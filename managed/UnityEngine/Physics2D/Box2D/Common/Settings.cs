@@ -40,6 +40,12 @@ namespace Unbound.Box2D.Common
         /// Unbound: half of Physics2D.defaultContactOffset.
         public static float LinearSlop = 0.005f * LengthUnitsPerMeter;
 
+        // Linear casts use fixed geometric precision. Contact-offset tuning changes
+        // the solver slop and shape skins, but does not change this query precision.
+        public const float LinearCastSlop = 0.005f;
+
+        public const float CastContactSeparationTolerance = LinearCastSlop * LinearCastSlop;
+
         /// A small angle used as a collision and constraint tolerance. Usually it is
         /// chosen to be numerically significant, but visually insignificant.
         public const float AngularSlop = 2.0f / 180.0f * Pi;

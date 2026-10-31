@@ -1,6 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Xunit;
+using Unbound.Box2D.Collision;
+using Unbound.Box2D.Collision.Shapes;
+using B2 = System.Numerics.Vector2;
+using B2Settings = Unbound.Box2D.Common.Settings;
+using B2Transform = Unbound.Box2D.Common.Transform;
 
 namespace UnityEngine.Tests
 {
@@ -228,6 +233,42 @@ namespace UnityEngine.Tests
                 : Physics2D.CapsuleCast(origin, size, CapsuleDirection2D.Horizontal, angle, Vector2.down, 2.5f);
             Assert.NotNull(hit.collider);
             Near(x, hit.point.x); Near(y, hit.point.y);
+        }
+
+        // A fixed pair of geometric cores distinguishes cast precision from the
+        // contact offset used by continuous simulation. No Native values are added.
+        [Theory]
+        [InlineData(.001f)]
+        [InlineData(.01f)]
+        [InlineData(.1f)]
+        public void SharedToiUsesTheOperationsPrecision(float contactOffset)
+        {
+            Physics2D.defaultContactOffset = contactOffset;
+            var proxy = new DistanceProxy();
+            proxy.Set(new[] { B2.Zero }, 1, .5f);
+            var cast = new ShapeCastInput
+            {
+                ProxyA = proxy, ProxyB = proxy,
+                TransformA = new B2Transform(B2.Zero, 0f),
+                TransformB = new B2Transform(new B2(5f, 0f), 0f),
+                TranslationB = new B2(-10f, 0f),
+            };
+            Assert.True(TimeOfImpact.LinearCast(out var hit, cast, B2Settings.LinearCastSlop));
+            Assert.InRange(Math.Abs(hit.Lambda - .4015f), 0f, 1e-6f);
+
+            var toi = new ToiInput
+            {
+                ProxyA = proxy, ProxyB = proxy,
+                SweepA = new Sweep(),
+                SweepB = new Sweep { C0 = new B2(5f, 0f), C = new B2(-5f, 0f) },
+                Tmax = 1f,
+            };
+            TimeOfImpact.ComputeTimeOfImpact(out var simulationHit, toi);
+            Assert.Equal(ToiOutput.ToiState.Touching, simulationHit.State);
+            float solverTarget = 1f - 3f * contactOffset * .5f;
+            Assert.InRange(Math.Abs(simulationHit.Time - (5f - solverTarget) / 10f), 0f, 1e-6f);
+            Assert.False(TimeOfImpact.StartsInside(proxy, proxy, .99f, B2Settings.LinearCastSlop));
+            Assert.True(TimeOfImpact.StartsInside(proxy, proxy, .98f, B2Settings.LinearCastSlop));
         }
     }
 }

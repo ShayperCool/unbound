@@ -97,18 +97,7 @@ namespace Unbound.Box2D.Collision
             var y = new Vector2(xf1.Rotation.Cos * n1.X - xf1.Rotation.Sin * n1.Y, xf1.Rotation.Sin * n1.X + xf1.Rotation.Cos * n1.Y);
             var normal1 = new Vector2(xf2.Rotation.Cos * y.X + xf2.Rotation.Sin * y.Y, -xf2.Rotation.Sin * y.X + xf2.Rotation.Cos * y.Y);
 
-            // Find the incident edge on poly2.
-            var index = 0;
-            var minDot = Settings.MaxFloat;
-            for (var i = 0; i < count2; ++i)
-            {
-                var dot = Vector2.Dot(normal1, normals2[i]);
-                if (dot < minDot)
-                {
-                    minDot = dot;
-                    index = i;
-                }
-            }
+            var index = FindIncidentEdgeIndex(normals2.AsSpan(0, count2), normal1);
 
             // Build the clip vertices for the incident edge.
             var i1 = index;
@@ -143,6 +132,23 @@ namespace Unbound.Box2D.Collision
             PolygonShape polyB,
             in Transform xfB)
         {
+            CollidePolygons(ref manifold, polyA, xfA, polyB, xfB,
+                0.1f * Settings.LinearSlop, true, out _);
+        }
+
+        // Segment cores have no side skin in a cast. Simulation manifolds keep
+        // their side padding; both operations use the same SAT and clipping path.
+        public static void CollidePolygons(
+            ref Manifold manifold,
+            PolygonShape polyA,
+            in Transform xfA,
+            PolygonShape polyB,
+            in Transform xfB,
+            float referenceEdgeTolerance,
+            bool extendSegmentSides,
+            out float coreSeparationSpread)
+        {
+            coreSeparationSpread = float.MaxValue;
             manifold.PointCount = 0;
             var totalRadius = polyA.Radius + polyB.Radius;
 
@@ -173,9 +179,8 @@ namespace Unbound.Box2D.Collision
             Transform xf1, xf2;
             int edge1; // reference edge
             byte flip;
-            float k_tol = 0.1f * Settings.LinearSlop;
 
-            if (separationB > separationA + k_tol)
+            if (separationB > separationA + referenceEdgeTolerance)
             {
                 poly1 = polyB;
                 poly2 = polyA;
@@ -224,8 +229,18 @@ namespace Unbound.Box2D.Collision
             var frontOffset = Vector2.Dot(normal, v11);
 
             // Side offsets, extended by polytope skin thickness.
-            var sideOffset1 = -Vector2.Dot(tangent, v11) + totalRadius;
-            var sideOffset2 = Vector2.Dot(tangent, v12) + totalRadius;
+            float sideRadius = extendSegmentSides || poly1.Count > 2 && poly2.Count > 2 ? totalRadius : 0f;
+            var sideOffset1 = -Vector2.Dot(tangent, v11) + sideRadius;
+            var sideOffset2 = Vector2.Dot(tangent, v12) + sideRadius;
+
+            // Measure the core overlap before skin extends the clipping sides.
+            // Callers can use this spread to choose a representative contact.
+            float s0 = Vector2.Dot(incidentEdge[0].Vector, tangent);
+            float s1 = Vector2.Dot(incidentEdge[1].Vector, tangent);
+            float width = Math.Min(Math.Max(s0, s1), Vector2.Dot(v12, tangent))
+                - Math.Max(Math.Min(s0, s1), Vector2.Dot(v11, tangent));
+            if (width >= 0f && s0 != s1)
+                coreSeparationSpread = Math.Abs(Vector2.Dot(normal, incidentEdge[1].Vector - incidentEdge[0].Vector) / (s1 - s0)) * width;
 
             // Clip incident edge against extruded edge1 side edges.
             Span<ClipVertex> clipPoints1 = stackalloc ClipVertex[2];

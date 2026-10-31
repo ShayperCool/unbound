@@ -63,12 +63,62 @@ namespace Unbound.Box2D.Collision
 
     internal static class TimeOfImpact
     {
+        static float TargetSeparation(in DistanceProxy a, in DistanceProxy b, float linearSlop) =>
+            Math.Max(linearSlop, a.Radius + b.Radius - 3.0f * linearSlop);
+
+        // Skin overlap alone need not start a cast inside: a shallow overlap can
+        // still advance to its target separation.
+        public static bool StartsInside(in DistanceProxy a, in DistanceProxy b, float coreDistance, float linearSlop) =>
+            coreDistance <= a.Radius + b.Radius
+            && coreDistance < TargetSeparation(a, b, linearSlop) + 0.25f * linearSlop;
+
+        /// Sweep B linearly against fixed A, using the shared time-of-impact solver.
+        public static bool LinearCast(out ShapeCastOutput output, in ShapeCastInput input, float linearSlop)
+        {
+            var a = input.TransformA;
+            var b = input.TransformB;
+            float angleA = a.Rotation.Angle, angleB = b.Rotation.Angle;
+            var toi = new ToiInput
+            {
+                ProxyA = input.ProxyA,
+                ProxyB = input.ProxyB,
+                SweepA = new Sweep { C0 = a.Position, C = a.Position, A0 = angleA, A = angleA },
+                SweepB = new Sweep { C0 = b.Position, C = b.Position + input.TranslationB, A0 = angleB, A = angleB },
+                Tmax = 1f,
+            };
+            output = default;
+            ComputeTimeOfImpact(out var hit, toi, linearSlop);
+            if (hit.State != ToiOutput.ToiState.Touching) return false;
+
+            // The minimum TOI target can exceed the combined radii of tiny shapes.
+            // A linear query requires actual surface contact at the resulting pose.
+            var distance = new DistanceInput
+            {
+                ProxyA = input.ProxyA, ProxyB = input.ProxyB, TransformA = a,
+                TransformB = new Transform(b.Position + hit.Time * input.TranslationB, b.Rotation),
+                UseRadii = true,
+            };
+            var cache = new SimplexCache();
+            DistanceAlgorithm.Distance(out var contact, ref cache, distance);
+            if (contact.Distance > 0f) return false;
+            output.Lambda = hit.Time;
+            return true;
+        }
+
         /// Compute the upper bound on time before two shapes penetrate. Time is represented as
         /// a fraction between [0,tMax]. This uses a swept separating axis and may miss some intermediate,
         /// non-tunneling collisions. If you change the time interval, you should call this function
         /// again.
         /// Note: use b2Distance to compute the contact point and normal at the time of impact.
         public static void ComputeTimeOfImpact(out ToiOutput output, in ToiInput input, ToiProfile toiProfile = null, GJkProfile gjkProfile = null)
+        {
+            ComputeTimeOfImpact(out output, input, Settings.LinearSlop, toiProfile, gjkProfile);
+        }
+
+        // The swept-axis/root algorithm is shared by continuous simulation and
+        // linear queries. Its precision belongs to the operation, not the release.
+        public static void ComputeTimeOfImpact(out ToiOutput output, in ToiInput input, float linearSlop,
+            ToiProfile toiProfile = null, GJkProfile gjkProfile = null)
         {
             var beginTime = toiProfile == null ? 0 : Stopwatch.GetTimestamp();
             output = new ToiOutput();
@@ -94,9 +144,8 @@ namespace Unbound.Box2D.Collision
 
             var tMax = input.Tmax;
 
-            var totalRadius = proxyA.Radius + proxyB.Radius;
-            var target = Math.Max(Settings.LinearSlop, totalRadius - 3.0f * Settings.LinearSlop);
-            var tolerance = 0.25f * Settings.LinearSlop;
+            var target = TargetSeparation(proxyA, proxyB, linearSlop);
+            var tolerance = 0.25f * linearSlop;
             Debug.Assert(target > tolerance);
 
             var t1 = 0.0f;

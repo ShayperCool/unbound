@@ -104,6 +104,88 @@ namespace Unbound.Box2D.Collision
             return count;
         }
 
+        // Both polygon manifolds and distance-cache contacts choose the incident
+        // edge by its most opposing normal, preserving vertex order for ties.
+        public static int FindIncidentEdgeIndex(ReadOnlySpan<Vector2> normals, in Vector2 referenceNormal)
+        {
+            int index = 0;
+            float minDot = Settings.MaxFloat;
+            for (int i = 0; i < normals.Length; i++)
+            {
+                float dot = Vector2.Dot(referenceNormal, normals[i]);
+                if (dot < minDot) { minDot = dot; index = i; }
+            }
+            return index;
+        }
+
+        static void FindIncidentEdge(in DistanceProxy incident, in Transform transform, in Vector2 normal,
+            out Vector2 start, out Vector2 end)
+        {
+            // A distance proxy can be a segment, so derive its world normals
+            // directly rather than requiring a PolygonShape's stored normals.
+            Span<Vector2> normals = stackalloc Vector2[incident.Count];
+            for (int i = 0; i < incident.Count; i++)
+            {
+                var p0 = MathUtils.Mul(transform, incident.Vertices[i]);
+                var p1 = MathUtils.Mul(transform, incident.Vertices[(i + 1) % incident.Count]);
+                var tangent = Vector2.Normalize(p1 - p0);
+                normals[i] = new Vector2(tangent.Y, -tangent.X);
+            }
+            int index = FindIncidentEdgeIndex(normals, normal);
+            start = MathUtils.Mul(transform, incident.Vertices[index]);
+            end = MathUtils.Mul(transform, incident.Vertices[(index + 1) % incident.Count]);
+        }
+
+        // A two-point GJK cache identifies an edge facing a vertex. Reconstruct
+        // its face contact using the same incident-edge selection as manifolds.
+        public static bool TryGetFaceContact(in DistanceProxy a, in Transform xfA,
+            in DistanceProxy b, in Transform xfB, in SimplexCache cache,
+            out Vector2 point, out Vector2 normal)
+        {
+            point = normal = default;
+            if (cache.Count != 2 || a.Count < 2 || b.Count < 2) return false;
+            bool edgeA = cache.IndexA[0] != cache.IndexA[1];
+            bool edgeB = cache.IndexB[0] != cache.IndexB[1];
+            if (edgeA == edgeB) return false;
+            var reference = edgeA ? a : b;
+            var incident = edgeA ? b : a;
+            var xfR = edgeA ? xfA : xfB;
+            var xfI = edgeA ? xfB : xfA;
+            int i0 = edgeA ? cache.IndexA[0] : cache.IndexB[0];
+            int i1 = edgeA ? cache.IndexA[1] : cache.IndexB[1];
+            var v0 = MathUtils.Mul(xfR, reference.Vertices[i0]);
+            var v1 = MathUtils.Mul(xfR, reference.Vertices[i1]);
+            var tangent = Vector2.Normalize(v1 - v0);
+            var n = new Vector2(tangent.Y, -tangent.X);
+            int support = edgeA ? cache.IndexB[0] : cache.IndexA[0];
+            var witness = MathUtils.Mul(xfI, incident.Vertices[support]);
+            if (Vector2.Dot(witness - v0, n) < 0f) n = -n;
+            FindIncidentEdge(incident, xfI, n, out var q0, out var q1);
+            float lo = Math.Min(Vector2.Dot(v0, tangent), Vector2.Dot(v1, tangent));
+            float hi = Math.Max(Vector2.Dot(v0, tangent), Vector2.Dot(v1, tangent));
+            if (!ClipSegmentToInterval(q0, q1, tangent, lo, hi, out var lower, out var upper)) return false;
+            float d0 = Vector2.Dot(lower - v0, n), d1 = Vector2.Dot(upper - v0, n);
+            var q = WorldManifold.SelectPoint(lower, upper, d0, d1, Math.Abs(d0 - d1), Settings.Epsilon,
+                out float separation);
+            point = q + 0.5f * (reference.Radius - incident.Radius - separation) * n;
+            normal = edgeA ? n : -n;
+            return true;
+        }
+
+        // Clip a world segment against the two tangent bounds of a core edge.
+        static bool ClipSegmentToInterval(Vector2 q0, Vector2 q1, in Vector2 tangent,
+            float lo, float hi, out Vector2 lower, out Vector2 upper)
+        {
+            lower = upper = default;
+            float s0 = Vector2.Dot(q0, tangent), s1 = Vector2.Dot(q1, tangent);
+            if (s0 > s1) { (q0, q1) = (q1, q0); (s0, s1) = (s1, s0); }
+            if (s1 < lo || s0 > hi || s1 - s0 <= 0f) return false;
+            var delta = q1 - q0;
+            lower = q0 + delta * Math.Max(0f, (lo - s0) / (s1 - s0));
+            upper = q0 + delta * Math.Min(1f, (hi - s0) / (s1 - s0));
+            return true;
+        }
+
         /// Determine if two generic shapes overlap.
         public static bool TestOverlap(
             Shape shapeA,
