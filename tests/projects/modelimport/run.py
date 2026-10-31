@@ -11,6 +11,7 @@ Editors run through the shared heavy-job launcher.
 """
 import argparse
 import filecmp
+import json
 import os
 from pathlib import Path
 import shutil
@@ -22,7 +23,13 @@ from probe_paths import editor_path, reference_root, run_root
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
-SPACES = {'Gamma': 0, 'Linear': 1}
+# Profile → color space. URP: the urp probe's pipeline asset, renderer and packages, so that the
+# render pipeline's own material preprocessors run.
+SPACES = {'Gamma': 0, 'Linear': 1, 'URP': 1}
+URP = PROBE.parent/'urp'
+URP_FILES = ['Assets/Settings/ProbeURP.asset', 'Assets/Settings/ProbeRenderer.asset',
+             'Assets/UniversalRenderPipelineGlobalSettings.asset', 'Assets/DefaultVolumeProfile.asset',
+             'ProjectSettings/GraphicsSettings.asset', 'ProjectSettings/QualitySettings.asset']
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 
 
@@ -31,6 +38,17 @@ def copy_project(dest, space):
         shutil.rmtree(dest)
     for part in ('Assets', 'Packages', 'ProjectSettings'):
         shutil.copytree(PROBE/part, dest/part)
+    if space == 'URP':
+        (dest/'Assets/Settings').mkdir(parents=True, exist_ok=True)
+        for name in URP_FILES:
+            shutil.copyfile(URP/name, dest/name)
+            if name.startswith('Assets/'):
+                shutil.copyfile(URP/(name + '.meta'), dest/(name + '.meta'))
+        shutil.copyfile(URP/'Assets/Settings.meta', dest/'Assets/Settings.meta')
+        manifest = json.loads((URP/'Packages/manifest.json').read_text())
+        manifest['dependencies'].update(json.loads((PROBE/'Packages/manifest.json').read_text())['dependencies'])
+        (dest/'Packages/manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
+        shutil.copyfile(URP/'Packages/packages-lock.json', dest/'Packages/packages-lock.json')
     settings = dest/'ProjectSettings/ProjectSettings.asset'
     text = settings.read_text()
     assert 'm_ActiveColorSpace: 0' in text
@@ -38,9 +56,15 @@ def copy_project(dest, space):
     return dest
 
 
+def profiles():
+    """MODEL_IMPORT_PROFILES (comma-separated) limits a run to some profiles."""
+    wanted = os.environ.get('MODEL_IMPORT_PROFILES')
+    return [p for p in SPACES if not wanted or p in wanted.split(',')]
+
+
 def editor(work):
     jobs = []
-    for space in SPACES:
+    for space in profiles():
         for repeat in ('native1', 'native2'):
             project = copy_project(work/'projects'/f'{space}-{repeat}', space)
             out = work/repeat/f'{space}.jsonl'
@@ -60,13 +84,13 @@ def editor(work):
 def publish(work):
     target = reference_root(PROBE)
     target.mkdir(parents=True, exist_ok=True)
-    for space in SPACES:
+    for space in profiles():
         a, b = work/'native1'/f'{space}.jsonl', work/'native2'/f'{space}.jsonl'
         if not filecmp.cmp(a, b, shallow=False):
             sys.exit(f'{space}: the two Editor captures differ; not publishing')
         shutil.copyfile(a, target/f'{space}.jsonl')
         print('published', target/f'{space}.jsonl')
-    # The descriptions do not depend on the color space.
+    # The descriptions do not depend on the color space or pipeline.
     a, b = work/'native1'/'Gamma.descriptions.txt', work/'native2'/'Gamma.descriptions.txt'
     if a.read_text() != b.read_text():
         sys.exit('the two Editor description dumps differ; not publishing')
@@ -78,7 +102,7 @@ def publish(work):
 def unbound(work):
     cli = os.environ.get('UNBOUND_CLI', str(REPO/'target/release/unbound'))
     code = 0
-    for space in SPACES:
+    for space in profiles():
         project = copy_project(work/'projects'/f'{space}-unbound', space)
         out = work/'unbound'/f'{space}.jsonl'
         out.parent.mkdir(parents=True, exist_ok=True)
