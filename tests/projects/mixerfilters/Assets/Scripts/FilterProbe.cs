@@ -13,6 +13,8 @@ public class FilterProbe : MonoBehaviour
     {
         get
         {
+            if (Environment.GetEnvironmentVariable("FILTER_PROBE_GAIN") == "1")
+                return new[] { "gain_m80", "gain_m60", "gain_m40", "gain_m20", "gain_m12", "gain_m6", "gain_m3", "gain_m1", "gain_m0d1", "gain_0", "gain_p0d1", "gain_p1", "gain_p3", "gain_p6", "gain_p12", "gain_p20" };
             if (Environment.GetEnvironmentVariable("FILTER_PROBE_PCM") == "1") return new[] { "pcm_output" };
             if (Environment.GetEnvironmentVariable("FILTER_PROBE_STARTUP") != "1") return Cases;
             var keys = new List<string> { "step_lp" };

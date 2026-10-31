@@ -51,7 +51,7 @@ public static class ProbeRunner
                 Call(mixer, "AddChildToParent", input, child);
             }
             object effect = null;
-            if (key != "dry" && key != "step_dry" && key != "stereo_dry" && key != "pcm_output")
+            if (key != "dry" && key != "step_dry" && key != "stereo_dry" && key != "pcm_output" && !key.StartsWith("gain_"))
             {
                 bool high = key.StartsWith("hp") || key == "tone_hp";
                 float cutoff = key == "lp80q1" ? 80 : key == "hp8000q1" ? 8000 : key == "lp20000q1" ? 20000 : 1000;
@@ -76,6 +76,11 @@ public static class ProbeRunner
                 Call(effect, "SetValueForParameter", mixer, snapshot, "Cutoff freq", 4000f);
             }
             if (key == "volume_lp") Call(child, "SetValueForVolume", mixer, Get(mixer, "TargetSnapshot"), -6f);
+            if (key.StartsWith("gain_"))
+            {
+                string value = key.Substring(5).Replace("m", "-").Replace("p", "").Replace("d", ".");
+                Call(child, "SetValueForVolume", mixer, Get(mixer, "TargetSnapshot"), float.Parse(value, System.Globalization.CultureInfo.InvariantCulture));
+            }
             EditorUtility.SetDirty((UnityEngine.Object)mixer);
         }
         AssetDatabase.SaveAssets();
