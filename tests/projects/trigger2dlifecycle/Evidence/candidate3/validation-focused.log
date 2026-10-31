@@ -1,0 +1,20 @@
+python3 /mnt/data/t3-worktrees/unialt/t3-bd5ab077/tests/projects/physicsscenesettings/parent_probes.py prepare --probe clone-placement --label final
+python3 /mnt/data/t3-worktrees/unialt/t3-bd5ab077/tests/projects/physicsscenesettings/parent_probes.py engine --probe clone-placement --label final
+clone-placement-final 160 records
+python3 /mnt/data/t3-worktrees/unialt/t3-bd5ab077/tests/projects/physicsscenesettings/parent_probes.py prepare --probe transform-clone-placement --label final
+python3 /mnt/data/t3-worktrees/unialt/t3-bd5ab077/tests/projects/physicsscenesettings/parent_probes.py engine --probe transform-clone-placement --label final
+transform-clone-placement-final 12 records
+python3 /mnt/data/t3-worktrees/unialt/t3-bd5ab077/tests/projects/physicsscenesettings/parent_probes.py prepare --probe sleep-inactive --label final
+python3 /mnt/data/t3-worktrees/unialt/t3-bd5ab077/tests/projects/physicsscenesettings/parent_probes.py engine --probe sleep-inactive --label final
+sleep-inactive-final 1050 records
+python3 /mnt/data/t3-worktrees/unialt/t3-bd5ab077/tests/projects/physicsscenesettings/parent_probes.py prepare --probe inactive-sequences --label final
+python3 /mnt/data/t3-worktrees/unialt/t3-bd5ab077/tests/projects/physicsscenesettings/parent_probes.py engine --probe inactive-sequences --label final
+inactive-sequences-final 4668 records
+python3 /mnt/data/t3-worktrees/unialt/t3-bd5ab077/tests/projects/physicsscenesettings/parent_probes.py prepare --probe sleep --label final
+python3 /mnt/data/t3-worktrees/unialt/t3-bd5ab077/tests/projects/physicsscenesettings/parent_probes.py engine --probe sleep --label final
+sleep-final 20700 records
+python3 /mnt/data/t3-worktrees/unialt/t3-bd5ab077/tests/projects/physicsscenesettings/parent_probes.py prepare --probe triggers --label final
+python3 /mnt/data/t3-worktrees/unialt/t3-bd5ab077/tests/projects/physicsscenesettings/parent_probes.py engine --probe triggers --label final
+triggers-final 1728 records
+python3 /mnt/data/t3-worktrees/unialt/t3-bd5ab077/tests/projects/physicsscenesettings/parent_probes.py prepare --probe flags --label final
+python3 /mnt/data/t3-worktrees/unialt/t3-bd5ab077/tests/projects/physicsscenesettings/parent_probes.py engine --probe flags --label final

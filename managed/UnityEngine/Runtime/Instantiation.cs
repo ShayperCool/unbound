@@ -223,6 +223,12 @@ namespace Unbound.Runtime
 
         internal static void DestroyImmediate(Object obj)
         {
+            if (Physics2DWorld.IsStepping && HasPhysics2D(obj))
+            {
+                Debug.LogError("DestroyImmediate is not permitted during a 2D physics callback.", obj);
+                obj.m_PendingDestroy = false;
+                return;
+            }
             switch (obj)
             {
                 case GameObject go:
@@ -246,6 +252,17 @@ namespace Unbound.Runtime
                     obj.MarkDestroyed();
                     break;
             }
+        }
+
+        static bool HasPhysics2D(Object obj)
+        {
+            if (obj is Rigidbody2D || obj is Collider2D) return true;
+            if (!(obj is GameObject go)) return false;
+            foreach (var c in go.m_Components)
+                if (c is Rigidbody2D || c is Collider2D) return true;
+            foreach (var child in go.m_Transform.m_Children)
+                if (HasPhysics2D(child.m_GameObject)) return true;
+            return false;
         }
 
         static void DestroyComponent(Component c)
@@ -272,6 +289,8 @@ namespace Unbound.Runtime
                     }
                 }
             }
+            // Removing only the body converts its surviving colliders to static without exits.
+            if (c is Rigidbody2D body2D) Physics2DWorld.Remove(body2D, silent: true);
             Lifecycle.OnComponentDestroyed(c);
             go?.m_Components.Remove(c);
             c.MarkDestroyed();
