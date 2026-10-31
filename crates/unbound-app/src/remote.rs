@@ -28,11 +28,8 @@ pub struct RemoteInput {
     /// Held buttons, as `FrameInput::mouse_buttons` bits.
     pub buttons: u32,
     pub keys: KeySet,
-    /// What the game sees this frame: the held buttons and keys, and those pressed and released
-    /// again since the last frame (a quick click must last a frame to be seen).
-    pub shown_buttons: u32,
-    pub shown_keys: KeySet,
-    /// Presses and releases this frame: Unity key, pressed, typed text.
+    /// Presses and releases of keys and mouse buttons this frame, in order: Unity key, pressed,
+    /// typed text (a quick click is a press and a release).
     pub key_events: Vec<(u16, bool, Option<char>)>,
     pub scroll: Vec2,
 }
@@ -43,8 +40,6 @@ impl RemoteInput {
         self.active = false;
         self.key_events.clear();
         self.scroll = Vec2::ZERO;
-        let mut pressed_buttons = 0u32;
-        let mut pressed_keys = KeySet::default();
         for event in events {
             match event {
                 RemoteEvent::Move { x, y } => {
@@ -65,9 +60,12 @@ impl RemoteInput {
                     };
                     if down {
                         self.buttons |= 1 << bit;
-                        pressed_buttons |= 1 << bit;
                     } else {
                         self.buttons &= !(1 << bit);
+                    }
+                    if bit < 7 {
+                        self.key_events
+                            .push((input::MOUSE0 + bit as u16, down, None));
                     }
                     self.active = true;
                 }
@@ -79,13 +77,17 @@ impl RemoteInput {
                     }
                     if down {
                         self.keys.set(key);
-                        pressed_keys.set(key);
                     } else {
                         self.keys.clear(key);
                     }
                     self.key_events.push((key, down, text.filter(|_| down)));
                 }
                 RemoteEvent::Release => {
+                    for bit in 0..7u16 {
+                        if self.buttons & (1 << bit) != 0 {
+                            self.key_events.push((input::MOUSE0 + bit, false, None));
+                        }
+                    }
                     self.buttons = 0;
                     for code in 0..512u16 {
                         if self.keys.contains(code) {
@@ -94,13 +96,6 @@ impl RemoteInput {
                     }
                     self.keys = KeySet::default();
                 }
-            }
-        }
-        self.shown_buttons = self.buttons | pressed_buttons;
-        self.shown_keys = self.keys.clone();
-        for code in 0..512u16 {
-            if pressed_keys.contains(code) {
-                self.shown_keys.set(code);
             }
         }
     }

@@ -20,7 +20,6 @@ use bevy::{
     app::AppExit,
     input::{
         ButtonState,
-        keyboard::KeyboardInput,
         mouse::{AccumulatedMouseMotion, MouseScrollUnit, MouseWheel},
     },
     prelude::*,
@@ -30,7 +29,8 @@ use bevy::{
     },
     window::{
         CursorGrabMode, CursorIcon, CursorOptions, CustomCursor, CustomCursorImage, ExitCondition,
-        PresentMode, PrimaryWindow, SystemCursorIcon, WindowCloseRequested, WindowResolution,
+        PresentMode, PrimaryWindow, SystemCursorIcon, WindowCloseRequested, WindowEvent,
+        WindowResolution,
     },
 };
 use std::{
@@ -238,6 +238,15 @@ fn spawn_view(mut commands: Commands) {
     ));
 }
 
+/// The window's mouse buttons in `FrameInput::mouse_buttons` bit order (Unity's `Mouse0` on).
+const MOUSE_BUTTONS: [MouseButton; 5] = [
+    MouseButton::Left,
+    MouseButton::Right,
+    MouseButton::Middle,
+    MouseButton::Back,
+    MouseButton::Forward,
+];
+
 #[allow(clippy::too_many_arguments)]
 fn drive(
     mut driver: NonSendMut<Driver>,
@@ -245,7 +254,7 @@ fn drive(
     keys: Res<ButtonInput<KeyCode>>,
     buttons: Res<ButtonInput<MouseButton>>,
     mut wheel: MessageReader<MouseWheel>,
-    mut keyboard: MessageReader<KeyboardInput>,
+    mut window_events: MessageReader<WindowEvent>,
     mut close: MessageReader<WindowCloseRequested>,
     windows: Query<&Window, With<PrimaryWindow>>,
     motion: Res<AccumulatedMouseMotion>,
@@ -286,16 +295,7 @@ fn drive(
         set.set(input::unity_key(*key));
     }
     let mut mouse_buttons = 0u32;
-    for (bit, button) in [
-        MouseButton::Left,
-        MouseButton::Right,
-        MouseButton::Middle,
-        MouseButton::Back,
-        MouseButton::Forward,
-    ]
-    .into_iter()
-    .enumerate()
-    {
+    for (bit, button) in MOUSE_BUTTONS.into_iter().enumerate() {
         if buttons.pressed(button) {
             mouse_buttons |= 1 << bit;
             set.set(input::MOUSE0 + bit as u16);
@@ -313,20 +313,39 @@ fn drive(
     }
     driver.text.clear();
     driver.key_events.clear();
-    for event in keyboard.read() {
-        let pressed = event.state == ButtonState::Pressed;
-        let start = driver.text.len() as i32;
-        if pressed && let Some(text) = &event.text {
-            let text = text.clone();
-            driver.text.push_str(&text);
+    // Key and mouse button changes in the order they happened: several may fall between two
+    // frames (a click within a frame is a press and a release).
+    for event in window_events.read() {
+        match event {
+            WindowEvent::KeyboardInput(event) => {
+                let pressed = event.state == ButtonState::Pressed;
+                let start = driver.text.len() as i32;
+                if pressed && let Some(text) = &event.text {
+                    let text = text.clone();
+                    driver.text.push_str(&text);
+                }
+                let text_length = driver.text.len() as i32 - start;
+                driver.key_events.push(KeyEvent {
+                    key: i32::from(input::unity_key(event.key_code)),
+                    pressed: i32::from(pressed),
+                    text_start: start,
+                    text_length,
+                });
+            }
+            WindowEvent::MouseButtonInput(event) => {
+                let Some(bit) = MOUSE_BUTTONS.iter().position(|b| *b == event.button) else {
+                    continue;
+                };
+                let start = driver.text.len() as i32;
+                driver.key_events.push(KeyEvent {
+                    key: i32::from(input::MOUSE0 + bit as u16),
+                    pressed: i32::from(event.state == ButtonState::Pressed),
+                    text_start: start,
+                    text_length: 0,
+                });
+            }
+            _ => {}
         }
-        let text_length = driver.text.len() as i32 - start;
-        driver.key_events.push(KeyEvent {
-            key: i32::from(input::unity_key(event.key_code)),
-            pressed: i32::from(pressed),
-            text_start: start,
-            text_length,
-        });
     }
     if let Some(position) = window.physical_cursor_position() {
         driver.mouse = position;
@@ -342,18 +361,18 @@ fn drive(
             window.physical_height() as f32,
         );
         if let Some(pointer) = driver.remote.pointer
-            && (driver.remote.active || driver.remote.shown_buttons != 0)
+            && (driver.remote.active || driver.remote.buttons != 0)
         {
             driver.mouse = pointer * size;
         }
-        mouse_buttons |= driver.remote.shown_buttons;
+        mouse_buttons |= driver.remote.buttons;
         for bit in 0..5 {
-            if driver.remote.shown_buttons & (1 << bit) != 0 {
+            if driver.remote.buttons & (1 << bit) != 0 {
                 driver.keys.set(input::MOUSE0 + bit as u16);
             }
         }
         for code in 0..512u16 {
-            if driver.remote.shown_keys.contains(code) {
+            if driver.remote.keys.contains(code) {
                 driver.keys.set(code);
             }
         }
