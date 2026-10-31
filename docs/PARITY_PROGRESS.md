@@ -1618,6 +1618,37 @@ images, worst mean 0.57, was 0.83: SpriteMask range images now draw the tight Ci
 1 from 230), urp2d (13 images at 0.00) and twod (same 4 scenarios as the baseline) have no
 regressions. `Sprite.Create` still builds quads.
 
+### Root sprite integration, 2026-10-31
+
+Merged 9f4270d7 and bumped the combined texture importer cache to version 9 in a
+separate commit. Both input branches used version 8 independently; neither branch's
+cached output is valid for their combination. Probe runners now require an explicit
+release and fresh capture label, and the sprite comparator retains the complete
+field and nested-value union outside Git with exact f32 comparisons.
+
+Root independently confirms both Native repeats equal the single canonical reference.
+The combined texture/sprite importer matches 519/520 fields across 52 sprites,
+resolving the separate sprite branch's four downscale fields. At flattened-value
+granularity, 7637/7654 observations pass, 5989 are resolved and none are introduced.
+All 17 retained observations describe the unsupported default physics shape of a
+Polygon-mode sprite. Runtime Sprite.Create Tight geometry remains open.
+
+Asset tests pass 71/71, runtime tests 38/38 and selected managed tests 853/853.
+The same full test assembly gives 1139/1151 before and after, with the same 12
+legacy text/particle failures and zero skips. API-check reports zero errors in
+2279 types; regenerated Core, Physics and Editor modules match. Four resource-mask
+images improve; all other 2025 rendering payload files, including UIToolkit JSON
+and its three PNGs, are byte-identical. Resources retain 539/539 values and 62/62
+passing images, with worst mean improving from 0.83 to 0.57. All three clipping
+profiles, colors and focused cameras pass unchanged. URP 2D retains 13/13 images
+within its published mean limit, worst mean 0.000417; the full 2D value union retains
+the same 22 differences across four scenarios with zero introductions.
+
+The source-correct immutable build input and complete unions are cache-only. Native
+API12, render protocol5, PhysX shim9 and shader cache13 remain unchanged. The next
+input integration changes the capture clock's first frame and fixed unscaled time;
+its physics/audio/particle regressions are a separate validation wave.
+
 ## Ordered input events within a frame
 
 Presses and releases of keys and mouse buttons now reach every input path in the order they
