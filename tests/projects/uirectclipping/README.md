@@ -224,6 +224,37 @@ Final unit-test commands, after exporting PATH and the build-server controls as 
 Only this fixture, CanvasRenderer draw preparation and the narrow FrameBuilder keyword override
 changed. The semantic index was refreshed after implementation. No PR or merge is part of this task.
 
+### Parent integration
+
+The parent reviewed and cherry-picked the four commits as db43474b, fba80dd6,
+f2e03994 and 72fa2a16. Follow-up 5ae8458b releases prepared clipping materials
+when assigned normal/pop slots or their counts change, and on Clear. This bounds
+the private material cache when a long-lived renderer cycles through materials;
+assigned material identity and properties remain untouched.
+
+The parent managed build and API check pass, zero errors in 2266 types. The final
+275-test run combines the 261 Canvas/UIElements/Yoga and 14 Core/RectTransform
+checks, with no failures or skips. Parent Linear and Gamma EACH match all 1211
+observations, 266 images and 17432576 float channels. Gamma uses a private fixture
+under Library/ParentGamma; authored fixture settings remain Linear.
+
+Parent reruns also retain colors 49201 EACH, lifecycle 8671, transitions 253
+samples/831 callbacks, and UI Toolkit metadata, eleven interactions and all three
+PNG files byte-identical to the independently built baseline. The regression
+runner now honors an explicit UNBOUND_MANAGED_DIR, so it can validate the parent's
+actual integrated output without overwriting the delegate's build or evidence:
+
+```sh
+UNBOUND_MANAGED_DIR=/mnt/storage-hdd/node-b-caches-20261023/unialt-target-compat/managed \
+  tests/projects/uirectclipping/regress.sh parent-regress
+```
+
+Parent quality-MSAA reproduces exactly the retained failure: 1211 observations
+pass, 151/266 images and 17390866/17432576 channels pass, leaving 115 images and
+41710 channels different. This remains an open rendering gap; no failing capture
+was removed. Parent logs and outputs are ~/.cache/compat/rectclip-parent-*;
+rectclip-parent-msaa-comparison.txt contains the complete failing comparison.
+
 Unity's own Bee compiler still launches Roslyn servers despite the supplied build-server
 controls. `run.sh` invokes `cleanup.py` on exit. It stops only VBCSCompiler processes whose
 inherited PWD is this exact isolated fixture; it does not stop shared/system build servers.

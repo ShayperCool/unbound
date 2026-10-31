@@ -719,3 +719,44 @@ Evidence and commands: tests/projects/physicsdefaults/README.md, its Evidence di
 the final full recording is Evidence/unbound-collider.jsonl. Controller-specific movement
 with offset overrides, terrain tree shapes, older releases and invalid-value simulation
 remain unmeasured. Existing solver/contact drift and other DynamicsManager settings stay open.
+
+## Integrated Canvas rectangle clipping and softness
+
+Reviewed and cherry-picked the clipping delegate's four commits as db43474b, fba80dd6,
+f2e03994 and 72fa2a16. CanvasRenderer now supplies root-Canvas vertex coordinates,
+_ClipRect, softness and a private local clipping keyword for normal and pop draws.
+Original Unity UI/Default performs clipping. Material/global keyword state is preserved;
+custom shaders without the clipping variant draw as Native does, without an imposed scissor.
+No lifecycle code, native ABI, protocol, Rust renderer or original shader source changed.
+
+Parent review also fixed unbounded retention of private material copies in 5ae8458b.
+Changing renderer material/pop slots or counts and Clear now release those copies. The
+fixture's live material changes, source isolation and full rendering checks still pass.
+
+Native pairs agree byte-for-byte in each of Linear, Gamma and LinearMSAA. Parent final
+Linear and Gamma EACH pass 1211 observations, 266 complete images and 17432576 float
+channels, 2422 observations/532 images/34865152 channels total, at the original 2e-4
+absolute/relative tolerance. The pre-change engine passed only 54/266 Linear images.
+Cases cover direct renderer and real uGUI masks, root/nested transforms, both sorting modes,
+WorldSpace/ScreenSpaceCamera/Overlay, intersections, hard/soft/negative softness, live mask
+lifecycle, material/global keyword precedence and shader coordinate/uniform diagnostics.
+
+Parent managed build/API check pass, zero errors in 2266 types. All 275 combined
+Canvas/UIElements/Yoga/Core/RectTransform tests pass with no skips. Colors retain 49201
+observations per color space, 98402 total; lifecycle 8671; transitions 253 samples and
+831 callbacks. UI Toolkit metadata, all eleven interactions and three PNGs are byte-identical
+to the independently built pre-change engine. The existing Native label-width discrepancy
+is unchanged. Gamma captures use a private project under Library; authored settings stay Linear.
+
+Quality MSAA remains open. Parent reproduces the same 115/266 failing images and
+41710/17432576 differing channels. An unclipped rotated control also differs from Native
+and is unchanged from the pre-clipping build. FrameBuilder applies quality MSAA to a
+single-sample ARGBFloat camera target where Native does not. This sample/format behavior
+needs a separate oracle; it is retained as a new open row rather than hidden by the
+passing single-sample matrices. No comparisons exclude cases or widen tolerances.
+
+Commands, reference manifests and remaining limits: tests/projects/uirectclipping/README.md.
+Parent outputs, build/API/test/regression logs and the complete failing MSAA comparison:
+~/.cache/compat/rectclip-parent-*. Nonfinite-input GPU rendering, perspective/tilted canvases,
+normal/tangent shader inputs, older releases and additional nested Overlay combinations
+remain unmeasured. This closes measured rectangle clipping, not complete UI/rendering parity.
