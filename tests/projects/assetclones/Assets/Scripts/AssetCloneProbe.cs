@@ -13,7 +13,16 @@ public class AssetCloneProbe : MonoBehaviour
     readonly StringBuilder output = new StringBuilder();
     Material sample;
     RenderTexture pixel;
-    static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r").Replace("\0", "\\u0000");
+    static string Escape(string s)
+    {
+        var b=new StringBuilder();
+        foreach(char c in s)
+        {
+            if(c=='\\')b.Append("\\\\"); else if(c=='\"')b.Append("\\\"");
+            else if(c<32)b.Append("\\u").Append(((int)c).ToString("x4")); else b.Append(c);
+        }
+        return b.ToString();
+    }
     void V(string k, object v) => output.Append("{\"k\":\"").Append(Escape(k)).Append("\",\"v\":\"").Append(Escape(Convert.ToString(v, CultureInfo.InvariantCulture))).Append("\"}\n");
     void Try(string k, Action f) { try { f(); V(k, "ok"); } catch (Exception e) { V(k, e.GetType().Name); } }
     void ColorValue(string k, Color c) { for (int i=0;i<4;i++) V(k+"."+i,c[i].ToString("R",CultureInfo.InvariantCulture)); }
