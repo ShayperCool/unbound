@@ -361,9 +361,6 @@ namespace UnityEngine
             internal int m_RingBufferIndex;
             internal float m_TotalTime;
             internal int m_Loop;
-            internal bool m_Playing;
-            internal bool m_Paused;
-            internal bool m_StopEmitting;
             internal int[] m_BurstCycles;
             internal ulong m_RandomState;
         }
