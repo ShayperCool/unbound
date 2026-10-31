@@ -85,24 +85,6 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ settings
 
-        public bool isOptimizable
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("Animator.isOptimizable", "is always false (avatars are not read yet)");
-                return false;
-            }
-        }
-
-        public bool isHuman
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("Animator.isHuman", "is always false (humanoid avatars are not supported yet)");
-                return false;
-            }
-        }
-
         public bool hasRootMotion
         {
             get
@@ -208,14 +190,6 @@ namespace UnityEngine
 
         public Quaternion deltaRotation => m_DeltaRotation;
 
-        public float humanScale
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("Animator.humanScale", "is the generic rig's 1 (humanoid avatars are not supported yet)");
-                return 1f;
-            }
-        }
 
         public float pivotWeight
         {
