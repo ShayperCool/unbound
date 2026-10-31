@@ -72,6 +72,6 @@ archive(WORK/'env.sh','validation/private-env.sh')
 summary['artifacts_sha256']={str(p.relative_to(WORK)):sha(p) for base in ['managed-accepted','managed-start','managed-threshold1','managed-contact2','managed-final'] for p in sorted((WORK/base).rglob('*')) if p.is_file()}
 summary['artifacts_sha256']['unbound']=sha(WORK/'unbound')
 summary['source_sha256']={str(p.relative_to(REPO)):sha(p) for p in [REPO/'managed/UnityEngine/Physics2D/Physics2DQueries.cs',*sorted((REPO/'managed/UnityEngine/Physics2D').glob('QueryParity*.cs')),REPO/'managed/UnityEngine.Tests/Physics2DQueryParityTests.cs']}
-summary['evidence_sha256']={str(p.relative_to(OUT)):sha(p) for p in sorted(OUT.rglob('*')) if p.is_file() and p.name!='summary.json'}
+summary['evidence_sha256']={str(p.relative_to(OUT)):sha(p) for p in sorted(OUT.rglob('*')) if p.is_file() and p!=OUT/'summary.json'}
 dump(OUT/'summary.json',summary)
 for name,row in summary['suites'].items():print(name,row['stages']['final'])
