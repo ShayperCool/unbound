@@ -182,3 +182,20 @@ contact count/separation, position, velocity and the current offset.
 Repeat the Native recording command above with
 `PHYSICS_DEFAULTS_OUT="$fixture/Evidence/native-collider-repeat.jsonl"`, then
 compare that file with the full reference using the same unchanged comparator.
+
+The parent before the Collider fix matches 452/582 records, retaining 130
+failures in `Evidence/unbound-before-collider.jsonl` and its comparison text.
+`Evidence/unbound-collider.jsonl` after the fix matches 582/582. There are 576
+exactly equal records and the same six solver-motion rounding records, worst
+absolute difference 6.15e-08, within the original tolerance. Every new collider
+record is exactly equal. No records were filtered or tolerances changed.
+
+Collider now snapshots its default in the constructor and leaves that snapshot
+intact when cloning. Its setter rejects nonpositive values and assignments
+without a shape, flushing lazy allocation first. Accepted assignments update
+the existing PhysX shape directly through `ua3_shape_set_contact_offset`, without
+recreating bodies, shapes or contact pairs. The PhysX shim version is 6 so stale
+libraries fail the existing version check. The engine protocol and main native
+ABI are unchanged. Controller-specific motion after contact-offset overrides,
+terrain tree shapes, older Unity releases and invalid-value simulation remain
+unmeasured.

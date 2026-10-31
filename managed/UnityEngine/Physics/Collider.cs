@@ -23,8 +23,11 @@ namespace UnityEngine
         internal int m_ExcludeLayers;
         internal int m_LayerOverridePriority;
         internal bool m_ProvidesContacts;
-        float m_ContactOffset = -1f;
         bool m_HasModifiableContacts;
+
+        // Runtime tuning is not serialized or copied into clones. Keep the creation-time
+        // project default even while disabled or before the native shape is allocated.
+        float m_ContactOffset;
 
         // Runtime state.
         /// <summary>Its GameObject is active in the hierarchy (the engine enabled it).</summary>
@@ -53,7 +56,7 @@ namespace UnityEngine
         internal PhysicsMaterial m_UsedMaterial;
         internal int m_MaterialVersion;
 
-        public Collider() { }
+        public Collider() => m_ContactOffset = Physics.defaultContactOffset;
 
         internal override void OnEngineEnable()
         {
@@ -191,8 +194,18 @@ namespace UnityEngine
 
         public float contactOffset
         {
-            get => m_ContactOffset >= 0f ? m_ContactOffset : Physics.s_DefaultContactOffset;
-            set => m_ContactOffset = Mathf.Max(0f, value);
+            get => m_ContactOffset;
+            set
+            {
+                // Unity ignores assignments without a shape, including disabled and
+                // geometry-less colliders. Flush our lazy allocation before checking.
+                if (value <= 0f || !m_Registered) return;
+                W.Flush();
+                if (m_Shape == 0) return;
+                m_ContactOffset = value;
+                B3.ua3_shape_set_contact_offset(m_Shape, value);
+                foreach (var extra in m_ExtraShapes) B3.ua3_shape_set_contact_offset(extra, value);
+            }
         }
 
         public bool hasModifiableContacts
@@ -312,7 +325,6 @@ namespace UnityEngine
             m_ExcludeLayers = s.m_ExcludeLayers;
             m_LayerOverridePriority = s.m_LayerOverridePriority;
             m_ProvidesContacts = s.m_ProvidesContacts;
-            m_ContactOffset = s.m_ContactOffset;
             m_HasModifiableContacts = s.m_HasModifiableContacts;
         }
 
