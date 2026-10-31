@@ -149,3 +149,21 @@ The ccc project was initialized here. The initial 40-second semantic refresh, a
 subsequent 25-second refresh and the final 25-second index request timed out.
 Logs are retained; source review used rg and direct reads. No shared daemon or
 sibling process was stopped.
+
+## Parent integration
+
+The parent independently reviewed and rebuilt the merged implementation, then
+replayed both document orders from fresh copies of the committed authored
+inputs. Both captures pass 4656/4656 exactly against the agreeing Native pairs,
+9312/9312 total, with no missing or extra keys. The parent verified the authored,
+Native, source, delegate-artifact and regression hashes before integration.
+
+The fresh parent replay also passes 371/371 tests, API-check with zero errors in
+2266 hand-written types, all 5055 matrix observations and every existing focused
+control. All 21 matrix files remain byte-identical to acceptance. Graphics80,
+Canvas8671 and messages316 pass, lifecycle is Native-byte-identical, and all
+existing broad/2D regression results are preserved without new failing values.
+
+Complete fresh parent captures, comparison logs, exact counts and artifact/source
+hashes are in `Evidence/ParentIntegration/summary.json`. Its `verify.py` writes
+only this new parent archive; historical delegate evidence remains intact.

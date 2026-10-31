@@ -1088,3 +1088,36 @@ reproduction are in physicsscenesettings/InactiveEvidence/ParentIntegration;
 serialized inactive objects edited before their first physics read, additional
 hierarchy/scale cases and older releases remain unmeasured. This is not full
 engine parity.
+
+### Serialized inactive body initialization, 2026-10-31
+
+Integrated `af5d3398`, `3ded1eac`, `f807cd00` and `7172284c` from the isolated
+loading workstream. ObjectGraphBuilder now captures Rigidbody poses after all
+serialized fields, parent links and flattened prefab overrides are complete,
+before creation callbacks and scene activation. Getter-triggered capture is
+removed. Runtime attachment and post-placement clone snapshots remain intact.
+Kinematic deactivation clears the velocity computed from its last target;
+dynamic bodies retain their actual motion.
+
+The new fixture has two independent Native recordings for each document order.
+All four recordings are byte-identical at 4656 observations each. They cover
+scene bodies, nested prefab instances and overrides, Resources assets and
+instances, active/inactive and dynamic/kinematic objects, parented poses and
+edits before the first physics read. Both parent engine replays pass exactly,
+9312/9312, resolving 98 Transform-first and 82 Rigidbody-first observations.
+The intermediate candidate's 42 failures per order remain archived.
+
+Fresh integrated parent validation passes 371/371 tests, API-check with zero
+errors in 2266 types, all 5055 matrix observations and every existing focused
+control. All 21 raw matrix files remain byte-identical to SDK8 acceptance;
+4803 observations are exact and 252 use the unchanged motion tolerance.
+Graphics80, Canvas8671 and messages316 pass; lifecycle is Native-byte-identical.
+The same 131 broad 2D differences and 376 timing/order differences remain.
+Existing defaults, joints, controller, forces, rayhits, Joint2D and Effector2D
+gates pass. Main ABI5, shim8 and shader cache13 are unchanged.
+
+Source, four Native captures, every baseline/candidate difference and exact
+commands are in tests/projects/inactive3dloading. Independent parent evidence
+and artifact hashes are under Evidence/ParentIntegration. Non-unit scale, other
+rotations, further loading mechanisms and older releases remain unmeasured;
+this does not claim full engine parity.
