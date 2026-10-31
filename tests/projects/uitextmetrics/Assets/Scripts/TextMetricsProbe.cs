@@ -91,6 +91,38 @@ public static class TextMetricsProbe
         // generation without depending on which theme glyphs previous controls happened to load.
         var source = label.resolvedStyle.unityFont;
         if (source == null) source = Asset(label).sourceFontFile;
+        foreach (string action in new[] { "none", "repaint", "parent-repaint", "class", "parent-class", "color", "parent-color", "opacity", "margin", "padding", "parent-width", "enabled", "parent-enabled", "same-size", "same-text", "same-wrap" })
+        {
+            var box = new VisualElement(); box.style.alignItems = Align.FlexStart; box.style.width = 400; root.Add(box);
+            var fresh = FontAsset.CreateFontAsset(source);
+            var item = new Label("Foldout AV To"); box.Add(item);
+            item.style.unityFontDefinition = FontDefinition.FromSDFFont(fresh); item.style.fontSize = 14;
+            item.style.whiteSpace = WhiteSpace.NoWrap; item.style.marginLeft = item.style.marginRight = 0;
+            item.style.paddingLeft = item.style.paddingRight = 0; Tick();
+            Add("invalidation/" + action + "/cold", item.text, "", item.layout.width, Pairs(fresh).Count);
+            typeof(FontAsset).GetMethod("UpdateFontAssetsInUpdateQueue", Flags).Invoke(null, null);
+            switch (action)
+            {
+                case "repaint": item.MarkDirtyRepaint(); break;
+                case "parent-repaint": box.MarkDirtyRepaint(); break;
+                case "class": item.AddToClassList("no-matching-rule"); break;
+                case "parent-class": box.AddToClassList("no-matching-rule"); break;
+                case "color": item.style.color = Color.red; break;
+                case "parent-color": box.style.color = Color.red; break;
+                case "opacity": item.style.opacity = .5f; break;
+                case "margin": item.style.marginLeft = 1; break;
+                case "padding": item.style.paddingLeft = 1; break;
+                case "parent-width": box.style.width = 401; break;
+                case "enabled": item.SetEnabled(false); break;
+                case "parent-enabled": box.SetEnabled(false); break;
+                case "same-size": item.style.fontSize = 14; break;
+                case "same-text": item.text = item.text; break;
+                case "same-wrap": item.style.whiteSpace = WhiteSpace.NoWrap; break;
+            }
+            Tick();
+            Add("invalidation/" + action + "/warm", item.text, "", item.layout.width, Pairs(fresh).Count);
+            box.RemoveFromHierarchy();
+        }
         for (int repeat = 0; repeat < 2; repeat++)
         {
             var asset = FontAsset.CreateFontAsset(source);
