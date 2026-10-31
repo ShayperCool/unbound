@@ -864,7 +864,7 @@
     "images": 424
   },
   "FinalLinear": {
-    "raw": "/home/shaypercool/.cache/compat/materialcolortransfer-6239018d/final-linear",
+    "raw": "/home/shaypercool/.cache/compat/materialcolortransfer-6239018d/final2-linear",
     "sha256": {
       "default_Color.rgba": "2f2c254bc3bbf57c5da5416c988cf9aa41a7a302c75a116de39b07ed341b1fc2",
       "default_Float.rgba": "b48fc5585d7d3340106437568a92e152dfe5e4bc111ba914772ca236215c6bf3",
@@ -2160,7 +2160,7 @@
     "images": 424
   },
   "FinalGamma": {
-    "raw": "/home/shaypercool/.cache/compat/materialcolortransfer-6239018d/final-gamma",
+    "raw": "/home/shaypercool/.cache/compat/materialcolortransfer-6239018d/final2-gamma",
     "sha256": {
       "default_Color.rgba": "ad46df0b67e6c230910b13feacc2ca3e09dbcc9b46fd1994285e5cc50232b9cf",
       "default_Float.rgba": "b48fc5585d7d3340106437568a92e152dfe5e4bc111ba914772ca236215c6bf3",

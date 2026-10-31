@@ -10,5 +10,13 @@
   "linearOrdinaryFloat": {
     "files": 53,
     "changed": []
+  },
+  "firstFinalVsFinal2Linear": {
+    "files": 425,
+    "changed": []
+  },
+  "firstFinalVsFinal2Gamma": {
+    "files": 425,
+    "changed": []
   }
 }
