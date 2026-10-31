@@ -13,7 +13,6 @@ pub mod fixed;
 pub mod preprocess;
 
 mod fit;
-mod sampler_bias;
 mod surface;
 
 use anyhow::{Context, Result, anyhow, bail};
@@ -503,7 +502,7 @@ impl ShaderCompiler {
         let hash = {
             let mut h = blake3::Hasher::new();
             h.update(&FORMAT_VERSION.to_le_bytes());
-            h.update(include_bytes!("sampler_bias.rs"));
+            h.update(b"native-sampler-lod-bias-v1");
             for part in [
                 &vertex_source,
                 &fragment_source,

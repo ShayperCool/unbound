@@ -233,6 +233,7 @@ pub struct UnityRenderer {
     zero_extra: Option<wgpu::Buffer>,
     textures: HashMap<u64, GpuTexture>,
     texture_mip_biases: HashMap<u64, f32>,
+    center_anisotropic_lod: bool,
     defaults: HashMap<&'static str, GpuTexture>,
     /// Default textures of other dimensions (cube, 3D, array): views by (dimension, default).
     dim_defaults: HashMap<(unbound_shaders::TextureDim, String), wgpu::TextureView>,
@@ -294,6 +295,7 @@ impl UnityRenderer {
         resolver: Resolver,
         compiled: compiled::CompiledPrograms,
         presented: Arc<Mutex<Option<Presented>>>,
+        center_anisotropic_lod: bool,
     ) -> Self {
         let pipelines = Pipelines::new(&device);
         let defaults = resources::default_textures(&device, &queue);
@@ -307,6 +309,7 @@ impl UnityRenderer {
             zero_extra: None,
             textures: HashMap::default(),
             texture_mip_biases: HashMap::default(),
+            center_anisotropic_lod,
             defaults: defaults.into_iter().collect(),
             dim_defaults: HashMap::default(),
             error_program: None,
@@ -448,6 +451,12 @@ impl UnityRenderer {
             }
             Upload::TextureMipBias(handle, bias) => {
                 self.texture_mip_biases.insert(handle, bias);
+                if let Some(texture) = self.textures.get_mut(&handle) {
+                    texture.sampler_key.lod_bias_bits =
+                        if bias == 0.0 { 0 } else { bias.to_bits() };
+                    texture.generation = texture.generation.wrapping_add(1);
+                    texture.bind_groups = [None, None];
+                }
             }
             Upload::UpdateMaterial(handle, material) => {
                 let resolved = self.resolver.resolve(&material);
@@ -479,8 +488,34 @@ impl UnityRenderer {
         }
     }
 
+    /// Bias uses the sampler's native LOD operation, preserving implicit and explicit gradients.
+    fn sampler_lod_bias(&self, handle: u64, key: SamplerKey, center: bool) -> u32 {
+        let mut bias = self.texture_mip_biases.get(&handle).copied().unwrap_or(0.0);
+        if self.center_anisotropic_lod
+            && center
+            && key.filter >= 1
+            && self.textures.get(&handle).is_some_and(|t| t.mip_count > 1)
+        {
+            // Native and Vulkan have the same measured anisotropic transition slopes.
+            // Native centers that transition on a half mip; Vulkan starts it at an integer.
+            let slope = match key.aniso {
+                ..=1 => 1.0,
+                2..=3 => 1.5,
+                4..=7 => 1.75,
+                _ => 2.0,
+            };
+            bias -= 0.5 - 0.5 / slope;
+        }
+        if bias == 0.0 { 0 } else { bias.to_bits() }
+    }
+
     fn sampler(&mut self, key: SamplerKey) -> wgpu::Sampler {
         let device = &self.device;
+        // Bias can change continuously. Bind groups own these samplers; keeping every bias
+        // in this renderer cache would prevent their release. HAL deduplicates live samplers.
+        if key.lod_bias_bits != 0 {
+            return resources::create_sampler(device, key);
+        }
         self.samplers
             .entry(key)
             .or_insert_with(|| resources::create_sampler(device, key))
@@ -516,6 +551,7 @@ impl UnityRenderer {
         if !self.texture_or_default(handle, default).render_target {
             key.aniso = self.effective_aniso(key.aniso);
         }
+        key.lod_bias_bits = self.sampler_lod_bias(handle, key, true);
         let sampler = self.sampler(key);
         let layout = self.pipelines.texture_layout.clone();
         let device = self.device.clone();
@@ -762,6 +798,7 @@ impl UnityRenderer {
                     wrap_v: inline.wrap,
                     aniso: 1,
                     compare: 0,
+                    lod_bias_bits: 0,
                 },
                 None if is_2d(*dim) => self.texture_or_default(*h, d).sampler_key,
                 None => self.textures.get(h).map_or(
@@ -771,6 +808,7 @@ impl UnityRenderer {
                         wrap_v: 1,
                         aniso: 1,
                         compare: 0,
+                        lod_bias_bits: 0,
                     },
                     |t| t.sampler_key,
                 ),
@@ -785,6 +823,10 @@ impl UnityRenderer {
             if slot.comparison {
                 key.compare = 4;
             }
+            if slot.inline.is_none() {
+                key.lod_bias_bits = self.sampler_lod_bias(*h, key, is_2d(*dim) && !slot.comparison);
+            }
+
             if slot.depth {
                 samplers.push(self.sampler(key));
                 // The texture's depth when its shape is the slot's, else a far-plane default.
@@ -1889,21 +1931,6 @@ impl UnityRenderer {
                 }
                 textures.get(&handle).map(|t| (t.width, t.height))
             };
-            let mip_biases = &self.texture_mip_biases;
-            let mip_bias = |name: &str| {
-                let mut handle = if name == "_MainTex" {
-                    main_handle
-                } else {
-                    texture_of(name)
-                };
-                if handle == 0
-                    && let Some(owned::PropertyValue::Texture { handle: h, .. }) =
-                        globals_index.find(&globals, name)
-                {
-                    handle = *h;
-                }
-                mip_biases.get(&handle).copied().unwrap_or(0.0)
-            };
             // A buffer bound by a cbuffer's name: the draw's, the material's, else a global one.
             let buffers = &self.buffers;
             let constant_buffer = |name: &str| -> Option<&[u8]> {
@@ -1935,7 +1962,6 @@ impl UnityRenderer {
                 globals_index,
                 main_alpha_only: alpha_only,
                 texture_size: &size,
-                texture_mip_bias: &mip_bias,
                 constant_buffer: &constant_buffer,
             };
             if let Some(filter) = trace_uniforms()
