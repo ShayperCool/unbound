@@ -93,6 +93,31 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(source);
         }
 
+        [Theory]
+        [InlineData(true, true)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(false, false)]
+        public void TextureCopyUpdatesRetainedStorageWithoutChangingReadability(bool sourceReadable, bool destinationReadable)
+        {
+            var source = new Texture2D(2, 2, TextureFormat.RGBA32, false, true);
+            source.SetPixels(new[] { Color.green, Color.green, Color.green, Color.green });
+            source.Apply(false, !sourceReadable);
+            var destination = new Texture2D(2, 2, TextureFormat.RGBA32, false, true);
+            destination.SetPixels(new[] { Color.red, Color.red, Color.red, Color.red });
+            destination.Apply(false, !destinationReadable);
+            Graphics.CopyTexture(source, destination);
+            Assert.Equal(sourceReadable, source.isReadable);
+            Assert.Equal(destinationReadable, destination.isReadable);
+            Assert.Equal(source.GetRawTextureData(), destination.GetRawTextureData());
+            var copy = Object.Instantiate(destination);
+            Assert.Equal(source.GetRawTextureData(), copy.GetRawTextureData());
+            Object.DestroyImmediate(destination);
+            Object.DestroyImmediate(source);
+            Assert.Equal(destinationReadable, copy.isReadable);
+            Object.DestroyImmediate(copy);
+        }
+
         [Fact]
         public void TextCloneOwnsItsBytesAndSafetyHandle()
         {
