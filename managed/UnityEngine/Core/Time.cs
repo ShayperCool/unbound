@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using Unity.IntegerTime;
 
 namespace UnityEngine
 {
@@ -23,6 +24,10 @@ namespace UnityEngine
         internal static bool s_InFixedTimeStep;
         internal static double s_TimeSinceLevelLoadStart;
         internal static int s_CaptureFramerate;
+        // Retain the requested float duration independently of its rounded integer FPS view.
+        internal static float s_CaptureDeltaTime;
+        static double CaptureDuration => RationalTime.FromDouble(s_CaptureDeltaTime,
+            RationalTime.TicksPerSecond.DefaultTicksPerSecond).ToDouble();
         /// <summary>The frame's real time, unclamped (audio runs in real time).</summary>
         internal static double s_RealDeltaTime;
 
@@ -90,14 +95,19 @@ namespace UnityEngine
 
         public static int captureFramerate
         {
-            get => s_CaptureFramerate;
-            set => s_CaptureFramerate = value;
+            get => captureDeltaTime == 0f ? 0 : Mathf.RoundToInt(1f / captureDeltaTime);
+            set => captureDeltaTime = value == 0 ? 0f : 1f / value;
         }
 
         public static float captureDeltaTime
         {
-            get => s_CaptureFramerate > 0 ? 1f / s_CaptureFramerate : 0f;
-            set => s_CaptureFramerate = value > 0 ? (int)Math.Round(1f / value) : 0;
+            // Native round trips use the already measured rational-time tick conversion.
+            get => (float)CaptureDuration;
+            set
+            {
+                s_CaptureDeltaTime = value > 0f ? value : 0f;
+                s_CaptureFramerate = captureFramerate;
+            }
         }
 
         /// <summary>Starts a frame: advances the frame clocks by the real time elapsed.</summary>
@@ -112,9 +122,9 @@ namespace UnityEngine
             s_RealDeltaTime = realDelta;
             // Under a capture rate the game clock steps by the capture delta while the unscaled
             // clock keeps real time (measured: unscaledDeltaTime 0.69 s, deltaTime 0.02).
-            double step = s_CaptureFramerate > 0 ? 1.0 / s_CaptureFramerate : realDelta;
+            double step = s_CaptureDeltaTime > 0f ? CaptureDuration : realDelta;
             float unscaled = (float)Math.Min(step, s_MaximumDeltaTime);
-            if (s_CaptureFramerate > 0) unscaled = (float)step;
+            if (s_CaptureDeltaTime > 0f) unscaled = (float)step;
             if (s_FrameCount == 0)
             {
                 // The first frame steps by the fixed timestep while the clocks stay at 0 (measured:
