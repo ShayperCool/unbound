@@ -7,7 +7,7 @@ sys.path.insert(0, str(ROOT.parents[1]))
 from probe_paths import cache_artifact_path
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['native', 'engine'])
-p.add_argument('--release', required=True, choices=['6000.0.71f1'])
+p.add_argument('--release', required=True)
 p.add_argument('--output', type=Path, required=True)
 p.add_argument('--cli', type=Path)
 p.add_argument('--managed', type=Path)
@@ -18,6 +18,7 @@ output.mkdir(parents=True)
 project = output/'project'
 for name in ['Assets', 'Packages', 'ProjectSettings']:
     shutil.copytree(ROOT.parent/'uitk'/name, project/name)
+(project/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+a.release+'\n')
 shutil.copy2(ROOT/'Assets/Scripts/TextMetricsProbe.cs', project/'Assets/Scripts/TextMetricsProbe.cs')
 source = project/'Assets/Scripts/UitkProbe.cs'
 s = source.read_text()
