@@ -212,13 +212,25 @@ namespace UnityEngine
             axes = Quaternion.LookRotation(z, y);
         }
 
-        /// <summary>Kinematic bodies asked to move get the velocity that reaches the target in this step.</summary>
-        internal void BeginStep(float deltaTime)
+        // Targets are sent when the command is issued so PhysX exposes the wake immediately.
+        // This marker only merges commands before the next simulation; it never models sleep.
+        internal void BeginStep(float deltaTime) => m_HasMove = false;
+
+        internal void ForgetMove() => m_HasMove = false;
+
+        void SetMoveTarget(Vector3 position, Quaternion rotation)
         {
-            if (!m_HasMove) return;
-            m_HasMove = false;
-            if (m_IsKinematic) B3.ua3_body_set_target_transform(m_Body, m_MovePosition, m_MoveRotation, deltaTime);
-            else B3.ua3_body_set_transform(m_Body, m_MovePosition, m_MoveRotation);
+            m_HasMove = true;
+            m_MovePosition = position;
+            m_MoveRotation = rotation;
+            B3.ua3_body_set_target_transform(m_Body, position, rotation, Time.fixedDeltaTime);
+        }
+
+        /// <summary>A Transform teleport replaces the whole target, including any pending move.</summary>
+        internal void Teleport(Vector3 position, Quaternion rotation)
+        {
+            B3.ua3_body_set_transform(m_Body, position, rotation);
+            if (m_IsKinematic) SetMoveTarget(position, rotation);
         }
 
         internal void EndStep()
@@ -499,6 +511,7 @@ namespace UnityEngine
                 }
                 B3.ua3_body_get_transform(body, out _, out var q);
                 B3.ua3_body_set_transform(body, value, q);
+                if (m_IsKinematic) SetMoveTarget(value, m_HasMove ? m_MoveRotation : q);
                 m_PreviousPosition = m_CurrentPosition = value;
             }
         }
@@ -523,6 +536,7 @@ namespace UnityEngine
                 B3.ua3_body_get_transform(body, out var p, out _);
                 var q = Quaternion.Normalize(value);
                 B3.ua3_body_set_transform(body, p, q);
+                if (m_IsKinematic) SetMoveTarget(m_HasMove ? m_MovePosition : p, q);
                 m_PreviousRotation = m_CurrentRotation = q;
             }
         }
@@ -538,9 +552,14 @@ namespace UnityEngine
                 transform.SetPositionAndRotation(position, rotation);
                 return;
             }
-            m_HasMove = true;
-            m_MovePosition = position;
-            m_MoveRotation = Quaternion.Normalize(rotation);
+            rotation = Quaternion.Normalize(rotation);
+            if (m_IsKinematic) SetMoveTarget(position, rotation);
+            else
+            {
+                B3.ua3_body_set_transform(m_Body, position, rotation);
+                m_PreviousPosition = m_CurrentPosition = position;
+                m_PreviousRotation = m_CurrentRotation = rotation;
+            }
         }
 
         public void PublishTransform()
