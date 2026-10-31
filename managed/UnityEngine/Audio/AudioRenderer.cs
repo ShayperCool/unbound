@@ -38,8 +38,9 @@ namespace UnityEngine
             if (ok) { s_Recording = false; s_Sinks.Clear(); }
             return ok;
         }
+        static float CaptureDelta => Time.captureDeltaTime != 0f ? Time.captureDeltaTime : Time.unscaledDeltaTime;
         internal static int Internal_AudioRenderer_GetSampleCountForCaptureFrame() =>
-            Native.IsReady ? JsonSerializer.Deserialize<int>(Native.Call("audio-renderer-count", "{}")) : 0;
+            Native.IsReady ? JsonSerializer.Deserialize<int>(Native.Call("audio-renderer-count", JsonSerializer.Serialize(CaptureDelta))) : 0;
 
         internal static bool Internal_AudioRenderer_AddMixerGroupSink(AudioMixerGroup mixerGroup, void* ptr, int length, bool excludeFromMix)
         {
@@ -54,7 +55,7 @@ namespace UnityEngine
             var sinks = new List<object>();
             foreach (var pair in s_Sinks)
                 sinks.Add(new { handle = pair.Key, length = pair.Value.Length, excludeFromMix = pair.Value.Exclude });
-            using var result = JsonDocument.Parse(Native.Call("audio-renderer-render", JsonSerializer.Serialize(new { length, sinks })));
+            using var result = JsonDocument.Parse(Native.Call("audio-renderer-render", JsonSerializer.Serialize(new { length, sinks, deltaTime = CaptureDelta })));
             var root = result.RootElement;
             if (!root.GetProperty("ok").GetBoolean()) return false;
             int index = 0;
