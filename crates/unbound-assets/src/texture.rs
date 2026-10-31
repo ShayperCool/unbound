@@ -653,10 +653,23 @@ pub fn import_texture(
 
 /// The imported mip chain of a 2D texture (just its top level without mipmaps).
 fn mip_chain(image: Image, settings: &TextureSettings) -> Vec<MipLevel> {
-    let normal_maps_xyz = settings.normal_maps_xyz;
     let format = image.format;
-    let srgb = settings.srgb && format == TextureFormat::Rgba8;
-    let normal_map = settings.texture_type == TextureType::NormalMap;
+    let height = settings
+        .normal_from_height
+        .filter(|_| format == TextureFormat::Rgba8)
+        .map(|(scale, filter)| (scale, filter == 1));
+    let levels = settings.mipmaps && (image.width > 1 || image.height > 1);
+    // The Editor filters sRGB colour in linear light (only when there are mips to make) and
+    // makes normals from float heights; other 8-bit textures keep their top level in bytes.
+    let srgb = settings.srgb && format == TextureFormat::Rgba8 && levels && height.is_none();
+    let top = if height.is_some() {
+        mipmaps::Top::Unorm
+    } else if srgb {
+        mipmaps::Top::Srgb
+    } else {
+        mipmaps::Top::Bytes
+    };
+    let top = mipmaps::Level::decode(image.width, image.height, &image.data, format, top);
     let options = mipmaps::Options {
         filter: if settings.mip_filter == 1 {
             mipmaps::Filter::Kaiser
@@ -666,105 +679,28 @@ fn mip_chain(image: Image, settings: &TextureSettings) -> Vec<MipLevel> {
         border: settings.border_mipmap,
         coverage: settings.preserve_coverage,
     };
-    let fade = |level: usize| {
-        settings
-            .mip_fade
-            .map_or(0.0, |f| mipmaps::fade_amount(level, f))
+    let encoding = mipmaps::Encoding {
+        height,
+        normal_map: settings.texture_type == TextureType::NormalMap,
+        dxt5nm: !settings.normal_maps_xyz,
+        flip_green: settings.flip_green,
+        srgb,
+        fade: settings.mip_fade,
     };
-    let chain = |top: mipmaps::Level, options: &mipmaps::Options| {
-        if settings.mipmaps {
-            mipmaps::chain(top, options)
-        } else {
-            vec![top]
-        }
-    };
-
-    if let Some((scale, filter)) = settings
-        .normal_from_height
-        .filter(|_| format == TextureFormat::Rgba8)
-    {
-        // The colour is filtered down the chain; each level's normals come from its height.
-        let top = mipmaps::Level::decode(image.width, image.height, &image.data, format, false);
-        let options = mipmaps::Options {
-            coverage: None,
-            ..options
-        };
-        return chain(top, &options)
-            .iter()
-            .enumerate()
-            .map(|(i, level)| {
-                let t = fade(i) as f64;
-                let encode = |v: f64, to: f64| {
-                    let e = (v * 0.5 + 0.5) * 255.0;
-                    mipmaps::quantize(e + (to * 255.0 - e) * t)
-                };
-                let data = mipmaps::normals_from_height(level, scale, filter == 1)
-                    .iter()
-                    .flat_map(|n| {
-                        let (x, y, z) = (encode(n[0], 0.5), encode(n[1], 0.5), encode(n[2], 1.0));
-                        // Flipping green inverts only the green of the encoded texel.
-                        let green = if settings.flip_green {
-                            encode(-n[1], 0.5)
-                        } else {
-                            y
-                        };
-                        if normal_maps_xyz {
-                            [x, green, z, 255]
-                        } else {
-                            [255, green, y, x]
-                        }
-                    })
-                    .collect();
-                MipLevel {
-                    width: level.width,
-                    height: level.height,
-                    data,
-                }
-            })
-            .collect();
-    }
-
-    let mut top = mipmaps::Level::decode(image.width, image.height, &image.data, format, srgb);
-    if settings.flip_green {
-        top.texels.iter_mut().for_each(|t| t[1] = 1.0 - t[1]);
-    }
-    let fade_to = if normal_map {
-        [0.5, 0.5, 1.0]
+    let chain = if levels {
+        mipmaps::chain(top, &options)
     } else {
-        [0.5; 3]
+        vec![top]
     };
-    chain(top, &options)
+    chain
         .iter()
         .enumerate()
-        .map(|(i, level)| {
-            let mut data = level.encode(format, srgb, fade(i), fade_to);
-            if normal_map && !normal_maps_xyz {
-                swizzle_dxt5nm(&mut data, format);
-            }
-            MipLevel {
-                width: level.width,
-                height: level.height,
-                data,
-            }
+        .map(|(i, level)| MipLevel {
+            width: level.width,
+            height: level.height,
+            data: level.encode(i, format, &encoding),
         })
         .collect()
-}
-
-/// A normal map as the DXT5nm layout stores it: (1, y, y, x).
-fn swizzle_dxt5nm(data: &mut [u8], format: TextureFormat) {
-    match format {
-        TextureFormat::Rgba8 => data
-            .as_chunks_mut::<4>()
-            .0
-            .iter_mut()
-            .for_each(|p| *p = [255, p[1], p[1], p[0]]),
-        TextureFormat::Rgba32F => data.as_chunks_mut::<16>().0.iter_mut().for_each(|p| {
-            let (x, y) = (read_f32(&p[0..4]), read_f32(&p[4..8]));
-            for (c, v) in [1.0, y, y, x].into_iter().enumerate() {
-                p[c * 4..c * 4 + 4].copy_from_slice(&v.to_le_bytes());
-            }
-        }),
-    }
 }
 
 /// A cubemap: its faces cut from (or projected out of) the image, scaled as a texture of the
@@ -804,8 +740,17 @@ fn import_cubemap(
         faces
             .into_iter()
             .map(|f| {
-                let face_srgb = srgb && f.format == TextureFormat::Rgba8;
-                let top = mipmaps::Level::decode(f.width, f.height, &f.data, f.format, face_srgb);
+                let face_srgb = srgb && f.format == TextureFormat::Rgba8 && levels > 1;
+                let top = if face_srgb {
+                    mipmaps::Top::Srgb
+                } else {
+                    mipmaps::Top::Bytes
+                };
+                let top = mipmaps::Level::decode(f.width, f.height, &f.data, f.format, top);
+                let encoding = mipmaps::Encoding {
+                    srgb: face_srgb,
+                    ..Default::default()
+                };
                 let options = mipmaps::Options {
                     filter: mipmaps::Filter::Box,
                     border: false,
@@ -813,8 +758,9 @@ fn import_cubemap(
                 };
                 let format = f.format;
                 let mut chain = vec![f];
-                for level in mipmaps::chain(top, &options)
+                for (i, level) in mipmaps::chain(top, &options)
                     .iter()
+                    .enumerate()
                     .skip(1)
                     .take(levels as usize - 1)
                 {
@@ -822,7 +768,7 @@ fn import_cubemap(
                         width: level.width,
                         height: level.height,
                         format,
-                        data: level.encode(format, face_srgb, 0.0, [0.5; 3]),
+                        data: level.encode(i, format, &encoding),
                     });
                 }
                 chain
@@ -1304,11 +1250,6 @@ impl Image {
         }
     }
 
-    /// Unity's resize (non-power-of-two scaling and the max size with the Mitchell algorithm),
-    /// measured on the 6000.0 Editor: each axis apart, x first, with a Mitchell-Netravali filter
-    /// (B = C = 1/3) widened by the scale when shrinking and a cubic B-spline when enlarging,
-    /// centred on texel centres, edges clamped, on the stored values (no colour-space conversion
-    /// or alpha weighting).
     fn resample(&self, width: u32, height: u32) -> Image {
         fn cubic(x: f64, b: f64, c: f64) -> f64 {
             let x = x.abs();
@@ -1462,15 +1403,6 @@ fn srgb_to_linear_table() -> &'static [f32; 256] {
             }
         })
     })
-}
-
-/// sRGB-encoded value (0..1) to linear.
-fn srgb_to_linear_f64(c: f64) -> f64 {
-    if c <= 0.04045 {
-        c / 12.92
-    } else {
-        ((c + 0.055) / 1.055).powf(2.4)
-    }
 }
 
 mod cubemap;
