@@ -12,13 +12,13 @@
 //! Rects are in pixels of the *source* image with Unity's bottom-left origin, as authored.
 //! [`SpriteDef::texture_rect`] is the same rect in the imported (possibly downscaled) texture.
 //!
-//! The sprite mesh (FullRect quad or Tight outline) is built by the runtime; the custom outlines
-//! authored in the Sprite Editor are passed through. TODO: generate Tight meshes from alpha when no
-//! outline is authored (Unity traces the alpha contour and simplifies it per
-//! `spriteTessellationDetail`); a FullRect quad is used until then.
+//! Tight meshes, the default physics shape and the texture rect are made at import from the
+//! imported texture's alpha (or the custom outline) as Unity's `Sprite::Initialize` makes them
+//! ([`build_geometry`], [`crate::sprite_mesh`]); Full Rect quads are built by the runtime.
 use crate::meta::{
     self, FileIdAllocator, FileIdSource, FileIdTable, boolean, class, float, int, polygons,
 };
+use crate::sprite_mesh::{self, SpriteMesh};
 use serde::{Deserialize, Serialize};
 use unbound_yaml::Value;
 
@@ -67,6 +67,8 @@ pub struct SpriteSettings {
     pub extrude: u32,
     /// `spriteGenerateFallbackPhysicsShape`.
     pub generate_physics_shape: bool,
+    /// `spriteTessellationDetail` (-1: chosen from the outline's size).
+    pub tessellation_detail: f32,
 }
 
 impl SpriteSettings {
@@ -94,6 +96,7 @@ impl SpriteSettings {
             extrude: int(imp, "spriteExtrude").unwrap_or(1).clamp(0, 32) as u32,
             generate_physics_shape: boolean(imp, "spriteGenerateFallbackPhysicsShape")
                 .unwrap_or(true),
+            tessellation_detail: float(imp, "spriteTessellationDetail").unwrap_or(-1.0),
         }
     }
 }
@@ -123,6 +126,9 @@ pub struct SpriteDef {
     pub mesh_type: SpriteMeshType,
     pub extrude: u32,
     pub generate_physics_shape: bool,
+    /// `tessellationDetail` of the entry (Multiple mode), else `spriteTessellationDetail`.
+    #[serde(default)]
+    pub tessellation_detail: f32,
     /// Custom outline polygons (Tight mesh), in pixels relative to the rect centre.
     pub outline: Vec<Vec<[f32; 2]>>,
     /// Custom physics shape polygons, in pixels relative to the rect centre.
@@ -145,6 +151,15 @@ pub struct SpriteDef {
     /// The sprite sheet's secondary textures (`spriteSheet.secondaryTextures`), shared by its sprites.
     #[serde(default)]
     pub secondary_textures: Vec<SecondaryTextureDef>,
+    /// The Tight mesh made at import ([`build_geometry`]); `None`: a Full Rect quad.
+    #[serde(default)]
+    pub mesh: Option<SpriteMesh>,
+    /// `Sprite.textureRect` (x, y, width, height) in imported-texture pixels.
+    #[serde(default)]
+    pub texture_rect_bounds: Option<[f32; 4]>,
+    /// `Sprite.GetPhysicsShape`: the custom or generated physics shape in units from the pivot.
+    #[serde(default)]
+    pub physics: Vec<Vec<[f32; 2]>>,
 }
 
 /// A secondary texture of a sprite (`_NormalMap`, `_MaskTex`, ...): the shader property it binds and
@@ -329,6 +344,9 @@ pub fn read_sprites(
             mesh_type: settings.mesh_type,
             extrude: settings.extrude,
             generate_physics_shape: settings.generate_physics_shape,
+            tessellation_detail: entry
+                .and_then(|e| float(e, "tessellationDetail"))
+                .unwrap_or(settings.tessellation_detail),
             outline: polygons(field("outline")),
             physics_shape: polygons(field("physicsShape")),
             sprite_id: field("spriteID")
@@ -346,6 +364,9 @@ pub fn read_sprites(
             weights: bone_weights(field("weights")),
             bones: sprite_bones(field("bones"), scale),
             secondary_textures: secondary_textures(sheet_field("secondaryTextures")),
+            mesh: None,
+            texture_rect_bounds: None,
+            physics: Vec::new(),
         }
     };
 
@@ -412,6 +433,42 @@ pub fn read_sprites(
             out
         }
     }
+}
+
+/// Makes what `Sprite::Initialize` makes from the imported texture: the Tight mesh, the texture
+/// rect and the physics shape. `rgba` is the imported mip 0 (RGBA8, rows bottom-up; `None`: a
+/// floating-point texture, whose alpha is not traced); `polygon`: Polygon sprite mode.
+pub fn build_geometry(
+    sprite: &mut SpriteDef,
+    width: u32,
+    height: u32,
+    rgba: Option<&[u8]>,
+    polygon: bool,
+) {
+    let r = sprite.texture_rect;
+    let texture = sprite_mesh::Texture {
+        width: width as i32,
+        height: height as i32,
+        rgba,
+    };
+    let geometry = sprite_mesh::sprite_geometry(
+        &texture,
+        &sprite_mesh::SpriteSource {
+            rect: [r.x, r.y, r.width, r.height],
+            pivot: sprite.pivot,
+            pixels_per_unit: sprite.texture_pixels_per_unit,
+            extrude: sprite.extrude,
+            tight: sprite.mesh_type == SpriteMeshType::Tight,
+            detail: sprite.tessellation_detail,
+            outline: &sprite.outline,
+            physics_shape: &sprite.physics_shape,
+            generate_physics_shape: sprite.generate_physics_shape,
+        },
+        !polygon,
+    );
+    sprite.mesh = geometry.mesh;
+    sprite.texture_rect_bounds = Some(geometry.texture_rect);
+    sprite.physics = geometry.physics;
 }
 
 #[cfg(test)]

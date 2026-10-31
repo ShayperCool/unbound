@@ -617,13 +617,27 @@ pub fn import_texture(
     };
 
     let name = asset_name(source);
-    let sprites = sprite::read_sprites(
+    let mut sprites = sprite::read_sprites(
         importer(meta, "TextureImporter"),
         &settings.sprite,
         &name,
         (original_width, original_height),
         (mips[0].width, mips[0].height),
     );
+    if !sprites.is_empty() {
+        let rgba = (format == TextureFormat::Rgba8).then_some(&mips[0].data[..]);
+        if rgba.is_none() {
+            tracing::warn!(
+                "{}: the alpha of a floating-point texture is not traced: its sprites get no \
+                 Tight mesh or default physics shape from it (Unbound traces 8-bit alpha only)",
+                source.display()
+            );
+        }
+        let polygon = settings.sprite.mode == sprite::SpriteMode::Polygon;
+        for s in &mut sprites {
+            sprite::build_geometry(s, mips[0].width, mips[0].height, rgba, polygon);
+        }
+    }
     Ok(ImportedTexture {
         name,
         width: mips[0].width,

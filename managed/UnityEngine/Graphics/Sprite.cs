@@ -18,9 +18,12 @@ namespace UnityEngine
         internal Vector2[] m_Vertices;
         internal Vector2[] m_UV;
         internal ushort[] m_Triangles;
-        /// <summary>Pixel outlines of a tight mesh, relative to the rect centre.</summary>
-        internal Vector2[][] m_Outline;
+        /// <summary>The physics shapes in units from the pivot (made at import).</summary>
         internal Vector2[][] m_PhysicsShape;
+        /// <summary>The traced bounds of a Tight mesh in texture pixels (else the rect).</summary>
+        internal Rect? m_TextureRect;
+        /// <summary>OverrideGeometry replaced the mesh: the bounds follow its vertices.</summary>
+        bool m_GeometryOverridden;
         internal Mesh m_Mesh;
         /// <summary>The secondary textures (an imported sprite's are loaded when first asked for).</summary>
         SecondarySpriteTexture[] m_SecondaryTextures;
@@ -90,8 +93,11 @@ namespace UnityEngine
         public static Sprite Create(Texture2D texture, Rect rect, Vector2 pivot) =>
             Create(texture, rect, pivot, 100f, 0, SpriteMeshType.Tight, Vector4.zero, false);
 
-        /// <summary>A sprite of an imported texture, from its import definition.</summary>
-        internal static Sprite FromImport(Texture2D texture, string name, Rect rect, Vector2 normalizedPivot, Vector4 border, float pixelsPerUnit, int meshType, Vector2[][] outline, Vector2[][] physicsShape)
+        /// <summary>A sprite of an imported texture, from its import definition: the Tight mesh
+        /// (vertices in units from the pivot, uvs, triangles; null for a quad), the texture rect
+        /// and the physics shapes (units from the pivot) the importer made.</summary>
+        internal static Sprite FromImport(Texture2D texture, string name, Rect rect, Vector2 normalizedPivot, Vector4 border, float pixelsPerUnit, int meshType,
+            Vector2[] meshVertices, Vector2[] meshUv, ushort[] meshTriangles, Rect? textureRect, Vector2[][] physicsShape)
         {
             Sprite sprite;
             using (ObjectRegistry.AsAssets())
@@ -103,47 +109,38 @@ namespace UnityEngine
             sprite.m_Border = border;
             sprite.m_PixelsPerUnit = pixelsPerUnit > 0 ? pixelsPerUnit : 100f;
             sprite.m_MeshType = (SpriteMeshType)meshType;
-            sprite.m_Outline = outline;
+            sprite.m_TextureRect = textureRect;
             sprite.m_PhysicsShape = physicsShape;
-            sprite.BuildGeometry();
+            if (meshVertices != null && meshVertices.Length > 0 && meshTriangles != null && meshTriangles.Length > 0)
+            {
+                sprite.m_Vertices = meshVertices;
+                sprite.m_UV = meshUv;
+                sprite.m_Triangles = meshTriangles;
+            }
+            else
+                sprite.BuildGeometry();
             return sprite;
         }
 
-        /// <summary>Vertices in units relative to the pivot, uvs in the texture, two triangles per quad
-        /// (or the authored outline, fan-triangulated).</summary>
+        /// <summary>The rect's corners in units relative to the pivot.</summary>
+        Vector2[] QuadCorners()
+        {
+            Vector2 ToVertex(Vector2 px) => new Vector2((px.x - m_Pivot.x) / m_PixelsPerUnit, (px.y - m_Pivot.y) / m_PixelsPerUnit);
+            return new[]
+            {
+                ToVertex(new Vector2(0, m_Rect.height)), ToVertex(new Vector2(m_Rect.width, m_Rect.height)),
+                ToVertex(new Vector2(0, 0)), ToVertex(new Vector2(m_Rect.width, 0)),
+            };
+        }
+
+        /// <summary>Vertices in units relative to the pivot, uvs in the texture, two triangles per
+        /// quad. (Tight meshes of imported sprites come from the importer; see FromImport.)</summary>
         void BuildGeometry()
         {
             float w = m_Texture != null ? m_Texture.width : 1f;
             float h = m_Texture != null ? m_Texture.height : 1f;
             Vector2 ToVertex(Vector2 px) => new Vector2((px.x - m_Pivot.x) / m_PixelsPerUnit, (px.y - m_Pivot.y) / m_PixelsPerUnit);
             Vector2 ToUv(Vector2 px) => new Vector2((m_Rect.x + px.x) / w, (m_Rect.y + px.y) / h);
-            if (m_MeshType == SpriteMeshType.Tight && m_Outline != null && m_Outline.Length > 0 && m_Outline[0].Length >= 3)
-            {
-                var vertices = new System.Collections.Generic.List<Vector2>();
-                var uvs = new System.Collections.Generic.List<Vector2>();
-                var triangles = new System.Collections.Generic.List<ushort>();
-                var centre = new Vector2(m_Rect.width / 2f, m_Rect.height / 2f);
-                foreach (var path in m_Outline)
-                {
-                    int start = vertices.Count;
-                    foreach (var p in path)
-                    {
-                        var px = p + centre;
-                        vertices.Add(ToVertex(px));
-                        uvs.Add(ToUv(px));
-                    }
-                    for (int i = 1; i + 1 < path.Length; i++)
-                    {
-                        triangles.Add((ushort)start);
-                        triangles.Add((ushort)(start + i));
-                        triangles.Add((ushort)(start + i + 1));
-                    }
-                }
-                m_Vertices = vertices.ToArray();
-                m_UV = uvs.ToArray();
-                m_Triangles = triangles.ToArray();
-                return;
-            }
             var corners = new[]
             {
                 new Vector2(0, m_Rect.height), new Vector2(m_Rect.width, m_Rect.height),
@@ -156,7 +153,8 @@ namespace UnityEngine
                 m_Vertices[i] = ToVertex(corners[i]);
                 m_UV[i] = ToUv(corners[i]);
             }
-            m_Triangles = new ushort[] { 0, 1, 3, 3, 2, 0 };
+            // SpriteRenderData::GenerateQuadMesh's order (measured: tests/projects/spriteimport).
+            m_Triangles = new ushort[] { 0, 1, 2, 2, 1, 3 };
         }
 
         /// <summary>An imported sprite's secondary textures, by shader property name and texture GUID.</summary>
@@ -216,7 +214,8 @@ namespace UnityEngine
             {
                 var min = new Vector2(float.MaxValue, float.MaxValue);
                 var max = new Vector2(float.MinValue, float.MinValue);
-                foreach (var v in m_Vertices)
+                // The rect's, also for a Tight mesh (measured: tests/projects/spriteimport).
+                foreach (var v in m_GeometryOverridden ? m_Vertices : QuadCorners())
                 {
                     min = Vector2.Min(min, v);
                     max = Vector2.Max(max, v);
@@ -229,9 +228,10 @@ namespace UnityEngine
         }
 
         public Rect rect => m_Rect;
-        public Rect textureRect => m_Rect;
-        [Unbound.EditorFaithful("sprites are not packed in the Editor's Play mode by default (atlases are built for players; see U2D/SpriteAtlas.cs): the texture rect is the sprite's rect")]
-        public Vector2 textureRectOffset => Vector2.zero;
+        /// <summary>The rect, or a Tight mesh's traced bounds (measured: tests/projects/spriteimport).</summary>
+        public Rect textureRect => m_TextureRect ?? m_Rect;
+        [Unbound.EditorFaithful("sprites are not packed in the Editor's Play mode by default (atlases are built for players; see U2D/SpriteAtlas.cs): the texture rect is the sprite's rect or its Tight mesh's bounds")]
+        public Vector2 textureRectOffset => m_TextureRect is Rect t ? new Vector2(t.x - m_Rect.x, t.y - m_Rect.y) : Vector2.zero;
         public Texture2D texture => m_Texture;
         [Unbound.EditorFaithful("alpha-split textures are made for ETC1 Android builds only, never in the Editor")]
         public Texture2D associatedAlphaSplitTexture => null;
@@ -257,9 +257,7 @@ namespace UnityEngine
         {
             physicsShape.Clear();
             if (m_PhysicsShape == null || shapeIdx >= m_PhysicsShape.Length) return 0;
-            // Stored in pixels from the rect's center; reported in units from the pivot.
-            var offset = new Vector2(m_Rect.width * 0.5f, m_Rect.height * 0.5f) - m_Pivot;
-            foreach (var p in m_PhysicsShape[shapeIdx]) physicsShape.Add((p + offset) / m_PixelsPerUnit);
+            physicsShape.AddRange(m_PhysicsShape[shapeIdx]);
             return physicsShape.Count;
         }
 
@@ -276,6 +274,7 @@ namespace UnityEngine
                 m_UV[i] = new Vector2((m_Rect.x + vertices[i].x) / w, (m_Rect.y + vertices[i].y) / h);
             }
             m_Triangles = (ushort[])triangles.Clone();
+            m_GeometryOverridden = true;
             m_Mesh = null;
         }
 
