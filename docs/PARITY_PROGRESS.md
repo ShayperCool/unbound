@@ -1406,3 +1406,31 @@ cache. Main ABI5, PhysX shim9 and shader cache13 are unchanged. A checker expect
 count omitted81 extra URP keys; the corrected complete-union report preserves them.
 A Vulkan Device(Lost) startup failure produced no captures; its log remains in the
 cache, and one fresh-directory retry passed. Completed captures were reused.
+
+
+### Particle emission and text measurement follow-up, 2026-10-31
+
+Integrated feec4436 and 23e0fe1e as independent changes. Emission observations now
+respect the module switch without treating zero rates or start delays as disabled
+emission. Playback snapshots restore simulation data while preserving the current
+Play/Pause/Stop state. Empty Stop/Clear, zero Emit and stopped simulation follow the
+measured state and clock behavior. The complete lifetime oracle passes all 30,080
+records in the delivered branch, resolving the previous 90 flag differences. The
+new 13,604-record emission control retains 72 count differences; all state flags
+and times match, with no introduced or changed retained values.
+
+Text measurement invalidates its cache when stylesheet matches or inherited style
+inputs change, including when declarations override the final values to equality.
+This resolves the inherited Label width of 54 instead of 53. Delivered focused
+controls pass all 608,384 observations; the existing UIToolkit JSON union passes
+36,846 observations. All three PNGs remain unchanged, retaining their small Native
+pixel differences. Generic font metrics and pixel rounding were not adjusted.
+
+Root combined managed verification passes 837/837 tests, including all 703 previous
+tests, 122 emission cases, four measurement-cache cases and eight text/font cases.
+The separate particle suite retains the same three failures. API verification
+reports zero errors in 2,279 types; Physics and Editor generated files match.
+Targeted combined capture replay is running. Earlier model, camera and material
+results remain in the immutable panel-models-native9 artifact set. The text probe
+can select another Editor release and writes that release into its disposable
+project; only Unity 6000.0.71f1 Linux has been measured so far.
