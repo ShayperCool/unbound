@@ -16,7 +16,8 @@ public static class RendererApiProbe
             try { value = action(); }
             catch (Exception e) { value = e.GetType().Name; }
             string text = value is bool b ? (b ? "true" : "false") : value is int i ? i.ToString()
-                : value is float f ? "\"" + f.ToString("R", System.Globalization.CultureInfo.InvariantCulture) + "\"" : "\"" + value + "\"";
+                : value is float f ? BitConverter.ToInt32(BitConverter.GetBytes(f), 0).ToString(System.Globalization.CultureInfo.InvariantCulture)
+                : "\"" + value + "\"";
             records.Add("\"" + key + "\":" + text);
         }
         float requested = Time.captureDeltaTime;
