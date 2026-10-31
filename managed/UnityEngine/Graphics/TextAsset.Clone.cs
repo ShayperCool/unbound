@@ -6,6 +6,6 @@ namespace UnityEngine
     {
         // Read a lazy imported asset now: the clone owns a snapshot, not the backing file or
         // the original's pinned array and safety handle.
-        Object Instantiation.ICloneable.CloneObject() => new TextAsset(m_Bytes.AsSpan());
+        Object Instantiation.ICloneable.CloneObject() => new TextAsset((System.ReadOnlySpan<byte>)m_Bytes);
     }
 }
