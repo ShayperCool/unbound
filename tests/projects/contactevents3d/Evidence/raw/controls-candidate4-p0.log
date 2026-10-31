@@ -1,0 +1,26 @@
+2026-10-31T07:55:44.551796Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 1629ms
+2026-10-31T07:55:44.562632Z  INFO unbound_runtime::config: prepared the game in 1.70s
+PhysX: TriangleMesh: Enable mesh welding with 0 weld tolerance! (/home/shaypercool/.t3/projects/unialt/native/physx/source/physxcooking/src/mesh/TriangleMeshBuilder.cpp:140)
+PhysX: TriangleMesh: Enable mesh welding with 0 weld tolerance! (/home/shaypercool/.t3/projects/unialt/native/physx/source/physxcooking/src/mesh/TriangleMeshBuilder.cpp:140)
+PhysX: TriangleMesh: Enable mesh welding with 0 weld tolerance! (/home/shaypercool/.t3/projects/unialt/native/physx/source/physxcooking/src/mesh/TriangleMeshBuilder.cpp:140)
+PhysX: TriangleMesh: Enable mesh welding with 0 weld tolerance! (/home/shaypercool/.t3/projects/unialt/native/physx/source/physxcooking/src/mesh/TriangleMeshBuilder.cpp:140)
+2026-10-31T07:55:44.926747Z ERROR game: Physics.Simulate cannot be called during a simulation step or its callbacks.
+   at Unbound.Runtime.PhysicsWorld.Simulate(Single deltaTime) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Physics/PhysicsWorld.cs:line 741
+   at UnityEngine.Physics.Simulate(Single step) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Physics/Physics.cs:line 334
+   at ContactControls.<>c.<Contact>b__8_0() in /mnt/storage-hdd/node-b-caches-20261023/contactevents3d-t3-f3abad48/controls-candidate4-p0/Assets/Scripts/ContactProbe.cs:line 45
+   at ContactControls.Try(String k, Action a) in /mnt/storage-hdd/node-b-caches-20261023/contactevents3d-t3-f3abad48/controls-candidate4-p0/Assets/Scripts/ContactProbe.cs:line 19
+   at ContactControls.Contact(PhysicsScene scene, ReadOnly headers) in /mnt/storage-hdd/node-b-caches-20261023/contactevents3d-t3-f3abad48/controls-candidate4-p0/Assets/Scripts/ContactProbe.cs:line 45
+   at UnityEngine.Physics.SendContactEvent(ReadOnly headers) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Physics/ContactEvent.cs:line 14
+   at Unbound.Runtime.PhysicsWorld.DispatchContactEvents() in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Physics/PhysicsWorld.cs:line 842
+   at Unbound.Runtime.PhysicsWorld.Simulate(Single deltaTime) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Physics/PhysicsWorld.cs:line 784
+   at UnityEngine.Physics.Simulate(Single step) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Physics/Physics.cs:line 334
+   at ContactControls.Run() in /mnt/storage-hdd/node-b-caches-20261023/contactevents3d-t3-f3abad48/controls-candidate4-p0/Assets/Scripts/ContactProbe.cs:line 86
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType loadType) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 530
+   at Unbound.Runtime.PlayerLoopDriver.Boot(String firstScene, Boolean unused) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 235
+   at Unbound.Host.Game.Start(Void* api, Byte* config, Int32 configLength) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/Unbound.Host/Game.cs:line 246
+
+2026-10-31T07:55:44.927164Z  INFO unbound_runtime::game: game started in 364.28ms
+2026-10-31T07:55:45.037018Z  INFO unbound_runtime::game: ran 1 frames in 109.68ms

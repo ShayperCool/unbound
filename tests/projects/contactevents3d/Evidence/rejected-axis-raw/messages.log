@@ -1,0 +1,18 @@
+2026-10-31T08:04:15.872120Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 1790ms
+2026-10-31T08:04:15.884748Z  INFO unbound_runtime::config: prepared the game in 1.86s
+2026-10-31T08:04:16.599468Z  INFO unbound_runtime::game: game started in 714.53ms
+2026-10-31T08:04:18.047814Z ERROR game: Coroutine couldn't be started because the the game object 'InactiveHost' is inactive!
+   at UnityEngine.MonoBehaviour.StartCoroutine(IEnumerator routine) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Core/MonoBehaviour.cs:line 55
+   at MessagesProbe.Start(String label, CoroutineHost host) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/tests/projects/messages/Assets/Scripts/MessagesProbe.cs:line 523
+   at MessagesProbe.Actions(Int32 frame) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/tests/projects/messages/Assets/Scripts/MessagesProbe.cs:line 435
+   at MessagesProbe.Update() in /mnt/data/t3-worktrees/unialt/t3-f3abad48/tests/projects/messages/Assets/Scripts/MessagesProbe.cs:line 303
+   at Unbound.Runtime.Lifecycle.UpdateList.Run(String message, Action atDefaultOrder) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Runtime/Lifecycle.cs:line 75
+   at Unbound.Runtime.Lifecycle.RunUpdate() in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Runtime/Lifecycle.cs:line 359
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T08:04:18.067329Z  INFO game: [Unbound] Play mode paused: frames stop until EditorApplication.isPaused is false again (Ctrl+Shift+P in the window)
+2026-10-31T08:04:18.071090Z  INFO game: [probe] wrote 335 records to /mnt/storage-hdd/node-b-caches-20261023/contactevents3d-t3-f3abad48/validation/engine/messages.jsonl
+2026-10-31T08:04:18.072335Z  INFO unbound_runtime::game: ran 445 frames in 1.47s

@@ -1,0 +1,63 @@
+using System;
+using System.IO;
+using System.Globalization;
+using UnityEngine;
+using Unity.Collections;
+public static class ContactGeometry
+{
+    static StreamWriter file;static string phase;static int serial;
+    static void Row(string key,params float[] v){file.WriteLine("{\"key\":\""+phase+"/"+(serial++)+"/"+key+"\",\"value\":["+string.Join(",",Array.ConvertAll(v,x=>x.ToString("R",CultureInfo.InvariantCulture)))+"]}");}
+    static void Event(PhysicsScene scene,NativeArray<ContactPairHeader>.ReadOnly headers)
+    {
+        Row("headers",headers.Length);
+        for(int i=0;i<headers.Length;i++)
+        {
+            var h=headers[i];Row("pairs",h.pairCount);
+            for(int j=0;j<h.pairCount;j++)
+            {
+                var p=h.GetContactPair(j);Row("pair",p.contactCount,p.isCollisionEnter?1:0,p.isCollisionStay?1:0,p.isCollisionExit?1:0);
+                for(int k=0;k<p.contactCount;k++){ref readonly var q=ref p.GetContactPoint(k);var v=q.position;var n=q.normal;var u=q.impulse;Row("point",v.x,v.y,v.z,n.x,n.y,n.z,q.separation,u.x,u.y,u.z);Row("face",p.GetContactPointFaceIndex(k));}
+            }
+        }
+    }
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Run()
+    {
+        string output=Environment.GetEnvironmentVariable("CONTACT_GEOMETRY_OUT");if(string.IsNullOrEmpty(output))return;
+        file=new StreamWriter(output);file.AutoFlush=true;Physics.simulationMode=SimulationMode.Script;Physics.gravity=Vector3.zero;
+        phase="defaults";var temp=new GameObject("defaults");var capsule=temp.AddComponent<CapsuleCollider>();Row("capsule",capsule.radius,capsule.height,capsule.direction);UnityEngine.Object.DestroyImmediate(temp);
+        Physics.ContactEvent+=Event;
+        foreach(float height in new[]{1f,2f})
+        {
+            phase="capsule-height-"+height;serial=0;
+            var a=new GameObject("capsuleA");var ca=a.AddComponent<CapsuleCollider>();ca.height=height;ca.providesContacts=true;
+            var b=new GameObject("capsuleB");b.transform.position=Vector3.right*.75f;var rb=b.AddComponent<Rigidbody>();rb.useGravity=false;var cb=b.AddComponent<CapsuleCollider>();cb.height=height;cb.providesContacts=true;
+            Physics.SyncTransforms();Physics.Simulate(.02f);UnityEngine.Object.DestroyImmediate(a);UnityEngine.Object.DestroyImmediate(b);Physics.Simulate(.02f);
+        }
+        foreach(string geometry in new[]{"mesh","terrain"})
+        {
+            phase=geometry;serial=0;
+            var a=new GameObject("support");Collider support;
+            if(geometry=="mesh")
+            {
+                var mesh=new Mesh();mesh.vertices=new[]{new Vector3(-2,0,-2),new Vector3(2,0,-2),new Vector3(2,0,2),new Vector3(-2,0,2)};
+                mesh.triangles=new[]{0,2,1,0,3,2};var mc=a.AddComponent<MeshCollider>();mc.sharedMesh=mesh;support=mc;
+            }
+            else
+            {
+                a.transform.position=new Vector3(-2,0,-2);
+                var data=new TerrainData();data.heightmapResolution=33;data.size=new Vector3(4,1,4);data.SetHeights(0,0,new float[33,33]);
+                var tc=a.AddComponent<TerrainCollider>();tc.terrainData=data;support=tc;
+            }
+            support.providesContacts=true;
+            var b=new GameObject("meshBody");b.transform.position=new Vector3(.1f,.4f,.2f);var rb=b.AddComponent<Rigidbody>();rb.useGravity=false;var box=b.AddComponent<BoxCollider>();box.providesContacts=true;
+            Physics.SyncTransforms();Physics.Simulate(.02f);UnityEngine.Object.DestroyImmediate(a);UnityEngine.Object.DestroyImmediate(b);Physics.Simulate(.02f);
+        }
+        Physics.ContactEvent-=Event;file.Dispose();
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.Exit(0);
+#else
+        Application.Quit();
+#endif
+    }
+}

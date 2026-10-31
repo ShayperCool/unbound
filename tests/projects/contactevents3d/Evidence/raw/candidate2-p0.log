@@ -1,0 +1,12 @@
+2026-10-31T07:47:19.069926Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 1682ms
+2026-10-31T07:47:19.080967Z  INFO unbound_runtime::config: prepared the game in 1.75s
+2026-10-31T07:47:19.388784Z  WARN game: Unbound: UnityEngine.Physics.defaultPhysicsScene is not implemented yet
+2026-10-31T07:47:19.390227Z  WARN game: Unbound: UnityEngine.PhysicsScene.op_Equality is not implemented yet
+2026-10-31T07:47:19.445289Z ERROR game: InvalidOperationException: contact-probe-sentinel
+   at ContactProbe.Throwing(PhysicsScene scene, ReadOnly a) in /mnt/storage-hdd/node-b-caches-20261023/contactevents3d-t3-f3abad48/candidate2-p0/Assets/Scripts/ContactProbe.cs:line 96
+   at UnityEngine.Physics.SendContactEvent(ReadOnly headers) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Physics/ContactEvent.cs:line 13
+2026-10-31T07:47:19.445794Z ERROR game: InvalidOperationException: contact-probe-sentinel
+   at ContactProbe.Throwing(PhysicsScene scene, ReadOnly a) in /mnt/storage-hdd/node-b-caches-20261023/contactevents3d-t3-f3abad48/candidate2-p0/Assets/Scripts/ContactProbe.cs:line 96
+   at UnityEngine.Physics.SendContactEvent(ReadOnly headers) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Physics/ContactEvent.cs:line 13
+2026-10-31T07:47:19.446438Z  INFO unbound_runtime::game: game started in 365.30ms
+2026-10-31T07:47:19.553103Z  INFO unbound_runtime::game: ran 1 frames in 106.49ms

@@ -1,0 +1,17 @@
+{
+  "native3": {
+    "expected": "ce1231ad776f31cf64eef43d14b0386ceebbc6150c5974551266b9904927a6ca",
+    "actual": "ce1231ad776f31cf64eef43d14b0386ceebbc6150c5974551266b9904927a6ca",
+    "verified": true
+  },
+  "native5": {
+    "expected": "44d80ded7984682c7f10f0224e631ca4548aa136e2a9591a0b1dad0fb51a5428",
+    "actual": "44d80ded7984682c7f10f0224e631ca4548aa136e2a9591a0b1dad0fb51a5428",
+    "verified": true
+  },
+  "initial": {
+    "expected": "f8453277b605e8dfcea20e643a8eacf84b3acdafe5db88dfb78eda287f6348e3",
+    "actual": "f8453277b605e8dfcea20e643a8eacf84b3acdafe5db88dfb78eda287f6348e3",
+    "verified": true
+  }
+}

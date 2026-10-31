@@ -1,0 +1,51 @@
+--- a/managed/UnityEngine/Physics/Collider.cs
++++ b/managed/UnityEngine/Physics/Collider.cs
+@@ -437,7 +437,7 @@
+     {
+         internal Vector3 m_Center;
+         internal float m_Radius = 0.5f;
+-        internal float m_Height = 2f;
++        internal float m_Height = 1f;
+         internal int m_Direction = 1;
+ 
+         public CapsuleCollider() { }
+@@ -486,7 +486,15 @@
+         internal override ulong CreateShape(ulong body, in B3.ShapeDef def, Matrix4x4 toBody, Rigidbody rigidbody)
+         {
+             Segment(toBody, out var a, out var b, out float r);
+-            if ((b - a).sqrMagnitude < 1e-10f) return B3.ua3_shape_sphere(body, def, (a + b) * 0.5f, r);
++            if ((b - a).sqrMagnitude < 1e-10f)
++            {
++                int axis = Mathf.Clamp(m_Direction, 0, 2);
++                var column = new Vector3(toBody[0, axis], toBody[1, axis], toBody[2, axis]);
++                var direction = column.sqrMagnitude > 1e-20f ? column.normalized : Vector3.up;
++                var center = (a + b) * 0.5f;
++                a = center - direction * 5e-6f;
++                b = center + direction * 5e-6f;
++            }
+             return B3.ua3_shape_capsule(body, def, a, b, r);
+         }
+ 
+@@ -502,7 +510,7 @@
+         {
+             ReadColliderData(body, resolver);
+             m_Radius = body.Float("m_Radius", 0.5f);
+-            m_Height = body.Float("m_Height", 2f);
++            m_Height = body.Float("m_Height", 1f);
+             m_Direction = body.Int("m_Direction", 1);
+             m_Center = body.Vector3("m_Center");
+         }
+--- a/managed/UnityEngine/Core/Object.cs
++++ b/managed/UnityEngine/Core/Object.cs
+@@ -173,6 +173,11 @@
+         public static void DestroyImmediate(Object obj, [UnityEngine.Internal.DefaultValue("false")] bool allowDestroyingAssets)
+         {
+             if ((object)obj == null || obj.m_Destroyed) return;
++            if (Unbound.Runtime.PhysicsWorld.IsStepping && obj is GameObject)
++            {
++                Debug.LogError("Destroying GameObjects immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.");
++                return;
++            }
+             if (obj.IsPersistentAsset && !allowDestroyingAssets)
+             {
+                 Debug.LogError("Destroying assets is not permitted to avoid data loss.\n" +

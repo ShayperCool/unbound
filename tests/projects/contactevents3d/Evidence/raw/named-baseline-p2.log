@@ -1,0 +1,9 @@
+2026-10-31T08:12:51.823195Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 1605ms
+2026-10-31T08:12:51.834819Z  INFO unbound_runtime::config: prepared the game in 1.67s
+2026-10-31T08:12:52.108229Z  WARN game: Unbound: UnityEngine.ContactPairHeader.pairCount is not implemented yet
+2026-10-31T08:12:52.108386Z  WARN game: Unbound: UnityEngine.ContactPair.contactCount is not implemented yet
+2026-10-31T08:12:52.108622Z  WARN game: Unbound: UnityEngine.ContactPairHeader.GetContactPair is not implemented yet
+2026-10-31T08:12:52.108808Z  WARN game: Unbound: UnityEngine.ContactPair.GetContactPoint is not implemented yet
+2026-10-31T08:12:52.108940Z  WARN game: Unbound: UnityEngine.Physics.ContactEvent is not implemented yet
+2026-10-31T08:12:52.166632Z  INFO unbound_runtime::game: game started in 331.64ms
+2026-10-31T08:12:52.265990Z  INFO unbound_runtime::game: ran 1 frames in 99.25ms

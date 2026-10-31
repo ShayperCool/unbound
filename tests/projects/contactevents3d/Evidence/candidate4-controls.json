@@ -1,0 +1,35 @@
+{
+  "records": 199,
+  "exact": 194,
+  "matched": 194,
+  "differences": [
+    {
+      "key": "destroy/17/legacy",
+      "reference": "4",
+      "candidate": null,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "destroy/17/returned",
+      "reference": null,
+      "candidate": "True",
+      "reason": "missing/extra"
+    },
+    {
+      "key": "destroy/18/returned",
+      "reference": "True",
+      "candidate": null,
+      "reason": "missing/extra"
+    },
+    {
+      "key": "scene/0/hash",
+      "reference": "2108477106",
+      "candidate": "-827477508"
+    },
+    {
+      "key": "scene/4/defaultHash",
+      "reference": "2108477106",
+      "candidate": "-827477508"
+    }
+  ]
+}

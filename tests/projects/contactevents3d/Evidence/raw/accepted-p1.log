@@ -1,0 +1,10 @@
+2026-10-31T08:10:26.910955Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 1648ms
+2026-10-31T08:10:26.924440Z  INFO unbound_runtime::config: prepared the game in 1.72s
+2026-10-31T08:10:27.299141Z ERROR game: InvalidOperationException: contact-probe-sentinel
+   at ContactProbe.Throwing(PhysicsScene scene, ReadOnly a) in /mnt/storage-hdd/node-b-caches-20261023/contactevents3d-t3-f3abad48/accepted-p1/Assets/Scripts/ContactProbe.cs:line 96
+   at UnityEngine.Physics.SendContactEvent(ReadOnly headers) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Physics/ContactEvent.cs:line 22
+2026-10-31T08:10:27.299597Z ERROR game: InvalidOperationException: contact-probe-sentinel
+   at ContactProbe.Throwing(PhysicsScene scene, ReadOnly a) in /mnt/storage-hdd/node-b-caches-20261023/contactevents3d-t3-f3abad48/accepted-p1/Assets/Scripts/ContactProbe.cs:line 96
+   at UnityEngine.Physics.SendContactEvent(ReadOnly headers) in /mnt/data/t3-worktrees/unialt/t3-f3abad48/managed/UnityEngine/Physics/ContactEvent.cs:line 22
+2026-10-31T08:10:27.299992Z  INFO unbound_runtime::game: game started in 375.37ms
+2026-10-31T08:10:27.400232Z  INFO unbound_runtime::game: ran 1 frames in 100.12ms

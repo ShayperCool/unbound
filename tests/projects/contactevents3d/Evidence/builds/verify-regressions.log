@@ -1,0 +1,8 @@
+Traceback (most recent call last):
+  File "/mnt/data/t3-worktrees/unialt/t3-f3abad48/tests/projects/contactevents3d/verify_regressions.py", line 173, in <module>
+    main()
+    ~~~~^^
+  File "/mnt/data/t3-worktrees/unialt/t3-f3abad48/tests/projects/contactevents3d/verify_regressions.py", line 87, in main
+    assert bad(after) <= bad(before), name
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+AssertionError: physics

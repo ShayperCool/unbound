@@ -101,7 +101,7 @@ public static class ContactProbe
     }
     static Collider Make(string name,int type,Vector3 pos,string geometry="box")
     {
-        var go=new GameObject(name);roots.Add(go);go.transform.position=pos;
+        var go=new GameObject(phase+"/"+name);roots.Add(go);go.transform.position=pos;
         if(type!=0) { var rb=go.AddComponent<Rigidbody>();rb.isKinematic=type==1;rb.useGravity=false;Register(rb,name+".body"); }
         Collider c;
         if(geometry=="sphere") c=go.AddComponent<SphereCollider>();
@@ -132,11 +132,12 @@ public static class ContactProbe
             {
                 string key=g+"/"+a+"-"+b;phase=key+"/create";var c=Make("A",a,Vector3.zero,g);var d=Make("B",b,new Vector3(.75f,0,0),g);Physics.SyncTransforms();
                 Step(key+"/enter");Step(key+"/stay");
+                if(a==1)c.attachedRigidbody.MovePosition(new Vector3(.01f,0,0));if(b==1)d.attachedRigidbody.MovePosition(new Vector3(.76f,0,0));Step(key+"/moved");
                 if(a==2)c.attachedRigidbody.Sleep();if(b==2)d.attachedRigidbody.Sleep();Step(key+"/sleep");
                 d.transform.position=Vector3.right*5;Physics.SyncTransforms();Step(key+"/exit");Clear();Step(key+"/empty");
             }
             phase="compound/create";var ca=Make("A",2,Vector3.zero);var cb=Make("B",0,new Vector3(.75f,0,0));var cc=Make("C",2,new Vector3(0,.75f,0));
-            var child=new GameObject("A-child");child.transform.SetParent(ca.transform,false);child.transform.localPosition=new Vector3(0,.2f,0);var cs=child.AddComponent<BoxCollider>();Register(cs,"A.childShape");Physics.SyncTransforms();Step("compound/enter");Step("compound/stay");Clear();Step("compound/clear");
+            var child=new GameObject(phase+"/A-child");child.transform.SetParent(ca.transform,false);child.transform.localPosition=new Vector3(0,.2f,0);var cs=child.AddComponent<BoxCollider>();Register(cs,"A.childShape");Physics.SyncTransforms();Step("compound/enter");Step("compound/stay");Clear();Step("compound/clear");
             foreach(string m in new[]{"none","disable","trigger","invokeOff","unsubscribe","move","throw"})
             {
                 phase="mutation/"+m+"/create";var c=Make("A",2,Vector3.zero);Make("B",0,new Vector3(.75f,0,0));Physics.SyncTransforms();
