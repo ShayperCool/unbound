@@ -62,6 +62,11 @@ public static class ProbeRunner
                 defaults.SaveAndReimport();
             }
 
+            var still = (ModelImporter)AssetImporter.GetAtPath(Dir + "RigStatic.fbx");
+            Generic(still);
+            still.importAnimation = false;
+            still.SaveAndReimport();
+
             var model = AssetDatabase.LoadAssetAtPath<GameObject>(Model);
             AssetDatabase.CreateFolder("Assets", "Masks");
             var noProp = MaskOf(model, "Prop");
@@ -140,6 +145,13 @@ public static class ProbeRunner
             var eventsRange = Clip("EventsRange", 6f, 30f, true);
             eventsRange.events = new[] { new AnimationEvent { time = 0.5f, functionName = "Hit", floatParameter = 2f } };
             clips.Add(eventsRange);
+            var eventsCycle = Clip("EventsCycle", loop: true);
+            eventsCycle.cycleOffset = 0.25f;
+            eventsCycle.events = events.events;
+            clips.Add(eventsCycle);
+            var eventsOnce = Clip("EventsOnce");
+            eventsOnce.events = events.events;
+            clips.Add(eventsOnce);
             var wrap = Clip("Wrap"); wrap.wrapMode = WrapMode.PingPong; clips.Add(wrap);
 
             var importer = (ModelImporter)AssetImporter.GetAtPath(Model);
@@ -154,7 +166,7 @@ public static class ProbeRunner
             foreach (var name in new[] { "MaskModel", "MaskAsset", "MaskStale", "MaskNone" })
                 Layered("O_" + name, Load(name), additive: false);
             // The state's cycle offset with the clip's, on a looping and a non-looping clip.
-            foreach (var name in new[] { "Cycle", "CycleOnce", "Loop", "Full" })
+            foreach (var name in new[] { "Cycle", "CycleOnce", "Loop", "Full", "Events", "EventsOnce" })
                 Single("S_" + name, Load(name), 0.1f);
             AssetDatabase.SaveAssets();
             EditorApplication.Exit(0);

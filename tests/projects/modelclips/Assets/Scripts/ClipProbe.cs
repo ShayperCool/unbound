@@ -131,15 +131,19 @@ public class ClipProbe : MonoBehaviour
             Imported("RigDefault", true);
             Imported("RigReduced", false);
             Imported("RigOptimal", false);
-            // The rest pose of the model, for the masked and unanimated transforms.
-            var rest = Instantiate(Resources.Load<GameObject>("Rig"));
-            Record("rest", "{" + string.Join(",", s_Nodes.Select(p =>
+            // The rest pose of the models, for the masked and unanimated transforms.
+            foreach (var model in new[] { "Rig", "RigDefault", "RigReduced", "RigOptimal", "RigStatic" })
             {
-                var t = rest.transform.Find(p);
-                string n = p.Substring(p.LastIndexOf('/') + 1);
-                return "\"" + n + ".p\":" + V(t.localPosition) + ",\"" + n + ".r\":" + Q(t.localRotation) + ",\"" + n + ".s\":" + V(t.localScale);
-            })) + ",\"animator\":" + (rest.GetComponent<Animator>() != null ? 1 : 0) + "}");
-            DestroyImmediate(rest);
+                var rest = Instantiate(Resources.Load<GameObject>(model));
+                Record(model == "Rig" ? "rest" : "rest." + model, "{" + string.Join(",", s_Nodes.Select(p =>
+                {
+                    var t = rest.transform.Find(p);
+                    string n = p.Substring(p.LastIndexOf('/') + 1);
+                    return "\"" + n + ".p\":" + V(t.localPosition) + ",\"" + n + ".r\":" + Q(t.localRotation) + ",\"" + n + ".s\":" + V(t.localScale);
+                })) + ",\"animator\":" + (rest.GetComponent<Animator>() != null ? 1 : 0) + "}");
+                DestroyImmediate(rest);
+            }
+            Imported("RigStatic", false);
             foreach (var clip in Clips("Rig"))
                 Play("play." + clip.name, "Rig", "C_" + clip.name);
             Play("play.Default", "RigDefault", "C_Default");
@@ -147,7 +151,7 @@ public class ClipProbe : MonoBehaviour
                 Play("additive." + name, "Rig", "A_" + name);
             foreach (var name in new[] { "MaskModel", "MaskAsset", "MaskStale", "MaskNone" })
                 Play("override." + name, "Rig", "O_" + name);
-            foreach (var name in new[] { "Cycle", "CycleOnce", "Loop", "Full" })
+            foreach (var name in new[] { "Cycle", "CycleOnce", "Loop", "Full", "Events", "EventsOnce" })
                 Play("stateoffset." + name, "Rig", "S_" + name);
         }
         catch (Exception e)

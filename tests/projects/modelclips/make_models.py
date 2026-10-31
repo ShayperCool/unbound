@@ -8,7 +8,8 @@ pose only; Spin turns 270 degrees about one axis. Keys every 12 frames, linear i
 exported with a key on every frame. The .meta (clip ranges, loop, masks, curves, events) is made
 by `run.py create` (ProbeRunner.Create in the Editor);
 RigDefault.fbx is the same file with the default clip settings (one clip per take), RigReduced.fbx
-and RigOptimal.fbx too, with keyframe reduction and Optimal compression.
+and RigOptimal.fbx too, with keyframe reduction and Optimal compression, RigStatic.fbx without
+animation import. The file's current frame is 1, so its static node transforms are frame 1's.
 """
 import os
 import shutil
@@ -87,7 +88,7 @@ def main():
     target = os.path.join(PROBE, 'Assets', 'Resources')
     os.makedirs(target, exist_ok=True)
     rig_path = rig()
-    for name in ('Rig.fbx', 'RigDefault.fbx', 'RigReduced.fbx', 'RigOptimal.fbx'):
+    for name in ('Rig.fbx', 'RigDefault.fbx', 'RigReduced.fbx', 'RigOptimal.fbx', 'RigStatic.fbx'):
         shutil.copyfile(rig_path, os.path.join(target, name))
 
 
