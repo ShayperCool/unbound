@@ -16,7 +16,7 @@ Game runs keep hitting features that are missing *without a warning* (physical c
 | Pattern | Example | Why it is silent |
 |---|---|---|
 | Hand-written empty body | `Camera.SetReplacementShader { }`, `Animator.ApplyBuiltinRootMotion` | A hand-written member suppresses the generated stub, and with it the warning (516 empty public bodies in the hand-written sources, many legitimate) |
-| Stored, never consumed | `Camera.depthTextureMode`, `Rigidbody` project defaults, `ParticleSystemRenderer` vertex streams | Auto-properties and fields the frame/simulation never reads |
+| Stored, never consumed | `Collider.hasModifiableContacts`, `Physics2D.simulationLayers` | Auto-properties and fields the frame/simulation never reads |
 | Serialized field or import setting not read | `m_DisabledShaderPasses`, `m_RenderingPath`, terrain lightmap, ModelImporter clip masks/root motion, `m_ContactPairsMode` | `ReadSerialized` / the importers read a subset of keys and drop the rest |
 | Message looked up, never sent | `OnAnimatorIK`, `OnParticleUpdateJobScheduled` (`Messages.cs` `s_NotSent` lists them) | Messages are not API calls: `api-gaps` cannot see them |
 | Overload drops a parameter | `SetPropertyBlock(block, materialIndex)`, `SetPixels(..., mip)`, Blit depth slice, `RenderTextureSubElement` | Forwarded to the simpler overload |
@@ -188,7 +188,8 @@ in ROADMAP; NavMesh queries/builds/agents/avoidance; terrain heights, collider, 
 | Particle custom vertex streams (`SetActiveVertexStreams`, `m_VertexStreams`) | `Particles/ParticleSystemRenderer.Streams.cs`; 3544 main/trail Editor records plus 23646 noise observations for packed attributes, random/noise vectors, transformed baking, particle aging, tail expiry and ribbon joins | W/S | done for measured main/trail/noise streams and declarations, with three byte-identical GPU images; further renderer edge cases remain separate |
 | `ParticleCollisionEvent.colliderComponent` always null | `Particles/ParticleTypes.cs:409` | S | done (answers the hit collider; no probe yet) |
 | `NavMeshObstacle` does nothing (no carving, no avoidance obstacle) | `AI/NavMeshObstacle.cs:197-220` | S (carving warns) | **H** where used |
-| Project physics defaults (solver iterations, sleep threshold, max angular speed, max depenetration) overwritten per body by hard-coded values | `Physics/Rigidbody.cs:36-41`, `Physics/PhysicsWorld.cs:359` | S | M |
+| Project physics defaults (solver iterations, sleep threshold, max angular speed, max depenetration) overwritten per body by hard-coded values | `Physics/Rigidbody.cs`, `Physics/Physics.cs` | S | done for Unity 6000.0.71f1 (creation snapshots, activation/allocation, scene/prefab loading, clone resets, setter boundaries and motion; tests/projects/physicsdefaults matches 582/582 with the original motion tolerance; older releases and invalid-value simulation unmeasured) |
+| Collider contact-offset default lifetime and live assignment | `Physics/Collider.cs`, `Physics/Box3D.cs`, `native/unbound_physx.cpp` | S | done for measured cases (creation snapshots, clone resets, shape-dependent assignment, activation and live box contact callbacks; all 193 added observations equal Native exactly; controller motion with overrides and terrain tree shapes unmeasured) |
 | DynamicsManager: contact pairs mode, solver type (TGS), friction type, determinism not read | `Physics/Physics.cs:79-112`, `native/unbound_physx.cpp:450` | S | M — kinematic pair callbacks |
 | `LocalPhysicsMode` / `PhysicsScene(2D).Simulate`: local scenes join the main world | `Core/SceneManagement.cs:74-97` | S | M-H — trajectory preview |
 | `autoTraverseOffMeshLink = false` ignored; link traversal speed is Detour's | `AI/NavMeshAgent.cs:68` | S | M-H |
@@ -205,7 +206,7 @@ in ROADMAP; NavMesh queries/builds/agents/avoidance; terrain heights, collider, 
 | Terrain baked lightmap import/rendering | `Terrain/TerrainRenderer.cs`, `Graphics/Lightmapping.cs`, `crates/unbound-shaders/src/surface.rs` | S | done for baked lighting (LightingData bindings, per-terrain indices/ST/UVs, directional/missing maps, original Diffuse/Standard and ordinary surface meshes in Linear/Gamma); realtime GI remains unsupported with a warning, shadowmask/add-pass mixing need more coverage |
 | Realtime GI charts, dynamic lightmap textures and shader bindings | `Graphics/Lightmapping.cs`, `Terrain/TerrainRenderer.cs` | W/S | M-H (four retained realtime cases in tests/projects/terrainlightmaps; Terrain warns, other renderer paths need an audit) |
 | Terrain auto-connect (`SetConnectivityDirty`), `normalmapTexture`, patch LOD overrides | `Terrain/Terrain.cs`, `TerrainData.cs` | W | L |
-| HingeJoint `freeSpin`/`extendedLimits`, `queriesHitBackfaces`, cooking options, live `contactOffset` | `Physics/Joints.cs`, `Physics/Physics.cs:191`, `Physics/Collider.cs` | S | L-M |
+| HingeJoint `freeSpin`/`extendedLimits`, `queriesHitBackfaces`, cooking options | `Physics/Joints.cs`, `Physics/Physics.cs:191`, `Physics/Collider.cs` | S | L-M |
 | 2D sub-stepping, `simulationLayers`, force send/receive layers, `Rigidbody2D.Slide` | `Physics2D/*` | S/W | L-M |
 | Particles: `cullingMode`, stretched-billboard details, `safeCollisionEventSize`, vector fields (noise rotation/size now measured and implemented) | `Particles/*` | S | L-M |
 | `ArticulationBody`, `Physics.BakeMesh`, `TerrainCallbacks`, `Tree`/SpeedTree wind | stubs | W/S | L |

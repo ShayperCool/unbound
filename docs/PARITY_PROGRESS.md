@@ -662,19 +662,60 @@ phases; ForceUpdateCanvases does not overwrite later authored rect changes. Nest
 driver release, parent scale/rotation and RectTransform reparent/clone callbacks match Native.
 Transform.KeepWorldPose is virtual so RectTransform can retain rect size on SetParent(true).
 
-Parent integration matches8671/8671 observations, including293 snapshots and401 callbacks.
+Parent integration matches 8671/8671 observations, including 293 snapshots and 401 callbacks.
 Two Native files and the committed reference are byte-identical. Linear/Gamma color checks
-remain49201/49201 EACH,98402 total; uitk metadata, eleven interaction steps and three PNGs
-remain byte-identical to the prior parent baseline. Managed build/API check pass,0 errors
-in2266 types.
+remain 49201/49201 EACH, 98402 total; uitk metadata, eleven interaction steps and three PNGs
+remain byte-identical to the prior parent baseline. Managed build/API check pass, 0 errors
+in 2266 types.
 
 The old CanvasOrder test expected inherited overlay depth to survive layout. Native
-transformParent.0.mode proves world Z0/local Z-100 under a parent at Z100. Parent corrected
+transformParent.0.mode proves world Z 0/local Z -100 under a parent at Z 100. Parent corrected
 the test in d4dedb12 to assert this behavior and explicit sortingOrder precedence, rather than
-changing the implementation back. Canvas/UIElements/Yoga now261/261 pass; additional
-Core/RectTransform coverage14/14 passes. There are no remaining failures from this handoff.
+changing the implementation back. Canvas/UIElements/Yoga now 261/261 pass; additional
+Core/RectTransform coverage 14/14 passes. There are no remaining failures from this handoff.
 
 Evidence: ~/.cache/compat/canvas-parent-* and tests/projects/canvaslifecycle/README.md.
 The color fixture is restored to Linear. Earlier Unity releases, standalone players and
-additional cross-callback state observations remain unmeasured. The next handoff to integrate
-is project Rigidbody defaults, including the reported Collider.contactOffset follow-up.
+additional cross-callback state observations remain unmeasured. The Rigidbody defaults and
+Collider.contactOffset follow-up are integrated below.
+
+## Integrated project physics defaults and Collider contact offsets
+
+Reviewed and cherry-picked the Rigidbody delegate's five commits as f91b31ee, dd2273ad,
+ad28e0c6, b0a6ee49 and 7596d6b5. Components snapshot project solver iterations, sleep threshold,
+angular speed and depenetration speed at construction. Allocation and reactivation retain
+those values; imported and cloned components use current defaults. Setter magnitude/clamp,
+nonpositive rejection and nonfinite readback follow the measured Native rules.
+
+Parent extended the original 389-record oracle with 193 Collider observations in 48e4c4f1.
+Two independent Native recordings agree on all 582 records, including every original value.
+The added cases cover six collider types, empty and valid mesh/terrain geometry, active/inactive
+objects and parents, disabled components, clone/prefab lifetime and invalid setters. A moving
+box measures contact entry, exit and stay when contactOffset changes during simulation.
+
+The integrated Rigidbody changes matched 388/389 original records; Collider.contactOffset
+still read the mutable global. Parent's pre-Collider build matches 452/582 expanded records.
+Commit 241340a6 snapshots Collider defaults and preserves them through activation, resets
+clones, ignores assignments without a shape, and updates live PhysX shapes directly. There is
+no body/shape recreation to approximate contact updates. PhysX shim version is 6; the engine
+protocol and main native ABI remain unchanged.
+
+Parent validation:
+
+- 582/582 records match at the unchanged tolerances. All 193 added Collider records and 576
+  total records are exactly equal. Six solver-motion records retain rounding up to 6.15e-08,
+  well within the original 1e-3 motion tolerance. Zero records were excluded.
+- Rust CLI/native and managed host builds pass. API-check reports zero errors in 2266 types.
+- Managed PhysicsTests/Physics2DTests pass 33/33, with no skips. Build fix c4e09fda selects
+  the test native library from CARGO_TARGET_DIR or explicit UnboundNativeDir. Absolute,
+  relative and fallback selection were checked; the copied library matches Cargo's SHA256.
+- Broad physics remains 21/29 scenarios, with exactly the same eight known differences.
+  Joints remain 26/27 plus the known hinge-limit settling-force difference. Controller is
+  23/23 and ConstantForce 608/608. Their complete comparison text equals the delegate's
+  pre-Collider regression output, including the 85/292 differing 3D stack values.
+
+Evidence and commands: tests/projects/physicsdefaults/README.md, its Evidence directory and
+~/.cache/compat/physics-parent-*. The historical 388/389 recording is retained separately;
+the final full recording is Evidence/unbound-collider.jsonl. Controller-specific movement
+with offset overrides, terrain tree shapes, older releases and invalid-value simulation
+remain unmeasured. Existing solver/contact drift and other DynamicsManager settings stay open.

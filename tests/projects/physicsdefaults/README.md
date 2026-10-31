@@ -7,7 +7,14 @@ are intentionally distinct from stock defaults: position iterations 11, velocity
 iterations 4, sleep threshold 0.03125, angular speed 13, depenetration speed 3.25,
 and contact offset 0.025.
 
-The 389 JSONL records cover static settings, new components, active and inactive
+The integrated parent matches **582/582 records**, including the Collider
+follow-up below. Two Native recordings agree exactly. There are 576 exactly equal
+engine records and six solver-motion rounding records, worst 6.15e-08 absolute,
+within the original motion tolerance. Managed physics tests pass 33/33 and
+api-check reports zero errors in 2266 types. Existing physics regressions are
+unchanged; `Evidence/parent-regressions.txt` retains their full comparison.
+
+The original 389 Rigidbody JSONL records cover static settings, new components, active and inactive
 scene imports, prefab loading, instantiation, lazy native allocation, activation,
 reactivation, runtime overrides, individual global changes, and existing versus
 future bodies. Invalid assignments cover both allocated and inactive bodies,
@@ -16,8 +23,11 @@ infinities. Each invalid assignment starts from restored project globals. Motion
 cases exercise angular clamping, supported-body sleeping, penetration recovery,
 and a tilted box solved over five steps.
 
-Two separate Editor processes produced `Reference/unity-6000.0.71f1.jsonl` and
-`Evidence/native-repeat.jsonl` before runtime changes. All 389 records agree.
+Two separate Editor processes produced agreeing initial 389-record references
+before runtime changes. `Evidence/native-repeat.jsonl` retains that original
+recording. The current `Reference/unity-6000.0.71f1.jsonl` and independent
+`Evidence/native-collider-repeat.jsonl` add 193 Collider records, retaining every
+original value unchanged.
 The comparator checks every key and rejects missing/extra records. Field tolerance
 is 1e-6 relative to max(1, |reference|); motion retains the broad physics fixture's
 original 1e-3 tolerance. Solver motion differences are counted separately and
@@ -44,6 +54,7 @@ Commands, run from this worktree root, one heavy process at a time:
 
 ```bash
 export PATH="$HOME/.cargo/bin:$HOME/.dotnet:$PATH"
+export CARGO_TARGET_DIR="${CARGO_TARGET_DIR:-$PWD/target}"
 export UseSharedCompilation=false MSBUILDDISABLENODEREUSE=1 DOTNET_CLI_USE_MSBUILD_SERVER=0
 fixture="$PWD/tests/projects/physicsdefaults"
 editor="$HOME/Unity/Hub/Editor/6000.0.71f1/Editor/Unity"
@@ -54,27 +65,30 @@ heavy="$HOME/.cache/compat/with-heavy-job"
 PHYSICS_DEFAULTS_OUT="$fixture/Reference/unity-6000.0.71f1.jsonl" \
   "$heavy" timeout 180 "$editor" -batchmode -nographics -projectPath "$fixture" \
   -executeMethod ProbeRunner.Record -logFile /tmp/physicsdefaults-native1.log
-PHYSICS_DEFAULTS_OUT="$fixture/Evidence/native-repeat.jsonl" \
+PHYSICS_DEFAULTS_OUT="$fixture/Evidence/native-collider-repeat.jsonl" \
   "$heavy" timeout 180 "$editor" -batchmode -nographics -projectPath "$fixture" \
   -executeMethod ProbeRunner.Record -logFile /tmp/physicsdefaults-native2.log
 python3 "$fixture/compare.py" "$fixture/Reference/unity-6000.0.71f1.jsonl" \
-  "$fixture/Evidence/native-repeat.jsonl"
+  "$fixture/Evidence/native-collider-repeat.jsonl"
 
+UNBOUND_SKIP_MANAGED_BUILD=1 "$heavy" timeout 600 cargo build --release -p unbound -j 2
 "$heavy" timeout 300 dotnet build managed/Unbound.Host/Unbound.Host.csproj -c Release \
-  -o "$PWD/target/physicsdefaults-managed" -p:UnboundTarget="$PWD/target/physicsdefaults-build/" \
+  -o "$CARGO_TARGET_DIR/managed" -p:UnboundTarget="$CARGO_TARGET_DIR/managed-build/" \
   --disable-build-servers -m:1 -p:UseSharedCompilation=false /nodeReuse:false
-export UNBOUND_MANAGED_DIR="$PWD/target/physicsdefaults-managed"
-export LD_LIBRARY_PATH="/mnt/storage-hdd/node-b-caches-20261023/unialt-target-compat/managed${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
-cli=/mnt/storage-hdd/node-b-caches-20261023/unialt-target-compat/release/unbound
-PHYSICS_DEFAULTS_OUT="$fixture/Evidence/unbound.jsonl" \
+export UNBOUND_MANAGED_DIR="$CARGO_TARGET_DIR/managed"
+export LD_LIBRARY_PATH="$CARGO_TARGET_DIR/managed${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH}"
+cli="$CARGO_TARGET_DIR/release/unbound"
+PHYSICS_DEFAULTS_OUT="$fixture/Evidence/unbound-collider.jsonl" \
   "$heavy" timeout 180 "$cli" run -p "$fixture" --headless 600
 python3 "$fixture/compare.py" "$fixture/Reference/unity-6000.0.71f1.jsonl" \
-  "$fixture/Evidence/unbound.jsonl"
+  "$fixture/Evidence/unbound-collider.jsonl"
+"$heavy" timeout 240 "$cli" api-check -p "$fixture"
 ```
 
-The parent CLI is reused with this worktree's managed output and unchanged native
-libraries through LD_LIBRARY_PATH. No child invocation of gen-stubs or api-check
-is used. Runtime caches belong in each fixture's Library/Unbound directory.
+The commands above are for the integrated parent, which owns shared outputs and
+api-check. The original delegate reused the parent CLI with private managed
+output and did not invoke gen-stubs or api-check. Runtime caches belong in each
+fixture's Library/Unbound directory.
 
 Before the fix, the parent source at 49407b61 with a fresh child-managed build
 matched 76/389 records. The 313 failing records include five solver motion
@@ -83,16 +97,17 @@ records. The complete recording and comparison are retained as
 The two Native recordings are exactly equal by key and value; enumeration order
 of the two scene bodies differs between Editor processes.
 
-After the fix, `Evidence/unbound.jsonl` matches 388/389 records. Of those, 382
+After the Rigidbody fix, before the Collider follow-up, `Evidence/unbound.jsonl`
+matches 388/389 records against `Evidence/native-repeat.jsonl`. Of those, 382
 are exactly equal by parsed key/value and six solver-motion records have rounding
 up to 6.15e-08 absolute. They pass the original 1e-3 motion tolerance. The comparator
 reports those six separately, with zero solver failures outside tolerance.
 The only failing record is `global-5/contact-old`: an existing collider returns
 0.05 after the global changes, while Native retains its creation offset 0.025.
-`Collider.cs` is outside this task's exclusive ownership. Fixing it requires
+`Collider.cs` was outside the delegate's exclusive ownership. Fixing it required
 snapshotting collider defaults independently of lazy shape allocation and
 activation, rather than reading the mutable global in its getter. This failure
-is retained in the fixture and the comparator still exits 1. It is not a
+is retained in the delegate's historical recording. It is not a
 Rigidbody-default failure and no native setter or ABI extension is needed for
 the implemented Rigidbody changes.
 
@@ -122,7 +137,7 @@ Exact regression commands, after exporting the same environment as above:
 ```bash
 mkdir -p target/physicsdefaults-results/{joints,controller,forces}
 "$heavy" timeout 300 dotnet test managed/UnityEngine.Tests/UnityEngine.Tests.csproj \
-  -c Release -p:UnboundTarget="$PWD/target/physicsdefaults-build/" \
+  -c Release -p:UnboundTarget="$CARGO_TARGET_DIR/managed-build/" \
   --disable-build-servers -m:1 -p:UseSharedCompilation=false /nodeReuse:false \
   --filter 'FullyQualifiedName~UnityEngine.Tests.PhysicsTests|FullyQualifiedName~UnityEngine.Tests.Physics2DTests' \
   --logger 'trx;LogFileName=physics-regressions.trx' \
@@ -148,8 +163,9 @@ allocated and inactive bodies; subsequent simulation with invalid settings and
 exact error diagnostics are unmeasured. Project YAML contains valid custom
 settings, not malformed settings assets. The maxLinearVelocity tests establish
 readback, sign handling and clone resets, not its existing post-step clamping
-algorithm. Collider contact-default lifetime, other releases, and the inherited
-solver/contact differences remain separate work. This is not full engine parity.
+algorithm. The Collider follow-up below closes contact-default lifetime. Other
+releases and the inherited solver/contact differences remain separate work.
+This is not full engine parity.
 
 ## Collider follow-up oracle
 
@@ -199,3 +215,17 @@ libraries fail the existing version check. The engine protocol and main native
 ABI are unchanged. Controller-specific motion after contact-offset overrides,
 terrain tree shapes, older Unity releases and invalid-value simulation remain
 unmeasured.
+
+Parent validation also rebuilds the Rust CLI/native library and managed host,
+runs all 33 PhysicsTests/Physics2DTests and the API check, and repeats broad
+physics, joints, controller and ConstantForce probes. Results remain 21/29 broad
+scenarios with the same eight differences, 26/27 joints with the same known
+hinge-limit force difference, 23/23 controller and 608/608 forces. The full parent
+comparison is `Evidence/parent-regressions.txt`; outputs and build/API/test logs
+are `~/.cache/compat/physics-parent-*`. No new failures occurred.
+
+The managed test project now locates its native library through CARGO_TARGET_DIR
+or an explicit UnboundNativeDir, falling back to target/managed. Parent verified
+the absolute/relative/default path selection and SHA256 equality between the
+test copy and rebuilt Cargo library. This prevents a custom Cargo target from
+silently leaving tests with an older native library from the default target.
