@@ -760,3 +760,44 @@ Parent outputs, build/API/test/regression logs and the complete failing MSAA com
 ~/.cache/compat/rectclip-parent-*. Nonfinite-input GPU rendering, perspective/tilted canvases,
 normal/tangent shader inputs, older releases and additional nested Overlay combinations
 remain unmeasured. This closes measured rectangle clipping, not complete UI/rendering parity.
+
+## Integrated camera MSAA sample selection
+
+Reviewed and cherry-picked the camera delegate's four commits as 1c962e0c, 7f1d7021,
+81b54879 and 89a50e33. An explicit HDR target now supplies its own samples. Quality
+samples belong to the screen and to the HDR intermediate used when converting to an LDR
+target; explicit buffer bindings bypass that intermediate. HDR resolves before LDR byte
+quantization, including alpha. Supported-sample API requests round down to a supported
+power of two on the measured reference device. Only FrameBuilder.cs and SystemInfo.cs
+changed at runtime; Rust, protocol/native ABI and cache formats are unchanged.
+
+The original 115 clipping quality-MSAA image failures and 41710 differing channels are
+fixed. Parent Linear, Gamma and LinearMSAA EACH pass 1211 observations, 266 images and
+17432576 channels with the existing comparator. The historical failing images and
+comparison remain preserved. The prior graphics single-sample LDR target counterexample
+also passes, so this does not simply turn off quality AA for explicit targets.
+
+The broader camera oracle records 948 observations and 195 complete float images per
+color space. Parent verified both independent Native pairs and committed float references
+byte-for-byte. Parent matches all observations, 174/195 Linear images and 183/195 Gamma
+images at the original 2e-4 tolerance. It retains 19 valid Linear failures and ten Gamma
+failures: image-effect precision/color conversion, six Linear screen readbacks and HDR
+partial viewport placement/filtering. Two inactive-source resolve captures per space also
+fail; Native asserts on those inputs and their untouched destinations were not initialized.
+They remain in strict totals, without being counted as valid rendering successes.
+
+Parent managed build/API check pass, zero errors in 2266 types; all 275 combined UI tests
+pass without skips. Repeated graphics regressions retain 80/80 records, resources 539/539
+values and 62/62 images, builtinrp 830 matching values plus 124 inherited expected values,
+and builtinfx 213 matching values plus two inherited expected values. Existing image
+comparators pass. HDR pre-quantization changes many edge bytes and generally reduces Native
+error; the delegate's complete metrics preserve the two small mean-error increases too.
+No expected sets or tolerances were widened. Colors remain 98402 total, lifecycle 8671,
+transitions 253 samples/831 callbacks and UI Toolkit byte-identical to its independent
+baseline across metadata, eleven interactions and three images.
+
+Evidence, exact commands and limits: tests/projects/cameramsaa/README.md and its Evidence
+directory, with parent captures/logs/comparisons in ~/.cache/compat/cameramsaa-parent-*.
+Authored settings remain Linear; Gamma copies live under Library. The old MSAA gap row is
+closed for these measured paths, and image effects, screen readback and HDR partial viewport
+are now separate open rows. This is not full camera or engine parity.
