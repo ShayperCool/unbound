@@ -37,7 +37,9 @@ else:
     env['LD_LIBRARY_PATH'] = str(a.managed.resolve())
     command = [str(a.cli.resolve()), 'run', '-p', str(project), '--frames', '35', '--size', '960x540', '--no-watch']
 hashes = {str(x.resolve()): hashlib.sha256(x.read_bytes()).hexdigest() for x in [a.cli, a.managed/'UnityEngine.CoreModule.dll', a.managed/'libunbound_physx.so']} if a.mode == 'engine' else {}
-(output/'execution.json').write_text(json.dumps(dict(command=command, sha256=hashes, release=a.release), indent=2)+'\n')
+sources = {str(x.relative_to(project)): hashlib.sha256(x.read_bytes()).hexdigest()
+           for x in sorted(project.rglob('*')) if x.is_file()}
+(output/'execution.json').write_text(json.dumps(dict(command=command, sha256=hashes, sources=sources, release=a.release), indent=2)+'\n')
 with (output/'process.log').open('w') as log:
     subprocess.run([str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600', *command], env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
 for path, digest in hashes.items():
