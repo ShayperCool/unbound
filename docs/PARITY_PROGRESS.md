@@ -850,3 +850,55 @@ layer experiment also exposed Color-property transfer above one; its Vector-base
 fixture isolates camera behavior and the color issue is tracked separately for an oracle.
 Next work separates material/color transfer from DynamicsManager native scene settings,
 with disjoint files and private builds. Neither full camera nor full engine parity is claimed.
+
+## Integrated HDR and Gamma material color transfer
+
+Reviewed and cherry-picked sixteen ordered delegate commits, c34b4824 through
+8c67b55b. The runtime changes are 820ac0d5, 3190d697 and f5cd1e0b. Materials now
+apply the selected shader's Color/HDR/Gamma binding rules, including built-in
+sources. RGB above one uses the measured power-2.2 transfer. Converted getters
+reproduce Native round trips without replacing assigned source data; negative
+converted RGB clamps on getter inverse transfer while assigned GPU values remain
+negative. Defaults clamp before initial conversion. HDR alpha remains unchanged.
+
+MaterialPropertyBlock SetColor converts at assignment independently of declaration,
+while SetVector and float overrides stay raw. Typed block storage and synthetic
+renderer material copies prevent double conversion. Rust receives working-space
+material/override values and converts only shader defaults. Shader flags come from
+the actual selected ShaderLab source, using names without allocating property IDs.
+General Mathf/Color, camera/readback code, packet layouts and native entry points
+are unchanged. Metadata is parsed in memory; no persisted layout changed, so shader
+cache 13 remains valid. Matching rebuilt CLI and managed artifacts are required.
+
+Parent validation:
+
+- Both Native pairs and committed references are byte-identical per color space.
+  Parent Linear/Gamma EACH pass 2986/2986 observations, 424/424 complete 4x4 buffers
+  and 27136/27136 channels at the frozen 2e-5 tolerance. Totals: 5972 observations,
+  848 buffers and 54272 channels. No missing/extra cases or exclusions.
+- Initial independent Linear baseline matched 2364 observations and 190 buffers;
+  Gamma already matched every case. The delegate retains byte-conservation checks
+  for Gamma and Linear raw Vector/ordinary Float controls.
+- CLI and managed builds pass. API-check: zero errors in 2266 types. Managed tests
+  306/306, Rust app tests 18/18 and checker tests 13/13 pass without skips.
+- Repeated graphics 80/80, resources 539/539 and 62 images, builtinrp's existing
+  830 matching/124 expected values and 33 normally checked images, and builtinfx's
+  213 matching/two expected values and 92 normally checked images pass. Existing
+  image expectations and tolerances are unchanged; hdr_half_target remains checked.
+- All three clipping matrices remain 1211 observations/266 images/17432576 channels
+  each, colors 98402 total, focused camera 481 observations/54 images per space.
+  UI Toolkit metadata, eleven interactions and three PNGs are byte-identical to
+  the independent baseline. Its inherited Native label-width discrepancy remains.
+
+Only the builtinfx variant image and three numeric readbacks changed in the
+delegate's complete before/after sweep. All three getters now equal Native exactly;
+variant mean max-channel error fell from 1.1788333 to 0.003 and worst error 27 to 8.
+One private Vulkan startup failure produced no captures; its log and a successful
+fresh-directory retry are preserved. Parent's complete validation needed no retry.
+
+Commands, counts and limits: tests/projects/materialcolortransfer/README.md and
+Evidence, with parent captures/comparisons in ~/.cache/compat/materialcolor-parent/
+and build/API/test logs in ~/.cache/compat/materialcolor-parent-*. Shader-switch
+reinterpretation, arrays, undeclared color properties, nonfinite GPU behavior and
+other releases remain unmeasured. PhysX native scene settings remain in a separate
+active worktree; no WIP physics commit is integrated here. Full engine parity is open.

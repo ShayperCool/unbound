@@ -1,0 +1,49 @@
+graphics exit 0
+   temporarySecondDistinct      unity True unbound True
+   temporaryCreated             unity False unbound False
+0 of 80 differ
+
+resources exit 0
+image tiled_threshold_7: mean 0.00, worst 0, over 8: 0
+image tiled_tight: mean 0.00, worst 0, over 8: 0
+resources: 539/539 values match, 0 differ, 0 expected; 62/62 images within a mean of 2 (0 expected), worst mean 0.83
+
+builtinrp exit 0
+image sort_priority_none: mean 0.00, worst 0, over 8: 0
+image sort_project: mean 0.00, worst 0, over 8: 0
+builtinrp: 830/954 values match, 0 differ, 124 expected; 33/33 images within a mean of 2 (4 expected), worst mean 1.32
+
+builtinfx exit 0
+image wireframe: mean 0.00, worst 1, over 8: 0
+image zclip: mean 0.00, worst 0, over 8: 0
+builtinfx: 213/215 values match, 0 differ, 2 expected; 92/92 images within a mean of 2 (11 expected), worst mean 1.83
+
+rectclip-linear exit 0
+records: 1211/1211, 0 unexpected
+images: 266/266, 0 unexpected; channels: 17432576/17432576
+
+rectclip-gamma exit 0
+records: 1211/1211, 0 unexpected
+images: 266/266, 0 unexpected; channels: 17432576/17432576
+
+rectclip-msaa exit 0
+records: 1211/1211, 0 unexpected
+images: 266/266, 0 unexpected; channels: 17432576/17432576
+
+colors-linear exit 0
+canvas colors: 49201/49201 records match, 0 differ, 0 unexpected
+
+colors-gamma exit 0
+canvas colors: 49201/49201 records match, 0 differ, 0 unexpected
+
+camera-focused-linear exit 0
+records: 481/481, 0 unexpected
+images: 54/54, 0 unexpected; channels: 3268608/3268608
+
+camera-focused-gamma exit 0
+records: 481/481, 0 unexpected
+images: 54/54, 0 unexpected; channels: 3268608/3268608
+
+UI Toolkit: metadata, 11 interactions and 3 PNGs byte-identical to baseline.
+
+UI Toolkit vs Native exit 1; inherited label-width difference retained.
