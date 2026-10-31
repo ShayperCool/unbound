@@ -10,13 +10,17 @@ physics shapes in Single, Polygon and Multiple modes, Full Rect with an outline,
 sprite rects.
 
     python3 tests/projects/spriteimport/make_textures.py      # after changing a case
-    python3 tests/projects/spriteimport/run.py create --label <L>   # remakes Assets/Scenes/Probe.unity
-    python3 tests/projects/spriteimport/run.py editor --label <L>   # two Editor captures
-    python3 tests/projects/spriteimport/run.py publish --label <L>  # checks they agree, writes Reference/
-    UNBOUND_CLI=<unbound> python3 tests/projects/spriteimport/run.py unbound --label <L>
+    python3 tests/projects/spriteimport/run.py create --release 6000.0.71f1 --label <L>
+    python3 tests/projects/spriteimport/run.py editor --release 6000.0.71f1 --label <L>
+    python3 tests/projects/spriteimport/run.py publish --release 6000.0.71f1 --label <L>
+    UNBOUND_CLI=<unbound> python3 tests/projects/spriteimport/run.py unbound --release 6000.0.71f1 --label <L>
     python3 tests/projects/spriteimport/compare.py \
         tests/projects/spriteimport/Reference/unity-6000.0.71f1.jsonl \
         ~/.cache/unbound/validation/runs/spriteimport/<L>/unbound/sprites.jsonl
+
+Use a fresh label for each capture. Reusing a label for its publish step is allowed;
+existing projects and captures are never deleted. The selected release is written
+into each disposable project's settings. Only Unity 6000.0.71f1 has been measured.
 
 Values compare exactly (as 32-bit floats). What Unity 6 does is described in
 `crates/unbound-assets/src/sprite_mesh.rs` and `sprite.rs` (`build_geometry`): a Tight mesh traced
