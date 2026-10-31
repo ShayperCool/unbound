@@ -64,6 +64,8 @@ namespace Unbound.Runtime
             m_HasStateMove = false;
             foreach (var state in MovingStates())
                 if (HandlesStateMove(state.Behaviour)) { m_HasStateMove = true; break; }
+            // Humanoid clips move the root through their body (muscle) curves.
+            if (animator.Human is { } human && HumanRootMotion(animator, human)) return;
             if (!animator.m_ApplyRootMotion && !m_HasMonoMove && !m_HasStateMove) return;
             var t = animator.transform;
             int pos = Bindings.ChannelOf(t, "position"), rot = Bindings.ChannelOf(t, "rotation");
@@ -193,5 +195,43 @@ namespace Unbound.Runtime
             return (p, r);
         }
 
+
+        /// <summary>A humanoid Animator's root motion: the clip's body motion between the state's
+        /// previous and current times, as a delta of the root (applied like generic root motion) and
+        /// the body placed relative to it for the pose. False when no humanoid clip plays.</summary>
+        bool HumanRootMotion(Animator animator, Unbound.Runtime.Humanoid.AnimatorHuman human)
+        {
+            (StateRun Run, AnimationClip Clip, float Weight) found = default;
+            int count = 0;
+            foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions)
+            {
+                float w = weight * (layerIndex == 0 ? 1f : layer.Evaluated);
+                if (w <= 0f || !clip.HasHumanCurves) continue;
+                count++;
+                if (found.Clip == null || w > found.Weight) found = (run, clip, w);
+            }
+            human.ClearMotion();
+            if (found.Clip == null) return false;
+            if (count > 1 || found.Weight < 1f)
+                Unbound.Runtime.Stubs.Ignored("Animator humanoid root motion blending",
+                    "blended humanoid clips (transitions, several layers or blend trees) move the root with the strongest clip only");
+            var motion = found.Clip.HumanClipMotion;
+            var def = found.Run.Def;
+            var input = new Unbound.Runtime.Humanoid.HumanClipMotionInput
+            {
+                Time = (float)found.Run.Normalized,
+                PreviousTime = (float)found.Run.Previous,
+                Speed = SpeedOf(def),
+                CycleOffset = def.CycleOffset,
+            };
+            human.EvaluateMotion(found.Clip, motion, input, m_RootDeltaTime,
+                animator.m_ApplyRootMotion || m_HasMonoMove, out var rm, out bool applied);
+            if (!applied) return true;
+            animator.m_DeltaPosition = new Vector3(rm.DeltaPosition.x, rm.DeltaPosition.y, rm.DeltaPosition.z);
+            animator.m_DeltaRotation = new Quaternion(rm.DeltaRotation.x, rm.DeltaRotation.y, rm.DeltaRotation.z, rm.DeltaRotation.w);
+            animator.m_RootVelocity = new Vector3(rm.Velocity.x, rm.Velocity.y, rm.Velocity.z);
+            animator.m_RootAngularVelocity = new Vector3(rm.AngularVelocity.x, rm.AngularVelocity.y, rm.AngularVelocity.z);
+            return true;
+        }
     }
 }

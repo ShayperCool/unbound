@@ -1833,3 +1833,53 @@ in the full reports; no comparison tolerance or mask changed.
 
 This preservation result uses shader cache13. The subsequent sampler14 and its
 new border/cache controls have separate acceptance reports.
+
+### Humanoid avatars and HumanPoseHandler, 2026-10-31
+
+Humanoid avatars are built from a model's hierarchy and the human description its meta carries
+(bone mapping, T-pose skeleton, limits, twist/stretch parameters), or by AvatarBuilder from a
+scene object: the human skeleton, muscle axes per bone, masses, body frame and scale, as the
+Editor computes them. HumanPoseHandler reads and writes poses through muscle space (retargeting
+with limb alignment, twist distribution, fingers). The HumanTrait tables, Avatar and Animator
+humanoid members and AvatarBuilder's validation errors follow. An animated FBX's nodes now rest
+in their pose at time 0, as the Editor imports them.
+
+Validation:
+
+- tests/projects/humanoid: two Editor captures are identical. Unbound matches every avatar,
+  trait, Animator, AvatarBuilder, rest-pose and HumanPoseHandler value (55820/55820 for the
+  handler: the default pose, every muscle alone at -1/1, random and out-of-range poses on both
+  rigs). Clip properties, playback, retargeting in the Animator and the IK pass are next.
+- animator 2236/2236, animatoradditive 1100/1100, bundle animation 8/8; modelimport Gamma and
+  Linear 6032/6033, URP 7011 matching as before. Asset (71) and runtime (39) Rust tests, managed
+  animation tests (32) pass; api-check: zero errors in 2287 hand-written types.
+
+### Humanoid clips, root motion, retargeting and IK, 2026-10-31
+
+A Humanoid model's clips become muscle clips of its avatar when first bound: each frame's
+skeleton pose is read into muscle space as the importer does (root, IK goals, muscles; rotation
+curves kept in one hemisphere, body muscles unwrapped and offset by whole turns, spline slopes).
+Muscle curves, from models and from `.anim` files, drive the Animator's human pose, which is
+retargeted onto the skeleton after the layers are written, so any humanoid clip plays on any
+humanoid avatar. The body's motion becomes root motion (yaw and the full translation for default
+clip settings, loop cycles, the feet pivot), which the importer turns on for humanoid models;
+clip averages follow. Layers with an IK pass send OnAnimatorIK, then the full-body IK solve
+applies the goals, hints, look-at and body position/rotation set there.
+
+Hooks in the generic Animator code: `AnimatorPlayer.Evaluate` calls `Animator.ApplyHumanPose()`
+after `PoseWriter.WriteLayers`; `AnimatorPlayer.ComputeRootMotion` hands humanoid clips to the
+humanoid root motion; `Binding` binds muscle curves to the Animator; layers carry `m_IKPass`.
+OnAnimatorIK runs inside the Animator's evaluation (no player loop change).
+
+Validation:
+
+- tests/projects/humanoid (two identical Editor captures): Unbound matches 120564/120650 values.
+  Avatars, traits, Animator members, AvatarBuilder, HumanPoseHandler, clip properties, playback of
+  both rigs (12238/12238, 7366/7366) and retargeting both ways match fully; the IK pass matches
+  every transform, body and goal value. The 86 remaining values are muscles 41 and 43 (left
+  upper arm and forearm twist) read back from the IK pose with HumanPoseHandler: their sum
+  matches, the split differs by whole steps of the twist alignment's iteration, which the IK
+  pose's last-bit differences flip.
+- animator 2236/2236, animatoradditive 1100/1100, bundle animation 8/8; modelimport Gamma and
+  Linear 6032/6033, URP 7011 matching as before. Asset (71) and runtime (39) Rust tests, managed
+  animation tests (32) pass; api-check: zero errors in 2288 hand-written types.

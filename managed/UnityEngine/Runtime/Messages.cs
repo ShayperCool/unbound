@@ -106,7 +106,6 @@ namespace Unbound.Runtime
         /// sent. (OnDrawGizmos* are not here: the Game view draws no gizmos, as in the Editor.)</summary>
         static readonly string[] s_NotSent =
         {
-            "OnAnimatorIK",
             "OnParticleUpdateJobScheduled",
         };
 

@@ -444,6 +444,10 @@ pub struct ImportedModel {
     pub animator: Option<FileId>,
     /// The Avatar sub-asset (Generic/Humanoid).
     pub avatar: Option<FileId>,
+    /// A Humanoid avatar's `humanDescription` as the meta has it (bone mapping, T-pose skeleton,
+    /// limits and parameters); the engine builds the human from it and the model's hierarchy.
+    #[serde(default)]
+    pub human_description: Option<Value>,
     /// The LODGroup of the root, when nodes are named as LOD levels.
     #[serde(default)]
     pub lod_group: Option<ModelLodGroup>,
@@ -476,7 +480,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 7;
+    const VERSION: u32 = 9;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -531,6 +535,7 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
             clips: Vec::new(),
             animator: None,
             avatar: None,
+            human_description: None,
             lod_group: None,
             scale,
             settings: settings.clone(),
@@ -540,6 +545,7 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         node_index: HashMap::new(),
         sources: Vec::new(),
         material_index: HashMap::new(),
+        rest_anim: (!scene.anim_stacks.is_empty()).then_some(&*scene.anim),
     };
 
     // The root: the single top-level node, or the scene root.
@@ -586,6 +592,9 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     if matches!(settings.animation_type, 2 | 3) && settings.avatar_setup == 1 {
         model.avatar = Some(ids.id(class::AVATAR, ROOT_NODE_NAME, None).into());
     }
+    if settings.animation_type == 3 && model.avatar.is_some() {
+        model.human_description = imp.get("humanDescription").cloned();
+    }
     if settings.import_animation && settings.animation_type == 3 && !model.clips.is_empty() {
         model
             .warnings
@@ -622,6 +631,9 @@ struct Builder<'a> {
     sources: Vec<&'a ufbx::Node>,
     /// ufbx material element id → index in `model.materials`.
     material_index: HashMap<u32, u32>,
+    /// The file's animation: an animated file's nodes rest in their pose at time 0 (measured:
+    /// tests/projects/humanoid, whose file stores another frame's pose as the static transforms).
+    rest_anim: Option<&'a ufbx::Anim>,
 }
 
 impl<'a> Builder<'a> {
@@ -698,7 +710,8 @@ impl<'a> Builder<'a> {
             &key,
             Some(ROOT_TRANSFORM_ID),
         );
-        let t = &node.local_transform;
+        let evaluated = self.rest_anim.map(|anim| node.evaluate_transform(anim, 0.0));
+        let t = evaluated.as_ref().unwrap_or(&node.local_transform);
         let index = self.model.nodes.len() as u32;
         self.node_index.insert(node.element.element_id, index);
         self.sources.push(node);

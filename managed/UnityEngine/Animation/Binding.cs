@@ -224,6 +224,7 @@ namespace Unbound.Runtime
 
         internal BoundClip Bind(AnimationClip clip)
         {
+            clip.EnsureHumanCurves();
             if (m_Clips.TryGetValue(clip, out var bound) && bound.Version == clip.m_Version) return bound;
             bound = Map(clip, create: true);
             m_Clips[clip] = bound;
@@ -574,6 +575,15 @@ namespace Unbound.Runtime
                 case Animator animator:
                 {
                     var name = attribute;
+                    // Muscle curves (humanoid clips) drive the Animator's human pose.
+                    int human = Unbound.Runtime.Humanoid.HumanClipImport.CurveIndex(name);
+                    if (human >= 0)
+                    {
+                        if (!animator.isHuman) break;
+                        return Make(animator, "human:" + name, 0, () => new AccessorGroup(animator, 1,
+                            () => new Vector4(Unbound.Runtime.Humanoid.AnimatorHuman.DefaultValue(human), 0),
+                            v => animator.Human.Set(human, v.x)) { AlwaysWrite = true });
+                    }
                     if (animator.HasParameterNamed(name))
                         return Make(animator, "param:" + name, 0, () => new AccessorGroup(animator, 1,
                             () => new Vector4(animator.GetParameterAsFloat(name), 0), v => animator.SetParameterFromCurve(name, v.x)));
