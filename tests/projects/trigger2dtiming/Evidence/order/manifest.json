@@ -1,0 +1,18 @@
+{
+  "independent_native_agreement": true,
+  "scenarios": 10,
+  "records": 5720,
+  "sha256": {
+    "order-native1.json": "8409ea6635fcae365a115137d5d1db1752ba3b72e4a0cbe7a958bad9fca25421",
+    "order-native1.log": "24dd953ef160fdce7a101a8e3b08ccef9dee33df80866dd5ccd282b4985b7794",
+    "order-candidate1.json": "c678a2889e2b28d0fbd2c3adbb6abb61ed5a4b28431be14d14629da0ba01e3dc",
+    "order-native2.log": "6605d0a31dd383f7d971ef8be33860461b4579b086736e077464152ec171b3f4",
+    "order-native2-stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "order-baseline-stdout.log": "4bc5099ae555e6e3c7901e530b80240f01626b936972c0ad3ee1bb910fe69b30",
+    "order-native2.json": "8409ea6635fcae365a115137d5d1db1752ba3b72e4a0cbe7a958bad9fca25421",
+    "order-candidate1-stdout.log": "1fec7cdcc6ce63c00fa359d34dbe0916ffec5bf9f3bc195a8ff9440f157b885e",
+    "order-baseline.json": "85aa60ff490752be4212f2ff2f178f78ac014b113c0c612470a8ff75cb6cf90f",
+    "order-native1-stdout.log": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+  },
+  "source_sha256": "57b356fd1c290ab3b6b2d45360e9c50697471ae4d9bc1045451e451f5114a6ff"
+}

@@ -236,7 +236,7 @@ namespace Unbound.Box2D.Dynamics
             DestroyContact(c);
         }
 
-        public void Collide()
+        public void Collide(bool sensorsOnly = false)
         {
             var node = ContactList.First;
 
@@ -247,6 +247,10 @@ namespace Unbound.Box2D.Dynamics
                 node = node.Next;
                 var fixtureA = c.FixtureA;
                 var fixtureB = c.FixtureB;
+                if (sensorsOnly && !fixtureA.IsSensor && !fixtureB.IsSensor)
+                {
+                    continue;
+                }
                 var indexA = c.ChildIndexA;
                 var indexB = c.ChildIndexB;
                 var bodyA = fixtureA.Body;
