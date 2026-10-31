@@ -1,0 +1,42 @@
+2026-10-31T07:06:33.944918Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 1566ms
+2026-10-31T07:06:33.958421Z  INFO unbound_runtime::config: prepared the game in 1.63s
+2026-10-31T07:06:34.243969Z  INFO unbound_runtime::game: game started in 285.37ms
+2026-10-31T07:06:34.892985Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.895666Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.895777Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.897684Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.897763Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.898707Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.898786Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.899760Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.899836Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.900741Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.900797Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.901700Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.901775Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.902462Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.902536Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.903284Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.903348Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.904067Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.904139Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.904968Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.905036Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.905779Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.905846Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.906566Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.906633Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.906930Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.907438Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.907488Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.908041Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.908106Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.908708Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.908763Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.909499Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.909636Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.910394Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.910473Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.911548Z  WARN game: The connected rigidbody for the 'TargetJoint2D' type cannot be set.
+2026-10-31T07:06:34.911621Z  WARN game: The enable collision flag for the 'TargetJoint2D' type cannot be changed.
+2026-10-31T07:06:34.944786Z  INFO unbound_runtime::game: ran 1 frames in 700.70ms
