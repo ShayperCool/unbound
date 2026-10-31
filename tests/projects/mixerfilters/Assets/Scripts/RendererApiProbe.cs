@@ -23,13 +23,16 @@ public static class RendererApiProbe
         Value("start.first", () => AudioRenderer.Start());
         Value("start.second", () => AudioRenderer.Start());
         Value("count.started", () => AudioRenderer.GetSampleCountForCaptureFrame());
-        foreach (int length in new[] { 0, 2, 2046, 2048, 2050, 4096 })
+        foreach (int length in new[] { 0, 1, 2, 2046, 2047, 2048, 2049, 2050, 4096 })
         {
             var buffer = new NativeArray<float>(length, Allocator.Temp);
             try
             {
                 for (int i = 0; i < buffer.Length; i++) buffer[i] = 123;
+                double before = AudioSettings.dspTime;
                 Value("render." + length, () => AudioRenderer.Render(buffer));
+                Value("advance." + length, () => (int)Math.Round((AudioSettings.dspTime-before)*AudioSettings.outputSampleRate));
+                Value("count." + length, () => AudioRenderer.GetSampleCountForCaptureFrame());
                 using (var writer = new BinaryWriter(File.Create(Path.Combine(output, "render_" + length + ".f32"))))
                     for (int i = 0; i < buffer.Length; i++) writer.Write(buffer[i]);
                 records.Add("\"buffer." + length + "\":{\"file\":\"render_" + length + ".f32\",\"length\":" + length + "}");
