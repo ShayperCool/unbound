@@ -1359,3 +1359,25 @@ flags, and `GetTag("RenderType", false)` on validated Lit materials still differ
 profiles keep 6032/6033. The material-colour regression set, materials, blendshapes, lod,
 urp and urp2d keep their results (one URP skybox capture differs by at most 1/255 in 12310
 channels); managed tests keep the same text and particle failures as the base.
+
+
+### Panel transition callback phases, 2026-10-31
+
+Integrated the measured panel-wide animation phases from f44954e6. Each value type
+samples its owners before event dispatch; callbacks can retarget a later type in
+the same update, while same-type callback events wait for the next batch. Picking
+and layout validation no longer advance animation time. Inline destination writes
+and detachment preserve the measured values and pending callback behavior.
+
+The complete callback reference matches byte-for-byte: 718 samples, 3428 callbacks,
+and all78854 observations. This resolves all5053 previous failing keys, with zero
+retained or introduced failures. The added inline controls match110 samples and
+132 callbacks exactly against two agreeing Editor recordings. The original253
+samples/831 callbacks also pass. Source, runners and one release reference are in
+uitransitioncallbacks and uitransitioninline; run artifacts stay in the cache.
+
+The delegate passed557 managed tests, the rendering gates and33552 focused physics
+observations. Root combined verification with URP material validation and the
+particle lifetime changes is queued; its API result is not yet certified. The
+inherited native Label width discrepancy and other unmeasured transition property
+combinations remain open.
