@@ -33,6 +33,10 @@ pub struct RuntimeState {
     textures: RwLock<HashMap<Guid, TextureSprites>>,
     /// Project shaders by declared name, built on first use.
     shaders: RwLock<Option<HashMap<String, Guid>>>,
+    /// The folders of the release's built-in shader sources (`DefaultResources`, ...).
+    builtin_shader_roots: Vec<PathBuf>,
+    /// Built-in shader sources by declared name, built on first use.
+    builtin_shaders: RwLock<Option<HashMap<String, PathBuf>>>,
     /// Imports clips with the active build target's overrides.
     audio_importer: RwLock<AudioImporter>,
     models: RwLock<HashMap<Guid, Arc<unbound_assets::ImportedModel>>>,
@@ -96,6 +100,11 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         }),
         textures: RwLock::new(HashMap::new()),
         shaders: RwLock::new(None),
+        builtin_shader_roots: project
+            .builtin_shaders()
+            .map(|b| b.shader_roots())
+            .unwrap_or_default(),
+        builtin_shaders: RwLock::new(None),
         audio_importer: RwLock::new(AudioImporter::default()),
         models: RwLock::new(HashMap::new()),
         audio: crate::audio::Engine::new(
@@ -448,6 +457,18 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 Ok(crate::editor_resources::object(&s.unity_data, id)?.to_string())
             }
         }
+        "builtin-shader-source" => {
+            #[derive(Deserialize)]
+            struct Request {
+                name: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let source = s
+                .builtin_shader_file(&r.name)
+                .and_then(|f| std::fs::read_to_string(f).ok())
+                .unwrap_or_default();
+            Ok(json!(source).to_string())
+        }
         "shader-find" => {
             #[derive(Deserialize)]
             struct Request {
@@ -754,6 +775,31 @@ pub fn backend() -> Arc<dyn RenderBackend> {
 
 impl RuntimeState {
     /// The project shader declaring `Shader "name"`, found by scanning `.shader` files once.
+    /// The source of the built-in shader with this declared name.
+    fn builtin_shader_file(&self, name: &str) -> Option<PathBuf> {
+        let mut index = self.builtin_shaders.write().unwrap();
+        let map = index.get_or_insert_with(|| {
+            let mut map = HashMap::new();
+            for root in &self.builtin_shader_roots {
+                for entry in walkdir::WalkDir::new(root).into_iter().flatten() {
+                    let path = entry.path();
+                    if path.extension().is_none_or(|e| e != "shader") {
+                        continue;
+                    }
+                    let Ok(text) = std::fs::read_to_string(path) else {
+                        continue;
+                    };
+                    if let Some(declared) = declared_shader_name(&text) {
+                        map.entry(declared.to_string())
+                            .or_insert_with(|| path.to_path_buf());
+                    }
+                }
+            }
+            map
+        });
+        map.get(name).cloned()
+    }
+
     fn shader_guid(&self, name: &str) -> Option<Guid> {
         let mut index = self.shaders.write().unwrap();
         if index.is_none() {
