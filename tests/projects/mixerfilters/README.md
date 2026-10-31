@@ -61,7 +61,7 @@ update, matching its Unity coroutine phase.
 The engine sends group routing and effect parameters through the existing audio RPC path.
 A group is summed before its effects, with persistent independent channel histories. The optional
 group output observer records its actual processed buffer before routing it into its parent.
-Callback kind 4 is opt-in; the ABI 5 table/signature and existing kinds 0–3 are unchanged.
+Callback kind 4 is opt-in; NativeApi12/render5/shim9 and existing kinds 0–3 are unchanged.
 Active unsupported effects and wet mixing throw clear errors. Other mixer effects and spatializer
 processing are outside this implementation.
 
