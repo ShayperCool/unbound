@@ -14,9 +14,11 @@ from probe_paths import editor_path
 from artifact_paths import artifact_path
 p=argparse.ArgumentParser(description=__doc__)
 p.add_argument('--unity-version',required=True)
-p.add_argument('--runtime',type=Path,required=True,help='Build made with UnboundNoStubs=true')
+p.add_argument('--runtime',type=Path,required=True,help='Directory containing the build made with UnboundNoStubs=true')
 p.add_argument('--work',type=Path,required=True)
 a=p.parse_args()
+if not a.runtime.is_dir() or not (a.runtime/'UnityEngine.CoreModule.dll').is_file():
+    p.error('--runtime must be a directory containing UnityEngine.CoreModule.dll')
 artifact_path(a.work)
 os.environ['UNBOUND_PROBE_UNITY_VERSION']=a.unity_version
 if a.work.resolve().is_relative_to(REPO):p.error('--work must be outside repository')
