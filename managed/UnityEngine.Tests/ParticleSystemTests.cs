@@ -55,17 +55,19 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void RateOverTimeEmitsThatManyParticlesPerSecond()
+        public void RateOverTimeFollowsAccumulatedPlaybackTime()
         {
             var ps = Make(p =>
             {
                 var e = p.emission;
                 e.rateOverTime = 20f;
             });
-            Run(ps, 1f);
-            Assert.Equal(20, ps.particleCount);
-            Run(ps, 0.5f);
-            Assert.Equal(30, ps.particleCount);
+            // Identical public calls and fixture: emission reference rateUnit/49 and /74.
+            // Native's float clock is just below 1 and 1.5 seconds after these steps.
+            for (int i = 0; i < 50; i++) { ps.Simulate(.02f, false, false, false); ps.Play(false); }
+            Assert.Equal(19, ps.particleCount);
+            for (int i = 0; i < 25; i++) { ps.Simulate(.02f, false, false, false); ps.Play(false); }
+            Assert.Equal(29, ps.particleCount);
             Done(ps);
         }
 

@@ -202,6 +202,20 @@ public class EmissionProbe : MonoBehaviour
             UnityEngine.Object.DestroyImmediate(ps.gameObject);
         }
     }
+    static void RateUnitInputs()
+    {
+        // Match the inherited unit fixture, including its default shape and play-on-awake.
+        var go = new GameObject("particles"); go.SetActive(false);
+        var ps = go.AddComponent<ParticleSystem>();
+        var main = ps.main; main.startLifetime = 10; main.startSpeed = 0;
+        var emission = ps.emission; emission.rateOverTime = 20;
+        go.SetActive(true);
+        for (int step = 0; step < 75; step++) {
+            ps.Simulate(.02f, false, false, false); ps.Play(false);
+            State("rateUnit/" + step, ps);
+        }
+        UnityEngine.Object.DestroyImmediate(go);
+    }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()
     {
@@ -220,6 +234,7 @@ public class EmissionProbe : MonoBehaviour
         for (int saved = 0; saved < 4; saved++)
         for (int target = 0; target < 4; target++) Playback(enabled, saved, target);
         Boundaries();
+        RateUnitInputs();
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_EMISSION_OUT"), output.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
