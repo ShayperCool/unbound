@@ -938,3 +938,41 @@ tests/projects/physicsscenesettings/ParentEvidence/README.md. The original deleg
 evidence and Claude backup remain preserved. Public Physics.ContactEvent, older
 releases and the listed island/sleep cases remain open; this is not full engine
 parity.
+
+### SDK shape lifecycle closes the remaining DynamicsManager matrix, 2026-10-31
+
+Merged the continuation delegate's Native ID/flag traces and rejected candidates
+without changing runtime. Its delegated scope excluded SDK edits. The parent
+then measured the Unity fork's differing SDK path directly and corrected shape
+flag handling on a separate branch, with production runtime in `9491a8bc`.
+
+Unity preserves a broadphase element ID while changing simulation/trigger flags.
+The SDK now updates that volume's metadata and marks filtering dirty. Trigger
+pairs include trigger/trigger overlaps, and fresh trigger creation executes the
+pair filter callback. Live box updates preserve shape identity. Activation fully
+realizes physics before MonoBehaviour Awake, including a clone destroyed before
+its first simulation. Contact and trigger event phases remain separate, with
+trigger messages first. IgnoreCollision survives Collider/GameObject deactivation.
+
+The complete rebuilt parent gate passes 5055/5055 observations: 4803 exact and
+252 within the unchanged motion tolerance. All 28 retained island-history cases
+now pass without introducing any failing observation. The additional two-run
+Native controls contain 1152, 1440 and 1848 observations. Every callback, ordering,
+raw-contact, ignore-state and motion record passes; each control retains its same
+three pre-simulation sleep records. Original long triggers remain 1575/1728 with
+153 known sleep-state differences; immediate setters pass 15/15.
+
+Integrated validation passes 318 managed tests, zero API errors in 2266 types,
+and 80/80 graphics observations. Defaults, controller, rayhits and joints keep
+byte-identical outputs. Forces pass 608/608 with passing rounding changes. Broad
+physics improves to 22/29 scenarios: all 85 old stack failures resolve and every
+3D scenario passes. The seven 2D scenario differences and 133 failing values are
+retained without new failing values.
+
+The new native binding is PhysX shim8; main ABI5 and shader cache13 are unchanged.
+SDK archives use source/header contents, compiler inputs and a cache format
+version for their BLAKE3 key. A complete SDK/CLI rebuild and a warm cache rebuild
+pass. Full evidence, artifact hashes, explicit remaining sleep failures, prior
+rejected experiments and commands are in
+tests/projects/physicsscenesettings/SDKLifecycleEvidence/README.md. Public
+ContactEvent, older releases and unmeasured collider lifecycle cases remain open.
