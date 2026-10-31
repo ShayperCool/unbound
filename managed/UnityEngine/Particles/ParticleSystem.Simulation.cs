@@ -78,19 +78,14 @@ namespace UnityEngine
             steps = Math.Clamp(steps, 1, 100000);
             float step = dt / steps;
             float share = distance / steps;
-            float remaining = dt;
             try
             {
                 for (int i = 0; i < steps; i++)
                 {
                     m_StepFrom = from + (to - from) * i / steps;
                     m_StepTo = from + (to - from) * (i + 1) / steps;
-                    // Repeated float subtraction can leave less than one nominal step.
-                    // Native consumes only that remainder in the final subdivision.
-                    float used = Mathf.Min(step, remaining);
-                    m_StepDt = used;
-                    Step(used, share);
-                    remaining -= used;
+                    m_StepDt = step;
+                    Step(step, share);
                     if (stopWhenPaused && (m_IsPaused || !m_Registered)) break;
                 }
             }
