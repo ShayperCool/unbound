@@ -14,7 +14,7 @@ if a.mode == 'prepare':
     if project.exists(): raise SystemExit('Refusing to overwrite '+str(project))
     for folder in ['Assets','Packages','ProjectSettings']:
         shutil.copytree(REPO/'tests/projects/physics'/folder, project/folder)
-    shutil.copy2(ROOT/'Sources/ProbeEntry.cs', project/'Assets/Scripts/ProbeEntry.cs')
+    shutil.copy2(ROOT/'Sources'/os.environ.get('MOTION_SOURCE', 'ProbeEntry.cs'), project/'Assets/Scripts/ProbeEntry.cs')
     manifest = {str(f.relative_to(project)): hashlib.sha256(f.read_bytes()).hexdigest() for d in ['Assets','Packages','ProjectSettings'] for f in sorted((project/d).rglob('*')) if f.is_file()}
     (WORK/(a.label+'-input-manifest.json')).write_text(json.dumps(manifest,indent=2)+'\n')
 else:
@@ -25,9 +25,15 @@ else:
         cmd = [str(Path.home()/'Unity/Hub/Editor/6000.0.71f1/Editor/Unity'), '-batchmode','-nographics','-projectPath',str(project),'-executeMethod','ProbeRunner.Record','-logFile',str(WORK/(a.label+'-unity.log'))]
     else:
         project = WORK/os.environ.get('MOTION_PROJECT', 'project-native1')
-        env['UNBOUND_MANAGED_DIR'] = str(WORK/('managed-baseline' if a.label == 'baseline' else 'managed-final'))
+        env['UNBOUND_MANAGED_DIR'] = str(WORK/os.environ.get('MOTION_MANAGED', 'managed-baseline' if a.label == 'baseline' else 'managed-final'))
         env['LD_LIBRARY_PATH'] = env['UNBOUND_MANAGED_DIR']
         cmd = [str(BASE/'unbound'),'run','-p',str(project),'--headless','30000','--no-watch']
-    with log.open('w') as f: result = subprocess.run([str(HEAVY),'timeout','600',*cmd],env=env,stdout=f,stderr=subprocess.STDOUT)
+    command = [str(HEAVY),'timeout','600',*cmd]
+    audit = dict(command=command, environment={k:env.get(k) for k in ['UNBOUND_MANAGED_DIR','LD_LIBRARY_PATH','PHYSICS_PROBE_OUT','CARGO_TARGET_DIR','UnboundTarget','UnboundNativeDir']})
+    if a.mode == 'engine':
+        runtime=Path(env['UNBOUND_MANAGED_DIR'])
+        audit['artifacts_sha256']={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in [BASE/'unbound',runtime/'UnityEngine.CoreModule.dll',runtime/'libunbound_physx.so']}
+    (WORK/(a.label+'-command.json')).write_text(json.dumps(audit,indent=2)+'\n')
+    with log.open('w') as f: result = subprocess.run(command,env=env,stdout=f,stderr=subprocess.STDOUT)
     print(a.label,'exit',result.returncode,flush=True)
     if result.returncode or not out.exists(): raise SystemExit('Run failed: '+str(log))

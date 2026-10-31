@@ -1,0 +1,696 @@
+Unity Editor version:    6000.0.71f1 (907bc2d768b5)
+Branch:                  6000.0/respin/6000.0.71f1-8308b6469260
+Build type:              Release
+Batch mode:              YES
+System name:             Linux
+Distro version:          #38-Ubuntu SMP PREEMPT_DYNAMIC Fri Sep  4 09:10:14 UTC 2026
+Kernel version:          7.0.0-38-generic
+Architecture:            x86_64
+Window Protocol:         Wayland (XWayland)
+Available memory:        30986 MB
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Initialize udev device monitor.
+[Licensing::IpcConnector] Channel LicenseClient-shaypercool doesn't exist
+[Licensing::Module] Successfully launched the LicensingClient (PId: 1476400)
+
+COMMAND LINE ARGUMENTS:
+/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Unity
+-batchmode
+-nographics
+-projectPath
+/mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/project-broad-native1
+-executeMethod
+ProbeRunner.Record
+-logFile
+/mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/broad-native1-unity.log
+Successfully changed project path to: /mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/project-broad-native1
+
+(process:1476378): Gtk-CRITICAL **: 08:00:25.214: gtk_label_set_text: assertion 'GTK_IS_LABEL (label)' failed
+
+(process:1476378): Gtk-CRITICAL **: 08:00:25.214: gtk_label_set_text: assertion 'GTK_IS_LABEL (label)' failed
+/mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/project-broad-native1
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gfx=262144"
+Player connection [134614458210176]  Target information:
+
+Player connection [134614458210176]  * "[IP] 192.168.31.231 [Port] 55504 [Flags] 2 [Guid] 1135861069 [EditorId] 1135861069 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [134614458210176]  * "[IP] 100.64.0.4 [Port] 55504 [Flags] 2 [Guid] 1135861069 [EditorId] 1135861069 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [134614458210176]  * "[IP] 172.18.0.1 [Port] 55504 [Flags] 2 [Guid] 1135861069 [EditorId] 1135861069 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [134614458210176]  * "[IP] 172.31.0.1 [Port] 55504 [Flags] 2 [Guid] 1135861069 [EditorId] 1135861069 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [134614458210176]  * "[IP] 192.168.0.1 [Port] 55504 [Flags] 2 [Guid] 1135861069 [EditorId] 1135861069 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [134614458210176]  * "[IP] 10.213.77.1 [Port] 55504 [Flags] 2 [Guid] 1135861069 [EditorId] 1135861069 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [134614458210176]  * "[IP] 172.23.0.1 [Port] 55504 [Flags] 2 [Guid] 1135861069 [EditorId] 1135861069 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [134614458210176]  * "[IP] 172.24.0.1 [Port] 55504 [Flags] 2 [Guid] 1135861069 [EditorId] 1135861069 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [134614458210176]  * "[IP] 10.77.23.1 [Port] 55504 [Flags] 2 [Guid] 1135861069 [EditorId] 1135861069 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [134614458210176]  * "[IP] 172.20.0.1 [Port] 55504 [Flags] 2 [Guid] 1135861069 [EditorId] 1135861069 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Unable to join player connection multicast group (err: 105).
+Unable to join player connection alternative multicast group (err: 105).
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Package Manager] Connected to IPC stream "Upm-1476378" after 0.2 seconds.
+Library Redirect Path: Library/
+Rebuilding Library because the asset database could not be found!
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Initialize engine version: 6000.0.71f1 (907bc2d768b5)
+[Subsystems] Discovering subsystems at path /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path /mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/project-broad-native1/Assets
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-shaypercool" at "2026-10-31T08:00:25.586753Z"
+[SignatureVerifier] Application signature verification not supported on this platform.
+Initialize mono
+Mono path[0] = '/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/Managed'
+Mono path[1] = '/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-linux'
+Mono config path = '/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56378
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.17.4+4293ba1
+  Session Id:              23193a4454c0411096338b1d9085373f
+  Correlation Id:          d3c3572930da77a0a2bc89320d09dfb1
+  External correlation Id: 4037528890583179191
+  Machine Id:              u9I7DXHjFecktPllptHXqWVZrtM=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-shaypercool" (connect: 0.38s, validation: 0.05s, handshake: 0.00s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-shaypercool-notifications" at "2026-10-31T08:00:25.636938Z"
+[Licensing::Module] Connected to LicensingClient (PId: 1476400, launch time: 0.00, total connection time: 0.43s)
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: 9071505245648-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.01
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] Licensing Background thread has ended after 0.46s
+Registering precompiled unity dll's ...
+[Licensing::Client] Successfully resolved entitlement details
+Register platform support module: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/PlaybackEngines/AndroidPlayer/UnityEditor.Android.Extensions.dll
+[Licensing::Client] Successfully resolved entitlement details
+Register platform support module: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/PlaybackEngines/iOSSupport/UnityEditor.iOS.Extensions.dll
+Register platform support module: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/PlaybackEngines/LinuxStandaloneSupport/UnityEditor.LinuxStandalone.Extensions.dll
+Registered in 0.005151 seconds.
+- Loaded All Assemblies, in  0.362 seconds
+Native extension for LinuxStandalone target not found
+[usbmuxd] Start listen thread
+[usbmuxd] Listen thread started
+Native extension for iOS target not found
+Native extension for Android target not found
+Package Manager log level set to [2]
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.365 seconds
+Domain Reload Profiling: 727ms
+	BeginReloadAssembly (94ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (0ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (1ms)
+	RebuildCommonClasses (38ms)
+	RebuildNativeTypeToScriptingClass (9ms)
+	initialDomainReloadingComplete (56ms)
+	LoadAllAssembliesAndSetupDomain (164ms)
+		LoadAssemblies (94ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (160ms)
+			TypeCache.Refresh (160ms)
+				TypeCache.ScanAssembly (146ms)
+			BuildScriptInfoCaches (0ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (366ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (329ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (68ms)
+			SetLoadedEditorAssemblies (4ms)
+			BeforeProcessingInitializeOnLoad (64ms)
+			ProcessInitializeOnLoadAttributes (130ms)
+			ProcessInitializeOnLoadMethodAttributes (64ms)
+			AfterProcessingInitializeOnLoad (0ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (0ms)
+[Licensing::Client] Successfully resolved entitlement details
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Done resolving packages in 0.56 seconds
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Registered 4 packages:
+  Built-in packages:
+    com.unity.modules.imgui@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/project-broad-native1/Library/PackageCache/com.unity.modules.imgui)
+    com.unity.modules.jsonserialize@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/project-broad-native1/Library/PackageCache/com.unity.modules.jsonserialize)
+    com.unity.modules.physics@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/project-broad-native1/Library/PackageCache/com.unity.modules.physics)
+    com.unity.modules.physics2d@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/project-broad-native1/Library/PackageCache/com.unity.modules.physics2d)
+[Subsystems] No new subsystems found in resolved package list.
+[Package Manager] Done registering packages in 0.00 seconds
+A meta data file (.meta) exists but its folder 'Assets/Resources' can't be found, and has been created. Empty directories cannot be stored in version control, so it's assumed that the meta data file is for an empty directory in version control. When moving or deleting folders outside of Unity, please ensure that the corresponding .meta file is moved or deleted along with it.
+[ScriptCompilation] Requested script compilation because: Assetdatabase observed changes in script compilation related files
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://unix:/tmp/ilpp.sock-04681d201b5641122c692a880bb88dd3
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Content root path: /mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/project-broad-native1/
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping application/grpc -
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping application/grpc - - 200 - application/grpc 43.6592ms
+Starting: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/bee_backend --ipc --defer-dag-verification --dagfile="Library/Bee/2400b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: /mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/project-broad-native1
+ExitCode: 4 Duration: 0s36ms
+[             ] Require frontend run.  Library/Bee/2400b0aE.dag couldn't be loaded
+DisplayProgressbar: Compiling Scripts
+Starting: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/Tools/netcorerun/netcorerun "/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/Tools/BuildPipeline/ScriptCompilationBuildProgram.exe" "Library/Bee/2400b0aE.dag.json" "Library/Bee/2400b0aE-inputdata.json" "Library/Bee/buildprogram0.traceevents"
+WorkingDir: /mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/project-broad-native1
+ExitCode: 0 Duration: 0s409ms
+Starting: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/bee_backend --ipc --defer-dag-verification --dagfile="Library/Bee/2400b0aE.dag" --continue-on-failure --dagfilejson="Library/Bee/2400b0aE.dag.json" --profile="Library/Bee/backend2.traceevents" ScriptAssemblies
+WorkingDir: /mnt/storage-hdd/node-b-caches-20261023/physics2dmotion-t3-319e74d7/project-broad-native1
+ExitCode: 0 Duration: 3s958ms
+Finished compiling graph: 151 nodes, 537 flattened edges (527 ToBuild, 4 ToUse), maximum node priority 18
+[  1/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.CrashReportingModule.dll_FFF5EF5C94F9F66A.mvfrm
+[  2/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ContentLoadModule.dll_D1BA8E6C2BEF9C10.mvfrm
+[  3/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ClusterInputModule.dll_C7A69580BEDCBD63.mvfrm
+[  4/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.AccessibilityModule.dll_D351BE2BDAC3624A.mvfrm
+[  5/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.CoreModule.dll_D3114EBF5DA07392.mvfrm
+[  6/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.GIModule.dll_395087EE792237F5.mvfrm
+[  7/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.UmbraModule.dll_89D0C901E16A8ED5.mvfrm
+[  8/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.UnityConnectModule.dll_480A206B0D54EA9D.mvfrm
+[  9/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.DSPGraphModule.dll_9C82844C2A76E750.mvfrm
+[ 10/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.UIElementsSamplesModule.dll_CDDC505FCFAB225A.mvfrm
+[ 11/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.VideoModule.dll_3405A15416D5FF07.mvfrm
+[ 12/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ClusterRendererModule.dll_D69FD92C9D10F08E.mvfrm
+[ 13/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.VFXModule.dll_DFA437E3AF2D13F4.mvfrm
+[ 14/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.UIElementsModule.dll_F8FA4E601D779443.mvfrm
+[ 15/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.XRModule.dll_E3AA3508F931F492.mvfrm
+[ 16/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.UIBuilderModule.dll_2BCEF0FEA29AF4E3.mvfrm
+[ 17/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.dll_E976E74DE8AD947E.mvfrm
+[ 18/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.PropertiesModule.dll_CECBC08C9FC35846.mvfrm
+[ 19/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.PerformanceReportingModule.dll_0701BF98C44C1A51.mvfrm
+[ 20/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.GameCenterModule.dll_A190814E2CD7F40A.mvfrm
+[ 21/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.LocalizationModule.dll_05F35FD35658B05C.mvfrm
+[ 22/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.MarshallingModule.dll_E10CD3C041952175.mvfrm
+[ 23/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.MultiplayerModule.dll_B84C51B81634819B.mvfrm
+[ 24/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.IdentifiersModule.dll_112DBD211FE5C23B.mvfrm
+[ 25/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.IMGUIModule.dll_0D8878B44BF2A7E8.mvfrm
+[ 26/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.InputLegacyModule.dll_C9E95049F55EAA14.mvfrm
+[ 27/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.InputModule.dll_3B9EA0FDFBF938AB.mvfrm
+[ 28/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.InputForUIModule.dll_A442DB678CF890C6.mvfrm
+[ 29/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.PhysicsModule.dll_6AE57EA0648595B8.mvfrm
+[ 30/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.Physics2DModule.dll_F271AFFBAB3C47EA.mvfrm
+[ 31/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.GridModule.dll_B0826AAD75F50989.mvfrm
+[ 32/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.HotReloadModule.dll_27147E10E5726BD7.mvfrm
+[ 33/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.GraphicsStateCollectionSerializerModule.dll_BB819329E0F77A57.mvfrm
+[ 34/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.JSONSerializeModule.dll_BFAA398F52F745F9.mvfrm
+[ 35/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.PhysicsModule.dll_786AC5F5FF76AE73.mvfrm
+[ 36/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.UIAutomationModule.dll_FD7101E584E4CE43.mvfrm
+[ 37/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.EmbreeModule.dll_74976475F3B69390.mvfrm
+[ 38/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.Physics2DModule.dll_3C8BBF12C5BC9605.mvfrm
+[ 39/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.CoreBusinessMetricsModule.dll_1A4F2E25217ACFD0.mvfrm
+[ 40/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.MultiplayerModule.dll_B286822903FA7116.mvfrm
+[ 41/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.GridModule.dll_8D61975ACDEF9E5E.mvfrm
+[ 42/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.GraphicsStateCollectionSerializerModule.dll_B28DC63A13F830F2.mvfrm
+[ 43/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.GraphViewModule.dll_D74643E22FE27BAF.mvfrm
+[ 44/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.DiagnosticsModule.dll_69AB812CA22F42D8.mvfrm
+[ 45/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.CoreModule.dll_AFF07B6CB59B0867.mvfrm
+[ 46/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.DeviceSimulatorModule.dll_D0F316BB2D55E30A.mvfrm
+[ 47/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.EditorToolbarModule.dll_094DD3FE5459139A.mvfrm
+[ 48/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.GridAndSnapModule.dll_736467AE2593FFC7.mvfrm
+[ 49/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.GIModule.dll_FAE1F65F0DA5042A.mvfrm
+[ 50/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.BuildProfileModule.dll_4CD012F4E8710583.mvfrm
+[ 51/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.TreeModule.dll_0D9C707B3D609DA6.mvfrm
+[ 52/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.TilemapModule.dll_31ADA8E5ECF1D86A.mvfrm
+[ 53/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.AdaptivePerformanceModule.dll_9A6434AAFB33A0D6.mvfrm
+[ 54/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.SpriteShapeModule.dll_4C3F92F700D51BA8.mvfrm
+[ 55/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.PresetsUIModule.dll_92AC7CC4323AD3B4.mvfrm
+[ 56/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.SubstanceModule.dll_8125D0BBBF9A53BC.mvfrm
+[ 57/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.SketchUpModule.dll_842F45B27F7CDABF.mvfrm
+[ 58/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.TextCoreTextEngineModule.dll_79D73E19967CD323.mvfrm
+[ 59/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.TextRenderingModule.dll_769066F7A5A26F2B.mvfrm
+[ 60/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.TextCoreFontEngineModule.dll_31EF07A806F91A05.mvfrm
+[ 61/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.SceneViewModule.dll_15F626EA250548BD.mvfrm
+[ 62/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.TerrainModule.dll_92B14164D534F761.mvfrm
+[ 63/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.ShaderFoundryModule.dll_6BCD14FF75F53A60.mvfrm
+[ 64/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.SceneTemplateModule.dll_2CED44BC5345BDD2.mvfrm
+[ 65/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.QuickSearchModule.dll_F4BB0239FB063F31.mvfrm
+[ 66/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.SafeModeModule.dll_9C1A6062344B3EA8.mvfrm
+[ 67/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.PropertiesModule.dll_CE1D53449D7F3EFB.mvfrm
+[ 68/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll_7C09841E10988CB3.mvfrm
+[ 69/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.QuickInstallModule.dll_2BAF613429F773B6.mvfrm
+[ 70/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.iOS.Extensions.Xcode.dll_65E294087A06CE40.mvfrm
+[ 71/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.Apple.Extensions.Common.dll_72C741D70D07BB29.mvfrm
+[ 72/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.iOS.Extensions.Common.dll_4F66B22AE2FDF3CC.mvfrm
+[ 73/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.dll_1C1B2E2647212163.mvfrm
+[ 74/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/Unity.Android.Gradle.dll_DD675E43164085CF.mvfrm
+[ 75/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/Unity.Android.Types.dll_635F0DA74D4257DD.mvfrm
+[ 76/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.SpriteMaskModule.dll_8A0E86964C037039.mvfrm
+[ 77/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.VFXModule.dll_EBC5DA371EDD21F9.mvfrm
+[ 78/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.VirtualTexturingModule.dll_09473B5C28D29BB0.mvfrm
+[ 79/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp.rsp2
+[ 80/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp.UnityAdditionalFile.txt
+[ 81/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp.dll.mvfrm.rsp
+[ 82/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp.rsp
+[ 83/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityCurlModule.dll_D8E8613C7A534242.mvfrm
+[ 84/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityTestProtocolModule.dll_899F065229A677B0.mvfrm
+[ 85/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityConnectModule.dll_3569A47A07DCEB48.mvfrm
+[ 86/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.TextRenderingModule.dll_02D1591F1E9AF250.mvfrm
+[ 87/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.TextCoreTextEngineModule.dll_F836B96CA97A91EE.mvfrm
+[ 88/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityAnalyticsCommonModule.dll_A2407CDCDE34B8AF.mvfrm
+[ 89/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.TextCoreFontEngineModule.dll_B04E82FB19F6D8D0.mvfrm
+[ 90/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.TLSModule.dll_6AE741C8486FB88C.mvfrm
+[ 91/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityConsentModule.dll_070F3BA614E78198.mvfrm
+[ 92/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.SpriteShapeModule.dll_52056286130F2C2D.mvfrm
+[ 93/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.SpriteMaskModule.dll_8ABCF3DE4E478984.mvfrm
+[ 94/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.SharedInternalsModule.dll_C6A315B29663A3D2.mvfrm
+[ 95/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.SubstanceModule.dll_370BC1A4A51A05A1.mvfrm
+[ 96/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.StreamingModule.dll_5A60AD5B59C70793.mvfrm
+[ 97/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ShaderVariantAnalyticsModule.dll_1259E3A005FA5D59.mvfrm
+[ 98/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UmbraModule.dll_4FFD856612E7BF7A.mvfrm
+[ 99/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.VRModule.dll_EF5A0393DB74DAFF.mvfrm
+[100/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityAnalyticsModule.dll_72A7A972AF32D3F4.mvfrm
+[101/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityWebRequestAssetBundleModule.dll_E239946CB174CDC5.mvfrm
+[102/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityWebRequestAudioModule.dll_7EFE13774AB6E4E9.mvfrm
+[103/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityWebRequestTextureModule.dll_519FC5EF5A2E21DE.mvfrm
+[104/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UIElementsModule.dll_F9A8BBA81FBBAD8E.mvfrm
+[105/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.VideoModule.dll_FA325DB848532FAC.mvfrm
+[106/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityWebRequestModule.dll_5430DE872A2A4301.mvfrm
+[107/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityWebRequestWWWModule.dll_C2F8FEC8993A4E5A.mvfrm
+[108/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.LinuxStandalone.Extensions.dll_284771E9126D9599.mvfrm
+[109/148    0s] MovedFromExtractor-Combine Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp.dll.mvfrm
+[110/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.VehiclesModule.dll_0EF41C62323FE5CA.mvfrm
+[111/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.Android.Extensions.dll_7C13B87F55DA696F.mvfrm
+[112/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.XRModule.dll_2218C69864AF285D.mvfrm
+[113/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.TilemapModule.dll_242861905200BFAF.mvfrm
+[114/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.WindModule.dll_496029E7EED6F1FB.mvfrm
+[115/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.HierarchyCoreModule.dll_D6AD4D2DC2693E65.mvfrm
+[116/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.TerrainModule.dll_852BFA0F3A43DEA6.mvfrm
+[117/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.TerrainPhysicsModule.dll_5382E17C1C4E7C85.mvfrm
+[118/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.NVIDIAModule.dll_CCA87C5D5153AE3E.mvfrm
+[119/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ScreenCaptureModule.dll_D991E7146763725B.mvfrm
+[120/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.AudioModule.dll_D528D94D85C11407.mvfrm
+[121/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ParticleSystemModule.dll_530838A9030B81F8.mvfrm
+[122/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp-Editor.rsp2
+[123/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp-Editor.UnityAdditionalFile.txt
+[124/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.SubsystemsModule.dll_F56A5A401C8F7197.mvfrm
+[125/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp-Editor.dll.mvfrm.rsp
+[126/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ImageConversionModule.dll_4291D6DD1F35A882.mvfrm
+[127/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp-Editor.rsp
+[128/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.InsightsModule.dll_30F7EB73429365AE.mvfrm
+[129/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.AnimationModule.dll_A5CBC00B0A3F5055.mvfrm
+[130/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.AssetBundleModule.dll_38A4352B5D6CF423.mvfrm
+[131/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.AccessibilityModule.dll_5F92B05353BBE56F.mvfrm
+[132/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.AndroidJNIModule.dll_7743373366970319.mvfrm
+[133/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ClothModule.dll_3C1136485FDDF2EB.mvfrm
+[134/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.AMDModule.dll_6C577E63213F3D39.mvfrm
+[135/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.AIModule.dll_A1143EE0DD734FDB.mvfrm
+[136/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ARModule.dll_5A8703E43A90AEA4.mvfrm
+[137/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.Graphs.dll_D9D272D801B86B99.mvfrm
+[138/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.iOS.Extensions.dll_C2AAB2FBCD6F4A19.mvfrm
+[139/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.DirectorModule.dll_973122E2B816162F.mvfrm
+[140/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UIModule.dll_9C87DD0E39BA5587.mvfrm
+[141/148    0s] MovedFromExtractor-Combine Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp-Editor.dll.mvfrm
+[142/148    2s] Csc Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp.dll (+2 others)
+Assets/Scripts/Probe2D.cs(411,43): warning CS0618: 'Physics2D.RaycastNonAlloc(Vector2, Vector2, RaycastHit2D[], float)' is obsolete: 'Physics2D.RaycastNonAlloc is deprecated. Use Physics2D.Raycast instead.'
+Assets/Scripts/Probe2D.cs(414,45): warning CS0618: 'Physics2D.CapsuleCastNonAlloc(Vector2, Vector2, CapsuleDirection2D, float, Vector2, RaycastHit2D[], float)' is obsolete: 'Physics2D.CapsuleCastNonAlloc is deprecated. Use Physics2D.CapsuleCast instead.'
+Assets/Scripts/Probe2D.cs(415,45): warning CS0618: 'Physics2D.CapsuleCastNonAlloc(Vector2, Vector2, CapsuleDirection2D, float, Vector2, RaycastHit2D[], float)' is obsolete: 'Physics2D.CapsuleCastNonAlloc is deprecated. Use Physics2D.CapsuleCast instead.'
+Assets/Scripts/Probe2D.cs(429,25): warning CS0618: 'Physics2D.OverlapCircleNonAlloc(Vector2, float, Collider2D[])' is obsolete: 'Physics2D.OverlapCircleNonAlloc is deprecated. Use Physics2D.OverlapCircle instead.'
+Assets/Scripts/Probe2D.cs(431,21): warning CS0618: 'Physics2D.OverlapBoxNonAlloc(Vector2, Vector2, float, Collider2D[])' is obsolete: 'Physics2D.OverlapBoxNonAlloc is deprecated. Use Physics2D.OverlapBox instead.'
+Assets/Scripts/Probe2D.cs(433,21): warning CS0618: 'Physics2D.OverlapCapsuleNonAlloc(Vector2, Vector2, CapsuleDirection2D, float, Collider2D[])' is obsolete: 'Physics2D.OverlapCapsuleNonAlloc is deprecated. Use Physics2D.OverlapCapsule instead.'
+Assets/Scripts/Probe2D.cs(483,46): warning CS0618: 'Physics2D.RaycastNonAlloc(Vector2, Vector2, RaycastHit2D[], float)' is obsolete: 'Physics2D.RaycastNonAlloc is deprecated. Use Physics2D.Raycast instead.'
+Assets/Scripts/Probe2D.cs(484,49): warning CS0618: 'Physics2D.CircleCastNonAlloc(Vector2, float, Vector2, RaycastHit2D[], float)' is obsolete: 'Physics2D.CircleCastNonAlloc is deprecated. Use Physics2D.CircleCast instead.'
+Assets/Scripts/Probe2D.cs(485,50): warning CS0618: 'Physics2D.CapsuleCastNonAlloc(Vector2, Vector2, CapsuleDirection2D, float, Vector2, RaycastHit2D[], float)' is obsolete: 'Physics2D.CapsuleCastNonAlloc is deprecated. Use Physics2D.CapsuleCast instead.'
+Assets/Scripts/Probe2D.cs(486,46): warning CS0618: 'Physics2D.BoxCastNonAlloc(Vector2, Vector2, float, Vector2, RaycastHit2D[], float)' is obsolete: 'Physics2D.BoxCastNonAlloc is deprecated. Use Physics2D.BoxCast instead.'
+[143/148    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp.pdb
+[144/148    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp.dll
+[145/148    0s] Csc Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp-Editor.dll (+2 others)
+[146/148    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp-Editor.pdb
+[147/148    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp-Editor.dll
+*** Tundra build success (3.93 seconds), 147 items updated, 148 evaluated
+Total cache size 0
+Assets/Scripts/Probe2D.cs(411,43): warning CS0618: 'Physics2D.RaycastNonAlloc(Vector2, Vector2, RaycastHit2D[], float)' is obsolete: 'Physics2D.RaycastNonAlloc is deprecated. Use Physics2D.Raycast instead.'
+Assets/Scripts/Probe2D.cs(414,45): warning CS0618: 'Physics2D.CapsuleCastNonAlloc(Vector2, Vector2, CapsuleDirection2D, float, Vector2, RaycastHit2D[], float)' is obsolete: 'Physics2D.CapsuleCastNonAlloc is deprecated. Use Physics2D.CapsuleCast instead.'
+Assets/Scripts/Probe2D.cs(415,45): warning CS0618: 'Physics2D.CapsuleCastNonAlloc(Vector2, Vector2, CapsuleDirection2D, float, Vector2, RaycastHit2D[], float)' is obsolete: 'Physics2D.CapsuleCastNonAlloc is deprecated. Use Physics2D.CapsuleCast instead.'
+Assets/Scripts/Probe2D.cs(429,25): warning CS0618: 'Physics2D.OverlapCircleNonAlloc(Vector2, float, Collider2D[])' is obsolete: 'Physics2D.OverlapCircleNonAlloc is deprecated. Use Physics2D.OverlapCircle instead.'
+Assets/Scripts/Probe2D.cs(431,21): warning CS0618: 'Physics2D.OverlapBoxNonAlloc(Vector2, Vector2, float, Collider2D[])' is obsolete: 'Physics2D.OverlapBoxNonAlloc is deprecated. Use Physics2D.OverlapBox instead.'
+Assets/Scripts/Probe2D.cs(433,21): warning CS0618: 'Physics2D.OverlapCapsuleNonAlloc(Vector2, Vector2, CapsuleDirection2D, float, Collider2D[])' is obsolete: 'Physics2D.OverlapCapsuleNonAlloc is deprecated. Use Physics2D.OverlapCapsule instead.'
+Assets/Scripts/Probe2D.cs(483,46): warning CS0618: 'Physics2D.RaycastNonAlloc(Vector2, Vector2, RaycastHit2D[], float)' is obsolete: 'Physics2D.RaycastNonAlloc is deprecated. Use Physics2D.Raycast instead.'
+Assets/Scripts/Probe2D.cs(484,49): warning CS0618: 'Physics2D.CircleCastNonAlloc(Vector2, float, Vector2, RaycastHit2D[], float)' is obsolete: 'Physics2D.CircleCastNonAlloc is deprecated. Use Physics2D.CircleCast instead.'
+Assets/Scripts/Probe2D.cs(485,50): warning CS0618: 'Physics2D.CapsuleCastNonAlloc(Vector2, Vector2, CapsuleDirection2D, float, Vector2, RaycastHit2D[], float)' is obsolete: 'Physics2D.CapsuleCastNonAlloc is deprecated. Use Physics2D.CapsuleCast instead.'
+Assets/Scripts/Probe2D.cs(486,46): warning CS0618: 'Physics2D.BoxCastNonAlloc(Vector2, Vector2, float, Vector2, RaycastHit2D[], float)' is obsolete: 'Physics2D.BoxCastNonAlloc is deprecated. Use Physics2D.BoxCast instead.'
+Total cache size after purge 0, took 00:00:00.0064976
+AssetDatabase: script compilation time: 4.880355s
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.235 seconds
+Start importing Assets using Guid(00000000000000001000000000000000) (DefaultImporter) -> (artifact id: '4b55c7cb15071bfc086d0e52a7664a41') in 0.014332999 seconds
+Start importing ProjectSettings/InputManager.asset using Guid(00000000000000002000000000000000) (LibraryAssetImporter) -> (artifact id: '3d278bdfa729973ecf92c670ca181c88') in 0.000871081 seconds
+Start importing ProjectSettings/TagManager.asset using Guid(00000000000000003000000000000000) (LibraryAssetImporter) -> (artifact id: '4aa03ef27a83f311e598313a3ec2fbc3') in 0.00078598 seconds
+Start importing ProjectSettings/ProjectSettings.asset using Guid(00000000000000004000000000000000) (LibraryAssetImporter) -> (artifact id: '9de65bac97c79f50e3bc9e7e4178073b') in 0.001320011 seconds
+Start importing ProjectSettings/AudioManager.asset using Guid(00000000000000006000000000000000) (LibraryAssetImporter) -> (artifact id: '22ffb3fe371a5950e3f1d63c04f3be40') in 0.000563761 seconds
+Start importing ProjectSettings/TimeManager.asset using Guid(00000000000000007000000000000000) (LibraryAssetImporter) -> (artifact id: '52c307e924e96ceef905bcc2cea85a00') in 0.00055331 seconds
+Start importing ProjectSettings/DynamicsManager.asset using Guid(00000000000000008000000000000000) (LibraryAssetImporter) -> (artifact id: 'be5c3cc4d9346f9e8fa2ddaee90dd709') in 0.000585421 seconds
+Start importing ProjectSettings/QualitySettings.asset using Guid(00000000000000009000000000000000) (LibraryAssetImporter) -> (artifact id: 'f44ba1262e818bbe4262433f49247514') in 0.00073185 seconds
+Start importing ProjectSettings/EditorBuildSettings.asset using Guid(0000000000000000b000000000000000) (LibraryAssetImporter) -> (artifact id: '5595937c56725606b60e4c751397db2c') in 0.00056021 seconds
+Start importing ProjectSettings/EditorSettings.asset using Guid(0000000000000000c000000000000000) (LibraryAssetImporter) -> (artifact id: '88a81b0cd41f2e6791b296dbea0c2761') in 0.000571951 seconds
+Start importing ProjectSettings/NavMeshAreas.asset using Guid(00000000000000004100000000000000) (LibraryAssetImporter) -> (artifact id: '4ba0a6bb5cc18b1619eb3b3f4ce570d1') in 0.0005844 seconds
+Start importing ProjectSettings/Physics2DSettings.asset using Guid(00000000000000005100000000000000) (LibraryAssetImporter) -> (artifact id: 'b9a798d8579cfd14a9d003bd527e0b64') in 0.000561421 seconds
+Start importing ProjectSettings/GraphicsSettings.asset using Guid(00000000000000006100000000000000) (LibraryAssetImporter) -> (artifact id: '73a0d0504a18325c463e244f56ec4944') in 0.0006399 seconds
+Start importing ProjectSettings/ClusterInputManager.asset using Guid(00000000000000007100000000000000) (LibraryAssetImporter) -> (artifact id: '5a028a71a6163b7bc9a46219c48662ec') in 0.00051445 seconds
+Start importing ProjectSettings/UnityConnectSettings.asset using Guid(0000000000000000a100000000000000) (LibraryAssetImporter) -> (artifact id: '5a6e69f8200d884ded3f19f546ea756a') in 0.00056863 seconds
+Start importing ProjectSettings/PresetManager.asset using Guid(0000000000000000b100000000000000) (LibraryAssetImporter) -> (artifact id: '669bd2cb5cdf99ef516d1350fa42393e') in 0.00059905 seconds
+Start importing ProjectSettings/VFXManager.asset using Guid(0000000000000000c100000000000000) (LibraryAssetImporter) -> (artifact id: 'd96b989647555359bde1f89c35e57424') in 0.000563361 seconds
+Start importing ProjectSettings/VersionControlSettings.asset using Guid(0000000000000000d100000000000000) (LibraryAssetImporter) -> (artifact id: 'b89f810c452b248c014f182ae5caa680') in 0.00060055 seconds
+Start importing ProjectSettings/MemorySettings.asset using Guid(0000000000000000f100000000000000) (LibraryAssetImporter) -> (artifact id: '19f032dc933bd79e61da5c81f7ddd1ac') in 0.000538881 seconds
+Start importing ProjectSettings/MultiplayerManager.asset using Guid(00000000000000000200000000000000) (LibraryAssetImporter) -> (artifact id: '2f864bba7a58beddb6fbf79980c9a838') in 0.00054764 seconds
+Start importing Library/BuildInstructions using Guid(00000000000000002300000000000000) (DefaultImporter) -> (artifact id: 'ade3aeda13ad9960ede0e143cb33502a') in 0.0003894 seconds
+Start importing Packages/com.unity.modules.imgui using Guid(c060426bfd6e82575228df6656368eaa) (DefaultImporter) -> (artifact id: '7d484ab5933192f91b6a2fb9f7498a1e') in 0.000389671 seconds
+Start importing Assets/Scenes using Guid(b1196d8a24871c74fbb1f22981d2ca95) (DefaultImporter) -> (artifact id: 'f1cb1501074acdad58e3d8fbc8dda265') in 0.00033938 seconds
+Start importing Packages/com.unity.modules.physics using Guid(d6db7caf2e852b75ebb9c6098418179c) (DefaultImporter) -> (artifact id: 'b562405fb5bd1c9305c356f8cfe7a672') in 0.00037412 seconds
+Start importing Assets/Editor using Guid(e6fda1e39d3130e378e21ad358928a0f) (DefaultImporter) -> (artifact id: '023321d4a005617ced249a5e52d36ee8') in 0.00033468 seconds
+Start importing Packages/com.unity.modules.physics2d using Guid(376c84ea405e0f2b80562c23bb977216) (DefaultImporter) -> (artifact id: 'f030ba7c21f8c3d36c2700ba9484429e') in 0.000371841 seconds
+Start importing Assets/Scripts using Guid(f713ee548e251a900804bb3e245774bd) (DefaultImporter) -> (artifact id: 'c49fa696da7fbc59c1766a314312418a') in 0.0003394 seconds
+Start importing Assets/Resources using Guid(1a47b28e14df6223288ed573984dd562) (DefaultImporter) -> (artifact id: '37208c27ed2a531bce3bdaadfd5a8078') in 0.00035221 seconds
+Start importing Packages/com.unity.modules.jsonserialize using Guid(fc3a810351931f5e6183e16b9beb5563) (DefaultImporter) -> (artifact id: 'ae149b8f46567b37c6b77b16bb572fe8') in 0.000380791 seconds
+Start importing Packages/com.unity.modules.jsonserialize/package.ModuleCompilationTrigger using Guid(e6a135e3ea9cb46795d1b0e05ac3e1e5) (DefaultImporter) -> (artifact id: '8d26f1c211bce77f7cf17eccccd57b0d') in 0.00037273 seconds
+Start importing Packages/com.unity.modules.physics/package.ModuleCompilationTrigger using Guid(5c1ee4056d0ac7ad3c5a16597fcaa38a) (DefaultImporter) -> (artifact id: '288b7a03d6481d4e92cee0ae908758ad') in 0.00034981 seconds
+Start importing Packages/com.unity.modules.imgui/package.ModuleCompilationTrigger using Guid(be13c398521e3c1ad21fb9da30ab2ab6) (DefaultImporter) -> (artifact id: 'ea0574aa05344c7e80357502346d73fc') in 0.000371471 seconds
+Start importing Packages/com.unity.modules.physics2d/package.ModuleCompilationTrigger using Guid(fe6a6957b37b61417b457a1e0541791d) (DefaultImporter) -> (artifact id: 'a5a6ae7d64235baf32ceb35097cc3c10') in 0.00030525 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Native extension for LinuxStandalone target not found
+Native extension for iOS target not found
+Native extension for Android target not found
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.392 seconds
+Domain Reload Profiling: 627ms
+	BeginReloadAssembly (149ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (8ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (41ms)
+	RebuildCommonClasses (32ms)
+	RebuildNativeTypeToScriptingClass (8ms)
+	initialDomainReloadingComplete (26ms)
+	LoadAllAssembliesAndSetupDomain (20ms)
+		LoadAssemblies (68ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (15ms)
+			TypeCache.Refresh (14ms)
+				TypeCache.ScanAssembly (8ms)
+			BuildScriptInfoCaches (0ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (392ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (270ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (28ms)
+			SetLoadedEditorAssemblies (3ms)
+			BeforeProcessingInitializeOnLoad (89ms)
+			ProcessInitializeOnLoadAttributes (122ms)
+			ProcessInitializeOnLoadMethodAttributes (24ms)
+			AfterProcessingInitializeOnLoad (5ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (7ms)
+Start importing Library/BuildPlayer.prefs using Guid(00000000000000005000000000000000) (DefaultImporter) -> (artifact id: '083d37eb6b0e82b8f5c1ec86344d848d') in 0.019259143 seconds
+Start importing Assets/Scenes/Probe.unity using Guid(bfc73bc94721817a9b4310129345dcef) (DefaultImporter) -> (artifact id: '03ebf54737a3f6e477d7077173246953') in 0.00040386 seconds
+Start importing Packages/com.unity.modules.jsonserialize/package.json using Guid(40bf3cec17fa0b49fe04443c8332d638) (PackageManifestImporter) -> (artifact id: '4bbe75e7d3a83ee7597a3bcba3a1e7c4') in 0.000747411 seconds
+Start importing Packages/com.unity.modules.imgui/package.json using Guid(42fe78c8fe682715a2cb531422e6ccb3) (PackageManifestImporter) -> (artifact id: '258497c2a57bcde162ae716914ae3ed9') in 0.00056834 seconds
+Start importing Packages/com.unity.modules.physics2d/package.json using Guid(f7a8357347c80dc69c08d0b1a05e2122) (PackageManifestImporter) -> (artifact id: 'ae5955da6334bfc2a25981da31e7683f') in 0.00051911 seconds
+Start importing Packages/com.unity.modules.physics/package.json using Guid(1a4266815e998967becf686f9c71f0a6) (PackageManifestImporter) -> (artifact id: '1cb3c922b1dde68060b01eaebbe11061') in 0.000488681 seconds
+Loading style catalogs (6)
+	StyleSheets/Extensions/base/common.uss
+	UIPackageResources/StyleSheets/Default/Variables/Public/common.uss
+	StyleSheets/Northstar/common.uss
+	StyleSheets/Extensions/fonts/inter.uss
+	StyleSheets/Extensions/base/dark.uss
+	UIPackageResources/StyleSheets/Default/Northstar/Palette/dark.uss
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=cf4582043018e95da9890f825500347c): Total: 6.352 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	Summary:
+		Imports: total=39 (actual=39, local cache=0, cache server=0)
+		Asset DB Process Time: managed=4 ms, native=525 ms
+		Asset DB Callback time: managed=128 ms, native=570 ms
+		Scripting: domain reloads=1, domain reload time=235 ms, compile time=4882 ms, other=4 ms
+		Project Asset Count: scripts=33, non-scripts=6
+		Asset File Changes: new=46, changed=46, moved=0, deleted=0
+		Scan Filter Count: 1
+	InvokeCustomDependenciesCallbacks: 0.002ms
+	InvokePackagesCallback: 569.005ms
+	ApplyChangesToAssetFolders: 0.060ms
+	Scan: 32.962ms
+	OnSourceAssetsModified: 0.748ms
+	CategorizeAssetsWithTransientArtifact: 0.074ms
+	ProcessAssetsWithTransientArtifactChanges: 0.386ms
+	CategorizeAssets: 0.166ms
+	ImportOutOfDateAssets: 454.601ms (-4489.089ms without children)
+		ImportManagerImport: 61.324ms (5.598ms without children)
+			ImportInProcess: 55.663ms
+			UpdateCategorizedAssets: 0.063ms
+		CompileScripts: 4881.969ms
+		ReloadNativeAssets: 0.000ms
+		UnloadImportedAssets: 0.272ms
+		ReloadImportedAssets: 0.006ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.005ms
+		InitializingProgressBar: 0.004ms
+		PostProcessAllAssetNotificationsAddChangedAssets: 0.000ms
+		OnDemandSchedulerStart: 0.109ms
+	PostProcessAllAssets: 128.695ms
+	Hotreload: 0.780ms
+	GatherAllCurrentPrimaryArtifactRevisions: 0.001ms
+	UnloadStreamsBegin: 0.115ms
+	PersistCurrentRevisions: 0.039ms
+	UnloadStreamsEnd: 0.006ms
+	GenerateScriptTypeHashes: 0.003ms
+	Untracked: 5164.032ms
+
+Application.AssetDatabase Initial Refresh End
+Scanning for USB devices : 5.996ms
+Initializing Unity extensions:
+UpdateMenuTitleForLanguage: 10
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-physics
+Curl error 60: Cert verify failed. Certificate Common Name(CN) does not match with the expected CN. UnityTls error code: 7
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+Curl error 60: Cert verify failed. Certificate Common Name(CN) does not match with the expected CN. UnityTls error code: 7
+Unloading 23 unused Assets / (0.6 MB). Loaded Objects now: 531.
+Memory consumption went from 77.7 MB to 77.1 MB.
+Total: 5.492134 ms (FindLiveObjects: 0.024770 ms CreateObjectMapping: 0.002540 ms MarkObjects: 4.855053 ms  DeleteObjects: 0.609201 ms)
+
+Opening scene 'Assets/Scenes/Probe.unity'
+Unloading 1 Unused Serialized files (Serialized files now loaded: 0)
+Loaded scene 'Assets/Scenes/Probe.unity'
+	Deserialize:            0.333 ms
+	Integration:            5.100 ms
+	Integration of assets:  0.001 ms
+	Thread Wait Time:       0.014 ms
+	Total Operation Time:   5.448 ms
+Unloading 1 unused Assets / (0.5 KB). Loaded Objects now: 537.
+Memory consumption went from 75.0 MB to 75.0 MB.
+Total: 3.582602 ms (FindLiveObjects: 0.025490 ms CreateObjectMapping: 0.003620 ms MarkObjects: 3.547012 ms  DeleteObjects: 0.005960 ms)
+
+
+(process:1476378): GLib-GObject-CRITICAL **: 08:00:32.884: g_object_unref: assertion 'G_IS_OBJECT (object)' failed
+
+(process:1476378): GLib-GObject-CRITICAL **: 08:00:32.884: g_object_unref: assertion 'G_IS_OBJECT (object)' failed
+
+(process:1476378): GLib-GObject-CRITICAL **: 08:00:32.884: g_object_unref: assertion 'G_IS_OBJECT (object)' failed
+
+(process:1476378): Gtk-CRITICAL **: 08:00:32.884: gtk_widget_destroy: assertion 'GTK_IS_WIDGET (widget)' failed
+[Project] Loading completed in 7.726 seconds
+	Project init time: 				7.556 seconds
+		Template init time: 		0.000 seconds
+		Package Manager init time: 		0.210 seconds
+		Asset Database init time: 		0.091 seconds
+		Global illumination init time: 	0.004 seconds
+		Assemblies load time: 			0.743 seconds
+		Unity extensions init time: 	0.000 seconds
+		Asset Database refresh time: 	6.352 seconds
+	Scene opening time: 			0.116 seconds
+##utp:{"type":"ProjectInfo","version":2,"phase":"Immediate","time":1793433632884,"processId":1476378,"projectLoad":7.726387706000001,"projectInit":7.555683334,"templateInit":0.0,"packageManagerInit":0.210183358,"assetDatabaseInit":0.090738399,"globalIlluminationInit":0.003924483,"assembliesLoad":0.743348707,"unityExtensionsInit":0.00026042,"assetDatabaseRefresh":6.351709845,"sceneOpening":0.116352916}
+##utp:{"type":"EditorInfo","version":2,"phase":"Immediate","time":1793433632884,"processId":1476378,"editorVersion":"6000.0.71f1 (907bc2d768b5)","branch":"6000.0/respin/6000.0.71f1-8308b6469260","buildType":"Release","platform":"Linux"}
+Reloading assemblies for play mode.
+Reloading assemblies after forced synchronous recompile.
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.191 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Native extension for LinuxStandalone target not found
+Native extension for iOS target not found
+Native extension for Android target not found
+Mono: successfully reloaded assembly
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+- Finished resetting the current domain, in  0.521 seconds
+Domain Reload Profiling: 711ms
+	BeginReloadAssembly (117ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (17ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (31ms)
+	RebuildCommonClasses (34ms)
+	RebuildNativeTypeToScriptingClass (8ms)
+	initialDomainReloadingComplete (22ms)
+	LoadAllAssembliesAndSetupDomain (9ms)
+		LoadAssemblies (52ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (4ms)
+			TypeCache.Refresh (3ms)
+				TypeCache.ScanAssembly (0ms)
+			BuildScriptInfoCaches (0ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (521ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (291ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (29ms)
+			SetLoadedEditorAssemblies (4ms)
+			BeforeProcessingInitializeOnLoad (103ms)
+			ProcessInitializeOnLoadAttributes (125ms)
+			ProcessInitializeOnLoadMethodAttributes (25ms)
+			AfterProcessingInitializeOnLoad (5ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (19ms)
+Asset Pipeline Refresh (id=b24981b52f000329298255423762a672): Total: 0.746 seconds - Initiated by StopAssetImportingV2(ForceSynchronousImport | ForceDomainReload)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=537 ms
+		Asset DB Callback time: managed=11 ms, native=0 ms
+		Scripting: domain reloads=1, domain reload time=196 ms, compile time=1 ms, other=0 ms
+		Project Asset Count: scripts=33, non-scripts=6
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokeCustomDependenciesCallbacks: 0.001ms
+	InvokePackagesCallback: 0.437ms
+	ApplyChangesToAssetFolders: 0.032ms
+	Scan: 0.001ms
+	OnSourceAssetsModified: 0.001ms
+	CategorizeAssetsWithTransientArtifact: 0.001ms
+	ProcessAssetsWithTransientArtifactChanges: 0.011ms
+	CategorizeAssets: 0.158ms
+	ImportOutOfDateAssets: 521.482ms (519.913ms without children)
+		CompileScripts: 1.397ms
+		CollectScriptTypesHashes: 0.000ms
+		ReloadNativeAssets: 0.000ms
+		UnloadImportedAssets: 0.032ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.007ms
+		InitializingProgressBar: 0.000ms
+		PostProcessAllAssetNotificationsAddChangedAssets: 0.000ms
+		OnDemandSchedulerStart: 0.131ms
+	PostProcessAllAssets: 11.197ms
+	GatherAllCurrentPrimaryArtifactRevisions: 0.004ms
+	UnloadStreamsBegin: 0.030ms
+	PersistCurrentRevisions: 0.002ms
+	UnloadStreamsEnd: 0.001ms
+	GenerateScriptTypeHashes: 0.001ms
+	Untracked: 213.049ms
+
+Density cannot be set on the collider unless it is attached to a dynamic rigid-body that is using auto-mass.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Collider2D:set_density (single)
+Probe2D:Mass () (at Assets/Scripts/Probe2D.cs:150)
+Probe2D:Scenario (string,System.Action) (at Assets/Scripts/Probe2D.cs:40)
+Probe2D:RunAll () (at Assets/Scripts/Probe2D.cs:19)
+ProbeEntry:Run () (at Assets/Scripts/ProbeEntry.cs:21)
+
+[Assets/Scripts/Probe2D.cs line 150]
+
+Density cannot be set on the collider unless it is attached to a dynamic rigid-body that is using auto-mass.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Collider2D:set_density (single)
+Probe2D:Mass () (at Assets/Scripts/Probe2D.cs:173)
+Probe2D:Scenario (string,System.Action) (at Assets/Scripts/Probe2D.cs:40)
+Probe2D:RunAll () (at Assets/Scripts/Probe2D.cs:19)
+ProbeEntry:Run () (at Assets/Scripts/ProbeEntry.cs:21)
+
+[Assets/Scripts/Probe2D.cs line 173]
+
+Asset Pipeline Refresh (id=890cf5483bcabb47ca00e3549442e2ae): Total: 0.016 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+[Physics::Module] Cleanup current backned.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input System polling thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-shaypercool-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-shaypercool channel disconnected successfully.
+AcceleratorClientConnectionCallback - disconnected - :0
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+Cleanup mono
+debugger-agent: Unable to listen on 37
+[usbmuxd] Stop listen thread
+[usbmuxd] Listen thread exiting
+[Package Manager] Server process was shutdown
+Checking for leaked weakptr:
+  Found no leaked weakptrs.
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1793433648067,"processId":1476378,"allocatedMemory":6699891,"memoryLabels":[{"Default":23549},{"Permanent":16268},{"Thread":1084616},{"Manager":29561},{"VertexData":8},{"Geometry":408},{"VFX":-104},{"Texture":160},{"Shader":79299},{"Material":24},{"GfxDevice":35976},{"Animation":456},{"Audio":4032},{"FontEngine":320},{"Physics":2081},{"Serialization":376},{"Input":26752},{"JobScheduler":33024},{"TextLib":160},{"Mono":32},{"ScriptingNativeRuntime":155096},{"BaseObject":1622928},{"Resource":1032},{"Renderer":2928},{"Transform":4678},{"File":5138},{"WebCam":80},{"Culling":32},{"Terrain":11298},{"Wind":24},{"String":25574},{"DynamicArray":84399},{"HashMap":105455},{"Utility":2663504},{"PoolAlloc":1568},{"AI":72},{"TypeTree":5005},{"ScriptManager":512},{"RuntimeInitializeOnLoadManager":568},{"SpriteAtlas":112},{"GI":7448},{"Director":8208},{"CloudService":8048},{"WebRequest":808},{"VR":45689},{"SceneManager":824},{"Video":64},{"LazyScriptCache":32},{"Camera":17},{"Secure":7785},{"Image":16384},{"SerializationCache":1576},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57552},{"StaticSafetyDebugInfo":278528},{"Analytics":384},{"Hierarchy":832},{"CoreStats":12456},{"Identifiers":12384},{"Gui":112},{"EditorUtility":16346},{"VersionControl":4},{"Undo":979},{"AssetDatabase":135174},{"EditorGi":328},{"UnityConnect":24792},{"Upm":11784},{"DrivenProperties":72},{"LocalIPC":154},{"ProfilerEditor":9810},{"CoreBusinessMetrics":2500},{"Licensing":1096},{"AssetReference":32},{"IPCStream":32}]}

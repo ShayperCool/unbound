@@ -7,12 +7,12 @@ WORK = Path(os.environ['MOTION_WORK'])
 os.environ['TRIGGER_WORK'] = str(WORK)
 spec = importlib.util.spec_from_file_location('comparison', ROOT.parent/'trigger2dtiming/report.py')
 comparison = importlib.util.module_from_spec(spec); spec.loader.exec_module(comparison)
-p=argparse.ArgumentParser();p.add_argument('label');p.add_argument('--native',default='native1');p.add_argument('--baseline',default='baseline');a=p.parse_args()
-dest=ROOT/'Evidence'/a.label
+p=argparse.ArgumentParser();p.add_argument('label');p.add_argument('--native',default='native1');p.add_argument('--baseline',default='baseline');p.add_argument('--archive');a=p.parse_args()
+dest=ROOT/'Evidence'/(a.archive or a.label)
 if dest.exists(): raise SystemExit('Refusing to replace '+str(dest))
-dest.mkdir()
 paths=[WORK/(s+'.json') for s in [a.native,a.baseline,a.label]]
 ref,old,new=[json.loads(f.read_text()) for f in paths]
+dest.mkdir()
 result={}
 for group,scenarios in [('motion',list(ref)),('broad',[k for k in ref if k.startswith(('2d.','3d.'))])]:
     r,b,c=[{k:d[k] for k in scenarios if k in d} for d in [ref,old,new]]
