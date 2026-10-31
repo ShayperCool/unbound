@@ -1175,20 +1175,19 @@ pub fn sprite_geometry(texture: &Texture, s: &SpriteSource, round: bool) -> Spri
                 triangles.reverse();
                 let (tw, th) = (texture.width as f32, texture.height as f32);
                 let [ox, oy] = region.offset;
+                // `RecalculateUVs`: from the unit vertices, with the transform the outline
+                // left (`ppu`, rect origin + offset).
+                let units: Vec<[f32; 2]> = vertices
+                    .iter()
+                    .map(|v| [(v[0] - ox) / ppu, (v[1] - oy) / ppu])
+                    .collect();
+                let (ux, uy) = (rx + ox, ry + oy);
                 out.mesh = Some(SpriteMesh {
-                    uv: vertices
+                    uv: units
                         .iter()
-                        .map(|v| {
-                            [
-                                (v[0] + region.x0 as f32) / tw,
-                                (v[1] + region.y0 as f32) / th,
-                            ]
-                        })
+                        .map(|v| [(v[0] * ppu + ux) / tw, (v[1] * ppu + uy) / th])
                         .collect(),
-                    vertices: vertices
-                        .iter()
-                        .map(|v| [(v[0] - ox) / ppu, (v[1] - oy) / ppu])
-                        .collect(),
+                    vertices: units,
                     triangles,
                 });
             }
@@ -1211,6 +1210,11 @@ pub fn sprite_geometry(texture: &Texture, s: &SpriteSource, round: bool) -> Spri
                     .collect()
             })
             .collect();
+    } else if s.generate_physics_shape && !round {
+        tracing::warn!(
+            "the default physics shape of a Polygon-mode sprite (the outline of its mesh) is not \
+             supported: the sprite gets none"
+        );
     } else if s.generate_physics_shape
         && let Some(region) = &region
         && let Some(shape) = region.trace(texture, 0.25, 200, 0)
