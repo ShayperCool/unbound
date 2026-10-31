@@ -209,6 +209,95 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void PressesAndReleasesWithinAFrameKeepTheirOrder()
+        {
+            NativeInput.Enabled = true;
+            try
+            {
+                TakeEvents();
+                Frame(new FrameInput { MouseX = 10, MouseY = 20, ScreenWidth = 960, ScreenHeight = 540 });
+                TakeEvents();
+                // A click with a key typed in it, all between two frames (tests/projects/inputframes,
+                // frame 440): each change is its own event, in order.
+                var events = new[]
+                {
+                    new KeyEvent { Key = (int)KeyCode.A, Pressed = 1, TextStart = 0, TextLength = 1 },
+                    new KeyEvent { Key = (int)KeyCode.Mouse0, Pressed = 1, TextStart = 1 },
+                    new KeyEvent { Key = (int)KeyCode.A, Pressed = 0, TextStart = 1 },
+                    new KeyEvent { Key = (int)KeyCode.Mouse0, Pressed = 0, TextStart = 1 },
+                };
+                var text = Encoding.UTF8.GetBytes("a");
+                fixed (KeyEvent* e = events)
+                fixed (byte* t = text)
+                {
+                    var input = new FrameInput { KeyEvents = e, KeyEventCount = events.Length, Text = t, TextLength = text.Length, MouseX = 10, MouseY = 20, ScreenWidth = 960, ScreenHeight = 540 };
+                    Input.BeginFrame(&input);
+                    Frame(input);
+                }
+                var queued = TakeEvents();
+                var kinds = new List<string>();
+                foreach (var q in queued)
+                {
+                    string type = Encoding.ASCII.GetString(q, 0, 4).Reverse();
+                    if (type == "TEXT") { kinds.Add("text " + (char)BitConverter.ToInt32(q, 20)); continue; }
+                    string format = Encoding.ASCII.GetString(q, 20, 4).Reverse();
+                    kinds.Add(format == "MOUS" ? "mouse " + BitConverter.ToUInt16(q, 24 + 24) : "keys " + Convert.ToHexString(q, 24, 3));
+                }
+                Assert.Equal(new[] { "keys 008000", "text a", "mouse 1", "keys 000000", "mouse 0" }, kinds);
+
+                // The Input Manager: down, up and held for the frame.
+                Assert.True(Input.GetKeyDown(KeyCode.A) && Input.GetKeyUp(KeyCode.A) && Input.GetKey(KeyCode.A));
+                Assert.True(Input.GetMouseButtonDown(0) && Input.GetMouseButtonUp(0) && Input.GetMouseButton(0));
+                // IMGUI: the same order; mouse events carry the button's key code.
+                var gui = new List<string>();
+                foreach (var g in GuiEvents.Frame)
+                    gui.Add($"{g.type} {g.keyCode} {(int)g.character}");
+                Assert.Equal(new[] { "KeyDown A 0", "KeyDown None 97", "mouseDown Mouse0 0", "keyUp A 0", "mouseUp Mouse0 0" }, gui);
+
+                // The next frame: nothing pressed, nothing held.
+                var empty = new FrameInput { MouseX = 10, MouseY = 20, ScreenWidth = 960, ScreenHeight = 540 };
+                Input.BeginFrame(&empty);
+                Assert.False(Input.GetKey(KeyCode.A) || Input.GetKeyUp(KeyCode.A) || Input.GetMouseButton(0));
+                Assert.Empty(GuiEvents.Frame);
+            }
+            finally
+            {
+                NativeInput.Enabled = false;
+                TakeEvents();
+            }
+        }
+
+        [Fact]
+        public void GuiEventsCarryTheModifiersHeldAfterThem()
+        {
+            var events = new[]
+            {
+                new KeyEvent { Key = (int)KeyCode.LeftShift, Pressed = 1 },
+                new KeyEvent { Key = (int)KeyCode.A, Pressed = 1, TextStart = 0, TextLength = 1 },
+                new KeyEvent { Key = (int)KeyCode.A, Pressed = 0, TextStart = 1 },
+                new KeyEvent { Key = (int)KeyCode.LeftShift, Pressed = 0, TextStart = 1 },
+            };
+            var text = Encoding.UTF8.GetBytes("A");
+            fixed (KeyEvent* e = events)
+            fixed (byte* t = text)
+            {
+                var input = new FrameInput { KeyEvents = e, KeyEventCount = events.Length, Text = t, TextLength = text.Length, MouseX = 10, MouseY = 20, ScreenWidth = 960, ScreenHeight = 540 };
+                Input.BeginFrame(&input);
+            }
+            var gui = new List<string>();
+            foreach (var g in GuiEvents.Frame)
+                gui.Add($"{g.type} {g.keyCode} {g.modifiers}");
+            // Measured (tests/projects/inputframes, frames 420-424): Shift's press has Shift, its
+            // release none; modifier keys are function keys.
+            Assert.Equal(new[]
+            {
+                "KeyDown LeftShift Shift, FunctionKey", "KeyDown A Shift", "KeyDown None Shift", "keyUp A Shift", "keyUp LeftShift FunctionKey",
+            }, gui);
+            var empty = new FrameInput { MouseX = 10, MouseY = 20, ScreenWidth = 960, ScreenHeight = 540 };
+            Input.BeginFrame(&empty);
+        }
+
+        [Fact]
         public void DeviceCommandsAnswerAsTheLinuxEditor()
         {
             NativeInput.Enabled = true;
