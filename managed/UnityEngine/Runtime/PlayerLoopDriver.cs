@@ -389,7 +389,10 @@ namespace Unbound.Runtime
                 if (!first)
                 {
                     Time.s_FixedTime += Time.s_FixedDeltaTime;
-                    Time.s_FixedUnscaledTime += Time.s_FixedDeltaTime;
+                    // The unscaled fixed clock is the unscaled clock less the step's lag behind
+                    // the game clock (measured at timeScale 1, tests/projects/inputframes: under a
+                    // capture rate too, where the unscaled clock keeps real time).
+                    Time.s_FixedUnscaledTime = Time.s_UnscaledTime - (Time.s_Time - Time.s_FixedTime);
                 }
                 first = false;
                 Time.s_InFixedTimeStep = true;
