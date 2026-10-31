@@ -870,6 +870,30 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
     let layout = block_layout(&[&vertex, &fragment]);
     merge_blocks(&mut vertex, &layout)?;
     merge_blocks(&mut fragment, &layout)?;
+    let bias_textures: Vec<String> = main_texture
+        .then(|| MAIN_TEXTURE.to_string())
+        .into_iter()
+        .chain(textures.iter().cloned())
+        .collect();
+    let bias_base = [&vertex, &fragment]
+        .iter()
+        .flat_map(|m| {
+            m.global_variables.iter().filter_map(|(_, g)| {
+                if g.space != AddressSpace::Uniform {
+                    return None;
+                }
+                match m.types[g.ty].inner {
+                    TypeInner::Struct { span, .. } => Some(span),
+                    _ => None,
+                }
+            })
+        })
+        .max()
+        .unwrap_or(0)
+        .div_ceil(16)
+        * 16;
+    crate::sampler_bias::append_uniforms(&mut vertex, &bias_textures, bias_base);
+    crate::sampler_bias::append_uniforms(&mut fragment, &bias_textures, bias_base);
     pad_member_gaps(&mut vertex)?;
     pad_member_gaps(&mut fragment)?;
 
@@ -910,8 +934,25 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
 
     name_deep_expressions(&mut vertex);
     name_deep_expressions(&mut fragment);
-    let vertex_wgsl = to_wgsl(&vertex).context("vertex program")?;
-    let fragment_wgsl = to_wgsl(&fragment).context("fragment program")?;
+    let vertex_wgsl = crate::sampler_bias::rewrite(
+        &to_wgsl(&vertex).context("vertex program")?,
+        &bias_textures,
+        main_texture,
+    )?;
+    let fragment_wgsl = crate::sampler_bias::rewrite(
+        &to_wgsl(&fragment).context("fragment program")?,
+        &bias_textures,
+        main_texture,
+    )?;
+    for uniform in &mut uniforms {
+        if let Some(index) = uniform
+            .name
+            .strip_prefix("unbound_mip_bias_")
+            .and_then(|s| s.parse::<usize>().ok())
+        {
+            uniform.name = format!("{}_UnboundMipBias", bias_textures[index]);
+        }
+    }
     let vertex_entry = wgsl_entry(&vertex_wgsl, naga::ShaderStage::Vertex)?;
     let fragment_entry = wgsl_entry(&fragment_wgsl, naga::ShaderStage::Fragment)?;
     Ok(Compiled {

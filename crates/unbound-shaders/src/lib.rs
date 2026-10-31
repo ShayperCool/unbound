@@ -13,6 +13,7 @@ pub mod fixed;
 pub mod preprocess;
 
 mod fit;
+mod sampler_bias;
 mod surface;
 
 use anyhow::{Context, Result, anyhow, bail};
@@ -25,7 +26,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 13;
+pub const FORMAT_VERSION: u32 = 14;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -502,6 +503,7 @@ impl ShaderCompiler {
         let hash = {
             let mut h = blake3::Hasher::new();
             h.update(&FORMAT_VERSION.to_le_bytes());
+            h.update(include_bytes!("sampler_bias.rs"));
             for part in [
                 &vertex_source,
                 &fragment_source,
