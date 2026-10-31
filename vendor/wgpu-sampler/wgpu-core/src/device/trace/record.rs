@@ -988,6 +988,7 @@ fn action_to_owned(action: Action<'_, PointerReferences>) -> Action<'static, Poi
                 lod_min_clamp: desc.lod_min_clamp,
                 lod_max_clamp: desc.lod_max_clamp,
                 lod_bias: desc.lod_bias,
+                native_mip_filter: desc.native_mip_filter,
                 compare: desc.compare,
                 anisotropy_clamp: desc.anisotropy_clamp,
                 border_color: desc.border_color,

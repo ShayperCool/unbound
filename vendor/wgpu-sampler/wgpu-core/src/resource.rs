@@ -2253,6 +2253,9 @@ pub struct SamplerDescriptor<'a> {
     /// Native sampler bias. Ordinary WebGPU samplers use zero.
     #[cfg_attr(feature = "serde", serde(default))]
     pub lod_bias: f32,
+    /// Opt into Vulkan anisotropic nearest-mip filtering through the native creation API.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub native_mip_filter: bool,
     /// If this is enabled, this is a comparison sampler using the given comparison function.
     pub compare: Option<wgt::CompareFunction>,
     /// Must be at least 1. If this is not 1, all filter modes must be linear.
@@ -2314,7 +2317,7 @@ impl fmt::Debug for SamplerFilterErrorType {
 pub enum CreateSamplerError {
     #[error(transparent)]
     Device(#[from] DeviceError),
-    #[error("Nonzero native sampler LOD bias is unsupported on this backend/device")]
+    #[error("Native sampler LOD bias or anisotropic nearest-mip filtering is unsupported on this backend/device")]
     UnsupportedLodBias,
     #[error("Invalid sampler LOD bias {bias}; it must be finite and within +/-{limit}")]
     InvalidLodBias { bias: f32, limit: f32 },

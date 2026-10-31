@@ -491,9 +491,19 @@ impl Device {
         Sampler { inner: sampler }
     }
 
+    /// Maximum native sampler LOD bias, or `None` when the native extension is unsupported.
+    pub fn native_sampler_lod_bias_limit(&self) -> Option<f32> {
+        #[cfg(wgpu_core)]
+        if let Some(device) = self.inner.as_core_opt() {
+            return device.native_sampler_lod_bias_limit();
+        }
+        None
+    }
+
     /// Creates a native Vulkan sampler with a bias applied after derivative LOD calculation.
     ///
-    /// The Core resource owns the sampler and its device, as with `create_sampler`.
+    /// Also permits anisotropy with nearest-mip filtering on Vulkan. Ordinary creation
+    /// retains WebGPU validation. The Core resource owns the sampler and its device.
     /// Returns `None` on non-Core backends. Unsupported native backends, non-finite bias,
     /// and bias outside the device limit produce the usual validation error.
     #[must_use]
@@ -502,13 +512,15 @@ impl Device {
         desc: &SamplerDescriptor<'_>,
         lod_bias: f32,
     ) -> Option<Sampler> {
-        if lod_bias == 0.0 {
+        let native_mip_filter =
+            desc.anisotropy_clamp > 1 && desc.mipmap_filter == MipmapFilterMode::Nearest;
+        if lod_bias == 0.0 && !native_mip_filter {
             return Some(self.create_sampler(desc));
         }
         #[cfg(wgpu_core)]
         if let Some(device) = self.inner.as_core_opt() {
             return Some(Sampler {
-                inner: device.create_sampler_with_lod_bias(desc, lod_bias),
+                inner: device.create_sampler_with_lod_bias(desc, lod_bias, native_mip_filter),
             });
         }
         None

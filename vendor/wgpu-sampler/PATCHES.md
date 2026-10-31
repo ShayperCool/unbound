@@ -19,8 +19,10 @@ are required; Cargo's patch entries replace only these three packages.
 ## APIs and ownership
 
 - `wgpu::Device::create_sampler_with_lod_bias(desc, bias)` returns an ordinary owned sampler.
-  Zero bias delegates to the existing creation method. Non-Core backends return `None`.
-- The Core backend adds `lod_bias` to its internal sampler descriptor and validates finite
+  Ordinary zero bias delegates to existing creation. The native method additionally permits
+  anisotropic nearest-mip filtering on Vulkan. Non-Core backends return `None`.
+- `wgpu::Device::native_sampler_lod_bias_limit()` reports support and the physical limit.
+- The Core backend adds `lod_bias` and explicit `native_mip_filter` to its internal sampler descriptor and validates finite
   values, supported backend, and the physical device's actual bias range. Trace descriptors
   preserve it and default old serialized descriptors to zero.
 - Vulkan HAL adds the bias to `VkSamplerCreateInfo` through the existing creation path.
@@ -29,8 +31,9 @@ are required; Cargo's patch entries replace only these three packages.
   No foreign handle is imported, borrowed, cast, or destroyed separately.
 - `hal::vulkan::Device::sampler_lod_bias_limit()` returns the cached physical limit, or `None`
   on portability-subset devices because this backend does not enable `samplerMipLodBias`.
-  Other native backends reject nonzero bias with `UnsupportedLodBias`. There is no silent
-  shader approximation. The ordinary zero-bias path remains available everywhere.
+  Other native backends reject nonzero bias or the native filter opt-in with
+  `UnsupportedLodBias`. There is no shader approximation. The engine keeps its prior
+  zero-bias filtering policy when this native extension is unavailable.
 
 NativeApi12, render-command protocol5, texture packet layouts and PhysX shim9 are unchanged.
 These are Rust dependency APIs, not additions to the managed/native packet contract.
@@ -57,3 +60,14 @@ the effective sampler strength/filter policy. Other backends and release profile
 been certified. Shader cache14 uses a distinct native-sampler implementation key; rejected
 shader-emulation entries cannot be reused. Final validation status and rejected experiments
 belong in cache handoff reports, never in this source ledger.
+
+Bilinear Native controls demonstrate nearest-mip selection even with active anisotropy.
+The native creation opt-in permits that Vulkan combination while ordinary WebGPU sampler
+validation stays unchanged. It does not enable nearest magnification/minification with
+anisotropy. The same measured anisotropic origin governs the nearest-mip decision. Vulkan's
+[sampler valid-usage rules](https://docs.vulkan.org/refpages/latest/refpages/source/VkSamplerCreateInfo.html)
+permit independent mip selection and anisotropy for normalized coordinates.
+
+The renderer does not permanently cache every nonzero float bias. Cached bind groups own
+those sampler references, and the existing HAL cache deduplicates live creation descriptors.
+This allows obsolete bias states to reach the ordinary destruction path.

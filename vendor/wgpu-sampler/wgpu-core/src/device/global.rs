@@ -610,6 +610,14 @@ impl Global {
         }
     }
 
+    /// Native sampler capabilities, queried from the same owned device used for creation.
+    pub fn device_native_sampler_lod_bias_limit(&self, device_id: DeviceId) -> Option<f32> {
+        self.hub
+            .devices
+            .get(device_id)
+            .native_sampler_lod_bias_limit()
+    }
+
     pub fn device_create_sampler(
         &self,
         device_id: DeviceId,

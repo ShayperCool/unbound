@@ -2249,20 +2249,30 @@ impl Device {
         Ok(external_texture)
     }
 
+    pub fn native_sampler_lod_bias_limit(&self) -> Option<f32> {
+        #[cfg(vulkan)]
+        {
+            self.raw()
+                .as_any()
+                .downcast_ref::<hal::vulkan::Device>()
+                .and_then(|device| device.sampler_lod_bias_limit())
+        }
+        #[cfg(not(vulkan))]
+        {
+            None
+        }
+    }
+
     pub fn create_sampler(
         self: &Arc<Self>,
         desc: &resource::SamplerDescriptor,
     ) -> Result<Arc<Sampler>, resource::CreateSamplerError> {
         self.check_is_valid()?;
-        if desc.lod_bias != 0.0 {
-            #[cfg(vulkan)]
-            let limit = self
-                .raw()
-                .as_any()
-                .downcast_ref::<hal::vulkan::Device>()
-                .and_then(|device| device.sampler_lod_bias_limit());
-            #[cfg(not(vulkan))]
-            let limit: Option<f32> = None;
+        if desc.lod_bias != 0.0 || desc.native_mip_filter {
+            let limit = self.native_sampler_lod_bias_limit();
+            if desc.native_mip_filter && limit.is_none() {
+                return Err(resource::CreateSamplerError::UnsupportedLodBias);
+            }
             resource::validate_sampler_lod_bias(desc.lod_bias, limit)?;
         }
 
@@ -2315,7 +2325,9 @@ impl Device {
                     },
                 );
             }
-            if !matches!(desc.mipmap_filter, wgt::MipmapFilterMode::Linear) {
+            if !matches!(desc.mipmap_filter, wgt::MipmapFilterMode::Linear)
+                && !desc.native_mip_filter
+            {
                 return Err(
                     resource::CreateSamplerError::InvalidMipmapFilterModeWithAnisotropy {
                         filter_type: resource::SamplerFilterErrorType::MipmapFilter,

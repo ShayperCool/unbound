@@ -471,10 +471,15 @@ pub struct CoreDevice {
 }
 
 impl CoreDevice {
+    pub(crate) fn native_sampler_lod_bias_limit(&self) -> Option<f32> {
+        self.context.0.device_native_sampler_lod_bias_limit(self.id)
+    }
+
     pub(crate) fn create_sampler_with_lod_bias(
         &self,
         desc: &crate::SamplerDescriptor<'_>,
         lod_bias: f32,
+        native_mip_filter: bool,
     ) -> dispatch::DispatchSampler {
         let descriptor = wgc::resource::SamplerDescriptor {
             label: desc.label.map(Borrowed),
@@ -489,6 +494,7 @@ impl CoreDevice {
             lod_min_clamp: desc.lod_min_clamp,
             lod_max_clamp: desc.lod_max_clamp,
             lod_bias,
+            native_mip_filter,
             compare: desc.compare,
             anisotropy_clamp: desc.anisotropy_clamp,
             border_color: desc.border_color,
@@ -1764,7 +1770,7 @@ impl dispatch::DeviceInterface for CoreDevice {
     }
 
     fn create_sampler(&self, desc: &crate::SamplerDescriptor<'_>) -> dispatch::DispatchSampler {
-        self.create_sampler_with_lod_bias(desc, 0.0)
+        self.create_sampler_with_lod_bias(desc, 0.0, false)
     }
 
     fn create_query_set(&self, desc: &crate::QuerySetDescriptor<'_>) -> dispatch::DispatchQuerySet {
