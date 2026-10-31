@@ -29,6 +29,7 @@ public class FilterProbe : MonoBehaviour
     BinaryWriter m_Writer, m_MasterWriter;
     int m_Written;
     bool m_Captured;
+    bool m_GroupObserved;
 
     public static float[] Signal(int frames, int channels, int rate, string kind)
     {
@@ -46,7 +47,7 @@ public class FilterProbe : MonoBehaviour
     public void RecordEngine(float[] data)
     {
         if (m_Writer == null) return;
-        foreach (float sample in data) { m_Writer.Write(sample); m_MasterWriter.Write(sample); }
+        foreach (float sample in data) { m_Writer.Write(sample); if (!m_GroupObserved) m_MasterWriter.Write(sample); }
         m_Written += data.Length;
     }
     void FlushEngine()
@@ -124,7 +125,8 @@ public class FilterProbe : MonoBehaviour
             var sink = default(NativeArray<float>);
             var buffer = default(NativeArray<float>);
             MethodInfo addSink = null;
-            AudioMixerGroup masterGroup = null;
+            var masterGroup = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Master");
+            MethodInfo observeGroup = Engine ? Type.GetType("Unbound.Runtime.AudioFilters, UnityEngine.CoreModule", true).GetMethod("ObserveGroup", Flags) : null;
             if (!Engine)
             {
                 sink = new NativeArray<float>(frames * 2, Allocator.Persistent); sinks.Add(sink);
@@ -143,7 +145,13 @@ public class FilterProbe : MonoBehaviour
             using (var masterWriter = new BinaryWriter(File.Create(Path.Combine(output, key + ".master.f32"))))
             using (var writer = new BinaryWriter(File.Create(Path.Combine(output, key + ".f32"))))
             {
-                if (Engine) { m_Writer = writer; m_MasterWriter = masterWriter; m_Written = 0; FlushEngine(); }
+                if (Engine)
+                {
+                    m_Writer = writer; m_MasterWriter = masterWriter; m_Written = 0;
+                    m_GroupObserved = observeGroup != null;
+                    if (m_GroupObserved) observeGroup.Invoke(null, new object[] { masterGroup, (Action<float[], int>)((data, channels) => { foreach (float sample in data) masterWriter.Write(sample); }) });
+                    FlushEngine();
+                }
                 for (int block = 0; block < 12; block++)
                 {
                     if (!Engine) yield return null;
@@ -171,6 +179,7 @@ public class FilterProbe : MonoBehaviour
                 }
                 if (Engine)
                 {
+                    if (m_GroupObserved) observeGroup.Invoke(null, new object[] { masterGroup, null });
                     m_Writer = m_MasterWriter = null;
                     if (m_Written != frames * 12 * 2) throw new Exception("Unexpected complete buffer length " + m_Written);
                 }
