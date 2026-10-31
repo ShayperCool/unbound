@@ -204,3 +204,130 @@ Those failed attempt logs remain under the private cache's
 successful reference runs. The engine also defines `UNITY_EDITOR` when compiling
 game code, so the backend adapter identifies the actual native PhysicsModule
 assembly rather than using that define to select its raw-contact reader.
+
+
+## Final results
+
+**4,111/5,055 baseline records match; 4,782/5,055 final records match.** The final
+recording has 4,530 exact records and 252 additional records within the unchanged
+tolerances. **273 failures remain**, and every final comparator still exits
+nonzero. There are no expected-failure masks. Each of these CPU profiles has zero
+images. The per-profile counts below include every record.
+
+| Profile/workload | Records | Baseline match | Final match | Final exact |
+| --- | ---: | ---: | ---: | ---: |
+| default | 227 | 212 | 216 | 204 |
+| tgs | 227 | 155 | 216 | 204 |
+| one | 227 | 155 | 216 | 204 |
+| two | 227 | 155 | 216 | 204 |
+| tgs-one | 227 | 155 | 216 | 204 |
+| tgs-two | 227 | 155 | 216 | 204 |
+| pairs-kk | 227 | 202 | 216 | 204 |
+| pairs-ks | 227 | 202 | 216 | 204 |
+| pairs-all | 227 | 192 | 216 | 204 |
+| determinism | 227 | 212 | 216 | 204 |
+| tgs-det | 227 | 155 | 216 | 204 |
+| improved | 227 | 179 | 216 | 204 |
+| pcm-off | 227 | 212 | 216 | 204 |
+| contacts-default | 299 | 284 | 288 | 276 |
+| contacts-pairs-kk | 299 | 263 | 288 | 276 |
+| contacts-pairs-ks | 299 | 263 | 288 | 276 |
+| contacts-pairs-all | 299 | 242 | 288 | 276 |
+| islands-default | 227 | 204 | 204 | 192 |
+| islands-determinism | 227 | 204 | 204 | 192 |
+| islands-tgs | 227 | 155 | 207 | 195 |
+| islands-tgs-det | 227 | 155 | 207 | 195 |
+
+All original thirteen profiles have zero final motion failures. Their eleven
+remaining failures per profile are trigger-stay delivery: Native sends stay in
+the enter step, and fresh sleeping kinematics also retain a stay on the next
+step in Native. These predate the scene-settings implementation. Correct
+kinematic activation/cloning resolves four other trigger-stay records per
+original profile as a consequence of creating those bodies with their actual
+initial type. The contact supplements have the same eleven trigger failures;
+all their non-trigger callback and generated-contact counts now match.
+
+The island workloads retain contact-order failures as well. PGS has 23 failures
+per profile: eleven trigger records, nine kinematic/dynamic motion records and
+three contact-count records. TGS has 20 per profile: eleven trigger records and
+nine kinematic/dynamic motion records. The four core motion scenarios remain
+within the original tolerance in every workload.
+
+**Eight failures are newly introduced versus the starting engine**, not
+inherited: PGS `islands-default` and `islands-determinism` each change
+`pair/kd/False/clone/{0,1,2}/motion` and `pair/kd/False/clone/1/contacts` from passing
+to failing. The body-registration correction changes native actor creation
+history. The cloned pair now takes the alternate contact-order outcome already
+seen in the independent Native fresh/activated island pairs, rather than the
+Native cloned pair's outcome. At step 1, for example, Native clone has four
+contacts, while final clone has three, exactly like Native's fresh/activated
+island pair. Final clone's velocity is `[0.648613632,-0.3294555,-0.2629254]` instead
+of Native clone's `[0.8527438,-0.115501478,-0.13520436]`. These remain failures.
+There is no actor-order workaround or change to the vendored solver.
+
+`Evidence/failure-transitions.json` retains the reference, baseline and final
+arrays for all **679 resolved**, **8 introduced**, and **18 retained failures
+whose values changed**. The latter are the TGS island pair motion cases under
+the actual TGS solver, which the baseline did not select. The net reduction is
+671 failing records. Do not describe all 273 failures as inherited or claim full
+physics parity from this fixture. Arbitrary allocation/actor creation history,
+long stacks, parallel-worker determinism and older Unity releases remain outside
+the measured guarantees. Runtime improved-friction toggling is implemented via
+cached PhysX material flags but is not separately measured by this project-flag
+oracle.
+
+The native shim is **7**, with a six-int/24-byte scene definition. Main engine
+ABI/protocol **5** and shader cache **13** are unchanged. The ABI probe creates
+and destroys all 48 valid solver/friction/pair/determinism combinations, and
+rejects three invalid enums with a clear DynamicsManager diagnostic. The stale
+library test loads the frozen shim 6 against the new binding and records the
+expected version-6/expected-7 error before the new scene-definition call.
+`Evidence/build-artifacts.json` retains snapshot and private artifact hashes;
+the snapshot hashes were rechecked unchanged.
+
+## Existing regressions
+
+The baseline and final data files of all six existing fixtures are byte-for-byte
+identical, as checked in `Evidence/regression-byte-comparison.json`. No inherited
+failure value changes in those fixtures. Full recordings, engine logs and
+comparison text are under `Evidence/regressions-baseline/` and
+`Evidence/regressions-final/`.
+
+- physicsdefaults: **582/582**, 576 exact and the same six inherited solver
+  rounding records, maximum 6.15e-8 absolute.
+- PhysicsTests + Physics2DTests: **33/33**, no skips. The native library copied
+  to the test output is explicitly selected through `UnboundNativeDir`.
+- Broad physics: **21/29**, the same eight differences: 2d.bounce, 2d.stack,
+  2d.kinematic, 2d.triggers, 2d.queries, 2d.queries.options, 2d.casts.inside and
+  3d.stack. The stack retains 85/292 differing values at 1e-3.
+- Joints: **26/27**, retaining the hinge-limit settling-force difference,
+  three values and worst 41.73. No unexpected failure.
+- Controller: **23/23**.
+- ConstantForce: **608/608**.
+- RaycastHit: **3,203/3,203**.
+
+The cached-project sequence retains the same eleven trigger failures in each
+227-record run, while all motion records match default, one-directional and
+restored-default Native respectively. Default and restored output agree exactly.
+`Evidence/cache-final/` contains all three recordings, comparator failures and
+engine logs, including reuse of cached game assemblies. The setting is reread
+without recompiling the game or changing a cache format.
+
+Additional commands used for guard/evidence validation:
+
+```bash
+"$heavy" timeout 120 python3 "$fixture/abi.py" > "$SCENE_WORK/abi.log" 2>&1
+# Copy final managed files without libunbound_physx into SCENE_WORK/stale-managed first.
+UNBOUND_MANAGED_DIR="$SCENE_WORK/stale-managed" \
+  LD_LIBRARY_PATH="$HOME/.cache/compat/parity-baseline-native6" \
+  "$heavy" timeout 60 "$SCENE_SETTINGS_CLI" run -p "$SCENE_WORK/projects/default" \
+  --headless 2 --no-watch > "$SCENE_WORK/stale-version.log" 2>&1
+rg -n 'version 6.*expects 7' "$SCENE_WORK/stale-version.log"
+python3 "$fixture/test_compare.py"
+ccc search --refresh --path 'native/unbound_physx.cpp' 'scene configuration solver friction kinematic pair modes'
+```
+
+No authored game files, generated stubs, shared progress documents, parent build
+outputs, preserved backup branches or snapshot artifacts were changed. This
+branch contains no PR or merge. Parent review and integrated API-check remain
+with the parent.

@@ -1,0 +1,83 @@
+2d.fall: ok (63 values)
+2d.damping: ok (60 values)
+2d.gravity: ok (30 values)
+2d.forces: ok (120 values)
+2d.mass: ok (66 values)
+2d.bounce: 9/288 differ (worst 0.1538)
+    ball.0.enter2d.point.x: unity 0.9599996  unbound 0.9721025
+    ball.0.enter2d.point.y: unity -0.05231124  unbound 0.0245991647
+    ball.0.enter2d.separation: unity -0.124622464  unbound 0.0291983485
+    ball.2.enter2d.point.x: unity 1.91612434  unbound 1.92818129
+    ball.2.enter2d.point.y: unity -0.021309346  unbound 0.0411607027
+    ball.2.enter2d.separation: unity -0.06261867  unbound 0.0623214245
+    ball.4.enter2d.point.x: unity 2.69981885  unbound 2.71139622
+    ball.4.enter2d.point.y: unity -0.04171565  unbound 0.0103322864
+2d.slide: ok (61 values)
+2d.stack: 27/148 differ (worst 0.2563)
+    box0.s50.rotation: unity -0.126200169  unbound -0.103633478
+    box0.s50.angularVelocity: unity 0.2563287  unbound -2.66804273e-06
+    box1.s50.rotation: unity -0.3316638  unbound -0.323038638
+    box1.s50.angularVelocity: unity 0.404106617  unbound 0.2524552
+    box2.s50.rotation: unity -0.438678384  unbound -0.4370426
+    box2.s50.angularVelocity: unity 0.460702777  unbound 0.400903732
+    box3.s50.rotation: unity -0.472704917  unbound -0.475452155
+    box0.s100.rotation: unity -0.09581146  unbound -0.07250824
+2d.kinematic: 19/184 differ (worst inf)
+    ball.1.enter2d.point.x: unity -0.431393236  unbound -0.324261367
+    ball.1.enter2d.point.y: unity 0.2998126  unbound 0.325888872
+    ball.1.enter2d.separation: unity -0.04459682  unbound -0.0250980183
+    ball.s50.angularVelocity: unity 9.052233  unbound 9.06228352
+    ball.4.enter2d.point.x: unity 2.5585196  unbound 2.651039
+    ball.4.enter2d.point.y: unity -0.0065099  unbound 0.000304728746
+    ball.4.enter2d.separation: unity -0.03301978  unbound -0.0193905234
+    ball.5.enter2d.point.x: unity 2.88143682  unbound 2.969285
+2d.triggers: 2/4 differ (worst 1)
+    ball.0.triggerEnter2d.step: unity 44  unbound 45
+    ball.1.triggerExit2d.step: unity 56  unbound 57
+2d.hinge: ok (60 values)
+2d.spring: ok (60 values)
+2d.distance: ok (60 values)
+2d.queries: 64/4561 differ (worst 0.4332)
+    capsuleV.h-4.5.0.normal.x: unity -0.7929228  unbound -0.7916723
+    capsuleV.h-4.5.0.normal.y: unity -0.6093221  unbound -0.610946059
+    box.h-3.5.point.x: unity -4.538681  unbound -4.55841
+    box.h-3.5.centroid.x: unity -4.36224842  unbound -4.38213062
+    box.h-3.5.distance: unity 5.63775158  unbound 5.61786938
+    capsuleV.h-2.0.normal.x: unity -0.46938467  unbound -0.4683357
+    capsuleV.h2.0.normal.x: unity -0.46938467  unbound -0.467282742
+    capsuleV.h2.0.normal.y: unity 0.882993758  unbound 0.8841079
+2d.queries.options: 2/1002 differ (worst 0.001035)
+    mask.h3.normal.x: unity -0.532155931  unbound -0.531121135
+    mask.v-5.normal.y: unity 0.532155931  unbound 0.531121135
+2d.casts.inside: 10/1812 differ (worst 0.003279)
+    in.1.0.capsule.2.normal.x: unity -0.780966759  unbound -0.7835783
+    in.1.0.capsule.2.normal.y: unity 0.6245726  unbound 0.6212931
+    in.2.0.circle.1.distance: unity 2.94641113  unbound 2.94345236
+    in.4.2.capsule.1.centroid.y: unity 0.320801616  unbound 0.32195735
+    in.4.2.box.2.point.x: unity -1.10586452  unbound -1.10435379
+    out.1.0.capsule.1.normal.x: unity -0.780966759  unbound -0.7835783
+    out.1.0.capsule.1.normal.y: unity 0.6245726  unbound 0.6212931
+    out.2.0.circle.0.distance: unity 2.94641113  unbound 2.94345236
+3d.fall: ok (120 values)
+3d.damping: ok (120 values)
+3d.forces: ok (360 values)
+3d.mass: ok (39 values)
+3d.bounce: ok (555 values)
+3d.slide: ok (121 values)
+3d.stack: 85/292 differ (worst 360)
+    box0.s50.rotation.x: unity 0.000662866631  unbound 0.008085323
+    box0.s50.rotation.y: unity 2.58455675e-05  unbound -0.001066426
+    box0.s50.rotation.z: unity -0.00340090087  unbound 359.992523
+    box0.s50.angularVelocity.x: unity -0.00251944643  unbound -0.00591398543
+    box0.s50.angularVelocity.z: unity 0.00146070961  unbound 0.0028542995
+    box1.s50.position.x: unity 0.103129826  unbound 0.10540995
+    box1.s50.position.z: unity -0.000909316062  unbound 0.00163216924
+    box1.s50.rotation.x: unity 359.903656  unbound 0.127887249
+3d.kinematic: ok (281 values)
+3d.triggers: ok (4 values)
+3d.hinge: ok (120 values)
+3d.spring: ok (120 values)
+3d.queries: ok (895 values)
+3d.penetration: ok (20 values)
+
+8 scenario(s) differ
