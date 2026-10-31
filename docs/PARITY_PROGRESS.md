@@ -1651,3 +1651,23 @@ Validation:
 
 Commands and Editor findings: tests/projects/inputframes/README.md. Captures, scratch variants and
 comparisons are in `~/.cache/unbound/validation/runs/inputframes/`.
+
+### Humanoid avatars and HumanPoseHandler, 2026-10-31
+
+Humanoid avatars are built from a model's hierarchy and the human description its meta carries
+(bone mapping, T-pose skeleton, limits, twist/stretch parameters), or by AvatarBuilder from a
+scene object: the human skeleton, muscle axes per bone, masses, body frame and scale, as the
+Editor computes them. HumanPoseHandler reads and writes poses through muscle space (retargeting
+with limb alignment, twist distribution, fingers). The HumanTrait tables, Avatar and Animator
+humanoid members and AvatarBuilder's validation errors follow. An animated FBX's nodes now rest
+in their pose at time 0, as the Editor imports them.
+
+Validation:
+
+- tests/projects/humanoid: two Editor captures are identical. Unbound matches every avatar,
+  trait, Animator, AvatarBuilder, rest-pose and HumanPoseHandler value (55820/55820 for the
+  handler: the default pose, every muscle alone at -1/1, random and out-of-range poses on both
+  rigs). Clip properties, playback, retargeting in the Animator and the IK pass are next.
+- animator 2236/2236, animatoradditive 1100/1100, bundle animation 8/8; modelimport Gamma and
+  Linear 6032/6033, URP 7011 matching as before. Asset (71) and runtime (39) Rust tests, managed
+  animation tests (32) pass; api-check: zero errors in 2287 hand-written types.
