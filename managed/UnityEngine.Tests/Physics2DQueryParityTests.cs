@@ -237,6 +237,27 @@ namespace UnityEngine.Tests
 
         // A fixed pair of geometric cores distinguishes cast precision from the
         // contact offset used by continuous simulation. No Native values are added.
+        // Independent Native captures in querycontactfeatures/Reference include
+        // both sides of the centerline as well as the exactly tied contact.
+        [Theory]
+        [InlineData(-.001f, .5f, -.8660254f, .112716496f, -.1952307f)]
+        [InlineData(0f, .5f, -.8660254f, .1125f, -.1948557f)]
+        [InlineData(.001f, -.5f, .8660254f, -.1127165f, .1952307f)]
+        public void InitialCapsuleContactWithCircleRetainsTheCenterlineSide(
+            float offset, float nx, float ny, float px, float py)
+        {
+            foreach (var go in made) Object.DestroyImmediate(go);
+            made.Clear();
+            Make("target", Vector2.zero).AddComponent<CircleCollider2D>().radius = .75f;
+            Physics2D.SyncTransforms();
+            var hit = Physics2D.CapsuleCast(new Vector2(0f, offset), new Vector2(1.6f, .6f),
+                CapsuleDirection2D.Horizontal, 30f, Vector2.right, 1f);
+            Assert.NotNull(hit.collider);
+            Near(0f, hit.distance);
+            Near(nx, hit.normal.x); Near(ny, hit.normal.y);
+            Near(px, hit.point.x); Near(py, hit.point.y);
+        }
+
         [Theory]
         [InlineData(.001f)]
         [InlineData(.01f)]
