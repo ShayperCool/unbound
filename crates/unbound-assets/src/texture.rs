@@ -490,7 +490,7 @@ impl Importer for TextureImporter {
     type Output = ImportedTexture;
     const KIND: &'static str = "textures";
     // Combined mip-filter and sprite-geometry imports must not reuse either branch's v8 entries.
-    const VERSION: u32 = 10;
+    const VERSION: u32 = 11;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -505,12 +505,14 @@ impl Importer for TextureImporter {
     }
 
     fn options_key(&self) -> String {
+        // Resized textures depend on the Editor's job worker count, which follows the machine.
         format!(
-            "{}{}{}{}",
+            "{}{}{}{}+workers{}",
             self.build_target,
             if self.compress { "+bc7" } else { "" },
             if self.gamma { "+gamma" } else { "" },
-            if self.normal_maps_xyz { "+xyz" } else { "" }
+            if self.normal_maps_xyz { "+xyz" } else { "" },
+            resize::job_workers()
         )
     }
 }
@@ -581,7 +583,13 @@ pub fn import_texture(
 ) -> Result<ImportedTexture> {
     let mut image = decode(source, bytes).context("decoding")?;
     let (original_width, original_height) = (image.width, image.height);
-    if settings.gamma_hdr && settings.srgb && image.format == TextureFormat::Rgba32F {
+    // HDR colour in a gamma project is gamma-encoded: a 2D texture's per level after resizing and
+    // filtering (measured with tests/projects/textureimport), a cubemap's here.
+    if settings.gamma_hdr
+        && settings.srgb
+        && image.format == TextureFormat::Rgba32F
+        && settings.shape == TextureShape::Cube
+    {
         image.linear_to_gamma();
     }
 
@@ -694,12 +702,13 @@ fn mip_chain(image: Image, settings: &TextureSettings) -> Vec<MipLevel> {
         border: settings.border_mipmap,
         coverage: settings.preserve_coverage,
     };
+    let hdr_gamma = settings.gamma_hdr && settings.srgb && format == TextureFormat::Rgba32F;
     let encoding = mipmaps::Encoding {
         height,
         normal_map: settings.texture_type == TextureType::NormalMap,
         dxt5nm: !settings.normal_maps_xyz,
         flip_green: settings.flip_green,
-        srgb,
+        srgb: srgb || hdr_gamma,
         fade: settings.mip_fade,
     };
     let chain = if levels {

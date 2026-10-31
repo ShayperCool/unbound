@@ -21,7 +21,9 @@ public static class ProbeRunner
         {
             var parts = line.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
             if (parts.Length == 0) continue;
-            var path = "Assets/Textures/" + parts[0] + ".png";
+            var path = File.Exists("Assets/Textures/" + parts[0] + ".exr")
+                ? "Assets/Textures/" + parts[0] + ".exr"
+                : "Assets/Textures/" + parts[0] + ".png";
             var importer = (TextureImporter)AssetImporter.GetAtPath(path);
             Apply(importer, parts.Skip(1));
             importer.SaveAndReimport();
@@ -47,6 +49,7 @@ public static class ProbeRunner
         importer.textureCompression = TextureImporterCompression.Uncompressed;
         int maxSize = 2048;
         var resize = TextureResizeAlgorithm.Mitchell;
+        var format = settings.Contains("format=float") ? TextureImporterFormat.RGBAFloat : TextureImporterFormat.RGBA32;
         foreach (var setting in settings)
         {
             if (!setting.StartsWith("maxsize=")) continue;
@@ -66,7 +69,7 @@ public static class ProbeRunner
                 overridden = true,
                 maxTextureSize = maxSize,
                 resizeAlgorithm = resize,
-                format = TextureImporterFormat.RGBA32,
+                format = format,
             });
         }
         foreach (var setting in settings)
@@ -113,6 +116,7 @@ public static class ProbeRunner
                     break;
                 case "flipgreen": importer.flipGreenChannel = value == "1"; break;
                 case "maxsize": break;
+                case "format": break;
                 default: throw new ArgumentException("unknown texture case setting " + setting);
             }
         }
