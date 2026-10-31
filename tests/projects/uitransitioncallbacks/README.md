@@ -6,8 +6,8 @@ layout. Callback records include presented values before and immediately after m
 property names, elapsed time, target, observer, propagation phase and flags. Repeated ticks at the
 same timestamp are intentional. No sleeps or frame timing tolerances are used.
 
-76 cases cover sibling and parent/child ordering, reversed creation and style-change order,
-same and different value types, simultaneous run/start/end/cancel, and mutation in each event kind.
+78 cases cover sibling and parent/child ordering, reversed creation and style-change order,
+same and different value types, staggered per-type starts, simultaneous run/start/end/cancel, and mutation in each event kind.
 Mutations retarget self/another element, reverse a class change, remove a transition property,
 detach, reparent, clear the root, register/unregister callbacks, or read `worldBound` after mutation
 to request layout through the public API. This does not call the experimental animation API.

@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Run in a disposable cache copy. This driver wraps its heavy children itself."""
 import argparse
+import hashlib
+import json
 import os
 from pathlib import Path
 import shutil
@@ -42,8 +44,16 @@ def run(fixture=None, method='TransitionRunner.Record', variable='UITRANSITIONS_
             p.error('engine requires --cli and --managed')
         env['UNBOUND_MANAGED_DIR'] = str(a.managed.resolve())
         command = [str(a.cli.resolve()), 'run', '-p', str(project), '--headless', '100', '--fixed-fps', '60', '--no-watch']
+    hashes = {}
+    if a.mode == 'engine':
+        for path in [a.cli.resolve(), a.managed.resolve()/'UnityEngine.CoreModule.dll', a.managed.resolve()/'libunbound_physx.so']:
+            hashes[str(path)] = hashlib.sha256(path.read_bytes()).hexdigest()
+    (output/'execution.json').write_text(json.dumps({'command': command, 'release': a.release, 'sha256': hashes}, indent=2)+'\n')
     with (output/'process.log').open('w') as log:
         subprocess.run([str(heavy), 'timeout', '240', *command], env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
+    for path, expected in hashes.items():
+        if hashlib.sha256(Path(path).read_bytes()).hexdigest() != expected:
+            raise RuntimeError('runtime changed during capture: ' + path)
 
 
 if __name__ == '__main__':
