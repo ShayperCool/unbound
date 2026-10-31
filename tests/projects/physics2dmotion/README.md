@@ -147,8 +147,11 @@ The one premature rotation report attempt is retained with its FileNotFoundError
 the complete report uses a separate archive name. A redundant copy of the
 already copied, read-only private shim initially returned Permission denied;
 only the private writable output was chmod'd. The frozen source was untouched.
-Git transport twice reported errors after the requested ref had advanced;
+Git transport returned errors after the requested ref had advanced;
 subsequent remote-ref reads verified the intended commit before proceeding.
+Production source passes git diff --check. The full evidence diff reports
+trailing spaces in raw graphics output and patch context; those bytes were
+retained rather than rewriting historical observations.
 
 ccc initialization succeeded. The first 50-second refresh and final 25-second
 index request timed out with exit124; no shared daemon was stopped. Source
