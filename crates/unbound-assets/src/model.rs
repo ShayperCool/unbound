@@ -476,7 +476,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 7;
+    const VERSION: u32 = 8;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -540,6 +540,7 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         node_index: HashMap::new(),
         sources: Vec::new(),
         material_index: HashMap::new(),
+        rest_anim: (!scene.anim_stacks.is_empty()).then_some(&*scene.anim),
     };
 
     // The root: the single top-level node, or the scene root.
@@ -622,6 +623,9 @@ struct Builder<'a> {
     sources: Vec<&'a ufbx::Node>,
     /// ufbx material element id → index in `model.materials`.
     material_index: HashMap<u32, u32>,
+    /// The file's animation: an animated file's nodes rest in their pose at time 0 (measured:
+    /// tests/projects/humanoid, whose file stores another frame's pose as the static transforms).
+    rest_anim: Option<&'a ufbx::Anim>,
 }
 
 impl<'a> Builder<'a> {
@@ -698,7 +702,8 @@ impl<'a> Builder<'a> {
             &key,
             Some(ROOT_TRANSFORM_ID),
         );
-        let t = &node.local_transform;
+        let evaluated = self.rest_anim.map(|anim| node.evaluate_transform(anim, 0.0));
+        let t = evaluated.as_ref().unwrap_or(&node.local_transform);
         let index = self.model.nodes.len() as u32;
         self.node_index.insert(node.element.element_id, index);
         self.sources.push(node);

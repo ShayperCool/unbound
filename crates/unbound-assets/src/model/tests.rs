@@ -187,6 +187,7 @@ fn bind_pose_conversion_mirrors_and_scales() {
         node_index: HashMap::new(),
         sources: Vec::new(),
         material_index: HashMap::new(),
+        rest_anim: None,
     };
     // A translation by (1, 2, 3) and a rotation of 90° about Z (x → y).
     let m = ufbx::Matrix {
