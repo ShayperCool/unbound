@@ -176,6 +176,30 @@ public class CameraMsaaProbe : MonoBehaviour
         }
         DestroyImmediate(camera.gameObject);camera=old;Current=null;
     }
+    IEnumerator Focused(GameObject triangle,Mesh mesh)
+    {
+        var a=new Material(Shader.Find("Probe/CameraLayers"));a.SetVector("_Color",new Vector4(2.34567f,.456789f,.123456f,.37123f));
+        var b=new Material(Shader.Find("Probe/CameraLayers"));b.SetVector("_Color",new Vector4(.173219f,.812345f,1.56789f,.612345f));b.renderQueue=3001;
+        triangle.GetComponent<MeshRenderer>().sharedMaterial=a;
+        var overlay=new GameObject("FocusedOverlap",typeof(MeshFilter),typeof(MeshRenderer));overlay.GetComponent<MeshFilter>().sharedMesh=mesh;overlay.GetComponent<MeshRenderer>().sharedMaterial=b;
+        foreach(var f in new[]{RenderTextureFormat.ARGB32,RenderTextureFormat.ARGBHalf,RenderTextureFormat.ARGBFloat})
+        foreach(bool hdr in new[]{false,true})foreach(int q in new[]{0,4}) {
+            string key="chain."+f+".hdr"+hdr+".q"+q;
+            QualitySettings.antiAliasing=q;camera.allowHDR=hdr;camera.rect=new Rect(0,0,1,1);
+            target=new RenderTexture(128,128,24,f,RenderTextureReadWrite.Linear);target.Create();camera.targetTexture=target;
+            var first=camera.gameObject.AddComponent<CameraMsaaEffect>();var second=camera.gameObject.AddComponent<CameraMsaaEffect>();
+            Capture(key);DestroyImmediate(first);DestroyImmediate(second);camera.targetTexture=null;target.Release();DestroyImmediate(target);
+        }
+        foreach(int q in new[]{0,4})foreach(var clear in new[]{CameraClearFlags.Depth,CameraClearFlags.Nothing,CameraClearFlags.SolidColor})foreach(bool fx in new[]{false,true}) {
+            string key="preserve.q"+q+"."+(clear==CameraClearFlags.SolidColor?"SolidColor":clear.ToString())+".fx"+fx;
+            QualitySettings.antiAliasing=q;camera.allowHDR=true;camera.clearFlags=clear;camera.rect=new Rect(.125f,.25f,.625f,.5f);camera.backgroundColor=new Color(.13791f,.27813f,.39127f,.43129f);
+            target=new RenderTexture(128,128,24,RenderTextureFormat.ARGB32,RenderTextureReadWrite.Linear);target.Create();camera.targetTexture=target;
+            RenderTexture.active=target;GL.Clear(true,true,new Color(.21739f,.34719f,.61973f,.71329f));RenderTexture.active=null;
+            CameraMsaaEffect effect=fx?camera.gameObject.AddComponent<CameraMsaaEffect>():null;
+            Capture(key);if(effect!=null)DestroyImmediate(effect);camera.targetTexture=null;target.Release();DestroyImmediate(target);
+        }
+        yield break;
+    }
     IEnumerator Start()
     {
         yield return null;
@@ -187,6 +211,16 @@ public class CameraMsaaProbe : MonoBehaviour
         var go=new GameObject("Coverage",typeof(MeshFilter),typeof(MeshRenderer));var m=new Mesh();
         // Several slopes and subpixel coordinates distinguish 1/2/4-sample coverage.
         m.vertices=new[]{new Vector3(-47.1875f,-38.3125f),new Vector3(48.4375f,-23.1875f),new Vector3(19.3125f,51.4375f)};m.triangles=new[]{0,1,2};m.RecalculateBounds();go.GetComponent<MeshFilter>().sharedMesh=m;go.GetComponent<MeshRenderer>().sharedMaterial=new Material(Shader.Find("Probe/Coverage"));
+        if(Environment.GetEnvironmentVariable("CAMERA_MSAA_FOCUSED")=="1") {
+            yield return Focused(go,m);
+            File.WriteAllText(Path.Combine(directory,"values.jsonl"),records.ToString());Debug.Log("CAMERA_MSAA_FOCUSED_DONE "+directory);
+#if UNITY_EDITOR
+            UnityEditor.EditorApplication.Exit(0);
+#else
+            Application.Quit();
+#endif
+            yield break;
+        }
         foreach(var f in formats)
         {
             foreach(int s in new[]{0,1,2,3,4,8}) {

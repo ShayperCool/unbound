@@ -366,3 +366,34 @@ Native repeats are also verified byte-identical, not just within tolerance, for
 all values.jsonl, .rgba, .raw and .png files. Their complete SHA-256 manifests are
 in `native-byte-manifests.json`; `RawReadbacksLinear/` and `RawReadbacksGamma/`
 retain the compressed raw Texture2D buffers for both destination formats/flags.
+
+### Effect chains and preserving color without a clear
+
+A further focused oracle covers two copy effects for ARGB32/ARGBHalf/ARGBFloat,
+HDR on/off, quality 0/4, plus partial HDR rects with depth-only, no-clear and solid
+clears, with/without an effect. Two independent Native processes per space
+recorded `camerafollowup-focused-native-{linear,gamma}{1,2}` before the subsequent
+runtime correction. Each pair is byte-identical across all 481 observations,
+54 complete GPU images and 3268608 channels. The separate focused run does not
+replace or subset the full camera matrix. `CAMERA_MSAA_FOCUSED=1` selects it.
+The fixture spells the SolidColor key explicitly because the equivalent Color
+and SolidColor enum aliases stringify differently in Native and Unbound.
+
+Native seeds the HDR temporary with the existing target when color is not
+cleared. Its full-target sentinel survives outside the geometry for Depth and
+Nothing, unlike a solid clear. FrameBuilder now copies that color before drawing;
+this is restricted to the measured forward HDR intermediate for explicit targets.
+Native's first effect destination follows the source's HDR classification. A
+later, final effect writes directly to camera.targetTexture rather than introducing
+another default-format conversion. The focused private baseline and final runs
+are `camerafollowup-focused-before2-*` and `camerafollowup-focused-final3-*`.
+Both final spaces pass 481/481 observations, 54/54 images and 3268608/3268608
+channels with the same strict comparator. `Reference/FollowupFocused*` retains
+all Native, independent baseline and final buffers; complete byte manifests and
+reports are in `Evidence/Followup/focused-*`.
+
+The final implementation changes only FrameBuilder.cs, RenderTexture.cs and
+Texture2D.cs relative to the parent. It adds no protocol, native ABI, shader cache
+format or release-specific switch. Rust and SystemInfo remain unchanged. The
+parent's explicit-target MSAA selection and HDR-resolve-before-quantization policy
+remain enabled. No authored project outside cameramsaa was changed.
