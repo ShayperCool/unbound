@@ -37,6 +37,7 @@ struct Biquad {
     b: [f32; 3],
     a: [f32; 2],
     z: [[f32; 2]; 2],
+    history: [[f32; 4]; 2],
 }
 impl Biquad {
     fn tune(&mut self, high: bool, cutoff: f32, q: f32, rate: u32) {
@@ -61,9 +62,11 @@ impl Biquad {
             z[0] = iir;
             output
         } else {
-            let output = self.b[0] * input + z[0];
-            z[0] = self.b[1] * input - self.a[0] * output + z[1];
-            z[1] = self.b[2] * input - self.a[1] * output;
+            let h = &mut self.history[channel];
+            let output = self.b[0] * input + self.b[1] * h[0] + self.b[2] * h[1]
+                - self.a[0] * h[2]
+                - self.a[1] * h[3];
+            *h = [input, h[0], output, h[2]];
             output
         }
     }
