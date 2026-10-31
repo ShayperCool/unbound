@@ -959,8 +959,16 @@ namespace Unbound.Runtime
                 var viewport = context.Viewport;
                 if (effects.Count > 0 || opaqueEffects.Count > 0)
                 {
+                    // Native keeps an explicit target's precision and encoding in the effect
+                    // source. Only an HDR-to-LDR camera changes its format before the effects.
+                    var format = hdrIntermediate ? RenderTextureFormat.DefaultHDR
+                        : cameraTarget != null ? cameraTarget.format
+                        : camera.allowHDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default;
+                    var readWrite = hdrIntermediate ? RenderTextureReadWrite.Linear
+                        : cameraTarget != null ? (cameraTarget.sRGB ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear)
+                        : RenderTextureReadWrite.Default;
                     sceneTarget = RenderTexture.GetTemporary(Math.Max(1, camera.pixelWidth), Math.Max(1, camera.pixelHeight), 24,
-                        camera.allowHDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
+                        format, readWrite, cameraSamples);
                     viewport = new Rect(0, 0, sceneTarget.width, sceneTarget.height);
                 }
                 // Resolve the selected camera samples before image effects. Their temporary
@@ -976,11 +984,17 @@ namespace Unbound.Runtime
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
                 }
-                else if ((cameraSamples > 1 || hdrIntermediate) && camera.rect == new Rect(0f, 0f, 1f, 1f)
-                    && (sceneTarget == null || sceneTarget.antiAliasing != cameraSamples) && buffers == null)
+                else if (buffers == null
+                    && ((hdrIntermediate && (sceneTarget == null || !GraphicsFormatUtility.IsHDRFormat(sceneTarget.graphicsFormat)))
+                        || (cameraSamples > 1 && camera.rect == new Rect(0f, 0f, 1f, 1f)
+                            && (sceneTarget == null || sceneTarget.antiAliasing != cameraSamples))))
                 {
-                    int w = sceneTarget != null ? sceneTarget.width : Math.Max(1, Screen.width);
-                    int h = sceneTarget != null ? sceneTarget.height : Math.Max(1, Screen.height);
+                    // Native renders HDR at the camera's pixel size, even for a partial rect,
+                    // then stretches the resolve across an explicit target. Buffer bindings
+                    // bypass this path. The intermediate is needed at one sample too: LDR
+                    // blending would clamp each HDR layer before it reaches the next layer.
+                    int w = hdrIntermediate ? Math.Max(1, camera.pixelWidth) : sceneTarget != null ? sceneTarget.width : Math.Max(1, Screen.width);
+                    int h = hdrIntermediate ? Math.Max(1, camera.pixelHeight) : sceneTarget != null ? sceneTarget.height : Math.Max(1, Screen.height);
                     // The HDR intermediate can also reduce explicit target samples to one when
                     // quality AA or allowMSAA is off. Resolve before LDR quantization, including
                     // alpha; quantizing each sample first loses a byte at partial coverage.
@@ -1078,7 +1092,7 @@ namespace Unbound.Runtime
                 // with its depth intact. Resolve only after those draws (resources commands probe).
                 if (deferred || effects.Count > 0 || opaqueEffects.Count > 0) ResolveIntermediate();
                 RunEvent(camera, CameraEvent.BeforeImageEffects, sceneTarget);
-                if (effects.Count > 0) RunImageEffects(effects, sceneTarget, cameraTarget, camera);
+                if (effects.Count > 0) RunImageEffects(effects, sceneTarget, cameraTarget, hdrIntermediate);
                 else if (opaqueEffects.Count > 0)
                 {
                     // Only opaque effects: the scene goes to the camera's target as it is.
@@ -1151,18 +1165,29 @@ namespace Unbound.Runtime
             RenderTexture.SetActiveQuietly(scene);
         }
 
-        static void RunImageEffects(List<(MonoBehaviour Script, ScriptMessages Messages)> effects, RenderTexture scene, RenderTexture cameraTarget, Camera camera)
+        static void RunImageEffects(List<(MonoBehaviour Script, ScriptMessages Messages)> effects, RenderTexture scene, RenderTexture cameraTarget, bool hdrIntermediate)
         {
             var source = scene;
             for (int i = 0; i < effects.Count; i++)
             {
                 bool last = i == effects.Count - 1;
-                var destination = last ? cameraTarget : RenderTexture.GetTemporary(source.descriptor);
-                RenderTexture.active = destination;
+                // For an explicit target Native inserts a default-format destination, then
+                // copies it to the target. HDR conversion already has the final destination.
+                bool direct = last && (cameraTarget == null || hdrIntermediate);
+                var destination = direct ? cameraTarget : RenderTexture.GetTemporary(source.width, source.height, 0,
+                    cameraTarget != null && GraphicsFormatUtility.IsHDRFormat(cameraTarget.graphicsFormat)
+                        ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
+                if (destination != null) destination.Create();
+                RenderTexture.active = source;
                 try { effects[i].Messages.OnRenderImage(effects[i].Script, source, destination); }
                 catch (Exception e) { Debug.LogException(e, effects[i].Script); }
                 RenderTexture.ReleaseTemporary(source);
                 source = destination;
+                if (last && !direct)
+                {
+                    Graphics.Blit(destination, cameraTarget);
+                    RenderTexture.ReleaseTemporary(destination);
+                }
             }
         }
 
