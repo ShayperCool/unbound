@@ -1258,6 +1258,34 @@ captures, reports, rejected invocations, hashes and the frozen integration
 snapshot are in the external Unbound validation cache. Only sources and one
 canonical Unity reference set per release enter Git. No history was rewritten.
 
+### Particle force-field rotation, 2026-10-31
+
+Force-field rotation now relaxes stored velocity toward the transformed tangent,
+using distance-sampled speed/attraction curves and sequential field application.
+Direction precedes rotation and drag follows it. Two independent Native recordings
+agree across all 2346 controls, which now pass without changed tolerances.
+Randomized curves and rotation randomness remain unsupported and warn.
+
+The combined branch passes 551 managed tests without skips. Separate particle
+unit tests remain 26/30 with the same four inherited failures. API checking finds
+zero errors in 2274 types; PhysicsModule regeneration matches. Broad particles
+match 1448/1560 records, resolving 301 scalar differences and retaining 598 with
+zero introduced failures. The original rotation scenario passes 16/16. Noise
+23646 and streams3544 pass, with all three stream image buffers exact. Four broad
+physical regression outputs are byte-identical to the accepted parent.
+
+Solver-body and expanded UI callback experiments delivered probes and tests only;
+their runtime candidates were rejected. Solver controls retain 2219 failures,
+and UI callbacks retain 5053; both introduce zero failures in the delivered code.
+The old transition oracle was renamed without changing its bytes. Its 253 samples
+and 831 callbacks still pass. Fresh UI regression copies preserve all 98402 canvas
+colors and 8671 lifecycle observations; UIToolkit records and three images match
+the independent baseline exactly. Disposable projects and runner outputs now use
+explicit private artifacts and the Unbound cache.
+
+Main ABI5, shim9 and shadercache13 are unchanged. All run data, rejected patches,
+logs, reports and artifact manifests remain outside Git. Older releases and
+remaining physical, particle and UI gaps stay open; this is not full engine parity.
 ### Model import materials, LOD groups and avatars, 2026-10-31
 
 The model import probe (tests/projects/modelimport) records 19 FBX models from Blender and
