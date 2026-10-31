@@ -1713,6 +1713,39 @@ introduced. Asset tests 71/71, runtime tests 38/38; API check zero errors in 227
 and Editor generated files match. Unmeasured: the HDR resize kernel and band splits whose float
 mapping differs from the whole image's (none of the probe's sizes).
 
+### Root input clock verification, 2026-10-31
+
+Integrated ordered input at e3a7c7c2 and made its runner release-specific and
+write-once at f4cadec2. The source-correct CLI/Core pair passes the existing Native
+comparison at 3785/3786 records, zero extra records and zero time problems. The
+single retained difference is the keyboard DCFG event. Legacy input420 and
+messages316 pass. Playables retains the same two failing scenarios and editorui
+the same expected height-cache difference; both raw captures are byte-identical
+to the previous runtime.
+
+The same 1153-test assembly gives 1139 passes/14 failures against the previous
+Core and 1141 passes/12 failures after integration. Both new input cases pass;
+the nine legacy TextTests and three ParticleSystemTests failures remain, with
+zero introduced failures or skips. Selected tests pass859/859; assets71, runtime39
+and app18 pass. API-check reports zero errors in2279 types; generated Core,
+Physics and Editor modules match.
+
+Clock-sensitive captures use separate private before/after CLI/Core pairs. All
+nine physical and bundle-audio output files are byte-identical: physics defaults,
+broad physics, joints, controller, forces, ray hits, Joint2D, effectors and audio.
+The scene matrix matches5055/5055, including4803 exact and252 original rounding
+observations. Particle lifetime30080, emission13604 and force-field2346 outputs
+are also byte-identical; emission retains its same72 count differences. Noise23646,
+streams3544 and all20 particle/stream PNGs remain unchanged. Broad particles keep
+the same597 failed values, with identical failing values and zero introductions;
+only four already-volatile wall-clock unscaledDeltaTime fields vary in the raw
+capture. No comparison masks or tolerances changed.
+
+The fixed-unscaled-clock relationship is measured at timeScale1; other scales
+remain unmeasured by the input probe. Input artifacts remain frozen in the cache.
+Native API12, render protocol5, PhysX shim9 and shader cache13 remain unchanged.
+The subsequent texture-cache10 build performs the combined rendering replay.
+
 The resize implementation currently derives its row-band split from available workers.
 Whether Editor worker settings change those bytes is under Native follow-up. Worker count
 is not yet a cache-key input; this possible cross-worker cache mismatch remains open.
