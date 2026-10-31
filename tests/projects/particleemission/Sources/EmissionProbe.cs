@@ -143,6 +143,65 @@ public class EmissionProbe : MonoBehaviour
         }
         UnityEngine.Object.DestroyImmediate(ps.gameObject);
     }
+    // Observe emitted ages as well as counts on both sides of a two-second lifetime.
+    // Keep these controls separate so the original matrix remains byte-for-byte comparable.
+    static void ParticleState(string key, ParticleSystem ps)
+    {
+        State(key, ps);
+        var particles = new ParticleSystem.Particle[ps.particleCount];
+        int count = ps.GetParticles(particles);
+        output.Append("{\"k\":\"").Append(key).Append("/particles\",\"v\":[");
+        for (int i = 0; i < count; i++) {
+            if (i > 0) output.Append(',');
+            output.Append("{\"seed\":").Append(particles[i].randomSeed)
+                .Append(",\"life\":").Append(F(particles[i].remainingLifetime))
+                .Append(",\"start\":").Append(F(particles[i].startLifetime)).Append('}');
+        }
+        output.Append("]}\n");
+    }
+    static void Boundaries()
+    {
+        foreach (int source in new[] { 1, 3 })
+        foreach (bool loop in new[] { false, true })
+        foreach (float delay in new[] { 0f, .25f })
+        foreach (bool fixedStep in new[] { false, true })
+        foreach (bool restore in new[] { false, true })
+        foreach (bool split in new[] { false, true }) {
+            string key = "boundary/" + source + "/" + B(loop) + "/" + F(delay) + "/" + B(fixedStep) + "/" + B(restore) + "/" + B(split);
+            var ps = Make(true, source, loop, delay, false);
+            ps.Play(false);
+            int step = 0;
+            foreach (float dt in split ? new[] { 0f, .125f, .125f, .25f, .5f, .25f, .9999f, .0001f, .0001f, .02f }
+                                      : new[] { 0f, .125f, .125f, .25f, .5f, .25f, 1f, .0001f, .02f }) {
+                ps.Simulate(dt, false, false, fixedStep);
+                ParticleState(key + "/" + step++, ps);
+                var saved = ps.GetPlaybackState();
+                ps.Play(false);
+                if (restore) ps.SetPlaybackState(saved);
+            }
+            UnityEngine.Object.DestroyImmediate(ps.gameObject);
+        }
+        // Identical setup to the inherited rate unit test and the broad long-call control.
+        foreach (bool restart in new[] { false, true }) {
+            var ps = Make(true, 1, true, 0, false);
+            var main = ps.main; main.duration = 5; main.startLifetime = 10;
+            var emission = ps.emission; emission.rateOverTime = 20;
+            ps.Play(false);
+            for (int step = 0; step < 75; step++) {
+                ps.Simulate(.02f, false, false, false); ps.Play(false);
+                ParticleState("rateSteps/" + B(restart) + "/" + step, ps);
+            }
+            UnityEngine.Object.DestroyImmediate(ps.gameObject);
+            ps = Make(true, 1, true, 0, false);
+            main = ps.main; main.duration = 5; main.startLifetime = 1.013f;
+            emission = ps.emission; emission.rateOverTime = 20;
+            foreach (float dt in new[] { .3f, .7f }) {
+                ps.Simulate(dt, false, restart, false);
+                ParticleState("longCall/" + B(restart) + "/" + F(dt), ps);
+            }
+            UnityEngine.Object.DestroyImmediate(ps.gameObject);
+        }
+    }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()
     {
@@ -160,6 +219,7 @@ public class EmissionProbe : MonoBehaviour
         foreach (bool enabled in new[] { false, true })
         for (int saved = 0; saved < 4; saved++)
         for (int target = 0; target < 4; target++) Playback(enabled, saved, target);
+        Boundaries();
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_EMISSION_OUT"), output.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
