@@ -433,6 +433,8 @@ namespace Unbound.Runtime
         static void DestroyBody(Rigidbody rb)
         {
             if (rb.m_Body == 0) return;
+            // Retain the actual physics pose separately from any unpublished Transform edit.
+            B3.ua3_body_get_transform(rb.m_Body, out rb.m_InactivePosition, out rb.m_InactiveRotation);
             // Keep the motion for when it is simulated again.
             rb.m_PendingVelocity = B3.ua3_body_get_linear_velocity(rb.m_Body);
             rb.m_PendingAngularVelocity = B3.ua3_body_get_angular_velocity(rb.m_Body);

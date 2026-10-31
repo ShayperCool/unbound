@@ -1,0 +1,1 @@
+rayhits: 3203/3203 records match, 0 differ, 0 unexpected
