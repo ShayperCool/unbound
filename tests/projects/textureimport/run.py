@@ -2,6 +2,8 @@
 """Records the texture import probe in the Unity Editor or runs it in Unbound.
 
     run.py editor [--label L]    two independent Editor captures per color space
+    run.py editor --job-worker-count N [--label L]   one capture per color space with the Editor's
+                                 job system at N workers (`-job-worker-count`; not publishable)
     run.py publish [--label L]   checks the two captures agree, copies them to Reference/
     run.py unbound [--label L]   Unbound captures per color space (UNBOUND_CLI: the binary)
 
@@ -58,12 +60,14 @@ def display():
     sys.exit('no free X display')
 
 
-def editor(work):
+def editor(work, workers=None):
     name, server = display()
     try:
         jobs = []
+        repeats = ('native1', 'native2') if workers is None else (f'workers{workers}',)
+        extra = [] if workers is None else ['-job-worker-count', str(workers)]
         for space in profiles():
-            for repeat in ('native1', 'native2'):
+            for repeat in repeats:
                 project = copy_project(work/'projects'/f'{space}-{repeat}', space)
                 out = work/repeat/f'{space}.jsonl'
                 out.parent.mkdir(parents=True, exist_ok=True)
@@ -73,7 +77,7 @@ def editor(work):
                 jobs.append(subprocess.Popen(
                     [str(LAUNCHER), 'timeout', '-s', 'KILL', '900', 'vglrun', '-d', 'egl', str(editor_path()),
                      '-batchmode', '-buildTarget', PROFILES[space][1], '-projectPath', str(project),
-                     '-executeMethod', 'ProbeRunner.Record',
+                     '-executeMethod', 'ProbeRunner.Record', *extra,
                      '-logFile', str(work/repeat/f'{space}.log')], env=env))
         codes = [job.wait() for job in jobs]
         print('editor exits', codes)
@@ -122,11 +126,16 @@ def main():
     parser.add_argument('mode', choices=('editor', 'publish', 'unbound'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
+    parser.add_argument('--job-worker-count', type=int, help='editor: one capture with N job workers')
     args = parser.parse_args()
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
+    if args.job_worker_count is not None:
+        if args.mode != 'editor':
+            parser.error('--job-worker-count is only for editor captures')
+        return editor(work, args.job_worker_count)
     return {'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
 
 
