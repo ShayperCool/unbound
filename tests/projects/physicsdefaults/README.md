@@ -150,3 +150,35 @@ settings, not malformed settings assets. The maxLinearVelocity tests establish
 readback, sign handling and clone resets, not its existing post-step clamping
 algorithm. Collider contact-default lifetime, other releases, and the inherited
 solver/contact differences remain separate work. This is not full engine parity.
+
+## Collider follow-up oracle
+
+The parent extends the reference to 582 records. The original 389 Native values
+are unchanged. `Evidence/native-collider-repeat.jsonl` is an independent Editor
+recording and agrees exactly by key/value with the complete new reference.
+`Evidence/native-repeat.jsonl` retains the earlier 389-record Native reference.
+
+The additional 193 records cover BoxCollider, SphereCollider, CapsuleCollider,
+CharacterController, empty MeshCollider/TerrainCollider, and those two types with
+valid geometry. They measure creation-time defaults, allocation, global changes,
+inactive objects and parents, disabled components, reactivation, clone resets,
+prefab lifetime, nonpositive/nonfinite values, and the smallest positive float.
+The authoring runner also assigns runtime contact offsets before saving; Unity
+omits them from scene/prefab YAML, just like Rigidbody runtime tuning.
+
+Native retains the creation offset through global changes and activation. Clones
+use current globals. A setter changes the value only while a physics shape
+exists; inactive, disabled and geometry-less colliders ignore the assignment.
+Valid overrides survive deactivation. Nonpositive values are rejected; active
+colliders retain NaN and positive infinity in API readback. Invalid-value
+simulation and exact diagnostic text remain unmeasured.
+
+A moving-box case checks live contact generation, not just API readback.
+Increasing the dynamic box's offset creates four positive-separation contacts;
+decreasing it ends that pair, restoring it enters again, and rejected zero/negative
+assignments preserve subsequent stay callbacks. Every phase records events,
+contact count/separation, position, velocity and the current offset.
+
+Repeat the Native recording command above with
+`PHYSICS_DEFAULTS_OUT="$fixture/Evidence/native-collider-repeat.jsonl"`, then
+compare that file with the full reference using the same unchanged comparator.
