@@ -871,12 +871,19 @@ namespace Unbound.Runtime
                 var b = contact.FixtureB.UserData as Collider2D;
                 if (a == null || b == null) return;
                 Physics2DEffectors.PreSolve(contact, a, b);
+                if (!contact.EnterPointVelocitiesCaptured)
+                {
+                    contact.GetWorldManifold(out var enteringWorld);
+                    for (int i = 0; i < contact.Manifold.PointCount; i++)
+                    {
+                        var enteringPoint = enteringWorld.Points[i];
+                        contact.EnterPointVelocities[i] = contact.FixtureB.Body.GetLinearVelocityFromWorldPoint(enteringPoint)
+                            - contact.FixtureA.Body.GetLinearVelocityFromWorldPoint(enteringPoint);
+                    }
+                    contact.EnterPointVelocitiesCaptured = true;
+                }
                 if (!s_Pairs.TryGetValue(new PairKey(a, b), out var pair) || pair.VelocityCaptured || !pair.EnterPending) return;
-                contact.GetWorldManifold(out var world);
-                var point = contact.Manifold.PointCount > 0 ? world.Points[0] : contact.FixtureA.Body.GetWorldCenter();
-                var vA = contact.FixtureA.Body.GetLinearVelocityFromWorldPoint(point);
-                var vB = contact.FixtureB.Body.GetLinearVelocityFromWorldPoint(point);
-                var relative = ToUnity(vB - vA);
+                var relative = ToUnity(contact.EnterPointVelocities[0]);
                 pair.EnterRelativeVelocity = pair.A == (object)a ? relative : -relative;
                 pair.VelocityCaptured = true;
             }
@@ -1019,9 +1026,7 @@ namespace Unbound.Runtime
             // Unity's exit messages carry no contacts and no relative velocity.
             if (phase == Phase.Exit) return collision;
             var points = new List<ContactPoint2D>(2);
-            bool enabled = CollectContacts(self, other, points, phase == Phase.Enter && pair.VelocityCaptured
-                ? (flip ? -pair.EnterRelativeVelocity : pair.EnterRelativeVelocity)
-                : (Vector2?)null);
+            bool enabled = CollectContacts(self, other, points, phase == Phase.Enter);
             collision.m_CollisionContacts = points.ToArray();
             collision.m_CollisionContactCount = points.Count;
             collision.m_CollisionEnabled = enabled;
@@ -1061,7 +1066,7 @@ namespace Unbound.Runtime
         /// <summary>The touching contact points between two colliders, seen from <paramref name="self"/>
         /// (normals point from <paramref name="other"/> towards <paramref name="self"/>). Returns
         /// whether the contact is enabled.</summary>
-        internal static bool CollectContacts(Collider2D self, Collider2D other, List<ContactPoint2D> into, Vector2? relativeVelocity)
+        internal static bool CollectContacts(Collider2D self, Collider2D other, List<ContactPoint2D> into, bool entering)
         {
             bool enabled = true;
             foreach (var f in self.m_Fixtures)
@@ -1089,7 +1094,9 @@ namespace Unbound.Runtime
                     {
                         var p = world.Points[i];
                         var mp = contact.Manifold.Points[i];
-                        var rel = relativeVelocity ?? ToUnity(otherBody.GetLinearVelocityFromWorldPoint(p) - selfBody.GetLinearVelocityFromWorldPoint(p));
+                        var rel = entering && contact.EnterPointVelocitiesCaptured
+                            ? ToUnity(selfIsA ? contact.EnterPointVelocities[i] : -contact.EnterPointVelocities[i])
+                            : ToUnity(otherBody.GetLinearVelocityFromWorldPoint(p) - selfBody.GetLinearVelocityFromWorldPoint(p));
                         into.Add(new ContactPoint2D(ToUnity(p), normal, rel, contact.Friction, contact.Restitution, world.Separations[i],
                             mp.NormalImpulse, mp.TangentImpulse, otherCollider, self, contact.IsEnabled));
                     }

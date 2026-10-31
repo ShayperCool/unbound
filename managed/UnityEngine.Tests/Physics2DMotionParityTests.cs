@@ -20,6 +20,38 @@ namespace UnityEngine.Tests
             Physics2D.gravity = new Vector2(0, -9.81f);
             Physics2D.Simulate(.02f);
         }
+
+        // Native phase/True/0/{speed}/{continuous} has two entering points with
+        // different lever arms. The collision velocity is its first point's velocity;
+        // each ContactPoint2D retains the velocity at its own evaluated position.
+        [Theory]
+        [InlineData(-3f, false, -1.14247024f, 3.242599f)]
+        [InlineData(-3f, true, -1.14879191f, 3.243122f)]
+        [InlineData(-12f, false, -1.126434f, 12.04712f)]
+        [InlineData(-12f, true, -1.14894533f, 12.047658f)]
+        public void EnteringContactPointsRetainTheirOwnRelativeVelocity(float speed, bool continuous, float x, float y)
+        {
+            Physics2D.gravity = new Vector2(0, -9.81f);
+            var ground = new GameObject("ground"); objects.Add(ground);
+            ground.transform.position = new Vector3(0, -.5f, 0);
+            ground.AddComponent<BoxCollider2D>().size = new Vector2(20, 1);
+            var moving = new GameObject("moving"); objects.Add(moving);
+            moving.transform.position = new Vector3(0, .6f, 0);
+            moving.AddComponent<BoxCollider2D>().sharedMaterial = new PhysicsMaterial2D { bounciness = .8f, friction = .4f };
+            var body = moving.AddComponent<Rigidbody2D>();
+            body.collisionDetectionMode = continuous ? CollisionDetectionMode2D.Continuous : CollisionDetectionMode2D.Discrete;
+            body.linearVelocity = new Vector2(1, speed);
+            body.angularVelocity = 17;
+            var recorder = moving.AddComponent<ContactRecorder>();
+            for (int i = 0; i < 20 && recorder.collisions.Count == 0; i++) Physics2D.Simulate(.02f);
+            var collision = Assert.Single(recorder.collisions);
+            Assert.Equal(2, collision.contactCount);
+            Assert.Equal(collision.relativeVelocity, collision.GetContact(0).relativeVelocity);
+            var second = collision.GetContact(1).relativeVelocity;
+            Assert.InRange(Mathf.Abs(second.x - x), 0, .001f);
+            Assert.InRange(Mathf.Abs(second.y - y), 0, .001f);
+            Assert.True(Mathf.Abs(second.y - collision.relativeVelocity.y) > .29f);
+        }
         public static IEnumerable<object[]> SkinTransitions()
         {
             foreach (float next in new[] { .001f, .1f })
