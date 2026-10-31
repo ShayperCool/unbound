@@ -20,9 +20,10 @@ public class UitkProbe : MonoBehaviour
         var readback = new Texture2D(1, 1, TextureFormat.RGBAFloat, false, true);
         bool bilinearControl = Environment.GetEnvironmentVariable("SAMPLER_BIAS_BILINEAR") == "1";
         bool liveControl = Environment.GetEnvironmentVariable("SAMPLER_BIAS_LIVE") == "1";
+        bool cacheControl = Environment.GetEnvironmentVariable("SAMPLER_BIAS_CACHE") == "1";
         try
         {
-            foreach (int width in liveControl ? Array.Empty<int>() : new[] { 4, 64 })
+            foreach (int width in liveControl || cacheControl ? Array.Empty<int>() : new[] { 4, 64 })
             foreach (TextureFormat format in new[] { TextureFormat.RGBA32, TextureFormat.RGBAHalf, TextureFormat.RFloat })
             foreach (bool readable in new[] { true, false })
             foreach (bool beforeUpload in new[] { true, false })
@@ -74,6 +75,7 @@ public class UitkProbe : MonoBehaviour
                 DestroyImmediate(texture);
             }
             if (liveControl) RecordLiveControls(rows, material, target, readback);
+            if (cacheControl) RecordCacheControls(rows, material, target, readback);
             File.WriteAllText(Path.Combine(output, "values.jsonl"), rows.ToString());
             File.WriteAllText(Path.Combine(output, "gpu.txt"), SystemInfo.graphicsDeviceName);
         }
@@ -138,6 +140,70 @@ public class UitkProbe : MonoBehaviour
         }
         QualitySettings.anisotropicFiltering = original;
         DestroyImmediate(texture);
+    }
+
+    static void RecordCacheControls(StringBuilder rows, Material material, RenderTexture target, Texture2D readback)
+    {
+        var original = QualitySettings.anisotropicFiltering;
+        QualitySettings.anisotropicFiltering = AnisotropicFiltering.Disable;
+        var texture = new Texture2D(4, 2, TextureFormat.RGBAFloat, true, true);
+        var quad = new Mesh();
+        var commands = new UnityEngine.Rendering.CommandBuffer();
+        try
+        {
+            texture.filterMode = FilterMode.Point; texture.wrapMode = TextureWrapMode.Clamp;
+            texture.anisoLevel = 1;
+            for (int mip = 0; mip < texture.mipmapCount; mip++)
+            {
+                int w = Math.Max(1, 4 >> mip), h = Math.Max(1, 2 >> mip);
+                var pixels = new Color[w * h];
+                for (int y = 0; y < h; y++)
+                for (int x = 0; x < w; x++) pixels[y * w + x] = new Color((x + 1f) / (w + 1f), mip * .25f, y * .25f, 1);
+                texture.SetPixels(pixels, mip);
+            }
+            texture.Apply(false, false);
+            quad.vertices = new[] { new Vector3(-1, -1, 0), new Vector3(1, -1, 0), new Vector3(1, 1, 0), new Vector3(-1, 1, 0) };
+            quad.uv = new[] { new Vector2(1.125f, .5f), new Vector2(1.125f, .5f), new Vector2(1.125f, .5f), new Vector2(1.125f, .5f) };
+            quad.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+            material.SetTexture("_ModernTex", texture);
+            material.SetFloat("_Mode", 4); material.SetFloat("_Level", .5f);
+            commands.SetRenderTarget(target);
+            commands.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
+            commands.DrawMesh(quad, Matrix4x4.identity, material, 0, 0);
+            void Capture(string label)
+            {
+                Graphics.ExecuteCommandBuffer(commands);
+                var previous = RenderTexture.active; RenderTexture.active = target;
+                readback.ReadPixels(new Rect(0, 0, 1, 1), 0, 0, false);
+                RenderTexture.active = previous;
+                // CPU read only: no Apply or material edit between the cached draws.
+                var value = readback.GetPixel(0, 0);
+                rows.Append("{\"k\":\"cache/").Append(label).Append("\",\"v\":[")
+                    .Append(F(value.r)).Append(',').Append(F(value.g)).Append(',').Append(F(value.b)).Append(',').Append(F(value.a)).Append("]}\n");
+                rows.Append("{\"k\":\"state/cache/").Append(label).Append("\",\"v\":[")
+                    .Append((int)texture.filterMode).Append(',').Append((int)texture.wrapMode).Append(',').Append(F(texture.mipMapBias)).Append("]}\n");
+            }
+            Capture("warm");
+            int sequence = 0;
+            foreach (var filter in new[] { FilterMode.Trilinear, FilterMode.Point, FilterMode.Bilinear, FilterMode.Trilinear })
+            {
+                texture.mipMapBias = 0; Capture("filter/" + sequence + "/armed");
+                texture.filterMode = filter; Capture("filter/" + sequence + "/changed");
+                sequence++;
+            }
+            sequence = 0;
+            foreach (var wrap in new[] { TextureWrapMode.Repeat, TextureWrapMode.Clamp, TextureWrapMode.Mirror, TextureWrapMode.Clamp })
+            {
+                texture.mipMapBias = 0; Capture("wrap/" + sequence + "/armed");
+                texture.wrapMode = wrap; Capture("wrap/" + sequence + "/changed");
+                sequence++;
+            }
+        }
+        finally
+        {
+            commands.Release(); DestroyImmediate(quad); DestroyImmediate(texture);
+            QualitySettings.anisotropicFiltering = original;
+        }
     }
 
     static string F(float value) => value.ToString("G9", CultureInfo.InvariantCulture);

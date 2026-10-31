@@ -14,7 +14,10 @@ p.add_argument('--managed', type=Path)
 p.add_argument('--anisotropy', choices=['Force', 'Enable', 'Disable'], default='Force')
 p.add_argument('--bilinear-control', action='store_true')
 p.add_argument('--live-control', action='store_true')
+p.add_argument('--cache-control', action='store_true')
 a = p.parse_args()
+if a.cache_control and (a.live_control or a.bilinear_control):
+    p.error('--cache-control is a separate profile')
 output = cache_artifact_path(a.output.expanduser().resolve())
 if output.exists(): p.error('output must be fresh')
 output.mkdir(parents=True)
@@ -29,6 +32,10 @@ if a.anisotropy != 'Force':
 shutil.copy2(ROOT/'Assets/Scripts/SamplerBiasProbe.cs', project/'Assets/Scripts/UitkProbe.cs')
 shutil.copytree(ROOT/'Assets/Shaders', project/'Assets/Shaders')
 env = dict(os.environ, SAMPLER_BIAS_OUT=str(output/'capture'))
+if a.cache_control:
+    env['SAMPLER_BIAS_CACHE'] = '1'
+else:
+    env.pop('SAMPLER_BIAS_CACHE', None)
 if a.live_control:
     env['SAMPLER_BIAS_LIVE'] = '1'
 else:
@@ -50,6 +57,7 @@ sources = {str(x.relative_to(project)): hashlib.sha256(x.read_bytes()).hexdigest
            for x in sorted(project.rglob('*')) if x.is_file()}
 (output/'execution.json').write_text(json.dumps(dict(command=command, sha256=hashes, sources=sources, release=a.release,
     anisotropy=a.anisotropy, bilinear_control=a.bilinear_control, live_control=a.live_control,
+    cache_control=a.cache_control,
     sampler_environment={k: v for k, v in env.items() if k.startswith('SAMPLER_BIAS_')}), indent=2)+'\n')
 with (output/'process.log').open('w') as log:
     subprocess.run([str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600', *command], env=env, stdout=log, stderr=subprocess.STDOUT, check=True)

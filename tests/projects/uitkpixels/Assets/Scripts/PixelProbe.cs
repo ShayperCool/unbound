@@ -74,6 +74,28 @@ public static class PixelProbe
             document.panelSettings.scale = scale; Update(); Update();
             Render(document, "shapes-" + (scale == 1 ? "1" : "1.25"));
         }
+        root.Clear(); document.panelSettings.scale = 1;
+        int[][] borders = {
+            new[] { 1, 1, 19, 19 }, new[] { 19, 1, 1, 19 },
+            new[] { 19, 19, 1, 1 }, new[] { 1, 19, 19, 1 },
+            new[] { 1, 1, 20, 20 }, new[] { 1, 1, 19, 2 },
+            new[] { 1, 1, 2, 19 }, new[] { 1, 1, 1, 1 },
+        };
+        for (int i = 0; i < borders.Length; i++)
+        {
+            var e = new VisualElement { name = "border-interior-" + i };
+            e.style.position = Position.Absolute;
+            e.style.left = 30 + i * 70; e.style.top = 30;
+            e.style.width = 20; e.style.height = 20;
+            e.style.backgroundColor = (Color)new Color32(48, 48, 48, 255);
+            e.style.borderTopLeftRadius = 10; e.style.borderTopRightRadius = 10;
+            e.style.borderBottomLeftRadius = 10; e.style.borderBottomRightRadius = 10;
+            e.style.borderLeftWidth = borders[i][0]; e.style.borderTopWidth = borders[i][1];
+            e.style.borderRightWidth = borders[i][2]; e.style.borderBottomWidth = borders[i][3];
+            e.style.borderTopColor = e.style.borderRightColor = e.style.borderBottomColor = e.style.borderLeftColor = (Color)new Color32(224, 144, 48, 255);
+            root.Add(e);
+        }
+        Update(); Update(); Render(document, "collapsed-borders");
         File.WriteAllLines(Path.Combine(Output, "pixels.jsonl"), Rows);
     }
 

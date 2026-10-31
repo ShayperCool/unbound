@@ -40,8 +40,13 @@ def main():
     p.add_argument('--anisotropy', choices=['Force', 'Enable', 'Disable'], default='Force')
     p.add_argument('--bilinear-control', action='store_true')
     p.add_argument('--live-control', action='store_true')
+    p.add_argument('--cache-control', action='store_true')
     args = p.parse_args()
+    if args.cache_control and (args.live_control or args.bilinear_control):
+        p.error('--cache-control is a separate profile')
     folder = ROOT/'Reference'/('unity-' + args.release)
+    if args.cache_control:
+        folder /= 'Cache'
     if args.live_control:
         folder /= 'Live'
     if args.bilinear_control:
