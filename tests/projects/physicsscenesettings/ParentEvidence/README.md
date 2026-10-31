@@ -47,6 +47,12 @@ took 30.51s with zero errors. `tests/integrated-final.trx` preserves the 302-tes
 Focused sources, independent Native hashes and reproduction commands are in
 `../ParentProbes/README.md` and `oracle-manifest.json`.
 
+The parent preserved matching immutable baseline artifacts for subsequent tasks at
+`~/.cache/compat/parity-baseline-native7/`: CLI, full managed output, shim7 and a
+SHA256 manifest for integrated source `4df2ae4d`. Set UNBOUND_MANAGED_DIR to its
+`managed/` directory and LD_LIBRARY_PATH to the snapshot root. The previous shim6
+snapshot remains untouched. Neither snapshot is a mutable build output.
+
 Reproduce from the repository root with matching rebuilt artifacts:
 
 ```bash
