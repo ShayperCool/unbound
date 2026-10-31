@@ -1,0 +1,60 @@
+{
+  "native_records_each": 276,
+  "both_preserve_original_values": true,
+  "id_events_each": 1599,
+  "pair_workload_events_each": 477,
+  "normalized_pair_workload_agrees": true,
+  "simulation_to_trigger_changes": [
+    {
+      "step": 57,
+      "rigid": 47,
+      "element_before": 38,
+      "element_after": 38
+    },
+    {
+      "step": 63,
+      "rigid": 59,
+      "element_before": 46,
+      "element_after": 46
+    },
+    {
+      "step": 75,
+      "rigid": 39,
+      "element_before": 30,
+      "element_after": 30
+    },
+    {
+      "step": 81,
+      "rigid": 39,
+      "element_before": 22,
+      "element_after": 22
+    },
+    {
+      "step": 93,
+      "rigid": 59,
+      "element_before": 58,
+      "element_after": 58
+    },
+    {
+      "step": 99,
+      "rigid": 39,
+      "element_before": 58,
+      "element_after": 58
+    },
+    {
+      "step": 111,
+      "rigid": 59,
+      "element_before": 62,
+      "element_after": 62
+    },
+    {
+      "step": 117,
+      "rigid": 63,
+      "element_before": 22,
+      "element_after": 22
+    }
+  ],
+  "sdk_source": "native/physx/source/simulationcontroller/src/ScShapeSim.cpp:244",
+  "sdk_trigger_change_calls_reinsertBroadPhase": true,
+  "runtime_changes_accepted": false
+}

@@ -1,0 +1,23 @@
+{
+  "records": 277,
+  "exact": 250,
+  "matched": 262,
+  "failed_keys": [
+    "pair/kd/False/fresh/0/motion",
+    "pair/kd/False/fresh/0/raw/0",
+    "pair/kd/False/fresh/0/raw/1",
+    "pair/kd/False/fresh/0/raw/2",
+    "pair/kd/False/fresh/0/raw/3",
+    "pair/kd/False/fresh/1/before/motion",
+    "pair/kd/False/fresh/1/contacts",
+    "pair/kd/False/fresh/1/motion",
+    "pair/kd/False/fresh/1/raw-count",
+    "pair/kd/False/fresh/1/raw/0",
+    "pair/kd/False/fresh/1/raw/1",
+    "pair/kd/False/fresh/1/raw/2",
+    "pair/kd/False/fresh/1/raw/3",
+    "pair/kd/False/fresh/2/before/motion",
+    "pair/kd/False/fresh/2/motion"
+  ],
+  "introduced": []
+}

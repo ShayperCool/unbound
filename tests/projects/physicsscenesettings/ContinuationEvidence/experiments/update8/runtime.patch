@@ -1,0 +1,150 @@
+diff --git a/managed/UnityEngine/Physics/Box3D.cs b/managed/UnityEngine/Physics/Box3D.cs
+index dc25b60e..05877ee4 100644
+--- a/managed/UnityEngine/Physics/Box3D.cs
++++ b/managed/UnityEngine/Physics/Box3D.cs
+@@ -15,7 +15,7 @@ namespace Unbound.Box3D
+         const string Library = "unbound_physx";
+ 
+         /// <summary>The shim version this binding was written for.</summary>
+-        internal const int Version = 7;
++        internal const int Version = 8;
+ 
+         // The per-body accessors called every step are constant time, never block and never call
+         // back into managed code: they skip the GC transition ([SuppressGCTransition]).
+@@ -243,6 +243,7 @@ namespace Unbound.Box3D
+         [LibraryImport(Library)] internal static partial ulong ua3_shape_sphere(ulong body, in ShapeDef def, Vector3 center, float radius);
+         [LibraryImport(Library)] internal static partial ulong ua3_shape_capsule(ulong body, in ShapeDef def, Vector3 center1, Vector3 center2, float radius);
+         [LibraryImport(Library)] internal static partial ulong ua3_shape_box(ulong body, in ShapeDef def, Vector3 center, Quaternion rotation, Vector3 halfExtents);
++        [LibraryImport(Library)] internal static partial void ua3_shape_update_box(ulong shape, in ShapeDef def, Vector3 center, Quaternion rotation, Vector3 halfExtents);
+         [LibraryImport(Library)] internal static partial ulong ua3_shape_hull(ulong body, in ShapeDef def, Vector3* points, int count);
+         [LibraryImport(Library)] internal static partial IntPtr ua3_mesh_create(Vector3* vertices, int vertexCount, int* indices, int triangleCount);
+         [LibraryImport(Library)] internal static partial void ua3_mesh_destroy(IntPtr mesh);
+diff --git a/managed/UnityEngine/Physics/PhysicsWorld.cs b/managed/UnityEngine/Physics/PhysicsWorld.cs
+index 86257de3..c2f9ebda 100644
+--- a/managed/UnityEngine/Physics/PhysicsWorld.cs
++++ b/managed/UnityEngine/Physics/PhysicsWorld.cs
+@@ -145,6 +145,18 @@ namespace Unbound.Runtime
+             rb.m_TransformVersion = -1;
+             s_StructureDirty = true;
+             s_AttachmentDirty = true;
++            // Converting an existing static collider is local to the new component.
++            bool hasStatic = false;
++            foreach (var c in s_Colliders)
++                if (c.m_StaticBody != 0 && ReferenceEquals(FindRigidbody(c), rb)) hasStatic = true;
++            if (hasStatic)
++            {
++                CreateBody(rb);
++                foreach (var c in s_Colliders)
++                    if (ReferenceEquals(FindRigidbody(c), rb)) Rebuild(c);
++                ApplyPendingKinematic(rb);
++                if (rb.m_MassDirty) rb.ApplyMass();
++            }
+         }
+ 
+         internal static void Remove(Rigidbody rb)
+@@ -180,6 +192,11 @@ namespace Unbound.Runtime
+             c.m_AddedVersion = t.m_Version;
+             s_Colliders.Add(c);
+             s_StructureDirty = true;
++            bool hasBodyComponent = false;
++            for (var parent = t; parent != null; parent = parent.m_Parent)
++                foreach (var component in parent.m_GameObject.m_Components)
++                    if (component is Rigidbody && !component.m_Destroyed) hasBodyComponent = true;
++            if (!hasBodyComponent && !(c is CharacterController)) Rebuild(c);
+         }
+ 
+         internal static void Remove(Collider c)
+@@ -203,6 +220,17 @@ namespace Unbound.Runtime
+         internal static void MarkShapeDirty(Collider c)
+         {
+             if (!c.m_Registered) return;
++            if (c is BoxCollider box && c.m_Shape != 0 && ReferenceEquals(FindRigidbody(c), c.m_AttachedBody))
++            {
++                var matrix = c.m_ShapeMatrix;
++                var scales = Collider.AxisScales(matrix);
++                var size = box.m_Size;
++                var half = Vector3.Scale(new Vector3(Mathf.Abs(size.x), Mathf.Abs(size.y), Mathf.Abs(size.z)) * .5f, scales);
++                half = Vector3.Max(half, new Vector3(1e-4f, 1e-4f, 1e-4f));
++                B3.ua3_shape_update_box(c.m_Shape, ShapeDefOf(c, c.m_AttachedBody), matrix.MultiplyPoint3x4(box.m_Center), Collider.AxisRotation(matrix), half);
++                if (c.m_AttachedBody != null) c.m_AttachedBody.m_MassDirty = true;
++                return;
++            }
+             c.m_ShapeDirty = true;
+             s_StructureDirty = true;
+         }
+diff --git a/managed/UnityEngine/Physics/Rigidbody.cs b/managed/UnityEngine/Physics/Rigidbody.cs
+index 67024b55..6fc21fdf 100644
+--- a/managed/UnityEngine/Physics/Rigidbody.cs
++++ b/managed/UnityEngine/Physics/Rigidbody.cs
+@@ -644,6 +644,7 @@ namespace UnityEngine
+ 
+         public void AddForce(Vector3 force, [Internal.DefaultValue("ForceMode.Force")] ForceMode mode)
+         {
++            EnsureMass();
+             var body = Body;
+             if (body == 0 || m_IsKinematic || !IsFinite(force)) return;
+             switch (mode)
+@@ -681,6 +682,7 @@ namespace UnityEngine
+ 
+         public void AddTorque(Vector3 torque, [Internal.DefaultValue("ForceMode.Force")] ForceMode mode)
+         {
++            EnsureMass();
+             var body = Body;
+             if (body == 0 || m_IsKinematic || !IsFinite(torque)) return;
+             switch (mode)
+@@ -719,6 +721,7 @@ namespace UnityEngine
+ 
+         public void AddForceAtPosition(Vector3 force, Vector3 position, [Internal.DefaultValue("ForceMode.Force")] ForceMode mode)
+         {
++            EnsureMass();
+             var body = Body;
+             if (body == 0 || m_IsKinematic || !IsFinite(force)) return;
+             switch (mode)
+diff --git a/native/unbound_physx.cpp b/native/unbound_physx.cpp
+index bb3d1141..0fd3dd74 100644
+--- a/native/unbound_physx.cpp
++++ b/native/unbound_physx.cpp
+@@ -46,7 +46,7 @@ using namespace physx;
+ #endif
+ 
+ // The version of this API; the managed side checks it.
+-#define UA3_VERSION 7
++#define UA3_VERSION 8
+ 
+ struct ua3_scene_def
+ {
+@@ -1704,6 +1704,34 @@ UA3_API uint64_t ua3_shape_height_field_scaled( uint64_t body, const ua3_shape_d
+ 	return attach( body, def, geometry, PxTransform( offset ) );
+ }
+ 
++UA3_API void ua3_shape_update_box( uint64_t id, const ua3_shape_def* def, ua3_vec3 centerIn, ua3_quat rotationIn, ua3_vec3 halfExtentsIn )
++{
++	PxShape* shape = shape_of( id );
++	if ( !shape ) return;
++	shape->setGeometry( PxBoxGeometry( halfExtentsIn ) );
++	PxQuat rotation = rotationIn;
++	shape->setLocalPose( PxTransform( centerIn, rotation.getNormalized() ) );
++	PxMaterial* m = material( def->staticFriction, def->friction, def->restitution, def->material );
++	shape->setMaterials( &m, 1 );
++	shape->setContactOffset( def->contactOffset );
++	PxShapeFlags flags = PxShapeFlag::eSCENE_QUERY_SHAPE | PxShapeFlag::eVISUALIZATION;
++	flags |= def->isSensor ? PxShapeFlag::eTRIGGER_SHAPE : PxShapeFlag::eSIMULATION_SHAPE;
++	shape->setFlags( flags );
++	ShapeInfo* i = info( shape );
++	i->density = def->density;
++	i->contactEvents = def->enableContactEvents != 0;
++	i->sensorEvents = def->enableSensorEvents != 0;
++	PxFilterData before = shape->getSimulationFilterData();
++	PxFilterData after = before;
++	after.word0 = static_cast<PxU32>( def->categoryBits );
++	after.word1 = static_cast<PxU32>( def->maskBits );
++	shape->setSimulationFilterData( after );
++	set_filter_flags( shape );
++	shape->setQueryFilterData( query_data( after.word0, shape->getActor(), def->isSensor != 0 ) );
++	after = shape->getSimulationFilterData();
++	if ( before.word0 != after.word0 || before.word1 != after.word1 || before.word2 != after.word2 ) refilter( shape );
++}
++
+ UA3_API void ua3_shape_destroy( uint64_t id, int updateBodyMass )
+ {
+ 	(void)updateBodyMass;
