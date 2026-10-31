@@ -142,6 +142,65 @@ namespace Unbound.Runtime
                     Debug.LogException(e);
                 }
             }
+            Validate(material);
+        }
+
+        /// <summary>
+        /// The Editor validates the material with its shader's <see cref="ShaderGUI"/> (the
+        /// pipeline-specific editor first, else <c>CustomEditor</c>), when Unbound has that class:
+        /// render pipelines' and projects' (measured: URP's model materials get their blend states,
+        /// queue control and GI flags; the built-in pipeline's Standard materials keep the
+        /// preprocessor's, tests/projects/modelimport).
+        /// </summary>
+        static void Validate(Material material)
+        {
+            var shader = material.shader;
+            if (shader == null) return;
+            var pipeline = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline;
+            string name = null;
+            if (pipeline != null)
+                foreach (var (editor, pipelineType) in shader.m_PipelineEditors)
+                    if (pipeline.GetType().FullName == pipelineType || pipeline.GetType().Name == pipelineType)
+                    {
+                        name = editor;
+                        break;
+                    }
+            name ??= shader.m_CustomEditor;
+            var type = string.IsNullOrEmpty(name) ? null : ShaderGuiType(name);
+            if (type == null) return;
+            try
+            {
+                var gui = (ShaderGUI)Activator.CreateInstance(type, nonPublic: true);
+                gui.ValidateMaterial(material);
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e is TargetInvocationException t ? t.InnerException ?? e : e);
+            }
+        }
+
+        static readonly Dictionary<string, Type> s_ShaderGuis = new Dictionary<string, Type>();
+
+        static Type ShaderGuiType(string name)
+        {
+            if (s_ShaderGuis.TryGetValue(name, out var cached)) return cached;
+            Type found = null;
+            foreach (var assembly in GameDomain.Assemblies())
+            {
+                Type[] types;
+                try { types = assembly.GetTypes(); }
+                catch (ReflectionTypeLoadException e) { types = Array.FindAll(e.Types, t => t != null); }
+                foreach (var type in types)
+                {
+                    if (type.IsAbstract || !typeof(ShaderGUI).IsAssignableFrom(type)) continue;
+                    if (type.FullName != name && type.Name != name) continue;
+                    if (type.IsDefined(typeof(StubAttribute), false)) continue;
+                    found = type;
+                    break;
+                }
+                if (found != null) break;
+            }
+            return s_ShaderGuis[name] = found;
         }
 
         /// <summary>

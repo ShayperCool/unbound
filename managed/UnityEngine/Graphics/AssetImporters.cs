@@ -88,6 +88,7 @@ namespace Unbound.Runtime
                 shader = Shader.Create(name, ShaderLab.Queue(source));
             shader.m_Properties.Clear();
             shader.m_Properties.AddRange(ShaderLab.Properties(source));
+            ShaderLab.Editors(source, shader);
             shader.PropertiesChanged();
             shader.IsPersistentAsset = true;
             Shader.Register(shader);
