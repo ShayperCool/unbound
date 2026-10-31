@@ -438,6 +438,7 @@ namespace Unbound.Runtime
             rb.m_PendingAngularVelocity = B3.ua3_body_get_angular_velocity(rb.m_Body);
             B3.ua3_body_destroy(rb.m_Body);
             rb.m_Body = 0;
+            rb.ForgetMove();
         }
 
         static void DestroyShape(Collider c)
@@ -654,7 +655,7 @@ namespace Unbound.Runtime
                 var position = t.position;
                 var rotation = t.rotation;
                 if (SamePose(position, rotation, rb.m_SyncPosition, rb.m_SyncRotation)) continue;
-                B3.ua3_body_set_transform(rb.m_Body, position, rotation);
+                rb.Teleport(position, rotation);
                 rb.m_SyncPosition = position;
                 rb.m_SyncRotation = rotation;
                 rb.m_PreviousPosition = rb.m_CurrentPosition = position;
@@ -804,6 +805,9 @@ namespace Unbound.Runtime
         {
             rb.m_CurrentPosition = position;
             rb.m_CurrentRotation = rotation;
+            // Native leaves a teleported body's Transform unpublished if Sleep preceded
+            // simulation. Its actual physics pose remains readable through Rigidbody.
+            if (B3.ua3_body_is_awake(rb.m_Body) == 0) return;
             if (SamePose(position, rotation, rb.m_SyncPosition, rb.m_SyncRotation)) return;
             SetTransformPose(rb, position, rotation);
         }
