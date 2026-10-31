@@ -308,7 +308,7 @@ crates/
   unbound-shaders    Unity shader programs (CG/HLSL) compiled to WGSL for the renderer
   unbound            the CLI
 native/
-  physx             PhysX 4.1.2, vendored with two small patches (see UNBOUND.md there)
+  physx             PhysX 4.1.2, vendored; patch inventory in UNBOUND_PATCHES.md there
   nvcloth           NvCloth 1.1.6, vendored unmodified (see UNBOUND.md there)
   unbound_physx.cpp  the flat C API the managed 3D physics calls
   unbound_cloth.cpp  the flat C API the managed Cloth calls (same library)
