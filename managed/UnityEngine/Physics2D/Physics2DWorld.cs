@@ -185,6 +185,7 @@ namespace Unbound.Runtime
         {
             EnsureWorld();
             if (c.m_Registered) return;
+            c.CaptureSkin();
             c.m_Registered = true;
             c.m_ShapeDirty = true;
             s_Colliders.Add(c);
@@ -370,6 +371,7 @@ namespace Unbound.Runtime
             c.m_TransformVersion = transform.m_Version;
             c.m_Layer = c.m_GameObject.m_Layer;
             var rb = FindRigidbody(c);
+            if (!ReferenceEquals(rb, c.m_AttachedBody)) c.CaptureSkin();
             c.m_AttachedBody = rb;
             Body body;
             Vector2 framePosition;
@@ -401,12 +403,16 @@ namespace Unbound.Runtime
                 }
                 else
                 {
+                    var oldPose = c.m_StaticBody.GetTransform();
+                    if (oldPose.Position != ToB2(framePosition) || !Mathf.Approximately(oldPose.Rotation.Angle, frameAngle))
+                        c.CaptureSkin();
                     c.m_StaticBody.SetTransform(ToB2(framePosition), frameAngle);
                 }
                 body = c.m_StaticBody;
             }
 
             var matrix = ToBodyMatrix(transform, framePosition, frameAngle);
+            if (!SameShapeMatrix(matrix, c.m_ShapeMatrix)) c.CaptureSkin();
             c.m_ShapeMatrix = matrix;
             s_ShapeBuffer.Clear();
             c.m_ErrorState = ColliderErrorState2D.None;
@@ -506,15 +512,24 @@ namespace Unbound.Runtime
                     if (c.m_StaticBody == null) { Rebuild(c); continue; }
                     PoseOf(t, out var position, out var angle);
                     var matrix = ToBodyMatrix(t, position, angle);
-                    if (!SameShapeMatrix(matrix, c.m_ShapeMatrix)) { Rebuild(c); continue; }
                     var current = c.m_StaticBody.GetTransform();
-                    if (current.Position != ToB2(position) || !Mathf.Approximately(current.Rotation.Angle, angle))
+                    bool changedShape = !SameShapeMatrix(matrix, c.m_ShapeMatrix);
+                    bool changedPose = current.Position != ToB2(position) || !Mathf.Approximately(current.Rotation.Angle, angle);
+                    if (changedShape || changedPose)
+                    {
+                        c.CaptureSkin();
+                        if (changedShape || c is BoxCollider2D box && box.SkinDiffersFromFixtures()) { Rebuild(c); continue; }
                         c.m_StaticBody.SetTransform(ToB2(position), angle);
+                    }
                 }
                 else if (rb.m_Body != null)
                 {
                     PoseOf(rb.m_GameObject.m_Transform, out var position, out var angle);
-                    if (!SameShapeMatrix(ToBodyMatrix(t, position, angle), c.m_ShapeMatrix)) Rebuild(c);
+                    if (!SameShapeMatrix(ToBodyMatrix(t, position, angle), c.m_ShapeMatrix))
+                    {
+                        c.CaptureSkin();
+                        Rebuild(c);
+                    }
                 }
             }
             for (int i = 0; i < s_Rigidbodies.Count; i++)
