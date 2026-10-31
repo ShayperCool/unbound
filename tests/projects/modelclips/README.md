@@ -2,13 +2,14 @@
 
 What the model importer makes of a generic rig's `clipAnimations` on Unity 6000.0.71f1, and how
 the Animator plays the clips. `Rig.fbx` (Blender, `make_models.py`: 24 fps, one take "Scene" of
-frames 0..48) has 29 clips in its `.meta`: ranges (also fractional and past the take's end), loop
+frames 0..48) has 30 clips in its `.meta`: ranges (also fractional and past the take's end), loop
 time, loop pose, clip cycle offsets (with and without loop time and loop pose), mirror, wrap mode,
 transform masks (from the model, from an AvatarMask asset, a stale copy of another mask, a list
 with mask type None), additive reference frames (inside and outside the range, and disabled),
-Animator parameter curves (float, int and bool parameters and a curve without a parameter) and
-events. `RigDefault`, `RigReduced` and `RigOptimal` are the same file with the default clip
-settings and animation compression Off, KeyframeReduction and Optimal. Humanoid rigs are not
+Animator parameter curves (float, int and bool parameters, a curve without a parameter, with loop
+pose) and events (also with cycle offsets). `RigDefault`, `RigReduced` and `RigOptimal` are the same file with the default clip
+settings and animation compression Off, KeyframeReduction and Optimal, and `RigStatic` without
+animation import. Humanoid rigs are not
 covered.
 
 `ClipProbe` records each imported clip (length, frame rate, flags, events,
@@ -46,9 +47,14 @@ write-once. The comparison lists every missing, extra and differing value; numbe
 
 What the Editor does (measured):
 
-- Clip IDs are the entries' `internalID`. A range is resampled from its first frame (fractional
-  frames too); one past the take's end stops at the take's end. Every animated node gets position,
-  rotation and scale curves, constant ones too, with every animation compression.
+- Clip IDs are the entries' `internalID`. A range past the take's end stops at the take's end; its
+  length is computed in single precision. Every animated node gets position, rotation and scale
+  curves, constant ones too, with every animation compression. Compression Off keeps keys at the
+  range's start, on every take frame after it and at its end (a range from frame 4.5 has keys at
+  4.5, 5, 6, ...); rotations and scales have smooth tangents (the slope between the neighbouring
+  keys), positions are linear between keys.
+- With animation import the model rests in the first take's pose at its start; without, in the
+  file's static transforms (here frame 1's).
 - A transform mask removes the curves of the transforms it leaves out; their children keep
   theirs. With `maskType` CopyFromOther the importer reads the `maskSource` asset, not the copy
   in `transformMask`; with mask type None the list is ignored.
@@ -65,5 +71,10 @@ What the Editor does (measured):
   Loop pose adds `(start − stop) × phase` to every float value and turns each rotation by
   `q · normalize(phase · d.xyz, d.w)` with `d = stop⁻¹ · start` (the sampled first and last
   frames), the phase being the sampled time over the length, cycle offset included.
+- Events move with the cycle offsets; an `Animator.Update(0)` fires the events at the start time
+  (once), and a state offset landing exactly on an event fires it.
 - Mirror has no effect on generic clips; the setting is kept. Wrap mode is kept and does not
   change Animator playback.
+
+Unbound matches 2949/2949 records. The reducing compression modes are compared by their bindings
+only: their keys depend on Unity's keyframe reduction, which Unbound approximates.
