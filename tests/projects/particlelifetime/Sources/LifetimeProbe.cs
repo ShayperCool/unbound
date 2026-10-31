@@ -94,10 +94,11 @@ public class LifetimeProbe : MonoBehaviour
         Value(key + "/inputAfter", Particles(input, input.Length));
         State(key + "/after", ps);
         var slice = new ParticleSystem.Particle[3];
-        int n = ps.GetParticles(slice, 2, 1);
+        int offset = ps.particleCount > 1 ? 1 : 0;
+        int n = ps.GetParticles(slice, 2, offset);
         Value(key + "/slice", "{\"count\":" + n + ",\"particles\":" + Particles(slice, slice.Length) + "}");
         using (var a = new NativeArray<ParticleSystem.Particle>(3, Allocator.Temp)) {
-            n = ps.GetParticles(a, 2, 1);
+            n = ps.GetParticles(a, 2, offset);
             Value(key + "/nativeSlice", "{\"count\":" + n + ",\"particles\":" + Particles(a.ToArray(), a.Length) + "}");
         }
         var roundtrip = new ParticleSystem.Particle[ps.particleCount]; ps.GetParticles(roundtrip);
@@ -112,8 +113,23 @@ public class LifetimeProbe : MonoBehaviour
             var ps = Make(); var input = new[] { Particle(321, life, start) };
             Value(key + "/input", Particles(input, 1));
             ps.SetParticles(input); State(key + "/after", ps);
+            var roundtrip = new ParticleSystem.Particle[ps.particleCount]; ps.GetParticles(roundtrip);
+            ps.SetParticles(roundtrip); State(key + "/roundtrip", ps);
             DestroyImmediate(ps.gameObject);
         }
+    }
+    static void RetainedPrefix()
+    {
+        var ps = Make();
+        ps.SetParticles(new[] { Particle(400, float.Epsilon), Particle(401, 5), Particle(402, 5) });
+        State("prefix/before", ps);
+        ps.SetParticles(new[] { Particle(403, 5) }, 1, 2);
+        State("prefix/after", ps);
+        ps.SetParticles(new ParticleSystem.Particle[0], 0, 1);
+        State("prefix/truncated", ps);
+        var roundtrip = new ParticleSystem.Particle[ps.particleCount]; ps.GetParticles(roundtrip);
+        ps.SetParticles(roundtrip); State("prefix/roundtrip", ps);
+        DestroyImmediate(ps.gameObject);
     }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()
@@ -122,6 +138,7 @@ public class LifetimeProbe : MonoBehaviour
         for (int state = 0; state < 3; state++)
         for (int mask = 0; mask < 5; mask++) Case(overload, state, mask);
         Lifetimes();
+        RetainedPrefix();
         // The exact Emit witness has randomized particle identities; record only deterministic flags.
         EmitFlags();
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_LIFETIME_OUT"), output.ToString());
