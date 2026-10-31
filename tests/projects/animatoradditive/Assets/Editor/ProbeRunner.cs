@@ -330,14 +330,16 @@ public static class ProbeRunner
 
     /// <summary>Transitions between a state with write defaults and one without, both ways, in the
     /// base layer (Base to Base2 or to an empty state, an additive AddMain layer above), an override
-    /// and an additive layer (AddMain to AddPartial or to an empty state over the Base clip).</summary>
+    /// and an additive layer (AddMain to AddPartial or to an empty state over the Base clip); to and
+    /// from empty states also with the same write defaults. Existing controllers are kept.</summary>
     public static void CreateMixed()
     {
         foreach (var (kind, layer, additive) in new[] { ("Base", 0, false), ("Over", 1, false), ("Add", 1, true) })
         foreach (bool empty in new[] { false, true })
-        foreach (bool first in new[] { true, false })
+        foreach (var (wdP, wdQ) in empty ? new[] { (true, false), (false, true), (true, true), (false, false) } : new[] { (true, false), (false, true) })
         {
-            string name = "Mix" + kind + (empty ? "Empty" : "") + (first ? "OnOff" : "OffOn");
+            string name = "Mix" + kind + (empty ? "Empty" : "") + (wdP ? "On" : "Off") + (wdQ ? "On" : "Off");
+            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(Dir + name + ".controller") != null) continue;
             var c = layer == 0
                 ? Controller(name, (Load("Base"), false), (Load("AddMain"), true))
                 : Controller(name, (Load("Base"), false), (Load("AddMain"), additive));
@@ -346,8 +348,8 @@ public static class ProbeRunner
             var sp = machine.defaultState;
             var sq = machine.AddState("Q");
             if (!empty) sq.motion = Load(layer == 0 ? "Base2" : "AddPartial");
-            sp.writeDefaultValues = first;
-            sq.writeDefaultValues = !first;
+            sp.writeDefaultValues = wdP;
+            sq.writeDefaultValues = wdQ;
             var to = sp.AddTransition(sq);
             to.hasExitTime = false; to.hasFixedDuration = true; to.duration = 0.375f;
             to.AddCondition(AnimatorConditionMode.If, 0f, "q");
