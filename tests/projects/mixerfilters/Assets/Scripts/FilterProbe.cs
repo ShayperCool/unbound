@@ -6,13 +6,6 @@ using UnityEngine;
 using UnityEngine.Audio;
 using Unity.Collections;
 
-// Added only to the engine's private listener. Unity uses AudioRenderer and has no script filter.
-public class EngineListenerCapture : MonoBehaviour
-{
-    public FilterProbe Probe;
-    void OnAudioFilterRead(float[] data, int channels) => Probe.RecordEngine(data);
-}
-
 public class FilterProbe : MonoBehaviour
 {
     public static readonly string[] Cases = { "dry", "lp1000q1", "lp1000q3", "lp1000q10", "hp1000q1", "hp1000q3", "hp1000q10", "lp80q1", "hp8000q1", "lp20000q1", "lp_bypass", "group_bypass", "lp_hp", "hp_lp", "parent_lp", "stereo_lp", "step_lp", "tone_hp", "set_lp", "snapshot_lp", "step_dry", "stereo_dry", "sum_lp", "volume_lp" };
@@ -173,3 +166,11 @@ public class FilterProbe : MonoBehaviour
         Exit(0);
     }
 }
+
+// Added only to the engine's private listener. Unity uses AudioRenderer and has no script filter.
+public class EngineListenerCapture : MonoBehaviour
+{
+    public FilterProbe Probe;
+    void OnAudioFilterRead(float[] data, int channels) => Probe.RecordEngine(data);
+}
+
