@@ -1523,29 +1523,31 @@ mod tests {
         let reference = include_bytes!(
             "../../../../tests/projects/mixerfilters/Reference/unity-6000.0.71f1/rate-48000/step_dry.master.f32"
         );
-        let mut m = Mixer::new(MixerConfig::default());
-        let input = (0..12288)
-            .map(|i| if i < 2048 { 0.125 } else { 0.0 })
-            .collect();
-        m.add_clip(1, Clip::new(1, 48000, input));
-        source_with(&mut m, 7, 1, |_| {});
-        play(&mut m, 7, command::PLAY, 0.0);
-        let mut out = vec![0.0; reference.len() / 4];
-        m.render(&mut out, 2);
-        let failures: Vec<_> = reference
-            .chunks_exact(4)
-            .zip(&out)
-            .enumerate()
-            .filter_map(|(i, (bytes, actual))| {
-                let expected = f32::from_le_bytes(bytes.try_into().unwrap());
-                ((*actual - expected).abs() > 2e-5 + 2e-4 * expected.abs())
-                    .then_some((i, expected, *actual))
-            })
-            .collect();
-        assert!(
-            failures.is_empty(),
-            "every failing (sample, Native, engine): {failures:?}"
-        );
+        for curve in [Vec::new(), vec![0.0; 65]] {
+            let mut m = Mixer::new(MixerConfig::default());
+            let input = (0..12288)
+                .map(|i| if i < 2048 { 0.125 } else { 0.0 })
+                .collect();
+            m.add_clip(1, Clip::new(1, 48000, input));
+            source_with(&mut m, 7, 1, |p| p.spatial_blend_curve = curve);
+            play(&mut m, 7, command::PLAY, 0.0);
+            let mut out = vec![0.0; reference.len() / 4];
+            m.render(&mut out, 2);
+            let failures: Vec<_> = reference
+                .chunks_exact(4)
+                .zip(&out)
+                .enumerate()
+                .filter_map(|(i, (bytes, actual))| {
+                    let expected = f32::from_le_bytes(bytes.try_into().unwrap());
+                    ((*actual - expected).abs() > 2e-5 + 2e-4 * expected.abs())
+                        .then_some((i, expected, *actual))
+                })
+                .collect();
+            assert!(
+                failures.is_empty(),
+                "every failing (sample, Native, engine): {failures:?}"
+            );
+        }
     }
     #[test]
     fn highpass_startup_matches_the_complete_native_tone_capture() {
