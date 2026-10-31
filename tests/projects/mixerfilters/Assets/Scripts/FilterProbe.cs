@@ -25,6 +25,7 @@ public class FilterProbe : MonoBehaviour
     }
     const BindingFlags Flags = BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     static bool Engine => Environment.GetEnvironmentVariable("FILTER_PROBE_ENGINE") == "1";
+    static bool Renderer => !Engine || Environment.GetEnvironmentVariable("FILTER_PROBE_RENDERER") == "1";
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
     {
@@ -137,12 +138,11 @@ public class FilterProbe : MonoBehaviour
         AudioListener.volume = 1;
         gameObject.AddComponent<AudioListener>();
         if (Engine) gameObject.AddComponent<EngineListenerCapture>().Probe = this;
-        else
+        else if (Environment.GetEnvironmentVariable("FILTER_PROBE_LISTENER") == "1")
         {
-            if (Environment.GetEnvironmentVariable("FILTER_PROBE_LISTENER") == "1")
-                gameObject.AddComponent<EngineListenerCapture>().Probe = this;
-            if (!AudioRenderer.Start()) throw new Exception("AudioRenderer.Start failed");
+            gameObject.AddComponent<EngineListenerCapture>().Probe = this;
         }
+        if (Renderer && !AudioRenderer.Start()) throw new Exception("AudioRenderer.Start failed");
         var sinks = new List<NativeArray<float>>();
         var records = new List<string> { "\"release\":\"" + Application.unityVersion + "\"", "\"rate\":" + rate };
         bool diagnosticInput = Environment.GetEnvironmentVariable("FILTER_PROBE_DIAGNOSTIC_INPUT") == "1";
@@ -165,8 +165,8 @@ public class FilterProbe : MonoBehaviour
             var inputBuffer = default(NativeArray<float>);
             MethodInfo addSink = null;
             var masterGroup = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Master");
-            MethodInfo observeGroup = Engine ? Type.GetType("Unbound.Runtime.AudioFilters, UnityEngine.CoreModule", true).GetMethod("ObserveGroup", Flags) : null;
-            if (!Engine)
+            MethodInfo observeGroup = Engine && !Renderer ? Type.GetType("Unbound.Runtime.AudioFilters, UnityEngine.CoreModule", true).GetMethod("ObserveGroup", Flags) : null;
+            if (Renderer)
             {
                 sink = new NativeArray<float>(frames * 2, Allocator.Persistent); sinks.Add(sink);
                 buffer = new NativeArray<float>(frames * 2, Allocator.Persistent);
@@ -190,7 +190,7 @@ public class FilterProbe : MonoBehaviour
                 m_ListenerWriter = listenerWriter;
                 if (Engine)
                 {
-                    m_Writer = writer; m_MasterWriter = masterWriter; m_Written = 0;
+                    if (!Renderer) { m_Writer = writer; m_MasterWriter = masterWriter; m_Written = 0; }
                     m_GroupObserved = observeGroup != null;
                     if (m_GroupObserved) observeGroup.Invoke(null, new object[] { masterGroup, (Action<float[], int>)((data, channelCount) => { foreach (float sample in data) masterWriter.Write(sample); }) });
                     FlushEngine();
@@ -206,7 +206,7 @@ public class FilterProbe : MonoBehaviour
                         bool ok = mixer.GetFloat("Cutoff", out float cutoff);
                         records.Add("\""+key+".cutoff."+block+"\":\""+ok+":"+cutoff.ToString("R", System.Globalization.CultureInfo.InvariantCulture)+"\"");
                     }
-                    if (Engine)
+                    if (!Renderer)
                     {
                         RenderEngine(frames, rate);
                         // Native's coroutine renders before PostLateUpdate.UpdateAudio submits changes.
@@ -220,24 +220,25 @@ public class FilterProbe : MonoBehaviour
                         for (int i = 0; i < buffer.Length; i++) writer.Write(buffer[i]);
                         for (int i = 0; i < sink.Length; i++) masterWriter.Write(sink[i]);
                         if (diagnosticInput) for (int i = 0; i < inputBuffer.Length; i++) inputWriter.Write(inputBuffer[i]);
+                        if (Engine) FlushEngine();
                     }
                 }
                 if (Engine)
                 {
                     if (m_GroupObserved) observeGroup.Invoke(null, new object[] { masterGroup, null });
                     m_Writer = m_MasterWriter = null;
-                    if (m_Written != frames * 12 * 2) throw new Exception("Unexpected complete buffer length " + m_Written);
+                    if (!Renderer && m_Written != frames * 12 * 2) throw new Exception("Unexpected complete buffer length " + m_Written);
                 }
                 m_ListenerWriter = null;
             }
-            if (!Engine) buffer.Dispose();
+            if (Renderer) buffer.Dispose();
             records.Add("\""+key+"\":{\"file\":\""+key+".f32\",\"frames\":"+(frames*12)+",\"channels\":2}");
             records.Add("\""+key+".master\":{\"file\":\""+key+".master.f32\",\"frames\":"+(frames*12)+",\"channels\":2}");
             if (diagnosticInput) records.Add("\""+key+".input\":{\"file\":\""+key+".input.f32\",\"frames\":"+(frames*12)+",\"channels\":2}");
             if (Environment.GetEnvironmentVariable("FILTER_PROBE_LISTENER") == "1") records.Add("\""+key+".listener\":{\"file\":\""+key+".listener.f32\",\"frames\":"+(frames*12)+",\"channels\":2}");
             source.Stop(); DestroyImmediate(go); DestroyImmediate(clip);
         }
-        if (!Engine) { AudioRenderer.Stop(); foreach (var sink in sinks) sink.Dispose(); }
+        if (Renderer) { AudioRenderer.Stop(); foreach (var sink in sinks) sink.Dispose(); }
         File.WriteAllText(Path.Combine(output, "capture.json"), "{"+string.Join(",", records)+"}\n");
         Exit(0);
     }
