@@ -1,0 +1,14 @@
+{
+  "final-linear": {
+    "raw": "/home/shaypercool/.cache/compat/camerafollowup-final3-linear",
+    "observations": 3249,
+    "images": 433,
+    "values_sha256": "1e4868aabfeb597fffe56d78baef48e0b8ff5b0eb999294ec3b8abfbf6cee953"
+  },
+  "final-gamma": {
+    "raw": "/home/shaypercool/.cache/compat/camerafollowup-final3-gamma",
+    "observations": 3249,
+    "images": 433,
+    "values_sha256": "8c72a730d0629a8ddcaf2c72a7b5199981b77c70da169c98774107590236f76c"
+  }
+}

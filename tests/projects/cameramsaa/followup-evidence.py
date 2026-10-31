@@ -11,7 +11,7 @@ import sys
 fixture = Path(__file__).resolve().parent
 cache = Path.home()/'.cache/compat'
 phase = sys.argv[1]
-assert phase in ('before', 'final', 'final2')
+assert phase in ('before', 'final', 'final2', 'final3')
 evidence = fixture/'Evidence/Followup'
 evidence.mkdir(exist_ok=True)
 
@@ -41,6 +41,8 @@ for space in ('linear','gamma'):
         compare('native-repeat-'+space,native,cache/('camerafollowup-oracle-v3-'+space+'2'))
         info['native-'+space] = pack(native,'Followup'+space.title())
         info['before-'+space] = pack(actual,'FollowupBefore'+space.title())
+    if phase=='final3':
+        info['final-'+space] = pack(actual,'FollowupFinal'+space.title())
     compare(phase+'-'+space,native,actual)
     # Export the entire original 948/195 matrix, preserving all keys and invalid inputs.
     rows = [json.loads(s) for s in (fixture/'Reference'/space.title()/'values.jsonl').read_text().splitlines()]
@@ -59,3 +61,6 @@ if phase=='before':
     info['baseline_commit']='1ac656a0'
     info['managed_sha256']={p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in (cache/'camerafollowup-before-managed').glob('*.dll')}
     (evidence/'recordings.json').write_text(json.dumps(info,indent=2)+'\n')
+
+if phase=='final3':
+    (evidence/'final-recordings.json').write_text(json.dumps(info,indent=2)+'\n')
