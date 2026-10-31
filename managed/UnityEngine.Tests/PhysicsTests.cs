@@ -549,6 +549,81 @@ namespace UnityEngine.Tests
             Assert.Equal(go.transform.position, rb.position);
         }
 
+        [Theory]
+        [InlineData(false, 0)]
+        [InlineData(false, 1)]
+        [InlineData(false, 2)]
+        [InlineData(false, 3)]
+        [InlineData(true, 0)]
+        [InlineData(true, 1)]
+        [InlineData(true, 2)]
+        [InlineData(true, 3)]
+        public void ClonedBodiesCaptureTheirCompletedPlacementAndStartWithoutMotion(bool active, int placement)
+        {
+            // InactiveClonePlacement.cs: two agreeing Native recordings, 160 records.
+            var parent = Make("source-parent", new Vector3(10, 20, 30));
+            parent.transform.rotation = new Quaternion(0, 1, 0, 0);
+            var target = Make("target-parent", new Vector3(-7, 8, 9));
+            target.transform.rotation = new Quaternion(0, 0, 1, 0);
+            var source = Make("source", Vector3.zero); source.SetActive(false);
+            source.transform.SetParent(parent.transform, false);
+            source.transform.localPosition = new Vector3(3, 4, 5);
+            source.transform.localRotation = new Quaternion(1, 0, 0, 0);
+            var body = source.AddComponent<Rigidbody>(); body.useGravity = false;
+            if (active) source.SetActive(true);
+            body.linearVelocity = Vector3.right; body.angularVelocity = Vector3.up;
+
+            GameObject clone;
+            Vector3 expectedPosition;
+            Quaternion expectedRotation;
+            if (placement == 0)
+            {
+                clone = Object.Instantiate(source);
+                expectedPosition = new Vector3(3, 4, 5); expectedRotation = new Quaternion(1, 0, 0, 0);
+            }
+            else if (placement == 1)
+            {
+                clone = Object.Instantiate(source, new Vector3(21, 22, 23), new Quaternion(0, 0, 1, 0));
+                expectedPosition = new Vector3(21, 22, 23); expectedRotation = new Quaternion(0, 0, 1, 0);
+            }
+            else
+            {
+                clone = Object.Instantiate(source, target.transform, placement == 2);
+                expectedPosition = placement == 2 ? new Vector3(7, 24, 25) : new Vector3(-10, 4, 14);
+                expectedRotation = placement == 2 ? new Quaternion(0, 0, -1, 0) : new Quaternion(0, 1, 0, 0);
+            }
+            m_Made.Add(clone);
+            var clonedBody = clone.GetComponent<Rigidbody>();
+            Assert.Equal(expectedPosition, clone.transform.position);
+            Assert.Equal(expectedRotation, clone.transform.rotation);
+            Assert.Equal(expectedPosition, clonedBody.position);
+            Assert.Equal(expectedRotation, clonedBody.rotation);
+            Assert.Equal(Vector3.zero, clonedBody.linearVelocity);
+            Assert.Equal(Vector3.zero, clonedBody.angularVelocity);
+            clone.SetActive(true); Physics.Simulate(Dt);
+            Assert.Equal(expectedPosition, clonedBody.position);
+        }
+
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        public void UnparentedClonesUseLocalPoseWithEitherNullParentFlag(int overload)
+        {
+            // TransformClonePlacement.cs verifies this without a physics component as well.
+            var parent = Make("parent", new Vector3(10, 20, 30));
+            parent.transform.rotation = new Quaternion(0, 1, 0, 0);
+            var source = Make("source", Vector3.zero);
+            source.transform.SetParent(parent.transform, false);
+            source.transform.localPosition = new Vector3(3, 4, 5);
+            source.transform.localRotation = new Quaternion(1, 0, 0, 0);
+            var clone = overload == 0 ? Object.Instantiate(source) : Object.Instantiate(source, (Transform)null, overload == 2);
+            m_Made.Add(clone);
+            Assert.Null(clone.transform.parent);
+            Assert.Equal(new Vector3(3, 4, 5), clone.transform.position);
+            Assert.Equal(new Quaternion(1, 0, 0, 0), clone.transform.rotation);
+        }
+
         [Fact]
         public void RaycastsHitTheNearestColliderOnTheirLayers()
         {

@@ -85,11 +85,11 @@ namespace Unbound.Runtime
             var sourceRotation = source.rotation;
             if (parent == null)
             {
-                // A root clone takes the original's world pose (or the one asked for) and keeps
-                // its local scale.
+                // With no parent, Native keeps the copied local pose unless explicit world
+                // coordinates were supplied. A null parent behaves the same for either flag.
                 SceneRegistry.Get(targetScene)?.Roots.Add(rootGo);
-                rootClone.m_LocalRotation = rotation ?? sourceRotation;
-                rootClone.SetLocalPosition(position ?? sourcePosition);
+                rootClone.m_LocalRotation = rotation ?? source.m_LocalRotation;
+                rootClone.SetLocalPosition(position ?? source.m_LocalPosition);
             }
             else
             {
@@ -108,6 +108,11 @@ namespace Unbound.Runtime
             rootClone.MarkChanged();
             foreach (var (_, dst) in pairs)
                 if (dst is Transform t) t.OnHierarchyChanged();
+
+            // Bodies are attached before placement. Their initial inactive physics pose must
+            // reflect the completed hierarchy, before callers can edit its Transform again.
+            foreach (var (_, dst) in pairs)
+                if (dst is Rigidbody rb) rb.CaptureInactivePose();
 
             if (rootGo.activeInHierarchy)
             {
