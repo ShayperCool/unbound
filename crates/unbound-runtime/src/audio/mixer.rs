@@ -843,7 +843,11 @@ impl Mixer {
                     out_rate,
                     target,
                     (source.params.spatial_blend <= 0.0
-                        && source.params.spatial_blend_curve.is_empty())
+                        && source
+                            .params
+                            .spatial_blend_curve
+                            .iter()
+                            .all(|value| *value <= 0.0))
                     .then_some(source.params.pan_stereo),
                     looping,
                     audible.then_some(&mut *buffer),
@@ -864,7 +868,11 @@ impl Mixer {
                     out_rate,
                     target,
                     (source.params.spatial_blend <= 0.0
-                        && source.params.spatial_blend_curve.is_empty())
+                        && source
+                            .params
+                            .spatial_blend_curve
+                            .iter()
+                            .all(|value| *value <= 0.0))
                     .then_some(source.params.pan_stereo),
                     false,
                     audible.then_some(&mut *buffer),
