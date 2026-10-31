@@ -17,7 +17,12 @@ and separate Editor processes. Complete YAML documents are reordered without
 changing component lists or references. All four captures are byte-identical,
 with 4,656 records each and SHA256
 `1b7f503b172bf15489d08ae76b8a6f3e29233ea78d6d27327f78247da5807e1b`.
-All four preceded runtime changes. Native logs, frozen baseline captures and
+All four preceded runtime changes. Each recording starts from a fresh private copy.
+At Editor exit Unity saves the deliberate runtime edits to the 48 prefab-asset
+cases in that recording's private copy. Evidence/native-post-state preserves those
+post-run files. document-order-manifest.json verifies the ordered starting inputs,
+all three engine stages and both matching Native post-states. Scene, nested and
+instance-source files retain their requested document order. Native logs, frozen baseline captures and
 every baseline difference are committed in Evidence/baseline.
 
 The probe covers 192 bodies per recording, varying scene objects, nested scene
@@ -62,6 +67,46 @@ snapshots remain intact. Kinematic deactivation discards computed target velocit
 dynamic deactivation retains its actual motion. No Compat, Instantiation,
 Lifecycle, 2D, generated, Rust or native source changes are included.
 
+## Accepted regression replay
+
+Evidence/validation/summary.json and its accepted outputs contain the complete
+fresh replay. Inactive 1,050, sequences 4,668, active 20,700 and clone-placement
+172 remain exact. Long triggers 1,728, SDK flags 1,152, trigger pairs 1,440,
+ignore lifecycle 1,848 and immediate setters 15 remain exact. Order 276,
+component 276 and barrier 227 pass the unchanged comparator with unchanged data.
+All 21 matrix files are byte-identical to acceptance, passing 5,055/5,055 with
+4,803 exact and the original 252 passing motion-rounding records.
+
+Graphics passes 80/80 on NVIDIA RTX 4060 Vulkan, Canvas passes 8,671/8,671 at
+24 frames and 640x480, messages passes 316/316 with the existing clock checks,
+and lifecycle is byte-identical to Native. The raw messages output retains all
+335 rows, including the existing variable-clock rows checked by its comparator.
+Defaults, joints, controller, ray-query and forces comparators pass. Joint2D
+retains its 1,382 direct matches and 19 existing solver-rounding records;
+effectors retains 2,531 direct matches and 28 measured contact-order alternatives.
+Their raw outputs and forces are byte-identical to the parent acceptance.
+
+Broad physics remains 23/29 scenarios and 11,495/11,626 values passing, 7,885
+exact, with the same 131 failures in six existing 2D scenarios. Expanded timing
+remains 18,275/18,491 and mixed order 5,560/5,720, retaining all 216 and 160
+failures respectively. All three datasets equal the accepted parent data. Every
+retained value, teardown observation and passing nonexact value remains in the
+new report. There are zero newly failing accepted values or keys.
+
+Main ABI5, PhysX shim8 and shader cache13 are unchanged. The assembly-local,
+root-private and test-local native libraries all have SHA256
+`4a543241a78444ce2595cf8ce42f370c692e993388d42479913558b875d7a208`.
+The private CLI and the frozen native8 CLI used by the unchanged matrix runner
+both have SHA256 `0a55f7d5fb6314deda371ee9c9334ec129652047925272d803d5cb86bb704b56`.
+All six native6/native7/native8/sleep3d/trigger2d/inactive3d snapshot manifests
+verify unchanged. Evidence/final/artifact-manifest.json hashes the complete
+private managed outputs and all used native/CLI artifacts.
+
+The measurements use unit scale and exact half-turn rotations. Arbitrary scale,
+other rotations, further loading mechanisms and older releases remain unmeasured.
+The parent's final integrated API check is still required. These results do not
+claim full engine parity.
+
 ## Reproduction
 
 All large artifacts and caches are private to
@@ -80,7 +125,8 @@ record each combination of `--order transform-first|rigidbody-first` and
 runner refuses to overwrite an existing capture or log. `report.py --label LABEL`
 archives a new report and refuses to overwrite old reports.
 
-Build the host with the private environment:
+commands.sh records the exact final build, integrated test filter, focused replay,
+full regression and verification commands. Build the host with the private environment:
 
 ```bash
 ~/.cache/compat/with-heavy-job dotnet build managed/Unbound.Host/Unbound.Host.csproj \
@@ -98,3 +144,8 @@ accepted results and archives only into this new fixture. It checks all focused
 controls, matrix, broad physics, 2D timing/order, joints, effectors, forces,
 controller, defaults, queries, graphics, Canvas, messages and lifecycle. The parent
 owns the final integrated API check.
+
+The ccc project was initialized here. The initial 40-second semantic refresh, a
+subsequent 25-second refresh and the final 25-second index request timed out.
+Logs are retained; source review used rg and direct reads. No shared daemon or
+sibling process was stopped.
