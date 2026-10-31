@@ -117,5 +117,27 @@ namespace UnityEngine.Tests
             Assert.Equal(names.Length, count);
             for (int i = 0; i < count; i++) Check(hits[i], names[i], values[i]);
         }
+        // Independent fine-angle controls distinguish the contact averaging boundary
+        // from an angular tolerance or defaultContactOffset-dependent threshold.
+        [InlineData("box", .5f, .001f, 3.57627869e-06f, 0.248004347f)]
+        [InlineData("box", 1f, .0007f, 4.887581e-06f, 0.5025061f)]
+        [InlineData("box", 1f, .0008f, -1.01999426f, 0.5024998f)]
+        [InlineData("capsule", 1f, .0011f, 0f, 0.5025058f)]
+        [InlineData("capsule", 1f, .0012f, -0.6f, 0.5025f)]
+        [InlineData("capsule", 2f, .001f, -1.2f, 1.0025f)]
+        [Theory]
+        public void NearParallelContactSelectionMatchesNative(string kind, float scale, float angle, float x, float y)
+        {
+            foreach (var go in made) Object.DestroyImmediate(go);
+            made.Clear();
+            Make("box", Vector2.zero).AddComponent<BoxCollider2D>().size = new Vector2(4, 1) * scale;
+            Physics2D.SyncTransforms();
+            var origin = new Vector2(0, 4) * scale;
+            var size = new Vector2(2, 0.8f) * scale;
+            var hit = kind == "box" ? Physics2D.BoxCast(origin, size, angle, Vector2.down, 5 * scale)
+                : Physics2D.CapsuleCast(origin, size, CapsuleDirection2D.Horizontal, angle, Vector2.down, 5 * scale);
+            Assert.NotNull(hit.collider);
+            Near(x, hit.point.x); Near(y, hit.point.y);
+        }
     }
 }
