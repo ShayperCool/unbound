@@ -19,6 +19,7 @@ for space in ['Linear','Gamma']:
  jobs.append(('camera-focused-'+space.lower(),'CAMERA_MSAA_OUT',copy('cameramsaa',space),['--frames','64','--size','128x128']))
 jobs.append(('rectclip-msaa','RECT_CLIP_OUT',copy('uirectclipping','Linear'),['--frames','24','--size','128x128']))
 for key,var,project,args in jobs:
+ if '--size' not in args:args += ['--size','640x480']
  env=dict(os.environ);env[var]=str(out/key/('unbound.jsonl' if key=='uitk' else ''))
  if key=='rectclip-msaa':env['RECT_CLIP_MSAA']='1'
  if key.startswith('camera-focused'):env['CAMERA_MSAA_FOCUSED']='1'
