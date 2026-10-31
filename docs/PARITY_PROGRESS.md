@@ -1345,3 +1345,17 @@ All artifacts and partial-failure reports remain in the external validation cach
 The model-import change requires a CLI with builtin-shader-source; the earlier
 frozen CLI must not be paired with these managed assemblies. Full engine parity
 and the remaining physics, particles, animation/audio and UI gaps remain open.
+
+### URP model material validation, 2026-10-31
+
+The probe also records a URP project (the urp probe's pipeline asset and packages), and every
+profile is now recorded with GPU Editors, with values identical to the earlier captures. In
+URP the render pipeline's own preprocessors (package sources) run after the built-in one;
+a material switching shader keeps the old shader's defaults for names both declare; slots
+without a material take the pipeline's default material; and imported materials are
+validated by their shader's ShaderGUI when Unbound has that class (URP's, projects'). URP
+matches 7011/7687 values: legacy-mode URP materials, Shader Graph material queues and GI
+flags, and `GetTag("RenderType", false)` on validated Lit materials still differ. Built-in
+profiles keep 6032/6033. The material-colour regression set, materials, blendshapes, lod,
+urp and urp2d keep their results (one URP skybox capture differs by at most 1/255 in 12310
+channels); managed tests keep the same text and particle failures as the base.

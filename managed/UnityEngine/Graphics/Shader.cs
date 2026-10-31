@@ -19,6 +19,10 @@ namespace UnityEngine
         internal readonly Dictionary<string, Texture> m_DefaultTextures = new Dictionary<string, Texture>();
         internal readonly Dictionary<string, Texture> m_NonModifiableTextures = new Dictionary<string, Texture>();
         internal readonly List<ShaderPropertyInfo> m_Properties = new List<ShaderPropertyInfo>();
+        /// <summary>The ShaderGUI class names the source gives: for any pipeline, and per pipeline
+        /// asset type.</summary>
+        internal string m_CustomEditor;
+        internal readonly List<(string Editor, string Pipeline)> m_PipelineEditors = new List<(string, string)>();
         int m_MaximumLOD = -1;
 
         static readonly Dictionary<string, Shader> s_ByName = new Dictionary<string, Shader>();
@@ -492,9 +496,11 @@ namespace Unbound.Runtime
             shader = UnityEngine.Shader.Create(name, DefaultQueue(name));
             shader.m_QueueFromSource = true;
             // The properties its source in the release's built-in shaders declares.
-            var properties = SourceProperties(name);
+            var source = Source(name);
+            var properties = string.IsNullOrEmpty(source) ? null : ShaderLab.Properties(source);
             if (properties != null && properties.Count > 0)
             {
+                ShaderLab.Editors(source, shader);
                 shader.m_Properties.Clear();
                 shader.m_Properties.AddRange(properties);
                 shader.PropertiesChanged();
@@ -503,14 +509,13 @@ namespace Unbound.Runtime
             return shader;
         }
 
-        static List<UnityEngine.ShaderPropertyInfo> SourceProperties(string name)
+        static string Source(string name)
         {
             if (!Native.IsReady) return null;
             try
             {
-                var source = System.Text.Json.JsonSerializer.Deserialize<string>(
+                return System.Text.Json.JsonSerializer.Deserialize<string>(
                     Native.Call("builtin-shader-source", System.Text.Json.JsonSerializer.Serialize(new { name })));
-                return string.IsNullOrEmpty(source) ? null : ShaderLab.Properties(source);
             }
             catch (Exception)
             {
