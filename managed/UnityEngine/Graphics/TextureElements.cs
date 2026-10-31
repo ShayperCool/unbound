@@ -72,16 +72,13 @@ namespace Unbound.Runtime
             }
         }
 
-        static readonly System.Collections.Generic.HashSet<int> s_DepthWarned = new System.Collections.Generic.HashSet<int>();
+        /// <summary>A sampled binding's handle bit naming the render texture's depth element (render
+        /// protocol 6, NativeApi 13: docs/RENDER_PROTOCOL.md). It exists only on the wire; getters
+        /// return the texture.</summary>
+        internal const ulong DepthElement = 1UL << 62;
 
-        /// <summary>The depth element of a target with color and depth. The renderer has no view of
-        /// such a depth buffer as a sampled texture yet: the color stands in, with a warning.</summary>
-        static ulong DepthHandle(UnityEngine.RenderTexture rt)
-        {
-            if (s_DepthWarned.Add(rt.GetInstanceID()))
-                UnityEngine.Debug.LogWarning($"Unbound: sampling the depth of render texture '{rt.name}', which also has color, is not supported yet; its color is bound.");
-            return TextureHandles.Of(rt);
-        }
+        /// <summary>The depth element of a target with color and depth.</summary>
+        static ulong DepthHandle(UnityEngine.RenderTexture rt) => TextureHandles.Of(rt) | DepthElement;
 
         static UnityEngine.Texture2D s_Gray;
 
