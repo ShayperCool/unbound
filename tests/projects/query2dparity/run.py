@@ -11,14 +11,14 @@ REPO = ROOT.parents[2]
 p = argparse.ArgumentParser()
 p.add_argument('mode', choices=['prepare', 'native', 'engine'])
 p.add_argument('--label', default='baseline')
-p.add_argument('--probe', choices=['queries','geometry','selection','selection-fine'], default='queries')
+p.add_argument('--probe', choices=['queries','geometry','selection','selection-fine','boundary','tests'], default='queries')
 a = p.parse_args()
 work = Path(os.environ['QUERY_WORK'])
 project = work / ('project' if a.probe=='queries' else 'project-' + a.probe)
 if a.mode == 'prepare':
     for name in ['Assets', 'Packages', 'ProjectSettings']:
         shutil.copytree(REPO / 'tests/projects/physics' / name, project / name, dirs_exist_ok=True)
-    shutil.copyfile(ROOT / ('Sources/' + {'queries':'ProbeEntry.cs','geometry':'GeometryProbe.cs','selection':'ContactSelection.cs','selection-fine':'ContactSelectionFine.cs'}[a.probe]), project / 'Assets/Scripts/ProbeEntry.cs')
+    shutil.copyfile(ROOT / ('Sources/' + {'queries':'ProbeEntry.cs','geometry':'GeometryProbe.cs','selection':'ContactSelection.cs','selection-fine':'ContactSelectionFine.cs','boundary':'OwnerBoundary.cs','tests':'IsolatedTests.cs'}[a.probe]), project / 'Assets/Scripts/ProbeEntry.cs')
 else:
     out = work / (a.label + '.json')
     if out.exists():
