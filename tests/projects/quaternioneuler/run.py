@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Record both Euler factories and compare every component and semantic control."""
+"""Record Euler factories and vector rotation with complete component comparisons."""
 import argparse
 import hashlib
 import importlib.util
@@ -62,7 +62,7 @@ elif a.mode == 'compare':
         for path in [reference, a.candidate]+([a.baseline] if a.baseline else [])}
     a.output.parent.mkdir(parents=True, exist_ok=True)
     a.output.write_text(json.dumps(report, indent=2)+'\n')
-    c.describe('Euler factories', report)
+    c.describe('Quaternion controls', report)
     raise SystemExit(bool(report['introduced'] if a.baseline else report['failures']))
 else:
     out = cache_artifact_path(work/(a.label+'.json'))

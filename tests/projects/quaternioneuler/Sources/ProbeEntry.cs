@@ -30,6 +30,18 @@ public static class ProbeEntry
             ProbeLog.Value("mixed",q*new Vector3(.3f,-.7f,1.1f));
 
         }
+        var quaternions = new[] { Quaternion.identity,new Quaternion(0,0,0,0),new Quaternion(.23f,-.17f,.31f,.9f),
+            new Quaternion(.3f,-.7f,1.1f,-.9f),new Quaternion(1,2,3,4),new Quaternion(-1.3f,.4f,.27f,-2.1f),
+            new Quaternion(0,0,.7071068f,.7071068f),new Quaternion(-.38839376f,-.795187056f,-.08882126f,-.4570982f),
+            new Quaternion(1e-6f,-2e-6f,3e-6f,-4e-6f),new Quaternion(17,-29,13,-41) };
+        var vectors = new[] { Vector3.right,Vector3.up,Vector3.forward,new Vector3(.3f,-.7f,1.1f),
+            new Vector3(-2.3f,4.7f,.011f),new Vector3(1000.125f,-.0003125f,17.25f),new Vector3(1e-6f,-2e-7f,3e-8f),Vector3.zero };
+        for(int i=0;i<quaternions.Length;i++)
+        for(int j=0;j<vectors.Length;j++)
+        {
+            ProbeLog.Begin("raw/"+i+"/"+j);Q("quaternion",quaternions[i]);
+            ProbeLog.Value("input",vectors[j]);ProbeLog.Value("result",quaternions[i]*vectors[j]);
+        }
         File.WriteAllText(output,ProbeLog.Json());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);

@@ -1,10 +1,12 @@
-# Euler factory precision
+# Euler factories and vector rotation
 
 This probe records both `Quaternion.Euler` overloads without renaming or
 normalizing their outputs. It retains each component, the normalized quaternion,
 the squared norm and rotation of four vectors. Cases include tilted and mixed
 angles, negative angles, neighbourhoods of zero, 90, 180 and 360 degrees,
-arbitrary values and large numbers of complete turns.
+arbitrary values and large numbers of complete turns. Independent vector controls
+use raw unit, nonunit, zero, small and large quaternions with axis, mixed, zero
+and differently scaled vectors. Raw inputs pass directly to the public operator.
 
 The release-named canonical reference is published after two independent Unity
 Editor recordings agree exactly. The comparator preserves the full missing,
