@@ -39,17 +39,10 @@ namespace UnityEngine
             // A readable clone uploads its own CPU snapshot, including unapplied edits. No
             // asset GUID is copied: later sampler/pixel writes cannot reload or alias the source.
             copy.EnsureUploaded();
-            if (!m_IsReadable && m_NativeHandle != 0)
+            if (copy.m_NativeHandle == 0)
             {
-                // Non-readable textures can have GPU-only writes. Preserve their actual
-                // storage instead of reconstructing it from an older retained CPU snapshot.
-                if (copy.m_NativeHandle == 0)
-                {
-                    copy.m_NativeHandle = RenderHandles.Next();
-                    copy.UploadSampler();
-                }
-                for (int mip = 0; mip < m_GpuMipCount; mip++)
-                    GfxStream.CopyTexture(m_NativeHandle, 0, mip, new RectInt(-1, -1, -1, -1), copy.m_NativeHandle, 0, mip, 0, 0);
+                Object.DestroyImmediate(copy);
+                throw new ArgumentException($"Instantiating texture '{name}' is not supported because its retained pixel data is unavailable.");
             }
             if (m_Pixels != null || m_Hdr != null || m_Raw != null) DropIfNotReadable();
             return copy;
