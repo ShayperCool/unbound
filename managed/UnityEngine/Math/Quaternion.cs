@@ -87,9 +87,11 @@ namespace UnityEngine
             float wz = rotation.w * z2;
 
             Vector3 res;
-            res.x = (1F - (yy + zz)) * point.x + (xy - wz) * point.y + (xz + wy) * point.z;
-            res.y = (xy + wz) * point.x + (1F - (xx + zz)) * point.y + (yz - wx) * point.z;
-            res.z = (xz - wy) * point.x + (yz + wx) * point.y + (1F - (xx + yy)) * point.z;
+            // Retain the rounded products, then accumulate each component at wider precision.
+            // Measured by tests/projects/quaternioneuler with unit and nonunit public inputs.
+            res.x = (float)((1.0 - ((double)yy + zz)) * point.x + ((double)xy - wz) * point.y + ((double)xz + wy) * point.z);
+            res.y = (float)(((double)xy + wz) * point.x + (1.0 - ((double)xx + zz)) * point.y + ((double)yz - wx) * point.z);
+            res.z = (float)(((double)xz - wy) * point.x + ((double)yz + wx) * point.y + (1.0 - ((double)xx + yy)) * point.z);
             return res;
         }
 
