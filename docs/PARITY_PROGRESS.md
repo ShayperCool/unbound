@@ -510,8 +510,8 @@ parity PR is not ready while those rows remain open.
   humanoid animations. Use it to select representative rigs and clips for retargeting,
   muscle curves, IK and `OnAnimatorIK`; root-motion bone selection, Bake Into Pose and
   `MatchTarget` need their own controls. The standard Unity Third Person sample is an
-  alternative or additional comparison project. `~/Dungeon` was not present at
-  `/home/shaypercool/Dungeon` in this checkout environment when this note was recorded;
+  alternative or additional comparison project. `~/Dungeon` was not present in
+  this checkout environment when this note was recorded;
   resolve the source location on the machine holding the project before using it.
 - Preferred owner for the remaining rendering work: Claude. Scope: shadowmask mixing,
   per-pixel LPPV, skinned motion vectors, halos/flares and the remaining low-level GPU
@@ -1525,9 +1525,18 @@ AnimationTests is included in this differential. Its layer test now passes, and
 there are zero newly failing test names. The nine Unbound.Tests.TextTests and three
 ParticleSystemTests failures remain. This is not a claim that the full suite is green.
 
-An immutable build input with all34 file hashes is kept outside Git. Dedicated
-texture/animation captures and combined graphics regressions are running. Texture
-byte differences remain unaccepted where documented; no tolerances are changed.
+An immutable build input with all34 file hashes is kept outside Git. Root captures
+confirm the original additive528/528, animator2236/2236 and bundle animation8/8.
+All2029 rendering payload files match the previous accepted captures byte-for-byte.
+One Vulkan Device(Lost) startup produced no captures; its failed log is preserved,
+and one fresh-directory retry completed all rendering gates.
+
+Strict texture comparison matches419/484 mip levels in each profile. At byte
+granularity Gamma/Linear resolve576020 failures but retain33542 and introduce72;
+Android resolves413658, retains33440 and introduces73. Every failed byte and its
+expected/actual value remains in the cache report. This importer stage remains
+unaccepted at tolerance zero; a separate continuation owns transparency fill,
+coverage and rounding. No mip-level count substitutes for byte-level acceptance.
 
 ### Mixed write-defaults transitions, 2026-10-31
 
@@ -1553,3 +1562,58 @@ the previous reference byte for byte. Measured in 6000.0.71f1:
 Before the fix Unbound matched 1007/1100 records; after it 1100/1100 (13200 values). The animator
 probe keeps 2236/2236 and the bundle animation probe 8/8. The managed tests have no new failures
 (82 earlier text, physics and particle failures, all in the previous list) and no animation failures.
+
+### Combined clone and Animator verification, 2026-10-31
+
+Root merged the mixed write-defaults implementation and texture/text asset cloning
+at840933bc. The combined runtime matches1100/1100 Animator records and13200/13200
+values; the existing animator2236/2236 and bundle8/8 controls also pass. Root
+verified both independent Native repeats against the canonical references,
+including the unchanged first528 Animator records.
+
+Texture2D clones own retained CPU mip snapshots and independent GPU allocations,
+including unreadable textures. CopyTexture preserves retained CPU storage even
+when readability is disabled. RenderTexture clones retain descriptors, start
+uncreated, and Release clears an active target. TextAsset clones own their bytes
+and use the measured valid/malformed BOM decoding behavior. Stored sRGB metadata
+is distinct from the active project-color-space graphics format.
+
+The main clone union matches14287/14340 values, resolves8006 and preserves all6281
+previous passes. Its53 retained differences are45 sampler-bias GPU values, two
+imported-source hide flags and six preexisting dirty-source auto-upload values.
+Each separate color profile matches105/109 and retains four Alpha8 graphics-format
+metadata differences. Root captures equal the delivered comparison rows exactly;
+no passing value regresses and no residual is hidden by a tolerance change.
+
+The same1151-test assembly against the previous and combined Core changes from
+1123 passes/28 failures to1139 passes/12 failures. All16 clone/encoding cases now
+pass; the same nine legacy TextTests and three ParticleSystemTests failures remain.
+Selected tests pass853/853 with zero skips. API-check reports zero errors in2279
+types; regenerated Core, Physics and Editor modules match the committed files.
+
+All2029 rendering payload files are byte-identical to the preceding source-correct
+texture/Animator build. Graphics80, resources539/62 images, clipping1211/266 images
+per profile, colors98402, and focused cameras481/54 images per color space retain
+their passing results. Existing built-in motion/effect and UIToolkit pixel gaps
+remain visible. Build inputs and full test/value unions are cache-only. Native API12,
+render protocol5, PhysX shim9 and shader cache13 are unchanged. Sampler and texture
+import acceptance remain open; this is not full engine parity.
+
+## Sprite Tight meshes and default physics shapes
+
+Imported sprites now get Unity's Tight mesh, `textureRect` and default physics shape. The generator
+(`crates/unbound-assets/src/sprite_mesh.rs`) reproduces the measured Editor outlines and meshes
+(tests/projects/spriteimport): alpha mask grown by a Manhattan distance transform, corner-mask
+Moore tracing with XOR region removal, direction-run line fitting with a one-pixel normal offset,
+area-cost vertex removal that never shrinks the bounds, rect clipping, rounding, and libtess2
+(vendored in `native/libtess2`) for the triangles, in the float operation order that matches the
+measured outlines. UVs come back from the unit vertices; quads use the Editor's measured triangle
+order.
+
+tests/projects/spriteimport (52 sprites, two Editor captures byte-identical): 515/520 values match
+exactly (baseline 241/520). The rest: a max-size-downscaled texture whose resized alpha is up to
+4/255 off the Editor's (28 pixels cross the alpha-0 threshold), and the default physics shape of a
+Polygon-mode sprite (Unity's mesh-edge outline, not made; warns). Resources (539/539, 62/62
+images, worst mean 0.57, was 0.83: SpriteMask range images now draw the tight Circle mesh, worst
+1 from 230), urp2d (13 images at 0.00) and twod (same 4 scenarios as the baseline) have no
+regressions. `Sprite.Create` still builds quads.

@@ -381,16 +381,15 @@ namespace UnityEngine
         public static void CopyTexture(Texture src, int srcElement, int srcMip, Texture dst, int dstElement, int dstMip) =>
             CopyTexture(src, srcElement, srcMip, -1, -1, -1, -1, dst, dstElement, dstMip, 0, 0);
 
-        /// <summary>Copies on the GPU; between two readable Texture2Ds the CPU pixels too, as Unity.</summary>
+        /// <summary>Copies on the GPU; between Texture2Ds the retained CPU pixels too, independent of readability.</summary>
         public static void CopyTexture(Texture src, int srcElement, int srcMip, int srcX, int srcY, int srcWidth, int srcHeight, Texture dst, int dstElement, int dstMip, int dstX, int dstY)
         {
             if (src == null) throw new ArgumentNullException(nameof(src));
             if (dst == null) throw new ArgumentNullException(nameof(dst));
-            if (src is Texture2D s2 && dst is Texture2D d2 && s2.isReadable && d2.isReadable && srcMip == 0 && dstMip == 0)
+            if (src is Texture2D s2 && dst is Texture2D d2 && srcMip == 0 && dstMip == 0)
             {
                 int w = srcWidth < 0 ? s2.width : srcWidth, h = srcHeight < 0 ? s2.height : srcHeight;
-                var pixels = s2.GetPixels(srcWidth < 0 ? 0 : srcX, srcWidth < 0 ? 0 : srcY, w, h);
-                d2.SetPixels(dstX, dstY, w, h, pixels);
+                s2.CopyRetainedPixels(d2, srcWidth < 0 ? 0 : srcX, srcWidth < 0 ? 0 : srcY, w, h, dstX, dstY);
             }
             ulong source = TextureHandles.Of(src), destination = TextureHandles.Of(dst);
             GfxStream.CopyTexture(source, srcElement, srcMip, new RectInt(srcX, srcY, srcWidth, srcHeight), destination, dstElement, dstMip, dstX, dstY);
