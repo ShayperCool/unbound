@@ -46,7 +46,7 @@ public static class ProbeRunner
             var child = Call(mixer, "CreateNewGroup", "Child", true);
             Call(mixer, "AddChildToParent", child, master);
             object effect = null;
-            if (key != "dry")
+            if (key != "dry" && key != "step_dry" && key != "stereo_dry")
             {
                 bool high = key.StartsWith("hp") || key == "tone_hp";
                 float cutoff = key == "lp80q1" ? 80 : key == "hp8000q1" ? 8000 : key == "lp20000q1" ? 20000 : 1000;
@@ -70,6 +70,7 @@ public static class ProbeRunner
                 var snapshot = Get(mixer, "TargetSnapshot"); ((UnityEngine.Object)snapshot).name = "Other";
                 Call(effect, "SetValueForParameter", mixer, snapshot, "Cutoff freq", 4000f);
             }
+            if (key == "volume_lp") Call(child, "SetValueForVolume", mixer, Get(mixer, "TargetSnapshot"), -6f);
             EditorUtility.SetDirty((UnityEngine.Object)mixer);
         }
         AssetDatabase.SaveAssets();

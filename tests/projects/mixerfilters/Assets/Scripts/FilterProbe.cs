@@ -9,14 +9,14 @@ using Unity.Collections;
 
 public class FilterProbe : MonoBehaviour
 {
-    public static readonly string[] Cases = { "dry", "lp1000q1", "lp1000q3", "lp1000q10", "hp1000q1", "hp1000q3", "hp1000q10", "lp80q1", "hp8000q1", "lp20000q1", "lp_bypass", "group_bypass", "lp_hp", "hp_lp", "parent_lp", "stereo_lp", "step_lp", "tone_hp", "set_lp", "snapshot_lp" };
+    public static readonly string[] Cases = { "dry", "lp1000q1", "lp1000q3", "lp1000q10", "hp1000q1", "hp1000q3", "hp1000q10", "lp80q1", "hp8000q1", "lp20000q1", "lp_bypass", "group_bypass", "lp_hp", "hp_lp", "parent_lp", "stereo_lp", "step_lp", "tone_hp", "set_lp", "snapshot_lp", "step_dry", "stereo_dry", "sum_lp", "volume_lp" };
     public static float[] Signal(int frames, int channels, int rate, string kind)
     {
         var a = new float[frames * channels];
         for (int f = 0; f < frames; f++) for (int c = 0; c < channels; c++)
         {
             float v = f == 0 || f == 2048 || f == 4096 || f == 6144 ? 0.25f : 0f;
-            if (kind == "step_lp") v = f < 2048 ? 0.125f : 0f;
+            if (kind.StartsWith("step")) v = f < 2048 ? 0.125f : 0f;
             if (kind == "tone_hp") v = (float)(0.125 * Math.Sin(2 * Math.PI * 400 * f / rate) + 0.0625 * Math.Sin(2 * Math.PI * 6000 * f / rate));
             a[f * channels + c] = c == 0 ? v : (f == 31 ? -0.125f : v * 0.5f);
         }
@@ -96,7 +96,8 @@ public class FilterProbe : MonoBehaviour
             {
                 var mixer = Resources.Load<AudioMixer>(key);
                 if (!mixer) throw new Exception("Missing mixer " + key);
-                int channels = key == "stereo_lp" ? 2 : 1;
+                if (key == "snapshot_lp") mixer.FindSnapshot("Snapshot").TransitionTo(0);
+                int channels = key.StartsWith("stereo") ? 2 : 1;
                 var go = new GameObject(key);
                 var source = go.AddComponent<AudioSource>();
                 source.outputAudioMixerGroup = mixer.FindMatchingGroups("Child")[0];
@@ -110,6 +111,13 @@ public class FilterProbe : MonoBehaviour
                 var addSink = typeof(AudioRenderer).GetMethod("AddMixerGroupSink", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
                 if (!(bool)addSink.Invoke(null, new object[] { mixer.FindMatchingGroups("")[0], sink, false })) throw new Exception("AddMixerGroupSink failed");
 #endif
+                AudioSource second = null;
+                if (key == "sum_lp")
+                {
+                    second = go.AddComponent<AudioSource>(); second.clip = clip;
+                    second.outputAudioMixerGroup = source.outputAudioMixerGroup;
+                    second.volume = 0.5f; second.Play();
+                }
                 source.Play();
                 using (var masterWriter = new BinaryWriter(File.Create(Path.Combine(output, key + ".master.f32"))))
                 using (var writer = new BinaryWriter(File.Create(Path.Combine(output, key + ".f32"))))
