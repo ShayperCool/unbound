@@ -504,6 +504,25 @@ animation/audio, physics, UI/input and import/networking sections of `COMPATIBIL
 Keep an Editor probe for each behavioral change and leave the snapshot branch unchanged. A full
 parity PR is not ready while those rows remain open.
 
+### User planning notes, 2026-10-31
+
+- Humanoid probe sources: the user reports a local `~/Dungeon` project with many
+  humanoid animations. Use it to select representative rigs and clips for retargeting,
+  muscle curves, IK and `OnAnimatorIK`; root-motion bone selection, Bake Into Pose and
+  `MatchTarget` need their own controls. The standard Unity Third Person sample is an
+  alternative or additional comparison project. `~/Dungeon` was not present at
+  `/home/shaypercool/Dungeon` in this checkout environment when this note was recorded;
+  resolve the source location on the machine holding the project before using it.
+- Preferred owner for the remaining rendering work: Claude. Scope: shadowmask mixing,
+  per-pixel LPPV, skinned motion vectors, halos/flares and the remaining low-level GPU
+  APIs listed in `COMPATIBILITY_GAPS.md`. This records the user's assignment preference;
+  it does not claim that a Claude task has started or that these features are complete.
+
+For each selected feature, record independent agreeing Unity Editor references for the
+explicit release before accepting an implementation. Keep source projects' authored files
+intact, put captures and run artifacts in `Library/Unbound/` or the Unbound cache, and
+commit only probe sources and the canonical release references under `tests/projects/`.
+
 ## Trail runtime and particle aging
 
 Implemented BakeTrailsMesh, default/custom trail layouts, packed neighbor/percentage/width
