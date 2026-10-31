@@ -14,7 +14,7 @@ public static class PixelProbe
     static void Visit(VisualElement e, Action<VisualElement> action)
     {
         action(e);
-        foreach (var c in e.Children()) Visit(c, action);
+        for (int i = 0; i < e.hierarchy.childCount; i++) Visit(e.hierarchy[i], action);
     }
 
     public static void Observe(string phase, UIDocument document, Action render)
