@@ -872,9 +872,13 @@ fn texture_importer(s: &RuntimeState) -> TextureImporter {
     }
 }
 
-pub fn set_build_target(target: &str) {
+/// The active build target; `normal_maps_xyz` when its shaders read XYZ normal maps
+/// (`UNITY_NO_DXT5nm`), else textures import normal maps DXT5nm-encoded.
+pub fn set_build_target(target: &str, normal_maps_xyz: bool) {
     state().audio_importer.write().unwrap().build_target = target.to_string();
-    state().texture_importer.write().unwrap().build_target = target.to_string();
+    let mut textures = state().texture_importer.write().unwrap();
+    textures.build_target = target.to_string();
+    textures.normal_maps_xyz = normal_maps_xyz;
 }
 
 /// Imports an asset audio clip (through the import cache) into a mixer clip handle.

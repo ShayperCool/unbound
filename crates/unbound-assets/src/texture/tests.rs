@@ -489,10 +489,156 @@ fn a_target_that_keeps_the_pixels_is_not_block_compressed() {
         build_target: "Android".into(),
         compress: true,
         gamma: false,
+        normal_maps_xyz: true,
     };
     let rgba32 = unbound_yaml::parse_value(&rgba32).unwrap();
     let texture = importer
         .import(Path::new("Mask.png"), &png, &rgba32)
         .unwrap();
     assert!(texture.bc7.is_none());
+}
+
+fn import_with(meta: &str, bytes: &[u8], xyz: bool) -> ImportedTexture {
+    TextureImporter {
+        normal_maps_xyz: xyz,
+        ..TextureImporter::default()
+    }
+    .import(
+        Path::new("t.png"),
+        bytes,
+        &unbound_yaml::parse_value(meta).unwrap(),
+    )
+    .unwrap()
+}
+
+fn texel(mip: &MipLevel, x: u32, y: u32) -> [u8; 4] {
+    let at = ((y * mip.width + x) * 4) as usize;
+    mip.data[at..at + 4].try_into().unwrap()
+}
+
+// The expected values below were recorded from the 6000.0 Editor (tests/projects/textureimport).
+
+#[test]
+fn kaiser_mips_keep_the_negative_lobes() {
+    // Mid-gray with one white texel at (12, 12) from the top: row 51 bottom-up.
+    let bytes = png(64, 64, |x, y| {
+        if (x, y) == (12, 12) {
+            [255; 4]
+        } else {
+            [128, 128, 128, 255]
+        }
+    });
+    let tex = import_with(
+        "TextureImporter:\n  mipmaps:\n    mipMapMode: 1\n    sRGBTexture: 0\n",
+        &bytes,
+        false,
+    );
+    let row: Vec<u8> = (4..8).map(|x| texel(&tex.mips[1], x, 25)[0]).collect();
+    assert_eq!(row, [127, 135, 152, 126]);
+}
+
+#[test]
+fn box_mips_of_odd_sizes_sample_bilinearly() {
+    // 3x1 -> 1x1 samples the middle texel's centre: the middle texel alone.
+    let bytes = png(3, 1, |x, _| [[0, 200, 40][x as usize], 0, 0, 255]);
+    let tex = import_with(
+        "TextureImporter:\n  mipmaps:\n    sRGBTexture: 0\n  nPOTScale: 0\n",
+        &bytes,
+        false,
+    );
+    assert_eq!(texel(&tex.mips[1], 0, 0), [200, 0, 0, 255]);
+}
+
+#[test]
+fn fade_out_blends_encoded_colour_to_gray() {
+    let bytes = png(4, 4, |_, _| [200, 100, 0, 200]);
+    let meta = "TextureImporter:\n  mipmaps:\n    fadeOut: 1\n    mipMapFadeDistanceStart: 0\n    mipMapFadeDistanceEnd: 2\n";
+    let tex = import_with(meta, &bytes, false);
+    // Halfway at level 1, gray at level 2; alpha untouched.
+    assert_eq!(texel(&tex.mips[0], 0, 0), [200, 100, 0, 200]);
+    assert_eq!(texel(&tex.mips[1], 0, 0), [164, 114, 64, 200]);
+    assert_eq!(texel(&tex.mips[2], 0, 0), [128, 128, 128, 200]);
+}
+
+#[test]
+fn border_mips_filter_the_edge_only() {
+    // A bright interior with a dark frame: the frame stays dark down the chain.
+    let bytes = png(8, 8, |x, y| {
+        if x == 0 || y == 0 || x == 7 || y == 7 {
+            [0, 0, 0, 255]
+        } else {
+            [255; 4]
+        }
+    });
+    let tex = import_with(
+        "TextureImporter:\n  mipmaps:\n    borderMipMap: 1\n    sRGBTexture: 0\n",
+        &bytes,
+        false,
+    );
+    assert_eq!(texel(&tex.mips[1], 0, 1), [0, 0, 0, 255]);
+    assert_eq!(texel(&tex.mips[1], 1, 1), [255; 4]);
+    assert_eq!(texel(&tex.mips[3], 0, 0), [0, 0, 0, 255]);
+}
+
+#[test]
+fn normal_maps_are_dxt5nm_or_xyz_by_target() {
+    let bytes = png(2, 2, |_, _| [128, 234, 198, 255]);
+    let meta = "TextureImporter:\n  textureType: 1\n  nPOTScale: 0\n";
+    assert_eq!(
+        texel(&import_with(meta, &bytes, false).mips[0], 0, 0),
+        [255, 234, 234, 128]
+    );
+    assert_eq!(
+        texel(&import_with(meta, &bytes, true).mips[0], 0, 0),
+        [128, 234, 198, 255]
+    );
+}
+
+#[test]
+fn normal_maps_from_height() {
+    // A white texel on black at (16, 16) from the top: row 15 bottom-up; heightScale 0.25.
+    let bytes = png(32, 32, |x, y| {
+        if (x, y) == (16, 16) {
+            [255; 4]
+        } else {
+            [0, 0, 0, 255]
+        }
+    });
+    let meta = "TextureImporter:\n  textureType: 1\n  bumpmap:\n    convertToNormalMap: 1\n    heightScale: 0.25\n";
+    let tex = import_with(meta, &bytes, false);
+    assert_eq!(texel(&tex.mips[0], 15, 15), [255, 128, 128, 14]);
+    assert_eq!(texel(&tex.mips[0], 17, 15), [255, 128, 128, 241]);
+    assert_eq!(texel(&tex.mips[0], 16, 16), [255, 241, 241, 128]);
+    let sobel = import_with(&format!("{meta}    normalMapFilter: 1\n"), &bytes, false);
+    assert_eq!(texel(&sobel.mips[0], 15, 15), [255, 128, 128, 38]);
+    assert_eq!(texel(&sobel.mips[0], 15, 16), [255, 179, 179, 76]);
+}
+
+#[test]
+fn alpha_source_none_keeps_alpha_in_an_explicit_alpha_format() {
+    let bytes = png(1, 1, |_, _| [10, 20, 30, 40]);
+    let meta = |format: i32| {
+        format!(
+            "TextureImporter:\n  alphaUsage: 0\n  platformSettings:\n  - buildTarget: Standalone\n    textureFormat: {format}\n    overridden: 1\n"
+        )
+    };
+    assert_eq!(
+        import_with(&meta(4), &bytes, false).mips[0].data,
+        [10, 20, 30, 40]
+    );
+    assert_eq!(
+        import_with(&meta(3), &bytes, false).mips[0].data,
+        [10, 20, 30, 255]
+    );
+    assert_eq!(
+        import_with(&meta(-1), &bytes, false).mips[0].data,
+        [10, 20, 30, 255]
+    );
+}
+
+#[test]
+fn alpha_from_gray_is_the_mean_rounded_down() {
+    let bytes = png(1, 1, |_, _| [113, 35, 178, 255]);
+    let tex = import_with("TextureImporter:\n  alphaUsage: 2\n", &bytes, false);
+    assert_eq!(tex.mips[0].data, [113, 35, 178, 108]);
 }

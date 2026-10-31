@@ -147,6 +147,7 @@ fn run(cache: &AssetCache, files: &[(AssetKind, PathBuf)], target: &str) -> Stat
         build_target: target.to_string(),
         compress: true,
         gamma: false,
+        normal_maps_xyz: target == "Android",
     };
     let audio = AudioImporter {
         build_target: target.to_string(),
