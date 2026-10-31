@@ -44,11 +44,27 @@ namespace Unbound.Runtime
     internal sealed class LayerRun
     {
         internal LayerDef Def;
-        internal float Weight;
+        float m_Weight;
+        /// <summary>The weight GetLayerWeight reports. Evaluation ignores negative weights and keeps
+        /// the last weight that was not (<see cref="Evaluated"/>).</summary>
+        internal float Weight
+        {
+            get => m_Weight;
+            set
+            {
+                m_Weight = value;
+                if (value >= 0f) Evaluated = value;
+            }
+        }
+        internal float Evaluated;
         internal StateRun Current;
         internal StateRun Next;
         internal TransitionRun Transition;
         internal PendingPlay Pending;
+        /// <summary>The layer's last values (an additive layer's: differences): what its states
+        /// without a motion and without write defaults keep. Held marks the channels it has.</summary>
+        internal float[] Last = Array.Empty<float>();
+        internal bool[] Held = Array.Empty<bool>();
     }
 
     /// <summary>Play / CrossFade requests: they take effect at the layer's next update, as in Unity.</summary>
@@ -313,31 +329,7 @@ namespace Unbound.Runtime
         internal void EvaluateInto(float[] values, bool[] animated, UnityEngine.Object[] objects, bool[] objectAnimated)
         {
             int count = BuildLayerPoses();
-            int n = Math.Min(Bindings.FloatCount, values.Length);
-            for (int c = 0; c < n; c++)
-            {
-                float r = values[c];
-                bool any = false;
-                for (int l = 0; l < count; l++)
-                {
-                    var layer = m_LayerPoses[l];
-                    float w = layer.AnimationPose.Weight[c];
-                    if (w <= 0f) continue;
-                    any = true;
-                    if (layer.Weight <= 0f) continue;
-                    float v = layer.AnimationPose.Value[c];
-                    if (layer.Additive)
-                    {
-                        r += layer.Weight * (v - w * Bindings.Defaults[c]);
-                        continue;
-                    }
-                    float lv = w >= 1f ? v / w : v + (1f - w) * r;
-                    r = layer.Weight >= 1f ? lv : r + (lv - r) * layer.Weight;
-                }
-                if (!any) continue;
-                values[c] = r;
-                animated[c] = true;
-            }
+            PoseWriter.CombineLayers(Bindings, m_LayerPoses, count, values, animated, overDefaults: false);
             int m = Math.Min(Bindings.ObjectCount, objects.Length);
             for (int c = 0; c < m; c++)
             {
@@ -818,9 +810,92 @@ namespace Unbound.Runtime
                     SampleState(layer, i, source.Current, 1f - p, pose, mask, objectMask);
                     if (source.Next != null && source.Transition != null) SampleState(layer, i, source.Next, p, pose, mask, objectMask);
                 }
-                m_LayerPoses[i] = new LayerPose { AnimationPose = pose, Weight = i == 0 ? 1f : layer.Weight, Additive = layer.Def.Additive && i > 0 };
+                m_LayerPoses[i] = new LayerPose { AnimationPose = pose, Weight = i == 0 ? 1f : layer.Evaluated, Additive = layer.Def.Additive };
+                if (!layer.Def.Additive)
+                {
+                    // Combining the layers records the layer's values anew.
+                    EnsureLast(layer);
+                    Array.Clear(layer.Held);
+                    m_LayerPoses[i].Last = layer.Last;
+                    m_LayerPoses[i].Held = layer.Held;
+                }
+                else
+                {
+                    KeepLast(layer, pose);
+                    // The layer writes what its motions animate every frame, if only with no difference.
+                    AddNoDifference(pose, 1f, LayerChannels(i).Floats, null, mask, onlyUnweighted: true);
+                }
             }
             return count;
+        }
+
+        /// <summary>Remembers an additive layer's pose, its rotations as <see cref="PoseWriter.AdditiveRotation"/> applies them.</summary>
+        void KeepLast(LayerRun layer, AnimationPose pose)
+        {
+            int n = Bindings.FloatCount;
+            EnsureLast(layer);
+            for (int c = 0; c < n; c++)
+            {
+                layer.Held[c] = pose.Weight[c] > 0f;
+                layer.Last[c] = pose.Value[c];
+                var owner = Bindings.FloatOwner[c];
+                if (!layer.Held[c] || !owner.IsQuaternion || owner.First != c || owner.Width != 4 || c + 3 >= n) continue;
+                if (!PoseWriter.AdditiveRotation(pose, c, 1f, out var d)) d = new Quaternion(0f, 0f, 0f, 0f);
+                for (int i = 0; i < 4; i++) layer.Held[c + i] = true;
+                layer.Last[c] = d.x; layer.Last[c + 1] = d.y; layer.Last[c + 2] = d.z; layer.Last[c + 3] = d.w;
+                c += 3;
+            }
+        }
+
+        void EnsureLast(LayerRun layer)
+        {
+            int n = Bindings.FloatCount;
+            if (layer.Last.Length >= n) return;
+            Array.Resize(ref layer.Last, n);
+            Array.Resize(ref layer.Held, n);
+        }
+
+        /// <summary>Adds "no difference" (0, a rotation's identity) with a weight to the channels in
+        /// <paramref name="channels"/> that <paramref name="except"/> and the mask leave (only those
+        /// without weight yet when <paramref name="onlyUnweighted"/>).</summary>
+        void AddNoDifference(AnimationPose pose, float weight, bool[] channels, bool[] except, bool[] mask, bool onlyUnweighted = false)
+        {
+            int n = Math.Min(Bindings.FloatCount, channels.Length);
+            for (int c = 0; c < n; c++)
+            {
+                if (!channels[c] || (except != null && c < except.Length && except[c]) || (mask != null && !mask[c])) continue;
+                if (onlyUnweighted && pose.Weight[c] > 0f) continue;
+                var owner = Bindings.FloatOwner[c];
+                if (owner.IsQuaternion && c == owner.First + 3)
+                {
+                    float dot = pose.Value[c];
+                    pose.Value[c] += dot < 0f ? -weight : weight;
+                }
+                pose.Weight[c] += weight;
+            }
+        }
+
+        /// <summary>A state without a motion and without write defaults keeps the layer's last values.</summary>
+        void SampleLast(LayerRun layer, float weight, AnimationPose pose)
+        {
+            pose.Total += weight;
+            int n = Math.Min(Bindings.FloatCount, layer.Last.Length);
+            for (int c = 0; c < n; c++)
+            {
+                if (!layer.Held[c]) continue;
+                var owner = Bindings.FloatOwner[c];
+                if (owner.IsQuaternion && owner.First == c && owner.Width == 4 && c + 3 < n)
+                {
+                    float x = layer.Last[c], y = layer.Last[c + 1], z = layer.Last[c + 2], w = layer.Last[c + 3];
+                    if (pose.Value[c] * x + pose.Value[c + 1] * y + pose.Value[c + 2] * z + pose.Value[c + 3] * w < 0f) { x = -x; y = -y; z = -z; w = -w; }
+                    pose.Value[c] += weight * x; pose.Value[c + 1] += weight * y; pose.Value[c + 2] += weight * z; pose.Value[c + 3] += weight * w;
+                    for (int i = 0; i < 4; i++) pose.Weight[c + i] += weight;
+                    c += 3;
+                    continue;
+                }
+                pose.Value[c] += weight * layer.Last[c];
+                pose.Weight[c] += weight;
+            }
         }
 
         void SampleState(LayerRun layer, int layerIndex, StateRun run, float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
@@ -829,19 +904,41 @@ namespace Unbound.Runtime
             var motion = MotionOf(layer.Def, run.Def);
             double normalized = run.Normalized + run.Def.CycleOffset + (run.Def.CycleOffsetParameter >= 0 ? Floats[run.Def.CycleOffsetParameter] : 0f);
             SampleMotion(layer, layerIndex, run, motion, normalized, weight, pose, mask, objectMask);
-            if (!run.Def.WriteDefaults) return;
-            // Write defaults: what the controller animates and this state does not goes back to its default.
+            if (layer.Def.Additive)
+            {
+                // Additive poses are differences. Without write defaults, a state without a motion
+                // keeps the layer's last pose, and a motion's state adds no difference for what the
+                // layer animates and it does not (with its weight); with write defaults they add nothing.
+                if (run.Def.WriteDefaults) return;
+                if (motion == null) { SampleLast(layer, weight, pose); return; }
+                var (own, _) = MotionMask(motion);
+                var (layerFloats, _) = LayerChannels(layerIndex);
+                AddNoDifference(pose, weight, layerFloats, own, mask);
+                return;
+            }
+            // What this state does not animate (see PoseWriter.CombineLayers): with write defaults,
+            // what the layer's motions animate; without, every channel of the controller, which the
+            // layer then has the value below for. A state without a motion and without write
+            // defaults keeps the layer's last values, which so include channels only the layers
+            // below animate; where the layer has none yet, the default value while another state
+            // has the channel, else the value below (measured: entered from a motion state it
+            // holds the base layer's channels as they were; as the first state it leaves them).
+            bool holds = motion == null && !run.Def.WriteDefaults;
+            if (holds) SampleLast(layer, weight, pose);
             var (animated, animatedObjects) = MotionMask(motion);
-            var defaults = Bindings.Defaults;
+            var (inLayer, objectsInLayer) = LayerChannels(layerIndex);
+            var leftAs = holds ? pose.Fill : !run.Def.WriteDefaults ? pose.Keep : motion != null ? pose.Fill : pose.Rest;
             for (int c = 0; c < Bindings.FloatCount; c++)
             {
-                if (animated[c] || (mask != null && !mask[c])) continue;
-                pose.Value[c] += weight * defaults[c];
-                pose.Weight[c] += weight;
+                if ((c < animated.Length && animated[c]) || (mask != null && !mask[c])) continue;
+                if (run.Def.WriteDefaults && (c >= inLayer.Length || !inLayer[c])) continue;
+                if (holds && c < layer.Held.Length && layer.Held[c]) continue;
+                leftAs[c] += weight;
             }
-            for (int c = 0; c < Bindings.ObjectCount; c++)
+            if (!run.Def.WriteDefaults || layerIndex > 0) return;
+            for (int c = 0; c < Bindings.ObjectCount && c < objectsInLayer.Length; c++)
             {
-                if (animatedObjects[c] || (objectMask != null && !objectMask[c])) continue;
+                if (animatedObjects[c] || !objectsInLayer[c] || (objectMask != null && !objectMask[c])) continue;
                 if (weight > pose.ObjectWeight[c])
                 {
                     pose.Objects[c] = Bindings.ObjectDefaults[c];
@@ -867,7 +964,8 @@ namespace Unbound.Runtime
                     }
                     var bound = Bindings.Bind(clip);
                     if (pose.Value.Length < Bindings.FloatCount || pose.Objects.Length < Bindings.ObjectCount) return; // bound after the poses were sized
-                    ClipSampling.Sample(bound, ClipSampling.ClipTime(clip, normalized, clip.isLooping), weight, pose, mask, objectMask);
+                    ClipSampling.Sample(bound, ClipSampling.ClipTime(clip, normalized, clip.isLooping), weight, pose, mask, objectMask,
+                        layer.Def.Additive ? Bindings.AdditiveReference(bound) : null);
                     m_Contributions.Add((layer, layerIndex, run, clip, weight));
                     break;
                 }
@@ -882,7 +980,7 @@ namespace Unbound.Runtime
                             any = true;
                             SampleMotion(layer, layerIndex, run, tree.Children[i].Motion, normalized + tree.Children[i].CycleOffset, weight * weights[i], pose, mask, objectMask);
                         }
-                    if (!any) SampleEmptyTree(tree, weight, pose, mask, objectMask);
+                    if (!any && !layer.Def.Additive) SampleEmptyTree(tree, weight, pose, mask, objectMask);
                     break;
                 }
             }
@@ -903,6 +1001,31 @@ namespace Unbound.Runtime
         }
 
         (bool[] Floats, bool[] Objects, int FloatCount, int ObjectCount) m_NullMotionMask;
+        (bool[] Floats, bool[] Objects, int FloatCount, int ObjectCount)[] m_LayerChannels = Array.Empty<(bool[], bool[], int, int)>();
+
+        /// <summary>The channels a layer's motions animate (a synced layer's: its own motions), the
+        /// ones its write-defaults states restore.</summary>
+        (bool[] Floats, bool[] Objects) LayerChannels(int index)
+        {
+            int fc = Bindings.FloatCount, oc = Bindings.ObjectCount;
+            if (m_LayerChannels.Length < Layers.Length) Array.Resize(ref m_LayerChannels, Layers.Length);
+            var cached = m_LayerChannels[index];
+            if (cached.Floats != null && cached.FloatCount == fc && cached.ObjectCount == oc) return (cached.Floats, cached.Objects);
+            var def = Layers[index].Def;
+            var states = def.SyncedLayerIndex >= 0 && def.SyncedLayerIndex < Layers.Length ? Layers[def.SyncedLayerIndex].Def.States : def.States;
+            foreach (var state in states) MotionMask(MotionOf(def, state)); // binds what is not bound yet
+            fc = Bindings.FloatCount; oc = Bindings.ObjectCount;
+            var floats = new bool[fc];
+            var objects = new bool[oc];
+            foreach (var state in states)
+            {
+                var (f, o) = MotionMask(MotionOf(def, state));
+                for (int c = 0; c < fc; c++) floats[c] |= f[c];
+                for (int c = 0; c < oc; c++) objects[c] |= o[c];
+            }
+            m_LayerChannels[index] = (floats, objects, fc, oc);
+            return (floats, objects);
+        }
 
         void Collect(Motion motion, bool[] floats, bool[] objects, int depth)
         {
@@ -943,9 +1066,12 @@ namespace Unbound.Runtime
             return (floats, objects);
         }
 
+        /// <summary>A transform mask masks Transform properties only: other components' properties
+        /// are animated whatever the mask says about their object.</summary>
         static bool Allowed(AvatarMask mask, Transform root, PropertyGroup group)
         {
-            var t = group?.Transform;
+            if (!(group?.Target is Transform)) return true;
+            var t = group.Transform;
             if (t == null || root == null) return true;
             var parts = new List<string>();
             for (var p = t; p != null && p != root; p = p.m_Parent) parts.Insert(0, p.m_GameObject.m_Name);
