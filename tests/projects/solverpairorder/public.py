@@ -19,13 +19,15 @@ p.add_argument('--baseline', type=Path)
 p.add_argument('--reference', type=Path, help='Independent Native capture when checking repeats')
 p.add_argument('--exact', action='store_true', help='Exact comparison for Native repeats')
 p.add_argument('--enumeration', action='store_true', help='Use the extended GetContacts reference')
+p.add_argument('--velocities', action='store_true', help='Use contact observation and update controls')
 p.add_argument('--output', type=Path, required=True)
 a = p.parse_args()
 try:
     cache_artifact_path(a.output)
 except ValueError as error:
     p.error(str(error))
-ref = a.reference or ROOT/'Reference'/('unity-'+a.release)/('enumeration.json.gz' if a.enumeration else 'public.json')
+if a.enumeration and a.velocities: p.error('Select one control set')
+ref = a.reference or ROOT/'Reference'/('unity-'+a.release)/('velocities.json' if a.velocities else 'enumeration.json.gz' if a.enumeration else 'public.json')
 tolerance = 0 if a.exact else 1e-3
 reference = c.load(ref)
 result = c.compare(reference, c.load(a.candidate), tolerance)

@@ -65,3 +65,38 @@ every live proxy and the complete star graph at all 48 simulation barriers.
 constraint's oriented body pair and point count, and all extra records. Explicit
 input poses bind identities; they do not order bodies or constraints. The
 existing lifetime probe's `verify_order.py` separately checks its 102 islands.
+
+`--velocities` covers a moving, rotating head-on contact, a four-body stack,
+mixed ordinary/continuous contacts and live continuity-mode changes. The
+canonical `velocities.json` has 18,129 indexed public values, independently
+recorded twice with exact agreement. `contact-updates.jsonl` has 200 exact
+pointer-normalized records of Native's actual update arrays and visits.
+These controls distinguish cached pre-solve points, separations and point
+velocities from updated normals and solved impulses, including getters called
+after editing body velocities without another simulation step. They also
+distinguish ordinary/sensor storage from the continuous-contact array and
+record contact removal/recreation without changing the oracle to fit an engine.
+
+Prepare mode's `--motion-witness` derives a private project from the existing
+motion probe, preserving its complete broad prefix and first bounce/stack
+cases. It uses the existing motion oracle rather than publishing a duplicate.
+Two Native recordings agreed on all 144,026 prefix values, 1,621 island inputs
+and 4,976 update records; the public prefix also agreed exactly with the existing
+motion oracle. `verify_witness_order.py` checks every one of the final 300 stack
+steps, including matching empty island lists after sleep. It derives the declared
+case boundary from the full Native update trace, retains every record in that
+interval and rejects extra records after the case. Native's one default static
+ground body and managed's static ground body are bound by their unique source
+role; their different body origins do not sort or relabel dynamic bodies.
+
+The optional Native `trace.py capture --queries --query-case mixed-continuous`
+hook records the actual scene pair vector read by body getters. Set
+`SOLVER_PAIR_VELOCITIES=1` and `DYNAMICS_TRACE_STORAGE=1` when using it with a
+prepared velocity project. `pair-vector.jsonl` contains all 85 records from the
+declared mixed case after two exact, bijective pointer-normalized recordings.
+The entire preceding scene history still runs. Source barriers temporarily set
+velocity iterations to 63/62 to delimit recording; no simulation runs at those
+values, and all 18,129 public observations remain exactly identical to the
+unmarked canonical capture. This avoids treating nondeterministic C++ component
+address reuse between destroyed test cases as a stable cross-case identity.
+The complete unmarked captures and their failed agreement report stay in cache.

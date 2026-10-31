@@ -23,7 +23,10 @@ p.add_argument('--project', default='native1', help='Prepared project label for 
 p.add_argument('--runtime', type=Path, help='Private frozen CLI and rebuilt managed directory')
 p.add_argument('--managed-trace', action='store_true', help='Record actual managed proxy IDs and edge order')
 p.add_argument('--enumeration', action='store_true', help='Run the independent public GetContacts controls')
+p.add_argument('--velocities', action='store_true', help='Record contact update order and reported velocities')
+p.add_argument('--motion-witness', action='store_true', help='Preserve the broad prefix through the first four-body motion stack')
 a = p.parse_args()
+if sum([a.enumeration, a.velocities, a.motion_witness]) > 1: p.error('Select one control set')
 os.environ['UNBOUND_PROBE_UNITY_VERSION'] = a.release
 work = a.work.resolve()
 try:
@@ -39,6 +42,13 @@ if a.mode == 'prepare':
         shutil.copytree(REPO/'tests/projects/physics'/folder, project/folder)
     for source in (ROOT/'Sources').glob('*.cs'):
         shutil.copy2(source, project/'Assets/Scripts'/source.name)
+    if a.motion_witness:
+        source = (ROOT.parent/'physics2dmotion/Sources/ProbeEntry.cs').read_text()
+        start = source.index('        foreach (var dt in new[]')
+        end = source.index('        File.WriteAllText(output, ProbeLog.Json());', start)
+        source = source[:start]+source[end:]
+        source = source.replace('new[] { "bounce", "stack", "kinematic" }', 'new[] { "bounce", "stack" }')
+        (project/'Assets/Scripts/ProbeEntry.cs').write_text(source)
     (project/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+a.release+'\n')
     inputs = {str(f.relative_to(project)): hashlib.sha256(f.read_bytes()).hexdigest()
               for d in ['Assets', 'Packages', 'ProjectSettings'] for f in sorted((project/d).rglob('*')) if f.is_file()}
@@ -48,8 +58,10 @@ elif a.mode == 'native':
     env = dict(os.environ, DYNAMICS_TRACE_STORAGE='1', UseSharedCompilation='false',
                MSBUILDDISABLENODEREUSE='1', DOTNET_CLI_USE_MSBUILD_SERVER='0')
     if a.enumeration: env['SOLVER_PAIR_ENUMERATION'] = '1'
+    if a.velocities: env['SOLVER_PAIR_VELOCITIES'] = '1'
     subprocess.run([sys.executable, str(ROOT.parent/'physics2ddynamics/trace.py'), 'capture',
-                    '--project', str(project), '--work', str(work/'traces'), '--label', a.label, '--pairs'], env=env, check=True)
+                    '--project', str(project), '--work', str(work/'traces'), '--label', a.label, '--pairs']+
+                   (['--updates'] if a.velocities or a.motion_witness else []), env=env, check=True)
 else:
     if not a.runtime: p.error('--runtime is required')
     project = work/('project-'+a.project)
@@ -61,6 +73,7 @@ else:
                LD_LIBRARY_PATH=str(runtime/'managed'), UseSharedCompilation='false',
                MSBUILDDISABLENODEREUSE='1', DOTNET_CLI_USE_MSBUILD_SERVER='0')
     if a.enumeration: env['SOLVER_PAIR_ENUMERATION'] = '1'
+    if a.velocities: env['SOLVER_PAIR_VELOCITIES'] = '1'
     if a.managed_trace:
         trace = work/(a.label+'-managed.jsonl')
         if trace.exists(): p.error('Refusing to overwrite '+str(trace))
