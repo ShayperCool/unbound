@@ -618,6 +618,11 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             })
             .to_string())
         }
+        "audio-mixer-group" => {
+            let group: crate::audio::effects::GroupSpec = serde_json::from_str(request)?;
+            s.audio.mixer().configure_group(group)?;
+            Ok("{}".to_owned())
+        }
         "audio-reset" => {
             let configuration: crate::audio::AudioConfiguration = serde_json::from_str(request)?;
             Ok(json!({ "ok": s.audio.reset(configuration) }).to_string())

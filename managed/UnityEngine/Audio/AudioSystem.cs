@@ -92,7 +92,7 @@ namespace Unbound.Runtime
         {
             if (!s_Groups.Contains(group)) s_Groups.Add(group);
             if (group.m_Mixer != null) Add(group.m_Mixer);
-            AudioBackend.Current.UpdateGroup(group.m_Handle, group.EffectiveGain(0), group.EffectivePitch(0));
+            AudioBackend.Current.UpdateGroup(group);
         }
 
         /// <summary>AudioSettings.Reset stopped every voice.</summary>
@@ -140,7 +140,7 @@ namespace Unbound.Runtime
                     s_Groups.RemoveAt(i);
                     continue;
                 }
-                backend.UpdateGroup(group.m_Handle, group.EffectiveGain(0), group.EffectivePitch(0));
+                backend.UpdateGroup(group);
             }
 
             for (int i = s_Loading.Count - 1; i >= 0; i--)

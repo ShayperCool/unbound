@@ -8,6 +8,7 @@
 //! changes do not click.
 use super::{
     fft,
+    effects::{GroupNode, GroupSpec},
     protocol::{
         AudioSourceCommand, AudioSourcePacket, AudioSourceState, Callback, callback, command,
         source_flags, voice_state,
@@ -290,6 +291,8 @@ pub struct Mixer {
     clips: HashMap<u64, Clip>,
     sources: HashMap<u64, Source>,
     groups: HashMap<u64, Group>,
+    group_nodes: HashMap<u64, GroupNode>,
+    group_order: Vec<u64>,
     pub listener: Listener,
     pub listener_volume: f32,
     pub listener_paused: bool,
@@ -317,6 +320,8 @@ impl Mixer {
             clips: HashMap::new(),
             sources: HashMap::new(),
             groups: HashMap::new(),
+            group_nodes: HashMap::new(),
+            group_order: Vec::new(),
             listener: Listener::default(),
             listener_volume: 1.0,
             listener_paused: false,
@@ -423,6 +428,39 @@ impl Mixer {
 
     pub fn update_group(&mut self, handle: u64, gain: f32, pitch: f32) {
         self.groups.insert(handle, Group { gain, pitch });
+    }
+
+    /// Updates routing and parameters without discarding the filters' delay lines.
+    pub fn configure_group(&mut self, spec: GroupSpec) -> anyhow::Result<()> {
+        for effect in &spec.effects {
+            anyhow::ensure!(matches!(effect.kind.as_str(), "Attenuation" | "Lowpass" | "Highpass") || effect.bypass || spec.bypass,
+                "unsupported AudioMixer effect '{}'", effect.kind);
+        }
+        let mut parent = spec.parent;
+        for _ in 0..=self.group_nodes.len() {
+            anyhow::ensure!(parent != spec.handle, "cyclic AudioMixer group routing");
+            parent = self.group_nodes.get(&parent).map_or(0, |n| n.spec.parent);
+            if parent == 0 { break; }
+        }
+        let handle = spec.handle;
+        if self.group_nodes.get(&handle).is_some_and(|node| node.spec == spec) { return Ok(()); }
+        let node = self.group_nodes.entry(handle).or_insert_with(|| GroupNode {
+            spec: spec.clone(), effects: Vec::new(), buffer: vec![0.0; BLOCK * 2],
+        });
+        node.update(spec, self.config.sample_rate);
+        // Children mix into parents. Stable order also makes independent sibling sums deterministic.
+        let depth = |h: u64| {
+            let mut d = 0;
+            let mut p = h;
+            while let Some(node) = self.group_nodes.get(&p) {
+                d += 1; p = node.spec.parent;
+                if p == 0 || d > self.group_nodes.len() { break; }
+            }
+            d
+        };
+        self.group_order = self.group_nodes.keys().copied().collect();
+        self.group_order.sort_by_key(|h| (std::cmp::Reverse(depth(*h)), *h));
+        Ok(())
     }
 
     pub fn command(&mut self, handle: u64, cmd: &AudioSourceCommand) {
@@ -669,6 +707,7 @@ impl Mixer {
         let config = self.config;
         let need_mix = !self.discard_output || self.listener_filter || self.listener_output_wanted;
         self.mix[..n * 2].fill(0.0);
+        for node in self.group_nodes.values_mut() { node.buffer[..n * 2].fill(0.0); }
 
         // Spatialize, then decide which voices are real: the most important `real_voices`.
         let mut playing: Vec<(u64, i32, f32)> = Vec::new();
@@ -714,6 +753,7 @@ impl Mixer {
             sources,
             clips,
             groups,
+            group_nodes,
             mix,
             source_buffer,
             ..
@@ -742,7 +782,8 @@ impl Mixer {
                 }),
             };
             let s = spatial[&handle];
-            let mut volume = source.params.volume.max(0.0) * group.gain;
+            let routed = group_nodes.contains_key(&source.params.group);
+            let mut volume = source.params.volume.max(0.0) * if routed { 1.0 } else { group.gain };
             if flags & source_flags::MUTE != 0 || !has_listener {
                 volume = 0.0;
             }
@@ -805,10 +846,22 @@ impl Mixer {
                 ring.push(buffer);
             }
             if need_mix || filter {
-                for (m, b) in mix[..n * 2].iter_mut().zip(buffer.iter()) {
-                    *m += *b;
-                }
+                let target = group_nodes.get_mut(&source.params.group)
+                    .map_or(&mut mix[..n * 2], |node| &mut node.buffer[..n * 2]);
+                for (m, b) in target.iter_mut().zip(buffer.iter()) { *m += *b; }
             }
+        }
+        for &handle in &self.group_order {
+            let node = self.group_nodes.get_mut(&handle).unwrap();
+            for effect in &mut node.effects { effect.process(&mut node.buffer[..n * 2], node.spec.bypass); }
+            if node.spec.muted { node.buffer[..n * 2].fill(0.0); }
+            let parent = node.spec.parent;
+            // Remove the buffer temporarily to borrow the parent without copying or allocating.
+            let buffer = std::mem::take(&mut node.buffer);
+            let target = self.group_nodes.get_mut(&parent)
+                .map_or(&mut self.mix[..n * 2], |node| &mut node.buffer[..n * 2]);
+            for (m, b) in target.iter_mut().zip(buffer.iter()) { *m += *b; }
+            self.group_nodes.get_mut(&handle).unwrap().buffer = buffer;
         }
         if self.listener_filter
             && has_listener
