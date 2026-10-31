@@ -29,9 +29,9 @@ public static class ProbeRunner
     }
     public static void Record()
     {
-        T("AudioMixerEffectDefinitions").GetMethod("Refresh", F).Invoke(null, null);
+        T("MixerEffectDefinitions").GetMethod("Refresh", F).Invoke(null, null);
         foreach (var name in new[] { "Lowpass", "Highpass" })
-            foreach (var definition in (Array)T("AudioMixerEffectDefinitions").GetMethod("GetEffectParameters", F).Invoke(null, new object[] { name }))
+            foreach (var definition in (Array)T("MixerEffectDefinitions").GetMethod("GetEffectParameters", F).Invoke(null, new object[] { name }))
                 Debug.Log(name + " parameter " + definition.GetType().GetField("name").GetValue(definition));
         Directory.CreateDirectory("Assets/Resources");
         foreach (var key in FilterProbe.Cases)
@@ -52,7 +52,7 @@ public static class ProbeRunner
                 if (key == "lp_hp" || key == "hp_lp") Effect(mixer, child, high ? "Lowpass" : "Highpass", 4000, 2);
                 if (key == "group_bypass") Set(child, "bypassEffects", true);
             }
-            if (key == "set_lp")
+            if (key == "set_lp" || key == "snapshot_lp")
             {
                 var exposed = new SerializedObject((UnityEngine.Object)mixer);
                 var parameters = exposed.FindProperty("m_ExposedParameters"); parameters.arraySize = 1;
