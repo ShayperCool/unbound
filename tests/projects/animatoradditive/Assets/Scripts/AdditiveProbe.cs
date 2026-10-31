@@ -138,6 +138,34 @@ public class AdditiveProbe : MonoBehaviour
             if (step == 0) animator.SetFloat("blend", 0.3f);
             if (step == 5) animator.SetFloat("blend", 0.8f);
         });
+        // Transitions between states with and without write defaults (both ways), in the base,
+        // an override and an additive layer, at full and half layer weight; to and from empty
+        // states also with the same write defaults. The ".poke" cases also set channels from a
+        // script in the first transition; the ".hold" cases stay longer in the base layer's empty state.
+        foreach (string kind in new[] { "Base", "Over", "Add" })
+        foreach (string empty in new[] { "", "Empty" })
+        foreach (string order in empty == "" ? new[] { "OnOff", "OffOn" } : new[] { "OnOff", "OffOn", "OnOn", "OffOff" })
+        {
+            string name = "Mix" + kind + empty + order;
+            foreach (float w in kind == "Base" ? new[] { 1f } : new[] { 1f, 0.5f })
+            foreach (string variant in new[] { "", ".poke", ".hold" })
+            {
+                bool poke = variant == ".poke", hold = variant == ".hold";
+                if ((poke && w != 1f) || (hold && (kind != "Base" || empty == ""))) continue;
+                Case(name.ToLowerInvariant() + (kind == "Base" ? "" : "." + F(w)) + variant, name, (animator, step) =>
+                {
+                    if (step == 0 && kind != "Base") animator.SetLayerWeight(1, w);
+                    if (step == 3) animator.SetBool("q", true);
+                    if (step == (hold ? 9 : 7)) animator.SetBool("q", false);
+                    if (poke && step == 4)
+                    {
+                        animator.transform.Find("C").localPosition = new Vector3(5, 5, 5);
+                        animator.transform.Find("A/B").localPosition = new Vector3(4, 4, 4);
+                        animator.GetComponent<AdditiveTarget>().g = 100f;
+                    }
+                });
+            }
+        }
 
         string output = Environment.GetEnvironmentVariable("ANIMATOR_ADDITIVE_OUT") ?? "/tmp/animatoradditive";
         Directory.CreateDirectory(Path.GetDirectoryName(Path.GetFullPath(output)));
