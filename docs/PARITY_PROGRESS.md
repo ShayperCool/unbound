@@ -1682,3 +1682,37 @@ Validation:
 
 Commands and Editor findings: tests/projects/inputframes/README.md. Captures, scratch variants and
 comparisons are in `~/.cache/unbound/validation/runs/inputframes/`.
+
+### Texture import: the Editor's mip, fill and resize arithmetic, 2026-10-31
+
+The remaining texture import differences (65 levels per profile, 33,614/33,614/33,513 bytes in
+Gamma/Linear/Android, 72/72/73 of them correct before the float mip chain) came from the
+importer's arithmetic, not from tolerances. Alpha dilation, mip halving, border mips, coverage
+preservation, per-level processing, the mip fade, bilinear halving and the stb resize were
+modelled against the saved 6000.0.71f1 references until every byte matched:
+
+- Alpha is transparency is a jump flood (4 neighbours at ±k, Manhattan distance, steps
+  min(max(w, h) / 2, 16) down to 1, bottom-up), not an average of neighbours; it runs whenever
+  the format stores alpha. Texels the flood does not reach keep their colour.
+- Preserve coverage bisects the alpha threshold against the level above (stopping within 0.5%)
+  and scales alpha by reference / threshold.
+- Box and Kaiser are float sums in a fixed order; a linear texture's first mip filters its
+  bytes (times 1/255); sRGB uses a float table and float gamma encode; odd levels use
+  16.16 fixed-point bilinear; flip green applies to each level after filtering; the fade is
+  float on the encoded level; normals from height follow a float formula that matches the references.
+- The Mitchell resize is stb_image_resize 0.97 on the bottom-up values (Mitchell to shrink,
+  cubic B-spline otherwise, the Editor's modified Mitchell for float images, row bands per job).
+
+The 72/72/73 regressed bytes were transparency-fill and rounding consequences of the earlier
+approximations; all are now exact. On the merged integration (texture cache VERSION 10):
+textureimport 484/484 levels and 1,172,940/1,172,940 bytes exact in every profile at tolerance
+0, zero introduced bytes. spriteimport stays 519/520 (the open Polygon physics shape); the
+`downscaled` texture's alpha now equals the Editor's pixel dump (16,384/16,384 in the model,
+550 differed before). modelimport Gamma/Linear 6032/6033 and URP 7011/7768 unchanged, zero
+introduced. Asset tests 71/71, runtime tests 38/38; API check zero errors in 2279 types, Physics
+and Editor generated files match. Unmeasured: the HDR resize kernel and band splits whose float
+mapping differs from the whole image's (none of the probe's sizes).
+
+The resize implementation currently derives its row-band split from available workers.
+Whether Editor worker settings change those bytes is under Native follow-up. Worker count
+is not yet a cache-key input; this possible cross-worker cache mismatch remains open.
