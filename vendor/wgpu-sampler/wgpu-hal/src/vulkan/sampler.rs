@@ -175,3 +175,19 @@ impl SamplerCache {
         }
     }
 }
+
+#[cfg(test)]
+#[test]
+fn native_lod_bias_has_distinct_cache_identity() {
+    use core::hash::{Hash, Hasher};
+    let original = HashableSamplerCreateInfo(vk::SamplerCreateInfo::default());
+    let biased = HashableSamplerCreateInfo(vk::SamplerCreateInfo::default().mip_lod_bias(-0.5));
+    assert!(original != biased);
+    let hash = |value: HashableSamplerCreateInfo| {
+        let mut h = std::collections::hash_map::DefaultHasher::new();
+        value.hash(&mut h);
+        h.finish()
+    };
+    assert_ne!(hash(original), hash(biased));
+    assert_eq!(hash(biased), hash(biased));
+}

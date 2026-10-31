@@ -470,6 +470,50 @@ pub struct CoreDevice {
     features: Features,
 }
 
+impl CoreDevice {
+    pub(crate) fn create_sampler_with_lod_bias(
+        &self,
+        desc: &crate::SamplerDescriptor<'_>,
+        lod_bias: f32,
+    ) -> dispatch::DispatchSampler {
+        let descriptor = wgc::resource::SamplerDescriptor {
+            label: desc.label.map(Borrowed),
+            address_modes: [
+                desc.address_mode_u,
+                desc.address_mode_v,
+                desc.address_mode_w,
+            ],
+            mag_filter: desc.mag_filter,
+            min_filter: desc.min_filter,
+            mipmap_filter: desc.mipmap_filter,
+            lod_min_clamp: desc.lod_min_clamp,
+            lod_max_clamp: desc.lod_max_clamp,
+            lod_bias,
+            compare: desc.compare,
+            anisotropy_clamp: desc.anisotropy_clamp,
+            border_color: desc.border_color,
+        };
+
+        let (id, error) = self
+            .context
+            .0
+            .device_create_sampler(self.id, &descriptor, None);
+        if let Some(cause) = error {
+            self.context.handle_error(
+                &self.error_sink,
+                cause,
+                desc.label,
+                "Device::create_sampler",
+            );
+        }
+        CoreSampler {
+            context: self.context.clone(),
+            id,
+        }
+        .into()
+    }
+}
+
 #[derive(Debug)]
 pub struct CoreBuffer {
     pub(crate) context: ContextWgpuCore,
@@ -1720,40 +1764,7 @@ impl dispatch::DeviceInterface for CoreDevice {
     }
 
     fn create_sampler(&self, desc: &crate::SamplerDescriptor<'_>) -> dispatch::DispatchSampler {
-        let descriptor = wgc::resource::SamplerDescriptor {
-            label: desc.label.map(Borrowed),
-            address_modes: [
-                desc.address_mode_u,
-                desc.address_mode_v,
-                desc.address_mode_w,
-            ],
-            mag_filter: desc.mag_filter,
-            min_filter: desc.min_filter,
-            mipmap_filter: desc.mipmap_filter,
-            lod_min_clamp: desc.lod_min_clamp,
-            lod_max_clamp: desc.lod_max_clamp,
-            compare: desc.compare,
-            anisotropy_clamp: desc.anisotropy_clamp,
-            border_color: desc.border_color,
-        };
-
-        let (id, error) = self
-            .context
-            .0
-            .device_create_sampler(self.id, &descriptor, None);
-        if let Some(cause) = error {
-            self.context.handle_error(
-                &self.error_sink,
-                cause,
-                desc.label,
-                "Device::create_sampler",
-            );
-        }
-        CoreSampler {
-            context: self.context.clone(),
-            id,
-        }
-        .into()
+        self.create_sampler_with_lod_bias(desc, 0.0)
     }
 
     fn create_query_set(&self, desc: &crate::QuerySetDescriptor<'_>) -> dispatch::DispatchQuerySet {

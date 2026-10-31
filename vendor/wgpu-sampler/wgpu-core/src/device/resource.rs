@@ -2254,6 +2254,17 @@ impl Device {
         desc: &resource::SamplerDescriptor,
     ) -> Result<Arc<Sampler>, resource::CreateSamplerError> {
         self.check_is_valid()?;
+        if desc.lod_bias != 0.0 {
+            #[cfg(vulkan)]
+            let limit = self
+                .raw()
+                .as_any()
+                .downcast_ref::<hal::vulkan::Device>()
+                .and_then(|device| device.sampler_lod_bias_limit());
+            #[cfg(not(vulkan))]
+            let limit: Option<f32> = None;
+            resource::validate_sampler_lod_bias(desc.lod_bias, limit)?;
+        }
 
         if desc
             .address_modes
@@ -2335,6 +2346,7 @@ impl Device {
             mag_filter: desc.mag_filter,
             min_filter: desc.min_filter,
             mipmap_filter: desc.mipmap_filter,
+            lod_bias: desc.lod_bias,
             lod_clamp: desc.lod_min_clamp..desc.lod_max_clamp,
             compare: desc.compare,
             anisotropy_clamp,

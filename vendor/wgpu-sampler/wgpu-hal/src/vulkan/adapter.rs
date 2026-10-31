@@ -2923,6 +2923,7 @@ impl super::Adapter {
             pipeline_cache_validation_key,
             vendor_id: self.phd_capabilities.properties.vendor_id,
             timestamp_period: self.phd_capabilities.properties.limits.timestamp_period,
+            max_sampler_lod_bias: self.phd_capabilities.properties.limits.max_sampler_lod_bias,
             private_caps: self.private_caps.clone(),
             features,
             workarounds: self.workarounds,

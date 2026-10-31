@@ -823,6 +823,19 @@ impl super::Device {
         self.shared.queue_index
     }
 
+    /// Portability-subset samplerMipLodBias is not enabled by this backend.
+    pub fn sampler_lod_bias_limit(&self) -> Option<f32> {
+        if self
+            .shared
+            .enabled_extensions
+            .contains(&ash::khr::portability_subset::NAME)
+        {
+            None
+        } else {
+            Some(self.shared.max_sampler_lod_bias)
+        }
+    }
+
     pub fn raw_device(&self) -> &ash::Device {
         &self.shared.raw
     }
@@ -1319,6 +1332,7 @@ impl crate::Device for super::Device {
             .address_mode_u(conv::map_address_mode(desc.address_modes[0]))
             .address_mode_v(conv::map_address_mode(desc.address_modes[1]))
             .address_mode_w(conv::map_address_mode(desc.address_modes[2]))
+            .mip_lod_bias(desc.lod_bias)
             .min_lod(desc.lod_clamp.start)
             .max_lod(desc.lod_clamp.end);
 

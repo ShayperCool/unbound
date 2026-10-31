@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = ["crates/*"]
+exclude = ["vendor/wgpu-sampler/wgpu", "vendor/wgpu-sampler/wgpu-core", "vendor/wgpu-sampler/wgpu-hal"]
 
 [workspace.package]
 version = "0.1.0"

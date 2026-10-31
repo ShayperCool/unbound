@@ -491,6 +491,29 @@ impl Device {
         Sampler { inner: sampler }
     }
 
+    /// Creates a native Vulkan sampler with a bias applied after derivative LOD calculation.
+    ///
+    /// The Core resource owns the sampler and its device, as with `create_sampler`.
+    /// Returns `None` on non-Core backends. Unsupported native backends, non-finite bias,
+    /// and bias outside the device limit produce the usual validation error.
+    #[must_use]
+    pub fn create_sampler_with_lod_bias(
+        &self,
+        desc: &SamplerDescriptor<'_>,
+        lod_bias: f32,
+    ) -> Option<Sampler> {
+        if lod_bias == 0.0 {
+            return Some(self.create_sampler(desc));
+        }
+        #[cfg(wgpu_core)]
+        if let Some(device) = self.inner.as_core_opt() {
+            return Some(Sampler {
+                inner: device.create_sampler_with_lod_bias(desc, lod_bias),
+            });
+        }
+        None
+    }
+
     /// Creates a new [`QuerySet`].
     #[must_use]
     pub fn create_query_set(&self, desc: &QuerySetDescriptor<'_>) -> QuerySet {

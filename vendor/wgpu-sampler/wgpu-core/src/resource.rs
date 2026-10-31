@@ -2250,6 +2250,9 @@ pub struct SamplerDescriptor<'a> {
     pub lod_min_clamp: f32,
     /// Maximum level of detail (i.e. mip level) to use
     pub lod_max_clamp: f32,
+    /// Native sampler bias. Ordinary WebGPU samplers use zero.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub lod_bias: f32,
     /// If this is enabled, this is a comparison sampler using the given comparison function.
     pub compare: Option<wgt::CompareFunction>,
     /// Must be at least 1. If this is not 1, all filter modes must be linear.
@@ -2311,6 +2314,10 @@ impl fmt::Debug for SamplerFilterErrorType {
 pub enum CreateSamplerError {
     #[error(transparent)]
     Device(#[from] DeviceError),
+    #[error("Nonzero native sampler LOD bias is unsupported on this backend/device")]
+    UnsupportedLodBias,
+    #[error("Invalid sampler LOD bias {bias}; it must be finite and within +/-{limit}")]
+    InvalidLodBias { bias: f32, limit: f32 },
     #[error("Invalid lodMinClamp: {0}. Must be greater or equal to 0.0")]
     InvalidLodMinClamp(f32),
     #[error("Invalid lodMaxClamp: {lod_max_clamp}. Must be greater or equal to lodMinClamp (which is {lod_min_clamp}).")]
@@ -2336,6 +2343,47 @@ pub enum CreateSamplerError {
     MissingFeatures(#[from] MissingFeatures),
 }
 
+/// Shared validation for the native extension. `None` means the backend does not support it.
+pub(crate) fn validate_sampler_lod_bias(
+    bias: f32,
+    limit: Option<f32>,
+) -> Result<(), CreateSamplerError> {
+    if !bias.is_finite() {
+        return Err(CreateSamplerError::InvalidLodBias {
+            bias,
+            limit: limit.unwrap_or(0.0),
+        });
+    }
+    if bias == 0.0 {
+        return Ok(());
+    }
+    let limit = limit.ok_or(CreateSamplerError::UnsupportedLodBias)?;
+    if bias.abs() > limit {
+        return Err(CreateSamplerError::InvalidLodBias { bias, limit });
+    }
+    Ok(())
+}
+
+#[cfg(test)]
+#[test]
+fn native_sampler_lod_bias_validation() {
+    assert!(validate_sampler_lod_bias(0.0, None).is_ok());
+    assert!(validate_sampler_lod_bias(-0.0, None).is_ok());
+    assert!(matches!(
+        validate_sampler_lod_bias(0.5, None),
+        Err(CreateSamplerError::UnsupportedLodBias)
+    ));
+    for value in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY, -4.01, 4.01] {
+        assert!(matches!(
+            validate_sampler_lod_bias(value, Some(4.0)),
+            Err(CreateSamplerError::InvalidLodBias { .. })
+        ));
+    }
+    for value in [-4.0, -0.5, 0.0, 0.5, 4.0] {
+        assert!(validate_sampler_lod_bias(value, Some(4.0)).is_ok());
+    }
+}
+
 crate::impl_resource_type!(Sampler);
 crate::impl_labeled!(Sampler);
 crate::impl_parent_device!(Sampler);
@@ -2348,7 +2396,9 @@ impl WebGpuError for CreateSamplerError {
             Self::Device(e) => e.webgpu_error_type(),
             Self::MissingFeatures(e) => e.webgpu_error_type(),
 
-            Self::InvalidLodMinClamp(_)
+            Self::UnsupportedLodBias
+            | Self::InvalidLodBias { .. }
+            | Self::InvalidLodMinClamp(_)
             | Self::InvalidLodMaxClamp { .. }
             | Self::InvalidAnisotropy(_)
             | Self::InvalidFilterModeWithAnisotropy { .. }

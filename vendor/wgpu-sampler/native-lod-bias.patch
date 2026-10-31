@@ -1,0 +1,330 @@
+--- a/wgpu/src/api/device.rs
++++ b/wgpu/src/api/device.rs
+@@ -491,6 +491,29 @@
+         Sampler { inner: sampler }
+     }
+ 
++    /// Creates a native Vulkan sampler with a bias applied after derivative LOD calculation.
++    ///
++    /// The Core resource owns the sampler and its device, as with `create_sampler`.
++    /// Returns `None` on non-Core backends. Unsupported native backends, non-finite bias,
++    /// and bias outside the device limit produce the usual validation error.
++    #[must_use]
++    pub fn create_sampler_with_lod_bias(
++        &self,
++        desc: &SamplerDescriptor<'_>,
++        lod_bias: f32,
++    ) -> Option<Sampler> {
++        if lod_bias == 0.0 {
++            return Some(self.create_sampler(desc));
++        }
++        #[cfg(wgpu_core)]
++        if let Some(device) = self.inner.as_core_opt() {
++            return Some(Sampler {
++                inner: device.create_sampler_with_lod_bias(desc, lod_bias),
++            });
++        }
++        None
++    }
++
+     /// Creates a new [`QuerySet`].
+     #[must_use]
+     pub fn create_query_set(&self, desc: &QuerySetDescriptor<'_>) -> QuerySet {
+--- a/wgpu/src/backend/wgpu_core.rs
++++ b/wgpu/src/backend/wgpu_core.rs
+@@ -468,6 +468,50 @@
+     id: wgc::id::DeviceId,
+     error_sink: ErrorSink,
+     features: Features,
++}
++
++impl CoreDevice {
++    pub(crate) fn create_sampler_with_lod_bias(
++        &self,
++        desc: &crate::SamplerDescriptor<'_>,
++        lod_bias: f32,
++    ) -> dispatch::DispatchSampler {
++        let descriptor = wgc::resource::SamplerDescriptor {
++            label: desc.label.map(Borrowed),
++            address_modes: [
++                desc.address_mode_u,
++                desc.address_mode_v,
++                desc.address_mode_w,
++            ],
++            mag_filter: desc.mag_filter,
++            min_filter: desc.min_filter,
++            mipmap_filter: desc.mipmap_filter,
++            lod_min_clamp: desc.lod_min_clamp,
++            lod_max_clamp: desc.lod_max_clamp,
++            lod_bias,
++            compare: desc.compare,
++            anisotropy_clamp: desc.anisotropy_clamp,
++            border_color: desc.border_color,
++        };
++
++        let (id, error) = self
++            .context
++            .0
++            .device_create_sampler(self.id, &descriptor, None);
++        if let Some(cause) = error {
++            self.context.handle_error(
++                &self.error_sink,
++                cause,
++                desc.label,
++                "Device::create_sampler",
++            );
++        }
++        CoreSampler {
++            context: self.context.clone(),
++            id,
++        }
++        .into()
++    }
+ }
+ 
+ #[derive(Debug)]
+@@ -1720,40 +1764,7 @@
+     }
+ 
+     fn create_sampler(&self, desc: &crate::SamplerDescriptor<'_>) -> dispatch::DispatchSampler {
+-        let descriptor = wgc::resource::SamplerDescriptor {
+-            label: desc.label.map(Borrowed),
+-            address_modes: [
+-                desc.address_mode_u,
+-                desc.address_mode_v,
+-                desc.address_mode_w,
+-            ],
+-            mag_filter: desc.mag_filter,
+-            min_filter: desc.min_filter,
+-            mipmap_filter: desc.mipmap_filter,
+-            lod_min_clamp: desc.lod_min_clamp,
+-            lod_max_clamp: desc.lod_max_clamp,
+-            compare: desc.compare,
+-            anisotropy_clamp: desc.anisotropy_clamp,
+-            border_color: desc.border_color,
+-        };
+-
+-        let (id, error) = self
+-            .context
+-            .0
+-            .device_create_sampler(self.id, &descriptor, None);
+-        if let Some(cause) = error {
+-            self.context.handle_error(
+-                &self.error_sink,
+-                cause,
+-                desc.label,
+-                "Device::create_sampler",
+-            );
+-        }
+-        CoreSampler {
+-            context: self.context.clone(),
+-            id,
+-        }
+-        .into()
++        self.create_sampler_with_lod_bias(desc, 0.0)
+     }
+ 
+     fn create_query_set(&self, desc: &crate::QuerySetDescriptor<'_>) -> dispatch::DispatchQuerySet {
+--- a/wgpu-core/src/device/resource.rs
++++ b/wgpu-core/src/device/resource.rs
+@@ -2254,6 +2254,17 @@
+         desc: &resource::SamplerDescriptor,
+     ) -> Result<Arc<Sampler>, resource::CreateSamplerError> {
+         self.check_is_valid()?;
++        if desc.lod_bias != 0.0 {
++            #[cfg(vulkan)]
++            let limit = self
++                .raw()
++                .as_any()
++                .downcast_ref::<hal::vulkan::Device>()
++                .and_then(|device| device.sampler_lod_bias_limit());
++            #[cfg(not(vulkan))]
++            let limit: Option<f32> = None;
++            resource::validate_sampler_lod_bias(desc.lod_bias, limit)?;
++        }
+ 
+         if desc
+             .address_modes
+@@ -2335,6 +2346,7 @@
+             mag_filter: desc.mag_filter,
+             min_filter: desc.min_filter,
+             mipmap_filter: desc.mipmap_filter,
++            lod_bias: desc.lod_bias,
+             lod_clamp: desc.lod_min_clamp..desc.lod_max_clamp,
+             compare: desc.compare,
+             anisotropy_clamp,
+--- a/wgpu-core/src/device/trace/record.rs
++++ b/wgpu-core/src/device/trace/record.rs
+@@ -987,6 +987,7 @@
+                 mipmap_filter: desc.mipmap_filter,
+                 lod_min_clamp: desc.lod_min_clamp,
+                 lod_max_clamp: desc.lod_max_clamp,
++                lod_bias: desc.lod_bias,
+                 compare: desc.compare,
+                 anisotropy_clamp: desc.anisotropy_clamp,
+                 border_color: desc.border_color,
+--- a/wgpu-core/src/resource.rs
++++ b/wgpu-core/src/resource.rs
+@@ -2250,6 +2250,9 @@
+     pub lod_min_clamp: f32,
+     /// Maximum level of detail (i.e. mip level) to use
+     pub lod_max_clamp: f32,
++    /// Native sampler bias. Ordinary WebGPU samplers use zero.
++    #[cfg_attr(feature = "serde", serde(default))]
++    pub lod_bias: f32,
+     /// If this is enabled, this is a comparison sampler using the given comparison function.
+     pub compare: Option<wgt::CompareFunction>,
+     /// Must be at least 1. If this is not 1, all filter modes must be linear.
+@@ -2311,6 +2314,10 @@
+ pub enum CreateSamplerError {
+     #[error(transparent)]
+     Device(#[from] DeviceError),
++    #[error("Nonzero native sampler LOD bias is unsupported on this backend/device")]
++    UnsupportedLodBias,
++    #[error("Invalid sampler LOD bias {bias}; it must be finite and within +/-{limit}")]
++    InvalidLodBias { bias: f32, limit: f32 },
+     #[error("Invalid lodMinClamp: {0}. Must be greater or equal to 0.0")]
+     InvalidLodMinClamp(f32),
+     #[error("Invalid lodMaxClamp: {lod_max_clamp}. Must be greater or equal to lodMinClamp (which is {lod_min_clamp}).")]
+@@ -2336,6 +2343,47 @@
+     MissingFeatures(#[from] MissingFeatures),
+ }
+ 
++/// Shared validation for the native extension. `None` means the backend does not support it.
++pub(crate) fn validate_sampler_lod_bias(
++    bias: f32,
++    limit: Option<f32>,
++) -> Result<(), CreateSamplerError> {
++    if !bias.is_finite() {
++        return Err(CreateSamplerError::InvalidLodBias {
++            bias,
++            limit: limit.unwrap_or(0.0),
++        });
++    }
++    if bias == 0.0 {
++        return Ok(());
++    }
++    let limit = limit.ok_or(CreateSamplerError::UnsupportedLodBias)?;
++    if bias.abs() > limit {
++        return Err(CreateSamplerError::InvalidLodBias { bias, limit });
++    }
++    Ok(())
++}
++
++#[cfg(test)]
++#[test]
++fn native_sampler_lod_bias_validation() {
++    assert!(validate_sampler_lod_bias(0.0, None).is_ok());
++    assert!(validate_sampler_lod_bias(-0.0, None).is_ok());
++    assert!(matches!(
++        validate_sampler_lod_bias(0.5, None),
++        Err(CreateSamplerError::UnsupportedLodBias)
++    ));
++    for value in [f32::NAN, f32::INFINITY, f32::NEG_INFINITY, -4.01, 4.01] {
++        assert!(matches!(
++            validate_sampler_lod_bias(value, Some(4.0)),
++            Err(CreateSamplerError::InvalidLodBias { .. })
++        ));
++    }
++    for value in [-4.0, -0.5, 0.0, 0.5, 4.0] {
++        assert!(validate_sampler_lod_bias(value, Some(4.0)).is_ok());
++    }
++}
++
+ crate::impl_resource_type!(Sampler);
+ crate::impl_labeled!(Sampler);
+ crate::impl_parent_device!(Sampler);
+@@ -2348,7 +2396,9 @@
+             Self::Device(e) => e.webgpu_error_type(),
+             Self::MissingFeatures(e) => e.webgpu_error_type(),
+ 
+-            Self::InvalidLodMinClamp(_)
++            Self::UnsupportedLodBias
++            | Self::InvalidLodBias { .. }
++            | Self::InvalidLodMinClamp(_)
+             | Self::InvalidLodMaxClamp { .. }
+             | Self::InvalidAnisotropy(_)
+             | Self::InvalidFilterModeWithAnisotropy { .. }
+--- a/wgpu-hal/src/lib.rs
++++ b/wgpu-hal/src/lib.rs
+@@ -2255,6 +2255,8 @@
+     pub min_filter: wgt::FilterMode,
+     pub mipmap_filter: wgt::MipmapFilterMode,
+     pub lod_clamp: Range<f32>,
++    /// Native Vulkan bias, validated by Core; zero on other backends.
++    pub lod_bias: f32,
+     pub compare: Option<wgt::CompareFunction>,
+     // Must in the range [1, 16].
+     //
+--- a/wgpu-hal/src/vulkan/adapter.rs
++++ b/wgpu-hal/src/vulkan/adapter.rs
+@@ -2923,6 +2923,7 @@
+             pipeline_cache_validation_key,
+             vendor_id: self.phd_capabilities.properties.vendor_id,
+             timestamp_period: self.phd_capabilities.properties.limits.timestamp_period,
++            max_sampler_lod_bias: self.phd_capabilities.properties.limits.max_sampler_lod_bias,
+             private_caps: self.private_caps.clone(),
+             features,
+             workarounds: self.workarounds,
+--- a/wgpu-hal/src/vulkan/device.rs
++++ b/wgpu-hal/src/vulkan/device.rs
+@@ -823,6 +823,19 @@
+         self.shared.queue_index
+     }
+ 
++    /// Portability-subset samplerMipLodBias is not enabled by this backend.
++    pub fn sampler_lod_bias_limit(&self) -> Option<f32> {
++        if self
++            .shared
++            .enabled_extensions
++            .contains(&ash::khr::portability_subset::NAME)
++        {
++            None
++        } else {
++            Some(self.shared.max_sampler_lod_bias)
++        }
++    }
++
+     pub fn raw_device(&self) -> &ash::Device {
+         &self.shared.raw
+     }
+@@ -1319,6 +1332,7 @@
+             .address_mode_u(conv::map_address_mode(desc.address_modes[0]))
+             .address_mode_v(conv::map_address_mode(desc.address_modes[1]))
+             .address_mode_w(conv::map_address_mode(desc.address_modes[2]))
++            .mip_lod_bias(desc.lod_bias)
+             .min_lod(desc.lod_clamp.start)
+             .max_lod(desc.lod_clamp.end);
+ 
+--- a/wgpu-hal/src/vulkan/mod.rs
++++ b/wgpu-hal/src/vulkan/mod.rs
+@@ -514,6 +514,7 @@
+     vendor_id: u32,
+     pipeline_cache_validation_key: [u8; 16],
+     timestamp_period: f32,
++    max_sampler_lod_bias: f32,
+     private_caps: PrivateCapabilities,
+     workarounds: Workarounds,
+     features: wgt::Features,
+--- a/wgpu-hal/src/vulkan/sampler.rs
++++ b/wgpu-hal/src/vulkan/sampler.rs
+@@ -175,3 +175,19 @@
+         }
+     }
+ }
++
++#[cfg(test)]
++#[test]
++fn native_lod_bias_has_distinct_cache_identity() {
++    use core::hash::{Hash, Hasher};
++    let original = HashableSamplerCreateInfo(vk::SamplerCreateInfo::default());
++    let biased = HashableSamplerCreateInfo(vk::SamplerCreateInfo::default().mip_lod_bias(-0.5));
++    assert!(original != biased);
++    let hash = |value: HashableSamplerCreateInfo| {
++        let mut h = std::collections::hash_map::DefaultHasher::new();
++        value.hash(&mut h);
++        h.finish()
++    };
++    assert_ne!(hash(original), hash(biased));
++    assert_eq!(hash(biased), hash(biased));
++}

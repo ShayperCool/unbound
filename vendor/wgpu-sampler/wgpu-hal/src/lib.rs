@@ -2255,6 +2255,8 @@ pub struct SamplerDescriptor<'a> {
     pub min_filter: wgt::FilterMode,
     pub mipmap_filter: wgt::MipmapFilterMode,
     pub lod_clamp: Range<f32>,
+    /// Native Vulkan bias, validated by Core; zero on other backends.
+    pub lod_bias: f32,
     pub compare: Option<wgt::CompareFunction>,
     // Must in the range [1, 16].
     //

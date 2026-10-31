@@ -514,6 +514,7 @@ struct DeviceShared {
     vendor_id: u32,
     pipeline_cache_validation_key: [u8; 16],
     timestamp_period: f32,
+    max_sampler_lod_bias: f32,
     private_caps: PrivateCapabilities,
     workarounds: Workarounds,
     features: wgt::Features,
