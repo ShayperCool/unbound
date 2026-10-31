@@ -27,6 +27,7 @@ pub mod serialized;
 pub mod serialized_mesh;
 pub mod serialized_texture;
 pub mod sprite;
+pub mod sprite_mesh;
 pub mod texture;
 
 pub use audio::{AudioImporter, AudioSettings, ImportedAudio};
