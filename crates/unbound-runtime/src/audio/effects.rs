@@ -1,5 +1,6 @@
-//! Persistent DSP on summed mixer groups. The measured built-in Lowpass is a fourth-order
-//! Butterworth cascade, while Highpass is second order. See tests/projects/mixerfilters.
+//! Persistent DSP on summed mixer groups. Native captures establish a fourth-order Butterworth
+//! response for Lowpass and a second-order response for Highpass. The lowpass cascade's startup
+//! modulation still differs; see tests/projects/mixerfilters for complete buffers and limits.
 use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
