@@ -15,6 +15,9 @@ RUNNER = Path.home()/'.cache/compat/with-heavy-job'
 if len(sys.argv)>1 and sys.argv[1]=='worker':
     output, name, seconds = Path(sys.argv[2]),sys.argv[3],float(sys.argv[4])
     kind = sys.argv[5]
+    assert os.environ['UseSharedCompilation']=='false'
+    assert os.environ['MSBUILDDISABLENODEREUSE']=='1'
+    assert os.environ['DOTNET_CLI_USE_MSBUILD_SERVER']=='0'
     if kind!='heavy':
         relative=Path('/proc/self/cgroup').read_text().split('::',1)[1].strip()
         group=Path('/sys/fs/cgroup')/relative.lstrip('/')
