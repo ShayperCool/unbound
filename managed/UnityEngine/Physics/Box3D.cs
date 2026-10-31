@@ -15,7 +15,7 @@ namespace Unbound.Box3D
         const string Library = "unbound_physx";
 
         /// <summary>The shim version this binding was written for.</summary>
-        internal const int Version = 6;
+        internal const int Version = 7;
 
         // The per-body accessors called every step are constant time, never block and never call
         // back into managed code: they skip the GC transition ([SuppressGCTransition]).
@@ -53,6 +53,16 @@ namespace Unbound.Box3D
             ContactEnd = 1,
             SensorBegin = 2,
             SensorEnd = 3,
+            ContactPersist = 4,
+        }
+
+        /// <summary>Creation-only DynamicsManager settings. Enum values match Unity's serialized
+        /// PGS/TGS, patch/one/two-directional friction, and kinematic pair-mode bits.</summary>
+        [StructLayout(LayoutKind.Sequential)]
+        internal struct SceneDef
+        {
+            internal int SolverType, FrictionType, ContactPairsMode;
+            internal int EnableEnhancedDeterminism, EnablePcm, ImprovedPatchFriction;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -186,7 +196,8 @@ namespace Unbound.Box3D
         [LibraryImport(Library)] internal static partial void ua3_settings(float contactOffset, float sleepThreshold, float maxDepenetration, float maxAngularVelocity, int positionIterations, int velocityIterations);
 
         // World.
-        [LibraryImport(Library)] internal static partial uint ua3_world_create(Vector3 gravity, float restitutionThreshold, float hitEventThreshold, int enableSleep);
+        [LibraryImport(Library)] internal static partial uint ua3_world_create(Vector3 gravity, float restitutionThreshold, float hitEventThreshold, int enableSleep, in SceneDef settings);
+        [LibraryImport(Library)] internal static partial void ua3_set_improved_patch_friction(int enabled);
         [LibraryImport(Library)] internal static partial void ua3_world_destroy(uint world);
         [LibraryImport(Library)] internal static partial void ua3_world_step(uint world, float timeStep, int subStepCount);
         [LibraryImport(Library)] internal static partial void ua3_world_set_gravity(uint world, Vector3 gravity);

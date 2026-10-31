@@ -1,0 +1,50 @@
+m_Gravity Vector3 
+m_Gravity.x Float 
+m_Gravity.y Float 
+m_Gravity.z Float 
+m_DefaultMaterial ObjectReference 
+m_BounceThreshold Float 
+m_DefaultMaxDepenetrationVelocity Float 
+m_SleepThreshold Float 
+m_DefaultContactOffset Float 
+m_DefaultSolverIterations Integer 6
+m_DefaultSolverVelocityIterations Integer 1
+m_QueriesHitBackfaces Boolean False
+m_QueriesHitTriggers Boolean True
+m_EnableAdaptiveForce Boolean False
+m_ClothInterCollisionDistance Float 
+m_ClothInterCollisionStiffness Float 
+m_SimulationMode Enum 0
+m_AutoSyncTransforms Boolean False
+m_ReuseCollisionCallbacks Boolean False
+m_InvokeCollisionCallbacks Boolean True
+m_ClothInterCollisionSettingsToggle Boolean False
+m_ClothGravity Vector3 
+m_ClothGravity.x Float 
+m_ClothGravity.y Float 
+m_ClothGravity.z Float 
+m_ContactPairsMode Enum 0
+m_BroadphaseType Enum 0
+m_WorldBounds Bounds 
+m_WorldBounds.m_Center Vector3 
+m_WorldBounds.m_Center.x Float 
+m_WorldBounds.m_Center.y Float 
+m_WorldBounds.m_Center.z Float 
+m_WorldBounds.m_Extent Vector3 
+m_WorldBounds.m_Extent.x Float 
+m_WorldBounds.m_Extent.y Float 
+m_WorldBounds.m_Extent.z Float 
+m_WorldSubdivisions Integer 8
+m_FrictionType Enum 0
+m_EnableEnhancedDeterminism Boolean True
+m_ImprovedPatchFriction Boolean False
+m_GenerateOnTriggerStayEvents Boolean True
+m_SolverType Enum 1
+m_DefaultMaxAngularSpeed Float 
+m_ScratchBufferChunkCount Integer 4
+m_CurrentBackendId Integer -222762491
+m_FastMotionThreshold Float 
+m_SceneBuffersReleaseInterval Integer 0
+m_ReleaseSceneBuffers Boolean False
+m_LogVerbosity Enum 3
+m_IncrementalStaticBroadphase Boolean True

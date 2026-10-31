@@ -31,6 +31,7 @@ namespace Unbound.Runtime
         static bool s_AttachmentDirty;
         static bool s_Stepping;
         static readonly List<Rigidbody> s_Rigidbodies = new List<Rigidbody>();
+        static readonly HashSet<Rigidbody> s_InitiallyKinematic = new HashSet<Rigidbody>();
         static readonly List<Collider> s_Colliders = new List<Collider>();
         static readonly Dictionary<ulong, Collider> s_ByShape = new Dictionary<ulong, Collider>();
 
@@ -56,8 +57,23 @@ namespace Unbound.Runtime
             Physics.EnsureSettings();
             B3.ua3_settings(Physics.s_DefaultContactOffset, Physics.s_SleepThreshold, Physics.s_DefaultMaxDepenetrationVelocity,
                 Physics.s_DefaultMaxAngularSpeed, Physics.s_DefaultSolverIterations, Physics.s_DefaultSolverVelocityIterations);
-            s_World = B3.ua3_world_create(Physics.s_Gravity, Mathf.Max(0f, Physics.s_BounceThreshold), 1f, 1);
+            var settings = new B3.SceneDef
+            {
+                SolverType = Physics.s_SolverType, FrictionType = Physics.s_FrictionType,
+                ContactPairsMode = Physics.s_ContactPairsMode,
+                EnableEnhancedDeterminism = Physics.s_EnableEnhancedDeterminism ? 1 : 0,
+                EnablePcm = Physics.s_EnablePcm ? 1 : 0,
+                ImprovedPatchFriction = Physics.s_ImprovedPatchFriction ? 1 : 0,
+            };
+            s_World = B3.ua3_world_create(Physics.s_Gravity, Mathf.Max(0f, Physics.s_BounceThreshold), 1f, 1, settings);
+            if (s_World == 0)
+                throw new InvalidOperationException($"Unbound: could not create the PhysX scene for DynamicsManager (solver type {settings.SolverType}, friction type {settings.FrictionType}, contact pairs mode {settings.ContactPairsMode})");
             EnsureRegistered();
+        }
+
+        internal static void SetImprovedPatchFriction(bool value)
+        {
+            if (s_World != 0) B3.ua3_set_improved_patch_friction(value ? 1 : 0);
         }
 
         internal static void EnsureRegistered()
@@ -81,6 +97,7 @@ namespace Unbound.Runtime
             if (s_World != 0) B3.ua3_world_destroy(s_World);
             s_World = 0;
             s_Rigidbodies.Clear();
+            s_InitiallyKinematic.Clear();
             s_Colliders.Clear();
             s_ByShape.Clear();
             s_Pairs.Clear();
@@ -121,6 +138,9 @@ namespace Unbound.Runtime
             EnsureWorld();
             if (rb.m_Registered) return;
             rb.m_Registered = true;
+            // Activation/import/cloning enters with the serialized type already set. Adding a
+            // component then setting isKinematic transitions after its shapes, as before.
+            if (rb.m_IsKinematic) s_InitiallyKinematic.Add(rb);
             s_Rigidbodies.Add(rb);
             rb.m_TransformVersion = -1;
             s_StructureDirty = true;
@@ -133,6 +153,7 @@ namespace Unbound.Runtime
             ReleaseJointsOf(rb);
             rb.m_Registered = false;
             s_Rigidbodies.Remove(rb);
+            s_InitiallyKinematic.Remove(rb);
             // Its colliders find another body (or become static) at the next flush.
             foreach (var c in s_Colliders)
             {
@@ -342,7 +363,7 @@ namespace Unbound.Runtime
             var def = new B3.BodyDef
             {
                 // Reactivated kinematic bodies enter the scene with their type already set.
-                Type = (int)(rb.m_HasCreatedBody ? rb.BodyType : B3.BodyType.Dynamic),
+                Type = (int)((s_InitiallyKinematic.Remove(rb) || rb.m_HasCreatedBody) ? rb.BodyType : B3.BodyType.Dynamic),
                 Position = position,
                 Rotation = rotation,
                 LinearVelocity = rb.m_PendingVelocity,
@@ -856,6 +877,7 @@ namespace Unbound.Runtime
             internal int Touching;
             internal bool IsTrigger;
             internal bool EnterPending, ExitPending;
+            internal bool ContactStayReported;
             /// <summary>B's velocity relative to A's before the step that made them touch.</summary>
             internal Vector3 EnterRelativeVelocity;
         }
@@ -891,10 +913,19 @@ namespace Unbound.Runtime
 
         static void CollectEvents()
         {
+            foreach (var pair in s_PairOrder) pair.ContactStayReported = false;
             Collect(B3.Events.ContactBegin, begin: true, trigger: false);
             Collect(B3.Events.SensorBegin, begin: true, trigger: true);
             Collect(B3.Events.ContactEnd, begin: false, trigger: false);
             Collect(B3.Events.SensorEnd, begin: false, trigger: true);
+            int count = ReadEvents(B3.Events.ContactPersist);
+            for (int i = 0; i < count; i++)
+            {
+                var e = s_EventBuffer[i];
+                var a = ColliderOf(e.A); var b = ColliderOf(e.B);
+                if (a != null && b != null && s_Pairs.TryGetValue(new PairKey(a, b), out var pair))
+                    pair.ContactStayReported = true;
+            }
         }
 
         static void Collect(B3.Events kind, bool begin, bool trigger)
@@ -919,14 +950,11 @@ namespace Unbound.Runtime
 
         static void Begin(Collider a, Collider b, bool trigger)
         {
-            // Unity's rules: triggers need a rigidbody on one side, collisions a dynamic one.
+            // The native scene filters contact pairs according to DynamicsManager. Enabled
+            // kinematic pairs report real contacts too; triggers still need a rigidbody.
             if (trigger)
             {
                 if (a.m_AttachedBody == null && b.m_AttachedBody == null && !(a is CharacterController) && !(b is CharacterController)) return;
-            }
-            else if (!IsDynamic(a) && !IsDynamic(b))
-            {
-                return;
             }
             var key = new PairKey(a, b);
             if (!s_Pairs.TryGetValue(key, out var pair))
@@ -984,7 +1012,8 @@ namespace Unbound.Runtime
                 pair.EnterPending = false;
                 pair.ExitPending = false;
                 if (enter) Send(pair, Phase.Enter);
-                else if (!exit && pair.Touching > 0 && (IsAwake(pair.A) || IsAwake(pair.B))) Send(pair, Phase.Stay);
+                else if (!exit && pair.Touching > 0 && (IsAwake(pair.A) || IsAwake(pair.B) ||
+                    (!pair.IsTrigger && !IsDynamic(pair.A) && !IsDynamic(pair.B) && pair.ContactStayReported))) Send(pair, Phase.Stay);
                 if (exit)
                 {
                     Send(pair, Phase.Exit);

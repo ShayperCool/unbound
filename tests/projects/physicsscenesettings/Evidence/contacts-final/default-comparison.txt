@@ -1,0 +1,13 @@
+pair/kd/True/activate/0/events: reference [0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0], candidate [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0]
+pair/kd/True/clone/0/events: reference [0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0], candidate [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0]
+pair/kd/True/fresh/0/events: reference [0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0], candidate [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0]
+pair/kk/True/activate/0/events: reference [0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0], candidate [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0]
+pair/kk/True/clone/0/events: reference [0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0], candidate [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0]
+pair/kk/True/fresh/0/events: reference [0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0], candidate [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0]
+pair/kk/True/fresh/1/events: reference [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0], candidate [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+pair/ks/True/activate/0/events: reference [0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0], candidate [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0]
+pair/ks/True/clone/0/events: reference [0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0], candidate [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0]
+pair/ks/True/fresh/0/events: reference [0, 0, 0, 1, 1, 0, 0, 0, 0, 1, 1, 0], candidate [0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0]
+pair/ks/True/fresh/1/events: reference [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0], candidate [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+288/299 records match; 11 differ; 0 motion differences
+12 motion records have rounding within the original tolerance; maximum absolute difference 3.224e-06

@@ -1,0 +1,2 @@
+582/582 records match; 0 differ; 0 solver motion differences
+6 solver motion records have rounding within the original tolerance; maximum absolute difference 6.15e-08

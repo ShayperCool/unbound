@@ -1,0 +1,14 @@
+2026-10-31T02:46:00.144433Z  INFO unbound_runtime::config: compiled 2 assemblies (0 compiled, 2 cached) in 157ms
+2026-10-31T02:46:00.158385Z  INFO unbound_runtime::config: prepared the game in 229.21ms
+2026-10-31T02:46:00.713470Z ERROR game: InvalidOperationException: Unbound: the unbound_physx library is version 6, the engine expects 7; rebuild with cargo build
+   at Unbound.Runtime.PhysicsWorld.EnsureWorld() in /mnt/data/t3-worktrees/unialt/t3-e1acb38a/managed/UnityEngine/Physics/PhysicsWorld.cs:line 56
+   at Unbound.Runtime.PhysicsWorld.Add(Collider c) in /mnt/data/t3-worktrees/unialt/t3-e1acb38a/managed/UnityEngine/Physics/PhysicsWorld.cs:line 171
+   at UnityEngine.Collider.OnEngineEnable() in /mnt/data/t3-worktrees/unialt/t3-e1acb38a/managed/UnityEngine/Physics/Collider.cs:line 64
+   at Unbound.Runtime.Lifecycle.SafeEngineEnable(Component c) in /mnt/data/t3-worktrees/unialt/t3-e1acb38a/managed/UnityEngine/Runtime/Lifecycle.cs:line 193
+2026-10-31T02:46:00.713722Z ERROR game: InvalidOperationException: Unbound: the unbound_physx library is version 6, the engine expects 7; rebuild with cargo build
+   at Unbound.Runtime.PhysicsWorld.EnsureWorld() in /mnt/data/t3-worktrees/unialt/t3-e1acb38a/managed/UnityEngine/Physics/PhysicsWorld.cs:line 56
+   at Unbound.Runtime.PhysicsWorld.Add(Rigidbody rb) in /mnt/data/t3-worktrees/unialt/t3-e1acb38a/managed/UnityEngine/Physics/PhysicsWorld.cs:line 138
+   at UnityEngine.Rigidbody.OnEngineEnable() in /mnt/data/t3-worktrees/unialt/t3-e1acb38a/managed/UnityEngine/Physics/Rigidbody.cs:line 78
+   at Unbound.Runtime.Lifecycle.SafeEngineEnable(Component c) in /mnt/data/t3-worktrees/unialt/t3-e1acb38a/managed/UnityEngine/Runtime/Lifecycle.cs:line 193
+2026-10-31T02:46:00.720534Z  INFO unbound_runtime::game: game started in 561.96ms
+2026-10-31T02:46:00.828374Z  INFO unbound_runtime::game: ran 2 frames in 107.71ms

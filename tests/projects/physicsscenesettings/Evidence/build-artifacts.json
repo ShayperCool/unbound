@@ -1,0 +1,20 @@
+{
+  "snapshot": {
+    "unbound": {
+      "sha256": "abb27a5462ec97e69488756a21862555b53ec88e9e73ac7d33265534695afeda",
+      "bytes": 491012080
+    },
+    "libunbound_physx.so": {
+      "sha256": "2cc074d574ac21a8d74f416a4165042891cf2eaf50d74dacb799e8a32e7e65c9",
+      "bytes": 6982320
+    }
+  },
+  "privatePhysX": {
+    "sha256": "8fcb0b9f7dd23e5d4e58468691639df3eea8ef97cfae2367e0859af02127e6a8",
+    "bytes": 6982432
+  },
+  "runtimeCommit": "cf233dd2",
+  "mainAbi": 5,
+  "physXShim": 7,
+  "shaderCache": 13
+}

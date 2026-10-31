@@ -46,7 +46,14 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 6
+#define UA3_VERSION 7
+
+struct ua3_scene_def
+{
+	int solverType, frictionType, contactPairsMode;
+	int enableEnhancedDeterminism, enablePcm, improvedPatchFriction;
+};
+static_assert( sizeof( ua3_scene_def ) == 24, "scene settings must match the managed binding" );
 
 // Vectors and quaternions cross the API as plain structs: PxVec3 and PxQuat have user-defined
 // copy constructors, which the C ABI passes by reference instead of in registers.
@@ -235,6 +242,16 @@ PxShape* shape_of( uint64_t id )
 // A material per (static friction, dynamic friction, bounce, combine modes); Unity's combine modes
 // are PhysX's (0 average, 1 minimum, 2 multiply, 3 maximum; of two the larger wins).
 std::map<std::tuple<float, float, float, int>, PxMaterial*> s_materials;
+bool s_improvedPatchFriction = false;
+
+void improved_patch_friction( bool enabled )
+{
+	s_improvedPatchFriction = enabled;
+	for ( const auto& entry : s_materials )
+	{
+		entry.second->setFlag( PxMaterialFlag::eIMPROVED_PATCH_FRICTION, enabled );
+	}
+}
 
 PxMaterial* material( float staticFriction, float dynamicFriction, float restitution, uint64_t modes )
 {
@@ -247,6 +264,7 @@ PxMaterial* material( float staticFriction, float dynamicFriction, float restitu
 	PxMaterial* m = s_physics->createMaterial( staticFriction, dynamicFriction, restitution );
 	m->setFrictionCombineMode( static_cast<PxCombineMode::Enum>( modes & 3 ) );
 	m->setRestitutionCombineMode( static_cast<PxCombineMode::Enum>( ( modes >> 2 ) & 3 ) );
+	m->setFlag( PxMaterialFlag::eIMPROVED_PATCH_FRICTION, s_improvedPatchFriction );
 	s_materials[key] = m;
 	return m;
 }
@@ -301,7 +319,7 @@ struct World
 	PxScene* scene = nullptr;
 	Events events;
 	Filter filter;
-	std::vector<ua3_pair> lists[4]; // contact begin, contact end, sensor begin, sensor end
+	std::vector<ua3_pair> lists[5]; // contact begin, contact end, sensor begin, sensor end, contact persist
 	std::set<std::pair<PxShape*, PxShape*>> ignores;
 	// The contact points of touching pairs this step.
 	std::map<std::pair<PxShape*, PxShape*>, std::vector<ua3_contact>> contacts;
@@ -353,6 +371,10 @@ void Events::onContact( const PxContactPairHeader& header, const PxContactPair* 
 		if ( reported && ( pair.events & PxPairFlag::eNOTIFY_TOUCH_LOST ) )
 		{
 			world->lists[1].push_back( { pack( a ), pack( b ) } );
+		}
+		if ( reported && ( pair.events & PxPairFlag::eNOTIFY_TOUCH_PERSISTS ) )
+		{
+			world->lists[4].push_back( { pack( a ), pack( b ) } );
 		}
 		if ( pair.events & PxPairFlag::eNOTIFY_TOUCH_LOST )
 		{
@@ -428,8 +450,8 @@ PxFilterFlags Filter::pairFound( PxU32, PxFilterObjectAttributes, PxFilterData, 
 }
 
 // Layers collide when each one's category is in the other's mask. Triggers report with any body
-// but another trigger; contacts need a dynamic body (kinematic and static pairs only touch
-// triggers), and report their points for collision messages.
+// but another trigger. The scene's kinematic pair filtering modes decide which non-dynamic
+// pairs reach this shader. Those pairs generate contacts and reports, without solver response.
 PxFilterFlags shader( PxFilterObjectAttributes attributes0, PxFilterData data0, PxFilterObjectAttributes attributes1,
 					  PxFilterData data1, PxPairFlags& pairFlags, const void*, PxU32 )
 {
@@ -449,12 +471,12 @@ PxFilterFlags shader( PxFilterObjectAttributes attributes0, PxFilterData data0, 
 	}
 	bool moving0 = PxGetFilterObjectType( attributes0 ) == PxFilterObjectType::eRIGID_DYNAMIC && !PxFilterObjectIsKinematic( attributes0 );
 	bool moving1 = PxGetFilterObjectType( attributes1 ) == PxFilterObjectType::eRIGID_DYNAMIC && !PxFilterObjectIsKinematic( attributes1 );
-	if ( !moving0 && !moving1 )
+	pairFlags = PxPairFlag::eDETECT_DISCRETE_CONTACT | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_LOST |
+				PxPairFlag::eNOTIFY_TOUCH_PERSISTS | PxPairFlag::eNOTIFY_CONTACT_POINTS;
+	if ( moving0 || moving1 )
 	{
-		return PxFilterFlag::eSUPPRESS;
+		pairFlags |= PxPairFlag::eSOLVE_CONTACT | PxPairFlag::eDETECT_CCD_CONTACT;
 	}
-	pairFlags = PxPairFlag::eCONTACT_DEFAULT | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_LOST |
-				PxPairFlag::eNOTIFY_TOUCH_PERSISTS | PxPairFlag::eNOTIFY_CONTACT_POINTS | PxPairFlag::eDETECT_CCD_CONTACT;
 	return ( data0.word2 | data1.word2 ) & FlagIgnores ? PxFilterFlag::eCALLBACK : PxFilterFlag::eDEFAULT;
 }
 
@@ -834,14 +856,27 @@ UA3_API void ua3_settings( float contactOffset, float sleepThreshold, float maxD
 
 // ----------------------------------------------------------------------------------- world
 
-UA3_API uint32_t ua3_world_create( ua3_vec3 gravityIn, float restitutionThreshold, float hitEventThreshold, int enableSleep )
+UA3_API void ua3_set_improved_patch_friction( int enabled )
+{
+	improved_patch_friction( enabled != 0 );
+}
+
+UA3_API uint32_t ua3_world_create( ua3_vec3 gravityIn, float restitutionThreshold, float hitEventThreshold, int enableSleep,
+								const ua3_scene_def* settings )
 {
 	PxVec3 gravity = gravityIn;
 	(void)hitEventThreshold;
+	if ( settings == nullptr || settings->solverType < 0 || settings->solverType > 1 ||
+		settings->frictionType < 0 || settings->frictionType > 2 || settings->contactPairsMode < 0 || settings->contactPairsMode > 3 )
+	{
+		std::fprintf( stderr, "Unbound: invalid DynamicsManager solver type, friction type or contact pairs mode\n" );
+		return 0;
+	}
 	if ( !sdk() )
 	{
 		return 0;
 	}
+	improved_patch_friction( settings->improvedPatchFriction != 0 );
 	World* world = new World();
 	world->events.world = world;
 	world->filter.world = world;
@@ -853,12 +888,14 @@ UA3_API uint32_t ua3_world_create( ua3_vec3 gravityIn, float restitutionThreshol
 	desc.filterCallback = &world->filter;
 	desc.simulationEventCallback = &world->events;
 	desc.bounceThresholdVelocity = restitutionThreshold;
-	desc.frictionType = PxFrictionType::ePATCH;
-	desc.solverType = PxSolverType::ePGS;
+	desc.frictionType = static_cast<PxFrictionType::Enum>( settings->frictionType );
+	desc.solverType = static_cast<PxSolverType::Enum>( settings->solverType );
 	desc.broadPhaseType = PxBroadPhaseType::eSAP;
-	desc.flags |= PxSceneFlag::eENABLE_CCD | PxSceneFlag::eENABLE_PCM;
-	desc.staticKineFilteringMode = PxPairFilteringMode::eKEEP;
-	desc.kineKineFilteringMode = PxPairFilteringMode::eKEEP;
+	desc.flags |= PxSceneFlag::eENABLE_CCD;
+	if ( !settings->enablePcm ) desc.flags &= ~PxSceneFlag::eENABLE_PCM;
+	if ( settings->enableEnhancedDeterminism ) desc.flags |= PxSceneFlag::eENABLE_ENHANCED_DETERMINISM;
+	desc.staticKineFilteringMode = settings->contactPairsMode & 2 ? PxPairFilteringMode::eKEEP : PxPairFilteringMode::eSUPPRESS;
+	desc.kineKineFilteringMode = settings->contactPairsMode & 1 ? PxPairFilteringMode::eKEEP : PxPairFilteringMode::eSUPPRESS;
 	world->scene = s_physics->createScene( desc );
 	if ( world->scene == nullptr )
 	{
@@ -979,7 +1016,7 @@ UA3_API void ua3_world_enable_sleeping( uint32_t id, int flag )
 UA3_API int ua3_world_events( uint32_t id, int kind, ua3_pair* out, int capacity )
 {
 	World* world = world_of( id );
-	if ( world == nullptr || kind < 0 || kind > 3 )
+	if ( world == nullptr || kind < 0 || kind > 4 )
 	{
 		return 0;
 	}
