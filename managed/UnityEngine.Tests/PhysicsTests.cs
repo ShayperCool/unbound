@@ -29,6 +29,16 @@ namespace UnityEngine.Tests
         void OnTriggerExit(Collider other) { log.Add("Exit"); }
     }
 
+    public class ContactPhaseRecorder3D : MonoBehaviour
+    {
+        public readonly List<string> log = new List<string>();
+        void OnCollisionEnter(Collision other) { log.Add("CE"); }
+        void OnCollisionExit(Collision other) { log.Add("CX"); }
+        void OnTriggerEnter(Collider other) { log.Add("TE"); }
+        void OnTriggerStay(Collider other) { log.Add("TS"); }
+        void OnTriggerExit(Collider other) { log.Add("TX"); }
+    }
+
     /// <summary>
     /// 3D physics: Box3D behind Unity's components. The world is global, so every test of the class
     /// runs alone (xunit runs a class's tests one after another) and destroys what it made.
@@ -248,6 +258,63 @@ namespace UnityEngine.Tests
                 Assert.Equal(Vector3.zero, rb.angularVelocity);
                 Assert.Equal(step == 2, rb.IsSleeping());
             }
+        }
+
+        [Fact]
+        public void TriggerConversionsKeepBothMessageKindsAndTriggerPairsReenter()
+        {
+            var a = Make("a", Vector3.zero); var b = Make("b", new Vector3(0.8f, 0f, 0f));
+            var ac = a.AddComponent<BoxCollider>(); var bc = b.AddComponent<BoxCollider>();
+            foreach (var go in new[] { a, b })
+            {
+                var rb = go.AddComponent<Rigidbody>();
+                rb.useGravity = false; rb.constraints = RigidbodyConstraints.FreezeAll; rb.sleepThreshold = 0f;
+            }
+            var ar = a.AddComponent<ContactPhaseRecorder3D>(); var br = b.AddComponent<ContactPhaseRecorder3D>();
+            void Step(params string[] expected)
+            {
+                ar.log.Clear(); br.log.Clear(); Physics.SyncTransforms(); Physics.Simulate(Dt);
+                Assert.Equal(expected, ar.log); Assert.Equal(expected, br.log);
+            }
+            Step("CE");
+            ac.isTrigger = true; Step("TE", "TS", "CX");
+            bc.isTrigger = true; Step("TS");
+            ac.isTrigger = false; Step("TS");
+            ac.isTrigger = true; bc.isTrigger = false; Step("TS");
+            bc.isTrigger = true; Step("TS");
+            b.transform.position = new Vector3(3f, 0f, 0f); Step("TX");
+            b.transform.position = new Vector3(0.8f, 0f, 0f); Step("TE", "TS");
+            ac.isTrigger = false; bc.isTrigger = false; Step("TX", "CE");
+            Physics.IgnoreCollision(ac, bc, true); Step("CX");
+            Physics.IgnoreCollision(ac, bc, false); Step("CE");
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void IgnoredTriggerPairsSurviveColliderAndGameObjectDeactivation(bool wholeObject)
+        {
+            var a = Make("a", Vector3.zero); var b = Make("b", new Vector3(0.8f, 0f, 0f));
+            var ac = a.AddComponent<BoxCollider>(); var bc = b.AddComponent<BoxCollider>();
+            ac.isTrigger = true;
+            foreach (var go in new[] { a, b })
+            {
+                var rb = go.AddComponent<Rigidbody>();
+                rb.useGravity = false; rb.constraints = RigidbodyConstraints.FreezeAll;
+            }
+            var ar = a.AddComponent<TriggerStepRecorder3D>(); var br = b.AddComponent<TriggerStepRecorder3D>();
+            Physics.SyncTransforms(); Physics.IgnoreCollision(ac, bc, true);
+            Physics.Simulate(Dt);
+            Assert.Empty(ar.log); Assert.Empty(br.log);
+            if (wholeObject) a.SetActive(false); else ac.enabled = false;
+            Assert.True(Physics.GetIgnoreCollision(ac, bc));
+            if (wholeObject) a.SetActive(true); else ac.enabled = true;
+            Assert.True(Physics.GetIgnoreCollision(ac, bc));
+            Physics.Simulate(Dt);
+            Assert.Empty(ar.log); Assert.Empty(br.log);
+            Physics.IgnoreCollision(ac, bc, false); Physics.Simulate(Dt);
+            Assert.Equal(new[] { "Enter", "Stay" }, ar.log);
+            Assert.Equal(ar.log, br.log);
         }
 
         [Fact]

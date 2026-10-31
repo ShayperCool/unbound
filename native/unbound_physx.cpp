@@ -46,7 +46,7 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 7
+#define UA3_VERSION 8
 
 struct ua3_scene_def
 {
@@ -449,8 +449,8 @@ PxFilterFlags Filter::pairFound( PxU32, PxFilterObjectAttributes, PxFilterData, 
 	return PxFilterFlag::eDEFAULT;
 }
 
-// Layers collide when each one's category is in the other's mask. Triggers report with any body
-// but another trigger. The scene's kinematic pair filtering modes decide which non-dynamic
+// Layers collide when each one's category is in the other's mask. Trigger pairs include
+// trigger/trigger overlaps. The scene's kinematic pair filtering modes decide which non-dynamic
 // pairs reach this shader. Those pairs generate contacts and reports, without solver response.
 PxFilterFlags shader( PxFilterObjectAttributes attributes0, PxFilterData data0, PxFilterObjectAttributes attributes1,
 					  PxFilterData data1, PxPairFlags& pairFlags, const void*, PxU32 )
@@ -462,10 +462,6 @@ PxFilterFlags shader( PxFilterObjectAttributes attributes0, PxFilterData data0, 
 	bool trigger0 = PxFilterObjectIsTrigger( attributes0 ), trigger1 = PxFilterObjectIsTrigger( attributes1 );
 	if ( trigger0 || trigger1 )
 	{
-		if ( trigger0 && trigger1 )
-		{
-			return PxFilterFlag::eSUPPRESS;
-		}
 		pairFlags = PxPairFlag::eTRIGGER_DEFAULT;
 		return ( data0.word2 | data1.word2 ) & FlagIgnores ? PxFilterFlag::eCALLBACK : PxFilterFlag::eDEFAULT;
 	}
@@ -515,7 +511,9 @@ void refilter( PxShape* shape )
 	PxRigidActor* actor = shape->getActor();
 	if ( actor != nullptr && actor->getScene() != nullptr )
 	{
-		actor->getScene()->resetFiltering( *actor, &shape, 1 );
+		// Reevaluate the existing overlap, including trigger Exit/Enter when an
+		// ignored pair changes. resetFiltering removes its broadphase volume.
+		shape->setSimulationFilterData( shape->getSimulationFilterData() );
 	}
 }
 
@@ -1702,6 +1700,34 @@ UA3_API uint64_t ua3_shape_height_field_scaled( uint64_t body, const ua3_shape_d
 	PxHeightField* hf = const_cast<PxHeightField*>( static_cast<const PxHeightField*>( heightField ) );
 	PxHeightFieldGeometry geometry( hf, PxMeshGeometryFlags(), heightScale, rowScale, columnScale );
 	return attach( body, def, geometry, PxTransform( offset ) );
+}
+
+UA3_API void ua3_shape_update_box( uint64_t id, const ua3_shape_def* def, ua3_vec3 centerIn, ua3_quat rotationIn, ua3_vec3 halfExtentsIn )
+{
+	PxShape* shape = shape_of( id );
+	if ( !shape ) return;
+	shape->setGeometry( PxBoxGeometry( halfExtentsIn ) );
+	PxQuat rotation = rotationIn;
+	shape->setLocalPose( PxTransform( centerIn, rotation.getNormalized() ) );
+	PxMaterial* m = material( def->staticFriction, def->friction, def->restitution, def->material );
+	shape->setMaterials( &m, 1 );
+	shape->setContactOffset( def->contactOffset );
+	PxShapeFlags flags = PxShapeFlag::eSCENE_QUERY_SHAPE | PxShapeFlag::eVISUALIZATION;
+	flags |= def->isSensor ? PxShapeFlag::eTRIGGER_SHAPE : PxShapeFlag::eSIMULATION_SHAPE;
+	shape->setFlags( flags );
+	ShapeInfo* i = info( shape );
+	i->density = def->density;
+	i->contactEvents = def->enableContactEvents != 0;
+	i->sensorEvents = def->enableSensorEvents != 0;
+	PxFilterData before = shape->getSimulationFilterData();
+	PxFilterData after = before;
+	after.word0 = static_cast<PxU32>( def->categoryBits );
+	after.word1 = static_cast<PxU32>( def->maskBits );
+	shape->setSimulationFilterData( after );
+	set_filter_flags( shape );
+	shape->setQueryFilterData( query_data( after.word0, shape->getActor(), def->isSensor != 0 ) );
+	after = shape->getSimulationFilterData();
+	if ( before.word0 != after.word0 || before.word1 != after.word1 || before.word2 != after.word2 ) refilter( shape );
 }
 
 UA3_API void ua3_shape_destroy( uint64_t id, int updateBodyMass )

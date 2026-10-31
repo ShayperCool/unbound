@@ -644,6 +644,7 @@ namespace UnityEngine
 
         public void AddForce(Vector3 force, [Internal.DefaultValue("ForceMode.Force")] ForceMode mode)
         {
+            EnsureMass();
             var body = Body;
             if (body == 0 || m_IsKinematic || !IsFinite(force)) return;
             switch (mode)
@@ -681,6 +682,7 @@ namespace UnityEngine
 
         public void AddTorque(Vector3 torque, [Internal.DefaultValue("ForceMode.Force")] ForceMode mode)
         {
+            EnsureMass();
             var body = Body;
             if (body == 0 || m_IsKinematic || !IsFinite(torque)) return;
             switch (mode)
@@ -719,6 +721,7 @@ namespace UnityEngine
 
         public void AddForceAtPosition(Vector3 force, Vector3 position, [Internal.DefaultValue("ForceMode.Force")] ForceMode mode)
         {
+            EnsureMass();
             var body = Body;
             if (body == 0 || m_IsKinematic || !IsFinite(force)) return;
             switch (mode)

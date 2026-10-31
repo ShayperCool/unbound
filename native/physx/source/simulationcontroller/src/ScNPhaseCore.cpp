@@ -476,12 +476,9 @@ static PxFilterInfo filterRbCollisionPair(const FilteringContext& context, const
 	const PxU32 trigger0 = s0.getFlags() & PxShapeFlag::eTRIGGER_SHAPE;
 	const PxU32 trigger1 = s1.getFlags() & PxShapeFlag::eTRIGGER_SHAPE;
 	isTriggerPair = (trigger0 | trigger1)!=0;
-	if(isTriggerPair)
-	{
-		if(trigger0 && trigger1)	// // trigger-trigger pairs are not supported
-			return filterOutRbCollisionPair(context.mFilterPairManager, filterPairIndex, PxFilterFlag::eKILL);
-	}
-	else
+	// Unity also reports overlapping trigger/trigger pairs. Keeping the interaction
+	// lets a flags-only role change retain overlap state (measured by the lifecycle probe).
+	if(!isTriggerPair)
 	{
 		const bool kine0 = b0 ? b0->isKinematic() : false;
 		const bool kine1 = b1 ? b1->isKinematic() : false;
@@ -795,7 +792,9 @@ Sc::ElementSimInteraction* Sc::NPhaseCore::createRbElementInteraction(ShapeSim& 
 	const FilteringContext context(mOwnerScene, mFilterPairManager);
 
 	bool isTriggerPair = false;
-	const PxFilterInfo finfo = filterRbCollisionPair(context, s0, s1, INVALID_FILTER_PAIR_INDEX, isTriggerPair, false);
+	// Trigger overlaps are created on the stepping thread. Evaluate pair callbacks
+	// here too, so ignored pairs stay suppressed when a collider is re-enabled.
+	const PxFilterInfo finfo = filterRbCollisionPair(context, s0, s1, INVALID_FILTER_PAIR_INDEX, isTriggerPair, true);
 
 	if(finfo.filterFlags & PxFilterFlag::eKILL)
 	{
