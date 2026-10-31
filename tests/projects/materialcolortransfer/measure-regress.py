@@ -19,6 +19,7 @@ for name,_,_,_ in checks:
  def hashes(root):return {str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file()}
  a=hashes(w/'regress-before'/('builtinrp-correct' if name=='builtinrp' else name));b=hashes(w/'regress-final'/name);changed=sorted(k for k in a.keys()|b.keys() if a.get(k)!=b.get(k))
  summary.append(f'{name}: {len(a)} files; changed: {changed}')
+ if name=='uitk' and changed:errors.append('uitk captures changed')
 result=subprocess.run([sys.executable,str(p/'uitk/compare.py'),str(w/'regress-before/uitk/unbound.jsonl'),str(w/'regress-final/uitk/unbound.jsonl')],capture_output=True,text=True)
 (e/'uitk-before-final.txt').write_text(result.stdout+result.stderr)
 summary.append(f'uitk independent before/final comparison exit {result.returncode}\n'+result.stdout)
