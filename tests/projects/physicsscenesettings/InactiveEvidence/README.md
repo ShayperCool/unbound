@@ -109,3 +109,29 @@ Serialized inactive objects edited before their first physics read, parented clo
 pose initialization and older releases are outside the added Native measurements.
 The parent owns the final integrated API check and shared documentation. These
 results certify the measured cases, not full engine parity.
+
+## Parent integration
+
+The parent integrated this change with the separate 2D timing fix, then added
+Native-first clone-placement controls before accepting the combined runtime.
+They exposed ten newly failing keys in the inactive-only candidate. The parent
+fixed initial body-pose capture after placement and the existing no-parent clone
+placement behavior. A further Canvas regression caught overwritten copied
+RectTransform anchors; the final correction restores all 8671 observations.
+See `../ClonePlacementEvidence/README.md` for the complete rejected and accepted
+controls. Historical evidence above remains unchanged.
+
+Final fresh parent verification passes 1050 inactive, 4668 sequence and 172 added
+clone records exactly; active20700 and every long/SDK control also remain exact.
+All 21 matrix files pass 5055/5055 and remain byte-identical to SDK8 acceptance.
+Tests pass 353/353 and API-check reports zero errors in 2266 types. Graphics80,
+Canvas8671 and messages316 pass; lifecycle is Native-byte-identical. Broad physics
+retains the current 131 2D differences after the separate timing fix, with the
+same 376 timing/order differences. Existing regression gates pass unchanged.
+
+Parent captures, logs, artifact/source hashes and full retained failures are in
+`ParentIntegration/summary.json`. Set INACTIVE_PARENT_WORK to a fresh parent
+capture directory and run `ParentIntegration/verify.py` to validate and archive
+those results. The exact engine driver is archived under
+`ParentIntegration/accepted/validation/validate-final.py`; its environment uses
+the same explicit output paths and heavy-job wrapper as the delegate.
