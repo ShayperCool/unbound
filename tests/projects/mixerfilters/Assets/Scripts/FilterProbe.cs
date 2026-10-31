@@ -210,4 +210,3 @@ public class EngineListenerCapture : MonoBehaviour
     public FilterProbe Probe;
     void OnAudioFilterRead(float[] data, int channels) => Probe.RecordEngine(data);
 }
-
