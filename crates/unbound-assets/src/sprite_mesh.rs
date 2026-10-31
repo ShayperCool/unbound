@@ -1330,3 +1330,101 @@ mod tess {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn image(w: usize, h: usize, f: impl Fn(usize, usize) -> bool) -> Vec<u8> {
+        (0..w * h)
+            .map(|i| if f(i % w, i / w) { 255 } else { 0 })
+            .collect()
+    }
+
+    fn circle(cx: f32, cy: f32, r: f32) -> impl Fn(usize, usize) -> bool {
+        move |x, y| {
+            let (dx, dy) = (x as f32 + 0.5 - cx, y as f32 + 0.5 - cy);
+            dx * dx + dy * dy <= r * r
+        }
+    }
+
+    fn mesh(alpha: &[u8], w: usize, h: usize, extrude: u32) -> (Vec<[f32; 2]>, Vec<u16>) {
+        let image = Alpha {
+            width: w,
+            height: h,
+            alpha,
+        };
+        let (v, mut t) = make_shape(&image, -1.0, 0, true, extrude).triangulate(true);
+        t.reverse();
+        (v, t)
+    }
+
+    // The values below are the Editor's (SpriteUtility.GenerateOutline and Sprite.Create).
+    #[test]
+    fn circle_outline_and_mesh() {
+        let alpha = image(128, 128, circle(64.0, 64.0, 20.0));
+        let image = Alpha {
+            width: 128,
+            height: 128,
+            alpha: &alpha,
+        };
+        let outline: Vec<Vec<[f32; 2]>> = make_shape(&image, 1.0, 0, true, 1)
+            .outlines()
+            .into_iter()
+            .map(|p| p.into_iter().map(|v| [v[0] - 64.0, v[1] - 64.0]).collect())
+            .collect();
+        assert_eq!(
+            outline,
+            vec![vec![
+                [-22.0, -17.0],
+                [-16.0, -22.0],
+                [16.0, -22.0],
+                [22.0, -19.0],
+                [22.0, 10.0],
+                [16.0, 22.0],
+                [-16.0, 22.0],
+                [-22.0, 14.0]
+            ]]
+        );
+        let (v, t) = mesh(&alpha, 128, 128, 1);
+        assert_eq!(
+            v,
+            [
+                [80.0, 86.0],
+                [86.0, 45.0],
+                [86.0, 74.0],
+                [80.0, 42.0],
+                [48.0, 86.0],
+                [48.0, 42.0],
+                [42.0, 78.0],
+                [42.0, 47.0]
+            ]
+        );
+        assert_eq!(t, [7, 6, 5, 4, 5, 6, 3, 5, 4, 0, 3, 4, 1, 3, 0, 2, 1, 0]);
+    }
+
+    #[test]
+    fn extrude_grows_by_manhattan_distance() {
+        let alpha = image(32, 32, |x, y| {
+            (12..15).contains(&x) && (12..17).contains(&y)
+        });
+        let (v, t) = mesh(&alpha, 32, 32, 4);
+        assert_eq!(
+            v,
+            [
+                [15.0, 22.0],
+                [20.0, 12.0],
+                [20.0, 17.0],
+                [15.0, 7.0],
+                [12.0, 22.0],
+                [12.0, 7.0],
+                [7.0, 17.0],
+                [7.0, 12.0]
+            ]
+        );
+        assert_eq!(t, [7, 6, 5, 4, 5, 6, 3, 5, 4, 0, 3, 4, 1, 3, 0, 2, 1, 0]);
+        let (v, t) = mesh(&alpha, 32, 32, 1);
+        assert_eq!(v, [[10.0, 19.0], [17.0, 10.0], [17.0, 19.0], [10.0, 10.0]]);
+        assert_eq!(t, [3, 0, 1, 2, 1, 0]);
+    }
+}
