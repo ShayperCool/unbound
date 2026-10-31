@@ -5,7 +5,7 @@ import json
 import math
 from pathlib import Path
 
-MISSING = {'missing': True}
+MISSING = object()
 
 
 def compare(reference, candidate):
@@ -15,7 +15,10 @@ def compare(reference, candidate):
     count = 0
     def visit(x, y, key, physical=False):
         nonlocal count
-        if isinstance(x, dict) and isinstance(y, dict):
+        if x is MISSING or y is MISSING:
+            count += 1
+            failures.append({'key': key, 'reference': {'missing': True} if x is MISSING else x, 'candidate': {'missing': True} if y is MISSING else y})
+        elif isinstance(x, dict) and isinstance(y, dict):
             for k in sorted(x.keys() | y.keys()):
                 visit(x.get(k, MISSING), y.get(k, MISSING), key + '/' + k, k == 'values')
         elif isinstance(x, list) and isinstance(y, list):

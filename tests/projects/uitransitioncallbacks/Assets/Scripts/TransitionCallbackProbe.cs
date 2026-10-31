@@ -59,6 +59,18 @@ public class TransitionCallbackProbe : MonoBehaviour
                 a.AddToClassList("third"); b.AddToClassList("third");
                 Tick(250); Tick(500); Tick(1000); Tick(1250); Tick(1500); Done();
             }
+            // Unlike reversing class assignment order before one style pass, these start actual
+            // animation groups on separate updates and distinguish per-type owner registration.
+            foreach (bool otherFirst in new[] { false, true })
+            {
+                Setup("stagger/" + otherFirst, false, false);
+                Configure(a, "width, opacity"); Configure(b, "width, opacity"); Update(); events.Clear();
+                var first = otherFirst ? b : a; var second = otherFirst ? a : b;
+                first.style.width = 300; Tick(0);
+                second.style.opacity = 0; Tick(0);
+                first.style.opacity = 0; second.style.width = 300;
+                Tick(0); Tick(250); Tick(500); Tick(1000); Tick(1250); Done();
+            }
             foreach (string kind in new[] { "run", "start", "cancel", "end" })
             foreach (string mutation in new[] { "self", "other", "reverse", "properties", "detach-self", "detach-other", "reparent", "clear", "register", "unregister", "layout" })
             {
