@@ -277,6 +277,29 @@ namespace UnityEngine.Tests
             finally { Time.maximumParticleDeltaTime = saved; Object.DestroyImmediate(ps.gameObject); }
         }
 
+        [Fact]
+        public void DurationBoundaryBirthSamplesTheNextLoopsStartCurves()
+        {
+            // Native broad reference start_curves/10; the particle born at duration one
+            // samples the next loop's first subdivision, rather than its old loop's end.
+            var ps = Make(true, 1, true);
+            try
+            {
+                var main = ps.main;
+                main.startSpeed = new ParticleSystem.MinMaxCurve(4, AnimationCurve.Linear(0, 0, 1, 1));
+                main.startSize = new ParticleSystem.MinMaxCurve(2, AnimationCurve.Linear(0, 1, 1, .25f));
+                main.startLifetime = new ParticleSystem.MinMaxCurve(1.537f, AnimationCurve.Linear(0, .5f, 1, 1));
+                var emission = ps.emission; emission.rateOverTime = 10;
+                for (int i = 0; i < 11; i++) ps.Simulate(.1f, false, i == 0, false);
+                var particles = new ParticleSystem.Particle[16];
+                Assert.Equal(9, ps.GetParticles(particles));
+                Assert.InRange(particles[8].startLifetime, .787712157f - 2e-4f, .787712157f + 2e-4f);
+                Assert.InRange(particles[8].startSize, 1.96250057f - 2e-4f, 1.96250057f + 2e-4f);
+                Assert.InRange(particles[8].velocity.z, -2e-4f, 2e-4f);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
         public static IEnumerable<object[]> PlaybackStates()
         {
             foreach (bool enabled in new[] { false, true })
