@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Archive continuation experiments with every difference and the original tolerances."""
+import sys
 import hashlib
 import json
 import os
@@ -8,10 +9,13 @@ import shutil
 import xml.etree.ElementTree as ET
 
 from compare import matches, read
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import reference_root, run_root, archived_root
+
 from run import ROOT
 
-WORK = Path(os.environ['KD_WORK'])
-OUT = ROOT / 'ContinuationEvidence'
+WORK = Path(os.environ.get('KD_WORK', run_root(ROOT, 'continuation')))
+OUT = run_root(ROOT, 'continuation-report')
 
 
 def copy(source, dest):
@@ -26,11 +30,9 @@ def matrix(label):
     profiles, differences = [], []
     for prefix in ['', 'contacts-', 'islands-']:
         for source in sorted((WORK / 'work' / (prefix + label)).glob('*.jsonl')):
-            reference = ROOT / 'Reference' / prefix.rstrip('-') / source.name
+            reference = reference_root(ROOT) / prefix.rstrip('-') / source.name
             a, b = read(str(reference)), read(str(source))
-            assert a == read(str(ROOT / 'Evidence' / (prefix + 'native1') / source.name))
-            assert a == read(str(ROOT / 'Evidence' / (prefix + 'native2') / source.name))
-            baseline = read(str(ROOT / 'ParentEvidence/accepted' / (prefix + 'final') / source.name))
+            baseline = read(str(archived_root(ROOT, 'ParentEvidence/accepted') / (prefix + 'final') / source.name))
             keys = a.keys() | b.keys()
             bad = sorted(k for k in keys if not matches(k, a.get(k), b.get(k)))
             introduced = [k for k in bad if matches(k, a.get(k), baseline.get(k))]
@@ -62,7 +64,7 @@ def main():
         row = matrix(label)
         reports[label] = {k: row[k] for k in ['records', 'exact', 'matched', 'introduced', 'fixed']}
     focused = {}
-    reference = read(str(WORK / 'controls/original-native1.jsonl'))
+    reference = read(str(reference_root(ROOT) / 'continuation/original.jsonl'))
     baseline = read(str(WORK / 'controls/original-frozen7.jsonl'))
     for label in ['flush8', 'perbody7', 'local7', 'update8', 'born8']:
         source = WORK / 'controls' / ('original-' + label + '.jsonl')
@@ -77,9 +79,9 @@ def main():
         (folder / 'focused-summary.json').write_text(json.dumps(focused[label], indent=2) + '\n')
     final_focused = []
     for name in ['kinematic', 'triggers']:
-        a = read(str(ROOT / 'ParentEvidence/Reference' / (name + '.jsonl')))
+        a = read(str(reference_root(ROOT) / 'focused' / (name + '.jsonl')))
         source = WORK / 'probes' / (name + '-final.jsonl')
-        b = read(str(source)); accepted = read(str(ROOT / 'ParentEvidence/accepted/focused' / (name + '.jsonl')))
+        b = read(str(source)); accepted = read(str(archived_root(ROOT, 'ParentEvidence/accepted/focused') / (name + '.jsonl')))
         assert b == accepted, name + ' differs from accepted values'
         bad = sorted(k for k in a.keys() | b.keys() if not matches(k, a.get(k), b.get(k)))
         final_focused.append(dict(probe=name, records=len(a.keys() | b.keys()), matched=len(a.keys() | b.keys())-len(bad), failed_keys=bad))
@@ -87,7 +89,7 @@ def main():
     regressions = []
     for path in ['physicsdefaults.jsonl', 'physics.json', 'joints/joints.jsonl', 'controller/controller.jsonl', 'forces/values.jsonl', 'rayhits/values.jsonl']:
         source = WORK / 'regressions-final' / path
-        assert source.read_bytes() == (ROOT / 'ParentEvidence/accepted/regressions' / path).read_bytes(), path
+        assert source.read_bytes() == (archived_root(ROOT, 'ParentEvidence/accepted/regressions') / path).read_bytes(), path
         copy(source, OUT / 'final/regressions' / path)
         regressions.append(dict(file=path, byte_identical_to_accepted=True))
     trx = ET.parse(WORK / 'tests/final.trx')

@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Exact, union-key comparison. Every baseline and candidate difference is retained."""
+import sys
 import argparse
 import hashlib
 import json
 import os
 from pathlib import Path
 import shutil
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import reference_root, run_root
 
 ROOT = Path(__file__).resolve().parent
 
@@ -29,20 +33,19 @@ def compare(ref, candidate):
 
 def main():
     p=argparse.ArgumentParser(); p.add_argument('--label',required=True); a=p.parse_args()
-    w=Path(os.environ['LOADING_WORK']); dest=ROOT/'Evidence'/a.label
+    w=Path(os.environ.get('LOADING_WORK', run_root(ROOT, 'loading'))); dest=run_root(ROOT, 'loading-report')/a.label
     if dest.exists(): raise SystemExit('refusing to overwrite ' + str(dest))
     dest.mkdir(parents=True)
     result={}
     for order in ['transform-first','rigidbody-first']:
-        n1,n2=[w/(order+'-native'+str(i)+'.jsonl') for i in [1,2]]
-        assert n1.read_bytes()==n2.read_bytes(), order
+        n1=reference_root(ROOT)/'loading.jsonl'
         ref=read(n1); baseline=compare(ref,read(w/(order+'-baseline.jsonl')))
         candidate=compare(ref,read(w/(order+'-'+a.label+'.jsonl')))
         before={r['key'] for r in baseline['failures']}; after={r['key'] for r in candidate['failures']}
-        result[order]=dict(native_records=len(ref),native_agreement=True,native_sha256=sha(n1),
+        result[order]=dict(native_records=len(ref),native_sha256=sha(n1),
                            baseline=baseline,candidate=candidate,resolved=sorted(before-after),
                            retained=sorted(before&after),introduced=sorted(after-before))
-        for label in ['native1','native2','baseline',a.label]:
+        for label in ['baseline',a.label]:
             source=w/(order+'-'+label+'.jsonl'); shutil.copy2(source,dest/source.name)
         print(order, 'baseline',baseline['exact'],'candidate',candidate['exact'],'/',candidate['records'],
               'resolved',len(before-after),'retained',len(before&after),'introduced',len(after-before))

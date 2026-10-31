@@ -1,21 +1,75 @@
 #!/usr/bin/env python3
-"""Retain every raw buffer, observation and strict comparison from this run."""
-import gzip,hashlib,json,os,shutil,subprocess,sys
+"""Compare full material captures; store run reports in the validation cache."""
+import argparse
+import gzip
+import hashlib
+import json
+import os
 from pathlib import Path
-f=Path(__file__).resolve().parent;work=Path(os.environ['MATERIAL_COLOR_TRANSFER_ROOT']);out=f/'Evidence';out.mkdir(exist_ok=True)
-manifest={}
-for space in ['linear','gamma']:
- a=work/f'oracle-v2-{space}1';b=work/f'oracle-v2-{space}2'
- def hashes(root):return {p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.iterdir()) if p.is_file()}
- assert hashes(a)==hashes(b),'Native repeats differ'
- for phase,source in [('Native',a),('Before',work/f'before-v2-{space}'),('Final',work/f'final{os.environ.get("MATERIAL_COLOR_TRANSFER_FINAL_SUFFIX","")}-{space}')]:
-  dest=f/'Reference'/(phase+space.title());dest.mkdir(parents=True,exist_ok=True)
-  shutil.copyfile(source/'values.jsonl',dest/'values.jsonl')
-  for p in source.glob('*.rgba'):(dest/(p.name+'.gz')).write_bytes(gzip.compress(p.read_bytes(),mtime=0))
-  manifest[dest.name]={'raw':str(source),'sha256':hashes(source),'observations':len((source/'values.jsonl').read_text().splitlines()),'images':len(list(source.glob('*.rgba')))}
-  if phase!='Native':
-   result=subprocess.run([sys.executable,str(f/'compare.py'),str(a),str(source)],text=True,capture_output=True)
-   (out/(phase.lower()+'-'+space+'.txt')).write_text(result.stdout+result.stderr)
-   print(phase,space,'exit',result.returncode,result.stdout.splitlines()[-2:])
-manifest['repeatsByteIdentical']=True
+import shutil
+import subprocess
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import reference_root, run_root
+
+fixture=Path(__file__).resolve().parent
+parser=argparse.ArgumentParser(description=__doc__)
+parser.add_argument('label', nargs='?', default='current')
+for space in ('linear','gamma'):
+ for kind in ('','native-','repeat-','before-'):
+  parser.add_argument('--'+kind+space, type=Path)
+parser.add_argument('--out', type=Path)
+parser.add_argument('--record-reference', action='store_true')
+args=parser.parse_args()
+work=Path(os.environ.get('MATERIAL_COLOR_TRANSFER_ROOT',run_root(fixture,args.label)))
+out=args.out or run_root(fixture,args.label)/'reports'
+out.mkdir(parents=True,exist_ok=True)
+
+def hashes(root):
+ result={}
+ for p in sorted(root.iterdir()):
+  name=p.name.removesuffix('.gz')
+  if not name.endswith(('.jsonl','.rgba')):continue
+  data=gzip.decompress(p.read_bytes()) if p.suffix=='.gz' else p.read_bytes()
+  assert name not in result, 'duplicate buffer '+name
+  result[name]=hashlib.sha256(data).hexdigest()
+ assert 'values.jsonl' in result, 'empty capture '+str(root)
+ return result
+
+if args.record_reference:
+ for space in ('Linear','Gamma'):
+  native=getattr(args,'native_'+space.lower());repeat=getattr(args,'repeat_'+space.lower())
+  assert native and repeat, '--record-reference requires two explicit Native captures per color space'
+  assert hashes(native)==hashes(repeat), space+' Native repeats differ'
+  assert not (reference_root(fixture)/space).exists(), 'reference already exists: '+space
+
+manifest={};failures=[]
+for space in ('Linear','Gamma'):
+ native=getattr(args,'native_'+space.lower()) or reference_root(fixture)/space
+ repeat=getattr(args,'repeat_'+space.lower())
+ actual=getattr(args,space.lower()) or work/space
+ if repeat:
+  assert hashes(native)==hashes(repeat), space+' Native repeats differ'
+ if args.record_reference:
+  assert repeat, '--record-reference needs two Native recordings per color space'
+  dest=reference_root(fixture)/space
+  assert not dest.exists(), 'refusing to overwrite '+str(dest)
+  dest.mkdir(parents=True)
+  shutil.copyfile(native/'values.jsonl',dest/'values.jsonl')
+  for p in native.iterdir():
+   name=p.name.removesuffix('.gz')
+   if not name.endswith('.rgba'):continue
+   data=gzip.decompress(p.read_bytes()) if p.suffix=='.gz' else p.read_bytes()
+   (dest/(name+'.gz')).write_bytes(gzip.compress(data,mtime=0))
+  manifest[space]={'native':str(native),'sha256':hashes(native)}
+  continue
+ for phase,source in [('before',getattr(args,'before_'+space.lower())),('actual',actual)]:
+  if source is None:continue
+  result=subprocess.run([sys.executable,str(fixture/'compare.py'),str(native),str(source)],text=True,capture_output=True)
+  (out/(phase+'-'+space.lower()+'.txt')).write_text(result.stdout+result.stderr)
+  failures.append(result.returncode)
+  manifest[phase+space]={'source':str(source),'sha256':hashes(source)}
+  print(phase,space,'exit',result.returncode,result.stdout.splitlines()[-2:])
 (out/'recordings.json').write_text(json.dumps(manifest,indent=2)+'\n')
+raise SystemExit(int(any(failures)))

@@ -1,8 +1,0 @@
-{
-  "native_gdb_log_sha256": "5a32fe302b2c3a42278fe8e999e6bd2fc04f1ed1fad2996663179eeaf330ed1f",
-  "safe_engine_log_sha256": "0a13cd2cc3e9fe82d1ee4cf47b309b9b7890c37ebb3824c3828ee95042e17758",
-  "initial_trace_failure_exit": 139,
-  "initial_trace_failure_log": "/mnt/storage-hdd/node-b-caches-20261023/sdk-physx-parity-20261031/probes/noiseless-engine8-trace.log",
-  "safe_trace_exit": 0,
-  "safe_trace_matched_records": 278
-}

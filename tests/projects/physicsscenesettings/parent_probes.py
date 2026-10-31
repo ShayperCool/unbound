@@ -1,11 +1,15 @@
 #!/usr/bin/env python3
 """Run focused integration probes in private copies, under the shared heavy-job lock."""
+import sys
 import argparse
 import os
 from pathlib import Path
 import shutil
 import subprocess
 
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import editor_path, run_root
 
 ROOT = Path(__file__).resolve().parent
 SOURCES = {'triggers': 'TriggerLifecycle.cs', 'barrier': 'RegistrationBarrier.cs',
@@ -25,7 +29,7 @@ def main():
     parser.add_argument('--repeat', type=int, choices=[1, 2], default=1)
     parser.add_argument('--label', default='final')
     args = parser.parse_args()
-    work = Path(os.environ['SCENE_PARENT_WORK']).resolve()
+    work = Path(os.environ.get('SCENE_PARENT_WORK', run_root(ROOT, 'focused'))).resolve()
     project = work / args.probe
     if args.mode == 'prepare':
         for folder in ['Assets', 'Packages', 'ProjectSettings']:
@@ -45,7 +49,7 @@ def main():
     if args.probe == 'barrier':
         env['SCENE_SETTINGS_CLONE_BARRIER'] = '1'
     if args.mode == 'native':
-        command = [str(Path.home() / 'Unity/Hub/Editor/6000.0.71f1/Editor/Unity'),
+        command = [str(editor_path()),
                    '-batchmode', '-nographics', '-projectPath', str(project),
                    '-executeMethod', 'ProbeRunner.Record', '-logFile', str(work / (stem + '.log'))]
     else:

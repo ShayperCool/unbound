@@ -1,5 +1,0 @@
-2026-10-31T07:04:58.999373Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 1574ms
-2026-10-31T07:04:59.010569Z  INFO unbound_runtime::config: prepared the game in 1.64s
-2026-10-31T07:04:59.684635Z  INFO game: physics defaults complete: /mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/validation/engine/work/regressions-final/physicsdefaults.jsonl
-2026-10-31T07:04:59.684759Z  INFO unbound_runtime::game: game started in 674.03ms
-2026-10-31T07:04:59.786202Z  INFO unbound_runtime::game: ran 1 frames in 101.34ms

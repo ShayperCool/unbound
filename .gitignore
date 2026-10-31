@@ -14,3 +14,8 @@
 
 # Python probe helpers
 __pycache__/
+
+# Probe run outputs belong in Library/Unbound or XDG_CACHE_HOME/unbound.
+/tests/projects/**/Evidence*/
+/tests/projects/**/*Evidence/
+/tests/projects/*/evidence.json

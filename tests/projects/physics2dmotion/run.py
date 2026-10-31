@@ -1,11 +1,14 @@
 #!/usr/bin/env python3
-"""Fresh independent Native projects and frozen-runtime private engine outputs."""
-import argparse, hashlib, json, os, shutil, subprocess
+"""Independent Native projects and explicitly selected engine outputs."""
+import argparse, hashlib, json, os, shutil, subprocess, sys
 from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
-WORK = Path(os.environ['MOTION_WORK'])
-BASE = Path.home()/'.cache/compat/parity-baseline-lifecycle2d-native8'
+sys.path.insert(0, str(ROOT.parents[1]))
+from probe_paths import reference_file, reference_root, run_root, unity_version, editor_path
+WORK = Path(os.environ.get('MOTION_WORK', run_root(ROOT))).resolve()
+WORK.mkdir(parents=True, exist_ok=True)
+CLI = os.environ.get('UNBOUND_CLI', os.environ.get('SCENE_SETTINGS_CLI', shutil.which('unbound') or str(REPO/'target/release/unbound')))
 HEAVY = Path.home()/'.cache/compat/with-heavy-job'
 p = argparse.ArgumentParser(); p.add_argument('mode', choices=['prepare','native','engine']); p.add_argument('--label', required=True)
 a = p.parse_args()
@@ -22,17 +25,17 @@ else:
     if out.exists() or log.exists(): raise SystemExit('Refusing to overwrite '+a.label)
     env = dict(os.environ, PHYSICS_PROBE_OUT=str(out))
     if a.mode == 'native':
-        cmd = [str(Path.home()/'Unity/Hub/Editor/6000.0.71f1/Editor/Unity'), '-batchmode','-nographics','-projectPath',str(project),'-executeMethod','ProbeRunner.Record','-logFile',str(WORK/(a.label+'-unity.log'))]
+        cmd = [os.environ.get('UNITY_EDITOR', str(editor_path())), '-batchmode','-nographics','-projectPath',str(project),'-executeMethod','ProbeRunner.Record','-logFile',str(WORK/(a.label+'-unity.log'))]
     else:
         project = WORK/os.environ.get('MOTION_PROJECT', 'project-native1')
-        env['UNBOUND_MANAGED_DIR'] = str(WORK/os.environ.get('MOTION_MANAGED', 'managed-baseline' if a.label == 'baseline' else 'managed-final'))
+        env['UNBOUND_MANAGED_DIR'] = os.environ.get('UNBOUND_MANAGED_DIR', str(WORK/os.environ.get('MOTION_MANAGED', 'managed-baseline' if a.label == 'baseline' else 'managed-final')))
         env['LD_LIBRARY_PATH'] = env['UNBOUND_MANAGED_DIR']
-        cmd = [str(BASE/'unbound'),'run','-p',str(project),'--headless','30000','--no-watch']
+        cmd = [CLI,'run','-p',str(project),'--headless','30000','--no-watch']
     command = [str(HEAVY),'timeout','600',*cmd]
     audit = dict(command=command, environment={k:env.get(k) for k in ['UNBOUND_MANAGED_DIR','LD_LIBRARY_PATH','PHYSICS_PROBE_OUT','CARGO_TARGET_DIR','UnboundTarget','UnboundNativeDir']})
     if a.mode == 'engine':
         runtime=Path(env['UNBOUND_MANAGED_DIR'])
-        audit['artifacts_sha256']={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in [BASE/'unbound',runtime/'UnityEngine.CoreModule.dll',runtime/'libunbound_physx.so']}
+        audit['artifacts_sha256']={str(f):hashlib.sha256(f.read_bytes()).hexdigest() for f in [Path(CLI),runtime/'UnityEngine.CoreModule.dll',runtime/'libunbound_physx.so']}
     (WORK/(a.label+'-command.json')).write_text(json.dumps(audit,indent=2)+'\n')
     with log.open('w') as f: result = subprocess.run(command,env=env,stdout=f,stderr=subprocess.STDOUT)
     print(a.label,'exit',result.returncode,flush=True)

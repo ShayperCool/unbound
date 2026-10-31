@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 """Remaining final checks with private paths and the unchanged managed test filter."""
-import os,subprocess
+import os,subprocess,sys
 from pathlib import Path
-WORK=Path(os.environ['MOTION_WORK']); ROOT=Path(__file__).resolve().parents[3]
+ROOT=Path(__file__).resolve().parents[3]
+sys.path.insert(0, str(ROOT/'tests'))
+from probe_paths import run_root
+WORK=Path(os.environ.get('MOTION_WORK', run_root(Path(__file__).resolve().parent))).resolve()
+WORK.mkdir(parents=True, exist_ok=True)
 heavy=str(Path.home()/'.cache/compat/with-heavy-job')
 env=dict(os.environ,LOADING_WORK=str(WORK/'loading'))
 for order in ['transform-first','rigidbody-first']:

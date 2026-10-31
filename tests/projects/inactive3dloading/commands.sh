@@ -18,5 +18,5 @@ for order in transform-first rigidbody-first; do
 done
 python3 tests/projects/inactive3dloading/report.py --label final
 bash tests/projects/inactive3dloading/validate-stage.sh > "$LOADING_WORK/logs/regressions-final.log" 2>&1
-python3 tests/projects/inactive3dloading/verify.py
+python3 tests/projects/inactive3dloading/verify.py --full
 python3 tests/projects/inactive3dloading/archive.py

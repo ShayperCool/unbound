@@ -5,7 +5,7 @@ using Xunit;
 namespace UnityEngine.Tests
 {
     // Expected observations come from two independent Unity 6000.0.71f1 recordings
-    // in query2dparity/Evidence. The broad comparator's 1e-3 rule is unchanged.
+    // in query2dparity/Reference. The broad comparator's 1e-3 rule is unchanged.
     public class Physics2DQueryParityTests : IDisposable
     {
         readonly List<GameObject> made = new List<GameObject>();

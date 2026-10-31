@@ -1,8 +1,0 @@
-Traceback (most recent call last):
-  File "/mnt/data/t3-worktrees/unialt/t3-54da5671/tests/projects/inactive3dloading/verify.py", line 169, in <module>
-    main()
-    ~~~~^^
-  File "/mnt/data/t3-worktrees/unialt/t3-54da5671/tests/projects/inactive3dloading/verify.py", line 146, in main
-    assert all(sha(base / path) == digest for path, digest in manifest['sha256'].items()), name
-                                                              ~~~~~~~~^^^^^^^^^^
-KeyError: 'sha256'

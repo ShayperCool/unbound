@@ -1,4 +1,0 @@
-records: 948/948, 0 unexpected
-ARGB32.resolve 0/65536 channels, max delta 1.0
-ARGBFloat.resolve 0/65536 channels, max delta 1.0
-images: 193/195, 0 unexpected; channels: 12648448/12779520

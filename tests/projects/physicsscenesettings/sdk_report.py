@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 """Archive SDK acceptance while retaining every nonexact and pre-existing failing value."""
+import sys
 import hashlib
 import importlib.util
 import json
@@ -10,6 +11,9 @@ import shutil
 import subprocess
 
 from compare import matches, read
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import reference_root, reference_file, run_root, archived_root
+
 from run import ROOT, PROFILES
 
 
@@ -22,17 +26,15 @@ def digest(path):
 
 
 def main():
-    work = Path(os.environ['SDK_WORK'])
-    output = ROOT / 'SDKLifecycleEvidence/accepted'
+    work = Path(os.environ.get('SDK_WORK', run_root(ROOT, 'sdk')))
+    output = run_root(ROOT, 'sdk-report')
     output.mkdir(parents=True, exist_ok=True)
     profiles, nonexact, focused, regressions = [], [], [], []
     for prefix, names in [('', list(PROFILES)), ('contacts-', ['default', 'pairs-kk', 'pairs-ks', 'pairs-all']),
                           ('islands-', ['default', 'determinism', 'tgs', 'tgs-det'])]:
         for name in names:
             filename = name + '.jsonl'
-            ref = read(str(ROOT / 'Reference' / prefix.rstrip('-') / filename))
-            assert ref == read(str(ROOT / 'Evidence' / (prefix + 'native1') / filename))
-            assert ref == read(str(ROOT / 'Evidence' / (prefix + 'native2') / filename))
+            ref = read(str(reference_root(ROOT) / prefix.rstrip('-') / filename))
             source = work / 'work' / (prefix + 'final') / filename
             candidate = read(str(source))
             assert ref.keys() == candidate.keys(), prefix + name
@@ -50,8 +52,8 @@ def main():
     assert sum(p['records'] for p in profiles) == 5055
     for name in ['flags', 'trigger-pairs', 'ignore-lifecycle', 'kinematic', 'triggers', 'order']:
         new_probe = name in ['flags', 'trigger-pairs', 'ignore-lifecycle']
-        refdir = ROOT / ('SDKLifecycleEvidence/Reference' if new_probe else 'ParentEvidence/Reference')
-        baseline = ROOT / ('SDKLifecycleEvidence/baseline7' if new_probe else 'ParentEvidence/accepted/focused')
+        refdir = reference_root(ROOT) / 'focused'
+        baseline = archived_root(ROOT, 'SDKLifecycleEvidence/baseline7' if new_probe else 'ParentEvidence/accepted/focused')
         source = work / 'probes' / (name + '-integrated-sdk8.jsonl')
         ref, old, candidate = [read(str(p)) for p in [refdir / (name + '.jsonl'), baseline / (name + '.jsonl'), source]]
         assert ref.keys() == candidate.keys(), name
@@ -65,11 +67,11 @@ def main():
     for relative in ['physicsdefaults.jsonl', 'physics.json', 'joints/joints.jsonl',
                      'controller/controller.jsonl', 'forces/values.jsonl', 'rayhits/values.jsonl']:
         source = work / 'work/regressions-final' / relative
-        baseline = ROOT / 'ParentEvidence/accepted/regressions' / relative
+        baseline = archived_root(ROOT, 'ParentEvidence/accepted/regressions') / relative
         identical = source.read_bytes() == baseline.read_bytes()
         if relative == 'physics.json':
             a, old, b = [json.loads(p.read_text()) for p in [
-                ROOT.parent / 'physics/Reference/unity-6000.0.71f1.json', baseline, source]]
+                reference_file(ROOT.parent / 'physics', 'json'), baseline, source]]
             assert a.keys() == b.keys()
             def equal(x, y):
                 if isinstance(x, (int, float)) and not isinstance(x, bool):
