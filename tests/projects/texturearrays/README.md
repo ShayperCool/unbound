@@ -38,8 +38,52 @@ tolerance (default 0), listing each missing, extra or differing value.
 Two independent captures per profile agree byte for byte (Renderer: NVIDIA GeForce RTX 4060).
 
 * **Cells.** A flipbook of C columns and R rows is cut into cells of floor(width / C) x
-  floor(height / R) texels; slice 0 is the top-left cell, then left to right, top to bottom. A
-  Texture3D's depth slices follow the same order.
+  floor(height / R) texels (a 100-texel row in 3 columns gives 33-texel cells); slice 0 is the
+  top-left cell, then left to right, top to bottom. A Texture3D's depth slices follow the same
+  order (16 columns of a 256x16 LUT strip make a 16x16x16 volume).
+* **Each slice is a 2D texture of the cell's size**: NPOT scaling and the max size apply per cell
+  (20x20 cells become 16x16; 128x128 cells at max size 64 become 64x64), and an array slice gets
+  the 2D mip chain with every mip setting (box/Kaiser, sRGB, fade, border, preserve coverage,
+  normal maps), as tests/projects/textureimport describes it, with two exceptions:
+  * **Alpha is transparency** fills only the first cell_w x cell_h texels of the whole flipbook
+    image in bottom-up row order, read as one cell-sized image (the jump flood of
+    textureimport); every texel after them keeps its colour. In a 128x64 two-column flipbook each
+    64x64 slice is filled in its bottom 32 rows only.
+  * **Border mipmaps**: the first halving takes its edge columns from the whole flipbook image,
+    read from the slice's bottom-left texel on with the cell's width as the row stride (so a
+    column steps by the cell's width, not the image's). The edge rows, and every lower level,
+    read the slice itself.
+* **Texture3D mips** do not use the 2D chain: each level is the one above halved along x, then y,
+  then z, each pass the truncating mean (a + b) >> 1 of two bytes (an axis of size 1 is kept, an
+  odd last texel dropped). sRGB and the mip filter change nothing (Kaiser equals box). The mip
+  count follows the largest of width, height and depth (16x8x12: 5 levels).
+* **Cube shape**: the faces of the strip; the sampler clamps on all three axes whatever the wrap
+  settings (a Repeat meta reads Clamp, Clamp, Clamp). `Cubemap.GetPixels` gives a face top row
+  first.
+* **Asset files** store `m_Format` as a GraphicsFormat (RGBA32 is `R8G8B8A8_UNorm` with
+  `m_ColorSpace: 1` for sRGB), the pixels in `_typelessdata`: an array's slices each with its mip
+  chain in turn, a cube array's (cube, face) images likewise, a volume's levels one after
+  another, each level all its depth slices (which halve, at least 1). `R8_UNorm` reads as
+  TextureFormat R8.
+* **CPU reads.** `GetPixels` gives a byte b as b * (1/255) in single precision (not b / 255,
+  which differs in 42% of the values); R8 reads as (r, 1, 1, 1) and (r, 255, 255, 255).
+  `GetPixelData` gives the stored bytes. An unreadable texture throws `ArgumentException:
+  Texture2DArray.GetPixels32: texture data is either not readable, corrupted or does not exist.
+  (Texture 'name')` (likewise `GetPixels` and Texture3D) and, from `GetPixelData`, the
+  UnityException of a non-readable texture.
 * The pixels do not depend on the project's colour space: Gamma and Linear differ only in the
   reported GraphicsFormat (`R8G8B8A8_SRGB` for sRGB textures in a linear project, UNorm in a
-  gamma project) and in GPU samples of sRGB data. Android differs only in normal maps (XYZ).
+  gamma project, also for assets saved as sRGB) and in GPU samples of sRGB data. Android differs
+  only in normal maps (XYZ).
+* **Sampling.** A point-sampled slice at texel centres reads its texels; beyond the depth a
+  Clamp wrapW gives the last (or first) slice and Repeat wraps.
+
+## What differs
+
+Unbound matches every info line, every `GetPixels`/`GetPixels32` value and every stored byte in
+Gamma, Linear and Android, and 9 of the 11 GPU samples. Open:
+
+* The two samples beyond the depth of a wrapW-Clamp volume: Unbound's renderer has no W wrap mode
+  and repeats.
+* `Cubemap.GetPixelData` (the imported cubes' 36 `raw` values) is not implemented and throws.
+* The cases are 8-bit; float flipbooks, and border mipmaps of resized cells, are unmeasured.

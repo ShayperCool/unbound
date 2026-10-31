@@ -1769,3 +1769,31 @@ Gamma, Linear and Android; the float case's line still differs (the runtime repo
 float texture as RGBAHalf, so the line has another format and length), while the importer's floats
 equal the Editor's bit for bit in every profile (unbound-assets test
 `hdr_max_size_resize_matches_the_editor`). Sprite import stays 519/520; asset tests 72/72.
+
+### Texture arrays, volumes and their asset files, 2026-10-31
+
+New probe tests/projects/texturearrays: 25 imported flipbooks (Texture2DArray, Texture3D and Cube
+shapes: cell order, NPOT and max size, sRGB, box/Kaiser, fade with border, coverage with alpha is
+transparency, a normal map, a 3-column 100-texel image, filter and wrapU/V/W, unreadable) and 10
+Texture3D/Texture2DArray/CubemapArray `.asset` files (RGBA32 with and without mips, sRGB and
+linear, RGBAHalf, R8, unreadable). Each value is the info line, GetPixels32, GetPixels and
+GetPixelData of every slice and mip, plus 11 point-sampled GPU readbacks. Two independent Editor
+captures per profile (Gamma, Linear, Android) agree byte for byte and are the published reference.
+
+Measured: slices are the cells top-left first; every slice is a 2D texture of the cell size
+(NPOT, max size and the 2D mip chain per cell); alpha is transparency fills only the first
+cell-sized run of the whole bottom-up flipbook, and a slice's first border mip reads its edge
+columns from the flipbook with the cell width as the stride (both modelled texel for texel); a
+volume halves x, then y, then z with truncating byte means, ignoring sRGB and the mip filter; a
+Cube shape clamps on all axes; GetPixels reads bytes as b * (1/255); R8 reads (r, 1, 1, 1); asset
+files store a GraphicsFormat with `m_ColorSpace`. Texture cache VERSION 12.
+
+Unbound: every info line, 556/556 GetPixels, 520/520 GetPixels32 and 520 of 556 GetPixelData values
+(2,100,272, 510,740 and 511,188 bytes) exact in all three profiles; the 36 others are the imported
+cubes' `Cubemap.GetPixelData`, still a stub. GPU samples 9/11: the two beyond the depth of a
+wrapW-Clamp volume repeat, because the renderer's samplers have no W wrap mode. Regressions:
+textureimport 502/502 mips and 1,732,492/1,732,492 bytes exact in Gamma, Linear and Android;
+spriteimport 519/520; modelimport Gamma/Linear 6032/6033 and URP 7011/7687 (complete union 7768
+keys, the same 757 failures line for line); descriptions 0 differences; unbound-assets 73/73 (new
+`flipbook_arrays_and_volumes_match_the_editor`); api-check 0 errors in 2279 types.
+
