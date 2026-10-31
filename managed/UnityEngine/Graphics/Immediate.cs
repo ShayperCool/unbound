@@ -381,7 +381,7 @@ namespace UnityEngine
         public static void CopyTexture(Texture src, int srcElement, int srcMip, Texture dst, int dstElement, int dstMip) =>
             CopyTexture(src, srcElement, srcMip, -1, -1, -1, -1, dst, dstElement, dstMip, 0, 0);
 
-        /// <summary>Copies on the GPU; between two readable Texture2Ds the CPU pixels too, as Unity.</summary>
+        /// <summary>Copies on the GPU; between Texture2Ds the retained CPU pixels too, independent of readability.</summary>
         public static void CopyTexture(Texture src, int srcElement, int srcMip, int srcX, int srcY, int srcWidth, int srcHeight, Texture dst, int dstElement, int dstMip, int dstX, int dstY)
         {
             if (src == null) throw new ArgumentNullException(nameof(src));

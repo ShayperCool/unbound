@@ -114,7 +114,7 @@ namespace UnityEngine
         /// another (an AssetBundle's block-compressed texture, decoded).</summary>
         TextureFormat? m_SourceFormat;
         int m_SourceMips;
-        internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(format, !m_Linear);
+        internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(format, !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear);
         public override bool isReadable => m_IsReadable;
         internal override int MipmapCount() => m_SourceMips > 0 ? m_SourceMips : m_MipCount;
         public bool alphaIsTransparency { get; set; }
