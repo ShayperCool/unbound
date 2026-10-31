@@ -106,6 +106,7 @@ namespace Unbound.Runtime
             s_World = null;
             s_StructureDirty = false;
             s_AttachmentDirty = false;
+            s_Removing = s_SilentRemoval = s_Dispatching = s_Stepping = false;
         }
 
         // ------------------------------------------------------------------ conversions
@@ -153,6 +154,7 @@ namespace Unbound.Runtime
             rb.m_TransformVersion = -1;
             s_StructureDirty = true;
             s_AttachmentDirty = true;
+            if (rb.m_GameObject.m_Transform != null) Flush();
         }
 
         internal static void Remove(Rigidbody2D rb, bool silent = false)
@@ -162,15 +164,18 @@ namespace Unbound.Runtime
             s_Rigidbodies.Remove(rb);
             bool wasSilent = s_SilentRemoval;
             s_SilentRemoval = silent;
-            // Its colliders find another body (or become static) at the next flush.
-            foreach (var c in s_Colliders)
+            try
             {
-                if (!ReferenceEquals(c.m_AttachedBody, rb)) continue;
-                DestroyFixtures(c, removing: true);
-                c.m_ShapeDirty = true;
+                // Its colliders find another body or become static at the next flush.
+                foreach (var c in s_Colliders)
+                {
+                    if (!ReferenceEquals(c.m_AttachedBody, rb)) continue;
+                    DestroyFixtures(c, removing: true);
+                    c.m_ShapeDirty = true;
+                }
+                DestroyBody(rb);
             }
-            DestroyBody(rb);
-            s_SilentRemoval = wasSilent;
+            finally { s_SilentRemoval = wasSilent; }
             s_Listener.DispatchRemovals();
             s_StructureDirty = true;
             s_AttachmentDirty = true;
@@ -184,6 +189,7 @@ namespace Unbound.Runtime
             c.m_ShapeDirty = true;
             s_Colliders.Add(c);
             s_StructureDirty = true;
+            if (c.m_GameObject.m_Transform != null) Flush();
         }
 
         internal static void Remove(Collider2D c)
@@ -236,7 +242,7 @@ namespace Unbound.Runtime
             for (int i = 0; i < s_Rigidbodies.Count; i++)
             {
                 var rb = s_Rigidbodies[i];
-                if (rb.m_BodyDirty || (rb.m_Body == null) == rb.m_Simulated) UpdateBody(rb);
+                if (rb.m_BodyDirty || rb.m_Body == null && rb.m_Simulated) UpdateBody(rb);
             }
             bool attachment = s_AttachmentDirty;
             s_AttachmentDirty = false;
@@ -271,12 +277,10 @@ namespace Unbound.Runtime
             rb.m_BodyDirty = false;
             if (!rb.m_Simulated)
             {
-                if (rb.m_Body != null)
-                {
-                    foreach (var c in s_Colliders)
-                        if (ReferenceEquals(c.m_AttachedBody, rb)) { DestroyFixtures(c, removing: false); c.m_ShapeDirty = true; }
-                    DestroyBody(rb);
-                }
+                // Box2D disabling removes proxies and real contacts while preserving the
+                // body's sleep, motion and fixtures. Its exits belong to the next step and
+                // do not use callbacksOnDisable, unlike removal of a collider or GameObject.
+                if (rb.m_Body != null) rb.m_Body.IsEnabled = false;
                 return;
             }
             if (rb.m_Body == null)
@@ -288,6 +292,7 @@ namespace Unbound.Runtime
                 s_AttachmentDirty = true;
                 return;
             }
+            rb.m_Body.IsEnabled = true;
             rb.ApplyBodySettings();
         }
 
@@ -771,6 +776,7 @@ namespace Unbound.Runtime
             internal bool IsTrigger;
             internal bool EnterPending, ExitPending;
             internal bool RemovalExit;
+            internal bool FirstIsB;
             internal bool VelocityCaptured;
             /// <summary>B's velocity relative to A's at the first contact point, before the solver
             /// resolved the impact.</summary>
@@ -809,7 +815,7 @@ namespace Unbound.Runtime
                 var key = new PairKey(a, b);
                 if (!s_Pairs.TryGetValue(key, out var pair))
                 {
-                    pair = new Pair { A = a, B = b };
+                    pair = new Pair { A = a, B = b, FirstIsB = b.m_ContactOrder > a.m_ContactOrder };
                     s_Pairs[key] = pair;
                     s_PairOrder.Add(pair);
                 }
@@ -902,31 +908,31 @@ namespace Unbound.Runtime
                 s_Dispatching = true;
                 try
                 {
-                // Native sends the trigger phase before the solid-contact phase, including
-                // reentry after a solid contact has already begun. Preserve order within each
-                // phase; creation order across the two kinds must not interleave callbacks.
-                for (int kind = 0; kind < 2; kind++)
-                foreach (var pair in pairs)
-                {
-                    if (pair.IsTrigger != (kind == 0) || !s_PairOrder.Contains(pair)) continue;
-                    bool enter = pair.EnterPending, exit = pair.ExitPending;
-                    pair.EnterPending = false;
-                    pair.ExitPending = false;
-                    pair.RemovalExit = false;
-                    if (enter)
+                    // Native sends the trigger phase before the solid-contact phase, including
+                    // reentry after a solid contact has already begun. Preserve order within each
+                    // phase; creation order across the two kinds must not interleave callbacks.
+                    for (int kind = 0; kind < 2; kind++)
+                    foreach (var pair in pairs)
                     {
-                        Send(pair, Phase.Enter);
+                        if (pair.IsTrigger != (kind == 0) || !s_PairOrder.Contains(pair)) continue;
+                        bool enter = pair.EnterPending, exit = pair.ExitPending;
+                        pair.EnterPending = false;
+                        pair.ExitPending = false;
+                        pair.RemovalExit = false;
+                        if (enter)
+                        {
+                            Send(pair, Phase.Enter);
+                        }
+                        else if (!exit && pair.Touching > 0 && IsAwake(pair))
+                        {
+                            Send(pair, Phase.Stay);
+                        }
+                        if (exit)
+                        {
+                            Send(pair, Phase.Exit);
+                            if (pair.Touching == 0 && !pair.EnterPending) Forget(pair);
+                        }
                     }
-                    else if (!exit && pair.Touching > 0 && IsAwake(pair))
-                    {
-                        Send(pair, Phase.Stay);
-                    }
-                    if (exit)
-                    {
-                        Send(pair, Phase.Exit);
-                        if (pair.Touching == 0 && !pair.EnterPending) Forget(pair);
-                    }
-                }
                 }
                 finally { s_Dispatching = false; }
                 DispatchRemovals();
@@ -948,8 +954,16 @@ namespace Unbound.Runtime
 
         static void Send(Pair pair, Phase phase)
         {
-            SendSide(pair, pair.A, pair.B, phase, flip: false);
-            SendSide(pair, pair.B, pair.A, phase, flip: true);
+            if (pair.FirstIsB)
+            {
+                SendSide(pair, pair.B, pair.A, phase, flip: true);
+                SendSide(pair, pair.A, pair.B, phase, flip: false);
+            }
+            else
+            {
+                SendSide(pair, pair.A, pair.B, phase, flip: false);
+                SendSide(pair, pair.B, pair.A, phase, flip: true);
+            }
         }
 
         /// <summary>The messages <paramref name="self"/>'s objects get about <paramref name="other"/>.</summary>
