@@ -398,6 +398,61 @@ mod tests {
     use protocol::{AudioSourceCommand, command, voice_state};
 
     #[test]
+    fn offline_capture_preserves_native_partial_buffers_and_pending_sample_counts() {
+        let reference = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/mixerfilters/Reference/unity-6000.0.71f1/renderer-api");
+        let header: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(reference.join("capture.json")).unwrap())
+                .unwrap();
+        let engine = Engine::new(
+            ProjectAudioSettings {
+                sample_rate: 48000,
+                ..Default::default()
+            },
+            false,
+        );
+        assert!(!engine.capture_stop());
+        assert!(engine.capture_start());
+        assert!(!engine.capture_start());
+        // The measured property round trip truncates the requested duration at the existing
+        // rational-time tick rate. Keep the exact float passed to AudioRenderer after that view.
+        let ticks = ((1024.0f32 / 48000.0) as f64 * 141120000.0) as i64;
+        let duration = (ticks as f64 / 141120000.0) as f32;
+        let restored_ticks = (duration as f64 * 141120000.0) as i64;
+        let duration = (restored_ticks as f64 / 141120000.0) as f32;
+        assert_eq!(
+            engine.capture_sample_count(duration),
+            header["count.started"].as_u64().unwrap() as u32
+        );
+        for length in [0, 1, 2, 2046, 2047, 2048, 2049, 2050, 4096] {
+            let mut actual = vec![123.0; length];
+            let output = engine.capture_render(length, Vec::new(), duration).unwrap();
+            assert!(output.ok);
+            actual[..output.samples.len()].copy_from_slice(&output.samples);
+            let expected = std::fs::read(reference.join(format!("render_{length}.f32"))).unwrap();
+            let failures: Vec<_> = expected
+                .chunks_exact(4)
+                .zip(actual)
+                .enumerate()
+                .filter_map(|(i, (bytes, value))| {
+                    let native = f32::from_le_bytes(bytes.try_into().unwrap());
+                    (value != native).then_some((i, native, value))
+                })
+                .collect();
+            assert!(
+                failures.is_empty(),
+                "length {length}, every failing (sample, Native, engine): {failures:?}"
+            );
+            assert_eq!(
+                engine.capture_sample_count(duration),
+                header[format!("count.{length}")].as_u64().unwrap() as u32
+            );
+        }
+        assert!(engine.capture_stop());
+        assert!(!engine.capture_stop());
+    }
+
+    #[test]
     fn reads_the_audio_manager() {
         let text = "AudioManager:\n  m_Volume: 0.5\n  Rolloff Scale: 2\n  Doppler Factor: 0\n  Default Speaker Mode: 1\n  m_SampleRate: 44100\n  m_DSPBufferSize: 1024\n  m_VirtualVoiceCount: 64\n  m_RealVoiceCount: 8\n  m_DisableAudio: 1\n  m_RequestedDSPBufferSize: 256\n";
         let value = unbound_yaml::parse_value(text).unwrap();
