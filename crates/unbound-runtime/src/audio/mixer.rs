@@ -1126,6 +1126,10 @@ mod tests {
         std::f32::consts::FRAC_1_SQRT_2 * age.min(64) as f32 / 64.0
     }
 
+    fn mono_sample(value: f32, age: usize) -> f32 {
+        (value * std::f32::consts::FRAC_1_SQRT_2) * (age.min(64) as f32 / 64.0)
+    }
+
     fn mixer() -> Mixer {
         Mixer::new(MixerConfig {
             sample_rate: 1000,
@@ -1171,8 +1175,8 @@ mod tests {
         let mut out = vec![0.0; 60 * 2];
         m.render(&mut out, 2);
         // Equal-power mono center and the independently measured startup fade.
-        assert_eq!(out[10 * 2], 0.1 * mono_gain(10));
-        assert_eq!(out[10 * 2 + 1], 0.1 * mono_gain(10));
+        assert_eq!(out[10 * 2], mono_sample(0.1, 10));
+        assert_eq!(out[10 * 2 + 1], mono_sample(0.1, 10));
         assert_eq!(m.source_state(7).position, 60.0);
         m.render(&mut out, 2);
         assert_eq!(m.source_state(7).main, voice_state::NONE);
@@ -1412,14 +1416,14 @@ mod tests {
         assert_eq!(
             out,
             [
-                0.06 * mono_gain(6),
-                0.07 * mono_gain(7),
-                0.08 * mono_gain(8),
-                0.09 * mono_gain(9)
+                mono_sample(0.06, 6),
+                mono_sample(0.07, 7),
+                mono_sample(0.08, 8),
+                mono_sample(0.09, 9)
             ]
         );
         assert!(m.output_data(0, 1, &mut out, -1));
-        assert_eq!(out[3], 0.09 * mono_gain(9));
+        assert_eq!(out[3], mono_sample(0.09, 9));
     }
 
     #[test]

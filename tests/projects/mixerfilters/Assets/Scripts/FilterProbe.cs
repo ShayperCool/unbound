@@ -11,6 +11,14 @@ public class FilterProbe : MonoBehaviour
     public static readonly string[] Cases = { "dry", "lp1000q1", "lp1000q3", "lp1000q10", "hp1000q1", "hp1000q3", "hp1000q10", "lp80q1", "hp8000q1", "lp20000q1", "lp_bypass", "group_bypass", "lp_hp", "hp_lp", "parent_lp", "stereo_lp", "step_lp", "tone_hp", "set_lp", "snapshot_lp", "step_dry", "stereo_dry", "sum_lp", "volume_lp" };
     const BindingFlags Flags = BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
     static bool Engine => typeof(AudioSource).Assembly.GetType("Unbound.Runtime.AudioBackend") != null;
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Bootstrap()
+    {
+        if (!Engine) return;
+        foreach (var existing in UnityEngine.Object.FindObjectsOfType<FilterProbe>())
+            DestroyImmediate(existing.gameObject);
+        new GameObject("FilterProbe").AddComponent<FilterProbe>();
+    }
     BinaryWriter m_Writer, m_MasterWriter;
     int m_Written;
 
