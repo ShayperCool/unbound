@@ -1688,3 +1688,25 @@ Validation:
 Not covered: Unity's keyframe reduction for the reducing compression modes (approximated by
 ufbx's near-lossless reduction with linear tangents), humanoid clips (mirror, masks by body part),
 and root-motion nodes and Bake Into Pose (next).
+
+## Generic root nodes, Bake Into Pose and target matching
+
+A generic avatar's root node (`motionNodeName`, with an avatar) now gives every imported clip
+MotionT/MotionQ curves on the Animator: the node's pose relative to the model's root at the clip's
+frames. Root motion follows them as it follows root curves; the node keeps its own curves.
+Bake Into Pose and the related settings (based upon original, height from feet, orientation
+offset, level) change nothing at play time in the Editor, for root nodes and root curves alike;
+they zero the baked components of `averageSpeed`. `averageSpeed`, `averageAngularSpeed`,
+`apparentSpeed` and `averageDuration` come from the motion curves (twenty equal parts of the clip,
+each in the node's frame at its start); `hasMotionCurves`, `hasMotionFloatCurves` and
+`hasRootCurves` read the curves. `MatchTarget` matches a generic rig's root (AvatarTarget.Root):
+each step adds its share of the remaining correction, the target less where the clip's motion
+alone would bring the root by the end, with rotations by the normalized lerp; the step past the
+end completes it. Body-part targets are left to humanoid avatars (ignored with a warning).
+
+Validation:
+
+- tests/projects/modelroot: two independent GPU Editor captures are byte-identical (3714 records);
+  Unbound matches 3699/3714 records, 35781/35796 values. The 15 others are `apparentSpeed` of the
+  clips that turn about the up axis: the Editor's value is the speed's length times a factor that
+  grows with the turn, which is not identified; Unbound returns the length.
