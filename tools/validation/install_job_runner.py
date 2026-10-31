@@ -26,10 +26,12 @@ old = CACHE/'with-heavy-job'
 backup = CACHE/'with-heavy-job.serial-20261031'
 if old.exists() and not backup.exists():
     shutil.copy2(old,backup)
-replace(CACHE/'job_runner.py',(ROOT/'job_runner.py').read_bytes())
-replace(CACHE/'job-limits.json',(ROOT/'job-limits.json').read_bytes())
 for name in ['unbound.slice','unbound-editors.slice','unbound-engines.slice']:
     replace(UNITS/name,(ROOT/name).read_bytes())
 subprocess.run(['systemctl','--user','daemon-reload'],check=True)
+# The old runner accepts the additional policy keys. Install limits and policy
+# before publishing a runner that requires them.
+replace(CACHE/'job-limits.json',(ROOT/'job-limits.json').read_bytes())
+replace(CACHE/'job_runner.py',(ROOT/'job_runner.py').read_bytes())
 replace(old,b'#!/usr/bin/env bash\nset -euo pipefail\nexec python3 "$HOME/.cache/compat/job_runner.py" "$@"\n',0o755)
 print(json.dumps(json.loads((CACHE/'job-limits.json').read_text()),indent=2))
