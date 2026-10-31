@@ -171,6 +171,8 @@ pub mod callback {
     pub const PCM_READ: i32 = 2;
     /// `PCMSetPositionCallback` of clip `handle` with position `arg`.
     pub const PCM_SET_POSITION: i32 = 3;
+    /// Opt-in observation of a summed group after its effects and before its parent.
+    pub const GROUP_OUTPUT: i32 = 4;
 }
 
 #[cfg(test)]

@@ -28,6 +28,8 @@ pub struct GroupSpec {
     pub muted: bool,
     pub bypass: bool,
     pub effects: Vec<EffectSpec>,
+    #[serde(default)]
+    pub observe: bool,
 }
 
 #[derive(Default)]
@@ -50,13 +52,19 @@ impl Biquad {
         self.b = [b0, if high { -2.0 * b0 } else { 2.0 * b0 }, b0];
         self.a = [-2.0 * c * inv, (1.0 - alpha) * inv];
     }
-    fn process(&mut self, samples: &mut [f32]) {
-        for (i, x) in samples.iter_mut().enumerate() {
-            let z = &mut self.z[i % 2];
-            let y = self.b[0] * *x + z[0];
-            z[0] = self.b[1] * *x - self.a[0] * y + z[1];
-            z[1] = self.b[2] * *x - self.a[1] * y;
-            *x = y;
+    fn sample(&mut self, input: f32, channel: usize, direct: bool) -> f32 {
+        let z = &mut self.z[channel];
+        if direct {
+            let iir = input - self.a[0] * z[0] - self.a[1] * z[1];
+            let output = self.b[0] * iir + self.b[1] * z[0] + self.b[2] * z[1];
+            z[1] = z[0];
+            z[0] = iir;
+            output
+        } else {
+            let output = self.b[0] * input + z[0];
+            z[0] = self.b[1] * input - self.a[0] * output + z[1];
+            z[1] = self.b[2] * input - self.a[1] * output;
+            output
         }
     }
 }
@@ -64,41 +72,73 @@ impl Biquad {
 pub struct Effect {
     pub spec: EffectSpec,
     stages: [Biquad; 2],
+    cutoff: f32,
+    resonance: f32,
+    rate: u32,
+    gain: f32,
 }
 impl Effect {
     pub fn new(spec: EffectSpec, rate: u32) -> Self {
         let mut effect = Self {
             spec: spec.clone(),
             stages: Default::default(),
+            cutoff: 5000.0,
+            resonance: 1.0,
+            rate,
+            gain: spec.gain,
         };
         effect.update(spec, rate);
         effect
     }
     pub fn update(&mut self, spec: EffectSpec, rate: u32) {
-        let cutoff = spec.cutoff.clamp(10.0, 22000.0);
-        let resonance = spec.resonance.clamp(1.0, 10.0);
-        match spec.kind.as_str() {
+        self.rate = rate;
+        self.spec = spec;
+        self.tune();
+    }
+    fn tune(&mut self) {
+        match self.spec.kind.as_str() {
             "Lowpass" => {
                 for (i, stage) in self.stages.iter_mut().enumerate() {
-                    let q = resonance
+                    let q = self.resonance
                         / (2.0 * (((2 * i + 1) as f32) * std::f32::consts::PI / 8.0).cos());
-                    stage.tune(false, cutoff, q, rate);
+                    stage.tune(false, self.cutoff, q, self.rate);
                 }
             }
-            "Highpass" => self.stages[0].tune(true, cutoff, resonance, rate),
+            "Highpass" => self.stages[0].tune(true, self.cutoff, self.resonance, self.rate),
             _ => {}
         }
-        self.spec = spec;
+    }
+    // Measured sample-by-sample slew: clamp the step to one percent of the endpoint sum.
+    fn slew(current: f32, target: f32) -> f32 {
+        let limit = (current.abs() + target.abs()) * 0.01;
+        current + (target - current).clamp(-limit, limit)
     }
     pub fn process(&mut self, samples: &mut [f32], bypass: bool) {
         if self.spec.kind == "Attenuation" {
-            for x in samples {
-                *x *= self.spec.gain;
+            let from = self.gain;
+            let frames = samples.len() / 2;
+            for (frame, stereo) in samples.chunks_exact_mut(2).enumerate() {
+                let gain = from + (self.spec.gain - from) * (frame + 1) as f32 / frames as f32;
+                for x in stereo {
+                    *x *= gain;
+                }
             }
+            self.gain = self.spec.gain;
         } else if !bypass && !self.spec.bypass {
-            self.stages[0].process(samples);
-            if self.spec.kind == "Lowpass" {
-                self.stages[1].process(samples);
+            for stereo in samples.chunks_exact_mut(2) {
+                let cutoff = Self::slew(self.cutoff, self.spec.cutoff.clamp(10.0, 22000.0));
+                let resonance = Self::slew(self.resonance, self.spec.resonance.clamp(1.0, 10.0));
+                if cutoff != self.cutoff || resonance != self.resonance {
+                    self.cutoff = cutoff;
+                    self.resonance = resonance;
+                    self.tune();
+                }
+                for (channel, x) in stereo.iter_mut().enumerate() {
+                    *x = self.stages[0].sample(*x, channel, self.spec.kind == "Highpass");
+                    if self.spec.kind == "Lowpass" {
+                        *x = self.stages[1].sample(*x, channel, false);
+                    }
+                }
             }
         }
     }
@@ -108,6 +148,7 @@ pub struct GroupNode {
     pub spec: GroupSpec,
     pub effects: Vec<Effect>,
     pub buffer: Vec<f32>,
+    pub rendered: usize,
 }
 impl GroupNode {
     pub fn update(&mut self, spec: GroupSpec, rate: u32) {

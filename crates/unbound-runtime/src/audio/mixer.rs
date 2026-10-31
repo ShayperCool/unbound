@@ -355,6 +355,7 @@ impl Mixer {
         self.config = config;
         self.frames = frame_of(seconds, config.sample_rate);
         for node in self.group_nodes.values_mut() {
+            node.rendered = 0;
             node.effects.clear();
             node.update(node.spec.clone(), config.sample_rate);
         }
@@ -466,6 +467,7 @@ impl Mixer {
         }
         let node = self.group_nodes.entry(handle).or_insert_with(|| GroupNode {
             spec: spec.clone(),
+            rendered: 0,
             effects: Vec::new(),
             buffer: vec![0.0; BLOCK * 2],
         });
@@ -893,11 +895,37 @@ impl Mixer {
         }
         for &handle in &self.group_order {
             let node = self.group_nodes.get_mut(&handle).unwrap();
+            let active = !node.spec.bypass
+                && node.effects.iter().any(|e| {
+                    !e.spec.bypass && matches!(e.spec.kind.as_str(), "Lowpass" | "Highpass")
+                });
+            if active {
+                for (frame, stereo) in node.buffer[..n * 2].chunks_exact_mut(2).enumerate() {
+                    let gain = ((node.rendered + frame) as f32 / config.buffer_size.max(1) as f32)
+                        .min(1.0);
+                    for sample in stereo {
+                        *sample *= gain;
+                    }
+                }
+            }
+            node.rendered += n;
             for effect in &mut node.effects {
                 effect.process(&mut node.buffer[..n * 2], node.spec.bypass);
             }
             if node.spec.muted {
                 node.buffer[..n * 2].fill(0.0);
+            }
+            if node.spec.observe
+                && let Some(cb) = callback
+            {
+                cb(
+                    callback::GROUP_OUTPUT,
+                    handle,
+                    node.buffer.as_mut_ptr(),
+                    n as i32,
+                    2,
+                    0,
+                );
             }
             let parent = node.spec.parent;
             // Remove the buffer temporarily to borrow the parent without copying or allocating.

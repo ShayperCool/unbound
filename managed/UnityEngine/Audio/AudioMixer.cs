@@ -304,6 +304,7 @@ namespace UnityEngine.Audio
         internal readonly List<string> m_EffectParameters = new List<string>();
         internal readonly List<AudioMixerEffectController> m_Effects = new List<AudioMixerEffectController>();
         internal ulong m_Handle;
+        internal bool m_ObserveOutput;
 
         internal AudioMixerGroup() { }
 
@@ -378,7 +379,7 @@ namespace UnityEngine.Audio
             var parent = m_Parent ?? m_Mixer?.m_OutputGroup;
             return new { handle = m_Handle, parent = parent?.Handle ?? 0UL,
                 muted = m_Mute || (m_Mixer != null && m_Mixer.AnySolo && !InSoloPath()),
-                bypass = m_BypassEffects, effects };
+                bypass = m_BypassEffects, observe = m_ObserveOutput, effects };
         }
 
         bool InSoloPath()
