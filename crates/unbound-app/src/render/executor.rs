@@ -504,13 +504,18 @@ impl UnityRenderer {
         space: i32,
     ) -> (wgpu::BindGroup, bool) {
         let slot = space.clamp(0, 1) as usize;
-        let key = {
+        let mut key = {
             let t = self.texture_or_default(handle, default);
             if let Some(bg) = &t.bind_groups[slot] {
                 return (bg.clone(), t.alpha_only);
             }
             t.sampler_key
         };
+        // The legacy main-texture binding follows the same global policy as a named 2D
+        // texture binding. Render targets keep their own anisotropic level.
+        if !self.texture_or_default(handle, default).render_target {
+            key.aniso = self.effective_aniso(key.aniso);
+        }
         let sampler = self.sampler(key);
         let layout = self.pipelines.texture_layout.clone();
         let device = self.device.clone();
@@ -1370,6 +1375,10 @@ impl UnityRenderer {
                         // The materials' bind groups hold samplers of the old levels.
                         for material in self.materials.values_mut() {
                             material.pass_textures.iter_mut().for_each(|p| *p = None);
+                        }
+                        for texture in self.textures.values_mut().chain(self.defaults.values_mut())
+                        {
+                            texture.bind_groups = [None, None];
                         }
                     }
                 }
