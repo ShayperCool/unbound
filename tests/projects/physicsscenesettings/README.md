@@ -98,3 +98,13 @@ in the engine. These 227-record runs live under `islands-*`; their motion record
 can also be compared with the original profile to measure island insertion's
 effect separately from process repeatability. This does not establish determinism
 for arbitrary insertion orders, parallel workers or long simulations.
+
+`python3 tests/projects/physicsscenesettings/test_compare.py` runs six comparator
+checks. They reject missing/extra/duplicate records and NaN, and preserve both the
+original 1e-3 motion boundary and stricter 1e-6 field boundary.
+
+`cache.py` reuses one private project's populated Library, changes only
+`m_FrictionType` from 0 to 1, then restores 0 in a `finally`-protected sequence.
+Its three complete recordings compare with the corresponding original Native
+profiles. Settings documents are read directly through `DocumentLoader.load`;
+no new settings cache format or version is introduced by this work.
