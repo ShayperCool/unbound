@@ -118,6 +118,73 @@ namespace UnityEngine.Tests
             Assert.Equal(names.Length, count);
             for (int i = 0; i < count; i++) Check(hits[i], names[i], values[i]);
         }
+        // Two fresh Native processes agree on these threshold, direction and range controls.
+        public static IEnumerable<object[]> NativeInitialCasts()
+        {
+            yield return new object[] { "box", "circle", -0.004f, false, "toward", null };
+            yield return new object[] { "box", "circle", -0.004f, true, "toward", new float[] { 0f, 0f, -1.003f, 0f, -1f, 0f, -1.296f, 0f } };
+            yield return new object[] { "box", "circle", -0.001f, false, "toward", new float[] { 0.0039999485f, 0.001333336f, -1.0025f, 0f, -1f, 0f, -1.29500008f, 0f } };
+            yield return new object[] { "box", "circle", -0.001f, true, "short", new float[] { 0.004999995f, 0.5f, -1.002f, 0f, -1f, 0f, -1.294f, 0f } };
+            yield return new object[] { "box", "circle", -0.001f, true, "zero", null };
+            yield return new object[] { "box", "circle", -0.001f, true, "away", null };
+            yield return new object[] { "circle", "circle", -0.016f, false, "toward", null };
+            yield return new object[] { "circle", "circle", -0.016f, true, "toward", new float[] { 0f, 0f, -0.742f, 0f, -1f, 0f, -1.034f, 0f } };
+            yield return new object[] { "circle", "circle", -0.012f, false, "toward", new float[] { 0.003000021f, 0.001000007f, -0.742499948f, 0f, -1f, 0f, -1.035f, 0f } };
+            yield return new object[] { "circle", "circle", -0.012f, true, "short", new float[] { 0.003000021f, 0.3000024f, -0.742499948f, 0f, -1f, 0f, -1.035f, 0f } };
+            yield return new object[] { "circle", "circle", -0.012f, true, "zero", null };
+            yield return new object[] { "circle", "circle", -0.012f, true, "away", null };
+            yield return new object[] { "box", "box", 0.001f, false, "toward", null };
+            yield return new object[] { "box", "box", 0.001f, true, "toward", new float[] { 0f, 0f, -1.0005f, 0f, -1f, 0f, -1.301f, 0f } };
+            yield return new object[] { "box", "box", 0.01f, false, "short", new float[] { 0.004999995f, 0.5f, -1.0025f, 0f, -1f, 0f, -1.30500007f, 0f } };
+            yield return new object[] { "box", "box", 0.01f, true, "away", null };
+            yield return new object[] { "capsuleV", "capsule", -0.012f, false, "toward", new float[] { 0.00299996138f, 0.0009999871f, -0.4925f, 0f, -1f, 0f, -0.785f, 0f } };
+            yield return new object[] { "capsuleV", "capsule", -0.012f, true, "short", new float[] { 0.00299996138f, 0.299996436f, -0.4925f, 0f, -1f, 0f, -0.785f, 0f } };
+            yield return new object[] { "capsuleH", "box", -0.001f, false, "toward", new float[] { 0.00400006771f, 0.0013333559f, -1.4925f, 0f, -1f, 0f, -1.795f, 0f } };
+            yield return new object[] { "capsuleH", "box", -0.001f, true, "short", new float[] { 0.004999995f, 0.5f, -1.492f, 0f, -1f, 0f, -1.794f, 0f } };
+        }
+        [Theory]
+        [MemberData(nameof(NativeInitialCasts))]
+        public void InitialCastThresholdMatchesNative(string target, string query, float gap, bool include, string range, float[] expected)
+        {
+            foreach (var old in made) Object.DestroyImmediate(old);
+            made.Clear();
+            var go = Make("target", Vector2.zero);
+            if (target == "box") go.AddComponent<BoxCollider2D>().size = new Vector2(2, 1);
+            else if (target == "circle") go.AddComponent<CircleCollider2D>().radius = 0.75f;
+            else
+            {
+                var capsule = go.AddComponent<CapsuleCollider2D>();
+                capsule.direction = target == "capsuleH" ? CapsuleDirection2D.Horizontal : CapsuleDirection2D.Vertical;
+                capsule.size = target == "capsuleH" ? new Vector2(3, 1) : new Vector2(1, 3);
+            }
+            Physics2D.SyncTransforms();
+            Physics2D.queriesStartInColliders = include;
+            var origin = new Vector2(go.GetComponent<Collider2D>().bounds.min.x - .3f - gap, 0);
+            var direction = range == "away" ? Vector2.left : Vector2.right;
+            float distance = range == "zero" ? 0 : range == "short" ? .01f : 3;
+            var hit = query == "circle" ? Physics2D.CircleCast(origin, .3f, direction, distance)
+                : query == "box" ? Physics2D.BoxCast(origin, new Vector2(.6f, .8f), 0, direction, distance)
+                : Physics2D.CapsuleCast(origin, new Vector2(.6f, .8f), CapsuleDirection2D.Vertical, 0, direction, distance);
+            if (expected == null) Assert.Null(hit.collider);
+            else Check(hit, "target", expected);
+        }
+
+        [Theory]
+        [InlineData(.5f, .262500018f)]
+        [InlineData(1f, .07500002f)]
+        [InlineData(2f, -.3f)]
+        public void CoincidentCircleCastUsesNativeContactOrientation(float scale, float pointX)
+        {
+            foreach (var old in made) Object.DestroyImmediate(old);
+            made.Clear();
+            var origin = new Vector2(.3f, -.2f);
+            Make("target", origin, 0, new Vector2(scale, scale * .8f))
+                .AddComponent<CircleCollider2D>().radius = .75f;
+            Physics2D.SyncTransforms();
+            var hit = Physics2D.CircleCast(origin, .3f, Vector2.right, 10);
+            Check(hit, "target", new[] { 0f, 0f, pointX, -.2f, -1f, 0f, .3f, -.2f });
+        }
+
         // Independent fine-angle controls distinguish the contact averaging boundary
         // from an angular tolerance or defaultContactOffset-dependent threshold.
         [InlineData("box", .5f, .001f, 3.516674e-06f, 0.252504349f)]

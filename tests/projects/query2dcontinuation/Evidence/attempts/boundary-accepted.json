@@ -1,0 +1,82 @@
+{
+  "before.0.001": {
+    "collider": "box",
+    "point.x": 0,
+    "point.y": 0.500250041,
+    "normal.x": 0,
+    "normal.y": 1,
+    "centroid.x": 0,
+    "centroid.y": 0.900500059,
+    "distance": 3.0995
+  },
+  "before.0.1": {
+    "collider": "box",
+    "point.x": 0,
+    "point.y": 0.5249999,
+    "normal.x": 0,
+    "normal.y": 1,
+    "centroid.x": 0,
+    "centroid.y": 0.9499998,
+    "distance": 3.05000019
+  },
+  "after.0.001": {
+    "collider": "box",
+    "point.x": 0,
+    "point.y": 0.500250041,
+    "normal.x": 0,
+    "normal.y": 1,
+    "centroid.x": 0,
+    "centroid.y": 0.900500059,
+    "distance": 3.0995
+  },
+  "after.0.1": {
+    "collider": "box",
+    "point.x": 0,
+    "point.y": 0.5249999,
+    "normal.x": 0,
+    "normal.y": 1,
+    "centroid.x": 0,
+    "centroid.y": 0.9499998,
+    "distance": 3.05000019
+  },
+  "after-sync.0.001": {
+    "collider": "box",
+    "point.x": 0,
+    "point.y": 0.509250045,
+    "normal.x": 0,
+    "normal.y": 1,
+    "centroid.x": 0,
+    "centroid.y": 0.9095001,
+    "distance": 3.09049988
+  },
+  "after-sync.0.1": {
+    "collider": "box",
+    "point.x": 0,
+    "point.y": 0.5249999,
+    "normal.x": 0,
+    "normal.y": 1,
+    "centroid.x": 0,
+    "centroid.y": 0.9499998,
+    "distance": 3.05000019
+  },
+  "after-edit.0.001": {
+    "collider": "box",
+    "point.x": 0,
+    "point.y": 0.50025,
+    "normal.x": 0,
+    "normal.y": 1,
+    "centroid.x": 0,
+    "centroid.y": 0.900500059,
+    "distance": 3.0995
+  },
+  "after-edit.0.1": {
+    "collider": "box",
+    "point.x": 0,
+    "point.y": 0.524999857,
+    "normal.x": 0,
+    "normal.y": 1,
+    "centroid.x": 0,
+    "centroid.y": 0.9499998,
+    "distance": 3.05000019
+  }
+}

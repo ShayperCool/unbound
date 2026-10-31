@@ -9,7 +9,16 @@ namespace Unbound.Runtime
     internal static class QueryParityCast
     {
         const float LinearSlop = 0.005f;
+        const float TimeTolerance = 0.25f * LinearSlop;
         internal const float ContactSeparationTolerance = LinearSlop * LinearSlop;
+
+        static float Target(DistanceProxy a, DistanceProxy b) =>
+            Math.Max(LinearSlop, a.Radius + b.Radius - 3f * LinearSlop);
+
+        // A shallow skin overlap can still sweep to the query target. Treating it
+        // as an initial hit incorrectly suppresses it when start-in-colliders is off.
+        internal static bool StartsInside(DistanceProxy a, DistanceProxy b, float coreDistance) =>
+            coreDistance <= a.Radius + b.Radius && coreDistance < Target(a, b) + TimeTolerance;
 
         internal static bool Cast(out ShapeCastOutput output, in ShapeCastInput input)
         {
@@ -41,8 +50,8 @@ namespace Unbound.Runtime
         // Contact/solver TOI and GJK are left unchanged.
         static bool Time(DistanceProxy a, DistanceProxy b, Sweep sweepA, Sweep sweepB, out float time)
         {
-            float target = Math.Max(LinearSlop, a.Radius + b.Radius - 3f * LinearSlop);
-            const float tolerance = 0.25f * LinearSlop;
+            float target = Target(a, b);
+            const float tolerance = TimeTolerance;
             var cache = new SimplexCache();
             var distance = new DistanceInput { ProxyA = a, ProxyB = b, UseRadii = false };
             float t1 = 0f;
