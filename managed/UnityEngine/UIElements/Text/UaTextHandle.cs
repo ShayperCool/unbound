@@ -34,6 +34,29 @@ namespace Unbound.UIElements
             a.unityParagraphSpacing == b.unityParagraphSpacing && a.whiteSpace == b.whiteSpace && a.unityTextAlign == b.unityTextAlign &&
             a.textOverflow == b.textOverflow && a.unityTextOverflowPosition == b.unityTextOverflowPosition;
 
+        // These are the inherited fields that contribute to the text's stylesheet cache key.
+        // Include the parent's values before this element's declarations override them.
+        internal static void AddInheritedStyleHash(ref HashCode hash, ComputedValues style)
+        {
+            style ??= ComputedValues.Initial;
+            hash.Add(style.color);
+            hash.Add(style.fontSize);
+            hash.Add(style.letterSpacing);
+            hash.Add(style.textShadow);
+            hash.Add(style.unityEditorTextRenderingMode);
+            hash.Add(style.unityFont);
+            hash.Add(style.unityFontDefinition);
+            hash.Add(style.unityFontStyleAndWeight);
+            hash.Add(style.unityParagraphSpacing);
+            hash.Add(style.unityTextAlign);
+            hash.Add(style.unityTextGenerator);
+            hash.Add(style.unityTextOutlineColor);
+            hash.Add(style.unityTextOutlineWidth);
+            hash.Add(style.visibility);
+            hash.Add(style.whiteSpace);
+            hash.Add(style.wordSpacing);
+        }
+
         /// <summary>The layout size of a text: its preferred size within the given constraints, ceiled
         /// to the pixel grid (the unrounded size is kept to lay the text out in the rounded box).</summary>
         internal Vector2 Measure(string text, float width, VisualElement.MeasureMode widthMode, float height, VisualElement.MeasureMode heightMode)
