@@ -135,3 +135,9 @@ capture directory and run `ParentIntegration/verify.py` to validate and archive
 those results. The exact engine driver is archived under
 `ParentIntegration/accepted/validation/validate-final.py`; its environment uses
 the same explicit output paths and heavy-job wrapper as the delegate.
+
+The accepted combined runtime also has an immutable local snapshot at
+`~/.cache/compat/parity-baseline-inactive3d-native8/`, with the ABI5 CLI, complete
+managed output, shim8 and all file hashes. Its manifest is preserved in
+`ParentIntegration/baseline-manifest.json`. Use copies of this snapshot for the
+next workstreams; leave it and every earlier baseline unchanged.
