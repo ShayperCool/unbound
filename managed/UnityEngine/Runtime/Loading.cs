@@ -623,6 +623,7 @@ namespace Unbound.Runtime
                     case "model":
                         // A model is the prefab it imports to (the native side makes its documents).
                         file = ObjectGraphBuilder.Build(Native.LoadDocuments(guid), info.Path, guid, ObjectGraphBuilder.Kind.PrefabAsset, null, Publish);
+                        if (info.Kind == "model") ModelMaterialImport.UsePipelineDefault(file);
                         break;
                     case "yaml":
                         file = ObjectGraphBuilder.Build(Native.LoadDocuments(guid), info.Path, guid, ObjectGraphBuilder.Kind.Asset, null, Publish);

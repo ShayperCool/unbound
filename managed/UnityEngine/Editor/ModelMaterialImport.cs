@@ -34,6 +34,26 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>A model's slots without a material of its own get the render pipeline's default
+        /// material (URP's Lit.mat), Default-Material without one (measured:
+        /// tests/projects/modelimport).</summary>
+        internal static void UsePipelineDefault(LoadedFile file)
+        {
+            var pipeline = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline;
+            var replacement = pipeline != null ? pipeline.defaultMaterial : null;
+            if (replacement == null) return;
+            var builtin = BuiltinShaders.Resolve(BuiltinShaders.ExtraGuid, DefaultMaterialFileId) as Material;
+            if (builtin == null) return;
+            foreach (var obj in file.Objects.Values)
+            {
+                if (obj is not Renderer renderer) continue;
+                for (int i = 0; i < renderer.m_Materials.Length; i++)
+                    if (ReferenceEquals(renderer.m_Materials[i], builtin)) renderer.m_Materials[i] = replacement;
+            }
+        }
+
+        const long DefaultMaterialFileId = 10303;
+
         static MaterialDescription Read(YNode import, IReferenceResolver resolver, string name)
         {
             var d = new MaterialDescription { m_MaterialName = name };
