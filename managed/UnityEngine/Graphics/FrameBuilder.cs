@@ -945,6 +945,15 @@ namespace Unbound.Runtime
                 // bound after the camera's setup).
                 var buffers = camera.targetTexture == null ? camera.TargetBufferHandles() : null;
                 var cameraTarget = camera.targetTexture ?? camera.BufferTarget;
+                // Measured in cameramsaa: an explicit target supplies its samples, including HDR
+                // float targets. Quality AA belongs to the screen or to the camera's HDR
+                // intermediate when converting into an LDR target. Buffer bindings bypass that
+                // intermediate. This also explains graphics' quality-AA single-sample LDR target.
+                bool qualitySamples = buffers == null && (cameraTarget == null ||
+                    (camera.allowHDR && !UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsHDRFormat(cameraTarget.graphicsFormat)));
+                int cameraSamples = qualitySamples
+                    ? (camera.allowMSAA ? Math.Max(1, QualitySettings.antiAliasing) : 1)
+                    : cameraTarget?.antiAliasing ?? 1;
                 RenderTexture sceneTarget = cameraTarget;
                 var viewport = context.Viewport;
                 if (effects.Count > 0 || opaqueEffects.Count > 0)
@@ -953,10 +962,8 @@ namespace Unbound.Runtime
                         camera.allowHDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
                     viewport = new Rect(0, 0, sceneTarget.width, sceneTarget.height);
                 }
-                // MSAA from the quality level: the camera draws into a multisampled intermediate,
-                // resolved into its target before the image effects (measured:
-                // tests/projects/graphics, half-covered pixels blend into an 8x8 target that has
-                // no MSAA of its own).
+                // Resolve the selected camera samples before image effects. Their temporary
+                // texture must not replace an explicit target's sample policy with quality AA.
                 RenderTexture msaaTarget = null, resolveTarget = sceneTarget;
                 if (deferred)
                 {
@@ -968,14 +975,14 @@ namespace Unbound.Runtime
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
                 }
-                else if (QualitySettings.antiAliasing > 1 && camera.allowMSAA && camera.rect == new Rect(0f, 0f, 1f, 1f)
-                    && (sceneTarget == null || sceneTarget.antiAliasing <= 1) && buffers == null)
+                else if (cameraSamples > 1 && camera.rect == new Rect(0f, 0f, 1f, 1f)
+                    && (sceneTarget == null || sceneTarget.antiAliasing != cameraSamples) && buffers == null)
                 {
                     int w = sceneTarget != null ? sceneTarget.width : Math.Max(1, Screen.width);
                     int h = sceneTarget != null ? sceneTarget.height : Math.Max(1, Screen.height);
                     var format = sceneTarget != null ? sceneTarget.format : camera.allowHDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default;
                     var readWrite = sceneTarget == null || sceneTarget.sRGB ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear;
-                    msaaTarget = RenderTexture.GetTemporary(w, h, 24, format, readWrite, QualitySettings.antiAliasing);
+                    msaaTarget = RenderTexture.GetTemporary(w, h, 24, format, readWrite, cameraSamples);
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
                 }
