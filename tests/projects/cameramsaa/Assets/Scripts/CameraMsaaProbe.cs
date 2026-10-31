@@ -1,6 +1,5 @@
 using System;
 using System.Collections;
-using System.Globalization;
 using System.IO;
 using System.Text;
 using UnityEngine;
@@ -74,7 +73,9 @@ public class CameraMsaaProbe : MonoBehaviour
             Case(f+".buffers",f,1,4,true,false,1);Case(f+".viewport",f,1,4,true,false,2);
             Case(f+".effect",f,1,4,true,false,3);Case(f+".effectHDR",f,1,4,true,true,3);
             if(f==RenderTextureFormat.ARGB32 || f==RenderTextureFormat.ARGBHalf || f==RenderTextureFormat.ARGBFloat) {
+                Case(f+".offS2",f,2,4,false);
                 Case(f+".hdrQ0",f,1,0,true,true);Case(f+".hdrQ2",f,1,2,true,true);
+                Case(f+".hdrQ0S2",f,2,0,true,true);Case(f+".hdrOffS2",f,2,4,false,true);Case(f+".hdrQ2S4",f,4,2,true,true);
                 Case(f+".hdrOff",f,1,4,false,true);Case(f+".hdrS2",f,2,4,true,true);
                 Case(f+".hdrBuffers",f,1,4,true,true,1);Case(f+".hdrViewport",f,1,4,true,true,2);
                 Case(f+".effectS2",f,2,4,true,false,3);Case(f+".effectHDRS2",f,2,4,true,true,3);
@@ -107,7 +108,12 @@ public class CameraMsaaProbe : MonoBehaviour
             // Read resolved separately without another camera render.
             var copy=new Texture2D(128,128,TextureFormat.RGBAFloat,false,true);copy.ReadPixels(new Rect(0,0,128,128),0,0);copy.Apply();
             using(var w=new BinaryWriter(File.Create(Path.Combine(directory,f+".resolve.rgba"))))foreach(var c in copy.GetPixels()){w.Write(c.r);w.Write(c.g);w.Write(c.b);w.Write(c.a);}
-            File.WriteAllBytes(Path.Combine(directory,f+".resolve.png"),copy.EncodeToPNG());Value(f+".resolve.pixels",128*128);DestroyImmediate(copy);RenderTexture.active=null;resolved.Release();DestroyImmediate(resolved);camera.targetTexture=null;target.Release();DestroyImmediate(target);
+            File.WriteAllBytes(Path.Combine(directory,f+".resolve.png"),copy.EncodeToPNG());Value(f+".resolve.pixels",128*128);DestroyImmediate(copy);
+            // The preceding inactive-source call asserts in Native. Retain its output as invalid
+            // input evidence, then exercise the valid path with the source bound explicitly.
+            RenderTexture.active=target;target.ResolveAntiAliasedSurface(resolved);
+            var source=target;target=resolved;ReadImage(f+".resolveActive");target=source;
+            RenderTexture.active=null;resolved.Release();DestroyImmediate(resolved);camera.targetTexture=null;target.Release();DestroyImmediate(target);
         }
         File.WriteAllText(Path.Combine(directory,"values.jsonl"),records.ToString());Debug.Log("CAMERA_MSAA_DONE "+directory);
 #if UNITY_EDITOR
