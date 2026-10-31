@@ -15367,8 +15367,6 @@ namespace UnityEditor
         [global::Unbound.Stub] public void LightmapEmissionProperty(int labelIndent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MaterialEditor.LightmapEmissionProperty"); }
         [global::Unbound.Stub] public void LightmapEmissionProperty(global::UnityEngine.Rect position, int labelIndent) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MaterialEditor.LightmapEmissionProperty"); }
         [global::Unbound.Stub] public bool EmissionEnabledProperty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MaterialEditor.EmissionEnabledProperty"); return default; }
-        [global::Unbound.Stub] public static void FixupEmissiveFlag(global::UnityEngine.Material mat) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MaterialEditor.FixupEmissiveFlag"); }
-        [global::Unbound.Stub] public static global::UnityEngine.MaterialGlobalIlluminationFlags FixupEmissiveFlag(global::UnityEngine.Color col, global::UnityEngine.MaterialGlobalIlluminationFlags flags) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MaterialEditor.FixupEmissiveFlag"); return default; }
         [global::Unbound.Stub] public void LightmapEmissionFlagsProperty(int indent, bool enabled) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MaterialEditor.LightmapEmissionFlagsProperty"); }
         [global::Unbound.Stub] public void LightmapEmissionFlagsProperty(int indent, bool enabled, bool ignoreEmissionColor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MaterialEditor.LightmapEmissionFlagsProperty"); }
         [global::Unbound.Stub] public void DefaultShaderProperty(global::UnityEditor.MaterialProperty prop, string label) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.MaterialEditor.DefaultShaderProperty"); }
@@ -23984,8 +23982,7 @@ namespace UnityEditor
             public global::UnityEngine.Rendering.TextureDimension Dim { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderData.TextureBindingInfo.Dim"); return default; } }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class ShaderGUI
+    unsafe partial class ShaderGUI
     {
         [global::Unbound.Stub] public virtual void OnGUI(global::UnityEditor.MaterialEditor materialEditor, global::UnityEditor.MaterialProperty[] properties) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderGUI.OnGUI"); }
         [global::Unbound.Stub] public virtual void OnMaterialPreviewGUI(global::UnityEditor.MaterialEditor materialEditor, global::UnityEngine.Rect r, global::UnityEngine.GUIStyle background) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderGUI.OnMaterialPreviewGUI"); }
@@ -23993,10 +23990,8 @@ namespace UnityEditor
         [global::Unbound.Stub] public virtual void OnMaterialPreviewSettingsGUI(global::UnityEditor.MaterialEditor materialEditor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderGUI.OnMaterialPreviewSettingsGUI"); }
         [global::Unbound.Stub] public virtual void OnClosed(global::UnityEngine.Material material) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderGUI.OnClosed"); }
         [global::Unbound.Stub] public virtual void AssignNewShaderToMaterial(global::UnityEngine.Material material, global::UnityEngine.Shader oldShader, global::UnityEngine.Shader newShader) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderGUI.AssignNewShaderToMaterial"); }
-        [global::Unbound.Stub] public virtual void ValidateMaterial(global::UnityEngine.Material material) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderGUI.ValidateMaterial"); }
         [global::Unbound.Stub] protected static global::UnityEditor.MaterialProperty FindProperty(string propertyName, global::UnityEditor.MaterialProperty[] properties) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderGUI.FindProperty"); return default; }
         [global::Unbound.Stub] protected static global::UnityEditor.MaterialProperty FindProperty(string propertyName, global::UnityEditor.MaterialProperty[] properties, bool propertyIsMandatory) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderGUI.FindProperty"); return default; }
-        [global::Unbound.Stub] protected ShaderGUI() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.ShaderGUI.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe static partial class ShaderGUIUtility

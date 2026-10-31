@@ -148,9 +148,37 @@ namespace UnityEngine
             get => m_Shader;
             set
             {
+                if (value != m_Shader) KeepDefaultsOf(m_Shader);
                 m_Shader = value;
                 AddTextureNames();
                 MarkDirty();
+            }
+        }
+
+        /// <summary>A material holds a value for every property of its shader from the start, so
+        /// the shader it leaves keeps its defaults for names the next one declares too (measured:
+        /// a model material the built-in preprocessor made Standard and URP's made Lit keeps
+        /// Standard's _Parallax, tests/projects/modelimport).</summary>
+        void KeepDefaultsOf(Shader shader)
+        {
+            if (shader == null || m_Parent != null) return;
+            foreach (var p in shader.m_Properties)
+            {
+                int id = Shader.PropertyToID(p.Name);
+                switch (p.Type)
+                {
+                    case ShaderPropertyType.Float:
+                    case ShaderPropertyType.Range:
+                        if (!m_Floats.ContainsKey(id)) m_Floats[id] = p.DefaultValue.x;
+                        break;
+                    case ShaderPropertyType.Int:
+                        if (!m_Ints.ContainsKey(id)) m_Ints[id] = (int)p.DefaultValue.x;
+                        break;
+                    case ShaderPropertyType.Color:
+                    case ShaderPropertyType.Vector:
+                        if (!m_Vectors.ContainsKey(id)) m_Vectors[id] = p.DefaultValue;
+                        break;
+                }
             }
         }
 

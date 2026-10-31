@@ -16,7 +16,8 @@ model + material, and `materialSearch` local, recursive up and everywhere (the E
 Material assets under the `Materials` folders on import; they are part of the probe). Textures are
 found by relative path, in the model's folder and its `Textures` folder, in the `Textures` folders
 above, and by name anywhere (Search.fbx); an embedded texture is not extracted. Captures run in
-Gamma and Linear projects.
+Gamma and Linear projects and in a URP project (the urp probe's pipeline asset and packages),
+with GPU Editors (private Xvfb, VirtualGL); `MODEL_IMPORT_PROFILES=URP` limits a run.
 
     python3 tests/projects/modelimport/run.py editor --label <L>    # two Editor runs per color space
     python3 tests/projects/modelimport/run.py publish --label <L>   # checks they agree, writes Reference/
@@ -24,6 +25,7 @@ Gamma and Linear projects.
     R=tests/projects/modelimport/Reference/unity-6000.0.71f1 W=~/.cache/unbound/validation/runs/modelimport/<L>
     python3 tests/projects/modelimport/compare.py $R/Gamma.jsonl $W/unbound/Gamma.jsonl
     python3 tests/projects/modelimport/compare.py $R/Linear.jsonl $W/unbound/Linear.jsonl
+    python3 tests/projects/modelimport/compare.py $R/URP.jsonl $W/unbound/URP.jsonl
     python3 tests/projects/modelimport/compare.py $R/descriptions.txt $W/unbound/Gamma.descriptions.txt
 
 After changing a generator, regenerate the models (`blender -b --factory-startup --python
@@ -41,9 +43,14 @@ mesh of their own make none); level i switches at 0.25 / 2^i of the screen heigh
 0.01; its size and reference point are the levels' bounds. The root gets an Animator only with an
 avatar (`avatarSetup` 1, the Avatar named `<model>Avatar`); `avatarSetup` 0, the default of current
 metas, gives none even to animated or skinned models. Metas that omit a setting take the current
-defaults.
+defaults. In URP, URP's preprocessors replace the built-in one's materials (Standard's values stay
+for names Lit declares too), the shader's ShaderGUI validates them (blend states, queue control,
+GI flags), and slots without a material get URP's Lit.mat; the legacy importer uses URP's shaders.
 
 What still differs: an Autodesk Interactive material with a mask threshold has `_DstBlend` 0 in the
 Editor although its preprocessor sets 10 (queue 3000 stays; when the Editor loads it outside Play
 mode the queue reads 2450, as the shader's GUI would set it); Unbound keeps 10. Material animation
-curves are not imported.
+curves are not imported. URP: the legacy importer's URP materials are not reproduced (Unbound
+makes Standard ones); `GetTag("RenderType", false)` reads "" for the Editor's validated Lit
+materials, "Opaque" in Unbound; materials of Shader Graph shaders keep EmissiveIsBlack and an
+explicit queue where the Editor's generated shaders leave the queue to the shader.

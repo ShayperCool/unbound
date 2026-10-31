@@ -69,6 +69,22 @@ namespace Unbound.Runtime
             info.Attributes = others.Count > 0 ? others.ToArray() : Array.Empty<string>();
         }
 
+        static readonly Regex s_CustomEditor = new Regex(
+            "^\\s*CustomEditor\\s+\"([^\"]+)\"\\s*$", RegexOptions.Multiline);
+        static readonly Regex s_PipelineEditor = new Regex(
+            "^\\s*CustomEditorForRenderPipeline\\s+\"([^\"]+)\"\\s+\"([^\"]+)\"", RegexOptions.Multiline);
+
+        /// <summary>The shader's `CustomEditor` and its `CustomEditorForRenderPipeline` entries
+        /// (editor, pipeline asset type).</summary>
+        internal static void Editors(string source, Shader shader)
+        {
+            var custom = s_CustomEditor.Match(source);
+            shader.m_CustomEditor = custom.Success ? custom.Groups[1].Value : null;
+            shader.m_PipelineEditors.Clear();
+            foreach (Match m in s_PipelineEditor.Matches(source))
+                shader.m_PipelineEditors.Add((m.Groups[1].Value, m.Groups[2].Value));
+        }
+
         internal static List<ShaderPropertyInfo> Properties(string source)
         {
             var list = new List<ShaderPropertyInfo>();

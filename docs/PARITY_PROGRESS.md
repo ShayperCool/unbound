@@ -1346,6 +1346,94 @@ The model-import change requires a CLI with builtin-shader-source; the earlier
 frozen CLI must not be paired with these managed assemblies. Full engine parity
 and the remaining physics, particles, animation/audio and UI gaps remain open.
 
+### URP model material validation, 2026-10-31
+
+The probe also records a URP project (the urp probe's pipeline asset and packages), and every
+profile is now recorded with GPU Editors, with values identical to the earlier captures. In
+URP the render pipeline's own preprocessors (package sources) run after the built-in one;
+a material switching shader keeps the old shader's defaults for names both declare; slots
+without a material take the pipeline's default material; and imported materials are
+validated by their shader's ShaderGUI when Unbound has that class (URP's, projects'). URP
+matches 7011 of 7687 Native values. The complete union has 7768 keys and 757 failures:
+550 missing, 126 differing and 81 extra keys. Legacy-mode URP materials, Shader Graph
+material queues and GI flags, and `GetTag("RenderType", false)` on validated Lit
+materials still differ. Root integration reproduces the delivered URP values with
+zero changes or newly failing keys; all35 material descriptions also match. Built-in
+profiles keep 6032/6033. The material-colour regression set, materials, blendshapes, lod,
+urp and urp2d keep their results (one URP skybox capture differs by at most 1/255 in 12310
+channels); managed tests keep the same text and particle failures as the base.
+
+
+### Panel transition callback phases, 2026-10-31
+
+Integrated the measured panel-wide animation phases from f44954e6. Each value type
+samples its owners before event dispatch; callbacks can retarget a later type in
+the same update, while same-type callback events wait for the next batch. Picking
+and layout validation no longer advance animation time. Inline destination writes
+and detachment preserve the measured values and pending callback behavior.
+
+The complete callback reference matches byte-for-byte: 718 samples, 3428 callbacks,
+and all78854 observations. This resolves all5053 previous failing keys, with zero
+retained or introduced failures. The added inline controls match110 samples and
+132 callbacks exactly against two agreeing Editor recordings. The original253
+samples/831 callbacks also pass. Source, runners and one release reference are in
+uitransitioncallbacks and uitransitioninline; run artifacts stay in the cache.
+
+The delegate passed557 managed tests, the rendering gates and33552 focused physics
+observations. Root combined verification with URP material validation and the
+particle lifetime changes passes703/703 managed tests, including all697 previous
+tests and six added callback controls. The separate particle suite retains its
+three known failures, with27/30 passing. API verification reports zero errors in
+2279 types; regenerated Physics and Editor modules match the committed files.
+The combined behavior and rendering replay is complete, with zero newly failing
+observations. All2029 graphics output files match the previous accepted model and
+lifetime build byte-for-byte, including UIToolkit JSON and three images. Each
+clipping profile passes1211 observations and266 images; canvas colors pass98402
+observations; focused cameras pass481 observations and54 images per color space.
+The strict UIToolkit comparator still fails against Native in both before and
+after captures, retaining the same Label width and image discrepancy.
+
+Noise23646, streams3544 and force-field2346 controls pass. All20 broad-particle and
+stream PNGs, plus broad physics, Joint2D, effector and force raw outputs, are
+byte-identical to the previous accepted build. Lifetime retains90 emission-state
+differences, broad particles retain597 scalar differences, and URP retains the
+757 complete-union differences documented above. None are excluded or reclassified
+as passing. Other transition property combinations and full engine parity remain
+open.
+
+The immutable artifact set is panel-models-native9, outside Git in the validation
+cache. Main ABI5, PhysX shim9 and shader cache13 are unchanged. A checker expected
+count omitted81 extra URP keys; the corrected complete-union report preserves them.
+A Vulkan Device(Lost) startup failure produced no captures; its log remains in the
+cache, and one fresh-directory retry passed. Completed captures were reused.
+
+
+### Particle emission and text measurement follow-up, 2026-10-31
+
+Integrated feec4436 and 23e0fe1e as independent changes. Emission observations now
+respect the module switch without treating zero rates or start delays as disabled
+emission. Playback snapshots restore simulation data while preserving the current
+Play/Pause/Stop state. Empty Stop/Clear, zero Emit and stopped simulation follow the
+measured state and clock behavior. The complete lifetime oracle passes all 30,080
+records in the delivered branch, resolving the previous 90 flag differences. The
+new 13,604-record emission control retains 72 count differences; all state flags
+and times match, with no introduced or changed retained values.
+
+Text measurement invalidates its cache when stylesheet matches or inherited style
+inputs change, including when declarations override the final values to equality.
+This resolves the inherited Label width of 54 instead of 53. Delivered focused
+controls pass all 608,384 observations; the existing UIToolkit JSON union passes
+36,846 observations. All three PNGs remain unchanged, retaining their small Native
+pixel differences. Generic font metrics and pixel rounding were not adjusted.
+
+Root combined managed verification passes 837/837 tests, including all 703 previous
+tests, 122 emission cases, four measurement-cache cases and eight text/font cases.
+The separate particle suite retains the same three failures. API verification
+reports zero errors in 2,279 types; Physics and Editor generated files match.
+Targeted combined capture replay is running. Earlier model, camera and material
+results remain in the immutable panel-models-native9 artifact set. The text probe
+can select another Editor release and writes that release into its disposable
+project; only Unity 6000.0.71f1 Linux has been measured so far.
 ### Texture import mip filters and normal maps, 2026-10-31
 
 The texture import probe (tests/projects/textureimport) records every mip level of 75 imported

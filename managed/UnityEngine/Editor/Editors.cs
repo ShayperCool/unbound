@@ -223,6 +223,24 @@ namespace UnityEditor
     {
         public MaterialEditor() { }
 
+        /// <summary>Sets <paramref name="mat"/>'s GI flags from its _EmissionColor.</summary>
+        public static void FixupEmissiveFlag(Material mat)
+        {
+            if (mat == null) throw new ArgumentNullException(nameof(mat));
+            mat.globalIlluminationFlags = FixupEmissiveFlag(mat.GetColor("_EmissionColor"), mat.globalIlluminationFlags);
+        }
+
+        /// <summary>Baked emission of a black colour is marked black; other flags keep only their
+        /// emissive bits (Unity's rule).</summary>
+        public static MaterialGlobalIlluminationFlags FixupEmissiveFlag(Color col, MaterialGlobalIlluminationFlags flags)
+        {
+            if ((flags & MaterialGlobalIlluminationFlags.BakedEmissive) != 0 && col.maxColorComponent == 0f)
+                flags |= MaterialGlobalIlluminationFlags.EmissiveIsBlack;
+            else if (flags != MaterialGlobalIlluminationFlags.EmissiveIsBlack)
+                flags &= MaterialGlobalIlluminationFlags.AnyEmissive;
+            return flags;
+        }
+
         [Unbound.EditorFaithful("the material inspector only prepares its drawing (previews, property lists), which no window does")]
         public virtual void Awake() { }
 
