@@ -40,6 +40,8 @@ def normalized(path):
     with path.open() as stream:
         for line in stream:
             row = json.loads(line)
+            if 'storage' in row:
+                row['storage'] = list(map(body, row['storage']))
             yield dict(row, world=identity('world', row['world']), bodies=list(map(body, row['bodies'])),
                        contacts=[dict(c, ptr=identity('contact', c['ptr']),
                                       fixtureA=identity('fixture', c['fixtureA']),
