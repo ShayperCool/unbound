@@ -19,7 +19,7 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import editor_path, reference_root, run_root
+from probe_paths import editor_path, reference_file, run_root
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -84,10 +84,10 @@ def publish(work):
     a, b = work/'native1'/'sprites.jsonl', work/'native2'/'sprites.jsonl'
     if not filecmp.cmp(a, b, shallow=False):
         sys.exit('the two Editor captures differ; not publishing')
-    target = reference_root(PROBE)
-    target.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(a, target/'sprites.jsonl')
-    print('published', target/'sprites.jsonl')
+    target = reference_file(PROBE, 'jsonl')
+    target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(a, target)
+    print('published', target)
     return 0
 
 
