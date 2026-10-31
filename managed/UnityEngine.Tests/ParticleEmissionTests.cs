@@ -105,6 +105,51 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
 
+        [Theory]
+        [InlineData(1, false, false, 3)]
+        [InlineData(1, true, false, 9)]
+        [InlineData(3, false, false, 2)]
+        [InlineData(3, true, false, 6)]
+        [InlineData(1, false, true, 3)]
+        [InlineData(1, true, true, 9)]
+        [InlineData(3, false, true, 2)]
+        [InlineData(3, true, true, 6)]
+        public void SubdivisionRemainderKeepsParticlesAtTheirLifetimeBoundary(int source, bool loop, bool live, int count)
+        {
+            var ps = Make(true, source, loop, 0, live);
+            try
+            {
+                ps.Play(false);
+                foreach (float dt in new[] { 0f, .125f, .125f, .25f, .5f, .25f, 1f })
+                {
+                    ps.Simulate(dt, false, false, false);
+                    var saved = ps.GetPlaybackState();
+                    ps.Play(false);
+                    ps.SetPlaybackState(saved);
+                }
+                Assert.Equal(count, ps.particleCount);
+                ps.Simulate(.0001f, false, false, false);
+                Assert.Equal(count - (source == 3 ? 2 : 1), ps.particleCount);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void LongSimulationConsumesTheFinalSubdivisionRemainder()
+        {
+            var ps = Make(true, 1, true);
+            try
+            {
+                var main = ps.main; main.duration = 5; main.startLifetime = 1.013f;
+                var emission = ps.emission; emission.rateOverTime = 20;
+                ps.Simulate(.3f, false, true, false);
+                Assert.Equal(5, ps.particleCount);
+                ps.Simulate(.7f, false, true, false);
+                Assert.Equal(13, ps.particleCount);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
         public static IEnumerable<object[]> PlaybackStates()
         {
             foreach (bool enabled in new[] { false, true })
