@@ -38,6 +38,35 @@ public static class SceneSettingsProbe
         foreach (var go in made) if (go != null) UnityEngine.Object.DestroyImmediate(go);
         made.Clear(); Physics.SyncTransforms();
     }
+    static readonly Dictionary<int,int> nativeContacts = new Dictionary<int,int>();
+#if UNITY_EDITOR
+    static void ContactEvent(PhysicsScene scene, Unity.Collections.NativeArray<ContactPairHeader> headers)
+    {
+        for (int i = 0; i < headers.Length; i++)
+        for (int j = 0; j < headers[i].pairCount; j++)
+        {
+            var pair = headers[i].GetContactPair(j);
+            foreach (int id in new[] { pair.colliderInstanceID,pair.otherColliderInstanceID })
+            {
+                nativeContacts.TryGetValue(id,out int count); nativeContacts[id] = count + pair.contactCount;
+            }
+        }
+    }
+#endif
+    static int GeneratedContacts(Collider collider)
+    {
+#if UNITY_EDITOR
+        return nativeContacts.TryGetValue(collider.GetInstanceID(),out int count) ? count : 0;
+#else
+        // The public ContactEvent API is currently a stub. Inspect the engine's real PhysX
+        // contact stream for this supplemental backend measurement, without faking that API.
+        var type = typeof(Physics).Assembly.GetType("Unbound.Runtime.PhysicsWorld");
+        var list = new List<ContactPoint>();
+        type.GetMethod("CollectContacts",System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic)
+            .Invoke(null,new object[] { collider,null,list });
+        return list.Count;
+#endif
+    }
     static void State(string key, Rigidbody rb)
     {
         var p = rb.position; var q = rb.rotation; var v = rb.linearVelocity; var a = rb.angularVelocity;
@@ -49,6 +78,9 @@ public static class SceneSettingsProbe
         string output = Environment.GetEnvironmentVariable("SCENE_SETTINGS_OUT");
         if (string.IsNullOrEmpty(output)) return;
         Physics.simulationMode = SimulationMode.Script;
+#if UNITY_EDITOR
+        Physics.ContactEvent += ContactEvent;
+#endif
         Record("globals", Physics.defaultSolverIterations, Physics.defaultSolverVelocityIterations,
             Physics.defaultContactOffset, Physics.defaultMaxAngularSpeed, Physics.improvedPatchFriction ? 1 : 0);
         // Imported bodies, activation and clones keep creation defaults independent of allocation.
@@ -106,16 +138,15 @@ public static class SceneSettingsProbe
             {
                 if (step == 2) { a.transform.position = new Vector3(-3,0,0); Physics.SyncTransforms(); }
                 var ae = a.GetComponent<SceneSettingsEvents>(); var be = b.GetComponent<SceneSettingsEvents>();
-                ae.Clear(); be.Clear(); Physics.Simulate(.02f);
+                ae.Clear(); be.Clear(); nativeContacts.Clear(); Physics.Simulate(.02f);
                 Record(key + "/" + step + "/events",ae.enter,ae.stay,ae.exit,ae.triggerEnter,ae.triggerStay,ae.triggerExit,
                     be.enter,be.stay,be.exit,be.triggerEnter,be.triggerStay,be.triggerExit);
                 // Contact point order and normal direction are deliberately not sorted into a fake correspondence.
                 Record(key + "/" + step + "/contacts",ae.contacts,be.contacts);
                 if (Environment.GetEnvironmentVariable("SCENE_SETTINGS_QUERY_CONTACTS") == "1")
                 {
-                    var points = new ContactPoint[32];
-                    int ac = Physics.GetContacts(a.GetComponent<Collider>(), points);
-                    int bc = Physics.GetContacts(b.GetComponent<Collider>(), points);
+                    int ac = GeneratedContacts(a.GetComponent<Collider>());
+                    int bc = GeneratedContacts(b.GetComponent<Collider>());
                     Record(key + "/" + step + "/query-contacts",ac,bc);
                 }
                 if (bType == 2) State(key + "/" + step,b.GetComponent<Rigidbody>());
