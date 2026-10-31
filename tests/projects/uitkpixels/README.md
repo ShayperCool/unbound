@@ -33,3 +33,10 @@ union. The accompanying compressed NumPy archive retains every raw RGBA channel 
 delta, including alpha, with no excluded regions. The report counts every introduced,
 retained, resolved, improved and worsened channel. A passing regression check permits only
 unchanged or improved errors; it does not assert exact rendering parity.
+
+
+`collapsed-borders.png` covers 20x20 rounded elements whose opposing border
+widths leave zero or negative inner space, all four asymmetric corner orientations,
+and a control with a positive inner area. The new image is published only after
+two independent Editor recordings agree; all earlier UI and shape references
+remain byte-identical.
