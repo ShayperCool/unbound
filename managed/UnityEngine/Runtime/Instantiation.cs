@@ -88,8 +88,8 @@ namespace Unbound.Runtime
                 // With no parent, Native keeps the copied local pose unless explicit world
                 // coordinates were supplied. A null parent behaves the same for either flag.
                 SceneRegistry.Get(targetScene)?.Roots.Add(rootGo);
-                rootClone.m_LocalRotation = rotation ?? source.m_LocalRotation;
-                rootClone.SetLocalPosition(position ?? source.m_LocalPosition);
+                if (rotation.HasValue) rootClone.m_LocalRotation = rotation.Value;
+                if (position.HasValue) rootClone.SetLocalPosition(position.Value);
             }
             else
             {
