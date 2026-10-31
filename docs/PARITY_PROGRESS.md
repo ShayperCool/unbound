@@ -1345,3 +1345,30 @@ All artifacts and partial-failure reports remain in the external validation cach
 The model-import change requires a CLI with builtin-shader-source; the earlier
 frozen CLI must not be paired with these managed assemblies. Full engine parity
 and the remaining physics, particles, animation/audio and UI gaps remain open.
+
+### Texture import mip filters and normal maps, 2026-10-31
+
+The texture import probe (tests/projects/textureimport) records every mip level of 75 imported
+RGBA32 textures with `GetPixels32`: box and Kaiser mipmaps in sRGB and linear, fade out, border
+mipmaps, preserve coverage, alpha is transparency, alpha from grayscale and alpha source None,
+NPOT sizes unscaled and scaled, the max size with both resize algorithms, and normal maps plain
+and made from grayscale (standard and Sobel, eleven height scales, three sizes). Two GPU Editor
+runs per profile (Gamma and Linear on Standalone, Android) agreed byte for byte before the
+references were published; the Gamma and Linear references are identical.
+
+The importer now builds mips from a float chain rounded per level (box as centred bilinear
+sampling, Kaiser width 2 and alpha 4 while both sides are even), fades encoded colour towards
+gray or the flat normal, filters border texels along the edge only and scales alpha for coverage.
+Normal maps are stored DXT5nm (1, y, y, x) on targets without `UNITY_NO_DXT5nm` and XYZ
+otherwise; grayscale normals filter the colour per level and scale the slope by
+`0.08 * (10^heightScale - 1) * (width + height) / 2`. Resizing uses Mitchell to shrink, a cubic
+B-spline to enlarge and truncating bilinear for the Bilinear algorithm, all on stored bytes.
+
+Unbound matches 419/484 mip levels byte for byte in every profile (before: 49 Standalone, 54
+Android) and 456 within 1. The remaining differences: the Editor's alpha-is-transparency fill
+(27 levels of four cases), one preserve-coverage 2x2 level (up to 18) and 1-step rounding ties.
+
+Regression against the untouched build: graphics, resources, builtinrp, builtinfx, rect clipping
+three profiles, canvas colors two profiles, focused camera two profiles and uitk give byte-identical
+raw outputs (uitk keeps its earlier image difference); baked and terrain lightmaps are identical.
+Rust tests: unbound-assets 69 and unbound-runtime 38 pass.
