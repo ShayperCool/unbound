@@ -393,8 +393,7 @@ namespace UnityEngine
             if (particles == null) throw new ArgumentNullException(nameof(particles));
             if (size < 0 || size > particles.Length) size = particles.Length;
             if (offset < 0) throw new ArgumentOutOfRangeException(nameof(offset));
-            int count = offset == 0 ? size : Math.Max(m_Count, offset + size);
-            count = Math.Min(count, Math.Max(m_Main.maxParticles, offset + size));
+            int count = offset + size;
             Reserve(count);
             for (int i = 0; i < size && offset + i < count; i++)
             {
@@ -404,16 +403,33 @@ namespace UnityEngine
                 m_Particles[offset + i] = particles[i];
                 m_Particles[offset + i].m_NoiseSum = noiseSum;
                 m_Particles[offset + i].m_NoiseImpulse = noiseImpulse;
-                m_Particles[offset + i].InitializeAge();
             }
             for (int s = 0; s < 2; s++)
                 if (m_Custom[s] != null && m_Custom[s].Length < count) Array.Resize(ref m_Custom[s], m_Particles.Length);
             m_Count = count;
-            // Particles set with a negative remaining lifetime die at once (the last takes their place).
-            for (int i = 0; i < m_Count;)
+            // Native consumes the input lifetime before encoding normalized age. Nonpositive
+            // inputs die immediately; tiny positive inputs can export as zero and still survive.
+            // Native's observed compaction order is four-slot groups aligned to the buffer:
+            // collect dead slots, remove high to low, then revisit the group after swap-back.
+            // The retained prefix is untouched, even when its exported lifetime is zero.
+            for (int block = offset & ~3; block < m_Count;)
             {
-                if (m_Particles[i].m_Lifetime < 0f) RemoveAt(i);
-                else i++;
+                int dead = 0;
+                for (int i = Math.Max(block, offset); i < Math.Min(block + 4, m_Count); i++)
+                    if (m_Particles[i].m_Lifetime <= 0f) dead |= 1 << (i - block);
+                if (dead == 0) { block += 4; continue; }
+                for (int lane = 3; lane >= 0; lane--)
+                    if ((dead & (1 << lane)) != 0) RemoveAt(block + lane);
+            }
+            for (int i = offset; i < m_Count; i++)
+            {
+                m_Particles[i].InitializeAge();
+                // SetParticles clamps inputs that exceed their start lifetime to birth.
+                if (m_Particles[i].m_AgePercent < 0f)
+                {
+                    m_Particles[i].m_AgePercent = 0f;
+                    m_Particles[i].ExportLifetime();
+                }
             }
         }
 
