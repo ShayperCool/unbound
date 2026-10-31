@@ -490,7 +490,7 @@ impl Importer for TextureImporter {
     type Output = ImportedTexture;
     const KIND: &'static str = "textures";
     // Combined mip-filter and sprite-geometry imports must not reuse either branch's v8 entries.
-    const VERSION: u32 = 9;
+    const VERSION: u32 = 10;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
