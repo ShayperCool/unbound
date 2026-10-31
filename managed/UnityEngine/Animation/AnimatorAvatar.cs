@@ -1,11 +1,13 @@
 using System;
 using System.Collections.Generic;
+using Unbound.Runtime;
 using Unbound.Runtime.Playables;
 
 namespace UnityEngine
 {
-    /// <summary>An Animator's avatar. Unbound animates generic hierarchies: there are no humanoid
-    /// avatars, and a model's avatar reference resolves to none.</summary>
+    /// <summary>An Animator's avatar: a model's generic avatar sub-asset (by name). Unbound animates
+    /// generic hierarchies: humanoid avatar data is not read.</summary>
+    [ClassId(90)]
     public partial class Avatar : Object
     {
         Avatar() { }

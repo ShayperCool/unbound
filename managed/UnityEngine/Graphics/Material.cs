@@ -914,6 +914,9 @@ namespace UnityEngine
             }
             AddTextureNames();
             MarkDirty();
+            // A material sub-asset of an imported model: made by its importer.
+            if (body.Get("m_UnboundMaterialImport") is YNode import && import.Kind == YKind.Map)
+                ModelMaterialImport.Apply(this, import, resolver);
         }
 
         /// <summary>Saved properties are lists of one-key maps (`- _Color: {...}`), or maps in old files.</summary>
@@ -1056,6 +1059,7 @@ namespace UnityEngine
         ComputeBuffer = 6,
     }
 
+    [Flags]
     public enum MaterialGlobalIlluminationFlags
     {
         None = 0,

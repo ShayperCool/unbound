@@ -2931,19 +2931,12 @@ namespace UnityEditor
             [global::Unbound.Stub] public CompareAssetImportPriority() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetPostprocessingInternal.CompareAssetImportPriority.ctor"); }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class AssetPostprocessor
+    unsafe partial class AssetPostprocessor
     {
         [global::System.Obsolete("Use context.LogImportWarning(string) instead.")] [global::Unbound.Stub] public void LogWarning(string warning) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetPostprocessor.LogWarning"); }
         [global::System.Obsolete("Use context.LogImportWarning(string, Object) instead.")] [global::Unbound.Stub] public void LogWarning(string warning, global::UnityEngine.Object context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetPostprocessor.LogWarning"); }
         [global::System.Obsolete("Use context.LogImportError(string) instead.")] [global::Unbound.Stub] public void LogError(string warning) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetPostprocessor.LogError"); }
         [global::System.Obsolete("Use context.LogImportError(string, Object) instead.")] [global::Unbound.Stub] public void LogError(string warning, global::UnityEngine.Object context) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetPostprocessor.LogError"); }
-        [global::Unbound.Stub] public virtual uint GetVersion() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetPostprocessor.GetVersion"); return default; }
-        [global::Unbound.Stub] public virtual int GetPostprocessOrder() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetPostprocessor.GetPostprocessOrder"); return default; }
-        [global::Unbound.Stub] public AssetPostprocessor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetPostprocessor.ctor"); }
-        public string assetPath { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetPostprocessor.assetPath"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetPostprocessor.assetPath"); } }
-        public global::UnityEditor.AssetImporters.AssetImportContext context { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetPostprocessor.context"); return default; } [global::Unbound.Stub] internal set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetPostprocessor.context"); } }
-        public global::UnityEditor.AssetImporter assetImporter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetPostprocessor.assetImporter"); return default; } }
         [global::System.Obsolete("To set or get the preview, call EditorUtility.SetAssetPreview or AssetPreview.GetAssetPreview instead")] public global::UnityEngine.Texture2D preview { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetPostprocessor.preview"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetPostprocessor.preview"); } }
         [global::Unbound.Stub]
         internal unsafe partial struct PostprocessorInfo
@@ -28968,14 +28961,6 @@ namespace UnityEditor.AssetImporters
         public uint version { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.CollectImportedDependenciesAttribute.version"); return default; } }
     }
     [global::Unbound.Stub]
-    public unsafe partial class FBXMaterialDescriptionPreprocessor : global::UnityEditor.AssetPostprocessor
-    {
-        [global::Unbound.Stub] public override uint GetVersion() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.FBXMaterialDescriptionPreprocessor.GetVersion"); return default; }
-        [global::Unbound.Stub] public override int GetPostprocessOrder() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.FBXMaterialDescriptionPreprocessor.GetPostprocessOrder"); return default; }
-        [global::Unbound.Stub] public void OnPreprocessMaterialDescription(global::UnityEditor.AssetImporters.MaterialDescription description, global::UnityEngine.Material material, global::UnityEngine.AnimationClip[] clips) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.FBXMaterialDescriptionPreprocessor.OnPreprocessMaterialDescription"); }
-        [global::Unbound.Stub] public FBXMaterialDescriptionPreprocessor() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.FBXMaterialDescriptionPreprocessor.ctor"); }
-    }
-    [global::Unbound.Stub]
     public unsafe sealed partial class ImportLog : global::UnityEngine.Object
     {
         [global::Unbound.Stub] internal void PrintToConsole() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.ImportLog.PrintToConsole"); }
@@ -29035,24 +29020,9 @@ namespace UnityEditor.AssetImporters
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEditor.AssetImporters.LightDescription desc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.LightDescription.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class MaterialDescription : global::System.IDisposable
+    unsafe partial class MaterialDescription
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] public MaterialDescription() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.MaterialDescription.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.MaterialDescription.Dispose"); }
-        [global::Unbound.Stub] public bool TryGetProperty(string propertyName, out float value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.MaterialDescription.TryGetProperty"); return default; }
-        [global::Unbound.Stub] public bool TryGetProperty(string propertyName, out global::UnityEngine.Vector4 value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.MaterialDescription.TryGetProperty"); return default; }
-        [global::Unbound.Stub] public bool TryGetProperty(string propertyName, out string value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.MaterialDescription.TryGetProperty"); return default; }
-        [global::Unbound.Stub] public bool TryGetProperty(string propertyName, out global::UnityEditor.AssetImporters.TexturePropertyDescription value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.MaterialDescription.TryGetProperty"); return default; }
-        [global::Unbound.Stub] public void GetVector4PropertyNames(global::System.Collections.Generic.List<string> names) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.MaterialDescription.GetVector4PropertyNames"); }
-        [global::Unbound.Stub] public void GetFloatPropertyNames(global::System.Collections.Generic.List<string> names) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.MaterialDescription.GetFloatPropertyNames"); }
-        [global::Unbound.Stub] public void GetTexturePropertyNames(global::System.Collections.Generic.List<string> names) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.MaterialDescription.GetTexturePropertyNames"); }
-        [global::Unbound.Stub] public void GetStringPropertyNames(global::System.Collections.Generic.List<string> names) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.MaterialDescription.GetStringPropertyNames"); }
-        [global::Unbound.Stub] public bool TryGetAnimationCurve(string clipName, string propertyName, out global::UnityEngine.AnimationCurve value) { value = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.MaterialDescription.TryGetAnimationCurve"); return default; }
-        [global::Unbound.Stub] public bool HasAnimationCurveInClip(string clipName, string propertyName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.MaterialDescription.HasAnimationCurveInClip"); return default; }
-        [global::Unbound.Stub] public bool HasAnimationCurve(string propertyName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.MaterialDescription.HasAnimationCurve"); return default; }
-        public string materialName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.MaterialDescription.materialName"); return default; } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
@@ -29152,15 +29122,6 @@ namespace UnityEditor.AssetImporters
     {
         [global::Unbound.Stub] public static global::UnityEditor.AssetImporters.TextureGenerationOutput GenerateTexture(global::UnityEditor.AssetImporters.TextureGenerationSettings settings, global::Unity.Collections.NativeArray<global::UnityEngine.Color32> colorBuffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerator.GenerateTexture"); return default; }
         [global::Unbound.Stub] public static global::UnityEditor.AssetImporters.TextureGenerationOutput GenerateTexture(global::UnityEditor.AssetImporters.TextureGenerationSettings settings, global::Unity.Collections.NativeArray<global::UnityEngine.Color> colorBuffer) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.AssetImporters.TextureGenerator.GenerateTexture"); return default; }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct TexturePropertyDescription
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 offset;
-        [global::Unbound.Stub] public global::UnityEngine.Vector2 scale;
-        [global::Unbound.Stub] public global::UnityEngine.Texture texture;
-        [global::Unbound.Stub] public string relativePath;
-        [global::Unbound.Stub] public string path;
     }
     [global::Unbound.Stub]
     public unsafe partial class ThreeDSMaterialDescriptionPreprocessor : global::UnityEditor.AssetPostprocessor
