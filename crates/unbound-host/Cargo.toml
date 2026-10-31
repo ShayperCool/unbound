@@ -15,4 +15,5 @@ netcorehost = { version = "0.22", default-features = false, features = ["net8_0"
 libc = "0.2"
 
 [build-dependencies]
+blake3.workspace = true
 cc = { version = "1", features = ["parallel"] }
