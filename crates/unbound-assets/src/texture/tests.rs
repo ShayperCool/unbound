@@ -717,3 +717,97 @@ fn hdr_max_size_resize_matches_the_editor() {
         );
     }
 }
+
+/// Standard base64 (with padding) to bytes.
+fn decode_base64(text: &str) -> Vec<u8> {
+    let value = |c: u8| match c {
+        b'A'..=b'Z' => c - b'A',
+        b'a'..=b'z' => c - b'a' + 26,
+        b'0'..=b'9' => c - b'0' + 52,
+        b'+' => 62,
+        _ => 63,
+    };
+    let digits: Vec<u8> = text.bytes().filter(|&c| c != b'=').map(value).collect();
+    digits
+        .chunks(4)
+        .flat_map(|q| {
+            let n = q
+                .iter()
+                .enumerate()
+                .fold(0u32, |n, (i, &d)| n | (d as u32) << (18 - 6 * i));
+            n.to_be_bytes()[1..q.len()].to_vec()
+        })
+        .collect()
+}
+
+#[test]
+fn flipbook_arrays_and_volumes_match_the_editor() {
+    // tests/projects/texturearrays: every readable imported Texture2DArray and Texture3D case,
+    // every slice and mip level byte for byte (GetPixels32 of the Editor's capture).
+    let probe = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/texturearrays");
+    for (profile, target) in [("Gamma", "Standalone"), ("Android", "Android")] {
+        let reference: std::collections::HashMap<String, String> = std::fs::read_to_string(
+            probe.join(format!("Reference/unity-6000.0.71f1/{profile}.jsonl")),
+        )
+        .unwrap()
+        .lines()
+        .map(|l| serde_json::from_str::<serde_json::Value>(l).unwrap())
+        .map(|v| {
+            (
+                v["k"].as_str().unwrap().into(),
+                v["v"].as_str().unwrap().into(),
+            )
+        })
+        .collect();
+        let importer = TextureImporter {
+            gamma: true,
+            build_target: target.into(),
+            normal_maps_xyz: target == "Android",
+            ..TextureImporter::default()
+        };
+        let mut checked = 0;
+        for entry in std::fs::read_dir(probe.join("Assets/Textures")).unwrap() {
+            let path = entry.unwrap().path();
+            if path.extension().is_none_or(|e| e != "png") {
+                continue;
+            }
+            let name = path.file_stem().unwrap().to_str().unwrap().to_string();
+            let info = &reference[&format!("{name}.info")];
+            let volume = info.starts_with("Texture3D ");
+            if !(volume || info.starts_with("Texture2DArray ")) || info.contains("readable False") {
+                continue;
+            }
+            let meta = unbound_yaml::parse_value(
+                &std::fs::read_to_string(path.with_extension("png.meta")).unwrap(),
+            )
+            .unwrap();
+            let tex = importer
+                .import(&path, &std::fs::read(&path).unwrap(), &meta)
+                .unwrap();
+            let size = format!(
+                "{}x{}x{} mips {}",
+                tex.width,
+                tex.height,
+                tex.layers,
+                tex.mip_count()
+            );
+            assert!(info.contains(&size), "{name}: {size} vs {info}");
+            for layer in 0..if volume { 1 } else { tex.layers as usize } {
+                for mip in 0..tex.mip_count() {
+                    let key = if volume {
+                        format!("{name}.mip{mip}.px32")
+                    } else {
+                        format!("{name}.e{layer}.mip{mip}.px32")
+                    };
+                    let data = decode_base64(reference[&key].split_once(':').unwrap().1);
+                    assert!(
+                        tex.level(layer, mip).unwrap().data == data,
+                        "{profile} {key}"
+                    );
+                    checked += 1;
+                }
+            }
+        }
+        assert!(checked > 200, "{checked} levels");
+    }
+}
