@@ -183,6 +183,8 @@ struct Voice {
     fresh: bool,
     /// Unity starts a voice with a 64-sample linear fade (measured by the dry step probe).
     fade_frames: u32,
+    fade_initial: [f32; 4],
+    fade_matrix: [f32; 4],
     stream: Option<StreamState>,
 }
 
@@ -198,6 +200,8 @@ impl Voice {
             matrix: [0.0; 4],
             fresh: true,
             fade_frames: 0,
+            fade_initial: [0.0; 4],
+            fade_matrix: [0.0; 4],
             stream: None,
         }
     }
@@ -1144,6 +1148,7 @@ fn render_voice(
     }
     if voice.fresh {
         voice.matrix = target;
+        voice.fade_initial = target;
         voice.fresh = false;
     }
     let from = voice.matrix;
@@ -1186,15 +1191,33 @@ fn render_voice(
         };
         if let Some(out) = out.as_deref_mut() {
             let t = (f + 1) as f32 * inv_n;
-            let m = [
+            let mut m = [
                 from[0] + (target[0] - from[0]) * t,
                 from[1] + (target[1] - from[1]) * t,
                 from[2] + (target[2] - from[2]) * t,
                 from[3] + (target[3] - from[3]) * t,
             ];
-            let v = voice.volume_scale * voice.fade_frames.min(64) as f32 / 64.0;
+            if voice.fade_frames < 64 {
+                for (i, gain) in m.iter_mut().enumerate() {
+                    *gain = if *gain == voice.fade_initial[i] {
+                        voice.fade_matrix[i]
+                    } else if voice.fade_initial[i] != 0.0 {
+                        (*gain / voice.fade_initial[i]) * voice.fade_matrix[i]
+                    } else {
+                        *gain * voice.fade_frames as f32 / 64.0
+                    };
+                }
+            }
+            let v = voice.volume_scale;
             out[f * 2] += (m[0] * l + m[1] * r) * v;
             out[f * 2 + 1] += (m[2] * l + m[3] * r) * v;
+        }
+        if voice.fade_frames < 64 {
+            // Native accumulates the gain-matrix step, rather than multiplying by age / 64.
+            // Its float rounding affects the IIR state and the later integer capture boundary.
+            for i in 0..4 {
+                voice.fade_matrix[i] += voice.fade_initial[i] / 64.0;
+            }
         }
         voice.fade_frames = (voice.fade_frames + 1).min(64);
         if let Some(stream) = &mut voice.stream {
@@ -1223,11 +1246,14 @@ mod tests {
     use crate::audio::protocol::AudioSourceCommand;
 
     fn mono_gain(age: usize) -> f32 {
-        std::f32::consts::FRAC_1_SQRT_2 * age.min(64) as f32 / 64.0
+        if age >= 64 {
+            return std::f32::consts::FRAC_1_SQRT_2;
+        }
+        (0..age).fold(0.0, |gain, _| gain + std::f32::consts::FRAC_1_SQRT_2 / 64.0)
     }
 
     fn mono_sample(value: f32, age: usize) -> f32 {
-        (value * std::f32::consts::FRAC_1_SQRT_2) * (age.min(64) as f32 / 64.0)
+        value * mono_gain(age)
     }
 
     fn mixer() -> Mixer {

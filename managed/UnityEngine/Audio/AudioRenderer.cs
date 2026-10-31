@@ -25,6 +25,7 @@ namespace UnityEngine
 
         internal static bool Internal_AudioRenderer_Start()
         {
+            AudioSystem.EnsureRegistered();
             if (!Native.IsReady) throw new NotSupportedException("AudioRenderer requires the native audio backend");
             bool ok = JsonSerializer.Deserialize<bool>(Native.Call("audio-renderer-start", "{}"));
             if (ok) { s_Recording = true; s_Sinks.Clear(); }
