@@ -520,8 +520,13 @@ namespace UnityEngine
             texture.m_MipCount = Math.Max(1, mips);
             texture.m_Readable = info.Readable != 0;
             texture.m_Linear = info.Srgb == 0 || info.Format == 2;
-            // HDR sources import as half floats, as 2D textures do.
-            texture.m_Format = info.Format == 2 ? TextureFormat.RGBAHalf : TextureFormat.RGBA32;
+            // HDR sources keep half floats, or float32 with an RGBAFloat override, as 2D textures do.
+            texture.m_Format = info.Format switch
+            {
+                2 => TextureFormat.RGBAHalf,
+                9 => TextureFormat.RGBAFloat,
+                _ => TextureFormat.RGBA32,
+            };
             texture.SetSamplerQuietly((FilterMode)info.FilterMode, (TextureWrapMode)info.WrapU, (TextureWrapMode)info.WrapV,
                 (TextureWrapMode)wrapW, info.AnisoLevel, mipBias);
             return texture;
@@ -815,8 +820,13 @@ namespace UnityEngine
             texture.m_MipCount = Math.Max(1, mips);
             texture.m_Readable = info.Readable != 0;
             texture.m_Linear = info.Srgb == 0 || info.Format == 2;
-            // HDR sources import as half floats, as 2D textures do.
-            texture.m_Format = info.Format == 2 ? TextureFormat.RGBAHalf : TextureFormat.RGBA32;
+            // HDR sources keep half floats, or float32 with an RGBAFloat override, as 2D textures do.
+            texture.m_Format = info.Format switch
+            {
+                2 => TextureFormat.RGBAHalf,
+                9 => TextureFormat.RGBAFloat,
+                _ => TextureFormat.RGBA32,
+            };
             texture.SetSamplerQuietly((FilterMode)info.FilterMode, (TextureWrapMode)info.WrapU, (TextureWrapMode)info.WrapV,
                 (TextureWrapMode)wrapW, info.AnisoLevel, mipBias);
             return texture;
