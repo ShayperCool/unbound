@@ -4,6 +4,7 @@ set debuginfod enabled off
 set disable-randomization off
 set print thread-events off
 handle SIGPWR nostop noprint pass
+handle SIGPIPE nostop noprint pass
 handle SIGXCPU nostop noprint pass
 handle SIG35 nostop noprint pass
 handle SIG36 nostop noprint pass
@@ -34,7 +35,11 @@ class Island(gdb.Breakpoint):
   for i in range(nc):
    c=ptr(ptr(p+0x20)+8*i);a=ptr(c+0x60);b=ptr(c+0x68)
    contacts.append(dict(ptr=hex(c),fixtureA=hex(a),fixtureB=hex(b),bodyA=body(ptr(a+0x20)),bodyB=body(ptr(b+0x20)),points=memory(c+0xbc,'i')))
-  out.write(json.dumps(dict(world=hex(current),step=steps[current],bodies=bodies,contacts=contacts))+'\n');out.flush()
+  row=dict(world=hex(current),step=steps[current],bodies=bodies,contacts=contacts)
+  if os.environ.get('DYNAMICS_TRACE_STORAGE') == '1':
+   count=memory(current+0x193a8,'i');assert 0<=count<1000
+   row['storage']=[dict(body(ptr(ptr(current+0x19398)+8*i)),storageIndex=memory(ptr(ptr(current+0x19398)+8*i)+0xd8,'i')) for i in range(count)]
+  out.write(json.dumps(row)+'\n');out.flush()
   return False
 Step('_ZN5Box2D7b2World4StepEfiiii',internal=True)
 Island('_ZN5Box2D8b2Island5SolveERKNS_10b2TimeStepERKNS_6b2Vec2Eb',internal=True)
