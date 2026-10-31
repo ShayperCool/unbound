@@ -109,7 +109,8 @@ public class FilterProbe : MonoBehaviour
                 var sink = new NativeArray<float>(frames * 2, Allocator.Persistent);
                 sinks.Add(sink);
                 var addSink = typeof(AudioRenderer).GetMethod("AddMixerGroupSink", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
-                if (!(bool)addSink.Invoke(null, new object[] { mixer.FindMatchingGroups("")[0], sink, false })) throw new Exception("AddMixerGroupSink failed");
+                var masterGroup = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Master");
+                if (masterGroup == null) throw new Exception("Missing master group");
 #endif
                 AudioSource second = null;
                 if (key == "sum_lp")
@@ -142,6 +143,7 @@ public class FilterProbe : MonoBehaviour
                             records.Add("\""+key+".cutoff."+block+"\":\""+ok+":"+cutoff.ToString("R", System.Globalization.CultureInfo.InvariantCulture)+"\"");
                         }
 #if UNITY_EDITOR
+                        if (!(bool)addSink.Invoke(null, new object[] { masterGroup, sink, false })) throw new Exception("AddMixerGroupSink failed");
                         if (key == "dry") Debug.Log("dry block=" + block + " count=" + AudioRenderer.GetSampleCountForCaptureFrame() + " playing=" + source.isPlaying + " position=" + source.timeSamples + " dsp=" + AudioSettings.dspTime);
                         if (!AudioRenderer.Render(buffer)) throw new Exception("Render failed: " + key);
                         for (int i = 0; i < buffer.Length; i++) writer.Write(buffer[i]);
