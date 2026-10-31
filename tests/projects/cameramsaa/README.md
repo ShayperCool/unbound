@@ -324,3 +324,22 @@ zero and the final filtered copy covers the entire explicit target. Its clear
 therefore overwrites the sentinel outside camera.rect too. Explicit buffer
 bindings instead render to the original 128x128 attachment and bypass HDR. These
 measurements explain why merely deleting the old full-viewport guard is insufficient.
+
+The first implementation fixes all original image-effect and HDR viewport images.
+Original strict totals become 187/195 Linear and 193/195 Gamma, with all 948 API
+observations still matching. The six original Linear screen captures compare the
+Editor's sRGB byte GameView attachment against the engine's linear half-float
+screen storage. They are retained as failures, rather than changing either read
+path or reference. Public in-frame null-framebuffer reads prove a further
+separation: with no intermediate, Native returns encoded RGB and alpha 1; with
+MSAA/HDR active it reads the Editor system framebuffer, gray 40/255 with alpha 1,
+while the actual active attachment contains the camera image. GameView retains
+fractional alpha. Null-framebuffer reads therefore do not certify GameView source
+identity. No global gamma or screen presentation change is justified by these
+captures alone.
+
+Initialized resolve sentinels also do not make the rejected inactive-source API
+a defined no-op. Native asserts the same current-RT requirement and overwrites
+the destination with the current framebuffer, not the rendered source or the
+initialized sentinel. Both legacy uninitialized outputs and both new rejected
+sentinel outputs stay in strict totals. The source-bound counterparts pass.

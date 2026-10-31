@@ -1,0 +1,10 @@
+records: 948/948, 0 unexpected
+ARGB32.resolve 0/65536 channels, max delta 1.0
+ARGBFloat.resolve 0/65536 channels, max delta 1.0
+screen.hFalse.q0 50384/65536 channels, max delta 0.2872549295425415
+screen.hFalse.q2 50277/65536 channels, max delta 0.2872702479362488
+screen.hFalse.q4 50186/65536 channels, max delta 0.2872702479362488
+screen.hTrue.q0 50384/65536 channels, max delta 0.2872549295425415
+screen.hTrue.q2 50176/65536 channels, max delta 0.2872549295425415
+screen.hTrue.q4 49988/65536 channels, max delta 0.2872549295425415
+images: 187/195, 0 unexpected; channels: 12556627/12779520
