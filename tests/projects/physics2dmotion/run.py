@@ -24,7 +24,7 @@ else:
     if a.mode == 'native':
         cmd = [str(Path.home()/'Unity/Hub/Editor/6000.0.71f1/Editor/Unity'), '-batchmode','-nographics','-projectPath',str(project),'-executeMethod','ProbeRunner.Record','-logFile',str(WORK/(a.label+'-unity.log'))]
     else:
-        project = WORK/'project-native1'
+        project = WORK/os.environ.get('MOTION_PROJECT', 'project-native1')
         env['UNBOUND_MANAGED_DIR'] = str(WORK/('managed-baseline' if a.label == 'baseline' else 'managed-final'))
         env['LD_LIBRARY_PATH'] = env['UNBOUND_MANAGED_DIR']
         cmd = [str(BASE/'unbound'),'run','-p',str(project),'--headless','30000','--no-watch']

@@ -17,12 +17,8 @@ public static class ProbeEntry
         var output = Environment.GetEnvironmentVariable("PHYSICS_PROBE_OUT");
         if (string.IsNullOrEmpty(output)) return;
         Physics2D.simulationMode = SimulationMode2D.Script;
-        // Run the exact original methods, including their own stepping, logging and teardown.
-        foreach (var name in new[] { "Bounce", "Stack", "Kinematic" })
-        {
-            var action = (Action)Delegate.CreateDelegate(typeof(Action), typeof(Probe2D).GetMethod(name, BindingFlags.Static | BindingFlags.NonPublic));
-            typeof(Probe2D).GetMethod("Scenario", BindingFlags.Static | BindingFlags.NonPublic).Invoke(null, new object[] { "2d." + name.ToLowerInvariant(), action });
-        }
+        // Preserve the full original sequence, including preceding scenarios' world history.
+        Probe2D.RunAll(); Probe3D.RunAll();
         foreach (var kind in new[] { "bounce", "stack", "kinematic" })
             Case("original/" + kind, kind, .02f, 8, 3, 0, .4f, .8f, false, false);
         foreach (var dt in new[] { .01f, .02f, .04f })
