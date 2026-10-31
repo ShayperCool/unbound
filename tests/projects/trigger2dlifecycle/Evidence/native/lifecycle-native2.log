@@ -1,0 +1,661 @@
+Unity Editor version:    6000.0.71f1 (907bc2d768b5)
+Branch:                  6000.0/respin/6000.0.71f1-8308b6469260
+Build type:              Release
+Batch mode:              YES
+System name:             Linux
+Distro version:          #38-Ubuntu SMP PREEMPT_DYNAMIC Fri Sep  4 09:10:14 UTC 2026
+Kernel version:          7.0.0-38-generic
+Architecture:            x86_64
+Window Protocol:         Wayland (XWayland)
+Available memory:        30986 MB
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Initialize udev device monitor.
+[Licensing::IpcConnector] Channel LicenseClient-shaypercool doesn't exist
+[Licensing::Module] Successfully launched the LicensingClient (PId: 926827)
+
+COMMAND LINE ARGUMENTS:
+/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Unity
+-batchmode
+-nographics
+-projectPath
+/mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle
+-executeMethod
+ProbeRunner.Record
+-logFile
+/mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/lifecycle-native2.log
+Successfully changed project path to: /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle
+
+(process:926790): Gtk-CRITICAL **: 06:56:39.020: gtk_label_set_text: assertion 'GTK_IS_LABEL (label)' failed
+
+(process:926790): Gtk-CRITICAL **: 06:56:39.021: gtk_label_set_text: assertion 'GTK_IS_LABEL (label)' failed
+/mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gfx=262144"
+Player connection [131957685438336]  Target information:
+
+Player connection [131957685438336]  * "[IP] 192.168.31.231 [Port] 55504 [Flags] 2 [Guid] 2153169562 [EditorId] 2153169562 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [131957685438336]  * "[IP] 100.64.0.4 [Port] 55504 [Flags] 2 [Guid] 2153169562 [EditorId] 2153169562 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [131957685438336]  * "[IP] 172.18.0.1 [Port] 55504 [Flags] 2 [Guid] 2153169562 [EditorId] 2153169562 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [131957685438336]  * "[IP] 172.31.0.1 [Port] 55504 [Flags] 2 [Guid] 2153169562 [EditorId] 2153169562 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [131957685438336]  * "[IP] 192.168.0.1 [Port] 55504 [Flags] 2 [Guid] 2153169562 [EditorId] 2153169562 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [131957685438336]  * "[IP] 10.213.77.1 [Port] 55504 [Flags] 2 [Guid] 2153169562 [EditorId] 2153169562 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [131957685438336]  * "[IP] 172.23.0.1 [Port] 55504 [Flags] 2 [Guid] 2153169562 [EditorId] 2153169562 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [131957685438336]  * "[IP] 172.24.0.1 [Port] 55504 [Flags] 2 [Guid] 2153169562 [EditorId] 2153169562 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [131957685438336]  * "[IP] 10.77.23.1 [Port] 55504 [Flags] 2 [Guid] 2153169562 [EditorId] 2153169562 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [131957685438336]  * "[IP] 172.20.0.1 [Port] 55504 [Flags] 2 [Guid] 2153169562 [EditorId] 2153169562 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Unable to join player connection multicast group (err: 105).
+Unable to join player connection alternative multicast group (err: 105).
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-shaypercool" at "2026-10-31T06:56:39.265567Z"
+[SignatureVerifier] Application signature verification not supported on this platform.
+[Package Manager] Connected to IPC stream "Upm-926790" after 0.2 seconds.
+Library Redirect Path: Library/
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.17.4+4293ba1
+  Session Id:              ba0f5b950bc5420f9a50f57b709e0d0e
+  Correlation Id:          f2d844da08a1f9c243f76e418294c0b5
+  External correlation Id: 1605078553760153447
+  Machine Id:              u9I7DXHjFecktPllptHXqWVZrtM=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-shaypercool" (connect: 0.25s, validation: 0.09s, handshake: 0.00s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-shaypercool-notifications" at "2026-10-31T06:56:39.355126Z"
+[Licensing::Module] Connected to LicensingClient (PId: 926827, launch time: 0.00, total connection time: 0.34s)
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: 9071505245648-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.03
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] Licensing Background thread has ended after 0.49s
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Initialize engine version: 6000.0.71f1 (907bc2d768b5)
+[Subsystems] Discovering subsystems at path /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+Initialize mono
+Mono path[0] = '/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/Managed'
+Mono path[1] = '/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-linux'
+Mono config path = '/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56790
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+Registering precompiled unity dll's ...
+[Licensing::Client] Successfully resolved entitlement details
+Register platform support module: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/PlaybackEngines/AndroidPlayer/UnityEditor.Android.Extensions.dll
+[Licensing::Client] Successfully resolved entitlement details
+Register platform support module: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/PlaybackEngines/iOSSupport/UnityEditor.iOS.Extensions.dll
+Register platform support module: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/PlaybackEngines/LinuxStandaloneSupport/UnityEditor.LinuxStandalone.Extensions.dll
+Registered in 0.005452 seconds.
+- Loaded All Assemblies, in  0.343 seconds
+Native extension for LinuxStandalone target not found
+[usbmuxd] Start listen thread
+[usbmuxd] Listen thread started
+Native extension for iOS target not found
+Native extension for Android target not found
+Package Manager log level set to [2]
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.349 seconds
+Domain Reload Profiling: 693ms
+	BeginReloadAssembly (88ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (0ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (1ms)
+	RebuildCommonClasses (37ms)
+	RebuildNativeTypeToScriptingClass (8ms)
+	initialDomainReloadingComplete (54ms)
+	LoadAllAssembliesAndSetupDomain (156ms)
+		LoadAssemblies (88ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (152ms)
+			TypeCache.Refresh (151ms)
+				TypeCache.ScanAssembly (138ms)
+			BuildScriptInfoCaches (0ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (351ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (316ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (70ms)
+			SetLoadedEditorAssemblies (4ms)
+			BeforeProcessingInitializeOnLoad (62ms)
+			ProcessInitializeOnLoadAttributes (118ms)
+			ProcessInitializeOnLoadMethodAttributes (63ms)
+			AfterProcessingInitializeOnLoad (0ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (0ms)
+[Licensing::Client] Successfully resolved entitlement details
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Restoring resolved packages state from cache
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Registered 4 packages:
+  Built-in packages:
+    com.unity.modules.imgui@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Library/PackageCache/com.unity.modules.imgui)
+    com.unity.modules.jsonserialize@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Library/PackageCache/com.unity.modules.jsonserialize)
+    com.unity.modules.physics@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Library/PackageCache/com.unity.modules.physics)
+    com.unity.modules.physics2d@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Library/PackageCache/com.unity.modules.physics2d)
+[Subsystems] No new subsystems found in resolved package list.
+[Package Manager] Done registering packages in 0.00 seconds
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://unix:/tmp/ilpp.sock-1ed9f97b47751162afdb34a6df13136c
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Content root path: /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping application/grpc -
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping application/grpc - - 200 - application/grpc 42.6178ms
+Starting: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/bee_backend --ipc --defer-dag-verification --dagfile="Library/Bee/2400b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle
+DisplayProgressbar: Compiling Scripts
+ExitCode: 0 Duration: 0s75ms
+*** Tundra build success (0.04 seconds), 0 items updated, 148 evaluated
+Total cache size 0
+Total cache size after purge 0, took 00:00:00.0041200
+AssetDatabase: script compilation time: 0.451140s
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.215 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Native extension for LinuxStandalone target not found
+Native extension for iOS target not found
+Native extension for Android target not found
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.370 seconds
+Domain Reload Profiling: 585ms
+	BeginReloadAssembly (131ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (9ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (33ms)
+	RebuildCommonClasses (34ms)
+	RebuildNativeTypeToScriptingClass (8ms)
+	initialDomainReloadingComplete (24ms)
+	LoadAllAssembliesAndSetupDomain (19ms)
+		LoadAssemblies (64ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (15ms)
+			TypeCache.Refresh (13ms)
+				TypeCache.ScanAssembly (8ms)
+			BuildScriptInfoCaches (0ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (370ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (251ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (29ms)
+			SetLoadedEditorAssemblies (3ms)
+			BeforeProcessingInitializeOnLoad (81ms)
+			ProcessInitializeOnLoadAttributes (107ms)
+			ProcessInitializeOnLoadMethodAttributes (27ms)
+			AfterProcessingInitializeOnLoad (5ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (7ms)
+Asset Pipeline Refresh (id=41eb5e5aa51fb813cabc2747cdb5390e): Total: 1.137 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=448 ms
+		Asset DB Callback time: managed=12 ms, native=2 ms
+		Scripting: domain reloads=1, domain reload time=215 ms, compile time=453 ms, other=5 ms
+		Project Asset Count: scripts=33, non-scripts=6
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 1
+	InvokeCustomDependenciesCallbacks: 0.002ms
+	InvokePackagesCallback: 3.040ms
+	ApplyChangesToAssetFolders: 0.066ms
+	Scan: 34.122ms
+	OnSourceAssetsModified: 0.003ms
+	CategorizeAssetsWithTransientArtifact: 0.037ms
+	ProcessAssetsWithTransientArtifactChanges: 0.363ms
+	CategorizeAssets: 0.154ms
+	ImportOutOfDateAssets: 370.964ms (-81.990ms without children)
+		CompileScripts: 452.534ms
+		ReloadNativeAssets: 0.000ms
+		UnloadImportedAssets: 0.214ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.011ms
+		InitializingProgressBar: 0.000ms
+		PostProcessAllAssetNotificationsAddChangedAssets: 0.000ms
+		OnDemandSchedulerStart: 0.194ms
+	PostProcessAllAssets: 12.908ms
+	GatherAllCurrentPrimaryArtifactRevisions: 0.001ms
+	UnloadStreamsBegin: 0.132ms
+	PersistCurrentRevisions: 0.001ms
+	UnloadStreamsEnd: 0.001ms
+	GenerateScriptTypeHashes: 0.002ms
+	Untracked: 715.626ms
+
+Application.AssetDatabase Initial Refresh End
+Scanning for USB devices : 6.140ms
+Initializing Unity extensions:
+UpdateMenuTitleForLanguage: 10
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-physics
+Curl error 60: Cert verify failed. Certificate Common Name(CN) does not match with the expected CN. UnityTls error code: 7
+Authorization required, but no authorization protocol specified
+
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+Curl error 60: Cert verify failed. Certificate Common Name(CN) does not match with the expected CN. UnityTls error code: 7
+Unloading 23 unused Assets / (0.6 MB). Loaded Objects now: 522.
+Memory consumption went from 76.4 MB to 75.8 MB.
+Total: 4.387983 ms (FindLiveObjects: 0.023710 ms CreateObjectMapping: 0.002690 ms MarkObjects: 3.962653 ms  DeleteObjects: 0.398410 ms)
+
+Opening scene 'Assets/Scenes/Probe.unity'
+Unloading 2 Unused Serialized files (Serialized files now loaded: 0)
+Loaded scene 'Assets/Scenes/Probe.unity'
+	Deserialize:            0.389 ms
+	Integration:            4.921 ms
+	Integration of assets:  0.001 ms
+	Thread Wait Time:       0.012 ms
+	Total Operation Time:   5.324 ms
+Unloading 1 unused Assets / (0.5 KB). Loaded Objects now: 530.
+Memory consumption went from 74.3 MB to 74.3 MB.
+Total: 3.571812 ms (FindLiveObjects: 0.019240 ms CreateObjectMapping: 0.002440 ms MarkObjects: 3.543662 ms  DeleteObjects: 0.005990 ms)
+
+
+(process:926790): GLib-GObject-CRITICAL **: 06:56:41.599: g_object_unref: assertion 'G_IS_OBJECT (object)' failed
+
+(process:926790): GLib-GObject-CRITICAL **: 06:56:41.599: g_object_unref: assertion 'G_IS_OBJECT (object)' failed
+
+(process:926790): GLib-GObject-CRITICAL **: 06:56:41.599: g_object_unref: assertion 'G_IS_OBJECT (object)' failed
+
+(process:926790): Gtk-CRITICAL **: 06:56:41.599: gtk_widget_destroy: assertion 'GTK_IS_WIDGET (widget)' failed
+[Project] Loading completed in 2.619 seconds
+	Project init time: 				2.463 seconds
+		Template init time: 		0.000 seconds
+		Package Manager init time: 		0.190 seconds
+		Asset Database init time: 		0.252 seconds
+		Global illumination init time: 	0.005 seconds
+		Assemblies load time: 			0.711 seconds
+		Unity extensions init time: 	0.000 seconds
+		Asset Database refresh time: 	1.137 seconds
+	Scene opening time: 			0.118 seconds
+##utp:{"type":"ProjectInfo","version":2,"phase":"Immediate","time":1793429801600,"processId":926790,"projectLoad":2.618932467,"projectInit":2.463497345,"templateInit":0.0,"packageManagerInit":0.190180204,"assetDatabaseInit":0.251606244,"globalIlluminationInit":0.004704453,"assembliesLoad":0.710993246,"unityExtensionsInit":0.00032914,"assetDatabaseRefresh":1.137466096,"sceneOpening":0.117596188}
+##utp:{"type":"EditorInfo","version":2,"phase":"Immediate","time":1793429801600,"processId":926790,"editorVersion":"6000.0.71f1 (907bc2d768b5)","branch":"6000.0/respin/6000.0.71f1-8308b6469260","buildType":"Release","platform":"Linux"}
+Reloading assemblies for play mode.
+Reloading assemblies after forced synchronous recompile.
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.184 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Native extension for LinuxStandalone target not found
+Native extension for iOS target not found
+Native extension for Android target not found
+Mono: successfully reloaded assembly
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+- Finished resetting the current domain, in  0.461 seconds
+Domain Reload Profiling: 644ms
+	BeginReloadAssembly (115ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (17ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (27ms)
+	RebuildCommonClasses (31ms)
+	RebuildNativeTypeToScriptingClass (7ms)
+	initialDomainReloadingComplete (20ms)
+	LoadAllAssembliesAndSetupDomain (10ms)
+		LoadAssemblies (53ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (6ms)
+			TypeCache.Refresh (3ms)
+				TypeCache.ScanAssembly (0ms)
+			BuildScriptInfoCaches (0ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (461ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (264ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (30ms)
+			SetLoadedEditorAssemblies (4ms)
+			BeforeProcessingInitializeOnLoad (82ms)
+			ProcessInitializeOnLoadAttributes (121ms)
+			ProcessInitializeOnLoadMethodAttributes (22ms)
+			AfterProcessingInitializeOnLoad (5ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (15ms)
+Asset Pipeline Refresh (id=8b102c782dfd1598bb84f84e0f5c5a2a): Total: 0.679 seconds - Initiated by StopAssetImportingV2(ForceSynchronousImport | ForceDomainReload)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=478 ms
+		Asset DB Callback time: managed=9 ms, native=0 ms
+		Scripting: domain reloads=1, domain reload time=189 ms, compile time=1 ms, other=0 ms
+		Project Asset Count: scripts=33, non-scripts=6
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokeCustomDependenciesCallbacks: 0.001ms
+	InvokePackagesCallback: 0.439ms
+	ApplyChangesToAssetFolders: 0.034ms
+	Scan: 0.001ms
+	OnSourceAssetsModified: 0.001ms
+	CategorizeAssetsWithTransientArtifact: 0.001ms
+	ProcessAssetsWithTransientArtifactChanges: 0.014ms
+	CategorizeAssets: 0.194ms
+	ImportOutOfDateAssets: 461.240ms (459.850ms without children)
+		CompileScripts: 1.230ms
+		CollectScriptTypesHashes: 0.000ms
+		ReloadNativeAssets: 0.000ms
+		UnloadImportedAssets: 0.034ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.008ms
+		InitializingProgressBar: 0.000ms
+		PostProcessAllAssetNotificationsAddChangedAssets: 0.000ms
+		OnDemandSchedulerStart: 0.118ms
+	PostProcessAllAssets: 9.585ms
+	GatherAllCurrentPrimaryArtifactRevisions: 0.004ms
+	UnloadStreamsBegin: 0.028ms
+	PersistCurrentRevisions: 0.001ms
+	UnloadStreamsEnd: 0.001ms
+	GenerateScriptTypeHashes: 0.001ms
+	Untracked: 207.718ms
+
+Destroying components immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object,bool)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object) (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnityEngineObject.bindings.cs:497)
+ProbeEntry:Act (string) (at Assets/Scripts/ProbeEntry.cs:109)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__2 () (at Assets/Scripts/ProbeEntry.cs:52)
+LifecycleRecorder:Record (string,UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:138)
+LifecycleRecorder:OnCollisionEnter2D (UnityEngine.Collision2D) (at Assets/Scripts/ProbeEntry.cs:144)
+UnityEngine.Physics2D:Simulate_Internal (UnityEngine.PhysicsScene2D,single,int)
+UnityEngine.Physics2D:Simulate (single) (at /home/bokken/build/output/unity/unity/Modules/Physics2D/ScriptBindings/Physics2D.bindings.cs:754)
+ProbeEntry:Sim () (at Assets/Scripts/ProbeEntry.cs:122)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__1 () (at Assets/Scripts/ProbeEntry.cs:53)
+ProbeEntry:Case (string,System.Action) (at Assets/Scripts/ProbeEntry.cs:81)
+ProbeEntry:Run () (at Assets/Scripts/ProbeEntry.cs:48)
+
+[Assets/Scripts/ProbeEntry.cs line 122]
+
+Destroying components immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object,bool)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object) (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnityEngineObject.bindings.cs:497)
+ProbeEntry:Act (string) (at Assets/Scripts/ProbeEntry.cs:110)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__2 () (at Assets/Scripts/ProbeEntry.cs:52)
+LifecycleRecorder:Record (string,UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:138)
+LifecycleRecorder:OnCollisionEnter2D (UnityEngine.Collision2D) (at Assets/Scripts/ProbeEntry.cs:144)
+UnityEngine.Physics2D:Simulate_Internal (UnityEngine.PhysicsScene2D,single,int)
+UnityEngine.Physics2D:Simulate (single) (at /home/bokken/build/output/unity/unity/Modules/Physics2D/ScriptBindings/Physics2D.bindings.cs:754)
+ProbeEntry:Sim () (at Assets/Scripts/ProbeEntry.cs:122)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__1 () (at Assets/Scripts/ProbeEntry.cs:53)
+ProbeEntry:Case (string,System.Action) (at Assets/Scripts/ProbeEntry.cs:81)
+ProbeEntry:Run () (at Assets/Scripts/ProbeEntry.cs:48)
+
+[Assets/Scripts/ProbeEntry.cs line 122]
+
+Destroying GameObjects immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object,bool)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object) (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnityEngineObject.bindings.cs:497)
+ProbeEntry:Act (string) (at Assets/Scripts/ProbeEntry.cs:111)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__2 () (at Assets/Scripts/ProbeEntry.cs:52)
+LifecycleRecorder:Record (string,UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:138)
+LifecycleRecorder:OnCollisionEnter2D (UnityEngine.Collision2D) (at Assets/Scripts/ProbeEntry.cs:144)
+UnityEngine.Physics2D:Simulate_Internal (UnityEngine.PhysicsScene2D,single,int)
+UnityEngine.Physics2D:Simulate (single) (at /home/bokken/build/output/unity/unity/Modules/Physics2D/ScriptBindings/Physics2D.bindings.cs:754)
+ProbeEntry:Sim () (at Assets/Scripts/ProbeEntry.cs:122)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__1 () (at Assets/Scripts/ProbeEntry.cs:53)
+ProbeEntry:Case (string,System.Action) (at Assets/Scripts/ProbeEntry.cs:81)
+ProbeEntry:Run () (at Assets/Scripts/ProbeEntry.cs:48)
+
+[Assets/Scripts/ProbeEntry.cs line 122]
+
+Destroying components immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object,bool)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object) (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnityEngineObject.bindings.cs:497)
+ProbeEntry:Act (string) (at Assets/Scripts/ProbeEntry.cs:109)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__2 () (at Assets/Scripts/ProbeEntry.cs:52)
+LifecycleRecorder:Record (string,UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:138)
+LifecycleRecorder:OnCollisionEnter2D (UnityEngine.Collision2D) (at Assets/Scripts/ProbeEntry.cs:144)
+UnityEngine.Physics2D:Simulate_Internal (UnityEngine.PhysicsScene2D,single,int)
+UnityEngine.Physics2D:Simulate (single) (at /home/bokken/build/output/unity/unity/Modules/Physics2D/ScriptBindings/Physics2D.bindings.cs:754)
+ProbeEntry:Sim () (at Assets/Scripts/ProbeEntry.cs:122)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__1 () (at Assets/Scripts/ProbeEntry.cs:53)
+ProbeEntry:Case (string,System.Action) (at Assets/Scripts/ProbeEntry.cs:81)
+ProbeEntry:Run () (at Assets/Scripts/ProbeEntry.cs:48)
+
+[Assets/Scripts/ProbeEntry.cs line 122]
+
+Destroying components immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object,bool)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object) (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnityEngineObject.bindings.cs:497)
+ProbeEntry:Act (string) (at Assets/Scripts/ProbeEntry.cs:110)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__2 () (at Assets/Scripts/ProbeEntry.cs:52)
+LifecycleRecorder:Record (string,UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:138)
+LifecycleRecorder:OnCollisionEnter2D (UnityEngine.Collision2D) (at Assets/Scripts/ProbeEntry.cs:144)
+UnityEngine.Physics2D:Simulate_Internal (UnityEngine.PhysicsScene2D,single,int)
+UnityEngine.Physics2D:Simulate (single) (at /home/bokken/build/output/unity/unity/Modules/Physics2D/ScriptBindings/Physics2D.bindings.cs:754)
+ProbeEntry:Sim () (at Assets/Scripts/ProbeEntry.cs:122)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__1 () (at Assets/Scripts/ProbeEntry.cs:53)
+ProbeEntry:Case (string,System.Action) (at Assets/Scripts/ProbeEntry.cs:81)
+ProbeEntry:Run () (at Assets/Scripts/ProbeEntry.cs:48)
+
+[Assets/Scripts/ProbeEntry.cs line 122]
+
+Destroying GameObjects immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object,bool)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object) (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnityEngineObject.bindings.cs:497)
+ProbeEntry:Act (string) (at Assets/Scripts/ProbeEntry.cs:111)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__2 () (at Assets/Scripts/ProbeEntry.cs:52)
+LifecycleRecorder:Record (string,UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:138)
+LifecycleRecorder:OnCollisionEnter2D (UnityEngine.Collision2D) (at Assets/Scripts/ProbeEntry.cs:144)
+UnityEngine.Physics2D:Simulate_Internal (UnityEngine.PhysicsScene2D,single,int)
+UnityEngine.Physics2D:Simulate (single) (at /home/bokken/build/output/unity/unity/Modules/Physics2D/ScriptBindings/Physics2D.bindings.cs:754)
+ProbeEntry:Sim () (at Assets/Scripts/ProbeEntry.cs:122)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__1 () (at Assets/Scripts/ProbeEntry.cs:53)
+ProbeEntry:Case (string,System.Action) (at Assets/Scripts/ProbeEntry.cs:81)
+ProbeEntry:Run () (at Assets/Scripts/ProbeEntry.cs:48)
+
+[Assets/Scripts/ProbeEntry.cs line 122]
+
+Destroying components immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object,bool)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object) (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnityEngineObject.bindings.cs:497)
+ProbeEntry:Act (string) (at Assets/Scripts/ProbeEntry.cs:109)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__2 () (at Assets/Scripts/ProbeEntry.cs:52)
+LifecycleRecorder:Record (string,UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:138)
+LifecycleRecorder:OnTriggerEnter2D (UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:141)
+UnityEngine.Physics2D:Simulate_Internal (UnityEngine.PhysicsScene2D,single,int)
+UnityEngine.Physics2D:Simulate (single) (at /home/bokken/build/output/unity/unity/Modules/Physics2D/ScriptBindings/Physics2D.bindings.cs:754)
+ProbeEntry:Sim () (at Assets/Scripts/ProbeEntry.cs:122)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__1 () (at Assets/Scripts/ProbeEntry.cs:53)
+ProbeEntry:Case (string,System.Action) (at Assets/Scripts/ProbeEntry.cs:81)
+ProbeEntry:Run () (at Assets/Scripts/ProbeEntry.cs:48)
+
+[Assets/Scripts/ProbeEntry.cs line 122]
+
+Destroying components immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object,bool)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object) (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnityEngineObject.bindings.cs:497)
+ProbeEntry:Act (string) (at Assets/Scripts/ProbeEntry.cs:110)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__2 () (at Assets/Scripts/ProbeEntry.cs:52)
+LifecycleRecorder:Record (string,UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:138)
+LifecycleRecorder:OnTriggerEnter2D (UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:141)
+UnityEngine.Physics2D:Simulate_Internal (UnityEngine.PhysicsScene2D,single,int)
+UnityEngine.Physics2D:Simulate (single) (at /home/bokken/build/output/unity/unity/Modules/Physics2D/ScriptBindings/Physics2D.bindings.cs:754)
+ProbeEntry:Sim () (at Assets/Scripts/ProbeEntry.cs:122)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__1 () (at Assets/Scripts/ProbeEntry.cs:53)
+ProbeEntry:Case (string,System.Action) (at Assets/Scripts/ProbeEntry.cs:81)
+ProbeEntry:Run () (at Assets/Scripts/ProbeEntry.cs:48)
+
+[Assets/Scripts/ProbeEntry.cs line 122]
+
+Destroying GameObjects immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object,bool)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object) (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnityEngineObject.bindings.cs:497)
+ProbeEntry:Act (string) (at Assets/Scripts/ProbeEntry.cs:111)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__2 () (at Assets/Scripts/ProbeEntry.cs:52)
+LifecycleRecorder:Record (string,UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:138)
+LifecycleRecorder:OnTriggerEnter2D (UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:141)
+UnityEngine.Physics2D:Simulate_Internal (UnityEngine.PhysicsScene2D,single,int)
+UnityEngine.Physics2D:Simulate (single) (at /home/bokken/build/output/unity/unity/Modules/Physics2D/ScriptBindings/Physics2D.bindings.cs:754)
+ProbeEntry:Sim () (at Assets/Scripts/ProbeEntry.cs:122)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__1 () (at Assets/Scripts/ProbeEntry.cs:53)
+ProbeEntry:Case (string,System.Action) (at Assets/Scripts/ProbeEntry.cs:81)
+ProbeEntry:Run () (at Assets/Scripts/ProbeEntry.cs:48)
+
+[Assets/Scripts/ProbeEntry.cs line 122]
+
+Destroying components immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object,bool)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object) (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnityEngineObject.bindings.cs:497)
+ProbeEntry:Act (string) (at Assets/Scripts/ProbeEntry.cs:109)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__2 () (at Assets/Scripts/ProbeEntry.cs:52)
+LifecycleRecorder:Record (string,UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:138)
+LifecycleRecorder:OnTriggerEnter2D (UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:141)
+UnityEngine.Physics2D:Simulate_Internal (UnityEngine.PhysicsScene2D,single,int)
+UnityEngine.Physics2D:Simulate (single) (at /home/bokken/build/output/unity/unity/Modules/Physics2D/ScriptBindings/Physics2D.bindings.cs:754)
+ProbeEntry:Sim () (at Assets/Scripts/ProbeEntry.cs:122)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__1 () (at Assets/Scripts/ProbeEntry.cs:53)
+ProbeEntry:Case (string,System.Action) (at Assets/Scripts/ProbeEntry.cs:81)
+ProbeEntry:Run () (at Assets/Scripts/ProbeEntry.cs:48)
+
+[Assets/Scripts/ProbeEntry.cs line 122]
+
+Destroying components immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object,bool)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object) (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnityEngineObject.bindings.cs:497)
+ProbeEntry:Act (string) (at Assets/Scripts/ProbeEntry.cs:110)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__2 () (at Assets/Scripts/ProbeEntry.cs:52)
+LifecycleRecorder:Record (string,UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:138)
+LifecycleRecorder:OnTriggerEnter2D (UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:141)
+UnityEngine.Physics2D:Simulate_Internal (UnityEngine.PhysicsScene2D,single,int)
+UnityEngine.Physics2D:Simulate (single) (at /home/bokken/build/output/unity/unity/Modules/Physics2D/ScriptBindings/Physics2D.bindings.cs:754)
+ProbeEntry:Sim () (at Assets/Scripts/ProbeEntry.cs:122)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__1 () (at Assets/Scripts/ProbeEntry.cs:53)
+ProbeEntry:Case (string,System.Action) (at Assets/Scripts/ProbeEntry.cs:81)
+ProbeEntry:Run () (at Assets/Scripts/ProbeEntry.cs:48)
+
+[Assets/Scripts/ProbeEntry.cs line 122]
+
+Destroying GameObjects immediately is not permitted during physics trigger/contact, animation event callbacks, rendering callbacks or OnValidate. You must use Destroy instead.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object,bool)
+UnityEngine.Object:DestroyImmediate (UnityEngine.Object) (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/UnityEngineObject.bindings.cs:497)
+ProbeEntry:Act (string) (at Assets/Scripts/ProbeEntry.cs:111)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__2 () (at Assets/Scripts/ProbeEntry.cs:52)
+LifecycleRecorder:Record (string,UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:138)
+LifecycleRecorder:OnTriggerEnter2D (UnityEngine.Collider2D) (at Assets/Scripts/ProbeEntry.cs:141)
+UnityEngine.Physics2D:Simulate_Internal (UnityEngine.PhysicsScene2D,single,int)
+UnityEngine.Physics2D:Simulate (single) (at /home/bokken/build/output/unity/unity/Modules/Physics2D/ScriptBindings/Physics2D.bindings.cs:754)
+ProbeEntry:Sim () (at Assets/Scripts/ProbeEntry.cs:122)
+ProbeEntry/<>c__DisplayClass8_8:<Run>b__1 () (at Assets/Scripts/ProbeEntry.cs:53)
+ProbeEntry:Case (string,System.Action) (at Assets/Scripts/ProbeEntry.cs:81)
+ProbeEntry:Run () (at Assets/Scripts/ProbeEntry.cs:48)
+
+[Assets/Scripts/ProbeEntry.cs line 122]
+
+Asset Pipeline Refresh (id=9a46d00fab58ac187a73e82e1b50e864): Total: 0.014 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+[Physics::Module] Cleanup current backned.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input System polling thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-shaypercool-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-shaypercool channel disconnected successfully.
+AcceleratorClientConnectionCallback - disconnected - :0
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+Cleanup mono
+debugger-agent: Unable to listen on 43
+[usbmuxd] Stop listen thread
+[usbmuxd] Listen thread exiting
+[Package Manager] Server process was shutdown
+Checking for leaked weakptr:
+  Found no leaked weakptrs.
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1793429805992,"processId":926790,"allocatedMemory":6672386,"memoryLabels":[{"Default":23549},{"Permanent":16268},{"Thread":1084616},{"Manager":29561},{"VertexData":8},{"Geometry":408},{"VFX":-104},{"Texture":160},{"Shader":79299},{"Material":24},{"GfxDevice":35976},{"Animation":456},{"Audio":4032},{"FontEngine":320},{"Physics":2081},{"Serialization":376},{"Input":26752},{"JobScheduler":33024},{"TextLib":160},{"Mono":32},{"ScriptingNativeRuntime":155096},{"BaseObject":1622928},{"Resource":1032},{"Renderer":2928},{"Transform":4678},{"File":5138},{"WebCam":80},{"Culling":32},{"Terrain":11298},{"Wind":24},{"String":25002},{"DynamicArray":84399},{"HashMap":105439},{"Utility":2663504},{"PoolAlloc":1568},{"AI":72},{"TypeTree":5005},{"ScriptManager":512},{"RuntimeInitializeOnLoadManager":568},{"SpriteAtlas":112},{"GI":7448},{"Director":8208},{"CloudService":8048},{"WebRequest":808},{"VR":45689},{"SceneManager":824},{"Video":64},{"LazyScriptCache":32},{"Camera":17},{"Secure":7785},{"SerializationCache":1576},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57552},{"StaticSafetyDebugInfo":278528},{"Analytics":384},{"Hierarchy":832},{"CoreStats":12456},{"Identifiers":12384},{"Gui":112},{"EditorUtility":16065},{"VersionControl":4},{"Undo":979},{"AssetDatabase":134854},{"EditorGi":328},{"UnityConnect":24792},{"Upm":1852},{"DrivenProperties":72},{"LocalIPC":154},{"ProfilerEditor":9810},{"CoreBusinessMetrics":2500},{"Licensing":1096},{"AssetReference":32},{"IPCStream":32}]}
