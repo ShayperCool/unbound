@@ -38,7 +38,7 @@ def union(a, b, tolerance, path=()):
 
 def read(kind, path):
     if kind == 'bundleaudio':
-        return {r['case']+':'+r['name']: r for r in map(json.loads, path.read_text().splitlines())}
+        return {r['case']+':'+r.get('name',''): r for r in map(json.loads, path.read_text().splitlines())}
     data = json.loads(path.read_text())
     return {r['name']: r for r in data['cases']} if kind == 'graphics' else data
 

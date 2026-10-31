@@ -2,6 +2,7 @@
 """Create an independent private project and capture offline Unity audio."""
 import argparse
 import array
+import json
 import os
 from pathlib import Path
 import shutil
@@ -32,3 +33,11 @@ values = array.array('f')
 values.frombytes((output/'dry.f32').read_bytes())
 if not any(abs(x) > 1e-6 for x in values):
     raise SystemExit('Rejected silent dry capture; no Native DSP evidence')
+
+header = json.loads((output/'capture.json').read_text())
+if header['rate'] != a.rate:
+    raise SystemExit('Editor did not use the requested sample rate')
+raw = array.array('f')
+raw.frombytes((output/'dry.master.f32').read_bytes())
+if len(raw) != 12288 * 2 or not (raw[2048 * 2] > 0.1):
+    raise SystemExit('Rejected incomplete or stale master sink capture')
