@@ -38,14 +38,14 @@ refresh outlier, although every capture passed. The count limit is based on
 memory and successful completion, not a linear speedup assumption.
 
 ```bash
-python3 tools/validation/test_job_runner.py "$XDG_CACHE_HOME/unbound/validation/runs/job-test"
-python3 tools/validation/editor_benchmark.py --work "$XDG_CACHE_HOME/unbound/validation/runs/editor-benchmark" --label fresh-eight --count 8
+python3 tools/validation/test_job_runner.py "${XDG_CACHE_HOME:-$HOME/.cache}/unbound/validation/runs/job-test"
+python3 tools/validation/editor_benchmark.py --work "${XDG_CACHE_HOME:-$HOME/.cache}/unbound/validation/runs/editor-benchmark" --label fresh-eight --count 8
 ```
 
-For an unconfigured direct benchmark, configure the temporary benchmark slice's
-16GiB limit first and hold the old exclusive heavy-job lock around the driver.
-For `--launcher pool`, each Editor acquires its own installed launcher lease;
-do not wrap that driver in another heavy-job lock. Each benchmark label is
+The default pool mode acquires a launcher lease for each Editor; do not wrap
+that driver in another heavy-job lock. For explicit `--launcher direct`, configure
+the temporary benchmark slice's 16GiB limit first and hold the exclusive heavy-job
+lock around the driver. Direct mode refuses an unbounded slice. Each label is
 write-once. Its projects, raw Native captures, memory samples, manifests and
 process logs are cache-only. The integration check verifies the eight-slot cap,
 actual overlap, exclusive writers, GPU serialization and cancellation.

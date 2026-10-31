@@ -21,11 +21,16 @@ parser.add_argument('--label', required=True)
 parser.add_argument('--count', type=int, required=True)
 parser.add_argument('--profile', choices=['motion', 'queries', 'clipping'], default='motion')
 parser.add_argument('--reuse', type=Path)
-parser.add_argument('--launcher', choices=['direct','pool'], default='direct')
+parser.add_argument('--launcher', choices=['direct','pool'], default='pool')
 args = parser.parse_args()
 out = args.work / args.label
 out.mkdir(parents=True)
 slice_name = 'unbound-editorbench.slice' if args.launcher=='direct' else 'unbound-editors.slice'
+if args.launcher=='direct':
+    maximum = subprocess.check_output(['systemctl','--user','show',slice_name,
+                                      '--property=MemoryMax','--value'],text=True).strip()
+    if maximum!=str(16*2**30):
+        raise SystemExit('Direct benchmark requires a configured 16 GiB slice; use --launcher pool.')
 editor = editor_path()
 source = REPO/'tests/projects'/('uirectclipping' if args.profile=='clipping' else 'physics')
 jobs = []
