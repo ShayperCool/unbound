@@ -1,0 +1,2339 @@
+Unity Editor version:    6000.0.71f1 (907bc2d768b5)
+Branch:                  6000.0/respin/6000.0.71f1-8308b6469260
+Build type:              Release
+Batch mode:              YES
+System name:             Linux
+Distro version:          #38-Ubuntu SMP PREEMPT_DYNAMIC Fri Sep  4 09:10:14 UTC 2026
+Kernel version:          7.0.0-38-generic
+Architecture:            x86_64
+Window Protocol:         Wayland (XWayland)
+Available memory:        30986 MB
+[Licensing::Module] Trying to connect to existing licensing client channel...
+Initialize udev device monitor.
+[Licensing::IpcConnector] Channel LicenseClient-shaypercool doesn't exist
+[Licensing::Module] Successfully launched the LicensingClient (PId: 916554)
+
+COMMAND LINE ARGUMENTS:
+/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Unity
+-batchmode
+-nographics
+-projectPath
+/mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/transform-first-native1
+-executeMethod
+LoadingEditor.Record
+-logFile
+/mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/logs/native-transform-first-native1.editor.log
+Successfully changed project path to: /mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/transform-first-native1
+
+(process:916535): Gtk-CRITICAL **: 06:55:37.613: gtk_label_set_text: assertion 'GTK_IS_LABEL (label)' failed
+
+(process:916535): Gtk-CRITICAL **: 06:55:37.614: gtk_label_set_text: assertion 'GTK_IS_LABEL (label)' failed
+/mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/transform-first-native1
+[UnityMemory] Configuration Parameters - Can be set up in boot.config
+    "memorysetup-bucket-allocator-granularity=16"
+    "memorysetup-bucket-allocator-bucket-count=8"
+    "memorysetup-bucket-allocator-block-size=33554432"
+    "memorysetup-bucket-allocator-block-count=8"
+    "memorysetup-main-allocator-block-size=16777216"
+    "memorysetup-thread-allocator-block-size=16777216"
+    "memorysetup-gfx-main-allocator-block-size=16777216"
+    "memorysetup-gfx-thread-allocator-block-size=16777216"
+    "memorysetup-cache-allocator-block-size=4194304"
+    "memorysetup-typetree-allocator-block-size=2097152"
+    "memorysetup-profiler-bucket-allocator-granularity=16"
+    "memorysetup-profiler-bucket-allocator-bucket-count=8"
+    "memorysetup-profiler-bucket-allocator-block-size=33554432"
+    "memorysetup-profiler-bucket-allocator-block-count=8"
+    "memorysetup-profiler-allocator-block-size=16777216"
+    "memorysetup-profiler-editor-allocator-block-size=1048576"
+    "memorysetup-temp-allocator-size-main=16777216"
+    "memorysetup-job-temp-allocator-block-size=2097152"
+    "memorysetup-job-temp-allocator-block-size-background=1048576"
+    "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+    "memorysetup-allocator-temp-initial-block-size-main=262144"
+    "memorysetup-allocator-temp-initial-block-size-worker=262144"
+    "memorysetup-temp-allocator-size-background-worker=32768"
+    "memorysetup-temp-allocator-size-job-worker=262144"
+    "memorysetup-temp-allocator-size-preload-manager=33554432"
+    "memorysetup-temp-allocator-size-nav-mesh-worker=65536"
+    "memorysetup-temp-allocator-size-audio-worker=65536"
+    "memorysetup-temp-allocator-size-cloud-worker=32768"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gi-baking-worker=262144"
+    "memorysetup-temp-allocator-size-gfx=262144"
+Player connection [124261939246976]  Target information:
+
+Player connection [124261939246976]  * "[IP] 192.168.31.231 [Port] 55504 [Flags] 2 [Guid] 1559196786 [EditorId] 1559196786 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [124261939246976]  * "[IP] 100.64.0.4 [Port] 55504 [Flags] 2 [Guid] 1559196786 [EditorId] 1559196786 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [124261939246976]  * "[IP] 172.18.0.1 [Port] 55504 [Flags] 2 [Guid] 1559196786 [EditorId] 1559196786 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [124261939246976]  * "[IP] 172.31.0.1 [Port] 55504 [Flags] 2 [Guid] 1559196786 [EditorId] 1559196786 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [124261939246976]  * "[IP] 192.168.0.1 [Port] 55504 [Flags] 2 [Guid] 1559196786 [EditorId] 1559196786 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [124261939246976]  * "[IP] 10.213.77.1 [Port] 55504 [Flags] 2 [Guid] 1559196786 [EditorId] 1559196786 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [124261939246976]  * "[IP] 172.23.0.1 [Port] 55504 [Flags] 2 [Guid] 1559196786 [EditorId] 1559196786 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [124261939246976]  * "[IP] 172.24.0.1 [Port] 55504 [Flags] 2 [Guid] 1559196786 [EditorId] 1559196786 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [124261939246976]  * "[IP] 10.77.23.1 [Port] 55504 [Flags] 2 [Guid] 1559196786 [EditorId] 1559196786 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Player connection [124261939246976]  * "[IP] 172.20.0.1 [Port] 55504 [Flags] 2 [Guid] 1559196786 [EditorId] 1559196786 [Version] 1048832 [Id] LinuxEditor(16,10.0.0.1) [Debug] 1 [PackageName] LinuxEditor [ProjectName] Editor" 
+
+Unable to join player connection multicast group (err: 105).
+Unable to join player connection alternative multicast group (err: 105).
+Input System module state changed to: Initialized.
+[Physics::Module] Initialized fallback backend.
+[Physics::Module] Id: 0xdecafbad
+[Package Manager] Connected to IPC stream "Upm-916535" after 0.2 seconds.
+Library Redirect Path: Library/
+Rebuilding Library because the asset database could not be found!
+[Physics::Module] Selected backend.
+[Physics::Module] Name: PhysX
+[Physics::Module] Id: 0xf2b8ea05
+[Physics::Module] SDK Version: 4.1.2
+[Physics::Module] Integration Version: 1.0.0
+[Physics::Module] Threading Mode: Multi-Threaded
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Initialize engine version: 6000.0.71f1 (907bc2d768b5)
+[Subsystems] Discovering subsystems at path /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/Resources/UnitySubsystems
+[Subsystems] Discovering subsystems at path /mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/transform-first-native1/Assets
+Forcing GfxDevice: Null
+GfxDevice: creating device client; kGfxThreadingModeNonThreaded
+NullGfxDevice:
+    Version:  NULL 1.0 [1.0]
+    Renderer: Null Device
+    Vendor:   Unity Technologies
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-shaypercool" at "2026-10-31T06:55:37.986128Z"
+[SignatureVerifier] Application signature verification not supported on this platform.
+Initialize mono
+Mono path[0] = '/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/Managed'
+Mono path[1] = '/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/MonoBleedingEdge/lib/mono/unityjit-linux'
+Mono config path = '/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/MonoBleedingEdge/etc'
+Using monoOptions --debugger-agent=transport=dt_socket,embedding=1,server=y,suspend=n,address=127.0.0.1:56535
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+Using cacheserver namespaces - metadata:defaultmetadata, artifacts:defaultartifacts
+ImportWorker Server TCP listen port: 0
+AcceleratorClientConnectionCallback - disconnected - :0
+Begin MonoManager ReloadAssembly
+[Licensing::Client] Handshaking with LicensingClient:
+  Version:                 1.17.4+4293ba1
+  Session Id:              b7b1ab7692154775924657212b773e1c
+  Correlation Id:          15acaf3f621ffa8b962bb58119303a02
+  External correlation Id: 6104493576562327144
+  Machine Id:              u9I7DXHjFecktPllptHXqWVZrtM=
+[Licensing::Module] Successfully connected to LicensingClient on channel: "LicenseClient-shaypercool" (connect: 0.38s, validation: 0.05s, handshake: 0.00s)
+[Licensing::IpcConnector] Successfully connected to: "LicenseClient-shaypercool-notifications" at "2026-10-31T06:55:38.041059Z"
+[Licensing::Module] Connected to LicensingClient (PId: 916554, launch time: 0.00, total connection time: 0.43s)
+[Licensing::Module] Error: Access token is unavailable; failed to update
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] License group:
+  Id: 9071505245648-UnityPersXXXX
+  Product: Unity Personal
+  Type: Assigned
+  Expiration: Unlimited
+[Licensing::Client] Successfully updated license, isAsync: True, time: 0.01
+[Licensing::Client] Successfully resolved entitlement details
+[Licensing::Module] Licensing Background thread has ended after 0.46s
+Registering precompiled unity dll's ...
+[Licensing::Client] Successfully resolved entitlement details
+Register platform support module: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/PlaybackEngines/AndroidPlayer/UnityEditor.Android.Extensions.dll
+[Licensing::Client] Successfully resolved entitlement details
+Register platform support module: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/PlaybackEngines/iOSSupport/UnityEditor.iOS.Extensions.dll
+Register platform support module: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/PlaybackEngines/LinuxStandaloneSupport/UnityEditor.LinuxStandalone.Extensions.dll
+Registered in 0.005056 seconds.
+- Loaded All Assemblies, in  0.338 seconds
+Native extension for LinuxStandalone target not found
+[usbmuxd] Start listen thread
+[usbmuxd] Listen thread started
+Native extension for iOS target not found
+Native extension for Android target not found
+Package Manager log level set to [2]
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.345 seconds
+Domain Reload Profiling: 683ms
+	BeginReloadAssembly (87ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (0ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (1ms)
+	RebuildCommonClasses (34ms)
+	RebuildNativeTypeToScriptingClass (7ms)
+	initialDomainReloadingComplete (56ms)
+	LoadAllAssembliesAndSetupDomain (153ms)
+		LoadAssemblies (87ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (150ms)
+			TypeCache.Refresh (149ms)
+				TypeCache.ScanAssembly (136ms)
+			BuildScriptInfoCaches (0ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (346ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (311ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (70ms)
+			SetLoadedEditorAssemblies (4ms)
+			BeforeProcessingInitializeOnLoad (58ms)
+			ProcessInitializeOnLoadAttributes (117ms)
+			ProcessInitializeOnLoadMethodAttributes (61ms)
+			AfterProcessingInitializeOnLoad (0ms)
+			EditorAssembliesLoaded (2ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (0ms)
+[Licensing::Client] Successfully resolved entitlement details
+Application.AssetDatabase Initial Refresh Start
+[Package Manager] Done resolving packages in 0.54 seconds
+[Licensing::Client] Successfully resolved entitlement details
+[Package Manager] Registered 6 packages:
+  Built-in packages:
+    com.unity.modules.imgui@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/transform-first-native1/Library/PackageCache/com.unity.modules.imgui)
+    com.unity.modules.jsonserialize@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/transform-first-native1/Library/PackageCache/com.unity.modules.jsonserialize)
+    com.unity.modules.physics@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/transform-first-native1/Library/PackageCache/com.unity.modules.physics)
+    com.unity.modules.physics2d@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/transform-first-native1/Library/PackageCache/com.unity.modules.physics2d)
+    com.unity.modules.terrain@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/transform-first-native1/Library/PackageCache/com.unity.modules.terrain)
+    com.unity.modules.terrainphysics@1.0.0 (location: /mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/transform-first-native1/Library/PackageCache/com.unity.modules.terrainphysics)
+[Subsystems] No new subsystems found in resolved package list.
+[Package Manager] Done registering packages in 0.00 seconds
+[ScriptCompilation] Requested script compilation because: Assetdatabase observed changes in script compilation related files
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[14]
+      Now listening on: http://unix:/tmp/ilpp.sock-9ee76ddf5d1c36978f770edf18105bb4
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Application started. Press Ctrl+C to shut down.
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Hosting environment: Production
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Content root path: /mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/transform-first-native1/
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Hosting.Diagnostics[1]
+      Request starting HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping application/grpc -
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Routing.EndpointMiddleware[0]
+      Executing endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Routing.EndpointMiddleware[1]
+      Executed endpoint 'gRPC - /UnityILPP.PostProcessing/Ping'
+[40m[32minfo[39m[22m[49m: Microsoft.AspNetCore.Hosting.Diagnostics[2]
+      Request finished HTTP/2 POST http://ilpp/UnityILPP.PostProcessing/Ping application/grpc - - 200 - application/grpc 42.8724ms
+Starting: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/bee_backend --ipc --defer-dag-verification --dagfile="Library/Bee/2400b0aE.dag" --continue-on-failure --profile="Library/Bee/backend1.traceevents" ScriptAssemblies
+WorkingDir: /mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/transform-first-native1
+ExitCode: 4 Duration: 0s37ms
+[             ] Require frontend run.  Library/Bee/2400b0aE.dag couldn't be loaded
+DisplayProgressbar: Compiling Scripts
+Starting: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/Tools/netcorerun/netcorerun "/home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/Tools/BuildPipeline/ScriptCompilationBuildProgram.exe" "Library/Bee/2400b0aE.dag.json" "Library/Bee/2400b0aE-inputdata.json" "Library/Bee/buildprogram0.traceevents"
+WorkingDir: /mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/transform-first-native1
+ExitCode: 0 Duration: 0s395ms
+Starting: /home/shaypercool/Unity/Hub/Editor/6000.0.71f1/Editor/Data/bee_backend --ipc --defer-dag-verification --dagfile="Library/Bee/2400b0aE.dag" --continue-on-failure --dagfilejson="Library/Bee/2400b0aE.dag.json" --profile="Library/Bee/backend2.traceevents" ScriptAssemblies
+WorkingDir: /mnt/storage-hdd/node-b-caches-20261023/inactive3dloading-t3-54da5671/transform-first-native1
+ExitCode: 0 Duration: 3s673ms
+Finished compiling graph: 151 nodes, 539 flattened edges (529 ToBuild, 4 ToUse), maximum node priority 18
+[  1/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.UIBuilderModule.dll_2BCEF0FEA29AF4E3.mvfrm
+[  2/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.UIElementsModule.dll_F8FA4E601D779443.mvfrm
+[  3/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.GIModule.dll_395087EE792237F5.mvfrm
+[  4/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ContentLoadModule.dll_D1BA8E6C2BEF9C10.mvfrm
+[  5/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.VFXModule.dll_DFA437E3AF2D13F4.mvfrm
+[  6/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.UmbraModule.dll_89D0C901E16A8ED5.mvfrm
+[  7/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.UnityConnectModule.dll_480A206B0D54EA9D.mvfrm
+[  8/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.UIElementsSamplesModule.dll_CDDC505FCFAB225A.mvfrm
+[  9/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.CrashReportingModule.dll_FFF5EF5C94F9F66A.mvfrm
+[ 10/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ClusterRendererModule.dll_D69FD92C9D10F08E.mvfrm
+[ 11/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ClusterInputModule.dll_C7A69580BEDCBD63.mvfrm
+[ 12/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.AccessibilityModule.dll_D351BE2BDAC3624A.mvfrm
+[ 13/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.DSPGraphModule.dll_9C82844C2A76E750.mvfrm
+[ 14/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.VideoModule.dll_3405A15416D5FF07.mvfrm
+[ 15/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.XRModule.dll_E3AA3508F931F492.mvfrm
+[ 16/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.CoreModule.dll_D3114EBF5DA07392.mvfrm
+[ 17/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.PropertiesModule.dll_CECBC08C9FC35846.mvfrm
+[ 18/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.dll_E976E74DE8AD947E.mvfrm
+[ 19/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.HotReloadModule.dll_27147E10E5726BD7.mvfrm
+[ 20/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.PhysicsModule.dll_6AE57EA0648595B8.mvfrm
+[ 21/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.Physics2DModule.dll_F271AFFBAB3C47EA.mvfrm
+[ 22/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.InputForUIModule.dll_A442DB678CF890C6.mvfrm
+[ 23/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.InputLegacyModule.dll_C9E95049F55EAA14.mvfrm
+[ 24/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.IdentifiersModule.dll_112DBD211FE5C23B.mvfrm
+[ 25/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.IMGUIModule.dll_0D8878B44BF2A7E8.mvfrm
+[ 26/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.InputModule.dll_3B9EA0FDFBF938AB.mvfrm
+[ 27/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.GameCenterModule.dll_A190814E2CD7F40A.mvfrm
+[ 28/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.GridModule.dll_B0826AAD75F50989.mvfrm
+[ 29/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.MultiplayerModule.dll_B84C51B81634819B.mvfrm
+[ 30/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.LocalizationModule.dll_05F35FD35658B05C.mvfrm
+[ 31/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.PerformanceReportingModule.dll_0701BF98C44C1A51.mvfrm
+[ 32/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.MarshallingModule.dll_E10CD3C041952175.mvfrm
+[ 33/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.GraphicsStateCollectionSerializerModule.dll_BB819329E0F77A57.mvfrm
+[ 34/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.JSONSerializeModule.dll_BFAA398F52F745F9.mvfrm
+[ 35/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.GridModule.dll_8D61975ACDEF9E5E.mvfrm
+[ 36/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.PhysicsModule.dll_786AC5F5FF76AE73.mvfrm
+[ 37/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.DiagnosticsModule.dll_69AB812CA22F42D8.mvfrm
+[ 38/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.Physics2DModule.dll_3C8BBF12C5BC9605.mvfrm
+[ 39/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.MultiplayerModule.dll_B286822903FA7116.mvfrm
+[ 40/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.CoreBusinessMetricsModule.dll_1A4F2E25217ACFD0.mvfrm
+[ 41/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.GraphicsStateCollectionSerializerModule.dll_B28DC63A13F830F2.mvfrm
+[ 42/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.GraphViewModule.dll_D74643E22FE27BAF.mvfrm
+[ 43/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.CoreModule.dll_AFF07B6CB59B0867.mvfrm
+[ 44/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.DeviceSimulatorModule.dll_D0F316BB2D55E30A.mvfrm
+[ 45/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.UIAutomationModule.dll_FD7101E584E4CE43.mvfrm
+[ 46/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.EmbreeModule.dll_74976475F3B69390.mvfrm
+[ 47/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.EditorToolbarModule.dll_094DD3FE5459139A.mvfrm
+[ 48/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.GridAndSnapModule.dll_736467AE2593FFC7.mvfrm
+[ 49/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.AdaptivePerformanceModule.dll_9A6434AAFB33A0D6.mvfrm
+[ 50/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.BuildProfileModule.dll_4CD012F4E8710583.mvfrm
+[ 51/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.TextCoreFontEngineModule.dll_31EF07A806F91A05.mvfrm
+[ 52/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.TilemapModule.dll_31ADA8E5ECF1D86A.mvfrm
+[ 53/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.TextCoreTextEngineModule.dll_79D73E19967CD323.mvfrm
+[ 54/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.GIModule.dll_FAE1F65F0DA5042A.mvfrm
+[ 55/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.TextRenderingModule.dll_769066F7A5A26F2B.mvfrm
+[ 56/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.SubstanceModule.dll_8125D0BBBF9A53BC.mvfrm
+[ 57/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.SpriteShapeModule.dll_4C3F92F700D51BA8.mvfrm
+[ 58/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.TreeModule.dll_0D9C707B3D609DA6.mvfrm
+[ 59/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.TerrainModule.dll_92B14164D534F761.mvfrm
+[ 60/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.PresetsUIModule.dll_92AC7CC4323AD3B4.mvfrm
+[ 61/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.ShaderFoundryModule.dll_6BCD14FF75F53A60.mvfrm
+[ 62/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.SketchUpModule.dll_842F45B27F7CDABF.mvfrm
+[ 63/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.SceneViewModule.dll_15F626EA250548BD.mvfrm
+[ 64/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.SceneTemplateModule.dll_2CED44BC5345BDD2.mvfrm
+[ 65/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.SafeModeModule.dll_9C1A6062344B3EA8.mvfrm
+[ 66/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.RuntimeInitializeOnLoadManagerInitializerModule.dll_7C09841E10988CB3.mvfrm
+[ 67/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.Apple.Extensions.Common.dll_72C741D70D07BB29.mvfrm
+[ 68/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.SpriteMaskModule.dll_8A0E86964C037039.mvfrm
+[ 69/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.dll_1C1B2E2647212163.mvfrm
+[ 70/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.iOS.Extensions.Xcode.dll_65E294087A06CE40.mvfrm
+[ 71/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.QuickSearchModule.dll_F4BB0239FB063F31.mvfrm
+[ 72/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.QuickInstallModule.dll_2BAF613429F773B6.mvfrm
+[ 73/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.VirtualTexturingModule.dll_09473B5C28D29BB0.mvfrm
+[ 74/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.VFXModule.dll_EBC5DA371EDD21F9.mvfrm
+[ 75/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityCurlModule.dll_D8E8613C7A534242.mvfrm
+[ 76/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityTestProtocolModule.dll_899F065229A677B0.mvfrm
+[ 77/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.iOS.Extensions.Common.dll_4F66B22AE2FDF3CC.mvfrm
+[ 78/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.PropertiesModule.dll_CE1D53449D7F3EFB.mvfrm
+[ 79/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/Unity.Android.Types.dll_635F0DA74D4257DD.mvfrm
+[ 80/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/Unity.Android.Gradle.dll_DD675E43164085CF.mvfrm
+[ 81/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp.rsp2
+[ 82/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp.UnityAdditionalFile.txt
+[ 83/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp.dll.mvfrm.rsp
+[ 84/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp.rsp
+[ 85/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityConsentModule.dll_070F3BA614E78198.mvfrm
+[ 86/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.SharedInternalsModule.dll_C6A315B29663A3D2.mvfrm
+[ 87/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.StreamingModule.dll_5A60AD5B59C70793.mvfrm
+[ 88/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ShaderVariantAnalyticsModule.dll_1259E3A005FA5D59.mvfrm
+[ 89/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.SpriteMaskModule.dll_8ABCF3DE4E478984.mvfrm
+[ 90/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityConnectModule.dll_3569A47A07DCEB48.mvfrm
+[ 91/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.TerrainPhysicsModule.dll_5382E17C1C4E7C85.mvfrm
+[ 92/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.SpriteShapeModule.dll_52056286130F2C2D.mvfrm
+[ 93/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.TextCoreTextEngineModule.dll_F836B96CA97A91EE.mvfrm
+[ 94/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityAnalyticsCommonModule.dll_A2407CDCDE34B8AF.mvfrm
+[ 95/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.SubstanceModule.dll_370BC1A4A51A05A1.mvfrm
+[ 96/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.TextCoreFontEngineModule.dll_B04E82FB19F6D8D0.mvfrm
+[ 97/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.TLSModule.dll_6AE741C8486FB88C.mvfrm
+[ 98/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.TerrainModule.dll_852BFA0F3A43DEA6.mvfrm
+[ 99/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityAnalyticsModule.dll_72A7A972AF32D3F4.mvfrm
+[100/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.VRModule.dll_EF5A0393DB74DAFF.mvfrm
+[101/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.TextRenderingModule.dll_02D1591F1E9AF250.mvfrm
+[102/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityWebRequestTextureModule.dll_519FC5EF5A2E21DE.mvfrm
+[103/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityWebRequestWWWModule.dll_C2F8FEC8993A4E5A.mvfrm
+[104/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityWebRequestAssetBundleModule.dll_E239946CB174CDC5.mvfrm
+[105/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.VehiclesModule.dll_0EF41C62323FE5CA.mvfrm
+[106/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.VideoModule.dll_FA325DB848532FAC.mvfrm
+[107/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityWebRequestAudioModule.dll_7EFE13774AB6E4E9.mvfrm
+[108/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.XRModule.dll_2218C69864AF285D.mvfrm
+[109/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.Android.Extensions.dll_7C13B87F55DA696F.mvfrm
+[110/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.iOS.Extensions.dll_C2AAB2FBCD6F4A19.mvfrm
+[111/148    0s] MovedFromExtractor-Combine Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp.dll.mvfrm
+[112/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.Graphs.dll_D9D272D801B86B99.mvfrm
+[113/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.WindModule.dll_496029E7EED6F1FB.mvfrm
+[114/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UIModule.dll_9C87DD0E39BA5587.mvfrm
+[115/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UnityWebRequestModule.dll_5430DE872A2A4301.mvfrm
+[116/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UmbraModule.dll_4FFD856612E7BF7A.mvfrm
+[117/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEditor.LinuxStandalone.Extensions.dll_284771E9126D9599.mvfrm
+[118/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ClothModule.dll_3C1136485FDDF2EB.mvfrm
+[119/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.TilemapModule.dll_242861905200BFAF.mvfrm
+[120/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ScreenCaptureModule.dll_D991E7146763725B.mvfrm
+[121/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.SubsystemsModule.dll_F56A5A401C8F7197.mvfrm
+[122/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ParticleSystemModule.dll_530838A9030B81F8.mvfrm
+[123/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp-Editor.UnityAdditionalFile.txt
+[124/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp-Editor.rsp2
+[125/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp-Editor.dll.mvfrm.rsp
+[126/148    0s] WriteText Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp-Editor.rsp
+[127/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.UIElementsModule.dll_F9A8BBA81FBBAD8E.mvfrm
+[128/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.AssetBundleModule.dll_38A4352B5D6CF423.mvfrm
+[129/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ARModule.dll_5A8703E43A90AEA4.mvfrm
+[130/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.HierarchyCoreModule.dll_D6AD4D2DC2693E65.mvfrm
+[131/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.InsightsModule.dll_30F7EB73429365AE.mvfrm
+[132/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.NVIDIAModule.dll_CCA87C5D5153AE3E.mvfrm
+[133/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.AccessibilityModule.dll_5F92B05353BBE56F.mvfrm
+[134/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.AndroidJNIModule.dll_7743373366970319.mvfrm
+[135/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.AudioModule.dll_D528D94D85C11407.mvfrm
+[136/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.DirectorModule.dll_973122E2B816162F.mvfrm
+[137/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.AnimationModule.dll_A5CBC00B0A3F5055.mvfrm
+[138/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.AMDModule.dll_6C577E63213F3D39.mvfrm
+[139/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.AIModule.dll_A1143EE0DD734FDB.mvfrm
+[140/148    0s] MovedFromExtractor Library/Bee/artifacts/mvdfrm/UnityEngine.ImageConversionModule.dll_4291D6DD1F35A882.mvfrm
+[141/148    0s] MovedFromExtractor-Combine Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp-Editor.dll.mvfrm
+[142/148    1s] Csc Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp.dll (+2 others)
+[143/148    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp.dll
+[144/148    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp.pdb
+[145/148    0s] Csc Library/Bee/artifacts/2400b0aE.dag/Assembly-CSharp-Editor.dll (+2 others)
+[146/148    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp-Editor.pdb
+[147/148    0s] CopyFiles Library/ScriptAssemblies/Assembly-CSharp-Editor.dll
+*** Tundra build success (3.65 seconds), 147 items updated, 148 evaluated
+AssetDatabase: script compilation time: 4.533995s
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.344 seconds
+Start importing Assets using Guid(00000000000000001000000000000000) (DefaultImporter) -> (artifact id: '4b55c7cb15071bfc086d0e52a7664a41') in 0.013767579 seconds
+Start importing ProjectSettings/InputManager.asset using Guid(00000000000000002000000000000000) (LibraryAssetImporter) -> (artifact id: '3d278bdfa729973ecf92c670ca181c88') in 0.00079644 seconds
+Start importing ProjectSettings/TagManager.asset using Guid(00000000000000003000000000000000) (LibraryAssetImporter) -> (artifact id: '4aa03ef27a83f311e598313a3ec2fbc3') in 0.000596211 seconds
+Start importing ProjectSettings/ProjectSettings.asset using Guid(00000000000000004000000000000000) (LibraryAssetImporter) -> (artifact id: '9de65bac97c79f50e3bc9e7e4178073b') in 0.001353681 seconds
+Start importing ProjectSettings/AudioManager.asset using Guid(00000000000000006000000000000000) (LibraryAssetImporter) -> (artifact id: '22ffb3fe371a5950e3f1d63c04f3be40') in 0.00066911 seconds
+Start importing ProjectSettings/TimeManager.asset using Guid(00000000000000007000000000000000) (LibraryAssetImporter) -> (artifact id: '52c307e924e96ceef905bcc2cea85a00') in 0.000608501 seconds
+Start importing ProjectSettings/DynamicsManager.asset using Guid(00000000000000008000000000000000) (LibraryAssetImporter) -> (artifact id: 'be5c3cc4d9346f9e8fa2ddaee90dd709') in 0.00057461 seconds
+Start importing ProjectSettings/QualitySettings.asset using Guid(00000000000000009000000000000000) (LibraryAssetImporter) -> (artifact id: 'f44ba1262e818bbe4262433f49247514') in 0.000752821 seconds
+Start importing ProjectSettings/EditorBuildSettings.asset using Guid(0000000000000000b000000000000000) (LibraryAssetImporter) -> (artifact id: 'd21bc78fe61d589557d705378c32ce80') in 0.00054132 seconds
+Start importing ProjectSettings/EditorSettings.asset using Guid(0000000000000000c000000000000000) (LibraryAssetImporter) -> (artifact id: '88a81b0cd41f2e6791b296dbea0c2761') in 0.0005287 seconds
+Start importing ProjectSettings/NavMeshAreas.asset using Guid(00000000000000004100000000000000) (LibraryAssetImporter) -> (artifact id: '4ba0a6bb5cc18b1619eb3b3f4ce570d1') in 0.000547801 seconds
+Start importing ProjectSettings/Physics2DSettings.asset using Guid(00000000000000005100000000000000) (LibraryAssetImporter) -> (artifact id: 'b9a798d8579cfd14a9d003bd527e0b64') in 0.00053628 seconds
+Start importing ProjectSettings/GraphicsSettings.asset using Guid(00000000000000006100000000000000) (LibraryAssetImporter) -> (artifact id: '73a0d0504a18325c463e244f56ec4944') in 0.000578471 seconds
+Start importing ProjectSettings/ClusterInputManager.asset using Guid(00000000000000007100000000000000) (LibraryAssetImporter) -> (artifact id: '5a028a71a6163b7bc9a46219c48662ec') in 0.00053706 seconds
+Start importing ProjectSettings/UnityConnectSettings.asset using Guid(0000000000000000a100000000000000) (LibraryAssetImporter) -> (artifact id: '5a6e69f8200d884ded3f19f546ea756a') in 0.0005365 seconds
+Start importing ProjectSettings/PresetManager.asset using Guid(0000000000000000b100000000000000) (LibraryAssetImporter) -> (artifact id: '669bd2cb5cdf99ef516d1350fa42393e') in 0.000521771 seconds
+Start importing ProjectSettings/VFXManager.asset using Guid(0000000000000000c100000000000000) (LibraryAssetImporter) -> (artifact id: 'd96b989647555359bde1f89c35e57424') in 0.00049637 seconds
+Start importing ProjectSettings/VersionControlSettings.asset using Guid(0000000000000000d100000000000000) (LibraryAssetImporter) -> (artifact id: 'b89f810c452b248c014f182ae5caa680') in 0.00052806 seconds
+Start importing ProjectSettings/MemorySettings.asset using Guid(0000000000000000f100000000000000) (LibraryAssetImporter) -> (artifact id: '19f032dc933bd79e61da5c81f7ddd1ac') in 0.000643411 seconds
+Start importing ProjectSettings/MultiplayerManager.asset using Guid(00000000000000000200000000000000) (LibraryAssetImporter) -> (artifact id: '2f864bba7a58beddb6fbf79980c9a838') in 0.00055683 seconds
+Start importing Library/BuildInstructions using Guid(00000000000000002300000000000000) (DefaultImporter) -> (artifact id: 'ade3aeda13ad9960ede0e143cb33502a') in 0.000337031 seconds
+Start importing Packages/com.unity.modules.imgui using Guid(c060426bfd6e82575228df6656368eaa) (DefaultImporter) -> (artifact id: '7d484ab5933192f91b6a2fb9f7498a1e') in 0.00031445 seconds
+Start importing Assets/Resources using Guid(631249776c4ac2d47ab7f93ea2056094) (DefaultImporter) -> (artifact id: '97f5c82c074c1cb0c0b916e75e512df4') in 0.00028462 seconds
+Start importing Packages/com.unity.modules.terrainphysics using Guid(95f85adeda79e994f011eb2152cf4fc9) (DefaultImporter) -> (artifact id: '361f0b2a768839d40a5a079492e0ff7f') in 0.00031826 seconds
+Start importing Assets/Editor using Guid(b64b759dede568d9c9978b83e6b9543a) (DefaultImporter) -> (artifact id: '19548b0db54ea5fd9c8f1db21587155e') in 0.000278851 seconds
+Start importing Packages/com.unity.modules.physics using Guid(d6db7caf2e852b75ebb9c6098418179c) (DefaultImporter) -> (artifact id: 'b562405fb5bd1c9305c356f8cfe7a672') in 0.00030001 seconds
+Start importing Packages/com.unity.modules.physics2d using Guid(376c84ea405e0f2b80562c23bb977216) (DefaultImporter) -> (artifact id: 'f030ba7c21f8c3d36c2700ba9484429e') in 0.00029673 seconds
+Start importing Assets/Scripts using Guid(a989ed12fdb58b8e2ae24f9f8c1cd477) (DefaultImporter) -> (artifact id: '26d35fa951b1ba56150cc883dbb3595d') in 0.00027329 seconds
+Start importing Assets/Scenes using Guid(da55d4f9618df67bf9dc73fa39f5bc4d) (DefaultImporter) -> (artifact id: 'c835a5c84c9f9e6bae89ff716e2bdd06') in 0.00027856 seconds
+Start importing Packages/com.unity.modules.jsonserialize using Guid(fc3a810351931f5e6183e16b9beb5563) (DefaultImporter) -> (artifact id: 'ae149b8f46567b37c6b77b16bb572fe8') in 0.000316 seconds
+Start importing Packages/com.unity.modules.terrain using Guid(6e1c8b97ec8aa0464e92506ffe099558) (DefaultImporter) -> (artifact id: 'd262e4fb78f6fff54404eb87b88b9ac4') in 0.00040728 seconds
+Start importing Packages/com.unity.modules.terrain/package.ModuleCompilationTrigger using Guid(23032f4383e95e772bce465c5896d0fd) (DefaultImporter) -> (artifact id: '491a7f75d3e9187fba07a3d515b1da29') in 0.0003337 seconds
+Start importing Packages/com.unity.modules.jsonserialize/package.ModuleCompilationTrigger using Guid(e6a135e3ea9cb46795d1b0e05ac3e1e5) (DefaultImporter) -> (artifact id: '8d26f1c211bce77f7cf17eccccd57b0d') in 0.000297391 seconds
+Start importing Packages/com.unity.modules.terrainphysics/package.ModuleCompilationTrigger using Guid(cbb1a39d56ce4d9ac1a46ac505893fa7) (DefaultImporter) -> (artifact id: '8d1d3ac1946fa5f9233e968059d3fb13') in 0.00031038 seconds
+Start importing Packages/com.unity.modules.physics/package.ModuleCompilationTrigger using Guid(5c1ee4056d0ac7ad3c5a16597fcaa38a) (DefaultImporter) -> (artifact id: '288b7a03d6481d4e92cee0ae908758ad') in 0.000298 seconds
+Start importing Packages/com.unity.modules.imgui/package.ModuleCompilationTrigger using Guid(be13c398521e3c1ad21fb9da30ab2ab6) (DefaultImporter) -> (artifact id: 'ea0574aa05344c7e80357502346d73fc') in 0.00029084 seconds
+Start importing Packages/com.unity.modules.physics2d/package.ModuleCompilationTrigger using Guid(fe6a6957b37b61417b457a1e0541791d) (DefaultImporter) -> (artifact id: 'a5a6ae7d64235baf32ceb35097cc3c10') in 0.000327081 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Native extension for LinuxStandalone target not found
+Native extension for iOS target not found
+Native extension for Android target not found
+Mono: successfully reloaded assembly
+- Finished resetting the current domain, in  0.374 seconds
+Domain Reload Profiling: 717ms
+	BeginReloadAssembly (259ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (13ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (144ms)
+	RebuildCommonClasses (33ms)
+	RebuildNativeTypeToScriptingClass (7ms)
+	initialDomainReloadingComplete (24ms)
+	LoadAllAssembliesAndSetupDomain (20ms)
+		LoadAssemblies (64ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (15ms)
+			TypeCache.Refresh (14ms)
+				TypeCache.ScanAssembly (8ms)
+			BuildScriptInfoCaches (1ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (374ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (255ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (33ms)
+			SetLoadedEditorAssemblies (3ms)
+			BeforeProcessingInitializeOnLoad (81ms)
+			ProcessInitializeOnLoadAttributes (109ms)
+			ProcessInitializeOnLoadMethodAttributes (22ms)
+			AfterProcessingInitializeOnLoad (7ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (6ms)
+Start importing Library/BuildPlayer.prefs using Guid(00000000000000005000000000000000) (DefaultImporter) -> (artifact id: '083d37eb6b0e82b8f5c1ec86344d848d') in 0.017693391 seconds
+Start importing Assets/Scenes/Probe.unity using Guid(4745a504d7f5f347fb9b4362bb1b3374) (DefaultImporter) -> (artifact id: '5a4feb1d49a8198ba3d402c9442ac82f') in 0.00035522 seconds
+Start importing Packages/com.unity.modules.jsonserialize/package.json using Guid(40bf3cec17fa0b49fe04443c8332d638) (PackageManifestImporter) -> (artifact id: '4bbe75e7d3a83ee7597a3bcba3a1e7c4') in 0.00067594 seconds
+Start importing Packages/com.unity.modules.imgui/package.json using Guid(42fe78c8fe682715a2cb531422e6ccb3) (PackageManifestImporter) -> (artifact id: '258497c2a57bcde162ae716914ae3ed9') in 0.00050808 seconds
+Start importing Packages/com.unity.modules.terrainphysics/package.json using Guid(d3cbe921f7b3d9a3257e7c61a5761796) (PackageManifestImporter) -> (artifact id: 'bd632a6addac0a26fbf7af664315b08c') in 0.000505401 seconds
+Start importing Packages/com.unity.modules.physics2d/package.json using Guid(f7a8357347c80dc69c08d0b1a05e2122) (PackageManifestImporter) -> (artifact id: 'ae5955da6334bfc2a25981da31e7683f') in 0.00050038 seconds
+Start importing Packages/com.unity.modules.physics/package.json using Guid(1a4266815e998967becf686f9c71f0a6) (PackageManifestImporter) -> (artifact id: '1cb3c922b1dde68060b01eaebbe11061') in 0.00048295 seconds
+Start importing Packages/com.unity.modules.terrain/package.json using Guid(6d56244f8c39a851975d3c0bd432c66f) (PackageManifestImporter) -> (artifact id: '3f1b9b8e3d3749c6eb00f5f51e43e5e8') in 0.00049005 seconds
+Start importing Assets/Resources/instance-inactive-dynamic-root-1.prefab using Guid(1041c367c2458ab61ba09e0de6a9b315) (PrefabImporter) -> (artifact id: '24f98b12cca18ee06d16c82197208fff') in 0.001523571 seconds
+Start importing Assets/Resources/asset-inactive-dynamic-child-5.prefab using Guid(2031f313f4300bc4a8de733d575544f9) (PrefabImporter) -> (artifact id: '91e991f6d1cb5c28f2e8152df78dc6f9') in 0.000809991 seconds
+Start importing Assets/Resources/nested-active-kinematic-root-3.prefab using Guid(201e7ba4357326889bd235756454f667) (PrefabImporter) -> (artifact id: '4189b2c527817c265b18b91784739737') in 0.00079895 seconds
+Start importing Assets/Resources/nested-active-dynamic-root-3.prefab using Guid(30ce274c4a07ec7afa79b58639e99c85) (PrefabImporter) -> (artifact id: '6c4d41876754cd9f76c311418a7b7fe0') in 0.000939051 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-child-0.prefab using Guid(506c7510b6087ae53aeb7490b3f7c96c) (PrefabImporter) -> (artifact id: '37607d0aea2c467ab415e952b329b624') in 0.00087128 seconds
+Start importing Assets/Resources/instance-inactive-dynamic-root-5.prefab using Guid(70ee622b43cce169eae8da459cec387a) (PrefabImporter) -> (artifact id: '094f70ec22c0176a22172617e8148c1d') in 0.000918691 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-child-3.prefab using Guid(f574a76b0096bd383911f3944ae49b5c) (PrefabImporter) -> (artifact id: '549b6239ff6cc05e6084d8a0272bde43') in 0.000818641 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-child-3-outer.prefab using Guid(901a19dc8b4d8666cb5745def8cbec43) (PrefabImporter) -> (artifact id: 'f5d05f4fea2498b88703f3a1db1918e3') in 0.001241061 seconds
+Start importing Assets/Resources/instance-inactive-dynamic-root-4.prefab using Guid(b03fd606eb46f058eb45c50b46f2fa07) (PrefabImporter) -> (artifact id: 'b11a2894a82b5907682c79611a619865') in 0.00081419 seconds
+Start importing Assets/Resources/nested-active-dynamic-root-5.prefab using Guid(cf8e64e4f48c8b6148675dc1ab8f7ada) (PrefabImporter) -> (artifact id: '1f11bf32f99736d3b5df395efbb4a467') in 0.000809581 seconds
+Start importing Assets/Resources/nested-active-dynamic-root-5-outer.prefab using Guid(d07a74e12a3f649ff90077f8b9aa24b6) (PrefabImporter) -> (artifact id: 'f252296113f9a894c03f742480b1a87f') in 0.001157431 seconds
+Start importing Assets/Resources/asset-inactive-kinematic-root-1.prefab using Guid(f0880a2c00eaca79682b6fce86ec2c39) (PrefabImporter) -> (artifact id: 'ba2a9dfb00b78ab147bb5ebb1d5b800a') in 0.00096951 seconds
+Start importing Assets/Resources/asset-active-kinematic-child-1.prefab using Guid(f0be1b96c5ac244c5a022e5a66271005) (PrefabImporter) -> (artifact id: 'e1f0bc74a4b10f37e49d4245b8268ea4') in 0.000894651 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-child-3.prefab using Guid(340e18bba3dbac2f7acbca409974ca8f) (PrefabImporter) -> (artifact id: '3d3b1b0bfcaef87a5015a42fb2810f17') in 0.000810331 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-child-3-outer.prefab using Guid(61e09ba3e7d5b51c1966d0cf189cd667) (PrefabImporter) -> (artifact id: '5f68dc4769d7c938d91780d643018faa') in 0.00109994 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-root-0.prefab using Guid(53351569b52721f7c913b26e32d0abf2) (PrefabImporter) -> (artifact id: '4583f9e35d68eeb311b93ef327755350') in 0.000844941 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-root-0-outer.prefab using Guid(61c96c29f8cc6dfe6bccb8eb894e794b) (PrefabImporter) -> (artifact id: '53ef28f364a035c7505b051000d0b012') in 0.001124691 seconds
+Start importing Assets/Resources/asset-inactive-dynamic-child-2.prefab using Guid(81065b90eaccf7ed79e6b03686a18bfe) (PrefabImporter) -> (artifact id: 'c562788ab9bb6132625923057be02679') in 0.0008378 seconds
+Start importing Assets/Resources/asset-active-kinematic-root-4.prefab using Guid(914166ffaade3423fb5f083bcc527563) (PrefabImporter) -> (artifact id: '8edfe1c542d093a8c0c1f333cd0e3cf8') in 0.000810541 seconds
+Start importing Assets/Resources/asset-inactive-kinematic-root-5.prefab using Guid(917e97f2db24a32318825292b93bd506) (PrefabImporter) -> (artifact id: 'f7aec2a038c33318a61418a24c9c9754') in 0.001002081 seconds
+Start importing Assets/Resources/nested-active-dynamic-root-4.prefab using Guid(5efcc9f14ddd4ed9589631cf0eba8ab1) (PrefabImporter) -> (artifact id: 'e2c3a23b6229e4261160bd0a1673f774') in 0.00098978 seconds
+Start importing Assets/Resources/nested-active-dynamic-root-4-outer.prefab using Guid(a14f52a4031c95fcb8806983c95dee06) (PrefabImporter) -> (artifact id: '11d099674c5177b492214d622cb1741b') in 0.001234761 seconds
+Start importing Assets/Resources/nested-active-dynamic-child-4.prefab using Guid(1decc5e7f2a47b91f9e0bd04ba237086) (PrefabImporter) -> (artifact id: '8e3daeda0fe6858c906bcb1b53bf6240') in 0.000913921 seconds
+Start importing Assets/Resources/nested-active-dynamic-child-4-outer.prefab using Guid(c1f34170ca398446e9cb13cf7622c898) (PrefabImporter) -> (artifact id: '068686494db0c35ceb0a2a65a7b1fe69') in 0.001185511 seconds
+Start importing Assets/Resources/asset-active-kinematic-child-4.prefab using Guid(c10f6314f84a26f2c9d160c5302c7e8e) (PrefabImporter) -> (artifact id: 'b477fb13d4d6c8144677f60ede47801b') in 0.00086827 seconds
+Start importing Assets/Resources/instance-inactive-dynamic-child-0.prefab using Guid(d1c31da68c28b9289946794d3524e3fa) (PrefabImporter) -> (artifact id: '0b0c06e07b584aaf888492b3ce7e7d7f') in 0.00084693 seconds
+Start importing Assets/Resources/instance-active-kinematic-child-2.prefab using Guid(d16c9bd8a84a66e8d9dc69f57d817d38) (PrefabImporter) -> (artifact id: '4b09aa729aea0ad60e3d3545c129981f') in 0.000878641 seconds
+Start importing Assets/Resources/asset-active-dynamic-root-1.prefab using Guid(e1925dd77d429b75b9507fb65eec4127) (PrefabImporter) -> (artifact id: 'd013c1f606b2e8108625539583375f08') in 0.00080765 seconds
+Start importing Assets/Resources/instance-inactive-kinematic-child-2.prefab using Guid(f1c2b79e6c5afa7d7a99e7dff0f3a0ef) (PrefabImporter) -> (artifact id: '442fbc91a0450be3df16ced30a46d227') in 0.000854361 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-root-4.prefab using Guid(4f232aa3f1474b1a0b8c660c7713d595) (PrefabImporter) -> (artifact id: '371fe2ea472a58dc337e26b44147a32a') in 0.000794611 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-root-4-outer.prefab using Guid(12ad939902a16a300b7750c366fce72b) (PrefabImporter) -> (artifact id: '610dc54ec7a56a0d5414c82062add996') in 0.00107501 seconds
+Start importing Assets/Resources/asset-inactive-kinematic-root-0.prefab using Guid(2250a0de4bf4773cea4d62c62a498c2b) (PrefabImporter) -> (artifact id: 'c343d771e753a4df836685d73255722e') in 0.000826231 seconds
+Start importing Assets/Resources/instance-inactive-dynamic-root-3.prefab using Guid(327304dc61423bb0ca7259bddcda7553) (PrefabImporter) -> (artifact id: 'acc13a30fe7fc9d1005d3c77696f4da1') in 0.000815881 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-root-3.prefab using Guid(7aaa3b8c53bc99fc9812b8a1dd4c2624) (PrefabImporter) -> (artifact id: 'bae396ffccf777564682b5578b878a6f') in 0.00086402 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-root-3-outer.prefab using Guid(42d54504c35548867aec28ebea07072b) (PrefabImporter) -> (artifact id: 'eee5854c3bbb68426adcdf5ecb8d9de4') in 0.001083701 seconds
+Start importing Assets/Resources/instance-active-dynamic-child-3.prefab using Guid(42966ff4787549859bed16dd6372ddd7) (PrefabImporter) -> (artifact id: '7bc02b7f1e96e4600feb25e7388a4ca4') in 0.000971931 seconds
+Start importing Assets/Resources/asset-active-kinematic-child-0.prefab using Guid(4287e5b8f1c9fb922acbe4a447f7b692) (PrefabImporter) -> (artifact id: '9ec487af10411bd5a840656eca347526') in 0.0009081 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-child-5.prefab using Guid(e4c5529e2fcd5f37b990a4f19302ffdf) (PrefabImporter) -> (artifact id: '2e78d647502d85674ec90707a40234ad') in 0.000881251 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-child-5-outer.prefab using Guid(8285d9659c05f7728b922d7435dc6876) (PrefabImporter) -> (artifact id: '37ef0f400d3a2d83df29c31c20b06af4') in 0.001113461 seconds
+Start importing Assets/Resources/asset-active-dynamic-root-3.prefab using Guid(8226a113af8ac1a9f90ba6961f3d49ab) (PrefabImporter) -> (artifact id: '9e3e1d364df345a98f14b58716857079') in 0.000865141 seconds
+Start importing Assets/Resources/asset-active-dynamic-child-0.prefab using Guid(921fe5ba5d9118661a87c4239991170d) (PrefabImporter) -> (artifact id: 'c52a71e5df0a1197723ed46d9960d280') in 0.00084615 seconds
+Start importing Assets/Resources/instance-active-dynamic-root-1.prefab using Guid(a2dc68d43f53d37ea9c32ebd077a4594) (PrefabImporter) -> (artifact id: 'a1b21dd581a00fb045c157a0a9481851') in 0.000791841 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-root-1.prefab using Guid(d9b7ed06d68d0e4b2b5f3c4ee5b5ff41) (PrefabImporter) -> (artifact id: '2f1bb5d01caa0852402c1a7e0c31f2cb') in 0.00082128 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-root-1-outer.prefab using Guid(b2437f032b2d458fc87038ef6da09a70) (PrefabImporter) -> (artifact id: '36d2e58e589a6f58806682609719fd53') in 0.001094751 seconds
+Start importing Assets/Resources/nested-active-kinematic-child-2.prefab using Guid(c2ca76dcecb56764c93c1687fcc0b727) (PrefabImporter) -> (artifact id: 'af8d0bd754414fd974d0dbe15a4ef9d7') in 0.000836381 seconds
+Start importing Assets/Resources/asset-active-dynamic-child-3.prefab using Guid(d2cade577a3c70359b599a6d3c965a22) (PrefabImporter) -> (artifact id: 'd147687d1cc7b173db126115c40a57ad') in 0.00084442 seconds
+Start importing Assets/Resources/asset-inactive-kinematic-child-1.prefab using Guid(e2b445361dd20013cac68809de933f91) (PrefabImporter) -> (artifact id: 'cab1fce5a918d6a5b17058f814e6025a') in 0.000830341 seconds
+Start importing Assets/Resources/asset-active-dynamic-root-2.prefab using Guid(f233974e70b3c79df97e36f89f11a4a4) (PrefabImporter) -> (artifact id: '5812f1e0d890633ebcfc512d896c6798') in 0.000818301 seconds
+Start importing Assets/Resources/instance-active-dynamic-child-2.prefab using Guid(f28fc1a4c1d62db44a6eb4ee9dbd1a65) (PrefabImporter) -> (artifact id: 'ad738f2e5343589dd26a3b468640224c') in 0.00086222 seconds
+Start importing Assets/Resources/instance-inactive-kinematic-child-1.prefab using Guid(038ca43130c4cac049a0bd98a3305ef5) (PrefabImporter) -> (artifact id: '209274a5fe92888ce6bb5d0d3cecb681') in 0.000818101 seconds
+Start importing Assets/Resources/instance-inactive-kinematic-root-0.prefab using Guid(3374aaaa04ea24ca79807641e3c5b0e6) (PrefabImporter) -> (artifact id: '12a99f8be581daa65e82dc13033121ae') in 0.00079131 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-root-3.prefab using Guid(330b2b3b3b330a4e8a95ffb13a1ed296) (PrefabImporter) -> (artifact id: '8510b7a7f54022e46abd3688331091a8') in 0.00083693 seconds
+Start importing Assets/Resources/nested-active-kinematic-child-2-outer.prefab using Guid(73f683029e8514376bb7cf835bd966da) (PrefabImporter) -> (artifact id: '284e4232eaa2c3f8d840549eb6c55485') in 0.001300431 seconds
+Start importing Assets/Resources/asset-active-kinematic-child-5.prefab using Guid(733e79d0401915938955d1d14ac1c34f) (PrefabImporter) -> (artifact id: '3cc0e20c22579f5f369b1fc3b51f14ac') in 0.000904751 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-child-1.prefab using Guid(77ca9e6b123112e039daaec21e80895a) (PrefabImporter) -> (artifact id: 'a58809cf51e268d797e095b2ab728a0c') in 0.00087053 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-child-1-outer.prefab using Guid(931eb49df271b5984ac1dd435712234c) (PrefabImporter) -> (artifact id: '38656f708b8d53b7e10899cd0f9476c7') in 0.001070741 seconds
+Start importing Assets/Resources/asset-active-kinematic-root-0.prefab using Guid(a3e3200a52c72595186acd932cd72a05) (PrefabImporter) -> (artifact id: '003a788ea0359f8c89217b15f153d4a4') in 0.000806271 seconds
+Start importing Assets/Resources/asset-inactive-dynamic-child-1.prefab using Guid(b3a195e8ab732c307af18b8df47699b1) (PrefabImporter) -> (artifact id: '70040e01a974b457966686ac395fd7af') in 0.00083667 seconds
+Start importing Assets/Resources/nested-active-dynamic-child-2.prefab using Guid(b35875784464fdd248262459f7c50d85) (PrefabImporter) -> (artifact id: 'ccfaef4bde0998825330a19a7d1670e3') in 0.000862471 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-root-4.prefab using Guid(b3bebde61d9a84b488054f1a4e2e2984) (PrefabImporter) -> (artifact id: '911ecb32799b148827dbf46691447a6c') in 0.000896681 seconds
+Start importing Assets/Resources/asset-inactive-kinematic-root-2.prefab using Guid(d392376e7c1af02279f97fddc9910035) (PrefabImporter) -> (artifact id: 'f3be0547fb6263cb38d43a119dc2eaf0') in 0.00084528 seconds
+Start importing Assets/Resources/asset-active-dynamic-root-0.prefab using Guid(d3ca0d0f2089abfb49982d650dc70d90) (PrefabImporter) -> (artifact id: '9e9a1feb3a6b8db32dcef5dc59e783ee') in 0.000766161 seconds
+Start importing Assets/Resources/instance-inactive-dynamic-root-2.prefab using Guid(e3416d7f5d5b29a19a8c27ecc6b73a96) (PrefabImporter) -> (artifact id: 'af63d9793756c2263c6ca0766f8456ad') in 0.00073945 seconds
+Start importing Assets/Resources/asset-inactive-dynamic-root-0.prefab using Guid(f30b59fe64815989ba823918f21c2e42) (PrefabImporter) -> (artifact id: '05b6d76c80902067542e3bd223f788f6') in 0.000738861 seconds
+Start importing Assets/Resources/asset-inactive-kinematic-root-3.prefab using Guid(94e55b7bd038c1f2bb9778112a3ff69e) (PrefabImporter) -> (artifact id: '19a0e60f0fb104194039b4fd4729bf22') in 0.00073566 seconds
+Start importing Assets/Resources/nested-active-kinematic-child-1.prefab using Guid(942d6ffff59bcc0fcac898634b8b1095) (PrefabImporter) -> (artifact id: '5265b6af9e2faac18c8364f6b8805fb3') in 0.00078949 seconds
+Start importing Assets/Resources/nested-active-kinematic-root-0.prefab using Guid(d487f5e498690696baaba9b8929128c7) (PrefabImporter) -> (artifact id: 'e8530021bf0fb5920091f8c81c6afbf8') in 0.000741671 seconds
+Start importing Assets/Resources/nested-active-kinematic-child-4.prefab using Guid(6f71aba3c84dfb2b6a91b448b5170c92) (PrefabImporter) -> (artifact id: 'a0312b796ba37f86643ef0efff79edbd') in 0.0007655 seconds
+Start importing Assets/Resources/nested-active-kinematic-child-4-outer.prefab using Guid(e4e56ff376db2c57a88ab05a69df6ff3) (PrefabImporter) -> (artifact id: 'f4f9bb0bfa5c547c68ea00148e65e880') in 0.001117251 seconds
+Start importing Assets/Resources/instance-active-kinematic-root-4.prefab using Guid(f462d68bc92e72ae88b1d9009752caf6) (PrefabImporter) -> (artifact id: '8a87c3b9b1d0b36db5f0d685bcb1b82b') in 0.000877901 seconds
+Start importing Assets/Resources/instance-active-dynamic-root-3.prefab using Guid(05710912e419ecc90851a337a18033a2) (PrefabImporter) -> (artifact id: '7ed540a52c512df9462270431cee4dd2') in 0.00084289 seconds
+Start importing Assets/Resources/nested-active-kinematic-root-5.prefab using Guid(1f3162e04a5d1261687faf160b397132) (PrefabImporter) -> (artifact id: '7c33827cf82a0544e81554674cfe9b86') in 0.000813501 seconds
+Start importing Assets/Resources/nested-active-kinematic-root-5-outer.prefab using Guid(25004dccc28e0f8c889764c7d74bb623) (PrefabImporter) -> (artifact id: 'fbb351e1b1442a341bd42b3d5a55556f') in 0.001030831 seconds
+Start importing Assets/Resources/nested-active-dynamic-root-0.prefab using Guid(d9ab1a668c84dad70bd83374129ef225) (PrefabImporter) -> (artifact id: '024ea0b670b5c1886b00d5c4570d323f') in 0.00078074 seconds
+Start importing Assets/Resources/nested-active-dynamic-root-0-outer.prefab using Guid(25ef30f23d1810e3882b834c66ac2f8c) (PrefabImporter) -> (artifact id: 'eda3d51f9ab2726004326294dca75486') in 0.001024291 seconds
+Start importing Assets/Resources/asset-inactive-kinematic-child-5.prefab using Guid(3513537c3315c546ebafad5b2cd49ad8) (PrefabImporter) -> (artifact id: '7543009f41e4586313d10687181643af') in 0.00076798 seconds
+Start importing Assets/Resources/instance-active-kinematic-root-3.prefab using Guid(3579dead93577cb23a3e49017a43834b) (PrefabImporter) -> (artifact id: '0e9ec5daf7ef0816f5edcdafb66d6b51') in 0.000751371 seconds
+Start importing Assets/Resources/instance-active-dynamic-child-1.prefab using Guid(55f550c7f2ecb18959482d743a2f4ad4) (PrefabImporter) -> (artifact id: 'ff99effdce371672633289069a64dab7') in 0.000864491 seconds
+Start importing Assets/Resources/nested-active-kinematic-root-1.prefab using Guid(551ae22b1cc33df99bc4ad0c83b2bcc3) (PrefabImporter) -> (artifact id: '232702750231d3d7f7bf2e3d094b662e') in 0.00076883 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-child-0.prefab using Guid(554f43a59edb0f9a6a8b970a4cd8f077) (PrefabImporter) -> (artifact id: '5016247f01cefd0585c0d4eb0ede2eb3') in 0.000778491 seconds
+Start importing Assets/Resources/instance-inactive-dynamic-root-0.prefab using Guid(7580175c56350aef39cc2b234895feb6) (PrefabImporter) -> (artifact id: '8b2340bc5030ac964eb18301d01944b8') in 0.00074147 seconds
+Start importing Assets/Resources/instance-active-dynamic-root-0.prefab using Guid(753c2c0dea8d03a8e887405aa87b8714) (PrefabImporter) -> (artifact id: '6417f5f86e5e955d8aa002c0479b4c85') in 0.000763071 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-root-5.prefab using Guid(85a1c002304964b1fb91b5259cec74a8) (PrefabImporter) -> (artifact id: '9c3dcaf6f15472d0b135247a914762c7') in 0.00090419 seconds
+Start importing Assets/Resources/instance-inactive-kinematic-child-5.prefab using Guid(958430c0769523ddbaa168741aea2772) (PrefabImporter) -> (artifact id: 'ebc5f99063b41e3bc40ebe5c12e78756') in 0.0009145 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-child-2.prefab using Guid(4ccf17b9fb2e9dc4d96a64c75b41280d) (PrefabImporter) -> (artifact id: '0300bbb1ffac0a1030d599b9327ee453') in 0.000905331 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-child-2-outer.prefab using Guid(954ba679bd16a1b4ab874a0bc99244b4) (PrefabImporter) -> (artifact id: '23dd10f784d5fedcc8909fec530e3238') in 0.001115841 seconds
+Start importing Assets/Resources/asset-inactive-kinematic-child-2.prefab using Guid(952c9e3edb39495f6a611016ed4d8bcc) (PrefabImporter) -> (artifact id: '1fa4803baa9ae63b084d926ee4c08907') in 0.00090653 seconds
+Start importing Assets/Resources/asset-active-kinematic-root-3.prefab using Guid(a5461a970f1e53332bbb96d1004f9d4e) (PrefabImporter) -> (artifact id: '7f28c3d28cc0804974a8bac0f4739fd2') in 0.000886341 seconds
+Start importing Assets/Resources/asset-inactive-dynamic-child-0.prefab using Guid(d513ac5f80dbd1e6c83c36ef9485d43b) (PrefabImporter) -> (artifact id: 'bed073a33181215081dbd76d257d3782') in 0.001036511 seconds
+Start importing Assets/Resources/asset-active-dynamic-child-5.prefab using Guid(0647cbae45b899c1f866d28ce61ab01c) (PrefabImporter) -> (artifact id: 'a6e7f9eb7c37a8ca23785be6af242526') in 0.00082743 seconds
+Start importing Assets/Resources/nested-active-dynamic-child-0.prefab using Guid(0a93007f634acaff3828c16611feec6d) (PrefabImporter) -> (artifact id: 'eb1e61e0649e8cd2b5a12ac42739b5d7') in 0.000848031 seconds
+Start importing Assets/Resources/nested-active-dynamic-child-0-outer.prefab using Guid(26549c390e07d6118ae819a27ff8a21d) (PrefabImporter) -> (artifact id: '0e2b65239855755919cbd18749fa124a') in 0.001044081 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-root-0.prefab using Guid(4f42a9c7ebd09834d93b942b194262f2) (PrefabImporter) -> (artifact id: 'b29d139f0f8c515583d588710acc0124') in 0.00075989 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-root-0-outer.prefab using Guid(262ae03291e8f73a29de10033bd497ad) (PrefabImporter) -> (artifact id: '69afcda1400b9f60059b4050afd5229a') in 0.002519552 seconds
+Start importing Assets/Resources/nested-active-dynamic-root-2.prefab using Guid(4646c50a955b06c12a0ea733047f0736) (PrefabImporter) -> (artifact id: '41053862c40c5e9e4c381f05f66cb782') in 0.000829921 seconds
+Start importing Assets/Resources/instance-active-dynamic-root-2.prefab using Guid(460caa050d635c53aa02c888af6384dc) (PrefabImporter) -> (artifact id: '5f6b04b1106a05e23e43663a67670c1a') in 0.00078384 seconds
+Start importing Assets/Resources/asset-inactive-dynamic-root-5.prefab using Guid(46de1ed219216916a9eb15b52d997ef5) (PrefabImporter) -> (artifact id: '05255d9f9a295f83b67ca947e84a06ad') in 0.000791301 seconds
+Start importing Assets/Resources/asset-active-kinematic-root-1.prefab using Guid(66902aa15328b91eab46807868992155) (PrefabImporter) -> (artifact id: '77e8a12bcf0643786de0d20d85c8aed7') in 0.00076037 seconds
+Start importing Assets/Resources/asset-active-kinematic-child-3.prefab using Guid(86657813d0df1a6e2af1b69cc3c020c5) (PrefabImporter) -> (artifact id: 'ffa4c6e447e7b2bd89d0ba6046dab35e') in 0.000786231 seconds
+Start importing Assets/Resources/nested-active-kinematic-child-5.prefab using Guid(49813ed484dca8cc5a0a7f410bc7dbba) (PrefabImporter) -> (artifact id: '7e7e56ab88a09c4bf01bceda57b9c2a2') in 0.00079068 seconds
+Start importing Assets/Resources/nested-active-kinematic-child-5-outer.prefab using Guid(86edcb546f308f7a2820b876671ca55f) (PrefabImporter) -> (artifact id: '484ae3851e029b164ba3d17f4842eba7') in 0.001054991 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-child-1.prefab using Guid(e62f579097697c8f9ba3b9fd558ef03e) (PrefabImporter) -> (artifact id: 'd74c4952a88adf5c61741f226be829f8') in 0.000785511 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-root-1.prefab using Guid(c8dc54aa3d4d8932c87f0ae3fd4589f3) (PrefabImporter) -> (artifact id: 'f8231984f19be4006319710fd3449de5') in 0.00094091 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-root-1-outer.prefab using Guid(f6cffc0cc9cc021a3b12a381522cf7b5) (PrefabImporter) -> (artifact id: '41cade3c3c5a28b71325a8a4fac39cd1') in 0.00117615 seconds
+Start importing Assets/Resources/instance-inactive-kinematic-child-4.prefab using Guid(07f93af491514c30c8bcb4a1b7c08011) (PrefabImporter) -> (artifact id: '046d8b9fc4e34d29419da43124ef4adf') in 0.001010801 seconds
+Start importing Assets/Resources/nested-active-dynamic-root-3-outer.prefab using Guid(2702ac192b44b9c939bf612b9b8dbc4a) (PrefabImporter) -> (artifact id: '9312804843f1f048b550d238cfbba67d') in 0.001139811 seconds
+Start importing Assets/Resources/nested-active-dynamic-root-2-outer.prefab using Guid(37a33baf15b0e5c479771e94095a66d5) (PrefabImporter) -> (artifact id: '417e63a106f02051732978ebbb267576') in 0.001168541 seconds
+Start importing Assets/Resources/instance-active-kinematic-root-5.prefab using Guid(37d31af464f458dc79a2e278faa54cbf) (PrefabImporter) -> (artifact id: 'db6006cefad4912d46431fd45e5bd8da') in 0.00085222 seconds
+Start importing Assets/Resources/instance-inactive-kinematic-child-0.prefab using Guid(477be796b57b94cf98c17f439faebf99) (PrefabImporter) -> (artifact id: 'eac66e130b6424eabbe4a749b1ccbbc8') in 0.000859501 seconds
+Start importing Assets/Resources/nested-active-kinematic-root-3-outer.prefab using Guid(57857c4828e815984b99ea80c20fcf96) (PrefabImporter) -> (artifact id: '59a54693e8ff44af88c8ef5f9796dda2') in 0.001214151 seconds
+Start importing Assets/Resources/asset-active-dynamic-root-4.prefab using Guid(57d5b5521846244fba77396628c44b0a) (PrefabImporter) -> (artifact id: '0704bfabaaa854e03c6920f3b44a4530') in 0.00084106 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-child-0-outer.prefab using Guid(8780b1b8e6a94a54ab8e6533867389de) (PrefabImporter) -> (artifact id: '2cc15a4e8b9468d124136d8cf925f390') in 0.001153061 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-child-4.prefab using Guid(7b516557292af33f4b1c2da3fba943ef) (PrefabImporter) -> (artifact id: 'd6877d49f2fea2775846bd5c437d65d3') in 0.000870411 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-child-4-outer.prefab using Guid(a7f4a907a2327b812864bc8ac825a9a6) (PrefabImporter) -> (artifact id: '260f1055de32d39f5d58ab60544b6b4c') in 0.001123271 seconds
+Start importing Assets/Resources/nested-active-dynamic-child-1.prefab using Guid(c7f9deb1fd48c4dd5a127a3ec75a8867) (PrefabImporter) -> (artifact id: '3e1440dc026d4da60cab068bbfefd59a') in 0.00087693 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-root-2.prefab using Guid(aa81125f46ce37f0a9ab2d6f675860c2) (PrefabImporter) -> (artifact id: '2460ac62649a18d0fe633f88006e2216') in 0.000828771 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-root-2-outer.prefab using Guid(08600df0d110d1fbb91c177748d61ca7) (PrefabImporter) -> (artifact id: '059387275148d1e1156fca9429b59fd7') in 0.001170621 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-root-4-outer.prefab using Guid(08837ab1f2c9800cdb123f8f9233c5dc) (PrefabImporter) -> (artifact id: '9919aef0e4be4c4f79fa3b67d3852129') in 0.001300931 seconds
+Start importing Assets/Resources/nested-active-dynamic-child-1-outer.prefab using Guid(081f742bd0dd9637e9d345605b6acab6) (PrefabImporter) -> (artifact id: 'af497c3df03d0985e70c80711644eea3') in 0.001265881 seconds
+Start importing Assets/Resources/asset-active-kinematic-root-2.prefab using Guid(58c5f241d9656937381c993251901e95) (PrefabImporter) -> (artifact id: 'a0728f93a1d57c5f7a75a58f3fa5f495') in 0.00088419 seconds
+Start importing Assets/Resources/nested-active-dynamic-root-1.prefab using Guid(88b6b0ea1adba4899b7d38ee92777788) (PrefabImporter) -> (artifact id: 'f19eda24637b4229fc6a48bafe2bec28') in 0.000825641 seconds
+Start importing Assets/Resources/asset-inactive-dynamic-child-4.prefab using Guid(9852e30528b095956ba4e07fddcd60e3) (PrefabImporter) -> (artifact id: 'bf2cf717608b0c7f62e76c7dc2290b2a') in 0.00083762 seconds
+Start importing Assets/Resources/nested-active-dynamic-child-2-outer.prefab using Guid(a8c4a264dd81022859bf1d42409a1105) (PrefabImporter) -> (artifact id: '78af8a0928fd80d2a0cb8570db3ae4a1') in 0.00113209 seconds
+Start importing Assets/Resources/nested-active-kinematic-child-3.prefab using Guid(8ffff200dad37cbb8ad0cc0cd03a5b77) (PrefabImporter) -> (artifact id: 'e3a306e0680c7dfa16fe5c0028c406ed') in 0.001084451 seconds
+Start importing Assets/Resources/nested-active-kinematic-child-3-outer.prefab using Guid(d80f0a58aff63d41db4d16693f2c9f0f) (PrefabImporter) -> (artifact id: 'c8c61fe32bb34eef86893c0bff80373f') in 0.001466791 seconds
+Start importing Assets/Resources/instance-active-kinematic-child-5.prefab using Guid(39dd76b8b4fb208529a25514a822bf4c) (PrefabImporter) -> (artifact id: 'b627ef08a4988d7430e69267b6397df4') in 0.000849911 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-root-2.prefab using Guid(0ccb23aa287fd27ac90525e9f03e96c4) (PrefabImporter) -> (artifact id: '4ea6acd4db08d01b8ec115a105233f23') in 0.00081087 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-root-2-outer.prefab using Guid(49a19d8de210289bbb5212298e03f313) (PrefabImporter) -> (artifact id: 'f5167c93172d671c6e64daa02e683b0d') in 0.001129221 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-child-4.prefab using Guid(6e07e5c8eaad64848933c882527a6d22) (PrefabImporter) -> (artifact id: 'a4618d544c116c47c23f7520bae620ac') in 0.000849401 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-child-4-outer.prefab using Guid(598f4751344e207858e5c84c6afa9021) (PrefabImporter) -> (artifact id: '30d4a7311d31a0c6764ec0c101d91713') in 0.00109128 seconds
+Start importing Assets/Resources/asset-active-dynamic-root-5.prefab using Guid(69d00dd545dc5780483103568ab848ff) (PrefabImporter) -> (artifact id: '501b3fcedf05c1eab6b50bded87eb4e8') in 0.00081381 seconds
+Start importing Assets/Resources/instance-active-kinematic-root-2.prefab using Guid(69524f3492085e455b75c692832ec8b9) (PrefabImporter) -> (artifact id: '987045785465f716dba1e4d0623b0ede') in 0.000915521 seconds
+Start importing Assets/Resources/instance-inactive-dynamic-child-2.prefab using Guid(b9eaf55173f6c2f468dcbad7e72a8bda) (PrefabImporter) -> (artifact id: '44aa51cc45324d0524f8d0a0c816a0f2') in 0.001059131 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-root-5.prefab using Guid(f9af5761788b2743d9c3ab675c1a7f97) (PrefabImporter) -> (artifact id: '6df96a316b6d66951ff2c59d4fcb1756') in 0.00113158 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-root-5-outer.prefab using Guid(c95ddeba9543eae6dad2405778aa56f3) (PrefabImporter) -> (artifact id: '7152c7aa16945f89fd65376d29536961') in 0.001447861 seconds
+Start importing Assets/Resources/asset-active-dynamic-child-1.prefab using Guid(e95f38c2fbda47363a6c30c6d9cfec48) (PrefabImporter) -> (artifact id: 'f54c6280e7b44b4556b413fc419384dd') in 0.000832741 seconds
+Start importing Assets/Resources/instance-inactive-kinematic-root-2.prefab using Guid(0afd4b182b3a238e180bed86dc80adee) (PrefabImporter) -> (artifact id: '24646c5cba5065d87b2ef5f5d4f47d32') in 0.000778041 seconds
+Start importing Assets/Resources/asset-inactive-dynamic-root-3.prefab using Guid(1a9be32a2310c0dffa628b5aa9129d89) (PrefabImporter) -> (artifact id: '4cf7d09209b11bcc1e87a20bdc2bec5a') in 0.00074493 seconds
+Start importing Assets/Resources/asset-inactive-kinematic-child-3.prefab using Guid(6a52f8d3b0b25878b87de1c7f80fb59c) (PrefabImporter) -> (artifact id: '01b70bab7068f157afd70f2ae8dab04b') in 0.000831021 seconds
+Start importing Assets/Resources/nested-active-dynamic-child-5.prefab using Guid(8a33371a73909f933a1daceb784adc28) (PrefabImporter) -> (artifact id: '37fb503888f7553ec84cda51348c5473') in 0.00083329 seconds
+Start importing Assets/Resources/asset-inactive-dynamic-root-1.prefab using Guid(8a1c4b04c36f72fb2a7736227a646eca) (PrefabImporter) -> (artifact id: 'f0ad101a726507fe195fe25f0a743a4c') in 0.000761061 seconds
+Start importing Assets/Resources/nested-active-kinematic-root-2.prefab using Guid(1ead4d11fa14a00fe8fd0e6f327e33ac) (PrefabImporter) -> (artifact id: '8ea2d26012ede758baf8273338a2037a') in 0.00074625 seconds
+Start importing Assets/Resources/nested-active-kinematic-root-2-outer.prefab using Guid(ba06be62a493f11b7b3553ae281fd331) (PrefabImporter) -> (artifact id: 'c11b3463f2b3f35d811e20f679dc0992') in 0.00103196 seconds
+Start importing Assets/Resources/nested-active-dynamic-child-3.prefab using Guid(ba2b0611cbaf10ad58679fd0221631f8) (PrefabImporter) -> (artifact id: '1830c40e4e6f40e2cfc7e32a92b152b8') in 0.000824751 seconds
+Start importing Assets/Resources/instance-active-dynamic-child-0.prefab using Guid(da41cae2aee4e6d479161e31253fc059) (PrefabImporter) -> (artifact id: 'a31578a3584e857f1140975b71d9a1ff') in 0.00078579 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-root-5-outer.prefab using Guid(ea790965f963a6d9fb0251b4b965fe45) (PrefabImporter) -> (artifact id: '6eacdd4f4eea9942317df1560d82d7bb') in 0.001069861 seconds
+Start importing Assets/Resources/instance-active-kinematic-root-1.prefab using Guid(cb259bb5992ebbf6b9f7f9cd5128354d) (PrefabImporter) -> (artifact id: 'f76b3f406244a3bb522b571cd9bc8c40') in 0.000789811 seconds
+Start importing Assets/Resources/instance-active-dynamic-root-5.prefab using Guid(ebeffa88ae6a0ddcdb09994b88309a75) (PrefabImporter) -> (artifact id: 'd0e95b7f49b5fb4db2d6b1cb45c0351e') in 0.00075778 seconds
+Start importing Assets/Resources/nested-active-dynamic-child-5-outer.prefab using Guid(fb4f6c293a4289dfeb5a4ead04864afe) (PrefabImporter) -> (artifact id: 'a413d089d76d6202ec35dfc8f944ee79') in 0.001275581 seconds
+Start importing Assets/Resources/instance-active-kinematic-child-1.prefab using Guid(0cfb8b444d930178c8ac771c38b6ad2c) (PrefabImporter) -> (artifact id: 'da666908b4a0c2230c1321ea7bbadf5d') in 0.001147451 seconds
+Start importing Assets/Resources/nested-active-kinematic-child-0.prefab using Guid(3c1cdfbd5ea6eabe28584d97326d76ed) (PrefabImporter) -> (artifact id: 'c58f28354a7fa72616640d86b32e56e1') in 0.001229661 seconds
+Start importing Assets/Resources/instance-active-dynamic-child-4.prefab using Guid(4cfb1f40b8794f9d0858168499b96d64) (PrefabImporter) -> (artifact id: '8dc791dd6834af70bc66eff1fa7d9959') in 0.000801561 seconds
+Start importing Assets/Resources/instance-inactive-kinematic-root-3.prefab using Guid(9cd62fbfd9cbaa83f8a56f717757e126) (PrefabImporter) -> (artifact id: 'c2603eba19a060e2888ce53900bf1eac') in 0.00076944 seconds
+Start importing Assets/Resources/instance-active-dynamic-root-4.prefab using Guid(9c9fd2781614a154d8b8e0160516f661) (PrefabImporter) -> (artifact id: 'e716aa07887863995bc95b30e9f5d912') in 0.000741231 seconds
+Start importing Assets/Resources/asset-inactive-dynamic-root-4.prefab using Guid(ac53a005431fd10f5b4901415afde52b) (PrefabImporter) -> (artifact id: 'f9a65d573e5159f89b5f6abe4739c4a6') in 0.00074482 seconds
+Start importing Assets/Resources/asset-inactive-dynamic-child-3.prefab using Guid(ac7a35daf3b79d4a994ff12e7484ab24) (PrefabImporter) -> (artifact id: '4569c2303773c5864657201fc7b65e2b') in 0.000777591 seconds
+Start importing Assets/Resources/instance-inactive-kinematic-root-5.prefab using Guid(ccae7495e2446c8da98d5ede7c88383f) (PrefabImporter) -> (artifact id: '9d03b42b262e890035341f9083cb1923') in 0.00085154 seconds
+Start importing Assets/Resources/instance-inactive-kinematic-child-3.prefab using Guid(0d82c080ba96dc80d9b7181c83a45753) (PrefabImporter) -> (artifact id: 'b4e7f82aec378031fd7c1af83f9e855f') in 0.000773401 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-child-0-outer.prefab using Guid(4deab521cd4197ccda4cb411f7bdcc83) (PrefabImporter) -> (artifact id: '797f317e3b5763a9c2cecefa05c3a8aa') in 0.001096001 seconds
+Start importing Assets/Resources/instance-active-dynamic-child-5.prefab using Guid(5d60d53968c5e77838077952339c90ad) (PrefabImporter) -> (artifact id: 'e35b1fb6954cf70bb75e9ef24b1be600') in 0.00079787 seconds
+Start importing Assets/Resources/nested-active-dynamic-root-1-outer.prefab using Guid(5d51c28deae04dbb7bbbb1ff1977715c) (PrefabImporter) -> (artifact id: 'f08aba31dc39bbc6d01206d3c7d8a0bc') in 0.001085541 seconds
+Start importing Assets/Resources/nested-active-kinematic-child-0-outer.prefab using Guid(7d93c91c049b7b004a3925d4639022cb) (PrefabImporter) -> (artifact id: '1ace9741198510f292f0d2ae86b4727f') in 0.001049451 seconds
+Start importing Assets/Resources/nested-active-dynamic-child-3-outer.prefab using Guid(8d08ec86de812ff179b0950a5fcee3cd) (PrefabImporter) -> (artifact id: '37a45ce96d2e1e149810f12647ab9fe6') in 0.001105431 seconds
+Start importing Assets/Resources/instance-inactive-dynamic-child-5.prefab using Guid(bd44681f16001035c9f4a3fb584e4a53) (PrefabImporter) -> (artifact id: 'fc13717b17cb35ab4ec98b5312cb8538') in 0.00077366 seconds
+Start importing Assets/Resources/instance-active-kinematic-root-0.prefab using Guid(bd350b1b0f416be4ab878e55c36dba9a) (PrefabImporter) -> (artifact id: '97a23d2b1d425407af87c9a5fe3cd50e') in 0.000860481 seconds
+Start importing Assets/Resources/nested-active-kinematic-root-0-outer.prefab using Guid(cd7252615676d4d468864788f4639fd9) (PrefabImporter) -> (artifact id: '348fd4ecae9ac58a13fe931165df9d5f') in 0.001462201 seconds
+Start importing Assets/Resources/asset-active-dynamic-child-4.prefab using Guid(cdb2dd8a4c7fad69e9528d8302df6106) (PrefabImporter) -> (artifact id: '39bffa0a3328263dc2016d103b38a161') in 0.001130831 seconds
+Start importing Assets/Resources/asset-inactive-kinematic-root-4.prefab using Guid(cd2f16d4f673b84a3a2df7d506bdf364) (PrefabImporter) -> (artifact id: '7b60ca65bd608d6590d599048340f72c') in 0.00100014 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-child-2.prefab using Guid(ed2193496f650ebfe9ca87ddfe073275) (PrefabImporter) -> (artifact id: 'c51f5191a4c416fa38935111c719c7e1') in 0.00081203 seconds
+Start importing Assets/Resources/asset-inactive-dynamic-root-2.prefab using Guid(ed9a438413c5b74e6af87b57451b0389) (PrefabImporter) -> (artifact id: '58f1f82accc8d70c01ab881306cc2c34') in 0.000995491 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-child-5.prefab using Guid(0eb86b1f271802cbb92871eee64fe778) (PrefabImporter) -> (artifact id: 'b43c6e213255e1894414620664bc6d64') in 0.001002881 seconds
+Start importing Assets/Resources/instance-active-kinematic-child-3.prefab using Guid(1e4cda92993240a5bb29b937b017af83) (PrefabImporter) -> (artifact id: '6259f8ca3d7ee06d93bfc4b37a6f02df') in 0.00118981 seconds
+Start importing Assets/Resources/asset-active-kinematic-root-5.prefab using Guid(2e3e96867e3bca05a8e73d0b96ec14fa) (PrefabImporter) -> (artifact id: 'a7bd8f388983d22aa936b0b22d6c56b5') in 0.000860241 seconds
+Start importing Assets/Resources/instance-inactive-dynamic-child-3.prefab using Guid(3e84baba174db932bad05a7d612f64e9) (PrefabImporter) -> (artifact id: '840cb95f0f5249e4c65f59875b44ed8b') in 0.000987421 seconds
+Start importing Assets/Resources/asset-inactive-kinematic-child-4.prefab using Guid(4ea6c52b945718bfcaf2011b470efd06) (PrefabImporter) -> (artifact id: 'c92fb696976dbaa2cf5d0bb0e1cfb9c2') in 0.00095262 seconds
+Start importing Assets/Resources/asset-active-dynamic-child-2.prefab using Guid(6e2066d9188187357b19c98c7d2ccc5f) (PrefabImporter) -> (artifact id: '4fc279c0527dc760e73adfe159534535') in 0.00081208 seconds
+Start importing Assets/Resources/nested-active-kinematic-child-1-outer.prefab using Guid(6e49ca68b8c6dc5b3890352511a53eda) (PrefabImporter) -> (artifact id: '72d012548b180e27d6fb13d42a03d6bf') in 0.001117851 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-root-3-outer.prefab using Guid(aec8830e7966f10c088c1d869bc4cb8f) (PrefabImporter) -> (artifact id: '24a184d0e28a251d61a0bb792d6d5bda') in 0.001035461 seconds
+Start importing Assets/Resources/instance-inactive-kinematic-root-4.prefab using Guid(de4d497f627e536348b6387622cf20bf) (PrefabImporter) -> (artifact id: 'ca0e1d1756a256e8810e42bdd73d46dc') in 0.00078036 seconds
+Start importing Assets/Resources/nested-active-kinematic-root-4.prefab using Guid(ff2a1587486b3792ea8c0182c9821346) (PrefabImporter) -> (artifact id: '3291c3f94ad8eb84d8e2ee91c3a310aa') in 0.000921941 seconds
+Start importing Assets/Resources/nested-active-kinematic-root-4-outer.prefab using Guid(fe95aa985e85e037aab67a87efdff44c) (PrefabImporter) -> (artifact id: '2858bd94b0d6285454a706dac4fa8fce') in 0.001141721 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-child-2-outer.prefab using Guid(fe6a11713ff491ccc8d57cf15ea44d27) (PrefabImporter) -> (artifact id: '1ded5bb0b1175b3aa325217ab592f667') in 0.001208511 seconds
+Start importing Assets/Resources/nested-inactive-kinematic-child-1-outer.prefab using Guid(0f09b88218d307975b299ae76bb11093) (PrefabImporter) -> (artifact id: '573f3e2c24337511fc5821c187704f27') in 0.00106321 seconds
+Start importing Assets/Resources/instance-inactive-dynamic-child-4.prefab using Guid(0f4fb46b48336952e913d805149b90f7) (PrefabImporter) -> (artifact id: 'adc05d337b719d398003cac7193dfdbe') in 0.000801811 seconds
+Start importing Assets/Resources/asset-active-kinematic-child-2.prefab using Guid(1f45d593e90e0c9f28502b9aafc845e9) (PrefabImporter) -> (artifact id: '0f576ce7a9030c620e8739baea18376c') in 0.00078027 seconds
+Start importing Assets/Resources/instance-inactive-dynamic-child-1.prefab using Guid(3fa3357eaa2f97b95b6e8debe753b485) (PrefabImporter) -> (artifact id: '353b53b77373e0fda034d69c1112a634') in 0.000791691 seconds
+Start importing Assets/Resources/asset-inactive-kinematic-child-0.prefab using Guid(6fd4f1fa52adff18dbd4875e040c6806) (PrefabImporter) -> (artifact id: '060deda05abe416f2e41496120f5d7f3') in 0.000769111 seconds
+Start importing Assets/Resources/nested-active-kinematic-root-1-outer.prefab using Guid(7fd5bd441239e8f11a5f9bbe9e026ae4) (PrefabImporter) -> (artifact id: 'ba828a84834310455dc323d0f315fcd7') in 0.0011813 seconds
+Start importing Assets/Resources/instance-inactive-kinematic-root-1.prefab using Guid(7ffa7560cddcd75238fb34f31f209d90) (PrefabImporter) -> (artifact id: '36784093f405d806f85f9279c7b46fed') in 0.000823711 seconds
+Start importing Assets/Resources/instance-active-kinematic-child-4.prefab using Guid(9fec3e198b60a1537b982ee3678a45cf) (PrefabImporter) -> (artifact id: 'e8c1feb8cb2a34cfd63f1c9b4405b3fc') in 0.000766821 seconds
+Start importing Assets/Resources/nested-inactive-dynamic-child-5-outer.prefab using Guid(bffb7b689bfdd0a859f3d92d22bf811f) (PrefabImporter) -> (artifact id: '0d00dcf4c6947c475afb84779e1988a0') in 0.00104616 seconds
+Start importing Assets/Resources/instance-active-kinematic-child-0.prefab using Guid(ff7eb2fdabcca45bebbee8eb4f092cf7) (PrefabImporter) -> (artifact id: 'ea6d57acb4f0be2e44b30e90a6de14d5') in 0.000842081 seconds
+Loading style catalogs (6)
+	StyleSheets/Extensions/base/common.uss
+	UIPackageResources/StyleSheets/Default/Variables/Public/common.uss
+	StyleSheets/Northstar/common.uss
+	StyleSheets/Extensions/fonts/inter.uss
+	StyleSheets/Extensions/base/dark.uss
+	UIPackageResources/StyleSheets/Default/Northstar/Palette/dark.uss
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=c3d699044592e9a81be261c36ccd0102): Total: 6.301 seconds - Initiated by InitialRefreshV2(ForceSynchronousImport)
+	Summary:
+		Imports: total=237 (actual=237, local cache=0, cache server=0)
+		Asset DB Process Time: managed=10 ms, native=717 ms
+		Asset DB Callback time: managed=134 ms, native=552 ms
+		Scripting: domain reloads=1, domain reload time=344 ms, compile time=4535 ms, other=5 ms
+		Project Asset Count: scripts=37, non-scripts=200
+		Asset File Changes: new=239, changed=239, moved=0, deleted=0
+		Scan Filter Count: 1
+	InvokeCustomDependenciesCallbacks: 0.003ms
+	InvokePackagesCallback: 549.489ms
+	ApplyChangesToAssetFolders: 0.080ms
+	Scan: 41.773ms
+	OnSourceAssetsModified: 1.052ms
+	CategorizeAssetsWithTransientArtifact: 0.064ms
+	ProcessAssetsWithTransientArtifactChanges: 0.110ms
+	CategorizeAssets: 0.798ms
+	ImportOutOfDateAssets: 646.899ms (-4156.454ms without children)
+		ImportManagerImport: 267.516ms (14.487ms without children)
+			ImportInProcess: 252.622ms
+			UpdateCategorizedAssets: 0.407ms
+		CompileScripts: 4535.407ms
+		ReloadNativeAssets: 0.000ms
+		UnloadImportedAssets: 0.226ms
+		ReloadImportedAssets: 0.032ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.013ms
+		InitializingProgressBar: 0.004ms
+		PostProcessAllAssetNotificationsAddChangedAssets: 0.000ms
+		OnDemandSchedulerStart: 0.154ms
+	PostProcessAllAssets: 136.061ms
+	Hotreload: 0.905ms
+	GatherAllCurrentPrimaryArtifactRevisions: 0.000ms
+	UnloadStreamsBegin: 0.102ms
+	PersistCurrentRevisions: 0.201ms
+	UnloadStreamsEnd: 0.016ms
+	GenerateScriptTypeHashes: 0.001ms
+	Untracked: 4923.223ms
+
+Application.AssetDatabase Initial Refresh End
+Scanning for USB devices : 5.879ms
+Initializing Unity extensions:
+UpdateMenuTitleForLanguage: 10
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+[MODES] Loading mode Default (0) for mode-current-id-physics
+Curl error 60: Cert verify failed. Certificate Common Name(CN) does not match with the expected CN. UnityTls error code: 7
+Unloading 3 Unused Serialized files (Serialized files now loaded: 0)
+Curl error 60: Cert verify failed. Certificate Common Name(CN) does not match with the expected CN. UnityTls error code: 7
+Unloading 18 unused Assets / (0.6 MB). Loaded Objects now: 526.
+Memory consumption went from 79.5 MB to 78.9 MB.
+Total: 4.725413 ms (FindLiveObjects: 0.037580 ms CreateObjectMapping: 0.004050 ms MarkObjects: 4.294633 ms  DeleteObjects: 0.388580 ms)
+
+Opening scene 'Assets/Scenes/Probe.unity'
+Unloading 1 Unused Serialized files (Serialized files now loaded: 0)
+Loaded scene 'Assets/Scenes/Probe.unity'
+	Deserialize:            3.513 ms
+	Integration:            13.869 ms
+	Integration of assets:  0.003 ms
+	Thread Wait Time:       0.010 ms
+	Total Operation Time:   17.397 ms
+Unloading 1 unused Assets / (0.5 KB). Loaded Objects now: 1396.
+Memory consumption went from 79.5 MB to 79.5 MB.
+Total: 4.191663 ms (FindLiveObjects: 0.050170 ms CreateObjectMapping: 0.011960 ms MarkObjects: 4.116063 ms  DeleteObjects: 0.013020 ms)
+
+
+(process:916535): GLib-GObject-CRITICAL **: 06:55:45.208: g_object_unref: assertion 'G_IS_OBJECT (object)' failed
+
+(process:916535): GLib-GObject-CRITICAL **: 06:55:45.208: g_object_unref: assertion 'G_IS_OBJECT (object)' failed
+
+(process:916535): GLib-GObject-CRITICAL **: 06:55:45.208: g_object_unref: assertion 'G_IS_OBJECT (object)' failed
+
+(process:916535): Gtk-CRITICAL **: 06:55:45.208: gtk_widget_destroy: assertion 'GTK_IS_WIDGET (widget)' failed
+[Project] Loading completed in 7.631 seconds
+	Project init time: 				7.473 seconds
+		Template init time: 		0.000 seconds
+		Package Manager init time: 		0.200 seconds
+		Asset Database init time: 		0.106 seconds
+		Global illumination init time: 	0.003 seconds
+		Assemblies load time: 			0.702 seconds
+		Unity extensions init time: 	0.000 seconds
+		Asset Database refresh time: 	6.301 seconds
+	Scene opening time: 			0.124 seconds
+##utp:{"type":"ProjectInfo","version":2,"phase":"Immediate","time":1793429745209,"processId":916535,"projectLoad":7.630563063,"projectInit":7.47290596,"templateInit":0.0,"packageManagerInit":0.200185541,"assetDatabaseInit":0.10610658,"globalIlluminationInit":0.003432423,"assembliesLoad":0.702425611,"unityExtensionsInit":0.0002395,"assetDatabaseRefresh":6.300826901,"sceneOpening":0.123928681}
+##utp:{"type":"EditorInfo","version":2,"phase":"Immediate","time":1793429745209,"processId":916535,"editorVersion":"6000.0.71f1 (907bc2d768b5)","branch":"6000.0/respin/6000.0.71f1-8308b6469260","buildType":"Release","platform":"Linux"}
+Reloading assemblies for play mode.
+Reloading assemblies after forced synchronous recompile.
+Begin MonoManager ReloadAssembly
+- Loaded All Assemblies, in  0.185 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Native extension for LinuxStandalone target not found
+Native extension for iOS target not found
+Native extension for Android target not found
+Mono: successfully reloaded assembly
+[MODES] ModeService[none].Initialize
+[MODES] ModeService[none].LoadModes
+- Finished resetting the current domain, in  0.494 seconds
+Domain Reload Profiling: 679ms
+	BeginReloadAssembly (116ms)
+		ExecutionOrderSort (0ms)
+		DisableScriptedObjects (18ms)
+		BackupInstance (0ms)
+		ReleaseScriptingObjects (0ms)
+		CreateAndSetChildDomain (32ms)
+	RebuildCommonClasses (33ms)
+	RebuildNativeTypeToScriptingClass (8ms)
+	initialDomainReloadingComplete (20ms)
+	LoadAllAssembliesAndSetupDomain (7ms)
+		LoadAssemblies (47ms)
+		RebuildTransferFunctionScriptingTraits (0ms)
+		AnalyzeDomain (4ms)
+			TypeCache.Refresh (3ms)
+				TypeCache.ScanAssembly (0ms)
+			BuildScriptInfoCaches (0ms)
+			ResolveRequiredComponents (0ms)
+	FinalizeReload (495ms)
+		ReleaseScriptCaches (0ms)
+		RebuildScriptCaches (0ms)
+		SetupLoadedEditorAssemblies (268ms)
+			LogAssemblyErrors (0ms)
+			InitializePlatformSupportModulesInManaged (29ms)
+			SetLoadedEditorAssemblies (4ms)
+			BeforeProcessingInitializeOnLoad (83ms)
+			ProcessInitializeOnLoadAttributes (120ms)
+			ProcessInitializeOnLoadMethodAttributes (26ms)
+			AfterProcessingInitializeOnLoad (5ms)
+			EditorAssembliesLoaded (0ms)
+		ExecutionOrderSort2 (0ms)
+		AwakeInstancesAfterBackupRestoration (19ms)
+Asset Pipeline Refresh (id=63d904561c0fec629ae13896e26cb7e7): Total: 0.747 seconds - Initiated by StopAssetImportingV2(ForceSynchronousImport | ForceDomainReload)
+	Summary:
+		Imports: total=0 (actual=0, local cache=0, cache server=0)
+		Asset DB Process Time: managed=0 ms, native=542 ms
+		Asset DB Callback time: managed=11 ms, native=0 ms
+		Scripting: domain reloads=1, domain reload time=191 ms, compile time=1 ms, other=0 ms
+		Project Asset Count: scripts=37, non-scripts=200
+		Asset File Changes: new=0, changed=0, moved=0, deleted=0
+		Scan Filter Count: 0
+	InvokeCustomDependenciesCallbacks: 0.001ms
+	InvokePackagesCallback: 0.518ms
+	ApplyChangesToAssetFolders: 0.052ms
+	Scan: 0.001ms
+	OnSourceAssetsModified: 0.001ms
+	CategorizeAssetsWithTransientArtifact: 0.001ms
+	ProcessAssetsWithTransientArtifactChanges: 0.011ms
+	CategorizeAssets: 1.299ms
+	ImportOutOfDateAssets: 495.230ms (493.715ms without children)
+		CompileScripts: 1.301ms
+		CollectScriptTypesHashes: 0.000ms
+		ReloadNativeAssets: 0.000ms
+		UnloadImportedAssets: 0.040ms
+		EnsureUptoDateAssetsAreRegisteredWithGuidPM: 0.021ms
+		InitializingProgressBar: 0.000ms
+		PostProcessAllAssetNotificationsAddChangedAssets: 0.000ms
+		OnDemandSchedulerStart: 0.150ms
+	PostProcessAllAssets: 11.320ms
+	GatherAllCurrentPrimaryArtifactRevisions: 0.010ms
+	UnloadStreamsBegin: 0.519ms
+	PersistCurrentRevisions: 0.008ms
+	UnloadStreamsEnd: 0.001ms
+	GenerateScriptTypeHashes: 0.000ms
+	Untracked: 237.639ms
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:107)
+
+[Assets/Scripts/LoadingProbe.cs line 107]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting linear velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_linearVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Setting angular velocity of a kinematic body is not supported.
+UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)
+UnityEngine.StackTraceUtility:ExtractStackTrace () (at /home/bokken/build/output/unity/unity/Runtime/Export/Scripting/StackTrace.cs:35)
+UnityEngine.Rigidbody:set_angularVelocity (UnityEngine.Vector3)
+LoadingProbe:Follow (string,UnityEngine.GameObject) (at Assets/Scripts/LoadingProbe.cs:65)
+LoadingProbe:Run () (at Assets/Scripts/LoadingProbe.cs:121)
+
+[Assets/Scripts/LoadingProbe.cs line 121]
+
+Asset Pipeline Refresh (id=5d4da6c9af9238250b676fbf9179a491): Total: 0.029 seconds - Initiated by RefreshV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-dynamic-root-1.prefab using Guid(8a1c4b04c36f72fb2a7736227a646eca) (PrefabImporter) -> (artifact id: 'ede30d2b2c41a7c173d0c9ff5d550091') in 0.004895903 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=f5f5855299b6f95e7b4ce5757dc488dc): Total: 0.041 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-kinematic-root-3.prefab using Guid(94e55b7bd038c1f2bb9778112a3ff69e) (PrefabImporter) -> (artifact id: '47133561e6b4ea69f0e0681b658dbc0a') in 0.0009054 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=3f880d05eb03367c1ba46d4e16001090): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-kinematic-root-5.prefab using Guid(2e3e96867e3bca05a8e73d0b96ec14fa) (PrefabImporter) -> (artifact id: '95d70010084b96170ce8f3a9e9d79c7c') in 0.00122617 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=e822bc5c5e186c27fac0caf5bca03942): Total: 0.006 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-kinematic-child-5.prefab using Guid(3513537c3315c546ebafad5b2cd49ad8) (PrefabImporter) -> (artifact id: '1c5c51dc1a36a122aa990ff071ad6245') in 0.00108461 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=3446021aa8fba92318041e7027767a50): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-kinematic-child-3.prefab using Guid(6a52f8d3b0b25878b87de1c7f80fb59c) (PrefabImporter) -> (artifact id: 'ca1f68704c2580e43cff78f79c60b103') in 0.000952531 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=8c673e69829cace81b8c76aba1a8765c): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-kinematic-root-1.prefab using Guid(f0880a2c00eaca79682b6fce86ec2c39) (PrefabImporter) -> (artifact id: 'fa1708e6762650dd4ef952d1c1982729') in 0.00092361 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=c337605a9882df3649a1c79ec705e309): Total: 0.006 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-dynamic-root-2.prefab using Guid(ed9a438413c5b74e6af87b57451b0389) (PrefabImporter) -> (artifact id: 'c0188f34b66e7ccb9c4363bda3002719') in 0.0008844 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=5ab29285295b56b6cac208a6df93c9d6): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-kinematic-root-2.prefab using Guid(58c5f241d9656937381c993251901e95) (PrefabImporter) -> (artifact id: '06484dcd0913cb06b6e1b1ce2ff96120') in 0.000857341 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=9076a9f142f2b81f39b0a06eef9565e3): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-dynamic-root-0.prefab using Guid(f30b59fe64815989ba823918f21c2e42) (PrefabImporter) -> (artifact id: '011f77134fe48db405a5bb48c3f6ef57') in 0.001076751 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=7d43328213f8ff8d38dc614f21baacf1): Total: 0.006 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-dynamic-root-0.prefab using Guid(d3ca0d0f2089abfb49982d650dc70d90) (PrefabImporter) -> (artifact id: '3a92ad160fe68cbbcecca72082d7fa39') in 0.000887831 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=693993c7c408244689311e725cad6897): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-kinematic-child-4.prefab using Guid(4ea6c52b945718bfcaf2011b470efd06) (PrefabImporter) -> (artifact id: '2af41e4732160f7f15f27bbcac5a5fd3') in 0.000893141 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=72bc1d5a61f43df3facdf0ea619241a0): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-dynamic-root-3.prefab using Guid(8226a113af8ac1a9f90ba6961f3d49ab) (PrefabImporter) -> (artifact id: 'bdc60a7fa31f63453b73b4cd92fa4f23') in 0.000886001 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=915b0f05e709a18ec865ecd1308a4953): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-kinematic-child-3.prefab using Guid(86657813d0df1a6e2af1b69cc3c020c5) (PrefabImporter) -> (artifact id: '82fcd9150e649ced4c8506cb373f8450') in 0.00089512 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=190a92d77b6728d46a8f51269c84d087): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-kinematic-child-1.prefab using Guid(e2b445361dd20013cac68809de933f91) (PrefabImporter) -> (artifact id: '89a2735888938922addce3f9bbf12035') in 0.000892981 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=bd3e2a1aff78d8858962c90f9833a3e2): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-dynamic-root-2.prefab using Guid(f233974e70b3c79df97e36f89f11a4a4) (PrefabImporter) -> (artifact id: '82b375201a2294cfcac9249f4334fe2c') in 0.0008892 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=d5722c7cf9b571073ad3a73761a1d72f): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-dynamic-child-1.prefab using Guid(e95f38c2fbda47363a6c30c6d9cfec48) (PrefabImporter) -> (artifact id: 'c34c8b1d24f083356fe7e9e428b938d6') in 0.0008884 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=c314285c175fde7d3a3909b2e50ce0f5): Total: 0.006 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-dynamic-root-5.prefab using Guid(46de1ed219216916a9eb15b52d997ef5) (PrefabImporter) -> (artifact id: 'c00149192ab6dff8751e62691fed0280') in 0.001157461 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=b41719590507686eab2d8998895811e1): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-kinematic-root-3.prefab using Guid(a5461a970f1e53332bbb96d1004f9d4e) (PrefabImporter) -> (artifact id: '602ccf0cb9f7d394a42229d169009d0c') in 0.000884001 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=8d7e4c3500d1d9a7f92ee137de96a95c): Total: 0.006 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-kinematic-root-2.prefab using Guid(d392376e7c1af02279f97fddc9910035) (PrefabImporter) -> (artifact id: '447b5f5fdce54783a1ffbd9cec43fa92') in 0.000924011 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=befb43639b83b4f2a990109e2b672307): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-dynamic-root-3.prefab using Guid(1a9be32a2310c0dffa628b5aa9129d89) (PrefabImporter) -> (artifact id: 'a2b356adc76a49879ad666fb0442e25c') in 0.000845201 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=250e1e7eaba625bcdb14f1497536497e): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-dynamic-child-5.prefab using Guid(2031f313f4300bc4a8de733d575544f9) (PrefabImporter) -> (artifact id: '02668617efdb655e6eea27d65a9457d1') in 0.000879781 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=478402fa309a09516ab079a2d7719bc1): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-dynamic-child-3.prefab using Guid(ac7a35daf3b79d4a994ff12e7484ab24) (PrefabImporter) -> (artifact id: '36bdfb25cd0b1635f74aee3632bcf9fb') in 0.00086019 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=1d6eb1d5ffbb9381eb93cd96d39f1df0): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-kinematic-child-2.prefab using Guid(1f45d593e90e0c9f28502b9aafc845e9) (PrefabImporter) -> (artifact id: '3e9f01b853f7135ed591d477deee69a2') in 0.000876671 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=6a3e091e2fce31ae5b272f6079fd363b): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-dynamic-child-1.prefab using Guid(b3a195e8ab732c307af18b8df47699b1) (PrefabImporter) -> (artifact id: 'd58a8aaa3164c4af6f05613d1f137de6') in 0.00088646 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=4e17c6ebef090fac4a6804ce4cdc5bfa): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-dynamic-root-1.prefab using Guid(e1925dd77d429b75b9507fb65eec4127) (PrefabImporter) -> (artifact id: '45a5bbe566bdbaea1c6b83a3ea3378ae') in 0.000830711 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=78940d753c16a1f738825014ee05c833): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-kinematic-root-5.prefab using Guid(917e97f2db24a32318825292b93bd506) (PrefabImporter) -> (artifact id: 'dcd63cea5ad1150b248b1a5adf5b1b8a') in 0.00096272 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=90c035ec51a04574a85ceace796da014): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-kinematic-child-5.prefab using Guid(733e79d0401915938955d1d14ac1c34f) (PrefabImporter) -> (artifact id: '506f3ba60bab40bbea6509cfd84a0f04') in 0.001181271 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=e8b5a10b69750b06f8148e76e8f73a29): Total: 0.006 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-dynamic-root-4.prefab using Guid(57d5b5521846244fba77396628c44b0a) (PrefabImporter) -> (artifact id: '3daa0e56fc5d25a5b71e2049f3356ff8') in 0.000859141 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=222a0176eece94d659ed35d897df3f6f): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-dynamic-root-4.prefab using Guid(ac53a005431fd10f5b4901415afde52b) (PrefabImporter) -> (artifact id: '015dc67c264e28010fda81a7a9a2a3b0') in 0.00087483 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=976491b1c187a09d0b35c5ea388dfcb3): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-dynamic-child-0.prefab using Guid(921fe5ba5d9118661a87c4239991170d) (PrefabImporter) -> (artifact id: 'f43f0373dab580ac68b7365a62e9b175') in 0.00087667 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=def29dda1573f76979ce0cccc14421eb): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-kinematic-root-1.prefab using Guid(66902aa15328b91eab46807868992155) (PrefabImporter) -> (artifact id: '3ae563f5c47bd6a87d992972ba5b35d6') in 0.001051941 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=3d1f5acebc753a73b9b12ba72e8a4bf3): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-kinematic-child-1.prefab using Guid(f0be1b96c5ac244c5a022e5a66271005) (PrefabImporter) -> (artifact id: 'eecd29b1d2dc635c96a49a46ff588864') in 0.00090949 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=ed01e3ead2b9827a8b9ab49903cc08db): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-kinematic-child-2.prefab using Guid(952c9e3edb39495f6a611016ed4d8bcc) (PrefabImporter) -> (artifact id: 'f599ff827ee1bf0027d667568cd11ca5') in 0.001166021 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=c565e3133265ee6d09997ff7fff44e27): Total: 0.006 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-dynamic-child-4.prefab using Guid(9852e30528b095956ba4e07fddcd60e3) (PrefabImporter) -> (artifact id: 'c19c3f94141be95784d8053eed69f6ff') in 0.00090337 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=b8c79f34707898555bf927ec7a20553b): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-kinematic-child-0.prefab using Guid(4287e5b8f1c9fb922acbe4a447f7b692) (PrefabImporter) -> (artifact id: 'c25e901d2d32362393e71e15914e0de9') in 0.000910731 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=c7f414a687c48902a8bafd59182e83d3): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-kinematic-root-4.prefab using Guid(914166ffaade3423fb5f083bcc527563) (PrefabImporter) -> (artifact id: 'f8b234fa189c39ac574ca97ef42f9fbf') in 0.000890341 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=038a06c957ff562b8bd93383df68d22d): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-kinematic-child-0.prefab using Guid(6fd4f1fa52adff18dbd4875e040c6806) (PrefabImporter) -> (artifact id: 'f3845294f83a62ba140acb818d8e7a05') in 0.00093854 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=a96075b845245a0f59a81d734d83d95b): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-kinematic-root-4.prefab using Guid(cd2f16d4f673b84a3a2df7d506bdf364) (PrefabImporter) -> (artifact id: '8946e12d70dbfb880fb0028edfeee484') in 0.000885171 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=59b7fd9f192a6068686230d7ca7f08cd): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-dynamic-root-5.prefab using Guid(69d00dd545dc5780483103568ab848ff) (PrefabImporter) -> (artifact id: 'dd90e214812bdff69d3ae97d90db38c5') in 0.000897421 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=3082221774ac65a03abedf873436c5d9): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-kinematic-root-0.prefab using Guid(2250a0de4bf4773cea4d62c62a498c2b) (PrefabImporter) -> (artifact id: '572ba9a693ef82ba6846d2a24f73465c') in 0.001064011 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=c495ddf14c326ee1aab963a0a5688615): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-kinematic-root-0.prefab using Guid(a3e3200a52c72595186acd932cd72a05) (PrefabImporter) -> (artifact id: '6ce096b0b559bff0f1cca3449a63fc45') in 0.001098331 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=6238b28a8ea190eecab96572c6518d0b): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-kinematic-child-4.prefab using Guid(c10f6314f84a26f2c9d160c5302c7e8e) (PrefabImporter) -> (artifact id: 'c653b2306af5d4c174fb06ffde937f3f') in 0.001007311 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=8cd41259cff1958f297365cbaa2b0783): Total: 0.006 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-dynamic-child-2.prefab using Guid(6e2066d9188187357b19c98c7d2ccc5f) (PrefabImporter) -> (artifact id: '07fc5de0abdf39e13e098602d7cdc585') in 0.000929811 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=eb3575beffac1f0478741076966240b3): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-dynamic-child-2.prefab using Guid(81065b90eaccf7ed79e6b03686a18bfe) (PrefabImporter) -> (artifact id: 'ba324770b7e8efb4b7fd4eabfa03452d') in 0.001310321 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=b6c6bd95385a2311a840e8141dc5df8c): Total: 0.006 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-dynamic-child-3.prefab using Guid(d2cade577a3c70359b599a6d3c965a22) (PrefabImporter) -> (artifact id: '4f070f4647b0cbd2f78ed8439fd0cdf0') in 0.00091274 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=22592887a3da581948d14cae014b0651): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-dynamic-child-5.prefab using Guid(0647cbae45b899c1f866d28ce61ab01c) (PrefabImporter) -> (artifact id: '1a26f915d6b27fdb90ba3f1a57f273c9') in 0.000909931 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=a11c59db2b8dd787eb08d519637d4a92): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-inactive-dynamic-child-0.prefab using Guid(d513ac5f80dbd1e6c83c36ef9485d43b) (PrefabImporter) -> (artifact id: '28b03cf443cefbba9a26fe7dedfd4454') in 0.001003531 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=c37e4a0650fefe0c8a6a7837b1a7e3a2): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+Start importing Assets/Resources/asset-active-dynamic-child-4.prefab using Guid(cdb2dd8a4c7fad69e9528d8302df6106) (PrefabImporter) -> (artifact id: 'd036d90e818686884b0da8009b712e04') in 0.001007491 seconds
+Refreshing native plugins compatible for Editor in 0.00 ms, found 0 plugins.
+Preloading 0 native plugins for Editor in 0.00 ms.
+Asset Pipeline Refresh (id=aaf15a49b1bd0d57baf6aa15f0c34b89): Total: 0.005 seconds - Initiated by StopAssetImportingV2(NoUpdateAssetOptions)
+[Physics::Module] Cleanup current backned.
+[Physics::Module] Id: 0xf2b8ea05
+Input System module state changed to: ShutdownInProgress.
+Input System polling thread exited.
+Input System module state changed to: Shutdown.
+[Licensing::IpcConnector] LicenseClient-shaypercool-notifications channel disconnected successfully.
+[Licensing::IpcConnector] LicenseClient-shaypercool channel disconnected successfully.
+AcceleratorClientConnectionCallback - disconnected - :0
+[40m[32minfo[39m[22m[49m: Microsoft.Hosting.Lifetime[0]
+      Application is shutting down...
+Cleanup mono
+debugger-agent: Unable to listen on 37
+[usbmuxd] Stop listen thread
+[usbmuxd] Listen thread exiting
+[Package Manager] Server process was shutdown
+Checking for leaked weakptr:
+  Found no leaked weakptrs.
+##utp:{"type":"MemoryLeaks","version":2,"phase":"Immediate","time":1793429750440,"processId":916535,"allocatedMemory":7182819,"memoryLabels":[{"Default":23549},{"Permanent":16147},{"Thread":1084616},{"Manager":29561},{"VertexData":8},{"Geometry":408},{"VFX":-104},{"Texture":160},{"Shader":79299},{"Material":24},{"GfxDevice":35976},{"Animation":456},{"Audio":4032},{"FontEngine":320},{"Physics":2081},{"Serialization":376},{"Input":26752},{"JobScheduler":33024},{"TextLib":160},{"Mono":32},{"ScriptingNativeRuntime":155096},{"BaseObject":1622928},{"Resource":1032},{"Renderer":2928},{"Transform":4678},{"File":45458},{"WebCam":80},{"Culling":32},{"Terrain":11298},{"Wind":24},{"String":98760},{"DynamicArray":84591},{"HashMap":112788},{"Utility":2663504},{"PoolAlloc":1568},{"AI":72},{"TypeTree":5005},{"ScriptManager":512},{"RuntimeInitializeOnLoadManager":568},{"SpriteAtlas":112},{"GI":7448},{"Director":8208},{"CloudService":49520},{"WebRequest":808},{"VR":45689},{"SceneManager":824},{"Video":64},{"LazyScriptCache":32},{"Camera":17},{"Secure":7785},{"Image":16384},{"SerializationCache":1576},{"APIUpdating":10320},{"Subsystems":336},{"VirtualTexturing":57552},{"StaticSafetyDebugInfo":278528},{"Analytics":384},{"Hierarchy":832},{"CoreStats":12456},{"Identifiers":12384},{"Gui":112},{"EditorUtility":65626},{"VersionControl":4},{"Undo":979},{"AssetDatabase":397230},{"EditorGi":328},{"UnityConnect":24792},{"Upm":21149},{"DrivenProperties":72},{"LocalIPC":154},{"ProfilerEditor":9810},{"CoreBusinessMetrics":2345},{"Licensing":1096},{"AssetReference":32},{"IPCStream":32}]}
