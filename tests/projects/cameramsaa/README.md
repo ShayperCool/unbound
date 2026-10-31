@@ -397,3 +397,119 @@ Texture2D.cs relative to the parent. It adds no protocol, native ABI, shader cac
 format or release-specific switch. Rust and SystemInfo remain unchanged. The
 parent's explicit-target MSAA selection and HDR-resolve-before-quantization policy
 remain enabled. No authored project outside cameramsaa was changed.
+
+### Final verification and commands
+
+The final private output is `~/.cache/compat/camerafollowup-managed3`, with
+`camerafollowup-build3/` intermediates. Final full captures are
+`camerafollowup-final3-{linear,gamma}`. Their original and expanded strict totals
+are unchanged from the second correction. Complete final GPU buffers are packed
+in `Reference/FollowupFinal{Linear,Gamma}`. The separate focused oracle passes
+in full. `complete-final3-metrics.json` lists every remaining unequal observation
+and image, including all centers and maximum errors. No tolerance, expected-image
+list, input, key or PNG manifest was relaxed. `legacy-native-preservation.json`
+verifies all original 948 observations and 195 Native buffers against the extended
+Native recordings in both spaces, including the retained invalid outputs.
+
+| Final check | Result |
+| --- | --- |
+| Camera original Linear / Gamma | 948/948 API each; 187/195 and 193/195 images |
+| Camera expanded Linear / Gamma | 3201/3261 and 3219/3261 observations; 381/433 and 405/433 images |
+| Focused chains/clear preservation, each space | 481/481 observations, 54/54 images, 3268608/3268608 channels |
+| Clipping Linear, Gamma, LinearMSAA, each | 1211/1211 observations, 266/266 images, 17432576/17432576 channels |
+| Graphics | 80/80, original image comparator passes |
+| Resources including rtmips/resolve and command early/late | 539/539, 62/62 images |
+| Builtinrp | 830 matching +124 inherited expected values, 33 passing +4 inherited expected images |
+| Builtinfx | 213 matching +2 inherited expected values, 91 passing +12 inherited expected images |
+| Colors | 49201 per space, 98402 total |
+| Lifecycle | 8671/8671 |
+| Transitions | 253 samples, 831 callbacks, zero differences |
+| UI/Canvas/Yoga/Core tests | 275 passed, zero failed/skipped |
+| UI Toolkit | JSON, all 11 interactions, all 3 PNGs byte-identical to the independent baseline |
+
+The complete final regression summary and unit log are `final3-regression-summary.txt`
+and `unit-tests3.txt`. The earlier second-build summaries remain separate.
+Graphics, resources, builtinrp and UI Toolkit have no changed capture files.
+Only three builtinfx PNGs change; all now match Native byte-for-byte:
+alpha_to_mask_no_msaa, hdr_half_target and hdr_on_no_msaa. Their Native mean
+maximum-channel errors fall from 0.0191667, 9.4181333 and 0.5272 to zero, and
+worst errors from 1, 73 and 11 to zero. The inherited expected-image lists remain
+unchanged. `regression-final3-pixel-metrics.json` includes complete measurements.
+The before/after Native UI Toolkit comparison reports also have identical hashes;
+the inherited 53-versus-54-pixel label discrepancy remains.
+
+Actual commands used for the independent baseline and final managed builds:
+
+```sh
+export PATH="$HOME/.dotnet:$HOME/.cargo/bin:$PATH"
+export UseSharedCompilation=false MSBUILDDISABLENODEREUSE=1 DOTNET_CLI_USE_MSBUILD_SERVER=0
+# Executed at 1ac656a0, before runtime edits:
+~/.cache/compat/with-heavy-job timeout 600 dotnet build managed/Unbound.Host/Unbound.Host.csproj \
+  -c Release -o "$HOME/.cache/compat/camerafollowup-before-managed" \
+  -p:UnboundTarget="$HOME/.cache/compat/camerafollowup-before-build/" \
+  --disable-build-servers -m:1 -p:UseSharedCompilation=false /nodeReuse:false
+# Executed after the final runtime correction:
+CAMERA_MSAA_BUILD="$HOME/.cache/compat/camerafollowup-build3/" \
+UNBOUND_MANAGED_DIR="$HOME/.cache/compat/camerafollowup-managed3" \
+  tests/projects/cameramsaa/run.sh build
+```
+
+The helper now accepts explicit output/intermediate paths while retaining its
+original defaults. The commands below describe the recorded runs. All listed
+outputs are retained evidence; choose fresh suffixes to repeat them.
+
+```sh
+f=tests/projects/cameramsaa
+# Linear Native, twice; Gamma repeats used CAMERA_MSAA_PROJECT as below.
+for n in 1 2; do
+  CAMERA_MSAA_OUTPUT="$HOME/.cache/compat/camerafollowup-oracle-v3-linear$n" "$f/run.sh" native
+done
+# Gamma full copy: Assets, Packages and ProjectSettings only, with
+# m_ActiveColorSpace: 0, under cameramsaa/Library/FollowupGammaV3.
+# Authored settings remain Linear throughout.
+CAMERA_MSAA_PROJECT="$PWD/$f/Library/FollowupGammaV3" \
+CAMERA_MSAA_OUTPUT="$HOME/.cache/compat/camerafollowup-oracle-v3-gamma1" "$f/run.sh" native
+CAMERA_MSAA_PROJECT="$PWD/$f/Library/FollowupGammaV3" \
+CAMERA_MSAA_OUTPUT="$HOME/.cache/compat/camerafollowup-oracle-v3-gamma2" "$f/run.sh" native
+# Both spaces were also captured with camerafollowup-before-managed before edits.
+for space in linear gamma; do
+  if [ "$space" = gamma ]; then
+    export CAMERA_MSAA_PROJECT="$PWD/$f/Library/FollowupGammaV3"
+  else
+    unset CAMERA_MSAA_PROJECT
+  fi
+  CAMERA_MSAA_OUTPUT="$HOME/.cache/compat/camerafollowup-final3-$space" \
+  UNBOUND_MANAGED_DIR="$HOME/.cache/compat/camerafollowup-managed3" "$f/run.sh" engine
+done
+unset CAMERA_MSAA_PROJECT
+# Focused Native repeated twice per space before the chain/clear correction.
+# Its Gamma copy is Library/FollowupFocusedGamma, made the same way.
+CAMERA_MSAA_FOCUSED=1 \
+CAMERA_MSAA_OUTPUT="$HOME/.cache/compat/camerafollowup-focused-native-linear1" "$f/run.sh" native
+# Focused captures used both before-managed and managed3, for both spaces:
+CAMERA_MSAA_FOCUSED=1 \
+CAMERA_MSAA_OUTPUT="$HOME/.cache/compat/camerafollowup-focused-final3-linear" \
+UNBOUND_MANAGED_DIR="$HOME/.cache/compat/camerafollowup-managed3" "$f/run.sh" engine
+# Complete baseline and final regression runners:
+CAMERA_MSAA_REGRESS_OUT="$HOME/.cache/compat/camerafollowup-regress-before" \
+UNBOUND_MANAGED_DIR="$HOME/.cache/compat/camerafollowup-before-managed" "$f/regress.sh" followup-before
+CAMERA_MSAA_REGRESS_OUT="$HOME/.cache/compat/camerafollowup-regress-final3" \
+UNBOUND_MANAGED_DIR="$HOME/.cache/compat/camerafollowup-managed3" "$f/regress.sh" followup-final3
+CAMERA_MSAA_BEFORE="$HOME/.cache/compat/camerafollowup-regress-before" \
+CAMERA_MSAA_AFTER="$HOME/.cache/compat/camerafollowup-regress-final3" \
+CAMERA_MSAA_REPORT_PREFIX=camerafollowup-final3 python3 "$f/check-regress.py"
+python3 "$f/followup-evidence.py" final3
+python3 "$f/followup-focused-evidence.py"
+python3 "$f/followup-metrics.py" final3
+~/.cache/compat/with-heavy-job timeout 600 dotnet test managed/UnityEngine.Tests/UnityEngine.Tests.csproj \
+  -c Release -p:UnboundTarget="$HOME/.cache/compat/camerafollowup-test-build3/" \
+  -p:UnboundNativeDir=/mnt/storage-hdd/node-b-caches-20261023/unialt-target-compat/managed \
+  --disable-build-servers -m:1 -p:UseSharedCompilation=false /nodeReuse:false \
+  --filter 'FullyQualifiedName~CanvasOrder|FullyQualifiedName~UIElements|FullyQualifiedName~.YG|FullyQualifiedName~CoreTests|FullyQualifiedName~RectTransform'
+```
+
+Build3 has zero errors and 34 existing warnings. All engine/Editor/.NET jobs use
+one global heavy-job lock; nested builds disable shared compilation/build servers.
+No shared Cargo, managed or previous delegate output was built into. No real game
+project, parent/backup branch, generated stub, ABI or shared progress document was
+touched. Integrated API-check remains for the parent. No PR or merge was made.

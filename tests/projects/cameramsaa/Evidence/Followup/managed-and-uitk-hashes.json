@@ -1,0 +1,16 @@
+{
+  "UnityEngine.CoreModule.dll": {
+    "before-managed": "7fa316d42b7ca72053d89eff6b80e957635fead7c95e69d0423eecd7e076177b",
+    "managed": "8c54647a5dadaa14bb7dda82413b165d43535c504bad1acf102a41868a01d411",
+    "managed2": "7481b5012ecb4492a212dabd6935c6a6fa541d657d49b92c56dfedb6c21f5e30",
+    "managed3": "a24b78c23e58ad435b96f9fd6a78aecd5ca4aedf02c861ad93ffa364b3485f12"
+  },
+  "Unbound.Host.dll": {
+    "before-managed": "14afa20d12253a8791569e8540625c158d5da04024061193e89ba8b43c43a2a7",
+    "managed": "5df76faafeeb3eee60b0a0ecd1d48b98f52aedbd04de975b9e857b31569011d7",
+    "managed2": "1e5ac61ae1f9ba91d1699305d80e7abe6c8748e6f8658fcc2ee8039c3cfaa0b0",
+    "managed3": "627a0a63bb83b662e3fcec5962d70a1ff066ccb987d32b111f8289957da35bfe"
+  },
+  "before-uitk-native-report-sha256": "7ca74b625035d7b8d0d73e83a624576a7c6dcec637e63a9142499ba3df13e6d0",
+  "after-uitk-native-report-sha256": "7ca74b625035d7b8d0d73e83a624576a7c6dcec637e63a9142499ba3df13e6d0"
+}

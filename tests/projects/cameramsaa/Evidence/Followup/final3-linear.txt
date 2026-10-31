@@ -1,0 +1,94 @@
+boundary.screen.hFalse.q0.target [0, 4, 1, 1, 1, 1, 1] None
+boundary.screen.hFalse.q0.target.size [128, 128, 24] MISSING
+boundary.screen.hFalse.q0.target.filter 0 MISSING
+boundary.screen.hFalse.q0.RGBAFloat.linearFalse.center [0.882353, 0.7372549, 0.5372549, 0.623529434] [0.75, 0.5, 0.25, 0.625]
+boundary.screen.hFalse.q0.RGBAFloat.linearTrue.center [0.882353, 0.7372549, 0.5372549, 0.623529434] [0.75, 0.5, 0.25, 0.625]
+boundary.screen.hFalse.q0.RGBA32.linearTrue.center [0.882352948, 0.7372549, 0.5372549, 0.623529434] [0.7490196, 0.5019608, 0.2509804, 0.623529434]
+boundary.screenPublic.hFalse.q0.RGBAFloat.linearFalse.center [0.882353, 0.7372549, 0.5372549, 1] [0.75, 0.5, 0.25, 0.625]
+boundary.screenPublic.hFalse.q0.RGBAFloat.linearTrue.center [0.882353, 0.7372549, 0.5372549, 1] [0.75, 0.5, 0.25, 0.625]
+boundary.screenPublic.hFalse.q0.RGBA32.linearFalse.center [0.882352948, 0.7372549, 0.5372549, 1] [0.882352948, 0.7372549, 0.5372549, 0.623529434]
+boundary.screenPublic.hFalse.q0.RGBA32.linearTrue.center [0.882352948, 0.7372549, 0.5372549, 1] [0.7490196, 0.5019608, 0.2509804, 0.623529434]
+boundary.screen.hFalse.q2.target [0, 4, 1, 1, 1, 1, 1] None
+boundary.screen.hFalse.q2.target.size [128, 128, 24] MISSING
+boundary.screen.hFalse.q2.target.filter 0 MISSING
+boundary.screen.hFalse.q2.RGBAFloat.linearFalse.center [0.882353, 0.7372549, 0.5372549, 0.623529434] [0.75390625, 0.50390625, 0.25, 0.6230469]
+boundary.screen.hFalse.q2.RGBAFloat.linearTrue.center [0.882353, 0.7372549, 0.5372549, 0.623529434] [0.75390625, 0.50390625, 0.25, 0.6230469]
+boundary.screen.hFalse.q2.RGBA32.linearTrue.center [0.882352948, 0.7372549, 0.5372549, 0.623529434] [0.7529412, 0.5019608, 0.2509804, 0.623529434]
+boundary.screenPublic.hFalse.q2.RGBAFloat.linearFalse.center [0.156862751, 0.156862751, 0.156862751, 1] [0.75390625, 0.50390625, 0.25, 0.6230469]
+boundary.screenPublic.hFalse.q2.RGBAFloat.linearTrue.center [0.156862751, 0.156862751, 0.156862751, 1] [0.75390625, 0.50390625, 0.25, 0.6230469]
+boundary.screenPublic.hFalse.q2.RGBA32.linearFalse.center [0.156862751, 0.156862751, 0.156862751, 1] [0.882352948, 0.7372549, 0.5372549, 0.623529434]
+boundary.screenPublic.hFalse.q2.RGBA32.linearTrue.center [0.156862751, 0.156862751, 0.156862751, 1] [0.7529412, 0.5019608, 0.2509804, 0.623529434]
+boundary.screen.hFalse.q4.target [0, 4, 1, 1, 1, 1, 1] None
+boundary.screen.hFalse.q4.target.size [128, 128, 24] MISSING
+boundary.screen.hFalse.q4.target.filter 0 MISSING
+boundary.screen.hFalse.q4.RGBAFloat.linearFalse.center [0.882353, 0.7372549, 0.5372549, 0.623529434] [0.75390625, 0.50390625, 0.25, 0.6230469]
+boundary.screen.hFalse.q4.RGBAFloat.linearTrue.center [0.882353, 0.7372549, 0.5372549, 0.623529434] [0.75390625, 0.50390625, 0.25, 0.6230469]
+boundary.screen.hFalse.q4.RGBA32.linearTrue.center [0.882352948, 0.7372549, 0.5372549, 0.623529434] [0.7529412, 0.5019608, 0.2509804, 0.623529434]
+boundary.screenPublic.hFalse.q4.RGBAFloat.linearFalse.center [0.156862751, 0.156862751, 0.156862751, 1] [0.75390625, 0.50390625, 0.25, 0.6230469]
+boundary.screenPublic.hFalse.q4.RGBAFloat.linearTrue.center [0.156862751, 0.156862751, 0.156862751, 1] [0.75390625, 0.50390625, 0.25, 0.6230469]
+boundary.screenPublic.hFalse.q4.RGBA32.linearFalse.center [0.156862751, 0.156862751, 0.156862751, 1] [0.882352948, 0.7372549, 0.5372549, 0.623529434]
+boundary.screenPublic.hFalse.q4.RGBA32.linearTrue.center [0.156862751, 0.156862751, 0.156862751, 1] [0.7529412, 0.5019608, 0.2509804, 0.623529434]
+boundary.screen.hTrue.q0.target [0, 4, 1, 1, 1, 1, 1] None
+boundary.screen.hTrue.q0.target.size [128, 128, 24] MISSING
+boundary.screen.hTrue.q0.target.filter 0 MISSING
+boundary.screen.hTrue.q0.RGBAFloat.linearFalse.center [0.882353, 0.7372549, 0.5372549, 0.623529434] [0.75, 0.5, 0.25, 0.625]
+boundary.screen.hTrue.q0.RGBAFloat.linearTrue.center [0.882353, 0.7372549, 0.5372549, 0.623529434] [0.75, 0.5, 0.25, 0.625]
+boundary.screen.hTrue.q0.RGBA32.linearTrue.center [0.882352948, 0.7372549, 0.5372549, 0.623529434] [0.7490196, 0.5019608, 0.2509804, 0.623529434]
+boundary.screenPublic.hTrue.q0.RGBAFloat.linearFalse.center [0.156862751, 0.156862751, 0.156862751, 1] [0.75, 0.5, 0.25, 0.625]
+boundary.screenPublic.hTrue.q0.RGBAFloat.linearTrue.center [0.156862751, 0.156862751, 0.156862751, 1] [0.75, 0.5, 0.25, 0.625]
+boundary.screenPublic.hTrue.q0.RGBA32.linearFalse.center [0.156862751, 0.156862751, 0.156862751, 1] [0.882352948, 0.7372549, 0.5372549, 0.623529434]
+boundary.screenPublic.hTrue.q0.RGBA32.linearTrue.center [0.156862751, 0.156862751, 0.156862751, 1] [0.7490196, 0.5019608, 0.2509804, 0.623529434]
+records: 3201/3261, 0 unexpected
+ARGB32.resolve 0/65536 channels, max delta 1.0
+ARGBFloat.resolve 0/65536 channels, max delta 1.0
+boundary.ARGB32.resolveSentinelInactive 0/65536 channels, max delta 1.0
+boundary.ARGBFloat.resolveSentinelInactive 0/65536 channels, max delta 1.458885669708252
+boundary.screen.hFalse.q0.RGBA32.linearTrue 54172/65536 channels, max delta 0.2862745225429535
+boundary.screen.hFalse.q0.RGBAFloat.linearFalse 50384/65536 channels, max delta 0.2872549295425415
+boundary.screen.hFalse.q0.RGBAFloat.linearTrue 50384/65536 channels, max delta 0.2872549295425415
+boundary.screen.hFalse.q2.RGBA32.linearTrue 54016/65536 channels, max delta 0.2862745225429535
+boundary.screen.hFalse.q2.RGBAFloat.linearFalse 50277/65536 channels, max delta 0.2872702479362488
+boundary.screen.hFalse.q2.RGBAFloat.linearTrue 50277/65536 channels, max delta 0.2872702479362488
+boundary.screen.hFalse.q4.RGBA32.linearTrue 53875/65536 channels, max delta 0.2862745225429535
+boundary.screen.hFalse.q4.RGBAFloat.linearFalse 50186/65536 channels, max delta 0.2872702479362488
+boundary.screen.hFalse.q4.RGBAFloat.linearTrue 50186/65536 channels, max delta 0.2872702479362488
+boundary.screen.hTrue.q0.RGBA32.linearTrue 54172/65536 channels, max delta 0.2862745225429535
+boundary.screen.hTrue.q0.RGBAFloat.linearFalse 50384/65536 channels, max delta 0.2872549295425415
+boundary.screen.hTrue.q0.RGBAFloat.linearTrue 50384/65536 channels, max delta 0.2872549295425415
+boundary.screen.hTrue.q2.RGBA32.linearTrue 54016/65536 channels, max delta 0.2862745225429535
+boundary.screen.hTrue.q2.RGBAFloat.linearFalse 50176/65536 channels, max delta 0.2872549295425415
+boundary.screen.hTrue.q2.RGBAFloat.linearTrue 50176/65536 channels, max delta 0.2872549295425415
+boundary.screen.hTrue.q4.RGBA32.linearTrue 53875/65536 channels, max delta 0.2862745225429535
+boundary.screen.hTrue.q4.RGBAFloat.linearFalse 49988/65536 channels, max delta 0.2872549295425415
+boundary.screen.hTrue.q4.RGBAFloat.linearTrue 49988/65536 channels, max delta 0.2872549295425415
+boundary.screenPublic.hFalse.q0.RGBA32.linearFalse 49152/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q0.RGBA32.linearTrue 37788/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q0.RGBAFloat.linearFalse 37788/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q0.RGBAFloat.linearTrue 37788/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q2.RGBA32.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q2.RGBA32.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q2.RGBAFloat.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q2.RGBAFloat.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q4.RGBA32.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q4.RGBA32.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q4.RGBAFloat.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hFalse.q4.RGBAFloat.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q0.RGBA32.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q0.RGBA32.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q0.RGBAFloat.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q0.RGBAFloat.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q2.RGBA32.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q2.RGBA32.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q2.RGBAFloat.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q2.RGBAFloat.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q4.RGBA32.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q4.RGBA32.linearTrue 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q4.RGBAFloat.linearFalse 0/65536 channels, max delta 1.0
+boundary.screenPublic.hTrue.q4.RGBAFloat.linearTrue 0/65536 channels, max delta 1.0
+screen.hFalse.q0 50384/65536 channels, max delta 0.2872549295425415
+screen.hFalse.q2 50277/65536 channels, max delta 0.2872702479362488
+screen.hFalse.q4 50186/65536 channels, max delta 0.2872702479362488
+screen.hTrue.q0 50384/65536 channels, max delta 0.2872549295425415
+screen.hTrue.q2 50176/65536 channels, max delta 0.2872549295425415
+screen.hTrue.q4 49988/65536 channels, max delta 0.2872549295425415
+images: 381/433, 0 unexpected; channels: 26089707/28106752
