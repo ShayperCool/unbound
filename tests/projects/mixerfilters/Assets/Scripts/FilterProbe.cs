@@ -10,10 +10,11 @@ public class FilterProbe : MonoBehaviour
 {
     public static readonly string[] Cases = { "dry", "lp1000q1", "lp1000q3", "lp1000q10", "hp1000q1", "hp1000q3", "hp1000q10", "lp80q1", "hp8000q1", "lp20000q1", "lp_bypass", "group_bypass", "lp_hp", "hp_lp", "parent_lp", "stereo_lp", "step_lp", "tone_hp", "set_lp", "snapshot_lp", "step_dry", "stereo_dry", "sum_lp", "volume_lp" };
     const BindingFlags Flags = BindingFlags.Static | BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
-    static bool Engine => typeof(AudioSource).Assembly.GetType("Unbound.Runtime.AudioBackend") != null;
+    static bool Engine => Environment.GetEnvironmentVariable("FILTER_PROBE_ENGINE") == "1";
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Bootstrap()
     {
+        Debug.Log("Filter probe bootstrap, engine=" + Engine);
         if (!Engine) return;
         foreach (var existing in UnityEngine.Object.FindObjectsOfType<FilterProbe>())
             DestroyImmediate(existing.gameObject);
@@ -43,14 +44,14 @@ public class FilterProbe : MonoBehaviour
     }
     void FlushEngine()
     {
-        var assembly = typeof(AudioSource).Assembly;
+        var assembly = Type.GetType("Unbound.Runtime.AudioBackend, UnityEngine.CoreModule", true).Assembly;
         typeof(Time).GetField("s_RealDeltaTime", Flags).SetValue(null, 0.0);
         typeof(Time).GetField("s_DeltaTime", Flags).SetValue(null, 0f);
         assembly.GetType("Unbound.Runtime.AudioSystem").GetMethod("Update", Flags).Invoke(null, null);
     }
     void RenderEngine(int frames, int rate)
     {
-        var assembly = typeof(AudioSource).Assembly;
+        var assembly = Type.GetType("Unbound.Runtime.AudioBackend, UnityEngine.CoreModule", true).Assembly;
         var backendType = assembly.GetType("Unbound.Runtime.AudioBackend");
         var backend = backendType.GetProperty("Current", Flags).GetValue(null);
         var packet = Activator.CreateInstance(assembly.GetType("Unbound.Runtime.AudioFramePacket"));

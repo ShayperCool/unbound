@@ -28,7 +28,7 @@ artifacts = [a.runtime/'unbound', *(a.runtime/'managed').glob('*')]
 hashes = {str(f.relative_to(a.runtime)): hashlib.sha256(f.read_bytes()).hexdigest() for f in artifacts if f.is_file()}
 (a.work/'runtime-hashes.json').write_text(json.dumps(hashes, indent=2)+'\n')
 (a.work/'command.json').write_text(json.dumps(command, indent=2)+'\n')
-env = dict(os.environ, FILTER_PROBE_OUT=str(output), FILTER_PROBE_RATE=str(a.rate), UNBOUND_MANAGED_DIR=str(a.runtime/'managed'), LD_LIBRARY_PATH=str(a.runtime/'managed'))
+env = dict(os.environ, FILTER_PROBE_OUT=str(output), FILTER_PROBE_ENGINE="1", FILTER_PROBE_RATE=str(a.rate), UNBOUND_MANAGED_DIR=str(a.runtime/'managed'), LD_LIBRARY_PATH=str(a.runtime/'managed'))
 with (a.work/'engine.log').open('w') as log:
     subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
 if not (output/'capture.json').exists():
