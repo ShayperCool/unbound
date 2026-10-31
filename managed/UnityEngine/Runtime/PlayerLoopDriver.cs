@@ -97,6 +97,7 @@ namespace Unbound.Runtime
             Register(typeof(PL.EarlyUpdate.ScriptRunDelayedStartupFrame), Lifecycle.RunPendingStarts);
             // The Input System's updates: in each fixed step, after the frame's start, before rendering.
             Register(typeof(PL.FixedUpdate.NewInputFixedUpdate), NativeInput.FixedUpdate);
+            Register(typeof(PL.PreUpdate.IMGUISendQueuedEvents), GuiDispatch.SendQueuedEvents);
             Register(typeof(PL.PreUpdate.NewInputUpdate), NativeInput.DynamicUpdate);
             Register(typeof(PL.PreUpdate.InputForUIUpdate), UnityEngine.InputForUI.EventProvider.NotifyUpdate);
             // The Editor skips the cameras that render into textures.
