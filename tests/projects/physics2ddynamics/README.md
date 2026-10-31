@@ -49,3 +49,38 @@ reports. Without a candidate it checks reference structure only. This is a
 measurement probe, not a claim that current dynamics match Unity. Older releases
 remain unmeasured. Runtime experiments, Native repeats, traces and comparisons
 belong in the validation cache, never this source directory.
+
+`trace.py` can record the Native inputs to each serial Box2D island solve without
+modifying its bodies, contacts or allocation state. It requires GDB and the exact
+Linux Editor/debug binary hashes checked by the driver. The `.gdb` file's offsets
+come from `b2World::Solve`, `b2Island::Solve`, `b2Contact::Update` and their symbols.
+It stores real world, body, fixture and contact pointers, body positions/types,
+Native island indices, contact counts and complete array order in the cache.
+Pointer reuse remains visible. The agreement comparator renames pointers
+bijectively and compares every remaining field exactly, including array order;
+raw pointers remain in the original captures.
+
+```bash
+python3 tests/projects/physics2ddynamics/trace.py capture \
+    --project "$DYNAMICS_WORK/project-native1" --work "$DYNAMICS_WORK/traces" --label native1
+python3 tests/projects/physics2ddynamics/trace.py capture \
+    --project "$DYNAMICS_WORK/project-native2" --work "$DYNAMICS_WORK/traces" --label native2
+python3 tests/projects/physics2ddynamics/trace.py compare \
+    "$DYNAMICS_WORK/traces/native1.jsonl" "$DYNAMICS_WORK/traces/native2.jsonl" \
+    --output "$DYNAMICS_WORK/traces/agreement.json"
+# Also verify that tracing preserved both public captures.
+python3 tests/projects/physics2ddynamics/verify.py --suite dynamics \
+    --candidate "$DYNAMICS_WORK/traces/native1.json"
+python3 tests/projects/physics2ddynamics/verify.py --suite dynamics \
+    --candidate "$DYNAMICS_WORK/traces/native2.json"
+```
+
+Two independent traces agreed across all 1,797 island records, while their public
+captures remained byte-identical to the canonical oracle. For the original stack,
+world step 576 seeds box0, then visits box1, box2, box3 and the static body. Its
+constraints are ground/box0, box0/box1, box1/box2 and box2/box3. This is measured
+input order. Inspection of the selected Editor's `b2World::CreateBody`,
+`DestroyBody` and `Solve` shows separate static/nonstatic arrays, append on creation
+and swap removal. Inferring the whole engine's ordering from a single creation
+sort would therefore be incorrect. Type changes and other releases need their
+own measurements before changes relying on those cases are accepted.
