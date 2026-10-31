@@ -11,36 +11,28 @@ phase and `AffectsProperty`. Cases include positive/negative delays, zero/negati
 multiple properties, `all`, shorthand matching, repeated list values, interruption, reversal,
 detachment, display changes, removing the transition property, and all 23 timing functions.
 
-Every Editor, build and engine command must use the shared exclusive heavy-job wrapper. On this
-machine use `$HOME/.cache/compat/with-heavy-job` before each command below. Use
-`timeout 180` after the wrapper. Build with `--disable-build-servers -m:1
--p:UseSharedCompilation=false /nodeReuse:false` so persistent .NET servers do not inherit the lock.
-
-Create the committed scene, only when changing fixture setup:
-
-```sh
-Unity -batchmode -nographics -quit -projectPath "$PWD/tests/projects/uitransitions" \
-  -executeMethod TransitionRunner.Create -logFile /tmp/ui-transitions-create.log
-```
-
-Record the native Editor oracle:
+Select the release explicitly and run the portable driver. It copies only authored fixture
+inputs into a fresh directory under `$XDG_CACHE_HOME/unbound`, default `~/.cache/unbound`.
+The driver wraps each Editor/engine child with the shared heavy-job wrapper; do not wrap the driver.
+It never records into the tracked project. Native repeats stay in cache. The canonical oracle is
+`Reference/unity-6000.0.71f1.jsonl`, renamed without changing its original bytes.
 
 ```sh
-UITRANSITIONS_OUT="$PWD/tests/projects/uitransitions/Reference" Unity -batchmode -nographics \
-  -projectPath "$PWD/tests/projects/uitransitions" -executeMethod TransitionRunner.Record \
-  -logFile /tmp/ui-transitions-oracle.log
-```
-
-Build `managed/Unbound.Host/Unbound.Host.csproj` to an isolated output directory and select it
-through `UNBOUND_MANAGED_DIR`. Do not use the root CLI's gen-stubs or api-check in a worktree because
-their compiled source paths point at another checkout. Run the fixture:
-
-```sh
-UITRANSITIONS_OUT=/tmp/ui-transitions-unbound UNBOUND_MANAGED_DIR=/path/to/own/managed \
-  unbound run -p tests/projects/uitransitions --headless 100 --fixed-fps 60
+cache="${XDG_CACHE_HOME:-$HOME/.cache}/unbound/validation/runs/transitions"
+python3 tests/projects/uitransitions/run.py native --release 6000.0.71f1 --output "$cache/native-a"
+python3 tests/projects/uitransitions/run.py native --release 6000.0.71f1 --output "$cache/native-b"
+cmp "$cache/native-a/capture/transitions.jsonl" "$cache/native-b/capture/transitions.jsonl"
+python3 tests/projects/uitransitions/run.py engine --release 6000.0.71f1 --output "$cache/engine" \
+  --cli /path/to/private/unbound --managed /path/to/fresh/managed
 python3 tests/projects/uitransitions/compare.py \
-  tests/projects/uitransitions/Reference/transitions.jsonl /tmp/ui-transitions-unbound/transitions.jsonl
+  tests/projects/uitransitions/Reference/unity-6000.0.71f1.jsonl "$cache/engine/capture/transitions.jsonl"
 ```
+
+Build the managed host into a private cache output with matching assembly-local native libraries.
+Use the heavy-job wrapper and `--disable-build-servers -m:1 -p:UseSharedCompilation=false
+/nodeReuse:false -p:UnboundTarget=<cache>/build/`. Do not run root CLI stub generation in a worktree.
+Creating the scene is an explicit setup edit, using `TransitionRunner.Create` in an independent
+cache copy before copying the resulting Unity-compatible authored scene back.
 
 ## Measured behavior
 
@@ -69,19 +61,9 @@ Unity's pixel-grid rounding. Translation supplies unrounded easing samples at qu
 
 ## Verification and limits
 
-The managed engine and host were built into
-`$HOME/.cache/unbound/validation/runs/uitransitions/managed`, using independent intermediate output.
-Only the UIElements generated stub module was retained after local explicit-path generation.
-The root CLI's gen-stubs and api-check were not used.
-
-The existing `UnityEngine.Tests` UIElements filter passed 8/8. Final verification with
-`--filter 'FullyQualifiedName~UIElements|FullyQualifiedName~Yoga'` passed 256/256.
-The final transition comparison passed all 253 samples and 831 callbacks with zero differences.
-The GPU `uitk` fixture preserved all
-structure, styles, text and 11 interaction steps. Its record and all three PNGs matched an
-independently built pre-change UI implementation exactly. Against native Unity, both builds retain
-one 1-pixel final label-width difference and image mean channel differences of 0.04, 0.04 and 0.06.
-Logs and independent outputs are under `$HOME/.cache/unbound/validation/runs/uitransitions/`.
+The accepted comparison has 253 samples and 831 callbacks with zero differences. See the
+commands above to replay it with the exact private runtime under review. Comparisons list every
+missing, extra or failing observation, including trailing samples and values.
 
 The oracle covers a single animated element plus an inheriting child. It does not establish
 cross-element ordering when several property types animate simultaneously, event-handler-driven
