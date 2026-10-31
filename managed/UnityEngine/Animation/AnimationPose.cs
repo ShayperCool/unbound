@@ -328,7 +328,8 @@ namespace Unbound.Runtime
         /// the default values (<paramref name="overDefaults"/>, else over <paramref name="values"/>).
         /// Within an override layer, the states that do not animate a channel complete its weighted
         /// sum: motion states without write defaults (for any channel of the controller) with the
-        /// value below, or the current value where no layer below writes it; motion states with
+        /// value below, or where no layer below writes it the value the Animator last wrote
+        /// (<paramref name="kept"/>, else the current value); motion states with
         /// write defaults (for the layer's channels), and states without a motion and write defaults
         /// where the layer has no last value, with the default value while another state has the
         /// channel. The rest up to full weight is the value below, which the layer does not keep as

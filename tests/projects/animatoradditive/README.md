@@ -1,7 +1,7 @@
 # Additive and override layer probe
 
-Generic-rig Animator layers on Unity 6000.0.71f1: 48 cases of eleven fixed `Animator.Update`
-steps (0, then ten of 0.125 s), 528 records of the local position, rotation and scale of an
+Generic-rig Animator layers on Unity 6000.0.71f1: 100 cases of eleven fixed `Animator.Update`
+steps (0, then ten of 0.125 s), 1100 records of the local position, rotation and scale of an
 animated hierarchy, two script floats and the layer weights. Humanoid rigs are not covered.
 
 The cases cover additive reference poses (none, another clip at a time, the clip itself at a time,
@@ -12,6 +12,10 @@ transform masks (no root, sparse) on additive and override layers, a six-layer s
 layers above additive ones, a synced additive layer with override motions across a transition,
 blend trees in additive layers, and transitions to and from motion and empty states with and
 without write defaults in additive and override layers, including empty first states.
+The `mix*` cases transition between a state with write defaults and one without, both ways, in
+the base, an override and an additive layer, to motion and empty states (empty states also with
+the same write defaults on both sides), at layer weights 1 and 0.5; `.poke` cases set channels from
+a script during the transition, `.hold` cases stay in the base layer's empty state.
 
 The assets are committed (`ProbeRunner.Create` made them in a copy of the project). Record two
 independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound, compare:
