@@ -1216,3 +1216,44 @@ known camera, realtime-GI, initial-query and motion differences remain visible.
 Default reference-only verification explicitly says that no engine capture was
 compared. Full before/after gates consume explicit actual and baseline work
 directories and report all retained and introduced values.
+
+### Shared physics integration and public contacts, 2026-10-31
+
+The query coincidence fix, per-point entering velocity and public 3D contact
+implementation now run together. Query and simulation code share the Box2D
+collision and sweep algorithms; the three QueryParity production copies are
+removed. Operation-specific precision stays explicit in the shared algorithms.
+No unmeasured release split was introduced.
+
+Main queries match52347/55251 and frame/center ties72679/75168, resolving528 prior
+values with no new failures across the nine suites. The new contact-feature
+oracle matches174044/181440. Entering ContactPoint2D velocities are captured at
+each point before solving, while Collision2D retains point0 for its aggregate
+velocity. This resolves12 dynamics-control values; the complete dynamics suite
+matches22341/24082 and retains1741 failures.
+
+Public ContactEvent now uses actual SDK headers, pairs, points and impulses,
+with the measured40/40/48-byte layouts and borrowed-array lifetime checks. All
+29628 profile observations pass the original physical bounds. Capsule creation
+and query-frame fixes resolve all832 failures of the rejected public feature;
+5610 expanded sweep values match exactly. Two raw process-hash rows differ in
+independent Native runs too and remain visible in comparisons. Local scenes,
+asynchronous lifetimes, non-unit capsule transforms and older releases remain
+unmeasured.
+
+The combined managed build passes530/530 tests without skips. API checking finds
+zero errors in2274 handwritten types; PhysicsModule regeneration matches. The
+5055-record scene matrix retains4803 exact values and252 original rounding
+values, with all21 captures byte-identical to acceptance. Loading9312,
+lifecycle25356/receiver1152, timing18491, order5720, focused3D, physical regression
+comparators, graphics80, Canvas8671, messages316 and general lifecycle all pass
+their existing gates. Full motion and rotation comparisons introduce no failing
+keys. Broad physics retains45 failures; expanded motion retains1423981/3399409.
+These retained gaps remain open.
+
+The public contact exports require shim9. Main ABI5 and shadercache13 are
+unchanged; the SDK is unchanged from the accepted native8 baseline. Matching
+private CLI, managed and native artifacts were checked together. Disposable
+captures, reports, rejected invocations, hashes and the frozen integration
+snapshot are in the external Unbound validation cache. Only sources and one
+canonical Unity reference set per release enter Git. No history was rewritten.
