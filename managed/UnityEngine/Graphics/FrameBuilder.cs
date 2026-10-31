@@ -949,8 +949,9 @@ namespace Unbound.Runtime
                 // float targets. Quality AA belongs to the screen or to the camera's HDR
                 // intermediate when converting into an LDR target. Buffer bindings bypass that
                 // intermediate. This also explains graphics' quality-AA single-sample LDR target.
-                bool qualitySamples = buffers == null && (cameraTarget == null ||
-                    (camera.allowHDR && !UnityEngine.Experimental.Rendering.GraphicsFormatUtility.IsHDRFormat(cameraTarget.graphicsFormat)));
+                bool hdrIntermediate = buffers == null && camera.allowHDR &&
+                    (cameraTarget == null || !GraphicsFormatUtility.IsHDRFormat(cameraTarget.graphicsFormat));
+                bool qualitySamples = buffers == null && (cameraTarget == null || hdrIntermediate);
                 int cameraSamples = qualitySamples
                     ? (camera.allowMSAA ? Math.Max(1, QualitySettings.antiAliasing) : 1)
                     : cameraTarget?.antiAliasing ?? 1;
@@ -975,13 +976,16 @@ namespace Unbound.Runtime
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
                 }
-                else if (cameraSamples > 1 && camera.rect == new Rect(0f, 0f, 1f, 1f)
+                else if ((cameraSamples > 1 || hdrIntermediate) && camera.rect == new Rect(0f, 0f, 1f, 1f)
                     && (sceneTarget == null || sceneTarget.antiAliasing != cameraSamples) && buffers == null)
                 {
                     int w = sceneTarget != null ? sceneTarget.width : Math.Max(1, Screen.width);
                     int h = sceneTarget != null ? sceneTarget.height : Math.Max(1, Screen.height);
-                    var format = sceneTarget != null ? sceneTarget.format : camera.allowHDR ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default;
-                    var readWrite = sceneTarget == null || sceneTarget.sRGB ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear;
+                    // The HDR intermediate can also reduce explicit target samples to one when
+                    // quality AA or allowMSAA is off. Resolve before LDR quantization, including
+                    // alpha; quantizing each sample first loses a byte at partial coverage.
+                    var format = hdrIntermediate ? RenderTextureFormat.DefaultHDR : sceneTarget != null ? sceneTarget.format : RenderTextureFormat.Default;
+                    var readWrite = !hdrIntermediate && (sceneTarget == null || sceneTarget.sRGB) ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear;
                     msaaTarget = RenderTexture.GetTemporary(w, h, 24, format, readWrite, cameraSamples);
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
