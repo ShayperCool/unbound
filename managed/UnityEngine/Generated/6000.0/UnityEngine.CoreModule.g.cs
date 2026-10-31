@@ -3144,7 +3144,6 @@ namespace UnityEngine
         internal bool isNativeTexture { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.isNativeTexture"); return default; } }
         internal bool allowReadingInEditor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.allowReadingInEditor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.allowReadingInEditor"); } }
         internal global::UnityEngine.ColorSpace activeTextureColorSpace { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.activeTextureColorSpace"); return default; } }
-        public bool isDataSRGB { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.isDataSRGB"); return default; } }
         public static ulong desiredTextureMemory { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.desiredTextureMemory"); return default; } }
         public static ulong targetTextureMemory { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.targetTextureMemory"); return default; } }
         public static ulong nonStreamingTextureMemory { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Texture.nonStreamingTextureMemory"); return default; } }
