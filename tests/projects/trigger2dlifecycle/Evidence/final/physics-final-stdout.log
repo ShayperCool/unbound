@@ -1,0 +1,5 @@
+2026-10-31T07:10:37.416795Z  INFO unbound_runtime::config: compiled 2 assemblies (0 compiled, 2 cached) in 91ms
+2026-10-31T07:10:37.431285Z  INFO unbound_runtime::config: prepared the game in 160.53ms
+2026-10-31T07:10:37.984394Z  INFO game: physics probe written to /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/physics-final.json
+2026-10-31T07:10:37.984662Z  INFO unbound_runtime::game: game started in 553.14ms
+2026-10-31T07:10:38.093996Z  INFO unbound_runtime::game: ran 1 frames in 109.20ms
