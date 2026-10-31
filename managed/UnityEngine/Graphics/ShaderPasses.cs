@@ -18,6 +18,8 @@ namespace Unbound.Runtime
         internal readonly Dictionary<string, string> Tags = new Dictionary<string, string>();
         /// <summary>The properties marked [Gamma] (interpolated in linear space).</summary>
         internal readonly HashSet<string> Gamma = new HashSet<string>();
+        // Working-space bindings from the actual selected ShaderLab source, including built-ins.
+        internal HashSet<int> ColorProperties;
         /// <summary>`Dependency` lines: name → shader name.</summary>
         internal readonly Dictionary<string, string> Dependencies = new Dictionary<string, string>();
         internal readonly List<(string Name, Dictionary<string, string> Tags)> Passes = new List<(string, Dictionary<string, string>)>();
@@ -96,6 +98,11 @@ namespace Unbound.Runtime
                 foreach (var tag in root.GetProperty("tags").EnumerateObject()) info.Tags[tag.Name] = tag.Value.GetString() ?? "";
                 if (root.TryGetProperty("fallback", out var fallback) && fallback.ValueKind == JsonValueKind.String)
                     info.Fallback = fallback.GetString();
+                if (root.TryGetProperty("colors", out var colors))
+                {
+                    info.ColorProperties = new HashSet<int>();
+                    foreach (var c in colors.EnumerateArray()) info.ColorProperties.Add(Shader.PropertyToID(c.GetString() ?? ""));
+                }
                 if (root.TryGetProperty("gamma", out var gamma))
                     foreach (var g in gamma.EnumerateArray()) info.Gamma.Add(g.GetString() ?? "");
                 if (root.TryGetProperty("dependencies", out var dependencies))

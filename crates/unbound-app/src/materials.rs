@@ -177,6 +177,7 @@ impl Resolver {
             "passes": passes,
             "dependencies": lab.dependencies.iter().cloned().collect::<std::collections::HashMap<_, _>>(),
             "gamma": lab.gamma,
+            "colors": lab.colors,
             "fallback": lab.fallback,
         })
         .to_string()
