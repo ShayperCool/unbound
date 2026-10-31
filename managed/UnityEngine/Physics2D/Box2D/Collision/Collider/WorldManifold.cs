@@ -1,3 +1,4 @@
+using System;
 using System.Numerics;
 using Unbound.Box2D.Common;
 
@@ -77,6 +78,29 @@ namespace Unbound.Box2D.Collision.Collider
             }
                 break;
             }
+        }
+
+        /// Choose the deepest contact, averaging two contacts only within the
+        /// caller's separation tolerance. Casts may supply the core spread before
+        /// the polygon skin extends the clipping sides.
+        public Vector2 GetRepresentativePoint(int pointCount, float separationSpread, float averagingTolerance)
+        {
+            return pointCount == 2
+                ? SelectPoint(Points[0], Points[1], Separations[0], Separations[1],
+                    separationSpread, averagingTolerance, out _)
+                : Points[0];
+        }
+
+        public static Vector2 SelectPoint(Vector2 point0, Vector2 point1, float separation0, float separation1,
+            float separationSpread, float averagingTolerance, out float separation)
+        {
+            separation = Math.Min(separation0, separation1);
+            if (separationSpread <= averagingTolerance)
+            {
+                separation = 0.5f * (separation0 + separation1);
+                return 0.5f * (point0 + point1);
+            }
+            return separation1 < separation0 ? point1 : point0;
         }
 
         /// world vector pointing from A to B

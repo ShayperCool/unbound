@@ -177,166 +177,61 @@ namespace Unbound.Box2D.Collision
         }
 
         /// <summary>
-        /// Perform a linear shape cast of shape B moving and shape A fixed. Determines the hit point, normal, and translation fraction.
+        /// The point and normal of a cast's hit, as Unity reports them: the normal from the hit
+        /// shape (A) to the cast one (B) at the hit pose, and the point midway between their
+        /// surfaces; where they touch along parallel features (two faces), at the middle of the
+        /// part they share.
         /// </summary>
-        /// <param name="output"></param>
-        /// <param name="input"></param>
-        /// <returns>true if hit, false if there is no hit or an initial overlap</returns>
-        public static bool ShapeCast(out ShapeCastOutput output, in ShapeCastInput input, float targetOffset = 0f)
+        public static (Vector2 Point, Vector2 Normal) SurfaceContact(DistanceProxy a, Transform xfA, DistanceProxy b, Transform xfB, Vector2 point, Vector2 normal, float minimumRadius)
         {
-            output = new ShapeCastOutput
+            var input = new DistanceInput { ProxyA = a, ProxyB = b, TransformA = xfA, TransformB = xfB, UseRadii = false };
+            var cache = new SimplexCache();
+            DistanceAlgorithm.Distance(out var core, ref cache, input);
+            var n = core.PointB - core.PointA;
+            if (core.Distance <= 1e-6f || n.LengthSquared() <= 0f) return (point, normal);
+            n = Vector2.Normalize(n);
+            if (CollisionUtils.TryGetFaceContact(a, xfA, b, xfB, cache, out var clippedPoint, out var clippedNormal))
+                return (clippedPoint, clippedNormal);
+            float rA = Math.Max(a.Radius, minimumRadius);
+            float rB = Math.Max(b.Radius, minimumRadius);
+            // Midway between the surfaces along the normal.
+            float surfaceA = Vector2.Dot(core.PointA, n) + rA;
+            float surfaceB = Vector2.Dot(core.PointB, n) - rB;
+            float across = 0.5f * (surfaceA + surfaceB);
+            var t = new Vector2(-n.Y, n.X);
+            float along = 0.5f * (Vector2.Dot(core.PointA, t) + Vector2.Dot(core.PointB, t));
+            // The features facing each other: A's vertices furthest along n, B's least.
+            const float flat = 1e-3f;
+            float maxA = float.MinValue, minB = float.MaxValue;
+            for (int i = 0; i < a.Count; i++) maxA = Math.Max(maxA, Vector2.Dot(MathUtils.Mul(xfA, a.Vertices[i]), n));
+            for (int i = 0; i < b.Count; i++) minB = Math.Min(minB, Vector2.Dot(MathUtils.Mul(xfB, b.Vertices[i]), n));
+            float loA = float.MaxValue, hiA = float.MinValue, loB = float.MaxValue, hiB = float.MinValue;
+            int countA = 0, countB = 0;
+            for (int i = 0; i < a.Count; i++)
             {
-                Iterations = 0,
-                Lambda = 1.0f,
-                Normal = Vector2.Zero,
-                Point = Vector2.Zero
-            };
-
-            ref readonly var proxyA = ref input.ProxyA;
-            ref readonly var proxyB = ref input.ProxyB;
-
-            var radiusA = Math.Max(proxyA.Radius, Settings.PolygonRadius);
-            var radiusB = Math.Max(proxyB.Radius, Settings.PolygonRadius);
-            var radius = radiusA + radiusB;
-
-            var xfA = input.TransformA;
-            var xfB = input.TransformB;
-
-            var r = input.TranslationB;
-            var n = new Vector2(0.0f, 0.0f);
-            var lambda = 0.0f;
-
-            // Initial simplex
-            var simplex = new Simplex();
-
-            // Get simplex vertices as an array.
-            // ref var vertices = ref simplex.Vertices;
-
-            // Get support point in -r direction
-            var indexA = proxyA.GetSupport(MathUtils.MulT(xfA.Rotation, -r));
-            var wA = MathUtils.Mul(xfA, proxyA.GetVertex(indexA));
-            var indexB = proxyB.GetSupport(MathUtils.MulT(xfB.Rotation, r));
-            var wB = MathUtils.Mul(xfB, proxyB.GetVertex(indexB));
-            var v = wA - wB;
-
-            // Sigma is the target distance between polygons
-            // Unbound: `targetOffset` moves the target (Unity's queries stop a linear slop deeper, and
-            // report the point midway between the surfaces).
-            var sigma = Math.Max(Settings.PolygonRadius, radius - Settings.PolygonRadius) + targetOffset;
-            float tolerance = 0.5f * Settings.LinearSlop;
-
-            // Main iteration loop.
-            // 迭代次数上限
-            const int maxIters = 20;
-            var iter = 0;
-            while (iter < maxIters && v.Length() - sigma > tolerance)
-            {
-                Debug.Assert(simplex.Count < 3);
-
-                output.Iterations += 1;
-
-                // Support in direction -v (A - B)
-                indexA = proxyA.GetSupport(MathUtils.MulT(xfA.Rotation, -v));
-                wA = MathUtils.Mul(xfA, proxyA.GetVertex(indexA));
-                indexB = proxyB.GetSupport(MathUtils.MulT(xfB.Rotation, v));
-                wB = MathUtils.Mul(xfB, proxyB.GetVertex(indexB));
-                var p = wA - wB;
-
-                // -v is a normal at p
-                v.Normalize();
-
-                // Intersect ray with plane
-                var vp = Vector2.Dot(v, p);
-                var vr = Vector2.Dot(v, r);
-                if (vp - sigma > lambda * vr)
-                {
-                    if (vr <= 0.0f)
-                    {
-                        return false;
-                    }
-
-                    lambda = (vp - sigma) / vr;
-                    if (lambda > 1.0f)
-                    {
-                        return false;
-                    }
-
-                    n = -v;
-                    simplex.Count = 0;
-                }
-
-                // Reverse simplex since it works with B - A.
-                // Shift by lambda * r because we want the closest point to the current clip point.
-                // Note that the support point p is not shifted because we want the plane equation
-                // to be formed in unshifted space.
-                ref var vertex = ref simplex.Vertices[simplex.Count];
-                vertex.IndexA = indexB;
-                vertex.Wa = wB + lambda * r;
-                vertex.IndexB = indexA;
-                vertex.Wb = wA;
-                vertex.W = vertex.Wb - vertex.Wa;
-                vertex.A = 1.0f;
-
-                simplex.Count += 1;
-
-                switch (simplex.Count)
-                {
-                    case 1:
-                        break;
-
-                    case 2:
-                        simplex.Solve2();
-                        break;
-
-                    case 3:
-                        simplex.Solve3();
-                        break;
-
-                    default:
-                        Debug.Assert(false);
-                        break;
-                }
-
-                // If we have 3 points, then the origin is in the corresponding triangle.
-                if (simplex.Count == 3)
-                {
-                    // Overlap
-                    return false;
-                }
-
-                // Get search direction.
-                v = simplex.GetClosestPoint();
-
-                // Iteration count is equated to the number of support point calls.
-                ++iter;
+                var v = MathUtils.Mul(xfA, a.Vertices[i]);
+                if (Vector2.Dot(v, n) < maxA - flat) continue;
+                float s = Vector2.Dot(v, t);
+                loA = Math.Min(loA, s);
+                hiA = Math.Max(hiA, s);
+                countA++;
             }
-
-            if (iter == 0)
+            for (int i = 0; i < b.Count; i++)
             {
-                // Initial overlap
-                return false;
+                var v = MathUtils.Mul(xfB, b.Vertices[i]);
+                if (Vector2.Dot(v, n) > minB + flat) continue;
+                float s = Vector2.Dot(v, t);
+                loB = Math.Min(loB, s);
+                hiB = Math.Max(hiB, s);
+                countB++;
             }
-
-            // Prepare output.
-            simplex.GetWitnessPoints(out var pointB, out var pointA);
-
-            if (v.LengthSquared() > 0.0f)
+            if (countA >= 2 && countB >= 2)
             {
-                n = -v;
-                n.Normalize();
+                float lo = Math.Max(loA, loB), hi = Math.Min(hiA, hiB);
+                if (hi > lo) along = 0.5f * (lo + hi);
             }
-
-            output.Point = pointA + radiusA * n;
-            if (targetOffset != 0f)
-            {
-                // Unbound: Unity's query point is midway between the two surfaces.
-                float coreDistance = Vector2.Dot(pointB - pointA, n);
-                output.Point = pointA + 0.5f * (radiusA + coreDistance - radiusB) * n;
-            }
-            output.Normal = n;
-            output.Lambda = lambda;
-            output.Iterations = iter;
-            return true;
+            return (across * n + along * t, n);
         }
+
     }
 }
