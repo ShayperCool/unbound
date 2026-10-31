@@ -1539,4 +1539,38 @@ mod tests {
             "every failing (sample, Native, engine): {failures:?}"
         );
     }
+    #[test]
+    fn highpass_startup_matches_the_complete_native_tone_capture() {
+        let reference = include_bytes!(
+            "../../../../tests/projects/mixerfilters/Reference/unity-6000.0.71f1/rate-48000/tone_hp.master.f32"
+        );
+        let mut m = Mixer::new(MixerConfig::default());
+        m.configure_group(filter_group(3, 0, "Highpass")).unwrap();
+        let input = (0..12288)
+            .map(|i| {
+                let t = i as f64 / 48000.0;
+                (0.125 * (std::f64::consts::TAU * 400.0 * t).sin()
+                    + 0.0625 * (std::f64::consts::TAU * 6000.0 * t).sin()) as f32
+            })
+            .collect();
+        m.add_clip(1, Clip::new(1, 48000, input));
+        source_with(&mut m, 7, 1, |p| p.group = 3);
+        play(&mut m, 7, command::PLAY, 0.0);
+        let mut out = vec![0.0; reference.len() / 4];
+        m.render(&mut out, 2);
+        let failures: Vec<_> = reference
+            .chunks_exact(4)
+            .zip(&out)
+            .enumerate()
+            .filter_map(|(i, (bytes, actual))| {
+                let expected = f32::from_le_bytes(bytes.try_into().unwrap());
+                ((*actual - expected).abs() > 2e-5 + 2e-4 * expected.abs())
+                    .then_some((i, expected, *actual))
+            })
+            .collect();
+        assert!(
+            failures.is_empty(),
+            "every failing (sample, Native, engine): {failures:?}"
+        );
+    }
 }
