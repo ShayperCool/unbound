@@ -67,16 +67,8 @@ namespace UnityEngine
             m_Name = name;
         }
 
-        /// <summary>The bytes decoded as UTF-8 (a byte order mark is skipped, as Unity does).</summary>
-        public string text
-        {
-            get
-            {
-                var b = m_Bytes;
-                if (b.Length >= 3 && b[0] == 0xEF && b[1] == 0xBB && b[2] == 0xBF) return Encoding.UTF8.GetString(b, 3, b.Length - 3);
-                return Encoding.UTF8.GetString(b);
-            }
-        }
+        /// <summary>The text view of the stored bytes, with Native BOM detection and fallback.</summary>
+        public string text => DecodeTextBytes(m_Bytes);
 
         public byte[] bytes => (byte[])m_Bytes.Clone();
 
