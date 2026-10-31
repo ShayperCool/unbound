@@ -180,6 +180,8 @@ struct Voice {
     /// The gain matrix of the last block (ramped from).
     matrix: [f32; 4],
     fresh: bool,
+    /// Unity starts a voice with a 64-sample linear fade (measured by the dry step probe).
+    fade_frames: u32,
     stream: Option<StreamState>,
 }
 
@@ -194,6 +196,7 @@ impl Voice {
             volume_scale,
             matrix: [0.0; 4],
             fresh: true,
+            fade_frames: 0,
             stream: None,
         }
     }
@@ -728,7 +731,10 @@ impl Mixer {
         let listener_paused = self.listener_paused;
         let has_listener = self.has_listener;
         let config = self.config;
-        let need_mix = !self.discard_output || self.listener_filter || self.listener_output_wanted;
+        let need_mix = !self.discard_output
+            || self.listener_filter
+            || self.listener_output_wanted
+            || !self.group_nodes.is_empty();
         self.mix[..n * 2].fill(0.0);
         for node in self.group_nodes.values_mut() {
             node.buffer[..n * 2].fill(0.0);
@@ -834,6 +840,9 @@ impl Mixer {
                     pitch,
                     out_rate,
                     target,
+                    (source.params.spatial_blend <= 0.0
+                        && source.params.spatial_blend_curve.is_empty())
+                    .then_some(source.params.pan_stereo),
                     looping,
                     audible.then_some(&mut *buffer),
                     callback,
@@ -852,6 +861,9 @@ impl Mixer {
                     pitch,
                     out_rate,
                     target,
+                    (source.params.spatial_blend <= 0.0
+                        && source.params.spatial_blend_curve.is_empty())
+                    .then_some(source.params.pan_stereo),
                     false,
                     audible.then_some(&mut *buffer),
                     callback,
@@ -998,7 +1010,8 @@ fn render_voice(
     t0: u64,
     pitch: f64,
     out_rate: u32,
-    target: [f32; 4],
+    mut target: [f32; 4],
+    mono_pan: Option<f32>,
     looping: bool,
     mut out: Option<&mut [f32]>,
     callback: Option<Callback>,
@@ -1011,6 +1024,23 @@ fn render_voice(
     }
     if clip.frames == 0 {
         return true;
+    }
+    if clip.channels == 1
+        && let Some(pan) = mono_pan
+    {
+        let pan = pan.clamp(-1.0, 1.0);
+        let linear = spatial::balance(pan);
+        let angle = (pan + 1.0) * std::f32::consts::FRAC_PI_4;
+        let equal_power = [angle.cos(), angle.sin()];
+        for channel in 0..2 {
+            let scale = if linear[channel] > 0.0 {
+                equal_power[channel] / linear[channel]
+            } else {
+                0.0
+            };
+            target[channel * 2] *= scale;
+            target[channel * 2 + 1] *= scale;
+        }
     }
     if voice.fresh {
         voice.matrix = target;
@@ -1062,10 +1092,11 @@ fn render_voice(
                 from[2] + (target[2] - from[2]) * t,
                 from[3] + (target[3] - from[3]) * t,
             ];
-            let v = voice.volume_scale;
+            let v = voice.volume_scale * voice.fade_frames.min(64) as f32 / 64.0;
             out[f * 2] += (m[0] * l + m[1] * r) * v;
             out[f * 2 + 1] += (m[2] * l + m[3] * r) * v;
         }
+        voice.fade_frames = (voice.fade_frames + 1).min(64);
         if let Some(stream) = &mut voice.stream {
             voice.position += step.abs();
             stream.trim(voice.position, clip.channels);

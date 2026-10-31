@@ -371,8 +371,8 @@ namespace UnityEngine.Audio
                 effects.Add(new {
                     id = effect.m_EffectId, kind = effect.m_EffectName, bypass = effect.m_Bypass,
                     gain = AudioMixer.DecibelsToGain(m_Mixer.Value(m_VolumeGuid)),
-                    cutoff = m_Mixer.Value(effect.Parameter("Cutoff freq")),
-                    resonance = m_Mixer.Value(effect.Parameter("Resonance")),
+                    cutoff = effect.Parameter("Cutoff freq") is string cutoff ? m_Mixer.Value(cutoff) : 5000f,
+                    resonance = effect.Parameter("Resonance") is string resonance ? m_Mixer.Value(resonance) : 1f,
                 });
             }
             var parent = m_Parent ?? m_Mixer?.m_OutputGroup;

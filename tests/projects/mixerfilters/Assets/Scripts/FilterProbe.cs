@@ -32,12 +32,16 @@ public class FilterProbe : MonoBehaviour
         foreach (float sample in data) { m_Writer.Write(sample); m_MasterWriter.Write(sample); }
         m_Written += data.Length;
     }
-    void RenderEngine(int frames, int rate)
+    void FlushEngine()
     {
         var assembly = typeof(AudioSource).Assembly;
         typeof(Time).GetField("s_RealDeltaTime", Flags).SetValue(null, 0.0);
         typeof(Time).GetField("s_DeltaTime", Flags).SetValue(null, 0f);
         assembly.GetType("Unbound.Runtime.AudioSystem").GetMethod("Update", Flags).Invoke(null, null);
+    }
+    void RenderEngine(int frames, int rate)
+    {
+        var assembly = typeof(AudioSource).Assembly;
         var backendType = assembly.GetType("Unbound.Runtime.AudioBackend");
         var backend = backendType.GetProperty("Current", Flags).GetValue(null);
         var packet = Activator.CreateInstance(assembly.GetType("Unbound.Runtime.AudioFramePacket"));
@@ -128,6 +132,7 @@ public class FilterProbe : MonoBehaviour
                 {
 #if !UNITY_EDITOR
                     m_Writer = writer; m_MasterWriter = masterWriter; m_Written = 0;
+                    FlushEngine();
 #endif
                     for (int block = 0; block < 12; block++)
                     {
@@ -150,6 +155,8 @@ public class FilterProbe : MonoBehaviour
                         for (int i = 0; i < sink.Length; i++) masterWriter.Write(sink[i]);
 #else
                         RenderEngine(frames, rate);
+                        // Unity's coroutine renders before PostLateUpdate.UpdateAudio submits changes.
+                        FlushEngine();
 #endif
                     }
                 }
