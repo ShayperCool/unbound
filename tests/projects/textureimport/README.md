@@ -1,16 +1,18 @@
 # Texture import probe
 
 What the TextureImporter gives a game, byte for byte: every texture's size, mip count, format and
-the pixels of every mip level (`GetPixels32`, bottom row first). The 75 textures (`make_textures.py`
-writes the sources; one PNG and one importer setting per case) cover box and Kaiser mipmaps in
+the pixels of every mip level (`GetPixels32`, bottom row first; a float texture's `GetPixels` as
+little-endian 32-bit floats). The 78 textures (`make_textures.py` writes the sources; one PNG or
+EXR and one importer setting per case) cover box and Kaiser mipmaps in
 sRGB and linear, fade out, border mipmaps, preserve coverage at three alpha-test values, alpha is
 transparency, alpha from grayscale and alpha source None, non-power-of-two textures without
 scaling (odd sizes, one odd side) and scaled to nearest/larger/smaller, the max size with the
-Mitchell and Bilinear resize algorithms, and normal maps: plain, with Kaiser mips, flipped green
+Mitchell and Bilinear resize algorithms (also soft 512x512 and 600x360 images and a float EXR
+downscaled to 128 and 256 rows), and normal maps: plain, with Kaiser mips, flipped green
 and fading, and made from grayscale with the standard and Sobel filters at eleven height scales,
 three sizes, gray and coloured sources and impulses (filter kernels). Every case is readable and
-stored as RGBA32 (platform overrides; uncompressed default platform), so compression hides
-nothing.
+stored as RGBA32, the float case as RGBAFloat (platform overrides; uncompressed default platform),
+so compression hides nothing.
 
 Profiles: Gamma and Linear projects on the Standalone target, and a gamma project on the Android
 target (`-buildTarget Android` / `--target Android`). Editors run on the GPU (private Xvfb,
@@ -18,6 +20,7 @@ VirtualGL) through the shared heavy-job launcher; every run works on a copy in t
 cache.
 
     python3 tests/projects/textureimport/run.py editor --release <version> --label <L>    # two Editor runs per profile
+    python3 tests/projects/textureimport/run.py editor --release <version> --label <L> --job-worker-count N  # one more, N job workers
     python3 tests/projects/textureimport/run.py publish --release <version> --label <L>   # checks they agree, writes Reference/
     UNBOUND_CLI=<unbound> python3 tests/projects/textureimport/run.py unbound --release <version> --label <L>
     R=tests/projects/textureimport/Reference/unity-6000.0.71f1 W=~/.cache/unbound/validation/runs/textureimport/<L>
@@ -75,16 +78,28 @@ order given; Unbound matches every level of every profile byte for byte.
 * **Resize** (NPOT scaling, max size with Mitchell): stb_image_resize 0.97 on the bottom-up stored
   values (no colour-space conversion, no alpha weighting, edges clamped): Mitchell-Netravali
   (B = C = 1/3) on an axis that shrinks, the cubic B-spline otherwise; bytes decode as v / 255 and
-  round in double. The Editor splits the output rows into min(height / 16, job workers) bands
-  resized as stb regions. The Bilinear algorithm interpolates the two texels around each texel
-  centre, x then y, rounding bytes down after each pass.
+  round in double. Float (HDR) images shrink with a variant
+  `(27 m(x) + 2) / 35` instead (plain Mitchell misses 55k of the float case's 65,536 values), and
+  a gamma project gamma-encodes HDR colour after the resize, not before. The Bilinear algorithm
+  interpolates the two texels around each texel centre, x then y, rounding bytes down after each
+  pass.
+* **Job workers.** The Editor resizes the output rows in min(height / 16, workers) bands, each an
+  stb region whose vertical mapping is recomputed in float, so bytes depend on the job worker
+  count. Without `-job-worker-count` that is the online logical processors
+  (`sysconf(_SC_NPROCESSORS_ONLN)`) less one, at least 1, at most 112: 15 on the measured
+  16-thread machine. Captures with `-job-worker-count 1` and `3` (honoured: "JobSystem: Creating
+  JobQueue using job-worker-count value N" in Editor.log) differ from the default in
+  MaxSizeSoftWide (256x154: 3, 1 and 1 bytes of mips 0-2 at 1 worker; 1 and 1 byte of mips 0 and 2
+  at 3), and Unbound's resize reproduces each capture only with that capture's count. Bands of
+  equal power-of-two height (MaxSizeSoft, the float case) do not change.
 
 ## What differs
 
-Nothing in this probe. Not covered: the Editor's modified Mitchell kernel `(27 m(x) + 2) / 35`
-for float (HDR) images (modelled, not measured here), and the band
-split of resized images only changes values when a band's float mapping differs from the whole
-image's (none of the measured sizes).
+The float case's probe values: Unbound's runtime reports an imported float texture as RGBAHalf
+(not the RGBAFloat the override asks for) and so its probe line has the wrong format and length.
+The importer's floats themselves equal the Editor's bit for bit in every profile (the
+`hdr_max_size_resize_matches_the_editor` test of unbound-assets reads this reference). Everything
+else matches byte for byte.
 
 Runners select the Editor release explicitly and write it into disposable project copies.
 Use a fresh label for each run; existing projects and captures are preserved. Only the

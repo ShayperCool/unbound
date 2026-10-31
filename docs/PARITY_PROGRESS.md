@@ -1647,3 +1647,27 @@ textureimport 484/484 levels and 1,172,940/1,172,940 bytes exact in every profil
 introduced. Asset tests 71/71, runtime tests 38/38; API check zero errors in 2279 types, Physics
 and Editor generated files match. Unmeasured: the HDR resize kernel and band splits whose float
 mapping differs from the whole image's (none of the probe's sizes).
+
+### Texture resize: measured job-worker dependence and HDR, 2026-10-31
+
+The texture import probe now also downscales a soft 512x512 image to 128 rows, a soft 600x360
+image (no NPOT scaling) to 256x154 and a float EXR to 128 rows (RGBAFloat override, probe line as
+raw floats). Two default Editor captures per profile agreed byte for byte and extend the
+published reference (21 lines per profile; the earlier 559 values are unchanged). Captures with
+`-job-worker-count 1` and `3` (honoured per Editor.log) differ from the default only in
+MaxSizeSoftWide: 3, 1 and 1 bytes of mips 0-2 at 1 worker, 1 and 1 byte of mips 0 and 2 at 3.
+The Editor splits resized rows into min(height / 16, workers) stb regions; its default worker
+count is `sysconf(_SC_NPROCESSORS_ONLN)` less one, at least 1, at most 112
+(15 here), not the affinity mask Unbound used. The stb model reproduces each capture only with its
+own count, so Unbound now uses the Editor's count and the texture cache key includes it.
+
+The float case confirmed the Editor's modified Mitchell kernel `(27 m(x) + 2) / 35` (plain
+Mitchell misses about 55k of 65,536 values) and showed that a gamma project gamma-encodes HDR
+colour after the resize; Unbound converted before it and now converts per level after the chain
+(cubemaps keep converting first). Texture cache VERSION 11.
+
+Unbound on the extended reference: 501/502 levels and 1,470,348/1,470,348 byte values exact in
+Gamma, Linear and Android; the float case's line still differs (the runtime reports an imported
+float texture as RGBAHalf, so the line has another format and length), while the importer's floats
+equal the Editor's bit for bit in every profile (unbound-assets test
+`hdr_max_size_resize_matches_the_editor`). Sprite import stays 519/520; asset tests 72/72.
