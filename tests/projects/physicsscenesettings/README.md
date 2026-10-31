@@ -331,3 +331,13 @@ No authored game files, generated stubs, shared progress documents, parent build
 outputs, preserved backup branches or snapshot artifacts were changed. This
 branch contains no PR or merge. Parent review and integrated API-check remain
 with the parent.
+
+`Sources/original/` freezes the exact C# input of all thirteen original private
+projects. `Sources/supplemental/` freezes the exact contact/island probe input.
+`run.py prepare` and `contactpairs.py` copy those snapshots so subsequent harness
+edits cannot change the recorded workload. `Evidence/source-sha256.json` records
+their hashes. Before handoff, all 21 private workload sources were checked against
+these snapshots, and every primary private DynamicsManager file remained
+byte-identical to its preserved `Profiles/` input after both Editor runs.
+The report command also regenerates `failure-transitions.json` using the same
+comparison function as the per-record checker.

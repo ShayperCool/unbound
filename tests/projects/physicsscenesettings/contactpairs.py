@@ -12,8 +12,8 @@ for name in profiles:
     if not project.exists():
         for d in ['Assets','ProjectSettings','Packages']:
             shutil.copytree(work/'projects'/name/d,project/d,dirs_exist_ok=True)
-    shutil.copy2(ROOT/'Assets/Scripts/SceneSettingsProbe.cs',project/'Assets/Scripts/SceneSettingsProbe.cs')
-    shutil.copy2(ROOT/'Assets/Editor/ProbeRunner.cs',project/'Assets/Editor/ProbeRunner.cs')
+    shutil.copy2(ROOT/'Sources/supplemental/Scripts/SceneSettingsProbe.cs',project/'Assets/Scripts/SceneSettingsProbe.cs')
+    shutil.copy2(ROOT/'Sources/supplemental/Editor/ProbeRunner.cs',project/'Assets/Editor/ProbeRunner.cs')
     for repeat in ([1,2] if phase=='native' else [1]):
         folder=work/(f'{label}-native{repeat}' if phase=='native' else label+'-'+phase);folder.mkdir(exist_ok=True)
         output=folder/(name+'.jsonl'); env=dict(os.environ,SCENE_SETTINGS_QUERY_CONTACTS='0' if noise else '1',SCENE_SETTINGS_NOISE='1' if noise else '0',SCENE_SETTINGS_OUT=str(output))
