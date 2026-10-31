@@ -1354,8 +1354,11 @@ URP the render pipeline's own preprocessors (package sources) run after the buil
 a material switching shader keeps the old shader's defaults for names both declare; slots
 without a material take the pipeline's default material; and imported materials are
 validated by their shader's ShaderGUI when Unbound has that class (URP's, projects'). URP
-matches 7011/7687 values: legacy-mode URP materials, Shader Graph material queues and GI
-flags, and `GetTag("RenderType", false)` on validated Lit materials still differ. Built-in
+matches 7011 of 7687 Native values. The complete union has 7768 keys and 757 failures:
+550 missing, 126 differing and 81 extra keys. Legacy-mode URP materials, Shader Graph
+material queues and GI flags, and `GetTag("RenderType", false)` on validated Lit
+materials still differ. Root integration reproduces the delivered URP values with
+zero changes or newly failing keys; all35 material descriptions also match. Built-in
 profiles keep 6032/6033. The material-colour regression set, materials, blendshapes, lod,
 urp and urp2d keep their results (one URP skybox capture differs by at most 1/255 in 12310
 channels); managed tests keep the same text and particle failures as the base.
