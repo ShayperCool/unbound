@@ -110,20 +110,24 @@ public class FilterProbe : MonoBehaviour
         else if (!AudioRenderer.Start()) throw new Exception("AudioRenderer.Start failed");
         var sinks = new List<NativeArray<float>>();
         var records = new List<string> { "\"release\":\"" + Application.unityVersion + "\"", "\"rate\":" + rate };
+        bool diagnosticInput = Environment.GetEnvironmentVariable("FILTER_PROBE_DIAGNOSTIC_INPUT") == "1";
+        if (Engine && diagnosticInput) throw new NotSupportedException("Input diagnostics use Native AudioRenderer");
         foreach (string key in Cases)
         {
+            if (diagnosticInput && key != "step_lp" && key != "tone_hp") continue;
             var mixer = Resources.Load<AudioMixer>(key);
             if (!mixer) throw new Exception("Missing mixer " + key);
             if (key == "snapshot_lp") mixer.FindSnapshot("Snapshot").TransitionTo(0);
             int channels = key.StartsWith("stereo") ? 2 : 1;
             var go = new GameObject(key);
             var source = go.AddComponent<AudioSource>();
-            source.outputAudioMixerGroup = mixer.FindMatchingGroups("Child")[0];
+            source.outputAudioMixerGroup = mixer.FindMatchingGroups(diagnosticInput ? "Input" : "Child")[0];
             source.spatialBlend = 0; source.volume = 1;
             var clip = AudioClip.Create(key, frames * 12, channels, rate, false);
             clip.SetData(Signal(frames * 12, channels, rate, key), 0); source.clip = clip;
             var sink = default(NativeArray<float>);
             var buffer = default(NativeArray<float>);
+            var inputBuffer = default(NativeArray<float>);
             MethodInfo addSink = null;
             var masterGroup = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Master");
             MethodInfo observeGroup = Engine ? Type.GetType("Unbound.Runtime.AudioFilters, UnityEngine.CoreModule", true).GetMethod("ObserveGroup", Flags) : null;
@@ -131,6 +135,7 @@ public class FilterProbe : MonoBehaviour
             {
                 sink = new NativeArray<float>(frames * 2, Allocator.Persistent); sinks.Add(sink);
                 buffer = new NativeArray<float>(frames * 2, Allocator.Persistent);
+                if (diagnosticInput) { inputBuffer = new NativeArray<float>(frames * 2, Allocator.Persistent); sinks.Add(inputBuffer); }
                 addSink = typeof(AudioRenderer).GetMethod("AddMixerGroupSink", Flags);
                 masterGroup = Array.Find(mixer.FindMatchingGroups(""), g => g.name == "Master");
                 if (masterGroup == null) throw new Exception("Missing master group");
@@ -142,6 +147,7 @@ public class FilterProbe : MonoBehaviour
                 second.volume = 0.5f; second.Play();
             }
             source.Play();
+            using (var inputWriter = diagnosticInput ? new BinaryWriter(File.Create(Path.Combine(output, key + ".input.f32"))) : null)
             using (var masterWriter = new BinaryWriter(File.Create(Path.Combine(output, key + ".master.f32"))))
             using (var writer = new BinaryWriter(File.Create(Path.Combine(output, key + ".f32"))))
             {
@@ -172,9 +178,11 @@ public class FilterProbe : MonoBehaviour
                     else
                     {
                         if (!(bool)addSink.Invoke(null, new object[] { masterGroup, sink, false })) throw new Exception("AddMixerGroupSink failed");
+                        if (diagnosticInput && !(bool)addSink.Invoke(null, new object[] { source.outputAudioMixerGroup, inputBuffer, false })) throw new Exception("Input sink failed");
                         if (!AudioRenderer.Render(buffer)) throw new Exception("Render failed: " + key);
                         for (int i = 0; i < buffer.Length; i++) writer.Write(buffer[i]);
                         for (int i = 0; i < sink.Length; i++) masterWriter.Write(sink[i]);
+                        if (diagnosticInput) for (int i = 0; i < inputBuffer.Length; i++) inputWriter.Write(inputBuffer[i]);
                     }
                 }
                 if (Engine)
@@ -187,6 +195,7 @@ public class FilterProbe : MonoBehaviour
             if (!Engine) buffer.Dispose();
             records.Add("\""+key+"\":{\"file\":\""+key+".f32\",\"frames\":"+(frames*12)+",\"channels\":2}");
             records.Add("\""+key+".master\":{\"file\":\""+key+".master.f32\",\"frames\":"+(frames*12)+",\"channels\":2}");
+            if (diagnosticInput) records.Add("\""+key+".input\":{\"file\":\""+key+".input.f32\",\"frames\":"+(frames*12)+",\"channels\":2}");
             source.Stop(); DestroyImmediate(go); DestroyImmediate(clip);
         }
         if (!Engine) { AudioRenderer.Stop(); foreach (var sink in sinks) sink.Dispose(); }

@@ -45,6 +45,11 @@ public static class ProbeRunner
             var master = Get(mixer, "masterGroup");
             var child = Call(mixer, "CreateNewGroup", "Child", true);
             Call(mixer, "AddChildToParent", child, master);
+            if (Environment.GetEnvironmentVariable("FILTER_PROBE_DIAGNOSTIC_INPUT") == "1")
+            {
+                var input = Call(mixer, "CreateNewGroup", "Input", true);
+                Call(mixer, "AddChildToParent", input, child);
+            }
             object effect = null;
             if (key != "dry" && key != "step_dry" && key != "stereo_dry")
             {
