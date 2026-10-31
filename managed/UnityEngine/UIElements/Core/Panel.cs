@@ -46,7 +46,27 @@ namespace UnityEngine.UIElements
         internal readonly UaElementUnderPointer uaUnderPointer = new UaElementUnderPointer();
         readonly StyleResolver m_StyleResolver = new StyleResolver();
         internal uint uaVersion;
-        internal readonly HashSet<StyleTransitions> uaTransitionUpdates = new HashSet<StyleTransitions>();
+        internal readonly List<StyleTransitions> uaTransitionUpdates = new List<StyleTransitions>();
+        readonly List<Type> uaTransitionTypes = new List<Type>();
+        readonly Dictionary<Type, List<StyleTransitions>> uaTransitionOwners = new Dictionary<Type, List<StyleTransitions>>();
+        internal bool uaUpdatingTransitions;
+        readonly Dictionary<Type, List<StyleTransitions>> uaTransitionEvents = new Dictionary<Type, List<StyleTransitions>>();
+        internal void UaQueueTransition(StyleTransitions transitions, Type type)
+        {
+            UaRegisterTransition(transitions, type);
+            if (!uaTransitionEvents.TryGetValue(type, out var owners)) uaTransitionEvents[type] = owners = new List<StyleTransitions>();
+            if (!owners.Contains(transitions)) owners.Add(transitions);
+        }
+        internal void UaRegisterTransition(StyleTransitions transitions, Type type)
+        {
+            if (!uaTransitionUpdates.Contains(transitions)) uaTransitionUpdates.Add(transitions);
+            if (!uaTransitionOwners.TryGetValue(type, out var owners))
+            {
+                uaTransitionTypes.Add(type);
+                uaTransitionOwners[type] = owners = new List<StyleTransitions>();
+            }
+            if (!owners.Contains(transitions)) owners.Add(transitions);
+        }
 
         public abstract VisualElement visualTree { get; }
         public abstract EventDispatcher dispatcher { get; set; }
@@ -203,15 +223,34 @@ namespace UnityEngine.UIElements
 
         public virtual void UpdateAnimations()
         {
-            long now = Panel.TimeSinceStartupMs();
-            // Events can start or detach animations. New registrations wait for the next update.
-            var updates = new List<StyleTransitions>(uaTransitionUpdates);
-            foreach (var transitions in updates)
+            // Native controls show panel-wide value-type phases. All owners in a type are
+            // sampled before its events, and callbacks can retarget a later type in this tick.
+            if (uaUpdatingTransitions) return;
+            uaUpdatingTransitions = true;
+            try
             {
-                if (!uaTransitionUpdates.Contains(transitions)) continue;
-                transitions.Update(now);
-                if (!transitions.active) uaTransitionUpdates.Remove(transitions);
+                long now = Panel.TimeSinceStartupMs();
+                var types = uaTransitionTypes.ToArray();
+                foreach (var type in types)
+                {
+                    var updates = uaTransitionOwners[type].ToArray();
+                    foreach (var transitions in updates)
+                        if (uaTransitionUpdates.Contains(transitions)) transitions.Update(now, type);
+                    if (uaTransitionEvents.TryGetValue(type, out var queued))
+                    {
+                        // Freeze every owner's current batch before the first callback. Events
+                        // queued by this type's callbacks belong to the next animation update.
+                        var events = queued.ToArray();
+                        queued.Clear();
+                        foreach (var transitions in events) transitions.FreezeEvents(type);
+                        foreach (var transitions in events) transitions.Dispatch();
+                    }
+                }
+                uaTransitionUpdates.RemoveAll(transitions => !transitions.active);
+                foreach (var owners in uaTransitionOwners.Values)
+                    owners.RemoveAll(transitions => !uaTransitionUpdates.Contains(transitions));
             }
+            finally { uaUpdatingTransitions = false; }
         }
 
         public abstract void ApplyStyles();
@@ -225,8 +264,6 @@ namespace UnityEngine.UIElements
             m_Validating = true;
             try
             {
-                UaApplyStyles();
-                UpdateAnimations();
                 UaApplyStyles();
                 UpdateLayout();
                 if (m_UaHierarchyFlagsVersion != m_UaHierarchyFlagsLastVersion)
@@ -471,6 +508,8 @@ namespace UnityEngine.UIElements
         internal virtual void Update()
         {
             uaScheduler.UpdateScheduledEvents();
+            ApplyStyles();
+            UpdateAnimations();
             ValidateLayout();
         }
 
