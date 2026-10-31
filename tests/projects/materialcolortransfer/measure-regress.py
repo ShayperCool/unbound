@@ -8,16 +8,17 @@ for name,project,ref in [('graphics','graphics','Reference/unity-6000.0.71f1.jso
 for s in ['Linear','Gamma']:checks.append(('camera-focused-'+s.lower(),p/'cameramsaa/compare.py',p/'cameramsaa/Reference'/('FollowupFocusedNative'+s),''))
 checks.append(('uitk',p/'uitk/compare.py',p/'uitk/Reference/unity-6000.0.71f1.jsonl','unbound.jsonl'))
 summary=[];errors=[]
+final_name='regress-final'+os.environ.get('MATERIAL_COLOR_TRANSFER_FINAL_SUFFIX','')
 for phase in ['before','final']:
  for name,checker,ref,tail in checks:
-  result=subprocess.run([sys.executable,str(checker),str(ref),str(w/('regress-'+phase)/('builtinrp-correct' if phase=='before' and name=='builtinrp' else name)/tail)],capture_output=True,text=True)
+  result=subprocess.run([sys.executable,str(checker),str(ref),str(w/('regress-before' if phase=='before' else final_name)/('builtinrp-correct' if phase=='before' and name=='builtinrp' else name)/tail)],capture_output=True,text=True)
   (e/(phase+'-'+name+'.txt')).write_text(result.stdout+result.stderr)
   summary.append(f'{phase} {name} exit {result.returncode}\n'+ '\n'.join(result.stdout.splitlines()[-3:]))
   if name!='uitk' and result.returncode:errors.append(phase+' '+name)
   if name=='builtinrp' and ('0 differ, 124 expected; 33/33 images' not in result.stdout):errors.append(phase+' builtinrp counts')
 for name,_,_,_ in checks:
  def hashes(root):return {str(p.relative_to(root)):hashlib.sha256(p.read_bytes()).hexdigest() for p in root.rglob('*') if p.is_file()}
- a=hashes(w/'regress-before'/('builtinrp-correct' if name=='builtinrp' else name));b=hashes(w/'regress-final'/name);changed=sorted(k for k in a.keys()|b.keys() if a.get(k)!=b.get(k))
+ a=hashes(w/'regress-before'/('builtinrp-correct' if name=='builtinrp' else name));b=hashes(w/final_name/name);changed=sorted(k for k in a.keys()|b.keys() if a.get(k)!=b.get(k))
  summary.append(f'{name}: {len(a)} files; changed: {changed}')
  if name=='uitk' and changed:errors.append('uitk captures changed')
 result=subprocess.run([sys.executable,str(p/'uitk/compare.py'),str(w/'regress-before/uitk/unbound.jsonl'),str(w/'regress-final/uitk/unbound.jsonl')],capture_output=True,text=True)

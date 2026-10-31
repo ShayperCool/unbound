@@ -241,3 +241,35 @@ results.
 ordinary Float buffers. The declaration-based Vector controls are unchanged.
 Property-block SetColor applied to a Vector declaration is a measured conversion
 case; its behavior is documented separately above.
+
+### Final metadata-reader check
+
+After the first final captures, the metadata reader changed from integer IDs to
+property names for its internal flag set. Reading shader flags now allocates no
+new Shader property IDs. This avoids introducing an ordering side effect. The
+wire data and Rust code are unchanged. Initial final captures remain privately
+under `final-*` and `regress-final`; the final source revision is independently
+rebuilt under `final2-managed`/`final2-build` and captured under `final2-*` and
+`regress-final2`. The selected managed tests are rebuilt under `unit2-build`.
+
+```sh
+UNBOUND_MANAGED_DIR="$w/final2-managed" MATERIAL_COLOR_TRANSFER_BUILD="$w/final2-build/" \
+  "$f/run.sh" build
+source "$w/final-env.sh"
+export UNBOUND_MANAGED_DIR="$w/final2-managed" MATERIAL_COLOR_TRANSFER_FINAL_SUFFIX=2
+for space in linear gamma; do
+  if [ "$space" = gamma ]; then
+    export MATERIAL_COLOR_TRANSFER_PROJECT="$PWD/$f/Library/Gamma"
+  else
+    unset MATERIAL_COLOR_TRANSFER_PROJECT
+  fi
+  MATERIAL_COLOR_TRANSFER_OUT="$w/final2-$space" "$f/run.sh" engine
+  python3 "$f/compare.py" "$w/oracle-v2-${space}1" "$w/final2-$space"
+done
+unset MATERIAL_COLOR_TRANSFER_PROJECT
+MATERIAL_COLOR_REGRESS_OUT="$w/regress-final2" python3 "$f/regress.py"
+python3 "$f/summarize.py"
+python3 "$f/measure-regress.py"
+# Repeat the identical managed test command above, replacing unit-build/ with
+# unit2-build/. Preserve unit-tests.log and unit2-tests.log separately.
+```
