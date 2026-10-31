@@ -12,8 +12,22 @@ cli="${MATERIAL_COLOR_TRANSFER_CLI:-$HOME/.cache/compat/parity-baseline-native6/
 heavy="$HOME/.cache/compat/with-heavy-job"
 editor="$HOME/Unity/Hub/Editor/6000.0.71f1/Editor/Unity"
 mkdir -p "$root" "$(dirname "$MATERIAL_COLOR_TRANSFER_OUT")"
+# Live asset tests deliberately modify loaded assets. Preserve exact authored inputs.
+saved="$fixture/Library/MaterialColorTransferAuthored"
+if [ "$1" = native ]; then
+ mkdir -p "$saved"
+ cp "$fixture/Assets/Resources/Imported.mat" "$saved/Imported.mat"
+ cp "$fixture/Assets/Resources/Variant.mat" "$saved/Variant.mat"
+fi
+cleanup() {
+ if [ "$1" = native ]; then
+  cp "$saved/Imported.mat" "$fixture/Assets/Resources/Imported.mat"
+  cp "$saved/Variant.mat" "$fixture/Assets/Resources/Variant.mat"
+ fi
+ MATERIAL_COLOR_TRANSFER_PROJECT="$fixture" python3 tests/projects/materialcolortransfer/cleanup.py
+}
 # Unity's Roslyn server can survive Editor exit. Only stop this fixture's processes.
-trap 'MATERIAL_COLOR_TRANSFER_PROJECT="$fixture" python3 tests/projects/materialcolortransfer/cleanup.py' EXIT
+trap 'cleanup "$1"' EXIT
 case "$1" in
  create) "$heavy" timeout 600 "$editor" -batchmode -quit -force-glcore -projectPath "$fixture" -executeMethod ProbeRunner.Create -logFile "$MATERIAL_COLOR_TRANSFER_OUT.log" ;;
  native) "$heavy" timeout 600 "$editor" -batchmode -force-glcore -projectPath "$fixture" -executeMethod ProbeRunner.Record -logFile "$MATERIAL_COLOR_TRANSFER_OUT.log" ;;
