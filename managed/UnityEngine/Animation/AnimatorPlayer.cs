@@ -16,6 +16,9 @@ namespace Unbound.Runtime
         internal double Previous;
         /// <summary>Entered since the last update: events at its start time fire.</summary>
         internal bool Fresh = true;
+        /// <summary>Events were fired for the state's first evaluation (an Animator.Update(0) that
+        /// enters no state yet still fires events at the start time).</summary>
+        internal bool EventsStarted;
         /// <summary>Its transitions have not been checked yet: an exit time at the start counts.</summary>
         internal bool ExitInclusive = true;
         /// <summary>OnStateEnter was queued this update (OnStateUpdate waits for the next one).</summary>
@@ -318,8 +321,18 @@ namespace Unbound.Runtime
         /// output; the attached Animator runs it before movement callbacks and transform writes.</summary>
         internal void AfterEvaluate()
         {
-            // Animator.Update(0) before the first advancing evaluation does not enter states.
-            if (Attached && !m_CallbacksStarted) return;
+            // Animator.Update(0) before the first advancing evaluation does not enter states; it
+            // fires the events at the states' start times, once (measured, tests/projects/modelclips).
+            if (Attached && !m_CallbacksStarted)
+            {
+                FireEvents();
+                foreach (var layer in Layers)
+                {
+                    if (layer.Current != null) layer.Current.EventsStarted = true;
+                    if (layer.Next != null) layer.Next.EventsStarted = true;
+                }
+                return;
+            }
             FireEvents();
             QueueUpdates();
             foreach (var layer in Layers)
@@ -1040,8 +1053,12 @@ namespace Unbound.Runtime
                     }
                     var bound = Bindings.Bind(clip);
                     if (pose.Value.Length < Bindings.FloatCount || pose.Objects.Length < Bindings.ObjectCount) return; // bound after the poses were sized
-                    ClipSampling.Sample(bound, ClipSampling.ClipTime(clip, normalized, clip.isLooping), weight, pose, mask, objectMask,
-                        layer.Def.Additive ? Bindings.AdditiveReference(bound) : null);
+                    // Cycle offsets (the clip's, the state's and blend trees') shift looping clips
+                    // only; a clip without loop time plays from the state's time (measured,
+                    // tests/projects/modelclips).
+                    double time = clip.isLooping ? normalized + clip.m_CycleOffset : run.Normalized;
+                    ClipSampling.Sample(bound, ClipSampling.ClipTime(clip, time, clip.isLooping), weight, pose, mask, objectMask,
+                        layer.Def.Additive ? Bindings.AdditiveReference(bound) : null, loopPose: true);
                     m_Contributions.Add((layer, layerIndex, run, clip, weight));
                     break;
                 }
@@ -1165,10 +1182,11 @@ namespace Unbound.Runtime
             foreach (var (layer, run, end) in left)
             {
                 if (!(MotionOf(layer.Def, run.Def) is AnimationClip leftClip) || leftClip.m_Events.Count == 0) continue;
-                double leftOffset = run.Def.CycleOffset;
+                double leftOffset = leftClip.isLooping ? run.Def.CycleOffset + leftClip.m_CycleOffset : 0.0;
                 var leftInfo = StateInfo(layer, run);
                 var leftClipInfo = new AnimatorClipInfo { m_Clip = leftClip, m_Weight = 1f };
-                AnimationEvents.FireCrossed(leftClip, run.Previous + leftOffset, end + leftOffset, leftClip.isLooping, run.Fresh, e =>
+                AnimationEvents.FireCrossed(leftClip, Single(run.Previous + leftOffset), Single(end + leftOffset), leftClip.isLooping,
+                    run.Fresh && !run.EventsStarted, e =>
                 {
                     var fired = e.Copy();
                     fired.m_Source = AnimationEventSource.Animator;
@@ -1180,10 +1198,11 @@ namespace Unbound.Runtime
             foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions.ToArray())
             {
                 if (clip.m_Events.Count == 0 || weight <= 0f) continue;
-                double offset = run.Def.CycleOffset;
+                double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
                 var info = StateInfo(layer, run);
                 var clipInfo = new AnimatorClipInfo { m_Clip = clip, m_Weight = weight };
-                AnimationEvents.FireCrossed(clip, run.Previous + offset, run.Normalized + offset, clip.isLooping, run.Fresh, e =>
+                AnimationEvents.FireCrossed(clip, Single(run.Previous + offset), Single(run.Normalized + offset), clip.isLooping,
+                    run.Fresh && !run.EventsStarted, e =>
                 {
                     var fired = e.Copy();
                     fired.m_Source = AnimationEventSource.Animator;
@@ -1193,6 +1212,10 @@ namespace Unbound.Runtime
                 });
             }
         }
+
+        /// <summary>A state time as the Editor compares event times with it: in single precision
+        /// (a state offset that lands exactly on an event fires it).</summary>
+        static double Single(double normalized) => (float)normalized;
 
         internal AnimatorStateInfo StateInfo(LayerRun layer, StateRun run)
         {

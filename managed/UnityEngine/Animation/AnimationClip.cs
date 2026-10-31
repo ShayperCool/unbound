@@ -85,6 +85,18 @@ namespace UnityEngine
         internal bool m_HasAdditiveReferencePose;
         internal AnimationClip m_AdditiveReferencePoseClip;
         internal float m_AdditiveReferencePoseTime;
+        /// <summary>Settings kept as they are (mirror has no effect on generic clips, measured in
+        /// tests/projects/modelclips).</summary>
+        internal bool m_Mirror;
+        internal float m_OrientationOffsetY;
+        internal float m_Level;
+        internal bool m_LoopBlendOrientation;
+        internal bool m_LoopBlendPositionY;
+        internal bool m_LoopBlendPositionXZ;
+        internal bool m_KeepOriginalOrientation;
+        internal bool m_KeepOriginalPositionY = true;
+        internal bool m_KeepOriginalPositionXZ;
+        internal bool m_HeightFromFeet;
         /// <summary>Bumped when curves change, so bindings made from the old curves are redone.</summary>
         internal int m_Version;
         /// <summary>The serialized m_HasGenericRootTransform (player data), else computed.</summary>
@@ -103,6 +115,54 @@ namespace UnityEngine
 
         /// <summary>Where the clip's time 0 is on its curves.</summary>
         internal float StartTime => m_HasRange ? m_StartTime : 0f;
+
+        float[] m_LoopStart, m_LoopStop;
+        int m_LoopVersion = -1;
+
+        /// <summary>Loop pose (m_LoopBlend, with loop time): where the Animator samples the clip at
+        /// a time, the phase (time from the start over the length) it corrects the values by, else
+        /// -1. The curves themselves stay as they are (measured, tests/projects/modelclips).</summary>
+        internal float LoopPosePhase(float time)
+        {
+            float length = this.length;
+            if (!m_LoopTime || !m_LoopBlend || length <= 0f) return -1f;
+            if (m_LoopVersion != m_Version || m_LoopStart == null || m_LoopStart.Length != m_Curves.Count)
+            {
+                m_LoopStart = new float[m_Curves.Count];
+                m_LoopStop = new float[m_Curves.Count];
+                for (int i = 0; i < m_Curves.Count; i++)
+                {
+                    m_LoopStart[i] = m_Curves[i].Evaluate(StartTime);
+                    m_LoopStop[i] = m_Curves[i].Evaluate(StartTime + length);
+                }
+                m_LoopVersion = m_Version;
+            }
+            return Math.Clamp((time - StartTime) / length, 0f, 1f);
+        }
+
+        /// <summary>A float value under loop pose: (start − stop) × phase added.</summary>
+        internal float LoopPose(int curve, float value, float phase) =>
+            phase < 0f ? value : value + (m_LoopStart[curve] - m_LoopStop[curve]) * phase;
+
+        /// <summary>A rotation (curves <paramref name="first"/>..+3) under loop pose: turned by
+        /// normalize(phase · d.xyz, d.w), d = stop⁻¹ · start, of the sampled first and last frames.</summary>
+        internal Quaternion LoopPose(int first, Quaternion q, float phase)
+        {
+            if (phase < 0f) return q;
+            var start = Unit(m_LoopStart, first);
+            var stop = Unit(m_LoopStop, first);
+            var d = new Quaternion(-stop.x, -stop.y, -stop.z, stop.w) * start;
+            float x = d.x * phase, y = d.y * phase, z = d.z * phase, w = d.w;
+            float m = MathF.Sqrt(x * x + y * y + z * z + w * w);
+            if (m < 1e-12f) return q;
+            return q * new Quaternion(x / m, y / m, z / m, w / m);
+        }
+
+        static Quaternion Unit(float[] v, int i)
+        {
+            float m = MathF.Sqrt(v[i] * v[i] + v[i + 1] * v[i + 1] + v[i + 2] * v[i + 2] + v[i + 3] * v[i + 3]);
+            return m < 1e-12f ? Quaternion.identity : new Quaternion(v[i] / m, v[i + 1] / m, v[i + 2] / m, v[i + 3] / m);
+        }
 
         float CurveEnd()
         {
@@ -330,6 +390,16 @@ namespace UnityEngine
                 m_HasAdditiveReferencePose = m_HasAdditiveReferencePose,
                 m_AdditiveReferencePoseClip = m_AdditiveReferencePoseClip,
                 m_AdditiveReferencePoseTime = m_AdditiveReferencePoseTime,
+                m_Mirror = m_Mirror,
+                m_OrientationOffsetY = m_OrientationOffsetY,
+                m_Level = m_Level,
+                m_LoopBlendOrientation = m_LoopBlendOrientation,
+                m_LoopBlendPositionY = m_LoopBlendPositionY,
+                m_LoopBlendPositionXZ = m_LoopBlendPositionXZ,
+                m_KeepOriginalOrientation = m_KeepOriginalOrientation,
+                m_KeepOriginalPositionY = m_KeepOriginalPositionY,
+                m_KeepOriginalPositionXZ = m_KeepOriginalPositionXZ,
+                m_HeightFromFeet = m_HeightFromFeet,
                 m_GenericRoot = m_GenericRoot,
             };
             foreach (var e in m_Events) clip.m_Events.Add(e.Copy());
@@ -630,7 +700,19 @@ namespace Unbound.Runtime
                 var reference = settings.Ref("m_AdditiveReferencePoseClip");
                 clip.m_AdditiveReferencePoseClip = reference.IsNull ? null : resolver.Resolve(reference, typeof(AnimationClip)) as AnimationClip;
                 clip.m_AdditiveReferencePoseTime = settings.Float("m_AdditiveReferencePoseTime");
+                clip.m_Mirror = settings.Bool("m_Mirror");
+                clip.m_OrientationOffsetY = settings.Float("m_OrientationOffsetY");
+                clip.m_Level = settings.Float("m_Level");
+                clip.m_LoopBlendOrientation = settings.Bool("m_LoopBlendOrientation");
+                clip.m_LoopBlendPositionY = settings.Bool("m_LoopBlendPositionY");
+                clip.m_LoopBlendPositionXZ = settings.Bool("m_LoopBlendPositionXZ");
+                clip.m_KeepOriginalOrientation = settings.Bool("m_KeepOriginalOrientation");
+                clip.m_KeepOriginalPositionY = settings.Get("m_KeepOriginalPositionY") == null || settings.Bool("m_KeepOriginalPositionY");
+                clip.m_KeepOriginalPositionXZ = settings.Bool("m_KeepOriginalPositionXZ");
+                clip.m_HeightFromFeet = settings.Bool("m_HeightFromFeet");
             }
+            // Imported clips are NotEditable, a take's preview clip also HideInHierarchy.
+            clip.hideFlags = (HideFlags)body.Int("m_ObjectHideFlags");
 
             clip.m_Events.Clear();
             foreach (var e in Items(body, "m_Events"))

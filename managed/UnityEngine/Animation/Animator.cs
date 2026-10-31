@@ -477,6 +477,10 @@ namespace UnityEngine
         // Animator parameters animated by clips (curves on the Animator with a parameter's name).
         internal bool HasParameterNamed(string name) => EnsurePlayer() is AnimatorPlayer p && p.ParameterIndex(name) >= 0;
 
+        internal bool HasFloatParameterNamed(string name) =>
+            EnsurePlayer() is AnimatorPlayer p && p.ParameterIndex(name) is int i && i >= 0
+            && p.Graph.Parameters[i].Type == AnimatorControllerParameterType.Float;
+
         internal float GetParameterAsFloat(string name)
         {
             var p = EnsurePlayer();

@@ -567,6 +567,12 @@ namespace Unbound.Runtime
             return list;
         }
 
+        /// <summary>A model's hidden `__preview__&lt;take&gt;` clip: listed by
+        /// AssetDatabase.LoadAllAssetsAtPath, not by Resources or LoadAllAssetRepresentationsAtPath
+        /// (measured, tests/projects/modelclips).</summary>
+        internal static bool IsTakePreview(Object o) =>
+            o is AnimationClip && (o.hideFlags & HideFlags.HideInHierarchy) != 0;
+
         /// <summary>Where a loaded asset object comes from.</summary>
         internal static bool TryGetLocation(Object obj, out string guid, out long fileId)
         {

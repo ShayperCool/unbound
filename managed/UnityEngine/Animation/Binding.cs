@@ -279,7 +279,10 @@ namespace Unbound.Runtime
                 return bound.Reference;
             var pose = new AnimationPose();
             pose.Reset(FloatCount, ObjectCount);
-            if (source == clip) ClipSampling.Sample(bound, clip.StartTime, 1f, pose);
+            // Without a reference clip, the clip's first frame; with one (the clip itself too, as
+            // the model importer refers to frames within the clip), that clip at the time.
+            if (source == clip && !(clip.m_HasAdditiveReferencePose && clip.m_AdditiveReferencePoseClip != null)) ClipSampling.Sample(bound, clip.StartTime, 1f, pose);
+            else if (source == clip) ClipSampling.Sample(bound, clip.StartTime + clip.m_AdditiveReferencePoseTime, 1f, pose);
             else ClipSampling.Sample(Map(source, create: false), source.StartTime + clip.m_AdditiveReferencePoseTime, 1f, pose);
             var reference = new float[FloatCount];
             for (int c = 0; c < FloatCount; c++)
@@ -574,7 +577,9 @@ namespace Unbound.Runtime
                 case Animator animator:
                 {
                     var name = attribute;
-                    if (animator.HasParameterNamed(name))
+                    // Clip curves drive float parameters only; int and bool ones keep their
+                    // values (measured, tests/projects/modelclips).
+                    if (animator.HasFloatParameterNamed(name))
                         return Make(animator, "param:" + name, 0, () => new AccessorGroup(animator, 1,
                             () => new Vector4(animator.GetParameterAsFloat(name), 0), v => animator.SetParameterFromCurve(name, v.x)));
                     break;

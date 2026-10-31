@@ -39,7 +39,7 @@ namespace UnityEngine
                 if (obj != null) return obj;
                 // A sub-asset of the requested type (a sprite of a texture).
                 foreach (var sub in AssetDatabaseRuntime.LoadAll(entry.Guid))
-                    if (systemTypeInstance.IsInstanceOfType(sub)) return sub;
+                    if (systemTypeInstance.IsInstanceOfType(sub) && !AssetDatabaseRuntime.IsTakePreview(sub)) return sub;
             }
             return null;
         }
@@ -61,7 +61,7 @@ namespace UnityEngine
             var result = new List<Object>();
             foreach (var entry in Find(path, folder: true))
                 foreach (var obj in AssetDatabaseRuntime.LoadAll(entry.Guid))
-                    if (systemTypeInstance.IsInstanceOfType(obj) && !(obj is Component)) result.Add(obj);
+                    if (systemTypeInstance.IsInstanceOfType(obj) && !(obj is Component) && !AssetDatabaseRuntime.IsTakePreview(obj)) result.Add(obj);
             return result.ToArray();
         }
 

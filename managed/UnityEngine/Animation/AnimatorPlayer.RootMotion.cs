@@ -84,7 +84,7 @@ namespace Unbound.Runtime
                 float w = weight * (layerIndex == 0 ? 1f : layer.Evaluated);
                 if (w <= 0f) continue;
                 var bound = Bindings.Bind(clip);
-                double offset = run.Def.CycleOffset;
+                double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
                 var (d, q) = MotionDelta(bound, clip, run.Previous + offset, run.Normalized + offset, pos, rot);
                 delta += d * w;
                 turn *= Quaternion.Slerp(Quaternion.identity, q, w);
