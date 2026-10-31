@@ -1345,3 +1345,22 @@ All artifacts and partial-failure reports remain in the external validation cach
 The model-import change requires a CLI with builtin-shader-source; the earlier
 frozen CLI must not be paired with these managed assemblies. Full engine parity
 and the remaining physics, particles, animation/audio and UI gaps remain open.
+
+### Additive and override animator layers, 2026-10-31
+
+Additive layers subtract their clips' reference pose (the clip's first frame, another clip or
+the clip itself at a time) and compose rotations as below·difference, the difference's vector
+part scaled by the layer weight. Override layers complete what their states do not animate:
+motion states without write defaults keep the value below for every channel of the controller,
+write-defaults states restore only their own layer's channels. An empty state without write
+defaults holds the layer's last values, including channels only the base layer animates; before
+the layer has any, it passes the value below through, and contributes the default values while
+transitioning. A rotation completed with the value below blends unnormalized.
+
+The probe has 528 records in 48 cases; two independent GPU Editor captures were byte-identical
+and are published as `tests/projects/animatoradditive/Reference/unity-6000.0.71f1.jsonl`.
+Unbound matches 528/528 records (6336 values); the ddb1dff1 baseline matched 60/528. The animator
+probe keeps 2236/2236 and the bundle animation probe 8/8. Animation unit tests pass; two
+assertions now follow the measurement (a constant additive clip adds nothing; write defaults do
+not restore the base layer's channels). API checking reports zero errors in 2278 types.
+Humanoid layers remain out of scope.
