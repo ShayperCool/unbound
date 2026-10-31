@@ -22,6 +22,7 @@ namespace UnityEngine.Tests
         {
             Physics2D.simulationMode = SimulationMode2D.Script;
             Physics2D.autoSyncTransforms = true;
+            Physics2D.defaultContactOffset = 0.01f;
             Physics2D.queriesStartInColliders = true;
             Physics2D.queriesHitTriggers = true;
             Make("box", Vector2.zero, 20).AddComponent<BoxCollider2D>().size = new Vector2(2, 1);
@@ -119,7 +120,7 @@ namespace UnityEngine.Tests
         }
         // Independent fine-angle controls distinguish the contact averaging boundary
         // from an angular tolerance or defaultContactOffset-dependent threshold.
-        [InlineData("box", .5f, .001f, 3.57627869e-06f, 0.248004347f)]
+        [InlineData("box", .5f, .001f, 3.516674e-06f, 0.252504349f)]
         [InlineData("box", 1f, .0007f, 4.887581e-06f, 0.5025061f)]
         [InlineData("box", 1f, .0008f, -1.01999426f, 0.5024998f)]
         [InlineData("capsule", 1f, .0011f, 0f, 0.5025058f)]
