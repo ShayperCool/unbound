@@ -144,3 +144,29 @@ same installed binary, with polygon type and vertex-count assertions.
 recordings with only bijective pointer renaming. Both complete scene-pair traces
 also agree on all 2,400 getter visits. Set `SOLVER_PAIR_MANAGED_SHAPES=1` with
 managed tracing to inspect the corresponding runtime polygons and proxy graph.
+
+Unattached collider controls
+---------------------------
+
+`Sources/UnattachedStatics/ProbeEntry.cs` distinguishes colliders without a
+Rigidbody2D from explicit static rigidbodies. Two independent Native captures
+agree exactly on 417 public fields, 49 proxy/pair events, 33 contact-update
+records and nine complete islands. Both neighbouring colliders use the same
+static scene body at `(0, 0)`. Moving, rotating or resizing one collider
+recreates its proxy while retaining the shared body and the other collider.
+Disabling, enabling and destroying/recreating the collider exercise that
+lifetime separately. Arrays retain their indexed contact order.
+
+```sh
+python3 tests/projects/solverpairorder/run.py prepare --release 6000.0.71f1 --work "$WORK" --label native1 --unattached-statics
+python3 tests/projects/solverpairorder/run.py native --release 6000.0.71f1 --work "$WORK" --label native1 --unattached-statics
+python3 tests/projects/solverpairorder/run.py prepare --release 6000.0.71f1 --work "$WORK" --label native2 --unattached-statics
+python3 tests/projects/solverpairorder/run.py native --release 6000.0.71f1 --work "$WORK" --label native2 --unattached-statics
+python3 tests/projects/solverpairorder/public.py --release 6000.0.71f1 --unattached-statics --candidate "$WORK/traces/native1.json" --output "$WORK/public-report.json"
+```
+
+Use a fresh cache directory for `WORK`. The canonical release directory contains
+`unattached-statics.json` and the corresponding complete pair, contact-update
+and island streams. The Native runner checks the installed binary layout before
+tracing; `verify.py` renames pointer identities bijectively and preserves every
+other field and event order.

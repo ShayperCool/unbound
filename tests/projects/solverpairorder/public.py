@@ -22,14 +22,15 @@ p.add_argument('--enumeration', action='store_true', help='Use the extended GetC
 p.add_argument('--velocities', action='store_true', help='Use contact observation and update controls')
 p.add_argument('--lifetimes', action='store_true', help='Use simultaneous loss and creation controls')
 p.add_argument('--rotation-inputs', action='store_true', help='Use quaternion-derived body rotation controls')
+p.add_argument('--unattached-statics', action='store_true', help='Use shared static-body and proxy lifetime controls')
 p.add_argument('--output', type=Path, required=True)
 a = p.parse_args()
 try:
     cache_artifact_path(a.output)
 except ValueError as error:
     p.error(str(error))
-if sum([a.enumeration, a.velocities, a.lifetimes, a.rotation_inputs]) > 1: p.error('Select one control set')
-ref = a.reference or ROOT/'Reference'/('unity-'+a.release)/('rotation-inputs.json' if a.rotation_inputs else 'lifetimes.json' if a.lifetimes else 'velocities.json' if a.velocities else 'enumeration.json.gz' if a.enumeration else 'public.json')
+if sum([a.enumeration, a.velocities, a.lifetimes, a.rotation_inputs, a.unattached_statics]) > 1: p.error('Select one control set')
+ref = a.reference or ROOT/'Reference'/('unity-'+a.release)/('unattached-statics.json' if a.unattached_statics else 'rotation-inputs.json' if a.rotation_inputs else 'lifetimes.json' if a.lifetimes else 'velocities.json' if a.velocities else 'enumeration.json.gz' if a.enumeration else 'public.json')
 tolerance = 0 if a.exact else 1e-3
 reference = c.load(ref)
 result = c.compare(reference, c.load(a.candidate), tolerance)
