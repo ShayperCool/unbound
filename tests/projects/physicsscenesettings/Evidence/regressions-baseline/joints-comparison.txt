@@ -1,0 +1,2 @@
+scenario:hinge limits: known difference (the joint force of the step the bob comes to rest on its limit (the path matches)): 3 values, worst 41.73
+joints: 26/27 records match, 0 expected and 1 known difference(s), 0 differ

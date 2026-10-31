@@ -1,0 +1,5 @@
+2026-10-31T02:44:50.377767Z  INFO unbound_runtime::config: compiled 2 assemblies (0 compiled, 2 cached) in 82ms
+2026-10-31T02:44:50.391817Z  INFO unbound_runtime::config: prepared the game in 146.53ms
+2026-10-31T02:44:51.027544Z  INFO game: physics defaults complete: /home/shaypercool/.cache/compat/physicsscenesettings-e1acb38a/regressions-final/physicsdefaults.jsonl
+2026-10-31T02:44:51.027677Z  INFO unbound_runtime::game: game started in 635.72ms
+2026-10-31T02:44:51.137629Z  INFO unbound_runtime::game: ran 1 frames in 109.84ms

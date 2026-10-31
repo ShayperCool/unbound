@@ -316,8 +316,14 @@ namespace UnityEngine
                 if (m_IsKinematic == value) return;
                 m_IsKinematic = value;
                 Changed();
-                foreach (var c in W.Colliders)
-                    if (ReferenceEquals(c.m_AttachedBody, this)) W.MarkShapeDirty(c);
+                // Existing bodies apply both native sleep/wake transitions even for a
+                // true/false sequence without simulation. New bodies keep their lazy
+                // creation order; the first native-backed read realizes the pending type.
+                if (m_Registered && m_Body != 0)
+                {
+                    W.Flush();
+                    if (!value && m_Body != 0) B3.ua3_body_set_awake(m_Body, 1);
+                }
             }
         }
 
