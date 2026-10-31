@@ -34,7 +34,7 @@ def differences(a, b, path='', exact=False):
             else:
                 yield from differences(a[i], b[i], path+'/'+str(i), exact)
     elif isinstance(a, (int, float)) and isinstance(b, (int, float)) and not isinstance(a, bool) and not isinstance(b, bool):
-        equal = struct.pack('f', a) == struct.pack('f', b) if exact else math.isclose(a, b, abs_tol=2e-4, rel_tol=2e-4)
+        equal = (a == b if isinstance(a, int) and isinstance(b, int) else struct.pack('f', a) == struct.pack('f', b)) if exact else math.isclose(a, b, abs_tol=2e-4, rel_tol=2e-4)
         if not math.isfinite(a) or not math.isfinite(b) or not equal:
             yield dict(path=path, expected=a, actual=b)
     elif a != b:
