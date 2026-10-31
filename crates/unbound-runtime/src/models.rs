@@ -155,8 +155,26 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
         ));
     }
 
+    // A Humanoid model's clips are muscle clips of its avatar (or the one it copies): they carry
+    // the avatar, through which the managed side turns their transform curves into muscle curves.
+    let human_avatar = (settings.animation_type == 3)
+        .then(|| {
+            model.avatar.map(|a| local(a.id)).or_else(|| {
+                settings
+                    .source_avatar
+                    .as_ref()
+                    .map(|s| external(s.file_id, &s.guid.to_string(), 3))
+            })
+        })
+        .flatten();
     for clip in &model.clips {
-        docs.push(clip_document(clip));
+        let mut document = clip_document(clip);
+        if let (Some(avatar), false, Value::Map(Map(entries))) =
+            (&human_avatar, clip.legacy, &mut document.body)
+        {
+            entries.push(("m_UnboundHumanAvatar".to_string(), avatar.clone()));
+        }
+        docs.push(document);
     }
 
     // The Animator's avatar: the model's own, or another model's. A humanoid one carries the
@@ -288,7 +306,9 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
                         ("m_Enabled", scalar(1)),
                         ("m_Avatar", avatar.clone()),
                         ("m_Controller", local(0)),
-                        ("m_ApplyRootMotion", scalar(0)),
+                        // The importer applies root motion for humanoid avatars (measured:
+                        // tests/projects/humanoid, the model moves with its clip).
+                        ("m_ApplyRootMotion", scalar(model.human_description.is_some() as i32)),
                     ]),
                 )
             });
