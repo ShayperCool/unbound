@@ -266,3 +266,10 @@ controls. `run.sh` invokes `cleanup.py` on exit. It stops only VBCSCompiler proc
 inherited PWD is this exact isolated fixture; it does not stop shared/system build servers.
 The same cleanup was run at handoff. No Editor, probe, compiler, local server or tunnel from
 this task remains running.
+
+The portable regression helper requires explicit private artifacts. Run
+`regress.sh before --cli <cli> --managed <managed> --work <cache-before>`, then
+`regress.sh after --cli <cli> --managed <managed> --work <cache-after>
+--baseline <cache-before>`. It copies every authored project into the selected
+cache, runs each heavy child through the shared wrapper, and consumes the
+versioned transition reference. Work directories must be fresh.
