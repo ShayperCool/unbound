@@ -1,5 +1,11 @@
 # DynamicsManager scene settings
 
+Parent integration now matches **5,027/5,055** observations with no introduced
+failures, 302 passing managed tests and a clean API-check. All clone observations
+pass; 28 prior island-history observations remain. The original delegate results
+below are preserved. See [ParentEvidence/README.md](ParentEvidence/README.md) for
+the accepted implementation, complete recordings, rejected experiments and limits.
+
 This fixture uses real Unity 6000.0.71f1 Editor Play mode with its Native PhysX
 backend, with no game project involved. `ProbeRunner.Create` authors the scene
 through Unity APIs. `run.py prepare` copies that authored fixture into independent

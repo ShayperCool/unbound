@@ -52,6 +52,11 @@ matches the original Native fresh and clone manifolds exactly; activation retain
 its earlier discrepancy. Preserving the existing static owner before runtime
 AddComponent<Rigidbody> is therefore observable and fixes the clone pair ordering.
 
+That focused registration experiment was rejected by the complete gate: it added
+96 failing observations elsewhere. Its data are retained under
+`../ParentEvidence/experiments/v5/`. Accepted integration results and remaining
+limits are in `../ParentEvidence/README.md`.
+
 The pre-fix engine matches 1,189/1,728 extended trigger records. Its 539 differences
 include 193 callback records, 193 order records and 153 sleeping-state records.
 The latter are a separate, retained discrepancy; fixing callback delivery does not
