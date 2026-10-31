@@ -436,9 +436,15 @@ pub fn read_sprites(
 }
 
 /// Makes what `Sprite::Initialize` makes from the imported texture: the Tight mesh, the texture
-/// rect and the physics shape. `rgba` is the imported mip 0 (RGBA8, rows bottom-up); `polygon`:
-/// Polygon sprite mode.
-pub fn build_geometry(sprite: &mut SpriteDef, width: u32, height: u32, rgba: &[u8], polygon: bool) {
+/// rect and the physics shape. `rgba` is the imported mip 0 (RGBA8, rows bottom-up; `None`: a
+/// floating-point texture, whose alpha is not traced); `polygon`: Polygon sprite mode.
+pub fn build_geometry(
+    sprite: &mut SpriteDef,
+    width: u32,
+    height: u32,
+    rgba: Option<&[u8]>,
+    polygon: bool,
+) {
     let r = sprite.texture_rect;
     let texture = sprite_mesh::Texture {
         width: width as i32,

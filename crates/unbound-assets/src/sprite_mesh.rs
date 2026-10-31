@@ -1035,11 +1035,12 @@ pub struct SpriteGeometry {
     pub physics: Vec<Vec<[f32; 2]>>,
 }
 
-/// The texture as `GetPixels32` gives it: RGBA8, rows bottom-up.
+/// The texture as `GetPixels32` gives it: RGBA8, rows bottom-up (`None`: not traceable, a
+/// floating-point texture).
 pub struct Texture<'a> {
     pub width: i32,
     pub height: i32,
-    pub rgba: &'a [u8],
+    pub rgba: Option<&'a [u8]>,
 }
 
 /// A sprite as the importer hands it to `Sprite::Initialize`.
@@ -1098,32 +1099,32 @@ impl Region {
         })
     }
 
-    fn alpha(&self, texture: &Texture) -> Vec<u8> {
+    fn alpha(&self, rgba: &[u8], texture_width: i32) -> Vec<u8> {
         let mut alpha = Vec::with_capacity((self.w * self.h) as usize);
         for y in 0..self.h {
             for x in 0..self.w {
-                let i = ((y + self.y0) * texture.width + x + self.x0) as usize;
-                alpha.push(texture.rgba[i * 4 + 3]);
+                let i = ((y + self.y0) * texture_width + x + self.x0) as usize;
+                alpha.push(rgba[i * 4 + 3]);
             }
         }
         alpha
     }
 
     /// `GenerateSpriteOutline` from the texture: `quality` as `MakeShape` takes it.
-    fn trace(&self, texture: &Texture, detail: f32, tolerance: u8, extrude: u32) -> Shape {
+    fn trace(&self, texture: &Texture, detail: f32, tolerance: u8, extrude: u32) -> Option<Shape> {
         let quality = if detail >= 0.0 {
             1.0 - if detail <= 1.0 { detail } else { 1.0 }
         } else {
             detail
         };
         let extrude = if extrude == 0 { 1 } else { extrude.min(32) };
-        let alpha = self.alpha(texture);
+        let alpha = self.alpha(texture.rgba?, texture.width);
         let image = Alpha {
             width: self.w as usize,
             height: self.h as usize,
             alpha: &alpha,
         };
-        make_shape(&image, quality, tolerance, true, extrude)
+        Some(make_shape(&image, quality, tolerance, true, extrude))
     }
 }
 
@@ -1159,8 +1160,13 @@ pub fn sprite_geometry(texture: &Texture, s: &SpriteSource, round: bool) -> Spri
                     .iter()
                     .map(|p| p.iter().map(|v| [v[0] + hw, v[1] + hh]).collect())
                     .collect();
-                Shape::from_outline(&outline, region.w, region.h)
+                Some(Shape::from_outline(&outline, region.w, region.h))
             };
+            let shape = shape.unwrap_or_else(|| Shape {
+                width: region.w,
+                height: region.h,
+                paths: Vec::new(),
+            });
             let (vertices, mut triangles) = shape.triangulate(round);
             bounds = shape
                 .bounds()
@@ -1207,8 +1213,8 @@ pub fn sprite_geometry(texture: &Texture, s: &SpriteSource, round: bool) -> Spri
             .collect();
     } else if s.generate_physics_shape
         && let Some(region) = &region
+        && let Some(shape) = region.trace(texture, 0.25, 200, 0)
     {
-        let shape = region.trace(texture, 0.25, 200, 0);
         let scale = 1.0 / ppu;
         let [ox, oy] = region.offset;
         out.physics = shape
