@@ -1,0 +1,11 @@
+[compat/inactive3dloading-20261031 f807cd00] fix(physics): discard kinematic target motion on deactivation
+ 13 files changed, 42661 insertions(+), 4 deletions(-)
+ create mode 100644 tests/projects/inactive3dloading/Evidence/final/rigidbody-first-baseline.jsonl
+ create mode 100644 tests/projects/inactive3dloading/Evidence/final/rigidbody-first-final.jsonl
+ create mode 100644 tests/projects/inactive3dloading/Evidence/final/rigidbody-first-native1.jsonl
+ create mode 100644 tests/projects/inactive3dloading/Evidence/final/rigidbody-first-native2.jsonl
+ create mode 100644 tests/projects/inactive3dloading/Evidence/final/summary.json
+ create mode 100644 tests/projects/inactive3dloading/Evidence/final/transform-first-baseline.jsonl
+ create mode 100644 tests/projects/inactive3dloading/Evidence/final/transform-first-final.jsonl
+ create mode 100644 tests/projects/inactive3dloading/Evidence/final/transform-first-native1.jsonl
+ create mode 100644 tests/projects/inactive3dloading/Evidence/final/transform-first-native2.jsonl

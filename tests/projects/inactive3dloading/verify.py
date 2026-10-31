@@ -131,7 +131,7 @@ def main():
 
     trx = BUILD / 'tests/final.trx'
     counts = ET.parse(trx).find('.//{http://microsoft.com/schemas/VisualStudio/TeamTest/2010}Counters').attrib
-    assert counts['total'] == counts['passed'] == '371' and counts['failed'] == '0'
+    assert counts['total'] == counts['passed'] == counts['executed'] == '371' and counts['failed'] == '0'
     summary['tests'] = dict(total=371, passed=371, failed=0, skipped=0)
     summary['api'] = 'Final integrated API check remains with parent.'
     for name in ['build-candidate1.log', 'tests-candidate1.log', 'build-final.log', 'tests-final.log']:
@@ -143,7 +143,10 @@ def main():
     for name in ['parity-baseline-native6', 'parity-baseline-native7', 'parity-baseline-native8', 'parity-baseline-sleep3d-native8', 'parity-baseline-trigger2d-native8', 'parity-baseline-inactive3d-native8']:
         base = Path.home() / '.cache/compat' / name
         manifest = json.loads((base / 'manifest.json').read_text())
-        assert all(sha(base / path) == digest for path, digest in manifest['sha256'].items()), name
+        hashes = manifest.get('sha256')
+        if hashes is None:
+            hashes = {path: record['sha256'] for path, record in manifest.items()}
+        assert all(sha(base / path) == digest for path, digest in hashes.items()), name
     native = BUILD / 'managed-final/libunbound_physx.so'
     assert sha(native) == '4a543241a78444ce2595cf8ce42f370c692e993388d42479913558b875d7a208'
     artifacts = [BUILD / 'managed-final' / name for name in ['UnityEngine.CoreModule.dll', 'Unbound.Host.dll', 'libunbound_physx.so']]

@@ -1,0 +1,48 @@
+2026-10-31T07:06:43.471023Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 1603ms
+2026-10-31T07:06:43.484493Z  INFO unbound_runtime::config: prepared the game in 1.67s
+2026-10-31T07:06:43.774600Z  INFO unbound_runtime::game: game started in 289.89ms
+2026-10-31T07:06:43.893178Z ERROR game: The component 'PlatformEffector2D' can't be added to 'API' because it already contains the same component (PlatformEffector2D).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Core/GameObject.cs:line 144
+   at EffectorProbe.Start() in /mnt/data/t3-worktrees/unialt/t3-54da5671/tests/projects/effectors/Assets/Scripts/EffectorProbe.cs:line 65
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/Lifecycle.cs:line 340
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T07:06:43.893431Z ERROR game: The component 'SurfaceEffector2D' can't be added to 'API' because it already contains the same component (PlatformEffector2D).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Core/GameObject.cs:line 144
+   at EffectorProbe.Start() in /mnt/data/t3-worktrees/unialt/t3-54da5671/tests/projects/effectors/Assets/Scripts/EffectorProbe.cs:line 65
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/Lifecycle.cs:line 340
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T07:06:44.310604Z ERROR game: The component 'SurfaceEffector2D' can't be added to 'API' because it already contains the same component (SurfaceEffector2D).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Core/GameObject.cs:line 144
+   at EffectorProbe.Start() in /mnt/data/t3-worktrees/unialt/t3-54da5671/tests/projects/effectors/Assets/Scripts/EffectorProbe.cs:line 65
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/Lifecycle.cs:line 340
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T07:06:44.310707Z ERROR game: The component 'PlatformEffector2D' can't be added to 'API' because it already contains the same component (SurfaceEffector2D).
+   at Unbound.Runtime.ComponentFactory.Add(GameObject go, Type type) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/Components.cs:line 60
+   at UnityEngine.GameObject.AddComponent(Type componentType) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Core/GameObject.cs:line 144
+   at EffectorProbe.Start() in /mnt/data/t3-worktrees/unialt/t3-54da5671/tests/projects/effectors/Assets/Scripts/EffectorProbe.cs:line 65
+   at Unbound.Runtime.Lifecycle.StartNow(MonoBehaviour mb) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/Lifecycle.cs:line 340
+   at Unbound.Runtime.Lifecycle.RunPendingStarts() in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/Lifecycle.cs:line 327
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 412
+   at Unbound.Runtime.PlayerLoopDriver.RunSystem(PlayerLoopSystem system) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 422
+   at Unbound.Runtime.PlayerLoopDriver.Tick(FrameInput* input) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 284
+   at Unbound.Host.Game.Frame(Void* input) in /mnt/data/t3-worktrees/unialt/t3-54da5671/managed/Unbound.Host/Game.cs:line 378
+
+2026-10-31T07:06:44.580497Z  INFO unbound_runtime::game: ran 1 frames in 805.77ms
