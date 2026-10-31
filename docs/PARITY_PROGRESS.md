@@ -1345,3 +1345,21 @@ All artifacts and partial-failure reports remain in the external validation cach
 The model-import change requires a CLI with builtin-shader-source; the earlier
 frozen CLI must not be paired with these managed assemblies. Full engine parity
 and the remaining physics, particles, animation/audio and UI gaps remain open.
+
+## Sprite Tight meshes and default physics shapes
+
+Imported sprites now get Unity's Tight mesh, `textureRect` and default physics shape. The generator
+(`crates/unbound-assets/src/sprite_mesh.rs`) follows `SpriteMeshGenerator`, recovered by read-only
+analysis of the Editor binary: alpha mask grown by a Manhattan distance transform, corner-mask
+Moore tracing with XOR region removal, direction-run line fitting with a one-pixel normal offset,
+area-cost vertex removal that never shrinks the bounds, rect clipping, rounding, and libtess2
+(vendored in `native/libtess2`) for the triangles, in the Editor's float operation order. UVs come
+back from the unit vertices (`RecalculateUVs`); quads use `GenerateQuadMesh`'s triangle order.
+
+tests/projects/spriteimport (52 sprites, two Editor captures byte-identical): 515/520 values match
+exactly (baseline 241/520). The rest: a max-size-downscaled texture whose resized alpha is up to
+4/255 off the Editor's (28 pixels cross the alpha-0 threshold), and the default physics shape of a
+Polygon-mode sprite (Unity's mesh-edge outline, not made; warns). Resources (539/539, 62/62
+images, worst mean 0.57, was 0.83: SpriteMask range images now draw the tight Circle mesh, worst
+1 from 230), urp2d (13 images at 0.00) and twod (same 4 scenarios as the baseline) have no
+regressions. `Sprite.Create` still builds quads.

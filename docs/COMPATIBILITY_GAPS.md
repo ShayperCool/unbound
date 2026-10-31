@@ -301,7 +301,7 @@ ScriptedImporters, UnityWebRequest core (multipart, certificates, timeouts, file
 | LODGroup from `_LOD0/_LOD1` node names | `crates/unbound-assets/src/model.rs` | S | done (levels, heights, bounds, gaps, case, mesh-less level nodes: tests/projects/modelimport) |
 | `generateSecondaryUV` (lightmap UVs) | `crates/unbound-assets/src/model.rs:33` | S | M-H in baked scenes |
 | `AssetPostprocessor` callbacks other than `OnPreprocessMaterialDescription` never run | stub | W | M |
-| `SpriteMeshType.Tight` outline; default physics shape | `crates/unbound-assets/src/sprite.rs:15-95` | S | M |
+| `SpriteMeshType.Tight` outline; default physics shape | `crates/unbound-assets/src/sprite_mesh.rs`, `sprite.rs` | S | done for import (515/520 Editor values over 52 sprites, exact: traced and custom-outline meshes, uvs, triangles, texture rects, generated and custom physics shapes; tests/projects/spriteimport). Open: a max-size-downscaled texture's alpha is up to 4/255 off the Editor's resize, so its outline differs; a Polygon-mode sprite's default physics shape (its mesh outline) is not made (warns); `Sprite.Create` still builds quads |
 | Normal map from grayscale, `normalSmoothAngle`, mipmap filters/preserve coverage | `crates/unbound-assets/src/texture.rs`, `model.rs:121` | S | L-M |
 | DDS/KTX/ASTC sources; `.dae/.3ds/.blend/.max` | `crates/unbound-runtime/src/state.rs:144-150` | S | L-M |
 | `DownloadHandlerScript.ReceiveData` / `DownloadHandlerFile` progressive delivery | `Networking/Handlers.cs`, `UnityWebRequest.cs` | S | done (458 Editor observations: main-thread ordered callbacks, buffer ownership, bounded streaming, progress, abort/rejection/disposal/errors, append and remove-on-abort; tests/projects/networkstreaming) |
