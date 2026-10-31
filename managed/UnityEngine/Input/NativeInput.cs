@@ -240,16 +240,19 @@ namespace Unbound.Runtime
         // ------------------------------------------------------------------ the window's input
 
         /// <summary>Queues the events the native layer would have queued for the frame's window
-        /// input: per key change a keyboard state event (and a text event per character the press
-        /// types; repeats type without changing the state), per mouse change a mouse state event
-        /// (a move, then each button change, then the wheel).</summary>
+        /// input: a mouse state event for a move, then per key change a keyboard state event (and
+        /// a text event per character the press types; repeats type without changing the state)
+        /// and per mouse button change a mouse state event, in the order they happened (measured,
+        /// tests/projects/inputframes: a click within a frame is two events, a key typed between
+        /// a press and a release lies between them), then the wheel.</summary>
         internal static void BeginFrame(FrameInput* input)
         {
             if (!Enabled) return;
             // The window's input arrived before the frame began.
             double time = CurrentTime;
-            KeyboardEvents(input, time);
-            MouseEvents(input, time);
+            MouseMove(input, time);
+            KeyAndButtonEvents(input, time);
+            MouseButtonsAndWheel(input, time);
             GamepadEvents(time);
         }
 
@@ -346,12 +349,22 @@ namespace Unbound.Runtime
             QueueEvent((IntPtr)e);
         }
 
-        static void KeyboardEvents(FrameInput* input, double time)
+        static void KeyAndButtonEvents(FrameInput* input, double time)
         {
             Span<bool> pressedThisFrame = stackalloc bool[KeyboardStateSize * 8];
             for (int i = 0; i < input->KeyEventCount; i++)
             {
                 var e = input->KeyEvents[i];
+                int button = e.Key - (int)KeyCode.Mouse0;
+                if (button >= 0 && button < 5)
+                {
+                    ushort mask = MouseButtons(1u << button);
+                    ushort buttons = e.Pressed != 0 ? (ushort)(s_MouseButtons | mask) : (ushort)(s_MouseButtons & ~mask);
+                    if (buttons == s_MouseButtons) continue;
+                    s_MouseButtons = buttons;
+                    QueueMouseState(Vector2.zero, Vector2.zero, time);
+                    continue;
+                }
                 int key = KeyMap.ToInputSystemKey(e.Key);
                 bool down = key > 0 && (s_Keys[key >> 3] & (1 << (key & 7))) != 0;
                 if (e.Pressed != 0)
@@ -418,7 +431,7 @@ namespace Unbound.Runtime
             QueueEvent((IntPtr)e);
         }
 
-        static void MouseEvents(FrameInput* input, double time)
+        static void MouseMove(FrameInput* input, double time)
         {
             var window = new Vector2(input->MouseX, input->MouseY);
             // The first frame tells where the pointer is, not that it moved: a pointer that never
@@ -446,6 +459,12 @@ namespace Unbound.Runtime
                 s_MousePosition = position;
                 QueueMouseState(delta, Vector2.zero, time);
             }
+        }
+
+        /// <summary>Buttons that changed without an event (simulated or remote taps), then the
+        /// wheel.</summary>
+        static void MouseButtonsAndWheel(FrameInput* input, double time)
+        {
             ushort buttons = MouseButtons(input->MouseButtons);
             for (int bit = 0; bit < 5; bit++)
             {
