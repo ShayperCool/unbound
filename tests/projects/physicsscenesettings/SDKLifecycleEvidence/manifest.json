@@ -5,5 +5,12 @@
   "settings_sha256": "a69abca15d86d256d8f093d7b30b13f89bf2c80cf4dcf8ab4d2a86f46d57cd77",
   "native1_sha256": "547a9d700989d64a2ff35fac495b0123cfdc6ff204de7b48f8dfbaf02566ccb4",
   "native2_sha256": "547a9d700989d64a2ff35fac495b0123cfdc6ff204de7b48f8dfbaf02566ccb4",
-  "baseline7_sha256": "3b353ef78bddc1f35e59dfcb7fbe1d185a0463c1de6520e19a31599149c5aa32"
+  "baseline7_sha256": "3b353ef78bddc1f35e59dfcb7fbe1d185a0463c1de6520e19a31599149c5aa32",
+  "trigger_pairs": {
+    "records": 1440,
+    "source_sha256": "74cd7b298c8fcfa3876b16b9039d94ae7445f94e58b01a591be4e5dc26960418",
+    "native1_sha256": "5c462a1ce084c261445e9f00ec9e8339939d57334786ffeb72f190c6a0cf8e31",
+    "native2_sha256": "5c462a1ce084c261445e9f00ec9e8339939d57334786ffeb72f190c6a0cf8e31",
+    "baseline7_sha256": "10c02f435871e83a3cbad6fa9042c49b4a6aa855268d358d6c4ddfd1df8bb97d"
+  }
 }
