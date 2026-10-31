@@ -31,7 +31,10 @@ to use the release-selected canonical reference.
 
 Unity 6000.0.71f1 removes nonpositive input lifetimes before age encoding. Tiny
 positive inputs survive even if they export as zero; writing that zero back removes
-them. Removal proceeds from the highest written index downward with swap-back,
-moving custom data with the slot. Offset writes retain the prefix and truncate at
+them. Exhaustive deletion masks for lengths 1 through 9 and offsets 0 through 3
+match four-slot groups aligned to the full buffer. Each pass removes marked slots
+from high to low with swap-back, then revisits the group. Custom data moves with
+the slot. This describes measured output order; an internal SIMD mechanism is
+only an inference. Offset writes retain the prefix and truncate at
 the written slice's end. Lifetimes exceeding start lifetime export at birth.
 Other releases and nonfinite lifetimes are unmeasured.
