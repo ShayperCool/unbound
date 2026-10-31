@@ -1857,3 +1857,15 @@ profiles. textureimport, spriteimport and modelimport (Gamma, Linear, URP failur
 unchanged; unbound-assets 73/73; api-check 0 errors in 2279 types. ImportedTextureInfo's
 documented dimensions now include 3 and 5 (layout unchanged).
 
+### HDR and count rendering preservation, 2026-10-31
+
+The matched count/HDR runtime at674c8eae completes the unchanged strict checkers
+for graphics, resources, built-in pipelines/effects, three clipping matrices,
+both Canvas color profiles, both focused camera profiles and UI Toolkit.
+All2029 captured payload files are byte-identical to the prior sprite/cloning
+runtime, including every JSON, pixel buffer and PNG. UI Toolkit's three renders
+and11 interactions are unchanged. Existing expected Native differences remain
+in the full reports; no comparison tolerance or mask changed.
+
+This preservation result uses shader cache13. The subsequent sampler14 and its
+new border/cache controls have separate acceptance reports.
