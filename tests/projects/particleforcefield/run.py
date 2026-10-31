@@ -7,8 +7,11 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import sys
 
 ROOT = Path(__file__).resolve().parent
+sys.path.insert(0, str(ROOT.parents[1]))
+from probe_paths import cache_artifact_path
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['prepare', 'native', 'engine'])
 p.add_argument('--unity-version', required=True)
@@ -17,6 +20,12 @@ p.add_argument('--label', required=True)
 p.add_argument('--cli', type=Path)
 p.add_argument('--runtime', type=Path)
 a = p.parse_args()
+if not a.label or Path(a.label).name != a.label or a.label in ['.', '..']:
+    p.error('labels must be single directory names')
+try:
+    cache_artifact_path(a.work)
+except ValueError as error:
+    p.error(str(error))
 work = a.work.resolve()
 work.mkdir(parents=True, exist_ok=True)
 project = work / ('project-' + a.label)
@@ -43,7 +52,7 @@ else:
         if not a.cli or not a.runtime: p.error('engine requires --cli and --runtime')
         env.update(UNBOUND_MANAGED_DIR=str(a.runtime.resolve()), LD_LIBRARY_PATH=str(a.runtime.resolve()))
         cmd = [str(a.cli.resolve()), 'run', '-p', str(project), '--headless', '30', '--no-watch']
-    cmd = [str(Path.home()/'.cache/compat/with-heavy-job'), *cmd]
+    cmd = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600', *cmd]
     audit = dict(command=cmd, environment={k:env.get(k) for k in ['PARTICLE_FIELD_OUT','UNBOUND_MANAGED_DIR','LD_LIBRARY_PATH']})
     if a.mode == 'engine':
         audit['sha256'] = {str(f): hashlib.sha256(f.read_bytes()).hexdigest() for f in [a.cli, a.runtime/'UnityEngine.CoreModule.dll', a.runtime/'libunbound_physx.so']}

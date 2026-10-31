@@ -12,6 +12,7 @@ import sys
 ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(ROOT.parents[1]))
+from probe_paths import cache_artifact_path
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['prepare', 'native', 'engine'])
@@ -23,7 +24,10 @@ p.add_argument('--runtime', type=Path, help='Private frozen CLI and rebuilt mana
 a = p.parse_args()
 os.environ['UNBOUND_PROBE_UNITY_VERSION'] = a.release
 work = a.work.resolve()
-if work.is_relative_to(REPO): p.error('--work must be outside the checkout')
+try:
+    cache_artifact_path(work)
+except ValueError as error:
+    p.error(str(error))
 if any(Path(s).name != s or s in ['.', '..'] for s in [a.label, a.project]): p.error('Invalid label')
 work.mkdir(parents=True, exist_ok=True)
 project = work/('project-'+a.label)
@@ -32,6 +36,7 @@ if a.mode == 'prepare':
     for folder in ['Assets', 'Packages', 'ProjectSettings']:
         shutil.copytree(REPO/'tests/projects/physics'/folder, project/folder)
     shutil.copy2(ROOT/'Sources/ProbeEntry.cs', project/'Assets/Scripts/ProbeEntry.cs')
+    (project/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+a.release+'\n')
     inputs = {str(f.relative_to(project)): hashlib.sha256(f.read_bytes()).hexdigest()
               for d in ['Assets', 'Packages', 'ProjectSettings'] for f in sorted((project/d).rglob('*')) if f.is_file()}
     (work/(a.label+'-inputs.json')).write_text(json.dumps(inputs, indent=2)+'\n')

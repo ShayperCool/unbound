@@ -4,6 +4,10 @@ import argparse
 import json
 import math
 from pathlib import Path
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+from probe_paths import cache_artifact_path
 
 def load(path):
     rows = [json.loads(line) for line in Path(path).read_text().splitlines()]
@@ -46,6 +50,10 @@ if __name__ == '__main__':
     p.add_argument('--output',type=Path,required=True)
     p.add_argument('--reference',type=Path,help='Independent Native agreement or candidate control input')
     a = p.parse_args()
+    try:
+        cache_artifact_path(a.output)
+    except ValueError as error:
+        p.error(str(error))
     reference = a.reference or Path(__file__).parent/'Reference'/('unity-'+a.unity_version+'.jsonl')
     result = report(load(reference),load(a.actual))
     a.output.parent.mkdir(parents=True,exist_ok=True)

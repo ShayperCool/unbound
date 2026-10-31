@@ -23,6 +23,16 @@ def validation_cache():
     return Path(os.environ.get('XDG_CACHE_HOME', str(Path.home()/'.cache')))/'unbound/validation'
 
 
+def cache_artifact_path(path):
+    """Validate disposable output, including the validation cache's disk symlink."""
+    path = Path(path)
+    cache = Path(os.environ.get('XDG_CACHE_HOME', str(Path.home()/'.cache')))/'unbound'
+    roots = [cache.resolve(), (cache/'validation').resolve()]
+    if not any(path.resolve().is_relative_to(root) for root in roots):
+        raise ValueError('Run artifacts must be under $XDG_CACHE_HOME/unbound')
+    return path
+
+
 def run_root(probe, label='current'):
     return validation_cache()/'runs'/Path(probe).name/label
 
