@@ -8,7 +8,7 @@ for space in ['linear','gamma']:
  a=work/f'oracle-v2-{space}1';b=work/f'oracle-v2-{space}2'
  def hashes(root):return {p.name:hashlib.sha256(p.read_bytes()).hexdigest() for p in sorted(root.iterdir()) if p.is_file()}
  assert hashes(a)==hashes(b),'Native repeats differ'
- for phase,source in [('Native',a),('Before',work/f'before-v2-{space}'),('Final',work/f'final-{space}')]:
+ for phase,source in [('Native',a),('Before',work/f'before-v2-{space}'),('Final',work/f'final{os.environ.get("MATERIAL_COLOR_TRANSFER_FINAL_SUFFIX","")}-{space}')]:
   dest=f/'Reference'/(phase+space.title());dest.mkdir(parents=True,exist_ok=True)
   shutil.copyfile(source/'values.jsonl',dest/'values.jsonl')
   for p in source.glob('*.rgba'):(dest/(p.name+'.gz')).write_bytes(gzip.compress(p.read_bytes(),mtime=0))
