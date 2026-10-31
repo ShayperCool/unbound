@@ -93,3 +93,15 @@ across 36 controls. These measure transformed tips, translated rotations,
 nearly circular segments and the minimum accepted radius in both directions.
 The canonical `capsule-geometry.json` retains zero-length and reversed core
 segments as observed, with every indexed vertex and shape error state.
+
+`--transform-inputs` selects `Sources/TransformInputs/ProbeEntry.cs`. Its single
+canonical profile contains 97,964 fields from 1,176 snapshots after two exact
+independent Editor recordings. All 144 original contact-frame records retain
+their measured public inputs. A further 160 parenting cases record the parent,
+original child, attachment, repeated cached reads, parent-scale edits and
+detachment. They cover both `worldPositionStays` values, nested transforms,
+uniform, nonuniform and negative parent scales, arbitrary planar angles and
+tilted rotations. Further controls cover raw quaternion setters, collapsed and tiny
+scales, and public point transforms in both directions. `public.py --transform-inputs --exact --baseline <starting>`
+retains every resolved, retained and introduced indexed field. The existing
+query tie oracle separately checks all 75,168 query fields.
