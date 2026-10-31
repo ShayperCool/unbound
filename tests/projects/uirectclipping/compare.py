@@ -2,6 +2,7 @@
 """Compare the complete oracle: keys, image manifest, and every float channel."""
 import gzip
 import json
+import math
 import sys
 from pathlib import Path
 import numpy as np
@@ -18,7 +19,7 @@ def equal(a, b):
     if isinstance(a, list) and isinstance(b, list):
         return len(a) == len(b) and all(equal(x, y) for x, y in zip(a, b))
     if isinstance(a, (int,float)) and isinstance(b, (int,float)):
-        return bool(np.isclose(a,b,rtol=2e-4,atol=2e-4,equal_nan=False))
+        return math.isfinite(a) and math.isfinite(b) and math.isclose(a,b,rel_tol=2e-4,abs_tol=2e-4)
     return a == b
 
 
@@ -52,11 +53,16 @@ if __name__ == '__main__':
         x = pixels(p);channels+=x.size
         if k not in bi:
             image_failures+=1;print(k,'MISSING');continue
-        y=pixels(bi[k]);ok=np.isclose(x,y,rtol=2e-4,atol=2e-4,equal_nan=False)
+        y=pixels(bi[k])
+        with np.errstate(invalid='ignore'):
+            delta=np.abs(x-y)
+            ok=(x==y) | (np.isfinite(x)&np.isfinite(y)&(delta<=np.maximum(2e-4,2e-4*np.maximum(np.abs(x),np.abs(y)))))
         matched+=int(ok.sum())
         if not ok.all():
             image_failures+=1
-            print(k,f'{ok.sum()}/{ok.size} channels, max delta {np.max(np.abs(x-y))}')
+            print(k,f'{ok.sum()}/{ok.size} channels, max delta {np.max(delta[~ok])}')
+    pngs={p.stem for p in actual.glob('*.png')}
+    assert pngs==expected, 'captured PNG manifest differs from records'
     unexpected=set(bi)-set(ai)
     print(f'images: {len(ai)-image_failures}/{len(ai)}, {len(unexpected)} unexpected; channels: {matched}/{channels}')
     sys.exit(int(bool(failures or extra or image_failures or unexpected)))
