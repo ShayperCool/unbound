@@ -54,7 +54,8 @@ pub struct FrameInput {
     pub text: *const u8,
     pub text_length: i32,
     pub quit_requested: i32,
-    /// The frame's key presses (repeats included) and releases, in order.
+    /// The frame's key presses (repeats included) and releases, and the mouse buttons' (as
+    /// `KeyCode.Mouse0` on), in the order they happened since the last frame.
     pub key_events: *const KeyEvent,
     pub key_event_count: i32,
     /// 1 when frames follow the wall clock in a window: the engine then keeps
@@ -407,11 +408,13 @@ impl Game {
                     } else {
                         self.held[byte] &= !bit;
                     }
-                    if (scripted::MOUSE0..scripted::MOUSE0 + 7).contains(&code) {
-                        continue;
-                    }
                     let start = text.len() as i32;
+                    let shifted = [303u16, 304]
+                        .iter()
+                        .any(|&shift| self.held[shift as usize / 8] & (1 << (shift % 8)) != 0);
                     if down && let Some(c) = scripted::key_text(code) {
+                        // Shift types capitals.
+                        let c = if shifted { c.to_ascii_uppercase() } else { c };
                         text.extend_from_slice(c.to_string().as_bytes());
                     }
                     events.push(KeyEvent {

@@ -311,9 +311,27 @@ namespace UnityEngine
             }
         }
 
+        // The keys and buttons held after the frame's events (GetKey also counts those pressed
+        // during the frame).
+        static readonly bool[] s_Held = new bool[KeyCount];
+
+        /// <summary>Takes the frame's input. Every press and release since the last frame counts,
+        /// in order (measured, tests/projects/inputframes): a key pressed and released between two
+        /// frames is down, up and held for that frame; one released and pressed again is down, up
+        /// and held; FixedUpdate sees the frame's state.</summary>
         internal static unsafe void BeginFrame(FrameInput* input)
         {
             s_AnyKeyDown = false;
+            Array.Clear(s_KeysDown);
+            Array.Clear(s_KeysUp);
+            for (int i = 0; i < input->KeyEventCount; i++)
+            {
+                var e = input->KeyEvents[i];
+                if (e.Key <= 0 || e.Key >= KeyCount) continue;
+                Change(e.Key, e.Pressed != 0);
+            }
+            // What changed without an event (taps, joysticks, a release the window never saw when
+            // it lost the focus) changes now.
             for (int i = 0; i < KeyCount; i++)
             {
                 bool down = input->Keys != null && (input->Keys[i >> 3] & (1 << (i & 7))) != 0;
@@ -321,10 +339,9 @@ namespace UnityEngine
                     down = (input->MouseButtons & (1u << (i - (int)KeyCode.Mouse0))) != 0;
                 else if (i >= (int)KeyCode.JoystickButton0 && i <= (int)KeyCode.Joystick8Button19)
                     down = JoystickKey(i);
-                s_KeysDown[i] = down && !s_Keys[i];
-                s_KeysUp[i] = !down && s_Keys[i];
+                if (down != s_Held[i]) Change(i, down);
+                s_Keys[i] = s_Held[i] || s_KeysDown[i];
                 if (s_KeysDown[i]) s_AnyKeyDown = true;
-                s_Keys[i] = down;
             }
             s_PreviousMouse = s_MousePosition;
             // The native side reports pixels from the top-left; Unity counts from the bottom-left.
@@ -335,14 +352,22 @@ namespace UnityEngine
                 s_MouseDelta = new Vector2(input->RawMotionX, -input->RawMotionY);
             s_Scroll = new Vector2(input->ScrollX, input->ScrollY);
             if (Trace.InputOn && s_KeysDown[(int)KeyCode.Mouse0]) Trace.Pointer(s_MousePosition);
-            // Return types "\n" in Unity's input string.
-            s_InputString = input->TextLength > 0 ? System.Text.Encoding.UTF8.GetString(input->Text, input->TextLength).Replace('\r', '\n') : "";
+            // Return types "\r" (measured).
+            s_InputString = input->TextLength > 0 ? System.Text.Encoding.UTF8.GetString(input->Text, input->TextLength) : "";
             UpdateAxes();
             UpdateSimulatedTouch();
             GuiEvents.BeginFrame(input);
         }
 
         internal static void EndFrame() { }
+
+        static void Change(int key, bool down)
+        {
+            if (down == s_Held[key]) return;
+            s_Held[key] = down;
+            if (down) s_KeysDown[key] = true;
+            else s_KeysUp[key] = true;
+        }
 
         /// <summary>A joystick button's key: "joystick button N" is any joystick's button N,
         /// "joystick J button N" joystick J's (SDL's button order, measured).</summary>
@@ -363,10 +388,13 @@ namespace UnityEngine
         {
             s_Touches.Clear();
             if (!SimulateTouchWithMouse) return;
-            bool down = s_Keys[(int)KeyCode.Mouse0];
-            bool pressed = s_KeysDown[(int)KeyCode.Mouse0];
-            bool released = s_KeysUp[(int)KeyCode.Mouse0];
-            if (!down && !released) return;
+            // A touch begins with a press and ends with the next release: a click within a frame
+            // begins it and the next frame ends it; a button released and pressed again within a
+            // frame ends it and the next frame begins another.
+            bool pressed = !s_SimulatedTouchDown && (s_KeysDown[(int)KeyCode.Mouse0] || s_Held[(int)KeyCode.Mouse0]);
+            bool released = s_SimulatedTouchDown && (s_KeysUp[(int)KeyCode.Mouse0] || !s_Held[(int)KeyCode.Mouse0]);
+            if (!pressed && !s_SimulatedTouchDown) return;
+            bool down = !released;
             if (pressed) s_TouchStart = s_MousePosition;
             var touch = new Touch
             {
