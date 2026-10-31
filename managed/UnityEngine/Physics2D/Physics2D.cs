@@ -361,7 +361,7 @@ namespace UnityEngine
             if (filter.useNormalAngle && !pair.IsTrigger)
             {
                 var points = new List<ContactPoint2D>();
-                W.CollectContacts(self, other, points, null);
+                W.CollectContacts(self, other, points, false);
                 foreach (var p in points)
                     if ((!requireEnabled || p.enabled) && !filter.IsFilteringNormalAngle(p.normal)) return true;
                 return false;
@@ -417,7 +417,7 @@ namespace UnityEngine
                     if (only != null && !ReferenceEquals(other, only)) continue;
                     if (pair.IsTrigger || !PairPasses(pair, self, filter)) continue;
                     points.Clear();
-                    W.CollectContacts(self, other, points, null);
+                    W.CollectContacts(self, other, points, false);
                     foreach (var p in points)
                         if (!filter.IsFilteringNormalAngle(p.normal)) result.Add(p);
                 }

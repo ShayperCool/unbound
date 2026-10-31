@@ -41,6 +41,11 @@ namespace Unbound.Box2D.Dynamics.Contacts
         /// </summary>
         public Manifold Manifold;
 
+        // Unity's entering ContactPoint2D velocity is evaluated before solving, at
+        // each point's own lever arm. The aggregate Collision2D velocity uses point 0.
+        internal FixedArray2<System.Numerics.Vector2> EnterPointVelocities;
+        internal bool EnterPointVelocitiesCaptured;
+
         /// World pool and list pointers.
         /// Nodes for connecting bodies.
         internal readonly LinkedListNode<Contact> Node = new LinkedListNode<Contact>(default);
@@ -92,6 +97,8 @@ namespace Unbound.Box2D.Dynamics.Contacts
             ChildIndexA = default;
             ChildIndexB = default;
             Manifold = default;
+            EnterPointVelocities = default;
+            EnterPointVelocitiesCaptured = false;
             Node.Value = default;
             NodeA.Node.Value = default;
             NodeA.Other = default;
@@ -269,6 +276,7 @@ namespace Unbound.Box2D.Dynamics.Contacts
 
             var touching = false;
             var wasTouching = Flags.IsSet(ContactFlag.TouchingFlag);
+            if (!wasTouching) EnterPointVelocitiesCaptured = false;
 
             var sensorA = FixtureA.IsSensor;
             var sensorB = FixtureB.IsSensor;
