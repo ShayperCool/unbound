@@ -220,7 +220,7 @@ public class FilterProbe : MonoBehaviour
                     if (!Renderer)
                     {
                         RenderEngine(frames, rate);
-                        // Native's coroutine renders before PostLateUpdate.UpdateAudio submits changes.
+                        // Native's coroutine renders before the frame's audio update submits changes.
                         FlushEngine();
                     }
                     else

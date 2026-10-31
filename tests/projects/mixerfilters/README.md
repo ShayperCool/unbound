@@ -8,6 +8,10 @@ Each run creates a fresh cache-only project. The matrix captures twelve complete
 stereo DSP buffers per case, including startup silence and the entire tail. It records three
 observation points: the master group sink, the listener callback, and AudioRenderer device PCM.
 The master sink is registered for every render. No buffers are aligned, shifted or trimmed.
+The synchronous engine capture submits queued source and mixer changes through AudioSystem at
+zero elapsed time, after each render, matching the measured coroutine submission order. The
+production AudioRenderer owns DSP stepping. The API profile runs before these submissions and
+checks the capture-duration properties and sample demand separately.
 
 Run from the repository root, choosing a new cache directory for each run:
 
