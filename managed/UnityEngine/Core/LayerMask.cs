@@ -79,8 +79,8 @@ namespace Unbound.Runtime
             switch (type)
             {
                 case UnityEngine.PrimitiveType.Sphere: go.AddComponent<UnityEngine.SphereCollider>(); break;
-                case UnityEngine.PrimitiveType.Capsule:
-                case UnityEngine.PrimitiveType.Cylinder: go.AddComponent<UnityEngine.CapsuleCollider>(); break;
+                case UnityEngine.PrimitiveType.Capsule: go.AddComponent<UnityEngine.CapsuleCollider>().height = 2f; break;
+                case UnityEngine.PrimitiveType.Cylinder: go.AddComponent<UnityEngine.CapsuleCollider>().height = 2f; break;
                 case UnityEngine.PrimitiveType.Plane:
                 case UnityEngine.PrimitiveType.Quad: go.AddComponent<UnityEngine.MeshCollider>().sharedMesh = mesh; break;
                 default: go.AddComponent<UnityEngine.BoxCollider>(); break;

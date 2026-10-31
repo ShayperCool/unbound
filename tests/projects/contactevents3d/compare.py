@@ -2,6 +2,7 @@
 """Union-key comparison. Raw IDs remain captured and checked through named identities."""
 import argparse,json,math
 from pathlib import Path
+from artifact_paths import artifact_path
 def read(path):
     values={}
     for row in map(json.loads,Path(path).read_text().splitlines()):
@@ -35,7 +36,7 @@ def compare(a,b,numeric=False):
         diff.append(dict(key=k,reference=x,candidate=y))
     return dict(records=len(a.keys()|b.keys()),exact=exact,matched=matched,differences=diff)
 def main():
-    p=argparse.ArgumentParser();p.add_argument('reference');p.add_argument('candidate');p.add_argument('--numeric',action='store_true');p.add_argument('--output',required=True);a=p.parse_args();out=Path(a.output)
+    p=argparse.ArgumentParser();p.add_argument('reference');p.add_argument('candidate');p.add_argument('--numeric',action='store_true');p.add_argument('--output',required=True);a=p.parse_args();out=artifact_path(a.output)
     if out.exists():raise SystemExit('refusing overwrite '+str(out))
     r=compare(read(a.reference),read(a.candidate),a.numeric);out.write_text(json.dumps(r,indent=2)+'\n');print({k:v if k!='differences' else len(v) for k,v in r.items()})
 if __name__=='__main__':main()

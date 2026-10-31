@@ -1632,7 +1632,10 @@ uint64_t attach( uint64_t bodyId, const ua3_shape_def* def, const PxGeometry& ge
 }
 
 // The rotation that turns PhysX's capsule axis (x) onto a direction.
-PxQuat axis_rotation( const PxVec3& direction )
+// The extra normalization changes nearly parallel capsule sweep witnesses.
+// Query controls measure the unnormalized shortest-arc construction; endpoint
+// shape creation keeps its previous frame. No returned contacts are adjusted.
+PxQuat axis_rotation( const PxVec3& direction, bool normalize = true )
 {
 	PxVec3 d = direction.getNormalized();
 	PxVec3 x( 1.0f, 0.0f, 0.0f );
@@ -1643,11 +1646,12 @@ PxQuat axis_rotation( const PxVec3& direction )
 	}
 	if ( c < -0.999999f )
 	{
-		return PxQuat( PxPi, PxVec3( 0.0f, 1.0f, 0.0f ) );
+		return normalize ? PxQuat( PxPi, PxVec3( 0.0f, 1.0f, 0.0f ) ) : PxQuat( 0.0f, 1.0f, 0.0f, 0.0f );
 	}
 	PxVec3 axis = x.cross( d );
 	float s = PxSqrt( ( 1.0f + c ) * 2.0f );
-	return PxQuat( axis.x / s, axis.y / s, axis.z / s, s * 0.5f ).getNormalized();
+	PxQuat result( axis.x / s, axis.y / s, axis.z / s, s * 0.5f );
+	return normalize ? result.getNormalized() : result;
 }
 } // namespace
 
@@ -2114,7 +2118,7 @@ PxGeometryHolder query_geometry( int kind, PxVec3 a, PxVec3 b, PxQuat rotation, 
 		else
 		{
 			holder.storeAny( PxCapsuleGeometry( PxMax( radius, 1e-5f ), half ) );
-			pose = PxTransform( ( a + b ) * 0.5f, axis_rotation( axis ) );
+			pose = PxTransform( ( a + b ) * 0.5f, axis_rotation( axis, false ) );
 		}
 	}
 	else

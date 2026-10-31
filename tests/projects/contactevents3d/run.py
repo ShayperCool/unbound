@@ -12,8 +12,9 @@ ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(REPO/'tests'))
 from probe_paths import editor_path, run_root
+from artifact_paths import artifact_path
 
-SOURCES = {'contacts': ('ContactProbe.cs', 'CONTACT_OUT'),
+SOURCES = {'sweeps': ('CapsuleSweeps.cs', 'CAPSULE_SWEEPS_OUT'), 'contacts': ('ContactProbe.cs', 'CONTACT_OUT'),
            'controls': ('ContactControls.cs', 'CONTACT_CONTROLS_OUT'),
            'geometry': ('ContactGeometry.cs', 'CONTACT_GEOMETRY_OUT'),
            'capsule': ('CapsuleGeometry.cs', 'CAPSULE_GEOMETRY_OUT')}
@@ -31,9 +32,7 @@ def main():
     a = p.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = a.unity_version
     work = a.work.resolve()
-    cache = Path(os.environ.get('XDG_CACHE_HOME', str(Path.home()/'.cache')))/'unbound'
-    if not (work.is_relative_to(cache.resolve()) or work.is_relative_to((cache/'validation').resolve())):
-        p.error('--work must be under $XDG_CACHE_HOME/unbound')
+    artifact_path(work)
     name = f'{a.suite}-{a.label}-p{a.profile}'
     project, out = work/name, work/(name+'.jsonl')
     if project.exists() or out.exists():
