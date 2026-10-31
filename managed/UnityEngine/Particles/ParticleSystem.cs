@@ -309,7 +309,9 @@ namespace UnityEngine
                         ps.m_FixedRemainder -= step;
                     }
                 }
-                else if (total > 0f)
+                // Native's non-fixed Simulate ignores calls below ten microseconds;
+                // this call boundary is distinct from Advance's subdivision remainder.
+                else if (total >= 1e-5f)
                 {
                     if (stopped) ps.AdvanceStoppedClock(total, ps.m_FrameDistance);
                     else ps.Advance(total, ps.m_FrameDistance, false);
