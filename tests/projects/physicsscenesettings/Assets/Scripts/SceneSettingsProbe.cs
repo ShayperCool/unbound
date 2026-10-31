@@ -111,6 +111,13 @@ public static class SceneSettingsProbe
                     be.enter,be.stay,be.exit,be.triggerEnter,be.triggerStay,be.triggerExit);
                 // Contact point order and normal direction are deliberately not sorted into a fake correspondence.
                 Record(key + "/" + step + "/contacts",ae.contacts,be.contacts);
+                if (Environment.GetEnvironmentVariable("SCENE_SETTINGS_QUERY_CONTACTS") == "1")
+                {
+                    var points = new ContactPoint[32];
+                    int ac = Physics.GetContacts(a.GetComponent<Collider>(), points);
+                    int bc = Physics.GetContacts(b.GetComponent<Collider>(), points);
+                    Record(key + "/" + step + "/query-contacts",ac,bc);
+                }
                 if (bType == 2) State(key + "/" + step,b.GetComponent<Rigidbody>());
             }
             Clean();
