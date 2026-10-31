@@ -1,0 +1,1 @@
+{"release":"6000.0.71f1","rate":48000,"pcm_output":{"file":"pcm_output.f32","frames":12288,"channels":2},"pcm_output.master":{"file":"pcm_output.master.f32","frames":12288,"channels":2},"pcm_output.listener":{"file":"pcm_output.listener.f32","frames":12288,"channels":2}}
