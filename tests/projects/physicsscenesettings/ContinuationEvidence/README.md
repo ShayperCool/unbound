@@ -67,7 +67,9 @@ reinsertBroadPhase when trigger status changes, consuming another element ID.
 The private engine trace of born8 changes the corresponding element37 to57.
 This is a measured SDK-path difference, not proof that modifying that algorithm
 alone would make the engine conform. No SDK algorithm change was attempted.
-The user excluded such changes; a safe general lifecycle solution was not found.
+The delegated brief excluded SDK algorithm changes; a safe lifecycle solution
+within that scope was not found. That restriction applied to the delegated task,
+not to the user's overall parity request. Parent SDK experiments are kept separate.
 
 ## Rejected runtime experiments
 
