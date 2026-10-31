@@ -83,6 +83,13 @@ The existing motion comparator also checks serial and parallel captures against
 that release's canonical `Reference/` oracle, retains all failures and uses its
 unchanged tolerance. Existing parity gaps are allowed; new gaps are not.
 
+On the measured Linux machine after the SSD migration, two warmed motion
+captures took 12.660 seconds serially and 8.692 seconds concurrently (1.457x
+throughput). The sampled combined pool peak was 3.053 GiB, with zero swap.
+All six warm/serial/parallel captures were byte-identical. The canonical
+comparator introduced zero failures and retained its existing parity gaps.
+This is one workload measurement, not a general engine speedup guarantee.
+
 ```bash
 python3 tools/validation/engine_benchmark.py --release 6000.0.71f1 \
   --cli /path/to/unbound --managed /path/to/managed \
