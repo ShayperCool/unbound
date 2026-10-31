@@ -28,7 +28,7 @@ python3 tests/projects/particleemission/verify.py --unity-version 6000.0.71f1 \
   --output "$work/comparison.json"
 ```
 
-The canonical reference has 13,604 records and was published only after exact
+The canonical reference has 16,573 records and was published only after exact
 agreement between independent Unity 6000.0.71f1 Linux recordings. The verifier
 keeps the full union, every nested discrepancy and the lifetime control's
 existing absolute/relative tolerance of `2e-4`. Boolean flags and counts compare
@@ -41,6 +41,33 @@ undo StopEmitting. Clear ends playback when it removes the last particles after
 emission has stopped. Emit(0) does not start a stopped system. PlaybackState
 restoration preserves the current public playback flags and module switch.
 
-Only this Editor release is measured. The control retains emission timing and
-other playback discrepancies independently of the emitting observation; passing
-the original lifetime control does not establish full particle parity.
+The expanded controls preserve every original matrix value and add emitted
+particle lifetimes and seeds, exact and split lifetime boundaries, restored
+playback, fixed stepping, repeated 0.02-second calls and long restarted calls.
+At rate 20, the identical unit fixture and public calls produce 19 particles
+after 50 steps and 29 after 75 steps: the float playback clock is just below
+1 and 1.5 seconds. These are measured expectations, not a changed tolerance.
+
+Constant-acceleration controls cover three maximum step settings and 321 long
+call inputs, including adjacent float perturbations around one, two and three
+seconds. Their position and velocity fingerprints agree exactly with subtracting
+each nominal subdivision from the call's remaining time, clamping a shortened
+last step and consuming a positive residual only while it exceeds one microsecond.
+This describes equivalent measured arithmetic; the Native internal mechanism is
+an inference. Separately, non-fixed calls below ten microseconds do not advance,
+while the boundary itself and its next float do. The canonical set keeps the
+observations on both sides of those boundaries.
+
+Rate controls cover both one-step calls and the default subdivisions, including
+loop crossings at rates 4, 10, 20 and 9.7. All 264 count observations match
+accumulating the rounded float `rate * (endTime - startTime)` for each subdivision
+and retaining its fractional remainder across calls and loops. An exact whole
+birth at an exclusive duration boundary remains pending for the next loop. The
+same count controls with and without particle writes separate emission timing
+from buffer compaction. Snapshot controls retain the accumulator through the
+existing opaque playback-state API.
+
+Only this Editor release is measured. The expanded observations also retain
+independent random-seed and stopped-simulation emission gaps. The verifier
+reports every discrepancy; passing the original lifetime control does not
+establish full particle parity.
