@@ -16,6 +16,10 @@ using Debug = UnityEngine.Debug;
 [InitializeOnLoad]
 public static class ProbeRunner
 {
+    /// <summary>How long after the Editor's start a run that has not finished counts as failed
+    /// (the launcher kills the Editor at 900 s).</summary>
+    const double WatchdogSeconds = 780;
+
     /// <summary>Makes the probe's scene (batchmode: <c>-executeMethod ProbeRunner.Create -quit</c>).</summary>
     public static void Create()
     {
@@ -30,6 +34,14 @@ public static class ProbeRunner
     static ProbeRunner()
     {
         if (Environment.GetEnvironmentVariable("INPUTFRAMES_PROBE_DRIVE") != "1" || Application.isBatchMode) return;
+        // A run that has not finished long after the Editor started has failed: quit with 1.
+        EditorApplication.update += () =>
+        {
+            if (SessionState.GetBool("InputFramesProbe.finished", false)) return;
+            if ((DateTime.Now - Process.GetCurrentProcess().StartTime).TotalSeconds < WatchdogSeconds) return;
+            Debug.LogError($"[probe] not finished after {WatchdogSeconds} s; quitting");
+            EditorApplication.Exit(1);
+        };
         if (SessionState.GetBool("InputFramesProbe.finished", false) && !EditorApplication.isPlayingOrWillChangePlaymode)
         {
             EditorApplication.delayCall += () => EditorApplication.Exit(0);
