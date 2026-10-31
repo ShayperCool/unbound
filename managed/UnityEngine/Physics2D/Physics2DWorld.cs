@@ -45,13 +45,15 @@ namespace Unbound.Runtime
         static bool s_Stepping;
         /// <summary>Fixtures are being destroyed because their collider left the simulation.</summary>
         static bool s_Removing;
+        static bool s_SilentRemoval;
+        static bool s_Dispatching;
         static readonly List<Rigidbody2D> s_Rigidbodies = new List<Rigidbody2D>();
         static readonly List<Collider2D> s_Colliders = new List<Collider2D>();
         static readonly List<B2Shape> s_ShapeBuffer = new List<B2Shape>();
         static readonly Listener s_Listener = new Listener();
         static readonly Filter s_Filter = new Filter();
 
-        internal static bool IsStepping => s_Stepping;
+        internal static bool IsStepping => s_Stepping || s_Dispatching;
 
         internal static World World
         {
@@ -104,6 +106,7 @@ namespace Unbound.Runtime
             s_World = null;
             s_StructureDirty = false;
             s_AttachmentDirty = false;
+            s_Removing = s_SilentRemoval = s_Dispatching = s_Stepping = false;
         }
 
         // ------------------------------------------------------------------ conversions
@@ -151,21 +154,29 @@ namespace Unbound.Runtime
             rb.m_TransformVersion = -1;
             s_StructureDirty = true;
             s_AttachmentDirty = true;
+            if (rb.m_GameObject.m_Transform != null) Flush();
         }
 
-        internal static void Remove(Rigidbody2D rb)
+        internal static void Remove(Rigidbody2D rb, bool silent = false)
         {
             if (!rb.m_Registered) return;
             rb.m_Registered = false;
             s_Rigidbodies.Remove(rb);
-            // Its colliders find another body (or become static) at the next flush.
-            foreach (var c in s_Colliders)
+            bool wasSilent = s_SilentRemoval;
+            s_SilentRemoval = silent;
+            try
             {
-                if (!ReferenceEquals(c.m_AttachedBody, rb)) continue;
-                DestroyFixtures(c, removing: true);
-                c.m_ShapeDirty = true;
+                // Its colliders find another body or become static at the next flush.
+                foreach (var c in s_Colliders)
+                {
+                    if (!ReferenceEquals(c.m_AttachedBody, rb)) continue;
+                    DestroyFixtures(c, removing: true);
+                    c.m_ShapeDirty = true;
+                }
+                DestroyBody(rb);
             }
-            DestroyBody(rb);
+            finally { s_SilentRemoval = wasSilent; }
+            s_Listener.DispatchRemovals();
             s_StructureDirty = true;
             s_AttachmentDirty = true;
         }
@@ -178,6 +189,7 @@ namespace Unbound.Runtime
             c.m_ShapeDirty = true;
             s_Colliders.Add(c);
             s_StructureDirty = true;
+            if (c.m_GameObject.m_Transform != null) Flush();
         }
 
         internal static void Remove(Collider2D c)
@@ -191,6 +203,7 @@ namespace Unbound.Runtime
                 s_World.DestroyBody(c.m_StaticBody);
                 c.m_StaticBody = null;
             }
+            s_Listener.DispatchRemovals();
             c.m_AttachedBody = null;
             ForgetIgnores(c);
         }
@@ -229,7 +242,7 @@ namespace Unbound.Runtime
             for (int i = 0; i < s_Rigidbodies.Count; i++)
             {
                 var rb = s_Rigidbodies[i];
-                if (rb.m_BodyDirty || (rb.m_Body == null) == rb.m_Simulated) UpdateBody(rb);
+                if (rb.m_BodyDirty || rb.m_Body == null && rb.m_Simulated) UpdateBody(rb);
             }
             bool attachment = s_AttachmentDirty;
             s_AttachmentDirty = false;
@@ -264,12 +277,10 @@ namespace Unbound.Runtime
             rb.m_BodyDirty = false;
             if (!rb.m_Simulated)
             {
-                if (rb.m_Body != null)
-                {
-                    foreach (var c in s_Colliders)
-                        if (ReferenceEquals(c.m_AttachedBody, rb)) { DestroyFixtures(c, removing: true); c.m_ShapeDirty = true; }
-                    DestroyBody(rb);
-                }
+                // Box2D disabling removes proxies and real contacts while preserving the
+                // body's sleep, motion and fixtures. Its exits belong to the next step and
+                // do not use callbacksOnDisable, unlike removal of a collider or GameObject.
+                if (rb.m_Body != null) rb.m_Body.IsEnabled = false;
                 return;
             }
             if (rb.m_Body == null)
@@ -281,6 +292,7 @@ namespace Unbound.Runtime
                 s_AttachmentDirty = true;
                 return;
             }
+            rb.m_Body.IsEnabled = true;
             rb.ApplyBodySettings();
         }
 
@@ -541,7 +553,7 @@ namespace Unbound.Runtime
 
         internal static bool Simulate(float deltaTime, int simulationLayers, bool fromLoop)
         {
-            if (s_Stepping)
+            if (IsStepping)
             {
                 Debug.LogError("Physics2D.Simulate cannot be called during a simulation step or its callbacks.");
                 return false;
@@ -763,6 +775,8 @@ namespace Unbound.Runtime
             internal int Touching;
             internal bool IsTrigger;
             internal bool EnterPending, ExitPending;
+            internal bool RemovalExit;
+            internal bool FirstIsB;
             internal bool VelocityCaptured;
             /// <summary>B's velocity relative to A's at the first contact point, before the solver
             /// resolved the impact.</summary>
@@ -801,7 +815,7 @@ namespace Unbound.Runtime
                 var key = new PairKey(a, b);
                 if (!s_Pairs.TryGetValue(key, out var pair))
                 {
-                    pair = new Pair { A = a, B = b };
+                    pair = new Pair { A = a, B = b, FirstIsB = b.m_ContactOrder > a.m_ContactOrder };
                     s_Pairs[key] = pair;
                     s_PairOrder.Add(pair);
                 }
@@ -827,12 +841,13 @@ namespace Unbound.Runtime
                 if (!s_Pairs.TryGetValue(new PairKey(a, b), out var pair)) return;
                 pair.Touching = Math.Max(0, pair.Touching - 1);
                 if (pair.Touching > 0) return;
-                if (s_Removing && !Physics2D.s_CallbacksOnDisable)
+                if (s_SilentRemoval || s_Removing && !Physics2D.s_CallbacksOnDisable)
                 {
                     Forget(pair);
                     return;
                 }
                 pair.ExitPending = true;
+                pair.RemovalExit = s_Removing;
             }
 
             public void PreSolve(Contact contact, in Manifold oldManifold)
@@ -863,35 +878,64 @@ namespace Unbound.Runtime
                 s_PairOrder.Remove(pair);
             }
 
+            // Drain real EndContact notifications only after fixture/body removal is complete.
+            // Reentrant removals wait until both sides of the current notification have run.
+            internal void DispatchRemovals()
+            {
+                if (s_Dispatching) return;
+                s_Dispatching = true;
+                try
+                {
+                    while (true)
+                    {
+                        Pair next = null;
+                        foreach (var pair in s_PairOrder)
+                            if (pair.RemovalExit && pair.ExitPending) { next = pair; break; }
+                        if (next == null) break;
+                        next.RemovalExit = next.ExitPending = false;
+                        Send(next, Phase.Exit);
+                        if (next.Touching == 0 && !next.EnterPending) Forget(next);
+                    }
+                }
+                finally { s_Dispatching = false; }
+            }
+
             /// <summary>Sends the callbacks of the step that just ended.</summary>
             internal void Dispatch()
             {
                 if (s_PairOrder.Count == 0) return;
                 var pairs = s_PairOrder.ToArray();
-                // Native sends the trigger phase before the solid-contact phase, including
-                // reentry after a solid contact has already begun. Preserve order within each
-                // phase; creation order across the two kinds must not interleave callbacks.
-                for (int kind = 0; kind < 2; kind++)
-                foreach (var pair in pairs)
+                s_Dispatching = true;
+                try
                 {
-                    if (pair.IsTrigger != (kind == 0)) continue;
-                    bool enter = pair.EnterPending, exit = pair.ExitPending;
-                    pair.EnterPending = false;
-                    pair.ExitPending = false;
-                    if (enter)
+                    // Native sends the trigger phase before the solid-contact phase, including
+                    // reentry after a solid contact has already begun. Preserve order within each
+                    // phase; creation order across the two kinds must not interleave callbacks.
+                    for (int kind = 0; kind < 2; kind++)
+                    foreach (var pair in pairs)
                     {
-                        Send(pair, Phase.Enter);
-                    }
-                    else if (!exit && pair.Touching > 0 && IsAwake(pair))
-                    {
-                        Send(pair, Phase.Stay);
-                    }
-                    if (exit)
-                    {
-                        Send(pair, Phase.Exit);
-                        if (pair.Touching == 0 && !pair.EnterPending) Forget(pair);
+                        if (pair.IsTrigger != (kind == 0) || !s_PairOrder.Contains(pair)) continue;
+                        bool enter = pair.EnterPending, exit = pair.ExitPending;
+                        pair.EnterPending = false;
+                        pair.ExitPending = false;
+                        pair.RemovalExit = false;
+                        if (enter)
+                        {
+                            Send(pair, Phase.Enter);
+                        }
+                        else if (!exit && pair.Touching > 0 && IsAwake(pair))
+                        {
+                            Send(pair, Phase.Stay);
+                        }
+                        if (exit)
+                        {
+                            Send(pair, Phase.Exit);
+                            if (pair.Touching == 0 && !pair.EnterPending) Forget(pair);
+                        }
                     }
                 }
+                finally { s_Dispatching = false; }
+                DispatchRemovals();
             }
 
             static bool IsAwake(Pair pair) => IsAwake(pair.A) || IsAwake(pair.B);
@@ -910,8 +954,16 @@ namespace Unbound.Runtime
 
         static void Send(Pair pair, Phase phase)
         {
-            SendSide(pair, pair.A, pair.B, phase, flip: false);
-            SendSide(pair, pair.B, pair.A, phase, flip: true);
+            if (pair.FirstIsB)
+            {
+                SendSide(pair, pair.B, pair.A, phase, flip: true);
+                SendSide(pair, pair.A, pair.B, phase, flip: false);
+            }
+            else
+            {
+                SendSide(pair, pair.A, pair.B, phase, flip: false);
+                SendSide(pair, pair.B, pair.A, phase, flip: true);
+            }
         }
 
         /// <summary>The messages <paramref name="self"/>'s objects get about <paramref name="other"/>.</summary>
@@ -919,7 +971,7 @@ namespace Unbound.Runtime
         {
             if (self.m_Destroyed && phase != Phase.Exit) return;
             var go = self.m_GameObject;
-            if (go == null || go.m_Destroyed || !go.activeInHierarchy) return;
+            if (go == null || go.m_Destroyed || phase != Phase.Exit && !go.activeInHierarchy) return;
             var otherGo = other.m_GameObject;
             int otherLayer = otherGo != null ? otherGo.m_Layer : 0;
             if ((self.m_CallbackLayers & (1 << otherLayer)) == 0) return;
