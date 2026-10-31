@@ -386,11 +386,10 @@ namespace UnityEngine
         {
             if (src == null) throw new ArgumentNullException(nameof(src));
             if (dst == null) throw new ArgumentNullException(nameof(dst));
-            if (src is Texture2D s2 && dst is Texture2D d2 && s2.isReadable && d2.isReadable && srcMip == 0 && dstMip == 0)
+            if (src is Texture2D s2 && dst is Texture2D d2 && srcMip == 0 && dstMip == 0)
             {
                 int w = srcWidth < 0 ? s2.width : srcWidth, h = srcHeight < 0 ? s2.height : srcHeight;
-                var pixels = s2.GetPixels(srcWidth < 0 ? 0 : srcX, srcWidth < 0 ? 0 : srcY, w, h);
-                d2.SetPixels(dstX, dstY, w, h, pixels);
+                s2.CopyRetainedPixels(d2, srcWidth < 0 ? 0 : srcX, srcWidth < 0 ? 0 : srcY, w, h, dstX, dstY);
             }
             ulong source = TextureHandles.Of(src), destination = TextureHandles.Of(dst);
             GfxStream.CopyTexture(source, srcElement, srcMip, new RectInt(srcX, srcY, srcWidth, srcHeight), destination, dstElement, dstMip, dstX, dstY);
