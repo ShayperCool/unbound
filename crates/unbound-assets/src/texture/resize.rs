@@ -5,7 +5,8 @@
 //! `(27 m(x) + 2) / 35`), every other axis the cubic B-spline. Bytes decode as v / 255 and
 //! encode as `(int)(saturate(v) * 255 + 0.5)`; all filtering is float, in stb's order. The Editor
 //! splits the output rows among `min(height / 16, job workers)` jobs; each resizes its band as an
-//! stb region, which recomputes the vertical mapping in float.
+//! stb region, which recomputes the vertical mapping in float, so a few bytes depend on the worker
+//! count.
 //! Every resized case of tests/projects/textureimport matches byte for byte.
 use super::{Image, TextureFormat, read_f32};
 
@@ -231,10 +232,14 @@ fn resample(
     out
 }
 
-/// The number of jobs the Editor's job system runs: one per worker thread, which it sets to the
-/// logical processors but one.
-fn job_workers() -> usize {
-    std::thread::available_parallelism().map_or(1, |n| n.get().saturating_sub(1).max(1))
+/// The Editor's job worker count without `-job-worker-count`: the online
+/// logical processors (`sysconf(_SC_NPROCESSORS_ONLN)`, not the affinity mask) less one, at least
+/// 1 and at most 112. Resized bytes depend on it (measured with tests/projects/textureimport at
+/// 1, 3 and the default 15 workers), so it is part of the texture cache key.
+pub(crate) fn job_workers() -> usize {
+    // SAFETY: sysconf only reads a system value.
+    let online = unsafe { libc::sysconf(libc::_SC_NPROCESSORS_ONLN) }.max(1) as usize;
+    (online.max(2) - 1).min(112)
 }
 
 /// `image` (rows top-down) resized to `width` x `height`. The Editor resizes the bottom-up

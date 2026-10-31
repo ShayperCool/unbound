@@ -505,12 +505,14 @@ impl Importer for TextureImporter {
     }
 
     fn options_key(&self) -> String {
+        // Resized textures depend on the Editor's job worker count, which follows the machine.
         format!(
-            "{}{}{}{}",
+            "{}{}{}{}+workers{}",
             self.build_target,
             if self.compress { "+bc7" } else { "" },
             if self.gamma { "+gamma" } else { "" },
-            if self.normal_maps_xyz { "+xyz" } else { "" }
+            if self.normal_maps_xyz { "+xyz" } else { "" },
+            resize::job_workers()
         )
     }
 }

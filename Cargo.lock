@@ -6448,6 +6448,7 @@ dependencies = [
  "exr",
  "image",
  "intel_tex_2",
+ "libc",
  "lz4_flex",
  "lzma-rs",
  "postcard",
