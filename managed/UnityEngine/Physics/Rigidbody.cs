@@ -44,7 +44,6 @@ namespace UnityEngine
         // Runtime state.
         // An inactive component still exposes a physics pose independently of Transform.
         // Activation creates its actor at the current Transform, discarding inactive setters.
-        bool m_HasInactivePose;
         internal Vector3 m_InactivePosition;
         internal Quaternion m_InactiveRotation = Quaternion.identity;
         internal ulong m_Body;
@@ -82,8 +81,8 @@ namespace UnityEngine
 
         internal override void OnAttached()
         {
-            // Serialized components can be allocated before their Transform document.
-            // Runtime AddComponent has its Transform already and snapshots it immediately.
+            // Runtime AddComponent snapshots its existing Transform immediately. The loader
+            // replaces this preliminary pose after all serialized fields and parents are read.
             if (m_GameObject.m_Transform != null) CaptureInactivePose();
         }
 
@@ -91,7 +90,6 @@ namespace UnityEngine
         {
             m_InactivePosition = transform.position;
             m_InactiveRotation = transform.rotation;
-            m_HasInactivePose = true;
         }
 
         internal override void OnEngineEnable() => W.Add(this);
@@ -112,7 +110,6 @@ namespace UnityEngine
             get
             {
                 if (m_Registered && m_Body == 0) W.Flush();
-                if (m_Body == 0 && !m_HasInactivePose && !m_HasCreatedBody) CaptureInactivePose();
                 return m_Body;
             }
         }
