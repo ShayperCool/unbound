@@ -216,6 +216,28 @@ public class EmissionProbe : MonoBehaviour
         }
         UnityEngine.Object.DestroyImmediate(go);
     }
+    static void SubdivisionControls()
+    {
+        float saved = Time.maximumParticleDeltaTime;
+        foreach (float maximum in new[] { .02f, .03f, .05f })
+        foreach (float dt in new[] { .03f, .05f, .1f, .125f, .25f, .3f, .5f, .7f, 1f, 2f, 3f }) {
+            Time.maximumParticleDeltaTime = maximum;
+            var ps = Make(false, 0, false, 0, false);
+            var main = ps.main; main.duration = 10; main.startLifetime = 10; main.gravityModifier = 1;
+            ps.Emit(new ParticleSystem.EmitParams { velocity = new Vector3(1, 0, 0), startLifetime = 10, randomSeed = 42 }, 1);
+            ps.Simulate(dt, false, false, false);
+            string key = "subdivision/" + F(maximum) + "/" + F(dt);
+            State(key, ps);
+            var particles = new ParticleSystem.Particle[1]; ps.GetParticles(particles);
+            var p = particles[0]; var position = p.position; var velocity = p.velocity;
+            output.Append("{\"k\":\"").Append(key).Append("/physical\",\"v\":{\"position\":[")
+                .Append(F(position.x)).Append(',').Append(F(position.y)).Append(',').Append(F(position.z))
+                .Append("],\"velocity\":[").Append(F(velocity.x)).Append(',').Append(F(velocity.y)).Append(',').Append(F(velocity.z))
+                .Append("],\"life\":").Append(F(p.remainingLifetime)).Append("}}\n");
+            UnityEngine.Object.DestroyImmediate(ps.gameObject);
+        }
+        Time.maximumParticleDeltaTime = saved;
+    }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()
     {
@@ -235,6 +257,7 @@ public class EmissionProbe : MonoBehaviour
         for (int target = 0; target < 4; target++) Playback(enabled, saved, target);
         Boundaries();
         RateUnitInputs();
+        SubdivisionControls();
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_EMISSION_OUT"), output.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
