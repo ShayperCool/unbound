@@ -19,8 +19,8 @@ def read(path):
 
 def main():
     a, b = map(read, sys.argv[1:3])
-    bad = solver_bad = solver_rounding = passed = 0
-    solver_rounding_max = 0
+    bad = motion_bad = motion_rounding = passed = 0
+    motion_rounding_max = 0
     for key in sorted(a.keys() | b.keys()):
         av, bv = a.get(key), b.get(key)
         tolerance = 1e-3 if key.endswith('/motion') else 1e-6
@@ -31,16 +31,16 @@ def main():
                         for x,y in zip(av,bv))
         if match:
             passed += 1
-            if key.startswith('dynamics/solver/') and key.endswith('/motion') and av != bv:
-                solver_rounding += 1
-                solver_rounding_max = max(solver_rounding_max, max(abs(x-y) for x,y in zip(av,bv)))
+            if key.endswith('/motion') and av != bv:
+                motion_rounding += 1
+                motion_rounding_max = max(motion_rounding_max, max(abs(x-y) for x,y in zip(av,bv)))
         else:
             bad += 1
-            solver_bad += key.startswith('dynamics/solver/') and key.endswith('/motion')
+            motion_bad += key.endswith('/motion')
             print(f'{key}: reference {av}, candidate {bv}')
-    print(f'{passed}/{len(a.keys() | b.keys())} records match; {bad} differ; {solver_bad} solver motion differences')
-    print(f'{solver_rounding} solver motion records have rounding within the original tolerance; '
-          f'maximum absolute difference {solver_rounding_max:.9g}')
+    print(f'{passed}/{len(a.keys() | b.keys())} records match; {bad} differ; {motion_bad} motion differences')
+    print(f'{motion_rounding} motion records have rounding within the original tolerance; '
+          f'maximum absolute difference {motion_rounding_max:.9g}')
     return bool(bad)
 
 
