@@ -1,0 +1,304 @@
+2026-10-31T07:06:21.998119Z  INFO unbound_runtime::config: compiled 2 assemblies (0 compiled, 2 cached) in 101ms
+2026-10-31T07:06:22.011840Z  INFO unbound_runtime::config: prepared the game in 168.90ms
+2026-10-31T07:06:22.501892Z ERROR game: DestroyImmediate is not permitted during a 2D physics callback.
+   at Unbound.Runtime.Destruction.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/Instantiation.cs:line 228
+   at UnityEngine.Object.DestroyImmediate(Object obj, Boolean allowDestroyingAssets) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 182
+   at UnityEngine.Object.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 185
+   at ProbeEntry.Act(String action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 109
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__2() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 52
+   at lambda_method1(Closure, MonoBehaviour, Object)
+   at Unbound.Runtime.Physics2DWorld.Deliver(GameObject go, String name, Type argumentType, Object argument) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 1110
+   at Unbound.Runtime.Physics2DWorld.SendSide(Pair pair, Collider2D self, Collider2D other, Phase phase, Boolean flip) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 994
+   at Unbound.Runtime.Physics2DWorld.Send(Pair pair, Phase phase) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 963
+   at Unbound.Runtime.Physics2DWorld.Listener.Dispatch() in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 928
+   at Unbound.Runtime.Physics2DWorld.Simulate(Single deltaTime, Int32 simulationLayers, Boolean fromLoop) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 601
+   at UnityEngine.Physics2D.Simulate(Single deltaTime, Int32 simulationLayers) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 270
+   at UnityEngine.Physics2D.Simulate(Single deltaTime) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 265
+   at ProbeEntry.Sim() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 122
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__1() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 53
+   at ProbeEntry.Case(String name, Action action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 81
+   at ProbeEntry.Run() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 48
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType loadType) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 530
+   at Unbound.Runtime.PlayerLoopDriver.Boot(String firstScene, Boolean unused) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 235
+   at Unbound.Host.Game.Start(Void* api, Byte* config, Int32 configLength) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/Unbound.Host/Game.cs:line 246
+
+2026-10-31T07:06:22.502318Z ERROR game: DestroyImmediate is not permitted during a 2D physics callback.
+   at Unbound.Runtime.Destruction.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/Instantiation.cs:line 228
+   at UnityEngine.Object.DestroyImmediate(Object obj, Boolean allowDestroyingAssets) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 182
+   at UnityEngine.Object.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 185
+   at ProbeEntry.Act(String action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 110
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__2() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 52
+   at lambda_method1(Closure, MonoBehaviour, Object)
+   at Unbound.Runtime.Physics2DWorld.Deliver(GameObject go, String name, Type argumentType, Object argument) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 1110
+   at Unbound.Runtime.Physics2DWorld.SendSide(Pair pair, Collider2D self, Collider2D other, Phase phase, Boolean flip) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 994
+   at Unbound.Runtime.Physics2DWorld.Send(Pair pair, Phase phase) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 963
+   at Unbound.Runtime.Physics2DWorld.Listener.Dispatch() in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 928
+   at Unbound.Runtime.Physics2DWorld.Simulate(Single deltaTime, Int32 simulationLayers, Boolean fromLoop) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 601
+   at UnityEngine.Physics2D.Simulate(Single deltaTime, Int32 simulationLayers) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 270
+   at UnityEngine.Physics2D.Simulate(Single deltaTime) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 265
+   at ProbeEntry.Sim() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 122
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__1() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 53
+   at ProbeEntry.Case(String name, Action action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 81
+   at ProbeEntry.Run() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 48
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType loadType) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 530
+   at Unbound.Runtime.PlayerLoopDriver.Boot(String firstScene, Boolean unused) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 235
+   at Unbound.Host.Game.Start(Void* api, Byte* config, Int32 configLength) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/Unbound.Host/Game.cs:line 246
+
+2026-10-31T07:06:22.502645Z ERROR game: DestroyImmediate is not permitted during a 2D physics callback.
+   at Unbound.Runtime.Destruction.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/Instantiation.cs:line 228
+   at UnityEngine.Object.DestroyImmediate(Object obj, Boolean allowDestroyingAssets) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 182
+   at UnityEngine.Object.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 185
+   at ProbeEntry.Act(String action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 111
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__2() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 52
+   at lambda_method1(Closure, MonoBehaviour, Object)
+   at Unbound.Runtime.Physics2DWorld.Deliver(GameObject go, String name, Type argumentType, Object argument) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 1110
+   at Unbound.Runtime.Physics2DWorld.SendSide(Pair pair, Collider2D self, Collider2D other, Phase phase, Boolean flip) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 994
+   at Unbound.Runtime.Physics2DWorld.Send(Pair pair, Phase phase) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 963
+   at Unbound.Runtime.Physics2DWorld.Listener.Dispatch() in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 928
+   at Unbound.Runtime.Physics2DWorld.Simulate(Single deltaTime, Int32 simulationLayers, Boolean fromLoop) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 601
+   at UnityEngine.Physics2D.Simulate(Single deltaTime, Int32 simulationLayers) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 270
+   at UnityEngine.Physics2D.Simulate(Single deltaTime) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 265
+   at ProbeEntry.Sim() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 122
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__1() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 53
+   at ProbeEntry.Case(String name, Action action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 81
+   at ProbeEntry.Run() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 48
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType loadType) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 530
+   at Unbound.Runtime.PlayerLoopDriver.Boot(String firstScene, Boolean unused) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 235
+   at Unbound.Host.Game.Start(Void* api, Byte* config, Int32 configLength) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/Unbound.Host/Game.cs:line 246
+
+2026-10-31T07:06:22.503335Z ERROR game: DestroyImmediate is not permitted during a 2D physics callback.
+   at Unbound.Runtime.Destruction.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/Instantiation.cs:line 228
+   at UnityEngine.Object.DestroyImmediate(Object obj, Boolean allowDestroyingAssets) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 182
+   at UnityEngine.Object.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 185
+   at ProbeEntry.Act(String action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 109
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__2() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 52
+   at lambda_method1(Closure, MonoBehaviour, Object)
+   at Unbound.Runtime.Physics2DWorld.Deliver(GameObject go, String name, Type argumentType, Object argument) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 1110
+   at Unbound.Runtime.Physics2DWorld.SendSide(Pair pair, Collider2D self, Collider2D other, Phase phase, Boolean flip) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 994
+   at Unbound.Runtime.Physics2DWorld.Send(Pair pair, Phase phase) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 963
+   at Unbound.Runtime.Physics2DWorld.Listener.Dispatch() in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 928
+   at Unbound.Runtime.Physics2DWorld.Simulate(Single deltaTime, Int32 simulationLayers, Boolean fromLoop) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 601
+   at UnityEngine.Physics2D.Simulate(Single deltaTime, Int32 simulationLayers) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 270
+   at UnityEngine.Physics2D.Simulate(Single deltaTime) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 265
+   at ProbeEntry.Sim() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 122
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__1() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 53
+   at ProbeEntry.Case(String name, Action action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 81
+   at ProbeEntry.Run() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 48
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType loadType) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 530
+   at Unbound.Runtime.PlayerLoopDriver.Boot(String firstScene, Boolean unused) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 235
+   at Unbound.Host.Game.Start(Void* api, Byte* config, Int32 configLength) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/Unbound.Host/Game.cs:line 246
+
+2026-10-31T07:06:22.503643Z ERROR game: DestroyImmediate is not permitted during a 2D physics callback.
+   at Unbound.Runtime.Destruction.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/Instantiation.cs:line 228
+   at UnityEngine.Object.DestroyImmediate(Object obj, Boolean allowDestroyingAssets) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 182
+   at UnityEngine.Object.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 185
+   at ProbeEntry.Act(String action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 110
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__2() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 52
+   at lambda_method1(Closure, MonoBehaviour, Object)
+   at Unbound.Runtime.Physics2DWorld.Deliver(GameObject go, String name, Type argumentType, Object argument) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 1110
+   at Unbound.Runtime.Physics2DWorld.SendSide(Pair pair, Collider2D self, Collider2D other, Phase phase, Boolean flip) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 994
+   at Unbound.Runtime.Physics2DWorld.Send(Pair pair, Phase phase) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 963
+   at Unbound.Runtime.Physics2DWorld.Listener.Dispatch() in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 928
+   at Unbound.Runtime.Physics2DWorld.Simulate(Single deltaTime, Int32 simulationLayers, Boolean fromLoop) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 601
+   at UnityEngine.Physics2D.Simulate(Single deltaTime, Int32 simulationLayers) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 270
+   at UnityEngine.Physics2D.Simulate(Single deltaTime) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 265
+   at ProbeEntry.Sim() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 122
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__1() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 53
+   at ProbeEntry.Case(String name, Action action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 81
+   at ProbeEntry.Run() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 48
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType loadType) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 530
+   at Unbound.Runtime.PlayerLoopDriver.Boot(String firstScene, Boolean unused) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 235
+   at Unbound.Host.Game.Start(Void* api, Byte* config, Int32 configLength) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/Unbound.Host/Game.cs:line 246
+
+2026-10-31T07:06:22.503941Z ERROR game: DestroyImmediate is not permitted during a 2D physics callback.
+   at Unbound.Runtime.Destruction.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/Instantiation.cs:line 228
+   at UnityEngine.Object.DestroyImmediate(Object obj, Boolean allowDestroyingAssets) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 182
+   at UnityEngine.Object.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 185
+   at ProbeEntry.Act(String action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 111
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__2() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 52
+   at lambda_method1(Closure, MonoBehaviour, Object)
+   at Unbound.Runtime.Physics2DWorld.Deliver(GameObject go, String name, Type argumentType, Object argument) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 1110
+   at Unbound.Runtime.Physics2DWorld.SendSide(Pair pair, Collider2D self, Collider2D other, Phase phase, Boolean flip) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 994
+   at Unbound.Runtime.Physics2DWorld.Send(Pair pair, Phase phase) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 963
+   at Unbound.Runtime.Physics2DWorld.Listener.Dispatch() in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 928
+   at Unbound.Runtime.Physics2DWorld.Simulate(Single deltaTime, Int32 simulationLayers, Boolean fromLoop) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 601
+   at UnityEngine.Physics2D.Simulate(Single deltaTime, Int32 simulationLayers) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 270
+   at UnityEngine.Physics2D.Simulate(Single deltaTime) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 265
+   at ProbeEntry.Sim() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 122
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__1() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 53
+   at ProbeEntry.Case(String name, Action action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 81
+   at ProbeEntry.Run() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 48
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType loadType) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 530
+   at Unbound.Runtime.PlayerLoopDriver.Boot(String firstScene, Boolean unused) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 235
+   at Unbound.Host.Game.Start(Void* api, Byte* config, Int32 configLength) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/Unbound.Host/Game.cs:line 246
+
+2026-10-31T07:06:22.504585Z ERROR game: DestroyImmediate is not permitted during a 2D physics callback.
+   at Unbound.Runtime.Destruction.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/Instantiation.cs:line 228
+   at UnityEngine.Object.DestroyImmediate(Object obj, Boolean allowDestroyingAssets) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 182
+   at UnityEngine.Object.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 185
+   at ProbeEntry.Act(String action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 109
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__2() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 52
+   at lambda_method4(Closure, MonoBehaviour, Object)
+   at Unbound.Runtime.Physics2DWorld.Deliver(GameObject go, String name, Type argumentType, Object argument) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 1110
+   at Unbound.Runtime.Physics2DWorld.SendSide(Pair pair, Collider2D self, Collider2D other, Phase phase, Boolean flip) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 987
+   at Unbound.Runtime.Physics2DWorld.Send(Pair pair, Phase phase) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 963
+   at Unbound.Runtime.Physics2DWorld.Listener.Dispatch() in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 928
+   at Unbound.Runtime.Physics2DWorld.Simulate(Single deltaTime, Int32 simulationLayers, Boolean fromLoop) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 601
+   at UnityEngine.Physics2D.Simulate(Single deltaTime, Int32 simulationLayers) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 270
+   at UnityEngine.Physics2D.Simulate(Single deltaTime) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 265
+   at ProbeEntry.Sim() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 122
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__1() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 53
+   at ProbeEntry.Case(String name, Action action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 81
+   at ProbeEntry.Run() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 48
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType loadType) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 530
+   at Unbound.Runtime.PlayerLoopDriver.Boot(String firstScene, Boolean unused) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 235
+   at Unbound.Host.Game.Start(Void* api, Byte* config, Int32 configLength) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/Unbound.Host/Game.cs:line 246
+
+2026-10-31T07:06:22.504874Z ERROR game: DestroyImmediate is not permitted during a 2D physics callback.
+   at Unbound.Runtime.Destruction.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/Instantiation.cs:line 228
+   at UnityEngine.Object.DestroyImmediate(Object obj, Boolean allowDestroyingAssets) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 182
+   at UnityEngine.Object.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 185
+   at ProbeEntry.Act(String action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 110
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__2() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 52
+   at lambda_method4(Closure, MonoBehaviour, Object)
+   at Unbound.Runtime.Physics2DWorld.Deliver(GameObject go, String name, Type argumentType, Object argument) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 1110
+   at Unbound.Runtime.Physics2DWorld.SendSide(Pair pair, Collider2D self, Collider2D other, Phase phase, Boolean flip) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 987
+   at Unbound.Runtime.Physics2DWorld.Send(Pair pair, Phase phase) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 963
+   at Unbound.Runtime.Physics2DWorld.Listener.Dispatch() in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 928
+   at Unbound.Runtime.Physics2DWorld.Simulate(Single deltaTime, Int32 simulationLayers, Boolean fromLoop) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 601
+   at UnityEngine.Physics2D.Simulate(Single deltaTime, Int32 simulationLayers) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 270
+   at UnityEngine.Physics2D.Simulate(Single deltaTime) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 265
+   at ProbeEntry.Sim() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 122
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__1() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 53
+   at ProbeEntry.Case(String name, Action action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 81
+   at ProbeEntry.Run() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 48
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType loadType) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 530
+   at Unbound.Runtime.PlayerLoopDriver.Boot(String firstScene, Boolean unused) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 235
+   at Unbound.Host.Game.Start(Void* api, Byte* config, Int32 configLength) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/Unbound.Host/Game.cs:line 246
+
+2026-10-31T07:06:22.505137Z ERROR game: DestroyImmediate is not permitted during a 2D physics callback.
+   at Unbound.Runtime.Destruction.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/Instantiation.cs:line 228
+   at UnityEngine.Object.DestroyImmediate(Object obj, Boolean allowDestroyingAssets) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 182
+   at UnityEngine.Object.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 185
+   at ProbeEntry.Act(String action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 111
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__2() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 52
+   at lambda_method4(Closure, MonoBehaviour, Object)
+   at Unbound.Runtime.Physics2DWorld.Deliver(GameObject go, String name, Type argumentType, Object argument) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 1110
+   at Unbound.Runtime.Physics2DWorld.SendSide(Pair pair, Collider2D self, Collider2D other, Phase phase, Boolean flip) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 987
+   at Unbound.Runtime.Physics2DWorld.Send(Pair pair, Phase phase) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 963
+   at Unbound.Runtime.Physics2DWorld.Listener.Dispatch() in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 928
+   at Unbound.Runtime.Physics2DWorld.Simulate(Single deltaTime, Int32 simulationLayers, Boolean fromLoop) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 601
+   at UnityEngine.Physics2D.Simulate(Single deltaTime, Int32 simulationLayers) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 270
+   at UnityEngine.Physics2D.Simulate(Single deltaTime) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 265
+   at ProbeEntry.Sim() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 122
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__1() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 53
+   at ProbeEntry.Case(String name, Action action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 81
+   at ProbeEntry.Run() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 48
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType loadType) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 530
+   at Unbound.Runtime.PlayerLoopDriver.Boot(String firstScene, Boolean unused) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 235
+   at Unbound.Host.Game.Start(Void* api, Byte* config, Int32 configLength) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/Unbound.Host/Game.cs:line 246
+
+2026-10-31T07:06:22.505807Z ERROR game: DestroyImmediate is not permitted during a 2D physics callback.
+   at Unbound.Runtime.Destruction.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/Instantiation.cs:line 228
+   at UnityEngine.Object.DestroyImmediate(Object obj, Boolean allowDestroyingAssets) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 182
+   at UnityEngine.Object.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 185
+   at ProbeEntry.Act(String action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 109
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__2() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 52
+   at lambda_method4(Closure, MonoBehaviour, Object)
+   at Unbound.Runtime.Physics2DWorld.Deliver(GameObject go, String name, Type argumentType, Object argument) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 1110
+   at Unbound.Runtime.Physics2DWorld.SendSide(Pair pair, Collider2D self, Collider2D other, Phase phase, Boolean flip) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 987
+   at Unbound.Runtime.Physics2DWorld.Send(Pair pair, Phase phase) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 963
+   at Unbound.Runtime.Physics2DWorld.Listener.Dispatch() in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 928
+   at Unbound.Runtime.Physics2DWorld.Simulate(Single deltaTime, Int32 simulationLayers, Boolean fromLoop) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 601
+   at UnityEngine.Physics2D.Simulate(Single deltaTime, Int32 simulationLayers) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 270
+   at UnityEngine.Physics2D.Simulate(Single deltaTime) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 265
+   at ProbeEntry.Sim() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 122
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__1() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 53
+   at ProbeEntry.Case(String name, Action action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 81
+   at ProbeEntry.Run() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 48
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType loadType) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 530
+   at Unbound.Runtime.PlayerLoopDriver.Boot(String firstScene, Boolean unused) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 235
+   at Unbound.Host.Game.Start(Void* api, Byte* config, Int32 configLength) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/Unbound.Host/Game.cs:line 246
+
+2026-10-31T07:06:22.506078Z ERROR game: DestroyImmediate is not permitted during a 2D physics callback.
+   at Unbound.Runtime.Destruction.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/Instantiation.cs:line 228
+   at UnityEngine.Object.DestroyImmediate(Object obj, Boolean allowDestroyingAssets) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 182
+   at UnityEngine.Object.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 185
+   at ProbeEntry.Act(String action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 110
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__2() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 52
+   at lambda_method4(Closure, MonoBehaviour, Object)
+   at Unbound.Runtime.Physics2DWorld.Deliver(GameObject go, String name, Type argumentType, Object argument) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 1110
+   at Unbound.Runtime.Physics2DWorld.SendSide(Pair pair, Collider2D self, Collider2D other, Phase phase, Boolean flip) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 987
+   at Unbound.Runtime.Physics2DWorld.Send(Pair pair, Phase phase) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 963
+   at Unbound.Runtime.Physics2DWorld.Listener.Dispatch() in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 928
+   at Unbound.Runtime.Physics2DWorld.Simulate(Single deltaTime, Int32 simulationLayers, Boolean fromLoop) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 601
+   at UnityEngine.Physics2D.Simulate(Single deltaTime, Int32 simulationLayers) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 270
+   at UnityEngine.Physics2D.Simulate(Single deltaTime) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 265
+   at ProbeEntry.Sim() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 122
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__1() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 53
+   at ProbeEntry.Case(String name, Action action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 81
+   at ProbeEntry.Run() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 48
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType loadType) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 530
+   at Unbound.Runtime.PlayerLoopDriver.Boot(String firstScene, Boolean unused) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 235
+   at Unbound.Host.Game.Start(Void* api, Byte* config, Int32 configLength) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/Unbound.Host/Game.cs:line 246
+
+2026-10-31T07:06:22.506355Z ERROR game: DestroyImmediate is not permitted during a 2D physics callback.
+   at Unbound.Runtime.Destruction.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/Instantiation.cs:line 228
+   at UnityEngine.Object.DestroyImmediate(Object obj, Boolean allowDestroyingAssets) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 182
+   at UnityEngine.Object.DestroyImmediate(Object obj) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Core/Object.cs:line 185
+   at ProbeEntry.Act(String action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 111
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__2() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 52
+   at lambda_method4(Closure, MonoBehaviour, Object)
+   at Unbound.Runtime.Physics2DWorld.Deliver(GameObject go, String name, Type argumentType, Object argument) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 1110
+   at Unbound.Runtime.Physics2DWorld.SendSide(Pair pair, Collider2D self, Collider2D other, Phase phase, Boolean flip) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 987
+   at Unbound.Runtime.Physics2DWorld.Send(Pair pair, Phase phase) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 963
+   at Unbound.Runtime.Physics2DWorld.Listener.Dispatch() in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 928
+   at Unbound.Runtime.Physics2DWorld.Simulate(Single deltaTime, Int32 simulationLayers, Boolean fromLoop) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2DWorld.cs:line 601
+   at UnityEngine.Physics2D.Simulate(Single deltaTime, Int32 simulationLayers) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 270
+   at UnityEngine.Physics2D.Simulate(Single deltaTime) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Physics2D/Physics2D.cs:line 265
+   at ProbeEntry.Sim() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 122
+   at ProbeEntry.<>c__DisplayClass8_8.<Run>b__1() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 53
+   at ProbeEntry.Case(String name, Action action) in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 81
+   at ProbeEntry.Run() in /mnt/storage-hdd/node-b-caches-20261023/trigger2dlifecycle-bd5ab077/project-lifecycle/Assets/Scripts/ProbeEntry.cs:line 48
+   at System.Reflection.MethodBaseInvoker.InterpretedInvoke_Method(Object obj, IntPtr* args)
+   at System.Reflection.MethodBaseInvoker.InvokeWithNoArgs(Object obj, BindingFlags invokeAttr)
+   at System.Reflection.RuntimeMethodInfo.Invoke(Object obj, BindingFlags invokeAttr, Binder binder, Object[] parameters, CultureInfo culture)
+   at Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType loadType) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 530
+   at Unbound.Runtime.PlayerLoopDriver.Boot(String firstScene, Boolean unused) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/UnityEngine/Runtime/PlayerLoopDriver.cs:line 235
+   at Unbound.Host.Game.Start(Void* api, Byte* config, Int32 configLength) in /mnt/data/t3-worktrees/unialt/t3-bd5ab077/managed/Unbound.Host/Game.cs:line 246
+
+2026-10-31T07:06:22.548131Z  INFO unbound_runtime::game: game started in 536.12ms
+2026-10-31T07:06:22.654098Z  INFO unbound_runtime::game: ran 1 frames in 105.81ms

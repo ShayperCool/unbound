@@ -53,7 +53,10 @@ def main():
     (dest/'summary.json').write_text(json.dumps(result, indent=2)+'\n')
     if args.accept:
         assert all(not r['introduced'] for r in result.values())
-        assert all(not result[n]['failures'] for n in ['timing', 'order'])
+        assert all(not result[n]['failures'] for n in ['lifecycle', 'receivers', 'timing', 'order'])
+        assert all(result[n]['exact'] == result[n]['reference_records'] for n in ['lifecycle', 'receivers'])
+        assert not any(r['key'].endswith(('/step', '/kind', '/phase', '/self', '/other', '/sleep', '/touching'))
+                       for n in ['lifecycle', 'receivers', 'timing', 'order'] for r in result[n]['rounding'])
 
 
 if __name__ == '__main__': main()
