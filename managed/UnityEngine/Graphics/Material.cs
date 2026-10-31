@@ -944,7 +944,7 @@ namespace UnityEngine
             // selected source's binding flags when the renderer can supply them.
             var bindings = ShaderPassInfo.Of(m_Shader);
             if (bindings != null && bindings.Found && bindings.ColorProperties != null)
-                return bindings.ColorProperties.Contains(id);
+                return bindings.ColorProperties.Contains(Shader.IdToName(id) ?? "");
             var p = m_Shader?.PropertyById(id);
             return p != null && ((p.Flags & ShaderPropertyFlags.Gamma) != 0 ||
                 (p.Type == ShaderPropertyType.Color && (p.Flags & ShaderPropertyFlags.HDR) == 0));
