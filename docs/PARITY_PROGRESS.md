@@ -1488,3 +1488,24 @@ probe keeps 2236/2236 and the bundle animation probe 8/8. Animation unit tests p
 assertions now follow the measurement (a constant additive clip adds nothing; write defaults do
 not restore the base layer's channels). API checking reports zero errors in 2278 types.
 Humanoid layers remain out of scope.
+
+
+### Texture and Animator integration build, 2026-10-31
+
+Merged texture294630d8 and Animator1d1662f6 without discarding the SSD/job-runner
+commits. The CLI and managed runtime were rebuilt together from1068b6a9; Cargo's
+path-sensitive host build was refreshed, and the normal build did not fall back
+to a runtime without compatibility stubs. Asset tests69/69, runtime tests38/38,
+and the existing selected managed tests837/837 pass. API-check reports zero errors
+in2279 types, with matching regenerated Physics and Editor modules.
+
+The full managed selection contains1135 tests. Using the same current test assembly
+against the frozen c59 parent Core gives1122 passes/13 failures; the candidate gives
+1123 passes/12 failures. The Native-backed additive expectation correction in
+AnimationTests is included in this differential. Its layer test now passes, and
+there are zero newly failing test names. The nine Unbound.Tests.TextTests and three
+ParticleSystemTests failures remain. This is not a claim that the full suite is green.
+
+An immutable build input with all34 file hashes is kept outside Git. Dedicated
+texture/animation captures and combined graphics regressions are running. Texture
+byte differences remain unaccepted where documented; no tolerances are changed.
