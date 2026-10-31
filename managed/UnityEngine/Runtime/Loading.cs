@@ -224,6 +224,12 @@ namespace Unbound.Runtime
             foreach (var (go, _) in gameObjects.Values)
                 go.m_Transform.MarkChanged();
 
+            // Attachment precedes serialized fields and may precede the Transform itself.
+            // Snapshot only after every local pose and parent is final, including the
+            // flattened prefab overrides. An inactive body must not capture later caller edits.
+            foreach (var (c, _) in components)
+                if (c is Rigidbody rb) rb.CaptureInactivePose();
+
             SetMainObject(file, kind, assets);
             foreach (var (asset, _) in assets)
                 if (asset is ScriptableObject so) so.RunCreationCallbacks();

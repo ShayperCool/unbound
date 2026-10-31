@@ -1,0 +1,46 @@
+engine transform-first parent exit 0
+engine rigidbody-first parent exit 0
+Parent loading captures complete
+clone-placement-final 160 records
+transform-clone-placement-final 12 records
+sleep-inactive-final 1050 records
+inactive-sequences-final 4668 records
+sleep-final 20700 records
+triggers-final 1728 records
+flags-final 1152 records
+trigger-pairs-final 1440 records
+ignore-lifecycle-final 1848 records
+kinematic-final 15 records
+order-final 276 records
+component-final 276 records
+barrier-final 227 records
+physicsdefaults engine 0 comparison 0
+physics engine 0 comparison 1
+joints engine 0 comparison 0
+controller engine 0 comparison 0
+forces engine 0 comparison 0
+rayhits engine 0 comparison 0
+timing-final exit 0
+order-final exit 0
+{'profile': 'default', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'determinism', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'improved', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'one', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'pairs-all', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'pairs-kk', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'pairs-ks', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'pcm-off', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'tgs-det', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'tgs-one', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'tgs-two', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'tgs', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'two', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'contacts-default', 'records': 299, 'exact': 287, 'matched': 299, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'contacts-pairs-kk', 'records': 299, 'exact': 287, 'matched': 299, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'contacts-pairs-ks', 'records': 299, 'exact': 287, 'matched': 299, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'contacts-pairs-all', 'records': 299, 'exact': 287, 'matched': 299, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'islands-default', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'islands-determinism', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'islands-tgs', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+{'profile': 'islands-tgs-det', 'records': 227, 'exact': 215, 'matched': 227, 'failed_keys': [], 'byte_identical_to_accepted': True}
+All final engine captures complete
