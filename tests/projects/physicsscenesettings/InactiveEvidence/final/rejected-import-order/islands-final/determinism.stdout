@@ -1,0 +1,12 @@
+2026-10-31T06:06:58.440689Z  INFO unbound_runtime::config: compiled 2 assemblies (2 compiled, 0 cached) in 1471ms
+2026-10-31T06:06:58.451638Z  INFO unbound_runtime::config: prepared the game in 1.53s
+2026-10-31T06:06:58.994551Z ERROR game: NullReferenceException: Object reference not set to an instance of an object.
+   at UnityEngine.Rigidbody.OnAttached() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Physics/Rigidbody.cs:line 84
+   at Unbound.Runtime.ComponentFactory.Create(Type type, GameObject go) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Components.cs:line 35
+   at Unbound.Runtime.ObjectGraphBuilder.Build(List`1 documents, String path, String guid, Kind kind, SceneData scene, Action`1 created) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Loading.cs:line 149
+2026-10-31T06:06:58.995058Z ERROR game: NullReferenceException: Object reference not set to an instance of an object.
+   at UnityEngine.Rigidbody.OnAttached() in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Physics/Rigidbody.cs:line 84
+   at Unbound.Runtime.ComponentFactory.Create(Type type, GameObject go) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Components.cs:line 35
+   at Unbound.Runtime.ObjectGraphBuilder.Build(List`1 documents, String path, String guid, Kind kind, SceneData scene, Action`1 created) in /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/managed/UnityEngine/Runtime/Loading.cs:line 149
+2026-10-31T06:06:59.084989Z  INFO unbound_runtime::game: game started in 633.20ms
+2026-10-31T06:06:59.189369Z  INFO unbound_runtime::game: ran 1 frames in 104.25ms

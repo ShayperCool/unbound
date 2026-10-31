@@ -1,0 +1,35 @@
+2026-10-31T06:11:03.553997Z  INFO unbound_runtime::config: compiled 2 assemblies (0 compiled, 2 cached) in 75ms
+2026-10-31T06:11:03.567481Z  INFO unbound_runtime::config: prepared the game in 141.39ms
+2026-10-31T06:11:03.862481Z  INFO unbound_runtime::game: game started in 294.78ms
+2026-10-31T06:11:03.864826Z  INFO bevy_app::terminal_ctrl_c_handler: Skipping installing `Ctrl+C` handler as one was already installed. Please call `TerminalCtrlCHandlerPlugin::gracefully_exit` in your own `Ctrl+C` handler if you want Bevy to gracefully exit on `Ctrl+C`.
+2026-10-31T06:11:03.957609Z  INFO wgpu_hal::vulkan::adapter: Found 6 cooperative matrix configurations supported by wgpu
+2026-10-31T06:11:03.957713Z  INFO wgpu_hal::vulkan::adapter: Found 2 cooperative matrix configurations supported by wgpu
+2026-10-31T06:11:03.957805Z  INFO bevy_render::renderer: AdapterInfo { name: "NVIDIA GeForce RTX 4060", vendor: 4318, device: 10370, device_type: DiscreteGpu, device_pci_bus_id: "0000:0a:00.0", driver: "NVIDIA", driver_info: "580.178.04", backend: Vulkan, subgroup_min_size: 32, subgroup_max_size: 32, transient_saves_memory: Some(false), limit_bucket: None }
+2026-10-31T06:11:04.310795Z  INFO unbound_app::render: indexed 216 shaders
+2026-10-31T06:11:04.312646Z  INFO bevy_winit::system: Creating new window graphics (63v0)
+2026-10-31T06:11:04.492273Z  INFO unbound_app::render::compiled: shader `Hidden/BlitCopy`: compiled its program (no keywords)
+2026-10-31T06:11:04.525290Z  INFO unbound_app::render::compiled: shader `Probe/Color`: compiled its program (no keywords)
+2026-10-31T06:11:04.539776Z  INFO unbound_app::render::compiled: shader `Probe/Grab`: compiled its program (no keywords)
+2026-10-31T06:11:04.551560Z  INFO unbound_app::render::compiled: shader `Probe/GrabNamed`: compiled its program (no keywords)
+2026-10-31T06:11:04.568438Z  INFO unbound_app::render::compiled: shader `Probe/Invert`: compiled its program (no keywords)
+2026-10-31T06:11:04.578221Z  INFO unbound_app::render::compiled: shader `Probe/TwoPass`: compiled its program (no keywords)
+2026-10-31T06:11:04.594016Z  INFO unbound_app::render::compiled: shader `Probe/Global`: compiled its program (no keywords)
+2026-10-31T06:11:04.615132Z  INFO unbound_app::render::compiled: shader `Probe/VertexColor`: compiled its program (no keywords)
+2026-10-31T06:11:04.628415Z  INFO unbound_app::render::compiled: shader `Probe/Hdr`: compiled its program (no keywords)
+2026-10-31T06:11:04.642270Z  INFO unbound_app::render::compiled: shader `Probe/ContentBounds`: compiled its program (no keywords)
+2026-10-31T06:11:04.653894Z  INFO unbound_app::render::compiled: shader `Probe/ContentBounds`: compiled its program (no keywords)
+2026-10-31T06:11:04.699526Z  INFO unbound_app::render::compiled: shader `Probe/Instanced`: compiled its program (no keywords)
+2026-10-31T06:11:04.718457Z  INFO unbound_app::render::compiled: shader `Probe/Procedural`: compiled its program (no keywords)
+2026-10-31T06:11:04.732390Z  INFO unbound_app::render::compiled: shader `Probe/Array`: compiled its program (no keywords)
+2026-10-31T06:11:04.743830Z  INFO unbound_app::render::compiled: shader `Probe/Volume`: compiled its program (no keywords)
+2026-10-31T06:11:04.757585Z  INFO unbound_app::render::compiled: shader `UI/Default`: compiled its program (no keywords)
+2026-10-31T06:11:04.771677Z  INFO unbound_app::render::executor::compute: compute kernel `Double` of /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/graphics/Assets/Resources/ProbeCompute.compute: compiled (no keywords)
+2026-10-31T06:11:04.773483Z  INFO unbound_app::render::executor::compute: compute kernel `Weights` of /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/graphics/Assets/Resources/ProbeCompute.compute: compiled (no keywords)
+2026-10-31T06:11:04.775909Z  INFO unbound_app::render::executor::compute: compute kernel `Paint` of /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/graphics/Assets/Resources/ProbeCompute.compute: compiled (no keywords)
+2026-10-31T06:11:04.778256Z  INFO unbound_app::render::executor::compute: compute kernel `Paint` of /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/graphics/Assets/Resources/ProbeCompute.compute: compiled (no keywords)
+2026-10-31T06:11:04.791063Z  INFO unbound_app::render::executor::compute: compute kernel `Args` of /mnt/data/t3-worktrees/unialt/t3-3a3af6f7/tests/projects/graphics/Assets/Resources/ProbeCompute.compute: compiled (no keywords)
+2026-10-31T06:11:04.805827Z  INFO unbound_app::render::compiled: shader `Probe/InstanceIds`: compiled its program (no keywords)
+2026-10-31T06:11:04.817081Z  INFO unbound_app::render::compiled: shader `Probe/MRT`: compiled its program (no keywords)
+2026-10-31T06:11:04.831171Z  INFO unbound_app::render::compiled: shader `Probe/CubeArray`: compiled its program (no keywords)
+2026-10-31T06:11:04.846709Z  INFO game: graphics probe written to /mnt/storage-hdd/node-b-caches-20261023/inactive3d-t3-3a3af6f7-20261031/graphics.json
+2026-10-31T06:11:04.869062Z  INFO bevy_render::batching::gpu_preprocessing: GPU preprocessing is fully supported on this device.
