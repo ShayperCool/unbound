@@ -28,7 +28,7 @@ python3 tests/projects/particleemission/verify.py --unity-version 6000.0.71f1 \
   --output "$work/comparison.json"
 ```
 
-The canonical reference has 13,604 records and was published only after exact
+The canonical reference has 15,203 records and was published only after exact
 agreement between independent Unity 6000.0.71f1 Linux recordings. The verifier
 keeps the full union, every nested discrepancy and the lifetime control's
 existing absolute/relative tolerance of `2e-4`. Boolean flags and counts compare
@@ -41,6 +41,14 @@ undo StopEmitting. Clear ends playback when it removes the last particles after
 emission has stopped. Emit(0) does not start a stopped system. PlaybackState
 restoration preserves the current public playback flags and module switch.
 
-Only this Editor release is measured. The control retains emission timing and
-other playback discrepancies independently of the emitting observation; passing
-the original lifetime control does not establish full particle parity.
+The expanded controls preserve every original matrix value and add emitted
+particle lifetimes and seeds, exact and split lifetime boundaries, restored
+playback, fixed stepping, repeated 0.02-second calls and long restarted calls.
+At rate 20, the identical unit fixture and public calls produce 19 particles
+after 50 steps and 29 after 75 steps: the float playback clock is just below
+1 and 1.5 seconds. These are measured expectations, not a changed tolerance.
+
+Only this Editor release is measured. The expanded observations also retain
+independent random-seed and stopped-simulation emission gaps. The verifier
+reports every discrepancy; passing the original lifetime control does not
+establish full particle parity.
