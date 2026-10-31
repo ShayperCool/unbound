@@ -566,17 +566,17 @@ pub fn import_texture(
         (mips[0].width, mips[0].height),
     );
     if !sprites.is_empty() {
-        if format == TextureFormat::Rgba8 {
-            let polygon = settings.sprite.mode == sprite::SpriteMode::Polygon;
-            for s in &mut sprites {
-                sprite::build_geometry(s, mips[0].width, mips[0].height, &mips[0].data, polygon);
-            }
-        } else {
+        let rgba = (format == TextureFormat::Rgba8).then_some(&mips[0].data[..]);
+        if rgba.is_none() {
             tracing::warn!(
-                "{}: sprites of a floating-point texture keep Full Rect quads and no physics shape \
-                 (Unbound traces 8-bit alpha only)",
+                "{}: the alpha of a floating-point texture is not traced: its sprites get no \
+                 Tight mesh or default physics shape from it (Unbound traces 8-bit alpha only)",
                 source.display()
             );
+        }
+        let polygon = settings.sprite.mode == sprite::SpriteMode::Polygon;
+        for s in &mut sprites {
+            sprite::build_geometry(s, mips[0].width, mips[0].height, rgba, polygon);
         }
     }
     Ok(ImportedTexture {
