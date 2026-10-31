@@ -916,16 +916,22 @@ namespace Unbound.Runtime
                 AddNoDifference(pose, weight, layerFloats, own, mask);
                 return;
             }
-            // What the layer's motions animate and this state does not (see PoseWriter.CombineLayers).
-            // A state without a motion and without write defaults keeps the layer's last values.
+            // What this state does not animate (see PoseWriter.CombineLayers): with write defaults,
+            // what the layer's motions animate; without, every channel of the controller, which the
+            // layer then has the value below for. A state without a motion and without write
+            // defaults keeps the layer's last values, which so include channels only the layers
+            // below animate; where the layer has none yet, the default value while another state
+            // has the channel, else the value below (measured: entered from a motion state it
+            // holds the base layer's channels as they were; as the first state it leaves them).
             bool holds = motion == null && !run.Def.WriteDefaults;
             if (holds) SampleLast(layer, weight, pose);
             var (animated, animatedObjects) = MotionMask(motion);
             var (inLayer, objectsInLayer) = LayerChannels(layerIndex);
-            var leftAs = !run.Def.WriteDefaults ? pose.Keep : motion != null ? pose.Fill : pose.Rest;
-            for (int c = 0; c < Bindings.FloatCount && c < inLayer.Length; c++)
+            var leftAs = holds ? pose.Fill : !run.Def.WriteDefaults ? pose.Keep : motion != null ? pose.Fill : pose.Rest;
+            for (int c = 0; c < Bindings.FloatCount; c++)
             {
-                if (animated[c] || !inLayer[c] || (mask != null && !mask[c])) continue;
+                if ((c < animated.Length && animated[c]) || (mask != null && !mask[c])) continue;
+                if (run.Def.WriteDefaults && (c >= inLayer.Length || !inLayer[c])) continue;
                 if (holds && c < layer.Held.Length && layer.Held[c]) continue;
                 leftAs[c] += weight;
             }

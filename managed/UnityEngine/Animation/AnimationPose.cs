@@ -15,9 +15,11 @@ namespace Unbound.Runtime
     {
         internal float[] Value = Array.Empty<float>();
         internal float[] Weight = Array.Empty<float>();
-        /// <summary>Weights of the states that do not animate a channel their layer animates: Keep
-        /// for states without write defaults, Fill for motion states with write defaults, Rest for
-        /// states without a motion with write defaults (see <see cref="PoseWriter.CombineLayers"/>).</summary>
+        /// <summary>Weights of the states that do not animate a channel: Keep for motion states
+        /// without write defaults (any channel), Fill for motion states with write defaults (the
+        /// layer's channels) and for states without a motion and write defaults where the layer has
+        /// no last value, Rest for states without a motion with write defaults (the layer's
+        /// channels; see <see cref="PoseWriter.CombineLayers"/>).</summary>
         internal float[] Keep = Array.Empty<float>();
         internal float[] Fill = Array.Empty<float>();
         internal float[] Rest = Array.Empty<float>();
@@ -304,11 +306,14 @@ namespace Unbound.Runtime
         /// channels a layer pose has weight in (marked in <paramref name="animated"/> when given).
         /// Each layer applies over the result of the layers below it; where none of them writes, over
         /// the default values (<paramref name="overDefaults"/>, else over <paramref name="values"/>).
-        /// Within an override layer, the states that do not animate a channel of the layer complete its
-        /// weighted sum: without write defaults with the value below, or the current value where no
-        /// layer below writes it; motion states with write defaults with the default value while
-        /// another state animates the channel. The rest up to full weight is the value below. The
-        /// layer then blends over the value below by its weight, rotations normalized first.
+        /// Within an override layer, the states that do not animate a channel complete its weighted
+        /// sum: motion states without write defaults (for any channel of the controller) with the
+        /// value below, or the current value where no layer below writes it; motion states with
+        /// write defaults (for the layer's channels), and states without a motion and write defaults
+        /// where the layer has no last value, with the default value while another state has the
+        /// channel. The rest up to full weight is the value below, which the layer does not keep as
+        /// its own. The layer then blends over the value below by its weight, rotations normalized
+        /// first unless the rest completed them.
         /// An additive layer's pose holds differences from its clips' reference poses; what a motion
         /// does not animate counts as no difference (a zero quaternion for rotations, so that their
         /// normalized sum leaves it out). Positions, scales and floats add weight × difference,
@@ -345,11 +350,13 @@ namespace Unbound.Runtime
                         written = true;
                         continue;
                     }
-                    float fill = w > 0f ? pose.Fill[c] : 0f;
+                    float fill = w > 0f || keep > 0f ? pose.Fill[c] : 0f;
                     v += keep * (written ? r : current) + fill * b.Defaults[c];
                     w += keep + fill;
                     float lv = w >= 1f ? v / w : v + (1f - w) * r;
-                    if (layer.Last != null && c < layer.Last.Length) { layer.Last[c] = lv; layer.Held[c] = true; }
+                    // Only the value below: the layer has no value of its own to keep.
+                    bool own = w > 0f || pose.Rest[c] > 0f;
+                    if (own && layer.Last != null && c < layer.Last.Length) { layer.Last[c] = lv; layer.Held[c] = true; }
                     r = lw >= 1f ? lv : r + (lv - r) * lw;
                     written = true;
                 }
@@ -406,7 +413,7 @@ namespace Unbound.Runtime
                 }
                 // The layer's own rotation: its states' sum completed to full weight, normalized.
                 float x = pose.Value[c], y = pose.Value[c + 1], z = pose.Value[c + 2], qw = pose.Value[c + 3];
-                float fill = w > 0f ? pose.Fill[c] : 0f;
+                float fill = w > 0f || keep > 0f ? pose.Fill[c] : 0f;
                 foreach (var (part, q) in new[] { (keep, written ? r : current), (fill, defaults) })
                 {
                     if (part <= 0f) continue;
@@ -415,18 +422,23 @@ namespace Unbound.Runtime
                     w += part;
                 }
                 written = true;
-                if (w < 1f)
+                bool partial = w < 1f;
+                if (partial)
                 {
                     float f = (x * r.x + y * r.y + z * r.z + qw * r.w < 0f ? -1f : 1f) * (1f - w);
                     x += f * r.x; y += f * r.y; z += f * r.z; qw += f * r.w;
                 }
                 var lv = Normalized(x, y, z, qw);
-                if (layer.Last != null && c + 3 < layer.Last.Length)
+                if ((w > 0f || pose.Rest[c] > 0f) && layer.Last != null && c + 3 < layer.Last.Length)
                 {
                     layer.Last[c] = lv.x; layer.Last[c + 1] = lv.y; layer.Last[c + 2] = lv.z; layer.Last[c + 3] = lv.w;
                     for (int i = 0; i < 4; i++) layer.Held[c + i] = true;
                 }
                 if (lw >= 1f || r.x * r.x + r.y * r.y + r.z * r.z + r.w * r.w < 1e-12f) { r = lv; continue; }
+                // Completed with the value below, the sum blends over it unnormalized: one
+                // normalization of below·(1 - weight·w) + weight·sum (measured in a transition
+                // to a state without a motion with write defaults, at half layer weight).
+                if (partial) lv = new Quaternion(x, y, z, qw);
                 if (Quaternion.Dot(r, lv) < 0f) lv = new Quaternion(-lv.x, -lv.y, -lv.z, -lv.w);
                 r = Normalized(r.x + (lv.x - r.x) * lw, r.y + (lv.y - r.y) * lw, r.z + (lv.z - r.z) * lw, r.w + (lv.w - r.w) * lw);
             }
