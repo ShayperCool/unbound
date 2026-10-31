@@ -18,19 +18,22 @@ def read(path):
     return result
 
 
+def matches(key, av, bv):
+    if av is None or bv is None or len(av) != len(bv):
+        return False
+    tolerance = 1e-3 if key.endswith('/motion') else 1e-6
+    return all(x == y if isinstance(x, str) or isinstance(y, str) else
+               math.isfinite(x) and math.isfinite(y) and abs(x-y) <= tolerance*max(1,abs(x))
+               for x,y in zip(av,bv))
+
+
 def main():
     a, b = map(read, sys.argv[1:3])
     bad = motion_bad = motion_rounding = passed = 0
     motion_rounding_max = 0
     for key in sorted(a.keys() | b.keys()):
         av, bv = a.get(key), b.get(key)
-        tolerance = 1e-3 if key.endswith('/motion') else 1e-6
-        match = av is not None and bv is not None and len(av) == len(bv)
-        if match:
-            match = all(x == y if isinstance(x, str) or isinstance(y, str) else
-                        math.isfinite(x) and math.isfinite(y) and abs(x-y) <= tolerance*max(1,abs(x))
-                        for x,y in zip(av,bv))
-        if match:
+        if matches(key, av, bv):
             passed += 1
             if key.endswith('/motion') and av != bv:
                 motion_rounding += 1

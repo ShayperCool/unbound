@@ -26,6 +26,9 @@ def main():
         if args.mode=='prepare':
             for d in ['Assets','ProjectSettings','Packages']:
                 shutil.copytree(ROOT/d,project/d,dirs_exist_ok=True)
+            # Keep the original oracle's exact C# input while the supplemental probe evolves.
+            for source in (ROOT/'Sources/original').rglob('*.cs'):
+                shutil.copy2(source,project/'Assets'/source.relative_to(ROOT/'Sources/original'))
             settings=project/'ProjectSettings/DynamicsManager.asset'; text=settings.read_text()
             import re
             for key,value in PROFILES[profile].items():
