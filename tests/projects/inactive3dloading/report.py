@@ -48,6 +48,9 @@ def main():
               'resolved',len(before-after),'retained',len(before&after),'introduced',len(after-before))
     result['capture_sha256']={p.name:sha(p) for p in dest.glob('*.jsonl')}
     (dest/'summary.json').write_text(json.dumps(result,indent=2)+'\n')
+    if a.label == 'final':
+        assert all(result[o]['candidate']['exact'] == result[o]['candidate']['records'] == 4656
+                   and not result[o]['introduced'] for o in ['transform-first','rigidbody-first'])
 
 
 if __name__=='__main__': main()

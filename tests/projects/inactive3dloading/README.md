@@ -44,6 +44,24 @@ The frozen baseline passes 4,558 records in Transform-first order and 4,574 in
 Rigidbody-first order. It fails 98 and 82 respectively. The exact union-key
 comparison reports every failure without rounding tolerance, exclusions or masks.
 
+## Loading results
+
+The final runtime passes 4,656/4,656 exactly in each YAML order, resolving all 98
+Transform-first and 82 Rigidbody-first baseline failures, with zero introduced or
+retained failures. The snapshot-only candidate passes 4,614/4,656 in each order;
+its remaining 42 kinematic deactivation records are preserved in Evidence/candidate1
+along with its patch, build artifacts manifest and 369/369 test result. It was
+never accepted as full certification. The final integrated filter passes 371/371
+with zero skips, preserving 353 tests and adding 16 loading-order/first-read cases
+and two dynamic/kinematic deactivation cases.
+
+The loader snapshots the completed hierarchy after reading every component and
+asset field, before creation callbacks or scene activation. Getter-triggered
+capture is removed. Runtime AddComponent attachment and post-placement clone
+snapshots remain intact. Kinematic deactivation discards computed target velocity;
+dynamic deactivation retains its actual motion. No Compat, Instantiation,
+Lifecycle, 2D, generated, Rust or native source changes are included.
+
 ## Reproduction
 
 All large artifacts and caches are private to
@@ -73,7 +91,8 @@ Build the host with the private environment:
 
 Keep UseSharedCompilation=false, MSBUILDDISABLENODEREUSE=1 and
 DOTNET_CLI_USE_MSBUILD_SERVER=0 for tests too. The requested six-class integrated
-filter is preserved. validate.py reuses the exact accepted parent engine commands
+filter is preserved. `validate-stage.sh` sets the private regression output paths
+and runs validate.py. That driver reuses the exact accepted parent engine commands
 with fresh private outputs. verify.py compares the existing Native references and
 accepted results and archives only into this new fixture. It checks all focused
 controls, matrix, broad physics, 2D timing/order, joints, effectors, forces,
