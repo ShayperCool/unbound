@@ -137,3 +137,18 @@ never writer destinations for these scripts.
 No authored files in ~/unity-projects/game were read, run or modified. Further
 multi-pair reentrancy, hierarchy/scale combinations and older releases remain
 outside these measurements. This is not a full-engine parity claim.
+
+## Parent integration
+
+The parent merged this work with the accepted serialized Rigidbody loading fix
+on a separate integration branch and rebuilt the managed engine. The combined
+filter passes 384/384 tests and API-check reports zero errors in 2266 hand-written
+types. The API command uses the complete physicsscenesettings project; this
+fixture's directory contains source probes rather than a complete Unity project.
+
+The parent independently replays the new lifecycle and receiver controls, both
+old timing/order suites, both serialized document orders and all existing 3D,
+matrix and visual gates. Fresh captures, comparisons, artifact/source hashes and
+exact verification scope are in `Evidence/ParentIntegration/summary.json`.
+The parent's verifier writes only that new archive and leaves delegate evidence
+and historical references unchanged.
