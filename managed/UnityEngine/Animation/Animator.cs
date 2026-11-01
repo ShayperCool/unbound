@@ -288,6 +288,7 @@ namespace UnityEngine
                 m_Match.Run = m_Player.Layers[0].Current;
                 m_Match.End = 1.0;
                 m_Match.Finish = false;
+                m_Match.PredictCurrentPose = true;
             }
         }
 

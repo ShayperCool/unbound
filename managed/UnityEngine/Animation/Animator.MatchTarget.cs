@@ -15,7 +15,7 @@ namespace UnityEngine
             internal MatchTargetWeightMask Mask;
             internal AnimatorPlayer Player;
             internal StateRun Run;
-            internal bool CompleteOnInterruption, Finish;
+            internal bool CompleteOnInterruption, Finish, PredictCurrentPose;
             /// <summary>Unwrapped normalized times of the base layer's state.</summary>
             internal double Start, End;
         }

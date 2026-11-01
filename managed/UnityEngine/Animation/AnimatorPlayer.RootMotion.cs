@@ -12,6 +12,8 @@ namespace Unbound.Runtime
         float m_RootDeltaTime;
         bool m_CallbacksStarted;
         bool m_HasMonoMove, m_HasStateMove;
+        Quaternion[] m_RootTurns = Array.Empty<Quaternion>();
+        float[] m_RootTurnWeights = Array.Empty<float>();
         static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, MethodInfo> s_OnAnimatorMove =
             new System.Collections.Concurrent.ConcurrentDictionary<Type, MethodInfo>();
         static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool> s_StateMove =
@@ -81,6 +83,13 @@ namespace Unbound.Runtime
             if (!animator.m_ApplyRootMotion && !m_HasMonoMove) return;
             var delta = Vector3.zero;
             var turn = Quaternion.identity;
+            if (m_RootTurns.Length != Layers.Length)
+            {
+                m_RootTurns = new Quaternion[Layers.Length];
+                m_RootTurnWeights = new float[Layers.Length];
+            }
+            Array.Clear(m_RootTurns);
+            Array.Clear(m_RootTurnWeights);
             foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions)
             {
                 float w = weight * (layerIndex == 0 ? 1f : layer.Evaluated);
@@ -89,7 +98,21 @@ namespace Unbound.Runtime
                 double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
                 var (d, q) = MotionDelta(bound, clip, run.Previous + offset, run.Normalized + offset, pos, rot);
                 delta += d * w;
-                turn *= Quaternion.Slerp(Quaternion.identity, q, w);
+                // States blend their rotation deltas in a layer; they do not compose them.
+                var sum = m_RootTurns[layerIndex];
+                if (Quaternion.Dot(sum, q) < 0) q = new Quaternion(-q.x, -q.y, -q.z, -q.w);
+                m_RootTurns[layerIndex] = new Quaternion(sum.x + q.x * weight, sum.y + q.y * weight,
+                    sum.z + q.z * weight, sum.w + q.w * weight);
+                m_RootTurnWeights[layerIndex] += weight;
+            }
+            for (int i = 0; i < Layers.Length; i++)
+            {
+                float weight = m_RootTurnWeights[i];
+                if (weight <= 0) continue;
+                var sum = m_RootTurns[i];
+                // An empty state's remaining weight contributes no rotation.
+                if (weight < 1) sum.w += sum.w < 0 ? weight - 1 : 1 - weight;
+                turn *= Quaternion.Slerp(Quaternion.identity, sum.normalized, i == 0 ? 1 : Layers[i].Evaluated);
             }
             // Root motion scales in its own frame before applying the current world rotation.
             // TransformVector would apply a nonuniform parent's scale after the root's rotation.
@@ -200,9 +223,8 @@ namespace Unbound.Runtime
             {
                 if (layerIndex != 0 || contribution != run || weight <= 0f) continue;
                 double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
-                var (d, q) = RootDelta(Bindings.Bind(clip),
-                    ClipTime(clip, from + offset, clip.isLooping),
-                    ClipTime(clip, (match.Finish ? to : match.End) + offset, clip.isLooping), pos, rot);
+                var (d, q) = MotionDelta(Bindings.Bind(clip), clip, from + offset,
+                    (match.Finish || match.PredictCurrentPose ? to : match.End) + offset, pos, rot);
                 toEnd += d * weight;
                 turnToEnd *= Quaternion.Slerp(Quaternion.identity, q, weight);
             }
