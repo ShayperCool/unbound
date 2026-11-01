@@ -1867,6 +1867,28 @@ texture array work. unbound-assets 73/73; api-check 0 errors in 2289 types; rege
 compatibility stubs changes nothing. Texture cache VERSION 12; native and render protocol
 versions and texture packet layouts unchanged.
 
+### Texture2D GetPixels byte conversion, 2026-11-01
+
+New probe tests/projects/texturepixels (on the texture array fixture): 16x16 textures of RGBA32,
+ARGB32, BGRA32, RGB24, Alpha8, R8, RG16, R16, RGBA4444, ARGB4444 and RGB565, sRGB and linear, with
+explicit mips, and a `LoadImage` result, every byte position running through 0..255. Two
+independent Editor captures per profile (Gamma, Linear) agree byte for byte. `GetPixels` (every
+overload and level) reads a byte b as b * (1 / 255) in single precision; `GetPixel` and Alpha8's
+`GetPixels` read b / 255. The two differ in the last bit for 126 of the 256 byte values (51 gives
+0.200000018 against 0.2). Unbound's Texture2D `GetPixels` now multiplies for byte formats other
+than Alpha8; `GetPixel`, Color32, `EncodeToEXR` and `RenderToCubemap` keep dividing.
+
+Unbound on the probe: 136 differences in Gamma and 138 in Linear before, 103 and 105 after (33
+resolved, none introduced). Every `GetPixels` value of RGBA32, ARGB32, BGRA32, RGB24, the linear
+and mipmapped RGBA32 and the loaded PNG is now exact. Remaining, unchanged: `GetPixelData` of
+script-made textures throws (27 values), the graphicsFormat of ARGB32 and Alpha8 (and in Linear
+of R8 and RG16) and the loaded PNG's format, R8 reading (r, 0, 0, 1) instead of (r, 1, 1, 1), Alpha8's `GetPixels32`
+(1, 1, 1, a) instead of (0, 0, 0, a), `SetPixelData` of RG16, R16, RGB565 and RGBA/ARGB4444
+(grey texels), `GetPixelBilinear` at texel centres (23 values) and `GetPixel` of those R8 and
+`SetPixelData` cases (11 values). tests/projects/resources at its 2e-3 tolerance is unchanged (501/539 values, 62/62
+images); exact float bits of its 208 Texture2D mip values go from 149 to 176 (none lost).
+Managed tests 1264/1275 (the 11 failures of the runtime before, 4 new tests pass).
+
 ### HDR and count rendering preservation, 2026-10-31
 
 The matched count/HDR runtime at674c8eae completes the unchanged strict checkers
