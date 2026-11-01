@@ -1,20 +1,18 @@
 {
   "editor_slots": 8,
-  "engine_slots": 2,
-  "engine_slot_weight": 2,
+  "engine_slots": 4,
   "engine_memory_max_bytes": 8589934592,
   "engine_job_memory_max_bytes": 4294967296,
   "memory_max_bytes": 17179869184,
   "memory_high_bytes": 15032385536,
-  "memory_swap_max_bytes": 0,
-  "gpu_editor_slots": 1,
   "slice": "unbound-editors.slice",
   "engine_slice": "unbound-engines.slice",
-  "basis": "Unity 6000.0.71f1: eight fresh 3.36M-observation Editor processes peaked at 14.108 GiB with identical captures and no swap.",
+  "basis": "Unity 6000.0.71f1: eight fresh 3.36M-observation Editor processes peaked at 14.108 GiB with identical captures. Admission is by count only (8 Editors, 4 engines, 1 build, GPU slots shared by Editors and engines); the slices bound RAM and may swap.",
   "build_slots": 1,
-  "build_slot_weight": 4,
   "build_slice": "unbound-builds.slice",
   "build_memory_high_bytes": 7516192768,
   "build_memory_max_bytes": 9663676416,
-  "build_basis": "Builds take four of the eight tokens, so a build plus four Editors stays inside the 16 GiB unbound.slice budget; tune from memory_peak in job-timings.jsonl."
+  "gpu_slots": 4,
+  "aging_seconds": 30,
+  "memory_tokens": 0
 }

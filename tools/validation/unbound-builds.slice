@@ -1,8 +1,7 @@
 [Unit]
-Description=Unbound build pool (one build, 9 GiB)
+Description=Unbound build pool (one build, 9 GiB RAM, may swap)
 
 [Slice]
 MemoryAccounting=yes
 MemoryHigh=7G
 MemoryMax=9G
-MemorySwapMax=0

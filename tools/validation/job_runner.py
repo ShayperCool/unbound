@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Bounded Editor/engine/build pools; unknown heavy commands keep exclusive access.
 
-Builds (cargo, dotnet build/test/...) no longer stop every Editor and engine run:
-they share the heavy lock, take build_slots (one build at a time) and
-build_slot_weight Editor tokens, and run in a memory-bounded scope inside the
-same unbound.slice budget. Other commands classified 'heavy' keep the exclusive
-lock, because they may start Editors without going through the pool.
+Every pooled job reserves all it needs at once, without blocking while it holds
+anything: Editor count slots, memory tokens (one GiB each, weighted by kind from
+measured peaks), engine slots, a build slot and a GPU slot. A job that cannot get
+everything releases what it took and retries, so a waiting job never pins tokens
+and never blocks other jobs whose resources are free. A job that has waited longer
+than aging_seconds (and every exclusive 'heavy' job) keeps the entry lock while it
+retries, so newer jobs queue behind it and large reservations cannot starve.
 Every job appends its wait and run time to job-timings.jsonl."""
 import contextlib
 import fcntl
@@ -13,6 +15,7 @@ import hashlib
 import json
 import os
 from pathlib import Path
+import random
 import re
 import signal
 import subprocess
@@ -20,28 +23,45 @@ import sys
 import time
 import uuid
 
-CACHE = Path.home()/'.cache/compat'
+# Tests point UNBOUND_JOB_RUNNER_STATE at a private directory for locks and policy.
+CACHE = Path(os.environ.get('UNBOUND_JOB_RUNNER_STATE') or Path.home()/'.cache/compat')
 CONFIG = CACHE/'job-limits.json'
 TIMINGS = CACHE/'job-timings.jsonl'
 BUILD_TOOLS = {'cargo': None, 'rustc': None,
                'dotnet': {'build', 'test', 'publish', 'restore', 'msbuild', 'pack', 'format'}}
 
 
+# GPU slot 0 keeps the name of the former single GPU mutex, so a job admitted by
+# the previous runner still occupies one GPU slot while the new runner is rolled out.
+GPU_SLOT_NAMES = ['parity-editor-gpu.lock']+['parity-gpu-slot-'+str(i)+'.lock' for i in range(1, 8)]
+
+
 def policy():
     value = json.loads(CONFIG.read_text())
     assert 1 <= value['editor_slots'] <= 64
-    assert 1 <= value['engine_slots'] <= 2
-    assert 1 <= value['engine_slot_weight'] <= value['editor_slots']
     assert value['memory_max_bytes'] == 16*2**30
     assert value['engine_memory_max_bytes'] == 8*2**30
     assert value['engine_job_memory_max_bytes'] == 4*2**30
-    value.setdefault('build_slots', 1)
-    value.setdefault('build_slot_weight', 4)
     value.setdefault('build_slice', 'unbound-builds.slice')
     value.setdefault('build_memory_high_bytes', 7*2**30)
     value.setdefault('build_memory_max_bytes', 9*2**30)
+    value.setdefault('build_slots', 1)
+    value.setdefault('engine_slots', 2)
+    value.setdefault('gpu_slots', 1)
+    value.setdefault('aging_seconds', 30)
+    # Optional memory tokens (one GiB each, weighted by kind). Without them only
+    # the count caps and the systemd slices bound the pools.
+    value.setdefault('memory_tokens', 0)
+    value.setdefault('weights', {})
+    assert 1 <= value['engine_slots'] <= 8
     assert 1 <= value['build_slots'] <= 2
-    assert 1 <= value['build_slot_weight'] <= value['editor_slots']
+    assert 1 <= value['gpu_slots'] <= len(GPU_SLOT_NAMES)
+    assert 0 <= value['memory_tokens'] <= 64
+    assert value['memory_tokens']*2**30 <= value['memory_max_bytes']
+    if value['memory_tokens']:
+        for kind in ['editor-cpu', 'editor-gpu', 'engine-cpu', 'engine-gpu', 'build']:
+            assert 1 <= value['weights'][kind] <= value['memory_tokens'], kind
+    assert value['aging_seconds'] >= 0
     return value
 
 
@@ -78,24 +98,71 @@ def lock(name, mode=fcntl.LOCK_EX):
             fcntl.flock(handle, fcntl.LOCK_UN)
 
 
-def slot(count, prefix='parity-editor-slot-', weight=1):
+def try_tokens(stack, names, weight):
+    """Lock `weight` of the named files without blocking; False if not enough are free."""
+    acquired = 0
+    for name in names:
+        if acquired == weight:
+            break
+        handle = (CACHE/name).open('a')
+        try:
+            fcntl.flock(handle, fcntl.LOCK_EX|fcntl.LOCK_NB)
+        except BlockingIOError:
+            handle.close()
+            continue
+        stack.enter_context(handle)
+        acquired += 1
+    return acquired == weight
+
+
+def needs(kind, config):
+    """(file names, count) pairs a job of this kind reserves together."""
+    result = []
+    if config['memory_tokens']:
+        tokens = ['parity-memory-token-'+str(i)+'.lock' for i in range(config['memory_tokens'])]
+        result.append((tokens, config['weights'][kind]))
+    if kind.startswith('editor-'):
+        result.append((['parity-editor-slot-'+str(i)+'.lock' for i in range(config['editor_slots'])], 1))
+    if kind.startswith('engine-'):
+        result.append((['parity-engine-slot-'+str(i)+'.lock' for i in range(config['engine_slots'])], 1))
+    if kind == 'build':
+        result.append((['parity-build-slot-'+str(i)+'.lock' for i in range(config['build_slots'])], 1))
+    if kind.endswith('-gpu'):
+        result.append((GPU_SLOT_NAMES[:config['gpu_slots']], 1))
+    return result
+
+
+def attempt(kind, config):
+    """Everything the job needs, or None with nothing held."""
+    with contextlib.ExitStack() as stack:
+        handle = (CACHE/'parity-heavy-job.lock').open('a')
+        try:
+            fcntl.flock(handle, (fcntl.LOCK_EX if kind == 'heavy' else fcntl.LOCK_SH)|fcntl.LOCK_NB)
+        except BlockingIOError:
+            handle.close()
+            return None
+        stack.enter_context(handle)
+        if kind != 'heavy':
+            for names, count in needs(kind, config):
+                if not try_tokens(stack, names, count):
+                    return None
+        return stack.pop_all()
+
+
+def admit(kind, config):
+    started = time.monotonic()
     while True:
-        # Reserve all tokens together. Keeping a partial reservation while
-        # waiting can deadlock two jobs that each need multiple tokens.
-        with contextlib.ExitStack() as attempt:
-            acquired = 0
-            for index in range(count):
-                handle = (CACHE/(prefix+str(index)+'.lock')).open('a')
-                try:
-                    fcntl.flock(handle, fcntl.LOCK_EX|fcntl.LOCK_NB)
-                except BlockingIOError:
-                    handle.close()
-                    continue
-                attempt.enter_context(handle)
-                acquired += 1
-                if acquired == weight:
-                    return attempt.pop_all()
-        time.sleep(.05)
+        aged = kind == 'heavy' or time.monotonic()-started >= config['aging_seconds']
+        with lock('parity-heavy-entry.lock'):
+            while True:
+                held = attempt(kind, config)
+                if held is not None:
+                    return held
+                if not aged:
+                    break
+                time.sleep(.05)
+        # Outside the entry lock, so other jobs can be admitted meanwhile.
+        time.sleep(.05+random.random()*.1)
 
 
 def run(command):
@@ -168,22 +235,7 @@ def execute(command, kind, config):
             # Wait before taking admission tokens, so another independent
             # project can use the engine pool while this project is busy.
             held.enter_context(lock('parity-engine-project-'+key+'.lock'))
-        # A writer keeps the entry lock while waiting, preventing endless new
-        # readers from joining the current Editor batch ahead of that writer.
-        with lock('parity-heavy-entry.lock'):
-            held.enter_context(lock('parity-heavy-job.lock',fcntl.LOCK_SH if pooled else fcntl.LOCK_EX))
-            if build:
-                # One build at a time; it waits for its build token before
-                # taking Editor tokens, so a queued build never pins them.
-                held.enter_context(slot(config['build_slots'],prefix='parity-build-slot-'))
-            if pooled:
-                held.enter_context(slot(config['editor_slots'],
-                    weight=config['engine_slot_weight'] if engine else
-                    config['build_slot_weight'] if build else 1))
-            if engine:
-                held.enter_context(slot(config['engine_slots'],prefix='parity-engine-slot-'))
-        if kind.endswith('-gpu'):
-            held.enter_context(lock('parity-editor-gpu.lock'))
+        held.enter_context(admit(kind, config))
         started = time.time()
         result = run(command)
         finished = time.time()
@@ -293,13 +345,11 @@ def main(args):
             limits = []
         elif build:
             limits = ['--property=MemoryHigh='+str(config['build_memory_high_bytes']),
-                      '--property=MemoryMax='+str(config['build_memory_max_bytes']),
-                      '--property=MemorySwapMax=0']
+                      '--property=MemoryMax='+str(config['build_memory_max_bytes'])]
         else:
             limits = [
             '--property=MemoryHigh='+str(config['engine_job_memory_max_bytes']*3//4),
-            '--property=MemoryMax='+str(config['engine_job_memory_max_bytes']),
-            '--property=MemorySwapMax=0']
+            '--property=MemoryMax='+str(config['engine_job_memory_max_bytes'])]
         return run(['systemd-run','--user','--scope','--quiet',
                     '--slice='+config['build_slice' if build else 'slice' if editor else 'engine_slice'],
                     '--unit='+unit,*limits,sys.executable,str(Path(__file__).resolve()),

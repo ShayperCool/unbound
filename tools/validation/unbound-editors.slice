@@ -1,8 +1,7 @@
 [Unit]
-Description=Unbound Unity Editor validation pool (16 GiB)
+Description=Unbound Unity Editor validation pool (eight Editors, 16 GiB RAM, may swap)
 
 [Slice]
 MemoryAccounting=yes
 MemoryHigh=14G
 MemoryMax=16G
-MemorySwapMax=0

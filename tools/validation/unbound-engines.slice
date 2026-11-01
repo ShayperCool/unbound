@@ -1,8 +1,7 @@
 [Unit]
-Description=Unbound engine validation pool (two jobs, 8 GiB)
+Description=Unbound engine validation pool (8 GiB RAM, may swap)
 
 [Slice]
 MemoryAccounting=yes
 MemoryHigh=7G
 MemoryMax=8G
-MemorySwapMax=0
