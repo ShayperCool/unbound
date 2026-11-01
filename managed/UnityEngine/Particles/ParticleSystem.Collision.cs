@@ -190,7 +190,7 @@ namespace UnityEngine
             float c = SphereTriggerDot(separation, separation) - sum * sum;
             if (c <= 0f || a == 0f) return true;
             float q = b * b - (4f * a) * c;
-            if (q < 0f) return false;
+            if (!(q >= 0f)) return false;
             float root = Mathf.Sqrt(q);
             float divisor = 1f / (2f * a);
             float u0 = (-b + root) * divisor;

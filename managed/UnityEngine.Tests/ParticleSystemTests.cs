@@ -61,6 +61,25 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(go); }
         }
 
+        [Fact]
+        public void SphereTriggerRejectsUnorderedDiscriminantFromFiniteOverflow()
+        {
+            // The finite segment passes the bounds check, but both discriminant products
+            // overflow. PhysX enters the real-root branch only when q >= 0.
+            float coordinate = 8589934592f; // 2^33
+            var start = new Vector3(coordinate, 0f, 0f);
+            var end = new Vector3(-coordinate, 0f, 0f);
+            float motion = end.x - start.x;
+            float a = motion * motion;
+            float b = 2f * (motion * coordinate);
+            float c = coordinate * coordinate - .75f * .75f;
+            Assert.True(float.IsNaN(b * b - (4f * a) * c));
+            var sweep = typeof(ParticleSystem).GetMethod("SphereTriggerSweep",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            Assert.NotNull(sweep);
+            Assert.False((bool)sweep.Invoke(null, new object[] { start, end, .25f, Vector3.zero, .5f }));
+        }
+
         static bool SphereTriggerRetains(SphereCollider sphere, Vector3 endpoint, float size, float velocity = 0f)
         {
             var ps = Make(system => {
