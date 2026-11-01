@@ -5,6 +5,9 @@
                     two independent windowed Editor captures (native1, native2)
     run.py check   --release R --label L   validates the two Editor captures without publishing
     run.py publish --release R --label L   checks that the two captures agree, writes Reference/unity-R
+    run.py publish --release R --label L --append PREFIX
+                                           the same checks, then appends the captures' PREFIX keys
+                                           to an existing Reference/unity-R (see publish_append)
     run.py unbound --release R --label L   an Unbound capture (UNBOUND_CLI: the binary; the
                                            environment's UNBOUND_MANAGED_DIR selects the engine)
 
@@ -31,8 +34,8 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from probe_paths import reference_root, run_root
-from editor_runner import EditorJob, load_result, publish as publish_repeats, result_problem, \
-    run_parallel, summary
+from editor_runner import EditorJob, differences, load_result, publish as publish_repeats, \
+    result_problem, run_parallel, summary
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -71,7 +74,14 @@ def job(work, repeat):
     project, out = work/'projects'/repeat, work/repeat
     return EditorJob(project, out/'editor.log', out, env={'LINE_PROBE_OUT': str(out)},
                      timeout=HARD_TIMEOUT, progress_files=[out/'values.jsonl'],
-                     progress_timeout=PROGRESS_TIMEOUT, label='lines-'+repeat)
+                     progress_timeout=PROGRESS_TIMEOUT, label='lines-'+repeat,
+                     launch_inputs={'release': os.environ['UNBOUND_PROBE_UNITY_VERSION'],
+                                    'paths': {'assets': str(project/'Assets'),
+                                              'packages': str(project/'Packages'),
+                                              'settings': str(project/'ProjectSettings'),
+                                              'runner': str(Path(__file__).resolve()),
+                                              'supervisor': str(REPO/'tests/editor_runner.py'),
+                                              'profile': str(REPO/'data/profiles/unity-6000.0.json')}})
 
 
 def editor(work, dry_run=False):
@@ -159,6 +169,55 @@ def publish(work):
                            write_reference, complete=[capture_problem], gpu=True)
 
 
+def publish_append(work, prefix):
+    """Adds new keys to an existing reference without rewriting it. Besides every check of a
+    new publication (both repeats complete, strict exit 0 on the GPU, byte-identical), the
+    captures with their `prefix` keys removed must reproduce the reference line for line, byte
+    for byte, and every reference image exactly; the reference must not hold a `prefix` key.
+    The reference's values.jsonl then gets the captures' `prefix` lines appended, in capture
+    order; its existing bytes and images are left as they are."""
+    repeats = [work/r for r in REPEATS]
+    for repeat in repeats:
+        if not repeat.is_dir():
+            sys.exit(f'{repeat.name}: no capture; not publishing')
+        reason = editor_problem(repeat) or capture_problem(repeat)
+        if reason:
+            sys.exit(f'{repeat.name}: {reason}; not publishing')
+    problems = differences(repeats, lambda d: ['values.jsonl', *images(d)])
+    if problems:
+        sys.exit('the repeats differ ('+'; '.join(problems)+'); not publishing')
+    target = reference_root(PROBE)
+    if not (target/'values.jsonl').is_file():
+        sys.exit(f'no reference to append to: {target}')
+    reference = (target/'values.jsonl').read_bytes()
+    if not reference.endswith(b'\n'):
+        sys.exit('the reference does not end with a newline; not appending')
+    old = reference.splitlines(keepends=True)
+    if any(json.loads(line)['k'].startswith(prefix) for line in old if line.strip()):
+        sys.exit(f'the reference already holds {prefix} keys; not appending')
+    captured = (repeats[0]/'values.jsonl').read_bytes().splitlines(keepends=True)
+    if any(not line.endswith(b'\n') for line in captured):
+        sys.exit('a captured record has no newline terminator; not appending')
+    new = [line for line in captured if json.loads(line)['k'].startswith(prefix)]
+    kept = [line for line in captured if not json.loads(line)['k'].startswith(prefix)]
+    if not new:
+        sys.exit(f'the captures hold no {prefix} keys; not appending')
+    if kept != old:
+        bad = next(i for i in range(max(len(kept), len(old))) if kept[i:i+1] != old[i:i+1])
+        sys.exit(f'the captures do not reproduce the reference (first difference at line {bad+1}); not appending')
+    present = sorted(p.name.removesuffix('.gz') for p in target.glob('*.rgba.gz'))
+    if present != images(repeats[0]):
+        sys.exit(f'the captures have other images than the reference: {sorted(set(present) ^ set(images(repeats[0])))[:5]}')
+    changed = [n for n in present if gzip.decompress((target/(n+'.gz')).read_bytes()) != (repeats[0]/n).read_bytes()]
+    if changed:
+        sys.exit(f'the captures do not reproduce the reference images {changed[:5]}; not appending')
+    with open(target/'values.jsonl', 'ab') as out:
+        out.write(b''.join(new))
+    print('appended', len(new), prefix, 'records to', target/'values.jsonl', '; reproduced', len(old), 'records and',
+          len(present), 'images')
+    return 0
+
+
 def unbound(work):
     cli = os.environ.get('UNBOUND_CLI', str(REPO/'target/release/unbound'))
     project = copy_project(work/'projects'/'unbound')
@@ -179,15 +238,21 @@ def main():
     parser.add_argument('--release', required=True)
     parser.add_argument('--dry-run', action='store_true',
                         help='editor: print the Editor jobs without copying projects or launching')
+    parser.add_argument('--append', metavar='PREFIX',
+                        help='publish: append the captures\' PREFIX keys to the existing reference')
     args = parser.parse_args()
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
     if args.dry_run and args.mode != 'editor':
         parser.error('--dry-run applies to editor only')
+    if args.append is not None and (args.mode != 'publish' or not args.append.endswith('.')):
+        parser.error('--append applies to publish only and takes a key prefix ending with a dot')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
     if args.mode == 'editor':
         return editor(work, args.dry_run)
+    if args.append:
+        return publish_append(work, args.append)
     return {'publish': publish, 'unbound': unbound, 'check': check}[args.mode](work)
 
 

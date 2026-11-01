@@ -2563,3 +2563,56 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - API:0/2314 through existing legacy-discovery entry; no public/API/stub/ABI/cache change;33payloads Root-verified.
 - Controls:builtinrp/lighting/graphics/urp unchanged; one flare image change remains unattributed, not a mask claim.
 - Open:maskedCB/SRP/deferred/retained-target runtime coverage, line/LP packages and original gaps. Receipt: `~/.cache/unbound/validation/runs/mask-root-integration-20261101b/root-adjudication.json`.
+
+### Combined line/trail queue validation, 2026-11-01
+- Integrated authoritative5a plus Root COW append and isolated queue tests; production confined to LineRenderers/PlayerLoopDriver.
+- One coherent Host/Core/test cycle, all33/PDB inputs bound, TestCore equals packaged Core; full managed1451/1462, exact known11 unchanged, line/queue33/33, Python8/8.
+- API/no-stubs0 errors/2314 types; source stub changes[]. Resources539 values+62 images pass with mip-bundles.
+- Required line1870 union:1654 pass/215 fail/1 resolved-extra; full Root/blend/final1887 keeps17 baseline-only keys. Both EOF introductions and state resolve;15 timing rows remain.
+- REJECTED:60 newly failing numeric/index paths and95 pixels versus matching Root, inside retained failing keys;36 numeric paths versus blend. All raw/error changes retained, no masks/tolerance changes.
+- Auto3557 BLOCKED at shader setup in Root/final; one runner correction failed, attempts preserved. No extra build/capture/Native; sphere48 and zero-life21 remain OPEN.
+- Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-trail-combined-20261101-t3-9d5972f4/REPORT.md`.
+
+### Offline line geometry attribution, 2026-11-01
+- Source `186e411d` on authorized ba658956; world TransformZ render plane prepared separately from measured BakeMesh, UNBUILT/UNACCEPTED.
+- All60 Root index introductions are30 one-cap TransformZ trail meshes; all36 blend introductions are round-trail tangent components. Full171-cap/37-lighting controls retained.
+- All95 pixel/388-channel introductions predate blend; exact witnesses and CPU replays retained. Native trail replay still differs at88 pixels.
+- Offline only: tilted image212->0 failing pixels, complete image864->652; Root introductions95->80 pixels/388->328 channels. Numeric60/36, retained4968/136, increases1279/480 unchanged.
+- Measured package remains REJECTED with all60/95 introductions and15 time failures; no new build/capture, managed test UNRUN, API/stub changes[]. Mask/cap/tangent blockers and sphere48/zero-life21 remain.
+- Root combines platformd662 and separate runnerf60 later; no runner import here. CCC timeout124 closed and registration removed; no owned clients remain.
+- Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-trail-geometry-attribution-20261101-t3-dd198b0b/REPORT.md`.
+
+### Offline corner/per-segment line geometry, 2026-11-01
+- Source 5d86c5a2 on prepared 2c604df5: per-segment width/color by index, un-eased corner arc side/turn plus normalized position angle, TransformZ trail corner side swap. UNBUILT/UNACCEPTED.
+- Float32 replay reproduces all saved engine meshes before the change; prediction: affected components 5746->44, none introduced; tangents 368->0; whole failing keys 215->83.
+- All 8 original trail channels and alpha 2055 predict within 2/255; nine-image failures 864->536 pixels, 2630->1880 channels; Root introductions 80 mask pixels only.
+- Numeric vs Root/blend/final: introduced 0/0/0; 32 above-tolerance increases vs final, all inside already failing components (max 6.7e-5).
+- Open: trail 88 pixels = tex.Static render U offset (scale x travelled path, one witness); 8 zero-area join indices; mask; 15 time rows; sphere48/zero-life21.
+- Cap-two inward plane remains inference (hidden non-emitting points zero the width). Cap-count layout proposal prepared, not published; append stays refused.
+- Four managed tests UNBUILT/UNRUN; API/stub/ABI []. Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-corner-alpha-20261101-t3-dae2fa72/REPORT.md`.
+
+### Combined line runtime on the mask Root, 2026-11-01
+- Merged prepared line geometry (8dff) plus runner f60 onto mask Root 48db; published the Root-approved 16-row cap-count control file (main reference and images unchanged, append still refused).
+- One build plus one test correction (positionCount); 33 payloads bound, TestCore equals Core; managed 1534/1546 = known 11 plus one stale assertion that contradicts Native.
+- API (current platform-module discovery) 0/2314; stubs [], no public API delta.
+- Lines on matching Root cf0: 1702 -> 81 failing, 0 introduced keys/paths/pixels/channels; 8 of 9 images exact; trail image 88 (Static U); 15 time rows unchanged.
+- Autodestruct fully exercised: 1918 -> 3142 of 3557 pass, but 382 rows introduced (trail count +1 at early steps; passive step-0 witness). Resources 539+62 exact.
+- NOT accepted: one stale test and the 382 autodestruct rows stay open; no third cycle.
+- Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/combined-line-runtime-20261101-t3-ef952536/REPORT.md`.
+
+### Trail first-move recording on Root cf0, 2026-11-01
+- Validated source 6ef53d16 (private trail state bit plus Root test fixes); one build/test cycle, 33 payloads bound, TestCore equals Core, CLI/PhysX from cf0.
+- Managed 1537/1548 = exactly the known 11; line tests 28/28. API: reused 0/2314 report, public metadata equal (65228 rows), stubs [].
+- Lines: 1702 -> 81 failing, 0 introduced keys/paths/pixels/channels vs Root, blend and the earlier combined run (raw values identical to it).
+- Autodestruct: 3545/6/6/6 of 3557, all 382 earlier introductions closed, 0 introduced; 18 manual-destroy delivery rows retained (fail on Root too).
+- Resources 539+62 byte-identical. Open: Static U 88 px, 15 time rows, 8 zero-area indices, cap-two plane inference.
+- Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/trail-recording-runtime-20261101-t3-fcf65aff/REPORT.md`.
+
+### Root line integration, 2026-11-01
+- What: admitted the measured line/trail package; production sources equal tested 6ef53d16, with only later documentation changes.
+- Probe: lines retain 81 failing keys in the full 1903-key union; autodestruct 3545/3557; resources 539 values + 62 images pass.
+- Introduced: 0 failing keys/numeric paths/pixels/channels; all 425 raw numeric error increases retained, including 205 above tolerance inside already failing paths.
+- Managed: 1537/1548, identical 11 inherited failures; line 28, queue 25, mask 15 and platform 64 pass. Root rehashed all 33 payloads; TestCore equals package.
+- API: reused proper nine-module 0/2314 result with identical public metadata; stub/API/ABI/cache changes [].
+- Open: 18 manual-Destroy timing rows, 15 line time rows, 88 Static-U pixels, 8 zero-area indices and cap-two inference; LightProbes remains held.
+- Evidence: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/trail-recording-runtime-20261101-t3-fcf65aff/REPORT.md`; runtime `candidate/`, Core 5c7b03ce; Root receipt `line-root-integration-20261101b/root-adjudication.json`.
