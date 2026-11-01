@@ -260,6 +260,9 @@ pub struct Source {
     filter_paused: bool,
     filtered: Vec<f32>,
     filtered_offset: usize,
+    component_playback: bool,
+    completed_shots: Vec<u64>,
+    completed_main: Option<u64>,
 }
 
 impl Source {
@@ -444,6 +447,8 @@ impl Mixer {
         for source in self.sources.values_mut() {
             source.main = None;
             source.one_shots.clear();
+            source.completed_shots.clear();
+            source.completed_main = None;
             source.pending_position = 0.0;
             source.generator = GeneratorState::default();
             source.filtered.clear();
@@ -591,6 +596,14 @@ impl Mixer {
         // Public Play can wake a mixer immediately, but its routed voice is submitted by
         // the audio update. Burst renders without updates do not submit a new voice.
         for source in self.sources.values_mut() {
+            // Component completion is published on the audio update. A decoded
+            // main keeps its final position until that update, while retirement
+            // of the real voice and completed one-shots follows the DSP frontier.
+            source.completed_shots.retain(|end| self.frames <= *end);
+            if let Some(end) = source.completed_main {
+                if self.frames >= end { source.pending_position = 0.0; }
+                if self.frames > end { source.completed_main = None; }
+            }
             if let Some(voice) = &mut source.main { voice.submitted = true; }
             for voice in &mut source.one_shots { voice.submitted = true; }
         }
@@ -632,6 +645,7 @@ impl Mixer {
         let source = sources.entry(handle).or_default();
         let deferred = *defer_voice_submission
             || group_nodes.get(&source.params.group).is_some_and(|n| n.spec.mixer != 0);
+        source.component_playback = deferred;
         let start_frame = |time: f64| -> u64 {
             if time < 0.0 {
                 now + frame_of(-time, rate)
@@ -652,6 +666,7 @@ impl Mixer {
                 }
                 source.played = true;
                 source.filter_paused = false;
+                source.completed_main = None;
                 let clip_handle = source.params.clip;
                 if clip_handle == 0 && source.params.has(source_flags::FILTER) {
                     source.generator = GeneratorState::default();
@@ -696,6 +711,8 @@ impl Mixer {
             command::STOP => {
                 source.main = None;
                 source.one_shots.clear();
+                source.completed_shots.clear();
+                source.completed_main = None;
                 source.pending_position = 0.0;
                 source.generator = GeneratorState::default();
                 source.filtered.clear();
@@ -705,6 +722,7 @@ impl Mixer {
                 source.played = true;
             }
             command::STOP_MAIN => {
+                source.completed_main = None;
                 source.main = None;
                 source.pending_position = 0.0;
             }
@@ -788,8 +806,9 @@ impl Mixer {
         };
         let mut state = AudioSourceState {
             main: voice_state::NONE,
-            one_shots: source.one_shots.len() as i32,
+            one_shots: (source.one_shots.len() + source.completed_shots.len()) as i32,
             is_virtual: (source.is_virtual || (source.main.is_none() && source.one_shots.is_empty()
+                && source.completed_shots.is_empty() && source.completed_main.is_none()
                 && source.played)) as i32,
             _pad: 0,
             position: source.pending_position,
@@ -1325,13 +1344,16 @@ fn render_source_voices(
     if let Some(main) = &mut source.main && main.clip != 0 {
         if render_voice(main, clips.get(&main.clip), n, t0, pitch, rate, target,
             mono_pan, looping, audible.then_some(&mut *out), callback) {
+            source.pending_position = if source.component_playback { main.position } else { 0.0 };
+            if source.component_playback { source.completed_main = Some(t0 + n as u64); }
             source.main = None;
-            source.pending_position = 0.0;
         }
     }
     source.one_shots.retain_mut(|voice| {
-        !render_voice(voice, clips.get(&voice.clip), n, t0, pitch, rate, target,
-            mono_pan, false, audible.then_some(&mut *out), callback)
+        let finished = render_voice(voice, clips.get(&voice.clip), n, t0, pitch, rate, target,
+            mono_pan, false, audible.then_some(&mut *out), callback);
+        if finished && source.component_playback { source.completed_shots.push(t0 + n as u64); }
+        !finished
     });
 }
 
@@ -2059,6 +2081,8 @@ mod tests {
             assert!(result.status.success());
             result.stdout.chunks_exact(4).map(|b| f32::from_le_bytes(b.try_into().unwrap())).collect()
         };
+        let metadata: serde_json::Value = serde_json::from_slice(
+            &std::fs::read(reference.join("capture.json")).unwrap()).unwrap();
         for key in ["idle", "shotPlain", "shotFilter", "generator", "generatorShot",
             "startInside", "endInside", "windowInside", "startClipInside", "endClipInside", "windowClipInside"] {
             TRACE.with(|trace| *trace.borrow_mut() = Trace::default());
@@ -2087,11 +2111,22 @@ mod tests {
                         clip: 1, volume_scale: 1.0, ..Default::default() });
                 }
             }
+            let check_state = |m: &Mixer, phase: &str, block: i64| {
+                let event = metadata[format!("{key}.events")].as_array().unwrap().iter()
+                    .find(|e| e["phase"] == phase && e["block"] == block).unwrap();
+                let state = m.source_state(7);
+                assert_eq!(state.main == voice_state::PLAYING || state.main == voice_state::SCHEDULED
+                    || state.one_shots > 0, event["playing"].as_bool().unwrap(), "playing {key} {phase} {block}");
+                assert_eq!(state.is_virtual != 0, event["virtual"].as_bool().unwrap(), "virtual {key} {phase} {block}");
+                assert_eq!(state.position as i64, event["timeSamples"].as_i64().unwrap(), "position {key} {phase} {block}");
+            };
             let mut pcm = Vec::new(); let mut sinks = [Vec::new(), Vec::new()];
-            for _ in 0..if key.ends_with("Inside") { 88 } else { 12 } {
+            for block in 0..if key.ends_with("Inside") { 88 } else { 12 } {
                 m.update_suspension();
+                check_state(&m, "beforeRender", block);
                 let result = m.capture(2048, [3, 4].into_iter().map(|handle|
                     capture::SinkRequest { handle, length: 2048, exclude_from_mix: false }).collect()).unwrap();
+                check_state(&m, "afterRender", block);
                 pcm.extend(result.samples);
                 for (dest, sink) in sinks.iter_mut().zip(result.sinks) {
                     let mut block = vec![-3.0; 2048];
