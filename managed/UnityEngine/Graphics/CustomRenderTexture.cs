@@ -144,7 +144,8 @@ namespace UnityEngine
 
         static bool SameDescription(in RenderTextureDescriptor a, in RenderTextureDescriptor b) =>
             a.width == b.width && a.height == b.height && a.graphicsFormat == b.graphicsFormat && a.depthStencilFormat == b.depthStencilFormat
-            && a.dimension == b.dimension && a.volumeDepth == b.volumeDepth && a.msaaSamples == b.msaaSamples && a.useMipMap == b.useMipMap;
+            && a.dimension == b.dimension && a.volumeDepth == b.volumeDepth && a.msaaSamples == b.msaaSamples && a.useMipMap == b.useMipMap
+            && a.mipCount == b.mipCount;
 
         void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
         {
@@ -266,9 +267,7 @@ namespace UnityEngine
                 InitializeFace(target, face);
             if (m_DoubleBuffered && m_Other != null)
             {
-                ulong other = m_Other.EnsureCreated();
-                for (int face = 0; face < Faces; face++)
-                    GfxStream.CopyTexture(target, face, 0, new RectInt(0, 0, -1, -1), other, face, 0, 0, 0);
+                CopyLevels(target, m_Other.EnsureCreated());
             }
             Restore(saved);
         }
@@ -472,7 +471,7 @@ namespace UnityEngine
         static RenderTexture s_SwapScratch;
 
         /// <summary>Exchanges the contents of the two buffers (each keeps its object and handle).</summary>
-        void Swap()
+        internal void Swap()
         {
             if (!m_DoubleBuffered || m_Other == null) return;
             var d = descriptor;
@@ -487,13 +486,22 @@ namespace UnityEngine
                     s_SwapScratch = new RenderTexture(d) { name = "CustomRenderTexture swap", hideFlags = HideFlags.HideAndDontSave };
             }
             ulong a = EnsureCreated(), b = m_Other.EnsureCreated(), t = s_SwapScratch.EnsureCreated();
+            CopyLevels(a, t);
+            CopyLevels(b, a);
+            CopyLevels(t, b);
+        }
+
+        /// <summary>Copies every face and every mip of this texture's description between two
+        /// textures of that description. Updates draw into mip 0 only (the renderer regenerates an
+        /// auto-generated chain after the pass), so the whole chain is copied: a copy of mip 0 alone
+        /// would leave the other buffer's lower mips with older content.</summary>
+        void CopyLevels(ulong from, ulong to)
+        {
             var whole = new RectInt(0, 0, -1, -1);
+            int mips = mipmapCount;
             for (int face = 0; face < Faces; face++)
-            {
-                GfxStream.CopyTexture(a, face, 0, whole, t, face, 0, 0, 0);
-                GfxStream.CopyTexture(b, face, 0, whole, a, face, 0, 0, 0);
-                GfxStream.CopyTexture(t, face, 0, whole, b, face, 0, 0, 0);
-            }
+                for (int mip = 0; mip < mips; mip++)
+                    GfxStream.CopyTexture(from, face, mip, whole, to, face, mip, 0, 0);
         }
 
         /// <summary>The custom render textures and render textures this one's materials read.</summary>

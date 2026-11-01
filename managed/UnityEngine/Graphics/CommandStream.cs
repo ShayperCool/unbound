@@ -90,6 +90,9 @@ namespace Unbound.Runtime
 
         internal static bool Pending => s_Length > 0;
 
+        /// <summary>The commands recorded since the last hand-over (read by tests).</summary>
+        internal static ReadOnlySpan<byte> Recorded => new ReadOnlySpan<byte>(s_Buffer, 0, s_Length);
+
         /// <summary>Hands the recorded commands to the renderer.</summary>
         internal static void Flush()
         {
