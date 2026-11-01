@@ -273,7 +273,10 @@ pub struct UnityRenderer {
     depth_copy_pipelines: [Option<(wgpu::RenderPipeline, wgpu::BindGroupLayout)>; 4],
     /// Integer copies of float textures that integer slots read, by texture and signedness.
     bit_views: HashMap<(u64, bool), (u32, u32, wgpu::TextureView)>,
-    /// Copies the draw being planned needs before it (integer copies of its textures).
+    /// Main-texture bind groups of render targets' depth elements, by texture and color space,
+    /// with the texture's generation they were made at (apart from its color's).
+    depth_main_groups: HashMap<(u64, usize), (u64, wgpu::BindGroup)>,
+    /// Copies the pass being planned needs before it (integer copies of its textures).
     pre_draw: Vec<DepthCopy>,
     /// Render targets whose depth element the draw being planned samples, and whether their depth
     /// copy must be brought up to date before it (made just now, or the current target's).
@@ -353,6 +356,7 @@ impl UnityRenderer {
             depth_target: None,
             depth_copy_pipelines: [None, None, None, None],
             bit_views: HashMap::default(),
+            depth_main_groups: HashMap::default(),
             pre_draw: Vec::new(),
             depth_reads: Vec::new(),
             target_handles: (0, 0),
@@ -490,6 +494,7 @@ impl UnityRenderer {
                 self.textures.remove(&handle);
                 self.texture_mip_biases.remove(&handle);
                 self.bit_views.retain(|(h, _), _| *h != handle);
+                self.depth_main_groups.retain(|(h, _), _| *h != handle);
             }
             Upload::TextureMipBias(handle, bias) => {
                 self.texture_mip_biases.insert(handle, bias);
@@ -585,7 +590,8 @@ impl UnityRenderer {
         })
     }
 
-    /// The main-texture bind group of a texture handle (or default), cached on the texture.
+    /// The main-texture bind group of a texture handle (or default), cached on the texture; a
+    /// depth element's (render protocol 6) reads the texture's depth copy.
     fn main_bind_group(
         &mut self,
         handle: u64,
@@ -593,6 +599,42 @@ impl UnityRenderer {
         space: i32,
     ) -> (wgpu::BindGroup, bool) {
         let slot = space.clamp(0, 1) as usize;
+        let (base, depth_element) = handle::split(handle);
+        if depth_element {
+            let Some(view) = self.depth_element_view(base) else {
+                return self.main_bind_group(0, default, space);
+            };
+            let t = &self.textures[&base];
+            let generation = t.generation;
+            if let Some((g, bg)) = self.depth_main_groups.get(&(base, slot))
+                && *g == generation
+            {
+                return (bg.clone(), false);
+            }
+            let mut key = t.sampler_key;
+            if !t.render_target {
+                key.aniso = self.effective_aniso(key.aniso);
+            }
+            key.lod_bias_bits = self.sampler_lod_bias(base, key, true);
+            let sampler = self.sampler(key);
+            let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("unbound main texture depth element"),
+                layout: &self.pipelines.texture_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&sampler),
+                    },
+                ],
+            });
+            self.depth_main_groups
+                .insert((base, slot), (generation, bg.clone()));
+            return (bg, false);
+        }
         let mut key = {
             let t = self.texture_or_default(handle, default);
             if let Some(bg) = &t.bind_groups[slot] {
