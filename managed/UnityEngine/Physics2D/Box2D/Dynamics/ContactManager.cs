@@ -92,6 +92,11 @@ namespace Unbound.Box2D.Dynamics
             Fixture fixtureB,
             int indexB)
         {
+            // Polygon/segment manifolds use the polygon as the first fixture.
+            // Both views retain the same core clipping and contact ordering.
+            if (fixtureA.Shape is PolygonShape a && a.Count == 2 &&
+                fixtureB.Shape is PolygonShape b && b.Count > 2)
+                (fixtureA, fixtureB, indexA, indexB) = (fixtureB, fixtureA, indexB, indexA);
             var type1 = fixtureA.ShapeType;
             var type2 = fixtureB.ShapeType;
 

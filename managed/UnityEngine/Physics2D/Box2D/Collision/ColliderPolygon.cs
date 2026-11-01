@@ -133,11 +133,11 @@ namespace Unbound.Box2D.Collision
             in Transform xfB)
         {
             CollidePolygons(ref manifold, polyA, xfA, polyB, xfB,
-                0.1f * Settings.LinearSlop, true, out _);
+                0.1f * Settings.LinearSlop, false, out _);
         }
 
-        // Segment cores have no side skin in a cast. Simulation manifolds keep
-        // their side padding; both operations use the same SAT and clipping path.
+        // Rounded segment contacts clip against the core's side bounds.
+        // Public cast and simulation controls: tests/projects/solverpairorder/Sources/ManifoldControls.
         public static void CollidePolygons(
             ref Manifold manifold,
             PolygonShape polyA,
