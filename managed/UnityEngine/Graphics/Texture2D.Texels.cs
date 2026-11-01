@@ -140,9 +140,7 @@ namespace Unbound.Runtime
         internal static Color DecodeFloatCell(TextureFormat format, ReadOnlySpan<byte> t)
         {
             if (format == TextureFormat.R16) return R16Cell(t[0] | t[1] << 8);
-            var one = new Color[1];
-            PixelFormats.DecodeFloat(format, t.ToArray(), one);
-            return PixelFormats.QuantizeFloat(format, one[0]);
+            return PixelFormats.QuantizeFloat(format, PixelFormats.DecodeFloatTexel(format, t));
         }
 
         internal static void EncodeFloatCell(TextureFormat format, Color c, Span<byte> t)
@@ -154,7 +152,7 @@ namespace Unbound.Runtime
                 t[1] = (byte)(n >> 8);
                 return;
             }
-            PixelFormats.EncodeFloat(format, new[] { c }).AsSpan(0, t.Length).CopyTo(t);
+            PixelFormats.EncodeFloatTexel(format, c, t);
         }
 
         internal static Color32 Pixel32(TextureFormat format, Color32 cell) => format switch

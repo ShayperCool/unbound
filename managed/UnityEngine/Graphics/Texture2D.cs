@@ -797,15 +797,27 @@ namespace Unbound.Runtime
                 return;
             }
             for (int i = 0; i < into.Length && (i + 1) * channels * size <= data.Length; i++)
+                into[i] = DecodeFloatTexel(format, data.AsSpan(i * channels * size, channels * size));
+        }
+
+        internal static UnityEngine.Color DecodeFloatTexel(UnityEngine.TextureFormat format, ReadOnlySpan<byte> data)
+        {
+            var (channels, size) = FloatLayout(format);
+            if (channels == 0) throw new NotSupportedException($"Unbound: floating texels in {format} are not supported.");
+            var color = new UnityEngine.Color(0f, 0f, 0f, 1f);
+            for (int k = 0; k < channels; k++)
+                color[k] = size == 2 ? (float)BitConverter.ToHalf(data.Slice(k * size, size)) : BitConverter.ToSingle(data.Slice(k * size, size));
+            return color;
+        }
+
+        internal static void EncodeFloatTexel(UnityEngine.TextureFormat format, UnityEngine.Color pixel, Span<byte> data)
+        {
+            var (channels, size) = FloatLayout(format);
+            if (channels == 0) throw new NotSupportedException($"Unbound: floating texels in {format} are not supported.");
+            for (int k = 0; k < channels; k++)
             {
-                var c = new UnityEngine.Color(0f, 0f, 0f, 1f);
-                for (int k = 0; k < channels; k++)
-                {
-                    int at = (i * channels + k) * size;
-                    float v = size == 2 ? (float)BitConverter.ToHalf(data, at) : BitConverter.ToSingle(data, at);
-                    c[k] = v;
-                }
-                into[i] = c;
+                if (size == 2) BitConverter.TryWriteBytes(data.Slice(k * size, size), (Half)pixel[k]);
+                else BitConverter.TryWriteBytes(data.Slice(k * size, size), pixel[k]);
             }
         }
 
@@ -815,12 +827,7 @@ namespace Unbound.Runtime
             if (channels == 0) return new byte[0];
             var bytes = new byte[pixels.Length * channels * size];
             for (int i = 0; i < pixels.Length; i++)
-                for (int k = 0; k < channels; k++)
-                {
-                    int at = (i * channels + k) * size;
-                    if (size == 2) BitConverter.TryWriteBytes(new Span<byte>(bytes, at, 2), (Half)pixels[i][k]);
-                    else BitConverter.TryWriteBytes(new Span<byte>(bytes, at, 4), pixels[i][k]);
-                }
+                EncodeFloatTexel(format, pixels[i], bytes.AsSpan(i * channels * size, channels * size));
             return bytes;
         }
 

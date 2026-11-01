@@ -239,15 +239,10 @@ namespace UnityEngine
         Color DecodeStored(ReadOnlySpan<byte> texel)
         {
             if (IsHdr)
-            {
-                var one = new Color[1];
-                PixelFormats.DecodeFloat(m_Format, texel.ToArray(), one);
-                return PixelFormats.QuantizeFloat(m_Format, one[0]);
-            }
-            var c = new Color32[1];
-            PixelFormats.Decode(m_Format, texel.ToArray(), c);
+                return PixelFormats.QuantizeFloat(m_Format, PixelFormats.DecodeFloatTexel(m_Format, texel));
+            var c = Texture2DTexels.DecodeCell(m_Format, texel);
             const float scale = 1f / 255f;
-            return new Color(c[0].r * scale, c[0].g * scale, c[0].b * scale, c[0].a * scale);
+            return new Color(c.r * scale, c.g * scale, c.b * scale, c.a * scale);
         }
 
         void DecodeStored(int face, int mip, Color[] level)
@@ -259,9 +254,8 @@ namespace UnityEngine
         void EncodeStored(Color c, Span<byte> texel)
         {
             static byte Channel(float v) => (byte)Math.Floor(Mathf.Clamp01(v) * 255f + 0.5f);
-            var bytes = IsHdr ? PixelFormats.EncodeFloat(m_Format, new[] { c })
-                : PixelFormats.Encode(m_Format, new[] { new Color32(Channel(c.r), Channel(c.g), Channel(c.b), Channel(c.a)) });
-            bytes.AsSpan(0, texel.Length).CopyTo(texel);
+            if (IsHdr) PixelFormats.EncodeFloatTexel(m_Format, c, texel);
+            else Texture2DTexels.EncodeCell(m_Format, new Color32(Channel(c.r), Channel(c.g), Channel(c.b), Channel(c.a)), texel);
         }
 
         void ReleaseStore()
