@@ -193,6 +193,8 @@ impl Engine {
     /// Starts the audio system with the project's settings; `open_device`: try the installed
     /// output device (else the virtual one).
     pub fn new(settings: ProjectAudioSettings, open_device: bool) -> Self {
+        let mut mixer = Mixer::new(MixerConfig::default());
+        mixer.defer_voice_submission = true;
         let configuration = AudioConfiguration {
             speaker_mode: settings.speaker_mode,
             dsp_buffer_size: settings.dsp_buffer_size,
@@ -201,7 +203,7 @@ impl Engine {
             num_virtual_voices: settings.virtual_voices,
         };
         let engine = Self {
-            mixer: Arc::new(Mutex::new(Mixer::new(MixerConfig::default()))),
+            mixer: Arc::new(Mutex::new(mixer)),
             clock: Arc::new(Clock::default()),
             device: Mutex::new(None),
             owed: Mutex::new(0.0),
@@ -314,6 +316,7 @@ impl Engine {
             return false;
         }
         *self.configuration.lock().unwrap() = configuration;
+        self.capturing.store(false, Ordering::Release);
         true
     }
 
@@ -386,6 +389,7 @@ impl Engine {
         mixer.has_listener = packet.flags & frame_flags::HAS_LISTENER != 0;
         mixer.listener_paused = packet.flags & frame_flags::PAUSED != 0;
         mixer.listener_filter = packet.flags & frame_flags::LISTENER_FILTER != 0;
+        mixer.update_suspension();
         if virtual_device && !self.capturing.load(Ordering::Acquire) {
             let rate = mixer.config.sample_rate as f64;
             let buffer = mixer.config.buffer_size.max(1) as usize;
@@ -579,8 +583,10 @@ mod tests {
         });
         let mut configuration = engine.configuration();
         assert_eq!(configuration.sample_rate, 1000);
+        assert!(engine.capture_start());
         configuration.sample_rate = 2000;
         assert!(engine.reset(configuration));
+        assert!(!engine.capturing.load(Ordering::Acquire));
         assert_eq!(engine.configuration().sample_rate, 2000);
         assert_eq!(engine.dsp_time(), 1.0);
     }
@@ -595,11 +601,13 @@ mod tests {
             })).unwrap();
             engine.mixer().configure_group(spec).unwrap();
             let before = engine.configuration();
+            if !engine.capturing.load(Ordering::Acquire) { assert!(engine.capture_start()); }
             assert!(!engine.reset(AudioConfiguration {
                 sample_rate: i32::MAX as u32,
                 ..before
             }));
             assert_eq!(engine.configuration(), before);
+            assert!(engine.capturing.load(Ordering::Acquire));
         }
         assert!(engine.reset(AudioConfiguration { sample_rate: 44100, ..engine.configuration() }));
         assert_eq!(engine.configuration().sample_rate, 44100);

@@ -1,0 +1,134 @@
+using System;
+using System.IO;
+using System.Reflection;
+using System.Collections.Generic;
+using UnityEngine;
+using UnityEngine.Audio;
+using Unity.Collections;
+
+public class ResetProbe : MonoBehaviour {
+    public static readonly string[] Cases = {
+        "dry_same", "dry_next", "dry_reassign", "dry_new", "dry_active", "dry_recreate", "dry_reload", "dry_setdata",
+        "echo_same", "echo_next", "echo_reassign", "echo_new", "echo_active", "echo_recreate",
+        "suspended_same", "suspended_next", "suspended_reassign", "suspended_new", "suspended_recreate",
+        "stopped_same", "stopped_next"
+    };
+    public const int Before = 64, After = 1024;
+    const BindingFlags F=BindingFlags.Static|BindingFlags.Instance|BindingFlags.Public|BindingFlags.NonPublic;
+    static bool Engine => Environment.GetEnvironmentVariable("SUSPEND_RESET_ENGINE")=="1";
+    volatile string stage="setup";
+    readonly object gate=new object();
+    BinaryWriter listener;
+    List<string> callbacks;
+    bool captured;
+    public void Listen(float[] data,int channels) {
+        lock(gate) {
+            if(listener==null) return;
+            callbacks.Add("{\"stage\":\""+stage+"\",\"frames\":"+(data.Length/channels)+",\"channels\":"+channels+",\"dspBits\":\""+BitConverter.DoubleToInt64Bits(AudioSettings.dspTime)+"\"}");
+            foreach(float x in data) listener.Write(x);
+        }
+    }
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
+    static void Bootstrap() {
+        if(!Engine) return;
+        foreach(var old in UnityEngine.Object.FindObjectsOfType<ResetProbe>()) DestroyImmediate(old.gameObject);
+        var probe=new GameObject("ResetProbe").AddComponent<ResetProbe>();
+        try { var run=probe.Capture(); while(run.MoveNext()) {} }
+        catch(Exception e) { Debug.LogException(e); Application.Quit(1); }
+    }
+    void Flush() {
+        if(!Engine) return;
+        var assembly=Type.GetType("Unbound.Runtime.AudioBackend, UnityEngine.CoreModule",true).Assembly;
+        typeof(Time).GetField("s_RealDeltaTime",F).SetValue(null,0.0);
+        typeof(Time).GetField("s_DeltaTime",F).SetValue(null,0f);
+        assembly.GetType("Unbound.Runtime.AudioSystem").GetMethod("Update",F).Invoke(null,null);
+    }
+    System.Collections.IEnumerator Start() {
+        var run=Capture();
+        for(;;) {
+            object next;
+            try { if(!run.MoveNext()) yield break; next=run.Current; }
+            catch(Exception e) { Debug.LogException(e); Exit(1); yield break; }
+            yield return next;
+        }
+    }
+    static void Exit(int code) {
+        if(Engine) { Application.Quit(code); return; }
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.Exit(code);
+#else
+        Application.Quit(code);
+#endif
+    }
+    System.Collections.IEnumerator Capture() {
+        if(captured) yield break; captured=true;
+        var config=AudioSettings.GetConfiguration();
+        config.sampleRate=int.Parse(Environment.GetEnvironmentVariable("SUSPEND_PROBE_RATE"));
+        config.speakerMode=AudioSpeakerMode.Stereo;config.dspBufferSize=1024;
+        if(!AudioSettings.Reset(config)) throw new Exception("Initial reset failed");
+        Time.captureDeltaTime=1024f/config.sampleRate;
+        var output=Environment.GetEnvironmentVariable("SUSPEND_PROBE_OUT");Directory.CreateDirectory(output);
+        gameObject.AddComponent<AudioListener>();gameObject.AddComponent<ResetListener>().Probe=this;
+        var records=new List<string>{"\"release\":\""+Application.unityVersion+"\"","\"rate\":"+AudioSettings.outputSampleRate};
+        void Save() => File.WriteAllText(Path.Combine(output,"capture.json"),"{"+string.Join(",",records)+"}\n");
+        var arrays=new List<NativeArray<float>>();
+        foreach(string key in Cases) {
+            Debug.Log("Reset case "+key);
+            if(!AudioRenderer.Start()) throw new Exception("Initial capture start failed");
+            var mixer=Resources.Load<AudioMixer>(key.StartsWith("dry")||key.StartsWith("stopped")?"bypassed":key.StartsWith("suspended")?"enabled":"disabled");
+            mixer.SetFloat("Wet",1);
+            var groups=mixer.FindMatchingGroups("");var child=Array.Find(groups,g=>g.name=="Child");var master=Array.Find(groups,g=>g.name=="Master");
+            var go=new GameObject(key);var source=go.AddComponent<AudioSource>();
+            var clip=AudioClip.Create(key,8192,2,config.sampleRate,false);var input=new float[16384];
+            for(int i=0;i<8192;i++) {
+                input[i*2]=key.EndsWith("active")?0.125f:i==2048?0.25f:0;
+                input[i*2+1]=key.EndsWith("active")?-0.0625f:i==3072?-0.125f:0;
+            }
+            clip.SetData(input,0);source.clip=clip;source.outputAudioMixerGroup=child;source.loop=key.EndsWith("active");
+            var sink=new NativeArray<float>(2048,Allocator.Persistent);arrays.Add(sink);
+            var buffer=new NativeArray<float>(2048,Allocator.Persistent);arrays.Add(buffer);
+            var addSink=typeof(AudioRenderer).GetMethod("AddMixerGroupSink",F);
+            var events=new List<string>();
+            void State(string name) { var data=new float[16];bool read=clip.GetData(data,2048);events.Add("{\"clipStage\":\""+name+"\",\"load\":"+(int)clip.loadState+",\"read\":"+(read?"true":"false")+",\"firstBits\":\""+BitConverter.ToInt32(BitConverter.GetBytes(data[0]),0)+"\"}"); events.Add("{\"stage\":\""+name+"\",\"playing\":"+(source.isPlaying?"true":"false")+",\"sample\":"+source.timeSamples+",\"dspBits\":\""+BitConverter.DoubleToInt64Bits(AudioSettings.dspTime)+"\"}"); }
+            source.Play();Flush();
+            using(var lw=new BinaryWriter(File.Create(Path.Combine(output,key+".listener.f32"))))
+            using(var mw=new BinaryWriter(File.Create(Path.Combine(output,key+".master.f32"))))
+            using(var pw=new BinaryWriter(File.Create(Path.Combine(output,key+".f32")))) {
+                lock(gate) { listener=lw;callbacks=new List<string>(); }
+                for(int block=0;block<Before+After;block++) {
+                    if(!Engine) yield return null;
+                    if(block==Before) {
+                        stage="before_reset";State(stage);
+                        if(key.StartsWith("stopped")) events.Add("{\"stopBefore\":"+(AudioRenderer.Stop()?"true":"false")+"}");
+                        stage="reset";bool ok=AudioSettings.Reset(config);events.Add("{\"reset\":"+(ok?"true":"false")+"}");State("after_reset");
+                        stage="restart";bool started=AudioRenderer.Start();events.Add("{\"restart\":"+(started?"true":"false")+"}");State("after_restart");
+                        if(!ok||!started) throw new Exception("Reset/restart failed");
+                        if(key.EndsWith("next")) { stage="next_update";if(!Engine) yield return null;Flush();State("after_update"); }
+                        if(key.EndsWith("reassign")) { source.clip=null;source.outputAudioMixerGroup=null;source.clip=clip;source.outputAudioMixerGroup=child; }
+                        if(key.EndsWith("new")) { DestroyImmediate(source);source=go.AddComponent<AudioSource>();source.clip=clip;source.outputAudioMixerGroup=child; }
+                        if(key.EndsWith("recreate")) { var oldClip=clip;clip=AudioClip.Create(key+"_recreated",8192,2,config.sampleRate,false);events.Add("{\"recreatedSetData\":"+(clip.SetData(input,0)?"true":"false")+"}");source.clip=clip;DestroyImmediate(oldClip); }
+                        if(key.EndsWith("reload")) events.Add("{\"reload\":"+(clip.LoadAudioData()?"true":"false")+"}");
+                        if(key.EndsWith("setdata")) events.Add("{\"setdata\":"+(clip.SetData(input,0)?"true":"false")+"}");
+                        stage="play";source.Play();State("after_play");
+                        Flush();State("after_submit");
+                    }
+                    stage="render_"+block;
+                    if(!(bool)addSink.Invoke(null,new object[]{master,sink,false})) throw new Exception("Sink failed");
+                    if(!AudioRenderer.Render(buffer)) throw new Exception("Render failed");
+                    for(int i=0;i<buffer.Length;i++){pw.Write(buffer[i]);mw.Write(sink[i]);}
+                    if(block==Before || block==Before+1) State("after_render_"+block);
+                    Flush();
+                }
+                lock(gate) { listener=null;records.Add("\""+key+".callbacks\":["+string.Join(",",callbacks)+"]"); }
+            }
+            records.Add("\""+key+".events\":["+string.Join(",",events)+"]");
+            foreach(string suffix in new[]{"",".master",".listener"}) records.Add("\""+key+suffix+"\":{\"file\":\""+key+suffix+".f32\",\"frames\":"+(new FileInfo(Path.Combine(output,key+suffix+".f32")).Length/8)+",\"channels\":2}");
+            mixer.SetFloat("Wet",0);source.Stop();DestroyImmediate(go);DestroyImmediate(clip);Flush();AudioRenderer.Stop();Save();
+        }
+        foreach(var array in arrays)array.Dispose();Save();Exit(0);
+    }
+}
+public class ResetListener : MonoBehaviour {
+    public ResetProbe Probe;
+    void OnAudioFilterRead(float[] data,int channels)=>Probe.Listen(data,channels);
+}

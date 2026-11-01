@@ -177,6 +177,7 @@ struct Voice {
     start_at: u64,
     end_at: u64,
     paused: bool,
+    submitted: bool,
     volume_scale: f32,
     /// The gain matrix of the last block (ramped from).
     matrix: [f32; 4],
@@ -196,6 +197,7 @@ impl Voice {
             start_at,
             end_at: u64::MAX,
             paused: false,
+            submitted: true,
             volume_scale,
             matrix: [0.0; 4],
             fresh: true,
@@ -295,6 +297,9 @@ impl Default for MixerConfig {
 
 pub struct Mixer {
     pub config: MixerConfig,
+    /// The engine submits component voices at its audio update; direct DSP users may render
+    /// immediately. Full AudioMixer graphs also require update-based submission.
+    pub defer_voice_submission: bool,
     frames: u64,
     clips: HashMap<u64, Clip>,
     sources: HashMap<u64, Source>,
@@ -309,6 +314,7 @@ pub struct Mixer {
     pub listener_filter: bool,
     listener_output: Ring,
     callback: Option<Callback>,
+    capture_listener_batch: bool,
     /// Nothing listens (the virtual device): voices only advance, unless their samples are
     /// asked for (filters, output data).
     pub discard_output: bool,
@@ -325,6 +331,7 @@ impl Mixer {
     pub fn new(config: MixerConfig) -> Self {
         Self {
             config,
+            defer_voice_submission: false,
             frames: 0,
             clips: HashMap::new(),
             sources: HashMap::new(),
@@ -339,6 +346,7 @@ impl Mixer {
             listener_filter: false,
             listener_output: Ring::new(),
             callback: None,
+            capture_listener_batch: false,
             discard_output: false,
             listener_output_wanted: false,
             mix: vec![0.0; BLOCK * 2],
@@ -373,6 +381,9 @@ impl Mixer {
         self.frames = frame_of(seconds, config.sample_rate);
         for node in self.group_nodes.values_mut() {
             node.rendered = 0;
+            node.suspended = false;
+            node.last_active = self.frames;
+            node.energy = 0.0;
             node.effects.clear();
             node.update(node.spec.clone(), config.sample_rate)?;
         }
@@ -458,6 +469,8 @@ impl Mixer {
 
     /// Updates routing and parameters without discarding the filters' delay lines.
     pub fn configure_group(&mut self, spec: GroupSpec) -> anyhow::Result<()> {
+        anyhow::ensure!(spec.suspend_threshold.is_finite() && spec.suspend_threshold >= 0.0,
+            "invalid AudioMixer suspension threshold");
         for effect in &spec.effects {
             effect.validate(self.config.sample_rate)?;
             anyhow::ensure!(
@@ -489,6 +502,9 @@ impl Mixer {
             rendered: 0,
             effects: Vec::new(),
             buffer: vec![0.0; BLOCK * 2],
+            suspended: false,
+            last_active: self.frames,
+            energy: 0.0,
         });
         node.update(spec, self.config.sample_rate)?;
         // Children mix into parents. Stable order also makes independent sibling sums deterministic.
@@ -510,12 +526,52 @@ impl Mixer {
         Ok(())
     }
 
+    /// Unity 6000.0.71f1 observes suspension on audio updates, using the rendered DSP clock.
+    /// Burst renders and no-render updates in tests/projects/mixersuspend constrain both clocks.
+    pub fn update_suspension(&mut self) {
+        // Public Play can wake a mixer immediately, but its routed voice is submitted by
+        // the audio update. Burst renders without updates do not submit a new voice.
+        for source in self.sources.values_mut() {
+            if let Some(voice) = &mut source.main { voice.submitted = true; }
+            for voice in &mut source.one_shots { voice.submitted = true; }
+        }
+        let active = self.active_mixer_roots();
+        for (handle, node) in &mut self.group_nodes {
+            if node.spec.mixer != *handle { continue; }
+            if active.contains(handle) || !node.spec.enable_suspend {
+                node.suspended = false;
+                node.last_active = self.frames;
+            } else if self.frames.saturating_sub(node.last_active) > self.config.sample_rate as u64 {
+                node.suspended = true;
+            }
+        }
+    }
+
+    fn active_mixer_roots(&self) -> std::collections::HashSet<u64> {
+        let mut active = std::collections::HashSet::new();
+        for source in self.sources.values().filter(|s| s.active()) {
+            let mut handle = source.params.group;
+            for _ in 0..self.group_nodes.len() {
+                let Some(group) = self.group_nodes.get(&handle) else { break; };
+                // A muted route contributes no activity to its mixer, even while its source
+                // remains playing and real. A silent clip on an unmuted route does. The
+                // independent lifecycle probe makes this distinction audible with a sibling Echo.
+                if group.spec.muted { break; }
+                if handle == group.spec.mixer && !active.insert(handle) { break; }
+                handle = group.spec.parent;
+            }
+        }
+        active
+    }
+
     pub fn command(&mut self, handle: u64, cmd: &AudioSourceCommand) {
         let now = self.frames;
         let rate = self.config.sample_rate;
         let callback = self.callback;
-        let Self { sources, clips, .. } = self;
+        let Self { sources, clips, group_nodes, defer_voice_submission, .. } = self;
         let source = sources.entry(handle).or_default();
+        let deferred = *defer_voice_submission
+            || group_nodes.get(&source.params.group).is_some_and(|n| n.spec.mixer != 0);
         let start_frame = |time: f64| -> u64 {
             if time < 0.0 {
                 now + frame_of(-time, rate)
@@ -543,7 +599,13 @@ impl Mixer {
                 if position == 0.0 && source.params.pitch < 0.0 && !clip.stream {
                     position = clip.frames as f64;
                 }
+                // A second Play before submission restarts the pending voice immediately.
+                // Unlike replay of an already submitted voice, this includes the explicit
+                // Play following playOnAwake on enable. The independent submission probe
+                // distinguishes replay, Stop/Play, two Play calls and disable/enable.
+                let restart_pending = source.main.as_ref().is_some_and(|v| !v.submitted);
                 let mut voice = Voice::new(clip_handle, position, start_frame(cmd.time), 1.0);
+                voice.submitted = !deferred || restart_pending;
                 if clip.stream {
                     voice.position = 0.0;
                     voice.stream = Some(StreamState::at((position as usize).min(clip.frames)));
@@ -591,6 +653,7 @@ impl Mixer {
                     0.0
                 };
                 let mut voice = Voice::new(cmd.clip, position, now, cmd.volume_scale);
+                voice.submitted = !deferred;
                 if clip.stream {
                     voice.stream = Some(StreamState::default());
                 }
@@ -645,7 +708,7 @@ impl Mixer {
         let mut state = AudioSourceState {
             main: voice_state::NONE,
             one_shots: source.one_shots.len() as i32,
-            is_virtual: source.is_virtual as i32,
+            is_virtual: (source.is_virtual || (source.main.is_none() && source.one_shots.is_empty())) as i32,
             _pad: 0,
             position: source.pending_position,
         };
@@ -738,7 +801,19 @@ impl Mixer {
         // untouched in the caller's NativeArray, including buffers shorter than one DSP block.
         let block_samples = self.config.buffer_size.max(1) as usize * 2;
         let mut samples = vec![0.0; length / block_samples * block_samples];
-        self.render(&mut samples, 2);
+        // Preserve the internal DSP chunks and their arithmetic. Native capture delivers the
+        // listener at the configured DSP-buffer boundary, as the submission profile records.
+        // This renders no extra samples and leaves partial caller buffers untouched.
+        self.capture_listener_batch = true;
+        for block in samples.chunks_mut(block_samples) {
+            self.render(block, 2);
+            if self.listener_filter && self.has_listener && let Some(cb) = self.callback {
+                cb(callback::LISTENER_FILTER, 0, block.as_mut_ptr(),
+                    (block.len() / 2) as i32, 2, 0);
+            }
+            self.listener_output.push(block);
+        }
+        self.capture_listener_batch = false;
         self.discard_output = discarded;
         for value in &mut samples {
             *value = capture::pcm16(*value);
@@ -807,6 +882,14 @@ impl Mixer {
         let listener_paused = self.listener_paused;
         let has_listener = self.has_listener;
         let config = self.config;
+        // New voices wake immediately, even when no main-thread update intervenes. Waking
+        // preserves effect history and the input fade; parameter submissions alone do not wake.
+        for root in self.active_mixer_roots() {
+            if let Some(node) = self.group_nodes.get_mut(&root) && node.suspended {
+                node.suspended = false;
+                node.last_active = self.frames;
+            }
+        }
         let need_mix = !self.discard_output
             || self.listener_filter
             || self.listener_output_wanted
@@ -976,6 +1059,12 @@ impl Mixer {
             }
         }
         for &handle in &self.group_order {
+            let root = self.group_nodes[&handle].spec.mixer;
+            if self.group_nodes.get(&root).is_some_and(|node| node.suspended) {
+                // A suspended graph does not write registered group sinks. The caller retains
+                // its previous block, while the device stream and listener receive silence.
+                continue;
+            }
             let node = self.group_nodes.get_mut(&handle).unwrap();
             // Echo retains the measured group input fade even when bypassed.
             let active = node.effects.iter().any(|e| e.spec.kind == "Echo")
@@ -998,6 +1087,19 @@ impl Mixer {
             }
             if node.spec.muted {
                 node.buffer[..n * 2].fill(0.0);
+            }
+            if root == handle {
+                for &sample in &node.buffer[..n * 2] {
+                    node.energy += sample as f64 * sample as f64;
+                }
+                let window = config.buffer_size.max(1) as u64;
+                if (t0 + n as u64) % window == 0 {
+                    if node.energy / (window * 2) as f64
+                        >= (node.spec.suspend_threshold as f64).powi(2) {
+                        node.last_active = t0 + n as u64 - window;
+                    }
+                    node.energy = 0.0;
+                }
             }
             if node.spec.observe
                 && let Some(cb) = callback
@@ -1030,6 +1132,7 @@ impl Mixer {
             self.group_nodes.get_mut(&handle).unwrap().buffer = buffer;
         }
         if self.listener_filter
+            && !self.capture_listener_batch
             && has_listener
             && let Some(cb) = callback
         {
@@ -1042,7 +1145,9 @@ impl Mixer {
                 0,
             );
         }
-        self.listener_output.push(&self.mix[..n * 2]);
+        if !self.capture_listener_batch {
+            self.listener_output.push(&self.mix[..n * 2]);
+        }
         self.frames += n as u64;
     }
 }
@@ -1137,7 +1242,7 @@ fn render_voice(
     let Some(clip) = clip else {
         return true;
     };
-    if voice.paused {
+    if voice.paused || !voice.submitted {
         return false;
     }
     if clip.frames == 0 {
@@ -1586,6 +1691,167 @@ mod tests {
                 "cutoff": 1000.0, "resonance": 1.0 }]
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn routed_voice_submission_waits_for_an_audio_update_without_shifting_the_clip() {
+        let mut m = Mixer::new(MixerConfig::default());
+        let mut group = filter_group(3, 0, "Attenuation");
+        group.mixer = 3;
+        group.effects[0].gain = 1.0;
+        m.configure_group(group).unwrap();
+        m.add_clip(1, Clip::new(2, 48000, vec![0.125; 4096 * 2]));
+        source_with(&mut m, 7, 1, |p| p.group = 3);
+        play(&mut m, 7, command::PLAY, 0.0);
+        let mut output = vec![0.0; 2048];
+        for _ in 0..10 { m.render(&mut output, 2); }
+        assert!(output.iter().all(|x| *x == 0.0));
+        assert_eq!(m.source_state(7).main, voice_state::PLAYING);
+        assert_eq!(m.source_state(7).position, 0.0);
+        m.update_suspension();
+        m.render(&mut output, 2);
+        assert!(output.iter().any(|x| *x > 0.1));
+        assert_eq!(m.source_state(7).position, 1024.0);
+    }
+
+    #[test]
+    fn captured_listener_delivery_uses_dsp_buffers_and_preserves_pcm_and_partial_suffixes() {
+        use std::cell::RefCell;
+        thread_local! { static SIZES: RefCell<Vec<i32>> = const { RefCell::new(Vec::new()) }; }
+        extern "C" fn listener(kind: i32, _: u64, data: *mut f32, frames: i32, channels: i32, _: i64) {
+            if kind != callback::LISTENER_FILTER { return; }
+            SIZES.with(|sizes| sizes.borrow_mut().push(frames));
+            let values = unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+            for value in values { *value *= 0.5; }
+        }
+        fn prepared() -> Mixer {
+            let mut m = Mixer::new(MixerConfig::default());
+            m.add_clip(1, Clip::new(2, 48000, vec![0.25; 8192 * 2]));
+            source_with(&mut m, 7, 1, |_| {});
+            play(&mut m, 7, command::PLAY, 0.0);
+            m
+        }
+        let mut control = prepared();
+        let mut expected = vec![0.0; 4096];
+        control.render(&mut expected, 2);
+        for sample in &mut expected { *sample = capture::pcm16(*sample * 0.5); }
+        let mut m = prepared();
+        m.set_callback(Some(listener));
+        m.listener_filter = true;
+        let output = m.capture(4097, Vec::new()).unwrap();
+        assert_eq!(output.samples, expected);
+        assert_eq!(m.frames(), 2048);
+        SIZES.with(|sizes| assert_eq!(*sizes.borrow(), [1024, 1024]));
+        // The capture frontier does not alter the device/direct DSP callback path.
+        m.render(&mut vec![0.0; 512], 2);
+        SIZES.with(|sizes| assert_eq!(*sizes.borrow(), [1024, 1024, 256]));
+    }
+
+    #[test]
+    fn muted_sibling_does_not_keep_a_quiet_mixer_awake() {
+        let mut m = Mixer::new(MixerConfig::default());
+        let mut echo = filter_group(3, 4, "Echo");
+        echo.mixer = 4;
+        echo.effects[0].delay = 5000.0;
+        m.configure_group(echo).unwrap();
+        let mut master = filter_group(4, 0, "Attenuation");
+        master.mixer = 4;
+        master.enable_suspend = true;
+        master.suspend_threshold = 0.0001;
+        master.effects[0].gain = 1.0;
+        m.configure_group(master).unwrap();
+        let mut muted = filter_group(5, 4, "Attenuation");
+        muted.mixer = 4;
+        muted.muted = true;
+        muted.effects[0].gain = 1.0;
+        m.configure_group(muted).unwrap();
+        let mut input = vec![0.0; 4096 * 2];
+        input[2048 * 2] = 0.25;
+        input[3072 * 2 + 1] = -0.125;
+        m.add_clip(1, Clip::new(2, 48000, input));
+        m.add_clip(2, Clip::new(2, 48000, vec![0.01; 2048]));
+        source_with(&mut m, 7, 1, |p| p.group = 3);
+        source_with(&mut m, 8, 2, |p| { p.group = 5; p.flags = source_flags::LOOP; });
+        play(&mut m, 7, command::PLAY, 0.0);
+        play(&mut m, 8, command::PLAY, 0.0);
+        for _ in 0..70 { m.update_suspension(); m.advance(1024); }
+        assert!(m.group_nodes[&4].suspended);
+        assert_eq!(m.group_nodes[&3].rendered, 50 * 1024);
+        assert_eq!(m.source_state(8).main, voice_state::PLAYING);
+        assert_eq!(m.source_state(8).is_virtual, 0);
+        assert_eq!(m.source_state(7).is_virtual, 1);
+    }
+
+    #[test]
+    fn component_play_distinguishes_pending_restart_from_active_replay() {
+        let mut m = Mixer::new(MixerConfig::default());
+        m.defer_voice_submission = true;
+        m.add_clip(1, Clip::new(2, 48000, vec![0.125; 4096 * 2]));
+        source_with(&mut m, 7, 1, |_| {});
+        let mut output = vec![0.0; 2048];
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.render(&mut output, 2);
+        assert_eq!(m.source_state(7).position, 0.0);
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.render(&mut output, 2);
+        assert_eq!(m.source_state(7).position, 1024.0);
+        m.update_suspension();
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.render(&mut output, 2);
+        assert_eq!(m.source_state(7).position, 0.0);
+        assert!(output.iter().all(|x| *x == 0.0));
+        play(&mut m, 7, command::STOP, 0.0);
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.render(&mut output, 2);
+        assert_eq!(m.source_state(7).position, 0.0);
+        m.update_suspension();
+        m.render(&mut output, 2);
+        assert_eq!(m.source_state(7).position, 1024.0);
+    }
+
+    #[test]
+    fn suspension_uses_dsp_time_at_updates_and_preserves_delay_and_sink_storage() {
+        let mut m = Mixer::new(MixerConfig::default());
+        let mut group = filter_group(3, 4, "Echo");
+        group.mixer = 4;
+        group.effects[0].delay = 5000.0;
+        m.configure_group(group).unwrap();
+        m.configure_group(serde_json::from_value(serde_json::json!({
+            "handle": 4, "parent": 0, "mixer": 4, "enableSuspend": true,
+            "suspendThreshold": 0.0001, "muted": false, "bypass": false, "effects": []
+        })).unwrap()).unwrap();
+        let mut input = vec![0.0; 4096 * 2];
+        input[2048 * 2] = 0.25;
+        input[3072 * 2 + 1] = -0.125;
+        m.add_clip(1, Clip::new(2, 48000, input));
+        source_with(&mut m, 7, 1, |p| p.group = 3);
+        play(&mut m, 7, command::PLAY, 0.0);
+        let mut block = vec![0.0; 2048];
+        for _ in 0..384 {
+            m.update_suspension();
+            m.render(&mut block, 2);
+        }
+        assert!(m.group_nodes[&4].suspended);
+        // The complete Native wake_hold capture freezes after 50 DSP buffers at 48 kHz.
+        assert_eq!(m.group_nodes[&3].rendered, 50 * 1024);
+        let captured = m.capture(2048, vec![capture::SinkRequest {
+            handle: 4, length: 2048, exclude_from_mix: false,
+        }]).unwrap();
+        assert!(captured.sinks[0].samples.is_empty());
+        assert!(captured.samples.iter().all(|x| *x == 0.0));
+        m.add_clip(2, Clip::new(2, 48000, vec![0.01; 1024 * 2]));
+        source_with(&mut m, 8, 2, |p| { p.group = 4; p.flags = source_flags::LOOP; });
+        play(&mut m, 8, command::PLAY, 0.0);
+        m.render(&mut block, 2);
+        assert!(!m.group_nodes[&4].suspended);
+        assert_eq!(m.group_nodes[&3].rendered, 51 * 1024);
+        // Neither time without rendering nor repeated graph submissions advance the history.
+        for _ in 0..160 { m.update_suspension(); }
+        assert_eq!(m.group_nodes[&3].rendered, 51 * 1024);
+        let configuration = m.config;
+        m.reconfigure(configuration).unwrap();
+        assert!(!m.group_nodes[&4].suspended);
+        assert_eq!(m.group_nodes[&3].rendered, 0);
     }
 
     #[test]

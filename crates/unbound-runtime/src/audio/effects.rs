@@ -53,6 +53,13 @@ pub struct GroupSpec {
     pub effects: Vec<EffectSpec>,
     #[serde(default)]
     pub observe: bool,
+    #[serde(default)]
+    pub mixer: u64,
+    #[serde(default)]
+    pub enable_suspend: bool,
+    /// Linear RMS boundary, converted from the asset's dB setting by the managed mixer.
+    #[serde(default)]
+    pub suspend_threshold: f32,
 }
 
 #[derive(Default)]
@@ -275,6 +282,9 @@ pub struct GroupNode {
     pub effects: Vec<Effect>,
     pub buffer: Vec<f32>,
     pub rendered: usize,
+    pub suspended: bool,
+    pub last_active: u64,
+    pub energy: f64,
 }
 impl GroupNode {
     pub fn update(&mut self, spec: GroupSpec, rate: u32) -> anyhow::Result<()> {

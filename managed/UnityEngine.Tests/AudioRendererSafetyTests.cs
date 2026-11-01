@@ -19,6 +19,7 @@ namespace UnityEngine.Tests
         readonly object previousApi, previousReady, previousMainThread;
         static int calls, sinkRequests, responseMode;
         static Action duringRender;
+        static bool resetOk;
 
         public AudioRendererSafetyTests()
         {
@@ -31,6 +32,7 @@ namespace UnityEngine.Tests
             Native.Initialize(&api);
             calls = sinkRequests = responseMode = 0;
             duringRender = null;
+            resetOk = true;
             Assert.True(AudioRenderer.Start());
         }
 
@@ -52,7 +54,9 @@ namespace UnityEngine.Tests
             string result = "true";
             try
             {
-                if (Encoding.UTF8.GetString(method, methodLength) == "audio-renderer-render")
+                string operation = Encoding.UTF8.GetString(method, methodLength);
+                if (operation == "audio-reset") result = resetOk ? "{\"ok\":true}" : "{\"ok\":false}";
+                else if (operation == "audio-renderer-render")
                 {
                     using var input = JsonDocument.Parse(Encoding.UTF8.GetString(request, requestLength));
                     var root = input.RootElement;
@@ -80,6 +84,44 @@ namespace UnityEngine.Tests
 
         [UnmanagedCallersOnly]
         static void Free(NativeBuffer buffer) => NativeMemory.Free(buffer.Data);
+
+        [Fact]
+        public void RejectedResetPreservesPausedSourcesNotificationsAndPendingSink()
+        {
+            var backend = typeof(AudioBackend).GetField("s_Current", BindingFlags.Static | BindingFlags.NonPublic);
+            var previousBackend = (AudioBackend)backend.GetValue(null);
+            var source = new AudioSource { m_Paused = true, m_Dirty = false };
+            AudioSystem.Add(source);
+            int notifications = 0;
+            void Changed(bool deviceChanged) { Assert.False(deviceChanged); notifications++; }
+            AudioSettings.OnAudioConfigurationChanged += Changed;
+            try
+            {
+                AudioBackend.Use(new NativeAudioBackend());
+                using var sink = new NativeArray<float>(4, Allocator.Persistent);
+                using var output = new NativeArray<float>(4, Allocator.Persistent);
+                Assert.True(AudioRenderer.AddMixerGroupSink(new AudioMixerGroup { m_Handle = 9 }, sink, false));
+                resetOk = false;
+                Assert.False(AudioSettings.Reset(default));
+                Assert.True(source.m_Paused);
+                Assert.False(source.m_Dirty);
+                Assert.Equal(0, notifications);
+                Assert.True(AudioRenderer.Render(output));
+                Assert.Equal(1, sinkRequests);
+                Assert.Equal(0.75f, sink[0]);
+                resetOk = true;
+                Assert.True(AudioSettings.Reset(default));
+                Assert.False(source.m_Paused);
+                Assert.True(source.m_Dirty);
+                Assert.Equal(1, notifications);
+            }
+            finally
+            {
+                AudioSettings.OnAudioConfigurationChanged -= Changed;
+                AudioSystem.Remove(source);
+                AudioBackend.Use(previousBackend);
+            }
+        }
 
         [Fact]
         public void NativeLengthFailureConsumesBorrowedSinkBeforeItIsDisposed()

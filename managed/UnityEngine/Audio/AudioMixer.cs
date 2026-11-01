@@ -19,6 +19,8 @@ namespace UnityEngine.Audio
         internal readonly List<AudioMixerSnapshot> m_Snapshots = new List<AudioMixerSnapshot>();
         internal AudioMixerSnapshot m_StartSnapshot;
         internal AudioMixerUpdateMode m_UpdateMode;
+        internal bool m_EnableSuspend = true;
+        internal float m_SuspendThreshold = -80f;
         /// <summary>Exposed parameter name → parameter GUID.</summary>
         internal readonly Dictionary<string, string> m_Exposed = new Dictionary<string, string>(StringComparer.Ordinal);
         /// <summary>Parameter GUID → value set by the snapshots.</summary>
@@ -259,6 +261,8 @@ namespace UnityEngine.Audio
             }
             m_StartSnapshot = Resolve<AudioMixerSnapshot>(body.Ref("m_StartSnapshot")) ?? (m_Snapshots.Count > 0 ? m_Snapshots[0] : null);
             m_UpdateMode = (AudioMixerUpdateMode)body.Int("m_UpdateMode");
+            m_EnableSuspend = body.Bool("m_EnableSuspend", true);
+            m_SuspendThreshold = body.Float("m_SuspendThreshold", -80f);
             m_Exposed.Clear();
             foreach (var item in body.Get("m_ExposedParameters")?.Seq() ?? Array.Empty<YNode>())
             {
@@ -403,8 +407,22 @@ namespace UnityEngine.Audio
             }
             var parent = m_Parent ?? m_Mixer?.m_OutputGroup;
             return new { handle = m_Handle, parent = parent?.Handle ?? 0UL,
+                mixer = m_Mixer?.m_MasterGroup?.Handle ?? 0UL,
+                enableSuspend = m_Parent == null && m_Mixer != null && m_Mixer.m_EnableSuspend,
+                suspendThreshold = SuspensionGain(m_Mixer?.m_SuspendThreshold ?? -80f),
                 muted = m_Mute || (m_Mixer != null && m_Mixer.AnySolo && !InSoloPath()),
                 bypass = m_BypassEffects, observe = m_ObserveOutput, effects };
+        }
+
+        // The constant-tail boundary in tests/projects/mixersuspend distinguishes this
+        // approximation from exact pow(10, db/20). Suspension has no attenuation mute floor.
+        static float SuspensionGain(float db)
+        {
+            float exponent = (db * 0.05f) * 3.3229959f;
+            int integral = Mathf.FloorToInt(exponent);
+            float fraction = exponent - integral;
+            float polynomial = (1f + fraction * 0.6822701f) + (fraction * fraction) * 0.31772992f;
+            return polynomial * BitConverter.Int32BitsToSingle((integral + 127) << 23);
         }
 
         bool InSoloPath()
