@@ -1161,6 +1161,22 @@ mod tests {
         assert_eq!([f(160), f(172)], [7.0, 8.0], "a bound constant buffer");
     }
 
+    /// Typed slots: only float slots are filterable; integer and depth slots bind their types.
+    #[test]
+    fn slot_texel_types_select_the_layout_sample_type() {
+        use unbound_shaders::SampleKind;
+        assert_eq!(
+            sample_type(SampleKind::Float),
+            wgpu::TextureSampleType::Float { filterable: true }
+        );
+        assert_eq!(sample_type(SampleKind::Sint), wgpu::TextureSampleType::Sint);
+        assert_eq!(sample_type(SampleKind::Uint), wgpu::TextureSampleType::Uint);
+        assert_eq!(
+            sample_type(SampleKind::Depth),
+            wgpu::TextureSampleType::Depth
+        );
+    }
+
     const BOUND: [u8; 16] = {
         let (a, b) = (7.0f32.to_le_bytes(), 8.0f32.to_le_bytes());
         [

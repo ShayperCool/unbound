@@ -1344,6 +1344,45 @@ float4 frag(v2f i, bool front : SV_IsFrontFace) : SV_Target { if (i.needDiscard)
     }
 
     #[test]
+    fn texture_slots_record_their_texel_type() {
+        // Shader cache 15: float, integer and depth declarations give the slot its texel type;
+        // integer slots cannot be filtered.
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+sampler2D _Filtered;
+Texture2D<uint2> _Unsigned;
+Texture2D<int4> _Signed;
+Texture2D _Shadow;
+SamplerComparisonState sampler_Shadow;
+float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, v); }
+float4 frag(float4 p : SV_POSITION) : SV_Target
+{
+    uint2 u = _Unsigned.Load(int3(p.xy, 0));
+    int4 s = _Signed.Load(int3(p.xy, 0));
+    float c = _Shadow.SampleCmpLevelZero(sampler_Shadow, p.xy, 0.5);
+    return tex2D(_Filtered, p.xy) + float4(u, s.x, c);
+}
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        let slot = |name: &str| {
+            let k = compiled.textures.iter().position(|t| t == name).unwrap();
+            compiled.texture_slots[k]
+        };
+        assert_eq!(slot("_Filtered").sample, SampleKind::Float);
+        assert_eq!(slot("_Unsigned").sample, SampleKind::Uint);
+        assert_eq!(slot("_Signed").sample, SampleKind::Sint);
+        assert_eq!(slot("_Shadow").sample, SampleKind::Depth);
+        assert!(slot("_Unsigned").integer() && slot("_Signed").integer());
+        assert!(!slot("_Filtered").integer() && !slot("_Shadow").integer());
+        assert!(slot("_Shadow").depth() && slot("_Shadow").comparison);
+    }
+
+    #[test]
     fn functions_write_copies_of_the_globals_they_assign() {
         // Writes FXC allows: a uniform changed for the rest of the invocation.
         let source = r#"
