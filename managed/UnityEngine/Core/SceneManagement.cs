@@ -397,7 +397,11 @@ namespace UnityEngine.SceneManagement
             }
         }
 
-        static void Perform(SceneData data, LoadSceneParameters parameters)
+        /// <summary>The mode sceneLoaded reports for the scenes Play mode starts with (measured:
+        /// tests/projects/editorcallbacks, 4: a value LoadSceneMode does not name).</summary>
+        internal const LoadSceneMode PlayModeEntry = (LoadSceneMode)4;
+
+        static void Perform(SceneData data, LoadSceneParameters parameters, LoadSceneMode? reported = null)
         {
             if (parameters.loadSceneMode == LoadSceneMode.Single)
             {
@@ -417,9 +421,10 @@ namespace UnityEngine.SceneManagement
             if (Unbound.Runtime.EditorSession.IsPlaying) UnityEditor.EditorInitialization.ProcessScene(new Scene(data.Handle));
             data.LoadingState = Scene.LoadingState.Loaded;
             if (parameters.loadSceneMode == LoadSceneMode.Single) Time.LevelLoaded();
-            SceneManager.Internal_SceneLoaded(new Scene(data.Handle), parameters.loadSceneMode);
+            // The active scene changes before sceneLoaded (measured: tests/projects/editorcallbacks).
             if (SceneRegistry.Active == data && previousActive != data)
                 SceneManager.Internal_ActiveSceneChanged(previousActive != null ? new Scene(previousActive.Handle) : default, new Scene(data.Handle));
+            SceneManager.Internal_SceneLoaded(new Scene(data.Handle), reported ?? parameters.loadSceneMode);
         }
 
         /// <summary>Loads a scene immediately: the first scene of a session.</summary>
@@ -431,12 +436,13 @@ namespace UnityEngine.SceneManagement
             return new Scene(data.Handle);
         }
 
-        /// <summary>Loads a scene by path, also one outside the build settings (as the Editor can).</summary>
-        internal static Scene LoadPath(string path)
+        /// <summary>Loads a scene by path, also one outside the build settings (as the Editor can);
+        /// <paramref name="playModeEntry"/>: the scene Play mode starts with.</summary>
+        internal static Scene LoadPath(string path, bool playModeEntry = false)
         {
             int buildIndex = SceneUtility.GetBuildIndexByScenePath(path);
             var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, buildIndex);
-            Perform(data, new LoadSceneParameters(LoadSceneMode.Single));
+            Perform(data, new LoadSceneParameters(LoadSceneMode.Single), playModeEntry ? PlayModeEntry : null);
             return new Scene(data.Handle);
         }
 
@@ -506,9 +512,12 @@ namespace UnityEngine.SceneManagement
             }
             data.IsLoaded = false;
             data.LoadingState = Scene.LoadingState.NotLoaded;
-            SceneRegistry.Forget(data);
+            SceneRegistry.Loaded.Remove(data);
             if (SceneRegistry.Active == data) SceneRegistry.Active = null;
+            // sceneUnloaded sees the scene with its name (measured: tests/projects/editorcallbacks);
+            // it is forgotten after.
             SceneManager.Internal_SceneUnloaded(new Scene(data.Handle));
+            SceneRegistry.Forget(data);
         }
     }
 }

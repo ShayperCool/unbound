@@ -92,7 +92,7 @@ namespace Unbound.Runtime
             foreach (var scene in SceneRegistry.Loaded.ToArray())
                 EditorInitialization.ProcessScene(new Scene(scene.Handle));
             foreach (var scene in SceneRegistry.Loaded.ToArray())
-                SceneManager.Internal_SceneLoaded(new Scene(scene.Handle), LoadSceneMode.Single);
+                SceneManager.Internal_SceneLoaded(new Scene(scene.Handle), SceneManagerInternal.PlayModeEntry);
             PlayerLoopDriver.SendPlayModeStart();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterSceneLoad);
             PlayerLoopDriver.RestartPlayMode();
