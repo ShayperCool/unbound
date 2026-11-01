@@ -284,6 +284,9 @@ namespace UnityEngine
                 if (m_NoMiter[i]) length = h;
                 float turn = Vector3.Dot(Vector3.Cross(s1, s2), normal);
                 bool aInner = turn > 0f || (turn == 0f && Vector3.Dot(s1, s2) < 0f);
+                // A zero or negative width swaps the arc's fixed side (measured corner triangles,
+                // tests/projects/lines line.width.zero and line.width.negative).
+                if (h <= 0f) aInner = !aInner;
                 if (corners == 0)
                 {
                     m_Pairs.Add(new Pair { A = point - m * length, B = point + m * length, Tangent = dout, U = u, Color = color });
