@@ -32,16 +32,31 @@ namespace UnityEngine
             Mips = mips;
             Volume = volume;
             Format = format;
-            // Sizes in 64 bits: a texture whose bytes (or whose RGBA upload) a managed array cannot
-            // hold fails here instead of wrapping around to a smaller size.
-            long texel = PixelFormats.Size(format, 1, 1), at = 0, texels = 0;
-            for (int mip = 0; mip < mips; mip++)
-                texels += (long)W(mip) * H(mip) * D(mip) * Images;
-            long total = texel * texels, upload = texels * (GraphicsFormatUtility.IsHDRFormat(format) ? 16 : 4);
-            if (width <= 0 || height <= 0 || layers <= 0 || mips <= 0 || Math.Max(total, upload) > Array.MaxLength)
+            if (width <= 0 || height <= 0 || layers <= 0 || mips <= 0)
+                throw new UnityException($"Unbound: a layered texture needs positive dimensions and mip count, got {width}x{height}x{layers} with {mips} mips.");
+            long offsets = (long)Images * mips + 1;
+            if (offsets > Array.MaxLength / sizeof(int))
+                throw new UnityException($"Unbound: a {width}x{height}x{layers} texture with {mips} mips needs {offsets} pixel offsets, exceeding one managed array.");
+            // Check every product and sum before allocating storage or exposing a raw-data view.
+            long texel = PixelFormats.Size(format, 1, 1), at = 0, texels = 0, total, upload;
+            try
+            {
+                checked
+                {
+                    for (int mip = 0; mip < mips; mip++)
+                        texels += (long)W(mip) * H(mip) * D(mip) * Images;
+                    total = texel * texels;
+                    upload = texels * (GraphicsFormatUtility.IsHDRFormat(format) ? 16 : 4);
+                }
+            }
+            catch (OverflowException)
+            {
+                throw new UnityException($"Unbound: the storage size of a {width}x{height}x{layers} {format} texture with {mips} mips exceeds 64-bit sizing.");
+            }
+            if (Math.Max(total, upload) > Array.MaxLength)
                 throw new UnityException($"Unbound: a {width}x{height}x{layers} {format} texture with {mips} mips needs {total} bytes " +
                     $"({upload} to upload); Unbound keeps a layered texture's pixels in one array of at most {Array.MaxLength} bytes.");
-            m_Offsets = new int[Images * mips + 1];
+            m_Offsets = new int[(int)offsets];
             for (int image = 0; image < Images; image++)
                 for (int mip = 0; mip < mips; mip++)
                 {
@@ -613,6 +628,8 @@ namespace UnityEngine
         {
             if (width <= 0 || cubemapCount <= 0)
                 throw new UnityException($"Failed to create cubemap array texture because of invalid parameters. Width {width}, cubemap count {cubemapCount}.");
+            if (cubemapCount > int.MaxValue / 6)
+                throw new UnityException($"Unbound: {cubemapCount} cubemaps have too many faces for a layered texture.");
             m_Width = width;
             m_Height = width;
             m_Count = cubemapCount;

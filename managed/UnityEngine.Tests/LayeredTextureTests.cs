@@ -19,6 +19,17 @@ namespace UnityEngine.Tests
             Assert.Throws<UnityException>(() => new Texture2DArray(16384, 16384, 2, TextureFormat.R8, false));
         }
 
+        [Fact]
+        public void OversizeArithmeticCannotWrapBeforeAllocatingPixelStorage()
+        {
+            // The texel product is 2^64. Unchecked long arithmetic made both byte budgets zero.
+            Assert.Throws<UnityException>(() => new Texture2DArray(1 << 30, 16, 1 << 30, TextureFormat.RGBA32, false));
+            // Texels fit in long, but the RGBAFloat byte count and upload do not.
+            Assert.Throws<UnityException>(() => new Texture2DArray(1 << 30, 1 << 30, 1, TextureFormat.RGBAFloat, false));
+            // A wrapped cube-face count would otherwise become two faces.
+            Assert.Throws<UnityException>(() => new CubemapArray(1, 715827883, TextureFormat.RGBA32, false));
+        }
+
         [Theory]
         [InlineData(TextureFormat.RGBA32)]
         [InlineData(TextureFormat.BGRA32)]
