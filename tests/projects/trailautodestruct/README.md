@@ -1,13 +1,22 @@
 # Trail autodestruction phase control
 
-This bounded public-API diagnostic moves two automatic trails for three Update
+This bounded public API diagnostic moves two automatic trails for three Update
 calls, then leaves them still. Their lifetimes are 0.05 and 0.11 seconds at a
 50 fps capture rate. A passive trail distinguishes point expiry from destruction.
 Three manual controls call `Object.Destroy` from Update, LateUpdate, and after
 `TriggerEndOfFrameCallbacks` at step 6. PlayerLoop callbacks observe public
 point counts and object existence before and after renderer and destruction
-phases. `OnDisable`, `OnDestroy`, request and return events retain raw frame,
-time, phase and probe step. No frame offsets are applied.
+flush phases. `OnDisable`, `OnDestroy`, request and return events retain raw
+frame, time, phase and probe step. No frame offsets are applied.
+
+The corrected fixture gives all six trails separate lanes in an orthographic
+camera, uses the line probe's explicit vertex-color material and renders to a
+128 by 128 target. An explicit `Camera.Render` after `UpdateAllRenderers`
+ensures batchmode rendering without a Game view. Snapshots surround that call;
+per-lane nonblack pixel counts at step 2 prove each trail rendered. Fifty Update
+steps provide one second of simulated time. A 20 ms fixture delay per step also
+bounds real elapsed time below by one second, even if batchmode ignores the
+requested frame rate. The output-progress deadline includes cold import.
 
 Run from the repository root, with a fresh label in the Unbound cache:
 
@@ -19,23 +28,24 @@ python3 tests/projects/trailautodestruct/run.py engine --release 6000.0.71f1 \
   --cli /path/to/unbound --runtime /path/to/managed
 ```
 
-The Native path uses `tests/editor_runner.py`, two independent batchmode
-`-nographics` Editors, one installed lease each, a 600 s hard deadline and a
-300 s output-progress deadline. Each engine command takes its own installed
-lease and a 180 s deadline. Do not wrap either driver in another lease.
+The Native path uses `tests/editor_runner.py`, two independent graphical
+batchmode Editors without `-nographics`, one installed lease each, a 600 s hard
+deadline and a 300 s output-progress deadline. Each engine command takes its own
+installed lease and a 180 s deadline. Do not wrap either driver in another lease.
 Projects, manifests, logs and raw events stay in the selected cache directory.
 
-The first pair on 2026-11-01 completed with byte-identical 859-record captures,
-but neither automatic trail expired. Both retained three points through step
-14. This camera-free, nographics setup therefore fails the causal exercise
-guard and cannot publish a reference for automatic destruction. It does record
-manual controls, including immediate OnDisable on request and later OnDestroy.
-The matching engine diagnostic has 863 records and expires its trails. These
-observations do not identify Native automatic-destruction request timing.
+The first pair on 2026-11-01 used the prior camera-free nographics fixture.
+It completed with byte-identical 859-record captures, but neither automatic
+trail expired. Both retained three points through step 14. That pair remains
+rejected, outside Git, and cannot publish a reference. Its manual controls
+recorded immediate OnDisable on request and later OnDestroy. The prior engine
+trace had 863 records and expired its trails. Those observations do not identify
+Native automatic-destruction request timing.
 
-No canonical reference has been published. A corrective graphics setup with a
-camera and material needs a separately authorized Native pair. Until then,
-do not use this diagnostic to justify an engine scheduling change. The `publish`
-command refuses captures that fail to exercise expiry and automatic destruction,
-and otherwise requires complete, identical independent repeats and successful
-Editor results. It never overwrites a canonical reference.
+The corrected capture has one separately authorized independent pair, with no
+retry or sweep. The `publish` command requires every declared phase, rendered
+lanes, populated trails, expiry with an empty-live observation, automatic
+destruction, passive expiry and complete manual observations. It also requires
+complete byte-identical independent repeats and strict successful GPU Editor
+results. It preserves raw order and never overwrites a canonical reference.
+Do not infer a global destruction rule from this diagnostic alone.

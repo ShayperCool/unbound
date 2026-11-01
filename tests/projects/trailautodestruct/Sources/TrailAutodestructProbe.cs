@@ -13,6 +13,9 @@ public class TrailAutodestructProbe : MonoBehaviour
     static TrailAutodestructProbe instance;
     readonly List<GameObject> objects = new List<GameObject>();
     readonly List<TrailRenderer> trails = new List<TrailRenderer>();
+    Camera camera;
+    Material material;
+    RenderTexture target;
     StreamWriter output;
     int step = -1;
     static string F(float x) => x.ToString("R", CultureInfo.InvariantCulture);
@@ -24,6 +27,7 @@ public class TrailAutodestructProbe : MonoBehaviour
         Time.captureFramerate = 50;
         instance = new GameObject("probe").AddComponent<TrailAutodestructProbe>();
         instance.output = new StreamWriter(Environment.GetEnvironmentVariable("TRAIL_AUTODESTRUCT_OUT")) { AutoFlush = true };
+        instance.SetupRendering();
         instance.Add("auto.short", .05f, true);
         instance.Add("auto.long", .11f, true);
         instance.Add("passive", .05f, false);
@@ -35,14 +39,44 @@ public class TrailAutodestructProbe : MonoBehaviour
         PlayerLoop.SetPlayerLoop(loop);
     }
 
+    void SetupRendering()
+    {
+        // Explicit rendering is needed in batchmode; the diagnostic does not rely on a Game view.
+        var shader = Resources.Load<Shader>("LineColor");
+        if (shader == null || !shader.isSupported) throw new InvalidOperationException("LineColor shader unavailable");
+        material = new Material(shader);
+        camera = new GameObject("Main Camera").AddComponent<Camera>();
+        camera.tag = "MainCamera";
+        camera.transform.position = new Vector3(0, 0, -10);
+        camera.orthographic = true;
+        camera.orthographicSize = 2;
+        camera.aspect = 1;
+        camera.nearClipPlane = .3f;
+        camera.farClipPlane = 50;
+        camera.cullingMask = 1;
+        camera.clearFlags = CameraClearFlags.SolidColor;
+        camera.backgroundColor = Color.black;
+        camera.allowHDR = false;
+        camera.allowMSAA = false;
+        target = new RenderTexture(128, 128, 24, RenderTextureFormat.ARGB32);
+        target.Create();
+        camera.targetTexture = target;
+        QualitySettings.vSyncCount = 0;
+        Application.targetFrameRate = 50;
+    }
+
     void Add(string name, float duration, bool auto)
     {
         var go = new GameObject(name);
+        go.transform.position = new Vector3(-1.5f, -1.25f + objects.Count * .5f, 0);
         go.AddComponent<TrailAutodestructObserver>();
         var trail = go.AddComponent<TrailRenderer>();
         trail.time = duration;
         trail.autodestruct = auto;
         trail.minVertexDistance = .01f;
+        trail.sharedMaterial = material;
+        trail.startWidth = trail.endWidth = .15f;
+        trail.startColor = trail.endColor = Color.white;
         objects.Add(go);
         trails.Add(trail);
     }
@@ -96,13 +130,16 @@ public class TrailAutodestructProbe : MonoBehaviour
 
     void Update()
     {
+        // Bound real elapsed time too, even when batchmode ignores targetFrameRate.
+        // This is fixture pacing, not an agent wait or a fitted destruction delay.
+        System.Threading.Thread.Sleep(20);
         step++;
         Phase = "Update";
         if (step < 3)
-            foreach (var go in objects) if (go != null) go.transform.position = new Vector3(step + 1, 0, 0);
+            foreach (var go in objects) if (go != null) go.transform.position = new Vector3(-1f + step * .5f, go.transform.position.y, 0);
         Snapshot("Update");
         if (step == 6) Request(objects[3]);
-        if (step == 14)
+        if (step == 49)
         {
             output.WriteLine("{\"complete\":true}");
             output.Dispose(); output = null;
@@ -125,7 +162,42 @@ public class TrailAutodestructProbe : MonoBehaviour
     {
         if (output == null) return;
         Snapshot("after." + phase);
+        if (phase == "UpdateAllRenderers")
+        {
+            Snapshot("before.Camera.Render");
+            camera.Render();
+            Snapshot("after.Camera.Render");
+            if (step == 2) RecordRenderedLanes();
+        }
         if (step == 6 && phase == "TriggerEndOfFrameCallbacks") Request(objects[5]);
+    }
+
+    void RecordRenderedLanes()
+    {
+        var previous = RenderTexture.active;
+        RenderTexture.active = target;
+        var image = new Texture2D(128, 128, TextureFormat.RGBA32, false);
+        image.ReadPixels(new Rect(0, 0, 128, 128), 0, 0);
+        image.Apply();
+        var pixels = image.GetPixels32();
+        for (int lane = 0; lane < objects.Count; lane++)
+        {
+            int count = 0;
+            // The lane centres are 24, 40, ..., 104 pixels, all inside the frustum.
+            int centre = 24 + lane * 16;
+            for (int y = centre - 6; y <= centre + 6; y++)
+                for (int x = 0; x < 128; x++)
+                {
+                    var c = pixels[y * 128 + x];
+                    if (c.r > 8 || c.g > 8 || c.b > 8) count++;
+                }
+            output.WriteLine("{\"kind\":\"rendered\",\"name\":\"" + objects[lane].name
+                + "\",\"step\":" + step + ",\"frame\":" + Time.frameCount + ",\"time\":" + F(Time.time)
+                + ",\"phase\":\"after.Camera.Render\",\"pixels\":" + count + "}");
+        }
+        RenderTexture.active = previous;
+        // Avoid adding a diagnostic texture Destroy request to the measured queue.
+        DestroyImmediate(image);
     }
 }
 

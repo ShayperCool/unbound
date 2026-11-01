@@ -36,6 +36,8 @@ def prepare(label):
     fixture = ROOT.parent/'lines'
     shutil.copytree(fixture/'ProjectSettings', project/'ProjectSettings')
     shutil.copytree(fixture/'Assets/Scenes', project/'Assets/Scenes')
+    (project/'Assets/Resources').mkdir()
+    shutil.copy2(fixture/'Assets/Resources/LineColor.shader', project/'Assets/Resources/LineColor.shader')
     (project/'Packages').mkdir()
     write(project/'Packages/manifest.json', {'dependencies': {}})
     (project/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+a.release+'\n')
@@ -49,31 +51,56 @@ def prepare(label):
 def complete(out):
     rows = [json.loads(x) for x in (out/'events.jsonl').read_text().splitlines()]
     assert rows[-1] == {'complete': True} and sum(x.get('complete', False) for x in rows) == 1
-    assert {x['step'] for x in rows if x.get('phase') == 'Update' and x.get('kind') == 'state'} == set(range(15))
+    assert {x['step'] for x in rows if x.get('phase') == 'Update' and x.get('kind') == 'state'} == set(range(50))
+    for step in range(49):
+        for phase in ('Update', 'LateUpdate', 'before.PlayerSendFrameStarted', 'after.PlayerSendFrameStarted',
+                      'before.UpdateAllRenderers', 'after.UpdateAllRenderers', 'before.Camera.Render',
+                      'after.Camera.Render', 'before.PlayerSendFrameComplete', 'after.PlayerSendFrameComplete',
+                      'before.TriggerEndOfFrameCallbacks', 'after.TriggerEndOfFrameCallbacks'):
+            assert len([x for x in rows if x.get('kind') == 'state' and x.get('step') == step and x.get('phase') == phase]) == 6, ('missing phase', step, phase)
     return rows
 
 def exercised(out):
     rows = complete(out)
     for name in ('auto.short', 'auto.long'):
+        assert any(x.get('name') == name and x.get('kind') == 'state' and x.get('count', 0) > 1 for x in rows), ('trail never populated', name)
         assert any(x.get('name') == name and x.get('kind') == 'state' and x.get('alive') and x.get('count') == 0 and x.get('step', -1) > 2 for x in rows), ('expiry not exercised', name)
         assert any(x.get('name') == name and x.get('kind') == 'OnDestroy' for x in rows), ('automatic destruction not exercised', name)
+    for name in ('auto.short', 'auto.long', 'passive', 'manual.update', 'manual.late', 'manual.eof'):
+        assert any(x.get('name') == name and x.get('kind') == 'rendered' and x.get('pixels', 0) > 0 for x in rows), ('trail not rendered', name)
+    assert any(x.get('name') == 'passive' and x.get('alive') and x.get('count') == 0 and x.get('step', -1) > 2 for x in rows), 'passive trail never expired'
+    for name in ('manual.update', 'manual.late', 'manual.eof'):
+        assert sorted(x['kind'] for x in rows if x.get('name') == name and x.get('kind') not in ('state', 'rendered')) == sorted(['request', 'OnDisable', 'returned', 'OnDestroy']), ('manual observations incomplete', name)
 
 if a.mode == 'native':
     jobs = []
     for repeat in ('native1', 'native2'):
         out, project = prepare(repeat)
         jobs.append(EditorJob(project, out/'editor.log', out, args=['-executeMethod', 'ProbeRunner.Record'],
-            batch=True, graphics=False, env={'TRAIL_AUTODESTRUCT_OUT': str(out/'events.jsonl')},
+            batch=True, graphics=True, env={'TRAIL_AUTODESTRUCT_OUT': str(out/'events.jsonl')},
             timeout=600, progress_files=[out/'events.jsonl'], progress_timeout=300))
     results = run_parallel(jobs)
+    receipt = {'complete': False, 'repeats': [], 'problems': []}
     for out, result in zip((work/'native1', work/'native2'), results):
-        assert not result_problem(out) and not result.get('forced_exit'), result
-        exercised(out)
-    assert (work/'native1/events.jsonl').read_bytes() == (work/'native2/events.jsonl').read_bytes(), 'independent repeats differ'
-    write(work/'pair.json', {'complete': True, 'sha256': sha(work/'native1/events.jsonl'), 'rows': len(complete(work/'native1'))})
+        item = {'name': out.name, 'result': result}
+        try:
+            assert not result_problem(out, gpu=True) and not result.get('forced_exit'), result
+            item.update(sha256=sha(out/'events.jsonl'), rows=len(complete(out)))
+            exercised(out)
+            item['exercised'] = True
+        except (AssertionError, OSError, ValueError) as error:
+            item['problem'] = str(error)
+            receipt['problems'].append({'name': out.name, 'problem': str(error)})
+        receipt['repeats'].append(item)
+    if not receipt['problems'] and (work/'native1/events.jsonl').read_bytes() != (work/'native2/events.jsonl').read_bytes():
+        receipt['problems'].append({'problem': 'independent repeats differ'})
+    receipt['complete'] = not receipt['problems']
+    write(work/'pair.json', receipt)
+    assert receipt['complete'], receipt['problems']
 elif a.mode == 'publish':
     for repeat in ('native1', 'native2'):
-        assert not result_problem(work/repeat)
+        assert not result_problem(work/repeat, gpu=True)
+        assert not json.loads((work/repeat/'editor-run.json').read_text()).get('forced_exit')
         exercised(work/repeat)
     assert (work/'native1/events.jsonl').read_bytes() == (work/'native2/events.jsonl').read_bytes()
     ref = ROOT/'Reference'/('unity-'+a.release+'.jsonl')
