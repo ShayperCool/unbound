@@ -698,8 +698,8 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>Resources.UnloadAsset of a loaded asset: a material reads its file again in
-        /// place; a ScriptableObject alone in its file is destroyed and the file forgotten, so the
+        /// <summary>Resources.UnloadAsset of a loaded asset: a material alone in its file reads it
+        /// again in place; a ScriptableObject alone in its file is destroyed and the file forgotten, so the
         /// next load reads it again. False for what is not unloaded (other kinds, sub-assets).</summary>
         internal static bool Unload(Object asset)
         {
@@ -714,7 +714,10 @@ namespace Unbound.Runtime
                     Invalidate(guid);
                     Object.DestroyImmediate(asset, true);
                     return true;
-                case Material material:
+                // Only a material alone in its file: reading a shared file again would build
+                // and destroy fresh copies of its siblings (the reverted material would then
+                // reference destroyed textures), so such a material is not unloaded (warns).
+                case Material material when file.Objects.Count == 1:
                     var saved = ReadAgain(guid, fileId) as Material;
                     if (saved == null) return false;
                     material.RevertTo(saved);
@@ -754,6 +757,13 @@ namespace Unbound.Runtime
         {
             s_Files.Clear();
             s_Objects.Clear();
+        }
+
+        /// <summary>Makes an already built file and its objects loaded, as reading it would (tests).</summary>
+        internal static void AddLoaded(LoadedFile file)
+        {
+            foreach (var pair in file.Objects) s_Objects[(file.Guid, pair.Key)] = pair.Value;
+            s_Files[file.Guid] = file;
         }
 
         /// <summary>Forgets one file so that the next load reads it again (hot reload of content).</summary>
