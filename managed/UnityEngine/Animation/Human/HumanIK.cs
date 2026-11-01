@@ -140,26 +140,61 @@ namespace Unbound.Runtime.Humanoid
         /// <summary>A state's "Foot IK" (run after the retarget step, left foot first, when the
         /// evaluated states ask for it): the foot goal's position and rotation weights become 1 and the
         /// goal moves sideways by the avatar's feet spacing (along the goal's z axis projected on the
-        /// horizontal plane, scaled by the human and avatar scales). The Animator's stabilizeFeet
-        /// (which limits the feet's motion between frames) is not supported and throws.</summary>
-        /// <param name="ikPose">In/out: the world IK pose (the foot goal's weights and position).</param>
+        /// horizontal plane, scaled by the human and avatar scales). With the Animator's stabilizeFeet
+        /// (after the first evaluation) the goal first moves from where the foot was last update by at
+        /// most what the root's and the clip's foot speeds allow: a speed below 0.1 (10°/s for the
+        /// rotation) allows nothing, one above 1 (100°/s) twice itself.</summary>
+        /// <param name="ikPose">In/out: the world IK pose (the foot goal's weights and transform).</param>
         /// <param name="avatarX">Input: the avatar root's world transform.</param>
-        /// <param name="stabilizeFeet">The Animator's stabilizeFeet.</param>
-        /// <param name="firstEvaluation">Whether this is the avatar's first evaluation (no previous
-        /// feet to stabilize against).</param>
-        internal static void SetIKOnFeet(bool left, Human h, HumanPose ikPose, Trs avatarX, bool stabilizeFeet, bool firstEvaluation)
+        /// <param name="stabilize">stabilizeFeet and not the avatar's first evaluation.</param>
+        /// <param name="previousFoot">In/out: the foot goal of the last update (stabilized).</param>
+        /// <param name="motionX">The avatar root after this update's root motion.</param>
+        /// <param name="deltaTime">The update's delta time.</param>
+        /// <param name="footSpeedT">The clip's foot speed (distance per second).</param>
+        /// <param name="footSpeedQ">The clip's foot angular speed (radians per second).</param>
+        internal static void SetIKOnFeet(bool left, Human h, HumanPose ikPose, Trs avatarX, bool stabilize, ref Trs previousFoot,
+            in Trs motionX, float deltaTime, float footSpeedT, float footSpeedQ)
         {
             int g = left ? LeftFoot : RightFoot;
             ref var goal = ref ikPose.Goals[g];
             goal.WeightT = 1f;
             goal.WeightR = 1f;
-            if (stabilizeFeet && !firstEvaluation)
-                throw new NotSupportedException("Animator.stabilizeFeet with a state's Foot IK is not supported");
-            float k = (left ? -1f : 1f) * h.Scale * h.FeetSpacing;
+            if (stabilize)
+            {
+                var rc = M.QConj(motionX.q);
+                float rootQ = M.Length3(M.DoubleAtan(M.Quat2Qtan(M.QMul(rc, avatarX.q)))) / deltaTime + footSpeedQ;
+                var prev = previousFoot;
+                var pc = M.QConj(prev.q);
+                var d = M.QRotate(pc, goal.X.t - prev.t);
+                var dq = M.QMul(pc, goal.X.q);
+                float length = M.Length3(d);
+                if (0f < length)
+                {
+                    float limit = M.Length3(M.QRotate(rc, avatarX.t - motionX.t)) / deltaTime + footSpeedT;
+                    limit = limit > 0.1f ? limit : 0f;
+                    if (limit > 1f) limit = limit + limit;
+                    float speed = length / deltaTime;
+                    float k = Math.Min(speed, limit) / speed;
+                    d = new F4(d.x * k, d.y * k, d.z * k, d.w * 0f);
+                }
+                var angles = M.DoubleAtan(M.Quat2Qtan(dq));
+                float angle = M.Length3(angles);
+                if (0f < angle)
+                {
+                    float speed = angle / deltaTime;
+                    float limit = rootQ > 0.17453292f ? rootQ : 0f;
+                    if (limit > 1.7453293f) limit = limit + limit;
+                    float k = Math.Min(speed, limit) / speed;
+                    dq = M.Qtan2Quat(M.HalfTan(angles * k));
+                }
+                previousFoot = new Trs(M.QRotate(prev.q, d * prev.s) + prev.t, M.QMul(prev.q, dq), prev.s);
+                goal.X = previousFoot;
+            }
+            float sk = (left ? -1f : 1f) * h.Scale * h.FeetSpacing;
             var q = goal.X.q;
             float zx = q.x * 2f * q.z - q.y * -2f * q.w;
             float zz = q.x * -2f * q.x - q.y * 2f * q.y;
-            var offset = new F4(k * zx, 0f, k * zz + k, 0f);
+            var offset = new F4(sk * zx, 0f, sk * zz + sk, 0f);
             var s = avatarX.s;
             goal.X.t = new F4(s.x * offset.x + goal.X.t.x, s.y * offset.y + goal.X.t.y, s.z * offset.z + goal.X.t.z, goal.X.t.w);
         }

@@ -169,6 +169,8 @@ namespace Unbound.Runtime.Humanoid
         public float ClipDeltaTime;
         /// <summary>How much the pivot follows the feet: 1, 0 with the XZ baked into the pose.</summary>
         public float GravityWeight;
+        /// <summary>The feet's speeds during the step (slip distance and angle per clip second).</summary>
+        public float LeftFootSpeedT, LeftFootSpeedQ, RightFootSpeedT, RightFootSpeedQ;
     }
 
     /// <summary>The root motion state an Animator keeps between updates.</summary>
@@ -373,6 +375,10 @@ namespace Unbound.Runtime.Humanoid
             {
                 result.LeftFootSlip = Slip(delta, result.LeftFoot, M.Mul(prevBody, ReadGoal(previous, present, 0)));
                 result.RightFootSlip = Slip(delta, result.RightFoot, M.Mul(prevBody, ReadGoal(previous, present, 1)));
+                result.LeftFootSpeedT = M.Length3(result.LeftFootSlip.t) / clipDt;
+                result.LeftFootSpeedQ = M.Length3(M.DoubleAtan(M.Quat2Qtan(result.LeftFootSlip.q))) / clipDt;
+                result.RightFootSpeedT = M.Length3(result.RightFootSlip.t) / clipDt;
+                result.RightFootSpeedQ = M.Length3(M.DoubleAtan(M.Quat2Qtan(result.RightFootSlip.q))) / clipDt;
             }
         }
 
