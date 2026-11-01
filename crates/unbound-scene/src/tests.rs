@@ -148,8 +148,127 @@ fn expands_a_prefab_instance() {
     let world = by_id(2);
     let children = world.body.get("m_Children").unwrap().as_seq().unwrap();
     assert_eq!(children.len(), 1);
-    assert!(docs.iter().all(|d| !d.stripped && d.class_id != 1001));
+    assert!(docs.iter().all(|d| !d.stripped));
     let _ = Value::Null;
+}
+
+#[test]
+fn instance_objects_keep_their_source_and_instance() {
+    let guid = Guid::parse("0000000000000000000000000000abcd").unwrap();
+    let fixture = Fixture([(guid, parse_documents(PREFAB).unwrap())].into());
+    let scene = parse_documents(SCENE).unwrap();
+    let docs = flatten(&scene, &fixture, &mut Vec::new()).unwrap();
+    let by_id = |id: i64| docs.iter().find(|d| d.file_id == id).unwrap();
+    for (object, source) in [
+        (50 ^ 100, 100),
+        (50 ^ 102, 102),
+        (50 ^ 201, 201),
+        (9001, 101),
+    ] {
+        let body = &by_id(object).body;
+        assert_eq!(
+            body.path("m_CorrespondingSourceObject.fileID")
+                .unwrap()
+                .as_i64(),
+            Some(source)
+        );
+        assert_eq!(
+            body.path("m_CorrespondingSourceObject.guid")
+                .unwrap()
+                .as_guid(),
+            Some(guid)
+        );
+        assert_eq!(
+            body.path("m_PrefabInstance.fileID").unwrap().as_i64(),
+            Some(50)
+        );
+    }
+    // The file's own PrefabInstance stays; the object the file adds is not part of it.
+    assert_eq!(by_id(50).class_id, 1001);
+    assert!(by_id(300).body.get("m_PrefabInstance").is_none());
+}
+
+/// A prefab nesting PREFAB: its own PrefabInstance stays in its documents, while an instance of it
+/// in a scene links every object to the nesting prefab's objects under the scene's instance only.
+#[test]
+fn nested_instances_link_to_the_nearest_source() {
+    let inner = Guid::parse("0000000000000000000000000000abcd").unwrap();
+    let outer = Guid::parse("0000000000000000000000000000beef").unwrap();
+    let outer_prefab = "%YAML 1.1
+--- !u!1001 &60
+PrefabInstance:
+  m_Modification:
+    m_TransformParent: {fileID: 0}
+    m_Modifications: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0000000000000000000000000000abcd, type: 3}
+";
+    let scene = "%YAML 1.1
+--- !u!1001 &70
+PrefabInstance:
+  m_Modification:
+    m_TransformParent: {fileID: 0}
+    m_Modifications: []
+  m_SourcePrefab: {fileID: 100100000, guid: 0000000000000000000000000000beef, type: 3}
+";
+    let fixture = Fixture(
+        [
+            (inner, parse_documents(PREFAB).unwrap()),
+            (outer, parse_documents(outer_prefab).unwrap()),
+        ]
+        .into(),
+    );
+    let asset = fixture.prefab(outer, &mut Vec::new()).unwrap();
+    let nested = asset.iter().find(|d| d.file_id == 60 ^ 100).unwrap();
+    assert_eq!(
+        nested
+            .body
+            .path("m_CorrespondingSourceObject.guid")
+            .unwrap()
+            .as_guid(),
+        Some(inner)
+    );
+    assert_eq!(
+        nested
+            .body
+            .path("m_PrefabInstance.fileID")
+            .unwrap()
+            .as_i64(),
+        Some(60)
+    );
+    assert!(asset.iter().any(|d| d.file_id == 60 && d.class_id == 1001));
+
+    let docs = flatten(&parse_documents(scene).unwrap(), &fixture, &mut Vec::new()).unwrap();
+    let object = docs.iter().find(|d| d.file_id == 70 ^ (60 ^ 100)).unwrap();
+    assert_eq!(
+        object
+            .body
+            .path("m_CorrespondingSourceObject.fileID")
+            .unwrap()
+            .as_i64(),
+        Some(60 ^ 100)
+    );
+    assert_eq!(
+        object
+            .body
+            .path("m_CorrespondingSourceObject.guid")
+            .unwrap()
+            .as_guid(),
+        Some(outer)
+    );
+    assert_eq!(
+        object
+            .body
+            .path("m_PrefabInstance.fileID")
+            .unwrap()
+            .as_i64(),
+        Some(70)
+    );
+    let instances: Vec<i64> = docs
+        .iter()
+        .filter(|d| d.class_id == 1001)
+        .map(|d| d.file_id)
+        .collect();
+    assert_eq!(instances, vec![70]);
 }
 
 #[test]

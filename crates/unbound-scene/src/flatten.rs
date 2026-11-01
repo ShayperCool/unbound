@@ -1,6 +1,10 @@
 //! Expanding prefab instances: the objects of each instance's source prefab (itself expanded) are
 //! copied into the file under new file ids, then the instance's modifications, removals and
-//! additions are applied, as the Editor merges a prefab instance.
+//! additions are applied, as the Editor merges a prefab instance. Each copied object keeps its
+//! link as the Editor's merged objects do: `m_CorrespondingSourceObject` names the object of the
+//! source prefab it comes from and `m_PrefabInstance` the file's PrefabInstance document, which
+//! stays in the output (the source's own nested PrefabInstance documents do not: in the file,
+//! the outermost instance stands for them).
 use crate::path;
 use anyhow::{Result, bail};
 use std::{
@@ -75,11 +79,7 @@ pub fn flatten(
     prefabs: &dyn PrefabSource,
     stack: &mut Vec<Guid>,
 ) -> Result<Vec<Document>> {
-    let mut out: Vec<Document> = docs
-        .iter()
-        .filter(|d| !d.stripped && d.class_id != PREFAB_INSTANCE)
-        .cloned()
-        .collect();
+    let mut out: Vec<Document> = docs.iter().filter(|d| !d.stripped).cloned().collect();
 
     // Ids the file gave instance objects it references (legacy files keep explicit ones).
     let mut stripped: HashMap<(i64, i64), i64> = HashMap::new();
@@ -115,10 +115,13 @@ pub fn flatten(
         let map_id = |s: i64| stripped.get(&(p, s)).copied().unwrap_or((p ^ s) & ID_MASK);
         let mut objects: Vec<Document> = source
             .iter()
+            .filter(|d| d.class_id != PREFAB_INSTANCE)
             .map(|d| {
                 let mut d = d.clone();
-                d.file_id = map_id(d.file_id);
+                let source_id = d.file_id;
+                d.file_id = map_id(source_id);
                 remap_refs(&mut d.body, source_guid, &map_id);
+                link_to_source(&mut d.body, source_id, source_guid, p);
                 d
             })
             .collect();
@@ -133,6 +136,20 @@ pub fn flatten(
 
     link_children(&mut out);
     Ok(out)
+}
+
+/// Records where an instance's object comes from: the source prefab's object and the instance.
+fn link_to_source(body: &mut Value, source_id: i64, source: Guid, instance: i64) {
+    let Some(map) = body.as_map_mut() else { return };
+    map.insert(
+        "m_CorrespondingSourceObject",
+        Value::Map(Map(vec![
+            ("fileID".into(), Value::Scalar(source_id.to_string())),
+            ("guid".into(), Value::Scalar(source.to_string())),
+            ("type".into(), Value::Scalar("3".into())),
+        ])),
+    );
+    map.insert("m_PrefabInstance", object_ref(instance));
 }
 
 /// A GameObject standing for an instance whose prefab is missing, under the instance's parent;
@@ -173,7 +190,7 @@ fn missing_prefab_placeholder(
         stripped: false,
         type_name: "GameObject".into(),
         body: parse(format!(
-            "m_Component:\n- component: {{fileID: {transform_id}}}\nm_Name: '{}'\nm_IsActive: 1\n",
+            "m_PrefabInstance: {{fileID: {p}}}\nm_Component:\n- component: {{fileID: {transform_id}}}\nm_Name: '{}'\nm_IsActive: 1\n",
             name.replace('\'', "''")
         )),
     };
@@ -184,7 +201,7 @@ fn missing_prefab_placeholder(
         stripped: false,
         type_name: "Transform".into(),
         body: parse(format!(
-            "m_GameObject: {{fileID: {go_id}}}\nm_LocalRotation: {{x: 0, y: 0, z: 0, w: 1}}\nm_LocalPosition: {{x: 0, y: 0, z: 0}}\nm_LocalScale: {{x: 1, y: 1, z: 1}}\nm_Children: []\nm_Father: {{fileID: {parent}}}\n"
+            "m_PrefabInstance: {{fileID: {p}}}\nm_GameObject: {{fileID: {go_id}}}\nm_LocalRotation: {{x: 0, y: 0, z: 0, w: 1}}\nm_LocalPosition: {{x: 0, y: 0, z: 0}}\nm_LocalScale: {{x: 1, y: 1, z: 1}}\nm_Children: []\nm_Father: {{fileID: {parent}}}\n"
         )),
     };
     vec![go, transform]
