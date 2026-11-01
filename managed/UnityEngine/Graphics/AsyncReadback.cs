@@ -206,7 +206,13 @@ namespace Unbound.Runtime
 
         internal static int LayerCount(Texture src, int mip) => src == null ? 1 : Layers(src, Math.Max(0, mip));
 
-        static bool IsFloat(GraphicsFormat format) => GraphicsFormatUtility.IsHalfFormat(format) || GraphicsFormatUtility.IsIEEE754Format(format);
+        /// <summary>Whether the declared format keeps 8 bits per channel: those read as the stored
+        /// bytes; every other format reads as floats, which the renderer converts from whatever it
+        /// stores the texture in (its storage may differ from the declared format).</summary>
+        static bool EightBit(GraphicsFormat format) =>
+            !GraphicsFormatUtility.IsHalfFormat(format) && !GraphicsFormatUtility.IsIEEE754Format(format)
+            && GraphicsFormatUtility.GetComponentCount(format) > 0
+            && GraphicsFormatUtility.GetBlockSize(format) == GraphicsFormatUtility.GetComponentCount(format);
 
         internal static Result Texture(Texture src, int mip, int x, int width, int y, int height, int z, int depth, ReadbackFormat format,
             Action<UnityEngine.Rendering.AsyncGPUReadbackRequest> callback)
@@ -226,20 +232,21 @@ namespace Unbound.Runtime
                 result.HasError = true;
                 return result;
             }
-            if (format == null)
+            if (format == null || GraphicsFormatUtility.IsCompressedFormat(src.graphicsFormat))
             {
                 Debug.LogError("Unbound: AsyncGPUReadback into this format is not supported; the request fails.");
                 result.HasError = true;
                 return result;
             }
             ulong handle = TextureHandles.Of(src);
-            bool floats = IsFloat(src.graphicsFormat);
+            bool floats = !EightBit(src.graphicsFormat);
+            bool alpha = src is Texture2D a8 && a8.format == TextureFormat.Alpha8;
             result.Layers = new byte[depth][];
             for (int layer = 0; layer < depth; layer++)
             {
                 var texels = handle == 0 ? null : Native.ReadTexture(handle, mip, z + layer, x, y, width, height, floats);
                 if (texels == null) return Unavailable(result);
-                result.Layers[layer] = format.Encode(texels, width * height, floats);
+                result.Layers[layer] = format.Encode(texels, width * height, floats, alpha);
             }
             result.Width = width;
             result.Height = height;
@@ -301,7 +308,7 @@ namespace Unbound.Runtime
 
         /// <summary><paramref name="texels"/> as the renderer reads them: 4 bytes per texel of an
         /// 8-bit RGBA texture (1 of a one-channel one), 4 floats when <paramref name="floats"/>.</summary>
-        internal byte[] Encode(byte[] texels, int count, bool floats)
+        internal byte[] Encode(byte[] texels, int count, bool floats, bool alpha = false)
         {
             int inChannels = floats ? 4 : Math.Max(1, texels.Length / Math.Max(1, count));
             var output = new byte[count * m_Channels.Length * m_Size];
@@ -319,8 +326,10 @@ namespace Unbound.Runtime
                     }
                     else
                     {
-                        // A one-channel texture reads (r, 0, 0, 1) (Alpha8: (0, 0, 0, a)).
-                        b = inChannels == 4 ? texels[i * 4 + c] : c == 0 ? texels[i] : c == 3 ? (byte)255 : (byte)0;
+                        // A one-channel texture reads (r, 0, 0, 1); Alpha8 (0, 0, 0, a).
+                        b = inChannels == 4 ? texels[i * 4 + c]
+                            : alpha ? (c == 3 ? texels[i] : (byte)0)
+                            : c == 0 ? texels[i] : c == 3 ? (byte)255 : (byte)0;
                         f = b * (1f / 255f);
                     }
                     switch (m_Size)
