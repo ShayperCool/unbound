@@ -32,6 +32,8 @@ def project(dest, release):
         shutil.copytree(PROBE.parent/'hello'/part, dest/part)
     (dest/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+release+'\n')
     shutil.copytree(PROBE/'Assets', dest/'Assets')
+    # Keep explicit safety checks active in runtime-compiled game code as in Native.
+    (dest/'Assets/csc.rsp').write_text('-define:ENABLE_UNITY_COLLECTIONS_CHECKS\n')
     (dest/'Assets/Scenes').mkdir()
     # Retain the fixture camera; remove its scripted GameObject.
     scene = (PROBE.parent/'hello/Assets/Scenes/Main.unity').read_text()

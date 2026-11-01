@@ -88,6 +88,22 @@ namespace TextureRaw.Tests
         }
 
         [Fact]
+        public void RemovingCpuDataRevokesBorrowedViewsAndRawGetterThrowsUnityException()
+        {
+            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false);
+            try
+            {
+                var raw = texture.GetRawTextureData<byte>();
+                texture.Apply(false, true);
+                Assert.False(texture.isReadable);
+                Assert.Throws<ObjectDisposedException>(() => AtomicSafetyHandle.CheckReadAndThrow(NativeArrayUnsafeUtility.GetAtomicSafetyHandle(raw)));
+                Assert.Throws<UnityException>(() => texture.GetRawTextureData<byte>());
+                Assert.Throws<UnityException>(() => texture.GetRawTextureData<TextureRawProbe.ThreeBytes>());
+            }
+            finally { Object.DestroyImmediate(texture); }
+        }
+
+        [Fact]
         public void RepeatedGettersAllocateNoPixelCopies()
         {
             var texture = new Texture2D(64, 64, TextureFormat.RGBAFloat, true);

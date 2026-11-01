@@ -4,6 +4,7 @@ using System.Globalization;
 using System.IO;
 using System.Runtime.InteropServices;
 using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -98,6 +99,11 @@ public static class TextureRawProbe
         }
         finally { Object.DestroyImmediate(texture); }
     }
+    static string CheckView(NativeArray<byte> view)
+    {
+        AtomicSafetyHandle.CheckReadAndThrow(NativeArrayUnsafeUtility.GetAtomicSafetyHandle(view));
+        return "readable";
+    }
     static void Lifetime()
     {
         var texture = new Texture2D(2, 2, TextureFormat.RGBA32, true, true);
@@ -114,8 +120,8 @@ public static class TextureRawProbe
             pixel = texture.GetPixelData<byte>(0);
             texture.Apply(false, true);
             Value("unreadable.readable", texture.isReadable.ToString());
-            Try("unreadable.old_raw", () => I(raw[0]));
-            Try("unreadable.old_pixel", () => I(pixel[0]));
+            Try("unreadable.old_raw", () => CheckView(raw));
+            Try("unreadable.old_pixel", () => CheckView(pixel));
             Try("unreadable.raw_byte", () => I(texture.GetRawTextureData<byte>().Length));
             Try("unreadable.raw_three", () => I(texture.GetRawTextureData<ThreeBytes>().Length));
             Try("unreadable.pixel", () => I(texture.GetPixelData<byte>(0).Length));
