@@ -373,6 +373,9 @@ impl Mixer {
         self.frames = frame_of(seconds, config.sample_rate);
         for node in self.group_nodes.values_mut() {
             node.rendered = 0;
+            node.suspended = false;
+            node.last_active = self.frames;
+            node.energy = 0.0;
             node.effects.clear();
             node.update(node.spec.clone(), config.sample_rate)?;
         }
@@ -458,6 +461,8 @@ impl Mixer {
 
     /// Updates routing and parameters without discarding the filters' delay lines.
     pub fn configure_group(&mut self, spec: GroupSpec) -> anyhow::Result<()> {
+        anyhow::ensure!(spec.suspend_threshold.is_finite() && spec.suspend_threshold >= 0.0,
+            "invalid AudioMixer suspension threshold");
         for effect in &spec.effects {
             effect.validate(self.config.sample_rate)?;
             anyhow::ensure!(
@@ -489,6 +494,9 @@ impl Mixer {
             rendered: 0,
             effects: Vec::new(),
             buffer: vec![0.0; BLOCK * 2],
+            suspended: false,
+            last_active: self.frames,
+            energy: 0.0,
         });
         node.update(spec, self.config.sample_rate)?;
         // Children mix into parents. Stable order also makes independent sibling sums deterministic.
@@ -508,6 +516,36 @@ impl Mixer {
         self.group_order
             .sort_by_key(|h| (std::cmp::Reverse(depth(*h)), *h));
         Ok(())
+    }
+
+    /// Unity 6000.0.71f1 observes suspension on audio updates, using the rendered DSP clock.
+    /// Burst renders and no-render updates in tests/projects/mixersuspend constrain both clocks.
+    pub fn update_suspension(&mut self) {
+        let active = self.active_mixer_roots();
+        for (handle, node) in &mut self.group_nodes {
+            if node.spec.mixer != *handle { continue; }
+            if active.contains(handle) || !node.spec.enable_suspend {
+                node.suspended = false;
+                node.last_active = self.frames;
+            } else if self.frames.saturating_sub(node.last_active) > self.config.sample_rate as u64 {
+                node.suspended = true;
+            }
+        }
+    }
+
+    fn active_mixer_roots(&self) -> std::collections::HashSet<u64> {
+        let mut active = std::collections::HashSet::new();
+        for source in self.sources.values().filter(|s| s.active()) {
+            let mut handle = source.params.group;
+            for _ in 0..self.group_nodes.len() {
+                let Some(group) = self.group_nodes.get(&handle) else { break; };
+                let root = group.spec.mixer;
+                if root == 0 || !active.insert(root) { break; }
+                let Some(master) = self.group_nodes.get(&root) else { break; };
+                handle = master.spec.parent;
+            }
+        }
+        active
     }
 
     pub fn command(&mut self, handle: u64, cmd: &AudioSourceCommand) {
@@ -807,6 +845,14 @@ impl Mixer {
         let listener_paused = self.listener_paused;
         let has_listener = self.has_listener;
         let config = self.config;
+        // New voices wake immediately, even when no main-thread update intervenes. Waking
+        // preserves effect history and the input fade; parameter submissions alone do not wake.
+        for root in self.active_mixer_roots() {
+            if let Some(node) = self.group_nodes.get_mut(&root) && node.suspended {
+                node.suspended = false;
+                node.last_active = self.frames;
+            }
+        }
         let need_mix = !self.discard_output
             || self.listener_filter
             || self.listener_output_wanted
@@ -976,6 +1022,12 @@ impl Mixer {
             }
         }
         for &handle in &self.group_order {
+            let root = self.group_nodes[&handle].spec.mixer;
+            if self.group_nodes.get(&root).is_some_and(|node| node.suspended) {
+                // A suspended graph does not write registered group sinks. The caller retains
+                // its previous block, while the device stream and listener receive silence.
+                continue;
+            }
             let node = self.group_nodes.get_mut(&handle).unwrap();
             // Echo retains the measured group input fade even when bypassed.
             let active = node.effects.iter().any(|e| e.spec.kind == "Echo")
@@ -998,6 +1050,19 @@ impl Mixer {
             }
             if node.spec.muted {
                 node.buffer[..n * 2].fill(0.0);
+            }
+            if root == handle {
+                for &sample in &node.buffer[..n * 2] {
+                    node.energy += sample as f64 * sample as f64;
+                }
+                let window = config.buffer_size.max(1) as u64;
+                if (t0 + n as u64) % window == 0 {
+                    if node.energy / (window * 2) as f64
+                        >= (node.spec.suspend_threshold as f64).powi(2) {
+                        node.last_active = t0 + n as u64 - window;
+                    }
+                    node.energy = 0.0;
+                }
             }
             if node.spec.observe
                 && let Some(cb) = callback
@@ -1586,6 +1651,51 @@ mod tests {
                 "cutoff": 1000.0, "resonance": 1.0 }]
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn suspension_uses_dsp_time_at_updates_and_preserves_delay_and_sink_storage() {
+        let mut m = Mixer::new(MixerConfig::default());
+        let mut group = filter_group(3, 4, "Echo");
+        group.mixer = 4;
+        group.effects[0].delay = 5000.0;
+        m.configure_group(group).unwrap();
+        m.configure_group(serde_json::from_value(serde_json::json!({
+            "handle": 4, "parent": 0, "mixer": 4, "enableSuspend": true,
+            "suspendThreshold": 0.0001, "muted": false, "bypass": false, "effects": []
+        })).unwrap()).unwrap();
+        let mut input = vec![0.0; 4096 * 2];
+        input[2048 * 2] = 0.25;
+        input[3072 * 2 + 1] = -0.125;
+        m.add_clip(1, Clip::new(2, 48000, input));
+        source_with(&mut m, 7, 1, |p| p.group = 3);
+        play(&mut m, 7, command::PLAY, 0.0);
+        let mut block = vec![0.0; 2048];
+        for _ in 0..384 {
+            m.update_suspension();
+            m.render(&mut block, 2);
+        }
+        assert!(m.group_nodes[&4].suspended);
+        // The complete Native wake_hold capture freezes after 50 DSP buffers at 48 kHz.
+        assert_eq!(m.group_nodes[&3].rendered, 50 * 1024);
+        let captured = m.capture(2048, vec![capture::SinkRequest {
+            handle: 4, length: 2048, exclude_from_mix: false,
+        }]).unwrap();
+        assert!(captured.sinks[0].samples.is_empty());
+        assert!(captured.samples.iter().all(|x| *x == 0.0));
+        m.add_clip(2, Clip::new(2, 48000, vec![0.01; 1024 * 2]));
+        source_with(&mut m, 8, 2, |p| { p.group = 4; p.flags = source_flags::LOOP; });
+        play(&mut m, 8, command::PLAY, 0.0);
+        m.render(&mut block, 2);
+        assert!(!m.group_nodes[&4].suspended);
+        assert_eq!(m.group_nodes[&3].rendered, 51 * 1024);
+        // Neither time without rendering nor repeated graph submissions advance the history.
+        for _ in 0..160 { m.update_suspension(); }
+        assert_eq!(m.group_nodes[&3].rendered, 51 * 1024);
+        let configuration = m.config;
+        m.reconfigure(configuration).unwrap();
+        assert!(!m.group_nodes[&4].suspended);
+        assert_eq!(m.group_nodes[&3].rendered, 0);
     }
 
     #[test]

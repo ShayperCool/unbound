@@ -314,6 +314,7 @@ impl Engine {
             return false;
         }
         *self.configuration.lock().unwrap() = configuration;
+        self.capturing.store(false, Ordering::Release);
         true
     }
 
@@ -386,6 +387,7 @@ impl Engine {
         mixer.has_listener = packet.flags & frame_flags::HAS_LISTENER != 0;
         mixer.listener_paused = packet.flags & frame_flags::PAUSED != 0;
         mixer.listener_filter = packet.flags & frame_flags::LISTENER_FILTER != 0;
+        mixer.update_suspension();
         if virtual_device && !self.capturing.load(Ordering::Acquire) {
             let rate = mixer.config.sample_rate as f64;
             let buffer = mixer.config.buffer_size.max(1) as usize;
