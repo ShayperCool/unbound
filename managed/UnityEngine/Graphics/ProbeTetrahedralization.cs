@@ -12,8 +12,15 @@ namespace UnityEngine
     /// neighbor k across the face opposite vertex k; after them one outer cell per hull triangle
     /// (fourth index -1, neighbor 3 the inner cell, neighbors 0..2 the outer cells across its
     /// edges); a hull probe's ray is the angle-weighted mean of the outward normals of its hull
-    /// triangles. The cells' order and float rounding are Unbound's: inside the probes' hull the
-    /// interpolation is the same blend, tetrahedron indices differ from the Editor's.
+    /// triangles. The cells' matrices are rounded as the Editor's (<see cref="Matrix"/>). The cells' order and the order
+    /// of each cell's vertices are Unbound's: the Editor's cells are consistent with the fourth
+    /// vertex being the one inserted last (all 55 baked cells of tests/projects/lightprobes), but
+    /// its insertion order depends on the probes (no sort by index, axis, lexicographic order or
+    /// distance fits) and the rotation of the other three on its history, so neither is
+    /// reproduced. Inside the hull the interpolation is the same blend; where Unbound's cell has
+    /// the Editor's vertex order (recorded at two of five points of tests/projects/lightprobes
+    /// tetrahedralized together) the weights are the Editor's to the bit, elsewhere they can
+    /// differ in the last bit, and tetrahedron indices differ.
     /// </summary>
     internal static class ProbeTetrahedralization
     {
@@ -226,19 +233,79 @@ namespace UnityEngine
             set.Cells = cells.ToArray();
         }
 
-        /// <summary>Rows of the inverse of the matrix with columns c0, c1, c2.</summary>
-        static void Matrix(Vector3 c0, Vector3 c1, Vector3 c2, out Vector3 r0, out Vector3 r1, out Vector3 r2)
+        /// <summary>
+        /// Rows of the inverse of the matrix with columns c0, c1, c2, rounded as the Editor's cells
+        /// are: the general 4×4 inverse, in single precision, of that matrix extended by
+        /// (0, 0, 0, 1), by Gauss–Jordan elimination with partial pivoting (pivots bubbled up from
+        /// the last row on a strictly larger magnitude, the multipliers taken once per column, the
+        /// right half's zero entries skipped in the first two eliminations, then back substitution
+        /// from the last row). It reproduces bit for bit all 55 cell matrices of the Editor's own
+        /// bakes in tests/projects/lightprobes (Main 45, Extra 10, from c_k = p_k − p3 in single
+        /// precision); a double-precision inverse rounded to single precision matches 1 of them.
+        /// The rounding decides a weight's last bit, so the interpolated probes and occlusion.
+        /// </summary>
+        internal static void Matrix(Vector3 c0, Vector3 c1, Vector3 c2, out Vector3 r0, out Vector3 r1, out Vector3 r2)
         {
-            var a = new Vector3d(c0.x, c0.y, c0.z);
-            var b = new Vector3d(c1.x, c1.y, c1.z);
-            var c = new Vector3d(c2.x, c2.y, c2.z);
-            var x0 = Vector3d.Cross(b, c);
-            var x1 = Vector3d.Cross(c, a);
-            var x2 = Vector3d.Cross(a, b);
-            double det = Vector3d.Dot(a, x0);
-            r0 = (x0 * (1 / det)).ToFloat();
-            r1 = (x1 * (1 / det)).ToFloat();
-            r2 = (x2 * (1 / det)).ToFloat();
+            var w0 = new float[] { c0.x, c1.x, c2.x, 0f, 1f, 0f, 0f, 0f };
+            var w1 = new float[] { c0.y, c1.y, c2.y, 0f, 0f, 1f, 0f, 0f };
+            var w2 = new float[] { c0.z, c1.z, c2.z, 0f, 0f, 0f, 1f, 0f };
+            var w3 = new float[] { 0f, 0f, 0f, 1f, 0f, 0f, 0f, 1f };
+            r0 = r1 = r2 = Vector3.zero;
+
+            // First column.
+            if (MathF.Abs(w3[0]) > MathF.Abs(w2[0])) (w3, w2) = (w2, w3);
+            if (MathF.Abs(w2[0]) > MathF.Abs(w1[0])) (w2, w1) = (w1, w2);
+            if (MathF.Abs(w1[0]) > MathF.Abs(w0[0])) (w1, w0) = (w0, w1);
+            if (w0[0] == 0f) return;
+            float m1 = w1[0] / w0[0], m2 = w2[0] / w0[0], m3 = w3[0] / w0[0];
+            for (int j = 1; j < 8; j++)
+            {
+                float s = w0[j];
+                if (j >= 4 && s == 0f) continue;
+                w1[j] -= m1 * s; w2[j] -= m2 * s; w3[j] -= m3 * s;
+            }
+
+            // Second column.
+            if (MathF.Abs(w3[1]) > MathF.Abs(w2[1])) (w3, w2) = (w2, w3);
+            if (MathF.Abs(w2[1]) > MathF.Abs(w1[1])) (w2, w1) = (w1, w2);
+            if (w1[1] == 0f) return;
+            m2 = w2[1] / w1[1]; m3 = w3[1] / w1[1];
+            for (int j = 2; j < 8; j++)
+            {
+                float s = w1[j];
+                if (j >= 4 && s == 0f) continue;
+                w2[j] -= m2 * s; w3[j] -= m3 * s;
+            }
+
+            // Third column.
+            if (MathF.Abs(w3[2]) > MathF.Abs(w2[2])) (w3, w2) = (w2, w3);
+            if (w2[2] == 0f) return;
+            m3 = w3[2] / w2[2];
+            for (int j = 3; j < 8; j++) w3[j] -= m3 * w2[j];
+            if (w3[3] == 0f) return;
+
+            // Back substitution.
+            float inv = 1f / w3[3];
+            for (int j = 4; j < 8; j++) w3[j] *= inv;
+            float m = w2[3];
+            inv = 1f / w2[2];
+            for (int j = 4; j < 8; j++) w2[j] = inv * (w2[j] - w3[j] * m);
+            m = w1[3];
+            for (int j = 4; j < 8; j++) w1[j] -= w3[j] * m;
+            m = w0[3];
+            for (int j = 4; j < 8; j++) w0[j] -= w3[j] * m;
+            m = w1[2];
+            inv = 1f / w1[1];
+            for (int j = 4; j < 8; j++) w1[j] = inv * (w1[j] - w2[j] * m);
+            m = w0[2];
+            for (int j = 4; j < 8; j++) w0[j] -= w2[j] * m;
+            m = w0[1];
+            inv = 1f / w0[0];
+            for (int j = 4; j < 8; j++) w0[j] = inv * (w0[j] - w1[j] * m);
+
+            r0 = new Vector3(w0[4], w0[5], w0[6]);
+            r1 = new Vector3(w1[4], w1[5], w1[6]);
+            r2 = new Vector3(w2[4], w2[5], w2[6]);
         }
 
         static (int, int, int) Sorted(int a, int b, int c)
