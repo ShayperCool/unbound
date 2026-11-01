@@ -25,6 +25,7 @@ namespace UnityEngine
 
         void ResetInitialRandom(uint seed)
         {
+            ResetShapeRandom(seed);
             for (int lane = 0; lane < 4; lane++)
                 m_InitialRandom[lane] = Random.State.FromSeed(unchecked((int)(seed + 367u * (uint)lane)));
             m_InitialRandomReady = true;

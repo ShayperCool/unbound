@@ -79,6 +79,7 @@ namespace UnityEngine
                 }
                 m_Main.randomSeed = value;
                 m_InitialRandomReady = false;
+                m_ShapeRandomReady = false;
             }
         }
 
@@ -561,6 +562,11 @@ namespace UnityEngine
             m_InitialRandom2 = m_InitialRandom[2],
             m_InitialRandom3 = m_InitialRandom[3],
             m_InitialRandomReady = m_InitialRandomReady,
+            m_ShapeRandom0 = m_ShapeRandom[0],
+            m_ShapeRandom1 = m_ShapeRandom[1],
+            m_ShapeRandom2 = m_ShapeRandom[2],
+            m_ShapeRandom3 = m_ShapeRandom[3],
+            m_ShapeRandomReady = m_ShapeRandomReady,
         };
 
         public void SetPlaybackState(PlaybackState playbackState)
@@ -580,6 +586,11 @@ namespace UnityEngine
             m_InitialRandom[2] = playbackState.m_InitialRandom2;
             m_InitialRandom[3] = playbackState.m_InitialRandom3;
             m_InitialRandomReady = playbackState.m_InitialRandomReady;
+            m_ShapeRandom[0] = playbackState.m_ShapeRandom0;
+            m_ShapeRandom[1] = playbackState.m_ShapeRandom1;
+            m_ShapeRandom[2] = playbackState.m_ShapeRandom2;
+            m_ShapeRandom[3] = playbackState.m_ShapeRandom3;
+            m_ShapeRandomReady = playbackState.m_ShapeRandomReady;
         }
 
         public Trails GetTrails()
