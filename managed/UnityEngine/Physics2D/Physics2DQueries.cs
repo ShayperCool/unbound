@@ -436,29 +436,44 @@ namespace Unbound.Runtime
 
         static ColliderDistance2D ShapeDistance(B2Shape shapeA, int indexA, B2Transform xfA, B2Shape shapeB, int indexB, B2Transform xfB)
         {
-            var input = new DistanceInput { TransformA = xfA, TransformB = xfB, UseRadii = true };
+            var input = new DistanceInput { TransformA = xfA, TransformB = xfB, UseRadii = false };
             input.ProxyA.Set(shapeA, indexA);
             input.ProxyB.Set(shapeB, indexB);
             var cache = new SimplexCache();
             DistanceAlgorithm.Distance(out var output, ref cache, input);
+            // Keep the core normal before moving the witnesses onto the radii.
+            // Dividing the rounded witness delta by a tiny surface gap loses it
+            // at touching boundaries, and a positive gap must not become overlap.
+            var coreNormal = output.Distance > 0f ? (output.PointB - output.PointA) / output.Distance : B2.Zero;
             var pointA = W.ToUnity(output.PointA);
             var pointB = W.ToUnity(output.PointB);
-            if (output.Distance > 10f * B2Settings.Epsilon)
-                return new ColliderDistance2D(pointA, pointB, (pointA - pointB) / output.Distance, output.Distance);
+            float distance = output.Distance - (input.ProxyA.Radius + input.ProxyB.Radius);
+            if (distance > 0f)
+                return new ColliderDistance2D(pointA + input.ProxyA.Radius * W.ToUnity(coreNormal),
+                    pointB - input.ProxyB.Radius * W.ToUnity(coreNormal), -W.ToUnity(coreNormal), distance);
 
-            // Overlapping: the deepest point of their contact manifold gives the penetration.
+            // Overlapping: use the mean contact witnesses, rather than the deepest
+            // solver point. The distance normal follows pointA - pointB, so its
+            // orientation reverses at overlap while the witnesses stay on A and B.
             if (TryManifold(shapeA, indexA, xfA, shapeB, indexB, xfB, out var normalAB, out var separation, out var point))
             {
                 var cA = point - 0.5f * separation * normalAB;
                 var cB = point + 0.5f * separation * normalAB;
-                return new ColliderDistance2D(cA, cB, -normalAB, separation);
+                return new ColliderDistance2D(cA, cB, normalAB, separation);
+            }
+            // Preserve the GJK fallback for shape pairs with no contact manifold.
+            if (output.Distance < B2Settings.Epsilon) pointA = pointB = 0.5f * (pointA + pointB);
+            else
+            {
+                pointA += input.ProxyA.Radius * W.ToUnity(coreNormal);
+                pointB -= input.ProxyB.Radius * W.ToUnity(coreNormal);
             }
             var away = pointA - W.ToUnity(xfB.Position);
             return new ColliderDistance2D(pointA, pointB, away.sqrMagnitude > 0f ? away.normalized : Vector2.up, 0f);
         }
 
-        /// <summary>The contact manifold of two shapes: the normal from A to B, the smallest
-        /// separation and its point.</summary>
+        /// <summary>The distance query's mean contact point and separation, with the
+        /// normal from A to B. This does not select a solver contact.</summary>
         static bool TryManifold(B2Shape shapeA, int indexA, B2Transform xfA, B2Shape shapeB, int indexB, B2Transform xfB,
             out Vector2 normalAB, out float separation, out Vector2 point)
         {
@@ -511,17 +526,15 @@ namespace Unbound.Runtime
             if (manifold.PointCount == 0) return false;
             var world = new WorldManifold();
             world.Initialize(manifold, xfFirst, first.Radius, xfSecond, second.Radius);
-            int deepest = 0;
-            for (int i = 1; i < manifold.PointCount; i++)
-                if (world.Separations[i] < world.Separations[deepest]) deepest = i;
             var n = W.ToUnity(world.Normal);
-            separation = world.Separations[deepest];
-            point = W.ToUnity(world.Points[deepest]);
-            normalAB = swapped ? -n : n;
-            if (swapped)
+            separation = world.Separations[0];
+            point = W.ToUnity(world.Points[0]);
+            if (manifold.PointCount == 2)
             {
-                // The manifold point is symmetric; the separation and normal now read from A to B.
+                separation = 0.5f * (separation + world.Separations[1]);
+                point = 0.5f * (point + W.ToUnity(world.Points[1]));
             }
+            normalAB = swapped ? -n : n;
             return true;
         }
 
