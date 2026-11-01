@@ -40,7 +40,7 @@ python3 tests/projects/particleseedaxis/run.py native --unity-version 6000.0.71f
 The runner enters the installed `with-heavy-job` once per capture. All generated
 projects, logs and reports belong under the validation cache. `engine` additionally
 requires `--cli` and `--runtime` pointing to a private verified matching runtime.
-No runtime build or production-code edit is part of this probe.
+The runner does not build runtime artifacts.
 
 ## Measured result for 6000.0.71f1
 
@@ -58,18 +58,17 @@ The supplied parent seeds themselves remain unchanged after the by-ref call.
 All nine predeclared causal hypotheses fail the requirement to predict all 30
 emitted seeds and all 60 stored seed observations. The existing script Random
 xorshift128 recurrence produces the observed values at words 1, 6 and 11.
-This is an observation about the stream, not an accepted draw-consumption rule.
-The control does not independently vary the number or kind of initialization
-samples, so hard-coding a five-word stride would be a fit to the output.
+The original control alone did not independently vary the number or kind of
+initialization samples. The added interventions below distinguish lane packing
+and mode-dependent consumers.
 `ParticleRandom.Hash`/`Value` and the current particle-system xorshift64* models
-predict none of the emitted seeds. No lookup, fitted stride or RNG patch is supplied.
+predict none of the original emitted seeds.
 
 The first particle in every system reports axis [0,1,0]. Later ordinary particles
 and manual particles with flags 0 report [0,0,1]. Later manual particles with flags
-15 report [1,0,0], matching the supplied parent's axis. These are observations,
-not a proven ordinal initialization rule. Replacing every default axis with Y
-would contradict this control. The seed and first-axis residuals therefore already
-occur in ordinary emission. A Death-only initialization repair is not justified.
+15 report [1,0,0], matching the supplied parent's axis. The delayed-read intervention below distinguishes materialization from an
+ordinal initialization rule. Replacing every default axis with Y would contradict
+this control. Generic initialization applies to ordinary and manual emission.
 
 Inheritance fields also remain explicit: flags 15 give start/remaining lifetime
 4.05216932, size [1.5,1.5,1.5], color [96,96,56,200] and rotation [0,0,47.188736].
@@ -79,9 +78,8 @@ The private immutable v14 baseline completes all 40 records with correct counts.
 Strict parity fails with 240 paths in 30 records and 60 exact raw-seed mismatches
 across stored snapshots. The full union includes axis, seed, rotation and lifetime
 values. It is a baseline observation, not a v15 runtime acceptance or a new
-runtime regression. Production initialization, simulation, traversal, Birth,
-Death and removal code remain unchanged. No complete causal seed/axis mechanism
-or shared-helper implementation contract was established in the bounded control.
+runtime regression. The implementation changes generic initialization and axis materialization.
+Simulation timing, traversal, Birth, Death and removal remain outside its scope.
 
 ## Review without recapture
 
@@ -93,7 +91,9 @@ python3 tests/projects/particleseedaxis/diagnose.py --unity-version 6000.0.71f1 
 
 `verify.py` exits zero for the canonical reference. Add `--native-a` and
 `--native-b` to verify exact independent agreement. Add `--actual` to retain the
-complete comparison union and get a nonzero exit on parity failure. Existing
+complete comparison union and get a nonzero exit on parity failure. Add
+`--baseline` to retain resolved, retained and introduced failures with full values,
+including a separate union for the original 40 records. Existing
 particle float/color tolerances remain unchanged; a separate audit requires exact
 raw uint seeds. `analyze.py` reports every model prediction and mismatch, including
 old particles in later snapshots. Its completion status does not accept a model.
@@ -125,3 +125,12 @@ retains 77 for both particles and leaves the next ordinary seed at 589364589.
 The original nine hypotheses and their failed predictions remain available in
 analyze.py. They describe the original control, independently of these added
 interventions. Runtime reports must retain all fields and exact uint seeds.
+
+The initializer owns four private xorshift128 lanes seeded with systemSeed plus
+367 times the lane index, expanded by the existing four-word seed recurrence.
+Ordinary groups consume seed, lifetime, size X, optional size Y/Z, rotation Z,
+optional rotation X/Y, then color. Constant settings still consume their named
+samples. Speed and flip derive private samples from the stored particle seed.
+EmitParams consumes only unset fields, across the batch in rotation, size, color,
+seed and lifetime order. It uses the same four private lanes and leaves the
+script-global Random state untouched.
