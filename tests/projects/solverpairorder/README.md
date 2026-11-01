@@ -120,3 +120,16 @@ contact arrays and cast results. Four arbitrary angles, small positive and
 negative angular differences, three offsets and three centers retain every
 indexed point, normal and separation. Body basis vectors and side rays separate
 pose arithmetic from clipping. Two Native recordings agree on all 28,512 fields.
+
+`--review-controls` records capsule tips whose core intervals do not overlap,
+collapsed cores against rotated boxes in both fixture orders, coincident and
+exactly touching core boundaries, and callback-driven removal of an earlier
+scene pair. Solid and trigger cases retain enter/stay order with both values of
+`callbacksOnDisable`, including the following simulation step. Two independent
+Editor recordings agree byte-for-byte on all 3,670 fields in 66 cases. The
+first 2,752 measured fields remain unchanged in the expanded reference.
+
+`public.py` reports newly missing observations separately from retained numeric
+failures. A baseline failure cannot make the loss of its field acceptable. Run
+the CLI regression controls with `python3 -m unittest discover -s
+tests/projects/solverpairorder -p test_public.py`.
