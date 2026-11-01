@@ -120,6 +120,8 @@ namespace UnityEngine
     internal struct LineFacing
     {
         internal bool TransformZ;
+        // Native TransformZ trails reverse both cap fans independently of cap count.
+        internal bool ReverseCaps;
         internal Vector3 TransformForward;
         internal Vector3 CameraPosition;
         internal Vector3 CameraForward;
@@ -503,7 +505,9 @@ namespace UnityEngine
 
         /// <summary>A half disc closing one end: its centre, then an arc from the end pair's plus
         /// vertex around the end to its minus vertex, in the strip's facing plane. At a negative
-        /// width the disc turns back over the strip (measured, line.width.negative).</summary>
+        /// width the disc turns back over the strip (measured, line.width.negative). TransformZ
+        /// trails use the opposite cap plane and fans: the old nonzero caps establish the plane,
+        /// and the independent capcount pair establishes both fans at counts one and two.</summary>
         void Cap(Vector3 center, Pair pair, Vector3 direction, bool start, bool negative, int caps, float va, float vb, LineFacing facing, Vector3 normal)
         {
             int at = m_Vertices.Count;
@@ -514,6 +518,7 @@ namespace UnityEngine
             var outward = Vector3.Cross(plane, radius).normalized;
             if (Vector3.Dot(outward, direction) < 0f) outward = -outward;
             if (negative) outward = -outward;
+            if (facing.ReverseCaps) outward = -outward;
             var back = outward * (start ? -r : r);
             for (int k = 0; k < caps + 2; k++)
             {
@@ -523,7 +528,7 @@ namespace UnityEngine
             }
             for (int k = 0; k < caps + 1; k++)
             {
-                if (start) Tri(at, at + 2 + k, at + 1 + k);
+                if (start != facing.ReverseCaps) Tri(at, at + 2 + k, at + 1 + k);
                 else Tri(at, at + 1 + k, at + 2 + k);
             }
         }
@@ -577,9 +582,10 @@ namespace UnityEngine
             return mesh;
         }
 
-        internal static LineFacing Facing(LineParameters p, Vector3 cameraPosition, Vector3 cameraForward) => new LineFacing
+        internal static LineFacing Facing(LineParameters p, Vector3 cameraPosition, Vector3 cameraForward, bool trail = false) => new LineFacing
         {
             TransformZ = p.Alignment == LineAlignment.TransformZ,
+            ReverseCaps = trail && p.Alignment == LineAlignment.TransformZ,
             TransformForward = Vector3.forward,
             CameraPosition = cameraPosition,
             CameraForward = cameraForward.normalized,
@@ -1099,7 +1105,7 @@ namespace UnityEngine
             if (mesh == null) throw new ArgumentNullException(nameof(mesh));
             if (camera == null) throw new ArgumentNullException(nameof(camera));
             var ct = camera.transform;
-            if (!m_Strip.Build(DrawPoints(), m_DrawHidden, false, m_Parameters, LineDrawing.Facing(m_Parameters, ct.position, ct.forward)))
+            if (!m_Strip.Build(DrawPoints(), m_DrawHidden, false, m_Parameters, LineDrawing.Facing(m_Parameters, ct.position, ct.forward, trail: true)))
             {
                 mesh.Clear();
                 return;
@@ -1119,7 +1125,7 @@ namespace UnityEngine
             Age(Now);
             if (m_Points.Count == 0 && m_HadPoints && m_Autodestruct && Application.isPlaying)
                 TrailSystem.RequestDestroy(m_GameObject);
-            if (!m_Strip.Build(DrawPoints(), m_DrawHidden, false, m_Parameters, LineDrawing.Facing(m_Parameters, camera.Position, camera.Forward))) return;
+            if (!m_Strip.Build(DrawPoints(), m_DrawHidden, false, m_Parameters, LineDrawing.Facing(m_Parameters, camera.Position, camera.Forward, trail: true))) return;
             var mesh = LineDrawing.MeshFor(m_Meshes, camera.Camera, "TrailRenderer");
             m_Strip.WriteTo(mesh, Matrix4x4.identity);
             FrameBuilder.AddMeshDraws(this, mesh, Matrix4x4.identity, Color.white, camera, into);
