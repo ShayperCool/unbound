@@ -28,6 +28,8 @@ namespace UnityEngine
         internal Object[] m_Result;
         internal readonly CancellationToken m_CancellationToken;
         internal bool m_Cancelled;
+        /// <summary>Completed by its cancellation: awaiting it throws.</summary>
+        internal bool m_WasCancelled;
         internal List<Instantiation.Prepared> m_Clones;
         internal Transform m_Parent;
         internal bool m_HasParent;
@@ -86,25 +88,37 @@ namespace UnityEngine
 
         public Awaiter GetAwaiter() => new Awaiter(this);
 
-        /// <summary>Awaits the operation's completion (Awaitable.FromAsyncOperation), then gives its result.</summary>
+        /// <summary>Awaits the operation's completion (Awaitable.FromAsyncOperation), then gives its
+        /// result. As in Unity, an awaiter gives its result once (a second GetResult finds it detached),
+        /// and awaiting a cancelled operation throws OperationCanceledException.</summary>
         public partial struct Awaiter : INotifyCompletion
         {
+            sealed class State
+            {
+                internal int Consumed;
+            }
+
             readonly AsyncInstantiateOperation<T> m_Op;
-            readonly Awaitable.Awaiter m_Awaiter;
+            readonly Awaitable m_Awaitable;
+            readonly State m_State;
 
             public Awaiter(AsyncInstantiateOperation<T> op)
             {
                 m_Op = op;
-                m_Awaiter = Awaitable.FromAsyncOperation(op).GetAwaiter();
+                m_Awaitable = Awaitable.FromAsyncOperation(op);
+                m_State = new State();
             }
 
-            public bool IsCompleted => m_Awaiter.IsCompleted;
+            public bool IsCompleted => m_Awaitable.IsCompleted;
 
-            public void OnCompleted(Action continuation) => m_Awaiter.OnCompleted(continuation);
+            public void OnCompleted(Action continuation) => m_Awaitable.GetAwaiter().OnCompleted(continuation);
 
             public T[] GetResult()
             {
-                m_Awaiter.GetResult();
+                if (Interlocked.Exchange(ref m_State.Consumed, 1) != 0)
+                    throw new InvalidOperationException("Awaitable is in detached state");
+                m_Awaitable.GetAwaiter().GetResult();
+                if (m_Op.m_WasCancelled) throw new OperationCanceledException("Async operation canceled");
                 return m_Op.Result;
             }
         }
@@ -269,6 +283,7 @@ namespace Unbound.Runtime
             if (op.m_Cancelled || op.m_CancellationToken.IsCancellationRequested || (op.m_HasParent && op.m_Parent == null))
             {
                 foreach (var clone in clones) Instantiation.Discard(clone);
+                op.m_WasCancelled = op.m_Cancelled || op.m_CancellationToken.IsCancellationRequested;
                 op.Complete();
                 return;
             }

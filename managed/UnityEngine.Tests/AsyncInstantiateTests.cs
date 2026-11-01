@@ -45,6 +45,10 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "Awake async-order (Clone)", "OnEnable async-order (Clone)", "Awake async-order (Clone)", "OnEnable async-order (Clone)" }, RecordsAwake.Log);
             Assert.Equal(2, op.Result.Length);
             Assert.Equal(new Vector3(6, 0, 0), op.Result[1].transform.position);
+            // An awaiter gives the result once, as Unity's does.
+            var awaiter = op.GetAwaiter();
+            Assert.Equal(2, awaiter.GetResult().Length);
+            Assert.Equal("Awaitable is in detached state", Assert.Throws<InvalidOperationException>(() => awaiter.GetResult()).Message);
             foreach (var clone in op.Result) Object.DestroyImmediate(clone);
             Object.DestroyImmediate(original);
         }
@@ -75,6 +79,7 @@ namespace UnityEngine.Tests
             var token = Object.InstantiateAsync(original, 1, null, Vector3.zero, Quaternion.identity, source.Token);
             token.WaitForCompletion();
             Assert.Null(token.Result);
+            Assert.Equal("Async operation canceled", Assert.Throws<OperationCanceledException>(() => token.GetAwaiter().GetResult()).Message);
             Object.DestroyImmediate(original);
         }
 
