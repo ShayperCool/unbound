@@ -36,7 +36,7 @@ namespace Unbound.Runtime
             /// <summary>The native array the data goes into on completion, locked until then.</summary>
             internal unsafe void* Output;
             internal long OutputLength;
-            internal AtomicSafetyHandle OutputSafety;
+            internal Safety.ExternalWriteReservation OutputReservation;
             internal bool HasOutput;
         }
 
@@ -95,14 +95,23 @@ namespace Unbound.Runtime
             if (update) result.Seen = Time.frameCount;
             if (result.HasOutput)
             {
-                AtomicSafetyHandle.SetAllowReadOrWriteAccess(result.OutputSafety, true);
-                long at = 0;
-                foreach (var layer in result.Layers)
+                try
                 {
-                    long n = Math.Min(layer.Length, result.OutputLength - at);
-                    if (n <= 0) break;
-                    fixed (byte* p = layer) UnsafeUtility.MemCpy((byte*)result.Output + at, p, n);
-                    at += n;
+                    long at = 0;
+                    foreach (var layer in result.Layers)
+                    {
+                        long n = Math.Min(layer.Length, result.OutputLength - at);
+                        if (n <= 0) break;
+                        fixed (byte* p = layer) UnsafeUtility.MemCpy((byte*)result.Output + at, p, n);
+                        at += n;
+                    }
+                }
+                finally
+                {
+                    result.OutputReservation.Dispose();
+                    result.OutputReservation = null;
+                    result.HasOutput = false;
+                    result.Output = null;
                 }
             }
             s_Completed.Add(id);
@@ -144,16 +153,16 @@ namespace Unbound.Runtime
             long length = (long)output.Length * UnsafeUtility.SizeOf<T>();
             if (!result.HasError)
             {
+                if (output.m_AllocatorLabel != Allocator.Persistent && output.m_AllocatorLabel != Allocator.TempJob)
+                    throw new ArgumentException("Unbound: a GPU readback destination must own Persistent or TempJob memory; frame-local and borrowed storage are not supported.", nameof(output));
                 long size = 0;
                 foreach (var layer in result.Layers) size += layer.Length;
                 if (size > length)
                     return Fail($"Size of source buffer data ({size} bytes) is larger than the destination nativeArray ({length} bytes).", result.Callback);
-                AtomicSafetyHandle.CheckWriteAndThrow(output.m_Safety);
+                result.OutputReservation = Safety.ReserveExternalWrite(output.m_Safety);
                 result.Output = NativeArrayUnsafeUtility.GetUnsafeBufferPointerWithoutChecks(output);
                 result.OutputLength = length;
-                result.OutputSafety = output.m_Safety;
                 result.HasOutput = true;
-                AtomicSafetyHandle.SetAllowReadOrWriteAccess(output.m_Safety, false);
             }
             return Start(result);
         }

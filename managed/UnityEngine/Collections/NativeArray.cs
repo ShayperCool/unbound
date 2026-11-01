@@ -175,6 +175,7 @@ namespace Unity.Collections
         /// <summary>Disposes the array in a job that runs after <paramref name="inputDeps"/>.</summary>
         public JobHandle Dispose(JobHandle inputDeps)
         {
+            Safety.CheckExternalWrite(m_Safety);
             if (m_AllocatorLabel != Allocator.None && !AtomicSafetyHandle.IsDefaultValue(in m_Safety))
                 AtomicSafetyHandle.CheckExistsAndThrow(in m_Safety);
             if (!IsCreated) return inputDeps;
