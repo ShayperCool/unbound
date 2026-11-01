@@ -74,7 +74,14 @@ def job(work, repeat):
     project, out = work/'projects'/repeat, work/repeat
     return EditorJob(project, out/'editor.log', out, env={'LINE_PROBE_OUT': str(out)},
                      timeout=HARD_TIMEOUT, progress_files=[out/'values.jsonl'],
-                     progress_timeout=PROGRESS_TIMEOUT, label='lines-'+repeat)
+                     progress_timeout=PROGRESS_TIMEOUT, label='lines-'+repeat,
+                     launch_inputs={'release': os.environ['UNBOUND_PROBE_UNITY_VERSION'],
+                                    'paths': {'assets': str(project/'Assets'),
+                                              'packages': str(project/'Packages'),
+                                              'settings': str(project/'ProjectSettings'),
+                                              'runner': str(Path(__file__).resolve()),
+                                              'supervisor': str(REPO/'tests/editor_runner.py'),
+                                              'profile': str(REPO/'data/profiles/unity-6000.0.json')}})
 
 
 def editor(work, dry_run=False):
