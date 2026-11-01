@@ -25,7 +25,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 14;
+pub const FORMAT_VERSION: u32 = 16;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -141,14 +141,38 @@ pub struct BlockRange {
     pub size: u32,
 }
 
-/// How a texture slot is sampled: a depth texture (`Texture2D` read with comparisons), a
-/// comparison sampler (`SamplerComparisonState`), a sampler whose name spells its state (Unity's
-/// inline samplers, such as `sampler_LinearClampCompare`).
+/// How a texture slot is sampled: what its texture's texels are ([`SampleKind`]), a comparison
+/// sampler (`SamplerComparisonState`), a sampler whose name spells its state (Unity's inline
+/// samplers, such as `sampler_LinearClampCompare`).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct TextureSlot {
-    pub depth: bool,
+    pub sample: SampleKind,
     pub comparison: bool,
     pub inline: Option<InlineSampler>,
+}
+
+/// The texel type a texture slot declares: floats (`Texture2D`, `sampler2D`; the default), signed
+/// or unsigned integers (`Texture2D<int4>`, `Texture2D<uint2>`, read with `Load`), or a depth
+/// texture (`Texture2D` read with comparisons).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
+pub enum SampleKind {
+    #[default]
+    Float,
+    Sint,
+    Uint,
+    Depth,
+}
+
+impl TextureSlot {
+    /// The slot reads a depth texture (comparisons).
+    pub fn depth(&self) -> bool {
+        self.sample == SampleKind::Depth
+    }
+
+    /// The slot reads integers: its texture cannot be filtered.
+    pub fn integer(&self) -> bool {
+        matches!(self.sample, SampleKind::Sint | SampleKind::Uint)
+    }
 }
 
 /// A sampler state spelt by a sampler's name: filter 0 point, 1 linear, 2 trilinear; wrap 0
@@ -1317,6 +1341,96 @@ float4 frag(v2f i, bool front : SV_IsFrontFace) : SV_Target { if (i.needDiscard)
         compiler
             .compile(&program(source, false), &[], false)
             .unwrap();
+    }
+
+    #[test]
+    fn texture_slots_record_their_texel_type() {
+        // Shader cache 15: float, integer and depth declarations give the slot its texel type;
+        // integer slots cannot be filtered.
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4x4 unity_MatrixVP;
+sampler2D _Filtered;
+Texture2D<uint2> _Unsigned;
+Texture2D<int4> _Signed;
+Texture2D _Shadow;
+SamplerComparisonState sampler_Shadow;
+float4 vert(float4 v : POSITION) : SV_POSITION { return mul(unity_MatrixVP, v); }
+float4 frag(float4 p : SV_POSITION) : SV_Target
+{
+    uint2 u = _Unsigned.Load(int3(p.xy, 0));
+    int4 s = _Signed.Load(int3(p.xy, 0));
+    float c = _Shadow.SampleCmpLevelZero(sampler_Shadow, p.xy, 0.5);
+    return tex2D(_Filtered, p.xy) + float4(u, s.x, c);
+}
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        let slot = |name: &str| {
+            let k = compiled.textures.iter().position(|t| t == name).unwrap();
+            compiled.texture_slots[k]
+        };
+        assert_eq!(slot("_Filtered").sample, SampleKind::Float);
+        assert_eq!(slot("_Unsigned").sample, SampleKind::Uint);
+        assert_eq!(slot("_Signed").sample, SampleKind::Sint);
+        assert_eq!(slot("_Shadow").sample, SampleKind::Depth);
+        assert!(slot("_Unsigned").integer() && slot("_Signed").integer());
+        assert!(!slot("_Filtered").integer() && !slot("_Shadow").integer());
+        assert!(slot("_Shadow").depth() && slot("_Shadow").comparison);
+    }
+
+    #[test]
+    fn only_filtered_float_main_textures_use_the_legacy_layout() {
+        for (declaration, expression, sample, legacy) in [
+            (
+                "sampler2D _MainTex;",
+                "tex2D(_MainTex, p.xy)",
+                SampleKind::Float,
+                true,
+            ),
+            (
+                "Texture2D<uint4> _MainTex;",
+                "asfloat(_MainTex.Load(int3(p.xy, 0)))",
+                SampleKind::Uint,
+                false,
+            ),
+            (
+                "Texture2D<int4> _MainTex;",
+                "float4(_MainTex.Load(int3(p.xy, 0)))",
+                SampleKind::Sint,
+                false,
+            ),
+            (
+                "Texture2D _MainTex; SamplerComparisonState sampler_MainTex;",
+                "_MainTex.SampleCmpLevelZero(sampler_MainTex, p.xy, 0.5)",
+                SampleKind::Depth,
+                false,
+            ),
+        ] {
+            let source = format!(
+                r#"
+#pragma vertex vert
+#pragma fragment frag
+{declaration}
+float4 vert(float4 p : POSITION) : SV_POSITION {{ return p; }}
+float4 frag(float4 p : SV_POSITION) : SV_Target {{ return {expression}; }}
+"#
+            );
+            let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+            let compiled = compiler
+                .compile(&program(&source, false), &[], false)
+                .unwrap();
+            assert_eq!(compiled.main_texture, legacy, "{declaration}");
+            if legacy {
+                assert!(compiled.textures.is_empty());
+            } else {
+                assert_eq!(compiled.textures, ["_MainTex"]);
+                assert_eq!(compiled.texture_slots[0].sample, sample);
+            }
+        }
     }
 
     #[test]

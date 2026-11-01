@@ -5,7 +5,7 @@
 //!
 //! Encoding (little endian), one command after another: `u8 opcode` and its fields. Strings are
 //! `u32 length` and UTF-8 bytes; matrices are 16 `f32`s, column-major as Unity's `Matrix4x4`.
-use crate::render_protocol::owned::PropertyValue;
+use crate::render_protocol::{handle, owned::PropertyValue};
 
 /// A texture handle meaning "none" (no depth attachment).
 pub const NO_TEXTURE: u64 = u64::MAX;
@@ -298,6 +298,14 @@ impl<'a> Reader<'a> {
         Ok(u64::from_le_bytes(self.take(8)?.try_into().unwrap()))
     }
 
+    /// A target's depth: plain, or [`NO_TEXTURE`] for none.
+    fn target_depth(&mut self) -> Result<u64, String> {
+        match self.u64()? {
+            NO_TEXTURE => Ok(NO_TEXTURE),
+            h => handle::plain(h, "a target's depth"),
+        }
+    }
+
     fn f32(&mut self) -> Result<f32, String> {
         Ok(f32::from_bits(self.u32()?))
     }
@@ -315,15 +323,29 @@ impl<'a> Reader<'a> {
         String::from_utf8(self.take(n)?.to_vec()).map_err(|_| "a string is not UTF-8".into())
     }
 
-    fn property(&mut self) -> Result<(String, PropertyValue), String> {
+    /// A texture handle used as itself (no element bits).
+    fn texture(&mut self, what: &str) -> Result<u64, String> {
+        handle::plain(self.u64()?, what)
+    }
+
+    /// A property; `sampled`: a draw's or a global property, whose textures may name an element.
+    fn property(&mut self, sampled: bool) -> Result<(String, PropertyValue), String> {
         let name = self.string()?;
         let value = match self.u8()? {
             kind::FLOAT => PropertyValue::Float(self.f32()?),
             kind::VECTOR => PropertyValue::Vector(self.floats()?),
-            kind::TEXTURE => PropertyValue::Texture {
-                handle: self.u64()?,
-                st: self.floats()?,
-            },
+            kind::TEXTURE => {
+                let raw = self.u64()?;
+                let what = format!("texture property `{name}`");
+                PropertyValue::Texture {
+                    handle: if sampled {
+                        handle::sampled(raw, &what)?
+                    } else {
+                        handle::plain(raw, &what)?
+                    },
+                    st: self.floats()?,
+                }
+            }
             kind::INT => PropertyValue::Int(self.i32()?),
             kind::MATRIX => PropertyValue::Matrix(self.floats()?),
             kind::BUFFER => PropertyValue::Buffer(self.u64()?),
@@ -337,7 +359,7 @@ impl<'a> Reader<'a> {
                 PropertyValue::Array { components, data }
             }
             kind::IMAGE => PropertyValue::Image {
-                handle: self.u64()?,
+                handle: handle::plain(self.u64()?, "an image property")?,
                 mip: self.i32()?,
             },
             k => return Err(format!("unknown property kind {k}")),
@@ -359,8 +381,8 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
             },
             op::END_FRAME => Command::EndFrame,
             op::SET_TARGET => Command::SetTarget {
-                color: r.u64()?,
-                depth: r.u64()?,
+                color: r.texture("SetTarget color")?,
+                depth: r.target_depth()?,
                 mip: r.i32()?,
                 slice: r.i32()?,
                 extra: Vec::new(),
@@ -372,9 +394,9 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 }
                 let mut colors = Vec::with_capacity(count);
                 for _ in 0..count {
-                    colors.push(r.u64()?);
+                    colors.push(r.texture("SetTargets color")?);
                 }
-                let depth = r.u64()?;
+                let depth = r.target_depth()?;
                 let mip = r.i32()?;
                 let slice = r.i32()?;
                 let color = colors.remove(0);
@@ -405,7 +427,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 flags: r.u32()?,
             },
             op::GLOBAL => {
-                let (name, value) = r.property()?;
+                let (name, value) = r.property(true)?;
                 Command::Global(name, value)
             }
             op::KEYWORD => Command::Keyword(r.string()?, r.u8()? != 0),
@@ -471,13 +493,13 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 let pass = r.i32()?;
                 let model = r.floats()?;
                 let color = r.floats()?;
-                let main_texture = r.u64()?;
+                let main_texture = r.texture("a draw's main texture")?;
                 let clip_enabled = r.u8()? != 0;
                 let clip: [f32; 4] = r.floats()?;
                 let count = r.u32()? as usize;
                 let mut properties = Vec::with_capacity(count.min(64));
                 for _ in 0..count {
-                    properties.push(r.property()?);
+                    properties.push(r.property(true)?);
                 }
                 Command::Draw(Box::new(Draw {
                     mesh,
@@ -515,7 +537,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 let count = r.u32()? as usize;
                 let mut properties = Vec::with_capacity(count.min(64));
                 for _ in 0..count {
-                    properties.push(r.property()?);
+                    properties.push(r.property(false)?);
                 }
                 Command::Dispatch(Box::new(Dispatch {
                     file,
@@ -525,13 +547,15 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     properties,
                 }))
             }
-            op::GENERATE_MIPS => Command::GenerateMips { texture: r.u64()? },
+            op::GENERATE_MIPS => Command::GenerateMips {
+                texture: r.texture("GenerateMips")?,
+            },
             op::COPY_TEXTURE => Command::CopyTexture {
-                source: r.u64()?,
+                source: r.texture("CopyTexture source")?,
                 source_slice: r.i32()?,
                 source_mip: r.i32()?,
                 source_rect: [r.i32()?, r.i32()?, r.i32()?, r.i32()?],
-                destination: r.u64()?,
+                destination: r.texture("CopyTexture destination")?,
                 destination_slice: r.i32()?,
                 destination_mip: r.i32()?,
                 destination_x: r.i32()?,
@@ -962,5 +986,61 @@ mod tests {
         }
         assert_eq!(parse(&w.bytes).unwrap(), commands);
         assert!(parse(&w.bytes[..w.bytes.len() - 2]).is_err());
+    }
+
+    /// Render protocol 6: only sampled bindings may name a depth element; any other reserved
+    /// handle bit is an error, and the "no depth" sentinel stays valid.
+    #[test]
+    fn handle_element_bits() {
+        let depth = 7 | handle::DEPTH_ELEMENT;
+        let texture = |h| PropertyValue::Texture {
+            handle: h,
+            st: [1.0, 1.0, 0.0, 0.0],
+        };
+        let encode = |command: Command| {
+            let mut w = Writer::default();
+            w.write(&command);
+            parse(&w.bytes)
+        };
+        assert!(encode(Command::Global("_Src".into(), texture(depth))).is_ok());
+        assert!(encode(Command::Global("_Src".into(), texture(7 | 1 << 63))).is_err());
+        assert!(
+            encode(Command::Global(
+                "_Src".into(),
+                texture(handle::DEPTH_ELEMENT)
+            ))
+            .is_err()
+        );
+        let set_target = |color, depth| Command::SetTarget {
+            color,
+            depth,
+            mip: 0,
+            slice: 0,
+            extra: Vec::new(),
+        };
+        assert!(encode(set_target(7, NO_TEXTURE)).is_ok());
+        assert!(encode(set_target(depth, 0)).is_err());
+        assert!(encode(set_target(7, depth)).is_err());
+        assert!(encode(Command::GenerateMips { texture: depth }).is_err());
+        let dispatch = |h| {
+            Command::Dispatch(Box::new(Dispatch {
+                file: "k.compute".into(),
+                kernel: "Main".into(),
+                keywords: Vec::new(),
+                groups: [1, 1, 1],
+                properties: vec![("_Src".into(), texture(h))],
+            }))
+        };
+        assert!(encode(dispatch(7)).is_ok());
+        assert!(
+            encode(dispatch(depth)).is_err(),
+            "kernels bind plain textures"
+        );
+        assert_eq!(handle::split(depth), (7, true));
+        assert_eq!(handle::split(7), (7, false));
+        // The renderer's own textures keep their handles through a sampled binding.
+        let grab = handle::PLAIN_MAX - 3;
+        assert_eq!(handle::split(grab), (grab, false));
+        assert_eq!(handle::sampled(grab, "grab"), Ok(grab));
     }
 }

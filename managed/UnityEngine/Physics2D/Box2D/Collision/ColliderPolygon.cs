@@ -150,6 +150,32 @@ namespace Unbound.Box2D.Collision
         {
             coreSeparationSpread = float.MaxValue;
             manifold.PointCount = 0;
+            // Keep collapsed capsule vertices intact for public shape getters, but
+            // use the shared point/circle narrowphase instead of a zero-length face.
+            if (polyB.Count == 2 && polyB.Vertices[0] == polyB.Vertices[1])
+            {
+                CollidePolygonAndCircle(ref manifold, polyA, xfA, polyB.Vertices[0], polyB.Radius, xfB);
+                return;
+            }
+            if (polyA.Count == 2 && polyA.Vertices[0] == polyA.Vertices[1])
+            {
+                CollidePolygonAndCircle(ref manifold, polyB, xfB, polyA.Vertices[0], polyA.Radius, xfA);
+                if (manifold.Type == ManifoldType.FaceA) manifold.Type = ManifoldType.FaceB;
+                else if (manifold.Type == ManifoldType.FaceB) manifold.Type = ManifoldType.FaceA;
+                else if (manifold.PointCount > 0)
+                {
+                    var localA = manifold.Points.Value0.LocalPoint;
+                    manifold.Points.Value0.LocalPoint = manifold.LocalPoint;
+                    manifold.LocalPoint = localA;
+                }
+                for (int i = 0; i < manifold.PointCount; i++)
+                {
+                    ref var id = ref manifold.Points[i].Id.ContactFeature;
+                    (id.IndexA, id.IndexB) = (id.IndexB, id.IndexA);
+                    (id.TypeA, id.TypeB) = (id.TypeB, id.TypeA);
+                }
+                return;
+            }
             var totalRadius = polyA.Radius + polyB.Radius;
 
             var separationA = FindMaxSeparation(
@@ -256,6 +282,7 @@ namespace Unbound.Box2D.Collision
 
             if (np < 2)
             {
+                CollideRoundedEndpoints(ref manifold, polyA, xfA, polyB, xfB);
                 return;
             }
 
@@ -269,6 +296,7 @@ namespace Unbound.Box2D.Collision
 
             if (np < 2)
             {
+                CollideRoundedEndpoints(ref manifold, polyA, xfA, polyB, xfB);
                 return;
             }
 
@@ -301,6 +329,39 @@ namespace Unbound.Box2D.Collision
             }
 
             manifold.PointCount = pointCount;
+        }
+
+        static void CollideRoundedEndpoints(ref Manifold manifold,
+            PolygonShape a, in Transform xfA, PolygonShape b, in Transform xfB)
+        {
+            if (a.Count != 2 && b.Count != 2) return;
+            var input = new DistanceInput { TransformA = xfA, TransformB = xfB, UseRadii = false };
+            input.ProxyA.Set(a, 0);
+            input.ProxyB.Set(b, 0);
+            var cache = new SimplexCache();
+            DistanceAlgorithm.Distance(out var closest, ref cache, input);
+            if (closest.Distance > a.Radius + b.Radius) return;
+
+            // The side clip has no interval, but the rounded core endpoints can
+            // still overlap. Reuse GJK's actual core witnesses for one contact.
+            manifold.Type = ManifoldType.Circles;
+            manifold.LocalPoint = cache.Count == 1 || cache.Count == 2 && cache.IndexA[0] == cache.IndexA[1]
+                ? a.Vertices[cache.IndexA[0]] : MathUtils.MulT(xfA, closest.PointA);
+            manifold.LocalNormal = Vector2.Zero;
+            manifold.PointCount = 1;
+            ref var point = ref manifold.Points.Value0;
+            point.LocalPoint = cache.Count == 1 || cache.Count == 2 && cache.IndexB[0] == cache.IndexB[1]
+                ? b.Vertices[cache.IndexB[0]] : MathUtils.MulT(xfB, closest.PointB);
+            point.Id.Key = 0;
+            point.Id.ContactFeature.IndexA = cache.IndexA[0];
+            point.Id.ContactFeature.IndexB = cache.IndexB[0];
+            if (cache.Count == 2)
+            {
+                if (cache.IndexA[0] != cache.IndexA[1])
+                    point.Id.ContactFeature.TypeA = (byte)ContactFeature.FeatureType.Face;
+                if (cache.IndexB[0] != cache.IndexB[1])
+                    point.Id.ContactFeature.TypeB = (byte)ContactFeature.FeatureType.Face;
+            }
         }
     }
 }

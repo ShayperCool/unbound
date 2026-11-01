@@ -27,11 +27,18 @@ namespace Unbound.Box2D.Collision
             CircleShape circleB,
             in Transform xfB)
         {
+            CollideEdgeAndCircle(ref manifold, edgeA, xfA, circleB.Position, circleB.Radius, xfB);
+        }
+
+        internal static void CollideEdgeAndCircle(
+            ref Manifold manifold, EdgeShape edgeA, in Transform xfA,
+            Vector2 circlePosition, float circleRadius, in Transform xfB)
+        {
             manifold.PointCount = 0;
 
             // Compute circle in frame of edge
             // 在边缘形状的外框处理圆形
-            var Q = MathUtils.MulT(xfA, MathUtils.Mul(xfB, circleB.Position));
+            var Q = MathUtils.MulT(xfA, MathUtils.Mul(xfB, circlePosition));
 
             Vector2 A = edgeA.Vertex1, B = edgeA.Vertex2;
             var e = B - A;
@@ -53,7 +60,7 @@ namespace Unbound.Box2D.Collision
             var u = Vector2.Dot(e, B - Q);
             var v = Vector2.Dot(e, Q - A);
 
-            var radius = edgeA.Radius + circleB.Radius;
+            var radius = edgeA.Radius + circleRadius;
 
             var cf = new ContactFeature {IndexB = 0, TypeB = (byte)ContactFeature.FeatureType.Vertex};
 
@@ -92,7 +99,7 @@ namespace Unbound.Box2D.Collision
                 ref var point = ref manifold.Points.Value0;
                 point.Id.Key = 0;
                 point.Id.ContactFeature = cf;
-                point.LocalPoint = circleB.Position;
+                point.LocalPoint = circlePosition;
                 return;
             }
 
@@ -131,7 +138,7 @@ namespace Unbound.Box2D.Collision
                 ref var point = ref manifold.Points.Value0;
                 point.Id.Key = 0;
                 point.Id.ContactFeature = cf;
-                point.LocalPoint = circleB.Position;
+                point.LocalPoint = circlePosition;
                 return;
             }
 
@@ -163,7 +170,7 @@ namespace Unbound.Box2D.Collision
                 ref var point = ref manifold.Points.Value0;
                 point.Id.Key = 0;
                 point.Id.ContactFeature = cf;
-                point.LocalPoint = circleB.Position;
+                point.LocalPoint = circlePosition;
             }
         }
 

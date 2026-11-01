@@ -38,6 +38,8 @@ def copy_project(dest, space):
         shutil.rmtree(dest)
     for part in ('Assets', 'Packages', 'ProjectSettings'):
         shutil.copytree(PROBE/part, dest/part)
+    (dest/'ProjectSettings/ProjectVersion.txt').write_text(
+        'm_EditorVersion: '+os.environ['UNBOUND_PROBE_UNITY_VERSION']+'\n')
     if space == 'URP':
         (dest/'Assets/Settings').mkdir(parents=True, exist_ok=True)
         for name in URP_FILES:
@@ -141,8 +143,12 @@ def unbound(work):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('mode', choices=('editor', 'publish', 'unbound'))
-    parser.add_argument('--label', default='current')
+    parser.add_argument('--label', required=True)
+    parser.add_argument('--release', required=True)
     args = parser.parse_args()
+    if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
+        parser.error('label must be a single directory name')
+    os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
     return {'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
 

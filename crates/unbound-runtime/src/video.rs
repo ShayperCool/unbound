@@ -212,6 +212,7 @@ pub fn frame(id: u64, n: i64, handles: [u64; 3]) -> Result<bool> {
                 filter_mode: 0,
                 wrap_u: 1,
                 wrap_v: 1,
+                wrap_w: 0,
                 aniso_level: 1,
                 render_target: false,
                 random_write: false,

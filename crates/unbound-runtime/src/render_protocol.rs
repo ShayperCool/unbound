@@ -91,6 +91,50 @@ pub struct MeshPacket {
     pub submeshes: *const SubMeshPacket,
 }
 
+/// Texture handle bits (render protocol 6, `NativeApi` version 13). The handles the managed side
+/// allocates never set bits 62 and 63. A sampled binding (a material's texture property, a draw's
+/// per-draw texture property, a global texture) may set [`handle::DEPTH_ELEMENT`]; every other use
+/// of a handle (uploads, releases, targets, copies, main textures, storage images, kernels' and
+/// read backs) must be plain. Anything else is rejected with an error.
+pub mod handle {
+    /// The render texture's depth buffer, sampled as `(d, 0, 0, 1)` (`RenderTextureSubElement.Depth`).
+    pub const DEPTH_ELEMENT: u64 = 1 << 62;
+    /// The bits no allocated handle uses.
+    pub const RESERVED: u64 = 3 << 62;
+    /// The largest plain handle. Textures the renderer makes itself (`GrabPass` textures) count
+    /// down from it, clear of the element bits and of the "no texture" `u64::MAX`.
+    pub const PLAIN_MAX: u64 = !RESERVED;
+
+    /// A handle with no element bits (`what` names its use in the error).
+    pub fn plain(h: u64, what: &str) -> Result<u64, String> {
+        if h & RESERVED != 0 {
+            Err(format!(
+                "{what}: texture handle {h:#x} carries reserved bits"
+            ))
+        } else {
+            Ok(h)
+        }
+    }
+
+    /// A sampled binding's handle: [`DEPTH_ELEMENT`] is allowed, other reserved bits are not.
+    pub fn sampled(h: u64, what: &str) -> Result<u64, String> {
+        if h & RESERVED & !DEPTH_ELEMENT != 0 {
+            Err(format!(
+                "{what}: texture handle {h:#x} carries unknown element bits"
+            ))
+        } else if h == DEPTH_ELEMENT {
+            Err(format!("{what}: a depth element names no texture"))
+        } else {
+            Ok(h)
+        }
+    }
+
+    /// A sampled binding's texture and whether it samples the depth element.
+    pub fn split(h: u64) -> (u64, bool) {
+        (h & !RESERVED, h & DEPTH_ELEMENT != 0)
+    }
+}
+
 #[repr(C)]
 #[derive(Debug)]
 pub struct TexturePacket {
@@ -115,6 +159,8 @@ pub struct TexturePacket {
     pub layers: i32,
     /// Unity's TextureDimension (2 2D, 3 3D, 4 cube, 5 2D array).
     pub dimension: i32,
+    /// Unity's TextureWrapMode along W, the depth of a Texture3D (`NativeApi` 14).
+    pub wrap_w: i32,
 }
 
 #[repr(C)]
@@ -132,8 +178,11 @@ pub struct ImportedTextureInfo {
     pub sprite_count: i32,
     /// TexturePacket format: 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBAHalf, 9 RGBAFloat.
     pub format: i32,
-    /// TextureDimension: 2 a 2D texture, 4 a cubemap.
+    /// TextureDimension: 2 a 2D texture, 3 a Texture3D, 4 a cubemap, 5 a Texture2DArray (an
+    /// array's slices and a volume's depth come from the `texture-layers` JSON call).
     pub dimension: i32,
+    /// The importer's `wrapW` (`NativeApi` 14).
+    pub wrap_w: i32,
 }
 
 #[repr(C)]
@@ -227,6 +276,8 @@ pub mod owned {
         pub filter_mode: i32,
         pub wrap_u: i32,
         pub wrap_v: i32,
+        /// TextureWrapMode along W: only a Texture3D's samples use it.
+        pub wrap_w: i32,
         pub aniso_level: i32,
         pub render_target: bool,
         /// A render target kernels write (RenderTexture.enableRandomWrite).
@@ -255,6 +306,7 @@ pub mod owned {
                 filter_mode: p.filter_mode,
                 wrap_u: p.wrap_u,
                 wrap_v: p.wrap_v,
+                wrap_w: p.wrap_w,
                 aniso_level: p.aniso_level,
                 render_target: p.render_target & 1 != 0,
                 random_write: p.render_target & 2 != 0,
@@ -486,7 +538,7 @@ pub trait RenderBackend: Send + Sync {
     fn upload_texture(&self, handle: u64, texture: owned::Texture);
     /// Sampler metadata delivered separately from the ABI-stable texture packet.
     fn texture_mip_bias(&self, _handle: u64, _bias: f32) {}
-    fn texture_sampler(&self, _handle: u64, _properties: [i32; 4]) {}
+    fn texture_sampler(&self, _handle: u64, _properties: [i32; 5]) {}
     fn release_texture(&self, handle: u64);
     fn update_material(&self, handle: u64, material: owned::Material);
     fn release_material(&self, handle: u64);

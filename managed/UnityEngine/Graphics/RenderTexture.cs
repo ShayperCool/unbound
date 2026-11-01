@@ -175,13 +175,20 @@ namespace UnityEngine
         /// target of what draws next.</summary>
         public static RenderTexture active
         {
-            get => s_Active;
+            get => s_Active != null && s_Active == ScreenStandIn ? null : s_Active;
             set
             {
-                s_Active = value;
-                GfxStream.SetTarget(value != null ? value.EnsureCreated() : 0);
+                s_Active = value ?? ScreenStandIn;
+                GfxStream.SetTarget(s_Active != null ? s_Active.EnsureCreated() : 0);
             }
         }
+
+        /// <summary>The texture that stands for the screen while a screen camera draws
+        /// (FrameBuilder): <see cref="active"/> reads null for it, and null selects it.</summary>
+        internal static RenderTexture ScreenStandIn;
+
+        /// <summary>The target drawing goes into, the screen's stand-in included.</summary>
+        internal static RenderTexture ActiveTarget => s_Active;
 
         /// <summary>Sets <see cref="active"/> for a caller that sets the stream's target itself.</summary>
         internal static void SetActiveQuietly(RenderTexture value) => s_Active = value;
@@ -275,6 +282,7 @@ namespace UnityEngine
                 FilterMode = (int)filterMode,
                 WrapU = (int)wrapModeU,
                 WrapV = (int)wrapModeV,
+                WrapW = (int)wrapModeW,
                 AnisoLevel = anisoLevel,
                 // 1: drawn into; 2: written by kernels (a storage binding).
                 RenderTarget = 1 | (m_Descriptor.enableRandomWrite ? 2 : 0) | (m_Descriptor.useMipMap && m_Descriptor.autoGenerateMips ? 4 : 0) | (Math.Clamp(m_Descriptor.msaaSamples, 1, 8) << 8),

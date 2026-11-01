@@ -1,6 +1,6 @@
 //! What the native side knows while a game runs: the project, its asset database and loaded
 //! documents. The managed engine reaches it through the native API.
-use crate::render_protocol::{ImportedTextureInfo, NullBackend, RenderBackend, owned};
+use crate::render_protocol::{ImportedTextureInfo, NullBackend, RenderBackend, handle, owned};
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use serde_json::json;
@@ -230,13 +230,15 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 filter_mode: i32,
                 wrap_u: i32,
                 wrap_v: i32,
+                wrap_w: i32,
                 aniso_level: i32,
             }
             let r: Request = serde_json::from_str(request)?;
+            handle::plain(r.handle, method).map_err(anyhow::Error::msg)?;
             anyhow::ensure!(r.handle != 0, "sampler properties require a texture handle");
             backend().texture_sampler(
                 r.handle,
-                [r.filter_mode, r.wrap_u, r.wrap_v, r.aniso_level],
+                [r.filter_mode, r.wrap_u, r.wrap_v, r.wrap_w, r.aniso_level],
             );
             Ok("true".to_owned())
         }
@@ -248,6 +250,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 mip_bias: Option<f32>,
             }
             let r: Request = serde_json::from_str(request)?;
+            handle::plain(r.handle, method).map_err(anyhow::Error::msg)?;
             if let Some(bias) = r.mip_bias {
                 set_texture_mip_bias(r.handle, bias);
             }
@@ -550,12 +553,16 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             .to_string())
         }
         "texture-pixels" => {
-            // An imported texture's requested mip, rows bottom first, retaining float precision.
+            // An imported texture's requested mip of one image (an array slice, a cube face; a
+            // volume's level holds all its depth slices), rows bottom first, retaining float
+            // precision.
             #[derive(Deserialize)]
             struct Request {
                 guid: String,
                 #[serde(default)]
                 mip: usize,
+                #[serde(default)]
+                layer: Option<usize>,
             }
             let r: Request = serde_json::from_str(request)?;
             let guid = Guid::parse(&r.guid).context("bad guid")?;
@@ -564,15 +571,38 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let texture = s
                 .imports
                 .get_or_import(&texture_importer(s), &asset.file, &meta)?;
-            let mip = texture
-                .mips
-                .get(r.mip)
-                .context("the texture has no such mip")?;
+            let mip = match r.layer {
+                // Without a layer: the n-th stored level, as 2D textures always asked.
+                None => texture.mips.get(r.mip),
+                Some(layer) => texture.level(layer, r.mip),
+            }
+            .context("the texture has no such mip")?;
             let format = match texture.format {
                 unbound_assets::texture::TextureFormat::Rgba8 => 0,
                 unbound_assets::texture::TextureFormat::Rgba32F => 2,
             };
             Ok(json!({ "width": mip.width, "height": mip.height, "format": format, "rgba": crate::models::base64(&mip.data) }).to_string())
+        }
+        "texture-layers" => {
+            // An imported texture's images: slices of an array, depth of a volume, cube faces.
+            #[derive(Deserialize)]
+            struct Request {
+                guid: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let guid = Guid::parse(&r.guid).context("bad guid")?;
+            let asset = s.db.by_guid(guid).context("no such asset")?;
+            let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
+            let texture = s
+                .imports
+                .get_or_import(&texture_importer(s), &asset.file, &meta)?;
+            Ok(json!({
+                "layers": texture.layers,
+                "mipCount": texture.mip_count(),
+                "dimension": texture.dimension(),
+                "mipBias": texture.mip_bias,
+            })
+            .to_string())
         }
         "texture-sprites" => {
             #[derive(Deserialize)]
@@ -1045,7 +1075,8 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             }
         }
     };
-    let mip_count = texture.mips.len() / texture.layers.max(1) as usize;
+    let mip_count = texture.mip_count();
+    let dimension = texture.dimension();
     // BC7 blocks when the GPU samples them (format 7 sRGB-capable, 8 linear), else RGBA8.
     let (gpu_format, data) = match texture.bc7.take() {
         Some(blocks) if GPU_BC7.load(std::sync::atomic::Ordering::Relaxed) => {
@@ -1080,6 +1111,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             filter_mode: filter,
             wrap_u: wrap(texture.wrap_u),
             wrap_v: wrap(texture.wrap_v),
+            wrap_w: wrap(texture.wrap_w),
             aniso_level: texture.aniso,
             render_target: false,
             random_write: false,
@@ -1087,7 +1119,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             samples: 1,
             depth_bits: 0,
             layers: texture.layers as i32,
-            dimension: if texture.layers == 6 { 4 } else { 2 },
+            dimension,
         },
     );
     set_texture_mip_bias(handle, texture.mip_bias);
@@ -1103,7 +1135,8 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         readable: texture.is_readable as i32,
         sprite_count: sprite_count as i32,
         format,
-        dimension: if texture.layers == 6 { 4 } else { 2 },
+        dimension,
+        wrap_w: wrap(texture.wrap_w),
     })
 }
 

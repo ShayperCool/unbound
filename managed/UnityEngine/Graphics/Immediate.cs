@@ -61,6 +61,9 @@ namespace Unbound.Runtime
         internal static void Blit(UnityEngine.Texture source, UnityEngine.RenderTexture destination, UnityEngine.Material material, int pass,
             UnityEngine.Vector2 scale, UnityEngine.Vector2 offset)
         {
+            // The screen, while a screen camera draws into its stand-in, is the stand-in: what is
+            // drawn there is presented with the camera's image.
+            destination ??= UnityEngine.RenderTexture.ScreenStandIn;
             material ??= BlitCopy;
             if (source != null) material.SetTexture(s_MainTex, source);
             s_BlitProperties.Clear();
@@ -104,7 +107,8 @@ namespace Unbound.Runtime
         /// <summary>Immediate drawing goes into the active render texture (the screen when none).</summary>
         internal static void EnsureActiveTarget()
         {
-            var active = UnityEngine.RenderTexture.active;
+            // The screen's stand-in, while a screen camera draws, is the screen.
+            var active = UnityEngine.RenderTexture.ActiveTarget;
             ulong handle = active != null ? active.EnsureCreated() : 0;
             if (GfxStream.Current.Color != handle) GfxStream.SetTarget(handle);
         }
@@ -451,7 +455,7 @@ namespace UnityEngine
         }
         public static void LoadPixelMatrix()
         {
-            var active = RenderTexture.active;
+            var active = RenderTexture.ActiveTarget;
             LoadPixelMatrix(0f, active != null ? active.width : Screen.width, 0f, active != null ? active.height : Screen.height);
         }
         public static void LoadPixelMatrix(float left, float right, float bottom, float top)

@@ -24,6 +24,7 @@ p.add_argument('--lifetimes', action='store_true', help='Use simultaneous loss a
 p.add_argument('--rotation-inputs', action='store_true', help='Use quaternion-derived body rotation controls')
 p.add_argument('--unattached-statics', action='store_true', help='Use shared static-body and proxy lifetime controls')
 p.add_argument('--manifold-controls', action='store_true', help='Use near-parallel cast and physical manifold controls')
+p.add_argument('--review-controls', action='store_true', help='Use capsule end contacts and callback-removal controls')
 p.add_argument('--transform-inputs', action='store_true', help='Use public frame and parenting controls')
 p.add_argument('--capsule-geometry', action='store_true', help='Use capsule construction boundary controls')
 p.add_argument('--contact-inputs', action='store_true', help='Use the unchanged indexed query controls')
@@ -34,14 +35,25 @@ try:
 except ValueError as error:
     p.error(str(error))
 if sum([a.enumeration, a.velocities, a.lifetimes, a.rotation_inputs, a.unattached_statics, a.contact_inputs, a.capsule_geometry, a.transform_inputs, a.manifold_controls]) > 1: p.error('Select one control set')
-ref = a.reference or ROOT/'Reference'/('unity-'+a.release)/('manifolds.json' if a.manifold_controls else 'transform-inputs.json' if a.transform_inputs else 'capsule-geometry.json' if a.capsule_geometry else 'unattached-statics.json' if a.unattached_statics else 'rotation-inputs.json' if a.rotation_inputs else 'lifetimes.json' if a.lifetimes else 'velocities.json' if a.velocities else 'enumeration.json.gz' if a.enumeration else 'public.json')
+ref = a.reference or ROOT/'Reference'/('unity-'+a.release)/('review-controls.json' if a.review_controls else 'manifolds.json' if a.manifold_controls else 'transform-inputs.json' if a.transform_inputs else 'capsule-geometry.json' if a.capsule_geometry else 'unattached-statics.json' if a.unattached_statics else 'rotation-inputs.json' if a.rotation_inputs else 'lifetimes.json' if a.lifetimes else 'velocities.json' if a.velocities else 'enumeration.json.gz' if a.enumeration else 'public.json')
 if a.contact_inputs and not a.reference: ref = ROOT.parent/'query2dties/Reference'/('unity-'+a.release+'.json')
 tolerance = 0 if a.exact else 1e-3
 reference = c.load(ref)
-result = c.compare(reference, c.load(a.candidate), tolerance)
-if a.baseline: result = c.changes(c.compare(reference, c.load(a.baseline), tolerance), result)
+candidate = c.load(a.candidate)
+result = c.compare(reference, candidate, tolerance)
+result['newly_missing'] = []
+if a.baseline:
+    baseline = c.load(a.baseline)
+    result = c.changes(c.compare(reference, baseline, tolerance), result)
+    # Losing an observation is a regression even if its earlier numeric value failed.
+    result['newly_missing'] = [
+        {'scenario': scenario, 'key': key, 'reference': expected,
+         'baseline': baseline[scenario][key]}
+        for scenario, values in reference.items() for key, expected in values.items()
+        if key in baseline.get(scenario, {}) and key not in candidate.get(scenario, {})]
 result['inputs_sha256'] = {str(f.resolve()):c.sha(f) for f in [ref, a.candidate]+([a.baseline] if a.baseline else [])}
 a.output.parent.mkdir(parents=True, exist_ok=True)
 a.output.write_text(json.dumps(result, indent=2)+'\n')
 c.describe('contact pair order', result)
-raise SystemExit(bool(result['introduced'] if a.baseline else result['failures']))
+raise SystemExit(bool(result['newly_missing'] or
+                      (result['introduced'] if a.baseline else result['failures'])))

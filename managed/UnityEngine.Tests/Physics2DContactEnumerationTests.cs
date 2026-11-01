@@ -110,6 +110,40 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "exit:L:N,R,M", "enter:N:N,R,M", "stay:R:N,R,M", "stay:M:N,R,M" },
                 PairLifetimeObserver.Events);
         }
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void CallbackRemovalOfAnEarlierPairStillDispatchesTheMovedTail(bool callbacksOnDisable)
+        {
+            bool previous = Physics2D.callbacksOnDisable;
+            Physics2D.callbacksOnDisable = callbacksOnDisable;
+            CallbackRemovalObserver.Events.Clear();
+            try
+            {
+                var a = Box("A", 0, dynamic: true);
+                a.gameObject.AddComponent<CallbackRemovalObserver>(); Box("A-peer", .9f); Step();
+                var b = Box("B", 20, dynamic: true);
+                var observer = b.gameObject.AddComponent<CallbackRemovalObserver>(); Box("B-peer", 20.9f); Step();
+                var c = Box("C", 40, dynamic: true);
+                c.gameObject.AddComponent<CallbackRemovalObserver>(); Box("C-peer", 40.9f); Step();
+                CallbackRemovalObserver.Events.Clear();
+                observer.Disable = a;
+                Step();
+                Assert.False(a.enabled);
+                Assert.Equal(new[] { "A", "B", "C" }, CallbackRemovalObserver.Events);
+            }
+            finally { Physics2D.callbacksOnDisable = previous; }
+        }
+        public sealed class CallbackRemovalObserver : MonoBehaviour
+        {
+            public static readonly List<string> Events = new List<string>();
+            public Collider2D Disable;
+            void OnCollisionStay2D(Collision2D collision)
+            {
+                Events.Add(name);
+                if (Disable != null) { var target = Disable; Disable = null; target.enabled = false; }
+            }
+        }
         public sealed class PairLifetimeObserver : MonoBehaviour
         {
             public static readonly List<string> Events = new List<string>();
@@ -281,6 +315,7 @@ namespace UnityEngine.Tests
             Physics2D.gravity = new Vector2(0,-9.81f); Physics2D.Simulate(.02f);
             SharedPairObserver.Events.Clear();
             PairLifetimeObserver.Events.Clear();
+            CallbackRemovalObserver.Events.Clear();
         }
     }
 }

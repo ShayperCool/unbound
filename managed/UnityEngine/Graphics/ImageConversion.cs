@@ -70,7 +70,7 @@ namespace UnityEngine
         {
             if (tex == null) throw new NullReferenceException("The texture is null");
             if (!tex.isReadable) throw new ArgumentException($"Texture '{tex.name}' is not readable, the texture memory can not be accessed from scripts.");
-            return Native.EncodeImage<Color>(3, 0, tex.GetPixels(), tex.width, tex.height);
+            return Native.EncodeImage<Color>(3, 0, tex.ColorsOfLevelZero(), tex.width, tex.height);
         }
 
         public static byte[] EncodeToEXR(this Texture2D tex) => EncodeToEXR(tex, Texture2D.EXRFlags.None);

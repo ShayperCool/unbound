@@ -225,6 +225,8 @@ pub struct SamplerKey {
     pub filter: i32,
     pub wrap_u: i32,
     pub wrap_v: i32,
+    /// Along W (a Texture3D's depth); samplers that are not a texture's own repeat there.
+    pub wrap_w: i32,
     pub aniso: i32,
     /// A comparison sampler's function (Unity's CompareFunction; 0: none).
     pub compare: i32,
@@ -262,7 +264,7 @@ pub fn create_sampler(device: &wgpu::Device, key: SamplerKey) -> wgpu::Sampler {
         label: Some("unbound texture sampler"),
         address_mode_u: wrap(key.wrap_u),
         address_mode_v: wrap(key.wrap_v),
-        address_mode_w: wgpu::AddressMode::Repeat,
+        address_mode_w: wrap(key.wrap_w),
         mag_filter: mag,
         min_filter: mag,
         mipmap_filter: mip,
@@ -308,6 +310,26 @@ pub fn depth_copy_format(device: &wgpu::Device) -> wgpu::TextureFormat {
     }
 }
 
+/// A float color texture of a depth buffer's size, which the depth copy writes.
+pub fn depth_copy_view(device: &wgpu::Device, width: u32, height: u32) -> wgpu::TextureView {
+    device
+        .create_texture(&wgpu::TextureDescriptor {
+            label: Some("unbound render texture depth copy"),
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: depth_copy_format(device),
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        })
+        .create_view(&wgpu::TextureViewDescriptor::default())
+}
+
 pub struct GpuTexture {
     pub texture: wgpu::Texture,
     /// Raw view (gamma projects; data textures).
@@ -318,10 +340,13 @@ pub struct GpuTexture {
     pub depth: Option<wgpu::TextureView>,
     /// The depth buffer's depth, for shaders that sample it.
     pub depth_sample: Option<wgpu::TextureView>,
-    /// A depth-only render target's depth as a float color texture, what sampling the texture
-    /// reads (Unity's depth textures read as their depth): copied after the passes that draw
-    /// into it.
+    /// A render target's depth as a float color texture, copied after the passes that draw into
+    /// it: what sampling a depth-only target reads (Unity's depth textures read as their depth),
+    /// and what its depth element reads (`render_protocol::handle::DEPTH_ELEMENT`; made the first
+    /// time a draw samples it for a target with color).
     pub depth_copy: Option<wgpu::TextureView>,
+    /// A multisampled target's depth buffer, as the depth copy reads it.
+    pub depth_msaa: Option<wgpu::TextureView>,
     /// A render target's depth buffer (its layers' views are made as they are drawn into).
     pub depth_texture: Option<wgpu::Texture>,
     /// A render target's multisampled color (raw and sRGB views) that passes resolve into the
@@ -352,7 +377,7 @@ pub struct GpuTexture {
 
 impl GpuTexture {
     pub fn view_for(&self, color_space: i32) -> &wgpu::TextureView {
-        if let Some(copy) = &self.depth_copy {
+        if let Some(copy) = self.depth_copy.as_ref().filter(|_| self.format == 5) {
             return copy;
         }
         match (&self.srgb_view, color_space) {
@@ -448,10 +473,11 @@ pub fn upload_texture(
     };
     let width = t.width.max(1) as u32;
     let height = t.height.max(1) as u32;
-    let max_mips = 32 - width.max(height).leading_zeros();
-    let mip_count = (t.mip_count.max(1) as u32).min(max_mips);
     let render_target = t.render_target;
     let layers = t.layers.max(1) as u32;
+    // A Texture3D: its layers are depth slices (mips shrink them too).
+    let volume = t.dimension == 3 && !render_target;
+    let mip_count = gpu_mip_count(width, height, layers, volume, t.mip_count);
     let samples = if render_target {
         t.samples.clamp(1, 8).next_power_of_two().min(8)
     } else {
@@ -460,8 +486,6 @@ pub fn upload_texture(
     let cube = t.dimension == 4 && layers == 6;
     // A CubemapArray: six faces per cube, sampled as a cube array.
     let cube_array = t.dimension == 6 && layers >= 6 && layers % 6 == 0;
-    // A Texture3D: its layers are depth slices (mips shrink them too).
-    let volume = t.dimension == 3 && !render_target;
     // Float textures retain their component count and precision. Packed
     // 11/11/10 float targets (URP's HDR camera and bloom format) keep their own precision,
     // which shows in the rounding of every pass, where the device can draw into them (not
@@ -494,6 +518,7 @@ pub fn upload_texture(
         filter: t.filter_mode,
         wrap_u: t.wrap_u,
         wrap_v: t.wrap_v,
+        wrap_w: t.wrap_w,
         aniso: t.aniso_level,
         compare: 0,
         lod_bias_bits: 0,
@@ -577,12 +602,9 @@ pub fn upload_texture(
                     sample_count: samples,
                     dimension: wgpu::TextureDimension::D2,
                     format: wgpu::TextureFormat::Depth24PlusStencil8,
-                    usage: if samples > 1 {
-                        wgpu::TextureUsages::RENDER_ATTACHMENT
-                    } else {
-                        wgpu::TextureUsages::RENDER_ATTACHMENT
-                            | wgpu::TextureUsages::TEXTURE_BINDING
-                    },
+                    // A multisampled one is read by the depth copy only.
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                        | wgpu::TextureUsages::TEXTURE_BINDING,
                     view_formats: &[],
                 })
             });
@@ -627,26 +649,17 @@ pub fn upload_texture(
                     ..Default::default()
                 })
             });
-            let depth_copy = (t.format == 5 && layers == 1 && depth_sample.is_some()).then(|| {
-                let format = depth_copy_format(device);
-                device
-                    .create_texture(&wgpu::TextureDescriptor {
-                        label: Some("unbound render texture depth copy"),
-                        size: wgpu::Extent3d {
-                            width,
-                            height,
-                            depth_or_array_layers: 1,
-                        },
-                        mip_level_count: 1,
-                        sample_count: 1,
-                        dimension: wgpu::TextureDimension::D2,
-                        format,
-                        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
-                            | wgpu::TextureUsages::TEXTURE_BINDING,
-                        view_formats: &[],
-                    })
-                    .create_view(&wgpu::TextureViewDescriptor::default())
+            let depth_msaa = depth_texture.as_ref().filter(|_| samples > 1).map(|t| {
+                t.create_view(&wgpu::TextureViewDescriptor {
+                    aspect: wgpu::TextureAspect::DepthOnly,
+                    dimension: Some(wgpu::TextureViewDimension::D2),
+                    mip_level_count: Some(1),
+                    array_layer_count: Some(1),
+                    ..Default::default()
+                })
             });
+            let depth_copy = (t.format == 5 && layers == 1 && depth_sample.is_some())
+                .then(|| depth_copy_view(device, width, height));
             GpuTexture {
                 texture,
                 view,
@@ -655,6 +668,7 @@ pub fn upload_texture(
                 depth,
                 depth_sample,
                 depth_copy,
+                depth_msaa,
                 depth_texture,
                 msaa,
                 samples,
@@ -813,6 +827,7 @@ pub fn default_textures(
         filter_mode: 1,
         wrap_u: 0,
         wrap_v: 0,
+        wrap_w: 0,
         aniso_level: 1,
         render_target: false,
         random_write: false,
@@ -839,10 +854,33 @@ pub fn default_textures(
     map
 }
 
+/// The mip levels a texture gets on the GPU: the requested count, at most a full chain. A
+/// volume's chain follows its largest side including the depth (a 4x4x16 Texture3D has 5
+/// levels, as in Unity); an array's or cube's layers never add levels.
+fn gpu_mip_count(width: u32, height: u32, layers: u32, volume: bool, requested: i32) -> u32 {
+    let largest = if volume {
+        width.max(height).max(layers)
+    } else {
+        width.max(height)
+    };
+    (requested.max(1) as u32).min(32 - largest.max(1).leading_zeros())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use unbound_runtime::render_protocol::{SubMeshPacket, Vector3, Vector4};
+
+    #[test]
+    fn volumes_deeper_than_wide_keep_every_level() {
+        // tests/projects/texturearrays: a 4x4x16 Texture3D has 5 levels; a 4x4 array of 16
+        // slices has 3.
+        assert_eq!(gpu_mip_count(4, 4, 16, true, 5), 5);
+        assert_eq!(gpu_mip_count(4, 4, 16, false, 5), 3);
+        assert_eq!(gpu_mip_count(16, 8, 12, true, 5), 5);
+        assert_eq!(gpu_mip_count(64, 64, 2, true, 99), 7);
+        assert_eq!(gpu_mip_count(8, 8, 1, false, 0), 1);
+    }
 
     #[test]
     fn half_floats() {

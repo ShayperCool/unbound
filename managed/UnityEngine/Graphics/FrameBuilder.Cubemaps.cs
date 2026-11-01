@@ -101,7 +101,7 @@ namespace UnityEngine
                     Graphics.CopyTexture(cube, i, 0, face, 0, 0);
                     RenderTexture.active = face;
                     read.ReadPixels(new Rect(0, 0, cubemap.width, cubemap.width), 0, 0);
-                    cubemap.SetPixels(read.GetPixels(), (CubemapFace)i);
+                    cubemap.SetPixels(read.ColorsOfLevelZero(), (CubemapFace)i);
                 }
                 Object.DestroyImmediate(read);
                 cubemap.Apply();

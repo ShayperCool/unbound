@@ -1770,7 +1770,6 @@ float texture as RGBAHalf, so the line has another format and length), while the
 equal the Editor's bit for bit in every profile (unbound-assets test
 `hdr_max_size_resize_matches_the_editor`). Sprite import stays 519/520; asset tests 72/72.
 
-
 ### Imported HDR format and combined texture validation, 2026-10-31
 
 Explicit RGBAFloat platform overrides now retain the existing float32 format through
@@ -1820,6 +1819,129 @@ match exactly. All run outputs, complete unions and immutable matching-artifact
 manifests stay in the validation cache. Combined rendering replay is separate.
 Native API12, render protocol5, PhysX shim9 and shader cache13 are unchanged.
 
+### Texture arrays, volumes and their asset files, 2026-10-31
+
+New probe tests/projects/texturearrays: 25 imported flipbooks (Texture2DArray, Texture3D and Cube
+shapes: cell order, NPOT and max size, sRGB, box/Kaiser, fade with border, coverage with alpha is
+transparency, a normal map, a 3-column 100-texel image, filter and wrapU/V/W, unreadable) and 10
+Texture3D/Texture2DArray/CubemapArray `.asset` files (RGBA32 with and without mips, sRGB and
+linear, RGBAHalf, R8, unreadable). Each value is the info line, GetPixels32, GetPixels and
+GetPixelData of every slice and mip, plus 11 point-sampled GPU readbacks. Two independent Editor
+captures per profile (Gamma, Linear, Android) agree byte for byte and are the published reference.
+
+Measured: slices are the cells top-left first; every slice is a 2D texture of the cell size
+(NPOT, max size and the 2D mip chain per cell); alpha is transparency fills only the first
+cell-sized run of the whole bottom-up flipbook, and a slice's first border mip reads its edge
+columns from the flipbook with the cell width as the stride (both modelled texel for texel); a
+volume halves x, then y, then z with truncating byte means, ignoring sRGB and the mip filter; a
+Cube shape clamps on all axes; GetPixels reads bytes as b * (1/255); R8 reads (r, 1, 1, 1); asset
+files store a GraphicsFormat with `m_ColorSpace`. Texture cache VERSION 12.
+
+Unbound: every info line, 556/556 GetPixels, 520/520 GetPixels32 and 520 of 556 GetPixelData values
+(2,100,272, 510,740 and 511,188 bytes) exact in all three profiles; the 36 others are the imported
+cubes' `Cubemap.GetPixelData`, still a stub. GPU samples 9/11: the two beyond the depth of a
+wrapW-Clamp volume repeat, because the renderer's samplers have no W wrap mode. Regressions:
+textureimport 502/502 mips and 1,732,492/1,732,492 bytes exact in Gamma, Linear and Android;
+spriteimport 519/520; modelimport Gamma/Linear 6032/6033 and URP 7011/7687 (complete union 7768
+keys, the same 757 failures line for line); descriptions 0 differences; unbound-assets 73/73 (new
+`flipbook_arrays_and_volumes_match_the_editor`); api-check 0 errors in 2279 types.
+
+Follow-up the same day: the probe adds a 4x4x16 imported volume and a 4x4 array of 16 slices,
+point-sampled at levels 1, 2 and 4 (new independent Editor pairs agree byte for byte; every earlier
+reference line is unchanged). The Editor reports 5 levels for the volume and 3 for the array.
+Unbound's renderer capped a volume's GPU mip count by width and height only, so the volume's
+level-4 sample read level 2; the count now includes the depth for volumes only. Unbound: 37/37
+info lines, 609/609 GetPixels, 573/573 GetPixels32 and 573/609 GetPixelData values exact (the 36
+others the imported cubes' stub), GPU samples 14/16 (the two wrapW-Clamp ones), in all three
+profiles. textureimport, spriteimport and modelimport (Gamma, Linear, URP failures line for line)
+unchanged; unbound-assets 73/73; api-check 0 errors in 2279 types. ImportedTextureInfo's
+documented dimensions now include 3 and 5 (layout unchanged).
+
+Combined with the later physics, audio and sampler-property work (2026-11-01): the texture array
+captures are byte-identical to the earlier ones in all three profiles (the same 38 differences:
+36 imported-cube `GetPixelData` values and 2 wrapW-Clamp samples). textureimport (502/502 mips,
+1,732,492/1,732,492 bytes in each profile), spriteimport (519/520) and modelimport (Gamma and
+Linear 6032/6033, URP 7011/7687 with 550 missing, 126 differing and 81 extra keys, union 7768;
+descriptions 0 differences) captures are byte-identical to those of the runtime without the
+texture array work. unbound-assets 73/73; api-check 0 errors in 2289 types; regenerating the
+compatibility stubs changes nothing. Texture cache VERSION 12 (13 since the storage corrections below); native and render protocol
+versions and texture packet layouts unchanged.
+
+### Texture2D GetPixels byte conversion, 2026-11-01
+
+New probe tests/projects/texturepixels (on the texture array fixture): 16x16 textures of RGBA32,
+ARGB32, BGRA32, RGB24, Alpha8, R8, RG16, R16, RGBA4444, ARGB4444 and RGB565, sRGB and linear, with
+explicit mips, and a `LoadImage` result, every byte position running through 0..255. Two
+independent Editor captures per profile (Gamma, Linear) agree byte for byte. `GetPixels` (every
+overload and level) reads a byte b as b * (1 / 255) in single precision; `GetPixel` and Alpha8's
+`GetPixels` read b / 255. The two differ in the last bit for 126 of the 256 byte values (51 gives
+0.200000018 against 0.2). Unbound's Texture2D `GetPixels` now multiplies for byte formats other
+than Alpha8; `GetPixel`, Color32, `EncodeToEXR` and `RenderToCubemap` keep dividing.
+
+Unbound on the probe: 136 differences in Gamma and 138 in Linear before, 103 and 105 after (33
+resolved, none introduced). Every `GetPixels` value of RGBA32, ARGB32, BGRA32, RGB24, the linear
+and mipmapped RGBA32 and the loaded PNG is now exact. Remaining, unchanged: `GetPixelData` of
+script-made textures throws (27 values), the graphicsFormat of ARGB32 and Alpha8 (and in Linear
+of R8 and RG16) and the loaded PNG's format, R8 reading (r, 0, 0, 1) instead of (r, 1, 1, 1), Alpha8's `GetPixels32`
+(1, 1, 1, a) instead of (0, 0, 0, a), `SetPixelData` of RG16, R16, RGB565 and RGBA/ARGB4444
+(grey texels), `GetPixelBilinear` at texel centres (23 values) and `GetPixel` of those R8 and
+`SetPixelData` cases (11 values). tests/projects/resources at its 2e-3 tolerance is unchanged (501/539 values, 62/62
+images); exact float bits of its 208 Texture2D mip values go from 149 to 176 (none lost).
+Managed tests 1264/1275 (the 11 failures of the runtime before, 4 new tests pass).
+
+### Layered texture storage corrections, 2026-11-01
+
+The texture pixel probe adds script-made volumes, BGRA32 array and volume `.asset` files, an
+imported readable PNG encoded to EXR as its first read and GPU draws of the fixture's imported
+readable cubemaps before and after `Apply(false)`; a new pair of independent Editor captures per
+profile agrees byte for byte and keeps every earlier reference line. Measured: `Texture3D.GetPixel`
+reads b / 255 (its `GetPixels` b * (1 / 255)) and `SetPixel` rounds halves up; B8G8R8A8 assets hold
+B, G, R, A bytes and report BGRA32; EXR encoding succeeds as the first access; `Apply(false)`
+leaves an imported cubemap's GPU faces unchanged.
+
+Corrections: R and RG float arrays, volumes and cube arrays read one in the channels they do not
+store (12 resources values had read zero); layered sizes are computed in 64 bits and a texture
+larger than one array fails with its size instead of wrapping; EXR encoding fetches an imported
+texture's pixels; an imported readable cubemap's `Apply` fetches its faces and uploads them in the
+import's row order; B8G8R8A8 assets read as BGRA32 bytes; `Texture3D.GetPixel`/`SetPixel` touch
+one texel (b / 255, halves rounded up); single-cell flipbook arrays and volumes stay uncompressed
+like the others, because the renderer binds them through RGBA8 views (texture cache VERSION 13).
+
+Against the runtime without the texture array work: the texture pixel probe goes from 240 to 146
+differences in Gamma and 242 to 148 in Linear (94 resolved, none introduced). Remaining there,
+unchanged: the Texture2D gaps above, `GetPixelData` of the imported PNG, `GraphicsFormatUtility.
+GetTextureFormat(B8G8R8A8_*)` returning ARGB32 instead of BGRA32, the imported cubemaps' GPU faces
+drawn upside down already before any CPU access (36 values: the import upload's row order), and
+one-ulp RGFloat differences that come from the probe's own float arithmetic in the Editor. The
+texture array probe, which that runtime could not run (it stopped with an exception before
+writing), keeps the earlier 37/37, 609/609, 573/573, 573/609 and 14/16 values in every profile.
+tests/projects/resources is identical to that runtime's (513/539 values, 62/62 images, every
+image byte for byte); exact float bits rise from 472 to 499 of its 540 keys (the 27 Texture2D
+`GetPixels` mip values), none lost. textureimport, spriteimport and modelimport captures are
+byte-identical to it. Managed tests 1275/1286 with the same 11 failures; unbound-assets 74/74;
+api-check 0 errors in 2289 types; regenerating the compatibility stubs changes nothing.
+
+### Texture W wrap mode, 2026-11-01
+
+NativeApi 14 appends `wrap_w` to `TexturePacket` and `ImportedTextureInfo`, and the
+`texture-sampling-properties` call carries it (filter, wrap U, V, W, anisotropy): a texture's own
+sampler uses it as its W address mode, which only a Texture3D's samples read. Imported textures
+report the importer's `wrapW` from the import info. Inline, default, integer, compute, grab, video
+and built-in lighting samplers keep repeating along W; no parity is claimed for them. A 13 side and
+a 14 side refuse each other at startup in either pairing. Render protocol, shader cache and texture
+cache are unchanged (texture cache 13 already stored `wrapW`).
+
+tests/projects/texturepixels adds one bound 4x4x4 volume drawn beyond its depth while its
+`wrapModeW` goes Repeat, Clamp, Repeat, then Clamp with an `Apply` and Repeat again (a new pair of
+independent Editor captures per profile agrees byte for byte; every earlier line unchanged).
+Against the runtime without the change: the texture array probe resolves its two wrapW-Clamp GPU
+samples in each profile (38 to 36 differences, the 36 imported-cube `GetPixelData` values remain),
+the texture pixel probe its four live Clamp samples (150 to 146 in Gamma, 152 to 148 in Linear),
+none introduced. textureimport and resources (539/539, 62/62 images) are byte-identical; rtdepth
+probe (1071 values, 316/368 images) and controls (46 values, 13/17 images), materials (1004) and
+graphics (80) keep every status. Managed tests 1289/1300 with the same 11 failures; unbound-assets
+77, unbound-runtime 50, unbound-app 20; api-check 0 errors in 2290 types; regenerated stubs
+unchanged.
 
 ### HDR and count rendering preservation, 2026-10-31
 
@@ -1991,3 +2113,193 @@ review evidence and runtime receipts remain cache-only. Auto-suspend, surround, 
 the fixture amplitudes, running-tail changes, timed snapshots and other releases remain outside
 this certification. Global slot wet mixing and other effects remain unsupported. This establishes
 only the measured Echo scope, not complete audio or engine parity.
+
+## Model importer clip settings
+
+Clips a model's `.meta` defines (`clipAnimations`) now import and play as the Editor makes them,
+for generic rigs: each clip's ID is its `internalID`; a range is resampled from its first frame
+(also between frames) and stops at the take's end; every animated node gets position, rotation and
+scale curves, constant ones too; animation compression Off keeps a key at the start, on every take
+frame and at the end, rotations and scales with smooth tangents and positions linear. Transform
+masks remove the curves of the transforms they leave out (from the model's list, or from the
+`maskSource` AvatarMask, not its copy in the meta). An additive reference frame inside the range
+refers to the clip itself, one outside it to the take's hidden `__preview__<take>` clip, which
+every take now has (NotEditable and HideInHierarchy: listed by `LoadAllAssetsAtPath`, not by
+`Resources.LoadAll` or `LoadAllAssetRepresentationsAtPath`). Parameter curves become float curves
+on the root's Animator; clip curves drive float parameters only. Mirror, wrap mode and the root
+settings are kept in the clip settings. With animation import the model rests in the first take's
+pose at its start. The model cache format is 8.
+
+At play time, loop pose adds `(start − stop) × phase` to float values and turns rotations by
+`q · normalize(phase · d.xyz, d.w)`, `d = stop⁻¹ · start`; it and the clip's and state's cycle
+offsets act only on looping clips, also for events and root motion. An `Animator.Update(0)` that
+enters no state still fires the events at the start time, once, and state times are compared with
+event times in single precision.
+
+Validation:
+
+- tests/projects/modelclips: two independent GPU Editor captures are byte-identical (2949
+  records); Unbound matches 2949/2949 records, 31391/31391 values (the ddb1dff1-based baseline
+  matched 514 of an earlier 2641-record version: clip IDs were not the meta's).
+- modelimport Gamma and Linear 6032/6033, URP 7011 matching with the same missing/differing/extra
+  counts as before, descriptions 35/0; animatoradditive 1100/1100; animator 2236/2236; animation
+  from bundles 8/8. api-check: 0 errors in 2279 types. unbound-assets (74) and unbound-runtime
+  (39) tests pass. Managed tests: the nine TextTests fail as before, and 21 PhysicsTests cases
+  (ClonedBodies*, SerializedInactiveBody*) fail with these sources and with the base sources alike.
+
+Not covered: Unity's keyframe reduction for the reducing compression modes (approximated by
+ufbx's near-lossless reduction with linear tangents), humanoid clips (mirror, masks by body part),
+and root-motion nodes and Bake Into Pose (next).
+
+## Generic root nodes, Bake Into Pose and target matching
+
+A generic avatar's root node (`motionNodeName`, with an avatar) now gives every imported clip
+MotionT/MotionQ curves on the Animator: the node's pose relative to the model's root at the clip's
+frames. Root motion follows them as it follows root curves; the node keeps its own curves.
+Bake Into Pose and the related settings (based upon original, height from feet, orientation
+offset, level) change nothing at play time in the Editor, for root nodes and root curves alike;
+they zero the baked components of `averageSpeed`. `averageSpeed`, `averageAngularSpeed`,
+`apparentSpeed` and `averageDuration` come from the motion curves (twenty equal parts of the clip,
+each in the node's frame at its start); `hasMotionCurves`, `hasMotionFloatCurves` and
+`hasRootCurves` read the curves. `MatchTarget` matches a generic rig's root (AvatarTarget.Root):
+each step adds its share of the remaining correction, the target less where the clip's motion
+alone would bring the root by the end, with rotations by the normalized lerp; the step past the
+end completes it. Body-part targets are left to humanoid avatars (ignored with a warning).
+
+Validation:
+
+- tests/projects/modelroot: two independent GPU Editor captures are byte-identical (3714 records);
+  Unbound matched 3699/3714 records, 35781/35796 values; the 15 others were `apparentSpeed` of
+  the clips that turn about the up axis (see below for the merged result).
+
+## Model clip settings and generic root nodes with humanoid avatars, 2026-11-01
+
+The generic model clip and root-node work now sits beside the humanoid avatars, muscle clips and
+humanoid root motion. Both paths read the same parsed clip settings. With animation import a
+model's nodes rest in the first take's pose at its start; without it they keep the file's static
+transforms. The humanoid probe's takes start at 0, so this matches both probes. Clip documents
+carry a mask asset and a Humanoid model's avatar. A clip is human only with root, goal or muscle
+curves; MotionT/MotionQ alone are a generic root node's motion. A Humanoid model's root node
+(`motionNodeName`) is ignored with a warning. `MatchTarget` on a humanoid avatar warns and does
+nothing. Humanoid clips now get every root setting of the meta; any setting other than the
+default still throws, as before. Model clips cropped from their take or masked by transforms
+carry an import warning, because their muscle curves are unmeasured. The motion statistics use the humanoid motion for muscle clips and the root-node curves
+for the rest. `apparentSpeed` is `|averageSpeed| · (1 + (averageAngularSpeed / 2)²)` for both:
+this formula gives all 102 Editor clip values of the root-node probe exactly. The model cache
+format is 11.
+
+Validation (candidate against the Root runtime it was merged into, same commands):
+
+- tests/projects/modelclips 2949/2949 records, 31391/31391 values (Root: 585/2949);
+  tests/projects/modelroot 3714/3714 records, 35796/35796 values (Root: 764/3714).
+- tests/projects/humanoid 120574/120650 values (Root: 120570/120650). In both, every difference
+  is muscle 41 or 43 of the IK pose read back with HumanPoseHandler, the known twist-split
+  residual. Its count changes with last-bit differences of the IK pose.
+- modelimport Gamma and Linear 6032/6033, URP 7011/7687 (550 missing, 126 differing, 81 extra),
+  descriptions 35/0; animatoradditive 1100/1100 (13200/13200 values); animator 2236/2236;
+  animation from bundles 8/8. These equal Root's.
+- api-check: 0 errors in 2290 hand-written types. unbound-assets 75 and unbound-runtime 49 tests,
+  and 31 managed animation/animator/humanoid tests, pass.
+
+## Combined Core and physics review follow-up, 2026-11-01
+
+The integration at `691f0ed6` includes shared rounded-tip and collapsed-core
+contacts, callback traversal after pair removal, first-access project settings,
+and strict reporting of newly missing observations. Its 4,700-field Editor
+control passes 4,570 observations, resolves 562 and introduces none; 130
+`Collider2D.Distance` normal and witness-point differences remain. Broad physics
+passes 11,626/11,626, motion 3,364,863/3,364,863, and the scene-settings matrix
+5,055/5,055 with its original rounding bounds. Managed tests pass 1,265/1,276:
+48 differences from the accepted parent are resolved, the same eleven failures
+remain, and none are introduced. API checking has zero errors in 2,289 types.
+
+All scheduled regression groups finished, including animation, input, clock,
+particles, UI and rendering. Their raw deltas are retained. The broad particles
+suite keeps the same 559 failing values. One trails pixel changes RGB error
+four to five, below the unchanged threshold of eight. Full integration
+acceptance remains open: humanoid IK readback resolves sixteen values, retains
+seventy and introduces ten against the prior accepted capture. Fewer total
+differences does not make those ten acceptable; they are assigned to the
+humanoid follow-up. No full Core, math or engine parity is claimed.
+
+Generic model target-matching review has a separate expanded Editor reference:
+11,536 records, with the old 3,714-record prefix unchanged. The source-matched
+candidate passes all 91,088 expanded values, including lifecycle, overrides,
+callbacks, Rebind and single-precision normalized playback time. The full
+managed differential keeps the same eleven failures and introduces none;
+API checking has zero errors in 2,290 types. Model clips, additive layers,
+Animator and bundled animation pass their affected controls. The model
+review package remains unaccepted: humanoid IK readback resolves 24 values,
+retains 62 and introduces eight against the prior accepted capture. The
+complete before/after union is retained outside Git.
+
+## Render texture elements combined integration, 2026-11-01
+
+NativeApi 13 and render protocol 6 are integrated with typed depth, signed and
+unsigned sampled bindings. Shader cache 16 also separates integer and
+depth-comparison `_MainTex` slots from the filtered float layout. Sampler JSON
+metadata requests validate reserved handle bits before reading or mutating
+state. Texture packet layouts, PhysX shim 9 and texture cache 11 are unchanged.
+
+The matching combined runtime passes 1,071/1,071 main RT values and 316/368
+images, plus 46/46 control values and 13/17 images. The complete unions introduce
+no failures or missing fields against the revised delivery. Screen encoding and
+the unsupported integer-array default account for the retained image differences.
+The typed `_MainTex` GPU-validation reproduction and six reserved-bit RPC
+controls pass. Main, bilinear, live and cache sampler controls pass 150,053
+observations with no numerical worsening of accepted values. Six affected
+rendering controls preserve their previous complete comparator reports.
+
+Managed tests pass 1,273/1,284 with the same eleven failures, zero introduced and
+zero skips. Rust runtime 50, app 19 and portable shader 35 tests pass; the private
+shader fixture remains explicitly excluded. API checking reports zero errors in
+2,290 types, with the affected generated modules unchanged after regeneration.
+The separate humanoid IK integration blocker remains open. RT acceptance does
+not imply full animation, rendering or engine parity.
+
+## Layered texture import combined integration, 2026-11-01
+
+The revised array, volume and serialized texture readers are integrated beside
+NativeApi 13 / render 6 / shader cache 16. Texture cache 13 prevents reuse of
+entries produced before the shape-specific compression correction. Layered
+storage checks texel, byte, upload and offset sizes before allocating or exposing
+raw views; cube-face counts cannot wrap before those checks.
+
+All three exact array comparisons preserve the revised delivery's results:
+37/37 info, 609/609 GetPixels, 573/573 GetPixels32, 573/609 raw reads and 14/16 GPU
+samples. The 38 retained fields per profile are the 36 imported cubemap raw
+reads and two WrapW samples. Pixel controls retain 146 Gamma and 148 Linear
+differences without introductions or newly missing fields. Texture import passes
+all 502 mips and 1,732,492 bytes per profile, at tolerance zero. Resources pass
+539/539 values and 62/62 images with the authored mip bundle staged; the sprite
+probe retains its one polygon-physics difference at 519/520. RT controls retain
+their previous complete result, without new failures or missing fields.
+
+The matching normal-stub build passes 1,289/1,300 managed tests, keeping the same
+eleven failures with none introduced and zero skips. The new oversized-storage
+control passes without large allocations. Rust assets 77, runtime 50 and app 20
+tests pass; API checking has zero errors in 2,290 types and affected generated
+modules match regeneration. No new Editor captures or unrelated physics, audio
+or full rendering suites were needed. Known texture gaps and the separate
+humanoid IK integration blocker remain open.
+
+## Texture W wrapping Root integration, 2026-11-01
+
+NativeApi 14 is integrated with render protocol 6, shader cache 16, PhysX shim 9
+and texture cache 13. The five sampler values are filter, U, V, W and anisotropy;
+the existing shared texture generation and bind-group invalidation are retained.
+The Root build uses identical Core DLL bytes for the full managed test run and
+the packaged runtime: 1,289/1,300 tests pass, the same eleven failures remain,
+and none are introduced. Runtime 50 and app 20 Rust tests pass. API checking has
+zero errors in 2,290 types and the affected generated modules match regeneration.
+
+The two Native live-W repeats match the published reference in each color
+profile, retaining all 300 previous records and adding eleven controls. Root's
+matching runtime passes all eleven live changes and reuploads in both profiles;
+their complete pixel unions retain 146 Gamma and 148 Linear differences with
+no introductions or newly missing values. The Gamma array replay resolves both
+W samples and retains only the 36 imported cubemap raw-read differences. All
+seven sampler RPC guards pass, including rejection of the obsolete four-value
+request. Broader source-identical delivery results were reused; no new Editor,
+full physics, audio or full-rendering runs were needed. Other sampler W policies
+and the separate humanoid IK blocker remain outside this acceptance.

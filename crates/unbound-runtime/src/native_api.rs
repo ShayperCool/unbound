@@ -9,12 +9,14 @@ use crate::{
         },
     },
     render_protocol::{
-        ImportedTextureInfo, MaterialPacket, MeshPacket, TexturePacket, commands, owned,
+        ImportedTextureInfo, MaterialPacket, MeshPacket, TexturePacket, commands, handle, owned,
     },
     state,
 };
 
-pub const NATIVE_API_VERSION: u32 = 12;
+/// 13: render protocol 6, texture handle element bits (`render_protocol::handle`).
+/// 14: `wrap_w` at the end of `TexturePacket` and `ImportedTextureInfo`.
+pub const NATIVE_API_VERSION: u32 = 14;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]
@@ -194,6 +196,13 @@ extern "C" fn video_frame(
     error: *mut NativeBuffer,
 ) -> i32 {
     let handles = unsafe { [*handles, *handles.add(1), *handles.add(2)] };
+    // The planes are uploads: plain handles only (render protocol 6).
+    for h in handles {
+        if let Err(e) = handle::plain(h, "video_frame") {
+            unsafe { *error = NativeBuffer::from_vec(e.into_bytes()) };
+            return -1;
+        }
+    }
     let result = std::panic::catch_unwind(|| crate::video::frame(decoder, frame, handles))
         .unwrap_or_else(|_| Err(anyhow::anyhow!("the decoder panicked")));
     match result {
@@ -457,6 +466,10 @@ extern "C" fn read_pixels(
     float: i32,
     out: *mut NativeBuffer,
 ) -> i32 {
+    if let Err(error) = handle::plain(texture, "read_pixels") {
+        tracing::error!("{error}");
+        return 0;
+    }
     match state::backend().read_pixels(texture, [x, y, width, height], float != 0) {
         Some(pixels) => {
             unsafe { *out = NativeBuffer::from_vec(pixels) };
@@ -479,7 +492,7 @@ extern "C" fn release_mesh(handle: u64) {
 }
 
 extern "C" fn upload_texture(handle: u64, texture: *const TexturePacket) {
-    if texture.is_null() {
+    if texture.is_null() || plain_texture(handle, "upload_texture").is_none() {
         return;
     }
     let texture = unsafe { owned::Texture::from_packet(&*texture) };
@@ -492,6 +505,9 @@ extern "C" fn import_texture(
     length: i32,
     info: *mut ImportedTextureInfo,
 ) -> i32 {
+    if plain_texture(handle, "import_texture").is_none() {
+        return 1;
+    }
     let guid = unsafe { text(guid, length) };
     match std::panic::catch_unwind(|| state::import_texture(handle, guid)) {
         Ok(Ok(imported)) => {
@@ -507,6 +523,9 @@ extern "C" fn import_texture(
 }
 
 extern "C" fn release_texture(handle: u64) {
+    if plain_texture(handle, "release_texture").is_none() {
+        return;
+    }
     state::release_texture_sampler(handle);
     state::backend().release_texture(handle);
 }
@@ -516,7 +535,23 @@ extern "C" fn update_material(handle: u64, material: *const MaterialPacket) {
         return;
     }
     let material = unsafe { owned::Material::from_packet(&*material) };
+    // A material's texture properties are sampled bindings: they may name an element.
+    for (name, value) in &material.properties {
+        if let owned::PropertyValue::Texture { handle: h, .. } = value
+            && let Err(error) = handle::sampled(*h, &format!("material {handle} texture `{name}`"))
+        {
+            tracing::error!("{error}; the material update is rejected");
+            return;
+        }
+    }
     state::backend().update_material(handle, material);
+}
+
+/// A texture handle passed to an entry point that takes plain handles: logs and refuses others.
+fn plain_texture(h: u64, what: &str) -> Option<u64> {
+    handle::plain(h, what)
+        .map_err(|error| tracing::error!("{error}"))
+        .ok()
 }
 
 extern "C" fn release_material(handle: u64) {
