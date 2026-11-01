@@ -99,16 +99,18 @@ def create(work):
     return 0
 
 
-def create_review(work):
+def create_review(work, precision=False):
     project = copy_project(work/'projects'/'create-review')
     work.mkdir(parents=True, exist_ok=True)
+    method = 'CreatePrecisionClip' if precision else 'CreateReviewController'
+    asset = 'MatchPrecision.anim' if precision else 'C_MatchReview.controller'
     code = subprocess.run([str(LAUNCHER), 'timeout', '-s', 'KILL', '900', str(editor_path()), '-batchmode',
-                           '-nographics', '-projectPath', str(project), '-executeMethod', 'ProbeRunner.CreateReviewController',
+                           '-nographics', '-projectPath', str(project), '-executeMethod', 'ProbeRunner.'+method,
                            '-logFile', str(work/'create-review.log')]).returncode
     if code:
         sys.exit(f'CreateReviewController failed ({code}), see {work/"create-review.log"}')
     for suffix in ('', '.meta'):
-        relative = 'Assets/Resources/C_MatchReview.controller'+suffix
+        relative = 'Assets/Resources/'+asset+suffix
         shutil.copyfile(project/relative, PROBE/relative)
     return 0
 
@@ -150,7 +152,7 @@ def unbound(work):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=('create', 'create-review', 'editor', 'publish', 'unbound'))
+    parser.add_argument('mode', choices=('create', 'create-review', 'create-precision', 'editor', 'publish', 'unbound'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
     args = parser.parse_args()
@@ -158,7 +160,7 @@ def main():
         parser.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
-    return {'create': create, 'create-review': create_review, 'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
+    return {'create': create, 'create-review': create_review, 'create-precision': lambda w: create_review(w, True), 'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
 
 
 if __name__ == '__main__':

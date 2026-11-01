@@ -27,6 +27,7 @@ public static class MatchReviewProbe
         foreach (float initial in new[] { 0f, .4f })
         foreach (float end in new[] { .6f, .8f, 1.25f })
         foreach (bool rebind in new[] { false, true }) Timing(initial, end, rebind);
+        Precision();
     }
 
     static Animator Make(out GameObject root)
@@ -127,5 +128,30 @@ public static class MatchReviewProbe
             for (int i = 0; i < 30; i++) { animator.Update(.1f); Snapshot(key+".step"+i, animator, null); }
         }
         finally { UnityEngine.Object.DestroyImmediate(root); }
+    }
+
+    static void Precision()
+    {
+        var animator = Make(out var root);
+        var controller = new AnimatorOverrideController(animator.runtimeAnimatorController);
+        try
+        {
+            var clip = Resources.Load<AnimationClip>("MatchPrecision");
+            if (clip == null) throw new InvalidOperationException("Missing MatchPrecision.anim; run create-precision");
+            controller[Resources.LoadAll<AnimationClip>("Mover").First(c => c.name == "Loop")] = clip;
+            animator.runtimeAnimatorController = controller;
+            animator.Play("Loop", 0, .17f); animator.Update(0);
+            foreach (float dt in new[] { .03f, .1f, .37f })
+            {
+                for (int i = 0; i < 20; i++)
+                {
+                    animator.Update(dt);
+                    var state = animator.GetCurrentAnimatorStateInfo(0);
+                    RootProbe.Record("matchReview.precision."+F(dt)+"."+i,
+                        "{\"time\":"+F(state.normalizedTime)+",\"length\":"+F(state.length)+"}");
+                }
+            }
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); UnityEngine.Object.DestroyImmediate(controller); }
     }
 }

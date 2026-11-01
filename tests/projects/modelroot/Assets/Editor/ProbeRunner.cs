@@ -124,6 +124,25 @@ public static class ProbeRunner
         }
         catch (Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
     }
+
+    public static void CreatePrecisionClip()
+    {
+        try
+        {
+            string path = Dir + "MatchPrecision.anim";
+            AssetDatabase.DeleteAsset(path);
+            var clip = new AnimationClip { name = "MatchPrecision", frameRate = 30 };
+            AnimationUtility.SetEditorCurve(clip, EditorCurveBinding.FloatCurve("", typeof(Transform), "m_LocalPosition.x"),
+                AnimationCurve.Linear(0, 0, 1.3f, 1.3f));
+            var settings = AnimationUtility.GetAnimationClipSettings(clip);
+            settings.loopTime = true;
+            AnimationUtility.SetAnimationClipSettings(clip, settings);
+            AssetDatabase.CreateAsset(clip, path);
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(0);
+        }
+        catch (Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+    }
 }
 
 /// <summary>Watchdog of a recording (re-armed after every domain reload): the probe exits after
