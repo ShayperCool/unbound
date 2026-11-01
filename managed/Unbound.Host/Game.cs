@@ -55,6 +55,9 @@ public sealed class GameConfig
     public RenderPipelineConfig RenderPipeline { get; set; } = new();
     /// <summary>The project's scripting define symbols for the active target group.</summary>
     public List<string> ScriptingDefines { get; set; } = new();
+    /// <summary>The reference assemblies of the engine modules whose built-in package the project
+    /// leaves out: scenes lose their components of those modules' classes.</summary>
+    public List<string> DisabledModules { get; set; } = new();
     /// <summary>The Unity install's Editor/Data directory.</summary>
     public string UnityDataPath { get; set; } = "";
     /// <summary>Where the release's Mono keeps the .NET Framework assemblies (System.Web, ...).</summary>
@@ -281,6 +284,7 @@ public static unsafe class Game
         ProjectInfo.PlayerPrefsPath = c.PlayerPrefsPath;
         ProjectInfo.Defines = c.ScriptingDefines.ToArray();
         UnityEditor.UnityInstallInfo.DataPath = c.UnityDataPath;
+        DisabledModules.Configure(c.DisabledModules);
         GameDomain.FrameworkDir = c.FrameworkDir;
         GameDomain.NativePlugins = c.NativePlugins;
         UnityEditor.PlayerSettings.s_PreloadedRefs = c.PreloadedAssets.Select(p => (p.Guid, p.FileId)).ToList();

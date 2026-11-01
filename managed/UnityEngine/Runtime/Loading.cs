@@ -143,6 +143,11 @@ namespace Unbound.Runtime
                         if (!gameObjects.TryGetValue(owner.FileId, out var entry)) continue;
                         var type = ComponentTypeOf(doc, guid);
                         if (type == null) continue;
+                        if (kind == Kind.Scene && DisabledModules.Contains(type))
+                        {
+                            Debug.Log($"{type.Name} component deleted: Component belongs to a disabled built-in package.");
+                            continue;
+                        }
                         Component c;
                         try
                         {
