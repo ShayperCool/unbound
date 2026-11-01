@@ -92,3 +92,23 @@ value across Native, before and after. Float tolerances remain ATOL `2e-5` and
 RTOL `2e-4`; metadata and Native repeat bits compare exactly. Numerical delta
 reports retain every changed float, including differences inside those tolerances.
 All repeats, candidates, unions, logs and rejected attempts belong in cache.
+
+
+## Unresolved reset experiments
+
+The separate reset/device-stop timeline and the controlled reset playback experiment
+are unclaimed diagnostics. The latter's measurement definition is in
+[RESET_MEASUREMENT.md](RESET_MEASUREMENT.md), committed before its Native captures.
+Its first independent repeats fail exact agreement at both rates, including variable
+callback counts and some playback differences. It is retained whole, with no
+certified controlled reset reference and no smaller replacement profile. No reset
+callback block count is inferred for production from this non-agreeing experiment.
+Absolute DSP observations and every zero block remain in their original cache runs.
+
+With `compare.py --batch`, sample failures are explicit parallel arrays named
+`samples`, `native`, `before`, `after`, and `status`, or `reference` and `candidate`
+for a two-way comparison. Every array index describes one complete sample record;
+there is no range omission. Metadata remains exact. NumPy accelerates this mode
+when installed, with a standard-library fallback. Partial output files from a failed
+capture are compared even if its metadata entry was never published. The report
+preserves the missing entry separately.

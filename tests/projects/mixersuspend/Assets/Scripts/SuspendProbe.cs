@@ -120,7 +120,7 @@ public class SuspendProbe : MonoBehaviour
                         if (key == "disable") { source.enabled=false; source.enabled=true; source.Play(); }
                         if (key == "wake_gain" && !mixer.SetFloat("Gain",-6)) throw new Exception("SetFloat failed");
                         if (key == "wake_wet" && !mixer.SetFloat("Wet",0.5f)) throw new Exception("SetFloat failed");
-                       
+
                     }
                     if (!(bool)addSink.Invoke(null,new object[]{master,sink,false})) throw new Exception("Sink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("Render failed");
