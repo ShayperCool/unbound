@@ -2499,3 +2499,12 @@ Comparator controls 9/9 and recording protocol controls 4/4; historical appfacts
 Three pure-managed attempts retained, including the prior commit-metadata Core mismatch; no current-source runtime or affected-probe acceptance claimed. Additional correction-cycle authorization pending.
 No new Native/Cargo, ABI/version/stub changes, broad suites or reference edits. Newer Root particle integration and final managed/API combination remain Root-owned.
 Full attempts, source correction, historical capture hashes and prepared matching commands: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-root875-20261101-t3-394c2f9d/PENDING_HANDOFF.md`.
+
+### 2026-11-01 bounded current-Root platform correction, acceptance blocked
+- Ordinary merge of prepared ae110878 onto Root870 preserves RNG/trail/sphere/audio; log opening now snapshots reachable authored aliases once for both destinations before mutation.
+- Cheap exact-source log controls30/30 and packaged-Core original red witnesses4/4 preserve temporary authored sentinels; new alias controls13/13 pass in the sole full managed TRX.
+- One frozen f26e8eb9 Host/Core/test cycle: managed1464/1475, identical11 inherited names/messages; focused RNG27/trail2/sphere9/platform55 pass. TestCore equals packaged Core; all33 artifacts and PE/PDB/input audits pass.
+- Normal/delayed Appfacts497/555 each, retains84/introduces0; original loaded493/solo497 retained; platform/lifecycle exact and messages316/316. Both actual machine checks FAIL physical console-log spelling; rooted fresh nonempty files proved separately.
+- Exact prior-platform API reuse BLOCKED by inherited axis-allocation annotation removal and generated-stub deltas. Full/API recording overlap NOT established; initial API assertion prevented tests and actual API work started after recording.
+- Unchanged runner rewrites copied ProjectVersion.txt; strict fixture-equality audit fails, with complete differences retained. No correction/rebuild/recapture follows these failures; one corrective budget consumed, runtime REJECTED.
+- Full source, commands, TRX, metadata, manifests, 555-key raw unions and failures: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-corrected-root-20261101-t3-2f1786c1/HANDOFF.md`. Root48 strict introductions OPEN,21 zero-life unchanged,305 broad Native failures; no full Unity parity claim.
