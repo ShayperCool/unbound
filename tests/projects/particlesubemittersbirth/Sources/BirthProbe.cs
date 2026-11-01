@@ -85,12 +85,73 @@ public class BirthProbe : MonoBehaviour
         RunCase(true);
         RunCase(true, false);
         RunCase(true, false, true);
+        RunPhaseCase("phase_event_zero", 0f, 0f, 13f);
+        RunPhaseCase("phase_event_inside", 0.017f, 0f, 13f);
+        RunPhaseCase("phase_child_delay", 0.017f, 0.023f, 13f);
+        RunPhaseCase("phase_child_rate", 0.017f, 0f, 17f);
+        RunPhaseCase("phase_burst", 0.017f, 0f, 0f, 0.031f);
+        RunPhaseCase("phase_burst_delay", 0.017f, 0.023f, 0f, 0.031f);
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_BIRTH_OUT"), s_Out.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
 #else
         Application.Quit();
 #endif
+    }
+
+    // One event-time discriminator: move the parent's event within an irregular call,
+    // then vary only the child's delay, rate, or burst clock. All particles outlive it.
+    static void RunPhaseCase(string name, float parentBurst, float childDelay, float childRate, float childBurst = -1f)
+    {
+        float[] deltas = { 0.013f, 0.011f, 0.019f, 0.037f, 0.041f, 0.007f, 0.053f, 0.029f, 0.061f };
+        ParticleSystem child = null;
+        var ps = Make(name, s =>
+        {
+            var m = s.main;
+            m.startSize = 2f;
+            m.startColor = (Color)new Color32(128, 192, 64, 255);
+            var e = s.emission;
+            e.rateOverTime = 0f;
+            e.SetBursts(new[] { new ParticleSystem.Burst(parentBurst, 1) });
+            child = Make(name + "_child", c =>
+            {
+                var cm = c.main;
+                cm.startSpeed = 0.5f;
+                cm.startLifetime = 0.413f;
+                cm.startDelay = childDelay;
+                var ce = c.emission;
+                ce.rateOverTime = childRate;
+                if (childBurst >= 0f) ce.SetBursts(new[] { new ParticleSystem.Burst(childBurst, 1) });
+            }, default, s.transform);
+            var sub = s.subEmitters;
+            sub.enabled = true;
+            sub.AddSubEmitter(child, ParticleSystemSubEmitterType.Birth,
+                ParticleSystemSubEmitterProperties.InheritColor | ParticleSystemSubEmitterProperties.InheritSize);
+        });
+        s_Out.Append("{\"scenario\":").Append(Q(name + " inputs")).Append(",\"step\":\"configured\",\"value\":{")
+            .Append("\"parentBurst\":").Append(F(parentBurst))
+            .Append(",\"childDelay\":").Append(F(childDelay))
+            .Append(",\"childRate\":").Append(F(childRate))
+            .Append(",\"childBurst\":").Append(F(childBurst))
+            .Append(",\"maximumParticleDeltaTime\":").Append(F(Time.maximumParticleDeltaTime))
+            .Append(",\"parentSpace\":").Append((int)ps.main.simulationSpace)
+            .Append(",\"childSpace\":").Append((int)child.main.simulationSpace)
+            .Append(",\"properties\":").Append((int)ps.subEmitters.GetSubEmitterProperties(0))
+            .Append(",\"deltas\":[");
+        for (int i = 0; i < deltas.Length; i++)
+        {
+            if (i > 0) s_Out.Append(',');
+            s_Out.Append(F(deltas[i]));
+        }
+        s_Out.Append("]}}\n");
+        for (int i = 0; i < deltas.Length; i++)
+        {
+            ps.Simulate(deltas[i], true, i == 0, false);
+            string step = i.ToString(CultureInfo.InvariantCulture);
+            RecordState(name, step, ps);
+            RecordState(name + "_child", step, child);
+        }
+        DestroyImmediate(ps.gameObject);
     }
 
     static void RunCase(bool single, bool withChildren = true, bool detached = false)
