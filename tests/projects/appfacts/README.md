@@ -96,3 +96,17 @@ byte-identical) and the runner from before `editor_runner`. The ported runner
 was validated with `py_compile`, `--dry-run`, `check` and `publish` on those
 saved captures, plus a publish refusal on a saved pair whose values differ. No
 live capture has used it yet.
+
+## Recording stub completion
+
+The OpenURL fixture takes its file offset before launch and waits up to five seconds of
+`Stopwatch` elapsed time for a newline-terminated stub record. It blocks only this fixture
+step; simulated headless frame time cannot exhaust the wait. It records the exact appended
+lines, and a missing or incomplete record fails the capture at the deadline. It does not
+change keys, argv, reference bytes or comparison tolerances. Existing Native records use
+the same newline protocol, including the empty and null URL cases.
+
+`AppFactsUrlRecordingTests` covers immediate and delayed writes, absent, late and incomplete
+records. `test_recording.py NEW_CACHE_OUT` checks compatibility with the canonical protocol
+and runner/comparator refusal controls. A stressed capture may delay only the private
+recording stubs before their writes to reproduce the former process-start race.
