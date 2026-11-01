@@ -174,8 +174,12 @@ public class LightProbesLifecycle : MonoBehaviour
         Mark("frame after Tetrahedralize");
 
         s_Step = "done";
-        File.AppendAllText(s_Out, "{\"k\":\"complete\",\"v\":true}\n");
-        Debug.Log("light probes lifecycle witness written to " + s_Out);
+        string output = s_Out;
+        // Shutdown can raise more probe events after their manager has been destroyed.
+        // Snapshot must stop before it can query that manager or append after completion.
+        s_Out = null;
+        File.AppendAllText(output, "{\"k\":\"complete\",\"v\":true}\n");
+        Debug.Log("light probes lifecycle witness written to " + output);
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
 #else
