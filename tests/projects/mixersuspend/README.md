@@ -18,8 +18,9 @@ No block is removed, shifted, aligned or quantized by the fixture.
 
 The serialized default enables suspension at a threshold of -80 dB. Disabled
 suspension preserves a five-second Echo during a silent gap. Enabled suspension
-can stop it before the delayed output reaches the mixer. A playing voice, including
-a quiet voice or a voice in a sibling group, keeps the mixer awake. Echo and filter
+can stop it before the delayed output reaches the mixer. A playing voice on an unmuted route, including
+a quiet voice or a silent clip in a sibling group, keeps the mixer awake. A muted
+route does not contribute activity, even when its source remains playing and real. Echo and filter
 history survive suspension and resume when a new voice wakes the mixer.
 
 The `wake_hold` and `silent_voice_end` cases distinguish a frozen delay from lost
@@ -112,3 +113,26 @@ there is no range omission. Metadata remains exact. NumPy accelerates this mode
 when installed, with a standard-library fallback. Partial output files from a failed
 capture are compared even if its metadata entry was never published. The report
 preserves the missing entry separately.
+
+
+## Additional stable profiles
+
+The `--submission` runner selects the experiment defined in
+[SUBMISSION_MEASUREMENT.md](SUBMISSION_MEASUREMENT.md). Its canonical data is in
+`submission-rate-<rate>/`. The `--lifecycle` runner selects
+[LIFECYCLE_MEASUREMENT.md](LIFECYCLE_MEASUREMENT.md), with canonical data in
+`lifecycle-rate-<rate>/`. Each has two independently bit-identical Native captures
+per rate before publication. Compare using `--profile submission` or
+`--profile lifecycle`; the default profile is the original suspension matrix.
+
+The source profile also records the complete listener callback frontier. Native
+capture delivers one callback per configured DSP buffer. The engine collects its
+existing internal DSP chunks before listener delivery, without rendering extra
+samples, changing effect arithmetic or changing PCM conversion. Direct/device DSP
+chunking is unchanged. All callback guards and borrowed-array checks remain in place.
+
+The original `wake_snapshot` initial sample mismatches and the reset sequence are
+kept in the full original matrix. The lifecycle profile explicitly initializes its
+snapshot through public calls. No engine behavior infers an Editor selection state.
+Engine resource-limit rejection preserves managed paused state, pending sink
+registrations and notifications; its safety tests do not certify reset delivery parity.
