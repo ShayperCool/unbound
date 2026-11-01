@@ -22,7 +22,7 @@ Allocated handles never set bits 62 and 63 (`render_protocol::handle::RESERVED`,
 A **sampled binding** may set bit 62, `DEPTH_ELEMENT` (`1 << 62`): the render texture's depth
 buffer, sampled as `(d, 0, 0, 1)` (`RenderTextureSubElement.Depth`). Sampled bindings are a
 material's texture property (`update_material`), a draw's per-draw texture property (`Draw`) and a
-global texture (`Global`). Everywhere else a handle must be plain: uploads, imports, releases,
+global texture (`Global`). Everywhere else a handle must be plain: uploads (`video_frame`'s planes too), imports, releases,
 read backs, `SetTarget`/`SetTargets` (the depth's `u64::MAX` "none" stays valid), `CopyTexture`,
 `GenerateMips`, a draw's main texture, image properties and kernel (`Dispatch`) properties. A
 reserved bit where it is not allowed, bit 63, or bit 62 alone is an error: the stream is rejected

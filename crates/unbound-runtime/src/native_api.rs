@@ -195,6 +195,13 @@ extern "C" fn video_frame(
     error: *mut NativeBuffer,
 ) -> i32 {
     let handles = unsafe { [*handles, *handles.add(1), *handles.add(2)] };
+    // The planes are uploads: plain handles only (render protocol 6).
+    for h in handles {
+        if let Err(e) = handle::plain(h, "video_frame") {
+            unsafe { *error = NativeBuffer::from_vec(e.into_bytes()) };
+            return -1;
+        }
+    }
     let result = std::panic::catch_unwind(|| crate::video::frame(decoder, frame, handles))
         .unwrap_or_else(|_| Err(anyhow::anyhow!("the decoder panicked")));
     match result {
