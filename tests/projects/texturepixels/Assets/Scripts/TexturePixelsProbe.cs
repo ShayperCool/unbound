@@ -313,6 +313,50 @@ public class TextureArrayProbe : MonoBehaviour
         Add("LiveWrapW.wrapModeW", volume.wrapModeW.ToString());
     }
 
+    /// <summary>A script-made R16 texture on the GPU: 16-bit values that 8-bit or half storage
+    /// cannot keep, point-blitted into a float target at its texel centres and read back as floats.</summary>
+    void R16Gpu()
+    {
+        var values = new ushort[Size * Size];
+        ushort[] fixedValues = { 0, 1, 2, 127, 128, 255, 256, 257, 4095, 16383, 32767, 32768, 49151, 65533, 65534, 65535 };
+        uint seed = 12345;
+        for (int i = 0; i < values.Length; i++)
+        {
+            seed = seed * 1664525u + 1013904223u;
+            values[i] = i < fixedValues.Length ? fixedValues[i] : (ushort)(seed >> 16);
+        }
+        var texture = new Texture2D(Size, Size, TextureFormat.R16, false, true);
+        texture.filterMode = FilterMode.Point;
+        texture.wrapMode = TextureWrapMode.Clamp;
+        texture.SetPixelData(values, 0);
+        texture.Apply(false);
+        var bytes = new byte[values.Length * 2];
+        Buffer.BlockCopy(values, 0, bytes, 0, bytes.Length);
+        Add("R16Gpu.values", Convert.ToBase64String(bytes));
+        string size = Size + "x" + Size;
+        Value("R16Gpu.blit.float", size, () =>
+        {
+            var rt = RenderTexture.GetTemporary(Size, Size, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+            var previous = RenderTexture.active;
+            try
+            {
+                Graphics.Blit(texture, rt);
+                RenderTexture.active = rt;
+                var read = new Texture2D(Size, Size, TextureFormat.RGBAFloat, false, true);
+                read.ReadPixels(new Rect(0, 0, Size, Size), 0, 0, false);
+                read.Apply(false);
+                var result = Floats(read.GetPixels());
+                Destroy(read);
+                return result;
+            }
+            finally
+            {
+                RenderTexture.active = previous;
+                RenderTexture.ReleaseTemporary(rt);
+            }
+        });
+    }
+
     Texture2D Make(TextureFormat format, bool mips, bool linear)
     {
         var t = new Texture2D(Size, Size, format, mips, linear);
@@ -351,6 +395,7 @@ public class TextureArrayProbe : MonoBehaviour
             ImportedCube("CubeStrip");
             ImportedCube("CubeStripLinear");
             LiveWrapW();
+            R16Gpu();
             var path = Environment.GetEnvironmentVariable("TEXTURE_PIXELS_PROBE_OUT");
             if (!string.IsNullOrEmpty(path))
             {
