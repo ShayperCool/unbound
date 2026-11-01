@@ -88,28 +88,44 @@ namespace UnityEngine
             if (width <= 0 || height <= 0) return;
             // The screen's bytes as an sRGB texture, drawn into the target's corner one texel per
             // pixel: sampling decodes them, an sRGB target encodes them again.
-            var copy = RenderTexture.GetTemporary(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
-            copy.filterMode = FilterMode.Point;
-            ulong source = copy.EnsureCreated();
-            GfxStream.CopyTexture(0, 0, 0, new RectInt(0, 0, Screen.width, Screen.height), source, 0, 0, 0, 0);
-            var material = Immediate.BlitCopy;
-            material.SetTexture(MainTex, copy);
             var saved = GfxStream.Current;
-            GfxStream.SetTarget(renderTexture.EnsureCreated());
-            GfxStream.Viewport(new Rect(0, 0, width, height));
-            GfxStream.Camera(Matrix4x4.identity, Immediate.Ortho);
-            s_Properties.Clear();
-            s_Properties[MainTexST] = new Vector4((float)width / Screen.width, (float)height / Screen.height, 0, 0);
-            GfxStream.Draw(Immediate.BlitQuad.Sync(), 0, material.Sync(), 0, Matrix4x4.identity, Color.white, properties: s_Properties);
-            GfxStream.SetTarget(saved.Color, saved.Depth, saved.Mip, saved.Slice);
-            if (saved.Viewport.width < float.MaxValue) GfxStream.Viewport(saved.Viewport);
-            GfxStream.Camera(saved.View, saved.Projection, saved.Flags);
-            RenderTexture.ReleaseTemporary(copy);
+            var savedActive = RenderTexture.ActiveTarget;
+            bool wireframe = GL.wireframe;
+            RenderTexture copy = null;
+            try
+            {
+                copy = RenderTexture.GetTemporary(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
+                copy.filterMode = FilterMode.Point;
+                ulong source = copy.EnsureCreated();
+                GfxStream.CopyTexture(ScreenHandle, 0, 0, new RectInt(0, 0, Screen.width, Screen.height), source, 0, 0, 0, 0);
+                var material = Immediate.BlitCopy;
+                material.SetTexture(MainTex, copy);
+                if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
+                GfxStream.SetTarget(renderTexture.EnsureCreated());
+                GfxStream.Viewport(new Rect(0, 0, width, height));
+                GfxStream.Camera(Matrix4x4.identity, Immediate.Ortho);
+                s_Properties.Clear();
+                s_Properties[MainTexST] = new Vector4((float)width / Screen.width, (float)height / Screen.height, 0, 0);
+                GfxStream.Draw(Immediate.BlitQuad.Sync(), 0, material.Sync(), 0, Matrix4x4.identity, Color.white, properties: s_Properties);
+            }
+            finally
+            {
+                try
+                {
+                    if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, true);
+                    RenderTexture.SetActiveQuietly(savedActive);
+                    GfxStream.Restore(saved);
+                }
+                finally { if (copy != null) RenderTexture.ReleaseTemporary(copy); }
+            }
         }
 
         static readonly int MainTex = Shader.PropertyToID("_MainTex");
         static readonly int MainTexST = Shader.PropertyToID("_MainTex_ST");
         static readonly Dictionary<int, object> s_Properties = new Dictionary<int, object>();
+
+        // During a screen camera callback the logical screen has not been presented yet.
+        static ulong ScreenHandle => RenderTexture.ScreenStandIn?.EnsureCreated() ?? 0;
 
         // A requested screenshot holds what the end-of-frame callbacks drew (tests/projects/screencapture).
         static ScreenCapture() =>
@@ -140,16 +156,26 @@ namespace UnityEngine
         {
             width = Screen.width * superSize;
             height = Screen.height * superSize;
-            if (superSize == 1) return Native.ReadPixels(0, 0, 0, width, height, false);
+            if (superSize == 1) return Native.ReadPixels(ScreenHandle, 0, 0, width, height, false);
             var target = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
-            var savedActive = RenderTexture.active;
-            RenderTexture.active = target;
-            GL.Clear(true, true, Color.black);
-            RenderSupersized(target, superSize);
-            RenderTexture.active = savedActive;
-            var bytes = Native.ReadPixels(target.EnsureCreated(), 0, 0, width, height, false);
-            RenderTexture.ReleaseTemporary(target);
-            return bytes;
+            var savedActive = RenderTexture.ActiveTarget;
+            var saved = GfxStream.Current;
+            try
+            {
+                RenderTexture.active = target;
+                GL.Clear(true, true, Color.black);
+                RenderSupersized(target, superSize);
+                return Native.ReadPixels(target.EnsureCreated(), 0, 0, width, height, false);
+            }
+            finally
+            {
+                try
+                {
+                    RenderTexture.SetActiveQuietly(savedActive);
+                    GfxStream.Restore(saved);
+                }
+                finally { RenderTexture.ReleaseTemporary(target); }
+            }
         }
 
         /// <summary>The screen cameras, in their order, into a target superSize times the screen's
