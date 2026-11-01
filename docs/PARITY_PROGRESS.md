@@ -2439,3 +2439,12 @@ InstantiateAsync retains 731/777, 46 missing/46 extra; CullingGroup 1149/1149 pl
 Matching GPU: 15 captures, zero introduced failures; CRT 349/352 + 100/140 images, flares 689/689 + 140/217; strict residuals retained.
 One builtinfx residual improves pointwise; all unions/tolerances and 33 runtime files retained, with no new builds or Native captures.
 Report/runtime/input/command manifests: `~/.cache/unbound/validation/runs/{combined-root-validation-20261101-t3-42333086,matching-closure-gpu-20261101-t3-de3d0dea}/`.
+
+### 2026-11-01 application facts and platform constants
+
+Managed-only on accepted Root `a90ca416` runtime (CLI/native unchanged, own Core/Host): `isLoadingLevel`, `buildGUID`, `consoleLogPath`, `OpenURL`, `HasProLicense`, `ExtractStackTraceNoAlloc`, startup logs, Profiler memory sizes, SystemInfo CPU/OS facts.
+Appfacts 497/555 (before 38/555): 461 resolved, 84 retained (18 missing, 26 extra, 40 different), none introduced; tolerances unchanged.
+Platform, lifecycle exact; messages 316/316. Managed 1380/1391, same eleven names/messages.
+API 0 errors/2314 types; generated stubs byte-identical to the accepted generator output, no stub regeneration.
+Open: unload timing, stack frames (resolved project path, inlined dispatch), StackTraceUtility stub, audio/component/material sizes, compressed texture creation; GPU identity is not read (marshalling disabled in CoreModule).
+Report: `~/.cache/unbound/validation/runs/claude-fresh-20261101b/platformconsts/`.
