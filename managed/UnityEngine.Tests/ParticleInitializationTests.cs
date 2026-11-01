@@ -152,5 +152,132 @@ namespace UnityEngine.Tests
             }
             finally { Object.DestroyImmediate(ps.gameObject); Object.DestroyImmediate(imported.gameObject); }
         }
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void PlaybackSnapshotRewindsEveryLaneAndCanBeReused(bool beforeFirstEmission)
+        {
+            var ps = Make();
+            try
+            {
+                var m = ps.main;
+                m.startLifetime = new ParticleSystem.MinMaxCurve(2f, 4f);
+                m.startSize3D = true;
+                m.startSizeX = new ParticleSystem.MinMaxCurve(.5f, 1.5f);
+                m.startSizeY = new ParticleSystem.MinMaxCurve(1f, 2f);
+                m.startSizeZ = new ParticleSystem.MinMaxCurve(2f, 3f);
+                if (!beforeFirstEmission) ps.Emit(1);
+                var saved = ps.GetPlaybackState();
+                ps.Clear(false);
+                ps.Emit(4);
+                var expected = Read(ps);
+                for (int repeat = 0; repeat < 2; repeat++)
+                {
+                    ps.SetPlaybackState(saved);
+                    ps.Clear(false);
+                    ps.Emit(4);
+                    var actual = Read(ps);
+                    for (int lane = 0; lane < 4; lane++)
+                    {
+                        Assert.Equal(expected[lane].randomSeed, actual[lane].randomSeed);
+                        Assert.Equal(expected[lane].startLifetime, actual[lane].startLifetime);
+                        Assert.Equal(expected[lane].startSize3D, actual[lane].startSize3D);
+                    }
+                }
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void PlaybackSnapshotReplaysTheNextSingleBirth()
+        {
+            var ps = Make();
+            try
+            {
+                ps.Emit(1);
+                var saved = ps.GetPlaybackState();
+                ps.Emit(1);
+                ps.SetPlaybackState(saved);
+                ps.Emit(1);
+                var p = Read(ps);
+                Assert.Equal(1622567041u, p[1].randomSeed);
+                Assert.Equal(p[1].randomSeed, p[2].randomSeed);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void ObsoleteParticleImportMaterializesAxisBeforeCopying()
+        {
+            var ps = Make();
+            try
+            {
+                ps.Emit(1);
+#pragma warning disable CS0618
+                ps.Emit(new ParticleSystem.Particle {
+                    startLifetime = 2f, remainingLifetime = 2f,
+                    axisOfRotation = Vector3.right, randomSeed = 77u });
+#pragma warning restore CS0618
+                var p = Read(ps);
+                Assert.Equal(Vector3.up, p[0].axisOfRotation);
+                Assert.Equal(Vector3.right, p[1].axisOfRotation);
+                ps.Emit(1);
+                Assert.Equal(Vector3.forward, Read(ps)[2].axisOfRotation);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Theory]
+        [InlineData(10000000)]
+        [InlineData(int.MaxValue)]
+        public void HugeRejectedTailDoesNotAllocateRequestSizedStorage(int requested)
+        {
+            var ps = Make();
+            try
+            {
+                var m = ps.main; m.maxParticles = 1;
+                // Warm both normal initialization and the jump tables before measuring.
+                ps.Emit(129); ps.Clear(false); ps.randomSeed = 12345u;
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                ps.Emit(requested);
+                long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+                var p = Read(ps);
+                Assert.Single(p);
+                Assert.Equal(692788716u, p[0].randomSeed);
+                Assert.InRange(allocated, 0L, 65536L);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        public void CapacityTruncationKeepsRequestedBatchDrawsAndAdmittedFields(bool external, bool threeD)
+        {
+            var limited = Make(); var complete = Make();
+            try
+            {
+                var lm = limited.main; lm.maxParticles = 1;
+                var cm = complete.main; cm.maxParticles = 256;
+                lm.startSize3D = cm.startSize3D = threeD;
+                lm.startRotation3D = cm.startRotation3D = threeD;
+                lm.startLifetime = cm.startLifetime = new ParticleSystem.MinMaxCurve(2f, 4f);
+                lm.startColor = cm.startColor = new ParticleSystem.MinMaxGradient(Color.black, Color.white);
+                var ep = new ParticleSystem.EmitParams { startSize = .625f };
+                if (external) { limited.Emit(ep, 129); complete.Emit(ep, 129); }
+                else { limited.Emit(129); complete.Emit(129); }
+                var first = Read(limited)[0]; var expected = Read(complete)[0];
+                Assert.Equal(expected.randomSeed, first.randomSeed);
+                Assert.Equal(expected.startLifetime, first.startLifetime);
+                Assert.Equal(expected.startColor, first.startColor);
+                limited.Clear(false); complete.Clear(false);
+                lm.maxParticles = 4;
+                limited.Emit(4); complete.Emit(4);
+                var actual = Read(limited); var next = Read(complete);
+                for (int lane = 0; lane < 4; lane++) Assert.Equal(next[lane].randomSeed, actual[lane].randomSeed);
+            }
+            finally { Object.DestroyImmediate(limited.gameObject); Object.DestroyImmediate(complete.gameObject); }
+        }
     }
 }
