@@ -301,7 +301,7 @@ namespace Unbound.Runtime
 
         internal static ReadbackFormat Of(GraphicsFormat format) => format switch
         {
-            GraphicsFormats.Texture2DAlpha8 => A8,
+            GraphicsFormatUtility.Texture2DAlpha8 => A8,
             GraphicsFormat.R8G8B8A8_UNorm or GraphicsFormat.R8G8B8A8_SRGB => Rgba8,
             GraphicsFormat.B8G8R8A8_UNorm or GraphicsFormat.B8G8R8A8_SRGB => Bgra8,
             GraphicsFormat.R8G8B8_UNorm or GraphicsFormat.R8G8B8_SRGB => Rgb8,
