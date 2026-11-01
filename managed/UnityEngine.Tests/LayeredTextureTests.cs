@@ -38,13 +38,18 @@ namespace UnityEngine.Tests
             colors[(1 * 3 + 2) * 4 + 1] = new Color(0.3f, 0.6f, 0.9f, 0.5f);
             expected.SetPixels(colors);
             Assert.Equal(expected.GetPixels(), level);
+            // GetPixel reads a byte b as b / 255, GetPixels as b * (1 / 255)
+            // (tests/projects/texturepixels Volume*.pixel); float formats agree.
+            bool bytes = format is TextureFormat.RGBA32 or TextureFormat.BGRA32 or TextureFormat.R8;
+            Color Read(Color c) => bytes ? (Color)new Color32((byte)Mathf.Round(c.r * 255), (byte)Mathf.Round(c.g * 255), (byte)Mathf.Round(c.b * 255), (byte)Mathf.Round(c.a * 255)) : c;
             for (int z = 0; z < 2; z++)
                 for (int y = 0; y < 3; y++)
                     for (int x = 0; x < 4; x++)
-                        Assert.Equal(level[(z * 3 + y) * 4 + x], volume.GetPixel(x, y, z));
-            Assert.Equal(level[(1 * 3 + 2) * 4 + 3], volume.GetPixel(9, 7, 5)); // clamped
+                        Assert.Equal(Read(level[(z * 3 + y) * 4 + x]), volume.GetPixel(x, y, z));
+            Assert.Equal(Read(level[(1 * 3 + 2) * 4 + 3]), volume.GetPixel(9, 7, 5)); // clamped
+            if (bytes) Assert.Equal(51f / 255f, Read(new Color(51 * (1f / 255f), 0, 0, 0)).r);
             volume.SetPixel(0, 0, 0, Color.green, 1);
-            Assert.Equal(volume.GetPixels(1)[0], volume.GetPixel(0, 0, 0, 1));
+            Assert.Equal(Read(volume.GetPixels(1)[0]), volume.GetPixel(0, 0, 0, 1));
             Object.DestroyImmediate(volume);
             Object.DestroyImmediate(expected);
         }

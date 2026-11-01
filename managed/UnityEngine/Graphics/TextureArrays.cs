@@ -113,7 +113,8 @@ namespace UnityEngine
             return result;
         }
 
-        /// <summary>One texel of a level as <see cref="GetPixels"/> reads it, decoding only its bytes.</summary>
+        /// <summary>One texel of a level, decoding only its bytes: as Texture3D.GetPixel reads it, a
+        /// byte b is b / 255 (not GetPixels' b × (1 / 255); tests/projects/texturepixels).</summary>
         internal Color GetPixel(int image, int mip, int index)
         {
             int size = PixelFormats.Size(Format, 1, 1);
@@ -128,8 +129,7 @@ namespace UnityEngine
             var c = new Color32[1];
             if (Format == TextureFormat.R8) c[0] = new Color32(bytes[0], 255, 255, 255);
             else PixelFormats.Decode(Format, bytes, c);
-            const float scale = 1f / 255f;
-            return new Color(c[0].r * scale, c[0].g * scale, c[0].b * scale, c[0].a * scale);
+            return c[0];
         }
 
         /// <summary>One texel of a level as <see cref="SetPixels"/> stores it, encoding only its bytes.</summary>
