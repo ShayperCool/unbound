@@ -87,8 +87,11 @@ namespace Unbound.Runtime
             foreach (var scene in SceneRegistry.Loaded.ToArray())
                 foreach (var root in scene.Roots.ToArray())
                     if (root != null) Collect(root.m_Transform, components);
-            // As the scenes the Editor reloads for Play mode: their objects wake up, are processed,
-            // then sceneLoaded.
+            // As the scenes the Editor reloads for Play mode: their objects are no prefab instances
+            // any more, wake up, are processed, then sceneLoaded.
+            foreach (var scene in SceneRegistry.Loaded.ToArray())
+                foreach (var root in scene.Roots.ToArray())
+                    if (root != null) Unlink(root.m_Transform);
             Lifecycle.Activate(components);
             foreach (var scene in SceneRegistry.Loaded.ToArray())
                 EditorInitialization.ProcessScene(new Scene(scene.Handle));
@@ -97,6 +100,13 @@ namespace Unbound.Runtime
             PlayerLoopDriver.SendPlayModeStart();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterSceneLoad);
             PlayerLoopDriver.RestartPlayMode();
+        }
+
+        static void Unlink(Transform t)
+        {
+            PrefabLinks.Unlink(t.m_GameObject);
+            foreach (var c in t.m_GameObject.m_Components) PrefabLinks.Unlink(c);
+            foreach (var child in t.m_Children) Unlink(child);
         }
 
         static void Collect(Transform t, List<Component> into)
