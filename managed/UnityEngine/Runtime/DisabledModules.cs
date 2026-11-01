@@ -37,6 +37,29 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Whether <paramref name="type"/> is a class of a disabled module.</summary>
-        internal static bool Contains(Type type) => s_Types.Count != 0 && type.FullName != null && s_Types.Contains(type.FullName);
+        internal static bool Contains(Type type) => type.Assembly == typeof(UnityEngine.Component).Assembly
+            && s_Types.Count != 0 && type.FullName != null && s_Types.Contains(type.FullName);
+
+        /// <summary>Removes disabled engine components before open Edit-mode scenes activate.</summary>
+        internal static void PruneOpenScenes()
+        {
+            if (s_Types.Count == 0) return;
+            foreach (var scene in SceneRegistry.Loaded.ToArray())
+                foreach (var root in scene.Roots.ToArray())
+                    if (root != null) Prune(root.transform);
+        }
+
+        internal static void Prune(UnityEngine.Transform transform)
+        {
+            var go = transform.gameObject;
+            foreach (var component in go.m_Components.ToArray())
+            {
+                if (component == null || !Contains(component.GetType())) continue;
+                UnityEngine.Debug.Log(component.GetType().Name + " component deleted: Component belongs to a disabled built-in package.");
+                UnityEngine.Object.DestroyImmediate(component);
+            }
+            foreach (var child in transform.m_Children.ToArray())
+                if (child != null) Prune(child);
+        }
     }
 }

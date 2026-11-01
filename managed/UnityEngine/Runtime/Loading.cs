@@ -144,7 +144,7 @@ namespace Unbound.Runtime
                         if (!gameObjects.TryGetValue(owner.FileId, out var entry)) continue;
                         var type = ComponentTypeOf(doc, guid);
                         if (type == null) continue;
-                        if (kind == Kind.Scene && DisabledModules.Contains(type))
+                        if (kind == Kind.Scene && EditorSession.IsPlaying && DisabledModules.Contains(type))
                         {
                             deleted[doc.FileId] = type;
                             continue;

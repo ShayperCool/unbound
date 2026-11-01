@@ -64,6 +64,7 @@ namespace Unbound.Runtime
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterAssembliesLoaded);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSplashScreen);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSceneLoad);
+            DisabledModules.PruneOpenScenes();
             // The open scenes play: their objects wake up as a loaded scene's do.
             var components = new List<Component>();
             foreach (var scene in SceneRegistry.Loaded.ToArray())

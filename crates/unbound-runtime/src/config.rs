@@ -265,13 +265,11 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
     }
     // Outside the literal above, which is at json!'s recursion limit.
     config["codeOptimization"] = json!(options.code_optimization.name());
-    // The Editor deletes those modules' components when Play mode loads a scene; opening one in
-    // Edit mode keeps them.
+    // Retain the metadata in Edit mode too: a session may enter Play mode later.
     config["disabledModules"] = json!(
         graph
             .disabled_modules
             .iter()
-            .filter(|_| !options.edit_mode)
             .map(|m| project.install.managed_engine_dir().join(format!("{}.dll", m.assembly)))
             .collect::<Vec<_>>()
     );
