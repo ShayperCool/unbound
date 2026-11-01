@@ -25,17 +25,17 @@ namespace Unbound.Tests
         };
 
         /// <summary>A scene's baked probes as its lighting data gives them, without cells.</summary>
-        static LightProbes Baked(Vector3[] positions, Func<Vector3, float> dc)
+        static LightProbes Baked(Vector3[] positions, Func<Vector3, float> dc) =>
+            LightProbes.FromJson(JsonDocument.Parse(ProbesJson(positions, dc)).RootElement);
+
+        /// <summary>A scene's baked probes as the lighting data reply gives them, without cells.</summary>
+        static string ProbesJson(Vector3[] positions, Func<Vector3, float> dc) => JsonSerializer.Serialize(new
         {
-            var json = JsonSerializer.Serialize(new
-            {
-                positions = positions.SelectMany(p => new[] { p.x, p.y, p.z }),
-                coefficients = positions.SelectMany(p => Enumerable.Range(0, 27).Select(k => k == 0 ? dc(p) : 0f)),
-                hullRays = Array.Empty<float>(),
-                tetrahedra = Array.Empty<object>(),
-            });
-            return LightProbes.FromJson(JsonDocument.Parse(json).RootElement);
-        }
+            positions = positions.SelectMany(p => new[] { p.x, p.y, p.z }),
+            coefficients = positions.SelectMany(p => Enumerable.Range(0, 27).Select(k => k == 0 ? dc(p) : 0f)),
+            hullRays = Array.Empty<float>(),
+            tetrahedra = Array.Empty<object>(),
+        });
 
         [Fact]
         public void ProbeOcclusionIsByShadowMaskChannel()
@@ -350,6 +350,158 @@ namespace Unbound.Tests
             }
         }
 
+        /// <summary>A scene's LightmapSettings document as a scene file has it (no lighting data).</summary>
+        const string LightmapSettingsDocument = @"--- !u!157 &3
+LightmapSettings:
+  m_ObjectHideFlags: 0
+  serializedVersion: 12
+  m_LightingDataAsset: {fileID: 0}
+";
+
+        /// <summary>
+        /// A SceneManager Single load keeps the outgoing active scene active through its
+        /// sceneUnloaded: GetActiveScene there answers it, valid and no longer loaded, and creates
+        /// no untitled scene (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference
+        /// lifecycle.jsonl, branch t3/light-probes-lifecycle-2, commit f8516528, rows 22-23:
+        /// active scene0 in sceneUnloaded, then activeSceneChanged from none). The incoming scene
+        /// is then the only loaded one, so its LightmapSettings (SceneSettings.Apply, the
+        /// production first-scene decision) resets the lighting and its probes (BakedLighting.Read
+        /// of the lighting data reply) become the global ones, without an event. Only reading the
+        /// scene file and the lighting data reply needs the native side; this test supplies them.
+        /// </summary>
+        [Fact]
+        public void SingleLoadKeepsTheOutgoingSceneActiveThroughSceneUnloaded()
+        {
+            var events = new List<string>();
+            var scenes = new Scenes();
+            SceneData mainScene = null;
+            Action need = () => events.Add("needs");
+            Action updated = () => events.Add("updated");
+            UnityEngine.Events.UnityAction<Scene, Scene> changed = (a, b) => events.Add($"activeSceneChanged {a.name} {b.name}");
+            UnityEngine.Events.UnityAction<Scene> unloaded = s =>
+            {
+                var active = SceneManager.GetActiveScene();
+                events.Add($"sceneUnloaded {s.name}: active {active.name} same {active == new Scene(mainScene.Handle)}"
+                    + $" valid {active.IsValid()} loaded {active.isLoaded} | untitled {SceneRegistry.Loaded.Exists(x => x.Name == "")}");
+            };
+            try
+            {
+                LightmapSettings.Reset();
+                mainScene = scenes.Loaded("Main");
+                var main = Tetrahedralized(MainBox, 1f);
+                LightProbes.SceneLoaded(mainScene.Handle.Value, main);
+                LightProbes.Tetrahedralize();
+                var extraScene = scenes.Loading("Extra");
+
+                LightProbes.needsRetetrahedralization += need;
+                LightProbes.lightProbesUpdated += updated;
+                SceneManager.activeSceneChanged += changed;
+                SceneManager.sceneUnloaded += unloaded;
+                SceneManagerInternal.UnloadForSingleLoad(extraScene, sceneManagerLoad: true);
+
+                Assert.Equal(new[] { "sceneUnloaded Main: active Main same True valid True loaded False | untitled False" }, events);
+                // Cleared after the handlers, before the incoming scene is activated; no untitled scene.
+                Assert.Null(SceneRegistry.Active);
+                Assert.Empty(SceneRegistry.Loaded);
+                Assert.False(new Scene(mainScene.Handle).IsValid());
+
+                // SceneManagerInternal.Perform then adds the incoming scene and reads its file.
+                SceneRegistry.Loaded.Add(extraScene);
+                extraScene.IsLoaded = true;
+                SceneSettings.Apply(UnityYaml.Parse(LightmapSettingsDocument)[0], null, extraScene);
+                Assert.Null(LightmapSettings.lightProbes);
+                var reply = JsonDocument.Parse($"{{\"probes\": {ProbesJson(Box, _ => 2f)}}}").RootElement;
+                BakedLighting.Read(reply, null, extraScene.Handle.Value);
+
+                var extra = LightmapSettings.lightProbes;
+                Assert.NotNull(extra);
+                Assert.NotSame(main, extra);
+                Assert.Same(extra, LightProbes.GetSharedLightProbesForScene(new Scene(extraScene.Handle)));
+                Assert.Equal((8, 8), (extra.count, extra.countSelf));
+                Assert.Equal(extra.cellCountSelf, extra.cellCount);
+                LightProbes.Tetrahedralize();
+                Assert.Same(extra, LightmapSettings.lightProbes);
+                Assert.Equal((8, 8), (extra.count, extra.countSelf));
+                Assert.Equal(extra.cellCountSelf, extra.cellCount);
+                Assert.Single(events);
+            }
+            finally
+            {
+                LightProbes.needsRetetrahedralization -= need;
+                LightProbes.lightProbesUpdated -= updated;
+                SceneManager.activeSceneChanged -= changed;
+                SceneManager.sceneUnloaded -= unloaded;
+                LightmapSettings.Reset();
+                scenes.Dispose();
+            }
+        }
+
+        /// <summary>The outgoing scene stays active only while no handler chose another: a scene a
+        /// sceneUnloaded handler made active is kept. (Unity is not measured for this; it pins that
+        /// the cleanup does not override a handler's choice.)</summary>
+        [Fact]
+        public void SingleLoadKeepsAnActiveSceneAHandlerChose()
+        {
+            var events = new List<string>();
+            var scenes = new Scenes();
+            Scene made = default;
+            UnityEngine.Events.UnityAction<Scene, Scene> changed = (a, b) => events.Add($"activeSceneChanged {a.name} {b.name}");
+            UnityEngine.Events.UnityAction<Scene> unloaded = s =>
+            {
+                made = SceneManager.CreateScene("Made");
+                SceneManager.SetActiveScene(made);
+                events.Add($"sceneUnloaded {s.name}: active {SceneManager.GetActiveScene().name}");
+            };
+            try
+            {
+                LightmapSettings.Reset();
+                var mainScene = scenes.Loaded("Main");
+                var incoming = scenes.Loading("Extra");
+                SceneManager.activeSceneChanged += changed;
+                SceneManager.sceneUnloaded += unloaded;
+                SceneManagerInternal.UnloadForSingleLoad(incoming, sceneManagerLoad: true);
+                Assert.Equal(new[] { "activeSceneChanged Main Made", "sceneUnloaded Main: active Made" }, events);
+                Assert.Same(made.Data, SceneRegistry.Active);
+                Assert.Equal(new[] { made.Data }, SceneRegistry.Loaded);
+                Assert.False(new Scene(mainScene.Handle).IsValid());
+            }
+            finally
+            {
+                SceneManager.activeSceneChanged -= changed;
+                SceneManager.sceneUnloaded -= unloaded;
+                if (made.Data != null) SceneRegistry.Forget(made.Data);
+                LightmapSettings.Reset();
+                scenes.Dispose();
+            }
+        }
+
+        /// <summary>A sceneUnloaded handler that throws still leaves no outgoing scene active; the
+        /// exception and the unforgotten scene are as before the active scene was kept.</summary>
+        [Fact]
+        public void SingleLoadClearsTheKeptActiveSceneWhenAHandlerThrows()
+        {
+            var scenes = new Scenes();
+            UnityEngine.Events.UnityAction<Scene> unloaded = s => throw new InvalidOperationException("handler");
+            try
+            {
+                LightmapSettings.Reset();
+                var mainScene = scenes.Loaded("Main");
+                var incoming = scenes.Loading("Extra");
+                SceneManager.sceneUnloaded += unloaded;
+                Assert.Throws<InvalidOperationException>(() => SceneManagerInternal.UnloadForSingleLoad(incoming, sceneManagerLoad: true));
+                Assert.Null(SceneRegistry.Active);
+                Assert.Empty(SceneRegistry.Loaded);
+                Assert.Same(mainScene, SceneRegistry.Get(mainScene.Handle));
+                Assert.False(mainScene.IsLoaded);
+            }
+            finally
+            {
+                SceneManager.sceneUnloaded -= unloaded;
+                LightmapSettings.Reset();
+                scenes.Dispose();
+            }
+        }
+
         /// <summary>Single loads that are not SceneManager loads (the Editor's OpenScene, Play
         /// mode entry, AssetBundle scenes) keep Unbound's per-scene unload: needsRetetrahedralization
         /// and the set kept. Unity's behaviour there is not measured; this pins the boundary of
@@ -360,7 +512,7 @@ namespace Unbound.Tests
             var events = new List<string>();
             var scenes = new Scenes();
             Action need = () => events.Add("needs");
-            UnityEngine.Events.UnityAction<Scene> unloaded = s => events.Add("sceneUnloaded " + s.name);
+            UnityEngine.Events.UnityAction<Scene> unloaded = s => events.Add($"sceneUnloaded {s.name} active {SceneRegistry.Active?.Name ?? "none"}");
             try
             {
                 LightmapSettings.Reset();
@@ -371,7 +523,7 @@ namespace Unbound.Tests
                 LightProbes.needsRetetrahedralization += need;
                 SceneManager.sceneUnloaded += unloaded;
                 SceneManagerInternal.UnloadForSingleLoad(incoming, sceneManagerLoad: false);
-                Assert.Equal(new[] { "needs", "sceneUnloaded Main" }, events);
+                Assert.Equal(new[] { "needs", "sceneUnloaded Main active none" }, events);
                 Assert.Equal(8, main.count);
                 Assert.Equal(main.cellCountSelf, main.cellCount);
             }
