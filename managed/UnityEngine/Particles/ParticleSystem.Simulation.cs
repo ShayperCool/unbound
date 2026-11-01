@@ -440,7 +440,7 @@ namespace UnityEngine
                 if (index < 0) break;
                 int si = spreadIndex >= 0 ? spreadIndex : k;
                 int sn = spreadIndex >= 0 ? spreadCount : count;
-                if (!InitParticle(ref m_Particles[index], emitter, nt, hasOverrides, ref overrides, si, sn, null) ||
+                if (!InitParticle(ref m_Particles[index], emitter, nt, hasOverrides, ref overrides, si, sn, null, k, count) ||
                     (simulate && !Integrate(ref m_Particles[index], preAge, ref m_Context)))
                     RemoveAt(index);
                 else StartTrail(ref m_Particles[index]);
@@ -459,40 +459,42 @@ namespace UnityEngine
 
         /// <summary>A new particle with the main and shape modules' start values. `origin` (world)
         /// replaces the emitter's position (sub-emitters emit from their parent particle).</summary>
-        bool InitParticle(ref Particle p, Matrix4x4 emitter, float nt, bool hasOverrides, ref EmitParams o, int spreadIndex, int spreadCount, Vector3? origin)
+        bool InitParticle(ref Particle p, Matrix4x4 emitter, float nt, bool hasOverrides, ref EmitParams o, int spreadIndex, int spreadCount, Vector3? origin,
+            int initializationIndex, int initializationCount, Vector3? inheritedAxis = null)
         {
-            uint seed = hasOverrides && o.m_RandomSeedSet ? o.m_Particle.m_RandomSeed : NextUInt();
+            var samples = InitialSamplesAt(initializationIndex, initializationCount, hasOverrides, ref o);
+            uint seed = samples.seed;
             var M = m_Main;
 
             var noiseSum = p.m_NoiseSum;
             p = default;
             p.m_NoiseSum = noiseSum;
             p.m_RandomSeed = seed;
-            float lifetime = M.startLifetime.Evaluate(nt, R.Value(seed, R.Lifetime));
+            float lifetime = M.startLifetime.Evaluate(nt, samples.lifetime);
             if (m_LifetimeByEmitterSpeed.enabled)
             {
                 var range = m_LifetimeByEmitterSpeed.range;
                 float s = Mathf.InverseLerp(range.x, range.y, m_EmitterVelocity.magnitude);
                 lifetime *= m_LifetimeByEmitterSpeed.curve.Evaluate(s, R.Value(seed, R.Inherit + 100));
             }
-            float speed = M.startSpeed.Evaluate(m_SpeedNt >= 0f ? m_SpeedNt : nt, R.Value(seed, R.Speed));
+            float speed = M.startSpeed.Evaluate(m_SpeedNt >= 0f ? m_SpeedNt : nt, InitialSeedValue(seed, 2527743459u));
             Vector3 size;
             if (M.startSize3D)
-                size = new Vector3(M.startSizeX.Evaluate(nt, R.Value(seed, R.SizeX)), M.startSizeY.Evaluate(nt, R.Value(seed, R.SizeY)), M.startSizeZ.Evaluate(nt, R.Value(seed, R.SizeZ)));
+                size = new Vector3(M.startSizeX.Evaluate(nt, samples.sizeX), M.startSizeY.Evaluate(nt, samples.sizeY), M.startSizeZ.Evaluate(nt, samples.sizeZ));
             else
             {
-                float s = M.startSizeX.Evaluate(nt, R.Value(seed, R.SizeX));
+                float s = M.startSizeX.Evaluate(nt, samples.sizeX);
                 size = new Vector3(s, s, s);
             }
             Vector3 rotation = M.startRotation3D
-                ? new Vector3(M.startRotationX.Evaluate(nt, R.Value(seed, R.RotX)), M.startRotationY.Evaluate(nt, R.Value(seed, R.RotY)), M.startRotationZ.Evaluate(nt, R.Value(seed, R.RotZ)))
-                : new Vector3(0f, 0f, M.startRotationZ.Evaluate(nt, R.Value(seed, R.RotZ)));
-            if (M.flipRotation > 0f && R.Value(seed, R.Flip) < M.flipRotation)
+                ? new Vector3(M.startRotationX.Evaluate(nt, samples.rotationX), M.startRotationY.Evaluate(nt, samples.rotationY), M.startRotationZ.Evaluate(nt, samples.rotationZ))
+                : new Vector3(0f, 0f, M.startRotationZ.Evaluate(nt, samples.rotationZ));
+            if (M.flipRotation > 0f && InitialSeedValue(seed, 4281053604u) < M.flipRotation)
             {
                 rotation = -rotation;
                 p.m_Flags |= Particle.FlagFlipRotation;
             }
-            var color = M.startColor.Evaluate(nt, R.Value(seed, R.Color));
+            var color = M.startColor.Evaluate(nt, samples.color);
 
             SampleShape(spreadIndex, spreadCount, out var pos, out var dir);
             var shapeOffset = pos;
@@ -545,7 +547,11 @@ namespace UnityEngine
                 if (o.m_StartSizeSet) size = o.m_Particle.m_StartSize;
                 if (o.m_RotationSet) rotation = o.m_Particle.m_Rotation;
                 if (o.m_AngularVelocitySet) p.m_AngularVelocity = o.m_Particle.m_AngularVelocity;
-                if (o.m_AxisOfRotationSet) p.m_AxisOfRotation = o.m_Particle.m_AxisOfRotation;
+                if (o.m_AxisOfRotationSet)
+                {
+                    MaterializeAxisOfRotation();
+                    p.m_AxisOfRotation = o.m_Particle.m_AxisOfRotation;
+                }
                 if (o.m_StartColorSet) color = o.m_Particle.m_StartColor;
                 if (o.m_MeshIndexSet)
                 {
@@ -553,7 +559,7 @@ namespace UnityEngine
                     p.m_Flags |= Particle.FlagMeshIndexSet;
                 }
             }
-            if (!(hasOverrides && o.m_AxisOfRotationSet)) p.m_AxisOfRotation = Vector3.forward;
+            if (!(hasOverrides && o.m_AxisOfRotationSet)) p.m_AxisOfRotation = inheritedAxis ?? Vector3.forward;
 
             p.m_Position = pos;
             p.m_Velocity = velocity;
@@ -1137,7 +1143,8 @@ namespace UnityEngine
                 int index = Allocate();
                 if (index < 0) return;
                 ref var p = ref m_Particles[index];
-                if (!InitParticle(ref p, emitter, Mathf.Clamp01(m_Time / Mathf.Max(m_Main.duration, 0.0001f)), false, ref none, k, count, origin))
+                if (!InitParticle(ref p, emitter, Mathf.Clamp01(m_Time / Mathf.Max(m_Main.duration, 0.0001f)), false, ref none, k, count, origin,
+                    k, count, (properties & ParticleSystemSubEmitterProperties.InheritRotation) != 0 ? parent.m_AxisOfRotation : null))
                 {
                     RemoveAt(index);
                     continue;
