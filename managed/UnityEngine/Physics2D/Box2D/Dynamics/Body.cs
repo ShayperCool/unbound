@@ -193,6 +193,8 @@ namespace Unbound.Box2D.Dynamics
         /// </summary>
         internal int IslandIndex;
 
+        internal int SolverStorageIndex = -1;
+
         /// <summary>
         /// 链表节点物体
         /// </summary>
@@ -356,6 +358,7 @@ namespace Unbound.Box2D.Dynamics
                     return;
                 }
 
+                _world.UpdateSolverBodyType(this, value);
                 _type = value;
 
                 ResetMassData();
