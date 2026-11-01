@@ -2282,3 +2282,24 @@ tests pass; API checking has zero errors in 2,290 types and affected generated
 modules match regeneration. No new Editor captures or unrelated physics, audio
 or full rendering suites were needed. Known texture gaps and the separate
 humanoid IK integration blocker remain open.
+
+## Texture W wrapping Root integration, 2026-11-01
+
+NativeApi 14 is integrated with render protocol 6, shader cache 16, PhysX shim 9
+and texture cache 13. The five sampler values are filter, U, V, W and anisotropy;
+the existing shared texture generation and bind-group invalidation are retained.
+The Root build uses identical Core DLL bytes for the full managed test run and
+the packaged runtime: 1,289/1,300 tests pass, the same eleven failures remain,
+and none are introduced. Runtime 50 and app 20 Rust tests pass. API checking has
+zero errors in 2,290 types and the affected generated modules match regeneration.
+
+The two Native live-W repeats match the published reference in each color
+profile, retaining all 300 previous records and adding eleven controls. Root's
+matching runtime passes all eleven live changes and reuploads in both profiles;
+their complete pixel unions retain 146 Gamma and 148 Linear differences with
+no introductions or newly missing values. The Gamma array replay resolves both
+W samples and retains only the 36 imported cubemap raw-read differences. All
+seven sampler RPC guards pass, including rejection of the obsolete four-value
+request. Broader source-identical delivery results were reused; no new Editor,
+full physics, audio or full-rendering runs were needed. Other sampler W policies
+and the separate humanoid IK blocker remain outside this acceptance.
