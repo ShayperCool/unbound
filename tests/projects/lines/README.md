@@ -193,4 +193,37 @@ writes nothing under Reference/ and leaves the refused append refused.
   --release 6000.0.71f1 --label cap-count-20261101-t3-ce24a7cc --out ~/.cache/unbound/validation/runs/capcount-layout
 ```
 
+### Cap-count control file
+
+Root approved one separate control file, `Reference/unity-R/capcount.values.jsonl`,
+holding only the 16 predeclared `capcount.*` rows (eight cases, `inputs` and `mesh`
+each). It is not another oracle of the old records: `values.jsonl` and its nine
+images stay byte-unchanged, and `run.py publish --append` stays refused.
+`capcount_layout.py publish` repeats every prepare check, binds both repeats'
+recorded pre-launch probe inputs to this checkout's probe files, accepts only the
+known order change (`complete` moved last, the records after it shifted by one),
+extracts the rows from each repeat independently, requires them byte-identical and
+equal to the predeclared keys, and creates the file exclusively and atomically.
+A refusal or an existing file leaves `Reference/` unchanged.
+
+`compare.py --mode capcount` and `capcount_layout.load_reference(dir, 'capcount')`
+read both files of the selected release directory. They verify the control file
+(predeclared keys in order, disjoint from `values.jsonl`) and keep every record:
+missing, extra and failing keys stay in the report. `--mode canonical` (the
+default) reads `values.jsonl` alone, as before.
+
+Limitation: the cap-count trails are manual and non-emitting, so every point is
+hidden and their effective width is zero. Their fan indices are valid topology
+observations, but a nonzero cap-two TransformZ trail displacement is still an
+inference, not a measurement. No further control case or frame adds that coverage.
+
+```sh
+~/.cache/compat/with-heavy-job --kind tool python3 tests/projects/lines/capcount_layout.py publish \
+  --release 6000.0.71f1 --label cap-count-20261101-t3-ce24a7cc \
+  --receipt ~/.cache/unbound/validation/runs/capcount-publish/receipt.json
+python3 tests/projects/lines/capcount_layout.py verify --release 6000.0.71f1
+python3 tests/projects/lines/compare.py tests/projects/lines/Reference/unity-6000.0.71f1 CAPTURE --mode capcount
+python3 -m unittest tests/projects/lines/test_capcount_layout.py tests/projects/lines/test_run.py
+```
+
 Receipt: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-corner-alpha-20261101-t3-dae2fa72/REPORT.md`.
