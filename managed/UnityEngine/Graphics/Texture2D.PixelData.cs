@@ -26,12 +26,15 @@ namespace UnityEngine
             EnterStore();
             int size = UnsafeUtility.SizeOf<T>();
             var array = NativeArrayUnsafeUtility.ConvertExistingDataToNativeArray<T>(
-                (byte*)m_StorePin.AddrOfPinnedObject() + m_StoreOffsets[mipLevel], RawMipSize(mipLevel) / size, Allocator.None);
+                (byte*)m_StorePin.AddrOfPinnedObject() + m_StoreOffsets[mipLevel], (m_StoreOffsets[mipLevel + 1] - m_StoreOffsets[mipLevel]) / size, Allocator.None);
             NativeArrayUnsafeUtility.SetAtomicSafetyHandle(ref array, m_StoreSafety);
             return array;
         }
 
         int TexelBytes => Texture2DTexels.TexelBytes(m_Format);
+
+        void CheckStoreRead() { if (m_Store != null) AtomicSafetyHandle.CheckReadAndThrow(m_StoreSafety); }
+        void CheckStoreWrite() { if (m_Store != null) AtomicSafetyHandle.CheckWriteAndThrow(m_StoreSafety); }
 
         Span<byte> StoreTexel(int mip, int i) => new Span<byte>(m_Store, m_StoreOffsets[mip] + i * TexelBytes, TexelBytes);
 
@@ -54,6 +57,7 @@ namespace UnityEngine
         void SyncFromStore()
         {
             if (m_Store == null) return;
+            CheckStoreRead();
             var store = m_Store;
             m_Store = null;
             try
@@ -70,17 +74,39 @@ namespace UnityEngine
         /// <summary>Back to the cells: views of the store end.</summary>
         void LeaveStore()
         {
+            if (m_Store == null) return;
+            TexturePixelStore.Complete(m_StoreSafety);
             SyncFromStore();
             ReleaseStore();
         }
 
         void ReleaseStore()
         {
-            if (m_StoreSafety.versionNode != IntPtr.Zero) AtomicSafetyHandle.Release(m_StoreSafety);
-            m_StoreSafety = default;
-            if (m_StorePin.IsAllocated) m_StorePin.Free();
+            TexturePixelStore.Release(ref m_StoreSafety, ref m_StorePin);
             m_Store = null;
             m_StoreOffsets = null;
+        }
+    }
+}
+
+namespace Unbound.Runtime
+{
+    internal static class TexturePixelStore
+    {
+        internal static void Complete(AtomicSafetyHandle safety)
+        {
+            if (safety.versionNode == IntPtr.Zero) return;
+            if (Jobs.JobSystem.IsExecutingJob)
+                throw new InvalidOperationException("Texture pixel storage cannot be reclaimed from a job.");
+            AtomicSafetyHandle.EnforceAllBufferJobsHaveCompleted(safety);
+        }
+
+        internal static void Release(ref AtomicSafetyHandle safety, ref GCHandle pin)
+        {
+            Complete(safety);
+            if (safety.versionNode != IntPtr.Zero) AtomicSafetyHandle.Release(safety);
+            safety = default;
+            if (pin.IsAllocated) pin.Free();
         }
     }
 }

@@ -294,9 +294,7 @@ namespace UnityEngine
 
         internal void Release()
         {
-            if (m_Safety.versionNode != IntPtr.Zero) AtomicSafetyHandle.Release(m_Safety);
-            m_Safety = default;
-            if (m_Pinned.IsAllocated) m_Pinned.Free();
+            TexturePixelStore.Release(ref m_Safety, ref m_Pinned);
         }
     }
 

@@ -46,18 +46,28 @@ namespace UnityEngine
         }
 
         /// <summary>A texel's cell (byte formats), from the store while a pixel data view exists.</summary>
-        Color32 Cell(int mip, int i) => m_Store != null ? Texture2DTexels.DecodeCell(m_Format, StoreTexel(mip, i)) : ByteLevel(mip)[i];
+        Color32 Cell(int mip, int i)
+        {
+            CheckStoreRead();
+            return m_Store != null ? Texture2DTexels.DecodeCell(m_Format, StoreTexel(mip, i)) : ByteLevel(mip)[i];
+        }
         /// <summary>A texel's cell (R16 and float formats).</summary>
-        Color FloatCell(int mip, int i) => m_Store != null ? Texture2DTexels.DecodeFloatCell(m_Format, StoreTexel(mip, i)) : FloatLevel(mip)[i];
+        Color FloatCell(int mip, int i)
+        {
+            CheckStoreRead();
+            return m_Store != null ? Texture2DTexels.DecodeFloatCell(m_Format, StoreTexel(mip, i)) : FloatLevel(mip)[i];
+        }
 
         void SetCell(int mip, int i, Color32 cell)
         {
+            CheckStoreWrite();
             if (m_Store != null) Texture2DTexels.EncodeCell(m_Format, cell, StoreTexel(mip, i));
             else ByteLevel(mip)[i] = cell;
         }
 
         void SetFloatCell(int mip, int i, Color cell)
         {
+            CheckStoreWrite();
             if (m_Store != null) Texture2DTexels.EncodeFloatCell(m_Format, cell, StoreTexel(mip, i));
             else FloatLevel(mip)[i] = cell;
         }
@@ -266,6 +276,7 @@ namespace UnityEngine
             int size = RawMipSize(mip);
             if (m_Store != null)
             {
+                CheckStoreWrite();
                 data.Slice(0, size).CopyTo(new Span<byte>(m_Store, m_StoreOffsets[mip], size));
                 return;
             }
@@ -293,6 +304,7 @@ namespace UnityEngine
         /// <summary>A level as bytes in the texture's format.</summary>
         byte[] EncodeLevel(int mip)
         {
+            CheckStoreRead();
             int size = RawMipSize(mip);
             if (m_Store != null) return new ReadOnlySpan<byte>(m_Store, m_StoreOffsets[mip], size).ToArray();
             int n = TexelBytes, texels = MipWidth(mip) * MipHeight(mip);

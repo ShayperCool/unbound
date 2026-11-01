@@ -348,6 +348,8 @@ namespace Unbound.Runtime
                 if (glyph.HasPixels && !glyph.Placed) pending.Add(glyph);
             }
             if (pending.Count == 0) return false;
+            // Engine glyph writes take back the cells before changing pixels or atlas size.
+            Texture.EnsurePixels();
             pending.Sort(ByHeight);
             int placed = 0;
             for (; placed < pending.Count; placed++)
@@ -372,6 +374,7 @@ namespace Unbound.Runtime
 
         void Rebuild(List<AtlasGlyph> pending, HashSet<GlyphKey> requested)
         {
+            Texture.EnsurePixels();
             var all = new List<AtlasGlyph>(m_Placed);
             all.AddRange(pending);
             all.Sort(ByHeight);

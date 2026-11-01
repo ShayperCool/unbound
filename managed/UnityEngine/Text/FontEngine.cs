@@ -431,6 +431,7 @@ namespace UnityEngine.TextCore.LowLevel
         internal static void ResetAtlasTexture(Texture2D texture)
         {
             if (texture == null) return;
+            texture.EnsurePixels();
             texture.m_Pixels = new Color32[texture.width * texture.height];
             if (texture.format == TextureFormat.Alpha8)
                 for (int i = 0; i < texture.m_Pixels.Length; i++) texture.m_Pixels[i] = new Color32(255, 255, 255, 0);

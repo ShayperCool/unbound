@@ -146,6 +146,7 @@ namespace UnityEngine
 
         Color[] CheckedLevel(CubemapFace face, int mip)
         {
+            CheckStoreRead();
             if (m_Readable && m_Pixels == null && m_AssetGuid != null) FetchImported();
             if (!m_Readable || m_Pixels == null) throw new UnityException($"Texture '{name}' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings.");
             if (face < CubemapFace.PositiveX || face > CubemapFace.NegativeZ) throw new ArgumentException("Invalid cubemap face.", nameof(face));
@@ -157,6 +158,7 @@ namespace UnityEngine
 
         public void SetPixel(CubemapFace face, int x, int y, Color color, int mip)
         {
+            CheckStoreWrite();
             var level = CheckedLevel(face, mip);
             int s = Math.Max(1, m_Width >> mip);
             if (x < 0 || y < 0 || x >= s || y >= s) return;
@@ -182,6 +184,7 @@ namespace UnityEngine
 
         public void SetPixels(Color[] colors, CubemapFace face, int miplevel)
         {
+            CheckStoreWrite();
             var level = CheckedLevel(face, miplevel);
             if (colors == null || colors.Length != level.Length) throw new ArgumentException("Array size must match the mip level's size.", nameof(colors));
             for (int i = 0; i < level.Length; i++) level[i] = PixelFormats.QuantizeFloat(m_Format, colors[i]);
@@ -197,6 +200,9 @@ namespace UnityEngine
         int[] m_StoreOffsets;
         GCHandle m_StorePin;
         AtomicSafetyHandle m_StoreSafety;
+
+        void CheckStoreRead() { if (m_Store != null) AtomicSafetyHandle.CheckReadAndThrow(m_StoreSafety); }
+        void CheckStoreWrite() { if (m_Store != null) AtomicSafetyHandle.CheckWriteAndThrow(m_StoreSafety); }
 
         int TexelBytes => PixelFormats.Size(m_Format, 1, 1);
         int LevelBytes(int mip) => PixelFormats.Size(m_Format, Math.Max(1, m_Width >> mip), Math.Max(1, m_Width >> mip));
@@ -260,9 +266,7 @@ namespace UnityEngine
 
         void ReleaseStore()
         {
-            if (m_StoreSafety.versionNode != IntPtr.Zero) AtomicSafetyHandle.Release(m_StoreSafety);
-            m_StoreSafety = default;
-            if (m_StorePin.IsAllocated) m_StorePin.Free();
+            TexturePixelStore.Release(ref m_StoreSafety, ref m_StorePin);
             m_Store = null;
             m_StoreOffsets = null;
         }
@@ -275,6 +279,7 @@ namespace UnityEngine
 
         public void Apply(bool updateMipmaps, bool makeNoLongerReadable)
         {
+            if (updateMipmaps) CheckStoreWrite(); else CheckStoreRead();
             if (!m_Readable) throw new UnityException($"Texture '{name}' is not readable.");
             if (m_Pixels == null && m_AssetGuid != null) FetchImported();
             if (m_Pixels == null) throw new UnityException($"Texture '{name}' is not readable.");
