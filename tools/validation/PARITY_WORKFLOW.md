@@ -4,6 +4,12 @@ Read this file in every new parity implementation or review brief, together with
 AGENTS.md and the current validation README. Assign one owner to each shared path.
 Keep a bounded control and a clear stopping condition in each task.
 
+Use [CHILD_BRIEF.md](CHILD_BRIEF.md) for a new task. Keep a queue of delivered
+packages with their source, evidence and next action. Once three packages await
+review/integration, assign free workers to review, conflict resolution or matching
+validation instead of opening more feature branches. Drain an existing larger
+backlog first. A worker finishing a task does not by itself justify a new feature.
+
 ## Reuse and acceptance
 
 Reuse a child's completed gate when the integrated runtime's complete recursive
@@ -45,6 +51,21 @@ instruction and end the turn when it says completion will wake the thread.
 Do not use sleep/until, process polling or repeated status calls to wait for jobs.
 Timed worker fixtures and the runner's lock retry algorithm are separate from
 agent waiting and may use bounded delays.
+
+Finish or cancel background searches/index refreshes before the final response.
+Refresh the index once for the completed source batch, not after every edit.
+Send one final delivery and only material blocker updates. A finished helper with
+no source/result change does not need another agent turn or coordinator message.
+Keep long investigations in bounded source/evidence checkpoints; a new worker
+reads the compact handoff, not the entire retired conversation.
+
+Native probe runners should use tests/editor_runner.py. It keeps the display
+inside the admitted lease, records the initiating driver's process identity,
+and supports a probe-output progress deadline. The progress budget includes
+startup/import before the first write: enable it only with a justified probe
+budget. Ordinary log noise or expected exceptions are not output progress.
+An agent failure can leave its background driver alive, so driver ownership
+alone is insufficient: retain both the hard and progress deadlines.
 
 Never resume a retired coordinator or its children. A fresh coordinator reads a
 compact handoff, saved decisions, branch snapshots and report links before
