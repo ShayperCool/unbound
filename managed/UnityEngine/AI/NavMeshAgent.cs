@@ -544,6 +544,41 @@ namespace Unbound.Runtime
             Place(agent, agent.m_NextPosition);
         }
 
+        /// <summary>A carve changed the NavMesh under agents (measured, tests/projects/navobstacle):
+        /// an agent whose path ran over it stands on the nearest polygon left (moved out of a
+        /// carve onto its edge) and has its path found anew in the same frame, keeping its
+        /// velocity.</summary>
+        internal static void NavMeshCarved(NavWorld.Surface surface)
+        {
+            foreach (var agent in s_Agents)
+            {
+                var ag = agent.m_Crowd;
+                // (A wall boundary over a replaced tile is invalid: the crowd finds it anew.)
+                if (ag == null || agent.m_Surface != surface) continue;
+                var corridor = ag.corridor.GetPath();
+                bool valid = true;
+                for (int i = 0; i < ag.corridor.GetPathCount() && valid; i++) valid = surface.Mesh.IsValidPolyRef(corridor[i]);
+                if (valid) continue;
+                // As far as the crowd places agents (a carve's edge can lie beyond the agent's reach).
+                var reach = NavMesh.AgentExtents(agent.agentTypeID);
+                reach.X = reach.Z = 8f;
+                if (NavMesh.Nearest(surface, NavMesh.V(ag.npos), reach, agent.Filter, out var polyRef, out var point))
+                {
+                    ag.npos = NavMesh.V(point);
+                    agent.m_NextPosition = point;
+                    ag.corridor.Reset(polyRef, ag.npos);
+                    if (agent.updatePosition) WriteTransform(agent);
+                }
+                ag.ncorners = 0;
+                if (!agent.hasPath) continue;
+                var search = NavMesh.PathSearch.Begin(surface, agent.m_NextPosition, agent.RequestedDestination, agent.Filter, agent.agentTypeID);
+                if (search == null) continue;
+                int budget = int.MaxValue;
+                search.Step(ref budget);
+                if (search.Result != null) ApplyPath(agent, search.Result);
+            }
+        }
+
         internal static DtCrowd CrowdOf(NavWorld.Surface surface)
         {
             if (surface == null) return null;

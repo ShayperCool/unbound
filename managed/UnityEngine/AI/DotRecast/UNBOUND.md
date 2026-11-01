@@ -5,6 +5,12 @@ on), by Choi Ikpil, from <https://github.com/ikpil/DotRecast> (main branch, Octo
 zlib licence (`LICENSE.txt`). The projects used are DotRecast.Core, DotRecast.Recast,
 DotRecast.Detour and DotRecast.Detour.Crowd, compiled into the engine.
 
+Carving (`NavMeshObstacle`) does not use DotRecast.Detour.TileCache or DotRecast.Detour.Dynamic:
+both rasterize obstacles into voxel layers, while Unity cuts the baked polygons exactly (the
+carve's corners lie on the obstacle's footprint grown by the agent radius, off the voxel grid;
+`tests/projects/navobstacle`). The engine clips the tiles' polygons itself (`AI/NavCarving.cs`)
+and replaces the touched tiles with `DtNavMesh.RemoveTile`/`AddTile`.
+
 Altered (marked `Unbound:` in the sources):
 
 - every top-level type is `internal` (it is not Unity API);

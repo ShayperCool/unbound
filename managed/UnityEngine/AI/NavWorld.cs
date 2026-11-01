@@ -44,6 +44,8 @@ namespace Unbound.Runtime
             internal DtNavMeshQuery Query;
             /// <summary>Off-mesh connection polygons by link id.</summary>
             internal readonly Dictionary<long, int> LinkOfPoly = new Dictionary<long, int>();
+            /// <summary>Every tile as baked (before carving and links), where it lies.</summary>
+            internal readonly List<(DtMeshData Data, int X, int Y, int Layer)> Sources = new List<(DtMeshData, int, int, int)>();
         }
 
         static readonly List<DataInstance> s_Data = new List<DataInstance>();
@@ -145,7 +147,8 @@ namespace Unbound.Runtime
                 }
                 foreach (var tile in instance.Data.m_Tiles)
                 {
-                    var placed = Place(tile, instance.Position, instance.Rotation);
+                    var source = Place(tile, instance.Position, instance.Rotation);
+                    var placed = Carved(surface, source);
                     AddLinks(surface, placed);
                     // Tiles of different data at the same place go on further layers.
                     surface.Mesh.CalcTileLoc(Center(placed.header), out int tx, out int ty);
@@ -155,6 +158,7 @@ namespace Unbound.Runtime
                     while (surface.Mesh.GetTileRefAt(tx, ty, layer) != 0) layer++;
                     placed.header.layer = layer;
                     surface.Mesh.AddTile(placed, 0, 0, out _);
+                    surface.Sources.Add((source, tx, ty, layer));
                 }
             }
             foreach (var surface in s_Surfaces.Values)
@@ -188,6 +192,40 @@ namespace Unbound.Runtime
                     }
                     System.IO.File.WriteAllText(polyDump + "." + surface.AgentTypeID + "." + (s_PolyDumps++) + ".txt", sb.ToString());
                 }
+                IndexLinks(surface);
+            }
+        }
+
+        /// <summary>A copy of a baked tile with the carving obstacles cut out of it.</summary>
+        static DtMeshData Carved(Surface surface, DtMeshData source)
+        {
+            var carved = NavCarving.Carve(source, ObstacleSystem.Hulls(surface), surface.Settings.agentClimb);
+            return ReferenceEquals(carved, source) ? Place(source, Vector3.zero, Quaternion.identity) : carved;
+        }
+
+        /// <summary>The tiles under a region carved anew (the others keep their polygons): each
+        /// replaced tile gets new polygon references.</summary>
+        internal static void Recarve(Surface surface, float minX, float minZ, float maxX, float maxZ)
+        {
+            foreach (var (source, x, y, layer) in surface.Sources)
+            {
+                var h = source.header;
+                if (h.bmax.X < minX || h.bmin.X > maxX || h.bmax.Z < minZ || h.bmin.Z > maxZ) continue;
+                var placed = Carved(surface, source);
+                AddLinks(surface, placed);
+                placed.header.x = x;
+                placed.header.y = y;
+                placed.header.layer = layer;
+                long old = surface.Mesh.GetTileRefAt(x, y, layer);
+                if (old != 0) surface.Mesh.RemoveTile(old);
+                surface.Mesh.AddTile(placed, 0, 0, out _);
+            }
+            IndexLinks(surface);
+        }
+
+        static void IndexLinks(Surface surface)
+        {
+            {
                 surface.LinkOfPoly.Clear();
                 for (int i = 0; i < surface.Mesh.GetMaxTiles(); i++)
                 {
