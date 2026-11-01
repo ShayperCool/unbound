@@ -1,12 +1,15 @@
 # Validation job limits
 
+Parity integration and new child briefs also follow [PARITY_WORKFLOW.md](PARITY_WORKFLOW.md).
+
 `install_job_runner.py` installs the common `~/.cache/compat/with-heavy-job`
 entry point and the user systemd slices. The source policy is `job-limits.json`;
 the previous serial launcher is backed up before replacement.
 
 Admission is by count: at most eight Unity Editors (`-nographics` or graphics),
 four direct `unbound run` engine jobs (`--headless` selects CPU mode), two builds
-(`cargo`, `rustc`, `dotnet build/test/publish/restore/msbuild/pack/format`, also
+(`cargo build/test/check` and other known build verbs, `rustc`,
+`dotnet build/test/publish/restore/msbuild/pack/format`, also
 behind time, timeout and env; pass `--kind build` for a script that only builds)
 `tool_slots` CPU tools (other `unbound` subcommands such as `compile`, `.NET` tools
 run as `dotnet Tool.dll` such as ApiCheck, or anything passed with `--kind tool`)
@@ -14,6 +17,7 @@ and `gpu_slots` GPU jobs, shared by graphics Editors and non-headless engine run
 Wrap build scripts with `--kind build` and analysis scripts that start no Editor or
 engine run with `--kind tool`: an unrecognized command is an exclusive `heavy` job
 and stops every pool while it runs.
+`cargo run` and unknown Cargo aliases stay exclusive because they can execute an engine.
 A job reserves everything it needs at once, without blocking while it holds any
 of it: a job that cannot get all its slots releases them and retries. A waiting
 job therefore never pins slots and never delays jobs whose own slots are free.
@@ -30,7 +34,8 @@ driver under the launcher if its child commands already use it.
 Memory is not divided into tokens (`memory_tokens` stays 0; the runner still
 accepts weighted one-GiB tokens if a policy sets them). The systemd slices bound
 RAM: `unbound.slice` MemoryHigh 14 GiB / MemoryMax 16 GiB for all pools, the
-engine slice 8 GiB with 4 GiB per engine job, the build slice 7/9 GiB. Swap is
+engine slice 8 GiB with 4 GiB per engine job, the build slice 12/14 GiB with
+7/9 GiB per build job. Swap is
 allowed in all of them, so a peak above the RAM bound swaps instead of being
 killed. All Editor children, import workers and compiler servers count toward the
 Editor slice. Lock descriptors are closed for child commands. At pool idle, only

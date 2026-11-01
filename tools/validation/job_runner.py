@@ -26,7 +26,10 @@ import uuid
 CACHE = Path(os.environ.get('UNBOUND_JOB_RUNNER_STATE') or Path.home()/'.cache/compat')
 CONFIG = CACHE/'job-limits.json'
 TIMINGS = CACHE/'job-timings.jsonl'
-BUILD_TOOLS = {'cargo': None, 'rustc': None,
+BUILD_TOOLS = {'cargo': {'build', 'test', 'check', 'bench', 'clippy', 'doc',
+                         'rustc', 'rustdoc', 'fetch', 'metadata', 'update',
+                         'generate-lockfile', 'clean', 'fix'},
+               'rustc': None,
                'dotnet': {'build', 'test', 'publish', 'restore', 'msbuild', 'pack', 'format'}}
 
 
@@ -191,6 +194,9 @@ def run(command):
 
 
 def clean_idle_compilers(config):
+    # Private test locks cannot establish that the machine-wide pool is idle.
+    if CACHE.resolve() != (Path.home()/'.cache/compat').resolve():
+        return
     # A waiting writer may hold the turnstile: never block on it while exiting.
     try:
         with lock('parity-heavy-entry.lock', fcntl.LOCK_EX|fcntl.LOCK_NB):
