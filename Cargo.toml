@@ -1,6 +1,7 @@
 [workspace]
 resolver = "3"
 members = ["crates/*"]
+exclude = ["vendor/wgpu-sampler/wgpu", "vendor/wgpu-sampler/wgpu-core", "vendor/wgpu-sampler/wgpu-hal"]
 
 [workspace.package]
 version = "0.1.0"
@@ -40,3 +41,9 @@ opt-level = 3
 
 [profile.release]
 debug = "line-tables-only"
+
+# Native sampler LOD bias, retaining the pinned backend ownership and cache.
+[patch.crates-io]
+wgpu = { path = "vendor/wgpu-sampler/wgpu" }
+wgpu-core = { path = "vendor/wgpu-sampler/wgpu-core" }
+wgpu-hal = { path = "vendor/wgpu-sampler/wgpu-hal" }

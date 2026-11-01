@@ -1618,6 +1618,37 @@ images, worst mean 0.57, was 0.83: SpriteMask range images now draw the tight Ci
 1 from 230), urp2d (13 images at 0.00) and twod (same 4 scenarios as the baseline) have no
 regressions. `Sprite.Create` still builds quads.
 
+### Root sprite integration, 2026-10-31
+
+Merged 9f4270d7 and bumped the combined texture importer cache to version 9 in a
+separate commit. Both input branches used version 8 independently; neither branch's
+cached output is valid for their combination. Probe runners now require an explicit
+release and fresh capture label, and the sprite comparator retains the complete
+field and nested-value union outside Git with exact f32 comparisons.
+
+Root independently confirms both Native repeats equal the single canonical reference.
+The combined texture/sprite importer matches 519/520 fields across 52 sprites,
+resolving the separate sprite branch's four downscale fields. At flattened-value
+granularity, 7637/7654 observations pass, 5989 are resolved and none are introduced.
+All 17 retained observations describe the unsupported default physics shape of a
+Polygon-mode sprite. Runtime Sprite.Create Tight geometry remains open.
+
+Asset tests pass 71/71, runtime tests 38/38 and selected managed tests 853/853.
+The same full test assembly gives 1139/1151 before and after, with the same 12
+legacy text/particle failures and zero skips. API-check reports zero errors in
+2279 types; regenerated Core, Physics and Editor modules match. Four resource-mask
+images improve; all other 2025 rendering payload files, including UIToolkit JSON
+and its three PNGs, are byte-identical. Resources retain 539/539 values and 62/62
+passing images, with worst mean improving from 0.83 to 0.57. All three clipping
+profiles, colors and focused cameras pass unchanged. URP 2D retains 13/13 images
+within its published mean limit, worst mean 0.000417; the full 2D value union retains
+the same 22 differences across four scenarios with zero introductions.
+
+The source-correct immutable build input and complete unions are cache-only. Native
+API12, render protocol5, PhysX shim9 and shader cache13 remain unchanged. The next
+input integration changes the capture clock's first frame and fixed unscaled time;
+its physics/audio/particle regressions are a separate validation wave.
+
 ## Ordered input events within a frame
 
 Presses and releases of keys and mouse buttons now reach every input path in the order they
@@ -1651,3 +1682,312 @@ Validation:
 
 Commands and Editor findings: tests/projects/inputframes/README.md. Captures, scratch variants and
 comparisons are in `~/.cache/unbound/validation/runs/inputframes/`.
+
+### Texture import: the Editor's mip, fill and resize arithmetic, 2026-10-31
+
+The remaining texture import differences (65 levels per profile, 33,614/33,614/33,513 bytes in
+Gamma/Linear/Android, 72/72/73 of them correct before the float mip chain) came from the
+importer's arithmetic, not from tolerances. Alpha dilation, mip halving, border mips, coverage
+preservation, per-level processing, the mip fade, bilinear halving and the stb resize were
+modelled against the saved 6000.0.71f1 references until every byte matched:
+
+- Alpha is transparency is a jump flood (4 neighbours at ±k, Manhattan distance, steps
+  min(max(w, h) / 2, 16) down to 1, bottom-up), not an average of neighbours; it runs whenever
+  the format stores alpha. Texels the flood does not reach keep their colour.
+- Preserve coverage bisects the alpha threshold against the level above (stopping within 0.5%)
+  and scales alpha by reference / threshold.
+- Box and Kaiser are float sums in a fixed order; a linear texture's first mip filters its
+  bytes (times 1/255); sRGB uses a float table and float gamma encode; odd levels use
+  16.16 fixed-point bilinear; flip green applies to each level after filtering; the fade is
+  float on the encoded level; normals from height follow a float formula that matches the references.
+- The Mitchell resize is stb_image_resize 0.97 on the bottom-up values (Mitchell to shrink,
+  cubic B-spline otherwise, the Editor's modified Mitchell for float images, row bands per job).
+
+The 72/72/73 regressed bytes were transparency-fill and rounding consequences of the earlier
+approximations; all are now exact. On the merged integration (texture cache VERSION 10):
+textureimport 484/484 levels and 1,172,940/1,172,940 bytes exact in every profile at tolerance
+0, zero introduced bytes. spriteimport stays 519/520 (the open Polygon physics shape); the
+`downscaled` texture's alpha now equals the Editor's pixel dump (16,384/16,384 in the model,
+550 differed before). modelimport Gamma/Linear 6032/6033 and URP 7011/7768 unchanged, zero
+introduced. Asset tests 71/71, runtime tests 38/38; API check zero errors in 2279 types, Physics
+and Editor generated files match. Unmeasured: the HDR resize kernel and band splits whose float
+mapping differs from the whole image's (none of the probe's sizes).
+
+### Root input clock verification, 2026-10-31
+
+Integrated ordered input at e3a7c7c2 and made its runner release-specific and
+write-once at f4cadec2. The source-correct CLI/Core pair passes the existing Native
+comparison at 3785/3786 records, zero extra records and zero time problems. The
+single retained difference is the keyboard DCFG event. Legacy input420 and
+messages316 pass. Playables retains the same two failing scenarios and editorui
+the same expected height-cache difference; both raw captures are byte-identical
+to the previous runtime.
+
+The same 1153-test assembly gives 1139 passes/14 failures against the previous
+Core and 1141 passes/12 failures after integration. Both new input cases pass;
+the nine legacy TextTests and three ParticleSystemTests failures remain, with
+zero introduced failures or skips. Selected tests pass859/859; assets71, runtime39
+and app18 pass. API-check reports zero errors in2279 types; generated Core,
+Physics and Editor modules match.
+
+Clock-sensitive captures use separate private before/after CLI/Core pairs. All
+nine physical and bundle-audio output files are byte-identical: physics defaults,
+broad physics, joints, controller, forces, ray hits, Joint2D, effectors and audio.
+The scene matrix matches5055/5055, including4803 exact and252 original rounding
+observations. Particle lifetime30080, emission13604 and force-field2346 outputs
+are also byte-identical; emission retains its same72 count differences. Noise23646,
+streams3544 and all20 particle/stream PNGs remain unchanged. Broad particles keep
+the same597 failed values, with identical failing values and zero introductions;
+only four already-volatile wall-clock unscaledDeltaTime fields vary in the raw
+capture. No comparison masks or tolerances changed.
+
+The fixed-unscaled-clock relationship is measured at timeScale1; other scales
+remain unmeasured by the input probe. Input artifacts remain frozen in the cache.
+Native API12, render protocol5, PhysX shim9 and shader cache13 remain unchanged.
+The subsequent texture-cache10 build performs the combined rendering replay.
+
+### Texture resize: measured job-worker dependence and HDR, 2026-10-31
+
+The texture import probe now also downscales a soft 512x512 image to 128 rows, a soft 600x360
+image (no NPOT scaling) to 256x154 and a float EXR to 128 rows (RGBAFloat override, probe line as
+raw floats). Two default Editor captures per profile agreed byte for byte and extend the
+published reference (21 lines per profile; the earlier 559 values are unchanged). Captures with
+`-job-worker-count 1` and `3` (honoured per Editor.log) differ from the default only in
+MaxSizeSoftWide: 3, 1 and 1 bytes of mips 0-2 at 1 worker, 1 and 1 byte of mips 0 and 2 at 3.
+The Editor splits resized rows into min(height / 16, workers) stb regions; its default worker
+count is `sysconf(_SC_NPROCESSORS_ONLN)` less one, at least 1, at most 112
+(15 here), not the affinity mask Unbound used. The stb model reproduces each capture only with its
+own count, so Unbound now uses the Editor's count and the texture cache key includes it.
+
+The float case confirmed the Editor's modified Mitchell kernel `(27 m(x) + 2) / 35` (plain
+Mitchell misses about 55k of 65,536 values) and showed that a gamma project gamma-encodes HDR
+colour after the resize; Unbound converted before it and now converts per level after the chain
+(cubemaps keep converting first). Texture cache VERSION 11.
+
+Unbound on the extended reference: 501/502 levels and 1,470,348/1,470,348 byte values exact in
+Gamma, Linear and Android; the float case's line still differs (the runtime reports an imported
+float texture as RGBAHalf, so the line has another format and length), while the importer's floats
+equal the Editor's bit for bit in every profile (unbound-assets test
+`hdr_max_size_resize_matches_the_editor`). Sprite import stays 519/520; asset tests 72/72.
+
+
+### Imported HDR format and combined texture validation, 2026-10-31
+
+Explicit RGBAFloat platform overrides now retain the existing float32 format through
+runtime import descriptors and Texture2D/Cubemap construction. Default and explicit
+RGBAHalf imports keep their previous format. This uses the existing render format
+values; packet layouts, Native API12, render protocol5, PhysX shim9 and shader cache13
+are unchanged. Texture cache11 and its measured worker-count key remain in use.
+
+Root replay against the extended Unity6000.0.71f1 reference passes502/502 mip levels
+and1,732,492/1,732,492 pixel bytes in each of Gamma, Linear and Android. Every complete
+580-record capture is byte-identical to its canonical reference and both independent
+Editor captures. This closes the prior501/502 descriptor/length difference. The
+8-bit Gamma/Linear cases agree; the HDR first level retains its measured project
+color-space difference.
+
+Assets72, runtime39, app18 and selected managed859 tests pass. The same1153-test
+assembly preserves1141 passes and12 inherited failures before/after this format
+change. API-check reports0 errors in2279 types; generated Core, Physics and Editor
+modules match exactly. Combined particle and rendering replays are recorded
+separately; this result certifies the measured texture import matrix.
+
+
+### Particle count integration, 2026-10-31
+
+The measured simulation remainder and per-subdivision emission accumulator are
+integrated with the current texture, input, cloning and animation changes.
+Root's private before/after recordings resolve all72 original count differences:
+the original13604 emission observations and30080 lifetime observations pass.
+Force fields2346, noise23646 and streams3544 pass, all20 particle/stream PNG
+controls remain pixel-identical, and the broad physical capture is byte-identical.
+Broad particles improve1448/1560 to1453/1560 records, resolving38 scalar values
+and retaining559 unchanged failures with zero introductions.
+
+The complete expanded emission reference remains strict at15721/16573 passing
+records and5997 failing scalar values. Missing parent values are expanded when
+comparing every nested leaf, so newly present particle fields are retained in the
+full union rather than hidden. This comparison introduces zero failing leaves.
+Three previously exact lifetime values differ by one float ULP after integration;
+all remain within the unchanged2e-4 lifetime tolerance and are listed separately.
+The375 subdivision position/velocity/lifetime controls remain exact. Expanded
+seed, lifetime and stopped-simulation gaps are still open.
+
+The same1191-test assembly improves1162 to1180 passes:18 failures resolve,
+11 inherited failures remain, zero introductions and skips. API-check reports
+zero errors across2279 types and generated Core, Physics and Editor modules
+match exactly. All run outputs, complete unions and immutable matching-artifact
+manifests stay in the validation cache. Combined rendering replay is separate.
+Native API12, render protocol5, PhysX shim9 and shader cache13 are unchanged.
+
+
+### HDR and count rendering preservation, 2026-10-31
+
+The matched count/HDR runtime at674c8eae completes the unchanged strict checkers
+for graphics, resources, built-in pipelines/effects, three clipping matrices,
+both Canvas color profiles, both focused camera profiles and UI Toolkit.
+All2029 captured payload files are byte-identical to the prior sprite/cloning
+runtime, including every JSON, pixel buffer and PNG. UI Toolkit's three renders
+and11 interactions are unchanged. Existing expected Native differences remain
+in the full reports; no comparison tolerance or mask changed.
+
+This preservation result uses shader cache13. The subsequent sampler14 and its
+new border/cache controls have separate acceptance reports.
+
+### Humanoid avatars and HumanPoseHandler, 2026-10-31
+
+Humanoid avatars are built from a model's hierarchy and the human description its meta carries
+(bone mapping, T-pose skeleton, limits, twist/stretch parameters), or by AvatarBuilder from a
+scene object: the human skeleton, muscle axes per bone, masses, body frame and scale, as the
+Editor computes them. HumanPoseHandler reads and writes poses through muscle space (retargeting
+with limb alignment, twist distribution, fingers). The HumanTrait tables, Avatar and Animator
+humanoid members and AvatarBuilder's validation errors follow. An animated FBX's nodes now rest
+in their pose at time 0, as the Editor imports them.
+
+Validation:
+
+- tests/projects/humanoid: two Editor captures are identical. Unbound matches every avatar,
+  trait, Animator, AvatarBuilder, rest-pose and HumanPoseHandler value (55820/55820 for the
+  handler: the default pose, every muscle alone at -1/1, random and out-of-range poses on both
+  rigs). Clip properties, playback, retargeting in the Animator and the IK pass are next.
+- animator 2236/2236, animatoradditive 1100/1100, bundle animation 8/8; modelimport Gamma and
+  Linear 6032/6033, URP 7011 matching as before. Asset (71) and runtime (39) Rust tests, managed
+  animation tests (32) pass; api-check: zero errors in 2287 hand-written types.
+
+### Humanoid clips, root motion, retargeting and IK, 2026-10-31
+
+A Humanoid model's clips become muscle clips of its avatar when first bound: each frame's
+skeleton pose is read into muscle space as the importer does (root, IK goals, muscles; rotation
+curves kept in one hemisphere, body muscles unwrapped and offset by whole turns, spline slopes).
+Muscle curves, from models and from `.anim` files, drive the Animator's human pose, which is
+retargeted onto the skeleton after the layers are written, so any humanoid clip plays on any
+humanoid avatar. The body's motion becomes root motion (yaw and the full translation for default
+clip settings, loop cycles, the feet pivot), which the importer turns on for humanoid models;
+clip averages follow. Layers with an IK pass send OnAnimatorIK, then the full-body IK solve
+applies the goals, hints, look-at and body position/rotation set there.
+
+Hooks in the generic Animator code: `AnimatorPlayer.Evaluate` calls `Animator.ApplyHumanPose()`
+after `PoseWriter.WriteLayers`; `AnimatorPlayer.ComputeRootMotion` hands humanoid clips to the
+humanoid root motion; `Binding` binds muscle curves to the Animator; layers carry `m_IKPass`.
+OnAnimatorIK runs inside the Animator's evaluation (no player loop change).
+
+Validation:
+
+- tests/projects/humanoid (two identical Editor captures): Unbound matches 120564/120650 values.
+  Avatars, traits, Animator members, AvatarBuilder, HumanPoseHandler, clip properties, playback of
+  both rigs (12238/12238, 7366/7366) and retargeting both ways match fully; the IK pass matches
+  every transform, body and goal value. The 86 remaining values are muscles 41 and 43 (left
+  upper arm and forearm twist) read back from the IK pose with HumanPoseHandler: their sum
+  matches, the split differs by whole steps of the twist alignment's iteration, which the IK
+  pose's last-bit differences flip.
+- animator 2236/2236, animatoradditive 1100/1100, bundle animation 8/8; modelimport Gamma and
+  Linear 6032/6033, URP 7011 matching as before. Asset (71) and runtime (39) Rust tests, managed
+  animation tests (32) pass; api-check: zero errors in 2288 hand-written types.
+
+
+## Automatic sampler property updates (2026-10-31)
+
+- Source `9e8ed0f3` was rebuilt with matching CLI and managed outputs. All seven sampler
+  profiles pass 371166/371166 observations without increasing any previously accepted
+  numeric error. The new cached-material control passes 171/171 and resolves 33 differences,
+  with zero introduced, retained or worsened accepted values. Both independent Unity
+  6000.0.71f1 captures agree, including every earlier control value.
+- Filter, wrap and anisotropy setters submit sampler metadata through the existing JSON
+  control route and share the texture upload generation counter. They preserve dirty CPU
+  mip data until Apply and preserve RenderTexture storage. No packet layout changed;
+  NativeApi12/shim9/shader14 remain in use.
+- Combined asset cloning passes 14332/14340 observations. The 45 clone sampler differences
+  are resolved. Eight inherited source metadata/upload differences remain, and each separate
+  color profile retains four Alpha8 graphics-format differences. Mixed Animator control
+  passes 1100/1100 records and 13200/13200 values.
+- The proposed collapsed-border guard was rejected by two agreeing Unity captures. It
+  introduced 668 failing channels and worsened 674 channels in the added control. Production
+  retains the measured corner behavior; complete rejected comparisons remain in cache.
+- Probe sources, canonical references and commands are in `tests/projects/samplerbias`,
+  `tests/projects/assetclones` and `tests/projects/uitkpixels`. Full unions and build/test/API
+  reports are cache-only. The later humanoid/audio/clock integration requires its own replay.
+
+
+## Combined humanoid, audio, clock and sampler replay (2026-10-31)
+
+Validated production source `5e226544` includes the pinned humanoid stage, mixer filters,
+AudioRenderer safety corrections, exact-duration capture clocks and automatic sampler metadata.
+The matching CLI, Core and actual freshly built PhysX library were copied from this build.
+All 33 runtime artifact hashes remain unchanged after the complete replay. NativeApi12,
+PhysX shim 9 and shader cache 14 remain in use.
+
+- Normal-stub builds pass. Full managed differential: 1208 tests, 1180 old passes preserved,
+  17 resolved, 11 inherited failures retained, zero introduced or skipped. The retained failures
+  are nine Text tests and two ParticleSystem tests. Rust assets 72/runtime 46/app 18 and 33 portable
+  shader tests pass; one inherited private shader fixture remains excluded. Separate no-stubs
+  API verification reports zero errors across 2289 types. Core, Physics, Editor Core, Audio
+  and Animation regenerated modules match the committed generated sources byte for byte.
+- All seven audio profiles pass 11516039 values with the original tolerances, and every capture
+  file is byte-identical to the accepted delivery. Capture registrations are consumed on every
+  render attempt, NativeArray lifetimes are checked before copying, audio callbacks cannot
+  re-enter renderer RPCs, and capture start waits for the device block and clock update.
+  The handoff lock has a concurrency unit test; actual-device recording remains unmeasured.
+- Five independently agreeing startup clock profiles match 120/120 fields exactly and resolve
+  44 prior differences. They include timeAsDouble, timeScale 0.5/1.5, and a three-second capture
+  duration whose integer FPS view is zero. Captured time accumulates whole clock ticks before
+  conversion to public float/double values. Existing fixed-step/unscaled-time behavior is
+  preserved: legacy Input 420/420 and inputframes 3785/3786 retain only the prior DCFG event,
+  with zero extra records or time problems. Messages 316 and Canvas lifecycle 8671 pass.
+- All sampler profiles and cache controls pass 371337/371337 observations without numerically
+  worsening accepted values. One sampler startup failed with Device(Lost) before any capture;
+  a fresh-directory retry passed. The failed attempt remains in cache.
+- The actual current PhysX library passes 11958 records, including matrix 5055/5055 and all
+  force/controller/ray-hit and focused lifecycle gates. Representative audio-import/physics/
+  graphics unions introduce nothing and retain the same 5721/45/0 failures, respectively.
+- Broad particles preserve 1453/1560 records and the same 559 scalar failures. Lifetime 30080,
+  force-field 2346, noise 23646 and streams 3544 pass, and all 20 PNG files are byte-identical.
+  The complete unfiltered before/after report retains four wall-clock changes and one game-time
+  scalar corrected from 0.100000009 to the Native 0.1 value. Every retained failing value is unchanged.
+- Humanoid remains 120564/120650 with the same 86 twist values; mixed layers 1100/1100 pass.
+  All three transition oracles pass (253/831,718/3428,110/132 samples/callbacks). Expanded UI
+  JSON matches exactly; original RGB residuals 22473/22517/30011 and alpha remain unchanged,
+  with zero introduced or worsened channels. All 2029 render payloads are byte-identical to
+  the accepted sampler baseline.
+
+Source probes and canonical release references remain under tests/projects. Complete commands,
+artifact receipts, original failures, fresh retries and full unions are cache-only. The initial
+ad-hoc driver failures are preserved, including missing native test-library packaging and
+incorrect lifecycle runner configuration. No frozen baseline was changed. This closes this
+integration wave, not full engine, rendering, audio-effect or older-release parity.
+
+
+## AudioMixer Echo integration (2026-11-01)
+
+Echo delivery `197656eb` is integrated, with the reviewed allocation correction in production
+source `02e061b5`. Independent Native repeats agree at 48 kHz and 44.1 kHz. The root replay passes
+24379636/24379636 values with unchanged ATOL 2e-5/RTOL 2e-4. All 70 device PCM files are bit-identical
+to the canonical Unity 6000.0.71f1 captures, and every output file is byte-identical to the
+accepted Echo delivery. Complete float delta reports preserve 681966/686797 tolerated patterns
+at the two rates; their maximum absolute difference from Native is 5.820766091346741e-11.
+
+- The persistent stereo delay uses the measured eight-frame quantization and signed 16-bit
+  history, with independent Drymix/Wetmix and feedback Decay. Defaults, finite parameter
+  endpoints, fractional delays, source completion/tails, effect/group bypass, serialized effect
+  order, parent routing, summed voices, attenuation, exposed values and immediate snapshots
+  are covered by the 35-case matrix at both rates.
+- Independent review found a malformed-rate allocation risk. Histories now have an explicit
+  8 MiB backend limit and use fallible allocation. Group configuration and rate resets validate
+  the limit before mutation. Tests reject int.MaxValue sample rates at default and maximum
+  delay and preserve the prior configuration; a subsequent valid reset succeeds. A five-second
+  history at 384 kHz fits the resource budget, without claiming unmeasured rate parity.
+- Both normal-stub and no-stubs builds pass. API verification reports zero errors in 2289 types;
+  all five generated module comparisons are byte-identical. Full managed differential preserves
+  all 1197 prior passing tests and resolves the new Echo configuration test: 1198/1209 pass,
+  with 11 unchanged Text/Particle failures, zero introduced and zero skipped. Rust audio 38,
+  runtime 49, assets 72, app 18 and portable shaders 33 pass; the same private shader fixture is excluded.
+- All 11516039 previously accepted mixerfilter values pass and their files remain byte-identical.
+  The 120 exact capture-clock fields pass. Audio-import/physics/graphics retain 5721/45/0 failures,
+  with zero introduced values or raw changes. The actual built native library matches the
+  prior root library hash; none was replaced with a frozen sibling artifact.
+
+The 33 matching runtime files retain their original hashes after replay. Canonical references
+and portable commands are in tests/projects/mixerecho; full comparisons, numerical deltas,
+review evidence and runtime receipts remain cache-only. Auto-suspend, surround, clipping beyond
+the fixture amplitudes, running-tail changes, timed snapshots and other releases remain outside
+this certification. Global slot wet mixing and other effects remain unsupported. This establishes
+only the measured Echo scope, not complete audio or engine parity.

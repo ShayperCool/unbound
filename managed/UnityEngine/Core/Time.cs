@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using Unity.IntegerTime;
 
 namespace UnityEngine
 {
@@ -23,6 +24,13 @@ namespace UnityEngine
         internal static bool s_InFixedTimeStep;
         internal static double s_TimeSinceLevelLoadStart;
         internal static int s_CaptureFramerate;
+        // Retain the requested float duration independently of its rounded integer FPS view.
+        internal static float s_CaptureDeltaTime;
+        static RationalTime CaptureStep => RationalTime.FromDouble(s_CaptureDeltaTime,
+            RationalTime.TicksPerSecond.DefaultTicksPerSecond);
+        static double CaptureDuration => CaptureStep.ToDouble();
+        internal static long s_CaptureClockTicks;
+        internal static double s_CaptureClockTime;
         /// <summary>The frame's real time, unclamped (audio runs in real time).</summary>
         internal static double s_RealDeltaTime;
 
@@ -90,14 +98,33 @@ namespace UnityEngine
 
         public static int captureFramerate
         {
-            get => s_CaptureFramerate;
-            set => s_CaptureFramerate = value;
+            get => captureDeltaTime == 0f ? 0 : Mathf.RoundToInt(1f / captureDeltaTime);
+            set => captureDeltaTime = value == 0 ? 0f : 1f / value;
         }
 
         public static float captureDeltaTime
         {
-            get => s_CaptureFramerate > 0 ? 1f / s_CaptureFramerate : 0f;
-            set => s_CaptureFramerate = value > 0 ? (int)Math.Round(1f / value) : 0;
+            // Native round trips use the already measured rational-time tick conversion.
+            get => (float)CaptureDuration;
+            set
+            {
+                s_CaptureDeltaTime = value > 0f ? value : 0f;
+                s_CaptureFramerate = captureFramerate;
+            }
+        }
+
+        static void AdvanceCaptureTime()
+        {
+            var rate = RationalTime.TicksPerSecond.DefaultTicksPerSecond;
+            // Capture advances in whole clock ticks. Convert the accumulated clock to public
+            // float/double views after accumulation, rather than accumulating rounded deltas.
+            if (s_Time != s_CaptureClockTime)
+                s_CaptureClockTicks = (long)Math.Round(s_Time * rate.Numerator / rate.Denominator);
+            long deltaTicks = (long)(CaptureStep.Count * (double)s_TimeScale);
+            s_CaptureClockTicks += deltaTicks;
+            s_DeltaTime = (float)new RationalTime(deltaTicks, rate).ToDouble();
+            s_Time = new RationalTime(s_CaptureClockTicks, rate).ToDouble();
+            s_CaptureClockTime = s_Time;
         }
 
         /// <summary>Starts a frame: advances the frame clocks by the real time elapsed.</summary>
@@ -112,9 +139,9 @@ namespace UnityEngine
             s_RealDeltaTime = realDelta;
             // Under a capture rate the game clock steps by the capture delta while the unscaled
             // clock keeps real time (measured: unscaledDeltaTime 0.69 s, deltaTime 0.02).
-            double step = s_CaptureFramerate > 0 ? 1.0 / s_CaptureFramerate : realDelta;
+            double step = s_CaptureDeltaTime > 0f ? CaptureDuration : realDelta;
             float unscaled = (float)Math.Min(step, s_MaximumDeltaTime);
-            if (s_CaptureFramerate > 0) unscaled = (float)step;
+            if (s_CaptureDeltaTime > 0f) unscaled = (float)step;
             if (s_FrameCount == 0)
             {
                 // The first frame steps by the fixed timestep while the clocks stay at 0 (measured:
@@ -125,11 +152,8 @@ namespace UnityEngine
                 // A capture rate set before the first frame (in Awake) steps the game clock from
                 // that frame on (measured, tests/projects/inputframes: captureFramerate 60 in Awake,
                 // the first frame's time and deltaTime 1/60, its fixed step at 0).
-                if (s_CaptureFramerate > 0)
-                {
-                    s_DeltaTime = (float)step * s_TimeScale;
-                    s_Time += s_DeltaTime;
-                }
+                if (s_CaptureDeltaTime > 0f)
+                    AdvanceCaptureTime();
             }
             else
             {
@@ -138,8 +162,13 @@ namespace UnityEngine
                 // load, time 10 s behind).
                 s_UnscaledDeltaTime = (float)realDelta;
                 s_UnscaledTime += realDelta;
-                s_DeltaTime = unscaled * s_TimeScale;
-                s_Time += s_DeltaTime;
+                if (s_CaptureDeltaTime > 0f)
+                    AdvanceCaptureTime();
+                else
+                {
+                    s_DeltaTime = unscaled * s_TimeScale;
+                    s_Time += s_DeltaTime;
+                }
             }
             // smoothDeltaTime starts at 0 in the first frame and at deltaTime in the second (measured).
             s_SmoothDeltaTime = s_FrameCount == 0 ? 0f : s_FrameCount == 1 ? s_DeltaTime : s_SmoothDeltaTime + (s_DeltaTime - s_SmoothDeltaTime) * 0.2f;
@@ -156,6 +185,8 @@ namespace UnityEngine
         {
             s_FixedStarted = false;
             s_Time = s_UnscaledTime = s_FixedTime = s_FixedUnscaledTime = 0;
+            s_CaptureClockTicks = 0;
+            s_CaptureClockTime = 0;
             s_DeltaTime = s_UnscaledDeltaTime = s_SmoothDeltaTime = 0f;
             s_TimeSinceLevelLoadStart = 0;
             s_FrameCount = 0;

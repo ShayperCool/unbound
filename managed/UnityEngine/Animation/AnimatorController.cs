@@ -79,6 +79,7 @@ namespace UnityEngine
                     SyncedLayerIndex = l.Int("m_SyncedLayerIndex", -1),
                     DefaultWeight = l.Float("m_DefaultWeight"),
                     SyncedLayerAffectsTiming = l.Bool("m_SyncedLayerAffectsTiming"),
+                    IKPass = l.Bool("m_IKPass"),
                 };
                 foreach (var pair in l.Get("m_Motions")?.Seq() ?? Array.Empty<YNode>())
                 {
@@ -354,6 +355,8 @@ namespace Unbound.Runtime
         internal int SyncedLayerIndex = -1;
         internal float DefaultWeight;
         internal bool SyncedLayerAffectsTiming;
+        /// <summary>The layer's "IK Pass": OnAnimatorIK and the IK solve run for it (humanoids).</summary>
+        internal bool IKPass;
         internal readonly List<(ControllerStateAsset State, Motion Motion)> SyncedMotions = new List<(ControllerStateAsset, Motion)>();
         internal readonly List<(ControllerStateAsset State, List<StateMachineBehaviour> Behaviours)> SyncedBehaviours = new List<(ControllerStateAsset, List<StateMachineBehaviour>)>();
     }

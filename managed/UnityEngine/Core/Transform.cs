@@ -70,7 +70,7 @@ namespace UnityEngine
             set
             {
                 SyncJobs();
-                m_LocalRotation = value.normalized;
+                m_LocalRotation = NormalizeParentingRotation(value);
                 MarkChanged();
             }
         }
@@ -104,14 +104,16 @@ namespace UnityEngine
             get
             {
                 SyncJobs();
-                if (m_Parent == null) return GetLocalPosition();
-                return m_Parent.localToWorldMatrix.MultiplyPoint3x4(GetLocalPosition());
+                var point = GetLocalPosition();
+                for (var ancestor = m_Parent; ancestor != null; ancestor = ancestor.m_Parent)
+                    point = ancestor.TransformLocalPoint(point);
+                return point;
             }
             set
             {
                 if (!IsFinite(value)) { InvalidValue("position", value); return; }
                 SyncJobs();
-                SetLocalPosition(m_Parent == null ? value : m_Parent.worldToLocalMatrix.MultiplyPoint3x4(value));
+                SetLocalPosition(m_Parent == null ? value : m_Parent.InverseHierarchyPoint(value));
             }
         }
 
@@ -124,7 +126,8 @@ namespace UnityEngine
             }
             set
             {
-                localRotation = m_Parent == null ? value : ReflectRotation(Quaternion.Inverse(m_Parent.rotation) * value, m_Parent.lossyScale);
+                SyncJobs();
+                localRotation = m_Parent == null ? value : m_Parent.InverseHierarchyRotation(value);
             }
         }
 
@@ -141,7 +144,7 @@ namespace UnityEngine
                 EnsureWorld();
                 // The scale left after removing the world rotation from the world matrix.
                 var inverseRotation = Matrix4x4.Rotate(Quaternion.Inverse(m_WorldRotation));
-                var m = inverseRotation * m_LocalToWorld;
+                var m = MultiplyRotationScale(inverseRotation, m_LocalToWorld);
                 return new Vector3(m.m00, m.m11, m.m22);
             }
         }
@@ -155,7 +158,17 @@ namespace UnityEngine
             }
         }
 
-        public Matrix4x4 worldToLocalMatrix => localToWorldMatrix.inverse;
+        public Matrix4x4 worldToLocalMatrix
+        {
+            get
+            {
+                SyncJobs();
+                var inverse = InverseLocalMatrix();
+                for (var ancestor = m_Parent; ancestor != null; ancestor = ancestor.m_Parent)
+                    inverse = MultiplyAffine(inverse, ancestor.InverseLocalMatrix());
+                return inverse;
+            }
+        }
 
         public Vector3 right
         {
@@ -229,17 +242,15 @@ namespace UnityEngine
         {
             SyncJobs();
             if (!m_WorldDirty) return;
-            var local = Matrix4x4.TRS(GetLocalPosition(), m_LocalRotation, m_LocalScale);
-            if (m_Parent == null)
+            var matrix = Matrix4x4.TRS(GetLocalPosition(), m_LocalRotation, m_LocalScale);
+            var rotation = m_LocalRotation;
+            for (var ancestor = m_Parent; ancestor != null; ancestor = ancestor.m_Parent)
             {
-                m_LocalToWorld = local;
-                m_WorldRotation = m_LocalRotation;
+                matrix = MultiplyAffine(Matrix4x4.TRS(ancestor.GetLocalPosition(), ancestor.m_LocalRotation, ancestor.m_LocalScale), matrix);
+                rotation = MultiplyHierarchyRotation(ancestor.m_LocalRotation, ReflectRotation(rotation, ancestor.m_LocalScale));
             }
-            else
-            {
-                m_LocalToWorld = m_Parent.localToWorldMatrix * local;
-                m_WorldRotation = m_Parent.rotation * ReflectRotation(m_LocalRotation, m_Parent.lossyScale);
-            }
+            m_LocalToWorld = matrix;
+            m_WorldRotation = rotation;
             m_WorldDirty = false;
         }
 
@@ -281,11 +292,21 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ space conversion
 
-        public Vector3 TransformPoint(Vector3 position) => localToWorldMatrix.MultiplyPoint3x4(position);
+        public Vector3 TransformPoint(Vector3 position)
+        {
+            SyncJobs();
+            for (var ancestor = this; ancestor != null; ancestor = ancestor.m_Parent)
+                position = ancestor.TransformLocalPoint(position);
+            return position;
+        }
 
         public Vector3 TransformPoint(float x, float y, float z) => TransformPoint(new Vector3(x, y, z));
 
-        public Vector3 InverseTransformPoint(Vector3 position) => worldToLocalMatrix.MultiplyPoint3x4(position);
+        public Vector3 InverseTransformPoint(Vector3 position)
+        {
+            SyncJobs();
+            return InverseHierarchyPoint(position);
+        }
 
         public Vector3 InverseTransformPoint(float x, float y, float z) => InverseTransformPoint(new Vector3(x, y, z));
 
@@ -546,20 +567,117 @@ namespace UnityEngine
         /// <summary>Computes and applies local values that keep the world pose under a new parent.</summary>
         internal virtual void KeepWorldPose(Vector3 worldPosition, Quaternion worldRotation, Vector3 worldScale, Transform newParent)
         {
+            Vector3 localPosition;
             if (newParent == null)
             {
-                m_LocalRotation = worldRotation;
+                m_LocalRotation = NormalizeParentingRotation(worldRotation);
                 m_LocalScale = worldScale;
                 SetLocalPosition(worldPosition);
                 return;
             }
-            var parentScale = newParent.lossyScale;
-            m_LocalRotation = ReflectRotation(Quaternion.Inverse(newParent.rotation) * worldRotation, parentScale).normalized;
+            else
+            {
+                m_LocalRotation = NormalizeParentingRotation(newParent.InverseHierarchyRotation(worldRotation));
+                localPosition = newParent.InverseHierarchyPoint(worldPosition);
+            }
+            // Measure the scale contributed by the new hierarchy with a unit local
+            // scale, in the original world rotation's frame. Public parenting
+            // controls: tests/projects/solverpairorder/Sources/TransformInputs.
+            var rotationMatrix = Matrix4x4.Rotate(m_LocalRotation);
+            rotationMatrix = MultiplyRotationScale(newParent.localToWorldMatrix, rotationMatrix);
+            var inheritedScale = MultiplyRotationScale(Matrix4x4.Rotate(Quaternion.Inverse(worldRotation)), rotationMatrix);
             m_LocalScale = new Vector3(
-                parentScale.x != 0 ? worldScale.x / parentScale.x : 0,
-                parentScale.y != 0 ? worldScale.y / parentScale.y : 0,
-                parentScale.z != 0 ? worldScale.z / parentScale.z : 0);
-            SetLocalPosition(newParent.worldToLocalMatrix.MultiplyPoint3x4(worldPosition));
+                worldScale.x * ReciprocalScale(inheritedScale.m00),
+                worldScale.y * ReciprocalScale(inheritedScale.m11),
+                worldScale.z * ReciprocalScale(inheritedScale.m22));
+            SetLocalPosition(localPosition);
+        }
+
+        // Keep the measured accumulation order when removing a rotation from scale.
+        // TransformInputs covers every component with tilted and nested controls.
+        static Matrix4x4 MultiplyRotationScale(Matrix4x4 a, Matrix4x4 b)
+        {
+            var result = Matrix4x4.identity;
+            for (int row = 0; row < 3; row++)
+                for (int column = 0; column < 3; column++)
+                    result[row, column] = (a[row, 1] * b[1, column] + a[row, 2] * b[2, column])
+                        + a[row, 0] * b[0, column];
+            return result;
+        }
+
+        static Matrix4x4 MultiplyAffine(Matrix4x4 a, Matrix4x4 b)
+        {
+            var result = MultiplyRotationScale(a, b);
+            for (int row = 0; row < 3; row++)
+                result[row, 3] = ((a[row, 1] * b.m13 + a[row, 2] * b.m23) + a[row, 0] * b.m03) + a[row, 3];
+            return result;
+        }
+
+        static float ReciprocalScale(float scale)
+        {
+            if (MathF.Abs(scale) < 1e-9f) return 0f;
+            float estimate = float.ReciprocalEstimate(scale);
+            float first = estimate * (2.0000005f - scale * estimate);
+            float refined = first * (2f - scale * first);
+            return float.IsNaN(refined) ? estimate : refined;
+        }
+
+        Matrix4x4 InverseLocalMatrix()
+        {
+            var inverse = Matrix4x4.Rotate(Quaternion.Inverse(m_LocalRotation));
+            var position = GetLocalPosition();
+            for (int row = 0; row < 3; row++)
+            {
+                float scale = ReciprocalScale(m_LocalScale[row]);
+                for (int column = 0; column < 3; column++) inverse[row, column] *= scale;
+                inverse[row, 3] = -((inverse[row, 1] * position.y + inverse[row, 2] * position.z) + inverse[row, 0] * position.x);
+            }
+            return inverse;
+        }
+
+        // Position composition retains the original vector separately from the
+        // rotation's diagonal correction. Its rounding differs from a matrix product.
+        static Vector3 RotateHierarchyPoint(Quaternion q, Vector3 point)
+        {
+            var delta = Matrix4x4.Rotate(q);
+            delta.m00 = -(q.y * (q.y * 2f) + q.z * (q.z * 2f));
+            delta.m11 = -(q.x * (q.x * 2f) + q.z * (q.z * 2f));
+            delta.m22 = -(q.x * (q.x * 2f) + q.y * (q.y * 2f));
+            return new Vector3(
+                (delta.m02 * point.z + delta.m01 * point.y) + (delta.m00 * point.x + point.x),
+                (delta.m12 * point.z + delta.m11 * point.y) + (delta.m10 * point.x + point.y),
+                (delta.m22 * point.z + delta.m21 * point.y) + (delta.m20 * point.x + point.z));
+        }
+
+        Vector3 TransformLocalPoint(Vector3 point) =>
+            RotateHierarchyPoint(m_LocalRotation, Vector3.Scale(point, m_LocalScale)) + GetLocalPosition();
+
+        Vector3 InverseHierarchyPoint(Vector3 point)
+        {
+            if (m_Parent != null) point = m_Parent.InverseHierarchyPoint(point);
+            point = RotateHierarchyPoint(Quaternion.Inverse(m_LocalRotation), point - GetLocalPosition());
+            return new Vector3(point.x * ReciprocalScale(m_LocalScale.x), point.y * ReciprocalScale(m_LocalScale.y), point.z * ReciprocalScale(m_LocalScale.z));
+        }
+
+        Quaternion InverseHierarchyRotation(Quaternion rotation)
+        {
+            if (m_Parent != null) rotation = m_Parent.InverseHierarchyRotation(rotation);
+            return ReflectRotation(MultiplyHierarchyRotation(Quaternion.Inverse(m_LocalRotation), rotation), m_LocalScale);
+        }
+
+        static Quaternion MultiplyHierarchyRotation(Quaternion a, Quaternion b) => new Quaternion(
+            (a.w * b.x + (a.y * b.z - a.z * b.y)) + a.x * b.w,
+            (a.w * b.y + (a.z * b.x - a.x * b.z)) + a.y * b.w,
+            ((a.w * b.z - a.y * b.x) + a.z * b.w) + a.x * b.y,
+            ((a.w * b.w - a.x * b.x) - a.z * b.z) - a.y * b.y);
+
+        static Quaternion NormalizeParentingRotation(Quaternion q)
+        {
+            float x = q.x * q.x, y = q.y * q.y, z = q.z * q.z, w = q.w * q.w;
+            float xz = (x + y) + (z + w), yw = (y + z) + (w + x);
+            float sxz = MathF.Sqrt(xz), syw = MathF.Sqrt(yw);
+            return new Quaternion(xz > 1e-30f ? q.x / sxz : 0f, yw > 1e-30f ? q.y / syw : 0f,
+                xz > 1e-30f ? q.z / sxz : 0f, yw > 1e-30f ? q.w / syw : 1f);
         }
 
         public void DetachChildren()

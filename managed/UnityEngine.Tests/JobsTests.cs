@@ -1,9 +1,12 @@
 using System;
+using System.Reflection;
 using System.Threading;
+using Unbound.Runtime;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Jobs.LowLevel.Unsafe;
+using UnityEngine.Jobs;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -36,6 +39,42 @@ namespace UnityEngine.Tests
             public void Execute()
             {
                 for (int i = 0; i < Data.Length; i++) Data[i] += Amount;
+            }
+        }
+
+        struct RotateTransformJob : IJobParallelForTransform
+        {
+            public Quaternion Rotation;
+            public void Execute(int index, TransformAccess transform) => transform.localRotation = Rotation;
+        }
+
+        [Fact]
+        public void WorldRotationAssignmentWaitsForTheParentsQueuedTransformJob()
+        {
+            var mainThread = typeof(PlayerLoopDriver).GetField("s_MainThreadId", BindingFlags.Static | BindingFlags.NonPublic);
+            var previousMainThread = mainThread.GetValue(null);
+            mainThread.SetValue(null, Environment.CurrentManagedThreadId);
+            var parent = new GameObject("parent");
+            var child = new GameObject("child");
+            var transforms = new TransformAccessArray(new[] { parent.transform });
+            JobHandle handle = default;
+            try
+            {
+                child.transform.SetParent(parent.transform, false);
+                // Leave this job batched so the setter must complete it before reading the parent.
+                handle = new RotateTransformJob { Rotation = Quaternion.Euler(0f, 0f, 90f) }.Schedule(transforms);
+                child.transform.rotation = Quaternion.identity;
+                handle.Complete();
+                Assert.InRange((parent.transform.up - Vector3.left).magnitude, 0f, 1e-6f);
+                Assert.InRange((child.transform.up - Vector3.up).magnitude, 0f, 1e-6f);
+            }
+            finally
+            {
+                handle.Complete();
+                transforms.Dispose();
+                Object.DestroyImmediate(child);
+                Object.DestroyImmediate(parent);
+                mainThread.SetValue(null, previousMainThread);
             }
         }
 

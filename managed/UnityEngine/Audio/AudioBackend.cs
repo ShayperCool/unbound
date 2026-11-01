@@ -50,6 +50,8 @@ namespace Unbound.Runtime
         internal abstract AudioSourceState State(ulong handle);
         internal abstract void ReleaseSource(ulong handle);
         internal abstract void UpdateGroup(ulong handle, float gain, float pitch);
+        internal virtual void UpdateGroup(UnityEngine.Audio.AudioMixerGroup group) =>
+            UpdateGroup(group.m_Handle, group.EffectiveGain(0), group.EffectivePitch(0));
         internal abstract AudioStatus Frame(in AudioFramePacket frame);
         internal abstract double DspTime { get; }
         /// <summary>window &lt; 0: samples; else the spectrum with that FFTWindow.</summary>
@@ -130,6 +132,13 @@ namespace Unbound.Runtime
         }
 
         internal override void UpdateGroup(ulong handle, float gain, float pitch) => Native.Api.AudioUpdateGroup(handle, gain, pitch);
+
+        internal override void UpdateGroup(UnityEngine.Audio.AudioMixerGroup group)
+        {
+            var configuration = group.DspConfiguration(); // Registers the parent before its child.
+            UpdateGroup(group.m_Handle, group.EffectiveGain(0), group.EffectivePitch(0));
+            Native.Call("audio-mixer-group", JsonSerializer.Serialize(configuration, s_Json));
+        }
 
         internal override AudioStatus Frame(in AudioFramePacket frame)
         {

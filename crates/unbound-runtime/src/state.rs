@@ -31,6 +31,7 @@ pub struct RuntimeState {
     /// Imported textures' sprites by GUID (asked for after the import). Only the name and the
     /// sprites stay: the pixels live on the GPU once uploaded.
     textures: RwLock<HashMap<Guid, TextureSprites>>,
+    texture_mip_biases: RwLock<HashMap<u64, f32>>,
     /// Project shaders by declared name, built on first use.
     shaders: RwLock<Option<HashMap<String, Guid>>>,
     /// The folders of the release's built-in shader sources (`DefaultResources`, ...).
@@ -53,6 +54,19 @@ static STATE: OnceLock<RuntimeState> = OnceLock::new();
 
 pub fn state() -> &'static RuntimeState {
     STATE.get().expect("the runtime state is not initialized")
+}
+
+pub fn set_texture_mip_bias(handle: u64, bias: f32) {
+    state()
+        .texture_mip_biases
+        .write()
+        .unwrap()
+        .insert(handle, bias);
+    backend().texture_mip_bias(handle, bias);
+}
+
+pub fn release_texture_sampler(handle: u64) {
+    state().texture_mip_biases.write().unwrap().remove(&handle);
 }
 
 /// Sets up the state for a project; once per process.
@@ -92,6 +106,7 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
                 .then(|| unbound_assets::serialized::documents(&data))
         })),
         resources,
+        texture_mip_biases: Default::default(),
         backend: RwLock::new(Arc::new(NullBackend)),
         imports: AssetCache::for_project(&project.root),
         texture_importer: RwLock::new(TextureImporter {
@@ -207,6 +222,45 @@ struct ResourcesRequest {
 pub fn dispatch(method: &str, request: &str) -> Result<String> {
     let s = state();
     match method {
+        "texture-sampling-properties" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                handle: u64,
+                filter_mode: i32,
+                wrap_u: i32,
+                wrap_v: i32,
+                aniso_level: i32,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            anyhow::ensure!(r.handle != 0, "sampler properties require a texture handle");
+            backend().texture_sampler(
+                r.handle,
+                [r.filter_mode, r.wrap_u, r.wrap_v, r.aniso_level],
+            );
+            Ok("true".to_owned())
+        }
+        "texture-sampler-state" => {
+            #[derive(Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                handle: u64,
+                mip_bias: Option<f32>,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            if let Some(bias) = r.mip_bias {
+                set_texture_mip_bias(r.handle, bias);
+            }
+            Ok(json!(
+                s.texture_mip_biases
+                    .read()
+                    .unwrap()
+                    .get(&r.handle)
+                    .copied()
+                    .unwrap_or(0.0)
+            )
+            .to_string())
+        }
         "lighting-data" => {
             #[derive(serde::Deserialize)]
             #[serde(rename_all = "camelCase")]
@@ -619,9 +673,35 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             })
             .to_string())
         }
+        "audio-mixer-group" => {
+            let group: crate::audio::effects::GroupSpec = serde_json::from_str(request)?;
+            s.audio.mixer().configure_group(group)?;
+            Ok("{}".to_owned())
+        }
         "audio-reset" => {
             let configuration: crate::audio::AudioConfiguration = serde_json::from_str(request)?;
             Ok(json!({ "ok": s.audio.reset(configuration) }).to_string())
+        }
+        "audio-renderer-start" => Ok(json!(s.audio.capture_start()).to_string()),
+        "audio-renderer-stop" => Ok(json!(s.audio.capture_stop()).to_string()),
+        "audio-renderer-count" => {
+            let delta_time: f32 = serde_json::from_str(request)?;
+            Ok(json!(s.audio.capture_sample_count(delta_time)).to_string())
+        }
+        "audio-renderer-render" => {
+            #[derive(Deserialize)]
+            struct Request {
+                length: usize,
+                sinks: Vec<crate::audio::capture::SinkRequest>,
+                #[serde(rename = "deltaTime")]
+                delta_time: f32,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(serde_json::to_string(&s.audio.capture_render(
+                r.length,
+                r.sinks,
+                r.delta_time,
+            )?)?)
         }
         other => bail!("unknown native method `{other}`"),
     }
@@ -938,9 +1018,10 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     let guid = Guid::parse(guid).context("bad guid")?;
     let asset = s.db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
+    let importer = texture_importer(s);
     let texture = s
         .imports
-        .get_or_import(&texture_importer(s), &asset.file, &meta)?;
+        .get_or_import(&importer, &asset.file, &meta)?;
     // The import is ours alone (the cache is on disk): take its data instead of copying it.
     let mut texture = Arc::try_unwrap(texture).unwrap_or_else(|shared| (*shared).clone());
     s.textures.write().unwrap().insert(
@@ -953,7 +1034,16 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     let sprite_count = s.textures.read().unwrap()[&guid].sprites.len();
     let format = match texture.format {
         unbound_assets::texture::TextureFormat::Rgba8 => i32::from(!texture.srgb),
-        unbound_assets::texture::TextureFormat::Rgba32F => 2,
+        unbound_assets::texture::TextureFormat::Rgba32F => {
+            // The importer retains float32 working pixels for both HDR storage formats.
+            // Honour the target's explicit RGBAFloat override instead of narrowing it to Half.
+            let document = unbound_yaml::parse_value(&std::fs::read_to_string(&meta)?)?;
+            let settings = unbound_assets::meta::importer(&document, "TextureImporter");
+            match unbound_assets::texture::platform_format(settings, &importer.build_target) {
+                Some(20) => 9, // TextureImporterFormat.RGBAFloat -> TexturePacket RGBAFloat.
+                _ => 2,
+            }
+        }
     };
     let mip_count = texture.mips.len() / texture.layers.max(1) as usize;
     // BC7 blocks when the GPU samples them (format 7 sRGB-capable, 8 linear), else RGBA8.
@@ -1000,6 +1090,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             dimension: if texture.layers == 6 { 4 } else { 2 },
         },
     );
+    set_texture_mip_bias(handle, texture.mip_bias);
     Ok(ImportedTextureInfo {
         width: texture.width as i32,
         height: texture.height as i32,

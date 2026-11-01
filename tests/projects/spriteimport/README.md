@@ -29,7 +29,13 @@ quad), or triangulated from the custom outline; the default physics shape traced
 from alpha above 200 (extrude does not matter); `textureRect` is the traced outline's bounds;
 `bounds` is the rect's, also for Tight meshes.
 
-What still differs (515/520 values): the `downscaled` sprite (4 values), because Unbound's
-max-size downscale gives alpha up to 4/255 off the Editor's (28 pixels cross the alpha 0
-threshold); and the default physics shape of a Polygon-mode sprite, which Unity takes from its
-mesh's boundary edges and Unbound does not make (it warns).
+The combined texture/sprite importer matches 519/520 fields, or 7637/7654 flattened
+observations, exactly as f32. Its comparison with the parent resolves 5989 observations
+and introduces none. The four `downscaled` fields retained by the separate sprite branch
+now match. The remaining field is a Polygon-mode sprite's default physics shape, which
+Unity takes from its mesh's boundary edges and Unbound does not make; it warns explicitly.
+The 17 missing/differing flattened observations all describe that one shape. Runtime
+`Sprite.Create` Tight meshes remain outside this import probe.
+
+Add `--report <cache-path.json>` to the comparator to retain every field and nested value,
+including missing and extra values. Reports do not overwrite earlier files.

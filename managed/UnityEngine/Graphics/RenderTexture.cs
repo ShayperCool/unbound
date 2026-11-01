@@ -282,20 +282,14 @@ namespace UnityEngine
                 Layers = layers,
                 Dimension = layers > 1 ? (int)dimension : 0,
             };
-            Native.UploadTexture(m_NativeHandle, &packet);
+            UploadTexture(&packet);
             m_Created = true;
             return m_NativeHandle;
         }
 
         internal override void OnSamplerChanged()
         {
-            // The sampler is part of the texture on the native side: a created target is remade
-            // with it (its contents are kept by the renderer for an unchanged shape).
-            if (m_Created)
-            {
-                m_Created = false;
-                EnsureCreated();
-            }
+            if (m_Created) EmitSamplingProperties();
         }
 
         // ---------------------------------------------------------------- temporaries

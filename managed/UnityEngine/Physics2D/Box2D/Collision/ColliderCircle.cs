@@ -60,26 +60,8 @@ namespace Unbound.Box2D.Collision
             // is from the segment's nearest point, also when the circle's center is inside it.
             if (polygonA is Shapes.CapsuleShape capsule)
             {
-                var axis = capsule.P2 - capsule.P1;
-                float t = Vector2.Dot(cLocal - capsule.P1, axis) / Math.Max(Vector2.Dot(axis, axis), Settings.Epsilon);
-                var nearest = capsule.P1 + Math.Clamp(t, 0f, 1f) * axis;
-                float distanceSquared = Vector2.DistanceSquared(cLocal, nearest);
-                float reach = capsule.Radius + circleB.Radius;
-                if (distanceSquared > reach * reach) return;
-                // Initial casts with a segment query select its second face only
-                // at exact core coincidence. Do not extend this choice over the
-                // epsilon band used to avoid unstable normalization.
-                querySegmentCoincidence &= distanceSquared == 0f;
-                if (distanceSquared > Settings.Epsilon * Settings.Epsilon)
-                {
-                    manifold.Type = ManifoldType.Circles;
-                    manifold.LocalPoint = nearest;
-                    manifold.LocalNormal.SetZero();
-                    manifold.PointCount = 1;
-                    manifold.Points.Value0.LocalPoint = circleB.Position;
-                    manifold.Points.Value0.Id.Key = 0;
-                    return;
-                }
+                CollideEdgeAndCircle(ref manifold, capsule.AsEdge(), xfA, circleB, xfB);
+                return;
             }
 
             // Find the min separating edge.

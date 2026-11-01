@@ -258,12 +258,11 @@ namespace UnityEngine
             for (int i = shapeIndex; i < last; i++)
             {
                 var f = m_Fixtures[i];
-                var xf = f.Body.GetTransform();
-                // Body frame to world, then into the group's space.
+                // Fixtures already use the group's body frame. A world-space
+                // round trip changes the indexed local vertices.
                 Vector2 Out(System.Numerics.Vector2 local)
                 {
-                    var world = W.ToUnity(Unbound.Box2D.Common.MathUtils.Mul(xf, local));
-                    return rb != null ? (Vector2)space.inverse.MultiplyPoint3x4(world) : world;
+                    return W.ToUnity(local);
                 }
                 points.Clear();
                 switch (f.Shape)

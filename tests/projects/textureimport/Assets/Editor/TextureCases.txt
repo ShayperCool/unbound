@@ -73,3 +73,6 @@ MixedNoneBox npot=none
 MixedNearest srgb=0
 MaxSizeMitchell maxsize=32
 MaxSizeBilinear maxsize=32,bilinear
+MaxSizeSoft maxsize=128
+MaxSizeSoftWide maxsize=256 npot=none srgb=0
+MaxSizeSoftHdr maxsize=128 mips=0 format=float

@@ -55,6 +55,7 @@ namespace Unbound.Runtime
                     Additive = data.BlendingMode == 1,
                     DefaultWeight = i == 0 ? 1f : data.DefaultWeight,
                     SyncedLayerIndex = data.SyncedLayerIndex,
+                    IKPass = data.IKPass,
                 };
                 var map = new Dictionary<ControllerStateAsset, StateDef>();
                 if (data.SyncedLayerIndex < 0 && data.StateMachine != null)
@@ -242,6 +243,7 @@ namespace Unbound.Runtime
         internal bool Additive;
         internal float DefaultWeight;
         internal int SyncedLayerIndex = -1;
+        internal bool IKPass;
         internal readonly List<StateDef> States = new List<StateDef>();
         internal readonly Dictionary<int, StateDef> StateByHash = new Dictionary<int, StateDef>();
         /// <summary>Any State transitions of every machine of the layer, root first.</summary>

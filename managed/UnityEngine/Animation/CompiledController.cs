@@ -87,6 +87,7 @@ namespace Unbound.Runtime
                     BlendingMode = layer.Int("(int&)m_LayerBlendingMode"),
                     DefaultWeight = layer.Float("m_DefaultWeight"),
                     SyncedLayerAffectsTiming = layer.Bool("m_SyncedLayerAffectsTiming"),
+                    IKPass = layer.Bool("m_IKPass"),
                 };
                 if (Items(Data(layer.Get("m_SkeletonMask")), "m_Data") is var mask && System.Linq.Enumerable.Any(mask))
                     Debug.LogWarning($"Unbound: animator controller '{controller.name}' layer '{data.Name}' has a mask built into its bundle; masks of compiled controllers are not supported yet, the layer animates everything.");

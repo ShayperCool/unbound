@@ -40,9 +40,13 @@ namespace UnityEngine
         internal override J2.JointDef Definition(B2.Body own, B2.Body other)
         {
             float angle = m_Suspension.angle * Mathf.Deg2Rad;
+            var scale = attachedRigidbody.transform.lossyScale;
             return new J2.WheelJointDef
             {
-                LocalAnchorA = own.GetLocalPoint(W.ToB2(WorldAnchor)), LocalAnchorB = other.GetLocalPoint(W.ToB2(OtherAnchor)),
+                // Native stores the scaled local anchor directly. A world-space
+                // round trip perturbs the wheel constraint at translated poses.
+                LocalAnchorA = new System.Numerics.Vector2(m_Anchor.x * scale.x, m_Anchor.y * scale.y),
+                LocalAnchorB = other.GetLocalPoint(W.ToB2(OtherAnchor)),
                 LocalAxisA = new System.Numerics.Vector2(Mathf.Cos(angle), Mathf.Sin(angle)), EnableMotor = m_UseMotor,
                 MotorSpeed = m_Motor.motorSpeed * Mathf.Deg2Rad, MaxMotorTorque = m_Motor.maxMotorTorque,
                 UnityFrequency = m_Suspension.frequency, UnityDampingRatio = m_Suspension.dampingRatio,

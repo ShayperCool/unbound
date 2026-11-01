@@ -105,6 +105,201 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
 
+        [Theory]
+        [InlineData(1, false, false, 3)]
+        [InlineData(1, true, false, 9)]
+        [InlineData(3, false, false, 2)]
+        [InlineData(3, true, false, 6)]
+        [InlineData(1, false, true, 3)]
+        [InlineData(1, true, true, 9)]
+        [InlineData(3, false, true, 2)]
+        [InlineData(3, true, true, 6)]
+        public void SubdivisionRemainderKeepsParticlesAtTheirLifetimeBoundary(int source, bool loop, bool live, int count)
+        {
+            var ps = Make(true, source, loop, 0, live);
+            try
+            {
+                ps.Play(false);
+                foreach (float dt in new[] { 0f, .125f, .125f, .25f, .5f, .25f, 1f })
+                {
+                    ps.Simulate(dt, false, false, false);
+                    var saved = ps.GetPlaybackState();
+                    ps.Play(false);
+                    ps.SetPlaybackState(saved);
+                }
+                Assert.Equal(count, ps.particleCount);
+                ps.Simulate(.0001f, false, false, false);
+                Assert.Equal(count - (source == 3 ? 2 : 1), ps.particleCount);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Theory]
+        [InlineData(0, 0f, 0, .250001162f)]
+        [InlineData(1, 0f, 8, .250001162f)]
+        [InlineData(3, 0f, 4, .250001162f)]
+        [InlineData(0, .25f, 0, .000000834465f)]
+        [InlineData(1, .25f, 8, .000000834465f)]
+        [InlineData(3, .25f, 4, .000000834465f)]
+        public void PositiveSubdivisionRemainderCrossesTheLoopBoundary(int source, float delay, int count, float time)
+        {
+            var ps = Make(true, source, true, delay);
+            try
+            {
+                ps.Play(false);
+                foreach (float dt in new[] { 0f, .125f, .125f, .25f, .5f, .25f, 1f, 2f })
+                {
+                    ps.Simulate(dt, false, false, false);
+                    var saved = ps.GetPlaybackState();
+                    ps.Play(false);
+                    ps.SetPlaybackState(saved);
+                }
+                Assert.Equal(count, ps.particleCount);
+                Assert.InRange(Mathf.Abs(ps.time - time), 0f, 2e-4f);
+                State(ps, true, true, false, false, true);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Theory]
+        [InlineData(1e-6f, 0f)]
+        [InlineData(5e-6f, 0f)]
+        [InlineData(9.999999e-6f, 0f)]
+        [InlineData(1e-5f, 1e-5f)]
+        [InlineData(1.0000001e-5f, 1.0000001e-5f)]
+        [InlineData(2e-5f, 2e-5f)]
+        public void NonFixedSimulationHonorsTheMeasuredMinimumCallTime(float dt, float time)
+        {
+            var ps = Make(false);
+            try
+            {
+                var main = ps.main; main.duration = 10; main.startLifetime = 10; main.gravityModifier = 1;
+                ps.Emit(new ParticleSystem.EmitParams { velocity = Vector3.right, startLifetime = 10, randomSeed = 42 }, 1);
+                ps.Simulate(dt, false, false, false);
+                var particles = new ParticleSystem.Particle[1];
+                Assert.Equal(1, ps.GetParticles(particles));
+                Assert.Equal(time, ps.time);
+                Assert.Equal(time, particles[0].position.x);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void LongSimulationConsumesTheFinalSubdivisionRemainder()
+        {
+            var ps = Make(true, 1, true);
+            try
+            {
+                var main = ps.main; main.duration = 5; main.startLifetime = 1.013f;
+                var emission = ps.emission; emission.rateOverTime = 20;
+                ps.Simulate(.3f, false, true, false);
+                Assert.Equal(5, ps.particleCount);
+                ps.Simulate(.7f, false, true, false);
+                Assert.Equal(13, ps.particleCount);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Theory]
+        [InlineData(1f, 4f, 5)]
+        [InlineData(1f, 10f, 4)]
+        [InlineData(1f, 20f, 4)]
+        [InlineData(.03f, 4f, 5)]
+        [InlineData(.03f, 10f, 5)]
+        [InlineData(.03f, 20f, 5)]
+        public void ConstantRateCarriesEachSubdivisionFraction(float maximum, float rate, int count)
+        {
+            float saved = Time.maximumParticleDeltaTime;
+            Time.maximumParticleDeltaTime = maximum;
+            var ps = Make(true, 1, true);
+            try
+            {
+                var main = ps.main; main.duration = 5; main.startLifetime = 10;
+                var emission = ps.emission; emission.rateOverTime = rate;
+                ps.Play(false);
+                for (int i = 0; i < 5; i++) ps.Simulate(1f / rate, false, false, false);
+                Assert.Equal(count, ps.particleCount);
+            }
+            finally { Time.maximumParticleDeltaTime = saved; Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Theory]
+        [InlineData(false, 9)]
+        [InlineData(true, 8)]
+        public void ContinuedRateEmissionPreservesTheIntervalAfterParticleWrites(bool write, int count)
+        {
+            var ps = Make(true, 1, true);
+            try
+            {
+                var main = ps.main; main.duration = 5; main.startLifetime = 1.013f; main.startSpeed = 2;
+                var emission = ps.emission; emission.rateOverTime = 20;
+                ps.Simulate(.3f, false, true, false);
+                Assert.Equal(5, ps.particleCount);
+                if (write)
+                {
+                    var particles = new ParticleSystem.Particle[ps.particleCount]; int n = ps.GetParticles(particles);
+                    for (int i = 0; i < n; i++)
+                    {
+                        particles[i].position += Vector3.up; particles[i].velocity = Vector3.right;
+                        if (i == 0) particles[i].remainingLifetime = -1;
+                    }
+                    ps.SetParticles(particles, n);
+                }
+                ps.Simulate(.1f, false, false, false);
+                ps.Simulate(.1f, false, false, false);
+                Assert.Equal(count, ps.particleCount);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Theory]
+        [InlineData(.03f, 4f, 4)]
+        [InlineData(.03f, 10f, 12)]
+        [InlineData(.03f, 20f, 24)]
+        [InlineData(.03f, 9.7f, 11)]
+        [InlineData(1f, 4f, 4)]
+        [InlineData(1f, 10f, 12)]
+        [InlineData(1f, 20f, 24)]
+        [InlineData(1f, 9.7f, 11)]
+        public void LoopCrossingsCarryTheEmissionFraction(float maximum, float rate, int count)
+        {
+            float saved = Time.maximumParticleDeltaTime;
+            Time.maximumParticleDeltaTime = maximum;
+            var ps = Make(true, 1, true);
+            try
+            {
+                var main = ps.main; main.duration = .3f; main.startLifetime = 10;
+                var emission = ps.emission; emission.rateOverTime = rate;
+                ps.Play(false);
+                for (int i = 0; i < 12; i++) ps.Simulate(.1f, false, false, false);
+                Assert.Equal(count, ps.particleCount);
+            }
+            finally { Time.maximumParticleDeltaTime = saved; Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void DurationBoundaryBirthSamplesTheNextLoopsStartCurves()
+        {
+            // Native broad reference start_curves/10; the particle born at duration one
+            // samples the next loop's first subdivision, rather than its old loop's end.
+            var ps = Make(true, 1, true);
+            try
+            {
+                var main = ps.main;
+                main.startSpeed = new ParticleSystem.MinMaxCurve(4, AnimationCurve.Linear(0, 0, 1, 1));
+                main.startSize = new ParticleSystem.MinMaxCurve(2, AnimationCurve.Linear(0, 1, 1, .25f));
+                main.startLifetime = new ParticleSystem.MinMaxCurve(1.537f, AnimationCurve.Linear(0, .5f, 1, 1));
+                var emission = ps.emission; emission.rateOverTime = 10;
+                for (int i = 0; i < 11; i++) ps.Simulate(.1f, false, i == 0, false);
+                var particles = new ParticleSystem.Particle[16];
+                Assert.Equal(9, ps.GetParticles(particles));
+                Assert.InRange(particles[8].startLifetime, .787712157f - 2e-4f, .787712157f + 2e-4f);
+                Assert.InRange(particles[8].startSize, 1.96250057f - 2e-4f, 1.96250057f + 2e-4f);
+                Assert.InRange(particles[8].velocity.z, -2e-4f, 2e-4f);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
         public static IEnumerable<object[]> PlaybackStates()
         {
             foreach (bool enabled in new[] { false, true })

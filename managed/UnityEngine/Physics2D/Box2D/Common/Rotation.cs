@@ -22,8 +22,8 @@ namespace Unbound.Box2D.Common
         public Rotation(float angle)
         {
             // TODO_ERIN optimize
-            Sin = (float) Math.Sin(angle);
-            Cos = (float) Math.Cos(angle);
+            Sin = MathF.Sin(angle);
+            Cos = MathF.Cos(angle);
         }
 
         /// Set using an angle in radians.
@@ -31,8 +31,8 @@ namespace Unbound.Box2D.Common
         public void Set(float angle)
         {
             // TODO_ERIN optimize
-            Sin = (float) Math.Sin(angle);
-            Cos = (float) Math.Cos(angle);
+            Sin = MathF.Sin(angle);
+            Cos = MathF.Cos(angle);
         }
 
         /// Set to the identity rotation

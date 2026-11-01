@@ -201,6 +201,7 @@ namespace UnityEngine
             if (updateMipmaps) m_Pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             m_Pixels.Upload(m_NativeHandle, m_Format, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel);
+            if (mipMapBias != 0f) EmitSamplerMetadata();
             updateCount++;
             if (makeNoLongerReadable)
             {
@@ -294,6 +295,7 @@ namespace UnityEngine
             if (updateMipmaps) m_Pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             m_Pixels.Upload(m_NativeHandle, m_Format, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel, TextureDimension.CubeArray);
+            if (mipMapBias != 0f) EmitSamplerMetadata();
             updateCount++;
             if (makeNoLongerReadable)
             {
@@ -402,6 +404,7 @@ namespace UnityEngine
             if (updateMipmaps) m_Pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
             m_Pixels.Upload(m_NativeHandle, m_Format, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel);
+            if (mipMapBias != 0f) EmitSamplerMetadata();
             updateCount++;
             if (makeNoLongerReadable)
             {

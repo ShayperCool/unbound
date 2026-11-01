@@ -63,7 +63,7 @@ namespace UnityEngine
             ? m_Joint is J2.RevoluteJoint hinge ? hinge.GetMotorTorque(1f / timeStep) : m_SuspendedMotor / timeStep : 0f;
         internal override J2.JointDef Definition(B2.Body own, B2.Body other) => new J2.RevoluteJointDef
         {
-            LocalAnchorA = own.GetLocalPoint(W.ToB2(WorldAnchor)), LocalAnchorB = other.GetLocalPoint(W.ToB2(OtherAnchor)),
+            LocalAnchorA = BodyAnchorA, LocalAnchorB = BodyAnchorB,
             ReferenceAngle = m_ReferenceAngle, EnableMotor = m_UseMotor, EnableLimit = m_UseLimits && m_Limits.min <= m_Limits.max,
             EnableAnchor = m_UseConnectedAnchor, MotorSpeed = m_Motor.motorSpeed * Mathf.Deg2Rad,
             MaxMotorTorque = m_Motor.maxMotorTorque, LowerAngle = m_Limits.min * Mathf.Deg2Rad, UpperAngle = m_Limits.max * Mathf.Deg2Rad,
@@ -95,7 +95,7 @@ namespace UnityEngine
         public float dampingRatio { get => m_Damping; set { m_Damping = Mathf.Clamp01(value); Changed(); } }
         internal override J2.JointDef Definition(B2.Body own, B2.Body other)
         {
-            var def = new J2.WeldJointDef { LocalAnchorA = own.GetLocalPoint(W.ToB2(WorldAnchor)), LocalAnchorB = other.GetLocalPoint(W.ToB2(OtherAnchor)), ReferenceAngle = m_ReferenceAngle };
+            var def = new J2.WeldJointDef { LocalAnchorA = BodyAnchorA, LocalAnchorB = BodyAnchorB, ReferenceAngle = m_ReferenceAngle };
             J2.JointUtils.AngularStiffness(out def.Stiffness, out def.Damping, m_Frequency, m_Damping, own, other);
             return def;
         }

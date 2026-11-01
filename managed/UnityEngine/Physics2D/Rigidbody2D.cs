@@ -215,8 +215,7 @@ namespace UnityEngine
 
         static float ZAngle(Quaternion rotation)
         {
-            var right = rotation * Vector3.right;
-            return Mathf.Atan2(right.y, right.x) * Mathf.Rad2Deg;
+            return W.RotationAngle(rotation) * Mathf.Rad2Deg;
         }
 
         public void MovePosition(Vector2 position)
@@ -228,7 +227,9 @@ namespace UnityEngine
         public void MoveRotation(float angle)
         {
             m_HasMoveRotation = true;
-            m_MoveRotation = angle;
+            // Native stores the pending target in radians. Converting the
+            // current angle back to degrees before subtraction loses precision.
+            m_MoveRotation = angle * Mathf.Deg2Rad;
         }
 
         public void MoveRotation(Quaternion rotation) => MoveRotation(ZAngle(rotation));
@@ -263,7 +264,13 @@ namespace UnityEngine
             }
             if (m_HasMoveRotation)
             {
-                float delta = Mathf.DeltaAngle(body.GetAngle() * Mathf.Rad2Deg, m_MoveRotation) * Mathf.Deg2Rad;
+                float delta = m_MoveRotation - body.GetAngle();
+                if (delta > Mathf.PI || delta < -Mathf.PI)
+                {
+                    delta %= 2f * Mathf.PI;
+                    if (delta > Mathf.PI) delta -= 2f * Mathf.PI;
+                    else if (delta < -Mathf.PI) delta += 2f * Mathf.PI;
+                }
                 body.SetAngularVelocity(delta / deltaTime);
             }
             body.IsAwake = true;
@@ -286,8 +293,17 @@ namespace UnityEngine
         {
             get
             {
-                var p = position;
-                return Matrix4x4.TRS(new Vector3(p.x, p.y, 0f), Quaternion.Euler(0f, 0f, rotation), Vector3.one);
+                var body = Body;
+                Vector2 p;
+                float angle;
+                if (body != null)
+                {
+                    p = W.ToUnity(body.GetPosition());
+                    angle = body.GetAngle();
+                }
+                else W.PoseOf(transform, out p, out angle);
+                return Matrix4x4.TRS(new Vector3(p.x, p.y, 0f),
+                    Quaternion.FromEulerRad(new Vector3(0f, 0f, angle)), Vector3.one);
             }
         }
 

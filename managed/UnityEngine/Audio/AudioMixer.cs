@@ -8,9 +8,8 @@ namespace UnityEngine.Audio
     /// An AudioMixer asset (.mixer, the Editor's AudioMixerController): a tree of groups whose
     /// volumes (dB) and pitches are parameters. A parameter's value comes from the current snapshot
     /// (blended during a transition), unless an exposed parameter is set by <c>SetFloat</c>.
-    /// Each frame the audio update sends every routed group's level (its volume chain to the master,
-    /// mute and solo) to the native mixer. Effects other than the attenuation are not applied
-    /// (their exposed parameters still read and write).
+    /// Each frame the audio update sends the group graph and current parameters to the native
+    /// mixer. Lowpass, Highpass and Echo process the summed group signal in serialized effect order.
     /// </summary>
     [ClassId(241)]
     public partial class AudioMixer : Object, ISerializedAsset
@@ -29,6 +28,8 @@ namespace UnityEngine.Audio
         internal readonly Dictionary<string, float> m_Defaults = new Dictionary<string, float>();
         internal readonly List<AudioMixerGroup> m_Groups = new List<AudioMixerGroup>();
         bool m_Built;
+        readonly HashSet<string> m_PendingClears = new HashSet<string>(StringComparer.Ordinal);
+        Dictionary<string, float> m_InstantTarget;
 
         // A snapshot transition in progress.
         Dictionary<string, float> m_From;
@@ -125,10 +126,11 @@ namespace UnityEngine.Audio
             }
             if (timeToReach <= 0f)
             {
-                foreach (var pair in target) m_Values[pair.Key] = pair.Value;
+                m_InstantTarget = target;
                 m_To = null;
                 return;
             }
+            m_InstantTarget = null;
             m_From = new Dictionary<string, float>(m_Values);
             m_To = target;
             m_TransitionTypes = types;
@@ -144,6 +146,7 @@ namespace UnityEngine.Audio
                 if (Trace.AudioOn) Trace.Audio($"SetFloat '{name}' on mixer '{m_Name}': not an exposed parameter");
                 return false;
             }
+            m_PendingClears.Remove(guid);
             m_Overrides[guid] = value;
             if (Trace.AudioOn) Trace.Audio($"SetFloat '{name}' = {value} on mixer '{m_Name}'");
             return true;
@@ -153,7 +156,7 @@ namespace UnityEngine.Audio
         {
             Build();
             if (name == null || !m_Exposed.TryGetValue(name, out var guid)) return false;
-            m_Overrides.Remove(guid);
+            m_PendingClears.Add(guid);
             return true;
         }
 
@@ -191,11 +194,30 @@ namespace UnityEngine.Audio
 
         internal static float DecibelsToGain(float db) => db <= MinVolume ? 0f : Mathf.Pow(10f, Mathf.Min(db, MaxVolume) / 20f);
 
+        // Unity's mixer DSP uses this quadratic exponent approximation. The parameter itself
+        // remains in dB; the independently repeated gain matrix constrains this conversion.
+        internal static float DspGain(float db)
+        {
+            if (db <= MinVolume) return 0f;
+            float exponent = (Mathf.Min(db, MaxVolume) * 0.05f) * 3.3229959f;
+            int integral = Mathf.FloorToInt(exponent);
+            float fraction = exponent - integral;
+            float polynomial = (1f + fraction * 0.6822701f) + (fraction * fraction) * 0.31772992f;
+            return polynomial * BitConverter.Int32BitsToSingle((integral + 127) << 23);
+        }
+
         internal static float GainToDecibels(float gain) => gain <= 1e-4f ? MinVolume : Mathf.Clamp(20f * Mathf.Log10(gain), MinVolume, MaxVolume);
 
         /// <summary>Advances a snapshot transition (scaled or unscaled time, by update mode).</summary>
         internal void Tick(float scaledDelta, float unscaledDelta)
         {
+            foreach (var guid in m_PendingClears) m_Overrides.Remove(guid);
+            m_PendingClears.Clear();
+            if (m_InstantTarget != null)
+            {
+                foreach (var pair in m_InstantTarget) m_Values[pair.Key] = pair.Value;
+                m_InstantTarget = null;
+            }
             if (m_To == null) return;
             m_Elapsed += m_UpdateMode == AudioMixerUpdateMode.UnscaledTime ? unscaledDelta : scaledDelta;
             float t = m_Duration > 0f ? Mathf.Clamp01(m_Elapsed / m_Duration) : 1f;
@@ -268,6 +290,19 @@ namespace UnityEngine.Audio
             group.m_Parent = parent;
             if (group.m_VolumeGuid != null) m_Defaults[group.m_VolumeGuid] = 0f;
             if (group.m_PitchGuid != null) m_Defaults[group.m_PitchGuid] = 1f;
+            foreach (var effect in group.m_Effects)
+            {
+                if (effect.Parameter("Cutoff freq") is string cutoff) m_Defaults[cutoff] = 5000f;
+                if (effect.Parameter("Resonance") is string resonance) m_Defaults[resonance] = 1f;
+                if (effect.m_EffectName == "Echo")
+                {
+                    if (effect.Parameter("Delay") is string delay) m_Defaults[delay] = 500f;
+                    if (effect.Parameter("Decay") is string decay) m_Defaults[decay] = 0f;
+                    if (effect.Parameter("Max channels") is string channels) m_Defaults[channels] = 0f;
+                    if (effect.Parameter("Drymix") is string dry) m_Defaults[dry] = 1f;
+                    if (effect.Parameter("Wetmix") is string wet) m_Defaults[wet] = 1f;
+                }
+            }
             foreach (var guid in group.m_EffectParameters) if (!m_Defaults.ContainsKey(guid)) m_Defaults[guid] = 0f;
             foreach (var child in group.m_Children) if (child != null) Collect(child, group);
         }
@@ -287,7 +322,9 @@ namespace UnityEngine.Audio
         internal bool m_Solo;
         internal bool m_BypassEffects;
         internal readonly List<string> m_EffectParameters = new List<string>();
+        internal readonly List<AudioMixerEffectController> m_Effects = new List<AudioMixerEffectController>();
         internal ulong m_Handle;
+        internal bool m_ObserveOutput;
 
         internal AudioMixerGroup() { }
 
@@ -341,6 +378,35 @@ namespace UnityEngine.Audio
             return pitch;
         }
 
+        internal object DspConfiguration()
+        {
+            m_Mixer?.Build();
+            var effects = new List<object>();
+            foreach (var effect in m_Effects)
+            {
+                bool bypass = m_BypassEffects || effect.m_Bypass;
+                if (!bypass && effect.m_EffectName != "Attenuation" && effect.m_EffectName != "Lowpass" && effect.m_EffectName != "Highpass" && effect.m_EffectName != "Echo")
+                    throw new NotSupportedException("Unsupported AudioMixer effect '" + effect.m_EffectName + "' in group '" + Path + "'");
+                if (!bypass && effect.m_EnableWetMix)
+                    throw new NotSupportedException("AudioMixer wet mixing is unsupported for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
+                effects.Add(new {
+                    id = effect.m_EffectId, kind = effect.m_EffectName, bypass = effect.m_Bypass,
+                    gain = AudioMixer.DspGain(m_Mixer.Value(m_VolumeGuid)),
+                    cutoff = effect.Parameter("Cutoff freq") is string cutoff ? m_Mixer.Value(cutoff) : 5000f,
+                    resonance = effect.Parameter("Resonance") is string resonance ? m_Mixer.Value(resonance) : 1f,
+                    delay = effect.Parameter("Delay") is string delay ? m_Mixer.Value(delay) : 500f,
+                    decay = effect.Parameter("Decay") is string decay ? m_Mixer.Value(decay) : 0f,
+                    maxChannels = effect.Parameter("Max channels") is string channels ? m_Mixer.Value(channels) : 0f,
+                    dryMix = effect.Parameter("Drymix") is string dry ? m_Mixer.Value(dry) : 1f,
+                    wetMix = effect.Parameter("Wetmix") is string wet ? m_Mixer.Value(wet) : 1f,
+                });
+            }
+            var parent = m_Parent ?? m_Mixer?.m_OutputGroup;
+            return new { handle = m_Handle, parent = parent?.Handle ?? 0UL,
+                muted = m_Mute || (m_Mixer != null && m_Mixer.AnySolo && !InSoloPath()),
+                bypass = m_BypassEffects, observe = m_ObserveOutput, effects };
+        }
+
         bool InSoloPath()
         {
             for (var g = this; g != null; g = g.m_Parent) if (g.m_Solo) return true;
@@ -371,9 +437,13 @@ namespace UnityEngine.Audio
                 if (child != null) m_Children.Add(child);
             }
             m_EffectParameters.Clear();
+            m_Effects.Clear();
             foreach (var item in body.Get("m_Effects")?.Seq() ?? Array.Empty<YNode>())
                 if (Resolve<AudioMixerEffectController>(item.AsRef()) is AudioMixerEffectController effect)
+                {
+                    m_Effects.Add(effect);
                     m_EffectParameters.AddRange(effect.m_Parameters);
+                }
         }
 
         internal static string NullIfZero(string guid) =>
@@ -422,18 +492,30 @@ namespace Unbound.Runtime
     internal sealed class AudioMixerEffectController : Object, ISerializedAsset
     {
         internal string m_EffectName;
+        internal string m_EffectId;
+        internal bool m_Bypass, m_EnableWetMix;
+        internal readonly Dictionary<string, string> m_ParameterGuids = new Dictionary<string, string>(StringComparer.Ordinal);
+        internal string Parameter(string name) => m_ParameterGuids.TryGetValue(name, out var guid) ? guid : null;
         internal readonly List<string> m_Parameters = new List<string>();
 
         void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
         {
             m_EffectName = body.Str("m_EffectName");
+            m_EffectId = body.Str("m_EffectID");
+            m_Bypass = body.Bool("m_Bypass");
+            m_EnableWetMix = body.Bool("m_EnableWetMix");
+            m_ParameterGuids.Clear();
             m_Parameters.Clear();
             var mix = UnityEngine.Audio.AudioMixerGroup.NullIfZero(body.Str("m_MixLevel"));
             if (mix != null) m_Parameters.Add(mix);
             foreach (var item in body.Get("m_Parameters")?.Seq() ?? Array.Empty<YNode>())
             {
                 var guid = UnityEngine.Audio.AudioMixerGroup.NullIfZero(item.Str("m_GUID"));
-                if (guid != null) m_Parameters.Add(guid);
+                if (guid != null)
+                {
+                    m_Parameters.Add(guid);
+                    m_ParameterGuids[item.Str("m_ParameterName")] = guid;
+                }
             }
         }
     }

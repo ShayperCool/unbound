@@ -155,18 +155,41 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
         ));
     }
 
+    // A Humanoid model's clips are muscle clips of its avatar (or the one it copies): they carry
+    // the avatar, through which the managed side turns their transform curves into muscle curves.
+    let human_avatar = (settings.animation_type == 3)
+        .then(|| {
+            model.avatar.map(|a| local(a.id)).or_else(|| {
+                settings
+                    .source_avatar
+                    .as_ref()
+                    .map(|s| external(s.file_id, &s.guid.to_string(), 3))
+            })
+        })
+        .flatten();
     for clip in &model.clips {
-        docs.push(clip_document(clip));
+        let mut document = clip_document(clip);
+        if let (Some(avatar), false, Value::Map(Map(entries))) =
+            (&human_avatar, clip.legacy, &mut document.body)
+        {
+            entries.push(("m_UnboundHumanAvatar".to_string(), avatar.clone()));
+        }
+        docs.push(document);
     }
 
-    // The Animator's avatar: the model's own (a generic one: its name), or another model's.
+    // The Animator's avatar: the model's own, or another model's. A humanoid one carries the
+    // meta's human description and its model's root, from which the managed side builds the
+    // human as the importer does (AvatarBuilder over the imported hierarchy).
     let avatar = if let Some(own) = model.avatar {
-        docs.push(doc(
-            AVATAR,
-            own.id,
-            "Avatar",
-            map(vec![("m_Name", scalar(format!("{}Avatar", model.name)))]),
-        ));
+        let mut body = vec![("m_Name", scalar(format!("{}Avatar", model.name)))];
+        if let Some(human) = &model.human_description {
+            body.push(("m_UnboundHumanDescription", human.clone()));
+            body.push((
+                "m_UnboundRoot",
+                local(model.nodes.first().map_or(0, |n| n.game_object.id)),
+            ));
+        }
+        docs.push(doc(AVATAR, own.id, "Avatar", map(body)));
         local(own.id)
     } else if let Some(source) = &model.settings.source_avatar {
         external(source.file_id, &source.guid.to_string(), 3)
@@ -283,7 +306,9 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
                         ("m_Enabled", scalar(1)),
                         ("m_Avatar", avatar.clone()),
                         ("m_Controller", local(0)),
-                        ("m_ApplyRootMotion", scalar(0)),
+                        // The importer applies root motion for humanoid avatars (measured:
+                        // tests/projects/humanoid, the model moves with its clip).
+                        ("m_ApplyRootMotion", scalar(model.human_description.is_some() as i32)),
                     ]),
                 )
             });

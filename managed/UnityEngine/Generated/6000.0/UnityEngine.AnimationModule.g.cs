@@ -138,24 +138,6 @@ namespace UnityEngine
         [global::System.Obsolete("GetCurrentAnimationClipState is obsolete. Use GetCurrentAnimatorClipInfo instead (UnityUpgradable) -> GetCurrentAnimatorClipInfo(*)")] [global::Unbound.Stub] public global::UnityEngine.AnimationInfo[] GetCurrentAnimationClipState(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetCurrentAnimationClipState"); return global::System.Array.Empty<global::UnityEngine.AnimationInfo>(); }
         [global::System.Obsolete("GetNextAnimationClipState is obsolete. Use GetNextAnimatorClipInfo instead (UnityUpgradable) -> GetNextAnimatorClipInfo(*)")] [global::Unbound.Stub] public global::UnityEngine.AnimationInfo[] GetNextAnimationClipState(int layerIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetNextAnimationClipState"); return global::System.Array.Empty<global::UnityEngine.AnimationInfo>(); }
         [global::System.Obsolete("Stop is obsolete. Use Animator.enabled = false instead")] [global::Unbound.Stub] public void Stop() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.Stop"); }
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 GetIKPosition(global::UnityEngine.AvatarIKGoal goal) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetIKPosition"); return default; }
-        [global::Unbound.Stub] public void SetIKPosition(global::UnityEngine.AvatarIKGoal goal, global::UnityEngine.Vector3 goalPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetIKPosition"); }
-        [global::Unbound.Stub] public global::UnityEngine.Quaternion GetIKRotation(global::UnityEngine.AvatarIKGoal goal) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetIKRotation"); return default; }
-        [global::Unbound.Stub] public void SetIKRotation(global::UnityEngine.AvatarIKGoal goal, global::UnityEngine.Quaternion goalRotation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetIKRotation"); }
-        [global::Unbound.Stub] public float GetIKPositionWeight(global::UnityEngine.AvatarIKGoal goal) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetIKPositionWeight"); return default; }
-        [global::Unbound.Stub] public void SetIKPositionWeight(global::UnityEngine.AvatarIKGoal goal, float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetIKPositionWeight"); }
-        [global::Unbound.Stub] public float GetIKRotationWeight(global::UnityEngine.AvatarIKGoal goal) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetIKRotationWeight"); return default; }
-        [global::Unbound.Stub] public void SetIKRotationWeight(global::UnityEngine.AvatarIKGoal goal, float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetIKRotationWeight"); }
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 GetIKHintPosition(global::UnityEngine.AvatarIKHint hint) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetIKHintPosition"); return default; }
-        [global::Unbound.Stub] public void SetIKHintPosition(global::UnityEngine.AvatarIKHint hint, global::UnityEngine.Vector3 hintPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetIKHintPosition"); }
-        [global::Unbound.Stub] public float GetIKHintPositionWeight(global::UnityEngine.AvatarIKHint hint) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetIKHintPositionWeight"); return default; }
-        [global::Unbound.Stub] public void SetIKHintPositionWeight(global::UnityEngine.AvatarIKHint hint, float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetIKHintPositionWeight"); }
-        [global::Unbound.Stub] public void SetLookAtPosition(global::UnityEngine.Vector3 lookAtPosition) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetLookAtPosition"); }
-        [global::Unbound.Stub] public void SetLookAtWeight(float weight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetLookAtWeight"); }
-        [global::Unbound.Stub] public void SetLookAtWeight(float weight, float bodyWeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetLookAtWeight"); }
-        [global::Unbound.Stub] public void SetLookAtWeight(float weight, float bodyWeight, float headWeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetLookAtWeight"); }
-        [global::Unbound.Stub] public void SetLookAtWeight(float weight, float bodyWeight, float headWeight, float eyesWeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetLookAtWeight"); }
-        [global::Unbound.Stub] public void SetLookAtWeight(float weight, float bodyWeight, float headWeight, float eyesWeight, float clampWeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetLookAtWeight"); }
         [global::Unbound.Stub] public void SetBoneLocalRotation(global::UnityEngine.HumanBodyBones humanBoneId, global::UnityEngine.Quaternion rotation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetBoneLocalRotation"); }
         [global::Unbound.Stub] internal global::UnityEngine.ScriptableObject[] InternalGetBehaviours(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.InternalGetBehaviours"); return global::System.Array.Empty<global::UnityEngine.ScriptableObject>(); }
         [global::Unbound.Stub] internal global::UnityEngine.ScriptableObject[] InternalGetBehavioursByKey(int fullPathHash, int layerIndex, global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.InternalGetBehavioursByKey"); return global::System.Array.Empty<global::UnityEngine.ScriptableObject>(); }
@@ -168,8 +150,6 @@ namespace UnityEngine
         [global::System.Obsolete("ForceStateNormalizedTime is deprecated. Please use Play or CrossFade instead.")] [global::Unbound.Stub] public void ForceStateNormalizedTime(float normalizedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.ForceStateNormalizedTime"); }
         [global::Unbound.Stub] public void SetTarget(global::UnityEngine.AvatarTarget targetIndex, float targetNormalizedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetTarget"); }
         [global::System.Obsolete("Use mask and layers to control subset of transfroms in a skeleton.")] [global::Unbound.Stub] public bool IsControlled(global::UnityEngine.Transform transform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.IsControlled"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Transform GetBoneTransform(global::UnityEngine.HumanBodyBones humanBoneId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetBoneTransform"); return default; }
-        [global::Unbound.Stub] internal global::UnityEngine.Transform GetBoneTransformInternal(int humanBoneId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetBoneTransformInternal"); return default; }
         [global::Unbound.Stub] public void StartPlayback() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.StartPlayback"); }
         [global::Unbound.Stub] public void StopPlayback() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.StopPlayback"); }
         [global::Unbound.Stub] public void StartRecording(int frameCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.StartRecording"); }
@@ -195,13 +175,10 @@ namespace UnityEngine
         [global::System.Obsolete("Animator.linearVelocityBlending is no longer used and has been deprecated.")] public bool linearVelocityBlending { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.linearVelocityBlending"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.linearVelocityBlending"); } }
         internal bool allowConstantClipSamplingOptimization { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.allowConstantClipSamplingOptimization"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.allowConstantClipSamplingOptimization"); } }
         public float gravityWeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.gravityWeight"); return default; } }
-        public global::UnityEngine.Vector3 bodyPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyPosition"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyPosition"); } }
         internal global::UnityEngine.Vector3 bodyPositionInternal { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyPositionInternal"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyPositionInternal"); } }
-        public global::UnityEngine.Quaternion bodyRotation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyRotation"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyRotation"); } }
         internal global::UnityEngine.Quaternion bodyRotationInternal { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyRotationInternal"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyRotationInternal"); } }
         public bool stabilizeFeet { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.stabilizeFeet"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.stabilizeFeet"); } }
         public float feetPivotActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.feetPivotActive"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.feetPivotActive"); } }
-        public global::UnityEngine.Vector3 pivotPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.pivotPosition"); return default; } }
         public bool isMatchingTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.isMatchingTarget"); return default; } }
         public global::UnityEngine.Vector3 targetPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.targetPosition"); return default; } }
         public global::UnityEngine.Quaternion targetRotation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.targetRotation"); return default; } }
@@ -210,8 +187,6 @@ namespace UnityEngine
         public float recorderStopTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.recorderStopTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.recorderStopTime"); } }
         public global::UnityEngine.AnimatorRecorderMode recorderMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.recorderMode"); return default; } }
         public bool layersAffectMassCenter { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.layersAffectMassCenter"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.layersAffectMassCenter"); } }
-        public float leftFeetBottomHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.leftFeetBottomHeight"); return default; } }
-        public float rightFeetBottomHeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.rightFeetBottomHeight"); return default; } }
         internal bool supportsOnAnimatorMove { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.supportsOnAnimatorMove"); return default; } }
     }
     [global::Unbound.Stub]
@@ -267,21 +242,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal global::UnityEngine.Quaternion Internal_GetZYPostQ(int humanId, global::UnityEngine.Quaternion parentQ, global::UnityEngine.Quaternion q) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Avatar.Internal_GetZYPostQ"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Quaternion Internal_GetZYRoll(int humanId, global::UnityEngine.Vector3 uvw) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Avatar.Internal_GetZYRoll"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Vector3 Internal_GetLimitSign(int humanId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Avatar.Internal_GetLimitSign"); return default; }
-        public global::UnityEngine.HumanDescription humanDescription { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Avatar.humanDescription"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class AvatarBuilder
-    {
-        [global::Unbound.Stub] public static global::UnityEngine.Avatar BuildHumanAvatar(global::UnityEngine.GameObject go, global::UnityEngine.HumanDescription humanDescription) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarBuilder.BuildHumanAvatar"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Avatar BuildGenericAvatar(global::UnityEngine.GameObject go, string rootMotionTransformName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarBuilder.BuildGenericAvatar"); return default; }
-        [global::Unbound.Stub] public AvatarBuilder() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarBuilder.ctor"); }
-    }
-    public enum AvatarIKHint
-    {
-        LeftKnee = 0,
-        RightKnee = 1,
-        LeftElbow = 2,
-        RightElbow = 3,
     }
     unsafe partial class AvatarMask
     {
@@ -355,48 +315,6 @@ namespace UnityEngine
         JawLeftRight = 11,
         LastHeadDof = 12,
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct HumanBone
-    {
-        [global::Unbound.Stub] public global::UnityEngine.HumanLimit limit;
-        public string boneName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanBone.boneName"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanBone.boneName"); } }
-        public string humanName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanBone.humanName"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanBone.humanName"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct HumanDescription
-    {
-        [global::Unbound.Stub] public global::UnityEngine.HumanBone[] human;
-        [global::Unbound.Stub] public global::UnityEngine.SkeletonBone[] skeleton;
-        [global::Unbound.Stub] internal float m_ArmTwist;
-        [global::Unbound.Stub] internal float m_ForeArmTwist;
-        [global::Unbound.Stub] internal float m_UpperLegTwist;
-        [global::Unbound.Stub] internal float m_LegTwist;
-        [global::Unbound.Stub] internal float m_ArmStretch;
-        [global::Unbound.Stub] internal float m_LegStretch;
-        [global::Unbound.Stub] internal float m_FeetSpacing;
-        [global::Unbound.Stub] internal float m_GlobalScale;
-        [global::Unbound.Stub] internal string m_RootMotionBoneName;
-        [global::Unbound.Stub] internal bool m_HasTranslationDoF;
-        [global::Unbound.Stub] internal bool m_HasExtraRoot;
-        [global::Unbound.Stub] internal bool m_SkeletonHasParents;
-        public float upperArmTwist { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.upperArmTwist"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.upperArmTwist"); } }
-        public float lowerArmTwist { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.lowerArmTwist"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.lowerArmTwist"); } }
-        public float upperLegTwist { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.upperLegTwist"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.upperLegTwist"); } }
-        public float lowerLegTwist { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.lowerLegTwist"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.lowerLegTwist"); } }
-        public float armStretch { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.armStretch"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.armStretch"); } }
-        public float legStretch { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.legStretch"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.legStretch"); } }
-        public float feetSpacing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.feetSpacing"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.feetSpacing"); } }
-        public bool hasTranslationDoF { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.hasTranslationDoF"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanDescription.hasTranslationDoF"); } }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct HumanLimit
-    {
-        public bool useDefaultValues { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanLimit.useDefaultValues"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanLimit.useDefaultValues"); } }
-        public global::UnityEngine.Vector3 min { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanLimit.min"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanLimit.min"); } }
-        public global::UnityEngine.Vector3 max { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanLimit.max"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanLimit.max"); } }
-        public global::UnityEngine.Vector3 center { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanLimit.center"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanLimit.center"); } }
-        public float axisLength { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanLimit.axisLength"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanLimit.axisLength"); } }
-    }
     internal enum HumanParameter
     {
         UpperArmTwist = 0,
@@ -427,25 +345,8 @@ namespace UnityEngine
         RightLittle = 15,
         LastHumanPartDof = 16,
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct HumanPose
+    unsafe partial class HumanPoseHandler
     {
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 bodyPosition;
-        [global::Unbound.Stub] public global::UnityEngine.Quaternion bodyRotation;
-        [global::Unbound.Stub] public float[] muscles;
-        [global::Unbound.Stub] internal void Init() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanPose.Init"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class HumanPoseHandler : global::System.IDisposable
-    {
-        [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanPoseHandler.Dispose"); }
-        [global::Unbound.Stub] public HumanPoseHandler(global::UnityEngine.Avatar avatar, global::UnityEngine.Transform root) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanPoseHandler.ctor"); }
-        [global::Unbound.Stub] public HumanPoseHandler(global::UnityEngine.Avatar avatar, string[] jointPaths) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanPoseHandler.ctor"); }
-        [global::Unbound.Stub] public void GetHumanPose(ref global::UnityEngine.HumanPose humanPose) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanPoseHandler.GetHumanPose"); }
-        [global::Unbound.Stub] public void SetHumanPose(ref global::UnityEngine.HumanPose humanPose) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanPoseHandler.SetHumanPose"); }
-        [global::Unbound.Stub] public void GetInternalHumanPose(ref global::UnityEngine.HumanPose humanPose) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanPoseHandler.GetInternalHumanPose"); }
-        [global::Unbound.Stub] public void SetInternalHumanPose(ref global::UnityEngine.HumanPose humanPose) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanPoseHandler.SetInternalHumanPose"); }
         [global::Unbound.Stub] public void GetInternalAvatarPose(global::Unity.Collections.NativeArray<float> avatarPose) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanPoseHandler.GetInternalAvatarPose"); }
         [global::Unbound.Stub] public void SetInternalAvatarPose(global::Unity.Collections.NativeArray<float> avatarPose) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanPoseHandler.SetInternalAvatarPose"); }
         [global::Unbound.Stub]
@@ -453,25 +354,6 @@ namespace UnityEngine
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.HumanPoseHandler humanPoseHandler) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanPoseHandler.BindingsMarshaller.ConvertToNative"); return default; }
         }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial class HumanTrait
-    {
-        [global::Unbound.Stub] internal static int GetBoneIndexFromMono(int humanId) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanTrait.GetBoneIndexFromMono"); return default; }
-        [global::Unbound.Stub] internal static int GetBoneIndexToMono(int boneIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanTrait.GetBoneIndexToMono"); return default; }
-        [global::Unbound.Stub] public static int MuscleFromBone(int i, int dofIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanTrait.MuscleFromBone"); return default; }
-        [global::Unbound.Stub] public static int BoneFromMuscle(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanTrait.BoneFromMuscle"); return default; }
-        [global::Unbound.Stub] public static bool RequiredBone(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanTrait.RequiredBone"); return default; }
-        [global::Unbound.Stub] public static float GetMuscleDefaultMin(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanTrait.GetMuscleDefaultMin"); return default; }
-        [global::Unbound.Stub] public static float GetMuscleDefaultMax(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanTrait.GetMuscleDefaultMax"); return default; }
-        [global::Unbound.Stub] public static float GetBoneDefaultHierarchyMass(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanTrait.GetBoneDefaultHierarchyMass"); return default; }
-        [global::Unbound.Stub] public static int GetParentBone(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanTrait.GetParentBone"); return default; }
-        [global::Unbound.Stub] public HumanTrait() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanTrait.ctor"); }
-        public static int MuscleCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanTrait.MuscleCount"); return default; } }
-        public static string[] MuscleName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanTrait.MuscleName"); return global::System.Array.Empty<string>(); } }
-        public static int BoneCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanTrait.BoneCount"); return default; } }
-        public static string[] BoneName { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanTrait.BoneName"); return global::System.Array.Empty<string>(); } }
-        public static int RequiredBoneCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanTrait.RequiredBoneCount"); return default; } }
     }
     public unsafe partial interface IAnimationClipSource
     {
@@ -501,14 +383,8 @@ namespace UnityEngine
         [global::System.Obsolete("ValidateIfRetargetable is not supported anymore, please use isHumanMotion instead.")] [global::Unbound.Stub] public bool ValidateIfRetargetable(bool val) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Motion.ValidateIfRetargetable"); return default; }
         [global::System.Obsolete("isAnimatorMotion is not supported anymore, please use !legacy instead.")] public bool isAnimatorMotion { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Motion.isAnimatorMotion"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct SkeletonBone
+    unsafe partial struct SkeletonBone
     {
-        [global::Unbound.Stub] public string name;
-        [global::Unbound.Stub] internal string parentName;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 position;
-        [global::Unbound.Stub] public global::UnityEngine.Quaternion rotation;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 scale;
         [global::System.Obsolete("transformModified is no longer used and has been deprecated.")] public int transformModified { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkeletonBone.transformModified"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.SkeletonBone.transformModified"); } }
     }
     internal enum StateInfoIndex
