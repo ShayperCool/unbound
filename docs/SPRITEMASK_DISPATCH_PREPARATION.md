@@ -1,7 +1,7 @@
 # SpriteMask opaque dispatch preparation
 
-Prepared from Root `d662d3023261dc34a7dbc751a8bc86758dd81765`. Source and tests
-only, **UNBUILT / UNRUN**. No runtime acceptance or measured failure count changes.
+Prepared from Root `d662d3023261dc34a7dbc751a8bc86758dd81765`. A matching mask-only
+runtime was validated afterwards (see the end of this file); Root decides on acceptance.
 NativeApi15/render7/shader16/cache13/model11/shim9 are unchanged. Exact generated
 stub changes and removals: `[]`. No native API reservation or protocol change.
 
@@ -78,3 +78,17 @@ mask_other_renderers and mask_particles. Include relevant built-in forward opaqu
 and transparent controls, deferred/fallback/VertexLit exclusions, callback and
 renderer-list/override controls, and depth-clear/retained-target controls.
 Use the existing release-selected canonical references and unchanged tolerances.
+
+## Mask-only runtime validation (2026-11-01)
+
+One coherent Host/Core/test build of the integrated source, compared against the frozen Root
+runtime (13b7dd2d) on the same fixtures. Full managed suite: 1488/1499, the 11 known failures
+unchanged, all 15 mask tests pass. API check: 0 errors, 2314 types, stub changes `[]`.
+Lines: VisibleInsideMask goes from 144 failing pixels to 0, VisibleOutsideMask stays at 590,
+no pixels or channels are introduced, and the other seven images are byte-identical. In
+VisibleOutsideMask, 246 raw channel errors increase inside pixels that were already failing;
+they are retained. Resources: 539/539 values and 62/62 images, byte-identical. The
+builtinrp/lighting/graphics/urp outputs are byte-identical; builtinfx differs only in an image
+its comparator already lists as expected. None of these controls has masks. Masked VertexLit,
+deferred, renderer-list, override, callback and depth-clear paths remain unmeasured at runtime.
+Receipt: `~/.cache/unbound/validation/runs/mask-only-integration-20261101-t3-65ed30f3/HANDOFF.md`.

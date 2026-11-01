@@ -2546,3 +2546,11 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - API:real Check0/2314; checker18/18,protocol4/4,strict machine and actual Check CPU/load overlap pass;33 payloads verified.
 - Native:independent repeats agree,551/555 old-canonical fields;4 stack-fixture disagreements remain, no reference replacement.
 - Open:84 platform failures, filesystem/macOS/TOCTOU limits and current combined full suite; line package remains rejected. Receipt: `~/.cache/unbound/validation/runs/platform-root-integration-20261101b/root-adjudication.json`.
+
+### 2026-11-01 SpriteMask opaque-stage dispatch, mask-only runtime
+- What: a tagged built-in forward opaque emission no longer adds new later-queue mask stencil writes; existing tracked masks and Inside/Outside ref-1 tests stay. Root review fixes are included.
+- Lines: canonical 1853, union 1870, failing keys 1679->1678 (inside mask resolved); introduced keys/leaves/pixels/channels 0. Outside keeps 590 failing pixels and 246 raw channel-error increases.
+- Resources 539/539 values, 62/62 images, byte-identical. builtinrp/lighting/graphics/urp byte-identical; builtinfx differs only in an expected flare image.
+- Managed 1488/1499, exact known 11; mask 15/15, platform 64/64. API 0 errors/2314; stubs [] (historical generator differences reported, not written).
+- Open: masked VertexLit/deferred/renderer-list/override/callback/depth-clear runtime paths are unmeasured; line geometry, LightProbes, sphere48 and zero-life21 remain with their owners.
+- Receipt: `~/.cache/unbound/validation/runs/mask-only-integration-20261101-t3-65ed30f3/HANDOFF.md`.
