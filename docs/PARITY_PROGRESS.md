@@ -2303,3 +2303,25 @@ seven sampler RPC guards pass, including rejection of the obsolete four-value
 request. Broader source-identical delivery results were reused; no new Editor,
 full physics, audio or full-rendering runs were needed. Other sampler W policies
 and the separate humanoid IK blocker remain outside this acceptance.
+
+## GPU buffer counters, copies, indirect dispatch and readbacks, 2026-11-01
+
+NativeApi 15 with render protocol 7 (buffer copies, hidden counters, indirect
+dispatches, texture level and layer readback); shader cache 16 and texture
+cache 13 are unchanged. tests/projects/gpubuffers records Append, Consume and
+Counter buffers, CopyCount, SetCounterValue, indirect dispatches, buffer copies,
+command-buffer buffer data, SetData/GetData overloads and AsyncGPUReadback of
+buffers and textures on OpenGL Core. Two windowed Native repeats are
+byte-identical in their 389 values; readback completion frames differ between
+repeats (one or two frames), so they are compared against the range the Editor
+showed. Root's runtime passes 130 of the 442 compared keys and none of the 54
+timings; the candidate passes 389/389 values and 53/53 timings. graphics 80/80,
+materials 1004/1004, resources 539/539 values and 62/62 images, rtdepth
+1071/1071 values and 316/368 images, controls 46/46 and 13/17, builtinfx
+213/215 (2 expected) and 92/92 images, editor 170/174 (4 expected) and all 26
+URP scenarios byte-identical to Root's runtime: none changed. Managed tests pass
+1,289/1,300 with the same eleven failures; runtime 50, app 20 and shader 37
+Rust tests pass; API checking has zero errors in 2,290 types with regenerated
+stubs. Readbacks into unmeasured formats (16-bit normalized, compressed
+sources) fail loudly; RequestIntoNativeSlice and the Awaitable overloads remain
+stubs.
