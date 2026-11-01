@@ -21,6 +21,9 @@ It then records:
   GPU (`Assets/Pixels/Shaders/SampleCube.shader`, point by point at the face's texel centres)
   before any CPU access, after `Apply(false)` as the first access, and after `GetPixels` then
   `Apply(false)`;
+* one script-made 16x16 R16 texture with 16-bit values (0, 1, 2, ..., 65534, 65535, then
+  pseudo-random ones) point-blitted into an ARGBFloat target and read back as floats
+  (`R16Gpu.blit.float`);
 * one script-made 4x4x4 Texture3D, bound to the volume sampling material throughout, drawn at
   depths 5 and -2 (beyond its 4 slices) while its `wrapModeW` goes Repeat, Clamp, Repeat, then
   Clamp with an `Apply(false)` and Repeat again.
@@ -75,5 +78,7 @@ Gamma and Linear read the same floats.
 * `EncodeToEXR` succeeds on a readable imported texture as its first CPU access.
 * An imported readable cubemap's `Apply(false)`, as the first access or after `GetPixels`, leaves
   every face the GPU draws unchanged.
+* A script-made R16 texture samples on the GPU as (n / 65535, 0, 0, 1) in single precision for
+  every 16-bit n: the GPU keeps all 16 bits.
 * Changing a bound Texture3D's `wrapModeW` takes effect on the next draw: Clamp repeats the edge
   slice beyond the depth, Repeat wraps again, with or without an `Apply` in between.
