@@ -143,6 +143,7 @@ namespace UnityEngine
             set
             {
                 if (m_Controller == value) return;
+                ResetBindings();
                 m_Controller = value;
                 m_Player = null;
                 if (isActiveAndEnabled) EnsurePlayer();
@@ -276,11 +277,7 @@ namespace UnityEngine
         /// animator first bound, measured in the Editor's Play mode), then bind again.</summary>
         public void Rebind()
         {
-            var root = transform;
-            var position = root.localPosition;
-            var rotation = root.localRotation;
-            m_Player?.Bindings.WriteDefaults();
-            if (m_ApplyRootMotion) root.SetLocalPositionAndRotation(position, rotation);
+            ResetBindings();
             m_Player = null;
             EnsurePlayer();
             if (m_Match != null && m_Player != null && m_Player.Layers.Length > 0)
@@ -292,6 +289,16 @@ namespace UnityEngine
                 m_Match.End = 1.0;
                 m_Match.Finish = false;
             }
+        }
+
+        void ResetBindings()
+        {
+            if (m_Player == null) return;
+            var root = transform;
+            var position = root.localPosition;
+            var rotation = root.localRotation;
+            m_Player.Bindings.WriteDefaults();
+            if (m_ApplyRootMotion) root.SetLocalPositionAndRotation(position, rotation);
         }
 
         public void WriteDefaultValues() => m_Player?.Bindings.WriteDefaults();
