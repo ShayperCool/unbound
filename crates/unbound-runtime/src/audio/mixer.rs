@@ -17,7 +17,7 @@ use super::{
     spatial::{self, Listener, SourceSpatial},
 };
 use crate::render_protocol::Vector3;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 /// Frames rendered at a time (scheduling stays sample accurate inside a block).
 pub const BLOCK: usize = 256;
@@ -253,15 +253,58 @@ pub struct Source {
     pending_position: f64,
     is_virtual: bool,
     output: Option<Ring>,
+    generator: GeneratorState,
+    played: bool,
 }
 
 impl Source {
     fn filter_only(&self) -> bool {
-        self.params.clip == 0 && self.params.has(source_flags::FILTER)
+        self.params.clip == 0 && self.params.has(source_flags::FILTER) && self.active()
     }
 
     fn active(&self) -> bool {
         self.main.as_ref().is_some_and(|v| !v.paused) || self.one_shots.iter().any(|v| !v.paused)
+    }
+}
+
+/// Clipless filters supply PCM ahead of playback, in configured DSP buffers. The
+/// first pull primes the current and next buffer; later pulls consume the prior
+/// callback's samples while requesting the next one. Pausing preserves that queue.
+#[derive(Debug, Default)]
+struct GeneratorState {
+    current: Vec<f32>,
+    next: Vec<f32>,
+    offset: usize,
+}
+
+impl GeneratorState {
+    fn render(&mut self, handle: u64, out: &mut [f32], frames: usize, callback: Option<Callback>) {
+        let length = frames * 2;
+        let fill = |buffer: &mut Vec<f32>| {
+            buffer.resize(length, 0.0);
+            buffer.fill(0.0);
+            if let Some(cb) = callback {
+                cb(callback::SOURCE_FILTER, handle, buffer.as_mut_ptr(), frames as i32, 2, 0);
+            }
+        };
+        if self.current.len() != length {
+            self.current.clear();
+            self.next.clear();
+            self.offset = 0;
+            fill(&mut self.current);
+        }
+        let mut written = 0;
+        while written < out.len() {
+            if self.offset == 0 { fill(&mut self.next); }
+            let count = (out.len() - written).min(length - self.offset);
+            out[written..written + count].copy_from_slice(&self.current[self.offset..self.offset + count]);
+            written += count;
+            self.offset += count;
+            if self.offset == length {
+                std::mem::swap(&mut self.current, &mut self.next);
+                self.offset = 0;
+            }
+        }
     }
 }
 
@@ -310,6 +353,7 @@ pub struct Mixer {
     groups: HashMap<u64, Group>,
     group_nodes: HashMap<u64, GroupNode>,
     group_order: Vec<u64>,
+    activated_mixers: HashSet<u64>,
     capture_sinks: HashMap<u64, capture::Sink>,
     pub listener: Listener,
     pub listener_volume: f32,
@@ -342,6 +386,7 @@ impl Mixer {
             groups: HashMap::new(),
             group_nodes: HashMap::new(),
             group_order: Vec::new(),
+            activated_mixers: HashSet::new(),
             capture_sinks: HashMap::new(),
             listener: Listener::default(),
             listener_volume: 1.0,
@@ -395,6 +440,7 @@ impl Mixer {
             source.main = None;
             source.one_shots.clear();
             source.pending_position = 0.0;
+            source.generator = GeneratorState::default();
         }
         Ok(())
     }
@@ -553,9 +599,8 @@ impl Mixer {
 
     fn active_mixer_roots(&self) -> std::collections::HashSet<u64> {
         let mut active = std::collections::HashSet::new();
-        // Clipless callbacks generate mixer input without a decoded clip voice. The
-        // generator control stays awake through silence and wakes a quiet route on attach.
-        for source in self.sources.values().filter(|s| s.active() || s.filter_only()) {
+        // A playing clipless callback is activity even when it generates silence.
+        for source in self.sources.values().filter(|s| s.active()) {
             let mut handle = source.params.group;
             for _ in 0..self.group_nodes.len() {
                 let Some(group) = self.group_nodes.get(&handle) else { break; };
@@ -596,6 +641,14 @@ impl Mixer {
                     return;
                 }
                 let clip_handle = source.params.clip;
+                if clip_handle == 0 && source.params.has(source_flags::FILTER) {
+                    source.played = true;
+                    source.generator = GeneratorState::default();
+                    let mut voice = Voice::new(0, 0.0, start_frame(cmd.time), 1.0);
+                    voice.submitted = !deferred;
+                    source.main = Some(voice);
+                    return;
+                }
                 let Some(clip) = clips.get(&clip_handle) else {
                     source.main = None;
                     return;
@@ -632,6 +685,7 @@ impl Mixer {
                 source.main = None;
                 source.one_shots.clear();
                 source.pending_position = 0.0;
+                source.generator = GeneratorState::default();
             }
             command::STOP_MAIN => {
                 source.main = None;
@@ -714,7 +768,8 @@ impl Mixer {
         let mut state = AudioSourceState {
             main: voice_state::NONE,
             one_shots: source.one_shots.len() as i32,
-            is_virtual: (source.is_virtual || (source.main.is_none() && source.one_shots.is_empty())) as i32,
+            is_virtual: (source.is_virtual || (source.main.is_none() && source.one_shots.is_empty()
+                && (source.params.clip != 0 || !source.params.has(source_flags::FILTER) || source.played))) as i32,
             _pad: 0,
             position: source.pending_position,
         };
@@ -888,6 +943,16 @@ impl Mixer {
         let listener_paused = self.listener_paused;
         let has_listener = self.has_listener;
         let config = self.config;
+        // A graph first participates when a routed source starts, including a pending
+        // voice. Merely loading it or registering a sink does not process its DSP.
+        for source in self.sources.values().filter(|s| s.active()) {
+            let mut handle = source.params.group;
+            for _ in 0..self.group_nodes.len() {
+                let Some(node) = self.group_nodes.get(&handle) else { break; };
+                if handle == node.spec.mixer { self.activated_mixers.insert(handle); }
+                handle = node.spec.parent;
+            }
+        }
         // New voices wake immediately, even when no main-thread update intervenes. Waking
         // preserves effect history and the input fade; parameter submissions alone do not wake.
         for root in self.active_mixer_roots() {
@@ -959,7 +1024,6 @@ impl Mixer {
             let flags = source.params.flags;
             let filter = flags & source_flags::FILTER != 0;
             let has_voices = source.main.is_some() || !source.one_shots.is_empty();
-            // A filter-only source (no clip) runs its filter all the time.
             let filter_only = source.filter_only();
             if !has_voices && !filter_only {
                 continue;
@@ -996,7 +1060,7 @@ impl Mixer {
             buffer.fill(0.0);
             let target = s.matrix.map(|g| g * volume);
             let looping = flags & source_flags::LOOP != 0;
-            if let Some(main) = &mut source.main {
+            if let Some(main) = &mut source.main && main.clip != 0 {
                 let finished = render_voice(
                     main,
                     clips.get(&main.clip),
@@ -1042,7 +1106,11 @@ impl Mixer {
                     callback,
                 )
             });
-            if filter && let Some(cb) = callback {
+            if filter_only {
+                if source.main.as_ref().is_some_and(|v| v.submitted && !v.paused && t0 >= v.start_at && t0 < v.end_at) {
+                    source.generator.render(handle, buffer, config.buffer_size.max(1) as usize, callback);
+                }
+            } else if filter && source.params.clip != 0 && let Some(cb) = callback {
                 cb(
                     callback::SOURCE_FILTER,
                     handle,
@@ -1066,7 +1134,8 @@ impl Mixer {
         }
         for &handle in &self.group_order {
             let root = self.group_nodes[&handle].spec.mixer;
-            if self.group_nodes.get(&root).is_some_and(|node| node.suspended) {
+            if self.group_nodes.get(&root).is_some_and(|node| node.suspended)
+                || (root != 0 && !self.activated_mixers.contains(&root)) {
                 // A suspended graph does not write registered group sinks. The caller retains
                 // its previous block, while the device stream and listener receive silence.
                 continue;
@@ -1852,13 +1921,78 @@ mod tests {
                 if block == attach {
                     if attach > 0 { assert!(mixer.group_nodes[&3].suspended); }
                     source_with(&mut mixer, 7, 0, |p| { p.group = 3; p.flags = source_flags::FILTER; });
+                    play(&mut mixer, 7, command::PLAY, 0.0);
                 }
                 if block == 82 { TONE.with(|tone| tone.set(true)); }
                 mixer.update_suspension();
                 mixer.render(&mut output, 2);
                 if block >= attach { assert!(!mixer.group_nodes[&3].suspended); }
-                assert!(output.iter().all(|sample| *sample == if block < 82 { 0.0 } else { 0.125 }));
+                assert!(output.iter().all(|sample| *sample == if block < 83 { 0.0 } else { 0.125 }));
             }
+        }
+    }
+
+    #[test]
+    fn clipless_lifecycle_matches_every_native_callback_state_and_sink_sample() {
+        use std::cell::RefCell;
+        #[derive(Default)]
+        struct Trace { amplitude: f32, calls: u32, listener: u32, length: usize, generated: f32, first: f32, last: f32 }
+        thread_local! { static TRACE: RefCell<Trace> = RefCell::new(Trace::default()); }
+        extern "C" fn callback(kind: i32, _: u64, data: *mut f32, frames: i32, channels: i32, _: i64) {
+            let values = unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+            TRACE.with(|trace| {
+                let mut t = trace.borrow_mut();
+                if kind == callback::SOURCE_FILTER {
+                    t.calls += 1; t.length = values.len(); t.generated = t.amplitude;
+                    values.fill(t.amplitude);
+                } else if kind == callback::LISTENER_FILTER {
+                    t.listener += 1; t.first = values[0]; t.last = values[values.len()-1];
+                }
+            });
+        }
+        let reference = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/audiogeneratorlifecycle/Reference/unity-6000.0.71f1");
+        // Keep the regression self-contained without adding a decompression dependency.
+        let unpack = |key: &str| -> Vec<f32> {
+            let result = std::process::Command::new("python3").args(["-c",
+                "import gzip,sys;sys.stdout.buffer.write(gzip.open(sys.argv[1],'rb').read())"])
+                .arg(reference.join(format!("{key}.f32.gz"))).output().unwrap();
+            assert!(result.status.success());
+            result.stdout.chunks_exact(4).map(|b| f32::from_le_bytes(b.try_into().unwrap())).collect()
+        };
+        let expected_output = unpack("output");
+        let expected_sink = unpack("master");
+        let expected_trace = unpack("trace");
+        let mut m = Mixer::new(MixerConfig::default());
+        m.defer_voice_submission = true;
+        let mut group = filter_group(3, 0, "Attenuation");
+        group.mixer = 3; group.effects[0].gain = 1.0;
+        m.configure_group(group).unwrap();
+        m.listener_filter = true;
+        m.set_callback(Some(callback));
+        source_with(&mut m, 7, 0, |p| { p.group = 3; p.flags = source_flags::FILTER; });
+        TRACE.with(|trace| *trace.borrow_mut() = Trace { amplitude: 0.0625, ..Default::default() });
+        for step in 0..23 {
+            if matches!(step, 0 | 1 | 2 | 5 | 12 | 15 | 18 | 21) { m.update_suspension(); }
+            let command = match step { 3 | 20 => Some(command::PLAY), 11 => Some(command::PAUSE),
+                14 => Some(command::UNPAUSE), 17 => Some(command::STOP), _ => None };
+            if let Some(command) = command { play(&mut m, 7, command, 0.0); }
+            if step == 8 { TRACE.with(|trace| trace.borrow_mut().amplitude = 0.125); }
+            if step == 20 { TRACE.with(|trace| trace.borrow_mut().amplitude = 0.25); }
+            let before = TRACE.with(|trace| { let t = trace.borrow(); (t.calls, t.listener) });
+            let output = m.capture(2048, vec![capture::SinkRequest { handle: 3, length: 2048, exclude_from_mix: false }]).unwrap();
+            let state = m.source_state(7);
+            let observed = TRACE.with(|trace| {
+                let t = trace.borrow();
+                [(t.calls-before.0) as f32, (t.listener-before.1) as f32,
+                    (state.main == voice_state::PLAYING) as u8 as f32, state.is_virtual as f32,
+                    state.position as f32, t.length as f32, t.generated, t.first, t.last]
+            });
+            assert_eq!(&observed, &expected_trace[step*9..(step+1)*9], "trace step={step}");
+            assert_eq!(output.samples, expected_output[step*2048..(step+1)*2048], "output step={step}");
+            let mut sink = vec![-3.0; 2048];
+            sink[..output.sinks[0].samples.len()].copy_from_slice(&output.sinks[0].samples);
+            assert_eq!(sink, expected_sink[step*2048..(step+1)*2048], "sink step={step}");
         }
     }
 
