@@ -104,7 +104,7 @@ Result (4 launches, all gated, repeats byte-identical; linear `ea1a9761…`, gam
 one predeclared rule holds for all 8 settings, `A=one R=x M=srgb`. That is
 `unity_IndirectSpecColor.rgb = L0 * reflectionIntensity` in linear, and
 `LinearToGammaSpace(L0 * reflectionIntensity)` per channel in gamma; ambientIntensity has no effect.
-The largest errors are 3e-9 (linear) and 6e-8 (gamma). Every other candidate misses by at least 0.011.
+The largest errors are 3e-9 (linear) and 6e-8 (gamma). Every other candidate's worst setting misses by at least 0.061.
 The immediate capture equals the settled one in every setting. Alpha is reflectionIntensity (recorded,
 not part of the rule). The Editor exposes no serialized ambient probe, so L0 is the offline parse above.
 The Standard sphere (tier High, BRDF1) is 0.02 x ISC in linear and 0.72 x 0.2209163 x ISC in gamma,
