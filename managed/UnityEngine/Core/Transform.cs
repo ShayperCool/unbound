@@ -126,6 +126,7 @@ namespace UnityEngine
             }
             set
             {
+                SyncJobs();
                 localRotation = m_Parent == null ? value : m_Parent.InverseHierarchyRotation(value);
             }
         }
