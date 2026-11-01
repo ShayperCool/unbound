@@ -1,6 +1,6 @@
 //! What the native side knows while a game runs: the project, its asset database and loaded
 //! documents. The managed engine reaches it through the native API.
-use crate::render_protocol::{ImportedTextureInfo, NullBackend, RenderBackend, owned};
+use crate::render_protocol::{ImportedTextureInfo, NullBackend, RenderBackend, handle, owned};
 use anyhow::{Context, Result, bail};
 use serde::Deserialize;
 use serde_json::json;
@@ -233,11 +233,9 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 aniso_level: i32,
             }
             let r: Request = serde_json::from_str(request)?;
+            handle::plain(r.handle, method).map_err(anyhow::Error::msg)?;
             anyhow::ensure!(r.handle != 0, "sampler properties require a texture handle");
-            backend().texture_sampler(
-                r.handle,
-                [r.filter_mode, r.wrap_u, r.wrap_v, r.aniso_level],
-            );
+            backend().texture_sampler(r.handle, [r.filter_mode, r.wrap_u, r.wrap_v, r.aniso_level]);
             Ok("true".to_owned())
         }
         "texture-sampler-state" => {
@@ -248,6 +246,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 mip_bias: Option<f32>,
             }
             let r: Request = serde_json::from_str(request)?;
+            handle::plain(r.handle, method).map_err(anyhow::Error::msg)?;
             if let Some(bias) = r.mip_bias {
                 set_texture_mip_bias(r.handle, bias);
             }
