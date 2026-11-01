@@ -2554,3 +2554,12 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - Managed 1488/1499, exact known 11; mask 15/15, platform 64/64. API 0 errors/2314; stubs [] (historical generator differences reported, not written).
 - Open: masked VertexLit/deferred/renderer-list/override/callback/depth-clear runtime paths are unmeasured; line geometry, LightProbes, sphere48 and zero-life21 remain with their owners.
 - Receipt: `~/.cache/unbound/validation/runs/mask-only-integration-20261101-t3-65ed30f3/HANDOFF.md`.
+
+### 2026-11-01 Root SpriteMask dispatch integration
+- What: only actual built-in forward-opaque draws defer NEW later-queue masks; existing stencil contributions and other dispatch paths retain their handling.
+- Probe: inside-mask144->0 failing pixels; outside590->590; other7lineimages byte-identical, resources539+62 exact.
+- Introduced:0 numeric/pixel/channel failures; outside246rawchannel errors increase and330decrease, all retained in full reports.
+- Managed:current1488/1499, same11 failures; all15mask and64platform controls pass, testedCore=package.
+- API:0/2314 through existing legacy-discovery entry; no public/API/stub/ABI/cache change;33payloads Root-verified.
+- Controls:builtinrp/lighting/graphics/urp unchanged; one flare image change remains unattributed, not a mask claim.
+- Open:maskedCB/SRP/deferred/retained-target runtime coverage, line/LP packages and original gaps. Receipt: `~/.cache/unbound/validation/runs/mask-root-integration-20261101b/root-adjudication.json`.
