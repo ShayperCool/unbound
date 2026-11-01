@@ -120,15 +120,30 @@ namespace Unbound.Runtime
         {
             var p = t.position;
             position = new Vector2(p.x, p.y);
-            var right = t.rotation * Vector3.right;
-            angle = Mathf.Atan2(right.y, right.x);
+            angle = RotationAngle(t.rotation);
+        }
+
+        // Native Physics2D takes the quaternion's Z/W twist, including tilted
+        // transforms. Projecting the rotated right axis changes the body angle.
+        internal static float RotationAngle(Quaternion rotation)
+        {
+            if (rotation.w < 0f) return 2f * MathF.Atan2(-rotation.z, -rotation.w);
+            return 2f * MathF.Atan2(rotation.z, rotation.w);
         }
 
         /// <summary>Maps points of a collider's transform space into the frame of the body at the given pose.</summary>
         internal static Matrix4x4 ToBodyMatrix(Transform collider, Vector2 bodyPosition, float bodyAngle)
         {
-            var pose = Matrix4x4.TRS(new Vector3(bodyPosition.x, bodyPosition.y, 0f), Quaternion.Euler(0f, 0f, bodyAngle * Mathf.Rad2Deg), Vector3.one);
-            var m = pose.inverse * collider.localToWorldMatrix;
+            // Native uses the conjugate of the pose quaternion. A general
+            // matrix inverse adds determinant division and changes local vertices.
+            var rotation = Quaternion.FromEulerRad(new Vector3(0f, 0f, bodyAngle));
+            var inverse = Matrix4x4.Rotate(Quaternion.Inverse(rotation));
+            var world = collider.localToWorldMatrix;
+            var m = inverse * world;
+            // Compose both translations in the rotated frame before subtracting.
+            // Tilted and nested frame controls retain this accumulation order.
+            m.m03 -= inverse.m00 * bodyPosition.x + inverse.m01 * bodyPosition.y;
+            m.m13 -= inverse.m10 * bodyPosition.x + inverse.m11 * bodyPosition.y;
             // The XY plane only: the depth of the collider does not matter.
             m.m23 = 0f;
             return m;

@@ -39,5 +39,35 @@ namespace UnityEngine.Tests
                 Object.DestroyImmediate(parent);
             }
         }
+        [Fact]
+        public void TiltedBodyFrameRetainsRadianRotationAndLocalCenter()
+        {
+            var parent = new GameObject("parent");
+            var go = new GameObject("circle");
+            try
+            {
+                parent.transform.position = new Vector3(.7f, -.4f, 1.2f);
+                parent.transform.localRotation = Quaternion.Euler(17f, -29f, 13f);
+                parent.transform.localScale = new Vector3(-.9f, 1.7f, 1.1f);
+                var body = parent.AddComponent<Rigidbody2D>(); body.bodyType = RigidbodyType2D.Kinematic;
+                go.transform.SetParent(parent.transform, false);
+                go.transform.localPosition = new Vector3(.23f, -.17f, 2f);
+                go.transform.localScale = new Vector3(1f, .8f, 1f);
+                var circle = go.AddComponent<CircleCollider2D>(); circle.radius = .75f;
+                circle.offset = new Vector2(.17f, -.23f);
+                Physics2D.SyncTransforms();
+                var group = new PhysicsShapeGroup2D(); circle.GetShapes(group);
+                Assert.Equal(.9541002f, body.localToWorldMatrix.m00);
+                Assert.Equal(.29948768f, group.localToWorldMatrix.m10);
+                var points = new System.Collections.Generic.List<Vector2>(); group.GetShapeVertices(0, points);
+                Assert.Equal(-1.44641972f, points[0].x);
+                Assert.Equal(-.8890377f, points[0].y);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(parent);
+            }
+        }
     }
 }
