@@ -775,6 +775,31 @@ namespace UnityEngine.Tests
             Assert.False(Physics.Raycast(Vector3.zero, Vector3.forward, 10f));
         }
 
+        // The query-only Native control in particletrigger measures the creation pose until
+        // explicit synchronization, including when isTrigger rebuilds the sphere's shape.
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ShapePropertyChangesDoNotSynchronizePendingTransformMoves(bool changeTrigger)
+        {
+            Physics.autoSyncTransforms = false;
+            var go = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            m_Made.Add(go);
+            var collider = go.GetComponent<SphereCollider>();
+            var moved = new Vector3(0f, 0f, 2.5f);
+            go.transform.position = moved;
+            if (changeTrigger) collider.isTrigger = true;
+
+            Assert.Equal(Vector3.zero, collider.bounds.center);
+            Assert.Contains(collider, Physics.OverlapSphere(Vector3.zero, 0.1f));
+            Assert.DoesNotContain(collider, Physics.OverlapSphere(moved, 0.1f));
+
+            Physics.SyncTransforms();
+            Assert.Equal(moved, collider.bounds.center);
+            Assert.DoesNotContain(collider, Physics.OverlapSphere(Vector3.zero, 0.1f));
+            Assert.Contains(collider, Physics.OverlapSphere(moved, 0.1f));
+        }
+
         [Fact]
         public void ShapeQueriesFindOverlapsAndCasts()
         {
