@@ -27,13 +27,11 @@ namespace Unbound.Runtime
             }
         }
 
-        static string Choose()
+        internal static string Choose(string[] args, string project)
         {
-            var args = EditorProcess.GetCommandLineArgs();
             for (int i = 0; i + 1 < args.Length; i++)
-                if (string.Equals(args[i], "-logFile", StringComparison.OrdinalIgnoreCase) && args[i + 1] != "-")
-                    return System.IO.Path.GetFullPath(args[i + 1]);
-            var project = UnityEngine.ProjectInfo.ProjectPath;
+                if (string.Equals(args[i], "-logFile", StringComparison.OrdinalIgnoreCase))
+                    return args[i + 1] == "-" ? null : System.IO.Path.GetFullPath(args[i + 1]);
             return string.IsNullOrEmpty(project) ? null : System.IO.Path.Combine(project, "Library", "Unbound", "Editor.log");
         }
 
@@ -41,13 +39,21 @@ namespace Unbound.Runtime
         {
             if (s_Opened) return;
             s_Opened = true;
-            string path = Choose();
-            if (path == null) return;
+            string path = null;
             try
             {
+                path = Choose(EditorProcess.GetCommandLineArgs(), UnityEngine.ProjectInfo.ProjectPath);
+                if (path == null) return;
+                // Resolve and validate both destinations before even creating the parent directory.
+                var cache = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
+                if (string.IsNullOrEmpty(cache)) cache = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache");
+                path = ConsoleLogPath.Validate(path, UnityEngine.ProjectInfo.ProjectPath, cache);
+                string previous = ConsoleLogPath.Validate(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(path),
+                    System.IO.Path.GetFileNameWithoutExtension(path) + "-prev" + System.IO.Path.GetExtension(path)),
+                    UnityEngine.ProjectInfo.ProjectPath, cache);
                 Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
                 if (File.Exists(path))
-                    File.Move(path, System.IO.Path.Combine(System.IO.Path.GetDirectoryName(path), System.IO.Path.GetFileNameWithoutExtension(path) + "-prev" + System.IO.Path.GetExtension(path)), true);
+                    File.Move(path, previous, true);
                 var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
                 s_Writer = new StreamWriter(stream) { AutoFlush = true };
                 s_Path = path;
