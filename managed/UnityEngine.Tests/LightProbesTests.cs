@@ -174,6 +174,37 @@ namespace Unbound.Tests
             }
         }
 
+        [System.Runtime.CompilerServices.MethodImpl(System.Runtime.CompilerServices.MethodImplOptions.NoInlining)]
+        static WeakReference<LightProbes> UnloadUnretainedOwnProbes(Scenes scenes)
+        {
+            var extraScene = scenes.Loaded("Extra");
+            var extra = Baked(Box, _ => 2f);
+            LightProbes.SceneLoaded(extraScene.Handle.Value, extra);
+            var weak = new WeakReference<LightProbes>(extra);
+            SceneManagerInternal.Unload(extraScene);
+            return weak;
+        }
+
+        [Fact]
+        public void ForgottenSceneDoesNotKeepItsOwnProbeObjectAlive()
+        {
+            using var scenes = new Scenes();
+            try
+            {
+                LightmapSettings.Reset();
+                var mainScene = scenes.Loaded("Main");
+                LightProbes.SceneLoaded(mainScene.Handle.Value, Baked(MainBox, _ => 1f));
+                // The main probes stay current. Only the scene lookup could otherwise retain
+                // this additive scene's own object, even across repeated unloads.
+                var weak = UnloadUnretainedOwnProbes(scenes);
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+                Assert.False(weak.TryGetTarget(out _));
+            }
+            finally { LightmapSettings.Reset(); }
+        }
+
         /// <summary>
         /// UnloadSceneAsync of an additive scene, in the relative order Unity 6000.0.71f1 gives
         /// (tests/projects/lightprobes Reference lifecycle.jsonl, seq 10-17): needsRetetrahedralization

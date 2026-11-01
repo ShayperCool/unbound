@@ -104,6 +104,7 @@ namespace Unbound.Runtime
         {
             s_Scenes.Remove(scene.Handle.Value);
             Loaded.Remove(scene);
+            LightProbes.SceneForgotten(scene.Handle.Value);
         }
 
         internal static bool IsDontDestroyOnLoad(SceneData scene) => scene != null && scene == s_DontDestroyOnLoad;

@@ -452,6 +452,10 @@ namespace UnityEngine
             if (s_Scenes.RemoveAll(s => s.Scene == scene) > 0) needsRetetrahedralization?.Invoke();
         }
 
+        /// <summary>Release the scene lookup after sceneUnloaded, without changing probe objects
+        /// a caller kept or the current combined set.</summary>
+        internal static void SceneForgotten(int scene) => s_Own.Remove(scene);
+
         /// <summary>
         /// A SceneManager Single load replaces the loaded scenes, before the first of them is
         /// unloaded: their probes leave the loaded set without needsRetetrahedralization, and the
