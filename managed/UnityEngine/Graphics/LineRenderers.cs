@@ -937,7 +937,9 @@ namespace UnityEngine
         /// object's automatic destruction once. Unity requests it while the camera's render culls
         /// the trail and destroys the object at the next fixed or dynamic delayed-callback update,
         /// not at the end of the frame; the object stays alive and not pending until then
-        /// (tests/projects/lines/TRAIL_AUTODESTRUCT_NATIVE.md).</summary>
+        /// (tests/projects/lines/TRAIL_AUTODESTRUCT_NATIVE.md on branch
+        /// t3/native-trail-destruction-phase, commit d4014978: an offline request and queue rule,
+        /// not a measurement of which node consumes the request).</summary>
         internal void AgeForRender()
         {
             TrackMovement();

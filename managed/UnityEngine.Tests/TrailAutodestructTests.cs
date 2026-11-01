@@ -27,7 +27,9 @@ namespace UnityEngine.Tests
 
     /// <summary>A trail's automatic destruction: requested only by the render's ageing, queued
     /// with the object alive, and run by the next fixed or dynamic delayed-callback update before
-    /// that node's other work (Unity 6000.0.71f1, tests/projects/lines/TRAIL_AUTODESTRUCT_NATIVE.md).
+    /// that node's other work (Unity 6000.0.71f1, tests/projects/lines/TRAIL_AUTODESTRUCT_NATIVE.md
+    /// on branch t3/native-trail-destruction-phase, commit d4014978; the consuming node there is
+    /// an offline rule, not a measured one).
     /// Steps the global clock and runs player loop nodes, so it shares the frame collection.</summary>
     [Collection("Frames")]
     public class TrailAutodestructTests
