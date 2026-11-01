@@ -93,6 +93,84 @@ public class SeedAxisProbe : MonoBehaviour
         Output.Append("]}\n");
     }
 
+    static void InitialRecord(string name, int step, ParticleSystem ps) =>
+        Record(name, step, ps, null, default, 0, -1);
+
+    static void InitializationControls()
+    {
+        foreach (int count in new[] { 2, 5 })
+        {
+            string name = "bulk" + count;
+            var ps = Make(name, 12345u);
+            InitialRecord(name, 0, ps);
+            ps.Emit(count); InitialRecord(name, 1, ps);
+            ps.Emit(1); InitialRecord(name, 2, ps);
+            DestroyImmediate(ps.gameObject);
+        }
+        {
+            const string name = "deferred_read";
+            var ps = Make(name, 12345u);
+            InitialRecord(name, 0, ps);
+            ps.Emit(1); ps.Emit(1); ps.Emit(1);
+            InitialRecord(name, 1, ps);
+            ps.Emit(1); InitialRecord(name, 2, ps);
+            DestroyImmediate(ps.gameObject);
+        }
+        {
+            const string name = "seed_reset";
+            var ps = Make(name, 12345u);
+            ps.Emit(2); InitialRecord(name, 1, ps);
+            ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+            ps.randomSeed = 305419896u;
+            ps.Emit(2); InitialRecord(name, 2, ps);
+            DestroyImmediate(ps.gameObject);
+        }
+        foreach (string name in new[] { "size3d", "rotation3d", "both3d", "random_scalar", "random3d" })
+        {
+            var ps = Make(name, 12345u);
+            var m = ps.main;
+            m.startSize3D = name == "size3d" || name == "both3d" || name == "random3d";
+            m.startRotation3D = name == "rotation3d" || name == "both3d" || name == "random3d";
+            if (m.startSize3D) { m.startSizeX = .5f; m.startSizeY = .75f; m.startSizeZ = 1.25f; }
+            if (m.startRotation3D) { m.startRotationX = .1f; m.startRotationY = .2f; m.startRotationZ = .3f; }
+            if (name == "random_scalar" || name == "random3d")
+            {
+                m.startLifetime = new ParticleSystem.MinMaxCurve(2f, 4f);
+                m.startSpeed = new ParticleSystem.MinMaxCurve(1f, 3f);
+                m.startSizeX = new ParticleSystem.MinMaxCurve(.5f, 1.5f);
+                m.startRotationZ = new ParticleSystem.MinMaxCurve(.1f, .9f);
+                m.startColor = new ParticleSystem.MinMaxGradient(Color.black, Color.white);
+                m.flipRotation = .5f;
+                if (m.startSize3D)
+                {
+                    m.startSizeY = new ParticleSystem.MinMaxCurve(1f, 2f);
+                    m.startSizeZ = new ParticleSystem.MinMaxCurve(2f, 3f);
+                    m.startRotationX = new ParticleSystem.MinMaxCurve(.2f, .8f);
+                    m.startRotationY = new ParticleSystem.MinMaxCurve(.3f, .7f);
+                }
+            }
+            ps.Emit(2); InitialRecord(name, 1, ps);
+            ps.Emit(1); InitialRecord(name, 2, ps);
+            DestroyImmediate(ps.gameObject);
+        }
+        {
+            const string name = "explicit_seed";
+            var ps = Make(name, 12345u);
+            ps.Emit(new ParticleSystem.EmitParams { randomSeed = 77u }, 2);
+            InitialRecord(name, 1, ps);
+            ps.Emit(1); InitialRecord(name, 2, ps);
+            DestroyImmediate(ps.gameObject);
+        }
+        {
+            const string name = "import_axis";
+            var ps = Make(name, 12345u);
+            ps.SetParticles(new[] { Parent(77u) }, 1);
+            InitialRecord(name, 1, ps);
+            ps.Emit(1); InitialRecord(name, 2, ps);
+            DestroyImmediate(ps.gameObject);
+        }
+    }
+
     void Start()
     {
         foreach (uint childSeed in ChildSeeds)
@@ -126,6 +204,7 @@ public class SeedAxisProbe : MonoBehaviour
             }
             DestroyImmediate(ps.gameObject);
         }
+        InitializationControls();
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_SEED_AXIS_OUT"), Output.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
