@@ -55,6 +55,34 @@ this without publishing) and refuses to overwrite a reference. The comparator
 keeps the whole key union and image manifest; numbers and channels use the camera MSAA probe's
 float tolerance (absolute and relative 2e-4).
 
+## Combined integration, 2026-11-01
+
+The combined NativeApi 13 / render protocol 6 / shader cache 16 runtime passes
+all 1,071 main values and 316/368 images. Controls pass all 46 values and 13/17
+images. Both complete comparisons preserve the revised delivery's failures,
+with no introduced or newly missing observations. The 52 main images retain
+the screen-encoding gap. The four control images retain three screen-encoding
+differences and the unsupported integer-array default binding.
+
+Integer and depth-comparison `_MainTex` declarations use their reflected typed
+binding layouts. Shader cache 16 invalidates the previous layout classification.
+A private reproduction that previously failed GPU validation completes with the
+matching combined runtime. It checks binding validity, without claiming new
+Editor image parity. Sampler metadata requests reject element and unknown handle
+bits before modifying sampler state.
+
+The combined build passes 1,273/1,284 managed tests, retaining the same eleven
+failures with none introduced. API checking reports zero errors in 2,290 types;
+the affected generated modules match regeneration. Rust runtime 50, app 19 and
+35 portable shader tests pass. The shader test requiring unavailable private
+fixtures remains explicitly excluded. Graphics, resources, built-in effects,
+UI Toolkit, focused MSAA and clipping controls preserve their prior complete
+comparator results. Representative main, bilinear, live and cache sampler
+controls pass 150,053 observations without numerically worsening accepted values.
+
+These results certify the measured RT scope. Full integration acceptance still
+has the separate humanoid IK blocker recorded in `docs/PARITY_PROGRESS.md`.
+
 `Reference/unity-6000.0.71f1/` holds 1,071 values and 368 images from two byte-identical captures
 (OpenGLCore 4.5, RTX 4060).
 `Reference/unity-6000.0.71f1/controls/` holds the controls' values and images, from two

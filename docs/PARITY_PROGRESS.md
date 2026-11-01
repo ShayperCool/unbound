@@ -2110,3 +2110,27 @@ Animator and bundled animation pass their affected controls. The model
 review package remains unaccepted: humanoid IK readback resolves 24 values,
 retains 62 and introduces eight against the prior accepted capture. The
 complete before/after union is retained outside Git.
+
+## Render texture elements combined integration, 2026-11-01
+
+NativeApi 13 and render protocol 6 are integrated with typed depth, signed and
+unsigned sampled bindings. Shader cache 16 also separates integer and
+depth-comparison `_MainTex` slots from the filtered float layout. Sampler JSON
+metadata requests validate reserved handle bits before reading or mutating
+state. Texture packet layouts, PhysX shim 9 and texture cache 11 are unchanged.
+
+The matching combined runtime passes 1,071/1,071 main RT values and 316/368
+images, plus 46/46 control values and 13/17 images. The complete unions introduce
+no failures or missing fields against the revised delivery. Screen encoding and
+the unsupported integer-array default account for the retained image differences.
+The typed `_MainTex` GPU-validation reproduction and six reserved-bit RPC
+controls pass. Main, bilinear, live and cache sampler controls pass 150,053
+observations with no numerical worsening of accepted values. Six affected
+rendering controls preserve their previous complete comparator reports.
+
+Managed tests pass 1,273/1,284 with the same eleven failures, zero introduced and
+zero skips. Rust runtime 50, app 19 and portable shader 35 tests pass; the private
+shader fixture remains explicitly excluded. API checking reports zero errors in
+2,290 types, with the affected generated modules unchanged after regeneration.
+The separate humanoid IK integration blocker remains open. RT acceptance does
+not imply full animation, rendering or engine parity.
