@@ -120,8 +120,9 @@ namespace UnityEngine
     internal struct LineFacing
     {
         internal bool TransformZ;
-        // Native TransformZ trails reverse both cap fans independently of cap count.
-        internal bool ReverseCaps;
+        // Native TransformZ trails take the opposite face: both cap fans and planes, independently
+        // of cap count, and the side each corner arc turns on.
+        internal bool ReverseFace;
         internal Vector3 TransformForward;
         internal Vector3 CameraPosition;
         internal Vector3 CameraForward;
@@ -310,6 +311,9 @@ namespace UnityEngine
                 // A zero or negative width swaps the arc's fixed side (measured corner triangles,
                 // tests/projects/lines line.width.zero and line.width.negative).
                 if (h <= 0f) aInner = !aInner;
+                // A TransformZ trail's opposite face also swaps the arc's side (measured corner
+                // triangles and vertices, tests/projects/lines trail.*.transformZ).
+                if (facing.ReverseFace) aInner = !aInner;
                 if (corners == 0)
                 {
                     m_Pairs.Add(new Pair { A = point - m * length, B = point + m * length, Tangent = Vector3.Cross(faceNormal, s2), U = u, Color = color });
@@ -521,7 +525,7 @@ namespace UnityEngine
             var outward = Vector3.Cross(plane, radius).normalized;
             if (Vector3.Dot(outward, direction) < 0f) outward = -outward;
             if (negative) outward = -outward;
-            if (facing.ReverseCaps) outward = -outward;
+            if (facing.ReverseFace) outward = -outward;
             var back = outward * (start ? -r : r);
             for (int k = 0; k < caps + 2; k++)
             {
@@ -531,7 +535,7 @@ namespace UnityEngine
             }
             for (int k = 0; k < caps + 1; k++)
             {
-                if (start != facing.ReverseCaps) Tri(at, at + 2 + k, at + 1 + k);
+                if (start != facing.ReverseFace) Tri(at, at + 2 + k, at + 1 + k);
                 else Tri(at, at + 1 + k, at + 2 + k);
             }
         }
@@ -588,7 +592,7 @@ namespace UnityEngine
         internal static LineFacing Facing(LineParameters p, Vector3 cameraPosition, Vector3 cameraForward, bool trail = false) => new LineFacing
         {
             TransformZ = p.Alignment == LineAlignment.TransformZ,
-            ReverseCaps = trail && p.Alignment == LineAlignment.TransformZ,
+            ReverseFace = trail && p.Alignment == LineAlignment.TransformZ,
             TransformForward = Vector3.forward,
             CameraPosition = cameraPosition,
             CameraForward = cameraForward.normalized,
