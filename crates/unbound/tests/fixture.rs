@@ -77,9 +77,10 @@ fn the_fixture_runs_its_script() {
     // --fixed-fps 20: 79 frames of 1/20 s each before frame 80 (the first frame has no delta).
     assert!(log.contains("fixed time 3.9500 delta 0.0500"), "{log}");
     // RuntimeChecks: a texture through PNG bytes and back (the native image codec), and an OBJ
-    // model loaded as its prefab with its mesh.
+    // model loaded as its prefab with its mesh. LoadImage selects ARGB32 for this PNG, as
+    // measured by the texture CPU probe in the 6000.0.71f1 Editor.
     assert!(
-        log.contains("image True 3x2 RGBA(1.000, 0.000, 0.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) RGBA32"),
+        log.contains("image True 3x2 RGBA(1.000, 0.000, 0.000, 1.000) RGBA(0.000, 0.000, 1.000, 1.000) ARGB32"),
         "{log}"
     );
     assert!(
