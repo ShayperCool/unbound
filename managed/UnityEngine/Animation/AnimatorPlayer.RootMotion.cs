@@ -200,7 +200,9 @@ namespace Unbound.Runtime
             {
                 if (layerIndex != 0 || contribution != run || weight <= 0f) continue;
                 double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
-                var (d, q) = MotionDelta(Bindings.Bind(clip), clip, from + offset, (match.Finish ? to : match.End) + offset, pos, rot);
+                var (d, q) = RootDelta(Bindings.Bind(clip),
+                    ClipTime(clip, from + offset, clip.isLooping),
+                    ClipTime(clip, (match.Finish ? to : match.End) + offset, clip.isLooping), pos, rot);
                 toEnd += d * weight;
                 turnToEnd *= Quaternion.Slerp(Quaternion.identity, q, weight);
             }
