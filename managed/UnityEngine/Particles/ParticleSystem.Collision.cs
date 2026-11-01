@@ -113,20 +113,34 @@ namespace UnityEngine
         internal bool m_CollectTriggers;
         static readonly Collider[] s_Overlaps = new Collider[64];
 
-        /// <summary>Applies the trigger module to a particle: inside means its sphere (half its size
-        /// times the radius scale) touches one of the colliders as the physics scene has them (moved
-        /// colliders only count once synced). False when an action kills it.</summary>
+        /// <summary>Classifies the particle against cached collider geometry, then applies the
+        /// trigger actions. False when an action kills it.</summary>
         bool Trigger(ref Particle p)
         {
             var T = m_Trigger;
-            var world = SimulationToWorld().MultiplyPoint3x4(p.m_Position);
+            var toWorld = SimulationToWorld();
+            var world = toWorld.MultiplyPoint3x4(p.m_Position);
             var size = CurrentSize3D(ref p);
             float radius = Mathf.Max(size.x, Mathf.Max(size.y, size.z)) * 0.5f * T.radiusScale;
-            int n = Physics.OverlapSphereNonAlloc(world, radius, s_Overlaps, Physics.AllLayers, QueryTriggerInteraction.Collide);
+            // Preserve the existing query path for other collider kinds. Sphere triggers use
+            // the particle-only bounds/sweep path documented in SPHERE_MECHANISM.md.
+            bool otherKinds = false;
+            foreach (var c in T.colliders)
+                if (c != null && !(c is SphereCollider)) { otherKinds = true; break; }
+            int n = otherKinds ? Physics.OverlapSphereNonAlloc(world, radius, s_Overlaps, Physics.AllLayers, QueryTriggerInteraction.Collide) : 0;
             bool inside = false;
             for (int i = 0; i < n && !inside; i++)
                 foreach (var c in T.colliders)
-                    if (c != null && ReferenceEquals(c, s_Overlaps[i])) { inside = true; break; }
+                    if (c != null && !(c is SphereCollider) && ReferenceEquals(c, s_Overlaps[i])) { inside = true; break; }
+            if (!inside)
+            {
+                var start = toWorld.MultiplyPoint3x4(p.m_Position - (p.m_Velocity + p.m_AnimatedVelocity) * m_LastStepDt);
+                float sphereRadius = (T.radiusScale * 0.5f) * Mathf.Max(size.x, Mathf.Max(size.y, size.z));
+                Unbound.Runtime.PhysicsWorld.PrepareQuery();
+                foreach (var c in T.colliders)
+                    if (c is SphereCollider sphere && sphere.m_Registered && sphere.m_Shape != 0 &&
+                        SphereTriggerOverlap(start, world, sphereRadius, sphere)) { inside = true; break; }
+            }
             bool was = (p.m_Flags & Particle.FlagInsideTrigger) != 0;
             if (inside) p.m_Flags |= Particle.FlagInsideTrigger;
             else p.m_Flags &= ~Particle.FlagInsideTrigger;
@@ -135,6 +149,56 @@ namespace UnityEngine
             if (!inside && was && !Act(ref p, T.exit, ParticleSystemTriggerEventType.Exit)) return false;
             return true;
         }
+
+        static bool SphereTriggerOverlap(Vector3 start, Vector3 end, float radius, SphereCollider sphere)
+        {
+            // Bounds come from the cached shape and actor, with native inflation 1. The fixed
+            // particle bounds pad is the literal 0x3727c5ac in FindParticleOverlaps, not a
+            // public-query contact offset. Keep midpoint/extents float operation order.
+            var bounds = sphere.bounds;
+            var half = (end - start) * 0.5f;
+            var midpoint = start + half;
+            var pe = new Vector3(Mathf.Abs(half.x) + radius, Mathf.Abs(half.y) + radius, Mathf.Abs(half.z) + radius);
+            float pad = BitConverter.Int32BitsToSingle(0x3727c5ac);
+            var ce = bounds.extents + Vector3.one * pad;
+            var offset = midpoint - bounds.center;
+            if (!(Mathf.Abs(offset.x) <= pe.x + ce.x && Mathf.Abs(offset.y) <= pe.y + ce.y && Mathf.Abs(offset.z) <= pe.z + ce.z)) return false;
+
+            // m_ShapeMatrix is collider-to-body, never a world pose. Query the cached actor
+            // and use the same local sphere geometry as CreateShape after PrepareQuery.
+            var body = Unbound.Box3D.B3.ua3_shape_body(sphere.m_Shape);
+            Unbound.Box3D.B3.ua3_body_get_transform(body, out var position, out var rotation);
+            var center = position + rotation * sphere.m_ShapeMatrix.MultiplyPoint3x4(sphere.m_Center);
+            var scale = Collider.AxisScales(sphere.m_ShapeMatrix);
+            float colliderRadius = Mathf.Max(1e-4f, Mathf.Abs(sphere.m_Radius) * Mathf.Max(scale.x, Mathf.Max(scale.y, scale.z)));
+            return SphereTriggerSweep(start, end, radius, center, colliderRadius);
+        }
+
+        // Boolean portion of GuSweepSphereSphere.cpp, including the a == 0 branch. This
+        // stays local to particle sphere triggers; public Physics query semantics differ.
+        static bool SphereTriggerSweep(Vector3 start, Vector3 end, float radius, Vector3 center, float colliderRadius)
+        {
+            var delta = end - start;
+            float length = Mathf.Sqrt(delta.x * delta.x + (delta.y * delta.y + delta.z * delta.z));
+            var direction = length > 1e-15f ? delta / length : Vector3.up;
+            var motion = direction * length;
+            var relative = (start + motion) - start;
+            var separation = start - center;
+            float a = SphereTriggerDot(relative, relative);
+            float b = 2f * SphereTriggerDot(relative, separation);
+            float sum = colliderRadius + radius;
+            float c = SphereTriggerDot(separation, separation) - sum * sum;
+            if (c <= 0f || a == 0f) return true;
+            float q = b * b - (4f * a) * c;
+            if (q < 0f) return false;
+            float root = Mathf.Sqrt(q);
+            float divisor = 1f / (2f * a);
+            float u0 = (-b + root) * divisor;
+            float u1 = (-b - root) * divisor;
+            return !(Mathf.Max(u0, u1) < 0f || Mathf.Min(u0, u1) > 1f);
+        }
+
+        static float SphereTriggerDot(Vector3 a, Vector3 b) => (a.y * b.y + a.x * b.x) + a.z * b.z;
 
         bool Act(ref Particle p, ParticleSystemOverlapAction action, ParticleSystemTriggerEventType type)
         {
