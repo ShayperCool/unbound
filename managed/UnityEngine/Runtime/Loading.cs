@@ -98,6 +98,7 @@ namespace Unbound.Runtime
             var assets = new List<(Object Asset, YDocument Doc)>();
             bool isAsset = kind != Kind.Scene;
             YDocument sceneRoots = null;
+            var deleted = new Dictionary<long, Type>();
 
             using (isAsset ? ObjectRegistry.AsAssets() : default)
             {
@@ -145,7 +146,7 @@ namespace Unbound.Runtime
                         if (type == null) continue;
                         if (kind == Kind.Scene && DisabledModules.Contains(type))
                         {
-                            Debug.Log($"{type.Name} component deleted: Component belongs to a disabled built-in package.");
+                            deleted[doc.FileId] = type;
                             continue;
                         }
                         Component c;
@@ -170,6 +171,15 @@ namespace Unbound.Runtime
                     file.Objects[doc.FileId] = asset;
                     assets.Add((asset, doc));
                 }
+            }
+
+            // Components of disabled modules, reported in the order each GameObject lists them.
+            if (deleted.Count != 0)
+            {
+                foreach (var (_, doc) in gameObjects.Values)
+                    foreach (var item in doc.Body.Get("m_Component")?.Seq() ?? Array.Empty<YNode>())
+                        if (deleted.Remove(item.Ref("component").FileId, out var type)) LogDeleted(type);
+                foreach (var type in deleted.Values) LogDeleted(type);
             }
 
             // Component order as each GameObject lists it, the Transform first.
@@ -252,6 +262,9 @@ namespace Unbound.Runtime
         /// AssetBundle's MonoScript by its class.</summary>
         static Type ScriptOf(ObjectRef script, string fileGuid) =>
             BundleFiles.IsBundleScript(script, fileGuid) ? BundleFiles.Script(script, fileGuid) : GameDomain.ResolveScript(script.Guid, script.FileId);
+
+        static void LogDeleted(Type type) =>
+            Debug.Log($"{type.Name} component deleted: Component belongs to a disabled built-in package.");
 
         static Type ComponentTypeOf(YDocument doc, string fileGuid)
         {
