@@ -13,6 +13,10 @@ public class GeneratorProbe : MonoBehaviour
 {
     public const int Blocks = 88;
     const BindingFlags F = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
+    static void Fill(NativeArray<float> values, float value)
+    {
+        for (int i = 0; i < values.Length; i++) values[i] = value;
+    }
     IEnumerator Start()
     {
         var run = Capture();
@@ -67,7 +71,7 @@ public class GeneratorProbe : MonoBehaviour
                     if (block == 80 && key == "late") Attach();
                     if (block == 82) generator.Amplitude = 0.125f;
                     yield return null;
-                    for (int i = 0; i < sink.Length; i++) sink[i] = -3f;
+                    Fill(sink, -3f);
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("Sink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("Render failed");
                     for (int i = 0; i < buffer.Length; i++) { pcm.Write(buffer[i]); group.Write(sink[i]); }
