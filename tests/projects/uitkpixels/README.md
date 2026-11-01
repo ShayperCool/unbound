@@ -40,3 +40,23 @@ widths leave zero or negative inner space, all four asymmetric corner orientatio
 and a control with a positive inner area. The new image is published only after
 two independent Editor recordings agree; all earlier UI and shape references
 remain byte-identical.
+
+`diagnose_border_fill.py` reads retained captures without running a renderer. It saves
+complete RGBA arrays, signed deltas, failing channel indices, missing image entries,
+JSON key unions, all 60 cell summaries at each scale, and corner coverage equations.
+The equations are diagnostic hypotheses and do not change acceptance. Every hypothesis
+disagreement remains in the report, including pixels that already passed.
+
+```sh
+python3 tests/projects/uitkpixels/diagnose_border_fill.py --release 6000.0.71f1 \
+  --run "$HOME/.cache/unbound/validation/runs/uitk-pixels-20261031" \
+  --output "$HOME/.cache/unbound/validation/runs/uitk-border-fill-offline/new-analysis"
+```
+
+The retained controls show eight bottom-left corner pixels consistent with independent
+left and bottom coverage passes when both inner radii collapse. Applying that algebra
+to all four eligible corner orientations fails seven other observations. This does not
+establish a general production correction. The missing measurement is the generated
+mesh and draw order for `shape-1-2`, including positions, indices, colors, circle
+coordinates, arc flags, retained generation scale and resolved widths. Its four corners
+distinguish side overlap from a single coverage product without another image matrix.
