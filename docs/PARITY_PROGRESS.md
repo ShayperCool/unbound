@@ -2091,3 +2091,146 @@ review evidence and runtime receipts remain cache-only. Auto-suspend, surround, 
 the fixture amplitudes, running-tail changes, timed snapshots and other releases remain outside
 this certification. Global slot wet mixing and other effects remain unsupported. This establishes
 only the measured Echo scope, not complete audio or engine parity.
+
+## Model importer clip settings
+
+Clips a model's `.meta` defines (`clipAnimations`) now import and play as the Editor makes them,
+for generic rigs: each clip's ID is its `internalID`; a range is resampled from its first frame
+(also between frames) and stops at the take's end; every animated node gets position, rotation and
+scale curves, constant ones too; animation compression Off keeps a key at the start, on every take
+frame and at the end, rotations and scales with smooth tangents and positions linear. Transform
+masks remove the curves of the transforms they leave out (from the model's list, or from the
+`maskSource` AvatarMask, not its copy in the meta). An additive reference frame inside the range
+refers to the clip itself, one outside it to the take's hidden `__preview__<take>` clip, which
+every take now has (NotEditable and HideInHierarchy: listed by `LoadAllAssetsAtPath`, not by
+`Resources.LoadAll` or `LoadAllAssetRepresentationsAtPath`). Parameter curves become float curves
+on the root's Animator; clip curves drive float parameters only. Mirror, wrap mode and the root
+settings are kept in the clip settings. With animation import the model rests in the first take's
+pose at its start. The model cache format is 8.
+
+At play time, loop pose adds `(start − stop) × phase` to float values and turns rotations by
+`q · normalize(phase · d.xyz, d.w)`, `d = stop⁻¹ · start`; it and the clip's and state's cycle
+offsets act only on looping clips, also for events and root motion. An `Animator.Update(0)` that
+enters no state still fires the events at the start time, once, and state times are compared with
+event times in single precision.
+
+Validation:
+
+- tests/projects/modelclips: two independent GPU Editor captures are byte-identical (2949
+  records); Unbound matches 2949/2949 records, 31391/31391 values (the ddb1dff1-based baseline
+  matched 514 of an earlier 2641-record version: clip IDs were not the meta's).
+- modelimport Gamma and Linear 6032/6033, URP 7011 matching with the same missing/differing/extra
+  counts as before, descriptions 35/0; animatoradditive 1100/1100; animator 2236/2236; animation
+  from bundles 8/8. api-check: 0 errors in 2279 types. unbound-assets (74) and unbound-runtime
+  (39) tests pass. Managed tests: the nine TextTests fail as before, and 21 PhysicsTests cases
+  (ClonedBodies*, SerializedInactiveBody*) fail with these sources and with the base sources alike.
+
+Not covered: Unity's keyframe reduction for the reducing compression modes (approximated by
+ufbx's near-lossless reduction with linear tangents), humanoid clips (mirror, masks by body part),
+and root-motion nodes and Bake Into Pose (next).
+
+## Generic root nodes, Bake Into Pose and target matching
+
+A generic avatar's root node (`motionNodeName`, with an avatar) now gives every imported clip
+MotionT/MotionQ curves on the Animator: the node's pose relative to the model's root at the clip's
+frames. Root motion follows them as it follows root curves; the node keeps its own curves.
+Bake Into Pose and the related settings (based upon original, height from feet, orientation
+offset, level) change nothing at play time in the Editor, for root nodes and root curves alike;
+they zero the baked components of `averageSpeed`. `averageSpeed`, `averageAngularSpeed`,
+`apparentSpeed` and `averageDuration` come from the motion curves (twenty equal parts of the clip,
+each in the node's frame at its start); `hasMotionCurves`, `hasMotionFloatCurves` and
+`hasRootCurves` read the curves. `MatchTarget` matches a generic rig's root (AvatarTarget.Root):
+each step adds its share of the remaining correction, the target less where the clip's motion
+alone would bring the root by the end, with rotations by the normalized lerp; the step past the
+end completes it. Body-part targets are left to humanoid avatars (ignored with a warning).
+
+Validation:
+
+- tests/projects/modelroot: two independent GPU Editor captures are byte-identical (3714 records);
+  Unbound matched 3699/3714 records, 35781/35796 values; the 15 others were `apparentSpeed` of
+  the clips that turn about the up axis (see below for the merged result).
+
+## Model clip settings and generic root nodes with humanoid avatars, 2026-11-01
+
+The generic model clip and root-node work now sits beside the humanoid avatars, muscle clips and
+humanoid root motion. Both paths read the same parsed clip settings. With animation import a
+model's nodes rest in the first take's pose at its start; without it they keep the file's static
+transforms. The humanoid probe's takes start at 0, so this matches both probes. Clip documents
+carry a mask asset and a Humanoid model's avatar. A clip is human only with root, goal or muscle
+curves; MotionT/MotionQ alone are a generic root node's motion. A Humanoid model's root node
+(`motionNodeName`) is ignored with a warning. `MatchTarget` on a humanoid avatar warns and does
+nothing. Humanoid clips now get every root setting of the meta; any setting other than the
+default still throws, as before. Model clips cropped from their take or masked by transforms
+carry an import warning, because their muscle curves are unmeasured. The motion statistics use the humanoid motion for muscle clips and the root-node curves
+for the rest. `apparentSpeed` is `|averageSpeed| · (1 + (averageAngularSpeed / 2)²)` for both:
+this formula gives all 102 Editor clip values of the root-node probe exactly. The model cache
+format is 11.
+
+Validation (candidate against the Root runtime it was merged into, same commands):
+
+- tests/projects/modelclips 2949/2949 records, 31391/31391 values (Root: 585/2949);
+  tests/projects/modelroot 3714/3714 records, 35796/35796 values (Root: 764/3714).
+- tests/projects/humanoid 120574/120650 values (Root: 120570/120650). In both, every difference
+  is muscle 41 or 43 of the IK pose read back with HumanPoseHandler, the known twist-split
+  residual. Its count changes with last-bit differences of the IK pose.
+- modelimport Gamma and Linear 6032/6033, URP 7011/7687 (550 missing, 126 differing, 81 extra),
+  descriptions 35/0; animatoradditive 1100/1100 (13200/13200 values); animator 2236/2236;
+  animation from bundles 8/8. These equal Root's.
+- api-check: 0 errors in 2290 hand-written types. unbound-assets 75 and unbound-runtime 49 tests,
+  and 31 managed animation/animator/humanoid tests, pass.
+
+## Combined Core and physics review follow-up, 2026-11-01
+
+The integration at `691f0ed6` includes shared rounded-tip and collapsed-core
+contacts, callback traversal after pair removal, first-access project settings,
+and strict reporting of newly missing observations. Its 4,700-field Editor
+control passes 4,570 observations, resolves 562 and introduces none; 130
+`Collider2D.Distance` normal and witness-point differences remain. Broad physics
+passes 11,626/11,626, motion 3,364,863/3,364,863, and the scene-settings matrix
+5,055/5,055 with its original rounding bounds. Managed tests pass 1,265/1,276:
+48 differences from the accepted parent are resolved, the same eleven failures
+remain, and none are introduced. API checking has zero errors in 2,289 types.
+
+All scheduled regression groups finished, including animation, input, clock,
+particles, UI and rendering. Their raw deltas are retained. The broad particles
+suite keeps the same 559 failing values. One trails pixel changes RGB error
+four to five, below the unchanged threshold of eight. Full integration
+acceptance remains open: humanoid IK readback resolves sixteen values, retains
+seventy and introduces ten against the prior accepted capture. Fewer total
+differences does not make those ten acceptable; they are assigned to the
+humanoid follow-up. No full Core, math or engine parity is claimed.
+
+Generic model target-matching review has a separate expanded Editor reference:
+11,536 records, with the old 3,714-record prefix unchanged. The source-matched
+candidate passes all 91,088 expanded values, including lifecycle, overrides,
+callbacks, Rebind and single-precision normalized playback time. The full
+managed differential keeps the same eleven failures and introduces none;
+API checking has zero errors in 2,290 types. Model clips, additive layers,
+Animator and bundled animation pass their affected controls. The model
+review package remains unaccepted: humanoid IK readback resolves 24 values,
+retains 62 and introduces eight against the prior accepted capture. The
+complete before/after union is retained outside Git.
+
+## Render texture elements combined integration, 2026-11-01
+
+NativeApi 13 and render protocol 6 are integrated with typed depth, signed and
+unsigned sampled bindings. Shader cache 16 also separates integer and
+depth-comparison `_MainTex` slots from the filtered float layout. Sampler JSON
+metadata requests validate reserved handle bits before reading or mutating
+state. Texture packet layouts, PhysX shim 9 and texture cache 11 are unchanged.
+
+The matching combined runtime passes 1,071/1,071 main RT values and 316/368
+images, plus 46/46 control values and 13/17 images. The complete unions introduce
+no failures or missing fields against the revised delivery. Screen encoding and
+the unsupported integer-array default account for the retained image differences.
+The typed `_MainTex` GPU-validation reproduction and six reserved-bit RPC
+controls pass. Main, bilinear, live and cache sampler controls pass 150,053
+observations with no numerical worsening of accepted values. Six affected
+rendering controls preserve their previous complete comparator reports.
+
+Managed tests pass 1,273/1,284 with the same eleven failures, zero introduced and
+zero skips. Rust runtime 50, app 19 and portable shader 35 tests pass; the private
+shader fixture remains explicitly excluded. API checking reports zero errors in
+2,290 types, with the affected generated modules unchanged after regeneration.
+The separate humanoid IK integration blocker remains open. RT acceptance does
+not imply full animation, rendering or engine parity.

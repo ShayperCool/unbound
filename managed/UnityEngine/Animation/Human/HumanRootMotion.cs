@@ -48,16 +48,8 @@ namespace Unbound.Runtime.Humanoid
 
         /// <summary>AnimationClip.apparentSpeed: |averageSpeed| · (1 + (averageAngularSpeed / 2)²),
         /// in double precision.</summary>
-        public float ApparentSpeed
-        {
-            get
-            {
-                var v = AverageSpeed;
-                float l = MathF.Sqrt(v.z * v.z + (v.x * v.x + v.y * v.y));
-                double h = AverageAngularSpeed * 0.5f;
-                return (float)((h * h + 1.0) * l);
-            }
-        }
+        public float ApparentSpeed =>
+            UnityEngine.Motion.ApparentSpeed(AverageSpeed.x, AverageSpeed.y, AverageSpeed.z, AverageAngularSpeed);
 
         /// <summary>The clip constants of a humanoid clip.</summary>
         /// <param name="sample">Fills, per curve index of <see cref="HumanClipImport.CurveNames"/>, the

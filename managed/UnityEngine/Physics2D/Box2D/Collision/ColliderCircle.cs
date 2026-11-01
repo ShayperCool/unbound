@@ -50,24 +50,33 @@ namespace Unbound.Box2D.Collision
             in Transform xfB,
             bool querySegmentCoincidence = false)
         {
+            CollidePolygonAndCircle(ref manifold, polygonA, xfA, circleB.Position, circleB.Radius,
+                xfB, querySegmentCoincidence);
+        }
+
+        internal static void CollidePolygonAndCircle(
+            ref Manifold manifold, PolygonShape polygonA, in Transform xfA,
+            Vector2 circlePosition, float circleRadius, in Transform xfB,
+            bool querySegmentCoincidence = false)
+        {
             manifold.PointCount = 0;
 
             // Compute circle position in the frame of the polygon.
-            var c = MathUtils.Mul(xfB, circleB.Position);
+            var c = MathUtils.Mul(xfB, circlePosition);
             var cLocal = MathUtils.MulT(xfA, c);
 
             // Unbound: a capsule is a rounded segment, as Unity's CapsuleCollider2D is: the contact
             // is from the segment's nearest point, also when the circle's center is inside it.
             if (polygonA is Shapes.CapsuleShape capsule)
             {
-                CollideEdgeAndCircle(ref manifold, capsule.AsEdge(), xfA, circleB, xfB);
+                CollideEdgeAndCircle(ref manifold, capsule.AsEdge(), xfA, circlePosition, circleRadius, xfB);
                 return;
             }
 
             // Find the min separating edge.
             var normalIndex = 0;
             var separation = -Settings.MaxFloat;
-            var radius = polygonA.Radius + circleB.Radius;
+            var radius = polygonA.Radius + circleRadius;
             var vertexCount = polygonA.Count;
             var vertices = polygonA.Vertices;
             var normals = polygonA.Normals;
@@ -103,7 +112,7 @@ namespace Unbound.Box2D.Collision
                 manifold.LocalNormal = normals[normalIndex];
                 manifold.LocalPoint = 0.5f * (v1 + v2);
 
-                manifold.Points.Value0.LocalPoint = circleB.Position;
+                manifold.Points.Value0.LocalPoint = circlePosition;
                 manifold.Points.Value0.Id.Key = 0;
                 return;
             }
@@ -124,7 +133,7 @@ namespace Unbound.Box2D.Collision
                 manifold.LocalNormal.Normalize();
                 manifold.LocalPoint = v1;
 
-                manifold.Points.Value0.LocalPoint = circleB.Position;
+                manifold.Points.Value0.LocalPoint = circlePosition;
                 manifold.Points.Value0.Id.Key = 0;
             }
             else if (u2 <= 0.0f)
@@ -140,7 +149,7 @@ namespace Unbound.Box2D.Collision
                 manifold.LocalNormal.Normalize();
                 manifold.LocalPoint = v2;
 
-                manifold.Points.Value0.LocalPoint = circleB.Position;
+                manifold.Points.Value0.LocalPoint = circlePosition;
                 manifold.Points.Value0.Id.Key = 0;
             }
             else
@@ -157,7 +166,7 @@ namespace Unbound.Box2D.Collision
                 manifold.LocalNormal = normals[vertIndex1];
                 manifold.LocalPoint = faceCenter;
 
-                manifold.Points.Value0.LocalPoint = circleB.Position;
+                manifold.Points.Value0.LocalPoint = circlePosition;
                 manifold.Points.Value0.Id.Key = 0;
             }
         }

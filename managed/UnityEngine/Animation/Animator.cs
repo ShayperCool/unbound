@@ -143,6 +143,7 @@ namespace UnityEngine
             set
             {
                 if (m_Controller == value) return;
+                ResetBindings();
                 m_Controller = value;
                 m_Player = null;
                 if (isActiveAndEnabled) EnsurePlayer();
@@ -276,9 +277,29 @@ namespace UnityEngine
         /// animator first bound, measured in the Editor's Play mode), then bind again.</summary>
         public void Rebind()
         {
-            m_Player?.Bindings.WriteDefaults();
+            ResetBindings();
             m_Player = null;
             EnsurePlayer();
+            if (m_Match != null && m_Player != null && m_Player.Layers.Length > 0)
+            {
+                // Rebinding keeps the target and start but resets its end to one state cycle.
+                // Measured with several original target times in tests/projects/modelroot.
+                m_Match.Player = m_Player;
+                m_Match.Run = m_Player.Layers[0].Current;
+                m_Match.End = 1.0;
+                m_Match.Finish = false;
+                m_Match.PredictCurrentPose = true;
+            }
+        }
+
+        void ResetBindings()
+        {
+            if (m_Player == null) return;
+            var root = transform;
+            var position = root.localPosition;
+            var rotation = root.localRotation;
+            m_Player.Bindings.WriteDefaults();
+            if (m_ApplyRootMotion) root.SetLocalPositionAndRotation(position, rotation);
         }
 
         public void WriteDefaultValues() => m_Player?.Bindings.WriteDefaults();
@@ -455,6 +476,10 @@ namespace UnityEngine
 
         // Animator parameters animated by clips (curves on the Animator with a parameter's name).
         internal bool HasParameterNamed(string name) => EnsurePlayer() is AnimatorPlayer p && p.ParameterIndex(name) >= 0;
+
+        internal bool HasFloatParameterNamed(string name) =>
+            EnsurePlayer() is AnimatorPlayer p && p.ParameterIndex(name) is int i && i >= 0
+            && p.Graph.Parameters[i].Type == AnimatorControllerParameterType.Float;
 
         internal float GetParameterAsFloat(string name)
         {

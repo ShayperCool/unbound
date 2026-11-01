@@ -12,6 +12,8 @@ namespace Unbound.Runtime
         float m_RootDeltaTime;
         bool m_CallbacksStarted;
         bool m_HasMonoMove, m_HasStateMove;
+        Quaternion[] m_RootTurns = Array.Empty<Quaternion>();
+        float[] m_RootTurnWeights = Array.Empty<float>();
         static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, MethodInfo> s_OnAnimatorMove =
             new System.Collections.Concurrent.ConcurrentDictionary<Type, MethodInfo>();
         static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool> s_StateMove =
@@ -81,15 +83,36 @@ namespace Unbound.Runtime
             if (!animator.m_ApplyRootMotion && !m_HasMonoMove) return;
             var delta = Vector3.zero;
             var turn = Quaternion.identity;
+            if (m_RootTurns.Length != Layers.Length)
+            {
+                m_RootTurns = new Quaternion[Layers.Length];
+                m_RootTurnWeights = new float[Layers.Length];
+            }
+            Array.Clear(m_RootTurns);
+            Array.Clear(m_RootTurnWeights);
             foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions)
             {
                 float w = weight * (layerIndex == 0 ? 1f : layer.Evaluated);
                 if (w <= 0f) continue;
                 var bound = Bindings.Bind(clip);
-                double offset = run.Def.CycleOffset;
+                double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
                 var (d, q) = MotionDelta(bound, clip, run.Previous + offset, run.Normalized + offset, pos, rot);
                 delta += d * w;
-                turn *= Quaternion.Slerp(Quaternion.identity, q, w);
+                // States blend their rotation deltas in a layer; they do not compose them.
+                var sum = m_RootTurns[layerIndex];
+                if (Quaternion.Dot(sum, q) < 0) q = new Quaternion(-q.x, -q.y, -q.z, -q.w);
+                m_RootTurns[layerIndex] = new Quaternion(sum.x + q.x * weight, sum.y + q.y * weight,
+                    sum.z + q.z * weight, sum.w + q.w * weight);
+                m_RootTurnWeights[layerIndex] += weight;
+            }
+            for (int i = 0; i < Layers.Length; i++)
+            {
+                float weight = m_RootTurnWeights[i];
+                if (weight <= 0) continue;
+                var sum = m_RootTurns[i];
+                // An empty state's remaining weight contributes no rotation.
+                if (weight < 1) sum.w += sum.w < 0 ? weight - 1 : 1 - weight;
+                turn *= Quaternion.Slerp(Quaternion.identity, sum.normalized, i == 0 ? 1 : Layers[i].Evaluated);
             }
             // Root motion scales in its own frame before applying the current world rotation.
             // TransformVector would apply a nonuniform parent's scale after the root's rotation.
@@ -97,10 +120,11 @@ namespace Unbound.Runtime
             if (t.parent != null) scale = Vector3.Scale(scale, t.parent.lossyScale);
             animator.m_DeltaPosition = animator.m_MotionRootRotation * Vector3.Scale(scale, delta);
             animator.m_DeltaRotation = turn;
+            MatchStep(animator, scale, pos, rot);
             if (m_RootDeltaTime != 0f)
             {
                 animator.m_RootVelocity = animator.m_DeltaPosition / m_RootDeltaTime;
-                turn.ToAngleAxis(out float angle, out var axis);
+                animator.m_DeltaRotation.ToAngleAxis(out float angle, out var axis);
                 if (angle > 180f) angle -= 360f;
                 animator.m_RootAngularVelocity = animator.m_MotionRootRotation * axis * (angle * Mathf.Deg2Rad / m_RootDeltaTime);
             }
@@ -168,6 +192,62 @@ namespace Unbound.Runtime
 
         static float ClipTime(AnimationClip clip, double normalized, bool loop) => ClipSampling.ClipTime(clip, normalized, loop);
 
+        internal bool CompletedNonLoopingBaseState(StateRun run) =>
+            run.Normalized >= 1.0 && MotionOf(Layers[0].Def, run.Def) is AnimationClip clip
+            && !Controller.MapClip(clip).isLooping;
+
+        /// <summary>Target matching: once the base layer's state reaches the match's start, each
+        /// evaluation moves the root by its motion plus the part of the remaining correction the
+        /// step covers, (min(t, end) − t₀) / (end − t₀), the correction being the target less where
+        /// the motion alone would bring the root by the end; rotations by the normalized lerp
+        /// towards it. The step past the end completes the match.</summary>
+        void MatchStep(Animator animator, Vector3 scale, int pos, int rot)
+        {
+            var match = animator.m_Match;
+            var run = Layers.Length > 0 ? Layers[0].Current : null;
+            if (match == null || run == null) return;
+            if (match.Player != this || match.Run != run || Layers[0].Transition != null)
+            {
+                if (!match.CompleteOnInterruption) { animator.m_Match = null; return; }
+                match.Finish = true;
+                match.Player = this;
+                match.Run = run;
+            }
+            double from = run.Previous, to = run.Normalized;
+            if (to < match.Start) return;
+            if (match.End <= from)
+            {
+                if (match.Finish || to > match.End) animator.m_Match = null;
+                return;
+            }
+            double f = match.Finish ? 1.0 : (Math.Min(to, match.End) - from) / (match.End - from);
+            // Where the base layer's motion would bring the root by the end of the match.
+            var toEnd = Vector3.zero;
+            var turnToEnd = Quaternion.identity;
+            foreach (var (_, layerIndex, contribution, clip, weight) in m_Contributions)
+            {
+                if (layerIndex != 0 || contribution != run || weight <= 0f) continue;
+                double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
+                var (d, q) = MotionDelta(Bindings.Bind(clip), clip, from + offset,
+                    (match.Finish || match.PredictCurrentPose ? to : match.End) + offset, pos, rot);
+                toEnd += d * weight;
+                turnToEnd *= Quaternion.Slerp(Quaternion.identity, q, weight);
+            }
+            var position = animator.m_MotionRootPosition;
+            var rotation = animator.m_MotionRootRotation;
+            var predicted = position + rotation * Vector3.Scale(scale, toEnd);
+            var turned = rotation * animator.m_DeltaRotation;
+            var rootCorrection = Quaternion.Inverse(turned) * (match.Position - predicted);
+            var correction = turned * Vector3.Scale(rootCorrection, match.Mask.positionXYZWeight) * (float)f;
+            animator.m_DeltaPosition += correction;
+            var remaining = match.Rotation * Quaternion.Inverse(rotation * turnToEnd);
+            float g = (float)f * Mathf.Clamp01(match.Mask.rotationWeight);
+            if (Quaternion.Dot(remaining, Quaternion.identity) < 0f) remaining = new Quaternion(-remaining.x, -remaining.y, -remaining.z, -remaining.w);
+            var part = new Quaternion(remaining.x * g, remaining.y * g, remaining.z * g, 1f - g + remaining.w * g).normalized;
+            animator.m_DeltaRotation = (Quaternion.Inverse(rotation) * (part * turned)).normalized;
+            if (match.Finish || to > match.End) animator.m_Match = null;
+        }
+
         /// <summary>A clip's root movement from one time to another, in its root frame at the first.</summary>
         (Vector3, Quaternion) RootDelta(BoundClip bound, float t0, float t1, int pos, int rot)
         {
@@ -179,6 +259,9 @@ namespace Unbound.Runtime
 
         (Vector3, Quaternion) RootPose(BoundClip bound, float time, int pos, int rot)
         {
+            // A root node's motion (MotionT/MotionQ) moves the root as its own curves would; the
+            // node keeps its curves (measured, tests/projects/modelroot).
+            if (bound.Clip.MotionCurves() != null) return bound.Clip.MotionPose(time);
             var pose = m_RootScratch ??= new AnimationPose();
             pose.Reset(Bindings.FloatCount, Bindings.ObjectCount);
             ClipSampling.Sample(bound, time, 1f, pose);

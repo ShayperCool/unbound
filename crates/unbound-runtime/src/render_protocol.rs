@@ -91,6 +91,50 @@ pub struct MeshPacket {
     pub submeshes: *const SubMeshPacket,
 }
 
+/// Texture handle bits (render protocol 6, `NativeApi` version 13). The handles the managed side
+/// allocates never set bits 62 and 63. A sampled binding (a material's texture property, a draw's
+/// per-draw texture property, a global texture) may set [`handle::DEPTH_ELEMENT`]; every other use
+/// of a handle (uploads, releases, targets, copies, main textures, storage images, kernels' and
+/// read backs) must be plain. Anything else is rejected with an error.
+pub mod handle {
+    /// The render texture's depth buffer, sampled as `(d, 0, 0, 1)` (`RenderTextureSubElement.Depth`).
+    pub const DEPTH_ELEMENT: u64 = 1 << 62;
+    /// The bits no allocated handle uses.
+    pub const RESERVED: u64 = 3 << 62;
+    /// The largest plain handle. Textures the renderer makes itself (`GrabPass` textures) count
+    /// down from it, clear of the element bits and of the "no texture" `u64::MAX`.
+    pub const PLAIN_MAX: u64 = !RESERVED;
+
+    /// A handle with no element bits (`what` names its use in the error).
+    pub fn plain(h: u64, what: &str) -> Result<u64, String> {
+        if h & RESERVED != 0 {
+            Err(format!(
+                "{what}: texture handle {h:#x} carries reserved bits"
+            ))
+        } else {
+            Ok(h)
+        }
+    }
+
+    /// A sampled binding's handle: [`DEPTH_ELEMENT`] is allowed, other reserved bits are not.
+    pub fn sampled(h: u64, what: &str) -> Result<u64, String> {
+        if h & RESERVED & !DEPTH_ELEMENT != 0 {
+            Err(format!(
+                "{what}: texture handle {h:#x} carries unknown element bits"
+            ))
+        } else if h == DEPTH_ELEMENT {
+            Err(format!("{what}: a depth element names no texture"))
+        } else {
+            Ok(h)
+        }
+    }
+
+    /// A sampled binding's texture and whether it samples the depth element.
+    pub fn split(h: u64) -> (u64, bool) {
+        (h & !RESERVED, h & DEPTH_ELEMENT != 0)
+    }
+}
+
 #[repr(C)]
 #[derive(Debug)]
 pub struct TexturePacket {

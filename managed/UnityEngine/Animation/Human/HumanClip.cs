@@ -15,14 +15,15 @@ namespace UnityEngine
         const int AnimatorClassId = 95;
         bool m_HumanConverted;
 
-        /// <summary>Whether the clip animates a human (muscle curves on the Animator).</summary>
+        /// <summary>Whether the clip animates a human (root, goal or muscle curves on the Animator);
+        /// MotionT/MotionQ alone are a generic root node's motion.</summary>
         internal bool HasHumanCurves
         {
             get
             {
                 EnsureHumanCurves();
                 foreach (var c in m_Curves)
-                    if (c.Binding.ClassId == AnimatorClassId && HumanClipImport.CurveIndex(c.Binding.Attribute) >= 0) return true;
+                    if (c.Binding.ClassId == AnimatorClassId && HumanClipImport.CurveIndex(c.Binding.Attribute) >= HumanClipImport.RootFirst) return true;
                 return false;
             }
         }
@@ -82,17 +83,35 @@ namespace UnityEngine
                 if (!HasHumanCurves) return null;
                 var curves = HumanCurves;
                 if (m_HumanClipMotion != null) return m_HumanClipMotion;
-                var settings = HumanClipSettings.Default;
-                settings.LoopTime = m_LoopTime;
-                settings.LoopBlend = m_LoopBlend;
-                settings.CycleOffset = m_CycleOffset;
+                var settings = HumanSettings();
                 float start = StartTime, stop = StartTime + length;
                 m_HumanClipMotion = HumanClipMotion.Build(SampleHuman, m_HumanPresent, start, stop, settings);
                 return m_HumanClipMotion;
             }
         }
 
-        internal override bool TryHumanMotion(out HumanClipMotion motion)
+        /// <summary>The clip's settings (AnimationClipSettings, from the model's meta or the
+        /// `.anim` file) as the humanoid conversion and root motion read them.</summary>
+        HumanClipSettings HumanSettings()
+        {
+            var settings = HumanClipSettings.Default;
+            settings.LoopTime = m_LoopTime;
+            settings.LoopBlend = m_LoopBlend;
+            settings.CycleOffset = m_CycleOffset;
+            settings.LoopBlendOrientation = m_LoopBlendOrientation;
+            settings.LoopBlendPositionY = m_LoopBlendPositionY;
+            settings.LoopBlendPositionXZ = m_LoopBlendPositionXZ;
+            settings.KeepOriginalOrientation = m_KeepOriginalOrientation;
+            settings.KeepOriginalPositionY = m_KeepOriginalPositionY;
+            settings.KeepOriginalPositionXZ = m_KeepOriginalPositionXZ;
+            settings.HeightFromFeet = m_HeightFromFeet;
+            settings.Mirror = m_Mirror;
+            settings.OrientationOffsetY = m_OrientationOffsetY;
+            settings.Level = m_Level;
+            return settings;
+        }
+
+                internal override bool TryHumanMotion(out HumanClipMotion motion)
         {
             motion = HasHumanCurves ? HumanClipMotion : null;
             return motion != null;
@@ -150,10 +169,7 @@ namespace UnityEngine
             }
             if (!(start < stop)) return;
             var times = HumanClipImport.SampleTimes(start, stop, m_SampleRate, 1);
-            var settings = HumanClipSettings.Default;
-            settings.LoopTime = m_LoopTime;
-            settings.LoopBlend = m_LoopBlend;
-            settings.CycleOffset = m_CycleOffset;
+            var settings = HumanSettings();
             var curvesOut = HumanClipImport.Convert(constant, times, (frame, time, pose) =>
             {
                 foreach (var (node, c) in position) pose.X[node].t = Sample(c, time, pose.X[node].t);

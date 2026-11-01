@@ -837,6 +837,7 @@ namespace Unbound.Runtime
         // Native getters filter the scene's dense touching-pair list. Removal
         // fills a slot from the end. Solver edges keep their linked order.
         static readonly List<Pair> s_ContactPairs = new List<Pair>();
+        static uint s_ContactPairRemovalVersion;
         sealed class ContactObservation
         {
             internal readonly Vector2[] Points = new Vector2[2];
@@ -861,6 +862,7 @@ namespace Unbound.Runtime
             s_ContactPairs[index] = s_ContactPairs[s_ContactPairs.Count - 1];
             s_ContactPairs.RemoveAt(s_ContactPairs.Count - 1);
             pair.PublicListed = false;
+            unchecked { s_ContactPairRemovalVersion++; }
         }
 
         internal static Pair FindPair(Collider2D a, Collider2D b) =>
@@ -1022,6 +1024,7 @@ namespace Unbound.Runtime
                             var pair = s_ContactPairs[i];
                             if (pair.IsTrigger != (kind == 0) ||
                                 !dispatched.Add(pair)) { i++; continue; }
+                            uint removalVersion = s_ContactPairRemovalVersion;
                             bool enter = pair.EnterPending, exit = pair.ExitPending;
                             pair.EnterPending = false;
                             pair.ExitPending = false;
@@ -1043,7 +1046,10 @@ namespace Unbound.Runtime
                                 Send(pair, Phase.Exit);
                                 if (pair.Touching == 0 && !pair.EnterPending) Forget(pair);
                             }
-                            if (i < s_ContactPairs.Count && ReferenceEquals(s_ContactPairs[i], pair)) i++;
+                            // A callback may remove an earlier slot and move an unvisited
+                            // tail behind us. Revisit current slots, keeping each pair once.
+                            if (removalVersion != s_ContactPairRemovalVersion) i = 0;
+                            else if (i < s_ContactPairs.Count && ReferenceEquals(s_ContactPairs[i], pair)) i++;
                         }
                     }
                 }
