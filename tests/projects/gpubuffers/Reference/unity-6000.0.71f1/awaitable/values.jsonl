@@ -1,0 +1,225 @@
+{"k":"compute.callback.return","v":"--"}
+{"k":"compute.async.returnCompleted","v":false}
+{"k":"compute.callback.state","v":"d-"}
+{"k":"compute.callback.data","v":"040302014433221188776655ddccbbaa"}
+{"k":"compute.callback.dataAgain","v":"040302014433221188776655ddccbbaa"}
+{"k":"compute.await.outcome","v":"request"}
+{"k":"compute.await.state","v":"d-"}
+{"k":"compute.await.data","v":"040302014433221188776655ddccbbaa"}
+{"k":"compute.await.dataAgain","v":"040302014433221188776655ddccbbaa"}
+{"k":"compute.consumeAgain","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"compute.finished","v":true}
+{"k":"compute.callback.expired.state","v":"de"}
+{"k":"compute.callback.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"compute.callback.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"compute.await.expired.state","v":"de"}
+{"k":"compute.await.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"compute.await.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"compute.logs","v":[]}
+{"k":"compute.range.callback.return","v":"--"}
+{"k":"compute.range.async.returnCompleted","v":false}
+{"k":"compute.range.callback.state","v":"d-"}
+{"k":"compute.range.callback.data","v":"4433221188776655"}
+{"k":"compute.range.callback.dataAgain","v":"4433221188776655"}
+{"k":"compute.range.await.outcome","v":"request"}
+{"k":"compute.range.await.state","v":"d-"}
+{"k":"compute.range.await.data","v":"4433221188776655"}
+{"k":"compute.range.await.dataAgain","v":"4433221188776655"}
+{"k":"compute.range.consumeAgain","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"compute.range.finished","v":true}
+{"k":"compute.range.callback.expired.state","v":"de"}
+{"k":"compute.range.callback.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"compute.range.callback.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"compute.range.await.expired.state","v":"de"}
+{"k":"compute.range.await.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"compute.range.await.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"compute.range.logs","v":[]}
+{"k":"graphics.callback.return","v":"--"}
+{"k":"graphics.async.returnCompleted","v":false}
+{"k":"graphics.callback.state","v":"d-"}
+{"k":"graphics.callback.data","v":"040302014433221188776655ddccbbaa"}
+{"k":"graphics.callback.dataAgain","v":"040302014433221188776655ddccbbaa"}
+{"k":"graphics.await.outcome","v":"request"}
+{"k":"graphics.await.state","v":"d-"}
+{"k":"graphics.await.data","v":"040302014433221188776655ddccbbaa"}
+{"k":"graphics.await.dataAgain","v":"040302014433221188776655ddccbbaa"}
+{"k":"graphics.consumeAgain","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"graphics.finished","v":true}
+{"k":"graphics.callback.expired.state","v":"de"}
+{"k":"graphics.callback.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"graphics.callback.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"graphics.await.expired.state","v":"de"}
+{"k":"graphics.await.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"graphics.await.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"graphics.logs","v":[]}
+{"k":"graphics.range.callback.return","v":"--"}
+{"k":"graphics.range.async.returnCompleted","v":false}
+{"k":"graphics.range.callback.state","v":"d-"}
+{"k":"graphics.range.callback.data","v":"4433221188776655"}
+{"k":"graphics.range.callback.dataAgain","v":"4433221188776655"}
+{"k":"graphics.range.await.outcome","v":"request"}
+{"k":"graphics.range.await.state","v":"d-"}
+{"k":"graphics.range.await.data","v":"4433221188776655"}
+{"k":"graphics.range.await.dataAgain","v":"4433221188776655"}
+{"k":"graphics.range.consumeAgain","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"graphics.range.finished","v":true}
+{"k":"graphics.range.callback.expired.state","v":"de"}
+{"k":"graphics.range.callback.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"graphics.range.callback.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"graphics.range.await.expired.state","v":"de"}
+{"k":"graphics.range.await.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"graphics.range.await.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"graphics.range.logs","v":[]}
+{"k":"texture.callback.return","v":"--"}
+{"k":"texture.async.returnCompleted","v":false}
+{"k":"texture.callback.state","v":"d-"}
+{"k":"texture.callback.data","v":"0102030405060708"}
+{"k":"texture.callback.dataAgain","v":"0102030405060708"}
+{"k":"texture.await.outcome","v":"request"}
+{"k":"texture.await.state","v":"d-"}
+{"k":"texture.await.data","v":"0102030405060708"}
+{"k":"texture.await.dataAgain","v":"0102030405060708"}
+{"k":"texture.consumeAgain","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"texture.finished","v":true}
+{"k":"texture.callback.expired.state","v":"de"}
+{"k":"texture.callback.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.callback.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.await.expired.state","v":"de"}
+{"k":"texture.await.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.await.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.logs","v":[]}
+{"k":"texture.format.callback.return","v":"--"}
+{"k":"texture.format.async.returnCompleted","v":false}
+{"k":"texture.format.callback.state","v":"d-"}
+{"k":"texture.format.callback.data","v":"0102030405060708"}
+{"k":"texture.format.callback.dataAgain","v":"0102030405060708"}
+{"k":"texture.format.await.outcome","v":"request"}
+{"k":"texture.format.await.state","v":"d-"}
+{"k":"texture.format.await.data","v":"0102030405060708"}
+{"k":"texture.format.await.dataAgain","v":"0102030405060708"}
+{"k":"texture.format.consumeAgain","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"texture.format.finished","v":true}
+{"k":"texture.format.callback.expired.state","v":"de"}
+{"k":"texture.format.callback.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.format.callback.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.format.await.expired.state","v":"de"}
+{"k":"texture.format.await.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.format.await.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.format.logs","v":[]}
+{"k":"texture.graphicsFormat.callback.return","v":"--"}
+{"k":"texture.graphicsFormat.async.returnCompleted","v":false}
+{"k":"texture.graphicsFormat.callback.state","v":"d-"}
+{"k":"texture.graphicsFormat.callback.data","v":"0102030405060708"}
+{"k":"texture.graphicsFormat.callback.dataAgain","v":"0102030405060708"}
+{"k":"texture.graphicsFormat.await.outcome","v":"request"}
+{"k":"texture.graphicsFormat.await.state","v":"d-"}
+{"k":"texture.graphicsFormat.await.data","v":"0102030405060708"}
+{"k":"texture.graphicsFormat.await.dataAgain","v":"0102030405060708"}
+{"k":"texture.graphicsFormat.consumeAgain","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"texture.graphicsFormat.finished","v":true}
+{"k":"texture.graphicsFormat.callback.expired.state","v":"de"}
+{"k":"texture.graphicsFormat.callback.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.graphicsFormat.callback.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.graphicsFormat.await.expired.state","v":"de"}
+{"k":"texture.graphicsFormat.await.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.graphicsFormat.await.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.graphicsFormat.logs","v":[]}
+{"k":"texture.region.callback.return","v":"--"}
+{"k":"texture.region.async.returnCompleted","v":false}
+{"k":"texture.region.callback.state","v":"d-"}
+{"k":"texture.region.callback.data","v":"05060708"}
+{"k":"texture.region.callback.dataAgain","v":"05060708"}
+{"k":"texture.region.await.outcome","v":"request"}
+{"k":"texture.region.await.state","v":"d-"}
+{"k":"texture.region.await.data","v":"05060708"}
+{"k":"texture.region.await.dataAgain","v":"05060708"}
+{"k":"texture.region.consumeAgain","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"texture.region.finished","v":true}
+{"k":"texture.region.callback.expired.state","v":"de"}
+{"k":"texture.region.callback.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.region.callback.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.region.await.expired.state","v":"de"}
+{"k":"texture.region.await.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.region.await.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.region.logs","v":[]}
+{"k":"texture.region.format.callback.return","v":"--"}
+{"k":"texture.region.format.async.returnCompleted","v":false}
+{"k":"texture.region.format.callback.state","v":"d-"}
+{"k":"texture.region.format.callback.data","v":"05060708"}
+{"k":"texture.region.format.callback.dataAgain","v":"05060708"}
+{"k":"texture.region.format.await.outcome","v":"request"}
+{"k":"texture.region.format.await.state","v":"d-"}
+{"k":"texture.region.format.await.data","v":"05060708"}
+{"k":"texture.region.format.await.dataAgain","v":"05060708"}
+{"k":"texture.region.format.consumeAgain","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"texture.region.format.finished","v":true}
+{"k":"texture.region.format.callback.expired.state","v":"de"}
+{"k":"texture.region.format.callback.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.region.format.callback.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.region.format.await.expired.state","v":"de"}
+{"k":"texture.region.format.await.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.region.format.await.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.region.format.logs","v":[]}
+{"k":"texture.region.graphicsFormat.callback.return","v":"--"}
+{"k":"texture.region.graphicsFormat.async.returnCompleted","v":false}
+{"k":"texture.region.graphicsFormat.callback.state","v":"d-"}
+{"k":"texture.region.graphicsFormat.callback.data","v":"05060708"}
+{"k":"texture.region.graphicsFormat.callback.dataAgain","v":"05060708"}
+{"k":"texture.region.graphicsFormat.await.outcome","v":"request"}
+{"k":"texture.region.graphicsFormat.await.state","v":"d-"}
+{"k":"texture.region.graphicsFormat.await.data","v":"05060708"}
+{"k":"texture.region.graphicsFormat.await.dataAgain","v":"05060708"}
+{"k":"texture.region.graphicsFormat.consumeAgain","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"texture.region.graphicsFormat.finished","v":true}
+{"k":"texture.region.graphicsFormat.callback.expired.state","v":"de"}
+{"k":"texture.region.graphicsFormat.callback.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.region.graphicsFormat.callback.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.region.graphicsFormat.await.expired.state","v":"de"}
+{"k":"texture.region.graphicsFormat.await.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.region.graphicsFormat.await.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"texture.region.graphicsFormat.logs","v":[]}
+{"k":"invalid.range.callback.state","v":"de"}
+{"k":"invalid.range.callback.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.range.callback.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.range.callback.return","v":"de"}
+{"k":"invalid.range.async.returnCompleted","v":true}
+{"k":"invalid.range.await.outcome","v":"request"}
+{"k":"invalid.range.await.state","v":"de"}
+{"k":"invalid.range.await.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.range.await.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.range.consumeAgain","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"invalid.range.finished","v":true}
+{"k":"invalid.range.callback.expired.state","v":"de"}
+{"k":"invalid.range.callback.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.range.callback.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.range.await.expired.state","v":"de"}
+{"k":"invalid.range.await.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.range.await.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.range.logs","v":["Error: AsyncGPUReadback - Out of bounds arguments - src offset:0 dst size:20 src size:16","Error: AsyncGPUReadback - Out of bounds arguments - src offset:0 dst size:20 src size:16"]}
+{"k":"invalid.mip.callback.state","v":"de"}
+{"k":"invalid.mip.callback.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.mip.callback.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.mip.callback.return","v":"de"}
+{"k":"invalid.mip.async.returnCompleted","v":true}
+{"k":"invalid.mip.await.outcome","v":"request"}
+{"k":"invalid.mip.await.state","v":"de"}
+{"k":"invalid.mip.await.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.mip.await.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.mip.consumeAgain","v":"NullReferenceException: Object reference not set to an instance of an object"}
+{"k":"invalid.mip.finished","v":true}
+{"k":"invalid.mip.callback.expired.state","v":"de"}
+{"k":"invalid.mip.callback.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.mip.callback.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.mip.await.expired.state","v":"de"}
+{"k":"invalid.mip.await.expired.data","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.mip.await.expired.dataAgain","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"invalid.mip.logs","v":["Error: AsyncGPUReadback - Invalid mipIndex: 4","Error: AsyncGPUReadback - Invalid mipIndex: 4"]}
+{"k":"invalid.null.callback.throw","v":"ArgumentNullException: Value cannot be null.\nParameter name: buffer"}
+{"k":"invalid.null.async.throw","v":"ArgumentNullException: Value cannot be null.\nParameter name: buffer"}
+{"k":"invalid.null.finished","v":true}
+{"k":"invalid.null.logs","v":[]}
+{"k":"invalid.released.callback.throw","v":"ArgumentNullException: Value cannot be null.\nParameter name: buffer"}
+{"k":"invalid.released.async.throw","v":"ArgumentNullException: Value cannot be null.\nParameter name: buffer"}
+{"k":"invalid.released.finished","v":true}
+{"k":"invalid.released.logs","v":[]}
+{"k":"complete","v":true}

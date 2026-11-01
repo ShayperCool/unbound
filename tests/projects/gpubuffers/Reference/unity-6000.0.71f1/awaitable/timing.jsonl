@@ -1,0 +1,14 @@
+{"k":"compute","v":[["r0:returned","c1:main:d-","a1:main:d-"]]}
+{"k":"compute.range","v":[["r0:returned","c2:main:d-","a2:main:d-"]]}
+{"k":"graphics","v":[["r0:returned","c2:main:d-","a2:main:d-"]]}
+{"k":"graphics.range","v":[["r0:returned","c2:main:d-","a2:main:d-"]]}
+{"k":"texture","v":[["r0:returned","c2:main:d-","a2:main:d-"]]}
+{"k":"texture.format","v":[["r0:returned","c1:main:d-","a1:main:d-"]]}
+{"k":"texture.graphicsFormat","v":[["r0:returned","c1:main:d-","a1:main:d-"]]}
+{"k":"texture.region","v":[["r0:returned","c1:main:d-","a1:main:d-"]]}
+{"k":"texture.region.format","v":[["r0:returned","c2:main:d-","a2:main:d-"],["r0:returned","c1:main:d-","a1:main:d-"]]}
+{"k":"texture.region.graphicsFormat","v":[["r0:returned","c1:main:d-","a1:main:d-"]]}
+{"k":"invalid.range","v":[["c0:main:de","r0:returned","a0:main:de"]]}
+{"k":"invalid.mip","v":[["c0:main:de","r0:returned","a0:main:de"]]}
+{"k":"invalid.null","v":[[]]}
+{"k":"invalid.released","v":[[]]}
