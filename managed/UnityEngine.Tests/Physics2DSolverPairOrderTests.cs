@@ -1,4 +1,5 @@
 using System.Linq;
+using Unbound.Box2D.Collision;
 using Unbound.Box2D.Collision.Shapes;
 using Unbound.Box2D.Dynamics;
 using Xunit;
@@ -62,5 +63,20 @@ namespace UnityEngine.Tests
             Assert.Same(tail, h.Body.ContactEdges.Last);
             Assert.Equal(ids, fixtures.Select(f => f.Proxies[0].ProxyId).ToArray());
         }
+        [Fact]
+        public void MovingProxyPredictsTwoDisplacementsAndRetainsContainingPadding()
+        {
+            var tree = new DynamicTree();
+            var initial = new AABB { LowerBound = B2Vector.Zero, UpperBound = B2Vector.One };
+            int id = tree.CreateProxy(initial, "proxy");
+            var moved = new AABB { LowerBound = new B2Vector(3, 0), UpperBound = new B2Vector(4, 1) };
+            Assert.True(tree.MoveProxy(id, moved, new B2Vector(3, 0)));
+            var fat = tree.GetFatAABB(id);
+            Assert.Equal(10.1f, fat.UpperBound.X);
+            Assert.False(tree.MoveProxy(id, moved, B2Vector.Zero));
+            Assert.Equal(fat.LowerBound, tree.GetFatAABB(id).LowerBound);
+            Assert.Equal(fat.UpperBound, tree.GetFatAABB(id).UpperBound);
+        }
+
     }
 }
