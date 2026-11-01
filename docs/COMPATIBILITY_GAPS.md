@@ -19,11 +19,11 @@ Game runs keep hitting features that are missing *without a warning* (physical c
 | Stored, never consumed | `Collider.hasModifiableContacts`, `Physics2D.simulationLayers` | Auto-properties and fields the frame/simulation never reads |
 | Serialized field or import setting not read | `m_DisabledShaderPasses`, `m_RenderingPath`, terrain lightmap, ModelImporter clip masks/root motion, `m_ContactPairsMode` | `ReadSerialized` / the importers read a subset of keys and drop the rest |
 | Message looked up, never sent | `OnParticleUpdateJobScheduled` (`Messages.cs` `s_NotSent` lists them) | Messages are not API calls: `api-gaps` cannot see them |
-| Overload drops a parameter | `SetPropertyBlock(block, materialIndex)`, `SetPixels(..., mip)`, Blit depth slice | Forwarded to the simpler overload |
+| Overload drops a parameter | `Graphics.ConvertTexture(src, srcElement, dst, dstElement)`, `Mesh.Set*(..., flags)`, stereo-eye overloads (Blit slices, `LogOption`, `SetPropertyBlock` index done) | Forwarded to the simpler overload |
 | Asset class with a ClassId but no reader | `.renderTexture` (always 256×256 RGBA8, no depth) | `Loading.ReadAsset` default-constructs it |
 | Stub default not neutral | `ScalableBufferManager.widthScaleFactor` = 0 (Unity 1), `CalculateObliqueMatrix` = zero matrix, `Microphone.devices` = null | Warns once, then the wrong value keeps flowing |
 | Generated stub events | `TerrainCallbacks.*` | Generated as `add { } remove { }` without `NotImplemented` |
-| Claimed capability | `SystemInfo.supportsMotionVectors`, `supports3DRenderTextures` = true | Packages enable a path that then draws nothing |
+| Claimed capability | `SystemInfo.supportsTextureWrapMirrorOnce` (MirrorOnce samples as Mirror; `supports3DRenderTextures` now answers false) | Packages enable a path that then draws nothing |
 | Warn once, then silent | SpriteMask, reflection probes | A second scene shows nothing in the log |
 
 ## Tooling first: make every gap loud
@@ -76,7 +76,8 @@ callbacks, FormerlySerializedAs), prefab variants/nesting/overrides, Time, Playe
 | `StartCoroutine` on a disabled behaviour of an active object refused (verify) | `Core/MonoBehaviour.cs:50,63` | S | done (Unity starts it: tests/projects/messages) |
 | No main-thread checks on engine API | only `Audio/AudioSystem.cs:117` | S | M — races instead of Unity's exception |
 | `CullingGroup` | stub | W | L-M |
-| `Resources.UnloadAsset` empty (warns); `UnloadUnusedAssets` only compacts | `Core/Resources.cs:82,91` | W/S | L-M |
+| `Resources.UnloadAsset` empty (warns); `UnloadUnusedAssets` only compacts | `Core/Resources.cs:82,91` | W/S | partial: materials revert to their saved state, ScriptableObjects alone in their file are destroyed and reload, refusals log the Editor's errors (tests/projects/droppedparams unload.*; the Editor hands a reloaded material out as a new wrapper, Unbound keeps one). Other asset kinds and `UnloadUnusedAssets` remain |
+| `Debug.LogFormat(LogType, LogOption, ...)` drops the options | `Core/Debug.cs` | S | done (NoStacktrace: tests/projects/droppedparams log.*) |
 | `Pose`, `LazyLoadReference<T>`, `GameObject.SetGameObjectsActive/InstantiateGameObjects` | stubs | W | L-M |
 | `Application.OpenURL` logs only (`Application.Quit` done: ignored in Play mode, no wantsToQuit/quitting, as measured in tests/projects/messages) | `Core/Application.cs:170,174` | S | L-M |
 | `[PostProcessScene]`, `IProcessSceneWithReport`, `[DidReloadScripts]` not run | `Editor/EditorInitialization.cs:20-22` | S | L-M |
@@ -166,17 +167,19 @@ AsyncGPUReadback, SRP culling/renderer lists, URP and URP 2D matching the Editor
 | Append/Counter buffers, `CopyCount`, `DispatchIndirect` | missing | W | M — GPU grass/culling |
 | CommandBuffer stubs: `SetRandomWriteTarget`, `ConvertTexture`, `RequestAsyncReadback`, `GetTemporaryRTArray`, `CopyBuffer`, `SetBufferData(NativeArray)`, ... | Generated stubs | W | M (`GenerateMips` implemented, resources rtmips.*) |
 | Graphics stubs: `RenderPrimitives*`, `RenderMeshIndirect`, `RenderMeshPrimitives`, `CopyBuffer` | Generated stubs | W | M |
-| Blit depth slice ignored | `Immediate.cs`, `CommandBuffer.cs` | S | L-M (explicit render-target slices are implemented and probed in resources rtmips.layers.*) |
+| Blit depth slice ignored; a target identifier's own slice dropped; slice -1 skipped draws; a blit from a texture array failed renderer validation | `Immediate.cs`, `CommandBuffer.cs`, `CommandStream.cs` | S | done (source and destination slices, array copies with and without slices, identifier slices, -1 clearing every layer, the Clear load action's exception: tests/projects/droppedparams slice.*, load.*; an array blit needs a target of the array's size and format without scale or offset, others warn and are skipped) |
 | `EnableScissorRect`; `ClearRenderTarget(Color[])` | `Graphics/CommandStream.cs`, `CommandBuffer.cs` | S/W | done (scissored draws, clears and blits, fractional/offscreen/empty rectangles, viewport intersection, distinct MRT clear colors and retained MRT binding: resources lowlevel.*) |
 | LineRenderer/TrailRenderer: corner vertices, lighting data, Static texture mode | `Graphics/LineRenderers.cs:117-266` | S | L-M |
 | `ScreenCapture.*`, `OnDemandRendering` | stubs | W | M |
 | `MaterialPropertyBlock.CopySHCoefficientArraysFrom`, `LightProbesQuery` | stubs | W | L-M |
-| 3D render targets (a 2D one stands in) | `Graphics/RenderTexture.cs:173` | W | L-M |
+| 3D render targets (a 2D one stands in; `supports3DRenderTextures` answers false and warns) | `Graphics/RenderTexture.cs:173` | W | L-M |
 | `mipMapBias` and live sampler property updates | `Graphics/Texture.cs`, `crates/unbound-app/src/render/resources.rs`, `executor.rs`, pinned wgpu source patches | S | done for the measured Linux Vulkan controls: tests/projects/samplerbias passes 371337/371337 observations across Force/Enable/Disable, bilinear, live-handle and cached-material profiles, with no numerically worsened accepted values. Filtering/wrapping changes preserve unapplied CPU pixels and RenderTexture storage. Other backends remain unmeasured; unsupported nonzero bias fails explicitly. |
 | `SetShadowSamplingMode`, `SetInstanceMultiplier`, `wrapModeW`, `MirrorOnce` (`supportsTextureWrapMirrorOnce` claimed), mipmap limit | `Srp/Keywords.cs`, `crates/unbound-app/src/render/resources.rs` | S/W | L |
 | Texture mipmap streaming not simulated (`streamingMipmaps*`, `desiredMipmapLevel`, ...); `Texture.totalTextureMemory/currentTextureMemory` 0 | `Graphics/Texture2D.cs`, `Cubemap.cs`, `Texture.cs` | W | L |
 | `Texture2D.Compress` keeps the uncompressed format; `UpdateExternalTexture`, `GL.IssuePluginEvent` (native plugins) | `Graphics/Texture2D.cs`, `Immediate.cs` | W | L-M |
 | Shader keyword declarations unknown (`LocalKeywordSpace.keywords`, `LocalKeyword.isDynamic/isOverridable`), `Shader.subshaderCount`, `Material.isVariant` | `Graphics/Srp/SrpContext.cs`, `Shader.cs`, `Material.cs` | W | L-M |
+| SRP visible lights: every enabled light; `GetShadowCasterBounds` ignores the light (every caster in view) | `Graphics/Srp/SrpContext.cs`, `ShadowCasterCulling.cs` | S | done (local lights culled by range and cone; per-light casters by volume, culling mask and the shadow-distance frustum swept toward the light: tests/projects/droppedparams shadow.*) |
+| `Shader.GetPropertyTextureDimension` always Tex2D; `CubeArray`/`Any` and lower-case texture types read as floats | `Graphics/Shader.cs`, `ShaderLab.cs` | S | done (tests/projects/droppedparams dims.*) |
 | `CullingResults` per-object light/probe index lists (`FillLightAndReflectionProbeIndices`, counts) | `Graphics/Srp/SrpContext.cs` | W | L — custom SRPs only |
 | `SystemInfo` machine identity not read: `deviceModel`, `graphicsDeviceID/VendorID/Version`, `graphicsMemorySize`, `processorFrequency/Manufacturer`, battery on macOS | `Platform/SystemInfo.cs` | W | L — analytics, per-GPU workarounds |
 | Renderer below the Editor's device (warn when queried): no geometry/tessellation shaders, sparse textures, conservative raster, graphics fences, RT array index from the vertex shader, MSAA 2D arrays; compute groups 256 (Editor 1024), 3D textures 2048, array slices 256 | `Platform/SystemInfo.cs`, wgpu limits | W | L-M — packages take their fallback path |

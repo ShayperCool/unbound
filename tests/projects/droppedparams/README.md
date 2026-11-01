@@ -65,4 +65,14 @@ Two independent captures agree byte for byte (Renderer: NVIDIA GeForce RTX 4060)
 
 ## What differs
 
-See the root's validation records for the current comparison.
+Unbound matches 251 of the 252 values. Open:
+
+* `unload.material.reload`: the Editor hands a material that was unloaded and loaded again out
+  as a new wrapper of the same object (`ReferenceEquals` false, same instance ID); Unbound keeps
+  the one object, which reads the saved state again in place.
+* Unbound copies an array slice texel for texel, so a blit from a texture array needs a target of
+  the array's size and format without scale or offset; other array blits warn and are skipped
+  (unmeasured in the Editor).
+* `Resources.UnloadAsset` of textures, meshes, audio and other asset kinds, and of an object that
+  shares its file with others, still warns and does nothing.
+* Draws into slice -1 go into the first layer; shaders that pick a layer are not supported.
