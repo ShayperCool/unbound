@@ -11,7 +11,8 @@ public class GeneratorBoundaryProbe : MonoBehaviour
 {
     public static readonly string[] AllCases = {
         "idle", "shotPlain", "shotFilter", "generator", "generatorShot",
-        "startInside", "endInside", "windowInside"
+        "startInside", "endInside", "windowInside",
+        "startClipInside", "endClipInside", "windowClipInside"
     };
     const int Rate = 48000, Frames = 1024, Channels = 2;
     const BindingFlags F = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
@@ -59,6 +60,7 @@ public class GeneratorBoundaryProbe : MonoBehaviour
         var addSink = typeof(AudioRenderer).GetMethod("AddMixerGroupSink", F);
         // No state is configured, and no Unity API is called, inside either callback.
         foreach (string key in cases) {
+            string kind = key.Replace("Clip", "");
             bool scheduled = key.EndsWith("Inside", StringComparison.Ordinal);
             int blocks = scheduled ? 88 : 12;
             var mixer = Resources.Load<AudioMixer>(key);
@@ -77,10 +79,11 @@ public class GeneratorBoundaryProbe : MonoBehaviour
                 shotData[frame * 2] = 0.125f; shotData[frame * 2 + 1] = -0.25f;
             }
             if (!shot.SetData(shotData, 0)) throw new Exception("SetData failed");
+            if (key.Contains("Clip")) source.clip = shot;
             yield return null;
             long origin = Tick(AudioSettings.dspTime);
-            long start = scheduled ? 8192 + (key == "endInside" ? 0 : 73) : -1;
-            long end = !scheduled ? -1 : key == "windowInside" ? 8192 + 185 : key == "endInside" ? 10240 + 185 : 12288;
+            long start = scheduled ? 8192 + (kind == "endInside" ? 0 : 73) : -1;
+            long end = !scheduled ? -1 : kind == "windowInside" ? 8192 + 185 : kind == "endInside" ? 10240 + 185 : 12288;
             var events = new List<string>();
             void State(string phase, int block) {
                 events.Add("{\"phase\":" + Json(phase) + ",\"block\":" + block + ",\"dsp\":" + (Tick(AudioSettings.dspTime) - origin)
@@ -137,7 +140,7 @@ public class GeneratorBoundaryProbe : MonoBehaviour
                 records.Add(Json(key + "." + suffix) + ":{\"file\":" + Json(key + "." + suffix + ".f32") + ",\"frames\":" + samples + ",\"channels\":1}");
             records.Add(Json(key + ".callbacks") + ":[" + string.Join(",", calls) + "]");
             records.Add(Json(key + ".events") + ":[" + string.Join(",", events) + "]");
-            records.Add(Json(key + ".schedule") + ":{\"start\":" + start + ",\"end\":" + end + ",\"submit\":" + Json(submit) + "}");
+            records.Add(Json(key + ".schedule") + ":{\"start\":" + start + ",\"end\":" + end + ",\"submit\":" + Json(submit) + ",\"clipAssigned\":" + (source.clip != null ? "true" : "false") + "}");
             DestroyImmediate(go); DestroyImmediate(shot);
         }
         AudioRenderer.Stop(); records.Add("\"complete\":true");

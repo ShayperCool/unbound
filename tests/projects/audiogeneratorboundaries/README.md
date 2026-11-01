@@ -2,13 +2,14 @@
 
 Independent offline `AudioRenderer` controls for Unity 6000.0.71f1 at 48 kHz,
 1024 DSP frames and stereo. Each case has a separate mixer and source. Sources
-have no assigned clip. A 4096-frame stereo one-shot contains 0.125 on the left
+have no assigned clip except the three clip-backed scheduling controls. A 4096-frame stereo one-shot contains 0.125 on the left
 and -0.25 on the right. The callback applies `sample * 0.5 + 0.0625`.
 
 The common cases are idle, an unfiltered one-shot, a filtered one-shot without
 main Play, a played generator, a played generator plus one-shot, scheduled
 start inside a block, scheduled end inside a block, and a scheduled window
-entirely inside one 256-frame interval. Scheduling uses absolute DSP time,
+entirely inside one 256-frame interval. Three corresponding clip-backed cases
+check the same scheduling calls with an assigned clip. Scheduling uses absolute DSP time,
 8192 frames of lead time, and offsets 73 and 185. Scheduled cases retain 88
 render blocks to observe natural completion and route quietness before Stop.
 

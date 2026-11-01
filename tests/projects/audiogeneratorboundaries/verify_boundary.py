@@ -9,7 +9,8 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / 'mixersuspend'))
 from compare import raw
 
 CASES = ['idle', 'shotPlain', 'shotFilter', 'generator', 'generatorShot',
-         'startInside', 'endInside', 'windowInside']
+         'startInside', 'endInside', 'windowInside',
+         'startClipInside', 'endClipInside', 'windowClipInside']
 
 
 def verify(root, release):

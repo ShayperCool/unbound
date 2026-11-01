@@ -52,7 +52,7 @@ else:
     assert runtime_hashes == json.loads((a.runtime / 'runtime-manifest.json').read_text()), 'Runtime manifest mismatch'
     (a.work / 'runtime-hashes.json').write_text(json.dumps(runtime_hashes, indent=2) + '\n')
     commands.append([heavy, 'timeout', '300', str(a.runtime / 'unbound'), 'run', '-p', str(project),
-                     '--scene', 'Assets/Scenes/Probe.unity', '--headless', '450', '--no-watch', '--fixed-fps', '60'])
+                     '--scene', 'Assets/Scenes/Probe.unity', '--headless', '750', '--no-watch', '--fixed-fps', '60'])
 (a.work / 'commands.json').write_text(json.dumps(commands, indent=2) + '\n')
 for i, command in enumerate(commands):
     with (a.work / ('stdout-' + str(i) + '.log')).open('x') as log:
