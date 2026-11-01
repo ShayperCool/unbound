@@ -2480,3 +2480,12 @@ Literal Core-only attribution control has31 identical payload files and2 changed
 Under Root's explicit package-causality policy, affected3D103, queries895+20, geometry59/capsule554/sweeps5610 and loading4656 per order pass.
 One matching-input broad1560/17-image capture resolves286/retains305/introduces0; all17 RGBA arrays equal Root baseline; original559 disposition286 resolved/273 unchanged.
 One managed build cycle, no Rust/new Native; full managed/API remains separately pending. Full unions/manifests/limits: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/sphere-dependency-fixed-20261101-t3-a9beda03/`.
+
+### Combined line/trail queue validation, 2026-11-01
+- Integrated authoritative5a plus Root COW append and isolated queue tests; production confined to LineRenderers/PlayerLoopDriver.
+- One coherent Host/Core/test cycle, all33/PDB inputs bound, TestCore equals packaged Core; full managed1451/1462, exact known11 unchanged, line/queue33/33, Python8/8.
+- API/no-stubs0 errors/2314 types; source stub changes[]. Resources539 values+62 images pass with mip-bundles.
+- Required line1870 union:1654 pass/215 fail/1 resolved-extra; full Root/blend/final1887 keeps17 baseline-only keys. Both EOF introductions and state resolve;15 timing rows remain.
+- REJECTED:60 newly failing numeric/index paths and95 pixels versus matching Root, inside retained failing keys;36 numeric paths versus blend. All raw/error changes retained, no masks/tolerance changes.
+- Auto3557 BLOCKED at shader setup in Root/final; one runner correction failed, attempts preserved. No extra build/capture/Native; sphere48 and zero-life21 remain OPEN.
+- Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-trail-combined-20261101-t3-9d5972f4/REPORT.md`.
