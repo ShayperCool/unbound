@@ -13,8 +13,8 @@ public static class TextureRawProbe
     public struct ThreeBytes { public byte A, B, C; }
     static readonly List<string> Rows = new List<string>();
     static string I(int value) => value.ToString(CultureInfo.InvariantCulture);
-    static void Value(string key, string value) => Rows.Add(JsonUtility.ToJson(new Row { k = key, v = value }));
-    [Serializable] sealed class Row { public string k, v; }
+    static string Json(string value) => "\"" + value.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r") + "\"";
+    static void Value(string key, string value) => Rows.Add("{\"k\":" + Json(key) + ",\"v\":" + Json(value) + "}");
     static void Try(string key, Func<string> get)
     {
         try { Value(key, get()); }
