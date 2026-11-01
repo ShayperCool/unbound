@@ -56,6 +56,8 @@ namespace Unbound.Runtime
         internal int Layers;
         /// <summary>TextureDimension (0 is 2D).</summary>
         internal int Dimension;
+        /// <summary>TextureWrapMode along W (NativeApi 14).</summary>
+        internal int WrapW;
     }
 
     [StructLayout(LayoutKind.Sequential)]
@@ -73,8 +75,10 @@ namespace Unbound.Runtime
         internal int SpriteCount;
         /// <summary>The data's TexturePacket format: 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBA float.</summary>
         internal int Format;
-        /// <summary>TextureDimension: 2 a 2D texture, 4 a cubemap.</summary>
+        /// <summary>TextureDimension: 2 a 2D texture, 3 a Texture3D, 4 a cubemap, 5 a Texture2DArray.</summary>
         internal int Dimension;
+        /// <summary>The importer's wrapW (NativeApi 14).</summary>
+        internal int WrapW;
     }
 
     [StructLayout(LayoutKind.Sequential)]

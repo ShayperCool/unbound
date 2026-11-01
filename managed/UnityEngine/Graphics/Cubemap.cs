@@ -262,6 +262,7 @@ namespace UnityEngine
                     FilterMode = (int)filterMode,
                     WrapU = (int)wrapModeU,
                     WrapV = (int)wrapModeV,
+                    WrapW = (int)wrapModeW,
                     AnisoLevel = anisoLevel,
                     Layers = 6,
                     Dimension = (int)TextureDimension.Cube,
@@ -315,6 +316,7 @@ namespace UnityEngine
                     FilterMode = (int)filterMode,
                     WrapU = (int)wrapModeU,
                     WrapV = (int)wrapModeV,
+                    WrapW = (int)wrapModeW,
                     AnisoLevel = anisoLevel,
                     Layers = 6,
                     Dimension = (int)TextureDimension.Cube,
@@ -342,13 +344,12 @@ namespace UnityEngine
                 9 => TextureFormat.RGBAFloat,
                 _ => TextureFormat.RGBA32,
             };
+            cube.m_WrapModeW = (TextureWrapMode)info.WrapW;
             cube.filterMode = (FilterMode)info.FilterMode;
             cube.wrapModeU = (TextureWrapMode)info.WrapU;
             cube.wrapModeV = (TextureWrapMode)info.WrapV;
             cube.anisoLevel = info.AnisoLevel;
             cube.ReadSamplerMetadata();
-            var (_, _, wrapW, _) = LayeredTextures.ImportedLayers(guid);
-            cube.wrapModeW = (TextureWrapMode)wrapW;
             return cube;
         }
 

@@ -230,12 +230,16 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 filter_mode: i32,
                 wrap_u: i32,
                 wrap_v: i32,
+                wrap_w: i32,
                 aniso_level: i32,
             }
             let r: Request = serde_json::from_str(request)?;
             handle::plain(r.handle, method).map_err(anyhow::Error::msg)?;
             anyhow::ensure!(r.handle != 0, "sampler properties require a texture handle");
-            backend().texture_sampler(r.handle, [r.filter_mode, r.wrap_u, r.wrap_v, r.aniso_level]);
+            backend().texture_sampler(
+                r.handle,
+                [r.filter_mode, r.wrap_u, r.wrap_v, r.wrap_w, r.aniso_level],
+            );
             Ok("true".to_owned())
         }
         "texture-sampler-state" => {
@@ -596,7 +600,6 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 "layers": texture.layers,
                 "mipCount": texture.mip_count(),
                 "dimension": texture.dimension(),
-                "wrapW": texture.wrap_w as i32,
                 "mipBias": texture.mip_bias,
             })
             .to_string())
@@ -1108,6 +1111,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             filter_mode: filter,
             wrap_u: wrap(texture.wrap_u),
             wrap_v: wrap(texture.wrap_v),
+            wrap_w: wrap(texture.wrap_w),
             aniso_level: texture.aniso,
             render_target: false,
             random_write: false,
@@ -1132,6 +1136,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         sprite_count: sprite_count as i32,
         format,
         dimension,
+        wrap_w: wrap(texture.wrap_w),
     })
 }
 

@@ -156,6 +156,7 @@ pub fn load_texture_object(
             filter_mode: t.filter_mode,
             wrap_u: t.wrap_u,
             wrap_v: t.wrap_v,
+            wrap_w: 0,
             aniso_level: t.aniso,
             render_target: false,
             random_write: false,

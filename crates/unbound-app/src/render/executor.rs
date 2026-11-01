@@ -33,7 +33,7 @@ pub enum Upload {
     ReleaseMesh(u64),
     UploadTexture(u64, owned::Texture),
     TextureMipBias(u64, f32),
-    TextureSampler(u64, [i32; 4]),
+    TextureSampler(u64, [i32; 5]),
     ReleaseTexture(u64),
     UpdateMaterial(u64, owned::Material),
     ReleaseMaterial(u64),
@@ -509,12 +509,13 @@ impl UnityRenderer {
                     texture.bind_groups = [None, None];
                 }
             }
-            Upload::TextureSampler(handle, [filter, wrap_u, wrap_v, aniso]) => {
+            Upload::TextureSampler(handle, [filter, wrap_u, wrap_v, wrap_w, aniso]) => {
                 if let Some(texture) = self.textures.get_mut(&handle) {
                     self.generation += 1;
                     texture.sampler_key.filter = filter;
                     texture.sampler_key.wrap_u = wrap_u;
                     texture.sampler_key.wrap_v = wrap_v;
+                    texture.sampler_key.wrap_w = wrap_w;
                     texture.sampler_key.aniso = aniso;
                     texture.generation = self.generation;
                     texture.bind_groups = [None, None];
@@ -1004,6 +1005,7 @@ impl UnityRenderer {
                     filter: inline.filter,
                     wrap_u: inline.wrap,
                     wrap_v: inline.wrap,
+                    wrap_w: 0,
                     aniso: 1,
                     compare: 0,
                     lod_bias_bits: 0,
@@ -1014,6 +1016,7 @@ impl UnityRenderer {
                         filter: 1,
                         wrap_u: 1,
                         wrap_v: 1,
+                        wrap_w: 0,
                         aniso: 1,
                         compare: 0,
                         lod_bias_bits: 0,
@@ -1041,6 +1044,7 @@ impl UnityRenderer {
                     filter: 0,
                     wrap_u: 1,
                     wrap_v: 1,
+                    wrap_w: 0,
                     aniso: 1,
                     compare: 0,
                     lod_bias_bits: 0,
@@ -2438,6 +2442,7 @@ impl UnityRenderer {
                 filter_mode: 1,
                 wrap_u: 1,
                 wrap_v: 1,
+                wrap_w: 0,
                 aniso_level: 0,
                 render_target: false,
                 random_write: false,

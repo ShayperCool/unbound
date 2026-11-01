@@ -15,7 +15,8 @@ use crate::{
 };
 
 /// 13: render protocol 6, texture handle element bits (`render_protocol::handle`).
-pub const NATIVE_API_VERSION: u32 = 13;
+/// 14: `wrap_w` at the end of `TexturePacket` and `ImportedTextureInfo`.
+pub const NATIVE_API_VERSION: u32 = 14;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]

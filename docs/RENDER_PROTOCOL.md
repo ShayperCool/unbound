@@ -18,6 +18,12 @@ knows the asset pipeline and its cache.
 
 ### Render protocol 6: texture handle element bits (NativeApi 13)
 
+NativeApi 14 appends `wrap_w` to `TexturePacket` and `ImportedTextureInfo`, and the
+`texture-sampling-properties` call carries `wrapW`: a texture's own sampler takes its W wrap mode
+(a Texture3D's depth; arrays and cubemaps ignore it). Samplers that are not a texture's own (inline
+sampler states, defaults) keep repeating along W. The managed side refuses a native side of another
+version at startup, so a 13 side and a 14 side refuse each other in either pairing.
+
 Allocated handles never set bits 62 and 63 (`render_protocol::handle::RESERVED`, `3 << 62`);
 the renderer's own textures (`GrabPass`) count down from `handle::PLAIN_MAX` (`!RESERVED`).
 A **sampled binding** may set bit 62, `DEPTH_ELEMENT` (`1 << 62`): the render texture's depth
@@ -97,12 +103,14 @@ TexturePacket {
                        // bits 8..15 contain the MSAA sample count
   i32 depth_bits;      // render targets: 0, 16, 24 (with stencil)
   i32 layers, dimension; // each layer has a mip chain; dimension is Unity's TextureDimension
+  i32 wrap_w;          // TextureWrapMode along W (NativeApi 14): a Texture3D's depth
 }
 
 ImportedTextureInfo { i32 width, height, mip_count, srgb, filter_mode, wrap_u, wrap_v, aniso_level, readable, sprite_count,
   format,      // TexturePacket format: 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBAHalf, 9 RGBAFloat
   dimension;   // TextureDimension: 2 2D, 3 Texture3D, 4 cubemap, 5 Texture2DArray; an array's
                // slices and a volume's depth: the `texture-layers` JSON call
+  wrap_w;      // the importer's wrapW (NativeApi 14)
 }
 
 MaterialPacket {

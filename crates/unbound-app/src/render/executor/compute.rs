@@ -606,6 +606,7 @@ fn inline_sampler(name: &str) -> super::SamplerKey {
         filter,
         wrap_u: wrap,
         wrap_v: wrap,
+        wrap_w: 0,
         aniso: 1,
         compare: if n.contains("compare") { 4 } else { 0 },
         lod_bias_bits: 0,
