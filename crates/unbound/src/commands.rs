@@ -271,6 +271,11 @@ fn compare_with_bee(project: &Project, graph: &unbound_project::Graph, bee: &Pat
         }
     }
     let file_name = |p: &str| p.rsplit('/').next().unwrap_or(p).to_string();
+    let engine_modules: Vec<String> =
+        unbound_project::compile::glob_dlls(&project.install.managed_engine_dir(), "UnityEngine")
+            .iter()
+            .map(|p| file_name(&p.to_string_lossy()))
+            .collect();
     for (name, unity) in &theirs {
         let Some(ours) = ours.get(name) else { continue };
         let their_sources: BTreeSet<String> = unity["SourceFiles"]
@@ -336,6 +341,38 @@ fn compare_with_bee(project: &Project, graph: &unbound_project::Graph, bee: &Pat
             "plugin",
             &their_plugins,
             &our_plugins,
+            &mut differences,
+        );
+
+        // Engine modules (`Managed/UnityEngine/UnityEngine*.dll`): every one for an Editor-only
+        // assembly, else the ones the build target and the project's packages have.
+        let is_engine_module = |p: &str| {
+            p.contains("/Managed/UnityEngine/") && file_name(p).starts_with("UnityEngine")
+        };
+        let their_modules: BTreeSet<String> = unity["PrebuiltReferences"]
+            .as_array()
+            .into_iter()
+            .flatten()
+            .filter_map(Value::as_str)
+            .filter(|p| is_engine_module(p))
+            .map(file_name)
+            .collect();
+        let our_modules: BTreeSet<String> = if ours.no_engine_references {
+            BTreeSet::new()
+        } else {
+            engine_modules
+                .iter()
+                .filter(|m| {
+                    ours.editor_only || !graph.excluded_modules.contains(m.trim_end_matches(".dll"))
+                })
+                .cloned()
+                .collect()
+        };
+        report(
+            name,
+            "engine module",
+            &their_modules,
+            &our_modules,
             &mut differences,
         );
 
@@ -433,7 +470,7 @@ pub fn compile(args: &ProjectArgs, editor_assemblies: bool, repeat: u32) -> Resu
                     assembly.name,
                     assembly.errors.len()
                 );
-                for error in assembly.errors.iter().take(10) {
+                for error in assembly.errors.iter() {
                     println!("  {error}");
                 }
             } else if assembly.status == "skipped" {

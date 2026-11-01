@@ -13,7 +13,13 @@ pub struct CompileRequest {
     pub bcl_references: Vec<PathBuf>,
     /// The .NET Standard 2.1 class library, for assemblies marked `net_standard`.
     pub net_standard_references: Vec<PathBuf>,
+    /// The engine references of Editor-only assemblies: every module.
     pub engine_references: Vec<PathBuf>,
+    /// The engine references of the other assemblies: without the modules the build target or the
+    /// project's packages leave out.
+    pub runtime_engine_references: Vec<PathBuf>,
+    /// The modules runtime assemblies lack because the project's packages leave them out.
+    pub disabled_modules: Vec<crate::modules::DisabledModule>,
     pub language_version: String,
     pub compiler_options: Vec<String>,
     pub analyzers: Vec<PathBuf>,
@@ -32,6 +38,8 @@ pub struct AssemblySpec {
     pub analyzers: Vec<PathBuf>,
     pub allow_unsafe: bool,
     pub no_engine_references: bool,
+    /// Compiles against [`CompileRequest::engine_references`], not the runtime ones.
+    pub editor_only: bool,
     pub net_standard: bool,
     /// Not IL post-processed: on the Editor's skip list.
     pub skip_code_gen: bool,
@@ -168,7 +176,7 @@ fn pref_int(text: &str, name: &str) -> Option<i64> {
     text[start..end].trim().parse().ok()
 }
 
-pub(crate) fn glob_dlls(dir: &std::path::Path, prefix: &str) -> Vec<PathBuf> {
+pub fn glob_dlls(dir: &std::path::Path, prefix: &str) -> Vec<PathBuf> {
     let mut out: Vec<PathBuf> = std::fs::read_dir(dir)
         .into_iter()
         .flatten()
@@ -193,7 +201,8 @@ pub fn is_post_processor(name: &str) -> bool {
 }
 
 impl Project {
-    /// The Unity reference assemblies game code compiles against, as the Editor passes them.
+    /// The Unity reference assemblies Editor-only game code compiles against, as the Editor passes
+    /// them; runtime assemblies leave out [`Graph::excluded_modules`].
     pub fn engine_references(&self, mode: CompileMode) -> Vec<PathBuf> {
         let managed = self.install.managed_engine_dir();
         match mode {
@@ -279,6 +288,7 @@ impl Project {
                 analyzers: a.analyzers.clone(),
                 allow_unsafe: a.allow_unsafe,
                 no_engine_references: a.no_engine_references,
+                editor_only: a.editor_only,
                 net_standard: a.net_standard,
                 skip_code_gen: self.profile.data.skip_code_gen.iter().any(|s| *s == a.name),
                 optimize: optimization == CodeOptimization::Release
@@ -288,12 +298,24 @@ impl Project {
                             .all(|s| immutable.iter().any(|root| s.file.starts_with(root)))),
             })
             .collect();
+        let engine_references = self.engine_references(mode);
+        let runtime_engine_references = engine_references
+            .iter()
+            .filter(|p| {
+                p.file_stem()
+                    .and_then(|s| s.to_str())
+                    .is_none_or(|stem| !graph.excluded_modules.contains(stem))
+            })
+            .cloned()
+            .collect();
         CompileRequest {
             cache_dir: self.script_cache_dir(),
             assemblies,
             bcl_references: self.framework_references(),
             net_standard_references: self.net_standard_references(),
-            engine_references: self.engine_references(mode),
+            engine_references,
+            runtime_engine_references,
+            disabled_modules: graph.disabled_modules.clone(),
             language_version: self.profile.data.language_version.clone(),
             compiler_options: self.profile.data.compiler_options.clone(),
             analyzers: self

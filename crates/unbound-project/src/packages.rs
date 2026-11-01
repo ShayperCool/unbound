@@ -257,6 +257,28 @@ pub fn resolve(project: &Path, install: &UnityInstall) -> Result<Resolution> {
     Ok(resolution)
 }
 
+/// The names of the project's packages that decide its engine modules: the resolved ones, the
+/// manifest's own dependencies (the Editor resolves those even when a stale lock lacks them) and
+/// the built-in modules those depend on.
+pub fn module_packages(project: &Path, install: &UnityInstall, resolved: &[Package]) -> std::collections::BTreeSet<String> {
+    let mut names: std::collections::BTreeSet<String> = resolved.iter().map(|p| p.name.clone()).collect();
+    if let Ok(bytes) = std::fs::read(project.join("Packages/manifest.json"))
+        && let Ok(manifest) = serde_json::from_slice::<Manifest>(&bytes)
+    {
+        names.extend(manifest.dependencies.into_keys());
+    }
+    let builtin = install.builtin_packages_dir();
+    let mut queue: Vec<String> = names.iter().filter(|n| n.starts_with("com.unity.modules.")).cloned().collect();
+    while let Some(name) = queue.pop() {
+        for dependency in read_package_json(&builtin.join(&name)).map(|json| json.dependencies).unwrap_or_default().into_keys() {
+            if names.insert(dependency.clone()) {
+                queue.push(dependency);
+            }
+        }
+    }
+    names
+}
+
 /// Whether version `a` is higher than `b` (dotted numbers, a pre-release lower than its release).
 fn newer(a: &str, b: &str) -> bool {
     fn parts(v: &str) -> (Vec<u64>, bool) {

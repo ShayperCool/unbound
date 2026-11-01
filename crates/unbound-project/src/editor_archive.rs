@@ -15,7 +15,7 @@ use std::{
 use unbound_compat::UnityVersion;
 
 /// Bumped when the set of unpacked files or their layout changes.
-const FORMAT_VERSION: u32 = 1;
+const FORMAT_VERSION: u32 = 2;
 
 /// Directories of `Editor/Data` that are unpacked whole.
 const DIRS: &[&str] = &[
@@ -33,6 +33,7 @@ const FILES: &[&str] = &[
     "Resources/unity default resources",
     "Resources/unity_builtin_extra",
     "Resources/unity editor resources",
+    "Resources/modules.asset",
 ];
 
 /// The platform modules taken with the Editor unless `UNBOUND_EDITOR_MODULES` (comma-separated
@@ -43,7 +44,7 @@ const DEFAULT_MODULES: &[&str] = &["android", "ios"];
 
 /// Whether `rel` (a path below `Editor/Data/`) is unpacked: [`DIRS`], [`FILES`], the platform
 /// modules' editor assemblies (`PlaybackEngines/<platform>/UnityEditor.*.dll`,
-/// `Unity.Android.*.dll`) and the players' built-in resources.
+/// `Unity.Android.*.dll`), their module lists (`modules.asset`) and the players' built-in resources.
 fn wanted(rel: &str) -> bool {
     if DIRS.iter().any(|dir| rel.starts_with(dir)) || FILES.contains(&rel) {
         return true;
@@ -56,8 +57,9 @@ fn wanted(rel: &str) -> bool {
     }
     match rest.split_once('/') {
         Some((_, file)) if !file.contains('/') => {
-            file.ends_with(".dll")
-                && (file.starts_with("UnityEditor.") || file.starts_with("Unity.Android."))
+            file == "modules.asset"
+                || (file.ends_with(".dll")
+                    && (file.starts_with("UnityEditor.") || file.starts_with("Unity.Android.")))
         }
         _ => false,
     }
@@ -559,6 +561,8 @@ mod tests {
             "PlaybackEngines/AndroidPlayer/Unity.Android.Gradle.dll",
             "PlaybackEngines/AndroidPlayer/Data/Resources/unity default resources",
             "PlaybackEngines/iOSSupport/UnityEditor.iOS.Extensions.Xcode.dll",
+            "Resources/modules.asset",
+            "PlaybackEngines/AndroidPlayer/modules.asset",
         ] {
             assert!(wanted(rel), "{rel}");
         }

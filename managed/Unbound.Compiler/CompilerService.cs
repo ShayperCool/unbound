@@ -138,9 +138,8 @@ public sealed class CompilerService
             var references = new List<(string Identity, MetadataReference Reference)>();
             foreach (var path in (spec.NetStandard ? request.NetStandardReferences : request.BclReferences))
                 references.Add(FileRef(path));
-            if (!spec.NoEngineReferences)
-                foreach (var path in request.EngineReferences)
-                    references.Add(FileRef(path));
+            foreach (var path in EngineReferences(spec, request))
+                references.Add(FileRef(path));
             foreach (var path in spec.Plugins)
                 references.Add(FileRef(path));
             foreach (var dependency in dependencies)
@@ -195,7 +194,7 @@ public sealed class CompilerService
                 if (diagnostic.Severity == DiagnosticSeverity.Error || GeneratorFailed(diagnostic))
                 {
                     if (result.Errors.Count < 100)
-                        result.Errors.Add(ToInfo(diagnostic));
+                        result.Errors.Add(ToInfo(diagnostic, request.DisabledModules));
                 }
                 else if (diagnostic.Severity == DiagnosticSeverity.Warning)
                 {
@@ -231,12 +230,20 @@ public sealed class CompilerService
         }
     }
 
+    /// <summary>The engine assemblies <paramref name="spec"/> compiles against: none
+    /// (<c>noEngineReferences</c>), every module for an Editor-only assembly, else the modules the
+    /// build target and the project's packages have.</summary>
+    static IEnumerable<string> EngineReferences(AssemblySpec spec, CompileRequest request) =>
+        spec.NoEngineReferences ? Enumerable.Empty<string>()
+        : spec.EditorOnly ? request.EngineReferences
+        : request.RuntimeEngineReferences;
+
     /// <summary>What an assembly's post-processing sees as its references, as the Editor's runner
     /// gets them: the class library, the engine, plugins and the compiled script assemblies.</summary>
     List<string> PostProcessingReferences(AssemblySpec spec, CompileRequest request)
     {
         var list = new List<string>(spec.NetStandard ? request.NetStandardReferences : request.BclReferences);
-        if (!spec.NoEngineReferences) list.AddRange(request.EngineReferences);
+        list.AddRange(EngineReferences(spec, request));
         list.AddRange(spec.Plugins);
         foreach (var reference in spec.References)
             if (_states.TryGetValue(reference, out var state) && state.Result?.Dll != null)
@@ -528,8 +535,7 @@ public sealed class CompilerService
         if (!_states.TryGetValue(spec.Name, out var state) || state.Result == null) return (null, new List<MetadataReference>());
         var references = new List<MetadataReference>();
         foreach (var path in (spec.NetStandard ? request.NetStandardReferences : request.BclReferences)) references.Add(FileRef(path).Reference);
-        if (!spec.NoEngineReferences)
-            foreach (var path in request.EngineReferences) references.Add(FileRef(path).Reference);
+        foreach (var path in EngineReferences(spec, request)) references.Add(FileRef(path).Reference);
         foreach (var path in spec.Plugins) references.Add(FileRef(path).Reference);
         foreach (var dependency in spec.References)
             if (_states.TryGetValue(dependency, out var d) && d.Interface != null) references.Add(d.Interface);
@@ -550,9 +556,20 @@ public sealed class CompilerService
         File.Move(temp, path, overwrite: true);
     }
 
-    static DiagnosticInfo ToInfo(Diagnostic diagnostic)
+    const string AddReferenceHint = " Consider adding a reference to that assembly.";
+
+    /// <summary>A diagnostic as the Editor reports it: a name forwarded to the module of a built-in
+    /// package the project leaves out (CS1069) asks for that package rather than a reference.</summary>
+    static DiagnosticInfo ToInfo(Diagnostic diagnostic, IReadOnlyList<DisabledModule> disabled)
     {
         var info = new DiagnosticInfo { Id = diagnostic.Id, Message = diagnostic.GetMessage() };
+        if (diagnostic.Id == "CS1069" && info.Message.EndsWith(AddReferenceHint, StringComparison.Ordinal))
+        {
+            var module = disabled.FirstOrDefault(m => info.Message.Contains($"forwarded to assembly '{m.Assembly},", StringComparison.Ordinal));
+            if (module != null)
+                info.Message = info.Message[..^AddReferenceHint.Length] +
+                    $" Enable the built in package '{module.DisplayName}' in the Package Manager window to fix this error.";
+        }
         if (diagnostic.Location.IsInSource)
         {
             var span = diagnostic.Location.GetLineSpan();
