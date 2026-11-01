@@ -102,12 +102,12 @@ namespace UnityEngine.Tests
                 new Vector3(-1f, -0.5f, 0f), new Vector3(1f, -0.5f, 0f), new Vector3(1f, 1f, 0f));
             var v = mesh.vertices;
             // Measured (line.width.negative): the start cap bulges over the strip...
-            Assert.Equal(-0.7835f, v[2].x, 3);
+            Near.Equal(-0.783493638f, v[2].x, 1e-5f);
             // ...and the corner pivots half a width outside the turn, with the arc on the other side.
-            Assert.Equal(1.1768f, v[7].x, 3);
-            Assert.Equal(-0.6768f, v[7].y, 3);
-            Assert.Equal(0.6768f, v[12].x, 3);
-            Assert.Equal(0.7835f, v[17].y, 3);
+            Near.Equal(1.1767776f, v[7].x, 1e-5f);
+            Near.Equal(-0.6767758f, v[7].y, 1e-5f);
+            Near.Equal(0.6767776f, v[12].x, 1e-5f);
+            Near.Equal(0.783493638f, v[17].y, 1e-5f);
         }
 
         [Fact]
