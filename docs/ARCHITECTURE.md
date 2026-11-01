@@ -231,8 +231,11 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   resolves exposed references and keeps the root's time by its wrap mode; Timeline, Cinemachine's
   track and Animation Rigging run on it unmodified.
 * **Editor Play mode emulation** also covers: the Editor's enter-Play-mode sequence
-  (`[InitializeOnLoad]`, `[InitializeOnLoadMethod]`, `playModeStateChanged`,
-  `[InitializeOnEnterPlayMode]`), finalizer exceptions logged instead of ending the process,
+  (`[InitializeOnLoad]`, `[InitializeOnEnterPlayMode]`, `[InitializeOnLoadMethod]`,
+  `playModeStateChanged`, `[DidReloadScripts]`), the scene processors (`IProcessSceneWithReport`,
+  `[PostProcessScene]`) run on each scene Play mode loads, prefab queries answered from the links
+  prefab assets keep (`m_CorrespondingSourceObject`/`m_PrefabInstance` of the flattened
+  documents; scenes loaded in Play mode keep none, as in the Editor), finalizer exceptions logged instead of ending the process,
   delegates passed to native code kept alive, .NET Framework-only reflection-emit calls redirected
   to shims, and game assemblies loaded from files so `Assembly.Location` names one.
 * **Editor API**: the UnityEditor API packages call is implemented without UI, answering as an
