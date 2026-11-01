@@ -8,17 +8,17 @@ using UnityEngine;
 /// <summary>
 /// Builds particle systems in code, each exercising one module with fixed (non-random) values,
 /// steps them with <see cref="ParticleSystem.Simulate(float, bool, bool, bool)"/> and records the
-/// system's state and every particle after each step, as JSON lines in <c>PARTICLES_PROBE_OUT</c>.
+/// system's state and every particle after each step, as JSON lines in <c>PARTICLE_TRIGGER_OUT</c>.
 /// Trigger controls record the Editor physics scene before and after explicit transform sync.
 /// </summary>
-public class ParticlesProbe : MonoBehaviour
+public class TriggerProbe : MonoBehaviour
 {
     static readonly StringBuilder s_Out = new StringBuilder();
     static readonly List<string> s_Events = new List<string>();
     static ParticleSystem.Particle[] s_Buffer = new ParticleSystem.Particle[4096];
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Run() => new GameObject("ParticlesProbe").AddComponent<ParticlesProbe>();
+    static void Run() => new GameObject("TriggerProbe").AddComponent<TriggerProbe>();
 
     static string F(float v) => v.ToString("R", CultureInfo.InvariantCulture);
     static string V(Vector3 v) => "[" + F(v.x) + "," + F(v.y) + "," + F(v.z) + "]";
@@ -120,6 +120,18 @@ public class ParticlesProbe : MonoBehaviour
 
     void Start()
     {
+        foreach (bool changeProperty in new[] { false, true })
+        {
+            string name = changeProperty ? "query_only_trigger" : "query_only_move";
+            var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+            var collider = sphere.GetComponent<Collider>();
+            sphere.transform.position = new Vector3(0f, 0f, 2.5f);
+            if (changeProperty) collider.isTrigger = true;
+            RecordQuery(name, "beforeSync", collider, 0.2f);
+            Physics.SyncTransforms();
+            RecordQuery(name, "afterSync", collider, 0.2f);
+            DestroyImmediate(sphere);
+        }
         foreach (string order in new[] { "original", "triggerFirst", "synced" })
         {
             RunCase("trigger_kill_inside", 1.5f, 1f, 30, ParticleSystemOverlapAction.Kill, ParticleSystemOverlapAction.Ignore, order);
