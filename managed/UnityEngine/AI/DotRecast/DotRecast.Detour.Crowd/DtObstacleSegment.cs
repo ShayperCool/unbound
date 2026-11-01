@@ -11,5 +11,8 @@ namespace DotRecast.Detour.Crowd
         public RcVec3f q = new RcVec3f();
 
         public bool touch;
+
+        /// Unbound: touched, but farther than the edges counted reach.
+        public bool beyond;
     }
 }

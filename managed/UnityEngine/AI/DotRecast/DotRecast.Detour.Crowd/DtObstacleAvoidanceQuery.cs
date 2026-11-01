@@ -154,6 +154,10 @@ namespace DotRecast.Detour.Crowd
                 float r = 0.01f;
                 var distSqr = DtUtils.DistancePtSegSqr2D(pos, seg.p, seg.q, out var t);
                 seg.touch = distSqr < RcMath.Sqr(r);
+                // Unbound: an edge touched beyond the reach does not count either (measured: an
+                // agent closing in on the end of a partial path at the NavMesh's edge lands on it,
+                // tests/projects/navmesh).
+                seg.beyond = seg.touch && MathF.Sqrt(distSqr) > segmentReach;
             }
         }
 
@@ -277,6 +281,8 @@ namespace DotRecast.Detour.Crowd
             for (int i = 0; i < m_nsegments; ++i)
             {
                 DtObstacleSegment seg = m_segments[i];
+                if (seg.beyond)
+                    continue;
                 float htmin = 0;
 
                 if (seg.touch)
@@ -301,7 +307,12 @@ namespace DotRecast.Detour.Crowd
                 }
 
                 // Avoid less when facing walls.
-                htmin *= 2.0f;
+                // Unbound: Unity's agents weigh an edge's time to impact as it is (measured: a
+                // fast agent's sample before an edge ahead, tests/projects/navlinks).
+                if (!m_params.unityVelocity)
+                {
+                    htmin *= 2.0f;
+                }
 
                 // The closest obstacle is somewhere ahead of us, keep track of nearest obstacle.
                 if (htmin < tmin)
@@ -352,6 +363,8 @@ namespace DotRecast.Detour.Crowd
             for (int i = 0; i < m_nsegments; ++i)
             {
                 DtObstacleSegment seg = m_segments[i];
+                if (seg.beyond)
+                    continue;
                 float htmin = 0;
                 if (seg.touch)
                 {
@@ -366,7 +379,7 @@ namespace DotRecast.Detour.Crowd
                     continue;
                 }
 
-                if (htmin * 2.0f < option.horizTime)
+                if (htmin * (option.unityVelocity ? 1.0f : 2.0f) < option.horizTime)
                     return false;
             }
             return true;
