@@ -505,27 +505,36 @@ namespace UnityEngine.Tests
         {
             var go = new GameObject("trail");
             go.transform.position = new Vector3(-1.5f, -0.25f, 0f);
-            var trail = go.AddComponent<TrailRenderer>();
-            trail.time = 0.05f;
-            trail.minVertexDistance = 0.01f;
-            var context = new Unbound.Runtime.FrameBuilder.CameraContext { Forward = Vector3.forward };
-            var draws = new System.Collections.Generic.List<Unbound.Runtime.FrameBuilder.DrawItem>();
-            for (int step = 0; step < 3; step++)
+            var clock = (Time.s_Time, Time.s_FrameCount, Time.s_InFixedTimeStep);
+            try
             {
-                Frame(0.02f);
-                go.transform.position = new Vector3(-1f + step * 0.5f, -0.25f, 0f);
-                Assert.Equal(step + 1, trail.positionCount);
-                trail.CollectDraws(context, draws);
-                Assert.Equal(step + 1, trail.positionCount);
+                (Time.s_Time, Time.s_FrameCount, Time.s_InFixedTimeStep) = (0d, 0, false);
+                var trail = go.AddComponent<TrailRenderer>();
+                trail.time = 0.05f;
+                trail.minVertexDistance = 0.01f;
+                var context = new Unbound.Runtime.FrameBuilder.CameraContext { Forward = Vector3.forward };
+                var draws = new System.Collections.Generic.List<Unbound.Runtime.FrameBuilder.DrawItem>();
+                for (int step = 0; step < 3; step++)
+                {
+                    Frame(0.02f);
+                    go.transform.position = new Vector3(-1f + step * 0.5f, -0.25f, 0f);
+                    Assert.Equal(step + 1, trail.positionCount);
+                    trail.CollectDraws(context, draws);
+                    Assert.Equal(step + 1, trail.positionCount);
+                }
+                Assert.Equal(new Vector3(-1f, -0.25f, 0f), trail.GetPosition(0));
+                foreach (int expected in new[] { 3, 2, 0 })
+                {
+                    Frame(0.02f);
+                    trail.CollectDraws(context, draws);
+                    Assert.Equal(expected, trail.positionCount);
+                }
             }
-            Assert.Equal(new Vector3(-1f, -0.25f, 0f), trail.GetPosition(0));
-            foreach (int expected in new[] { 3, 2, 0 })
+            finally
             {
-                Frame(0.02f);
-                trail.CollectDraws(context, draws);
-                Assert.Equal(expected, trail.positionCount);
+                try { Object.DestroyImmediate(go); }
+                finally { (Time.s_Time, Time.s_FrameCount, Time.s_InFixedTimeStep) = clock; }
             }
-            Object.DestroyImmediate(go);
         }
 
         /// <summary>Native 6000.0.71f1 (tests/projects/lines, trail "clear" f6..f7): Clear after a
@@ -534,19 +543,28 @@ namespace UnityEngine.Tests
         public void TrailMovedAfterClearRecordsTheClearedAtPosition()
         {
             var go = new GameObject("trail");
-            var trail = go.AddComponent<TrailRenderer>();
-            trail.time = 1f;
-            trail.minVertexDistance = 0.05f;
-            Frame(0.02f);
-            go.transform.position = new Vector3(-1.3f, -0.677f, 0f);
-            trail.Clear();
-            Assert.Equal(0, trail.positionCount);
-            Frame(0.02f);
-            go.transform.position = new Vector3(-1.1f, -0.849f, 0f);
-            Assert.Equal(2, trail.positionCount);
-            Assert.Equal(new Vector3(-1.3f, -0.677f, 0f), trail.GetPosition(0));
-            Assert.Equal(new Vector3(-1.1f, -0.849f, 0f), trail.GetPosition(1));
-            Object.DestroyImmediate(go);
+            var clock = (Time.s_Time, Time.s_FrameCount, Time.s_InFixedTimeStep);
+            try
+            {
+                (Time.s_Time, Time.s_FrameCount, Time.s_InFixedTimeStep) = (0d, 0, false);
+                var trail = go.AddComponent<TrailRenderer>();
+                trail.time = 1f;
+                trail.minVertexDistance = 0.05f;
+                Frame(0.02f);
+                go.transform.position = new Vector3(-1.3f, -0.677f, 0f);
+                trail.Clear();
+                Assert.Equal(0, trail.positionCount);
+                Frame(0.02f);
+                go.transform.position = new Vector3(-1.1f, -0.849f, 0f);
+                Assert.Equal(2, trail.positionCount);
+                Assert.Equal(new Vector3(-1.3f, -0.677f, 0f), trail.GetPosition(0));
+                Assert.Equal(new Vector3(-1.1f, -0.849f, 0f), trail.GetPosition(1));
+            }
+            finally
+            {
+                try { Object.DestroyImmediate(go); }
+                finally { (Time.s_Time, Time.s_FrameCount, Time.s_InFixedTimeStep) = clock; }
+            }
         }
 
         [Fact]
