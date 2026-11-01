@@ -78,6 +78,7 @@ namespace UnityEngine
                     return;
                 }
                 m_Main.randomSeed = value;
+                m_InitialRandomReady = false;
             }
         }
 
@@ -398,8 +399,7 @@ namespace UnityEngine
         [Unbound.EditorFaithful("no-op is equivalent: a GPU buffer memory hint; nothing a game observes")]
         public static void SetMaximumPreMappedBufferCounts(int vertexBuffersCount, int indexBuffersCount) { }
 
-        [Unbound.EditorFaithful("no-op is equivalent: every particle always stores its axis of rotation")]
-        public void AllocateAxisOfRotationAttribute() { }
+        public void AllocateAxisOfRotationAttribute() => MaterializeAxisOfRotation();
 
         [Unbound.EditorFaithful("no-op is equivalent: every particle always stores its mesh index")]
         public void AllocateMeshIndexAttribute() { }
@@ -415,6 +415,7 @@ namespace UnityEngine
             if (offset < 0) throw new ArgumentOutOfRangeException(nameof(offset));
             int count = offset + size;
             Reserve(count);
+            if (count > 0) MaterializeAxisOfRotation();
             for (int i = 0; i < size && offset + i < count; i++)
             {
                 // Native optional noise arrays are separate from the public particle struct.
@@ -470,6 +471,7 @@ namespace UnityEngine
             offset = Math.Max(0, offset);
             int n = Math.Min(Math.Min(size, particles.Length), m_Count - offset);
             if (n <= 0) return 0;
+            MaterializeAxisOfRotation();
             Array.Copy(m_Particles, offset, particles, 0, n);
             return n;
         }
@@ -637,6 +639,7 @@ namespace UnityEngine
         internal void Restart(bool prewarm)
         {
             uint seed = m_Main.autoRandomSeed ? NextAutoSeed() : m_Main.randomSeed;
+            ResetInitialRandom(seed);
             m_RandomState = ((ulong)seed << 32) ^ 0x9e3779b97f4a7c15UL ^ seed;
             if (m_RandomState == 0) m_RandomState = 0x9e3779b97f4a7c15UL;
             m_NoiseSumEnabled = false;
