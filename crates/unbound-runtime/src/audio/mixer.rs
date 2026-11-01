@@ -255,11 +255,16 @@ pub struct Source {
     output: Option<Ring>,
     generator: GeneratorState,
     played: bool,
+    // Processing survives natural voice completion; explicit Stop tears it down.
+    filter_started: bool,
+    filter_paused: bool,
+    filtered: Vec<f32>,
+    filtered_offset: usize,
 }
 
 impl Source {
     fn filter_only(&self) -> bool {
-        self.params.clip == 0 && self.params.has(source_flags::FILTER) && self.active()
+        self.params.clip == 0 && self.params.has(source_flags::FILTER) && self.main.is_some()
     }
 
     fn active(&self) -> bool {
@@ -441,6 +446,10 @@ impl Mixer {
             source.one_shots.clear();
             source.pending_position = 0.0;
             source.generator = GeneratorState::default();
+            source.filtered.clear();
+            source.filtered_offset = 0;
+            source.filter_started = false;
+            source.filter_paused = false;
         }
         Ok(())
     }
@@ -637,14 +646,17 @@ impl Mixer {
                     && main.paused
                 {
                     main.paused = false;
+                    source.filter_paused = false;
                     source.one_shots.iter_mut().for_each(|v| v.paused = false);
                     return;
                 }
+                source.played = true;
+                source.filter_paused = false;
                 let clip_handle = source.params.clip;
                 if clip_handle == 0 && source.params.has(source_flags::FILTER) {
-                    source.played = true;
                     source.generator = GeneratorState::default();
-                    let mut voice = Voice::new(0, 0.0, start_frame(cmd.time), 1.0);
+                    // Native clipless generators ignore both scheduled boundaries.
+                    let mut voice = Voice::new(0, 0.0, now, 1.0);
                     voice.submitted = !deferred;
                     source.main = Some(voice);
                     return;
@@ -686,18 +698,25 @@ impl Mixer {
                 source.one_shots.clear();
                 source.pending_position = 0.0;
                 source.generator = GeneratorState::default();
+                source.filtered.clear();
+                source.filtered_offset = 0;
+                source.filter_started = false;
+                source.filter_paused = false;
+                source.played = true;
             }
             command::STOP_MAIN => {
                 source.main = None;
                 source.pending_position = 0.0;
             }
             command::PAUSE => {
+                source.filter_paused = true;
                 if let Some(main) = &mut source.main {
                     main.paused = true;
                 }
                 source.one_shots.iter_mut().for_each(|v| v.paused = true);
             }
             command::UNPAUSE => {
+                source.filter_paused = false;
                 if let Some(main) = &mut source.main {
                     main.paused = false;
                 }
@@ -712,6 +731,8 @@ impl Mixer {
                 } else {
                     0.0
                 };
+                source.played = true;
+                source.filter_paused = false;
                 let mut voice = Voice::new(cmd.clip, position, now, cmd.volume_scale);
                 voice.submitted = !deferred;
                 if clip.stream {
@@ -753,8 +774,8 @@ impl Mixer {
                 }
             }
             command::SET_SCHEDULED_END => {
-                if let Some(main) = &mut source.main {
-                    main.end_at = frame_of(cmd.time, rate);
+                if let Some(main) = &mut source.main && main.clip != 0 {
+                    main.end_at = (cmd.time.max(0.0) * rate as f64) as u64;
                 }
             }
             _ => {}
@@ -769,7 +790,7 @@ impl Mixer {
             main: voice_state::NONE,
             one_shots: source.one_shots.len() as i32,
             is_virtual: (source.is_virtual || (source.main.is_none() && source.one_shots.is_empty()
-                && (source.params.clip != 0 || !source.params.has(source_flags::FILTER) || source.played))) as i32,
+                && source.played)) as i32,
             _pad: 0,
             position: source.pending_position,
         };
@@ -1025,7 +1046,7 @@ impl Mixer {
             let filter = flags & source_flags::FILTER != 0;
             let has_voices = source.main.is_some() || !source.one_shots.is_empty();
             let filter_only = source.filter_only();
-            if !has_voices && !filter_only {
+            if !has_voices && !(filter && source.filter_started) {
                 continue;
             }
             if listener_paused && flags & source_flags::IGNORE_LISTENER_PAUSE == 0 {
@@ -1060,65 +1081,54 @@ impl Mixer {
             buffer.fill(0.0);
             let target = s.matrix.map(|g| g * volume);
             let looping = flags & source_flags::LOOP != 0;
-            if let Some(main) = &mut source.main && main.clip != 0 {
-                let finished = render_voice(
-                    main,
-                    clips.get(&main.clip),
-                    n,
-                    t0,
-                    pitch,
-                    out_rate,
-                    target,
-                    (source.params.spatial_blend <= 0.0
-                        && source
-                            .params
-                            .spatial_blend_curve
-                            .iter()
-                            .all(|value| *value <= 0.0))
-                    .then_some(source.params.pan_stereo),
-                    looping,
-                    audible.then_some(&mut *buffer),
-                    callback,
-                );
-                if finished {
-                    source.main = None;
-                    source.pending_position = 0.0;
-                }
-            }
-            source.one_shots.retain_mut(|voice| {
-                !render_voice(
-                    voice,
-                    clips.get(&voice.clip),
-                    n,
-                    t0,
-                    pitch,
-                    out_rate,
-                    target,
-                    (source.params.spatial_blend <= 0.0
-                        && source
-                            .params
-                            .spatial_blend_curve
-                            .iter()
-                            .all(|value| *value <= 0.0))
-                    .then_some(source.params.pan_stereo),
-                    false,
-                    audible.then_some(&mut *buffer),
-                    callback,
-                )
-            });
-            if filter_only {
-                if source.main.as_ref().is_some_and(|v| v.submitted && !v.paused && t0 >= v.start_at && t0 < v.end_at) {
+            let mono_pan = (source.params.spatial_blend <= 0.0
+                && source.params.spatial_blend_curve.iter().all(|value| *value <= 0.0))
+                .then_some(source.params.pan_stereo);
+            let generator = filter_only;
+            if generator {
+                // The main generator receives zeros. One-shots retain their own gain
+                // and are accumulated downstream of its callback/read-ahead queue.
+                if source.main.as_ref().is_some_and(|v| v.submitted && !v.paused) {
                     source.generator.render(handle, buffer, config.buffer_size.max(1) as usize, callback);
                 }
-            } else if filter && source.params.clip != 0 && let Some(cb) = callback {
-                cb(
-                    callback::SOURCE_FILTER,
-                    handle,
-                    buffer.as_mut_ptr(),
-                    n as i32,
-                    2,
-                    0,
-                );
+                render_source_voices(source, clips, buffer, n, t0, pitch, out_rate,
+                    target, mono_pan, looping, audible, callback);
+            } else if filter {
+                if source.main.as_ref().is_some_and(|v| v.submitted && !v.paused)
+                    || source.one_shots.iter().any(|v| v.submitted && !v.paused) {
+                    source.filter_started = true;
+                }
+                if source.filter_started && !source.filter_paused {
+                    let length = config.buffer_size.max(1) as usize * 2;
+                    let mut written = 0;
+                    while written < buffer.len() {
+                        if source.filtered.len() != length || source.filtered_offset == length {
+                            let mut input = std::mem::take(&mut source.filtered);
+                            input.resize(length, 0.0);
+                            input.fill(0.0);
+                            // Keep voice ramps and interpolation in their existing DSP chunks.
+                            for (block, chunk) in input.chunks_mut(BLOCK * 2).enumerate() {
+                                render_source_voices(source, clips, chunk, chunk.len() / 2,
+                                    t0 + (written / 2 + block * BLOCK) as u64, pitch, out_rate,
+                                    target, mono_pan, looping, audible, callback);
+                            }
+                            if let Some(cb) = callback {
+                                cb(callback::SOURCE_FILTER, handle, input.as_mut_ptr(),
+                                    (length / 2) as i32, 2, 0);
+                            }
+                            source.filtered = input;
+                            source.filtered_offset = 0;
+                        }
+                        let count = (buffer.len() - written).min(length - source.filtered_offset);
+                        buffer[written..written + count].copy_from_slice(
+                            &source.filtered[source.filtered_offset..source.filtered_offset + count]);
+                        source.filtered_offset += count;
+                        written += count;
+                    }
+                }
+            } else {
+                render_source_voices(source, clips, buffer, n, t0, pitch, out_rate,
+                    target, mono_pan, looping, audible, callback);
             }
             if let Some(ring) = &mut source.output {
                 ring.push(buffer);
@@ -1303,6 +1313,26 @@ impl StreamState {
             self.base += drop as u64;
         }
     }
+}
+
+/// Advance decoded voices and accumulate their PCM without invoking the source filter.
+#[allow(clippy::too_many_arguments)]
+fn render_source_voices(
+    source: &mut Source, clips: &HashMap<u64, Clip>, out: &mut [f32], n: usize,
+    t0: u64, pitch: f64, rate: u32, target: [f32; 4], mono_pan: Option<f32>,
+    looping: bool, audible: bool, callback: Option<Callback>,
+) {
+    if let Some(main) = &mut source.main && main.clip != 0 {
+        if render_voice(main, clips.get(&main.clip), n, t0, pitch, rate, target,
+            mono_pan, looping, audible.then_some(&mut *out), callback) {
+            source.main = None;
+            source.pending_position = 0.0;
+        }
+    }
+    source.one_shots.retain_mut(|voice| {
+        !render_voice(voice, clips.get(&voice.clip), n, t0, pitch, rate, target,
+            mono_pan, false, audible.then_some(&mut *out), callback)
+    });
 }
 
 /// Mixes `n` frames of a voice into `out` (stereo) when given, and advances it either way.
@@ -1994,6 +2024,129 @@ mod tests {
             sink[..output.sinks[0].samples.len()].copy_from_slice(&output.sinks[0].samples);
             assert_eq!(sink, expected_sink[step*2048..(step+1)*2048], "sink step={step}");
         }
+    }
+
+    #[test]
+    fn source_filter_routes_match_complete_native_one_shots_and_scheduled_windows() {
+        use std::cell::RefCell;
+        #[derive(Default)]
+        struct Trace { input: Vec<f32>, emitted: Vec<f32>, lengths: Vec<usize> }
+        thread_local! { static TRACE: RefCell<Trace> = RefCell::new(Trace::default()); }
+        extern "C" fn filter(kind: i32, _: u64, data: *mut f32, frames: i32, channels: i32, _: i64) {
+            if kind != callback::SOURCE_FILTER { return; }
+            let values = unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+            TRACE.with(|trace| {
+                let mut trace = trace.borrow_mut();
+                trace.input.extend_from_slice(values);
+                trace.lengths.push(values.len());
+                for value in values.iter_mut() { *value = *value * 0.5 + 0.0625; }
+                trace.emitted.extend_from_slice(values);
+            });
+        }
+        let reference = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/audiogeneratorboundaries/Reference/unity-6000.0.71f1");
+        let unpack = |key: &str| -> Vec<f32> {
+            let result = std::process::Command::new("python3").args(["-c",
+                "import gzip,sys;sys.stdout.buffer.write(gzip.open(sys.argv[1],'rb').read())"])
+                .arg(reference.join(format!("{key}.f32.gz"))).output().unwrap();
+            assert!(result.status.success());
+            result.stdout.chunks_exact(4).map(|b| f32::from_le_bytes(b.try_into().unwrap())).collect()
+        };
+        for key in ["idle", "shotPlain", "shotFilter", "generator", "generatorShot",
+            "startInside", "endInside", "windowInside", "startClipInside", "endClipInside", "windowClipInside"] {
+            TRACE.with(|trace| *trace.borrow_mut() = Trace::default());
+            let mut m = Mixer::new(MixerConfig::default());
+            let mut master = filter_group(3, 0, "Attenuation");
+            master.mixer = 3; master.effects[0].gain = 1.0;
+            let mut child = filter_group(4, 3, "Attenuation");
+            child.mixer = 3; child.effects[0].gain = 1.0;
+            m.configure_group(master).unwrap(); m.configure_group(child).unwrap();
+            m.set_callback(Some(filter));
+            let pcm: Vec<f32> = (0..4096).flat_map(|_| [0.125, -0.25]).collect();
+            m.add_clip(1, Clip::new(2, 48000, pcm));
+            let backed = key.contains("Clip");
+            source_with(&mut m, 7, if backed { 1 } else { 0 }, |p| {
+                p.group = 4; if key != "shotPlain" { p.flags = source_flags::FILTER; }
+            });
+            if key.ends_with("Inside") {
+                let (start, end) = if key.starts_with("start") { (8265.25, 12288.75) }
+                    else if key.starts_with("end") { (8192.25, 10425.75) } else { (8265.25, 8377.75) };
+                play(&mut m, 7, command::PLAY, start / 48000.0);
+                play(&mut m, 7, command::SET_SCHEDULED_END, end / 48000.0);
+            } else {
+                if key.starts_with("generator") { play(&mut m, 7, command::PLAY, 0.0); }
+                if matches!(key, "shotPlain" | "shotFilter" | "generatorShot") {
+                    m.command(7, &AudioSourceCommand { kind: command::PLAY_ONE_SHOT,
+                        clip: 1, volume_scale: 1.0, ..Default::default() });
+                }
+            }
+            let mut pcm = Vec::new(); let mut sinks = [Vec::new(), Vec::new()];
+            for _ in 0..if key.ends_with("Inside") { 88 } else { 12 } {
+                m.update_suspension();
+                let result = m.capture(2048, [3, 4].into_iter().map(|handle|
+                    capture::SinkRequest { handle, length: 2048, exclude_from_mix: false }).collect()).unwrap();
+                pcm.extend(result.samples);
+                for (dest, sink) in sinks.iter_mut().zip(result.sinks) {
+                    let mut block = vec![-3.0; 2048];
+                    block[..sink.samples.len()].copy_from_slice(&sink.samples); dest.extend(block);
+                }
+            }
+            let check = |actual: &[f32], suffix: &str| {
+                let expected = unpack(&format!("{key}.{suffix}"));
+                assert_eq!(actual.len(), expected.len(), "length {key}.{suffix}");
+                for (i, (a, b)) in actual.iter().zip(expected).enumerate() {
+                    assert_eq!(*a, b, "{key}.{suffix} sample {i}");
+                }
+            };
+            check(&pcm, "output");
+            for (i, suffix) in ["master", "child"].into_iter().enumerate() {
+                check(&sinks[i], suffix);
+            }
+            TRACE.with(|trace| {
+                let trace = trace.borrow();
+                assert!(trace.lengths.iter().all(|n| *n == 2048), "callback dimensions {key}");
+                check(&trace.input, "input");
+                check(&trace.emitted, "emitted");
+            });
+            if key.ends_with("Inside") {
+                assert_eq!(m.source_state(7).main == voice_state::PLAYING, !backed, "completion {key}");
+            }
+        }
+    }
+
+    #[test]
+    fn generator_accumulates_independent_one_shots_without_changing_their_gain() {
+        use std::cell::Cell;
+        thread_local! { static INPUT_ZERO: Cell<bool> = const { Cell::new(true) }; }
+        extern "C" fn generate(kind: i32, _: u64, data: *mut f32, frames: i32, channels: i32, _: i64) {
+            if kind != callback::SOURCE_FILTER { return; }
+            let pcm = unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+            INPUT_ZERO.with(|zero| zero.set(zero.get() && pcm.iter().all(|x| *x == 0.0)));
+            for (i, value) in pcm.iter_mut().enumerate() { *value = (i % 17) as f32 / 128.0; }
+        }
+        let render = |generator: bool, shots: bool| {
+            let mut m = Mixer::new(MixerConfig { buffer_size: 512, ..Default::default() });
+            m.set_callback(Some(generate));
+            source_with(&mut m, 7, 0, |p| { if generator { p.flags = source_flags::FILTER; } });
+            m.add_clip(1, Clip::new(2, 48000, (0..3500).map(|i| (i % 31) as f32 / 64.0).collect()));
+            if generator { play(&mut m, 7, command::PLAY, 0.0); }
+            if shots {
+                for scale in [0.375, 0.8125] {
+                    m.command(7, &AudioSourceCommand { kind: command::PLAY_ONE_SHOT,
+                        clip: 1, volume_scale: scale, ..Default::default() });
+                }
+            }
+            let mut out = vec![0.0; 4096];
+            // Cross callback boundaries using device-sized packets.
+            for chunk in out.chunks_mut(480 * 2) { m.render(chunk, 2); }
+            out
+        };
+        INPUT_ZERO.with(|zero| zero.set(true));
+        let generated = render(true, false); let shots = render(false, true); let combined = render(true, true);
+        for ((g, s), actual) in generated.iter().zip(shots).zip(combined) {
+            assert!((actual - (g + s)).abs() < 1e-6);
+        }
+        INPUT_ZERO.with(|zero| assert!(zero.get()));
     }
 
     #[test]
