@@ -48,13 +48,21 @@ enabled.
 `m_ActiveColorSpace: 0` and nothing else changed. Each profile is one canonical file:
 `Reference/unity-<release>/linear.jsonl` and `gamma.jsonl`.
 
-    python3 tests/projects/indirectspec/run.py editor --release 6000.0.71f1 --label <L>   # 4 Editors: 2 profiles x 2 repeats
+    python3 tests/projects/indirectspec/preflight.py --rsp-dir <copy>/Library/Bee/artifacts/<h>.dag --out <new dir>
+    python3 tests/projects/indirectspec/test_gate.py <new dir>                            # synthetic gate controls
+    python3 tests/projects/indirectspec/run.py editor --release 6000.0.71f1 --label <L>   # 4 Editors, one at a time, gated
     python3 tests/projects/indirectspec/run.py publish --release 6000.0.71f1 --label <L>  # per profile, strict
     python3 tests/projects/indirectspec/analyze.py tests/projects/indirectspec/Reference/unity-6000.0.71f1/{linear,gamma}.jsonl
 
-A profile is published only if both repeats meet every condition: exit 0 with no forced stop,
-the NVIDIA renderer, a launch-bound input record, the completion marker last, and
-byte-identical output.
+`run.py editor` admits one Editor at a time in the order linear/native1, linear/native2,
+gamma/native1, gamma/native2. Each capture must pass `gate.py` before the next is admitted; the
+first rejected capture ends the run and nothing is relaunched. `gate.py` requires exit 0 with no
+forced stop of any kind, the NVIDIA renderer, a launch-bound input record of this checkout's
+witness and the profile's color space, a log without C# or shader errors, and an output with
+every predeclared key (derived from the witness's own `Slots` and `Settings`), no duplicate,
+no diagnostic `* error` record, finite dump/Standard values, no placeholder or error-shader
+dump, and exactly one completion marker, last. A profile is published only if both repeats
+pass the gate and their outputs are byte-identical.
 Run outputs stay in `$XDG_CACHE_HOME/unbound/validation/runs/indirectspec/<L>/`.
 
 ## Analysis (predeclared)
@@ -76,6 +84,21 @@ jsonserialize modules, so `Collider` (PhysicsModule) does not resolve. The witne
 references it. Nothing was published. An offline compile check must use the Editor's own
 reference set for this project (`Library/Bee/artifacts/*/Assembly-CSharp.rsp` of a copy), not
 every module in `Managed/UnityEngine`.
+
+### Attempt 2 (label `indirectspec-2`)
+
+The witness, shader, scenes, bake, metas, settings and `analyze.py` are those of eb25b98a, minus the
+two `Collider` references (3173269f). Before any launch, `preflight.py` compiled the witness and
+`ProbeRunner` with the Editor's own Roslyn and the `Assembly-CSharp(-Editor).rsp` that the failed
+Editors wrote for this fixture (references, defines and options unchanged; the gamma copies' files
+are byte-identical). It also reproduced the original CS1069 pair on the eb25b98a witness. The
+four-at-once runner was replaced by the sequential gated one above. Budget: four launches
+(linear x2, gamma x2), no relaunch.
+
+If the Editor exposes no serialized `m_BakedAmbientProbeInLinear`, `analyze.py --l0` takes the
+offline parse of the same bake (LightingData.asset sha256 `e5de0e37…`):
+`0.18028377 0.22571412 0.30692285`. That value only binds the input. It neither confirms nor
+refutes anything.
 
 Not covered: a Custom default reflection, `DynamicGI.UpdateEnvironment`, Skybox/Flat ambient
 modes, other skyboxes, authored (rather than script-set) intensities, and bakes other than this

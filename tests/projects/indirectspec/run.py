@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
 """Records the unity_IndirectSpecColor witness in the Editor and publishes its references.
 
-    run.py editor --release R --label L    the four Editor captures, at once: the linear and the
-                                           gamma profile, two independent repeats each
-    run.py publish --release R --label L   per profile: both repeats exit 0 with no forced stop,
-                                           the NVIDIA renderer, complete (marker last) and
-                                           byte-identical; then writes
+    run.py editor --release R --label L    the four Editor captures, ONE AT A TIME: linear/native1,
+                                           linear/native2, gamma/native1, gamma/native2; each is
+                                           checked by the strict gate (gate.py) before the next is
+                                           admitted, and the first rejected capture stops the run
+    run.py publish --release R --label L   per profile: both repeats pass the strict gate (exit 0,
+                                           no forced stop, NVIDIA, every predeclared key, finite,
+                                           no error record) and are byte-identical; then writes
                                            Reference/unity-R/<profile>.jsonl. A profile whose
                                            pair fails is not published (no replacement pair).
 
@@ -16,6 +18,7 @@ the validation cache; Editors run through tests/editor_runner.py (one installed-
 each, the GPU on a private display). Do not wrap this driver in with-heavy-job.
 """
 import argparse
+import json
 import os
 from pathlib import Path
 import shutil
@@ -24,17 +27,22 @@ import sys
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from probe_paths import reference_root, run_root  # noqa: E402
 import editor_runner  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import gate  # noqa: E402
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 OUT = 'indirectspec.jsonl'
 PROFILES = ('linear', 'gamma')
 REPEATS = ('native1', 'native2')
+ORDER = (('linear', 'native1'), ('linear', 'native2'), ('gamma', 'native1'), ('gamma', 'native2'))
+# Launched once and rejected (CS1069, zero observations); never reused.
+REJECTED_LABELS = ('indirectspec',)
 COLOR_SPACE = {'linear': 'm_ActiveColorSpace: 1', 'gamma': 'm_ActiveColorSpace: 0'}
 TIMEOUT = 1200    # hard deadline per admitted Editor
 # Silence budget, including the cold import before the witness opens its output: the same
 # fixture's fresh-copy captures (tests/projects/lightprobes) import in about 10 s and finish in
-# about a minute; four Editors import at once here.
+# about a minute; one Editor runs at a time here.
 PROGRESS = 600
 
 
@@ -52,58 +60,57 @@ def copy_project(dest, profile, release):
     return dest
 
 
+def job(work, profile, repeat, release):
+    out = work/profile/repeat
+    if out.exists():
+        sys.exit(f'refusing to overwrite capture: {out}')
+    project = copy_project(work/'projects'/f'{profile}-{repeat}', profile, release)
+    out.mkdir(parents=True)
+    inputs = {'release': release, 'paths': {
+        'project/Assets': str(project/'Assets'), 'project/Packages': str(project/'Packages'),
+        'project/ProjectSettings': str(project/'ProjectSettings'),
+        'probe/run.py': str(PROBE/'run.py'), 'probe/gate.py': str(PROBE/'gate.py'),
+        'tests/editor_runner.py': str(REPO/'tests/editor_runner.py'),
+        'tests/probe_paths.py': str(REPO/'tests/probe_paths.py'),
+        'profile': str(REPO/'data/profiles'/('unity-'+'.'.join(release.split('.')[:2])+'.json'))}}
+    return editor_runner.EditorJob(
+        project, out/'editor.log', out,
+        ['-buildTarget', 'Standalone', '-executeMethod', 'ProbeRunner.Record'],
+        batch=True, env={'INDIRECT_SPEC_OUT': str(out/OUT)}, timeout=TIMEOUT,
+        progress_files=[out/OUT], progress_timeout=PROGRESS,
+        label=f'indirectspec-{profile}-{repeat}', launch_inputs=inputs)
+
+
 def editor(work, release):
-    jobs = []
-    for profile in PROFILES:
-        for repeat in REPEATS:
-            out = work/profile/repeat
-            if out.exists():
-                sys.exit(f'refusing to overwrite capture: {out}')
-            project = copy_project(work/'projects'/f'{profile}-{repeat}', profile, release)
-            out.mkdir(parents=True)
-            inputs = {'release': release, 'paths': {
-                'project/Assets': str(project/'Assets'), 'project/Packages': str(project/'Packages'),
-                'project/ProjectSettings': str(project/'ProjectSettings'),
-                'probe/run.py': str(PROBE/'run.py'),
-                'tests/editor_runner.py': str(REPO/'tests/editor_runner.py'),
-                'tests/probe_paths.py': str(REPO/'tests/probe_paths.py'),
-                'profile': str(REPO/'data/profiles'/('unity-'+'.'.join(release.split('.')[:2])+'.json'))}}
-            jobs.append(editor_runner.EditorJob(
-                project, out/'editor.log', out,
-                ['-buildTarget', 'Standalone', '-executeMethod', 'ProbeRunner.Record'],
-                batch=True, env={'INDIRECT_SPEC_OUT': str(out/OUT)}, timeout=TIMEOUT,
-                progress_files=[out/OUT], progress_timeout=PROGRESS,
-                label=f'indirectspec-{profile}-{repeat}', launch_inputs=inputs))
-    results = editor_runner.run_parallel(jobs)
-    for result in results:
+    """Sequential admission: linear/native1 first, each launch gated (gate.py) before the next
+    one is admitted. Stops at the first failing capture; nothing is relaunched."""
+    if work.exists() and any((work/p).exists() for p in PROFILES):
+        sys.exit(f'refusing: {work} already holds captures (a label is launched once)')
+    for profile, repeat in ORDER:
+        result = editor_runner.run(job(work, profile, repeat, release))
         print(editor_runner.summary(result))
-    failed = 0
-    for profile in PROFILES:
-        for repeat in REPEATS:
-            problem = capture_problem(work/profile/repeat)
-            failed |= bool(problem)
-            print(profile, repeat, problem or 'complete, exit 0, no forced exit, NVIDIA')
-    return failed
+        problems = gate.problems(work/profile/repeat, profile, release)
+        (work/profile/repeat/'gate.json').write_text(json.dumps({'problems': problems}, indent=1)+'\n')
+        if problems:
+            print(f'{profile} {repeat}: REJECTED, admitting nothing further')
+            for problem in problems:
+                print('  ', problem)
+            return 1
+        print(f'{profile} {repeat}: gate passed')
+    return 0
 
 
-def capture_problem(directory):
-    """Strict: exit 0 without any forced stop, the NVIDIA renderer, a complete witness."""
-    result = editor_runner.load_result(directory)
-    if result is None:
-        return 'no Editor result'
-    if result.get('forced_exit'):
-        return f"forced exit ({result['forced_exit']}: {result.get('forced_detail')})"
-    if not (directory/'prelaunch-inputs.json').exists():
-        return 'no launch-bound input record'
-    return editor_runner.result_problem(directory, gpu=True) or editor_runner.jsonl_complete(OUT)(directory)
+def capture_problem(directory, profile, release):
+    """The strict gate (gate.py): every problem, joined."""
+    return '; '.join(gate.problems(directory, profile, release))
 
 
-def publish(work):
+def publish(work, release):
     target_dir = reference_root(PROBE)
     failed = 0
     for profile in PROFILES:
         dirs = [work/profile/r for r in REPEATS]
-        problems = [(r, capture_problem(d)) for r, d in zip(REPEATS, dirs)]
+        problems = [(r, capture_problem(d, profile, release)) for r, d in zip(REPEATS, dirs)]
         problems = [f'{r}: {p}' for r, p in problems if p]
         if problems:
             print(f'{profile}: not publishing ({"; ".join(problems)})')
@@ -131,11 +138,13 @@ def main():
     args = parser.parse_args()
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
+    if args.label in REJECTED_LABELS:
+        parser.error(f'label {args.label} holds rejected captures and is never reused')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
     if args.mode == 'editor':
         return editor(work, args.release)
-    return publish(work)
+    return publish(work, args.release)
 
 
 if __name__ == '__main__':
