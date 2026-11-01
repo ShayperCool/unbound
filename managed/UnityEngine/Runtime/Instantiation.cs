@@ -47,15 +47,50 @@ namespace Unbound.Runtime
 
         static Object CloneGameObject(Object original, GameObject sourceGo, Transform parent, bool instantiateInWorldSpace, Vector3? position, Quaternion? rotation)
         {
+            var scene = TargetScene(parent, default);
+            var clone = Prepare(original, sourceGo, scene, "(Clone)");
+            Place(clone, parent, scene, instantiateInWorldSpace, false, position, rotation);
+            Activate(new[] { clone });
+            return clone.Result;
+        }
+
+        /// <summary>A copied hierarchy that is in no scene and has not woken up yet: the first half of
+        /// Instantiate, which InstantiateAsync does when it is called.</summary>
+        internal sealed class Prepared
+        {
+            internal Object Original;
+            internal GameObject RootGo;
+            internal Transform Root;
+            internal Dictionary<Object, Object> Map;
+            internal List<(Component Source, Component Clone)> Pairs;
+            internal Vector3 SourcePosition, SourceLossyScale, SourceLocalScale;
+            internal Quaternion SourceRotation;
+            internal Transform Parent;
+
+            internal Object Result => Original is GameObject ? RootGo : Map[Original];
+        }
+
+        /// <summary>The scene a clone goes to: its parent's, else the requested one if it is loaded,
+        /// else the active scene.</summary>
+        internal static SceneHandle TargetScene(Transform parent, Scene scene)
+        {
+            if (parent != null) return parent.m_GameObject.m_Scene;
+            if (scene.isLoaded) return new SceneHandle(scene.handle);
+            var target = SceneRegistry.EnsureActive().Handle;
+            if (SceneManagerInternal.ActiveScene != null) target = SceneManagerInternal.ActiveScene.Handle;
+            return target;
+        }
+
+        /// <summary>Copies the hierarchy of <paramref name="sourceGo"/> and the serialized state of its
+        /// components, references inside it remapped to the copies. Nothing is placed or woken.</summary>
+        internal static Prepared Prepare(Object original, GameObject sourceGo, SceneHandle scene, string suffix)
+        {
             var map = new Dictionary<Object, Object>();
             var pairs = new List<(Component Source, Component Clone)>();
             var source = sourceGo.m_Transform;
-            var targetScene = parent != null ? parent.m_GameObject.m_Scene : SceneRegistry.EnsureActive().Handle;
-            if (parent == null && SceneManagerInternal.ActiveScene != null) targetScene = SceneManagerInternal.ActiveScene.Handle;
-
-            var rootClone = CloneTree(source, null, targetScene, map, pairs);
+            var rootClone = CloneTree(source, null, scene, map, pairs);
             var rootGo = rootClone.m_GameObject;
-            rootGo.m_Name = sourceGo.m_Name + "(Clone)";
+            rootGo.m_Name = sourceGo.m_Name + suffix;
 
             // Remap references into the cloned set, then copy component state.
             Object Remap(Object o) => o != null && map.TryGetValue(o, out var clone) ? clone : o;
@@ -79,15 +114,34 @@ namespace Unbound.Runtime
                     Debug.LogException(e, src);
                 }
             }
+            return new Prepared
+            {
+                Original = original, RootGo = rootGo, Root = rootClone, Map = map, Pairs = pairs,
+                SourcePosition = source.position, SourceRotation = source.rotation, SourceLossyScale = source.lossyScale,
+                SourceLocalScale = source.m_LocalScale,
+            };
+        }
 
-            // Placement.
-            var sourcePosition = source.position;
-            var sourceRotation = source.rotation;
-            if (parent == null)
+        /// <summary>Puts a prepared copy into its scene or under its parent. With a parent, explicit
+        /// coordinates are world coordinates unless <paramref name="localPose"/> (the parent then
+        /// applies to them); without explicit coordinates the copied local pose stays unless
+        /// <paramref name="instantiateInWorldSpace"/>.</summary>
+        internal static void Place(Prepared clone, Transform parent, SceneHandle scene, bool instantiateInWorldSpace, bool localPose,
+            Vector3? position, Quaternion? rotation)
+        {
+            var rootClone = clone.Root;
+            foreach (var (_, dst) in clone.Pairs)
+                if (dst is Transform moved) moved.m_GameObject.m_Scene = scene;
+            if (parent == null || localPose)
             {
                 // With no parent, Native keeps the copied local pose unless explicit world
                 // coordinates were supplied. A null parent behaves the same for either flag.
-                SceneRegistry.Get(targetScene)?.Roots.Add(rootGo);
+                if (parent == null) SceneRegistry.Get(scene)?.Roots.Add(clone.RootGo);
+                else
+                {
+                    rootClone.m_Parent = parent;
+                    parent.m_Children.Add(rootClone);
+                }
                 if (rotation.HasValue) rootClone.m_LocalRotation = rotation.Value;
                 if (position.HasValue) rootClone.SetLocalPosition(position.Value);
             }
@@ -97,35 +151,50 @@ namespace Unbound.Runtime
                 parent.m_Children.Add(rootClone);
                 if (position.HasValue || rotation.HasValue)
                 {
-                    rootClone.KeepWorldPose(position ?? sourcePosition, rotation ?? sourceRotation, source.lossyScale, parent);
-                    rootClone.m_LocalScale = source.m_LocalScale;
+                    rootClone.KeepWorldPose(position ?? clone.SourcePosition, rotation ?? clone.SourceRotation, clone.SourceLossyScale, parent);
+                    rootClone.m_LocalScale = clone.SourceLocalScale;
                 }
                 else if (instantiateInWorldSpace)
                 {
-                    rootClone.KeepWorldPose(sourcePosition, sourceRotation, source.lossyScale, parent);
+                    rootClone.KeepWorldPose(clone.SourcePosition, clone.SourceRotation, clone.SourceLossyScale, parent);
                 }
             }
+            clone.Parent = parent;
             rootClone.MarkChanged();
-            foreach (var (_, dst) in pairs)
+            foreach (var (_, dst) in clone.Pairs)
                 if (dst is Transform t) t.OnHierarchyChanged();
 
             // Bodies are attached before placement. Their initial inactive physics pose must
             // reflect the completed hierarchy, before callers can edit its Transform again.
-            foreach (var (_, dst) in pairs)
+            foreach (var (_, dst) in clone.Pairs)
                 if (dst is Rigidbody rb) rb.CaptureInactivePose();
+        }
 
-            if (rootGo.activeInHierarchy)
-            {
-                var components = new List<Component>();
-                foreach (var (_, dst) in pairs)
-                    if (!dst.m_Destroyed && dst.m_GameObject.activeInHierarchy)
+        /// <summary>Wakes placed copies together: Awake and OnEnable go through the copies object by
+        /// object of the original, each object of every copy before the next object.</summary>
+        internal static void Activate(IReadOnlyList<Prepared> clones)
+        {
+            var components = new List<Component>();
+            int count = clones.Count == 0 ? 0 : clones[0].Pairs.Count;
+            for (int j = 0; j < count; j++)
+                foreach (var clone in clones)
+                {
+                    var dst = clone.Pairs[j].Clone;
+                    if (clone.RootGo.activeInHierarchy && !dst.m_Destroyed && dst.m_GameObject.activeInHierarchy)
                         components.Add(dst);
-                Lifecycle.Activate(components);
-            }
-            if (parent != null)
-                Messaging.SendFast(parent.m_GameObject, "OnTransformChildrenChanged");
+                }
+            if (components.Count > 0) Lifecycle.Activate(components);
+            foreach (var clone in clones)
+                if (clone.Parent != null)
+                    Messaging.SendFast(clone.Parent.m_GameObject, "OnTransformChildrenChanged");
+        }
 
-            return original is GameObject ? rootGo : map[original];
+        /// <summary>Drops a prepared copy that was never placed: it never woke, so it gets no messages.</summary>
+        internal static void Discard(Prepared clone)
+        {
+            foreach (var (_, dst) in clone.Pairs) dst.MarkDestroyed();
+            foreach (var (_, dst) in clone.Pairs)
+                if (dst is Transform t) t.m_GameObject.MarkDestroyed();
         }
 
         static Transform CloneTree(Transform source, Transform parentClone, SceneHandle scene, Dictionary<Object, Object> map, List<(Component, Component)> pairs)
