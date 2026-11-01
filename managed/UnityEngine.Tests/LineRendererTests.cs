@@ -356,6 +356,144 @@ namespace UnityEngine.Tests
             }
         }
 
+        static Mesh BakeLine(Vector3[] points, float width, int corners, LineTextureMode mode = LineTextureMode.Stretch, AnimationCurve curve = null)
+        {
+            var line = new GameObject("line").AddComponent<LineRenderer>();
+            var camera = new GameObject("camera").AddComponent<Camera>();
+            try
+            {
+                camera.orthographic = true;
+                camera.transform.position = new Vector3(0f, 0f, -10f);
+                if (curve != null) line.widthCurve = curve;
+                line.widthMultiplier = width;
+                line.numCornerVertices = corners;
+                line.textureMode = mode;
+                line.positionCount = points.Length;
+                line.SetPositions(points);
+                var mesh = new Mesh();
+                line.BakeMesh(mesh, camera);
+                return mesh;
+            }
+            finally
+            {
+                Object.DestroyImmediate(line.gameObject);
+                Object.DestroyImmediate(camera.gameObject);
+            }
+        }
+
+        static void Near(Vector3 expected, Vector3 actual, float tolerance = 1e-5f)
+        {
+            for (int axis = 0; axis < 3; axis++)
+                Assert.InRange(actual[axis], expected[axis] - tolerance, expected[axis] + tolerance);
+        }
+
+        /// <summary>The per-segment texture modes evaluate the width curve by point index, other
+        /// modes by distance (Unity 6000.0.71f1, tests/projects/lines line.tex.*.zigzag.curve,
+        /// pairs one and two; the per-segment trails show the same index rule for the gradient).</summary>
+        [Theory]
+        [InlineData(LineTextureMode.DistributePerSegment, new[] { -1.34018052f, 0.409776568f, -1.45981944f, 0.7902235f, -0.118935607f, -0.7140598f, -0.2810644f, -0.08594015f })]
+        [InlineData(LineTextureMode.RepeatPerSegment, new[] { -1.34018052f, 0.409776568f, -1.45981944f, 0.7902235f, -0.118935607f, -0.7140598f, -0.2810644f, -0.08594015f })]
+        [InlineData(LineTextureMode.Stretch, new[] { -1.34449029f, 0.4234814f, -1.45550966f, 0.776518643f, -0.120708525f, -0.707191348f, -0.279291481f, -0.09280869f })]
+        public void PerSegmentModesPlaceWidthByPointIndex(LineTextureMode mode, float[] expected)
+        {
+            var zigzag = new[] { new Vector3(-2f, -0.5f, 0f), new Vector3(-1.4f, 0.6f, 0f), new Vector3(-0.2f, -0.4f, 0f), new Vector3(0.3f, 0.8f, 0f), new Vector3(1.8f, 0.1f, 0f) };
+            var mesh = BakeLine(zigzag, 0.4f, 0, mode, new AnimationCurve(new Keyframe(0f, 0.5f), new Keyframe(1f, 2f)));
+            try
+            {
+                for (int i = 0; i < 4; i++)
+                    Near(new Vector3(expected[2 * i], expected[2 * i + 1], 0f), mesh.vertices[2 + i]);
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
+        /// <summary>Coincident corner sides keep a zero arc: the position angle divides the cosine
+        /// by the side lengths, as the tangent angle does (Unity 6000.0.71f1, tests/projects/lines
+        /// line.sweep.L.c2.w2 and line.dup.near1e-3.c2, all inner arc vertices).</summary>
+        [Fact]
+        public void CoincidentCornerSidesKeepAZeroArc()
+        {
+            var sweep = BakeLine(new[] { new Vector3(-1f, 0f, 0f), Vector3.zero, new Vector3(0f, 1f, 0f) }, 2f, 2);
+            var near = BakeLine(new[] { new Vector3(-1f, 0f, 0f), Vector3.zero, new Vector3(0.001f, 0f, 0f), new Vector3(1f, 1f, 0f) }, 0.4f, 2);
+            try
+            {
+                foreach (int i in new[] { 2, 4, 6 })
+                    Near(new Vector3(0.7071067f, -0.707106769f, 0f), sweep.vertices[i]);
+                foreach (int i in new[] { 2, 4, 6 })
+                    Near(new Vector3(0.07658291f, -0.184756771f, 0f), near.vertices[i]);
+            }
+            finally
+            {
+                Object.DestroyImmediate(sweep);
+                Object.DestroyImmediate(near);
+            }
+        }
+
+        /// <summary>Only the miter eases a small turn; the corner arc ends on the un-eased outgoing
+        /// side, parallel to the next point's pair (measured on every eased corner of the saved
+        /// round and TransformZ trails, tests/projects/lines trail.*.round / transformZ).</summary>
+        [Fact]
+        public void CornerArcsEndOnTheUnEasedOutgoingSide()
+        {
+            // A 2.9 degree turn: its cosine is above the 0.99 easing threshold.
+            var mesh = BakeLine(new[] { new Vector3(-1f, 0f, 0f), Vector3.zero, new Vector3(1f, 0.05f, 0f) }, 0.4f, 2);
+            try
+            {
+                var v = mesh.vertices;
+                Assert.Equal(10, v.Length);
+                // The eased arc would miss that side by 0.044 (offline float32 replay).
+                Near((v[9] - v[8]).normalized, (v[7] - v[6]).normalized, 1e-5f);
+                // The arc's inner vertex is shared by the corner's three pairs.
+                Assert.True(v[2] == v[4] && v[4] == v[6] || v[3] == v[5] && v[5] == v[7]);
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
+        /// <summary>A TransformZ trail's opposite face swaps each corner's side: its corner block is
+        /// the point reflection of the View trail's block through the point, with the fan on the
+        /// other side (Unity 6000.0.71f1, tests/projects/lines trail.f*.transformZ, all 30 meshes;
+        /// lines keep their side).</summary>
+        [Fact]
+        public void TransformZTrailCornersTurnOnTheOppositeSide()
+        {
+            var meshes = new Mesh[2];
+            var camera = new GameObject("camera").AddComponent<Camera>();
+            var corner = new Vector3(0f, 0.3f, 0f);
+            try
+            {
+                camera.orthographic = true;
+                camera.transform.position = new Vector3(0f, 0f, -10f);
+                for (int j = 0; j < 2; j++)
+                {
+                    var go = new GameObject("trail");
+                    go.transform.position = new Vector3(1f, 0f, 0f);
+                    var trail = go.AddComponent<TrailRenderer>();
+                    trail.time = 10000f;
+                    trail.autodestruct = false;
+                    trail.minVertexDistance = 0f;
+                    trail.widthMultiplier = 0.3f;
+                    trail.numCornerVertices = 1;
+                    trail.alignment = j == 0 ? LineAlignment.View : LineAlignment.TransformZ;
+                    trail.Clear();
+                    trail.AddPositions(new[] { new Vector3(-1f, 0f, 0f), corner });
+                    meshes[j] = new Mesh();
+                    trail.BakeMesh(meshes[j], camera);
+                    Object.DestroyImmediate(go);
+                }
+                Vector3[] view = meshes[0].vertices, transformZ = meshes[1].vertices;
+                Assert.Equal(8, view.Length);
+                Assert.Equal(8, transformZ.Length);
+                // Pairs: head, the corner's two (vertices 2..5), the oldest point.
+                for (int i = 2; i < 6; i++)
+                    Near(2f * corner - view[i ^ 1], transformZ[i]);
+                Assert.NotEqual(meshes[0].triangles[6..9], meshes[1].triangles[6..9]);
+            }
+            finally
+            {
+                foreach (var m in meshes) if (m != null) Object.DestroyImmediate(m);
+                Object.DestroyImmediate(camera.gameObject);
+            }
+        }
+
         [Fact]
         public void TrailsRecordMovementAndForgetOldPoints()
         {
