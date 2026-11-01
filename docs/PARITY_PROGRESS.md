@@ -2489,3 +2489,12 @@ One managed build cycle, no Rust/new Native; full managed/API remains separately
 - REJECTED:60 newly failing numeric/index paths and95 pixels versus matching Root, inside retained failing keys;36 numeric paths versus blend. All raw/error changes retained, no masks/tolerance changes.
 - Auto3557 BLOCKED at shader setup in Root/final; one runner correction failed, attempts preserved. No extra build/capture/Native; sphere48 and zero-life21 remain OPEN.
 - Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-trail-combined-20261101-t3-9d5972f4/REPORT.md`.
+
+### Offline line geometry attribution, 2026-11-01
+- Source `186e411d` on authorized ba658956; world TransformZ render plane prepared separately from measured BakeMesh, UNBUILT/UNACCEPTED.
+- All60 Root index introductions are30 one-cap TransformZ trail meshes; all36 blend introductions are round-trail tangent components. Full171-cap/37-lighting controls retained.
+- All95 pixel/388-channel introductions predate blend; exact witnesses and CPU replays retained. Native trail replay still differs at88 pixels.
+- Offline only: tilted image212->0 failing pixels, complete image864->652; Root introductions95->80 pixels/388->328 channels. Numeric60/36, retained4968/136, increases1279/480 unchanged.
+- Measured package remains REJECTED with all60/95 introductions and15 time failures; no new build/capture, managed test UNRUN, API/stub changes[]. Mask/cap/tangent blockers and sphere48/zero-life21 remain.
+- Root combines platformd662 and separate runnerf60 later; no runner import here. CCC timeout124 closed and registration removed; no owned clients remain.
+- Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-trail-geometry-attribution-20261101-t3-dd198b0b/REPORT.md`.
