@@ -2436,5 +2436,6 @@ Managed 1380/1391, same eleven names/messages; affected Rust 146/146 and existin
 API 0 errors/2314 handwritten types, PhysicsModule consistent; inherited two-file generator differences byte-proved, no rewrites.
 Callbacks retain 29 missing/29 extra, nine changed unmatched records and 25 ordering inversions; prefab fields retain 21/6280 differences.
 InstantiateAsync retains 731/777, 46 missing/46 extra; CullingGroup 1149/1149 plus initial EndOfFrame extra; module compile 7/7, Play/transition 8/8 and five identity checks pass.
-All unions/tolerances retained; no runtime fixes or Native captures. Broader matching GPU replay remains pending, with resources and GPU CullingGroup completed here.
-Report/runtime/input/command manifests: `~/.cache/unbound/validation/runs/combined-root-validation-20261101-t3-42333086/`.
+Matching GPU: 15 captures, zero introduced failures; CRT 349/352 + 100/140 images, flares 689/689 + 140/217; strict residuals retained.
+One builtinfx residual improves pointwise; all unions/tolerances and 33 runtime files retained, with no new builds or Native captures.
+Report/runtime/input/command manifests: `~/.cache/unbound/validation/runs/{combined-root-validation-20261101-t3-42333086,matching-closure-gpu-20261101-t3-de3d0dea}/`.
