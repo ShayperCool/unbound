@@ -551,10 +551,12 @@ impl Mixer {
             let mut handle = source.params.group;
             for _ in 0..self.group_nodes.len() {
                 let Some(group) = self.group_nodes.get(&handle) else { break; };
-                let root = group.spec.mixer;
-                if root == 0 || !active.insert(root) { break; }
-                let Some(master) = self.group_nodes.get(&root) else { break; };
-                handle = master.spec.parent;
+                // A muted route contributes no activity to its mixer, even while its source
+                // remains playing and real. A silent clip on an unmuted route does. The
+                // independent lifecycle probe makes this distinction audible with a sibling Echo.
+                if group.spec.muted { break; }
+                if handle == group.spec.mixer && !active.insert(handle) { break; }
+                handle = group.spec.parent;
             }
         }
         active
@@ -704,7 +706,7 @@ impl Mixer {
         let mut state = AudioSourceState {
             main: voice_state::NONE,
             one_shots: source.one_shots.len() as i32,
-            is_virtual: source.is_virtual as i32,
+            is_virtual: (source.is_virtual || (source.main.is_none() && source.one_shots.is_empty())) as i32,
             _pad: 0,
             position: source.pending_position,
         };
@@ -1693,6 +1695,41 @@ mod tests {
         m.render(&mut output, 2);
         assert!(output.iter().any(|x| *x > 0.1));
         assert_eq!(m.source_state(7).position, 1024.0);
+    }
+
+    #[test]
+    fn muted_sibling_does_not_keep_a_quiet_mixer_awake() {
+        let mut m = Mixer::new(MixerConfig::default());
+        let mut echo = filter_group(3, 4, "Echo");
+        echo.mixer = 4;
+        echo.effects[0].delay = 5000.0;
+        m.configure_group(echo).unwrap();
+        let mut master = filter_group(4, 0, "Attenuation");
+        master.mixer = 4;
+        master.enable_suspend = true;
+        master.suspend_threshold = 0.0001;
+        master.effects[0].gain = 1.0;
+        m.configure_group(master).unwrap();
+        let mut muted = filter_group(5, 4, "Attenuation");
+        muted.mixer = 4;
+        muted.muted = true;
+        muted.effects[0].gain = 1.0;
+        m.configure_group(muted).unwrap();
+        let mut input = vec![0.0; 4096 * 2];
+        input[2048 * 2] = 0.25;
+        input[3072 * 2 + 1] = -0.125;
+        m.add_clip(1, Clip::new(2, 48000, input));
+        m.add_clip(2, Clip::new(2, 48000, vec![0.01; 2048]));
+        source_with(&mut m, 7, 1, |p| p.group = 3);
+        source_with(&mut m, 8, 2, |p| { p.group = 5; p.flags = source_flags::LOOP; });
+        play(&mut m, 7, command::PLAY, 0.0);
+        play(&mut m, 8, command::PLAY, 0.0);
+        for _ in 0..70 { m.update_suspension(); m.advance(1024); }
+        assert!(m.group_nodes[&4].suspended);
+        assert_eq!(m.group_nodes[&3].rendered, 50 * 1024);
+        assert_eq!(m.source_state(8).main, voice_state::PLAYING);
+        assert_eq!(m.source_state(8).is_virtual, 0);
+        assert_eq!(m.source_state(7).is_virtual, 1);
     }
 
     #[test]

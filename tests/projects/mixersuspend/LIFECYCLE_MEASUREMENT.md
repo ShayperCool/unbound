@@ -27,3 +27,10 @@ that original canonical reference is unchanged.
 Two independently agreeing complete Native captures per rate are required before
 acceptance or publishing a lifecycle profile. Metadata and Native repeat bits are
 exact. Engine tolerances remain ATOL 2e-5 / RTOL 2e-4.
+
+Independent Native pairs agree exactly at both rates. Gain, wet and snapshot
+changes retain the control's resumed history position; they do not advance it
+during this measured gap. A muted sibling does not keep the mixer awake, although
+it remains playing and real. A silent clip on an unmuted sibling does keep the
+mixer awake and preserves the unsuspended five-second repeat. Inactive sources
+report virtual at the measured observation points.
