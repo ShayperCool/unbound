@@ -1954,3 +1954,40 @@ artifact receipts, original failures, fresh retries and full unions are cache-on
 ad-hoc driver failures are preserved, including missing native test-library packaging and
 incorrect lifecycle runner configuration. No frozen baseline was changed. This closes this
 integration wave, not full engine, rendering, audio-effect or older-release parity.
+
+
+## AudioMixer Echo integration (2026-11-01)
+
+Echo delivery `197656eb` is integrated, with the reviewed allocation correction in production
+source `02e061b5`. Independent Native repeats agree at 48 kHz and 44.1 kHz. The root replay passes
+24379636/24379636 values with unchanged ATOL 2e-5/RTOL 2e-4. All 70 device PCM files are bit-identical
+to the canonical Unity 6000.0.71f1 captures, and every output file is byte-identical to the
+accepted Echo delivery. Complete float delta reports preserve 681966/686797 tolerated patterns
+at the two rates; their maximum absolute difference from Native is 5.820766091346741e-11.
+
+- The persistent stereo delay uses the measured eight-frame quantization and signed 16-bit
+  history, with independent Drymix/Wetmix and feedback Decay. Defaults, finite parameter
+  endpoints, fractional delays, source completion/tails, effect/group bypass, serialized effect
+  order, parent routing, summed voices, attenuation, exposed values and immediate snapshots
+  are covered by the 35-case matrix at both rates.
+- Independent review found a malformed-rate allocation risk. Histories now have an explicit
+  8 MiB backend limit and use fallible allocation. Group configuration and rate resets validate
+  the limit before mutation. Tests reject int.MaxValue sample rates at default and maximum
+  delay and preserve the prior configuration; a subsequent valid reset succeeds. A five-second
+  history at 384 kHz fits the resource budget, without claiming unmeasured rate parity.
+- Both normal-stub and no-stubs builds pass. API verification reports zero errors in 2289 types;
+  all five generated module comparisons are byte-identical. Full managed differential preserves
+  all 1197 prior passing tests and resolves the new Echo configuration test: 1198/1209 pass,
+  with 11 unchanged Text/Particle failures, zero introduced and zero skipped. Rust audio 38,
+  runtime 49, assets 72, app 18 and portable shaders 33 pass; the same private shader fixture is excluded.
+- All 11516039 previously accepted mixerfilter values pass and their files remain byte-identical.
+  The 120 exact capture-clock fields pass. Audio-import/physics/graphics retain 5721/45/0 failures,
+  with zero introduced values or raw changes. The actual built native library matches the
+  prior root library hash; none was replaced with a frozen sibling artifact.
+
+The 33 matching runtime files retain their original hashes after replay. Canonical references
+and portable commands are in tests/projects/mixerecho; full comparisons, numerical deltas,
+review evidence and runtime receipts remain cache-only. Auto-suspend, surround, clipping beyond
+the fixture amplitudes, running-tail changes, timed snapshots and other releases remain outside
+this certification. Global slot wet mixing and other effects remain unsupported. This establishes
+only the measured Echo scope, not complete audio or engine parity.
