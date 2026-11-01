@@ -68,4 +68,6 @@ purported effect captures, including missing long-delay repeats. Reports stream 
 extra and failing sample into gzip JSON lines, followed by a summary. Integer/metadata/bit
 fields compare exactly. Float tolerances remain ATOL `2e-5` and RTOL `2e-4`; independent Native
 repeat checks compare float bits exactly. Summary files also count bit differences inside the
-float tolerances. All run projects, repeats, candidates, failures and reports stay in cache.
+float tolerances. `deltas.py --release 6000.0.71f1 --rate 48000 --candidate <capture>
+--report <cache/deltas.jsonl.gz>` records every changed float with both bit patterns, including
+those inside tolerance, and summarizes their maximum absolute differences by observation point. All run projects, repeats, candidates, failures and reports stay in cache.
