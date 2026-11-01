@@ -20,6 +20,7 @@ p.add_argument('--label', required=True)
 p.add_argument('--cli', type=Path)
 p.add_argument('--runtime', type=Path)
 p.add_argument('--fixed-delta-time', type=float)
+p.add_argument('--external-delta', type=float)
 a = p.parse_args()
 if not a.label or Path(a.label).name != a.label or a.label in ['.', '..']:
     p.error('labels must be single directory names')
@@ -47,6 +48,9 @@ else:
     if out.exists() or log.exists(): raise SystemExit('Refusing to overwrite ' + a.label)
     env = dict(os.environ, PARTICLE_DEATH_TIMING_OUT=str(out))
     env.pop('PARTICLE_DEATH_FIXED_DELTA', None)
+    env.pop('PARTICLE_DEATH_EXTERNAL_DELTA', None)
+    if a.external_delta is not None:
+        env['PARTICLE_DEATH_EXTERNAL_DELTA'] = str(a.external_delta)
     if a.fixed_delta_time is not None:
         env['PARTICLE_DEATH_FIXED_DELTA'] = str(a.fixed_delta_time)
     if a.mode == 'native':
@@ -58,7 +62,7 @@ else:
         cmd = [str(a.cli.resolve()), 'run', '-p', str(project), '--headless', '30', '--no-watch']
     cmd = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600', *cmd]
     audit = dict(command=cmd, environment={k:env.get(k) for k in
-        ['PARTICLE_DEATH_TIMING_OUT','PARTICLE_DEATH_FIXED_DELTA','UNBOUND_MANAGED_DIR','LD_LIBRARY_PATH','UNBOUND_CACHE','CARGO_TARGET_DIR']})
+        ['PARTICLE_DEATH_TIMING_OUT','PARTICLE_DEATH_FIXED_DELTA','PARTICLE_DEATH_EXTERNAL_DELTA','UNBOUND_MANAGED_DIR','LD_LIBRARY_PATH','UNBOUND_CACHE','CARGO_TARGET_DIR']})
     if a.mode == 'engine':
         audit['sha256'] = {str(f): hashlib.sha256(f.read_bytes()).hexdigest() for f in [a.cli, a.runtime/'UnityEngine.CoreModule.dll', a.runtime/'libunbound_physx.so']}
     (work / (a.label + '-command.json')).write_text(json.dumps(audit, indent=2) + '\n')

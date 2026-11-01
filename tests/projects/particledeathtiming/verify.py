@@ -19,7 +19,7 @@ spec.loader.exec_module(comparison)
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--unity-version', required=True)
-    parser.add_argument('--profile', choices=['default', 'fixed-0.01'], default='default')
+    parser.add_argument('--profile', choices=['default', 'fixed-0.01', 'delta-0.015'], default='default')
     parser.add_argument('--native-a', type=Path)
     parser.add_argument('--native-b', type=Path)
     parser.add_argument('--actual', type=Path)

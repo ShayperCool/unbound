@@ -10,18 +10,26 @@ index reads are excluded because that getter crashed the earlier Native probe.
 
 Unity 6000.0.71f1 removes the parent in the first call. Its Death child has
 z .48, lifetime 1.993 and time .025, then z .505, lifetime 1.968 and time .05.
-The ordinary child advances by .025 in each call. Both Death captures use seed
+The ordinary child advances by .025 in each call. The Death captures use seed
 692788716 and axis [0,1,0], which remain part of the full comparison.
 
-The sole timing variation changes `Time.fixedDeltaTime` from the project's
+The fixed-step timing variation changes `Time.fixedDeltaTime` from the project's
 .02 to .01 while leaving `fixedTimeStep=false`. Every recorded particle and
 system field stays identical. This does not explain the Death child's initial
 .02 age and does not justify substituting the current fixed step or a constant
-for that age. The control proves the difference from ordinary traversal; the
-initialization mechanism remains unresolved.
+for that age. The control proves the difference from ordinary traversal.
+
+One further paired discriminator changes only the external simulation delta to
+.015. It records `Time.deltaTime` as .0199999921 throughout. The parent still
+dies in call one, but the Death child now has zero initial age: z .46,
+lifetime 2.013 and time .015. Call two gives z .475, lifetime 1.99799991 and
+time .03. Its seed and axis match the other profiles. The ordinary child
+advances .015 per call. This also excludes simply pre-aging by frame delta or
+the entire external call. The event scheduling mechanism remains unresolved;
+these measurements do not justify a fitted scheduling quantum.
 
 `Reference/unity-6000.0.71f1/` is the single reference set for that release.
-Its two profiles are `default.jsonl` and `fixed-0.01.jsonl`. Each was checked
+Its profiles are `default.jsonl`, `fixed-0.01.jsonl` and `delta-0.015.jsonl`. Each was checked
 against an independent repeat before publication. Repeats, engine captures,
 input hashes, commands, logs and full failure unions stay in the validation cache.
 The original 27-record trigger-lifetime reference remains unchanged.
@@ -39,6 +47,8 @@ python3 tests/projects/particledeathtiming/verify.py --unity-version 6000.0.71f1
 
 For the variation, use new labels in `prepare`, then pass
 `--fixed-delta-time .01` to both capture commands and `--profile fixed-0.01`
+to the verifier. For the final discriminator, use new labels, pass
+`--external-delta .015` to both capture commands and `--profile delta-0.015`
 to the verifier. Preparation always copies authored inputs into the cache.
 Each capture enters the installed heavy-job runner once.
 

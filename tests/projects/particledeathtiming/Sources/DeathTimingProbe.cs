@@ -8,6 +8,8 @@ using UnityEngine;
 public class DeathTimingProbe : MonoBehaviour
 {
     static readonly StringBuilder s_Out = new StringBuilder();
+    static float s_ExternalDelta = .025f;
+    static bool s_RecordEventDelta;
     static ParticleSystem.Particle[] s_Buffer = new ParticleSystem.Particle[32];
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -26,6 +28,11 @@ public class DeathTimingProbe : MonoBehaviour
         Array.Clear(s_Buffer, 0, s_Buffer.Length);
         int n = ps.GetParticles(s_Buffer);
         s_Out.Append("{\"scenario\":").Append(Q(scenario)).Append(",\"step\":").Append(Q(step));
+        if (s_RecordEventDelta)
+        {
+            s_Out.Append(",\"externalDelta\":").Append(F(s_ExternalDelta));
+            s_Out.Append(",\"deltaTime\":").Append(F(Time.deltaTime));
+        }
         s_Out.Append(",\"fixedDeltaTime\":").Append(F(Time.fixedDeltaTime));
         s_Out.Append(",\"maximumParticleDeltaTime\":").Append(F(Time.maximumParticleDeltaTime));
         s_Out.Append(",\"count\":").Append(count);
@@ -86,6 +93,12 @@ public class DeathTimingProbe : MonoBehaviour
             string fixedStep = Environment.GetEnvironmentVariable("PARTICLE_DEATH_FIXED_DELTA");
             if (!string.IsNullOrEmpty(fixedStep))
                 Time.fixedDeltaTime = float.Parse(fixedStep, CultureInfo.InvariantCulture);
+            string externalDelta = Environment.GetEnvironmentVariable("PARTICLE_DEATH_EXTERNAL_DELTA");
+            if (!string.IsNullOrEmpty(externalDelta))
+            {
+                s_ExternalDelta = float.Parse(externalDelta, CultureInfo.InvariantCulture);
+                s_RecordEventDelta = true;
+            }
             Case();
         }
         finally { Time.fixedDeltaTime = originalFixedDeltaTime; }
@@ -114,7 +127,7 @@ public class DeathTimingProbe : MonoBehaviour
         Record("before", parent, death, ordinary);
         for (int i = 1; i <= 2; i++)
         {
-            parent.Simulate(.025f, true, false, false);
+            parent.Simulate(s_ExternalDelta, true, false, false);
             Record("after" + i.ToString(CultureInfo.InvariantCulture), parent, death, ordinary);
         }
         DestroyImmediate(parent.gameObject);
