@@ -934,9 +934,9 @@ namespace UnityEngine
 
         /// <summary>A camera's render collecting the trail, before its empty check: ages at the
         /// render's time and, when that leaves a trail that had points empty, requests its
-        /// object's automatic destruction once. Native does this in the trail's culling callback
-        /// and queues a delayed call that only the next fixed or dynamic delayed-callback update
-        /// runs (not the end of the frame); the object stays alive and not pending until then
+        /// object's automatic destruction once. Unity requests it while the camera's render culls
+        /// the trail and destroys the object at the next fixed or dynamic delayed-callback update,
+        /// not at the end of the frame; the object stays alive and not pending until then
         /// (tests/projects/lines/TRAIL_AUTODESTRUCT_NATIVE.md).</summary>
         internal void AgeForRender()
         {
@@ -1185,9 +1185,9 @@ namespace UnityEngine
                 if (s_Registered) return;
                 s_Registered = true;
                 PlayerLoopDriver.Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), UpdateAll);
-                // Native queues the request as a delayed call due 100 seconds before the clocks,
-                // so the delayed-callback updates of fixed and dynamic delayed calls run it before
-                // their other delayed work (coroutines); the end-of-frame update does not run it.
+                // The request is due before any other delayed work: the fixed and dynamic
+                // delayed-callback updates run it before their coroutines. The end-of-frame
+                // destruction does not run it.
                 PlayerLoopDriver.RegisterFirst(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), DrainAutodestruct);
                 PlayerLoopDriver.RegisterFirst(typeof(PL.Update.ScriptRunDelayedDynamicFrameRate), DrainAutodestruct);
                 PlayerLoopDriver.RegisterFirst(typeof(PL.PostLateUpdate.ScriptRunDelayedDynamicFrameRate), DrainAutodestruct);
