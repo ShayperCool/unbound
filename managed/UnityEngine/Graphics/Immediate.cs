@@ -56,12 +56,14 @@ namespace Unbound.Runtime
         /// slice.*.array.*: the source slice is read into the destination slice). The renderer binds
         /// a blit's source as a 2D texture, so the slice is copied texel for texel, which gives the
         /// Editor's result between targets of the same size and format without scale or offset;
-        /// another such blit is refused (warns) rather than drawn wrong. True when it was handled
-        /// (the source is an array).</summary>
+        /// another such blit is refused (warns) rather than drawn wrong. So is a copy the renderer
+        /// cannot make: a slice past the source's slices or the destination's layers, or a
+        /// multisampled side. True when it was handled (the source is an array).</summary>
         internal static bool BlitArraySlice(UnityEngine.Texture source, UnityEngine.Texture destination, int sourceSlice, int destinationSlice,
             UnityEngine.Vector2 scale, UnityEngine.Vector2 offset)
         {
-            if (ArraySlices(source) == 0) return false;
+            int slices = ArraySlices(source);
+            if (slices == 0) return false;
             if (destination == null || destination.width != source.width || destination.height != source.height
                 || destination.graphicsFormat != source.graphicsFormat || scale != UnityEngine.Vector2.one || offset != UnityEngine.Vector2.zero)
             {
@@ -69,11 +71,41 @@ namespace Unbound.Runtime
                     "is done only into a target of the array's size and format, without scale or offset: this blit is skipped");
                 return true;
             }
+            if (sourceSlice < 0 || sourceSlice >= slices)
+            {
+                Stubs.Ignored("Blit from a texture array slice past its slices",
+                    "is not supported: this blit is skipped");
+                return true;
+            }
+            if (destinationSlice < 0 || destinationSlice >= GpuLayers(destination))
+            {
+                Stubs.Ignored("Blit from a texture array into a slice past the target's layers",
+                    "is not supported (3D and cube-array targets have one layer in Unbound): this blit is skipped");
+                return true;
+            }
+            if (source is UnityEngine.RenderTexture { antiAliasing: > 1 } || destination is UnityEngine.RenderTexture { antiAliasing: > 1 })
+            {
+                Stubs.Ignored("Blit from a texture array with multisampling",
+                    "is not supported: this blit is skipped");
+                return true;
+            }
             ulong from = source is UnityEngine.RenderTexture rs ? rs.EnsureCreated() : TextureHandles.Of(source);
             ulong to = destination is UnityEngine.RenderTexture rd ? rd.EnsureCreated() : TextureHandles.Of(destination);
             GfxStream.CopyTexture(from, sourceSlice, 0, new UnityEngine.RectInt(0, 0, -1, -1), to, destinationSlice, 0, 0, 0);
             return true;
         }
+
+        /// <summary>The layers the renderer holds for a texture: an array's slices, a cube's six
+        /// faces (six per cube of a cubemap array), one for 2D and 3D (a 3D render texture has a 2D
+        /// stand-in).</summary>
+        internal static int GpuLayers(UnityEngine.Texture texture) => texture switch
+        {
+            UnityEngine.RenderTexture rt => rt.GpuLayers,
+            UnityEngine.Texture2DArray array => array.depth,
+            UnityEngine.CubemapArray cubes => 6 * cubes.cubemapCount,
+            UnityEngine.Cubemap => 6,
+            _ => 1,
+        };
 
         /// <summary>A texture array's slice count (0: not an array).</summary>
         internal static int ArraySlices(UnityEngine.Texture texture) => texture switch

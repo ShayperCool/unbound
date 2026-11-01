@@ -274,6 +274,15 @@ namespace UnityEngine
             return GraphicsFormatUtility.IsSRGBFormat(f) ? 0 : 1;
         }
 
+        /// <summary>The layers the renderer allocates: an array's depth, a cube's six faces, else one
+        /// (3D and cube-array targets have a 2D stand-in).</summary>
+        internal int GpuLayers => m_Descriptor.dimension switch
+        {
+            TextureDimension.Cube => 6,
+            TextureDimension.Tex2DArray => Math.Max(1, m_Descriptor.volumeDepth),
+            _ => 1,
+        };
+
         internal unsafe ulong EnsureCreated()
         {
             m_LastUsedFrame = Time.frameCount;
@@ -282,12 +291,7 @@ namespace UnityEngine
             var dimension = m_Descriptor.dimension;
             if (dimension == TextureDimension.Tex3D)
                 Debug.LogWarning($"Unbound: RenderTexture '{name}' is a {dimension}; 3D render textures are not drawn into yet (a 2D one stands in).");
-            int layers = dimension switch
-            {
-                TextureDimension.Cube => 6,
-                TextureDimension.Tex2DArray => Math.Max(1, m_Descriptor.volumeDepth),
-                _ => 1,
-            };
+            int layers = GpuLayers;
             int depthBits = GraphicsFormatUtility.GetDepthBits(m_Descriptor.depthStencilFormat);
             var packet = new TexturePacket
             {
