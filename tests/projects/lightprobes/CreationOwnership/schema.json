@@ -1,0 +1,28 @@
+{
+  "suite": "creation-ownership",
+  "schema": 1,
+  "release": "6000.0.71f1",
+  "output": "creation-ownership.jsonl",
+  "raw_output": "creation-ownership-raw.jsonl",
+  "aliases": ["destroyer", "i-new", "ii-prefab", "iii-child", "iv-ondestroy"],
+  "points": ["setup",
+             "t1.a.start", "t1.a.i", "t1.a.ii", "t1.a.iii.parented", "t1.a.iii.detached", "t1.a.iv",
+             "t1.b", "t1.c",
+             "t2.a.start", "t2.a.made", "t2.b", "t2.c",
+             "t3.a.start", "t3.b", "t3.c"],
+  "subjects": {
+    "i-new":        {"a": ["t1.a.i", "t1.a.iii.detached"], "b": "t1.b", "c": "t1.c", "d": "t2.c"},
+    "ii-prefab":    {"a": ["t1.a.ii", "t1.a.iii.detached"], "b": "t1.b", "c": "t1.c", "d": "t2.c"},
+    "iii-child":    {"a": ["t1.a.iii.parented", "t1.a.iii.detached"], "b": "t1.b", "c": "t1.c", "d": "t2.c"},
+    "iv-ondestroy": {"a": ["t1.a.iv"], "b": "t1.b", "c": "t1.c", "d": "t2.c"},
+    "CreateScene Made": {"a": ["t2.a.made"], "b": "t2.b", "c": "t2.c", "d": "t3.c"}
+  },
+  "ownership_fields": ["name", "activeSelf", "activeInHierarchy", "scene", "parent", "root", "inSceneRoots",
+                       "find", "findByType", "tracker", "status", "updatedThisEpoch"],
+  "state_fields": ["active", "sceneCount", "loadedSceneCount", "listed", "controllerScene", "scenes",
+                   "lightProbes", "findByType", "objects"],
+  "row_kinds": ["snapshot", "lifecycle", "create", "log", "note"],
+  "rejected_row_kinds": ["error"],
+  "membership_order": "state.findByType holds the declared aliases (or name:<name>) of FindObjectsByType<CreationOwnershipTracker>(FindObjectsInactive.Include, FindObjectsSortMode.None), sorted ordinally by alias; the returned order is in raw_output under the same seq. Scene roots keep GetRootGameObjects order. Nothing else is sorted, renamed or renumbered.",
+  "points_doc": "tN.a.start: the first sceneUnloaded of transition N; t1.a.i..iii: after each creation in that handler; t1.a.iv: after the creation in the destroyer's OnDestroy; t2.a.made: after CreateScene(\"Made\") + SetActiveScene in t2's handler; tN.b: the first sceneLoaded of tN; tN.c: the first controller LateUpdate after it. t1 = LoadScene(Extra, Single), t2 = LoadScene(Main, Single), t3 = LoadScene(Extra, Single)."
+}

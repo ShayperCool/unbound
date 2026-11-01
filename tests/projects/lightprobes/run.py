@@ -10,12 +10,20 @@
                                                     unload event-order witness (Lifecycle/)
     run.py lifecycle-publish --release R --label L  checks they are complete, strict exit 0 and
                                                     identical; writes Reference/.../lifecycle.jsonl
+    run.py creation-ownership --release R --label L          two SEQUENTIAL Editor captures of the
+                                                             creation-ownership witness
+                                                             (CreationOwnership/); the second starts
+                                                             only if the first passes every gate
+    run.py creation-ownership-publish --release R --label L  checks both are complete, strict exit 0,
+                                                             gated and identical; writes
+                                                             Reference/.../creation-ownership.jsonl
 
 Every capture runs on a fresh copy of this project in the validation cache. Editors run through
 the shared heavy-job launcher on the GPU (a private Xvfb and VirtualGL); do not wrap this driver.
 """
 import argparse
 import filecmp
+import json
 import os
 from pathlib import Path
 import shutil
@@ -199,9 +207,151 @@ def lifecycle_publish(work):
         complete=[editor_runner.jsonl_complete(LIFECYCLE)], gpu=True)
 
 
+CREATION = PROBE/'CreationOwnership'
+CREATION_SCRIPTS = ('SceneCreationOwnership.cs', 'CreationOwnershipTracker.cs')
+
+
+def creation_schema():
+    return json.loads((CREATION/'schema.json').read_text())
+
+
+def creation_project(dest):
+    """A fresh fixture copy in which the creation-ownership witness replaces the main probe's
+    recorder, with its tiny prefab under Assets/Resources."""
+    project = copy_project(dest)
+    for name in ('LightProbesProbe.cs', 'LightProbesProbe.cs.meta'):
+        (project/'Assets/Scripts'/name).unlink()
+    for name in CREATION_SCRIPTS:
+        for file in (name, name+'.meta'):
+            shutil.copyfile(CREATION/file, project/'Assets/Scripts'/file)
+    shutil.copytree(CREATION/'Resources', project/'Assets/Resources')
+    shutil.copyfile(CREATION/'Resources.meta', project/'Assets/Resources.meta')
+    return project
+
+
+def creation_rows_problem(directory, schema=None):
+    """The witness output's own gate: complete with the marker last and unique, the declared
+    source first, sequence numbers 0..n-1 without duplicates, no error row, every declared point
+    exactly once with every alias and its ownership fields, and a raw row for each snapshot."""
+    schema = schema or creation_schema()
+    name = schema['output']
+    problem = editor_runner.jsonl_complete(name)(directory)
+    if problem:
+        return problem
+    rows = [json.loads(line) for line in (Path(directory)/name).read_text().splitlines() if line.strip()]
+    source = rows[0]
+    want = {'k': 'source', 'suite': schema['suite'], 'schema': schema['schema'],
+            'release': schema['release'], 'aliases': schema['aliases']}
+    if source != want:
+        return f'wrong source row {json.dumps(source)}'
+    body = rows[1:-1]
+    seqs = [row.get('seq') for row in body]
+    if len(set(seqs)) != len(seqs):
+        return 'duplicate sequence numbers'
+    if seqs != list(range(len(body))):
+        return 'sequence numbers are not 0..n-1 in order'
+    kinds = set(schema['row_kinds'])
+    for row in body:
+        if row.get('kind') in schema['rejected_row_kinds']:
+            return f"error row {row['seq']}: {row.get('at')}: {row.get('exception')}"
+        if row.get('kind') not in kinds:
+            return f"row {row['seq']} has an undeclared kind {row.get('kind')!r}"
+    points = {}
+    for row in body:
+        if row['kind'] == 'snapshot' and row.get('point') is not None:
+            points.setdefault(row['point'], []).append(row)
+    extra = sorted(set(points)-set(schema['points']))
+    if extra:
+        return f'undeclared points {extra}'
+    for point in schema['points']:
+        found = points.get(point, [])
+        if len(found) != 1:
+            return f'point {point} appears {len(found)} times'
+        state = found[0].get('state') or {}
+        missing = [f for f in schema['state_fields'] if f not in state]
+        if missing:
+            return f'point {point} lacks state fields {missing}'
+        objects = state['objects']
+        if list(objects) != schema['aliases']:
+            return f'point {point} has object rows {list(objects)}, not {schema["aliases"]}'
+        for alias, value in objects.items():
+            if 'created' not in value:
+                return f'point {point}: {alias} has no ownership row'
+            if value['created'] and value.get('alive') is None:
+                return f'point {point}: {alias} has no existence'
+            if value['created'] and value['alive']:
+                lacking = [f for f in schema['ownership_fields'] if f not in value]
+                if lacking:
+                    return f'point {point}: {alias} lacks ownership fields {lacking}'
+    raw_path = Path(directory)/schema['raw_output']
+    if not raw_path.exists():
+        return f"{schema['raw_output']} is missing"
+    raw = [json.loads(line) for line in raw_path.read_text().splitlines() if line.strip()]
+    snapshot_seqs = [row['seq'] for row in body if row['kind'] == 'snapshot']
+    if [row.get('seq') for row in raw] != snapshot_seqs:
+        return 'the raw FindObjectsByType rows do not match the snapshots'
+    return None
+
+
+def creation_problem(directory):
+    """Strict: exit 0 without any forced stop, the NVIDIA renderer, the witness gate."""
+    result = editor_runner.load_result(directory)
+    if result is None:
+        return 'no Editor result'
+    if result.get('forced_exit'):
+        return f"forced exit ({result['forced_exit']}: {result.get('forced_detail')})"
+    return editor_runner.result_problem(directory, gpu=True) or creation_rows_problem(directory)
+
+
+def creation_ownership(work, release):
+    schema = creation_schema()
+    if release != schema['release']:
+        sys.exit(f"the creation-ownership schema declares {schema['release']}, not {release}")
+    for repeat in ('native1', 'native2'):
+        out = work/repeat
+        if (out/schema['output']).exists() or (out/editor_runner.RESULT).exists():
+            sys.exit(f'refusing to overwrite capture: {out}')
+        project = creation_project(work/'projects'/repeat)
+        out.mkdir(parents=True, exist_ok=True)
+        inputs = {'release': release, 'paths': {
+            'project/Assets': str(project/'Assets'), 'project/Packages': str(project/'Packages'),
+            'project/ProjectSettings': str(project/'ProjectSettings'),
+            'probe/CreationOwnership': str(CREATION), 'probe/run.py': str(PROBE/'run.py'),
+            'tests/editor_runner.py': str(REPO/'tests/editor_runner.py'),
+            'tests/probe_paths.py': str(REPO/'tests/probe_paths.py'),
+            'profile': str(REPO/'data/profiles'/('unity-'+'.'.join(release.split('.')[:2])+'.json'))}}
+        result = editor_runner.run(editor_runner.EditorJob(
+            project, out/'editor.log', out, ['-buildTarget', 'Standalone', '-executeMethod', 'ProbeRunner.Record'],
+            batch=True, env={'LIGHT_PROBES_CREATION_OUT': str(out/schema['output']),
+                             'LIGHT_PROBES_CREATION_RAW_OUT': str(out/schema['raw_output'])},
+            timeout=LIFECYCLE_TIMEOUT, progress_files=[out/schema['output']], progress_timeout=LIFECYCLE_PROGRESS,
+            label='creation-ownership-'+repeat, launch_inputs=inputs))
+        print(editor_runner.summary(result))
+        problem = creation_problem(out)
+        print(repeat, problem or 'complete, exit 0, no forced exit, gate passed')
+        if problem:
+            print('stopping: no further launch')
+            return 1
+    return 0
+
+
+def creation_ownership_publish(work):
+    schema = creation_schema()
+    for repeat in ('native1', 'native2'):
+        problem = creation_problem(work/repeat)
+        if problem:
+            sys.exit(f'{repeat}: {problem}; not publishing')
+    name = schema['output']
+    return editor_runner.publish(
+        [work/'native1', work/'native2'], reference_root(PROBE)/name, lambda d: [name],
+        lambda target, first: (shutil.copyfile(first/name, target), print('published', target)),
+        complete=[creation_rows_problem], gpu=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'unbound', 'lifecycle', 'lifecycle-publish'))
+    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'unbound', 'lifecycle', 'lifecycle-publish',
+                                           'creation-ownership', 'creation-ownership-publish'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
     args = parser.parse_args()
@@ -213,6 +363,10 @@ def main():
         return lifecycle(work, args.release)
     if args.mode == 'lifecycle-publish':
         return lifecycle_publish(work)
+    if args.mode == 'creation-ownership':
+        return creation_ownership(work, args.release)
+    if args.mode == 'creation-ownership-publish':
+        return creation_ownership_publish(work)
     return {'create': create, 'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
 
 

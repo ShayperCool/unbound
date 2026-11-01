@@ -92,3 +92,18 @@ Reference. Still open:
   Editor's `OpenScene`, Play mode entry and AssetBundle scenes (they keep the per-scene unload),
   `LoadSceneAsync` Single (it shares `LoadScene`'s path in Unbound), and `TetrahedralizeAsync`'s
   completion frame. The witness records no frame numbers.
+
+### Objects made while a Single load unloads the outgoing scene (`creation-ownership.jsonl`)
+
+`CreationOwnership/` (`run.py creation-ownership`, `run.py creation-ownership-publish`; suite and
+points declared in `schema.json`) records which scene owns objects made during a SceneManager
+Single load's unload, and what becomes of them: (i) a `new GameObject`, (ii) an `Instantiate` of a
+tiny Resources prefab, (iii) a child of (ii) moved to the root with `SetParent(null)`, all inside
+the first `sceneUnloaded` handler, and (iv) a root made in `OnDestroy` of an outgoing-scene object.
+A second Single load's handler calls `CreateScene("Made")` and `SetActiveScene`; a third Single load
+follows it. Each point records existence, owning scene, parent/root, scene-root, `Find` and
+`FindObjectsByType` membership, the message order and the global light probe counts.
+The two Editor repeats run one after the other; the second starts only if the first passes
+every gate. `CreationOwnership/offline_compile.py` compiles the witness with an Editor-compiled
+fixture copy's own compiler arguments, and `CreationOwnership/guards.py` checks the gate against
+damaged synthetic captures.
