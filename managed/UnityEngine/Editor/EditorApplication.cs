@@ -283,61 +283,6 @@ namespace UnityEditor
         }
     }
 
-    /// <summary>Prefab queries Play mode code asks: assets are prefab assets; scene objects are
-    /// treated as plain objects (Unbound does not keep instance links at run time).</summary>
-    public sealed partial class PrefabUtility
-    {
-        static GameObject GameObjectOf(Object o) => o as GameObject ?? (o as Component)?.m_GameObject;
-
-        public static bool IsPartOfPrefabAsset(Object componentOrGameObject)
-        {
-            var go = GameObjectOf(componentOrGameObject);
-            return go != null && go.m_IsPrefabAsset;
-        }
-
-        public static bool IsPartOfAnyPrefab(Object componentOrGameObject) => IsPartOfPrefabAsset(componentOrGameObject);
-
-        public static bool IsPartOfPrefabInstance(Object componentOrGameObject) { Stubs.Ignored("PrefabUtility.IsPartOfPrefabInstance", "is not honoured yet: Unbound keeps no prefab instance links at run time"); return false; }
-
-        public static bool IsPartOfNonAssetPrefabInstance(Object componentOrGameObject) { Stubs.Ignored("PrefabUtility.IsPartOfNonAssetPrefabInstance", "is not honoured yet: Unbound keeps no prefab instance links at run time"); return false; }
-
-        public static bool IsPartOfRegularPrefab(Object componentOrGameObject) => IsPartOfPrefabAsset(componentOrGameObject);
-
-        public static bool IsPartOfModelPrefab(Object componentOrGameObject) { Stubs.Ignored("PrefabUtility.IsPartOfModelPrefab", "is not honoured yet: model prefabs are not told apart"); return false; }
-
-        public static bool IsPartOfVariantPrefab(Object componentOrGameObject) { Stubs.Ignored("PrefabUtility.IsPartOfVariantPrefab", "is not honoured yet: prefab variants are not told apart"); return false; }
-
-        public static bool IsPartOfImmutablePrefab(Object componentOrGameObject) { Stubs.Ignored("PrefabUtility.IsPartOfImmutablePrefab", "is not honoured yet: model and package prefabs are not told apart"); return false; }
-
-        public static bool IsAnyPrefabInstanceRoot(GameObject gameObject) { Stubs.Ignored("PrefabUtility.IsAnyPrefabInstanceRoot", "is not honoured yet: Unbound keeps no prefab instance links at run time"); return false; }
-
-        public static bool IsOutermostPrefabInstanceRoot(GameObject gameObject) { Stubs.Ignored("PrefabUtility.IsOutermostPrefabInstanceRoot", "is not honoured yet: Unbound keeps no prefab instance links at run time"); return false; }
-
-        public static PrefabAssetType GetPrefabAssetType(Object componentOrGameObject) =>
-            IsPartOfPrefabAsset(componentOrGameObject) ? PrefabAssetType.Regular : PrefabAssetType.NotAPrefab;
-
-        public static PrefabInstanceStatus GetPrefabInstanceStatus(Object componentOrGameObject) => PrefabInstanceStatus.NotAPrefab;
-
-        public static T GetCorrespondingObjectFromSource<T>(T componentOrGameObject) where T : Object { Stubs.Ignored("PrefabUtility.GetCorrespondingObjectFromSource", "is not honoured yet: Unbound keeps no prefab instance links at run time"); return null; }
-
-        public static GameObject GetOutermostPrefabInstanceRoot(Object componentOrGameObject) { Stubs.Ignored("PrefabUtility.GetOutermostPrefabInstanceRoot", "is not honoured yet: Unbound keeps no prefab instance links at run time"); return null; }
-
-        public static GameObject GetNearestPrefabInstanceRoot(Object componentOrGameObject) { Stubs.Ignored("PrefabUtility.GetNearestPrefabInstanceRoot", "is not honoured yet: Unbound keeps no prefab instance links at run time"); return null; }
-
-        public static string GetPrefabAssetPathOfNearestInstanceRoot(Object instanceComponentOrGameObject) { Stubs.Ignored("PrefabUtility.GetPrefabAssetPathOfNearestInstanceRoot", "is not honoured yet: Unbound keeps no prefab instance links at run time"); return ""; }
-
-        public static Object InstantiatePrefab(Object assetComponentOrGameObject) => Object.Instantiate(assetComponentOrGameObject);
-
-        public static Object InstantiatePrefab(Object assetComponentOrGameObject, Transform parent) => Object.Instantiate(assetComponentOrGameObject, parent);
-
-        public static Object InstantiatePrefab(Object assetComponentOrGameObject, UnityEngine.SceneManagement.Scene destinationScene) => Object.Instantiate(assetComponentOrGameObject, destinationScene);
-
-        public static void RecordPrefabInstancePropertyModifications(Object targetObject) =>
-            Stubs.Ignored("PrefabUtility.RecordPrefabInstancePropertyModifications", "is not honoured yet: Unbound keeps no prefab instance links at run time");
-    }
-
-
-
     /// <summary>EditorUtility as Play mode code uses it.</summary>
     public partial class EditorUtility
     {

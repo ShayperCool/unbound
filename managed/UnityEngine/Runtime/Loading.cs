@@ -99,6 +99,9 @@ namespace Unbound.Runtime
             bool isAsset = kind != Kind.Scene;
             YDocument sceneRoots = null;
             var deleted = new Dictionary<long, Type>();
+            // A built bundle keeps no prefab instances; nor do the scenes Play mode loads, whose
+            // objects are plain objects (measured: tests/projects/editorcallbacks).
+            var instances = kind == Kind.Bundle || kind == Kind.Scene && EditorSession.IsPlaying ? null : PrefabLinks.Instances(documents, isAsset);
 
             using (isAsset ? ObjectRegistry.AsAssets() : default)
             {
@@ -117,6 +120,7 @@ namespace Unbound.Runtime
                     };
                     go.isStatic = body.Long("m_StaticEditorFlags") != 0;
                     if (scene != null) go.m_Scene = scene.Handle;
+                    if (instances != null) PrefabLinks.Link(go, body, instances);
                     gameObjects[doc.FileId] = (go, doc);
                     file.Objects[doc.FileId] = go;
                 }
@@ -160,6 +164,7 @@ namespace Unbound.Runtime
                             continue;
                         }
                         c.IsPersistentAsset = isAsset;
+                        if (instances != null) PrefabLinks.Link(c, body, instances);
                         if (c is Transform t) entry.Go.m_Transform = t;
                         file.Objects[doc.FileId] = c;
                         components.Add((c, doc));

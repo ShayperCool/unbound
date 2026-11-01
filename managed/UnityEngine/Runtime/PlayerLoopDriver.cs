@@ -225,7 +225,7 @@ namespace Unbound.Runtime
             {
                 try
                 {
-                    SceneManagerInternal.LoadPath(firstScene);
+                    SceneManagerInternal.LoadPath(firstScene, playModeEntry: true);
                 }
                 catch (Exception e)
                 {

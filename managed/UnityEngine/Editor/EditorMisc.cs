@@ -221,27 +221,6 @@ namespace UnityEditor
         }
     }
 
-    public sealed partial class PrefabUtility
-    {
-        /// <summary>The obsolete prefab type of an object: assets are prefabs, scene objects are
-        /// not prefab instances (Unbound keeps no prefab connection in Play mode).</summary>
-        [Obsolete("PrefabUtility.GetPrefabType is no longer supported. Use PrefabUtility.GetPrefabAssetType and PrefabUtility.GetPrefabInstanceStatus to get the full picture about Prefab types.")]
-        public static PrefabType GetPrefabType(Object target)
-        {
-            if (target == null) return PrefabType.None;
-            var go = target as GameObject ?? (target as Component)?.gameObject;
-            if (go != null && go.m_IsPrefabAsset) return PrefabType.Prefab;
-            return PrefabType.None;
-        }
-
-        [Obsolete("Use PrefabUtility.GetCorrespondingObjectFromSource.")]
-        public static Object GetPrefabParent(Object obj)
-        {
-            Stubs.Ignored("PrefabUtility.GetPrefabParent", "is not honoured yet: Unbound keeps no prefab instance links at run time");
-            return null;
-        }
-    }
-
     public enum PrefabType
     {
         None = 0,

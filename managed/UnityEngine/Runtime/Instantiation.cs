@@ -68,6 +68,20 @@ namespace Unbound.Runtime
             return clone.Result;
         }
 
+        /// <summary>PrefabUtility.InstantiatePrefab: a copy named as the original, in the parent or
+        /// scene given, whose objects <paramref name="linked"/> sees (originals to copies) before
+        /// they wake up.</summary>
+        internal static GameObject CloneLinked(GameObject original, Transform parent, Scene? scene, Action<Dictionary<Object, Object>> linked)
+        {
+            SceneHandle target = parent != null ? parent.m_GameObject.m_Scene
+                : scene?.Data is SceneData d ? d.Handle : TargetScene(null, default);
+            var clone = Prepare(original, original, target, "");
+            Place(clone, parent, target, false, false, null, null);
+            linked?.Invoke(clone.Map);
+            Activate(new[] { clone });
+            return clone.RootGo;
+        }
+
         /// <summary>A copied hierarchy that is in no scene and has not woken up yet: the first half of
         /// Instantiate, which InstantiateAsync does when it is called.</summary>
         internal sealed class Prepared
@@ -85,11 +99,13 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The scene a clone goes to: its parent's, else the requested one if it is loaded,
-        /// else the active scene.</summary>
+        /// else the active scene. A scene still loading (its objects waking up or being processed,
+        /// when the public isLoaded is false) keeps its copies, as SetActiveScene and
+        /// MoveGameObjectToScene accept it; Unity's answer for that window is unmeasured.</summary>
         internal static SceneHandle TargetScene(Transform parent, Scene scene)
         {
             if (parent != null) return parent.m_GameObject.m_Scene;
-            if (scene.isLoaded) return new SceneHandle(scene.handle);
+            if (scene.Data is SceneData data && data.IsLoaded) return data.Handle;
             var target = SceneRegistry.EnsureActive().Handle;
             if (SceneManagerInternal.ActiveScene != null) target = SceneManagerInternal.ActiveScene.Handle;
             return target;

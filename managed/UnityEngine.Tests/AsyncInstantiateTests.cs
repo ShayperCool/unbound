@@ -99,6 +99,38 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ALoadingSceneKeepsTheCopiesTargetedAtIt()
+        {
+            // A scene whose objects are waking up or being processed answers isLoaded false, but a
+            // copy targeted at it stays in it (Unity's answer for this window is unmeasured).
+            var active = Unbound.Runtime.SceneRegistry.EnsureActive();
+            var loading = Unbound.Runtime.SceneRegistry.Create("loading-target", "", -1);
+            loading.IsLoaded = true;
+            loading.LoadingState = SceneManagement.Scene.LoadingState.Loading;
+            var scene = new SceneManagement.Scene(loading.Handle);
+            Assert.False(scene.isLoaded);
+            var original = Original("loading-owner");
+            try
+            {
+                var copy = Object.Instantiate(original, new InstantiateParameters { scene = scene });
+                Assert.Equal(scene, copy.scene);
+                Assert.Contains(copy, loading.Roots);
+                Assert.DoesNotContain(copy, active.Roots);
+                var op = Object.InstantiateAsync(original, new InstantiateParameters { scene = scene });
+                op.WaitForCompletion();
+                Assert.Equal(scene, op.Result[0].scene);
+                Assert.Contains(op.Result[0], loading.Roots);
+                Object.DestroyImmediate(copy);
+                Object.DestroyImmediate(op.Result[0]);
+            }
+            finally
+            {
+                Object.DestroyImmediate(original);
+                Unbound.Runtime.SceneRegistry.Forget(loading);
+            }
+        }
+
+        [Fact]
         public void InstantiateParametersPlaceInTheParentsSpaceUnlessWorldSpace()
         {
             var original = Original("params");

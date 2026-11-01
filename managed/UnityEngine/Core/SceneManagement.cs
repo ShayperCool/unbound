@@ -24,7 +24,9 @@ namespace UnityEngine.SceneManagement
             get => Data?.Name;
             set { if (Data != null) Data.Name = value; }
         }
-        public bool isLoaded => Data?.IsLoaded ?? false;
+        /// <summary>Not yet while the scene's objects wake up and the scene is processed
+        /// (measured: tests/projects/editorcallbacks).</summary>
+        public bool isLoaded => Data != null && Data.IsLoaded && Data.LoadingState != LoadingState.Loading;
         public int buildIndex => Data?.BuildIndex ?? -1;
         public bool isDirty => Data?.IsDirty ?? false;
         public int dirtyID => 0;
@@ -44,7 +46,8 @@ namespace UnityEngine.SceneManagement
         {
             if (rootGameObjects == null) throw new ArgumentNullException(nameof(rootGameObjects));
             if (!IsValid()) throw new ArgumentException("The scene is invalid.");
-            if (!isLoaded) throw new ArgumentException("The scene is not loaded.");
+            // A loading scene lists its roots to the scene processors (measured: tests/projects/editorcallbacks).
+            if (!Data.IsLoaded) throw new ArgumentException("The scene is not loaded.");
             rootGameObjects.Clear();
             foreach (var go in Data.Roots)
                 if (!go.m_Destroyed) rootGameObjects.Add(go);
@@ -394,7 +397,11 @@ namespace UnityEngine.SceneManagement
             }
         }
 
-        static void Perform(SceneData data, LoadSceneParameters parameters)
+        /// <summary>The mode sceneLoaded reports for the scenes Play mode starts with (measured:
+        /// tests/projects/editorcallbacks, 4: a value LoadSceneMode does not name).</summary>
+        internal const LoadSceneMode PlayModeEntry = (LoadSceneMode)4;
+
+        static void Perform(SceneData data, LoadSceneParameters parameters, LoadSceneMode? reported = null)
         {
             if (parameters.loadSceneMode == LoadSceneMode.Single)
             {
@@ -404,15 +411,20 @@ namespace UnityEngine.SceneManagement
             }
             SceneRegistry.Loaded.Add(data);
             data.IsLoaded = true;
+            data.LoadingState = Scene.LoadingState.Loading;
             var previousActive = SceneRegistry.Active;
             if (parameters.loadSceneMode == LoadSceneMode.Single || previousActive == null)
                 SceneRegistry.Active = data;
             SceneLoader.LoadInto(data);
+            // Play mode processes the loaded scene after its objects woke up (measured:
+            // tests/projects/editorcallbacks); Edit mode opens scenes unprocessed.
+            if (Unbound.Runtime.EditorSession.IsPlaying) UnityEditor.EditorInitialization.ProcessScene(new Scene(data.Handle));
             data.LoadingState = Scene.LoadingState.Loaded;
             if (parameters.loadSceneMode == LoadSceneMode.Single) Time.LevelLoaded();
-            SceneManager.Internal_SceneLoaded(new Scene(data.Handle), parameters.loadSceneMode);
+            // The active scene changes before sceneLoaded (measured: tests/projects/editorcallbacks).
             if (SceneRegistry.Active == data && previousActive != data)
                 SceneManager.Internal_ActiveSceneChanged(previousActive != null ? new Scene(previousActive.Handle) : default, new Scene(data.Handle));
+            SceneManager.Internal_SceneLoaded(new Scene(data.Handle), reported ?? parameters.loadSceneMode);
         }
 
         /// <summary>Loads a scene immediately: the first scene of a session.</summary>
@@ -424,12 +436,13 @@ namespace UnityEngine.SceneManagement
             return new Scene(data.Handle);
         }
 
-        /// <summary>Loads a scene by path, also one outside the build settings (as the Editor can).</summary>
-        internal static Scene LoadPath(string path)
+        /// <summary>Loads a scene by path, also one outside the build settings (as the Editor can);
+        /// <paramref name="playModeEntry"/>: the scene Play mode starts with.</summary>
+        internal static Scene LoadPath(string path, bool playModeEntry = false)
         {
             int buildIndex = SceneUtility.GetBuildIndexByScenePath(path);
             var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, buildIndex);
-            Perform(data, new LoadSceneParameters(LoadSceneMode.Single));
+            Perform(data, new LoadSceneParameters(LoadSceneMode.Single), playModeEntry ? PlayModeEntry : null);
             return new Scene(data.Handle);
         }
 
@@ -499,9 +512,12 @@ namespace UnityEngine.SceneManagement
             }
             data.IsLoaded = false;
             data.LoadingState = Scene.LoadingState.NotLoaded;
-            SceneRegistry.Forget(data);
+            SceneRegistry.Loaded.Remove(data);
             if (SceneRegistry.Active == data) SceneRegistry.Active = null;
+            // sceneUnloaded sees the scene with its name (measured: tests/projects/editorcallbacks);
+            // it is forgotten after.
             SceneManager.Internal_SceneUnloaded(new Scene(data.Handle));
+            SceneRegistry.Forget(data);
         }
     }
 }

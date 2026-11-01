@@ -267,29 +267,25 @@ namespace UnityEditor
         [Unbound.EditorFaithful("only the Animation window's preview or recording animates properties; it is not open while playing")]
         public bool isAnimated => false;
 
+        /// <summary>A property of an object of a prefab instance (measured: tests/projects/editorcallbacks).</summary>
         public bool isInstantiatedPrefab
         {
             get
             {
-                Unbound.Runtime.Stubs.Ignored("SerializedProperty.isInstantiatedPrefab", "is not honoured yet: Unbound keeps no prefab instance links at run time");
-                return false;
+                _ = N;
+                return Unbound.Runtime.PrefabLinks.Of(m_SerializedObject.targetObject) != null;
             }
         }
 
+        /// <summary>The instance modifies the property or a part of it.</summary>
         public bool prefabOverride
         {
-            get => false;
-            set => Unbound.Runtime.Stubs.Ignored("SerializedProperty.prefabOverride", "is not honoured yet: Unbound keeps no prefab instance links at run time");
+            get => UnityEditor.PrefabUtility.IsOverride(m_SerializedObject.targetObject, N.Path);
+            set => Unbound.Runtime.Stubs.Ignored("SerializedProperty.prefabOverride", "is not honoured yet: overrides are not reverted or recorded in Play mode");
         }
 
-        public bool isDefaultOverride
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("SerializedProperty.isDefaultOverride", "is not honoured yet: Unbound keeps no prefab instance links at run time");
-                return false;
-            }
-        }
+        /// <summary>A property every instance overrides: the instance root's names and local pose.</summary>
+        public bool isDefaultOverride => UnityEditor.PrefabUtility.IsDefaultOverrideProperty(m_SerializedObject.targetObject, N.Path);
 
         public bool isExpanded
         {
