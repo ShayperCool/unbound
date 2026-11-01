@@ -411,10 +411,19 @@ namespace UnityEngine
 
         internal static void RaiseUpdated() => lightProbesUpdated?.Invoke();
 
-        /// <summary>The loaded scenes with baked probes (by scene handle), in load order.</summary>
+        /// <summary>The loaded scenes with baked probes (by scene handle), in load order: the sets
+        /// a tetrahedralization combines.</summary>
         static readonly List<(int Scene, LightProbes Probes)> s_Scenes = new List<(int, LightProbes)>();
+        /// <summary>Each scene's own probes object, by scene handle. It outlives the scene's load
+        /// membership: GetSharedLightProbesForScene answers it while the scene is valid, also during
+        /// its sceneUnloaded (measured: tests/projects/lightprobes lifecycle.jsonl).</summary>
+        static readonly Dictionary<int, LightProbes> s_Own = new Dictionary<int, LightProbes>();
 
-        internal static void ResetScenes() => s_Scenes.Clear();
+        internal static void ResetScenes()
+        {
+            s_Scenes.Clear();
+            s_Own.Clear();
+        }
 
         /// <summary>A scene's baked probes, loaded: the first become the current probes; those of
         /// a scene loaded beside them wait for the next tetrahedralization.</summary>
@@ -422,6 +431,7 @@ namespace UnityEngine
         {
             s_Scenes.RemoveAll(s => s.Scene == scene);
             s_Scenes.Add((scene, probes));
+            s_Own[scene] = probes;
             if (LightmapSettings.lightProbes == null)
             {
                 LightmapSettings.SetLightProbes(probes);
@@ -430,6 +440,13 @@ namespace UnityEngine
             needsRetetrahedralization?.Invoke();
         }
 
+        /// <summary>A scene unloaded on its own (UnloadScene, UnloadSceneAsync): its probes leave
+        /// the loaded set and needsRetetrahedralization is raised, before its sceneUnloaded; the
+        /// current probes keep the combined set until the next tetrahedralization, and the scene's
+        /// own object stays readable while the scene is valid (measured, Unity 6000.0.71f1:
+        /// tests/projects/lightprobes Reference lifecycle.jsonl, published on branch
+        /// t3/light-probes-lifecycle-2, commit f8516528). Unity raises this group after
+        /// UnloadSceneAsync has returned; Unbound unloads within the call (an open gap).</summary>
         internal static void SceneUnloaded(int scene)
         {
             if (s_Scenes.RemoveAll(s => s.Scene == scene) > 0) needsRetetrahedralization?.Invoke();
@@ -471,11 +488,15 @@ namespace UnityEngine
             tetrahedralizationCompleted?.Invoke();
         }
 
+        /// <summary>A scene's own probes while the scene is valid, also once it left the loaded
+        /// set; null for an invalid scene and for a scene still loading whose probes are not read
+        /// yet (measured: tests/projects/lightprobes lifecycle.jsonl). A loaded scene without baked
+        /// probes gets the current probes (not measured).</summary>
         public static LightProbes GetSharedLightProbesForScene(SceneManagement.Scene scene)
         {
-            foreach (var (handle, probes) in s_Scenes)
-                if (handle == scene.handle) return probes;
-            return LightmapSettings.lightProbes;
+            if (!scene.IsValid()) return null;
+            if (s_Own.TryGetValue(scene.handle, out var own)) return own;
+            return scene.isLoaded ? LightmapSettings.lightProbes : null;
         }
 
         public static LightProbes GetInstantiatedLightProbesForScene(SceneManagement.Scene scene) => GetSharedLightProbesForScene(scene);

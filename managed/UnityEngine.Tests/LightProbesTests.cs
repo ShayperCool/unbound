@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
+using Unbound.Runtime;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -47,6 +48,74 @@ namespace Unbound.Tests
                 ProbeSet.ProbeOcclusion(new[] { -1, -1, -1, -1 }, new[] { 0f, 0f, 0f, 0f }, new[] { -1, -1, -1, -1 }));
         }
 
+        /// <summary>A scene's baked probes with Unbound's cells of their own (as baked lighting data
+        /// carries them).</summary>
+        static LightProbes Tetrahedralized(Vector3[] positions, float dc)
+        {
+            var probes = Baked(positions, _ => dc);
+            ProbeTetrahedralization.Build(probes.m_Self);
+            return probes;
+        }
+
+        static Vector3[] MainBox => Box.Select(p => p - new Vector3(4f, 0f, 0f)).ToArray();
+
+        /// <summary>Only the scenes a test makes are loaded while it runs; the registry's loaded
+        /// list and active scene are restored after, and the test's scenes forgotten.</summary>
+        sealed class Scenes : IDisposable
+        {
+            readonly SceneData[] m_Loaded = SceneRegistry.Loaded.ToArray();
+            readonly SceneData m_Active = SceneRegistry.Active;
+            readonly List<SceneData> m_Made = new List<SceneData>();
+
+            internal Scenes()
+            {
+                SceneRegistry.Loaded.Clear();
+                SceneRegistry.Active = null;
+            }
+
+            internal SceneData Loaded(string name)
+            {
+                var data = SceneRegistry.Create(name, "", -1);
+                data.IsLoaded = true;
+                data.LoadingState = Scene.LoadingState.Loaded;
+                SceneRegistry.Loaded.Add(data);
+                if (SceneRegistry.Active == null) SceneRegistry.Active = data;
+                m_Made.Add(data);
+                return data;
+            }
+
+            /// <summary>A scene a load has created, not loaded yet (as LoadScene leaves it).</summary>
+            internal SceneData Loading(string name)
+            {
+                var data = SceneRegistry.Create(name, "", -1);
+                data.LoadingState = Scene.LoadingState.Loading;
+                m_Made.Add(data);
+                return data;
+            }
+
+            public void Dispose()
+            {
+                foreach (var data in m_Made)
+                    if (SceneRegistry.Get(data.Handle) != null) SceneRegistry.Forget(data);
+                SceneRegistry.Loaded.Clear();
+                SceneRegistry.Loaded.AddRange(m_Loaded);
+                SceneRegistry.Active = m_Active;
+            }
+        }
+
+        /// <summary>The public probe state at a point, in the form tests/projects/lightprobes'
+        /// lifecycle witness records it: the global counts, and the scene's validity, isLoaded and
+        /// shared probes.</summary>
+        static string State(SceneData data, LightProbes own)
+        {
+            var g = LightmapSettings.lightProbes;
+            var scene = new Scene(data.Handle);
+            var shared = LightProbes.GetSharedLightProbesForScene(scene);
+            string Name(LightProbes p) => p == null ? "null" : p == own ? "own" : p == g ? "global" : "other";
+            return $"global {(g == null ? "null" : $"{g.count} {g.countSelf} {g.cellCount} {g.cellCountSelf}")} | "
+                + $"valid {scene.IsValid()} loaded {scene.isLoaded} shared {Name(shared)}";
+        }
+
         [Fact]
         public void SceneProbesJoinAndLeaveOnlyWhenTetrahedralized()
         {
@@ -55,22 +124,25 @@ namespace Unbound.Tests
             LightProbes.needsRetetrahedralization += need;
             LightProbes.tetrahedralizationCompleted += done;
             LightProbes.lightProbesUpdated += updated;
+            var scenes = new Scenes();
             try
             {
                 LightmapSettings.Reset();
-                var main = Baked(Box.Select(p => p - new Vector3(4f, 0f, 0f)).ToArray(), _ => 1f);
+                var mainScene = scenes.Loaded("Main");
+                var extraScene = scenes.Loaded("Extra");
+                var main = Baked(MainBox, _ => 1f);
                 var extra = Baked(Box, _ => 2f);
 
                 // The first scene's probes become the current ones, without an event.
-                LightProbes.SceneLoaded(101, main);
+                LightProbes.SceneLoaded(mainScene.Handle.Value, main);
                 Assert.Same(main, LightmapSettings.lightProbes);
                 Assert.Empty(events);
 
                 // Another scene's wait for the next tetrahedralization.
-                LightProbes.SceneLoaded(102, extra);
+                LightProbes.SceneLoaded(extraScene.Handle.Value, extra);
                 Assert.Equal(new[] { "need" }, events);
                 Assert.Equal(8, main.count);
-                Assert.Same(extra, LightProbes.GetSharedLightProbesForScene(new Scene { m_Handle = 102 }));
+                Assert.Same(extra, LightProbes.GetSharedLightProbesForScene(new Scene(extraScene.Handle)));
 
                 LightProbes.Tetrahedralize();
                 Assert.Equal(new[] { "need", "done" }, events);
@@ -81,7 +153,7 @@ namespace Unbound.Tests
                 Assert.Equal(8, main.GetPositionsSelf().Length);
 
                 // An unloaded scene's probes stay until the next tetrahedralization.
-                LightProbes.SceneUnloaded(102);
+                LightProbes.SceneUnloaded(extraScene.Handle.Value);
                 Assert.Equal(new[] { "need", "done", "need" }, events);
                 Assert.Equal(16, main.count);
                 LightProbes.SceneUnloaded(999);
@@ -98,6 +170,74 @@ namespace Unbound.Tests
                 LightProbes.tetrahedralizationCompleted -= done;
                 LightProbes.lightProbesUpdated -= updated;
                 LightmapSettings.Reset();
+                scenes.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// UnloadSceneAsync of an additive scene, in the relative order Unity 6000.0.71f1 gives
+        /// (tests/projects/lightprobes Reference lifecycle.jsonl, seq 10-17): needsRetetrahedralization
+        /// before sceneUnloaded; in both the scene is valid, no longer loaded, and its own probes
+        /// are its shared probes; the global probes keep the combined set until Tetrahedralize; the
+        /// scene is forgotten after its sceneUnloaded. Unity raises this group after
+        /// UnloadSceneAsync has returned; Unbound within the call, which this test does not
+        /// settle (the relative order and the state are what it checks).
+        /// </summary>
+        [Fact]
+        public void AdditiveUnloadRaisesNeedsBeforeSceneUnloadedAndKeepsTheCombinedSet()
+        {
+            var events = new List<string>();
+            var scenes = new Scenes();
+            SceneData extraScene = null;
+            LightProbes extra = null;
+            Action need = () => events.Add("needs: " + State(extraScene, extra));
+            Action done = () => events.Add("done");
+            UnityEngine.Events.UnityAction<Scene> unloaded = s => events.Add($"sceneUnloaded {s.name}: " + State(extraScene, extra));
+            try
+            {
+                LightmapSettings.Reset();
+                var mainScene = scenes.Loaded("Main");
+                extraScene = scenes.Loaded("Extra");
+                var main = Tetrahedralized(MainBox, 1f);
+                extra = Tetrahedralized(Box, 2f);
+                int mainCells = main.cellCountSelf, extraCells = extra.cellCountSelf;
+                LightProbes.SceneLoaded(mainScene.Handle.Value, main);
+                LightProbes.SceneLoaded(extraScene.Handle.Value, extra);
+                LightProbes.Tetrahedralize();
+                int combinedCells = main.cellCount;
+                Assert.Equal(16, main.count);
+                Assert.NotEqual(mainCells, combinedCells);
+
+                LightProbes.needsRetetrahedralization += need;
+                LightProbes.tetrahedralizationCompleted += done;
+                SceneManager.sceneUnloaded += unloaded;
+                var operation = SceneManagerInternal.Unload(extraScene);
+                Assert.NotNull(operation);
+
+                string during = $"global 16 8 {combinedCells} {mainCells} | valid True loaded False shared own";
+                Assert.Equal(new[] { "needs: " + during, "sceneUnloaded Extra: " + during }, events);
+                // Forgotten after its sceneUnloaded: invalid, no shared probes (as Unity's completed
+                // callback sees it); the stale combined set stays.
+                Assert.Equal($"global 16 8 {combinedCells} {mainCells} | valid False loaded False shared null", State(extraScene, extra));
+                Assert.Same(main, LightmapSettings.lightProbes);
+                Assert.Same(main, LightProbes.GetSharedLightProbesForScene(new Scene(mainScene.Handle)));
+                // The unloaded scene's object keeps its own set.
+                Assert.Equal(8, extra.count);
+                Assert.Equal(extraCells, extra.cellCount);
+
+                events.Clear();
+                LightProbes.Tetrahedralize();
+                Assert.Equal(new[] { "done" }, events);
+                Assert.Equal(8, main.count);
+                Assert.Equal(mainCells, main.cellCount);
+            }
+            finally
+            {
+                LightProbes.needsRetetrahedralization -= need;
+                LightProbes.tetrahedralizationCompleted -= done;
+                SceneManager.sceneUnloaded -= unloaded;
+                LightmapSettings.Reset();
+                scenes.Dispose();
             }
         }
 

@@ -533,10 +533,11 @@ namespace UnityEngine.SceneManagement
             data.LoadingState = Scene.LoadingState.NotLoaded;
             SceneRegistry.Loaded.Remove(data);
             if (SceneRegistry.Active == data) SceneRegistry.Active = null;
-            // Its probes leave the loaded set, raising needsRetetrahedralization within the unload
-            // (measured: tests/projects/lightprobes). Whether that comes before or after
-            // sceneUnloaded is not measured; this keeps the order the light probe change was
-            // written against (before it).
+            // Its probes leave the loaded set, raising needsRetetrahedralization before sceneUnloaded
+            // (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference lifecycle.jsonl,
+            // branch t3/light-probes-lifecycle-2, commit f8516528). Unity raises the group (needs,
+            // sceneUnloaded, the operation's completion) after UnloadSceneAsync returns; here it
+            // happens within the call (not fixed).
             LightProbes.SceneUnloaded(data.Handle.Value);
             // sceneUnloaded sees the scene with its name (measured: tests/projects/editorcallbacks);
             // it is forgotten after.
