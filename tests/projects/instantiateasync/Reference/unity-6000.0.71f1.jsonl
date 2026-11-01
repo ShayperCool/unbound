@@ -3,6 +3,7 @@
 {"f":-1,"p":"ScriptRunDelayedStartupFrame","s":"-","who":"Template","e":"Start"}
 {"f":0,"p":"ScriptRunDelayedStartupFrame","s":"-","who":"probe","e":"start prefab=Item hidden=Hidden active=0"}
 {"f":0,"p":"ScriptRunDelayedStartupFrame","s":"-","who":"probe","e":"early update order UpdateAsyncInstantiate,UpdateAsyncReadbackManager,UpdatePreloading,ScriptRunDelayedStartupFrame"}
+{"f":0,"p":"ScriptRunDelayedStartupFrame","s":"-","who":"probe","e":"default early update order UpdateAsyncInstantiate,UpdateAsyncReadbackManager,UpdatePreloading,ScriptRunDelayedStartupFrame"}
 {"f":0,"p":"ScriptRunBehaviourUpdate","s":"-","who":"Template","e":"first Update"}
 {"f":2,"p":"ScriptRunBehaviourUpdate","s":"single","who":"probe","e":"before awakened=1 alive=1 found=2"}
 {"f":2,"p":"ScriptRunBehaviourUpdate","s":"single","who":"probe","e":"returned type=AsyncInstantiateOperation`1 awakened=1 alive=1 found=2"}
@@ -707,64 +708,70 @@
 {"f":106,"p":"UpdateAsyncInstantiate","s":"await","who":"probe","e":"await resumed length=1 type=GameObject[] done=1 progress=1 result=1 waiting=0 allow=1"}
 {"f":106,"p":"UpdateAsyncInstantiate","s":"await","who":"probe","e":"await done op resumed length=1"}
 {"f":106,"p":"UpdateAsyncInstantiate","s":"await","who":"probe","e":"awaiter after isCompleted=1 result=1"}
+{"f":106,"p":"UpdateAsyncInstantiate","s":"await","who":"probe","e":"early awaiter GetResult length=1"}
+{"f":106,"p":"UpdateAsyncInstantiate","s":"await","who":"probe","e":"late awaiter GetResult length=1 again threw System.InvalidOperationException: Awaitable is in detached state"}
 {"f":106,"p":"ScriptRunDelayedStartupFrame","s":"await","who":"Item (Clone)","e":"Start"}
 {"f":106,"p":"ScriptRunDelayedStartupFrame","s":"await","who":"Item (Clone)/Child","e":"Start"}
 {"f":106,"p":"ScriptRunBehaviourUpdate","s":"await","who":"Item (Clone)","e":"first Update"}
 {"f":106,"p":"ScriptRunBehaviourUpdate","s":"await","who":"Item (Clone)/Child","e":"first Update"}
-{"f":109,"p":"ScriptRunBehaviourUpdate","s":"slice","who":"probe","e":"default budget 2.000"}
-{"f":109,"p":"ScriptRunBehaviourUpdate","s":"slice","who":"probe","e":"set 0 threw System.ArgumentOutOfRangeException: integrationTimeMS was out of range. Must be greater than zero.\nParameter name: integrationTimeMS"}
-{"f":109,"p":"ScriptRunBehaviourUpdate","s":"slice","who":"probe","e":"set -1 threw System.ArgumentOutOfRangeException: integrationTimeMS was out of range. Must be greater than zero.\nParameter name: integrationTimeMS"}
-{"f":109,"p":"ScriptRunBehaviourUpdate","s":"slice","who":"probe","e":"set NaN ok budget=2.000"}
-{"f":109,"p":"ScriptRunBehaviourUpdate","s":"slice","who":"probe","e":"budget 0.0001"}
+{"f":109,"p":"ScriptRunBehaviourUpdate","s":"awaitCancel","who":"probe","e":"cancelled awaiter isCompleted=0"}
+{"f":110,"p":"UpdateAsyncInstantiate","s":"awaitCancel","who":"probe","e":"cancelled await threw System.OperationCanceledException: Async operation canceled done=1 progress=1 result=null waiting=0 allow=1"}
+{"f":111,"p":"ScriptRunBehaviourUpdate","s":"awaitToken","who":"probe","e":"cancelled awaiter isCompleted=0"}
+{"f":112,"p":"UpdateAsyncInstantiate","s":"awaitToken","who":"probe","e":"cancelled await threw System.OperationCanceledException: Async operation canceled done=1 progress=1 result=null waiting=0 allow=1"}
+{"f":115,"p":"ScriptRunBehaviourUpdate","s":"slice","who":"probe","e":"default budget 2.000"}
+{"f":115,"p":"ScriptRunBehaviourUpdate","s":"slice","who":"probe","e":"set 0 threw System.ArgumentOutOfRangeException: integrationTimeMS was out of range. Must be greater than zero.\nParameter name: integrationTimeMS"}
+{"f":115,"p":"ScriptRunBehaviourUpdate","s":"slice","who":"probe","e":"set -1 threw System.ArgumentOutOfRangeException: integrationTimeMS was out of range. Must be greater than zero.\nParameter name: integrationTimeMS"}
+{"f":115,"p":"ScriptRunBehaviourUpdate","s":"slice","who":"probe","e":"set NaN ok budget=2.000"}
+{"f":115,"p":"ScriptRunBehaviourUpdate","s":"slice","who":"probe","e":"budget 0.0001"}
 {"f":-9,"p":"UpdateAsyncInstantiate","s":"slice","who":"probe","e":"tiny budget completed awakened=40 wokenBeforeCompletionFrame=0 done=1 progress=1 result=20 waiting=0 allow=1"}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"asyncNull","e":"threw System.ArgumentException: The Object you want to instantiate is null."}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncNull","e":"threw System.ArgumentException: The Object you want to instantiate is null."}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncPosNull","e":"threw System.ArgumentException: The Object you want to instantiate is null."}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"count0","e":"threw System.ArgumentException: Cannot call instantiate multiple with count less or equal to zero"}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"countMinus","e":"threw System.ArgumentException: Cannot call instantiate multiple with count less or equal to zero"}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"count0Null","e":"threw System.ArgumentException: The Object you want to instantiate is null."}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"asyncScriptable","e":"threw System.ArgumentException: Cannot call instantiate multiple for a ScriptableObject"}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncScriptable","e":"returned ProbeData Data(Clone)"}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncPosScriptable","e":"returned ProbeData Data(Clone)"}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"asyncDestroyed","e":"threw UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: original"}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncDestroyed","e":"threw UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: data"}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncPosDestroyed","e":"threw UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: data"}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"Doomed/Item(Clone)","e":"Awake active=1 root=Doomed scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"Doomed/Item(Clone)","e":"OnEnable"}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"Item(Clone)/Child","e":"Awake active=1 root=Doomed scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"Item(Clone)/Child","e":"OnEnable"}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncDoomedParent","e":"returned GameObject Item(Clone) parent=Doomed scene=Probe active=1 sibling=0 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)"}
-{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"asyncDoomedParent","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=188"}
-{"f":121,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Doomed/Item(Clone)","e":"Start"}
-{"f":121,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Item(Clone)/Child","e":"Start"}
-{"f":121,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Item(Clone)/Child","e":"OnDisable"}
-{"f":121,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Doomed/Item(Clone)","e":"OnDisable"}
-{"f":121,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Doomed/Item(Clone)","e":"OnDestroy"}
-{"f":121,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Item(Clone)/Child","e":"OnDestroy"}
-{"f":122,"p":"UpdateAsyncInstantiate","s":"errors","who":"asyncDoomedParent","e":"completed done=1 progress=1 result=null waiting=0 allow=1 awakened=188 result=null"}
-{"f":122,"p":"UpdateAsyncReadbackManager","s":"errors","who":"asyncDoomedParent","e":"state done=1 result=null allow=1 awakened=188"}
-{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Item(Clone)","e":"Awake active=1 root=Item(Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
-{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Item(Clone)","e":"OnEnable"}
-{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Item(Clone)/Child","e":"Awake active=1 root=Item(Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
-{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Item(Clone)/Child","e":"OnEnable"}
-{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"pending","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=190"}
-{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source/Child","e":"OnDisable"}
-{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source","e":"OnDisable"}
-{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source","e":"OnDestroy"}
-{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source/Child","e":"OnDestroy"}
-{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"probe","e":"source destroyed done=0 result=null allow=1 awakened=190 alive=186 found=188"}
-{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"parentDestroyed","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=190"}
-{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"probe","e":"parent destroyed done=0 result=null allow=1 awakened=190 alive=186 found=188"}
-{"f":126,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"Source (Clone)","e":"Awake active=1 root=Source (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
-{"f":126,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"Source (Clone)","e":"OnEnable"}
-{"f":126,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"Source (Clone)/Child","e":"Awake active=1 root=Source (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
-{"f":126,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"Source (Clone)/Child","e":"OnEnable"}
-{"f":126,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"pending","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=192 [GameObject Source (Clone) parent=- scene=Probe active=1 sibling=64 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
-{"f":126,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"parentDestroyed","e":"completed done=1 progress=1 result=null waiting=0 allow=1 awakened=192 result=null"}
-{"f":126,"p":"UpdateAsyncReadbackManager","s":"pendingDestroy","who":"pending","e":"state done=1 result=1 allow=1 awakened=192"}
-{"f":126,"p":"UpdateAsyncReadbackManager","s":"pendingDestroy","who":"parentDestroyed","e":"state done=1 result=null allow=1 awakened=192"}
-{"f":126,"p":"ScriptRunDelayedStartupFrame","s":"pendingDestroy","who":"Source (Clone)","e":"Start"}
-{"f":126,"p":"ScriptRunDelayedStartupFrame","s":"pendingDestroy","who":"Source (Clone)/Child","e":"Start"}
-{"f":126,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source (Clone)","e":"first Update"}
-{"f":126,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source (Clone)/Child","e":"first Update"}
-{"f":131,"p":"ScriptRunBehaviourUpdate","s":"finish","who":"probe","e":"finish awakened=192 alive=188 found=190"}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"asyncNull","e":"threw System.ArgumentException: The Object you want to instantiate is null."}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncNull","e":"threw System.ArgumentException: The Object you want to instantiate is null."}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncPosNull","e":"threw System.ArgumentException: The Object you want to instantiate is null."}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"count0","e":"threw System.ArgumentException: Cannot call instantiate multiple with count less or equal to zero"}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"countMinus","e":"threw System.ArgumentException: Cannot call instantiate multiple with count less or equal to zero"}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"count0Null","e":"threw System.ArgumentException: The Object you want to instantiate is null."}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"asyncScriptable","e":"threw System.ArgumentException: Cannot call instantiate multiple for a ScriptableObject"}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncScriptable","e":"returned ProbeData Data(Clone)"}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncPosScriptable","e":"returned ProbeData Data(Clone)"}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"asyncDestroyed","e":"threw UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: original"}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncDestroyed","e":"threw UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: data"}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncPosDestroyed","e":"threw UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: data"}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"Doomed/Item(Clone)","e":"Awake active=1 root=Doomed scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"Doomed/Item(Clone)","e":"OnEnable"}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"Item(Clone)/Child","e":"Awake active=1 root=Doomed scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"Item(Clone)/Child","e":"OnEnable"}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncDoomedParent","e":"returned GameObject Item(Clone) parent=Doomed scene=Probe active=1 sibling=0 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)"}
+{"f":127,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"asyncDoomedParent","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=188"}
+{"f":127,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Doomed/Item(Clone)","e":"Start"}
+{"f":127,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Item(Clone)/Child","e":"Start"}
+{"f":127,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Item(Clone)/Child","e":"OnDisable"}
+{"f":127,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Doomed/Item(Clone)","e":"OnDisable"}
+{"f":127,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Doomed/Item(Clone)","e":"OnDestroy"}
+{"f":127,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Item(Clone)/Child","e":"OnDestroy"}
+{"f":128,"p":"UpdateAsyncInstantiate","s":"errors","who":"asyncDoomedParent","e":"completed done=1 progress=1 result=null waiting=0 allow=1 awakened=188 result=null"}
+{"f":128,"p":"UpdateAsyncReadbackManager","s":"errors","who":"asyncDoomedParent","e":"state done=1 result=null allow=1 awakened=188"}
+{"f":131,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Item(Clone)","e":"Awake active=1 root=Item(Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":131,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Item(Clone)","e":"OnEnable"}
+{"f":131,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Item(Clone)/Child","e":"Awake active=1 root=Item(Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":131,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Item(Clone)/Child","e":"OnEnable"}
+{"f":131,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"pending","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=190"}
+{"f":131,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source/Child","e":"OnDisable"}
+{"f":131,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source","e":"OnDisable"}
+{"f":131,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source","e":"OnDestroy"}
+{"f":131,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source/Child","e":"OnDestroy"}
+{"f":131,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"probe","e":"source destroyed done=0 result=null allow=1 awakened=190 alive=186 found=188"}
+{"f":132,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"Source (Clone)","e":"Awake active=1 root=Source (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":132,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"Source (Clone)","e":"OnEnable"}
+{"f":132,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"Source (Clone)/Child","e":"Awake active=1 root=Source (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":132,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"Source (Clone)/Child","e":"OnEnable"}
+{"f":132,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"pending","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=192 [GameObject Source (Clone) parent=- scene=Probe active=1 sibling=64 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":132,"p":"UpdateAsyncReadbackManager","s":"pendingDestroy","who":"pending","e":"state done=1 result=1 allow=1 awakened=192"}
+{"f":132,"p":"ScriptRunDelayedStartupFrame","s":"pendingDestroy","who":"Source (Clone)","e":"Start"}
+{"f":132,"p":"ScriptRunDelayedStartupFrame","s":"pendingDestroy","who":"Source (Clone)/Child","e":"Start"}
+{"f":132,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source (Clone)","e":"first Update"}
+{"f":132,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source (Clone)/Child","e":"first Update"}
+{"f":133,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"parentDestroyed","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=192"}
+{"f":133,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"probe","e":"parent destroyed done=0 result=null allow=1 awakened=192 alive=188 found=190"}
+{"f":134,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"parentDestroyed","e":"completed done=1 progress=1 result=null waiting=0 allow=1 awakened=192 result=null"}
+{"f":134,"p":"UpdateAsyncReadbackManager","s":"pendingDestroy","who":"parentDestroyed","e":"state done=1 result=null allow=1 awakened=192"}
+{"f":139,"p":"ScriptRunBehaviourUpdate","s":"finish","who":"probe","e":"finish awakened=192 alive=188 found=190"}

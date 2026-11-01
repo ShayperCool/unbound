@@ -57,7 +57,8 @@ public class AsyncProbe : MonoBehaviour
             if (item.name == "Hidden") m_Hidden = item.gameObject;
         m_Extra = SceneManager.CreateScene("Extra");
         Record("probe", $"start prefab={m_Prefab.name} hidden={m_Hidden.name} active={P.B(m_Hidden.activeSelf)}");
-        Record("probe", "early update order " + LoopOrder());
+        Record("probe", "early update order " + LoopOrder(PlayerLoop.GetCurrentPlayerLoop()));
+        Record("probe", "default early update order " + LoopOrder(PlayerLoop.GetDefaultPlayerLoop()));
         Schedule();
     }
 
@@ -84,11 +85,11 @@ public class AsyncProbe : MonoBehaviour
     }
 
     /// <summary>Where the integration system is among its neighbours that run engine work.</summary>
-    static string LoopOrder()
+    static string LoopOrder(PlayerLoopSystem loop)
     {
         var watched = new[] { "UpdatePreloading", "UpdateAsyncInstantiate", "UpdateAsyncReadbackManager", "ScriptRunDelayedStartupFrame" };
         var order = new List<string>();
-        foreach (var phase in PlayerLoop.GetCurrentPlayerLoop().subSystemList)
+        foreach (var phase in loop.subSystemList)
             if (phase.type == typeof(UnityEngine.PlayerLoop.EarlyUpdate))
                 foreach (var s in phase.subSystemList)
                     if (s.type != null && Array.IndexOf(watched, s.type.Name) >= 0) order.Add(s.type.Name);
@@ -257,9 +258,12 @@ public class AsyncProbe : MonoBehaviour
 
         At("wait", Wait, 4);
         At("await", Await, 4);
+        At("awaitCancel", () => AwaitCancelled(false));
+        At("awaitToken", () => AwaitCancelled(true), 4);
         At("slice", Slice, 12);
         At("errors", Errors, 4);
-        At("pendingDestroy", PendingDestroy, 6);
+        At("pendingDestroy", PendingDestroy);
+        At("pendingDestroy", ParentDestroyed, 6);
         At("finish", Finish);
     }
 
@@ -385,6 +389,43 @@ public class AsyncProbe : MonoBehaviour
         var again = await op;
         Record("probe", "await done op resumed length=" + again.Length);
         Record("probe", "awaiter after isCompleted=" + P.B(op.GetAwaiter().IsCompleted) + " result=" + op.GetAwaiter().GetResult().Length);
+        // The same awaiter's result read again: once for the awaiter taken before completion, twice
+        // for one taken after it.
+        Record("probe", "early awaiter GetResult " + Results(() => awaiter.GetResult()));
+        var late = op.GetAwaiter();
+        Record("probe", "late awaiter GetResult " + Results(() => late.GetResult()) + " again " + Results(() => late.GetResult()));
+    }
+
+    /// <summary>Awaiting an operation cancelled by Cancel() or by an already cancelled token.</summary>
+    async void AwaitCancelled(bool token)
+    {
+        var source = new CancellationTokenSource();
+        if (token) source.Cancel();
+        var op = token
+            ? Object.InstantiateAsync(m_Prefab, 1, null, Vector3.zero, Quaternion.identity, source.Token)
+            : Object.InstantiateAsync(m_Prefab);
+        if (!token) op.Cancel();
+        var awaiter = op.GetAwaiter();
+        Record("probe", "cancelled awaiter isCompleted=" + P.B(awaiter.IsCompleted));
+        try
+        {
+            var none = await op;
+            Record("probe", "cancelled await resumed result=" + (none == null ? "null" : none.Length.ToString()) + " " + State(op));
+        }
+        catch (Exception e)
+        {
+            Record("probe", "cancelled await threw " + P.Ex(e) + " " + State(op));
+        }
+    }
+
+    static string Results(Func<GameObject[]> read)
+    {
+        try
+        {
+            var r = read();
+            return r == null ? "null" : "length=" + r.Length;
+        }
+        catch (Exception e) { return "threw " + P.Ex(e); }
     }
 
     /// <summary>The budget API, and one large operation under a tiny budget. How many frames the
@@ -454,6 +495,10 @@ public class AsyncProbe : MonoBehaviour
         Watch("pending", op);
         Object.DestroyImmediate(source);
         Record("probe", "source destroyed " + Polled(op) + " " + Counts());
+    }
+
+    void ParentDestroyed()
+    {
         var parent = new GameObject("Gone").transform;
         var orphan = Object.InstantiateAsync(m_Prefab, parent);
         Watch("parentDestroyed", orphan);
