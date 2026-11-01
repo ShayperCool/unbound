@@ -890,6 +890,9 @@ namespace Unbound.Runtime
             {
                 Camera.onPreCull?.Invoke(camera);
                 SendToCamera(camera, m => m.OnPreCull);
+                // Culling groups: evaluated and their callbacks sent before renderers become
+                // visible (measured: tests/projects/cullinggroup).
+                CullingGroup.EvaluateForCamera(camera);
                 var context = ContextOf(camera);
                 SpriteMasking.Begin(camera, context);
                 s_Items.Clear();
