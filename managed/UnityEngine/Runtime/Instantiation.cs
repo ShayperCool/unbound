@@ -99,11 +99,13 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The scene a clone goes to: its parent's, else the requested one if it is loaded,
-        /// else the active scene.</summary>
+        /// else the active scene. A scene still loading (its objects waking up or being processed,
+        /// when the public isLoaded is false) keeps its copies, as SetActiveScene and
+        /// MoveGameObjectToScene accept it; Unity's answer for that window is unmeasured.</summary>
         internal static SceneHandle TargetScene(Transform parent, Scene scene)
         {
             if (parent != null) return parent.m_GameObject.m_Scene;
-            if (scene.isLoaded) return new SceneHandle(scene.handle);
+            if (scene.Data is SceneData data && data.IsLoaded) return data.Handle;
             var target = SceneRegistry.EnsureActive().Handle;
             if (SceneManagerInternal.ActiveScene != null) target = SceneManagerInternal.ActiveScene.Handle;
             return target;
