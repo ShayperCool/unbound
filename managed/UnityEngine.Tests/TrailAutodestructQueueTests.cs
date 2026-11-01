@@ -289,7 +289,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void StaleRequestsAfterSceneUnloadAndPlayModeResetCannotDestroyReplacementObjects()
+        public void StaleRequestsAfterSceneUnloadAndAClockResetSkipDestroyedTargets()
         {
             using var scope = new Scope();
             var trail = scope.Trail();
@@ -304,8 +304,13 @@ namespace UnityEngine.Tests
             // target reference must be harmless across clock resets and replacement allocations.
             Time.s_Time = 0;
             var replacement = scope.Trail();
+            var surviving = scope.Trail();
+            var survivingTarget = surviving.gameObject;
+            Time.s_Time += 1;
+            Collect(surviving);
             Run(Node(0));
             Assert.True(replacement != null);
+            Assert.True(survivingTarget.m_Destroyed);
             Assert.Empty(Requests);
             Assert.Empty(Targets);
         }
