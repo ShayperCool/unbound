@@ -276,7 +276,11 @@ namespace UnityEngine
         /// animator first bound, measured in the Editor's Play mode), then bind again.</summary>
         public void Rebind()
         {
+            var root = transform;
+            var position = root.localPosition;
+            var rotation = root.localRotation;
             m_Player?.Bindings.WriteDefaults();
+            if (m_ApplyRootMotion) root.SetLocalPositionAndRotation(position, rotation);
             m_Player = null;
             EnsurePlayer();
             if (m_Match != null && m_Player != null && m_Player.Layers.Length > 0)
