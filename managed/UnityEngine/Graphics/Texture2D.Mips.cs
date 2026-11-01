@@ -145,6 +145,15 @@ namespace UnityEngine
             CheckMip(miplevel);
             return GetPixels(0, 0, MipWidth(miplevel), MipHeight(miplevel), miplevel);
         }
+        /// <summary>Level zero with each stored byte as b / 255 (the Color32 conversion), for engine
+        /// paths that are not GetPixels.</summary>
+        internal Color[] ColorsOfLevelZero()
+        {
+            var result = new Color[m_Width * m_Height];
+            for (int i = 0; i < result.Length; i++) result[i] = Read(0, i);
+            return result;
+        }
+
         public Color[] GetPixels(int x, int y, int blockWidth, int blockHeight) => GetPixels(x, y, blockWidth, blockHeight, 0);
         public Color[] GetPixels(int x, int y, int blockWidth, int blockHeight, int miplevel)
         {
@@ -152,6 +161,20 @@ namespace UnityEngine
             CheckBlock(x, y, blockWidth, blockHeight, miplevel);
             var result = new Color[blockWidth * blockHeight];
             int width = MipWidth(miplevel);
+            if (m_Hdr == null && m_Format != TextureFormat.Alpha8)
+            {
+                // GetPixels reads a stored byte b as b * (1 / 255) in single precision, which differs
+                // from b / 255 (GetPixel, Alpha8's GetPixels) in the last bit for 126 of the 256 values.
+                const float scale = 1f / 255f;
+                var level = ByteLevel(miplevel);
+                for (int j = 0; j < blockHeight; j++)
+                    for (int i = 0; i < blockWidth; i++)
+                    {
+                        var c = level[(y + j) * width + x + i];
+                        result[j * blockWidth + i] = new Color(c.r * scale, c.g * scale, c.b * scale, c.a * scale);
+                    }
+                return result;
+            }
             for (int j = 0; j < blockHeight; j++)
                 for (int i = 0; i < blockWidth; i++) result[j * blockWidth + i] = Read(miplevel, (y + j) * width + x + i);
             return result;
