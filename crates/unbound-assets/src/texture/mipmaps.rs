@@ -258,6 +258,17 @@ fn fade(texels: &mut [[f32; 4]], index: i32, start: i32, end: i32, encoding: &En
 
 /// `top` and the levels below it down to 1x1 (each side halves, rounding down, at least 1).
 pub(super) fn chain(top: Level, options: &Options) -> Vec<Level> {
+    chain_with_columns(top, options, None)
+}
+
+/// [`chain`] whose first border mip takes its edge columns from `first_columns` (a level of
+/// the top's size and encoding) instead of the top level: a flipbook slice's view of its whole
+/// image (see `import_flipbook`).
+pub(super) fn chain_with_columns(
+    top: Level,
+    options: &Options,
+    first_columns: Option<&Level>,
+) -> Vec<Level> {
     let mut levels = vec![top];
     while let Some(last) = levels.last().filter(|l| l.width > 1 || l.height > 1) {
         let mut next = if last.width % 2 == 1 || last.height % 2 == 1 {
@@ -268,7 +279,8 @@ pub(super) fn chain(top: Level, options: &Options) -> Vec<Level> {
             halve_box(last)
         };
         if options.border {
-            border(last, &mut next);
+            let columns = first_columns.filter(|_| levels.len() == 1).unwrap_or(last);
+            border(last, columns, &mut next);
         }
         if let Some(reference) = options.coverage {
             preserve_coverage(last, &mut next, reference);
@@ -453,8 +465,9 @@ fn bilinear(src: &Level) -> Level {
 }
 
 /// Border mip maps: the edge rows, then the edge columns (which win at the corners), become the
-/// mean of texels 2i and 2i + 1 of the level above's edge.
-fn border(src: &Level, dst: &mut Level) {
+/// mean of texels 2i and 2i + 1 of the level above's edge (the columns those of `columns`, the
+/// level above itself but for a flipbook slice's first level).
+fn border(src: &Level, columns: &Level, dst: &mut Level) {
     let (w, h) = (src.width as usize, src.height as usize);
     let (dw, dh) = (dst.width as usize, dst.height as usize);
     let pair = |a: [f32; 4], b: [f32; 4]| -> [f32; 4] {
@@ -469,7 +482,7 @@ fn border(src: &Level, dst: &mut Level) {
     for (dx, sx) in [(0, 0), (dw - 1, w - 1)] {
         for y in 0..dh {
             let (a, b) = ((2 * y).min(h - 1), (2 * y + 1).min(h - 1));
-            dst.texels[y * dw + dx] = pair(src.texels[a * w + sx], src.texels[b * w + sx]);
+            dst.texels[y * dw + dx] = pair(columns.texels[a * w + sx], columns.texels[b * w + sx]);
         }
     }
 }

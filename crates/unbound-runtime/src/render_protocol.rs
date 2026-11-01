@@ -132,7 +132,8 @@ pub struct ImportedTextureInfo {
     pub sprite_count: i32,
     /// TexturePacket format: 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBAHalf, 9 RGBAFloat.
     pub format: i32,
-    /// TextureDimension: 2 a 2D texture, 4 a cubemap.
+    /// TextureDimension: 2 a 2D texture, 3 a Texture3D, 4 a cubemap, 5 a Texture2DArray (an
+    /// array's slices and a volume's depth come from the `texture-layers` JSON call).
     pub dimension: i32,
 }
 

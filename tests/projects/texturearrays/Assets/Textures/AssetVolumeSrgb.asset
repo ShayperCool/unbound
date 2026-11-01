@@ -1,0 +1,38 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!117 &11700000
+Texture3D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: AssetVolumeSrgb
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 4
+  m_ColorSpace: 1
+  m_Format: 4
+  m_Width: 8
+  m_Height: 4
+  m_Depth: 2
+  m_MipCount: 4
+  m_DataSize: 300
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 2
+    m_Aniso: 3
+    m_MipBias: 0
+    m_WrapU: 0
+    m_WrapV: 0
+    m_WrapW: 0
+  m_UsageMode: 0
+  m_IsReadable: 1
+  image data: 300
+  _typelessdata: 395523d458dfd086c708abe9ece545041702f7d46fdab02f9e13805b3c7ae36dfcc1ce6399fa7b017ed2f56c388e63879cc71411b8e54e7b7a5dd68a22aa3fb1690cf32c6e0303dc658aaee6fe14b30a974856c3217b3423d2f1c86d8fd4b97018f0e9a6f1343e1014e92ecf58af0d829f3c1663c2d43b203e88ac7b9b2e29a0a024084938c4069422a5cd9f5c9749e94d5dab68b528396a55d8dc2c5df2683c9a5fa98e5cea31612877e4cf2304403739616d4b10af08f8b09aaff9ee564c399d5b22ed74df996ebe17cad7c42ec862fa02b483eca17fc2e6867e596693af9143cecddd99dc15b37b3ed62e584dbb6529f6d989603677c091549fc5dde2683c7ea364706680908d64836c7478899673798277948460978190736b7e9e98907b7881808482857f777d837f7d
+  m_StreamData:
+    serializedVersion: 2
+    offset: 0
+    size: 0
+    path: 

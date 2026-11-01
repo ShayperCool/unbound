@@ -11,8 +11,8 @@
 //!
 //! Compression formats (`textureFormat`, `textureCompression`, crunch) are not applied: textures
 //! stay uncompressed RGBA. Cubemaps are imported as their six faces ([`ImportedTexture::layers`]);
-//! array/3D shapes as their 2D source image, reported through [`TextureSettings::shape`] so the
-//! caller can refuse them.
+//! Texture2DArray and Texture3D shapes as the cells of their flipbook (`flipbookColumns` x
+//! `flipbookRows`), each slice processed like a 2D texture of the cell's size.
 use crate::{
     Importer, asset_name,
     meta::{boolean, float, importer, int},
@@ -195,10 +195,17 @@ pub struct TextureSettings {
     pub cubemap_layout: i32,
     /// `cubemapConvolution`: 0 none, 1 specular (glossy reflection), 2 diffuse.
     pub cubemap_convolution: i32,
+    /// `flipbookColumns`, `flipbookRows`: the cells of a Texture2DArray or Texture3D shape.
+    #[serde(default = "one_by_one")]
+    pub flipbook: (u32, u32),
     /// The build target keeps the pixels as they are: an uncompressed format (RGBA32, ...), or
     /// compression off. Such a texture is never block-compressed.
     #[serde(default)]
     pub uncompressed: bool,
+}
+
+fn one_by_one() -> (u32, u32) {
+    (1, 1)
 }
 
 impl Default for TextureSettings {
@@ -260,6 +267,15 @@ impl TextureSettings {
                 _ => WrapMode::Repeat,
             }
         };
+        // A Cube shape clamps on every axis, whatever its wrap settings say (a Repeat meta
+        // imports as Clamp, Clamp, Clamp in the 6000.0 Editor: tests/projects/texturearrays).
+        let wrap = |key: &str| {
+            if shape == TextureShape::Cube {
+                WrapMode::Clamp
+            } else {
+                wrap(key)
+            }
+        };
         let filter = match int(imp, "textureSettings.filterMode").unwrap_or(-1) {
             0 => FilterMode::Point,
             2 => FilterMode::Trilinear,
@@ -318,6 +334,10 @@ impl TextureSettings {
             sprite: SpriteSettings::read(imp, texture_type == TextureType::Sprite),
             cubemap_layout: int(imp, "generateCubemap").unwrap_or(6) as i32,
             cubemap_convolution: int(imp, "cubemapConvolution").unwrap_or(0) as i32,
+            flipbook: (
+                int(imp, "flipbookColumns").unwrap_or(1).max(1) as u32,
+                int(imp, "flipbookRows").unwrap_or(1).max(1) as u32,
+            ),
             uncompressed,
         }
     }
@@ -427,9 +447,11 @@ pub struct ImportedTexture {
     /// Sample with an sRGB view (only meaningful in a linear-colour-space project).
     pub srgb: bool,
     /// Mip 0 first; a single level when mipmaps are disabled. Rows are bottom-up (see the module
-    /// documentation). A cubemap holds each face's chain in turn (+X, -X, +Y, -Y, +Z, -Z).
+    /// documentation). A cubemap holds each face's chain in turn (+X, -X, +Y, -Y, +Z, -Z), a
+    /// Texture2DArray each slice's chain in turn, a Texture3D one level after another, each level
+    /// all its depth slices (which halve with the level, at least 1).
     pub mips: Vec<MipLevel>,
-    /// 6 for a cubemap, else 1.
+    /// Images: 6 for a cubemap, the slices of a Texture2DArray, the depth of a Texture3D, else 1.
     pub layers: u32,
     pub wrap_u: WrapMode,
     pub wrap_v: WrapMode,
@@ -460,6 +482,38 @@ impl ImportedTexture {
     pub fn sprite(&self, file_id: i64) -> Option<&SpriteDef> {
         self.sprites.iter().find(|s| s.file_id == file_id)
     }
+
+    /// Unity's TextureDimension: 2 a 2D texture, 3 a Texture3D, 4 a cubemap, 5 a Texture2DArray.
+    pub fn dimension(&self) -> i32 {
+        match self.settings.shape {
+            TextureShape::Texture2D => 2,
+            TextureShape::Texture3D => 3,
+            TextureShape::Cube => 4,
+            TextureShape::Texture2DArray => 5,
+        }
+    }
+
+    /// Mip levels of each image (of the volume, for a Texture3D).
+    pub fn mip_count(&self) -> usize {
+        if self.settings.shape == TextureShape::Texture3D {
+            self.mips.len()
+        } else {
+            self.mips.len() / self.layers.max(1) as usize
+        }
+    }
+
+    /// The mip `mip` of image `layer` (a Texture3D's level holds every depth slice; its only
+    /// image is 0).
+    pub fn level(&self, layer: usize, mip: usize) -> Option<&MipLevel> {
+        let count = self.mip_count();
+        if mip >= count || layer >= self.layers.max(1) as usize {
+            return None;
+        }
+        if self.settings.shape == TextureShape::Texture3D {
+            return (layer == 0).then(|| &self.mips[mip]);
+        }
+        self.mips.get(layer * count + mip)
+    }
 }
 
 /// The texture importer. Its option is the build target whose platform overrides apply.
@@ -489,8 +543,8 @@ impl Default for TextureImporter {
 impl Importer for TextureImporter {
     type Output = ImportedTexture;
     const KIND: &'static str = "textures";
-    // Combined mip-filter and sprite-geometry imports must not reuse either branch's v8 entries.
-    const VERSION: u32 = 11;
+    // 12: Texture2DArray and Texture3D shapes import their flipbook cells (were a 2D texture).
+    const VERSION: u32 = 12;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -601,7 +655,14 @@ pub fn import_texture(
     }
     // The Editor dilates whenever the texture's format stores alpha (an automatic one does
     // whenever the image has transparent texels to fill).
-    if settings.alpha_is_transparency && settings.format_alpha != Some(false) {
+    let dilate = settings.alpha_is_transparency && settings.format_alpha != Some(false);
+    if matches!(
+        settings.shape,
+        TextureShape::Texture2DArray | TextureShape::Texture3D
+    ) {
+        return import_flipbook(source, image, settings, dilate);
+    }
+    if dilate {
         image.dilate_transparent();
     }
 
@@ -676,6 +737,16 @@ pub fn import_texture(
 
 /// The imported mip chain of a 2D texture (just its top level without mipmaps).
 fn mip_chain(image: Image, settings: &TextureSettings) -> Vec<MipLevel> {
+    mip_chain_with_columns(image, settings, None)
+}
+
+/// [`mip_chain`] whose first border mip reads its edge columns from `first_columns` (bottom-up
+/// texels of the image's size and format).
+fn mip_chain_with_columns(
+    image: Image,
+    settings: &TextureSettings,
+    first_columns: Option<&[u8]>,
+) -> Vec<MipLevel> {
     let format = image.format;
     let height = settings
         .normal_from_height
@@ -692,6 +763,8 @@ fn mip_chain(image: Image, settings: &TextureSettings) -> Vec<MipLevel> {
     } else {
         mipmaps::Top::Bytes
     };
+    let columns = first_columns
+        .map(|data| mipmaps::Level::decode(image.width, image.height, data, format, top));
     let top = mipmaps::Level::decode(image.width, image.height, &image.data, format, top);
     let options = mipmaps::Options {
         filter: if settings.mip_filter == 1 {
@@ -712,7 +785,7 @@ fn mip_chain(image: Image, settings: &TextureSettings) -> Vec<MipLevel> {
         fade: settings.mip_fade,
     };
     let chain = if levels {
-        mipmaps::chain(top, &options)
+        mipmaps::chain_with_columns(top, &options, columns.as_ref())
     } else {
         vec![top]
     };
@@ -725,6 +798,214 @@ fn mip_chain(image: Image, settings: &TextureSettings) -> Vec<MipLevel> {
             data: level.encode(i, format, &encoding),
         })
         .collect()
+}
+
+/// A Texture2DArray or Texture3D: the image cut into `flipbookColumns` x `flipbookRows` cells of
+/// floor(width / columns) x floor(height / rows) texels, the top-left cell first, then left to
+/// right and top to bottom (measured with tests/projects/texturearrays). Each cell is processed
+/// like a 2D texture of its size: alpha-is-transparency dilation, NPOT scaling, the max size and,
+/// for an array, the 2D mip chain with every mip setting. A volume's mips are its own (see
+/// [`volume_chain`]).
+fn import_flipbook(
+    source: &Path,
+    mut image: Image,
+    settings: TextureSettings,
+    dilate: bool,
+) -> Result<ImportedTexture> {
+    let (columns, rows) = settings.flipbook;
+    let (cell_w, cell_h) = (image.width / columns.max(1), image.height / rows.max(1));
+    if cell_w == 0 || cell_h == 0 {
+        bail!(
+            "a {columns}x{rows} flipbook does not fit the {}x{} image",
+            image.width,
+            image.height
+        );
+    }
+    if dilate {
+        image.dilate_flipbook_prefix(cell_w, cell_h);
+    }
+    let mut cells = Vec::with_capacity((columns * rows) as usize);
+    for row in 0..rows {
+        for column in 0..columns {
+            let mut cell = image.crop(column * cell_w, row * cell_h, cell_w, cell_h);
+            let (w, h) = npot_size(cell_w, cell_h, settings.npot_scale);
+            let (w, h) = fit_max_size(w, h, settings.max_size);
+            if (w, h) != (cell_w, cell_h) {
+                cell = cell.resize(w, h, settings.resize_algorithm)?;
+            }
+            // An array's HDR colour is gamma-encoded per level by its 2D chain; a volume's here.
+            if settings.shape == TextureShape::Texture3D
+                && settings.gamma_hdr
+                && settings.srgb
+                && cell.format == TextureFormat::Rgba32F
+            {
+                cell.linear_to_gamma();
+            }
+            cell.flip_rows();
+            cells.push(cell);
+        }
+    }
+    let format = image.format;
+    let has_alpha = cells.iter().any(Image::has_alpha);
+    let (width, height) = (cells[0].width, cells[0].height);
+    let layers = cells.len() as u32;
+    let mips = if settings.shape == TextureShape::Texture3D {
+        if format == TextureFormat::Rgba32F && settings.mipmaps {
+            tracing::warn!(
+                "{}: the mips of a floating-point Texture3D are not measured; Unbound halves it \
+                 like an 8-bit volume without the byte truncation",
+                source.display()
+            );
+        }
+        volume_chain(cells, settings.mipmaps)
+    } else {
+        let views = (settings.border_mipmap && settings.mipmaps)
+            .then(|| flipbook_views(&cells, columns, rows));
+        cells
+            .into_iter()
+            .enumerate()
+            .flat_map(|(i, cell)| {
+                mip_chain_with_columns(cell, &settings, views.as_ref().map(|v| &v[i][..]))
+            })
+            .collect()
+    };
+    Ok(ImportedTexture {
+        name: asset_name(source),
+        width,
+        height,
+        original_width: image.width,
+        original_height: image.height,
+        format,
+        srgb: settings.srgb,
+        mips,
+        wrap_u: settings.wrap_u,
+        wrap_v: settings.wrap_v,
+        wrap_w: settings.wrap_w,
+        filter: settings.filter,
+        aniso: settings.aniso,
+        mip_bias: settings.mip_bias,
+        is_readable: settings.is_readable,
+        has_alpha,
+        sprites: Vec::new(),
+        import_settings_hash: settings.hash(),
+        settings,
+        layers,
+        bc7: None,
+    })
+}
+
+/// What each slice's first border mip reads its edge columns from, as the 6000.0 Editor does
+/// it: the whole flipbook image (bottom-up rows), read from the slice's bottom-left texel on as
+/// if its rows were a cell wide, so a column steps by the cell's width instead of the image's.
+/// Measured texel for texel at the first level of tests/projects/texturearrays's border case;
+/// lower levels read their own slice. The cells here are the processed (possibly resized) ones
+/// put back in their grid; with resized cells this is unmeasured. Texels past the image's end
+/// (only the top row's cells can reach there) repeat its last texel.
+fn flipbook_views(cells: &[Image], columns: u32, rows: u32) -> Vec<Vec<u8>> {
+    let (cw, ch) = (cells[0].width as usize, cells[0].height as usize);
+    let bpp = cells[0].format.bytes_per_pixel();
+    let (columns, rows) = (columns as usize, rows as usize);
+    let width = cw * columns;
+    let mut whole = vec![0u8; width * ch * rows * bpp];
+    for (i, cell) in cells.iter().enumerate() {
+        // Slice i is column i % columns of row i / columns from the top; rows are bottom-up.
+        let (cx, cy) = (i % columns, rows - 1 - i / columns);
+        for y in 0..ch {
+            let to = ((cy * ch + y) * width + cx * cw) * bpp;
+            whole[to..to + cw * bpp].copy_from_slice(&cell.data[y * cw * bpp..(y + 1) * cw * bpp]);
+        }
+    }
+    let texels = whole.len() / bpp;
+    (0..cells.len())
+        .map(|i| {
+            let (cx, cy) = (i % columns, rows - 1 - i / columns);
+            let origin = cy * ch * width + cx * cw;
+            (0..cw * ch)
+                .flat_map(|t| {
+                    let at = (origin + t).min(texels - 1) * bpp;
+                    whole[at..at + bpp].to_vec()
+                })
+                .collect()
+        })
+        .collect()
+}
+
+/// A Texture3D's mip chain from its (bottom-up) depth slices: each level is the one above halved
+/// along x, then y, then z, every pass the truncating mean `(a + b) >> 1` of a pair of bytes (an
+/// axis of size 1 is kept; an odd last texel is dropped). The colour space and the mip filter do
+/// not change it. Measured exactly at every level of tests/projects/texturearrays's volumes.
+fn volume_chain(slices: Vec<Image>, mipmaps: bool) -> Vec<MipLevel> {
+    let (mut w, mut h, mut d) = (slices[0].width, slices[0].height, slices.len() as u32);
+    let format = slices[0].format;
+    let data: Vec<u8> = slices.into_iter().flat_map(|s| s.data).collect();
+    let count = if mipmaps {
+        32 - w.max(h).max(d).leading_zeros()
+    } else {
+        1
+    };
+    let mut levels = vec![MipLevel {
+        width: w,
+        height: h,
+        data,
+    }];
+    for _ in 1..count {
+        let mut level = levels.last().unwrap().data.clone();
+        for axis in 0..3 {
+            (level, w, h, d) = halve_axis(&level, (w, h, d), axis, format);
+        }
+        levels.push(MipLevel {
+            width: w,
+            height: h,
+            data: level,
+        });
+    }
+    levels
+}
+
+/// One pass of [`volume_chain`]: `data` (w x h x d texels) halved along `axis` (0 x, 1 y, 2 z).
+fn halve_axis(
+    data: &[u8],
+    (w, h, d): (u32, u32, u32),
+    axis: usize,
+    format: TextureFormat,
+) -> (Vec<u8>, u32, u32, u32) {
+    let size = [w, h, d];
+    if size[axis] == 1 {
+        return (data.to_vec(), w, h, d);
+    }
+    let mut out_size = size;
+    out_size[axis] = size[axis] / 2;
+    let [ow, oh, od] = out_size;
+    let bpp = format.bytes_per_pixel();
+    let index = |x: u32, y: u32, z: u32| ((z * h + y) * w + x) as usize * bpp;
+    let mut out = Vec::with_capacity((ow * oh * od) as usize * bpp);
+    for z in 0..od {
+        for y in 0..oh {
+            for x in 0..ow {
+                let mut first = [x, y, z];
+                first[axis] *= 2;
+                let mut second = first;
+                second[axis] += 1;
+                let a = &data[index(first[0], first[1], first[2])..][..bpp];
+                let b = &data[index(second[0], second[1], second[2])..][..bpp];
+                match format {
+                    TextureFormat::Rgba8 => out.extend(
+                        a.iter()
+                            .zip(b)
+                            .map(|(&a, &b)| ((a as u16 + b as u16) >> 1) as u8),
+                    ),
+                    TextureFormat::Rgba32F => {
+                        for c in 0..4 {
+                            let at = c * 4..c * 4 + 4;
+                            let v = (read_f32(&a[at.clone()]) + read_f32(&b[at])) * 0.5;
+                            out.extend_from_slice(&v.to_le_bytes());
+                        }
+                    }
+                }
+            }
+        }
+    }
+    (out, ow, oh, od)
 }
 
 /// A cubemap: its faces cut from (or projected out of) the image, scaled as a texture of the
@@ -1299,6 +1580,45 @@ impl Image {
             width: self.width,
             height: self.height,
             format: TextureFormat::Rgba32F,
+            data,
+        }
+    }
+
+    /// Alpha-is-transparency of a flipbook as the 6000.0 Editor applies it: the jump flood of
+    /// [`Image::dilate_transparent`] runs over the first `cell_w` x `cell_h` texels of the whole
+    /// image in bottom-up row order, read as one cell-sized image; the texels after them keep
+    /// their colour. (Each 64x64 cell of a 128x64 two-column flipbook is filled in its bottom 32
+    /// rows only; measured texel for texel in tests/projects/texturearrays.)
+    fn dilate_flipbook_prefix(&mut self, cell_w: u32, cell_h: u32) {
+        let bpp = self.format.bytes_per_pixel();
+        let len = (cell_w * cell_h) as usize * bpp;
+        self.flip_rows();
+        let mut prefix = Image {
+            width: cell_w,
+            height: cell_h,
+            format: self.format,
+            data: self.data[..len].to_vec(),
+        };
+        // The prefix is bottom-up; the flood takes top-down rows.
+        prefix.flip_rows();
+        prefix.dilate_transparent();
+        prefix.flip_rows();
+        self.data[..len].copy_from_slice(&prefix.data);
+        self.flip_rows();
+    }
+
+    /// The `width` x `height` texels at (`x`, `y`) (top-down rows, as the image).
+    fn crop(&self, x: u32, y: u32, width: u32, height: u32) -> Image {
+        let bpp = self.format.bytes_per_pixel();
+        let mut data = Vec::with_capacity((width * height) as usize * bpp);
+        for row in y..y + height {
+            let start = ((row * self.width + x) as usize) * bpp;
+            data.extend_from_slice(&self.data[start..start + width as usize * bpp]);
+        }
+        Image {
+            width,
+            height,
+            format: self.format,
             data,
         }
     }

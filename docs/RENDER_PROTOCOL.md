@@ -73,7 +73,11 @@ TexturePacket {
   i32 layers, dimension; // each layer has a mip chain; dimension is Unity's TextureDimension
 }
 
-ImportedTextureInfo { i32 width, height, mip_count, srgb, filter_mode, wrap_u, wrap_v, aniso_level, readable, sprite_count; }
+ImportedTextureInfo { i32 width, height, mip_count, srgb, filter_mode, wrap_u, wrap_v, aniso_level, readable, sprite_count,
+  format,      // TexturePacket format: 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBAHalf, 9 RGBAFloat
+  dimension;   // TextureDimension: 2 2D, 3 Texture3D, 4 cubemap, 5 Texture2DArray; an array's
+               // slices and a volume's depth: the `texture-layers` JSON call
+}
 
 MaterialPacket {
   *const u8 shader_name; i32 shader_name_length;
