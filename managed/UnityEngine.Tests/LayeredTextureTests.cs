@@ -6,6 +6,19 @@ namespace UnityEngine.Tests
 {
     public class LayeredTextureTests
     {
+        // 16384x16384x4 RGBA32 is 4 GiB, which 32-bit offsets wrapped to an empty array while
+        // GetPixelData still described a 1 GiB level over it.
+        [Fact]
+        public void TexturesTooLargeForOneArrayFailInsteadOfWrapping()
+        {
+            var array = Assert.Throws<UnityException>(() => new Texture2DArray(16384, 16384, 4, TextureFormat.RGBA32, false));
+            Assert.Contains("4294967296 bytes", array.Message);
+            Assert.Throws<UnityException>(() => new Texture3D(2048, 2048, 2048, TextureFormat.R8, false));
+            Assert.Throws<UnityException>(() => new CubemapArray(16384, 2, TextureFormat.RGBA32, false));
+            // An R8 array whose RGBA upload alone would not fit.
+            Assert.Throws<UnityException>(() => new Texture2DArray(16384, 16384, 2, TextureFormat.R8, false));
+        }
+
         // tests/projects/resources floatformats.*.array/volume/cubearray.cpu: two independent
         // Unity 6000.0.71f1 captures read one in the channels R and RG formats do not store.
         [Theory]

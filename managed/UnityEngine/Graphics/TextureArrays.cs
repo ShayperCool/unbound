@@ -32,15 +32,23 @@ namespace UnityEngine
             Mips = mips;
             Volume = volume;
             Format = format;
+            // Sizes in 64 bits: a texture whose bytes (or whose RGBA upload) a managed array cannot
+            // hold fails here instead of wrapping around to a smaller size.
+            long texel = PixelFormats.Size(format, 1, 1), at = 0, texels = 0;
+            for (int mip = 0; mip < mips; mip++)
+                texels += (long)W(mip) * H(mip) * D(mip) * Images;
+            long total = texel * texels, upload = texels * (GraphicsFormatUtility.IsHDRFormat(format) ? 16 : 4);
+            if (width <= 0 || height <= 0 || layers <= 0 || mips <= 0 || Math.Max(total, upload) > Array.MaxLength)
+                throw new UnityException($"Unbound: a {width}x{height}x{layers} {format} texture with {mips} mips needs {total} bytes " +
+                    $"({upload} to upload); Unbound keeps a layered texture's pixels in one array of at most {Array.MaxLength} bytes.");
             m_Offsets = new int[Images * mips + 1];
-            int at = 0;
             for (int image = 0; image < Images; image++)
                 for (int mip = 0; mip < mips; mip++)
                 {
-                    m_Offsets[image * mips + mip] = at;
+                    m_Offsets[image * mips + mip] = (int)at;
                     at += LevelBytes(mip);
                 }
-            m_Offsets[^1] = at;
+            m_Offsets[^1] = (int)at;
             if (data != null && data.Length < at)
                 throw new ArgumentException($"the texture data has {data.Length} bytes; its {Images} images of {mips} mips need {at}");
             Data = data ?? new byte[at];
