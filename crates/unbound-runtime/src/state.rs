@@ -549,12 +549,16 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             .to_string())
         }
         "texture-pixels" => {
-            // An imported texture's requested mip, rows bottom first, retaining float precision.
+            // An imported texture's requested mip of one image (an array slice, a cube face; a
+            // volume's level holds all its depth slices), rows bottom first, retaining float
+            // precision.
             #[derive(Deserialize)]
             struct Request {
                 guid: String,
                 #[serde(default)]
                 mip: usize,
+                #[serde(default)]
+                layer: Option<usize>,
             }
             let r: Request = serde_json::from_str(request)?;
             let guid = Guid::parse(&r.guid).context("bad guid")?;
@@ -563,15 +567,39 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let texture = s
                 .imports
                 .get_or_import(&texture_importer(s), &asset.file, &meta)?;
-            let mip = texture
-                .mips
-                .get(r.mip)
-                .context("the texture has no such mip")?;
+            let mip = match r.layer {
+                // Without a layer: the n-th stored level, as 2D textures always asked.
+                None => texture.mips.get(r.mip),
+                Some(layer) => texture.level(layer, r.mip),
+            }
+            .context("the texture has no such mip")?;
             let format = match texture.format {
                 unbound_assets::texture::TextureFormat::Rgba8 => 0,
                 unbound_assets::texture::TextureFormat::Rgba32F => 2,
             };
             Ok(json!({ "width": mip.width, "height": mip.height, "format": format, "rgba": crate::models::base64(&mip.data) }).to_string())
+        }
+        "texture-layers" => {
+            // An imported texture's images: slices of an array, depth of a volume, cube faces.
+            #[derive(Deserialize)]
+            struct Request {
+                guid: String,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            let guid = Guid::parse(&r.guid).context("bad guid")?;
+            let asset = s.db.by_guid(guid).context("no such asset")?;
+            let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
+            let texture = s
+                .imports
+                .get_or_import(&texture_importer(s), &asset.file, &meta)?;
+            Ok(json!({
+                "layers": texture.layers,
+                "mipCount": texture.mip_count(),
+                "dimension": texture.dimension(),
+                "wrapW": texture.wrap_w as i32,
+                "mipBias": texture.mip_bias,
+            })
+            .to_string())
         }
         "texture-sprites" => {
             #[derive(Deserialize)]
@@ -1044,7 +1072,8 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             }
         }
     };
-    let mip_count = texture.mips.len() / texture.layers.max(1) as usize;
+    let mip_count = texture.mip_count();
+    let dimension = texture.dimension();
     // BC7 blocks when the GPU samples them (format 7 sRGB-capable, 8 linear), else RGBA8.
     let (gpu_format, data) = match texture.bc7.take() {
         Some(blocks) if GPU_BC7.load(std::sync::atomic::Ordering::Relaxed) => {
@@ -1086,7 +1115,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
             samples: 1,
             depth_bits: 0,
             layers: texture.layers as i32,
-            dimension: if texture.layers == 6 { 4 } else { 2 },
+            dimension,
         },
     );
     set_texture_mip_bias(handle, texture.mip_bias);
@@ -1102,7 +1131,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
         readable: texture.is_readable as i32,
         sprite_count: sprite_count as i32,
         format,
-        dimension: if texture.layers == 6 { 4 } else { 2 },
+        dimension,
     })
 }
 

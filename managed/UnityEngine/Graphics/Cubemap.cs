@@ -20,6 +20,11 @@ namespace UnityEngine
         Color[][][] m_Pixels;
         /// <summary>The data is RGBM encoded (a reflection cubemap).</summary>
         internal bool m_Rgbm;
+        /// <summary>An imported readable cubemap whose faces the importer gives on first access.</summary>
+        string m_AssetGuid;
+        /// <summary>The faces came from the importer, whose GPU faces keep their rows bottom-up:
+        /// uploads reverse the CPU faces' top-down rows back.</summary>
+        bool m_UploadBottomUp;
 
         public Cubemap(int width, TextureFormat textureFormat, bool mipChain) : this(width, textureFormat, mipChain ? -1 : 1, false) { }
         public Cubemap(int width, TextureFormat textureFormat, bool mipChain, bool createUninitialized) : this(width, textureFormat, mipChain ? -1 : 1, createUninitialized) { }
@@ -69,6 +74,7 @@ namespace UnityEngine
         public override bool isReadable => m_Readable;
         internal override int MipmapCount() => m_MipCount;
         public override TextureDimension dimension { get => TextureDimension.Cube; set => throw new NotImplementedException(); }
+        internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(m_Format, !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear);
         internal bool isPreProcessed => false;
         public bool streamingMipmaps { get { Stubs.Ignored("Cubemap.streamingMipmaps", "is not read from the import settings: texture streaming is not simulated"); return false; } }
         public int streamingMipmapsPriority { get { Stubs.Ignored("Cubemap.streamingMipmapsPriority", "is not read from the import settings: texture streaming is not simulated"); return 0; } }
@@ -85,8 +91,55 @@ namespace UnityEngine
             return true;
         }
 
+        /// <summary>The faces of an imported readable cubemap from the importer: bytes read as
+        /// b × (1 / 255), as array and volume textures, and each face's rows top row first (the
+        /// importer keeps them bottom-up for the renderer); tests/projects/texturearrays.</summary>
+        void FetchImported()
+        {
+            var pixels = new Color[6][][];
+            try
+            {
+                for (int f = 0; f < 6; f++)
+                {
+                    pixels[f] = new Color[m_MipCount][];
+                    for (int mip = 0; mip < m_MipCount; mip++)
+                    {
+                        var json = Native.Call("texture-pixels", JsonSerializer.Serialize(new { guid = m_AssetGuid, mip, layer = f }));
+                        using var doc = JsonDocument.Parse(json);
+                        var root = doc.RootElement;
+                        var bytes = Convert.FromBase64String(root.GetProperty("rgba").GetString());
+                        int s = Math.Max(1, m_Width >> mip);
+                        var level = pixels[f][mip] = new Color[s * s];
+                        int stride = bytes.Length / s;
+                        var flipped = new byte[bytes.Length];
+                        for (int y = 0; y < s; y++) Buffer.BlockCopy(bytes, (s - 1 - y) * stride, flipped, y * stride, stride);
+                        bytes = flipped;
+                        if (root.TryGetProperty("format", out var format) && format.GetInt32() == 2)
+                        {
+                            PixelFormats.DecodeFloat(TextureFormat.RGBAFloat, bytes, level);
+                            for (int i = 0; i < level.Length; i++) level[i] = PixelFormats.QuantizeFloat(m_Format, level[i]);
+                        }
+                        else
+                        {
+                            const float scale = 1f / 255f;
+                            for (int i = 0; i < level.Length; i++)
+                                level[i] = new Color(bytes[i * 4] * scale, bytes[i * 4 + 1] * scale, bytes[i * 4 + 2] * scale, bytes[i * 4 + 3] * scale);
+                        }
+                    }
+                }
+                m_Pixels = pixels;
+                m_UploadBottomUp = true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: reading the pixels of {name}: {e.Message}");
+            }
+            m_AssetGuid = null;
+        }
+
         Color[] Level(CubemapFace face, int mip)
         {
+            if (m_Readable && m_Pixels == null && m_AssetGuid != null) FetchImported();
             if (!m_Readable || m_Pixels == null) throw new UnityException($"Texture '{name}' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings.");
             if (face < CubemapFace.PositiveX || face > CubemapFace.NegativeZ) throw new ArgumentException("Invalid cubemap face.", nameof(face));
             if (mip < 0 || mip >= m_MipCount) throw new ArgumentException($"Invalid mip level {mip}.", nameof(mip));
@@ -135,6 +188,8 @@ namespace UnityEngine
         public void Apply(bool updateMipmaps, bool makeNoLongerReadable)
         {
             if (!m_Readable) throw new UnityException($"Texture '{name}' is not readable.");
+            if (m_Pixels == null && m_AssetGuid != null) FetchImported();
+            if (m_Pixels == null) throw new UnityException($"Texture '{name}' is not readable.");
             if (updateMipmaps)
                 for (int f = 0; f < 6; f++)
                     for (int m = 1; m < m_MipCount; m++)
@@ -172,8 +227,12 @@ namespace UnityEngine
             int at = 0;
             for (int f = 0; f < 6; f++)
                 for (int m = 0; m < m_MipCount; m++)
-                    foreach (var c in m_Pixels[f][m])
+                {
+                    int s = Math.Max(1, m_Width >> m);
+                    var level = m_Pixels[f][m];
+                    for (int i = 0; i < level.Length; i++)
                     {
+                        var c = m_UploadBottomUp ? level[(s - 1 - i / s) * s + i % s] : level[i];
                         if (hdr)
                         {
                             BitConverter.TryWriteBytes(new Span<byte>(data, at, 4), c.r);
@@ -189,6 +248,7 @@ namespace UnityEngine
                             at += 4;
                         }
                     }
+                }
             fixed (byte* p = data)
             {
                 var packet = new TexturePacket
@@ -265,11 +325,12 @@ namespace UnityEngine
 
         /// <summary>A cubemap the renderer imported from an image under <paramref name="handle"/>
         /// (a texture asset of the Cube shape): its pixels stay on the GPU.</summary>
-        internal static Cubemap FromImport(ulong handle, string name, in ImportedTextureInfo info)
+        internal static Cubemap FromImport(ulong handle, string guid, string name, in ImportedTextureInfo info)
         {
             Cubemap cube;
             using (ObjectRegistry.AsAssets())
-                cube = new Cubemap { IsPersistentAsset = true, m_Readable = false };
+                cube = new Cubemap { IsPersistentAsset = true, m_Readable = info.Readable != 0 };
+            if (cube.m_Readable) cube.m_AssetGuid = guid;
             cube.m_NativeHandle = handle;
             cube.m_Name = name;
             cube.m_Width = cube.m_Height = info.Width;
@@ -286,6 +347,8 @@ namespace UnityEngine
             cube.wrapModeV = (TextureWrapMode)info.WrapV;
             cube.anisoLevel = info.AnisoLevel;
             cube.ReadSamplerMetadata();
+            var (_, _, wrapW, _) = LayeredTextures.ImportedLayers(guid);
+            cube.wrapModeW = (TextureWrapMode)wrapW;
             return cube;
         }
 

@@ -471,10 +471,11 @@ pub fn upload_texture(
     };
     let width = t.width.max(1) as u32;
     let height = t.height.max(1) as u32;
-    let max_mips = 32 - width.max(height).leading_zeros();
-    let mip_count = (t.mip_count.max(1) as u32).min(max_mips);
     let render_target = t.render_target;
     let layers = t.layers.max(1) as u32;
+    // A Texture3D: its layers are depth slices (mips shrink them too).
+    let volume = t.dimension == 3 && !render_target;
+    let mip_count = gpu_mip_count(width, height, layers, volume, t.mip_count);
     let samples = if render_target {
         t.samples.clamp(1, 8).next_power_of_two().min(8)
     } else {
@@ -483,8 +484,6 @@ pub fn upload_texture(
     let cube = t.dimension == 4 && layers == 6;
     // A CubemapArray: six faces per cube, sampled as a cube array.
     let cube_array = t.dimension == 6 && layers >= 6 && layers % 6 == 0;
-    // A Texture3D: its layers are depth slices (mips shrink them too).
-    let volume = t.dimension == 3 && !render_target;
     // Float textures retain their component count and precision. Packed
     // 11/11/10 float targets (URP's HDR camera and bloom format) keep their own precision,
     // which shows in the rounding of every pass, where the device can draw into them (not
@@ -851,10 +850,33 @@ pub fn default_textures(
     map
 }
 
+/// The mip levels a texture gets on the GPU: the requested count, at most a full chain. A
+/// volume's chain follows its largest side including the depth (a 4x4x16 Texture3D has 5
+/// levels, as in Unity); an array's or cube's layers never add levels.
+fn gpu_mip_count(width: u32, height: u32, layers: u32, volume: bool, requested: i32) -> u32 {
+    let largest = if volume {
+        width.max(height).max(layers)
+    } else {
+        width.max(height)
+    };
+    (requested.max(1) as u32).min(32 - largest.max(1).leading_zeros())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use unbound_runtime::render_protocol::{SubMeshPacket, Vector3, Vector4};
+
+    #[test]
+    fn volumes_deeper_than_wide_keep_every_level() {
+        // tests/projects/texturearrays: a 4x4x16 Texture3D has 5 levels; a 4x4 array of 16
+        // slices has 3.
+        assert_eq!(gpu_mip_count(4, 4, 16, true, 5), 5);
+        assert_eq!(gpu_mip_count(4, 4, 16, false, 5), 3);
+        assert_eq!(gpu_mip_count(16, 8, 12, true, 5), 5);
+        assert_eq!(gpu_mip_count(64, 64, 2, true, 99), 7);
+        assert_eq!(gpu_mip_count(8, 8, 1, false, 0), 1);
+    }
 
     #[test]
     fn half_floats() {

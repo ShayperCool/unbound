@@ -1770,7 +1770,6 @@ float texture as RGBAHalf, so the line has another format and length), while the
 equal the Editor's bit for bit in every profile (unbound-assets test
 `hdr_max_size_resize_matches_the_editor`). Sprite import stays 519/520; asset tests 72/72.
 
-
 ### Imported HDR format and combined texture validation, 2026-10-31
 
 Explicit RGBAFloat platform overrides now retain the existing float32 format through
@@ -1820,6 +1819,107 @@ match exactly. All run outputs, complete unions and immutable matching-artifact
 manifests stay in the validation cache. Combined rendering replay is separate.
 Native API12, render protocol5, PhysX shim9 and shader cache13 are unchanged.
 
+### Texture arrays, volumes and their asset files, 2026-10-31
+
+New probe tests/projects/texturearrays: 25 imported flipbooks (Texture2DArray, Texture3D and Cube
+shapes: cell order, NPOT and max size, sRGB, box/Kaiser, fade with border, coverage with alpha is
+transparency, a normal map, a 3-column 100-texel image, filter and wrapU/V/W, unreadable) and 10
+Texture3D/Texture2DArray/CubemapArray `.asset` files (RGBA32 with and without mips, sRGB and
+linear, RGBAHalf, R8, unreadable). Each value is the info line, GetPixels32, GetPixels and
+GetPixelData of every slice and mip, plus 11 point-sampled GPU readbacks. Two independent Editor
+captures per profile (Gamma, Linear, Android) agree byte for byte and are the published reference.
+
+Measured: slices are the cells top-left first; every slice is a 2D texture of the cell size
+(NPOT, max size and the 2D mip chain per cell); alpha is transparency fills only the first
+cell-sized run of the whole bottom-up flipbook, and a slice's first border mip reads its edge
+columns from the flipbook with the cell width as the stride (both modelled texel for texel); a
+volume halves x, then y, then z with truncating byte means, ignoring sRGB and the mip filter; a
+Cube shape clamps on all axes; GetPixels reads bytes as b * (1/255); R8 reads (r, 1, 1, 1); asset
+files store a GraphicsFormat with `m_ColorSpace`. Texture cache VERSION 12.
+
+Unbound: every info line, 556/556 GetPixels, 520/520 GetPixels32 and 520 of 556 GetPixelData values
+(2,100,272, 510,740 and 511,188 bytes) exact in all three profiles; the 36 others are the imported
+cubes' `Cubemap.GetPixelData`, still a stub. GPU samples 9/11: the two beyond the depth of a
+wrapW-Clamp volume repeat, because the renderer's samplers have no W wrap mode. Regressions:
+textureimport 502/502 mips and 1,732,492/1,732,492 bytes exact in Gamma, Linear and Android;
+spriteimport 519/520; modelimport Gamma/Linear 6032/6033 and URP 7011/7687 (complete union 7768
+keys, the same 757 failures line for line); descriptions 0 differences; unbound-assets 73/73 (new
+`flipbook_arrays_and_volumes_match_the_editor`); api-check 0 errors in 2279 types.
+
+Follow-up the same day: the probe adds a 4x4x16 imported volume and a 4x4 array of 16 slices,
+point-sampled at levels 1, 2 and 4 (new independent Editor pairs agree byte for byte; every earlier
+reference line is unchanged). The Editor reports 5 levels for the volume and 3 for the array.
+Unbound's renderer capped a volume's GPU mip count by width and height only, so the volume's
+level-4 sample read level 2; the count now includes the depth for volumes only. Unbound: 37/37
+info lines, 609/609 GetPixels, 573/573 GetPixels32 and 573/609 GetPixelData values exact (the 36
+others the imported cubes' stub), GPU samples 14/16 (the two wrapW-Clamp ones), in all three
+profiles. textureimport, spriteimport and modelimport (Gamma, Linear, URP failures line for line)
+unchanged; unbound-assets 73/73; api-check 0 errors in 2279 types. ImportedTextureInfo's
+documented dimensions now include 3 and 5 (layout unchanged).
+
+Combined with the later physics, audio and sampler-property work (2026-11-01): the texture array
+captures are byte-identical to the earlier ones in all three profiles (the same 38 differences:
+36 imported-cube `GetPixelData` values and 2 wrapW-Clamp samples). textureimport (502/502 mips,
+1,732,492/1,732,492 bytes in each profile), spriteimport (519/520) and modelimport (Gamma and
+Linear 6032/6033, URP 7011/7687 with 550 missing, 126 differing and 81 extra keys, union 7768;
+descriptions 0 differences) captures are byte-identical to those of the runtime without the
+texture array work. unbound-assets 73/73; api-check 0 errors in 2289 types; regenerating the
+compatibility stubs changes nothing. Texture cache VERSION 12 (13 since the storage corrections below); native and render protocol
+versions and texture packet layouts unchanged.
+
+### Texture2D GetPixels byte conversion, 2026-11-01
+
+New probe tests/projects/texturepixels (on the texture array fixture): 16x16 textures of RGBA32,
+ARGB32, BGRA32, RGB24, Alpha8, R8, RG16, R16, RGBA4444, ARGB4444 and RGB565, sRGB and linear, with
+explicit mips, and a `LoadImage` result, every byte position running through 0..255. Two
+independent Editor captures per profile (Gamma, Linear) agree byte for byte. `GetPixels` (every
+overload and level) reads a byte b as b * (1 / 255) in single precision; `GetPixel` and Alpha8's
+`GetPixels` read b / 255. The two differ in the last bit for 126 of the 256 byte values (51 gives
+0.200000018 against 0.2). Unbound's Texture2D `GetPixels` now multiplies for byte formats other
+than Alpha8; `GetPixel`, Color32, `EncodeToEXR` and `RenderToCubemap` keep dividing.
+
+Unbound on the probe: 136 differences in Gamma and 138 in Linear before, 103 and 105 after (33
+resolved, none introduced). Every `GetPixels` value of RGBA32, ARGB32, BGRA32, RGB24, the linear
+and mipmapped RGBA32 and the loaded PNG is now exact. Remaining, unchanged: `GetPixelData` of
+script-made textures throws (27 values), the graphicsFormat of ARGB32 and Alpha8 (and in Linear
+of R8 and RG16) and the loaded PNG's format, R8 reading (r, 0, 0, 1) instead of (r, 1, 1, 1), Alpha8's `GetPixels32`
+(1, 1, 1, a) instead of (0, 0, 0, a), `SetPixelData` of RG16, R16, RGB565 and RGBA/ARGB4444
+(grey texels), `GetPixelBilinear` at texel centres (23 values) and `GetPixel` of those R8 and
+`SetPixelData` cases (11 values). tests/projects/resources at its 2e-3 tolerance is unchanged (501/539 values, 62/62
+images); exact float bits of its 208 Texture2D mip values go from 149 to 176 (none lost).
+Managed tests 1264/1275 (the 11 failures of the runtime before, 4 new tests pass).
+
+### Layered texture storage corrections, 2026-11-01
+
+The texture pixel probe adds script-made volumes, BGRA32 array and volume `.asset` files, an
+imported readable PNG encoded to EXR as its first read and GPU draws of the fixture's imported
+readable cubemaps before and after `Apply(false)`; a new pair of independent Editor captures per
+profile agrees byte for byte and keeps every earlier reference line. Measured: `Texture3D.GetPixel`
+reads b / 255 (its `GetPixels` b * (1 / 255)) and `SetPixel` rounds halves up; B8G8R8A8 assets hold
+B, G, R, A bytes and report BGRA32; EXR encoding succeeds as the first access; `Apply(false)`
+leaves an imported cubemap's GPU faces unchanged.
+
+Corrections: R and RG float arrays, volumes and cube arrays read one in the channels they do not
+store (12 resources values had read zero); layered sizes are computed in 64 bits and a texture
+larger than one array fails with its size instead of wrapping; EXR encoding fetches an imported
+texture's pixels; an imported readable cubemap's `Apply` fetches its faces and uploads them in the
+import's row order; B8G8R8A8 assets read as BGRA32 bytes; `Texture3D.GetPixel`/`SetPixel` touch
+one texel (b / 255, halves rounded up); single-cell flipbook arrays and volumes stay uncompressed
+like the others, because the renderer binds them through RGBA8 views (texture cache VERSION 13).
+
+Against the runtime without the texture array work: the texture pixel probe goes from 240 to 146
+differences in Gamma and 242 to 148 in Linear (94 resolved, none introduced). Remaining there,
+unchanged: the Texture2D gaps above, `GetPixelData` of the imported PNG, `GraphicsFormatUtility.
+GetTextureFormat(B8G8R8A8_*)` returning ARGB32 instead of BGRA32, the imported cubemaps' GPU faces
+drawn upside down already before any CPU access (36 values: the import upload's row order), and
+one-ulp RGFloat differences that come from the probe's own float arithmetic in the Editor. The
+texture array probe, which that runtime could not run (it stopped with an exception before
+writing), keeps the earlier 37/37, 609/609, 573/573, 573/609 and 14/16 values in every profile.
+tests/projects/resources is identical to that runtime's (513/539 values, 62/62 images, every
+image byte for byte); exact float bits rise from 472 to 499 of its 540 keys (the 27 Texture2D
+`GetPixels` mip values), none lost. textureimport, spriteimport and modelimport captures are
+byte-identical to it. Managed tests 1275/1286 with the same 11 failures; unbound-assets 74/74;
+api-check 0 errors in 2289 types; regenerating the compatibility stubs changes nothing.
 
 ### HDR and count rendering preservation, 2026-10-31
 
