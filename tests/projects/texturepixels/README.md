@@ -20,7 +20,10 @@ It then records:
 * the fixture's imported readable cubemaps (CubeStrip, CubeStripLinear): every face drawn by the
   GPU (`Assets/Pixels/Shaders/SampleCube.shader`, point by point at the face's texel centres)
   before any CPU access, after `Apply(false)` as the first access, and after `GetPixels` then
-  `Apply(false)`.
+  `Apply(false)`;
+* one script-made 4x4x4 Texture3D, bound to the volume sampling material throughout, drawn at
+  depths 5 and -2 (beyond its 4 slices) while its `wrapModeW` goes Repeat, Clamp, Repeat, then
+  Clamp with an `Apply(false)` and Repeat again.
 
 `run.py create` has the Editor make those assets (`Assets/Pixels/Editor/PixelsAssets.cs`); the
 other files of `Assets/Pixels` are copied into every capture's project.
@@ -62,3 +65,5 @@ Gamma and Linear read the same floats.
 * `EncodeToEXR` succeeds on a readable imported texture as its first CPU access.
 * An imported readable cubemap's `Apply(false)`, as the first access or after `GetPixels`, leaves
   every face the GPU draws unchanged.
+* Changing a bound Texture3D's `wrapModeW` takes effect on the next draw: Clamp repeats the edge
+  slice beyond the depth, Repeat wraps again, with or without an `Apply` in between.
