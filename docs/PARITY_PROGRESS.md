@@ -2414,3 +2414,14 @@ superSize one; the probe skips those there.
 Managed tests pass 1,289/1,300 with the same eleven failures; runtime 50 and app 20
 Rust tests pass; API checking has zero errors in 2,292 types and regeneration only
 removes the ScreenCapture module's stubs. No ABI, protocol or cache version changed.
+
+### 2026-11-01 combined async, culling and module validation
+
+Frozen matching Root `5e396e08` runtime: 33 files; tested and packaged Core identical.
+Managed 1352/1363, same eleven failure names/messages; project/runtime Rust 23/23 and 57/57.
+API preflight reused: 0/2301 errors/types; only the ten Core RequestAsync stubs removed.
+InstantiateAsync 731/777, retained 46 missing/46 extra; CullingGroup 1147/1149, retained 2/3.
+Module compile 7/7, Play and Edit-to-Play 8/8; five assembly-identity/transition checks pass.
+CLI fixture expectation corrected to measured ARGB32 and passed; no runtime-source changes.
+GPU Awaitable replay and final Root acceptance remain pending; no new Native captures.
+Full reports/manifests: `~/.cache/unbound/validation/runs/integrated-root-validation-20261101-t3-6df242fc/`.
