@@ -945,7 +945,8 @@ namespace Unbound.Runtime
         /// <summary>An agent following a partial path searches it again once more than a second
         /// has passed since the path was found, counting the update that found it, while it walks
         /// towards the path's end (measured, tests/projects/navlinks: a link activated meanwhile
-        /// is taken at the next search; an agent that has reached the end searches no more).</summary>
+        /// is taken at the next search; an agent that has reached the end searches no more; an
+        /// agent with autoRepath off never searches again by itself).</summary>
         static void ReplanPartialPaths()
         {
             float dt = Time.deltaTime;
@@ -953,7 +954,7 @@ namespace Unbound.Runtime
             foreach (var agent in s_Agents)
             {
                 var ag = agent.m_Crowd;
-                if (ag == null || ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING || agent.pathPending || !agent.hasPath
+                if (ag == null || !agent.autoRepath || ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING || agent.pathPending || !agent.hasPath
                     || ag.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID || !ag.partial)
                     continue;
                 agent.m_ReplanTime += dt;
