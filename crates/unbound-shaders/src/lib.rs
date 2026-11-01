@@ -1344,6 +1344,32 @@ float4 frag(v2f i, bool front : SV_IsFrontFace) : SV_Target { if (i.needDiscard)
     }
 
     #[test]
+    fn integer_varyings_interpolate_flat() {
+        // Unity's custom render texture vertex program passes `uint primitiveID : TEXCOORD2;`.
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+struct v2f { float4 pos : SV_POSITION; uint id : TEXCOORD2; int2 pair : TEXCOORD3; float2 uv : TEXCOORD0; };
+v2f vert(uint vertexID : SV_VertexID) { v2f o; o.pos = float4(vertexID & 1, vertexID >> 1, 0, 1); o.id = vertexID / 6; o.pair = int2(vertexID, -1); o.uv = o.pos.xy; return o; }
+float4 frag(v2f i) : SV_Target { return float4(i.id, i.pair, i.uv.x); }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        assert!(
+            compiled.vertex.contains("@interpolate(flat)"),
+            "{}",
+            compiled.vertex
+        );
+        assert!(
+            compiled.fragment.contains("@interpolate(flat)"),
+            "{}",
+            compiled.fragment
+        );
+    }
+
+    #[test]
     fn texture_slots_record_their_texel_type() {
         // Shader cache 15: float, integer and depth declarations give the slot its texel type;
         // integer slots cannot be filtered.
