@@ -319,7 +319,6 @@ namespace UnityEngine
                 return;
             }
             int w = x1 - x0, h = y1 - y0;
-            bool hdr = m_Hdr != null;
             var bytes = Native.ReadPixels(active != null ? active.EnsureCreated() : 0, x0, y0, w, h, true);
             if (bytes == null)
             {
@@ -327,9 +326,8 @@ namespace UnityEngine
                 return;
             }
             // ReadPixels copies attachment values, including float-to-byte reads, regardless
-            // of the destination's linear flag. The engine's linear screen storage needs its
-            // existing presentation encoding for a byte screenshot; it is not an explicit RT.
-            bool encode = active == null && !hdr && !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear;
+            // of the destination's linear flag; the screen's are its 8-bit (in Linear,
+            // sRGB-encoded) bytes.
             unsafe
             {
                 fixed (byte* p = bytes)
@@ -343,7 +341,6 @@ namespace UnityEngine
                             int tx = destX + (x0 - (int)source.x) + col;
                             var c = new Color(f[0], f[1], f[2], f[3]);
                             f += 4;
-                            if (encode) c = c.gamma;
                             Write(ty * m_Width + tx, c);
                         }
                     }
