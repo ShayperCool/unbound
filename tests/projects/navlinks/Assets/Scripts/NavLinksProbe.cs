@@ -338,6 +338,15 @@ public class NavLinksProbe : MonoBehaviour
                     for (int k = 0; k < corners.Length; k++) c.Append(k > 0 ? "," : "").Append(V(corners[k]));
                     Line(lane.Name, "-", 0, "\"path\":" + B(found) + ",\"ps\":" + Text(path.status.ToString()) + ",\"c\":[" + c + "]");
                 }
+                // Then the schedule of lane "inactive" with autoRepath off: a partial path while the
+                // link is off, the link switched on midway, a new destination later.
+                lane.Link.activated = false;
+                agent = Agent(lane, "a", a, b, g => g.autoRepath = false);
+                lane.Act = f =>
+                {
+                    if (f == 100) lane.Link.activated = true;
+                    if (f == 200) agent.SetDestination(lane.O + b);
+                };
                 break;
             case "disableagent":
                 lane.Link = AddLink(lane, ls, le);
