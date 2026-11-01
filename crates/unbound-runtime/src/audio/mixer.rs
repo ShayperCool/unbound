@@ -1089,16 +1089,23 @@ impl Mixer {
                 node.buffer[..n * 2].fill(0.0);
             }
             if root == handle {
-                for &sample in &node.buffer[..n * 2] {
-                    node.energy += sample as f64 * sample as f64;
-                }
                 let window = config.buffer_size.max(1) as u64;
-                if (t0 + n as u64) % window == 0 {
-                    if node.energy / (window * 2) as f64
-                        >= (node.spec.suspend_threshold as f64).powi(2) {
-                        node.last_active = t0 + n as u64 - window;
+                let mut start = 0;
+                while start < n {
+                    let frame = t0 + start as u64;
+                    let count = (n - start).min((window - frame % window) as usize);
+                    for &sample in &node.buffer[start * 2..(start + count) * 2] {
+                        node.energy += sample as f64 * sample as f64;
                     }
-                    node.energy = 0.0;
+                    let end = frame + count as u64;
+                    if end % window == 0 {
+                        if node.energy / (window * 2) as f64
+                            >= (node.spec.suspend_threshold as f64).powi(2) {
+                            node.last_active = end - window;
+                        }
+                        node.energy = 0.0;
+                    }
+                    start += count;
                 }
             }
             if node.spec.observe
@@ -1780,6 +1787,39 @@ mod tests {
         assert_eq!(m.source_state(8).main, voice_state::PLAYING);
         assert_eq!(m.source_state(8).is_virtual, 0);
         assert_eq!(m.source_state(7).is_virtual, 1);
+    }
+
+    #[test]
+    fn remote_sized_packets_observe_each_dsp_rms_window() {
+        fn prepared() -> Mixer {
+            let mut mixer = Mixer::new(MixerConfig::default());
+            let mut root = filter_group(3, 0, "Echo");
+            root.mixer = 3;
+            root.enable_suspend = true;
+            root.suspend_threshold = 0.01;
+            root.effects[0].delay = 100.0;
+            root.effects[0].decay = 1.0;
+            mixer.configure_group(root).unwrap();
+            let mut input = vec![0.0; (1024 + 4800) * 2];
+            input[1024 * 2..].fill(0.00999);
+            mixer.add_clip(1, Clip::new(2, 48000, input));
+            source_with(&mut mixer, 7, 1, |p| p.group = 3);
+            play(&mut mixer, 7, command::PLAY, 0.0);
+            mixer.update_suspension();
+            mixer.render(&mut vec![0.0; 6144 * 2], 2);
+            assert!(mixer.sources[&7].main.is_none());
+            mixer
+        }
+        let mut dsp = prepared();
+        let mut remote = prepared();
+        for (mixer, packet) in [(&mut dsp, 1024), (&mut remote, 480)] {
+            for _ in 0..(61440 / packet) {
+                mixer.update_suspension();
+                mixer.render(&mut vec![0.0; packet * 2], 2);
+            }
+            assert!(mixer.group_nodes[&3].suspended, "packet={packet}");
+        }
+        assert_eq!(dsp.group_nodes[&3].last_active, remote.group_nodes[&3].last_active);
     }
 
     #[test]
