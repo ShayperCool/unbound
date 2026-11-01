@@ -289,9 +289,15 @@ namespace UnityEngine
         internal static Serialized Read(Texture texture, YNode body)
         {
             var graphics = (GraphicsFormat)body.Int("m_Format");
-            // R8_UNorm is also Alpha8's GraphicsFormat; these assets read as R8
-            // (tests/projects/texturearrays).
-            var format = graphics == GraphicsFormat.R8_UNorm ? TextureFormat.R8 : GraphicsFormatUtility.GetTextureFormat(graphics);
+            // The stored bytes follow the GraphicsFormat. R8_UNorm is also Alpha8's GraphicsFormat;
+            // these assets read as R8 (tests/projects/texturearrays). B8G8R8A8 bytes are BGRA32's
+            // (tests/projects/texturepixels), not ARGB32's, which the table also maps to it.
+            var format = graphics switch
+            {
+                GraphicsFormat.R8_UNorm => TextureFormat.R8,
+                GraphicsFormat.B8G8R8A8_UNorm or GraphicsFormat.B8G8R8A8_SRGB => TextureFormat.BGRA32,
+                _ => GraphicsFormatUtility.GetTextureFormat(graphics),
+            };
             bool srgb = body.Int("m_ColorSpace") == 1 || GraphicsFormatUtility.IsSRGBFormat(graphics);
             var settings = body.Get("m_TextureSettings");
             if (settings != null)
