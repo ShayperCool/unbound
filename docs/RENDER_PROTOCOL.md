@@ -16,6 +16,32 @@ Meshes, textures and materials are identified by `u64` handles the managed side 
 is destroyed. Imported textures are uploaded by the native side itself (`import_texture`), which
 knows the asset pipeline and its cache.
 
+### Render protocol 6: texture handle element bits (NativeApi 13)
+
+Allocated handles never set bits 62 and 63 (`render_protocol::handle::RESERVED`, `3 << 62`);
+the renderer's own textures (`GrabPass`) count down from `handle::PLAIN_MAX` (`!RESERVED`).
+A **sampled binding** may set bit 62, `DEPTH_ELEMENT` (`1 << 62`): the render texture's depth
+buffer, sampled as `(d, 0, 0, 1)` (`RenderTextureSubElement.Depth`). Sampled bindings are a
+material's texture property (`update_material`), a draw's per-draw texture property (`Draw`) and a
+global texture (`Global`). Everywhere else a handle must be plain: uploads (`video_frame`'s planes too), imports, releases,
+read backs, `SetTarget`/`SetTargets` (the depth's `u64::MAX` "none" stays valid), `CopyTexture`,
+`GenerateMips`, a draw's main texture, image properties and kernel (`Dispatch`) properties. A
+reserved bit where it is not allowed, bit 63, or bit 62 alone is an error: the stream is rejected
+as malformed, the material update or the call is refused, with a logged message.
+
+The renderer binds a depth element through the texture's depth copy (a float color texture of its
+size), made the first time a draw samples it. A multisampled depth buffer copies one sample (the
+one a quarter pixel left of the center at 2 samples). The copy is brought up to date before the
+draw that samples it, also when the texture's depth buffer is the current target's (its own or
+attached to another color). It is then copied after every group of passes that draws into that
+depth buffer. Comparison (depth) slots read the depth buffer itself. Bind groups are keyed by the
+handle as bound, element bits included, and the texture's generation, so a texture's color and
+depth element never share one; `_MainTex` too, and `<name>_TexelSize` is the texture's. Managed getters
+(`Material.GetTexture`) return the texture: the bit exists only on the wire.
+
+The managed side refuses a native side of another `NativeApi.Version` at startup (`Native.Initialize`),
+before anything renders, in both directions.
+
 ## Functions (in `NativeApi`, after the version 1 entries)
 
 | Function | Purpose |
@@ -134,7 +160,8 @@ before and after it, as on Unity's render thread) and a read back.
                                                 // first instance; else vertex count, instances, first vertex,
                                                 // first instance)
 23 GenerateMips u64 texture                      // filter a render target's lower mip levels
-property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 + f32x4 st, 3 int i32, 4 matrix,
+property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 (element bits in Draw and Global
+            only, see render protocol 6) + f32x4 st, 3 int i32, 4 matrix,
             5 buffer u64, 6 array u32 components (0: consecutive values) u32 n f32[n], 7 image u64 texture i32 mip)
 ```
 
@@ -158,6 +185,13 @@ offscreen targets (`Rgba8Unorm` with gamma values in gamma projects, `Rgba16Floa
 Format 0 textures are sampled raw in gamma projects and through an sRGB view in linear ones;
 Alpha8 samples as `(0, 0, 0, a)`, and `_TextureSampleAdd` defaults to `(1, 1, 1, 0)` for it as
 Unity's canvas sets it.
+
+A texture slot's texel type comes from its declaration (shader cache format 15): floats, signed or
+unsigned integers (`Texture2D<uint2>`, read unfiltered) or depth. An integer slot reads a float
+texture's values as their bits within its size and zeros where nothing is bound, as Unity does on
+OpenGL Core (tests/projects/rtdepth); the bits are copied into an integer texture right before
+each pass that reads them (after a `GrabPass` before it). An integer slot that is not 2D (bound or
+not), or bound to a layered texture or a depth element, skips the draw with a message.
 
 A material's shader name selects its shader: the project's `.shader` source, else Unity's built-in
 one (compiled from the release's `builtin_shaders` sources). The renderer draws the forward passes

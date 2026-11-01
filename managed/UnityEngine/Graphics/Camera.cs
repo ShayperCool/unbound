@@ -168,7 +168,14 @@ namespace UnityEngine
                 m_TargetColorBuffers = null;
             }
         }
-        public RenderTexture activeTexture => m_TargetTexture;
+        /// <summary>The texture the camera draws into while it renders (an HDR intermediate; null
+        /// for the screen or its stand-in: measured, tests/projects/rtdepth target.*.active), else
+        /// its target texture.</summary>
+        public RenderTexture activeTexture => m_Rendering ? (m_RenderingInto == RenderTexture.ScreenStandIn ? null : m_RenderingInto) : m_TargetTexture;
+
+        /// <summary>Set by FrameBuilder while this camera renders.</summary>
+        internal bool m_Rendering;
+        internal RenderTexture m_RenderingInto;
         public int targetDisplay { get => m_TargetDisplay; set => m_TargetDisplay = value; }
         public bool allowHDR { get => m_AllowHDR; set => m_AllowHDR = value; }
         public bool allowMSAA { get => m_AllowMSAA; set => m_AllowMSAA = value; }

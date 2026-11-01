@@ -303,7 +303,9 @@ namespace UnityEngine
         public void ReadPixels(Rect source, int destX, int destY, bool recalculateMipMaps)
         {
             RequireReadable();
-            var active = RenderTexture.active;
+            // The active target as drawn into: a screen camera's stand-in while it renders (what
+            // the screen shows once it is presented).
+            var active = RenderTexture.ActiveTarget;
             int sourceWidth = active != null ? active.width : Screen.width;
             int sourceHeight = active != null ? active.height : Screen.height;
             int x0 = Math.Max(0, (int)source.x), y0 = Math.Max(0, (int)source.y);

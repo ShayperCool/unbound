@@ -880,10 +880,12 @@ namespace Unbound.Runtime
         internal static void RenderCamera(Camera camera, bool automatic = false, bool restoreActive = true)
         {
             var previousCamera = Camera.current;
-            var previousActive = RenderTexture.active;
+            var previousActive = RenderTexture.ActiveTarget;
+            var previousStandIn = RenderTexture.ScreenStandIn;
             var previousProjection = Immediate.Projection;
             var previousModelView = Immediate.ModelView;
             Camera.current = camera;
+            RenderTexture screenStandIn = null;
             try
             {
                 Camera.onPreCull?.Invoke(camera);
@@ -955,6 +957,20 @@ namespace Unbound.Runtime
                 int cameraSamples = qualitySamples
                     ? (camera.allowMSAA ? Math.Max(1, QualitySettings.antiAliasing) : 1)
                     : cameraTarget?.antiAliasing ?? 1;
+                // A screen camera whose command buffers may read or draw into CameraTarget draws
+                // into a texture that stands for the screen, copied onto the screen at the end: a
+                // Blit from CameraTarget copies the camera's image (measured: tests/projects/rtdepth
+                // target.screen.*). Only full-screen cameras that clear their color take it;
+                // image effects keep their null destination.
+                if (cameraTarget == null && buffers == null && !deferred && camera.commandBufferCount > 0
+                    && effects.Count == 0 && opaqueEffects.Count == 0 && camera.rect == new Rect(0f, 0f, 1f, 1f)
+                    && camera.clearFlags is CameraClearFlags.Skybox or CameraClearFlags.SolidColor)
+                {
+                    screenStandIn = RenderTexture.GetTemporary(Math.Max(1, camera.pixelWidth), Math.Max(1, camera.pixelHeight), 24,
+                        RenderTextureFormat.Default, RenderTextureReadWrite.Default, 1);
+                    cameraTarget = screenStandIn;
+                    RenderTexture.ScreenStandIn = screenStandIn;
+                }
                 RenderTexture sceneTarget = cameraTarget;
                 var viewport = context.Viewport;
                 if (effects.Count > 0 || opaqueEffects.Count > 0)
@@ -1028,6 +1044,8 @@ namespace Unbound.Runtime
                 }
                 ulong target = sceneTarget != null ? TextureHandles.Of(sceneTarget) : 0;
                 RenderTexture.SetActiveQuietly(sceneTarget);
+                camera.m_Rendering = true;
+                camera.m_RenderingInto = sceneTarget;
                 Immediate.Projection = context.Projection;
                 Immediate.ModelView = context.View;
                 SetupCamera(target, viewport, deferred ? CameraClearFlags.Nothing : camera.clearFlags, camera.backgroundColor, context.View, context.Projection, 0);
@@ -1104,10 +1122,22 @@ namespace Unbound.Runtime
                     Graphics.Blit(sceneTarget, cameraTarget);
                     RenderTexture.ReleaseTemporary(sceneTarget);
                 }
+                // A single-sample HDR intermediate is resolved before the late events: they see
+                // the camera's target (measured: tests/projects/rtdepth target.*.hdr.AfterEverything).
+                if (hdrIntermediate && cameraSamples == 1) ResolveIntermediate();
                 var lateTarget = msaaTarget != null ? sceneTarget : cameraTarget;
                 RunEvent(camera, CameraEvent.AfterImageEffects, lateTarget);
                 RunEvent(camera, CameraEvent.AfterEverything, lateTarget);
                 ResolveIntermediate();
+                if (screenStandIn != null)
+                {
+                    // Presenting the stand-in is a copy, not a draw: GL.wireframe leaves it alone.
+                    RenderTexture.ScreenStandIn = previousStandIn;
+                    bool wireframe = GL.wireframe;
+                    if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
+                    Graphics.Blit(screenStandIn, (RenderTexture)null);
+                    if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, true);
+                }
                 // What the player loop rendered is the next render's previous view (measured:
                 // Camera.Render leaves it).
                 if (automatic)
@@ -1118,6 +1148,10 @@ namespace Unbound.Runtime
             }
             finally
             {
+                camera.m_Rendering = false;
+                camera.m_RenderingInto = null;
+                RenderTexture.ScreenStandIn = previousStandIn;
+                if (screenStandIn != null) RenderTexture.ReleaseTemporary(screenStandIn);
                 ReleaseShadowTemporaries();
                 CommandBuffer.ReleaseNamedTemporaries();
                 Camera.current = previousCamera;
@@ -1237,7 +1271,11 @@ namespace Unbound.Runtime
             if (saved.Color != handle) GfxStream.SetTarget(handle);
             foreach (var buffer in buffers.ToArray())
             {
-                var context = new CommandBuffer.Context { Camera = camera, CameraTarget = target };
+                var context = new CommandBuffer.Context
+                {
+                    Camera = camera, CameraTarget = target,
+                    Screen = camera.targetTexture == null && camera.BufferTarget == null,
+                };
                 try { buffer.ExecuteIn(context); }
                 catch (Exception e) { Debug.LogException(e); }
             }
