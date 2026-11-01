@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Reflection;
 using Unbound.Runtime;
 using UnityEngine.LowLevel;
@@ -206,6 +207,115 @@ namespace UnityEngine.Tests
                 Actions(node).Remove(observer);
             }
             Object.DestroyImmediate(probe.gameObject);
+            Object.DestroyImmediate(camera.gameObject);
+        }
+
+        /// <summary>Work registered at a drain node after the drain sees the target already
+        /// destroyed, at each of the three nodes: the engine object gone and the reference null,
+        /// not merely the drain's action ordered first.</summary>
+        [Theory]
+        [InlineData(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate))]
+        [InlineData(typeof(PL.Update.ScriptRunDelayedDynamicFrameRate))]
+        [InlineData(typeof(PL.PostLateUpdate.ScriptRunDelayedDynamicFrameRate))]
+        public void AnObserverAfterTheDrainSeesTheTargetAlreadyDestroyed(Type node)
+        {
+            var camera = new GameObject("camera").AddComponent<Camera>();
+            var trail = ExpiredTrail("autodestruct.observed");
+            var go = trail.gameObject;
+            Collect(trail, camera);
+            Assert.Equal(1, Requests(trail));
+            bool? destroyed = null, isNull = null, trailNull = null;
+            int queued = -1;
+            Action observer = () =>
+            {
+                destroyed = go.m_Destroyed;
+                isNull = go == null;
+                trailNull = trail == null;
+                queued = Requests(trail);
+            };
+            PlayerLoopDriver.Register(node, observer);
+            try
+            {
+                Assert.True(Actions(node).IndexOf(observer) > Actions(node).FindIndex(IsDrain));
+                Assert.False(go.m_Destroyed);
+                RunNode(node);
+                Assert.True(destroyed);
+                Assert.True(isNull);
+                Assert.True(trailNull);
+                Assert.Equal(0, queued);
+            }
+            finally
+            {
+                Actions(node).Remove(observer);
+            }
+            Object.DestroyImmediate(camera.gameObject);
+        }
+
+        /// <summary>The drain carries out the request as it was made: a trail disabled, its object
+        /// deactivated, or its autodestruct turned off after the request is still destroyed, and
+        /// none of these makes or cancels a request before the drain.</summary>
+        [Theory]
+        [InlineData("disabled")]
+        [InlineData("deactivated")]
+        [InlineData("autodestructOff")]
+        public void ATrailChangedAfterItsRequestIsStillDestroyedAtTheDrain(string change)
+        {
+            var camera = new GameObject("camera").AddComponent<Camera>();
+            var trail = ExpiredTrail("autodestruct.changed");
+            var go = trail.gameObject;
+            Collect(trail, camera);
+            Assert.Equal(1, Requests(trail));
+            switch (change)
+            {
+                case "disabled": trail.enabled = false; break;
+                case "deactivated": go.SetActive(false); break;
+                case "autodestructOff": trail.autodestruct = false; break;
+            }
+            var trails = (IList)s_TrailSystem.GetField("s_Trails", Static).GetValue(null);
+            if (change != "autodestructOff") Assert.DoesNotContain(trail, trails.Cast<TrailRenderer>());
+            Assert.False(go.m_Destroyed);
+            Assert.False(go.m_PendingDestroy);
+            Assert.Equal(1, Requests(trail));
+            RunNode(typeof(PL.Update.ScriptRunDelayedDynamicFrameRate));
+            Assert.True(go == null);
+            Assert.True(trail == null);
+            Assert.Equal(0, Requests(trail));
+            Object.DestroyImmediate(camera.gameObject);
+        }
+
+        /// <summary>Only the three delayed-callback nodes drain: BakeMesh, bounds, the movement
+        /// update and the end-of-frame nodes leave a queued request queued and its object alive.</summary>
+        [Fact]
+        public void NeitherBakeMeshNorTheEndOfFrameDrainsARequest()
+        {
+            var camera = new GameObject("camera").AddComponent<Camera>();
+            var trail = ExpiredTrail("autodestruct.notdrained");
+            var go = trail.gameObject;
+            Collect(trail, camera);
+            Assert.Equal(1, Requests(trail));
+            var mesh = new Mesh();
+            Action[] others =
+            {
+                () => trail.BakeMesh(mesh, camera),
+                () => trail.BakeMesh(mesh, camera, true),
+                () => trail.GetLocalBounds(),
+                () => trail.UpdateTrail(),
+                () => RunNode(typeof(PL.PostLateUpdate.PlayerSendFrameStarted)),
+                () => RunNode(typeof(PL.PostLateUpdate.TriggerEndOfFrameCallbacks)),
+                () => RunNode(typeof(PL.PostLateUpdate.PlayerSendFrameComplete)),
+            };
+            foreach (var other in others)
+            {
+                other();
+                Assert.False(go.m_Destroyed);
+                Assert.False(go.m_PendingDestroy);
+                Assert.True(trail.m_AutodestructRequested);
+                Assert.Equal(1, Requests(trail));
+            }
+            RunNode(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate));
+            Assert.True(go == null);
+            Assert.Equal(0, Requests(trail));
+            Object.DestroyImmediate(mesh);
             Object.DestroyImmediate(camera.gameObject);
         }
 
