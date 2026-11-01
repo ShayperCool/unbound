@@ -141,6 +141,14 @@ namespace Unbound.Runtime
             s_Engine[system] = next;
         }
 
+        /// <summary>Appends without changing a list that a current node invocation is enumerating.</summary>
+        internal static void RegisterLast(Type system, Action action)
+        {
+            var next = s_Engine.TryGetValue(system, out var list) ? new List<Action>(list) : new List<Action>();
+            next.Add(action);
+            s_Engine[system] = next;
+        }
+
         internal static PlayerLoopSystem DefaultLoop()
         {
             var phases = new[]

@@ -1173,7 +1173,7 @@ namespace UnityEngine
                 if (!s_Registered)
                 {
                     s_Registered = true;
-                    PlayerLoopDriver.Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), UpdateAll);
+                    PlayerLoopDriver.RegisterLast(typeof(PL.PostLateUpdate.UpdateAllRenderers), UpdateAll);
                     // Native automatic requests use mode 0x43: fixed mask 1 and dynamic mask 2
                     // consume them; startup mask 4 and EOF mask 0x20 do not. Prepend so existing
                     // Invokes/coroutines at these same nodes observe the completed destruction.
