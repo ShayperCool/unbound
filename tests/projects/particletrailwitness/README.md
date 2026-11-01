@@ -80,3 +80,13 @@ raw byte/leaf differences. Numerical geometry keeps the streams comparator's
 2e-4 absolute/relative tolerance. Raw buffers must agree with their complete typed
 views. Tolerated coordinate bit differences are explicitly reported, never called
 bit-exact parity. The original full-storage `publish` command still fails honestly.
+
+The measured automatic trail keeps 46/31/15 stored points. Its newest tail starts
+at the birth coordinate, with the first scheduled sample's W of .7666667. The
+engine now retains that coordinate through newborn integration and consumes it
+in the first scheduled sample. It adds no extra point and moves no lifecycle event.
+Native's camera-plane offsets and shallow-angle miter blend close the two edge
+pixels as well. The blend factor 50 was read from StoreLineData in the installed
+6000.0.71f1 binary, then checked against all 190 captured vertices and 552 indices.
+This mechanism is an inference supported by static code and public geometry;
+the exact public repeat and final image pixel equality are measurements.
