@@ -549,6 +549,18 @@ pub trait RenderBackend: Send + Sync {
     fn read_pixels(&self, _texture: u64, _rect: [i32; 4], _float: bool) -> Option<Vec<u8>> {
         None
     }
+    /// A rectangle of a mip level of a texture's layer (an array slice, a cube face, a volume's
+    /// depth slice), as [`Backend::read_pixels`] gives it (NativeApi 15).
+    fn read_texture(
+        &self,
+        _texture: u64,
+        _mip: u32,
+        _layer: u32,
+        _rect: [i32; 4],
+        _float: bool,
+    ) -> Option<Vec<u8>> {
+        None
+    }
     /// Bytes of a buffer after every command submitted so far.
     fn read_buffer(&self, _buffer: u64, _offset: u64, _size: u64) -> Option<Vec<u8>> {
         None

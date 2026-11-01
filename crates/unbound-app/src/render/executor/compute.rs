@@ -19,13 +19,33 @@ pub struct GpuBuffer {
     /// A constant buffer's bytes as written (draws copy them into their uniform blocks; what
     /// compute kernels write into it is not seen).
     pub shadow: Option<Vec<u8>>,
+    /// The hidden counter of an Append or Counter buffer: one `u32`, bound where a kernel's
+    /// `<name>@count` block (glslang's counter of `<name>`) is.
+    pub counter: Option<wgpu::Buffer>,
+    /// A dispatch has bound the counter: until then Unity's CopyCount writes nothing (while
+    /// SetCounterValue still sets where the first dispatch starts).
+    pub counter_used: bool,
 }
 
 pub struct DispatchOp {
     pipeline: wgpu::ComputePipeline,
     bind_group: wgpu::BindGroup,
     groups: [u32; 3],
+    /// Group counts read on the GPU: the arguments buffer and a byte offset.
+    indirect: Option<(wgpu::Buffer, u64)>,
 }
+
+/// A copy between buffers (or from a buffer's counter), encoded in order with the passes.
+pub struct BufferCopyOp {
+    source: wgpu::Buffer,
+    source_offset: u64,
+    destination: wgpu::Buffer,
+    destination_offset: u64,
+    size: u64,
+}
+
+/// The suffix glslang gives the block holding a buffer's hidden counter.
+const COUNTER_SUFFIX: &str = "@count";
 
 pub struct KernelGpu {
     kernel: Arc<CompiledKernel>,
@@ -155,9 +175,8 @@ impl UnityRenderer {
         if usage & buffer::INDEX != 0 {
             flags |= wgpu::BufferUsages::INDEX;
         }
-        if usage & buffer::INDIRECT_ARGUMENTS != 0 {
-            flags |= wgpu::BufferUsages::INDIRECT;
-        }
+        // Any buffer can hold indirect arguments; the managed side checks what Unity allows.
+        flags |= wgpu::BufferUsages::INDIRECT;
         if usage & buffer::CONSTANT != 0 {
             flags |= wgpu::BufferUsages::UNIFORM;
         }
@@ -169,14 +188,239 @@ impl UnityRenderer {
             mapped_at_creation: false,
         });
         let shadow = (usage & buffer::CONSTANT != 0).then(|| vec![0u8; size as usize]);
+        let counter = (usage & (buffer::APPEND | buffer::COUNTER) != 0).then(|| {
+            self.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("unbound buffer counter"),
+                size: 4,
+                usage: wgpu::BufferUsages::STORAGE
+                    | wgpu::BufferUsages::COPY_DST
+                    | wgpu::BufferUsages::COPY_SRC,
+                mapped_at_creation: false,
+            })
+        });
         self.buffers.insert(
             handle,
             GpuBuffer {
                 buffer,
                 size,
                 shadow,
+                counter,
+                counter_used: false,
             },
         );
+    }
+
+    /// Sets an Append or Counter buffer's hidden counter (after what was queued before).
+    pub(super) fn set_counter(&mut self, handle: u64, value: u32) {
+        match self.buffers.get(&handle).map(|b| b.counter.as_ref()) {
+            Some(Some(counter)) => self.queue.write_buffer(counter, 0, &value.to_le_bytes()),
+            Some(None) => self.warn_once(format!("nocounter{handle}"), || {
+                format!("buffer {handle} has no counter (not an Append or Counter buffer): its counter value is not set")
+            }),
+            None => self.warn_once(format!("buf{handle}"), || {
+                format!("a counter value for unknown buffer {handle}: dropped")
+            }),
+        }
+    }
+
+    /// A copy of `size` bytes between buffers, or `None` (logged) when it cannot be made: the
+    /// buffers must exist, the ranges fit and the offsets and size be multiples of 4.
+    pub(super) fn plan_buffer_copy(
+        &mut self,
+        source: u64,
+        source_offset: u64,
+        destination: u64,
+        destination_offset: u64,
+        size: u64,
+    ) -> Option<BufferCopyOp> {
+        let (Some(s), Some(d)) = (self.buffers.get(&source), self.buffers.get(&destination)) else {
+            self.warn_once(format!("copybuf{source}-{destination}"), || {
+                format!("a copy between buffers {source} and {destination}, one of which does not exist: skipped")
+            });
+            return None;
+        };
+        if source == destination {
+            // Unity copies a buffer onto itself as nothing; wgpu refuses the same buffer twice.
+            if source_offset != destination_offset {
+                self.warn_once(format!("copybufself{source}"), || {
+                    format!("a copy within buffer {source} between different offsets is not supported: skipped")
+                });
+            }
+            return None;
+        }
+        let fits = source_offset.checked_add(size).is_some_and(|e| e <= s.size)
+            && destination_offset
+                .checked_add(size)
+                .is_some_and(|e| e <= d.size);
+        if !fits || (source_offset | destination_offset | size) % 4 != 0 {
+            self.warn_once(format!("copybufrange{source}-{destination}"), || {
+                format!("a copy of {size} bytes from buffer {source} at {source_offset} to buffer {destination} at {destination_offset} does not fit or is not 4-byte aligned: skipped")
+            });
+            return None;
+        }
+        Some(BufferCopyOp {
+            source: s.buffer.clone(),
+            source_offset,
+            destination: d.buffer.clone(),
+            destination_offset,
+            size,
+        })
+    }
+
+    /// The copy of an Append or Counter buffer's counter into another buffer at byte `offset`:
+    /// a buffer copy, or at an offset that is not a multiple of 4 (which Unity writes too) a
+    /// one-thread pass that merges the counter's bytes into the two words it spans.
+    pub(super) fn plan_counter_copy(
+        &mut self,
+        source: u64,
+        destination: u64,
+        offset: u32,
+    ) -> Option<Op> {
+        let counter = self
+            .buffers
+            .get(&source)
+            .map(|b| (b.counter.clone(), b.counter_used));
+        let counter = match counter {
+            Some((Some(counter), true)) => counter,
+            // A counter no dispatch has used yet: nothing is written, as in Unity.
+            Some((Some(_), false)) => return None,
+            _ => {
+                self.warn_once(format!("nocounter{source}"), || {
+                    format!("buffer {source} has no counter (not an Append or Counter buffer): its count is not copied")
+                });
+                return None;
+            }
+        };
+        let Some(d) = self.buffers.get(&destination) else {
+            self.warn_once(format!("buf{destination}"), || {
+                format!("a count copied into unknown buffer {destination}: dropped")
+            });
+            return None;
+        };
+        let destination_buffer = d.buffer.clone();
+        let offset = offset as u64;
+        if offset + 4 > d.size {
+            self.warn_once(format!("copycount{destination}"), || {
+                format!("a count copied into buffer {destination} at byte {offset}, past its end: skipped")
+            });
+            return None;
+        }
+        if offset % 4 == 0 {
+            return Some(Op::BufferCopy(BufferCopyOp {
+                source: counter,
+                source_offset: 0,
+                destination: destination_buffer,
+                destination_offset: offset,
+                size: 4,
+            }));
+        }
+        let (pipeline, layout) = self.unaligned_count_pipeline();
+        let parameters = self
+            .device
+            .create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("unbound unaligned count"),
+                contents: &[offset as u32, 0, 0, 0].map(u32::to_le_bytes).concat(),
+                usage: wgpu::BufferUsages::UNIFORM,
+            });
+        let bind_group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("unbound unaligned count"),
+            layout: &layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: counter.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: destination_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: parameters.as_entire_binding(),
+                },
+            ],
+        });
+        Some(Op::Dispatch(DispatchOp {
+            pipeline,
+            bind_group,
+            groups: [1, 1, 1],
+            indirect: None,
+        }))
+    }
+
+    fn unaligned_count_pipeline(&mut self) -> (wgpu::ComputePipeline, wgpu::BindGroupLayout) {
+        if let Some((pipeline, layout)) = &self.unaligned_count {
+            return (pipeline.clone(), layout.clone());
+        }
+        const SOURCE: &str = r#"
+@group(0) @binding(0) var<storage, read> counter: array<u32>;
+@group(0) @binding(1) var<storage, read_write> destination: array<u32>;
+struct Parameters { offset: u32 }
+@group(0) @binding(2) var<uniform> parameters: Parameters;
+@compute @workgroup_size(1)
+fn main() {
+    let value = counter[0];
+    let word = parameters.offset / 4u;
+    let shift = (parameters.offset % 4u) * 8u;
+    let low = (1u << shift) - 1u;
+    destination[word] = (destination[word] & low) | (value << shift);
+    destination[word + 1u] = (destination[word + 1u] & ~low) | (value >> (32u - shift));
+}
+"#;
+        let storage = |binding, read_only| wgpu::BindGroupLayoutEntry {
+            binding,
+            visibility: wgpu::ShaderStages::COMPUTE,
+            ty: wgpu::BindingType::Buffer {
+                ty: wgpu::BufferBindingType::Storage { read_only },
+                has_dynamic_offset: false,
+                min_binding_size: None,
+            },
+            count: None,
+        };
+        let layout = self
+            .device
+            .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("unbound unaligned count"),
+                entries: &[
+                    storage(0, true),
+                    storage(1, false),
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::COMPUTE,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+            });
+        let pipeline_layout = self
+            .device
+            .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("unbound unaligned count"),
+                bind_group_layouts: &[Some(&layout)],
+                immediate_size: 0,
+            });
+        let module = self
+            .device
+            .create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("unbound unaligned count"),
+                source: wgpu::ShaderSource::Wgsl(SOURCE.into()),
+            });
+        let pipeline = self
+            .device
+            .create_compute_pipeline(&wgpu::ComputePipelineDescriptor {
+                label: Some("unbound unaligned count"),
+                layout: Some(&pipeline_layout),
+                module: &module,
+                entry_point: Some("main"),
+                compilation_options: Default::default(),
+                cache: None,
+            });
+        self.unaligned_count = Some((pipeline.clone(), layout.clone()));
+        (pipeline, layout)
     }
 
     pub(super) fn write_buffer(&mut self, handle: u64, offset: u64, data: &[u8]) {
@@ -470,6 +714,30 @@ impl UnityRenderer {
         for r in &gpu.kernel.resources {
             let value = Self::dispatch_value(&d.properties, &globals, &r.name);
             match &r.kind {
+                ResourceKind::Buffer { .. } if r.name.ends_with(COUNTER_SUFFIX) => {
+                    // The hidden counter of the buffer bound to the name before the suffix.
+                    let owner = &r.name[..r.name.len() - COUNTER_SUFFIX.len()];
+                    let bound_to = match Self::dispatch_value(&d.properties, &globals, owner) {
+                        Some(PropertyValue::Buffer(h)) => Some(*h),
+                        _ => None,
+                    };
+                    let counter = bound_to
+                        .and_then(|h| self.buffers.get_mut(&h))
+                        .and_then(|b| {
+                            b.counter_used |= b.counter.is_some();
+                            b.counter.clone()
+                        });
+                    let Some(counter) = counter else {
+                        self.warn_once(format!("kcount{}{owner}", d.kernel), || {
+                            format!(
+                                "kernel `{}` uses the counter of buffer `{owner}`, which is not set or not an Append or Counter buffer: the dispatch is skipped",
+                                d.kernel
+                            )
+                        });
+                        return None;
+                    };
+                    bound.push((r.binding, Bound::Buffer(counter)));
+                }
                 ResourceKind::Buffer { .. } => {
                     let Some(b) = (match value {
                         Some(PropertyValue::Buffer(h)) => self.buffers.get(h),
@@ -574,10 +842,32 @@ impl UnityRenderer {
             layout: &gpu.layout,
             entries: &entries,
         });
+        let indirect = match d.indirect {
+            None => None,
+            Some((args, offset)) => {
+                let fits = self
+                    .buffers
+                    .get(&args)
+                    .map(|b| (b.buffer.clone(), offset as u64 + 12 <= b.size));
+                match fits {
+                    Some((buffer, true)) if offset % 4 == 0 => Some((buffer, offset as u64)),
+                    _ => {
+                        self.warn_once(format!("kargs{args}"), || {
+                            format!(
+                                "kernel `{}`: the indirect arguments at byte {offset} of buffer {args} do not exist, fit or align to 4 bytes: the dispatch is skipped",
+                                d.kernel
+                            )
+                        });
+                        return None;
+                    }
+                }
+            }
+        };
         Some(Op::Dispatch(DispatchOp {
             pipeline: gpu.pipeline.clone(),
             bind_group,
             groups: d.groups,
+            indirect,
         }))
     }
 }
@@ -621,6 +911,22 @@ pub(super) fn encode(encoder: &mut wgpu::CommandEncoder, d: &DispatchOp) {
     });
     pass.set_pipeline(&d.pipeline);
     pass.set_bind_group(0, &d.bind_group, &[]);
-    let [x, y, z] = d.groups;
-    pass.dispatch_workgroups(x, y, z);
+    match &d.indirect {
+        Some((buffer, offset)) => pass.dispatch_workgroups_indirect(buffer, *offset),
+        None => {
+            let [x, y, z] = d.groups;
+            pass.dispatch_workgroups(x, y, z);
+        }
+    }
+}
+
+/// Encodes a planned buffer copy.
+pub(super) fn encode_copy(encoder: &mut wgpu::CommandEncoder, c: &BufferCopyOp) {
+    encoder.copy_buffer_to_buffer(
+        &c.source,
+        c.source_offset,
+        &c.destination,
+        c.destination_offset,
+        c.size,
+    );
 }
