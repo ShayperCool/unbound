@@ -64,6 +64,7 @@ def run_case(case, out):
     out.mkdir()
     paths = []
     active = {}
+    stopped = []
     guard = threading.Lock()
     cancelled = threading.Event()
     for job in case['jobs']:
@@ -85,6 +86,12 @@ def run_case(case, out):
                 stop(scope, process)
             try:
                 code = process.wait()
+            except BaseException:
+                # A serial wait runs on the main thread. Stop its scope before
+                # finally removes it from the active map used by cancellation.
+                stop(scope, process)
+                process.wait(timeout=15)
+                raise
             finally:
                 with guard:
                     active.pop(scope, None)
@@ -95,6 +102,8 @@ def run_case(case, out):
         return report
 
     def stop(scope, process):
+        with guard:
+            stopped.append(scope)
         subprocess.run(['systemctl', '--user', 'kill', '--signal=SIGTERM', '--kill-whom=all', scope],
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         try:
@@ -119,7 +128,7 @@ def run_case(case, out):
             running = list(active.items())
         for scope, process in running:
             stop(scope, process)
-        write(out/'cancelled.json', {'scopes': [s for s, p in running], 'time': time.time()})
+        write(out/'cancelled.json', {'scopes': sorted(set(stopped)), 'time': time.time()})
         raise
     finally:
         pool.shutdown(wait=True, cancel_futures=True)
