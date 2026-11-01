@@ -143,6 +143,8 @@ namespace Unbound.Runtime
                         Speed = s.Speed,
                         CycleOffset = s.CycleOffset,
                         WriteDefaults = s.WriteDefaults,
+                        IKOnFeet = s.IKOnFeet,
+                        Mirror = s.Mirror,
                         Motion = s.Motion,
                         SpeedParameter = m_Graph.ParameterIndex(s.SpeedParameter),
                         CycleOffsetParameter = m_Graph.ParameterIndex(s.CycleOffsetParameter),
@@ -280,6 +282,8 @@ namespace Unbound.Runtime
         internal float Speed = 1f;
         internal float CycleOffset;
         internal bool WriteDefaults = true;
+        /// <summary>The state's Foot IK and Mirror options (humanoid).</summary>
+        internal bool IKOnFeet, Mirror;
         internal Motion Motion;
         internal int SpeedParameter = -1;
         internal int CycleOffsetParameter = -1;

@@ -113,6 +113,12 @@ namespace Unbound.Runtime
         float[] m_Written = Array.Empty<float>();
         bool[] m_WrittenHeld = Array.Empty<bool>();
         (bool[] Floats, bool[] Objects, int FloatCount)[] m_LayerMasks;
+        /// <summary>The humanoid clips of this evaluation, each with its state, the state's weight in
+        /// its layer, the clip's weight (the state's times the blend trees') and the offset of its
+        /// normalized time from the state's (cycle offsets).</summary>
+        internal readonly List<Unbound.Runtime.Humanoid.HumanContribution> m_HumanContributions =
+            new List<Unbound.Runtime.Humanoid.HumanContribution>();
+        float m_StateWeight;
         readonly List<(LayerRun Layer, int LayerIndex, StateRun Run, AnimationClip Clip, float Weight)> m_Contributions =
             new List<(LayerRun, int, StateRun, AnimationClip, float)>();
 
@@ -812,6 +818,7 @@ namespace Unbound.Runtime
                 m_LayerPoses = new LayerPose[count];
             }
             m_Contributions.Clear();
+            m_HumanContributions.Clear();
             for (int i = 0; i < count; i++)
             {
                 var layer = Layers[i];
@@ -878,13 +885,24 @@ namespace Unbound.Runtime
         /// root motion) keep the state's transition weight.</summary>
         void SampleAtFullWeight(LayerRun layer, int layerIndex, StateRun run, float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
         {
-            int first = m_Contributions.Count;
+            int first = m_Contributions.Count, firstHuman = m_HumanContributions.Count;
             SampleState(layer, layerIndex, run, 1f, pose, mask, objectMask);
             for (int k = m_Contributions.Count - 1; k >= first; k--)
             {
                 var entry = m_Contributions[k];
                 if (weight <= 0f) m_Contributions.RemoveAt(k);
                 else m_Contributions[k] = (entry.Layer, entry.LayerIndex, entry.Run, entry.Clip, entry.Weight * weight);
+            }
+            for (int k = m_HumanContributions.Count - 1; k >= firstHuman; k--)
+            {
+                var entry = m_HumanContributions[k];
+                if (weight <= 0f) m_HumanContributions.RemoveAt(k);
+                else
+                {
+                    entry.Weight *= weight;
+                    entry.StateWeight *= weight;
+                    m_HumanContributions[k] = entry;
+                }
             }
         }
 
@@ -980,6 +998,7 @@ namespace Unbound.Runtime
             if (weight <= 0f) return;
             var motion = MotionOf(layer.Def, run.Def);
             double normalized = run.Normalized + run.Def.CycleOffset + (run.Def.CycleOffsetParameter >= 0 ? Floats[run.Def.CycleOffsetParameter] : 0f);
+            m_StateWeight = weight;
             SampleMotion(layer, layerIndex, run, motion, normalized, weight, pose, mask, objectMask);
             if (layer.Def.Additive)
             {
@@ -1044,6 +1063,12 @@ namespace Unbound.Runtime
                     ClipSampling.Sample(bound, ClipSampling.ClipTime(clip, normalized, clip.isLooping), weight, pose, mask, objectMask,
                         layer.Def.Additive ? Bindings.AdditiveReference(bound) : null);
                     m_Contributions.Add((layer, layerIndex, run, clip, weight));
+                    if (Attached && m_Animator.isHuman && clip.HasHumanCurves)
+                        m_HumanContributions.Add(new Unbound.Runtime.Humanoid.HumanContribution
+                        {
+                            Layer = layerIndex, Run = run, StateWeight = m_StateWeight, Clip = clip, Weight = weight,
+                            Offset = (float)(normalized - run.Normalized),
+                        });
                     break;
                 }
                 case BlendTreeMotion tree:

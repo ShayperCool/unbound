@@ -742,6 +742,7 @@ namespace UnityEngine
             m_CullingMode = (AnimatorCullingMode)body.Int("m_CullingMode");
             m_UpdateMode = (AnimatorUpdateMode)body.Int("m_UpdateMode");
             m_ApplyRootMotion = body.Bool("m_ApplyRootMotion");
+            m_StabilizeFeet = body.Bool("m_StabilizeFeet");
             m_KeepAnimatorStateOnDisable = body.Bool("m_KeepAnimatorStateOnDisable") || body.Bool("m_KeepAnimatorControllerStateOnDisable");
             m_WriteDefaultValuesOnDisable = body.Bool("m_WriteDefaultValuesOnDisable");
         }
@@ -754,6 +755,9 @@ namespace UnityEngine
             m_CullingMode = s.m_CullingMode;
             m_UpdateMode = s.m_UpdateMode;
             m_ApplyRootMotion = s.m_ApplyRootMotion;
+            m_StabilizeFeet = s.m_StabilizeFeet;
+            m_LayersAffectMassCenter = s.m_LayersAffectMassCenter;
+            m_FeetPivotActive = s.m_FeetPivotActive;
             m_Avatar = s.m_Avatar;
             m_KeepAnimatorStateOnDisable = s.m_KeepAnimatorStateOnDisable;
             m_WriteDefaultValuesOnDisable = s.m_WriteDefaultValuesOnDisable;

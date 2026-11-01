@@ -412,6 +412,7 @@ namespace Unbound.Runtime
         internal readonly List<StateMachineBehaviour> Behaviours = new List<StateMachineBehaviour>();
         internal bool WriteDefaults = true;
         internal bool Mirror;
+        internal bool IKOnFeet;
         internal Motion Motion;
         internal string Tag = "";
         internal string SpeedParameter;
@@ -427,6 +428,7 @@ namespace Unbound.Runtime
                 if (RuntimeAnimatorController.Resolve<StateMachineBehaviour>(resolver, b.AsRef()) is StateMachineBehaviour smb) Behaviours.Add(smb);
             WriteDefaults = body.Bool("m_WriteDefaultValues", true);
             Mirror = body.Bool("m_Mirror");
+            IKOnFeet = body.Bool("m_IKOnFeet");
             var motion = body.Ref("m_Motion");
             Motion = RuntimeAnimatorController.Resolve<Motion>(resolver, motion);
             if (Motion == null && !motion.IsNull) MissingMotion.Report(motion, $"animator state '{m_Name}'");

@@ -106,6 +106,12 @@ namespace Unbound.Runtime
             }
         }
 
+        Unbound.Runtime.Humanoid.HumanLayer[] m_HumanLayers = Array.Empty<Unbound.Runtime.Humanoid.HumanLayer>();
+
+        /// <summary>The human pose parts an avatar mask's body parts select.</summary>
+        static bool[] HumanMaskOf(AvatarMask mask) =>
+            Unbound.Runtime.Humanoid.HumanMask.FromBodyParts(part => mask.m_HumanoidParts[part]);
+
         void ProcessRootMotion()
         {
             if (!Attached) return;
@@ -196,36 +202,25 @@ namespace Unbound.Runtime
         }
 
 
-        /// <summary>A humanoid Animator's root motion: the clip's body motion between the state's
-        /// previous and current times, as a delta of the root (applied like generic root motion) and
-        /// the body placed relative to it for the pose. False when no humanoid clip plays.</summary>
+        /// <summary>A humanoid Animator's root motion and human pose: the layers' humanoid clips
+        /// evaluated and mixed (see <see cref="Unbound.Runtime.Humanoid.AnimatorHuman.EvaluateLayers"/>); the mix's
+        /// root motion is a delta of the root (applied like generic root motion) and its body is
+        /// placed relative to it for the pose. False when no humanoid clip plays.</summary>
         bool HumanRootMotion(Animator animator, Unbound.Runtime.Humanoid.AnimatorHuman human)
         {
-            (StateRun Run, AnimationClip Clip, float Weight) found = default;
-            int count = 0;
-            foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions)
+            var layers = m_HumanLayers.Length == Layers.Length ? m_HumanLayers : m_HumanLayers = new Unbound.Runtime.Humanoid.HumanLayer[Layers.Length];
+            for (int i = 0; i < Layers.Length; i++)
             {
-                float w = weight * (layerIndex == 0 ? 1f : layer.Evaluated);
-                if (w <= 0f || !clip.HasHumanCurves) continue;
-                count++;
-                if (found.Clip == null || w > found.Weight) found = (run, clip, w);
+                var def = Layers[i].Def;
+                layers[i].Weight = i == 0 ? 1f : Layers[i].Evaluated;
+                layers[i].Additive = def.Additive;
+                layers[i].Mask = def.Mask == null ? null : HumanMaskOf(def.Mask);
             }
             human.ClearMotion();
-            if (found.Clip == null) return false;
-            if (count > 1 || found.Weight < 1f)
-                Unbound.Runtime.Stubs.Ignored("Animator humanoid root motion blending",
-                    "blended humanoid clips (transitions, several layers or blend trees) move the root with the strongest clip only");
-            var motion = found.Clip.HumanClipMotion;
-            var def = found.Run.Def;
-            var input = new Unbound.Runtime.Humanoid.HumanClipMotionInput
-            {
-                Time = (float)found.Run.Normalized,
-                PreviousTime = (float)found.Run.Previous,
-                Speed = SpeedOf(def),
-                CycleOffset = def.CycleOffset,
-            };
-            human.EvaluateMotion(found.Clip, motion, input, m_RootDeltaTime,
-                animator.m_ApplyRootMotion || m_HasMonoMove, out var rm, out bool applied);
+            if (!human.EvaluateLayers(m_HumanContributions, layers, run => SpeedOf(run.Def),
+                    animator.m_LayersAffectMassCenter || Layers.Length <= 1, m_RootDeltaTime,
+                    animator.m_ApplyRootMotion || m_HasMonoMove, out var rm, out bool applied))
+                return false;
             if (!applied) return true;
             animator.m_DeltaPosition = new Vector3(rm.DeltaPosition.x, rm.DeltaPosition.y, rm.DeltaPosition.z);
             animator.m_DeltaRotation = new Quaternion(rm.DeltaRotation.x, rm.DeltaRotation.y, rm.DeltaRotation.z, rm.DeltaRotation.w);
