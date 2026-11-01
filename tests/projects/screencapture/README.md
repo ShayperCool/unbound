@@ -50,6 +50,30 @@ channel, absolute and relative tolerance 2e-4.
 captures each (OpenGLCore, RTX 4060): Linear 187 values and 39 images, Gamma 174 values and 35
 images.
 
+## Focused state controls
+
+`run.py editor --release 6000.0.71f1 --space Linear --profile internal-state --label <fresh-label>`
+selects 22 values and nine images, with sequential independent Editor captures. Use the same
+arguments for `check` and `publish`. The profile has its own directory at
+`Reference/unity-6000.0.71f1/internal-state/Linear`; the full profile's references stay in place.
+
+`state.none` and `state.copy` draw the same triangles into two sRGB attachments, with viewport
+`(8,4,48,24)`, scissor `(20,8,24,16)`, `GL.sRGBWrite=false` and `GL.wireframe=true`. Only
+`state.copy` calls `CaptureScreenshotIntoRenderTexture` before the caller's draw. Both attachments
+and the copied image are read after the draw. The marker shader's second pass writes distinct
+colors to both attachments. These rendered outputs observe the caller state without reading
+internal flags. `state.source` records the screen before either case.
+
+`post.buffer` adds one empty `AfterEverything` camera command buffer. A single `OnPostRender`
+callback draws the screen marker, calls `CaptureScreenshotAsTexture(1)` and
+`CaptureScreenshotIntoRenderTexture`, and immediately reads the latter's target. The final
+screen is read at the end of that frame. No supersized capture runs inside a camera callback.
+
+Publishing requires successful exits, complete captures, exact control key and image coverage,
+and byte-identical independent repeats. Source hashes, commands, raw captures, artifact hashes
+and the full repeat comparison remain in the validation cache. The existing comparator and its
+2e-4 absolute and relative tolerance apply to replay comparisons.
+
 ## What the Editor does (6000.0.71f1, Linux, OpenGL Core)
 
 * The game view is 8-bit RGBA, sRGB-encoded in Linear color space. `ReadPixels` of the screen at

@@ -28,7 +28,7 @@ using UnityEngine;
 /// in CaptureScreenshotAsTexture called in Update or with a superSize below one: those calls,
 /// and the render texture capture in Update, are skipped there (<c>.skipped</c>).
 /// </summary>
-public class ScreenCaptureProbe : MonoBehaviour
+public partial class ScreenCaptureProbe : MonoBehaviour
 {
     /// <summary>Set by the Editor runner: ends Play mode and quits with the code.</summary>
     public static Action<int> finished;
@@ -104,7 +104,7 @@ public class ScreenCaptureProbe : MonoBehaviour
     void Update()
     {
         frames++;
-        cam.backgroundColor = new Color((frames % 8) / 8f, 0.5f, 0.75f, 0.6f);
+        cam.backgroundColor = new Color((internalState ? 3 : frames % 8) / 8f, 0.5f, 0.75f, 0.6f);
     }
 
     /// <summary>The marker over the top right 8x8 pixels of the screen, drawn with GL.</summary>
@@ -246,7 +246,8 @@ public class ScreenCaptureProbe : MonoBehaviour
     IEnumerator Run()
     {
         int code = 0;
-        var steps = Steps();
+        internalState = Environment.GetEnvironmentVariable("SCREENCAPTURE_PROBE_PROFILE") == "internal-state";
+        var steps = internalState ? InternalStateSteps() : Steps();
         while (true)
         {
             bool more;

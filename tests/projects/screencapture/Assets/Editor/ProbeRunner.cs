@@ -13,7 +13,8 @@ using UnityEngine;
 [InitializeOnLoad]
 public static class ProbeRunner
 {
-    const double WatchdogSeconds = 600;
+    static double WatchdogSeconds =>
+        Environment.GetEnvironmentVariable("SCREENCAPTURE_PROBE_PROFILE") == "internal-state" ? 120 : 600;
 
     /// <summary>Makes the probe's empty scene (batchmode, -quit).</summary>
     public static void Create()
