@@ -77,6 +77,41 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(camera.gameObject);
         }
 
+        /// <summary>A negative width's caps turn back over the strip: both half discs, with the
+        /// exact measured positions of their centre and arc (Unity 6000.0.71f1, tests/projects/lines
+        /// line.width.negative, width multiplier -0.5, two corner and two cap vertices, View
+        /// alignment). Only the caps are checked: the negative-width corner stays open.</summary>
+        [Fact]
+        public void ANegativeWidthTurnsItsCapsBackOverTheStrip()
+        {
+            var line = new GameObject("line").AddComponent<LineRenderer>();
+            line.widthMultiplier = -0.5f;
+            line.numCornerVertices = 2;
+            line.numCapVertices = 2;
+            line.positionCount = 3;
+            line.SetPositions(new[] { new Vector3(-1f, -0.5f, 0f), new Vector3(1f, -0.5f, 0f), new Vector3(1f, 1f, 0f) });
+            var camera = new GameObject("camera").AddComponent<Camera>();
+            camera.orthographic = true;
+            camera.transform.position = new Vector3(0f, 0f, -10f);
+            var mesh = new Mesh();
+            line.BakeMesh(mesh, camera);
+            var v = mesh.vertices;
+            // The reference's first five vertices (start cap) and last five (end cap).
+            var start = new[] { -1f, -0.5f, -1f, -0.75f, -0.783493638f, -0.625f, -0.783493638f, -0.375f, -1f, -0.25f };
+            var end = new[] { 1f, 1f, 1.25f, 1f, 1.125f, 0.783493638f, 0.875f, 0.783493638f, 0.75f, 1f };
+            Assert.True(v.Length >= 10);
+            for (int i = 0; i < 5; i++)
+            {
+                Assert.InRange(v[i].x, start[2 * i] - 1e-5f, start[2 * i] + 1e-5f);
+                Assert.InRange(v[i].y, start[2 * i + 1] - 1e-5f, start[2 * i + 1] + 1e-5f);
+                var e = v[v.Length - 5 + i];
+                Assert.InRange(e.x, end[2 * i] - 1e-5f, end[2 * i] + 1e-5f);
+                Assert.InRange(e.y, end[2 * i + 1] - 1e-5f, end[2 * i + 1] + 1e-5f);
+            }
+            Object.DestroyImmediate(line.gameObject);
+            Object.DestroyImmediate(camera.gameObject);
+        }
+
         [Fact]
         public void LocalLinesFollowTheirTransformAndCapsRoundTheEnds()
         {
