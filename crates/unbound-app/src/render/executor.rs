@@ -67,14 +67,31 @@ struct GpuMaterial {
     blocks: rustc_hash::FxHashMap<u32, Arc<compiled::MaterialBlock>>,
 }
 
+/// The screen: 8-bit RGBA like the Editor's game view, sRGB-encoded in Linear color space
+/// (draws encode, samples decode, readbacks and copies see the stored bytes: measured,
+/// tests/projects/rtdepth `target.screen.*.final` and `ctl.*`).
 struct ScreenTarget {
     width: u32,
     height: u32,
-    format: wgpu::TextureFormat,
     texture: wgpu::Texture,
+    /// The stored bytes (Gamma color space, GL.sRGBWrite off).
     color: wgpu::TextureView,
+    /// The bytes as sRGB-encoded colors (Linear color space).
+    srgb: wgpu::TextureView,
     depth: wgpu::TextureView,
 }
+
+impl ScreenTarget {
+    fn view(&self, color_space: i32) -> (&wgpu::TextureView, wgpu::TextureFormat) {
+        if color_space == 1 {
+            (&self.srgb, wgpu::TextureFormat::Rgba8UnormSrgb)
+        } else {
+            (&self.color, SCREEN_FORMAT)
+        }
+    }
+}
+
+const SCREEN_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
 
 /// The latest complete frame, for the window.
 #[derive(Clone)]
@@ -1419,21 +1436,12 @@ impl UnityRenderer {
         ((self.uniforms.len() - 1) as u64 * DRAW_SLOT) as u32
     }
 
-    fn screen_format(color_space: i32) -> wgpu::TextureFormat {
-        if color_space == 1 {
-            wgpu::TextureFormat::Rgba16Float
-        } else {
-            wgpu::TextureFormat::Rgba8Unorm
-        }
-    }
-
-    /// The screen target of a ring slot, (re)created at the frame's size and format.
+    /// The screen target of a ring slot, (re)created at the frame's size.
     fn ensure_screen(&mut self, slot: usize) -> &ScreenTarget {
         let (width, height) = self.screen_size;
-        let format = Self::screen_format(self.color_space);
         let fits = self.screens[slot]
             .as_ref()
-            .is_some_and(|s| s.width == width && s.height == height && s.format == format);
+            .is_some_and(|s| s.width == width && s.height == height);
         if !fits {
             let size = wgpu::Extent3d {
                 width,
@@ -1446,14 +1454,18 @@ impl UnityRenderer {
                 mip_level_count: 1,
                 sample_count: 1,
                 dimension: wgpu::TextureDimension::D2,
-                format,
+                format: SCREEN_FORMAT,
                 usage: wgpu::TextureUsages::RENDER_ATTACHMENT
                     | wgpu::TextureUsages::TEXTURE_BINDING
                     | wgpu::TextureUsages::COPY_SRC
                     | wgpu::TextureUsages::COPY_DST,
-                view_formats: &[],
+                view_formats: &[wgpu::TextureFormat::Rgba8UnormSrgb],
             });
             let color = texture.create_view(&Default::default());
+            let srgb = texture.create_view(&wgpu::TextureViewDescriptor {
+                format: Some(wgpu::TextureFormat::Rgba8UnormSrgb),
+                ..Default::default()
+            });
             let depth = self
                 .device
                 .create_texture(&wgpu::TextureDescriptor {
@@ -1470,23 +1482,25 @@ impl UnityRenderer {
             self.screens[slot] = Some(ScreenTarget {
                 width,
                 height,
-                format,
                 texture,
                 color,
+                srgb,
                 depth,
             });
         }
         self.screens[slot].as_ref().unwrap()
     }
 
-    fn screen_target(&mut self) -> Target {
+    /// The screen as a target, its bytes written as `color_space` encodes them.
+    fn screen_target(&mut self, color_space: i32) -> Target {
         let s = self.ensure_screen(self.screen_slot);
+        let (color, format) = s.view(color_space);
         Target {
-            color: s.color.clone(),
+            color: color.clone(),
             resolve: None,
             samples: 1,
             depth: Some(s.depth.clone()),
-            format: s.format,
+            format,
             width: s.width,
             height: s.height,
             screen: true,
@@ -1505,7 +1519,7 @@ impl UnityRenderer {
             self.color_space
         };
         let mut target = if color == 0 {
-            self.screen_target()
+            self.screen_target(space)
         } else {
             let Some(t) = self.textures.get(&color).filter(|t| t.render_target) else {
                 self.warn_once(format!("rt{color}"), || {
@@ -1645,7 +1659,7 @@ impl UnityRenderer {
                     self.depth_target = None;
                     if !self.screen_touched {
                         // Nothing drew on the screen: it shows black.
-                        let target = self.screen_target();
+                        let target = self.screen_target(self.color_space);
                         let pass = self.new_pass(target);
                         passes.push(Op::Pass(pass));
                     }
@@ -2051,7 +2065,8 @@ impl UnityRenderer {
         self.encode(passes);
         if end_frame {
             let slot = self.screen_slot;
-            let screen = self.ensure_screen(slot).color.clone();
+            let space = self.color_space;
+            let screen = self.ensure_screen(slot).view(space).0.clone();
             *self.presented.lock().unwrap() = Some(Presented {
                 color: screen,
                 color_space: self.color_space,

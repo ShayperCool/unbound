@@ -88,6 +88,19 @@ has the separate humanoid IK blocker recorded in `docs/PARITY_PROGRESS.md`.
 `Reference/unity-6000.0.71f1/controls/` holds the controls' values and images, from two
 byte-identical complete captures (same device).
 
+## Screen encoding, 2026-11-01
+
+The screen is now stored as the game view stores it: 8-bit RGBA, drawn through an sRGB view in
+Linear color space, read back and copied as its bytes (`crates/unbound-app/src/render/executor.rs`;
+it was a half-float target whose float reads returned linear values and whose byte reads were
+re-encoded on the CPU). All 1,071 main values and 368/368 images pass (316 before, the 52
+`target.screen.*.final` images resolved); controls pass 46/46 values and 16/17 images (13 before:
+`ctl.postRead.none`, `ctl.wireframe.none.final` and `ctl.wireframeKept.none.final`, one 8-bit step
+apart at exact halves, resolved), retaining the unsupported `ctl.uintArray` default binding. No
+value or image is introduced or newly missing. The camera MSAA probe's Linear screen reads now
+match as its Gamma ones do (24 images and 18 records resolved, none introduced); its reads of the
+Editor's system framebuffer remain different.
+
 ## What the Editor does (6000.0.71f1, Linux, OpenGL Core)
 
 * The Depth element samples as `(d, 0, 0, 1)`, the window depth in 0..1 with the near plane at 0
@@ -113,5 +126,7 @@ byte-identical complete captures (same device).
   shows). SetRenderTarget(CameraTarget) after another target draws into the camera's target;
   SetRenderTarget(CurrentActive) after another target stays on that target. During an HDR camera's rendering `Camera.activeTexture`
   is its half-float intermediate.
-* `ReadPixels` from the screen returns the game view's sRGB-encoded values (the inherited screen
-  readback gap in docs/COMPATIBILITY_GAPS.md).
+* The screen (the game view) is 8-bit RGBA, sRGB-encoded in Linear color space: `ReadPixels`
+  from it returns those stored bytes into a float texture too, and draws onto it are quantized
+  by the GPU's encoding, a value at half a step included (the `ctl.*.none` controls draw straight
+  onto it, the `.buffer` ones through a camera stand-in texture of the same format).

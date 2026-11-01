@@ -109,6 +109,18 @@ namespace UnityEngine
             m_PixelsDirty = true;
         }
 
+        /// <summary>The texture <c>ScreenCapture.CaptureScreenshotAsTexture</c> returns for a size
+        /// below one: ARGB32, linear, readable, 0x0 and without pixels (tests/projects/screencapture).</summary>
+        internal static Texture2D EmptyCapture()
+        {
+            var texture = new Texture2D(1, 1, TextureFormat.ARGB32, false, true);
+            texture.m_Width = 0;
+            texture.m_Height = 0;
+            texture.m_Pixels = null;
+            texture.m_PixelsDirty = false;
+            return texture;
+        }
+
         public TextureFormat format => m_SourceFormat ?? m_Format;
 
         /// <summary>A serialized texture's own format and mip count when Unbound keeps its pixels in
@@ -330,7 +342,10 @@ namespace UnityEngine
                 return;
             }
             int w = x1 - x0, h = y1 - y0;
-            bool hdr = m_Hdr != null;
+            // Outside the frame's drawing the Editor reads its window's framebuffer (measured in
+            // Update: tests/projects/screencapture read.update), with an error.
+            if (active == null && Camera.current == null && !FrameBuilder.InDrawingFrame)
+                Debug.LogError("ReadPixels was called to read pixels from system frame buffer, while not inside drawing frame.");
             var bytes = Native.ReadPixels(active != null ? active.EnsureCreated() : 0, x0, y0, w, h, true);
             if (bytes == null)
             {
@@ -338,9 +353,8 @@ namespace UnityEngine
                 return;
             }
             // ReadPixels copies attachment values, including float-to-byte reads, regardless
-            // of the destination's linear flag. The engine's linear screen storage needs its
-            // existing presentation encoding for a byte screenshot; it is not an explicit RT.
-            bool encode = active == null && !hdr && !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear;
+            // of the destination's linear flag; the screen's are its 8-bit (in Linear,
+            // sRGB-encoded) bytes.
             unsafe
             {
                 fixed (byte* p = bytes)
@@ -354,7 +368,6 @@ namespace UnityEngine
                             int tx = destX + (x0 - (int)source.x) + col;
                             var c = new Color(f[0], f[1], f[2], f[3]);
                             f += 4;
-                            if (encode) c = c.gamma;
                             Write(ty * m_Width + tx, c);
                         }
                     }
