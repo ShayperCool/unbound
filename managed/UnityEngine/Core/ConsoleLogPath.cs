@@ -14,8 +14,12 @@ namespace Unbound.Runtime
             string projectRoot = projectPath == null ? null : System.IO.Path.Combine(projectPath, "Library", "Unbound");
             if (projectPath != null)
                 foreach (string authored in new[] { "Assets", "Packages", "ProjectSettings" })
-                    if (Inside(resolved, System.IO.Path.Combine(projectPath, authored)))
+                {
+                    string authoredRoot = System.IO.Path.Combine(projectPath, authored);
+                    if (Inside(resolved, authoredRoot, StringComparison.OrdinalIgnoreCase) ||
+                        Inside(resolved, Resolve(authoredRoot), StringComparison.OrdinalIgnoreCase))
                         throw new IOException("log path cannot write the project's authored files");
+                }
             // The global cache itself may be relocated by symlink, as supported by cache migration.
             string cacheRoot = Resolve(System.IO.Path.Combine(cacheHome, "unbound"));
             // Match tests/probe_paths.py's existing cache_artifact_path policy: validation
@@ -26,8 +30,8 @@ namespace Unbound.Runtime
             return resolved;
         }
 
-        static bool Inside(string path, string root) => root != null &&
-            path.StartsWith(root.TrimEnd(System.IO.Path.DirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar, StringComparison.Ordinal);
+        static bool Inside(string path, string root, StringComparison comparison = StringComparison.Ordinal) => root != null &&
+            path.StartsWith(root.TrimEnd(System.IO.Path.DirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar, comparison);
 
         // Walk existing ancestors as well as the final entry. LinkTarget also sees dangling links;
         // link targets are walked again so symlinks in their ancestors cannot escape validation.

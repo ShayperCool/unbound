@@ -156,6 +156,28 @@ namespace UnityEngine.Tests
             Assert.Equal(before, Authored());
         }
 
+        [Fact]
+        public void Authored_directory_alias_into_allowed_cache_cannot_receive_logs()
+        {
+            foreach (string part in new[] { "Assets", "Packages", "ProjectSettings" })
+            {
+                string authored = Path.Combine(Project, part);
+                string target = Path.Combine(Cache, "unbound", part);
+                Directory.CreateDirectory(Path.GetDirectoryName(target));
+                Directory.Move(authored, target);
+                Directory.CreateSymbolicLink(authored, target);
+                var before = Authored();
+                Open(Path.Combine(target, "sentinel.cs"));
+                Assert.Equal("", ConsoleLog.Path);
+                Assert.Equal(before, Authored());
+                Assert.False(File.Exists(Path.Combine(target, "sentinel-prev.cs")));
+                Open(Path.Combine(authored, "new/sub/log.txt"));
+                Assert.Equal("", ConsoleLog.Path);
+                Assert.Equal(before, Authored());
+                Assert.False(Directory.Exists(Path.Combine(target, "new")));
+            }
+        }
+
         public void Dispose()
         {
             ConsoleLog.Reset();
