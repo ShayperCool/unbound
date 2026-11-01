@@ -14,7 +14,7 @@ namespace UnityEngine.Tests
         [InlineData("late")]
         [InlineData("delayed")]
         [InlineData("already complete")]
-        public void Only_complete_records_within_real_deadline_succeed(string kind)
+        public async Task Only_complete_records_within_real_deadline_succeed(string kind)
         {
             string directory = Path.Combine(Environment.GetEnvironmentVariable("XDG_CACHE_HOME") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache"), "unbound/validation/url-tests", Guid.NewGuid().ToString("N"));
             Directory.CreateDirectory(directory);
@@ -38,7 +38,7 @@ namespace UnityEngine.Tests
             }
             finally
             {
-                writer.GetAwaiter().GetResult();
+                await writer;
                 Directory.Delete(directory, true);
             }
         }

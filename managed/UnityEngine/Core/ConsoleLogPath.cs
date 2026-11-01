@@ -22,17 +22,20 @@ namespace Unbound.Runtime
             path.StartsWith(root.TrimEnd(System.IO.Path.DirectorySeparatorChar) + System.IO.Path.DirectorySeparatorChar, StringComparison.Ordinal);
 
         // Walk existing ancestors as well as the final entry. LinkTarget also sees dangling links;
-        // ResolveLinkTarget fails closed on broken chains and loops. Mutations use the returned path.
-        static string Resolve(string path)
+        // link targets are walked again so symlinks in their ancestors cannot escape validation.
+        // A bounded link count refuses loops. Mutations use the returned path.
+        static string Resolve(string path, int links = 0)
         {
+            if (links > 40) throw new IOException("too many log path symlinks");
             path = System.IO.Path.GetFullPath(path);
             string current = System.IO.Path.GetPathRoot(path);
             foreach (string part in path.Substring(current.Length).Split(System.IO.Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
             {
                 current = System.IO.Path.Combine(current, part);
                 var entry = new FileInfo(current);
-                if (entry.LinkTarget != null)
-                    current = entry.ResolveLinkTarget(true)?.FullName ?? throw new IOException("cannot resolve log path symlink");
+                string target = entry.LinkTarget;
+                if (target != null)
+                    current = Resolve(System.IO.Path.GetFullPath(target, System.IO.Path.GetDirectoryName(current)), links + 1);
             }
             return System.IO.Path.GetFullPath(current);
         }

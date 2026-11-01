@@ -9,7 +9,8 @@ namespace UnityEngine.Tests
 {
     public class ConsoleLogTests : IDisposable
     {
-        readonly string root = Path.Combine(Environment.GetEnvironmentVariable("XDG_CACHE_HOME") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache"), "unbound/validation/consolelog-tests", Guid.NewGuid().ToString("N"));
+        readonly string root;
+        static string TestCache => Environment.GetEnvironmentVariable("XDG_CACHE_HOME") ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache");
         readonly string oldProject = ProjectInfo.ProjectPath;
         readonly string[] oldArgs = EditorProcess.s_CommandLine;
         readonly string oldCache = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
@@ -19,6 +20,7 @@ namespace UnityEngine.Tests
 
         public ConsoleLogTests()
         {
+            root = ConsoleLogPath.Validate(Path.Combine(TestCache, "unbound/validation/consolelog-tests", Guid.NewGuid().ToString("N")), null, TestCache);
             foreach (string part in new[] { "Assets", "Packages", "ProjectSettings" })
             {
                 Directory.CreateDirectory(Path.Combine(Project, part));
@@ -62,6 +64,8 @@ namespace UnityEngine.Tests
         [InlineData("dangling")]
         [InlineData("backup")]
         [InlineData("root")]
+        [InlineData("chained target ancestor")]
+        [InlineData("loop")]
         public void Symlink_escapes_cannot_create_rotate_or_overwrite(string kind)
         {
             Directory.CreateDirectory(Logs);
@@ -78,6 +82,12 @@ namespace UnityEngine.Tests
                 File.WriteAllText(path, "previous log sentinel");
                 File.CreateSymbolicLink(Path.Combine(Logs, "test-prev.log"), Path.Combine(Project, "Assets/sentinel.cs"));
             }
+            if (kind == "chained target ancestor")
+            {
+                Directory.CreateSymbolicLink(Path.Combine(Logs, "alias"), Path.Combine(Project, "Assets"));
+                File.CreateSymbolicLink(path, Path.Combine(Logs, "alias/sentinel.cs"));
+            }
+            if (kind == "loop") File.CreateSymbolicLink(path, path);
             if (kind == "root")
             {
                 Directory.Delete(Logs);
