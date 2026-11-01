@@ -2461,3 +2461,13 @@ automatic trail. It cannot establish request timing or publish an autodestructio
 No new managed build/API/gates; reused all 33 verified cand3 runtime files for diagnosis only.
 Blocked on permission for a corrective GPU pair with camera/material. Full receipt:
 `/mnt/data/unbound-cache-20261031/unbound-validation/runs/trail-autodestruct-20261101-t3-01e21304/REPORT.md`.
+
+## 2026-11-01: rendered trail destruction measurement, no production fix
+
+Adopted prepared82f55457 onto accepted875; corrected only the trail diagnostic, no geometry or shared-core edits.
+One authorized graphical batchmode Native pair: 3557/3557 byte-identical rows, rendered lanes, expiry, empty-live states and destruction; published one canonical.
+Native is empty-live through expiry-frame EOF and dead before next Update; its internal request phase remains unobserved, so no timing rule or production build was added.
+Preserved line union 1276/1854, retained576, introduced2, 15 frameCount residuals and baselineOnly17; tolerances unchanged.
+Managed/API: no new build, suite or stub removals; accepted runtime33 hashes verified, no candidate acceptance claim.
+Open: Native automatic request/queue call-site witness between expiry rendering and next Update; no further capture authorized.
+Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/trail-autodestruct-cause-20261101-t3-3141edbd/REPORT.md`.
