@@ -251,6 +251,10 @@ namespace UnityEngine
         static float s_AmbientIntensity = 1f;
         static Color s_SubtractiveShadowColor = new Color(0.42f, 0.478f, 0.627f, 1f);
         static Color s_IndirectSpecular;
+        /// <summary>Whether the scene's RenderSettings serialize <c>m_IndirectSpecularColor</c> (scenes
+        /// before serializedVersion 10 do; later ones do not). Presence, not value: black is a valid
+        /// serialized color.</summary>
+        static bool s_IndirectSpecularSerialized;
         static float s_ReflectionIntensity = 1f;
         static int s_ReflectionBounces = 1;
         static float s_HaloStrength = 0.5f;
@@ -272,7 +276,14 @@ namespace UnityEngine
             internal YNode Body;
             internal IReferenceResolver Resolver;
             internal object[] Saved;
+            /// <summary>The DC term (linear) of the ambient probe of this scene's own baked lighting
+            /// data (<c>m_BakedAmbientProbeInLinear</c>, a project LightingData asset), or null.</summary>
+            internal Color? BakedSkyboxDC;
         }
+
+        /// <summary>The scene whose RenderSettings are the ones in effect (null when they were read
+        /// without a scene): only its own baked lighting data is a source for them.</summary>
+        static SceneSettings s_SettingsOwner;
 
         static readonly System.Collections.Generic.Dictionary<SceneData, SceneSettings> s_SceneSettings = new System.Collections.Generic.Dictionary<SceneData, SceneSettings>();
         static SceneData s_SettingsScene;
@@ -282,10 +293,10 @@ namespace UnityEngine
         {
             nameof(s_Fog), nameof(s_FogColor), nameof(s_FogMode), nameof(s_FogDensity), nameof(s_FogStart), nameof(s_FogEnd),
             nameof(s_AmbientSky), nameof(s_AmbientEquator), nameof(s_AmbientGround), nameof(s_AmbientIntensity), nameof(s_AmbientMode),
-            nameof(s_CustomProbe), nameof(s_SubtractiveShadowColor), nameof(s_IndirectSpecular), nameof(s_ReflectionIntensity),
+            nameof(s_CustomProbe), nameof(s_SubtractiveShadowColor), nameof(s_IndirectSpecular), nameof(s_IndirectSpecularSerialized), nameof(s_ReflectionIntensity),
             nameof(s_ReflectionBounces), nameof(s_DefaultReflectionMode), nameof(s_DefaultReflectionResolution), nameof(s_CustomReflection),
             nameof(s_SerializedProbe), nameof(s_SerializedReflection), nameof(s_HaloStrength), nameof(s_FlareStrength),
-            nameof(s_FlareFadeSpeed), nameof(s_HaloTexture), nameof(s_Skybox), nameof(s_Sun), nameof(s_PendingSun),
+            nameof(s_FlareFadeSpeed), nameof(s_HaloTexture), nameof(s_Skybox), nameof(s_Sun), nameof(s_PendingSun), nameof(s_SettingsOwner),
         }, n => typeof(RenderSettings).GetField(n, System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic));
 
         /// <summary>A scene's RenderSettings document was loaded. Each scene keeps its own; the
@@ -330,6 +341,7 @@ namespace UnityEngine
             {
                 Read(next.Body, next.Resolver);
             }
+            s_SettingsOwner = next;
             foreach (var stale in new System.Collections.Generic.List<SceneData>(s_SceneSettings.Keys))
                 if (stale != scene && !stale.IsLoaded && stale.LoadingState != UnityEngine.SceneManagement.Scene.LoadingState.Loading)
                     s_SceneSettings.Remove(stale);
@@ -352,6 +364,8 @@ namespace UnityEngine
             s_CustomProbe = null;
             s_SubtractiveShadowColor = b.Color("m_SubtractiveShadowColor", s_SubtractiveShadowColor);
             s_IndirectSpecular = b.Color("m_IndirectSpecularColor", default);
+            s_IndirectSpecularSerialized = b.Get("m_IndirectSpecularColor") != null;
+            s_SettingsOwner = null;
             s_ReflectionIntensity = b.Float("m_ReflectionIntensity", 1f);
             s_ReflectionBounces = b.Int("m_ReflectionBounces", 1);
             s_DefaultReflectionMode = (DefaultReflectionMode)b.Int("m_DefaultReflectionMode");
@@ -432,6 +446,7 @@ namespace UnityEngine
             s_BakedReflection = null;
             s_EnvironmentProbe = null;
             if (firstScene) LightmapSettings.Reset();
+            BindBakedSkybox(file, reference, null);
             if (reference.IsNull || reference.Guid == null || !Native.IsReady) return;
             try
             {
@@ -446,6 +461,7 @@ namespace UnityEngine
                     k++;
                 }
                 s_BakedProbe = sh;
+                BindBakedSkybox(file, reference, sh);
                 var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
                 BakedLighting.Read(root, file, scene);
                 if (root.TryGetProperty("defaultReflection", out var reflection) && reflection.ValueKind == System.Text.Json.JsonValueKind.Object)
@@ -457,6 +473,21 @@ namespace UnityEngine
             }
         }
         static bool s_WarnedSkyboxProbe;
+
+        /// <summary>Gives the scene whose RenderSettings were read with <paramref name="file"/> (its
+        /// own file: one scene's settings and lighting data are read with the same resolver) the DC
+        /// term of its lighting data's ambient probe, or none. Only a project's baked LightingData
+        /// counts: the built-in one of a scene without a bake is not measured as a source.</summary>
+        internal static void BindBakedSkybox(IReferenceResolver file, ObjectRef reference, SphericalHarmonicsL2? probe)
+        {
+            if (file == null) return;
+            foreach (var settings in s_SceneSettings.Values)
+            {
+                if (!ReferenceEquals(settings.Resolver, file)) continue;
+                bool project = !reference.IsNull && reference.Guid != null && !reference.Guid.StartsWith("0000000000000000", StringComparison.Ordinal);
+                settings.BakedSkyboxDC = project && probe is { } sh ? new Color(sh[0, 0], sh[1, 0], sh[2, 0], 1f) : (Color?)null;
+            }
+        }
 
         /// <summary>A baked reflection a lighting data names (the skybox's, a probe's): a cubemap
         /// of the built-in resources, or a project's baked cubemap asset.</summary>
@@ -563,7 +594,33 @@ namespace UnityEngine
         /// it instead of the built-in falloff.</summary>
         internal static Texture haloTexture => s_HaloTexture;
 
-        internal static Color IndirectSpecularColor => s_IndirectSpecular;
+        /// <summary>
+        /// <c>unity_IndirectSpecColor</c> in the project's color space. A serialized
+        /// <c>m_IndirectSpecularColor</c> is a gamma color, converted for linear projects. Without
+        /// one, with the default reflection the skybox's, Trilight ambient and the scene's own baked
+        /// lighting data, the Editor gives the lighting data's ambient probe DC term (linear) times
+        /// reflectionIntensity, sRGB-encoded per channel in gamma projects; ambientIntensity does not
+        /// change it, alpha is reflectionIntensity (measured: tests/projects/indirectspec, both color
+        /// spaces, ambientIntensity 1/0.5 x reflectionIntensity 1/0.25). Any other case (a Custom
+        /// reflection, Skybox/Flat ambient, after DynamicGI.UpdateEnvironment, no project bake) is not
+        /// measured and keeps the serialized value (black when absent).
+        /// </summary>
+        internal static Vector4 IndirectSpecularGlobal(bool linear)
+        {
+            if (!s_IndirectSpecularSerialized && s_SettingsOwner?.BakedSkyboxDC is { } dc
+                && s_DefaultReflectionMode == DefaultReflectionMode.Skybox && s_AmbientMode == AmbientMode.Trilight && !s_EnvironmentProbe.HasValue)
+            {
+                float r = dc.r * s_ReflectionIntensity, g = dc.g * s_ReflectionIntensity, b = dc.b * s_ReflectionIntensity;
+                if (!linear)
+                {
+                    r = Mathf.LinearToGammaSpace(r);
+                    g = Mathf.LinearToGammaSpace(g);
+                    b = Mathf.LinearToGammaSpace(b);
+                }
+                return new Vector4(r, g, b, s_ReflectionIntensity);
+            }
+            return (Vector4)(linear ? s_IndirectSpecular.linear : s_IndirectSpecular);
+        }
     }
 
     /// <summary>What the lighting data says a light was baked into.</summary>
@@ -629,7 +686,7 @@ namespace Unbound.Runtime
             into.Add(("unity_AmbientGround", (Vector4)ground));
             // UNITY_LIGHTMODEL_AMBIENT is twice this.
             into.Add(("glstate_lightmodel_ambient", (Vector4)(sky * 0.5f)));
-            into.Add(("unity_IndirectSpecColor", (Vector4)Space(UnityEngine.RenderSettings.IndirectSpecularColor)));
+            into.Add(("unity_IndirectSpecColor", UnityEngine.RenderSettings.IndirectSpecularGlobal(linear)));
 
             // Fog.
             into.Add(("unity_FogColor", (Vector4)Space(UnityEngine.RenderSettings.fogColor)));
