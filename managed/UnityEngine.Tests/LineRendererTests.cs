@@ -133,6 +133,103 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(go);
         }
 
+        /// <summary>Expiring many points at once keeps exactly the points the one-at-a-time rule
+        /// kept: drop the oldest while the next one is older than the trail's time, then a last
+        /// point that is.</summary>
+        [Fact]
+        public void TrailsExpireAPrefixAsTheOneAtATimeRuleDid()
+        {
+            var go = new GameObject("trail");
+            var trail = go.AddComponent<TrailRenderer>();
+            trail.time = 1f;
+            var positions = new System.Collections.Generic.List<Vector3>();
+            var times = new System.Collections.Generic.List<float>();
+            // AddPositions stamps a point between the newest point's time and now (half way for one).
+            trail.AddPosition(Vector3.zero);
+            positions.Add(Vector3.zero);
+            times.Add(Time.time);
+            for (int k = 1; k <= 40; k++)
+            {
+                Frame(k % 3 == 0 ? 0.07f : 0.03f);
+                var p = new Vector3(k, 0f, 0f);
+                trail.AddPosition(p);
+                float now = Time.time, from = times[times.Count - 1];
+                positions.Add(p);
+                times.Add(from + (now - from) * 1 / 2);
+            }
+            Assert.Equal(positions.Count, trail.positionCount);
+            foreach (float step in new[] { 1.13f, 0.41f, 5f })
+            {
+                Frame(step);
+                trail.UpdateTrail();
+                float now = Time.time;
+                while (positions.Count >= 2 && now - times[1] > 1f)
+                {
+                    positions.RemoveAt(0);
+                    times.RemoveAt(0);
+                }
+                if (positions.Count == 1 && now - times[0] > 1f)
+                {
+                    positions.Clear();
+                    times.Clear();
+                }
+                Assert.Equal(positions.Count, trail.positionCount);
+                for (int i = 0; i < positions.Count; i++) Assert.Equal(positions[i], trail.GetPosition(i));
+            }
+            Assert.Equal(0, trail.positionCount);
+            Object.DestroyImmediate(go);
+        }
+
+        /// <summary>A loop's zero-length segments take the next non-zero segment's direction around
+        /// the loop, as the per-segment forward scan did, for every zero pattern up to nine segments
+        /// (runs at the start, the end and across the wrap, and all zero).</summary>
+        [Fact]
+        public void LoopZeroRunsTakeTheNextNonZeroDirectionAsTheScanDid()
+        {
+            const System.Reflection.BindingFlags Private = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+            var strip = new LineStrip();
+            var dirField = typeof(LineStrip).GetField("m_Dir", Private);
+            var zeroField = typeof(LineStrip).GetField("m_Zero", Private);
+            var effectiveField = typeof(LineStrip).GetField("m_Effective", Private);
+            var loopDirections = typeof(LineStrip).GetMethod("LoopDirections", Private);
+            Assert.NotNull(dirField);
+            Assert.NotNull(zeroField);
+            Assert.NotNull(effectiveField);
+            Assert.NotNull(loopDirections);
+            for (int segments = 1; segments <= 9; segments++)
+            {
+                for (int mask = 0; mask < 1 << segments; mask++)
+                {
+                    // Scratch arrays are grown, not trimmed: keep stale entries past the segments.
+                    var dir = new Vector3[segments + 2];
+                    var zero = new bool[segments + 2];
+                    var effective = new Vector3[segments + 2];
+                    for (int j = 0; j < dir.Length; j++)
+                    {
+                        dir[j] = new Vector3(j + 1, 0.5f * j, -j);
+                        effective[j] = new Vector3(-99f, -99f, -99f);
+                    }
+                    for (int j = 0; j < segments; j++) zero[j] = (mask & (1 << j)) != 0;
+                    var expected = new Vector3[segments];
+                    for (int j = 0; j < segments; j++)
+                    {
+                        expected[j] = dir[j];
+                        if (!zero[j]) continue;
+                        for (int k = 1; k < segments; k++)
+                        {
+                            int at = (j + k) % segments;
+                            if (!zero[at]) { expected[j] = dir[at]; break; }
+                        }
+                    }
+                    dirField.SetValue(strip, dir);
+                    zeroField.SetValue(strip, zero);
+                    effectiveField.SetValue(strip, effective);
+                    loopDirections.Invoke(strip, new object[] { segments });
+                    for (int j = 0; j < segments; j++) Assert.Equal(expected[j], effective[j]);
+                }
+            }
+        }
+
         [Fact]
         public void LineUtilityDropsPointsWithinTolerance()
         {
