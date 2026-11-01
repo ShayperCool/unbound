@@ -24,6 +24,9 @@ public static class MatchReviewProbe
         bool before = clip.hasRootCurves;
         bool human = clip.humanMotion;
         RootProbe.Record("matchReview.humanGetterOrder", "{\"before\":"+(before?1:0)+",\"human\":"+(human?1:0)+",\"after\":"+(clip.hasRootCurves?1:0)+"}");
+        foreach (float initial in new[] { 0f, .4f })
+        foreach (float end in new[] { .6f, .8f, 1.25f })
+        foreach (bool rebind in new[] { false, true }) Timing(initial, end, rebind);
     }
 
     static Animator Make(out GameObject root)
@@ -107,5 +110,22 @@ public static class MatchReviewProbe
             }
         }
         finally { UnityEngine.Object.DestroyImmediate(root); UnityEngine.Object.DestroyImmediate(controller); }
+    }
+
+    static void Timing(float initial, float end, bool rebind)
+    {
+        string key = "matchReview.timing."+F(initial)+"."+F(end)+"."+rebind;
+        var animator = Make(out var root);
+        try
+        {
+            animator.Play("Loop", 0, initial); animator.Update(0);
+            animator.MatchTarget(Target, Turn, AvatarTarget.Root, new MatchTargetWeightMask(Vector3.one, 1), .2f, end, false);
+            animator.Update(.1f); Snapshot(key+".before", animator, null);
+            if (rebind) animator.Rebind();
+            Snapshot(key+".afterCall", animator, null);
+            animator.Update(0); Snapshot(key+".zero", animator, null);
+            for (int i = 0; i < 30; i++) { animator.Update(.1f); Snapshot(key+".step"+i, animator, null); }
+        }
+        finally { UnityEngine.Object.DestroyImmediate(root); }
     }
 }
