@@ -1104,12 +1104,21 @@ namespace Unbound.Runtime
                 EmitItems(transparent, s_Items.Count);
                 CameraPlanes?.Invoke(camera, true);
                 RunEvent(camera, CameraEvent.AfterForwardAlpha, sceneTarget);
-                // OnPostRender, the halo and lens flare events (Unbound draws none: the events
-                // fire anyway), then OnRenderObject (measured: tests/projects/builtinrp
-                // events.*.orderWithMessages).
+                // OnPostRender (the message, then Camera.onPostRender), the halos and lens flares
+                // between their events, then OnRenderObject (measured: tests/projects/builtinrp
+                // events.*.orderWithMessages, tests/projects/flares o.*).
                 SendToCamera(camera, m => m.OnPostRender);
                 Camera.onPostRender?.Invoke(camera);
                 RunEvent(camera, CameraEvent.BeforeHaloAndLensFlares, sceneTarget);
+                {
+                    ulong haloTarget = sceneTarget != null ? TextureHandles.Of(sceneTarget) : 0;
+                    if (GfxStream.Current.Color != haloTarget)
+                    {
+                        GfxStream.SetTarget(haloTarget);
+                        GfxStream.Viewport(viewport);
+                    }
+                    Halos.Render(camera, context.View, context.Projection, viewport);
+                }
                 RunEvent(camera, CameraEvent.AfterHaloAndLensFlares, sceneTarget);
                 SendToAll(m => m.OnRenderObject);
                 void ResolveIntermediate()

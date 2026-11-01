@@ -1304,7 +1304,7 @@ impl Parser<'_> {
                 }
                 let mut values = Vec::new();
                 if let Some(first) = self.value() {
-                    let off = first == Value::Word("Off".into());
+                    let off = matches!(&first, Value::Word(w) if w.eq_ignore_ascii_case("off"));
                     values.push(first);
                     if !off {
                         values.extend(self.value());
