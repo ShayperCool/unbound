@@ -55,9 +55,19 @@ Gamma and Linear read the same floats.
 * `GetPixel` reads the same byte as b / 255 (0.2), and so does Alpha8's `GetPixels`, which
   returns (1, 1, 1, a) while its `GetPixels32` returns (0, 0, 0, a).
 * R8 reads (r, 1, 1, 1) and `GetPixels32` (r, 255, 255, 255); RG16 (r, g, 1, 1).
-* RGBA4444/ARGB4444 read each nibble n as (17 n) * (1 / 255) in both `GetPixels` and `GetPixel`;
-  R16 and RGB565 use their own scales (neither rule applies).
-* `GetPixelBilinear` at texel centres filters, so it is not a plain byte read.
+* RGBA4444/ARGB4444 read each nibble n as (17 n) * (1 / 255) in both `GetPixels` and `GetPixel`,
+  `GetPixels32` 17 n. RGB565 reads a 5-bit n as n * (1 / 31) and the 6-bit green as n * (1 / 63) in
+  both, `GetPixels32` the bits widened by repeating their top bits (7 gives 57). R16 reads n as
+  n * (1 / 65535) in `GetPixels`, n / 65535 in `GetPixel`, (r, 1, 1, 1), and `GetPixels32`
+  round(n / 257) in r, g and b with alpha 255.
+* `GetPixelData` returns the stored bytes in the texture's format, also for an imported texture
+  and a `LoadImage` result.
+* `GetPixelBilinear(u, v)` mixes the four `GetPixel` values around (u w, v h) with no half-texel
+  offset, so a texel centre mixes in its right and upper neighbours (by the wrap mode); each lerp
+  is a (1 - t) + b t in single precision, along x first.
+* `LoadImage` of a PNG makes an ARGB32 texture. `graphicsFormat`: ARGB32 reports values without a
+  GraphicsFormat name (88, sRGB 87), Alpha8 54; R8 and RG16 report R8_SRGB and R8G8_SRGB for an
+  sRGB texture in the Linear profile.
 * `Texture3D.GetPixel` reads b / 255 like Texture2D's `GetPixel`, its `GetPixels` b * (1 / 255);
   `SetPixel` stores a value half way between two bytes as the upper byte.
 * B8G8R8A8 array and volume assets hold B, G, R, A bytes and report BGRA32 (B8G8R8A8_UNorm), and

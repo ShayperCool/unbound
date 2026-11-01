@@ -18,7 +18,8 @@ namespace UnityEngine
 
     /// <summary>
     /// Image files in and out of textures (the native side decodes and encodes). LoadImage replaces a
-    /// texture's size and pixels: JPGs load as RGB24, other images as RGBA32; the encoders read the
+    /// texture's size and pixels: JPGs load as RGB24, other images as ARGB32 (as Unity documents for
+    /// PNGs; tests/projects/texturepixels Loaded); the encoders read the
     /// texture's pixels, which must be readable.
     /// </summary>
     public static partial class ImageConversion
@@ -45,7 +46,7 @@ namespace UnityEngine
                 tex.Reinitialize(8, 8, TextureFormat.RGBA32, tex.mipmapCount > 1);
                 return false;
             }
-            tex.Reinitialize(width, height, jpeg ? TextureFormat.RGB24 : TextureFormat.RGBA32, tex.mipmapCount > 1);
+            tex.Reinitialize(width, height, jpeg ? TextureFormat.RGB24 : TextureFormat.ARGB32, tex.mipmapCount > 1);
             tex.SetPixels32(pixels);
             tex.Apply(true, markNonReadable);
             return true;

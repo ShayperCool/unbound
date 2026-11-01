@@ -27,7 +27,7 @@ namespace UnityEngine
 
         bool EnsureRetainedPixels()
         {
-            EnsurePixels();
+            DecodeRaw();
             if (m_Pixels == null && m_Hdr == null)
             {
                 if (m_UnreadableRaw != null) DecodeMipChain(m_UnreadableRaw);

@@ -45,13 +45,31 @@ namespace UnityEngine
             return m_MipHdr[mip];
         }
 
+        /// <summary>A texel's cell (byte formats), from the store while a pixel data view exists.</summary>
+        Color32 Cell(int mip, int i) => m_Store != null ? Texture2DTexels.DecodeCell(m_Format, StoreTexel(mip, i)) : ByteLevel(mip)[i];
+        /// <summary>A texel's cell (R16 and float formats).</summary>
+        Color FloatCell(int mip, int i) => m_Store != null ? Texture2DTexels.DecodeFloatCell(m_Format, StoreTexel(mip, i)) : FloatLevel(mip)[i];
+
+        void SetCell(int mip, int i, Color32 cell)
+        {
+            if (m_Store != null) Texture2DTexels.EncodeCell(m_Format, cell, StoreTexel(mip, i));
+            else ByteLevel(mip)[i] = cell;
+        }
+
+        void SetFloatCell(int mip, int i, Color cell)
+        {
+            if (m_Store != null) Texture2DTexels.EncodeFloatCell(m_Format, cell, StoreTexel(mip, i));
+            else FloatLevel(mip)[i] = cell;
+        }
+
         Color Read(int i) => Read(0, i);
-        Color Read(int mip, int i) => m_Hdr != null ? FloatLevel(mip)[i] : (Color)ByteLevel(mip)[i];
+        /// <summary>A texel as GetPixel reads it.</summary>
+        Color Read(int mip, int i) => m_Hdr != null ? FloatCell(mip, i) : Texture2DTexels.Pixel(m_Format, Cell(mip, i));
         void Write(int i, Color c) => Write(0, i, c);
 
         int FloatChannels => m_Format switch
         {
-            TextureFormat.RHalf or TextureFormat.RFloat => 1,
+            TextureFormat.RHalf or TextureFormat.RFloat or TextureFormat.R16 => 1,
             TextureFormat.RGHalf or TextureFormat.RGFloat => 2,
             _ => 4,
         };
@@ -60,21 +78,18 @@ namespace UnityEngine
         {
             if (m_Hdr != null)
             {
+                if (m_Format == TextureFormat.R16)
+                {
+                    SetFloatCell(mip, i, Texture2DTexels.QuantizeFloat(m_Format, c));
+                    return;
+                }
                 int channels = FloatChannels;
                 bool half = m_Format is TextureFormat.RHalf or TextureFormat.RGHalf or TextureFormat.RGBAHalf;
                 for (int k = 0; k < 4; k++) c[k] = k >= channels ? 1f : half ? (float)(Half)c[k] : c[k];
-                FloatLevel(mip)[i] = c;
+                SetFloatCell(mip, i, c);
             }
-            else
-            {
-                // Texture setters round half upward; Color32's managed conversion uses Round.
-                byte Channel(float v) => (byte)Math.Floor(Mathf.Clamp01(v) * 255f + 0.5f);
-                var color = new Color32(Channel(c.r), Channel(c.g), Channel(c.b), Channel(c.a));
-                if (m_Format == TextureFormat.RGB24) color.a = 255;
-                else if (m_Format == TextureFormat.Alpha8) color.r = color.g = color.b = 255;
-                else if (m_Format == TextureFormat.R8) { color.g = color.b = 0; color.a = 255; }
-                ByteLevel(mip)[i] = color;
-            }
+            // Texture setters round half upward; Color32's managed conversion uses Round.
+            else SetCell(mip, i, Texture2DTexels.Quantize(m_Format, c));
         }
 
         public Color GetPixel(int x, int y) => GetPixel(x, y, 0);
@@ -113,11 +128,24 @@ namespace UnityEngine
         }
 
         public Color GetPixelBilinear(float u, float v) => GetPixelBilinear(u, v, 0);
+        /// <summary>The four GetPixel values around (u w, v h) (no half-texel offset: a texel
+        /// centre mixes its right and upper neighbours in), each lerp a (1 - t) + b t in single
+        /// precision, along x first (tests/projects/texturepixels).</summary>
         public Color GetPixelBilinear(float u, float v, int mipLevel)
         {
             RequireReadable();
             if (!ValidMip(mipLevel)) { Debug.LogError("Texture mip level is out of range."); return Color.white; }
-            return Bilinear(u, v, mipLevel);
+            int w = MipWidth(mipLevel), h = MipHeight(mipLevel);
+            float x = u * w, y = v * h;
+            int x0 = (int)Math.Floor(x), y0 = (int)Math.Floor(y);
+            float fx = x - x0, fy = y - y0;
+            int r0 = Wrap(y0, h, wrapModeV) * w, r1 = Wrap(y0 + 1, h, wrapModeV) * w;
+            int c0 = Wrap(x0, w, wrapModeU), c1 = Wrap(x0 + 1, w, wrapModeU);
+            Color a = Read(mipLevel, r0 + c0), b = Read(mipLevel, r0 + c1), c = Read(mipLevel, r1 + c0), d = Read(mipLevel, r1 + c1);
+            static float Lerp(float p, float q, float t) => p * (1f - t) + q * t;
+            var result = new Color();
+            for (int k = 0; k < 4; k++) result[k] = Lerp(Lerp(a[k], b[k], fx), Lerp(c[k], d[k], fx), fy);
+            return result;
         }
 
         public void SetPixel(int x, int y, Color color) => SetPixel(x, y, color, 0);
@@ -162,22 +190,14 @@ namespace UnityEngine
             CheckBlock(x, y, blockWidth, blockHeight, miplevel);
             var result = new Color[blockWidth * blockHeight];
             int width = MipWidth(miplevel);
-            if (m_Hdr == null && m_Format != TextureFormat.Alpha8)
-            {
-                // GetPixels reads a stored byte b as b * (1 / 255) in single precision, which differs
-                // from b / 255 (GetPixel, Alpha8's GetPixels) in the last bit for 126 of the 256 values.
-                const float scale = 1f / 255f;
-                var level = ByteLevel(miplevel);
-                for (int j = 0; j < blockHeight; j++)
-                    for (int i = 0; i < blockWidth; i++)
-                    {
-                        var c = level[(y + j) * width + x + i];
-                        result[j * blockWidth + i] = new Color(c.r * scale, c.g * scale, c.b * scale, c.a * scale);
-                    }
-                return result;
-            }
+            // GetPixels reads a stored byte b as b * (1 / 255) in single precision, which differs
+            // from b / 255 (GetPixel, Alpha8's GetPixels) in the last bit for 126 of the 256 values.
             for (int j = 0; j < blockHeight; j++)
-                for (int i = 0; i < blockWidth; i++) result[j * blockWidth + i] = Read(miplevel, (y + j) * width + x + i);
+                for (int i = 0; i < blockWidth; i++)
+                {
+                    int at = (y + j) * width + x + i;
+                    result[j * blockWidth + i] = m_Hdr != null ? Texture2DTexels.Pixels(m_Format, FloatCell(miplevel, at)) : Texture2DTexels.Pixels(m_Format, Cell(miplevel, at));
+                }
             return result;
         }
 
@@ -187,7 +207,8 @@ namespace UnityEngine
             RequireReadable(true);
             CheckMip(miplevel);
             var result = new Color32[MipWidth(miplevel) * MipHeight(miplevel)];
-            for (int i = 0; i < result.Length; i++) result[i] = Read(miplevel, i);
+            for (int i = 0; i < result.Length; i++)
+                result[i] = m_Hdr != null ? Texture2DTexels.Pixel32(m_Format, FloatCell(miplevel, i)) : Texture2DTexels.Pixel32(m_Format, Cell(miplevel, i));
             return result;
         }
 
@@ -231,7 +252,7 @@ namespace UnityEngine
             m_PixelsDirty = true;
         }
 
-        int RawMipSize(int mip) => PixelFormats.Size(m_Format, MipWidth(mip), MipHeight(mip));
+        int RawMipSize(int mip) => Texture2DTexels.Size(m_Format, MipWidth(mip), MipHeight(mip));
         int RawChainSize()
         {
             int bytes = 0;
@@ -239,21 +260,57 @@ namespace UnityEngine
             return bytes;
         }
 
-        void DecodeLevel(byte[] data, int mip)
+        /// <summary>A level from bytes in the texture's format (into the store while it exists).</summary>
+        void DecodeLevel(ReadOnlySpan<byte> data, int mip)
         {
+            int size = RawMipSize(mip);
+            if (m_Store != null)
+            {
+                data.Slice(0, size).CopyTo(new Span<byte>(m_Store, m_StoreOffsets[mip], size));
+                return;
+            }
+            int n = TexelBytes;
             if (m_Hdr != null)
             {
                 var pixels = FloatLevel(mip);
-                PixelFormats.DecodeFloat(m_Format, data, pixels);
+                if (m_Format == TextureFormat.R16)
+                {
+                    for (int i = 0; i < pixels.Length; i++) pixels[i] = Texture2DTexels.DecodeFloatCell(m_Format, data.Slice(i * n, n));
+                    return;
+                }
+                PixelFormats.DecodeFloat(m_Format, data.ToArray(), pixels);
                 for (int i = 0; i < pixels.Length; i++)
                     for (int k = FloatChannels; k < 4; k++) pixels[i][k] = 1f;
             }
-            else PixelFormats.Decode(m_Format, data, ByteLevel(mip));
+            else if (Texture2DTexels.Coded(m_Format))
+            {
+                var level = ByteLevel(mip);
+                for (int i = 0; i < level.Length; i++) level[i] = Texture2DTexels.DecodeCell(m_Format, data.Slice(i * n, n));
+            }
+            else PixelFormats.Decode(m_Format, data.ToArray(), ByteLevel(mip));
+        }
+
+        /// <summary>A level as bytes in the texture's format.</summary>
+        byte[] EncodeLevel(int mip)
+        {
+            int size = RawMipSize(mip);
+            if (m_Store != null) return new ReadOnlySpan<byte>(m_Store, m_StoreOffsets[mip], size).ToArray();
+            int n = TexelBytes, texels = MipWidth(mip) * MipHeight(mip);
+            if (m_Hdr != null && m_Format != TextureFormat.R16) return PixelFormats.EncodeFloat(m_Format, FloatLevel(mip));
+            if (m_Hdr == null && !Texture2DTexels.Coded(m_Format)) return PixelFormats.Encode(m_Format, ByteLevel(mip));
+            var bytes = new byte[size];
+            for (int i = 0; i < texels; i++)
+            {
+                var texel = new Span<byte>(bytes, i * n, n);
+                if (m_Hdr != null) Texture2DTexels.EncodeFloatCell(m_Format, FloatLevel(mip)[i], texel);
+                else Texture2DTexels.EncodeCell(m_Format, ByteLevel(mip)[i], texel);
+            }
+            return bytes;
         }
 
         void DecodeMipChain(byte[] data)
         {
-            if (GraphicsFormatUtility.IsHDRFormat(m_Format))
+            if (Texture2DTexels.FloatStored(m_Format))
             {
                 m_Hdr ??= new Color[m_Width * m_Height];
                 m_Pixels = null;
@@ -265,7 +322,7 @@ namespace UnityEngine
                 int size = RawMipSize(mip);
                 if (size == 0 || at + size > data.Length)
                     throw new UnityException($"Texture '{name}' has incomplete pixel data for mip {mip}.");
-                DecodeLevel(new ReadOnlySpan<byte>(data, at, size).ToArray(), mip);
+                DecodeLevel(new ReadOnlySpan<byte>(data, at, size), mip);
                 at += size;
             }
         }
@@ -293,7 +350,7 @@ namespace UnityEngine
             var bytes = MemoryMarshal.AsBytes(new ReadOnlySpan<T>(data, sourceDataStartIndex, data.Length - sourceDataStartIndex));
             int size = RawMipSize(mipLevel);
             if (bytes.Length < size) throw new ArgumentException("SetPixelData: not enough data provided.");
-            DecodeLevel(bytes.Slice(0, size).ToArray(), mipLevel);
+            DecodeLevel(bytes.Slice(0, size), mipLevel);
             m_PixelsDirty = true;
         }
         public byte[] GetRawTextureData()
@@ -319,11 +376,12 @@ namespace UnityEngine
 
         byte[] EncodeMipChain()
         {
+            if (m_Store != null) return (byte[])m_Store.Clone();
             var data = new byte[RawChainSize()];
             int at = 0;
             for (int mip = 0; mip < m_MipCount; mip++)
             {
-                var bytes = m_Hdr != null ? PixelFormats.EncodeFloat(m_Format, FloatLevel(mip)) : PixelFormats.Encode(m_Format, ByteLevel(mip));
+                var bytes = EncodeLevel(mip);
                 bytes.CopyTo(data, at);
                 at += bytes.Length;
             }
@@ -349,19 +407,18 @@ namespace UnityEngine
                             float sx = (x + 0.5f) * sw / w - 0.5f, sy = (y + 0.5f) * sh / h - 0.5f;
                             int ix = (int)Math.Floor(sx), iy = (int)Math.Floor(sy);
                             float fx = sx - ix, fy = sy - iy;
-                            var src = ByteLevel(mip - 1);
-                            var a = src[Math.Clamp(iy, 0, sh - 1) * sw + Math.Clamp(ix, 0, sw - 1)];
-                            var b = src[Math.Clamp(iy, 0, sh - 1) * sw + Math.Clamp(ix + 1, 0, sw - 1)];
-                            var d = src[Math.Clamp(iy + 1, 0, sh - 1) * sw + Math.Clamp(ix, 0, sw - 1)];
-                            var e = src[Math.Clamp(iy + 1, 0, sh - 1) * sw + Math.Clamp(ix + 1, 0, sw - 1)];
+                            var a = Cell(mip - 1, Math.Clamp(iy, 0, sh - 1) * sw + Math.Clamp(ix, 0, sw - 1));
+                            var b = Cell(mip - 1, Math.Clamp(iy, 0, sh - 1) * sw + Math.Clamp(ix + 1, 0, sw - 1));
+                            var d = Cell(mip - 1, Math.Clamp(iy + 1, 0, sh - 1) * sw + Math.Clamp(ix, 0, sw - 1));
+                            var e = Cell(mip - 1, Math.Clamp(iy + 1, 0, sh - 1) * sw + Math.Clamp(ix + 1, 0, sw - 1));
                             byte Filter(byte av, byte bv, byte dv, byte ev)
                             {
                                 int top = (int)Math.Floor(av + (bv - av) * fx);
                                 int bottom = (int)Math.Floor(dv + (ev - dv) * fx);
                                 return (byte)Math.Clamp((int)Math.Floor(top + (bottom - top) * fy), 0, 255);
                             }
-                            ByteLevel(mip)[y * w + x] = new Color32(Filter(a.r, b.r, d.r, e.r), Filter(a.g, b.g, d.g, e.g),
-                                Filter(a.b, b.b, d.b, e.b), Filter(a.a, b.a, d.a, e.a));
+                            SetCell(mip, y * w + x, Texture2DTexels.Canonical(m_Format, new Color32(Filter(a.r, b.r, d.r, e.r), Filter(a.g, b.g, d.g, e.g),
+                                Filter(a.b, b.b, d.b, e.b), Filter(a.a, b.a, d.a, e.a))));
                         }
                     }
             }
@@ -369,7 +426,7 @@ namespace UnityEngine
 
         Color32[] UploadByteChain()
         {
-            if (m_MipCount == 1) return m_Pixels;
+            if (m_MipCount == 1 && m_Store == null) return m_Pixels;
             int count = 0;
             for (int mip = 0; mip < m_MipCount; mip++) count += ByteLevel(mip).Length;
             var result = new Color32[count];
@@ -377,7 +434,9 @@ namespace UnityEngine
             for (int mip = 0; mip < m_MipCount; mip++)
             {
                 var level = ByteLevel(mip);
-                level.CopyTo(result, at);
+                if (m_Store != null)
+                    for (int i = 0; i < level.Length; i++) result[at + i] = Cell(mip, i);
+                else level.CopyTo(result, at);
                 at += level.Length;
             }
             return result;
@@ -390,9 +449,9 @@ namespace UnityEngine
             var result = new Color[count];
             int at = 0;
             for (int mip = 0; mip < m_MipCount; mip++)
-                foreach (var pixel in FloatLevel(mip))
+                for (int i = 0, n = MipWidth(mip) * MipHeight(mip); i < n; i++)
                 {
-                    var c = pixel;
+                    var c = FloatCell(mip, i);
                     // CPU reads fill missing channels with one; the GPU fills RGB with zero.
                     for (int k = FloatChannels; k < 3; k++) c[k] = 0f;
                     result[at++] = c;

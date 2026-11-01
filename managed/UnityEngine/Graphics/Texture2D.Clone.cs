@@ -7,7 +7,8 @@ namespace UnityEngine
     {
         Object Instantiation.ICloneable.CloneObject()
         {
-            EnsurePixels();
+            DecodeRaw();
+            SyncFromStore();
             if (m_Pixels == null && m_Hdr == null && m_AssetGuid != null)
                 FetchImportedPixels();
 
