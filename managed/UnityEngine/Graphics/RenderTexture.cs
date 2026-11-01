@@ -249,7 +249,9 @@ namespace UnityEngine
             var f = m_Descriptor.graphicsFormat;
             if (f == GraphicsFormat.None && m_Descriptor.depthStencilFormat != GraphicsFormat.None) return 5;
             if (f == GraphicsFormat.B10G11R11_UFloatPack32) return 4;
-            if (f == GraphicsFormat.R32_SFloat) return 6;
+            // R16's Texture2D storage also uses the existing single-channel float backend.
+            // Keep matching public R16 formats copy-compatible; normalized RT precision is separate.
+            if (f == GraphicsFormat.R32_SFloat || f == GraphicsFormat.R16_UNorm) return 6;
             if (f == GraphicsFormat.R32G32B32A32_SFloat) return 9;
             if (f == GraphicsFormat.R32G32_SFloat) return 10;
             if (f == GraphicsFormat.R16_SFloat) return 11;
