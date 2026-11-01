@@ -206,58 +206,59 @@ namespace UnityEngine
 
         public static int velocityIterations
         {
-            get => s_VelocityIterations;
-            set => s_VelocityIterations = Math.Max(1, value);
+            get { EnsureSettings(); return s_VelocityIterations; }
+            set { EnsureSettings(); s_VelocityIterations = Math.Max(1, value); }
         }
 
         public static int positionIterations
         {
-            get => s_PositionIterations;
-            set => s_PositionIterations = Math.Max(1, value);
+            get { EnsureSettings(); return s_PositionIterations; }
+            set { EnsureSettings(); s_PositionIterations = Math.Max(1, value); }
         }
 
         public static Vector2 gravity
         {
-            get => s_Gravity;
+            get { EnsureSettings(); return s_Gravity; }
             set
             {
+                EnsureSettings();
                 s_Gravity = value;
                 // Sleeping bodies notice a new gravity.
                 foreach (var rb in W.Rigidbodies) if (rb.m_Body != null) rb.m_Body.IsAwake = true;
             }
         }
 
-        public static bool queriesHitTriggers { get => s_QueriesHitTriggers; set => s_QueriesHitTriggers = value; }
-        public static bool queriesStartInColliders { get => s_QueriesStartInColliders; set => s_QueriesStartInColliders = value; }
-        public static bool callbacksOnDisable { get => s_CallbacksOnDisable; set => s_CallbacksOnDisable = value; }
-        public static bool reuseCollisionCallbacks { get => s_ReuseCollisionCallbacks; set => s_ReuseCollisionCallbacks = value; }
-        public static bool autoSyncTransforms { get => s_AutoSyncTransforms; set => s_AutoSyncTransforms = value; }
-        public static SimulationMode2D simulationMode { get => s_SimulationMode; set => s_SimulationMode = value; }
-        public static LayerMask simulationLayers { get => s_SimulationLayers; set => s_SimulationLayers = value; }
-        public static bool useSubStepping { get => s_UseSubStepping; set => s_UseSubStepping = value; }
-        public static bool useSubStepContacts { get => s_UseSubStepContacts; set => s_UseSubStepContacts = value; }
-        public static float minSubStepFPS { get => s_MinSubStepFPS; set => s_MinSubStepFPS = Mathf.Max(1f, value); }
-        public static int maxSubStepCount { get => s_MaxSubStepCount; set => s_MaxSubStepCount = Math.Max(1, value); }
-        public static float bounceThreshold { get => s_BounceThreshold; set { s_BounceThreshold = Mathf.Max(0f, value); ApplyTuning(); } }
-        public static float contactThreshold { get => s_ContactThreshold; set => s_ContactThreshold = Mathf.Max(0f, value); }
-        public static float maxLinearCorrection { get => s_MaxLinearCorrection; set { s_MaxLinearCorrection = Mathf.Max(0.0001f, value); ApplyTuning(); } }
-        public static float maxAngularCorrection { get => s_MaxAngularCorrection; set { s_MaxAngularCorrection = Mathf.Max(0.0001f, value); ApplyTuning(); } }
-        public static float maxTranslationSpeed { get => s_MaxTranslationSpeed; set { s_MaxTranslationSpeed = Mathf.Max(0.0001f, value); ApplyTuning(); } }
-        public static float maxRotationSpeed { get => s_MaxRotationSpeed; set { s_MaxRotationSpeed = Mathf.Max(0.0001f, value); ApplyTuning(); } }
-        public static float defaultContactOffset { get => s_DefaultContactOffset; set { s_DefaultContactOffset = Mathf.Max(0.0001f, value); ApplyTuning(); } }
-        public static float baumgarteScale { get => s_BaumgarteScale; set { s_BaumgarteScale = Mathf.Max(0f, value); ApplyTuning(); } }
-        public static float baumgarteTOIScale { get => s_BaumgarteTOIScale; set { s_BaumgarteTOIScale = Mathf.Max(0f, value); ApplyTuning(); } }
-        public static float timeToSleep { get => s_TimeToSleep; set { s_TimeToSleep = Mathf.Max(0f, value); ApplyTuning(); } }
-        public static float linearSleepTolerance { get => s_LinearSleepTolerance; set { s_LinearSleepTolerance = Mathf.Max(0f, value); ApplyTuning(); } }
-        public static float angularSleepTolerance { get => s_AngularSleepTolerance; set { s_AngularSleepTolerance = Mathf.Max(0f, value); ApplyTuning(); } }
+        public static bool queriesHitTriggers { get { EnsureSettings(); return s_QueriesHitTriggers; } set { EnsureSettings(); s_QueriesHitTriggers = value; } }
+        public static bool queriesStartInColliders { get { EnsureSettings(); return s_QueriesStartInColliders; } set { EnsureSettings(); s_QueriesStartInColliders = value; } }
+        public static bool callbacksOnDisable { get { EnsureSettings(); return s_CallbacksOnDisable; } set { EnsureSettings(); s_CallbacksOnDisable = value; } }
+        public static bool reuseCollisionCallbacks { get { EnsureSettings(); return s_ReuseCollisionCallbacks; } set { EnsureSettings(); s_ReuseCollisionCallbacks = value; } }
+        public static bool autoSyncTransforms { get { EnsureSettings(); return s_AutoSyncTransforms; } set { EnsureSettings(); s_AutoSyncTransforms = value; } }
+        public static SimulationMode2D simulationMode { get { EnsureSettings(); return s_SimulationMode; } set { EnsureSettings(); s_SimulationMode = value; } }
+        public static LayerMask simulationLayers { get { EnsureSettings(); return s_SimulationLayers; } set { EnsureSettings(); s_SimulationLayers = value; } }
+        public static bool useSubStepping { get { EnsureSettings(); return s_UseSubStepping; } set { EnsureSettings(); s_UseSubStepping = value; } }
+        public static bool useSubStepContacts { get { EnsureSettings(); return s_UseSubStepContacts; } set { EnsureSettings(); s_UseSubStepContacts = value; } }
+        public static float minSubStepFPS { get { EnsureSettings(); return s_MinSubStepFPS; } set { EnsureSettings(); s_MinSubStepFPS = Mathf.Max(1f, value); } }
+        public static int maxSubStepCount { get { EnsureSettings(); return s_MaxSubStepCount; } set { EnsureSettings(); s_MaxSubStepCount = Math.Max(1, value); } }
+        public static float bounceThreshold { get { EnsureSettings(); return s_BounceThreshold; } set { EnsureSettings(); s_BounceThreshold = Mathf.Max(0f, value); ApplyTuning(); } }
+        public static float contactThreshold { get { EnsureSettings(); return s_ContactThreshold; } set { EnsureSettings(); s_ContactThreshold = Mathf.Max(0f, value); } }
+        public static float maxLinearCorrection { get { EnsureSettings(); return s_MaxLinearCorrection; } set { EnsureSettings(); s_MaxLinearCorrection = Mathf.Max(0.0001f, value); ApplyTuning(); } }
+        public static float maxAngularCorrection { get { EnsureSettings(); return s_MaxAngularCorrection; } set { EnsureSettings(); s_MaxAngularCorrection = Mathf.Max(0.0001f, value); ApplyTuning(); } }
+        public static float maxTranslationSpeed { get { EnsureSettings(); return s_MaxTranslationSpeed; } set { EnsureSettings(); s_MaxTranslationSpeed = Mathf.Max(0.0001f, value); ApplyTuning(); } }
+        public static float maxRotationSpeed { get { EnsureSettings(); return s_MaxRotationSpeed; } set { EnsureSettings(); s_MaxRotationSpeed = Mathf.Max(0.0001f, value); ApplyTuning(); } }
+        public static float defaultContactOffset { get { EnsureSettings(); return s_DefaultContactOffset; } set { EnsureSettings(); s_DefaultContactOffset = Mathf.Max(0.0001f, value); ApplyTuning(); } }
+        public static float baumgarteScale { get { EnsureSettings(); return s_BaumgarteScale; } set { EnsureSettings(); s_BaumgarteScale = Mathf.Max(0f, value); ApplyTuning(); } }
+        public static float baumgarteTOIScale { get { EnsureSettings(); return s_BaumgarteTOIScale; } set { EnsureSettings(); s_BaumgarteTOIScale = Mathf.Max(0f, value); ApplyTuning(); } }
+        public static float timeToSleep { get { EnsureSettings(); return s_TimeToSleep; } set { EnsureSettings(); s_TimeToSleep = Mathf.Max(0f, value); ApplyTuning(); } }
+        public static float linearSleepTolerance { get { EnsureSettings(); return s_LinearSleepTolerance; } set { EnsureSettings(); s_LinearSleepTolerance = Mathf.Max(0f, value); ApplyTuning(); } }
+        public static float angularSleepTolerance { get { EnsureSettings(); return s_AngularSleepTolerance; } set { EnsureSettings(); s_AngularSleepTolerance = Mathf.Max(0f, value); ApplyTuning(); } }
 
         public static bool raycastsHitTriggers { get => queriesHitTriggers; set => queriesHitTriggers = value; }
         public static bool raycastsStartInColliders { get => queriesStartInColliders; set => queriesStartInColliders = value; }
         public static float velocityThreshold { get => bounceThreshold; set => bounceThreshold = value; }
         public static bool autoSimulation
         {
-            get => s_SimulationMode != SimulationMode2D.Script;
-            set => s_SimulationMode = value ? SimulationMode2D.FixedUpdate : SimulationMode2D.Script;
+            get { EnsureSettings(); return s_SimulationMode != SimulationMode2D.Script; }
+            set { EnsureSettings(); s_SimulationMode = value ? SimulationMode2D.FixedUpdate : SimulationMode2D.Script; }
         }
 
         // ------------------------------------------------------------------ simulation
@@ -301,6 +302,7 @@ namespace UnityEngine
         {
             if (layer1 < 0 || layer1 > 31) throw new ArgumentOutOfRangeException(nameof(layer1), "layer1 is out of range. Layer numbers must be in the range 0 to 31.");
             if (layer2 < 0 || layer2 > 31) throw new ArgumentOutOfRangeException(nameof(layer2), "layer2 is out of range. Layer numbers must be in the range 0 to 31.");
+            EnsureSettings();
             if (ignore)
             {
                 s_LayerCollisionMatrix[layer1] &= ~(1 << layer2);
@@ -319,12 +321,14 @@ namespace UnityEngine
         {
             if (layer1 < 0 || layer1 > 31) throw new ArgumentOutOfRangeException(nameof(layer1), "layer1 is out of range. Layer numbers must be in the range 0 to 31.");
             if (layer2 < 0 || layer2 > 31) throw new ArgumentOutOfRangeException(nameof(layer2), "layer2 is out of range. Layer numbers must be in the range 0 to 31.");
+            EnsureSettings();
             return (s_LayerCollisionMatrix[layer1] & (1 << layer2)) == 0;
         }
 
         public static void SetLayerCollisionMask(int layer, int layerMask)
         {
             if (layer < 0 || layer > 31) throw new ArgumentOutOfRangeException(nameof(layer), "layer is out of range. Layer numbers must be in the range 0 to 31.");
+            EnsureSettings();
             for (int other = 0; other < 32; other++)
             {
                 bool collide = (layerMask & (1 << other)) != 0;
@@ -346,6 +350,7 @@ namespace UnityEngine
         public static int GetLayerCollisionMask(int layer)
         {
             if (layer < 0 || layer > 31) throw new ArgumentOutOfRangeException(nameof(layer), "layer is out of range. Layer numbers must be in the range 0 to 31.");
+            EnsureSettings();
             return s_LayerCollisionMatrix[layer];
         }
 
