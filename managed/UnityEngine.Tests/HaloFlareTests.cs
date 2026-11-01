@@ -66,6 +66,10 @@ namespace UnityEngine.Tests
                 var setFloat = new CommandBuffer();
                 setFloat.SetGlobalFloat("_HaloTestUnused", 1f);
                 Assert.False(HiddenWith(CameraEvent.BeforeImageEffects, setFloat));
+                var noClear = new CommandBuffer();
+                noClear.ClearRenderTarget(RTClearFlags.None, new[] { Color.green }, 1f, 0);
+                Assert.False(HiddenWith(CameraEvent.AfterForwardAlpha, noClear));
+                Assert.False(HiddenWith(CameraEvent.BeforeHaloAndLensFlares, noClear));
                 // ho.*: a color clear before the halos hides them; after them it cannot.
                 var clear = new CommandBuffer();
                 clear.ClearRenderTarget(false, true, Color.green);

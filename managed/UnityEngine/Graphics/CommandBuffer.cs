@@ -284,7 +284,7 @@ namespace UnityEngine.Rendering
             if (backgroundColors.Length < 1 || backgroundColors.Length > 8)
                 throw new ArgumentException("The number of background colors must be between 1 and 8.", nameof(backgroundColors));
             var colors = (Color[])backgroundColors.Clone();
-            m_OtherClears++;
+            if ((clearFlags & RTClearFlags.All) != RTClearFlags.None) m_OtherClears++;
             Add(c =>
             {
                 if (colors.Length < (GfxStream.Current.Colors?.Length ?? 1))
