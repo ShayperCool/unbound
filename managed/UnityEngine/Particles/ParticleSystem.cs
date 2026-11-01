@@ -78,6 +78,8 @@ namespace UnityEngine
                     return;
                 }
                 m_Main.randomSeed = value;
+                m_InitialRandomReady = false;
+                m_ShapeRandomReady = false;
             }
         }
 
@@ -363,7 +365,11 @@ namespace UnityEngine
         public void Emit(Particle particle)
         {
             int index = Allocate();
-            if (index >= 0) m_Particles[index] = particle;
+            if (index >= 0)
+            {
+                MaterializeAxisOfRotation();
+                m_Particles[index] = particle;
+            }
         }
 
         public void TriggerSubEmitter(int subEmitterIndex)
@@ -398,8 +404,7 @@ namespace UnityEngine
         [Unbound.EditorFaithful("no-op is equivalent: a GPU buffer memory hint; nothing a game observes")]
         public static void SetMaximumPreMappedBufferCounts(int vertexBuffersCount, int indexBuffersCount) { }
 
-        [Unbound.EditorFaithful("no-op is equivalent: every particle always stores its axis of rotation")]
-        public void AllocateAxisOfRotationAttribute() { }
+        public void AllocateAxisOfRotationAttribute() => MaterializeAxisOfRotation();
 
         [Unbound.EditorFaithful("no-op is equivalent: every particle always stores its mesh index")]
         public void AllocateMeshIndexAttribute() { }
@@ -415,6 +420,7 @@ namespace UnityEngine
             if (offset < 0) throw new ArgumentOutOfRangeException(nameof(offset));
             int count = offset + size;
             Reserve(count);
+            if (count > 0) MaterializeAxisOfRotation();
             for (int i = 0; i < size && offset + i < count; i++)
             {
                 // Native optional noise arrays are separate from the public particle struct.
@@ -470,6 +476,7 @@ namespace UnityEngine
             offset = Math.Max(0, offset);
             int n = Math.Min(Math.Min(size, particles.Length), m_Count - offset);
             if (n <= 0) return 0;
+            MaterializeAxisOfRotation();
             Array.Copy(m_Particles, offset, particles, 0, n);
             return n;
         }
@@ -550,6 +557,16 @@ namespace UnityEngine
             m_Loop = m_Loop,
             m_BurstCycles = (int[])m_BurstCycles.Clone(),
             m_RandomState = m_RandomState,
+            m_InitialRandom0 = m_InitialRandom[0],
+            m_InitialRandom1 = m_InitialRandom[1],
+            m_InitialRandom2 = m_InitialRandom[2],
+            m_InitialRandom3 = m_InitialRandom[3],
+            m_InitialRandomReady = m_InitialRandomReady,
+            m_ShapeRandom0 = m_ShapeRandom[0],
+            m_ShapeRandom1 = m_ShapeRandom[1],
+            m_ShapeRandom2 = m_ShapeRandom[2],
+            m_ShapeRandom3 = m_ShapeRandom[3],
+            m_ShapeRandomReady = m_ShapeRandomReady,
         };
 
         public void SetPlaybackState(PlaybackState playbackState)
@@ -564,6 +581,16 @@ namespace UnityEngine
             m_PlaybackRestored = true;
             m_BurstCycles = (int[])playbackState.m_BurstCycles?.Clone() ?? Array.Empty<int>();
             m_RandomState = playbackState.m_RandomState;
+            m_InitialRandom[0] = playbackState.m_InitialRandom0;
+            m_InitialRandom[1] = playbackState.m_InitialRandom1;
+            m_InitialRandom[2] = playbackState.m_InitialRandom2;
+            m_InitialRandom[3] = playbackState.m_InitialRandom3;
+            m_InitialRandomReady = playbackState.m_InitialRandomReady;
+            m_ShapeRandom[0] = playbackState.m_ShapeRandom0;
+            m_ShapeRandom[1] = playbackState.m_ShapeRandom1;
+            m_ShapeRandom[2] = playbackState.m_ShapeRandom2;
+            m_ShapeRandom[3] = playbackState.m_ShapeRandom3;
+            m_ShapeRandomReady = playbackState.m_ShapeRandomReady;
         }
 
         public Trails GetTrails()
@@ -637,6 +664,7 @@ namespace UnityEngine
         internal void Restart(bool prewarm)
         {
             uint seed = m_Main.autoRandomSeed ? NextAutoSeed() : m_Main.randomSeed;
+            ResetInitialRandom(seed);
             m_RandomState = ((ulong)seed << 32) ^ 0x9e3779b97f4a7c15UL ^ seed;
             if (m_RandomState == 0) m_RandomState = 0x9e3779b97f4a7c15UL;
             m_NoiseSumEnabled = false;

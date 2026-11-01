@@ -440,7 +440,7 @@ namespace UnityEngine
                 if (index < 0) break;
                 int si = spreadIndex >= 0 ? spreadIndex : k;
                 int sn = spreadIndex >= 0 ? spreadCount : count;
-                if (!InitParticle(ref m_Particles[index], emitter, nt, hasOverrides, ref overrides, si, sn, null) ||
+                if (!InitParticle(ref m_Particles[index], emitter, nt, hasOverrides, ref overrides, si, sn, null, k, count) ||
                     (simulate && !Integrate(ref m_Particles[index], preAge, ref m_Context)))
                     RemoveAt(index);
                 else StartTrail(ref m_Particles[index]);
@@ -459,40 +459,42 @@ namespace UnityEngine
 
         /// <summary>A new particle with the main and shape modules' start values. `origin` (world)
         /// replaces the emitter's position (sub-emitters emit from their parent particle).</summary>
-        bool InitParticle(ref Particle p, Matrix4x4 emitter, float nt, bool hasOverrides, ref EmitParams o, int spreadIndex, int spreadCount, Vector3? origin)
+        bool InitParticle(ref Particle p, Matrix4x4 emitter, float nt, bool hasOverrides, ref EmitParams o, int spreadIndex, int spreadCount, Vector3? origin,
+            int initializationIndex, int initializationCount, Vector3? inheritedAxis = null)
         {
-            uint seed = hasOverrides && o.m_RandomSeedSet ? o.m_Particle.m_RandomSeed : NextUInt();
+            var samples = InitialSamplesAt(initializationIndex, initializationCount, hasOverrides, ref o);
+            uint seed = samples.seed;
             var M = m_Main;
 
             var noiseSum = p.m_NoiseSum;
             p = default;
             p.m_NoiseSum = noiseSum;
             p.m_RandomSeed = seed;
-            float lifetime = M.startLifetime.Evaluate(nt, R.Value(seed, R.Lifetime));
+            float lifetime = M.startLifetime.Evaluate(nt, samples.lifetime);
             if (m_LifetimeByEmitterSpeed.enabled)
             {
                 var range = m_LifetimeByEmitterSpeed.range;
                 float s = Mathf.InverseLerp(range.x, range.y, m_EmitterVelocity.magnitude);
                 lifetime *= m_LifetimeByEmitterSpeed.curve.Evaluate(s, R.Value(seed, R.Inherit + 100));
             }
-            float speed = M.startSpeed.Evaluate(m_SpeedNt >= 0f ? m_SpeedNt : nt, R.Value(seed, R.Speed));
+            float speed = M.startSpeed.Evaluate(m_SpeedNt >= 0f ? m_SpeedNt : nt, InitialSeedValue(seed, 2527743459u));
             Vector3 size;
             if (M.startSize3D)
-                size = new Vector3(M.startSizeX.Evaluate(nt, R.Value(seed, R.SizeX)), M.startSizeY.Evaluate(nt, R.Value(seed, R.SizeY)), M.startSizeZ.Evaluate(nt, R.Value(seed, R.SizeZ)));
+                size = new Vector3(M.startSizeX.Evaluate(nt, samples.sizeX), M.startSizeY.Evaluate(nt, samples.sizeY), M.startSizeZ.Evaluate(nt, samples.sizeZ));
             else
             {
-                float s = M.startSizeX.Evaluate(nt, R.Value(seed, R.SizeX));
+                float s = M.startSizeX.Evaluate(nt, samples.sizeX);
                 size = new Vector3(s, s, s);
             }
             Vector3 rotation = M.startRotation3D
-                ? new Vector3(M.startRotationX.Evaluate(nt, R.Value(seed, R.RotX)), M.startRotationY.Evaluate(nt, R.Value(seed, R.RotY)), M.startRotationZ.Evaluate(nt, R.Value(seed, R.RotZ)))
-                : new Vector3(0f, 0f, M.startRotationZ.Evaluate(nt, R.Value(seed, R.RotZ)));
-            if (M.flipRotation > 0f && R.Value(seed, R.Flip) < M.flipRotation)
+                ? new Vector3(M.startRotationX.Evaluate(nt, samples.rotationX), M.startRotationY.Evaluate(nt, samples.rotationY), M.startRotationZ.Evaluate(nt, samples.rotationZ))
+                : new Vector3(0f, 0f, M.startRotationZ.Evaluate(nt, samples.rotationZ));
+            if (M.flipRotation > 0f && InitialSeedValue(seed, 4281053604u) < M.flipRotation)
             {
                 rotation = -rotation;
                 p.m_Flags |= Particle.FlagFlipRotation;
             }
-            var color = M.startColor.Evaluate(nt, R.Value(seed, R.Color));
+            var color = M.startColor.Evaluate(nt, samples.color);
 
             SampleShape(spreadIndex, spreadCount, out var pos, out var dir);
             var shapeOffset = pos;
@@ -545,7 +547,11 @@ namespace UnityEngine
                 if (o.m_StartSizeSet) size = o.m_Particle.m_StartSize;
                 if (o.m_RotationSet) rotation = o.m_Particle.m_Rotation;
                 if (o.m_AngularVelocitySet) p.m_AngularVelocity = o.m_Particle.m_AngularVelocity;
-                if (o.m_AxisOfRotationSet) p.m_AxisOfRotation = o.m_Particle.m_AxisOfRotation;
+                if (o.m_AxisOfRotationSet)
+                {
+                    MaterializeAxisOfRotation();
+                    p.m_AxisOfRotation = o.m_Particle.m_AxisOfRotation;
+                }
                 if (o.m_StartColorSet) color = o.m_Particle.m_StartColor;
                 if (o.m_MeshIndexSet)
                 {
@@ -553,7 +559,7 @@ namespace UnityEngine
                     p.m_Flags |= Particle.FlagMeshIndexSet;
                 }
             }
-            if (!(hasOverrides && o.m_AxisOfRotationSet)) p.m_AxisOfRotation = Vector3.forward;
+            if (!(hasOverrides && o.m_AxisOfRotationSet)) p.m_AxisOfRotation = inheritedAxis ?? Vector3.forward;
 
             p.m_Position = pos;
             p.m_Velocity = velocity;
@@ -606,6 +612,7 @@ namespace UnityEngine
                 dir = Vector3.forward;
                 return;
             }
+            BeginShapeSample(spreadIndex);
             float radius = S.radius;
             float thickness = Mathf.Clamp01(S.radiusThickness);
             switch (S.shapeType)
@@ -615,11 +622,16 @@ namespace UnityEngine
                 case ParticleSystemShapeType.Hemisphere:
                 case ParticleSystemShapeType.HemisphereShell:
                 {
-                    dir = RandomUnitVector();
-                    if (S.shapeType == ParticleSystemShapeType.Hemisphere || S.shapeType == ParticleSystemShapeType.HemisphereShell)
-                        dir.z = Mathf.Abs(dir.z);
+                    float phi = ArcAngle(spreadIndex, spreadCount) * Mathf.Deg2Rad;
+                    float height = ShapeValue();
+                    bool hemisphere = S.shapeType == ParticleSystemShapeType.Hemisphere || S.shapeType == ParticleSystemShapeType.HemisphereShell;
+                    float z = hemisphere ? height : height * 2f - 1f;
+                    float ring = Mathf.Sqrt(Mathf.Max(0f, 1f - z * z));
+                    dir = new Vector3(ring * Mathf.Cos(phi), ring * Mathf.Sin(phi), z);
                     bool shell = S.shapeType == ParticleSystemShapeType.SphereShell || S.shapeType == ParticleSystemShapeType.HemisphereShell;
-                    float r = shell ? radius : radius * Mathf.Lerp(1f - thickness, 1f, Mathf.Pow(NextFloat(), 1f / 3f));
+                    float inner = shell ? 1f : Mathf.Pow(1f - thickness, 3f);
+                    float sample = ShapeValue();
+                    float r = radius * ShapeCubeRoot((1f - sample) + inner * sample);
                     pos = dir * r;
                     break;
                 }
@@ -630,37 +642,36 @@ namespace UnityEngine
                 {
                     float phi = ArcAngle(spreadIndex, spreadCount) * Mathf.Deg2Rad;
                     bool shell = S.shapeType == ParticleSystemShapeType.ConeShell || S.shapeType == ParticleSystemShapeType.ConeVolumeShell;
-                    float r01 = shell ? 1f : Mathf.Lerp(1f - thickness, 1f, Mathf.Sqrt(NextFloat()));
+                    float sample = ShapeValue();
+                    float r01 = Mathf.Sqrt((1f - sample) + Mathf.Max(0.001f, shell ? 1f : 1f - thickness) * sample);
                     float angle = Mathf.Clamp(S.angle, 0f, 90f) * Mathf.Deg2Rad;
                     float cos = Mathf.Cos(phi), sin = Mathf.Sin(phi);
-                    // Directions fan out with the distance from the axis, reaching the cone angle at the rim.
-                    float tilt = radius > 1e-4f ? angle * r01 : angle * Mathf.Sqrt(NextFloat());
-                    dir = new Vector3(cos * Mathf.Sin(tilt), sin * Mathf.Sin(tilt), Mathf.Cos(tilt));
+                    dir = new Vector3(cos * r01 * Mathf.Sin(angle), sin * r01 * Mathf.Sin(angle), Mathf.Cos(angle)).normalized;
                     pos = new Vector3(cos * radius * r01, sin * radius * r01, 0f);
                     if (S.shapeType == ParticleSystemShapeType.ConeVolume || S.shapeType == ParticleSystemShapeType.ConeVolumeShell)
                     {
-                        float along = NextFloat() * S.length;
-                        pos += dir * (along / Mathf.Max(dir.z, 1e-4f));
+                        float along = ShapeValue() * S.length;
+                        pos += dir * along;
                     }
                     break;
                 }
                 case ParticleSystemShapeType.Box:
-                    pos = new Vector3(NextFloat() - 0.5f, NextFloat() - 0.5f, NextFloat() - 0.5f);
+                    pos = new Vector3(ShapeValue() - 0.5f, ShapeValue() - 0.5f, ShapeValue() - 0.5f);
                     dir = Vector3.forward;
                     break;
                 case ParticleSystemShapeType.BoxShell:
                 {
-                    pos = new Vector3(NextFloat() - 0.5f, NextFloat() - 0.5f, NextFloat() - 0.5f);
-                    int axis = (int)(NextFloat() * 3f) % 3;
-                    pos[axis] = NextFloat() < 0.5f ? -0.5f : 0.5f;
+                    pos = new Vector3(ShapeValue() - 0.5f, ShapeValue() - 0.5f, ShapeValue() - 0.5f);
+                    int axis = (int)(ShapeValue() * 3f) % 3;
+                    pos[axis] = ShapeValue() < 0.5f ? -0.5f : 0.5f;
                     dir = Vector3.forward;
                     break;
                 }
                 case ParticleSystemShapeType.BoxEdge:
                 {
-                    pos = new Vector3(NextFloat() < 0.5f ? -0.5f : 0.5f, NextFloat() < 0.5f ? -0.5f : 0.5f, NextFloat() < 0.5f ? -0.5f : 0.5f);
-                    int axis = (int)(NextFloat() * 3f) % 3;
-                    pos[axis] = NextFloat() - 0.5f;
+                    pos = new Vector3(ShapeValue() < 0.5f ? -0.5f : 0.5f, ShapeValue() < 0.5f ? -0.5f : 0.5f, ShapeValue() < 0.5f ? -0.5f : 0.5f);
+                    int axis = (int)(ShapeValue() * 3f) % 3;
+                    pos[axis] = ShapeValue() - 0.5f;
                     dir = Vector3.forward;
                     break;
                 }
@@ -668,7 +679,7 @@ namespace UnityEngine
                 case ParticleSystemShapeType.CircleEdge:
                 {
                     float phi = ArcAngle(spreadIndex, spreadCount) * Mathf.Deg2Rad;
-                    float r01 = S.shapeType == ParticleSystemShapeType.CircleEdge ? 1f : Mathf.Lerp(1f - thickness, 1f, Mathf.Sqrt(NextFloat()));
+                    float r01 = S.shapeType == ParticleSystemShapeType.CircleEdge ? 1f : Mathf.Lerp(1f - thickness, 1f, Mathf.Sqrt(ShapeValue()));
                     dir = new Vector3(Mathf.Cos(phi), Mathf.Sin(phi), 0f);
                     pos = dir * (radius * r01);
                     break;
@@ -683,7 +694,7 @@ namespace UnityEngine
                         case ParticleSystemShapeMultiModeValue.Loop: u = Frac(travel); break;
                         case ParticleSystemShapeMultiModeValue.PingPong: u = Mathf.PingPong(travel, 1f); break;
                         case ParticleSystemShapeMultiModeValue.BurstSpread: u = spreadCount > 1 ? spreadIndex / (float)(spreadCount - 1) : 0f; break;
-                        default: u = NextFloat(); break;
+                        default: u = ShapeValue(); break;
                     }
                     if (S.radiusSpread > 0f) u = Mathf.Floor(u / S.radiusSpread) * S.radiusSpread;
                     pos = new Vector3(Mathf.Lerp(-radius, radius, u), 0f, 0f);
@@ -693,15 +704,15 @@ namespace UnityEngine
                 case ParticleSystemShapeType.Donut:
                 {
                     float phi = ArcAngle(spreadIndex, spreadCount) * Mathf.Deg2Rad;
-                    float theta = NextFloat() * Mathf.PI * 2f;
-                    float tube = S.donutRadius * Mathf.Lerp(1f - thickness, 1f, Mathf.Sqrt(NextFloat()));
+                    float theta = ShapeValue() * Mathf.PI * 2f;
+                    float tube = S.donutRadius * Mathf.Lerp(Mathf.Max(0.001f, 1f - thickness), 1f, ShapeValue());
                     var ring = new Vector3(Mathf.Cos(phi), Mathf.Sin(phi), 0f);
                     dir = ring * Mathf.Cos(theta) + Vector3.forward * Mathf.Sin(theta);
                     pos = ring * radius + dir * tube;
                     break;
                 }
                 case ParticleSystemShapeType.Rectangle:
-                    pos = new Vector3(NextFloat() - 0.5f, NextFloat() - 0.5f, 0f);
+                    pos = new Vector3(ShapeValue() - 0.5f, ShapeValue() - 0.5f, 0f);
                     dir = Vector3.forward;
                     break;
                 default:
@@ -709,7 +720,7 @@ namespace UnityEngine
                     break;
             }
 
-            if (S.randomPositionAmount > 0f) pos += RandomUnitVector() * (S.randomPositionAmount * Mathf.Pow(NextFloat(), 1f / 3f));
+            if (S.randomPositionAmount > 0f) pos += RandomUnitVector() * (S.randomPositionAmount * Mathf.Pow(ShapeValue(), 1f / 3f));
 
             var rot = Quaternion.Euler(S.rotation);
             var shapeMatrix = Matrix4x4.TRS(S.position, rot, S.scale);
@@ -750,7 +761,7 @@ namespace UnityEngine
                     angle = count > 0 ? index / (float)count * arc : 0f;
                     break;
                 default:
-                    angle = NextFloat() * arc;
+                    angle = ShapeValue() * arc;
                     break;
             }
             if (S.arcSpread > 0f)
@@ -778,7 +789,7 @@ namespace UnityEngine
             }
             if ((S.shapeType == ParticleSystemShapeType.Mesh || S.shapeType == ParticleSystemShapeType.MeshRenderer) && mesh != null && mesh.m_Vertices.Length > 0)
             {
-                int i = Math.Min((int)(NextFloat() * mesh.m_Vertices.Length), mesh.m_Vertices.Length - 1);
+                int i = Math.Min((int)(ShapeValue() * mesh.m_Vertices.Length), mesh.m_Vertices.Length - 1);
                 pos = mesh.m_Vertices[i];
                 dir = mesh.m_Normals != null && i < mesh.m_Normals.Length && mesh.m_Normals[i].sqrMagnitude > 0f ? mesh.m_Normals[i].normalized : Vector3.forward;
                 pos += dir * S.normalOffset;
@@ -788,18 +799,18 @@ namespace UnityEngine
             if ((S.shapeType == ParticleSystemShapeType.Sprite || S.shapeType == ParticleSystemShapeType.SpriteRenderer) && sprite != null)
             {
                 var b = sprite.bounds;
-                pos = new Vector3(Mathf.Lerp(b.min.x, b.max.x, NextFloat()), Mathf.Lerp(b.min.y, b.max.y, NextFloat()), 0f);
+                pos = new Vector3(Mathf.Lerp(b.min.x, b.max.x, ShapeValue()), Mathf.Lerp(b.min.y, b.max.y, ShapeValue()), 0f);
                 dir = Vector3.forward;
                 return;
             }
-            pos = new Vector3(NextFloat() - 0.5f, NextFloat() - 0.5f, NextFloat() - 0.5f);
+            pos = new Vector3(ShapeValue() - 0.5f, ShapeValue() - 0.5f, ShapeValue() - 0.5f);
             dir = Vector3.forward;
         }
 
         Vector3 RandomUnitVector()
         {
-            float z = NextFloat() * 2f - 1f;
-            float a = NextFloat() * Mathf.PI * 2f;
+            float z = ShapeValue() * 2f - 1f;
+            float a = ShapeValue() * Mathf.PI * 2f;
             float r = Mathf.Sqrt(Mathf.Max(0f, 1f - z * z));
             return new Vector3(r * Mathf.Cos(a), r * Mathf.Sin(a), z);
         }
@@ -1137,7 +1148,8 @@ namespace UnityEngine
                 int index = Allocate();
                 if (index < 0) return;
                 ref var p = ref m_Particles[index];
-                if (!InitParticle(ref p, emitter, Mathf.Clamp01(m_Time / Mathf.Max(m_Main.duration, 0.0001f)), false, ref none, k, count, origin))
+                if (!InitParticle(ref p, emitter, Mathf.Clamp01(m_Time / Mathf.Max(m_Main.duration, 0.0001f)), false, ref none, k, count, origin,
+                    k, count, (properties & ParticleSystemSubEmitterProperties.InheritRotation) != 0 ? parent.m_AxisOfRotation : null))
                 {
                     RemoveAt(index);
                     continue;
