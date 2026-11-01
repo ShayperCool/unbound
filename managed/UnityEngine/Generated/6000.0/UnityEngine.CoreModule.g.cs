@@ -566,21 +566,9 @@ namespace UnityEngine
         [global::Unbound.Stub] public override bool Equals(object other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssemblyVersion.Equals"); return default; }
         [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AssemblyVersion.GetHashCode"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class AsyncInstantiateOperation : global::UnityEngine.AsyncOperation
+    unsafe partial class AsyncInstantiateOperation
     {
         [global::Unbound.Stub] internal static global::System.Threading.CancellationTokenSource s_GlobalCancellation;
-        [global::Unbound.Stub] internal global::UnityEngine.Object[] m_Result;
-        [global::Unbound.Stub] public bool IsWaitingForSceneActivation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation.IsWaitingForSceneActivation"); return default; }
-        [global::Unbound.Stub] public void WaitForCompletion() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation.WaitForCompletion"); }
-        [global::Unbound.Stub] public void Cancel() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation.Cancel"); }
-        [global::Unbound.Stub] public AsyncInstantiateOperation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation.ctor"); }
-        [global::Unbound.Stub] protected AsyncInstantiateOperation(global::System.IntPtr ptr, global::System.Threading.CancellationToken cancellationToken) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation.ctor"); }
-        [global::Unbound.Stub] public static float GetIntegrationTimeMS() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation.GetIntegrationTimeMS"); return default; }
-        [global::Unbound.Stub] public static void SetIntegrationTimeMS(float integrationTimeMS) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation.SetIntegrationTimeMS"); }
-        [global::Unbound.Stub] internal virtual global::UnityEngine.Object[] CreateResultArray(int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation.CreateResultArray"); return global::System.Array.Empty<global::UnityEngine.Object>(); }
-        public global::UnityEngine.Object[] Result { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation.Result"); return global::System.Array.Empty<global::UnityEngine.Object>(); } }
-        internal static float IntegrationTimeMS { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation.IntegrationTimeMS"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation.IntegrationTimeMS"); } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
@@ -594,26 +582,13 @@ namespace UnityEngine
         [global::Unbound.Stub] public static global::UnityEngine.Object[] CreateAsyncInstantiateOperationResultArray(global::UnityEngine.AsyncInstantiateOperation op, int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperationHelper.CreateAsyncInstantiateOperationResultArray"); return global::System.Array.Empty<global::UnityEngine.Object>(); }
         [global::Unbound.Stub] public AsyncInstantiateOperationHelper() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperationHelper.ctor"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class AsyncInstantiateOperation<T> : global::UnityEngine.AsyncInstantiateOperation
+    unsafe partial class AsyncInstantiateOperation<T>
     {
-        [global::Unbound.Stub] internal AsyncInstantiateOperation(global::System.IntPtr ptr, global::System.Threading.CancellationToken cancellationToken) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation<T>.ctor"); }
-        [global::Unbound.Stub] internal override global::UnityEngine.Object[] CreateResultArray(int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation<T>.CreateResultArray"); return global::System.Array.Empty<global::UnityEngine.Object>(); }
-        [global::Unbound.Stub] public global::UnityEngine.AsyncInstantiateOperation<T>.Awaiter GetAwaiter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation<T>.GetAwaiter"); return default; }
-        public T[] Result { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation<T>.Result"); return global::System.Array.Empty<T>(); } }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> ConvertToManaged(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation<T>.BindingsMarshaller.ConvertToManaged"); return default; }
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.AsyncInstantiateOperation<T> obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation<T>.BindingsMarshaller.ConvertToNative"); return default; }
-        }
-        [global::Unbound.Stub]
-        public unsafe partial struct Awaiter : global::System.Runtime.CompilerServices.INotifyCompletion
-        {
-            [global::Unbound.Stub] public Awaiter(global::UnityEngine.AsyncInstantiateOperation<T> op) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation<T>.Awaiter.ctor"); }
-            [global::Unbound.Stub] public void OnCompleted(global::System.Action continuation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation<T>.Awaiter.OnCompleted"); }
-            [global::Unbound.Stub] public T[] GetResult() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation<T>.Awaiter.GetResult"); return global::System.Array.Empty<T>(); }
-            public bool IsCompleted { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AsyncInstantiateOperation<T>.Awaiter.IsCompleted"); return default; } }
         }
     }
     unsafe partial class AsyncOperation
@@ -1741,14 +1716,6 @@ namespace UnityEngine
         internal global::UnityEngine.InspectorSort m_inspectorSort { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.InspectorOrderAttribute.m_inspectorSort"); return default; } }
         internal global::UnityEngine.InspectorSortDirection m_sortDirection { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.InspectorOrderAttribute.m_sortDirection"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct InstantiateParameters
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Transform parent;
-        [global::Unbound.Stub] public global::UnityEngine.SceneManagement.Scene scene;
-        [global::Unbound.Stub] public bool worldSpace;
-        [global::Unbound.Stub] public bool originalImmutable;
-    }
     public enum IntegrityCheckLevel
     {
         Low = 1,
@@ -2225,25 +2192,6 @@ namespace UnityEngine
     }
     unsafe partial class Object
     {
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, global::UnityEngine.Transform parent) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, global::UnityEngine.Transform parent, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, int count) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, int count, global::UnityEngine.Transform parent) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, int count, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, int count, global::System.ReadOnlySpan<global::UnityEngine.Vector3> positions, global::System.ReadOnlySpan<global::UnityEngine.Quaternion> rotations) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, int count, global::UnityEngine.Transform parent, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, int count, global::UnityEngine.Transform parent, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation, global::System.Threading.CancellationToken cancellationToken) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, int count, global::UnityEngine.Transform parent, global::System.ReadOnlySpan<global::UnityEngine.Vector3> positions, global::System.ReadOnlySpan<global::UnityEngine.Quaternion> rotations) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, int count, global::UnityEngine.Transform parent, global::System.ReadOnlySpan<global::UnityEngine.Vector3> positions, global::System.ReadOnlySpan<global::UnityEngine.Quaternion> rotations, global::System.Threading.CancellationToken cancellationToken) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, global::UnityEngine.InstantiateParameters parameters, global::System.Threading.CancellationToken cancellationToken = default) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, int count, global::UnityEngine.InstantiateParameters parameters, global::System.Threading.CancellationToken cancellationToken = default) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation, global::UnityEngine.InstantiateParameters parameters, global::System.Threading.CancellationToken cancellationToken = default) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, int count, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation, global::UnityEngine.InstantiateParameters parameters, global::System.Threading.CancellationToken cancellationToken = default) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.AsyncInstantiateOperation<T> InstantiateAsync<T>(T original, int count, global::System.ReadOnlySpan<global::UnityEngine.Vector3> positions, global::System.ReadOnlySpan<global::UnityEngine.Quaternion> rotations, global::UnityEngine.InstantiateParameters parameters, global::System.Threading.CancellationToken cancellationToken = default) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.InstantiateAsync"); return default; }
-        [global::Unbound.Stub] public static T Instantiate<T>(T original, global::UnityEngine.InstantiateParameters parameters) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.Instantiate"); return default; }
-        [global::Unbound.Stub] public static T Instantiate<T>(T original, global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation, global::UnityEngine.InstantiateParameters parameters) where T : global::UnityEngine.Object { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.Instantiate"); return default; }
         [global::System.Obsolete("Object.FindSceneObjectsOfType has been deprecated, Use Object.FindObjectsByType instead which lets you decide whether you need the results sorted or not.  FindSceneObjectsOfType sorts the results by InstanceID but if you do not need this using FindObjectSortMode.None is considerably faster.")] [global::Unbound.Stub] public static global::UnityEngine.Object[] FindSceneObjectsOfType(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.FindSceneObjectsOfType"); return global::System.Array.Empty<global::UnityEngine.Object>(); }
         [global::Unbound.Stub] internal static bool IsPersistent(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.IsPersistent"); return default; }
         [global::Unbound.Stub] internal static bool DoesObjectWithInstanceIDExist(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.DoesObjectWithInstanceIDExist"); return default; }

@@ -45,6 +45,20 @@ namespace Unbound.Runtime
             return clone;
         }
 
+        /// <summary>Object.Instantiate with InstantiateParameters: the parent decides the scene, else
+        /// the given scene; with a parent, explicit coordinates are local unless worldSpace.</summary>
+        internal static Object Clone(Object original, InstantiateParameters parameters, Vector3? position, Quaternion? rotation)
+        {
+            var sourceGo = original as GameObject ?? (original as Component)?.m_GameObject;
+            if (sourceGo == null) return Clone(original, null, false, null, null);
+            var parent = parameters.parent;
+            var scene = TargetScene(parent, parameters.scene);
+            var clone = Prepare(original, sourceGo, scene, "(Clone)");
+            Place(clone, parent, scene, parameters.worldSpace, !parameters.worldSpace, position, rotation);
+            Activate(new[] { clone });
+            return clone.Result;
+        }
+
         static Object CloneGameObject(Object original, GameObject sourceGo, Transform parent, bool instantiateInWorldSpace, Vector3? position, Quaternion? rotation)
         {
             var scene = TargetScene(parent, default);
