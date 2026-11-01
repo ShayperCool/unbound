@@ -8,6 +8,24 @@ Audit of 2026-10-29: read-only, every subsystem; nothing was measured against th
 row still needs a probe before and after it is fixed. Paths are relative to `managed/UnityEngine/`
 unless they start with `crates/` or `native/`.
 
+## Known insignificant residuals
+
+By the user's decision of 2026-11-01, small differences with no visible effect or
+game-logic change do not block package admission. Raw values and comparator
+tolerances stay unchanged; strict verifiers still report these failures.
+Roughly 1-3/255 in isolated pixels is an example, not a blanket tolerance.
+Systematic biases, wrong functional answers, order/lifetime changes and actual
+bugs remain actionable. No Native captures or deep research are spent solely
+to eliminate a listed insignificant residual.
+
+| Probe / release | Keys or region | Raw difference | Suspected cause and disposition |
+|---|---|---|---|
+| lightprobes / 6000.0.71f1 | `additive tetrahedralized occlusion 3`; `unloaded occlusion 3` | Candidate `0.99999994` versus Native `1`, one float step below 1, absolute difference `5.960464477539063e-8` per differing component | Cell vertex order and float32 weight accumulation. User-classified nonblocking precision residual; no observed visible or logic effect in the measured controls. Preserve the original two failing keys and raw components in the coherent package receipt. Evidence: `validation/runs/lightprobes-occlusion/RECEIPT.md`. This classification does not accept the rest of the unvalidated package. |
+
+The light-probe pixels are not classified here in advance. Fix the measured zero
+`unity_IndirectSpecColor` bug, then record the actual remaining regions, magnitudes
+and whether they are isolated or systematic in the matching runtime report.
+
 ## How gaps hide
 
 Game runs keep hitting features that are missing *without a warning* (physical cameras,

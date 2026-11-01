@@ -29,12 +29,35 @@ graph before a costly build: an exit0 restore can still omit those references
 with mixed logical/physical paths. Keep failed preparation separate from timing
 or runtime acceptance results.
 
-An introduced difference blocks the package that causes it. To attribute a
-difference elsewhere, use a controlled Root A/B with and without the package and
-hold all other source, runtime dependencies and probe inputs fixed. File ownership
-or an already-failing record is not proof. Preserve the complete original union
-and record unresolved values with their owner. Never remove fields or loosen
-tolerances to make a package pass.
+An introduced significant difference blocks the package that causes it. To
+attribute a difference elsewhere, use a controlled Root A/B with and without the
+package and hold all other source, runtime dependencies and probe inputs fixed.
+File ownership or an already-failing record is not proof. Preserve the complete
+original union and record unresolved values with their owner. Never remove fields
+or loosen tolerances to make a package pass.
+
+### Known insignificant residuals
+
+User decision, 2026-11-01: a difference that has no visible or other observable
+effect and does not change game logic does not block a package. Examples include
+a few float steps or isolated pixel differences of roughly 1-3/255. Those are
+examples, not a new global tolerance or an automatic exemption for every small
+number. A systematic frame/object/material bias, a wrong functional API answer,
+changed counts, callbacks, order or lifetime, and any actual bug behind a small
+delta still need correction. Significant inherited gaps remain open.
+
+Keep every raw value, missing/extra/failing field and original comparator
+tolerance. The strict verifier may remain red while package admission succeeds.
+Report strict introduced/retained counts separately from the nonblocking
+classification; do not count a residual as an exact pass or remove it from a
+union. Record its key or pixel region, size, suspected cause and evidence in the
+package receipt and docs row, with a durable entry in
+[Known insignificant residuals](../../docs/COMPATIBILITY_GAPS.md#known-insignificant-residuals).
+
+Do not spend Native captures or deep offline research solely to close an
+insignificant residual. Revisit its classification if existing or later evidence
+shows a real bug, visible effect or logic change. Source review, functional tests,
+API checks and matching-runtime provenance remain required for the actual change.
 
 Keep new PARITY_PROGRESS entries to about eight lines: change, probe passed/total,
 introduced/retained, managed, API, open issues and the full report path. Leave old
