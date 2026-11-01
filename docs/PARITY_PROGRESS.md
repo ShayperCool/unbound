@@ -2607,3 +2607,12 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - Autodestruct: 3545/6/6/6 of 3557, all 382 earlier introductions closed, 0 introduced; 18 manual-destroy delivery rows retained (fail on Root too).
 - Resources 539+62 byte-identical. Open: Static U 88 px, 15 time rows, 8 zero-area indices, cap-two plane inference.
 - Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/trail-recording-runtime-20261101-t3-fcf65aff/REPORT.md`.
+
+### Root line integration, 2026-11-01
+- What: admitted the measured line/trail package; production sources equal tested 6ef53d16, with only later documentation changes.
+- Probe: lines retain 81 failing keys in the full 1903-key union; autodestruct 3545/3557; resources 539 values + 62 images pass.
+- Introduced: 0 failing keys/numeric paths/pixels/channels; all 425 raw numeric error increases retained, including 205 above tolerance inside already failing paths.
+- Managed: 1537/1548, identical 11 inherited failures; line 28, queue 25, mask 15 and platform 64 pass. Root rehashed all 33 payloads; TestCore equals package.
+- API: reused proper nine-module 0/2314 result with identical public metadata; stub/API/ABI/cache changes [].
+- Open: 18 manual-Destroy timing rows, 15 line time rows, 88 Static-U pixels, 8 zero-area indices and cap-two inference; LightProbes remains held.
+- Evidence: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/trail-recording-runtime-20261101-t3-fcf65aff/REPORT.md`; runtime `candidate/`, Core 5c7b03ce; Root receipt `line-root-integration-20261101b/root-adjudication.json`.
