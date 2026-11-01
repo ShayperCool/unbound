@@ -24,6 +24,16 @@ namespace UnityEngine
             return (Vector3.zero, 0f, 0f);
         }
 
+        /// <summary>apparentSpeed from averageSpeed and averageAngularSpeed:
+        /// |speed| · (1 + (angular / 2)²), the product in double precision (measured for humanoid
+        /// clips, tests/projects/humanoid, and generic root nodes, tests/projects/modelroot).</summary>
+        internal static float ApparentSpeed(float x, float y, float z, float angularSpeed)
+        {
+            float l = MathF.Sqrt(z * z + (x * x + y * y));
+            double h = angularSpeed * 0.5f;
+            return (float)((h * h + 1.0) * l);
+        }
+
         /// <summary>A humanoid clip's averages, from its muscle clip's root motion.</summary>
         internal static (Vector3, float, float) HumanMotionStats(Unbound.Runtime.Humanoid.HumanClipMotion m)
         {
@@ -268,9 +278,8 @@ namespace UnityEngine
         /// <summary>Root motion statistics of a root node's motion (none without MotionT/MotionQ
         /// curves, root curves included): the motion over twenty equal parts of the clip, each in
         /// the node's frame at its start, over the length; the turn about the up axis likewise.
-        /// Bake Into Pose zeroes the baked components of the speed, not the turn. The apparent
-        /// speed is the speed's length; the Editor's is larger for clips that turn about the up
-        /// axis (measured, tests/projects/modelroot).</summary>
+        /// Bake Into Pose zeroes the baked components of the speed, not the turn (measured,
+        /// tests/projects/modelroot).</summary>
         internal override (Vector3 Speed, float AngularSpeed, float ApparentSpeed) GetMotionStats()
         {
             if (TryHumanMotion(out var human)) return HumanMotionStats(human);
@@ -295,7 +304,8 @@ namespace UnityEngine
             speed /= length;
             if (m_LoopBlendPositionY) speed.y = 0f;
             if (m_LoopBlendPositionXZ) { speed.x = 0f; speed.z = 0f; }
-            return m_Stats = (speed, turn / length, speed.magnitude);
+            float angular = turn / length;
+            return m_Stats = (speed, angular, ApparentSpeed(speed.x, speed.y, speed.z, angular));
         }
 
         /// <summary>The root node's pose at a time on the clip's curves (MotionT, MotionQ).</summary>

@@ -59,8 +59,8 @@ What the Editor does (measured):
   (min(t, end) − t₀) / (end − t₀), where the correction is the target less where the clip's
   motion alone would bring the root by the end; rotations turn by the normalized lerp towards the
   target. The step past the end completes the match and `isMatchingTarget` turns false.
+- `apparentSpeed` is `|averageSpeed| · (1 + (averageAngularSpeed / 2)²)`, the product in double
+  precision, as for humanoid clips: the speed's length for clips that do not turn, more for clips
+  that turn about the up axis (1.154 times for a 90 degree turn in two seconds).
 
-Unbound matches 3699/3714 records. The 15 others are `apparentSpeed` of the clips that turn
-about the up axis: the Editor's value is the speed's length times a factor that grows with the
-turn (1.154 for a 90 degree turn in two seconds); Unbound returns the speed's length, which is
-the Editor's value for clips that do not turn.
+Unbound matches 3714/3714 records.
