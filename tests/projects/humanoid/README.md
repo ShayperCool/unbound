@@ -26,7 +26,19 @@ imported without keyframe reduction.
   (retargeting), and HumanA's clip on a layer with an IK pass whose `OnAnimatorIK` sets hand, foot,
   hint and look-at goals and moves the body, on both rigs: `Animator.Update(0)`, 24 steps of 1/30 s
   and four of 0.1 s, every transform's locals, the human pose, body/root/pivot and what
-  `OnAnimatorIK` read (goals, weights, hint, body) at every call.
+  `OnAnimatorIK` read (goals, weights, hint, body) at every call;
+- the Animator's `velocity`, `angularVelocity`, `deltaPosition` and `deltaRotation` after every step;
+- HumanA with a second layer playing HumanB's clip: an override layer masked to the arms, an
+  additive one (weight 0.7) masked to body and head, an override one (0.8) masked to the left leg
+  and the root with a transform mask, and a full-body one (0.5) with and without
+  `layersAffectMassCenter`; a transition between the two clips and a 1D blend tree (0.4); a state
+  with Foot IK, with and without `stabilizeFeet`; `SetBoneLocalRotation` in `OnAnimatorIK`;
+- HumanT, a copy of HumanA whose avatar has translation DoF (its avatar, handler, clip, playback on
+  itself and on HumanB);
+- `HumanPoseHandler` made from joint paths: a human pose written and the avatar pose read (seven
+  floats per joint), the rest locals written as the avatar pose and the human pose read back.
+
+`ProbeRunner.Create` also makes the masks, the controllers and HumanT (`CreateBlends`).
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:
