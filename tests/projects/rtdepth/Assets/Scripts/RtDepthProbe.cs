@@ -16,6 +16,10 @@ using UnityEngine.Rendering;
 /// shaders, whose float outputs are read back. Targets: a camera drawing to the screen and to a
 /// render texture runs command buffers that read, sample and draw into CameraTarget,
 /// CurrentActive, Depth and ResolvedDepth. API values, log messages and every image are recorded.
+///
+/// With <c>RTDEPTH_PROBE_MODE=controls</c> it records the controls instead (<see cref="Controls"/>):
+/// screen readback, screen blits and GL.wireframe from a screen camera's callbacks with and
+/// without a command buffer, and depth elements and integer loads in further binding paths.
 /// </summary>
 public class RtDepthProbe : MonoBehaviour
 {
@@ -37,6 +41,7 @@ public class RtDepthProbe : MonoBehaviour
     Mesh quad;
     int renders;
     string activeDuringRender;
+    bool controls;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Boot()
@@ -151,6 +156,7 @@ public class RtDepthProbe : MonoBehaviour
 
     void Start()
     {
+        controls = Environment.GetEnvironmentVariable("RTDEPTH_PROBE_MODE") == "controls";
         directory = Environment.GetEnvironmentVariable("RTDEPTH_PROBE_OUT");
         Directory.CreateDirectory(directory);
         Application.logMessageReceived += OnLog;
@@ -180,14 +186,22 @@ public class RtDepthProbe : MonoBehaviour
             quad = new Mesh { vertices = Rect3(-0.25f, 0.25f, -0.25f, 0.25f, 0, 0), triangles = new[] { 0, 1, 2, 0, 2, 3 } };
             quad.RecalculateBounds();
             Shader.SetGlobalTexture(Src, magenta);
-            Api();
+            if (!controls) Api();
             MakeScene();
             cam = new GameObject("Camera").AddComponent<Camera>();
             cam.enabled = false;
             Configure(false);
             Camera.onPostRender += OnAnyPostRender;
-            Formats();
-            steps = Targets();
+            if (controls)
+            {
+                Camera.onPreRender += OnControlPreRender;
+                steps = Controls();
+            }
+            else
+            {
+                Formats();
+                steps = Targets();
+            }
         }
         catch (Exception e)
         {
@@ -202,7 +216,7 @@ public class RtDepthProbe : MonoBehaviour
             if (!more) break;
             yield return steps.Current;
         }
-        try { if (code == 0) Stencils(); }
+        try { if (code == 0 && !controls) Stencils(); }
         catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
         Value("complete", B(code == 0));
         Flush();
@@ -410,6 +424,7 @@ public class RtDepthProbe : MonoBehaviour
         if (c != cam) return;
         renders++;
         activeDuringRender = Name(RenderTexture.active) + "," + Name(c.activeTexture);
+        OnControlPostRender();
     }
 
     static readonly string[] Cases =
@@ -510,5 +525,175 @@ public class RtDepthProbe : MonoBehaviour
         cam.targetTexture = null;
         cameraTarget.Release();
         scratch.Release();
+    }
+
+    // ------------------------------------------------------------ controls
+
+    string control;
+    float[] postImage;
+
+    void OnControlPreRender(Camera c)
+    {
+        if (c == cam && control == "wireframe") GL.wireframe = true;
+    }
+
+    void OnControlPostRender()
+    {
+        switch (control)
+        {
+            case "postRead": postImage = ScreenBytes(); break;
+            case "postBlit": Graphics.Blit(stripes, (RenderTexture)null); break;
+            case "wireframe": GL.wireframe = false; break;
+        }
+    }
+
+    /// <summary>The screen (the active target being null) read into an 8-bit sRGB texture, as a
+    /// screenshot does.</summary>
+    float[] ScreenBytes()
+    {
+        var image = new Texture2D(W, H, TextureFormat.RGBA32, false, false);
+        image.ReadPixels(new Rect(0, 0, W, H), 0, 0);
+        image.Apply();
+        var pixels = image.GetPixels();
+        DestroyImmediate(image);
+        var result = new float[pixels.Length * 4];
+        for (int i = 0; i < pixels.Length; i++)
+        {
+            result[4 * i] = pixels[i].r; result[4 * i + 1] = pixels[i].g;
+            result[4 * i + 2] = pixels[i].b; result[4 * i + 3] = pixels[i].a;
+        }
+        return result;
+    }
+
+    void WriteImage(string key, float[] pixels)
+    {
+        if (pixels == null) { Value(key + ".pixels", "null"); return; }
+        using (var w = new BinaryWriter(File.Create(Path.Combine(directory, key + ".rgba"))))
+            foreach (var v in pixels) w.Write(v);
+        Value(key + ".pixels", (pixels.Length / 4).ToString());
+    }
+
+    /// <summary>
+    /// Screen camera (LDR, the 64x32 game view), each without and with an empty command buffer
+    /// at AfterEverything: <c>postRead</c> reads the screen in OnPostRender; <c>postBlit</c> blits
+    /// a texture to the screen in OnPostRender (the screen read after the frame);
+    /// <c>wireframe</c> draws with GL.wireframe on from OnPreRender to OnPostRender. Then render
+    /// targets: <c>mainDepth</c> binds a target's Depth element as a material's _MainTex drawn by
+    /// a camera; <c>texelSize</c> returns _Src_TexelSize of a Depth element; <c>attachedDepth</c>
+    /// clears target B's depth through SetRenderTarget(A, B) after both depth elements were
+    /// sampled, then samples both; <c>grabUint</c> loads a GrabPass texture as unsigned
+    /// integers, twice with different colors; <c>uintArray</c> loads an unbound
+    /// Texture2DArray&lt;uint4&gt;.
+    /// </summary>
+    IEnumerator Controls()
+    {
+        const int Layer = 31;
+        cam.cullingMask = ~(1 << Layer);
+        foreach (var name in new[] { "postRead", "postBlit", "wireframe" })
+        foreach (bool withBuffer in new[] { false, true })
+        {
+            string key = "ctl." + name + (withBuffer ? ".buffer" : ".none");
+            Configure(false);
+            cam.targetTexture = null;
+            var cb = new CommandBuffer { name = "probe empty" };
+            if (withBuffer) cam.AddCommandBuffer(CameraEvent.AfterEverything, cb);
+            control = name;
+            postImage = null;
+            renders = 0;
+            cam.enabled = true;
+            BeginLogs();
+            yield return new WaitForEndOfFrame();
+            EndLogs(key);
+            control = null;
+            Value(key + ".renders", renders.ToString());
+            if (name == "postRead") WriteImage(key, postImage);
+            else WriteImage(key + ".final", ScreenBytes());
+            cam.enabled = false;
+            if (withBuffer) cam.RemoveCommandBuffer(CameraEvent.AfterEverything, cb);
+            cb.Release();
+            Flush();
+            yield return null;
+        }
+
+        var ctlCam = new GameObject("ControlCamera").AddComponent<Camera>();
+        ctlCam.enabled = false;
+        ctlCam.transform.position = new Vector3(0, 0, -5);
+        ctlCam.orthographic = true;
+        ctlCam.orthographicSize = 1;
+        ctlCam.nearClipPlane = 1;
+        ctlCam.farClipPlane = 10;
+        ctlCam.clearFlags = CameraClearFlags.Nothing;
+        ctlCam.cullingMask = 1 << Layer;
+        ctlCam.allowHDR = false;
+        ctlCam.allowMSAA = false;
+        ctlCam.aspect = 2;
+        var view = Quad("ControlQuad", Rect3(-2, 2, -1, 1, 0, 0), Color.white, 0);
+        view.layer = Layer;
+        var mesh = view.GetComponent<MeshFilter>().sharedMesh;
+        mesh.uv = new[] { new Vector2(0, 0), new Vector2(0, 1), new Vector2(1, 1), new Vector2(1, 0) };
+        var viewRenderer = view.GetComponent<MeshRenderer>();
+        void Draw(string key, Material m)
+        {
+            var output = Output();
+            viewRenderer.sharedMaterial = m;
+            ctlCam.targetTexture = output;
+            BeginLogs();
+            ctlCam.Render();
+            EndLogs(key);
+            ctlCam.targetTexture = null;
+            Read(key, output);
+            output.Release();
+            DestroyImmediate(output);
+        }
+
+        var source = Source(Configs[4], "ctl.source");
+        var sampleMain = new Material(Shader.Find("Probe/SampleMain"));
+        sampleMain.SetTexture("_MainTex", source, RenderTextureSubElement.Depth);
+        Draw("ctl.mainDepth", sampleMain);
+        Sample("ctl.texelSize", source, Bind.Depth, Shader.Find("Probe/TexelSize"));
+        source.Release();
+        DestroyImmediate(source);
+        Flush();
+
+        var a = new RenderTexture(W, H, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+        var b = new RenderTexture(W, H, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+        a.Create(); b.Create();
+        foreach (var t in new[] { a, b })
+        {
+            var saved = RenderTexture.active;
+            RenderTexture.active = t;
+            GL.Clear(true, true, Color.black, 1f);
+            RenderTexture.active = saved;
+        }
+        Sample("ctl.attachedDepth.beforeA", a, Bind.Depth, sampleTex);
+        Sample("ctl.attachedDepth.beforeB", b, Bind.Depth, sampleTex);
+        var clear = new CommandBuffer { name = "probe attached depth" };
+        clear.SetRenderTarget(new RenderTargetIdentifier(a), new RenderTargetIdentifier(b));
+        clear.ClearRenderTarget(true, false, Color.black, 0.375f);
+        BeginLogs();
+        Graphics.ExecuteCommandBuffer(clear);
+        EndLogs("ctl.attachedDepth.clear");
+        clear.Release();
+        Sample("ctl.attachedDepth.B", b, Bind.Depth, sampleTex);
+        Sample("ctl.attachedDepth.A", a, Bind.Depth, sampleTex);
+        a.Release(); b.Release();
+        DestroyImmediate(a); DestroyImmediate(b);
+        Flush();
+
+        var grab = new Material(Shader.Find("Probe/GrabUint"));
+        grab.SetColor("_Color", new Color(1, 0, 1, 1));
+        Draw("ctl.grabUint.first", grab);
+        grab.SetColor("_Color", new Color(0, 1, 1, 1));
+        Draw("ctl.grabUint.second", grab);
+        Flush();
+
+        var bound = Output();
+        Sample("ctl.uintArray", bound, Bind.Material, Shader.Find("Probe/UintArray"));
+        bound.Release();
+        DestroyImmediate(bound);
+        Flush();
+        DestroyImmediate(view);
+        DestroyImmediate(ctlCam.gameObject);
+        cam.cullingMask = ~0;
     }
 }
