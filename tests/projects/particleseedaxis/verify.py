@@ -53,12 +53,34 @@ def exact_seed_union(reference, actual):
     return failures
 
 
+def strict_report(reference, actual):
+    result = compare.report(reference, actual)
+    existing = {(tuple(f['key']), f['path']) for f in result['failures']}
+    result['failures'].extend(f for f in exact_seed_union(reference, actual)
+                              if (tuple(f['key']), f['path']) not in existing)
+    bad = {tuple(f['key']) for f in result['failures']}
+    result.update(failing_values=len(result['failures']), failing_records=len(bad),
+                  passing_records=result['union_records']-len(bad))
+    return result
+
+
+def full_union(before, after):
+    left = {(tuple(f['key']), f['path']): f for f in before['failures']}
+    right = {(tuple(f['key']), f['path']): f for f in after['failures']}
+    return {kind: [dict(key=key, path=path, baseline=left.get((key, path)),
+                       candidate=right.get((key, path))) for key, path in sorted(keys)]
+            for kind, keys in [('resolved', left.keys()-right.keys()),
+                               ('retained', left.keys() & right.keys()),
+                               ('introduced', right.keys()-left.keys())]}
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__)
     p.add_argument('--unity-version', required=True)
     p.add_argument('--native-a', type=Path)
     p.add_argument('--native-b', type=Path)
     p.add_argument('--actual', type=Path)
+    p.add_argument('--baseline', type=Path)
     p.add_argument('--output', type=Path, required=True)
     a = p.parse_args()
     if bool(a.native_a) != bool(a.native_b):
@@ -80,13 +102,28 @@ def main():
     if a.actual:
         paths.append(a.actual)
         actual = compare.load(a.actual)
-        result.update(actual=compare.report(reference, actual), actual_structural_failures=structural(actual),
+        result.update(actual=strict_report(reference, actual), actual_structural_failures=structural(actual),
                       exact_seed_failures=exact_seed_union(reference, actual))
+        if a.baseline:
+            paths.append(a.baseline)
+            baseline = compare.load(a.baseline)
+            result['baseline'] = strict_report(reference, baseline)
+            result['union'] = full_union(result['baseline'], result['actual'])
+            original = lambda rows: {key: row for key, row in rows.items()
+                                     if key[0].startswith(('manual_', 'emit_'))}
+            result['original40'] = dict(baseline=strict_report(original(reference), original(baseline)),
+                                        actual=strict_report(original(reference), original(actual)))
+            result['original40']['union'] = full_union(result['original40']['baseline'], result['original40']['actual'])
     result['sha256'] = {str(path): hashlib.sha256(path.read_bytes()).hexdigest() for path in paths}
     a.output.parent.mkdir(parents=True, exist_ok=True)
     a.output.write_text(json.dumps(result, indent=2)+'\n')
-    print({k: len(v) if isinstance(v, list) else {i: j for i, j in v.items() if i != 'failures'}
-           if isinstance(v, dict) else v for k, v in result.items() if k != 'sha256'})
+    def summary(value):
+        if isinstance(value, list):
+            return len(value)
+        if isinstance(value, dict):
+            return {key: summary(item) for key, item in value.items() if key not in ('failures', 'sha256')}
+        return value
+    print(summary(result))
     return int(bool(result['structural_failures']) or not result.get('exact_native_agreement', True)
                or not result.get('canonical_agrees_exactly', True)
                or bool(result.get('native_structural_failures'))
