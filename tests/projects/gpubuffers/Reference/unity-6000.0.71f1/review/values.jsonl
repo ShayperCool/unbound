@@ -1,0 +1,15 @@
+{"k":"caps","v":{"computeShaders":true,"asyncReadback":true}}
+{"k":"review.copy.index6","v":[4660,22136,39612]}
+{"k":"review.copy.constant.cpuSource","v":"3e000000,3ec00000,3f200000,3f800000 3e000000,3ec00000,3f200000,3f800000 3e000000,3ec00000,3f200000,3f800000 3e000000,3ec00000,3f200000,3f800000 3e000000,3ec00000,3f200000,3f800000 3e000000,3ec00000,3f200000,3f800000 3e000000,3ec00000,3f200000,3f800000 3e000000,3ec00000,3f200000,3f800000 3e000000,3ec00000,3f200000,3f800000 3e000000,3ec00000,3f200000,3f800000 3e000000,3ec00000,3f200000,3f800000 3e000000,3ec00000,3f200000,3f800000 3e000000,3ec00000,3f200000,3f800000 3e000000,3ec00000,3f200000,3f800000 3e000000,3ec00000,3f200000,3f800000 3e000000,3ec00000,3f200000,3f800000"}
+{"k":"review.copy.constant.gpuSource","v":"3f400000,3f000000,3e800000,3f800000 3f400000,3f000000,3e800000,3f800000 3f400000,3f000000,3e800000,3f800000 3f400000,3f000000,3e800000,3f800000 3f400000,3f000000,3e800000,3f800000 3f400000,3f000000,3e800000,3f800000 3f400000,3f000000,3e800000,3f800000 3f400000,3f000000,3e800000,3f800000 3f400000,3f000000,3e800000,3f800000 3f400000,3f000000,3e800000,3f800000 3f400000,3f000000,3e800000,3f800000 3f400000,3f000000,3e800000,3f800000 3f400000,3f000000,3e800000,3f800000 3f400000,3f000000,3e800000,3f800000 3f400000,3f000000,3e800000,3f800000 3f400000,3f000000,3e800000,3f800000"}
+{"k":"review.copy.constant.gpuWords","v":[1061158912,1056964608,1048576000,1065353216]}
+{"k":"review.copy.constant.log","v":["Warning: Releasing render texture that is set to be RenderTexture.active!"]}
+{"k":"review.alpha.input","v":"000102070f1f3f407f8081bfdffdfeff"}
+{"k":"review.alpha.default.shape","v":[16,1,1,0,0]}
+{"k":"review.alpha.default.dataerror","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"review.alpha.default.events","v":["c0:de","r0:de"]}
+{"k":"review.alpha.explicit.log","v":["Error: '54' doesn't support ReadPixels usage on this platform. Async GPU readback failed."]}
+{"k":"review.alpha.explicit.shape","v":[16,1,1,0,0]}
+{"k":"review.alpha.explicit.dataerror","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"review.alpha.explicit.events","v":["c0:de","r0:de"]}
+{"k":"complete","v":true}
