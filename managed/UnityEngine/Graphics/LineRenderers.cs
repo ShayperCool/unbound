@@ -211,9 +211,12 @@ namespace UnityEngine
             for (int i = 1; i < n; i++) m_Dist[i] = m_Dist[i - 1] + Vector3.Distance(points[(i - 1) % count], points[i % count]);
             float total = m_Dist[n - 1];
             bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
+            // The per-segment texture modes also place the width curve and the gradient by point index
+            // (measured, tests/projects/lines line.tex.*PerSegment.zigzag.curve and trail.*.tex.*PerSegment).
+            bool perSegment = p.TextureMode == LineTextureMode.DistributePerSegment || p.TextureMode == LineTextureMode.RepeatPerSegment;
             for (int i = 0; i < n; i++)
             {
-                float t = total > 0f ? m_Dist[i] / total : 0f;
+                float t = perSegment ? (float)i / (n - 1) : total > 0f ? m_Dist[i] / total : 0f;
                 bool hide = hidden != null && hidden[i % count];
                 m_Half[i] = hide ? 0f : 0.5f * p.WidthMultiplier * p.WidthCurve.Evaluate(t);
                 m_Color[i] = VertexColor(p.ColorGradient.Evaluate(t), linear);

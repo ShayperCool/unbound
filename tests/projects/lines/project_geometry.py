@@ -3,6 +3,7 @@ import argparse, ast, copy, json, math, sys
 from pathlib import Path
 import numpy as np
 import tangent_projection as model
+import strip_projection
 
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--batch',type=Path,required=True)
@@ -60,6 +61,9 @@ for c in controls:
   row['raw']['prepared']['value']['t']=(actual+delta).tolist()
 for row in ROWS:row['raw'].setdefault('prepared',copy.deepcopy(row['raw']['final']))
 save('cap-projection-controls.json',cap_checks)
+# Corner side/arc and per-segment width/gradient rules, each replay first reproducing the saved engine mesh.
+strip_checks=strip_projection.project_rows(BY)
+save('strip-projection-controls.json',strip_checks)
 
 # Full nine-image union. Keep the exact saved pixels where the raster does not change.
 def image(key,base):return np.load(BATCH/'comparisons/line-image-arrays'/f'{key}.{base}.npy').astype(float).reshape(64,96,4)
@@ -94,6 +98,10 @@ for row in imgrows:
 for base,m in metrics.items():
  m['totals']={label:{k:sum(x[k] for x in m[label].values()) for k in next(iter(m[label].values()))} for label in ('measured','prepared')}
 save('projected-images.json',metrics);save('eight-trail-channel-disposition.json',witness)
+# Every trail-image channel failing in the prediction but not in the measured final image.
+ref=image('img.trails.f10','reference');old=image('img.trails.f10','final')
+newly=np.argwhere((abs(trail-ref)>2/255)&~(abs(old-ref)>2/255))
+save('trail-image-new-vs-measured.json',[dict(pixel=int(y*96+x),channel=int(c),reference=float(ref[y,x,c]),measured=float(old[y,x,c]),prepared=float(trail[y,x,c])) for y,x,c in newly])
 
 # Preserve every row and every original raw value; add prediction, all component
 # failures (including absent fields), and every numeric error increase.
@@ -141,6 +149,6 @@ for row in ROWS:
     if ae>be:deltas[base][state]['all_numeric_worsenings'].append(r)
     if ae>tol and be<=tol:deltas[base][state]['introduced_numeric_paths'].append(r)
     if ae>tol and be>tol and a!=b:deltas[base][state]['changed_retained_numeric_paths'].append(r)
-summary=dict(status='UNBUILT/UNACCEPTED CPU prediction, not runtime/GPU closure',required_union=1870,complete_union=len(ROWS),canonical_rows=1869,source=args.source_revision,numeric={base:{state:{k:len(v) for k,v in z.items()} for state,z in states.items()} for base,states in deltas.items()},whole_key_failures={base:len(v) for base,v in whole.items()},whole_key_changes={base:dict(introduced=sorted(whole['prepared'].keys()-whole[base].keys()),resolved=sorted(whole[base].keys()-whole['prepared'].keys())) for base in ('root','blend','final')},images={base:m['totals'] for base,m in metrics.items()},unchanged_missing_extra='All original presence flags preserved in projected-full-raw-union.json',tangent_baseline_model_errors=sum(len(r['baseline_model_errors']) for r in controls),cap_baseline_model_max_error=max(x.get('baseline_max_absolute_error',0) for x in cap_checks))
+summary=dict(status='UNBUILT/UNACCEPTED CPU prediction, not runtime/GPU closure',required_union=1870,complete_union=len(ROWS),canonical_rows=1869,source=args.source_revision,numeric={base:{state:{k:len(v) for k,v in z.items()} for state,z in states.items()} for base,states in deltas.items()},whole_key_failures={base:len(v) for base,v in whole.items()},whole_key_changes={base:dict(introduced=sorted(whole['prepared'].keys()-whole[base].keys()),resolved=sorted(whole[base].keys()-whole['prepared'].keys())) for base in ('root','blend','final')},images={base:m['totals'] for base,m in metrics.items()},unchanged_missing_extra='All original presence flags preserved in projected-full-raw-union.json',tangent_baseline_model_errors=sum(len(r['baseline_model_errors']) for r in controls),cap_baseline_model_max_error=max(x.get('baseline_max_absolute_error',0) for x in cap_checks),strip_replays=len(strip_checks),strip_changed=sum(x['changed'] for x in strip_checks),strip_baseline_errors=sum(len(x['baseline_errors']) for x in strip_checks))
 save('projected-component-deltas.json',deltas);save('projected-whole-failures.json',whole);save('projected-full-raw-union.json',dict(summary=summary,rows=ROWS));save('projection-summary.json',summary)
-print(json.dumps({k:summary[k] for k in ('numeric','whole_key_failures','images','tangent_baseline_model_errors','cap_baseline_model_max_error')},indent=1))
+print(json.dumps({k:summary[k] for k in ('numeric','whole_key_failures','images','tangent_baseline_model_errors','cap_baseline_model_max_error','strip_replays','strip_changed','strip_baseline_errors')},indent=1))

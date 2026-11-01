@@ -30,7 +30,7 @@ def effective(points,width,loop=False):
   if dot(eff[j],eff[j])==0:eff[j]=eff[j+1]
  return eff
 
-def tangent_model(points,face,campos,forward,widths,corners,caps,loop=False,normalized=False,transform_z=False):
+def tangent_model(points,face,campos,forward,widths,corners,caps,loop=False,normalized=False,transform_z=False,raw_arc=False):
  points=np.array(points,dtype='f');face=np.array(face,dtype='f');campos=np.array(campos,dtype='f');forward=np.array(forward,dtype='f')
  eff=effective(points,F(max(abs(w) for w in widths)),loop)
  out=[];witness=[]
@@ -40,13 +40,15 @@ def tangent_model(points,face,campos,forward,widths,corners,caps,loop=False,norm
   return norm(s)
  for i,p in enumerate(points):
   hasin=i>0 or loop;hasout=i<len(eff) or loop
-  din=eff[i-1] if hasin else np.zeros(3,dtype='f');dout=eff[i%len(eff)] if hasout else np.zeros(3,dtype='f')
+  din=eff[i-1] if hasin else np.zeros(3,dtype='f');dout=eff[i%len(eff)] if hasout else np.zeros(3,dtype='f');raw=dout
   if hasin and hasout and not loop:
    c=dot(din,dout)
    if c>F(.99):
     weight=F(F(1)-c)/F(F(1)-F(.99));e=din*F(F(1)-weight)+dout*weight;dout=norm(e) if dot(e,e)>0 else dout
   if not(hasin and hasout):out.extend([cross(face,side(dout if hasout else din,i))]*2);continue
   s1,s2=side(din,i),side(dout,i)
+  # The prepared arc ends on the un-eased outgoing side (the miter keeps the eased one).
+  if raw_arc and corners:s2=side(raw,i)
   if not corners:out.extend([cross(face,s2)]*2);continue
   c=dot(s1,s2);angle=acos(c)
   perp=s2-s1*c;perp=norm(perp) if dot(perp,perp)>F(1e-12) else din
@@ -74,7 +76,7 @@ def project_tangents(rows, controls, out):
    points=pts[shape];widths=[F(.4)]*len(points);caps=2 if shape in ('L','spatial') else 0;loop=shape=='square'
    opts=dict(loop=loop,transform_z='TransformZ' in key)
    old,w=tangent_model(points,-cf,cp,cf,widths,2,caps,**opts)
-   new,wn=tangent_model(points,-cf,cp,cf,widths,2,caps,normalized=True,**opts)
+   new,wn=tangent_model(points,-cf,cp,cf,widths,2,caps,normalized=True,raw_arc=True,**opts)
    actual=np.array(m['t']);ref=np.array(row['raw']['reference']['t']);blend=np.array(row['raw']['blend']['t'])
    def bad(a,b):return np.flatnonzero(abs(a-b)>1e-5+1e-5*abs(a)).tolist()
    reports.append(dict(key=key,baseline_model_errors=bad(actual,old),old_bad=bad(ref,actual),new_bad=bad(ref,new),introduced_vs_blend=sorted(set(bad(ref,new))-set(bad(ref,blend))),candidate=new.tolist(),baseline=old.tolist(),witness=wn));continue
@@ -84,7 +86,7 @@ def project_tangents(rows, controls, out):
   for d in np.diff(points,axis=0):dist.append(F(dist[-1]+mag(d)))
   ts=np.array(dist,dtype='f')/dist[-1];widths=F(.3)*(F(1)+F(-.75)*(ts*ts*(F(3)-F(2)*ts)))
   old,w=tangent_model(points,[0,0,-1],[0,0,-10],[0,0,1],widths,2,2)
-  new,wn=tangent_model(points,[0,0,-1],[0,0,-10],[0,0,1],widths,2,2,normalized=True)
+  new,wn=tangent_model(points,[0,0,-1],[0,0,-10],[0,0,1],widths,2,2,normalized=True,raw_arc=True)
   actual=np.array(m['t']);ref=np.array(row['raw']['reference']['t']);blend=np.array(row['raw']['blend']['t'])
   def bad(a,b):return np.flatnonzero(abs(a-b)>1e-5+1e-5*abs(a)).tolist()
   record=dict(key=key,baseline_model_errors=bad(actual,old),old_bad=bad(ref,actual),new_bad=bad(ref,new),introduced_vs_blend=sorted(set(bad(ref,new))-set(bad(ref,blend))),candidate=new.tolist(),baseline=old.tolist(),witness=wn)
