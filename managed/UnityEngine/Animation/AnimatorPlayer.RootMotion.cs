@@ -207,10 +207,10 @@ namespace Unbound.Runtime
             var position = animator.m_MotionRootPosition;
             var rotation = animator.m_MotionRootRotation;
             var predicted = position + rotation * Vector3.Scale(scale, toEnd);
-            var rootCorrection = Quaternion.Inverse(rotation) * (match.Position - predicted);
-            var correction = rotation * Vector3.Scale(rootCorrection, match.Mask.positionXYZWeight) * (float)f;
-            animator.m_DeltaPosition += correction;
             var turned = rotation * animator.m_DeltaRotation;
+            var rootCorrection = Quaternion.Inverse(turned) * (match.Position - predicted);
+            var correction = turned * Vector3.Scale(rootCorrection, match.Mask.positionXYZWeight) * (float)f;
+            animator.m_DeltaPosition += correction;
             var remaining = match.Rotation * Quaternion.Inverse(rotation * turnToEnd);
             float g = (float)f * Mathf.Clamp01(match.Mask.rotationWeight);
             if (Quaternion.Dot(remaining, Quaternion.identity) < 0f) remaining = new Quaternion(-remaining.x, -remaining.y, -remaining.z, -remaining.w);
