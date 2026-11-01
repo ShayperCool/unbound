@@ -186,12 +186,16 @@ Format 0 textures are sampled raw in gamma projects and through an sRGB view in 
 Alpha8 samples as `(0, 0, 0, a)`, and `_TextureSampleAdd` defaults to `(1, 1, 1, 0)` for it as
 Unity's canvas sets it.
 
-A texture slot's texel type comes from its declaration (shader cache format 15): floats, signed or
+A texture slot's texel type comes from its declaration (shader cache format 16): floats, signed or
 unsigned integers (`Texture2D<uint2>`, read unfiltered) or depth. An integer slot reads a float
 texture's values as their bits within its size and zeros where nothing is bound, as Unity does on
 OpenGL Core (tests/projects/rtdepth); the bits are copied into an integer texture right before
 each pass that reads them (after a `GrabPass` before it). An integer slot that is not 2D (bound or
 not), or bound to a layered texture or a depth element, skips the draw with a message.
+The fixed legacy `_MainTex` group accepts filtered float 2D slots only. Integer and
+comparison `_MainTex` declarations retain their typed program slots, including
+the renderer's 2D main-texture override. The cache version rejects earlier entries
+whose `_MainTex` slot classification differs.
 
 A material's shader name selects its shader: the project's `.shader` source, else Unity's built-in
 one (compiled from the release's `builtin_shaders` sources). The renderer draws the forward passes

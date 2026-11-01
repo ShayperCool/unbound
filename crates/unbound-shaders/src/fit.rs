@@ -843,6 +843,9 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
         }
     }
     let main_texture = dims.get(MAIN_TEXTURE).copied().unwrap_or(TextureDim::D2) == TextureDim::D2
+        && slots
+            .get(MAIN_TEXTURE)
+            .is_none_or(|slot| slot.sample == SampleKind::Float && !slot.comparison)
         && names.remove(MAIN_TEXTURE);
     let textures: Vec<String> = names.into_iter().collect();
 

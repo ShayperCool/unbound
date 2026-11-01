@@ -823,6 +823,7 @@ impl UnityRenderer {
         space: i32,
         globals: &[(String, owned::PropertyValue)],
         overrides: &[(String, owned::PropertyValue)],
+        main_override: u64,
     ) -> Option<wgpu::BindGroup> {
         let program = self.compiled.program(id).clone();
         let texture_override = |name: &str| {
@@ -862,6 +863,14 @@ impl UnityRenderer {
                         .get(k)
                         .copied()
                         .unwrap_or(unbound_shaders::TextureDim::D2);
+                    // Typed 2D _MainTex slots use the program layout, but still receive a
+                    // renderer's main texture (a sprite's, for example).
+                    if name == "_MainTex"
+                        && dim == unbound_shaders::TextureDim::D2
+                        && main_override != 0
+                    {
+                        texture = main_override;
+                    }
                     let slot = program.texture_slots.get(k).copied().unwrap_or_default();
                     (texture, default, dim, slot)
                 })
@@ -2270,6 +2279,7 @@ impl UnityRenderer {
                 space,
                 &globals,
                 &draw.properties,
+                draw.main_texture,
             ) else {
                 self.pre_draw.clear();
                 continue;

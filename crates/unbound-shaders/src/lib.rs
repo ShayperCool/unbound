@@ -25,7 +25,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 15;
+pub const FORMAT_VERSION: u32 = 16;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1380,6 +1380,57 @@ float4 frag(float4 p : SV_POSITION) : SV_Target
         assert!(slot("_Unsigned").integer() && slot("_Signed").integer());
         assert!(!slot("_Filtered").integer() && !slot("_Shadow").integer());
         assert!(slot("_Shadow").depth() && slot("_Shadow").comparison);
+    }
+
+    #[test]
+    fn only_filtered_float_main_textures_use_the_legacy_layout() {
+        for (declaration, expression, sample, legacy) in [
+            (
+                "sampler2D _MainTex;",
+                "tex2D(_MainTex, p.xy)",
+                SampleKind::Float,
+                true,
+            ),
+            (
+                "Texture2D<uint4> _MainTex;",
+                "asfloat(_MainTex.Load(int3(p.xy, 0)))",
+                SampleKind::Uint,
+                false,
+            ),
+            (
+                "Texture2D<int4> _MainTex;",
+                "float4(_MainTex.Load(int3(p.xy, 0)))",
+                SampleKind::Sint,
+                false,
+            ),
+            (
+                "Texture2D _MainTex; SamplerComparisonState sampler_MainTex;",
+                "_MainTex.SampleCmpLevelZero(sampler_MainTex, p.xy, 0.5)",
+                SampleKind::Depth,
+                false,
+            ),
+        ] {
+            let source = format!(
+                r#"
+#pragma vertex vert
+#pragma fragment frag
+{declaration}
+float4 vert(float4 p : POSITION) : SV_POSITION {{ return p; }}
+float4 frag(float4 p : SV_POSITION) : SV_Target {{ return {expression}; }}
+"#
+            );
+            let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+            let compiled = compiler
+                .compile(&program(&source, false), &[], false)
+                .unwrap();
+            assert_eq!(compiled.main_texture, legacy, "{declaration}");
+            if legacy {
+                assert!(compiled.textures.is_empty());
+            } else {
+                assert_eq!(compiled.textures, ["_MainTex"]);
+                assert_eq!(compiled.texture_slots[0].sample, sample);
+            }
+        }
     }
 
     #[test]
