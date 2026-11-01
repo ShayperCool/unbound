@@ -1921,6 +1921,28 @@ image byte for byte); exact float bits rise from 472 to 499 of its 540 keys (the
 byte-identical to it. Managed tests 1275/1286 with the same 11 failures; unbound-assets 74/74;
 api-check 0 errors in 2289 types; regenerating the compatibility stubs changes nothing.
 
+### Texture W wrap mode, 2026-11-01
+
+NativeApi 14 appends `wrap_w` to `TexturePacket` and `ImportedTextureInfo`, and the
+`texture-sampling-properties` call carries it (filter, wrap U, V, W, anisotropy): a texture's own
+sampler uses it as its W address mode, which only a Texture3D's samples read. Imported textures
+report the importer's `wrapW` from the import info. Inline, default, integer, compute, grab, video
+and built-in lighting samplers keep repeating along W; no parity is claimed for them. A 13 side and
+a 14 side refuse each other at startup in either pairing. Render protocol, shader cache and texture
+cache are unchanged (texture cache 13 already stored `wrapW`).
+
+tests/projects/texturepixels adds one bound 4x4x4 volume drawn beyond its depth while its
+`wrapModeW` goes Repeat, Clamp, Repeat, then Clamp with an `Apply` and Repeat again (a new pair of
+independent Editor captures per profile agrees byte for byte; every earlier line unchanged).
+Against the runtime without the change: the texture array probe resolves its two wrapW-Clamp GPU
+samples in each profile (38 to 36 differences, the 36 imported-cube `GetPixelData` values remain),
+the texture pixel probe its four live Clamp samples (150 to 146 in Gamma, 152 to 148 in Linear),
+none introduced. textureimport and resources (539/539, 62/62 images) are byte-identical; rtdepth
+probe (1071 values, 316/368 images) and controls (46 values, 13/17 images), materials (1004) and
+graphics (80) keep every status. Managed tests 1289/1300 with the same 11 failures; unbound-assets
+77, unbound-runtime 50, unbound-app 20; api-check 0 errors in 2290 types; regenerated stubs
+unchanged.
+
 ### HDR and count rendering preservation, 2026-10-31
 
 The matched count/HDR runtime at674c8eae completes the unchanged strict checkers
