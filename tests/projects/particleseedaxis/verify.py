@@ -22,9 +22,18 @@ def structural(rows):
                 for seed in [12345, 305419896] for flags in [0, 15]
                 for order in [0, 1] for step in range(4)}
     expected |= {(f'emit_{seed}', step) for seed in [12345, 305419896] for step in range(4)}
-    failures = compare.report({key: {} for key in expected}, {key: {} for key in rows})['failures']
+    counts = {key: key[1] for key in expected}
+    for name, steps in {
+        'bulk2': [0, 2, 3], 'bulk5': [0, 5, 6], 'deferred_read': [0, 3, 4],
+        'seed_reset': [None, 2, 2], 'size3d': [None, 2, 3],
+        'rotation3d': [None, 2, 3], 'both3d': [None, 2, 3],
+        'random_scalar': [None, 2, 3], 'random3d': [None, 2, 3],
+        'explicit_seed': [None, 2, 3], 'import_axis': [None, 1, 2],
+    }.items():
+        counts.update({(name, step): n for step, n in enumerate(steps) if n is not None})
+    failures = compare.report({key: {} for key in counts}, {key: {} for key in rows})['failures']
     for key, row in rows.items():
-        for field, want in [('count', key[1]), ('readCount', key[1]), ('time', 0), ('parentCount', 0)]:
+        for field, want in [('count', counts.get(key)), ('readCount', counts.get(key)), ('time', 0), ('parentCount', 0)]:
             if row.get(field) != want:
                 failures.append(dict(key=key, path='/'+field, expected=want, actual=row.get(field, 'MISSING')))
     return failures
