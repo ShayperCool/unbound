@@ -38,3 +38,9 @@ The original image script's reporting threshold of 8 is not a pass/fail gate her
 The engine's current empty GetTrails stub is not Native evidence. This diagnostic
 does not implement that API. Geometry analysis must compare the public Native data
 against the independently validated source model and preserve any disagreement.
+
+The first complete pair preserved the original image exactly on both runs and
+matched the baked mesh bytes, but differed in 530 raw Vector4 storage slots in
+`Trails.positions`. All other 132 records matched. Per the declared stop rule,
+no canonical reference was published and no production change was made. The raw
+captures and complete mismatch report remain in the validation cache handoff.
