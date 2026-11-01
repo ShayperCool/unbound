@@ -59,7 +59,8 @@ class EditorJob:
 
     def __init__(self, project, log, out, args=(), *, batch=False, graphics=True, env=None,
                  timeout=1800, shutdown_grace=30, kill_grace=10, follow=30, label=None,
-                 screen='1280x720x24', late_sweeps=LATE_SWEEPS, editor=None, cwd=None):
+                 screen='1280x720x24', late_sweeps=LATE_SWEEPS, editor=None, cwd=None,
+                 progress_files=(), progress_timeout=None):
         self.project = Path(project)
         self.log = Path(log)
         self.out = Path(out)
@@ -76,6 +77,10 @@ class EditorJob:
         self.late_sweeps = tuple(late_sweeps)
         self.editor = Path(editor) if editor else editor_path()
         self.cwd = Path(cwd) if cwd else self.project
+        self.progress_files = [str(Path(p).resolve()) for p in progress_files]
+        self.progress_timeout = progress_timeout
+        if progress_timeout is not None and (progress_timeout <= 0 or not self.progress_files):
+            raise ValueError('progress_timeout needs progress_files and a positive timeout')
 
     @property
     def kind(self):
@@ -91,10 +96,11 @@ class EditorJob:
 # ---------------------------------------------------------------- processes
 
 class Proc:
-    __slots__ = ('pid', 'ppid', 'pgid', 'state', 'argv')
+    __slots__ = ('pid', 'ppid', 'pgid', 'state', 'argv', 'start_ticks')
 
-    def __init__(self, pid, ppid, pgid, state, argv):
+    def __init__(self, pid, ppid, pgid, state, argv, start_ticks=None):
         self.pid, self.ppid, self.pgid, self.state, self.argv = pid, ppid, pgid, state, argv
+        self.start_ticks = start_ticks
 
     def describe(self):
         return b' '.join(self.argv).decode(errors='replace')[:200]
@@ -115,7 +121,7 @@ def read_proc(pid):
         return None
     if argv and argv[-1] == b'':
         argv.pop()
-    return Proc(int(pid), int(rest[1]), int(rest[2]), rest[0], argv)
+    return Proc(int(pid), int(rest[1]), int(rest[2]), rest[0], argv, int(rest[19]))
 
 
 def processes():
@@ -244,7 +250,7 @@ def send(proc, sig):
         return False
     try:
         now = read_proc(proc.pid)
-        if now is None or now.argv != proc.argv:
+        if now is None or now.argv != proc.argv or now.start_ticks != proc.start_ticks:
             return False
         signal.pidfd_send_signal(fd, sig)
         return True
@@ -256,7 +262,7 @@ def send(proc, sig):
 
 def alive(proc):
     now = read_proc(proc.pid)
-    return now is not None and now.argv == proc.argv
+    return now is not None and now.argv == proc.argv and now.start_ticks == proc.start_ticks
 
 
 def terminate(procs, grace, reap=None):
@@ -351,7 +357,35 @@ def find_relaunch(project, exclude, table=None):
     return next((p for p in table if is_editor(p) and keys & set(p.argv) and p.pid not in exclude), None)
 
 
+def owner_alive(spec):
+    if not spec.get('owner_pid'):
+        return True
+    owner = read_proc(spec['owner_pid'])
+    return owner is not None and owner.start_ticks == spec['owner_start_ticks']
+
+
+def progress_signature(paths):
+    result = []
+    for path in paths:
+        try:
+            stat = Path(path).stat()
+            result.append((stat.st_mtime_ns, stat.st_size))
+        except FileNotFoundError:
+            result.append(None)
+    return result
+
+
 def supervise(spec, poll=.25):
+    # Create a display only after admission, inside this job's lease.
+    display = Display(spec['screen']) if spec.get('private_display') and owner_alive(spec) else None
+    try:
+        return _supervise(dict(spec, display=display.name) if display else spec, poll)
+    finally:
+        if display:
+            display.close()
+
+
+def _supervise(spec, poll=.25):
     """Runs one Editor described by `spec` (a dict, see EditorJob) and returns its result."""
     out = Path(spec['out'])
     out.mkdir(parents=True, exist_ok=True)
@@ -366,6 +400,12 @@ def supervise(spec, poll=.25):
               'swept': [], 'times': {'admitted': round(started_wall, 3)}}
     watch = LogWatch(spec['log'])
     stopping = []
+    if not owner_alive(spec):
+        result.update(forced_exit='owner-exit', forced_detail='the initiating driver already exited')
+        write_json(out/RESULT, result)
+        return result
+    progress = progress_signature(spec.get('progress_files', []))
+    last_progress = start
 
     def cancel(number, frame):
         stopping.append(signal.Signals(number).name)
@@ -373,6 +413,7 @@ def supervise(spec, poll=.25):
     with (out/'editor.stdout.log').open('ab') as stdout:
         editor = subprocess.Popen(spec['command'], cwd=spec.get('cwd'), stdin=subprocess.DEVNULL,
                                   stdout=stdout, stderr=subprocess.STDOUT,
+                                  env=dict(os.environ, DISPLAY=spec['display']) if spec.get('display') else None,
                                   preexec_fn=_kill_on_parent_death)
     current = Proc(editor.pid, os.getpid(), editor.pid, 'R', [])
     seen = {editor.pid}
@@ -391,6 +432,10 @@ def supervise(spec, poll=.25):
     while True:
         now = time.monotonic()
         watch.poll(now)
+        current_progress = progress_signature(spec.get('progress_files', []))
+        if current_progress != progress:
+            progress, last_progress = current_progress, now
+            result['times']['last_progress_s'] = round(now-start, 2)
         if watch.renderer is not None and result['renderer'] is None:
             result['renderer'] = watch.renderer
             result['times']['renderer_s'] = round(now-start, 2)
@@ -404,12 +449,16 @@ def supervise(spec, poll=.25):
         if alive_now:
             if stopping:
                 stop('cancelled', 'the supervisor received '+stopping[0])
+            elif not owner_alive(spec):
+                stop('owner-exit', 'the initiating driver exited')
             elif spec.get('require_gpu') and watch.renderer is not None and 'NVIDIA' not in watch.renderer:
                 stop('renderer', 'the Editor renders with '+watch.renderer)
             elif watch.shutdown is not None and now-watch.shutdown > spec['shutdown_grace']:
                 stop('shutdown-guard', f"still alive {spec['shutdown_grace']} s after the shutdown line")
             elif now-start > spec['timeout']:
                 stop('watchdog', f"still running after {spec['timeout']} s")
+            elif spec.get('progress_timeout') and now-last_progress > spec['progress_timeout']:
+                stop('no-progress', f"no probe output progress for {spec['progress_timeout']} s")
             else:
                 time.sleep(poll)
                 continue
@@ -500,31 +549,27 @@ def run(job):
     if (job.out/RESULT).exists():
         raise SystemExit(f'refusing to overwrite an Editor result: {job.out/RESULT}')
     queued = time.time()
-    display = Display(job.screen) if job.graphics else None
     env = dict(os.environ, PWD=str(job.project), **job.env)
     env.pop('XAUTHORITY', None)
-    if display:
-        env['DISPLAY'] = display.name
+    owner = read_proc(os.getpid())
     spec = {'label': job.label, 'kind': job.kind, 'command': job.command(), 'project': str(job.project),
             'log': str(job.log), 'out': str(job.out), 'cwd': str(job.cwd), 'timeout': job.timeout,
             'shutdown_grace': job.shutdown_grace, 'kill_grace': job.kill_grace, 'follow': job.follow,
-            'require_gpu': job.graphics, 'display': display.name if display else None}
+            'require_gpu': job.graphics, 'private_display': job.graphics, 'screen': job.screen,
+            'owner_pid': owner.pid, 'owner_start_ticks': owner.start_ticks,
+            'progress_files': job.progress_files, 'progress_timeout': job.progress_timeout}
     spec_path = job.out/'editor-spec.json'
     write_json(spec_path, spec)
     scope = uuid.uuid4().hex
     launcher = [str(LAUNCHER), '--kind', job.kind, '--scope-id', scope,
                 sys.executable, str(Path(__file__).resolve()), 'supervise', str(spec_path)]
+    process = subprocess.Popen(launcher, cwd=job.cwd, env=env)
     try:
-        process = subprocess.Popen(launcher, cwd=job.cwd, env=env)
-        try:
-            code = process.wait()
-        except BaseException:
-            process.terminate()
-            process.wait()
-            raise
-    finally:
-        if display:
-            display.close()
+        code = process.wait()
+    except BaseException:
+        process.terminate()
+        process.wait()
+        raise
     finished = time.time()
     path = job.out/RESULT
     if path.exists():

@@ -14,6 +14,7 @@ ROOT = Path(__file__).resolve().parent
 REPO = ROOT.parents[2]
 sys.path.insert(0, str(ROOT.parents[1]))
 from probe_paths import cache_artifact_path, editor_path
+from editor_runner import EditorJob, run as run_editor
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['prepare', 'native', 'engine', 'compare'])
@@ -72,8 +73,11 @@ else:
         MSBUILDDISABLENODEREUSE='1', DOTNET_CLI_USE_MSBUILD_SERVER='0')
     command = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '600']
     if a.mode == 'native':
-        command += [str(editor_path()), '-batchmode', '-nographics', '-projectPath', str(project),
-            '-executeMethod', 'ProbeRunner.Record', '-logFile', str(work/(a.label+'-unity.log'))]
+        job = EditorJob(project, work/(a.label+'-unity.log'), work/(a.label+'-editor'),
+                        args=['-executeMethod', 'ProbeRunner.Record'], graphics=False,
+                        env={'PHYSICS_PROBE_OUT': str(out)}, timeout=600,
+                        progress_files=[out], progress_timeout=180)
+        command = job.command()
         artifacts = {}
     else:
         if not a.runtime: p.error('--runtime is required')
@@ -87,6 +91,12 @@ else:
         environment={key:value for key,value in env.items() if key in
             ['PHYSICS_PROBE_OUT','UNBOUND_MANAGED_DIR','LD_LIBRARY_PATH','UNBOUND_PROBE_UNITY_VERSION']})
     (work/(a.label+'-command.json')).write_text(json.dumps(audit, indent=2)+'\n')
-    with log.open('x') as stream:
-        result = subprocess.run(command, env=env, stdout=stream, stderr=subprocess.STDOUT)
-    if result.returncode or not out.exists(): raise SystemExit('Capture failed: '+str(log))
+    if a.mode == 'native':
+        result = run_editor(job)
+        log.write_text(json.dumps(result, indent=2)+'\n')
+        failed = result['exit_code'] != 0 or bool(result.get('forced_exit'))
+    else:
+        with log.open('x') as stream:
+            result = subprocess.run(command, env=env, stdout=stream, stderr=subprocess.STDOUT)
+        failed = result.returncode != 0
+    if failed or not out.exists(): raise SystemExit('Capture failed: '+str(log))

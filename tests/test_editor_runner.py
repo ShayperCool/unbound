@@ -11,6 +11,7 @@ import sys
 import tempfile
 import time
 import unittest
+from unittest.mock import patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import editor_runner as er  # noqa: E402
@@ -153,6 +154,39 @@ class FakeEditorTest(unittest.TestCase):
         self.assertTrue(self.alive(self.pid('licensing')))
         self.assertIn('watchdog', er.result_problem(self.out))
 
+    def test_probe_progress_timeout(self):
+        result = self.supervise('hang', timeout=30,
+                                progress_files=[str(self.root/'values.jsonl')], progress_timeout=.8)
+        self.assertEqual(result['forced_exit'], 'no-progress')
+        self.assertLess(result['times']['finished_s'], 10)
+        self.assertIn('no-progress', er.result_problem(self.out))
+        self.assertTrue(self.alive(self.pid('licensing')))
+
+    def test_exited_owner_starts_no_editor(self):
+        owner = er.read_proc(os.getpid())
+        result = self.supervise('hang', owner_pid=owner.pid, owner_start_ticks=owner.start_ticks+1)
+        self.assertEqual(result['forced_exit'], 'owner-exit')
+        self.assertIsNone(result['exit_code'])
+        self.assertFalse((self.root/'licensing.pid').exists())
+
+    def test_owner_exit_stops_the_editor(self):
+        owner = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(.7)'])
+        self.others.append(owner)
+        identity = er.read_proc(owner.pid)
+        result = self.supervise('hang', owner_pid=owner.pid, owner_start_ticks=identity.start_ticks)
+        self.assertEqual(result['forced_exit'], 'owner-exit')
+        self.assertLess(result['times']['finished_s'], 10)
+        self.assertTrue(self.alive(self.pid('licensing')))
+
+    def test_private_display_is_inside_supervision(self):
+        display = unittest.mock.Mock(name='private display')
+        display.name = ':9876'
+        with patch.object(er, 'Display', return_value=display) as create:
+            result = self.supervise('clean', private_display=True, screen='64x64x24')
+        create.assert_called_once_with('64x64x24')
+        display.close.assert_called_once()
+        self.assertEqual(result['display'], ':9876')
+
     def test_software_renderer_stops_early(self):
         result = self.supervise('software')
         self.assertEqual(result['forced_exit'], 'renderer')
@@ -203,6 +237,16 @@ class FakeEditorTest(unittest.TestCase):
 
 
 class HubSelectionTest(unittest.TestCase):
+    def test_reused_pid_is_not_signalled(self):
+        before = er.Proc(123, 1, 123, 'R', [b'/Editor/Unity'], 10)
+        replacement = er.Proc(123, 1, 123, 'R', [b'/Editor/Unity'], 11)
+        with patch.object(er, 'read_proc', return_value=replacement), \
+             patch.object(er.os, 'pidfd_open', return_value=999), \
+             patch.object(er.os, 'close'), patch.object(er.signal, 'pidfd_send_signal') as send:
+            self.assertFalse(er.alive(before))
+            self.assertFalse(er.send(before, signal.SIGTERM))
+        send.assert_not_called()
+
     def test_table(self):
         P = er.Proc
         project = b'/c/runs/p/projects/native1'

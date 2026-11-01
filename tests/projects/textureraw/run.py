@@ -15,6 +15,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from probe_paths import editor_path, reference_file, run_root
+from editor_runner import EditorJob, load_result, result_problem, run as run_editor
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -75,10 +76,26 @@ def main():
     if args.mode == 'native':
         for name in ('native1', 'native2'):
             dest = project(work/('project-'+name), args.release)
-            run(work, name, [LAUNCHER, 'timeout', '300', editor_path(), '-batchmode', '-nographics',
-                            '-projectPath', dest, '-executeMethod', 'RawProbeRunner.Record',
-                            '-logFile', work/(name+'-editor.log')], work/(name+'.jsonl'))
+            output = work/(name+'.jsonl')
+            job = EditorJob(dest, work/(name+'-editor.log'), work/(name+'-editor'),
+                            args=['-executeMethod', 'RawProbeRunner.Record'], graphics=False,
+                            env={'TEXTURE_RAW_PROBE_OUT': str(output)}, timeout=300,
+                            progress_files=[output], progress_timeout=180)
+            (work/(name+'-command.json')).write_text(json.dumps({
+                'command': job.command(), 'output': str(output),
+                'source': {str(p.relative_to(PROBE)): digest(p)
+                           for p in sorted((PROBE/'Assets').rglob('*')) if p.is_file()}}, indent=2)+'\n')
+            result = run_editor(job)
+            if result['exit_code'] != 0 or result.get('forced_exit') or not output.exists():
+                raise SystemExit(f'{name}: incomplete Editor run; see {job.out}')
+            print(name+' complete', flush=True)
     elif args.mode == 'publish':
+        for name in ('native1', 'native2'):
+            reason = result_problem(work/(name+'-editor'), gpu=False)
+            if not reason and load_result(work/(name+'-editor')).get('forced_exit'):
+                reason = 'forced exits are not accepted by this probe'
+            if reason:
+                raise SystemExit(name+': '+reason+'; not publishing')
         a, b = work/'native1.jsonl', work/'native2.jsonl'
         from compare import compare
         report = compare(a, b)
