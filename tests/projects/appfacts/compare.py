@@ -14,7 +14,8 @@ when anything fails.
 it, plus /etc/os-release and the Editor licence file read now): the GPU's PCI ids, OpenGL
 strings and memory, the CPU's vendor, model and current clock, the host, machine id, memory and
 OS release, the battery, the log path (--editor: the Editor's -logFile; else the project's
-Library/Unbound/Editor.log, which the probe writes as <project>/...: the file under the project
+Library/Unbound/Editor.log, masked as <project>/... or an absolute path resolving to that file:
+the file under the project
 path run.py recorded in run.json must exist, be non-empty and be written during the run) and the
 licence.
 """
@@ -77,7 +78,9 @@ def licence_pro():
 
 def unbound_log_problem(capture, log):
     """Why the reported console log is not the project's Library/Unbound/Editor.log written by
-    this run (None when it is). The probe writes the project's path as <project>; run.json holds
+    this run (None when it is). Accept the probe's <project> mask or an absolute spelling that
+    strictly resolves to the expected file, including a physical path through a project alias.
+    run.json holds
     the absolute project path the engine was given and when the run started."""
     try:
         run = json.loads((capture/'run.json').read_text())
@@ -86,9 +89,15 @@ def unbound_log_problem(capture, log):
         return 'the capture records no project path and start (run.json)'
     if not project.is_absolute():
         return f'the recorded project path {project} is not absolute'
-    if log != '<project>/Library/Unbound/Editor.log':
-        return 'not the project\'s Library/Unbound/Editor.log'
     path = project/'Library/Unbound/Editor.log'
+    if log != '<project>/Library/Unbound/Editor.log':
+        if not isinstance(log, str) or not Path(log).is_absolute():
+            return 'not the project\'s Library/Unbound/Editor.log'
+        try:
+            if Path(log).resolve(strict=True) != path.resolve(strict=True):
+                return 'not the project\'s Library/Unbound/Editor.log'
+        except (OSError, ValueError):
+            return 'not the project\'s Library/Unbound/Editor.log'
     if not path.is_file():
         return f'{path} does not exist'
     if path.stat().st_size == 0:

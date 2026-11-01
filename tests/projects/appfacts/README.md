@@ -79,11 +79,21 @@ comparison time. The checks cover the GPU's PCI ids, OpenGL strings and memory,
 the CPU vendor and model, the host name, the machine id as the device unique
 identifier, memory and OS release, and the battery. They also cover the log
 path (with `--editor` the Editor's `-logFile`, otherwise the project's
-`Library/Unbound/Editor.log`, which must exist) and the licence. The CPU clock
+`Library/Unbound/Editor.log`) and the licence. The engine log can be reported as
+`<project>/Library/Unbound/Editor.log` or as an absolute path that strictly resolves
+to that same file under the absolute project recorded in `run.json`. This includes
+a physical cache path when the launch used a logical project alias. A different
+fresh file or a relative path cannot pass. The expected file must exist, contain
+bytes and have been written since the recorded start. The CPU clock
 must be a positive integer no greater than `cpuinfo_max_freq`, because it is a
 current reading. The graphics driver start figure must be a non-negative byte
 count. These facts are always compared with the machine that ran the capture,
 never with another machine's capture.
+
+`test_compare.py NEW_CACHE_OUT` checks masked and absolute physical alias paths,
+including refusal of different fresh, relative, missing, empty, stale and unrecorded
+logs. It starts no engine or Editor. Checker reevaluations must name the checker
+source hash and retain earlier failed reports and raw captures.
 
 ## Reference
 
