@@ -6,6 +6,10 @@
     run.py editor --release R --label L    two independent Editor captures
     run.py publish --release R --label L   checks the two captures agree, copies one to Reference/
     run.py unbound --release R --label L   one Unbound capture (UNBOUND_CLI: the binary)
+    run.py lifecycle --release R --label L          two independent Editor captures of the scene
+                                                    unload event-order witness (Lifecycle/)
+    run.py lifecycle-publish --release R --label L  checks they are complete, strict exit 0 and
+                                                    identical; writes Reference/.../lifecycle.jsonl
 
 Every capture runs on a fresh copy of this project in the validation cache. Editors run through
 the shared heavy-job launcher on the GPU (a private Xvfb and VirtualGL); do not wrap this driver.
@@ -20,6 +24,7 @@ import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from probe_paths import editor_path, reference_root, run_root
+import editor_runner
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -125,9 +130,78 @@ def unbound(work):
     return result.returncode
 
 
+LIFECYCLE = 'lifecycle.jsonl'
+LIFECYCLE_TIMEOUT = 1200   # hard deadline per admitted Editor
+# Silence budget, including the cold import before the witness creates its output (the main
+# probe's fresh-copy captures import in about 10 s and finish in about a minute).
+LIFECYCLE_PROGRESS = 600
+
+
+def lifecycle_project(dest):
+    """A fresh copy of the fixture (every scene, bake, meta and setting) in which the witness
+    replaces the main probe's recorder: LightProbesProbe quits the Editor when its own output
+    variable is unset, and no scene references it."""
+    project = copy_project(dest)
+    for name in ('LightProbesProbe.cs', 'LightProbesProbe.cs.meta'):
+        (project/'Assets/Scripts'/name).unlink()
+    for name in ('LightProbesLifecycle.cs', 'LightProbesLifecycle.cs.meta'):
+        shutil.copyfile(PROBE/'Lifecycle'/name, project/'Assets/Scripts'/name)
+    return project
+
+
+def lifecycle(work, release):
+    jobs = []
+    for repeat in ('native1', 'native2'):
+        out = work/repeat
+        if (out/LIFECYCLE).exists() or (out/editor_runner.RESULT).exists():
+            sys.exit(f'refusing to overwrite capture: {out}')
+        project = lifecycle_project(work/'projects'/repeat)
+        out.mkdir(parents=True, exist_ok=True)
+        inputs = {'release': release, 'paths': {
+            'project/Assets': str(project/'Assets'), 'project/Packages': str(project/'Packages'),
+            'project/ProjectSettings': str(project/'ProjectSettings'),
+            'probe/Lifecycle': str(PROBE/'Lifecycle'), 'probe/run.py': str(PROBE/'run.py'),
+            'tests/editor_runner.py': str(REPO/'tests/editor_runner.py'),
+            'tests/probe_paths.py': str(REPO/'tests/probe_paths.py'),
+            'profile': str(REPO/'data/profiles'/('unity-'+'.'.join(release.split('.')[:2])+'.json'))}}
+        jobs.append(editor_runner.EditorJob(
+            project, out/'editor.log', out, ['-buildTarget', 'Standalone', '-executeMethod', 'ProbeRunner.Record'],
+            batch=True, env={'LIGHT_PROBES_LIFECYCLE_OUT': str(out/LIFECYCLE)}, timeout=LIFECYCLE_TIMEOUT,
+            progress_files=[out/LIFECYCLE], progress_timeout=LIFECYCLE_PROGRESS, label='lifecycle-'+repeat,
+            launch_inputs=inputs))
+    results = editor_runner.run_parallel(jobs)
+    for result in results:
+        print(editor_runner.summary(result))
+    problems = [lifecycle_problem(work/r) for r in ('native1', 'native2')]
+    for repeat, problem in zip(('native1', 'native2'), problems):
+        print(repeat, problem or 'complete, exit 0, no forced exit')
+    return int(any(problems))
+
+
+def lifecycle_problem(directory):
+    """Strict: exit 0 without any forced stop, the NVIDIA renderer, a complete witness."""
+    result = editor_runner.load_result(directory)
+    if result is None:
+        return 'no Editor result'
+    if result.get('forced_exit'):
+        return f"forced exit ({result['forced_exit']}: {result.get('forced_detail')})"
+    return editor_runner.result_problem(directory, gpu=True) or editor_runner.jsonl_complete(LIFECYCLE)(directory)
+
+
+def lifecycle_publish(work):
+    for repeat in ('native1', 'native2'):
+        problem = lifecycle_problem(work/repeat)
+        if problem:
+            sys.exit(f'{repeat}: {problem}; not publishing')
+    return editor_runner.publish(
+        [work/'native1', work/'native2'], reference_root(PROBE)/LIFECYCLE, lambda d: [LIFECYCLE],
+        lambda target, first: (shutil.copyfile(first/LIFECYCLE, target), print('published', target)),
+        complete=[editor_runner.jsonl_complete(LIFECYCLE)], gpu=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'unbound'))
+    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'unbound', 'lifecycle', 'lifecycle-publish'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
     args = parser.parse_args()
@@ -135,6 +209,10 @@ def main():
         parser.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
+    if args.mode == 'lifecycle':
+        return lifecycle(work, args.release)
+    if args.mode == 'lifecycle-publish':
+        return lifecycle_publish(work)
     return {'create': create, 'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
 
 
