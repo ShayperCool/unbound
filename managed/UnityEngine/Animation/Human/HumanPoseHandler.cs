@@ -55,9 +55,30 @@ namespace UnityEngine
             if (avatar == null) throw new ArgumentNullException("HumanPoseHandler avatar is null");
             if (!avatar.isValid) throw new ArgumentException("HumanPoseHandler avatar is invalid");
             if (!avatar.isHuman) throw new ArgumentException("HumanPoseHandler avatar is not human");
-            m_Constant = avatar.Constant;
+            Init(avatar.Constant);
             m_Root = root;
             m_Bound = AvatarBinding.Bind(root, m_Constant);
+        }
+
+        /// <summary>A handler without transforms: its avatar pose is read and written as seven floats
+        /// per joint (local position, local rotation), the joints found by their paths' hashes among the
+        /// avatar's nodes (unknown paths are skipped). The avatar root stays at the origin.</summary>
+        public HumanPoseHandler(Avatar avatar, string[] jointPaths)
+        {
+            if (avatar == null) throw new ArgumentNullException("HumanPoseHandler avatar is null");
+            if (jointPaths == null) throw new ArgumentNullException("HumanPoseHandler jointPaths array is null");
+            if (!avatar.isValid) throw new ArgumentException("HumanPoseHandler avatar is invalid");
+            if (!avatar.isHuman) throw new ArgumentException("HumanPoseHandler avatar is not human");
+            Init(avatar.Constant);
+            var skel = m_Constant.AvatarSkeleton;
+            m_Joints = new int[jointPaths.Length];
+            for (int i = 0; i < jointPaths.Length; i++)
+                m_Joints[i] = Array.IndexOf(skel.Id, HashedBindings.Crc32(jointPaths[i] ?? ""));
+        }
+
+        void Init(AvatarConstant constant)
+        {
+            m_Constant = constant;
             int n = m_Constant.AvatarSkeleton.Count, h = m_Constant.Human.Skeleton.Count;
             m_AvatarPose = new SkeletonPose(n);
             m_AvatarGlobal = new SkeletonPose(n);
@@ -69,8 +90,51 @@ namespace UnityEngine
             m_Ptr = (IntPtr)1;
         }
 
-        public HumanPoseHandler(Avatar avatar, string[] jointPaths) =>
-            throw new NotSupportedException("HumanPoseHandler(Avatar, string[] jointPaths) (an avatar pose without transforms) is not supported yet");
+        /// <summary>The avatar node of each joint path (−1 when the avatar has none); null for a
+        /// handler made from a transform hierarchy.</summary>
+        int[] m_Joints;
+
+        /// <summary>The joints' local positions and rotations in the internal avatar pose, seven floats
+        /// per joint (as many joints as fit).</summary>
+        public void GetInternalAvatarPose(Unity.Collections.NativeArray<float> avatarPose)
+        {
+            Check();
+            if (m_Joints == null)
+            {
+                Debug.LogError("Trying to get an avatar pose but no joint paths were provided to the HumanPoseHandler");
+                return;
+            }
+            int count = Math.Min(m_Joints.Length, avatarPose.Length / 7);
+            for (int i = 0; i < count; i++)
+            {
+                int node = m_Joints[i];
+                if (node < 0) continue;
+                var x = m_AvatarPose.X[node];
+                int k = i * 7;
+                avatarPose[k] = x.t.x; avatarPose[k + 1] = x.t.y; avatarPose[k + 2] = x.t.z;
+                avatarPose[k + 3] = x.q.x; avatarPose[k + 4] = x.q.y; avatarPose[k + 5] = x.q.z; avatarPose[k + 6] = x.q.w;
+            }
+        }
+
+        /// <summary>Writes the joints' local positions and rotations into the internal avatar pose.</summary>
+        public void SetInternalAvatarPose(Unity.Collections.NativeArray<float> avatarPose)
+        {
+            Check();
+            if (m_Joints == null)
+            {
+                Debug.LogError("Trying to set an avatar pose but no joint paths were provided to the HumanPoseHandler");
+                return;
+            }
+            int count = Math.Min(m_Joints.Length, avatarPose.Length / 7);
+            for (int i = 0; i < count; i++)
+            {
+                int node = m_Joints[i];
+                if (node < 0) continue;
+                int k = i * 7;
+                m_AvatarPose.X[node].t = new F4(avatarPose[k], avatarPose[k + 1], avatarPose[k + 2], 0f);
+                m_AvatarPose.X[node].q = new F4(avatarPose[k + 3], avatarPose[k + 4], avatarPose[k + 5], avatarPose[k + 6]);
+            }
+        }
 
         public void Dispose()
         {
@@ -118,6 +182,7 @@ namespace UnityEngine
         /// <summary>The avatar's T-pose with the bound transforms' local positions and rotations.</summary>
         void ReadTransforms()
         {
+            if (m_Bound == null) return;
             m_AvatarPose.CopyFrom(m_Constant.AvatarSkeletonPose);
             for (int i = 0; i < m_Bound.Length; i++)
             {
@@ -131,6 +196,7 @@ namespace UnityEngine
         /// <summary>The bound transforms below the root take the pose's local positions and rotations.</summary>
         void WriteTransforms()
         {
+            if (m_Bound == null) return;
             for (int i = 1; i < m_Bound.Length; i++)
             {
                 var t = m_Bound[i];

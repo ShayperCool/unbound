@@ -347,8 +347,6 @@ namespace UnityEngine
     }
     unsafe partial class HumanPoseHandler
     {
-        [global::Unbound.Stub] public void GetInternalAvatarPose(global::Unity.Collections.NativeArray<float> avatarPose) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanPoseHandler.GetInternalAvatarPose"); }
-        [global::Unbound.Stub] public void SetInternalAvatarPose(global::Unity.Collections.NativeArray<float> avatarPose) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.HumanPoseHandler.SetInternalAvatarPose"); }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
