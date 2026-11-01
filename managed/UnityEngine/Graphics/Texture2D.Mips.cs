@@ -149,6 +149,7 @@ namespace UnityEngine
         /// paths that are not GetPixels.</summary>
         internal Color[] ColorsOfLevelZero()
         {
+            RequireReadable(true);
             var result = new Color[m_Width * m_Height];
             for (int i = 0; i < result.Length; i++) result[i] = Read(0, i);
             return result;
