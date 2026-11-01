@@ -34,6 +34,7 @@ namespace UnityEngine
         internal bool m_Active;
         internal bool m_Registered;
         internal bool m_ShapeDirty;
+        internal bool m_GeometryDirty;
         internal Rigidbody m_AttachedBody;
         internal ulong m_StaticBody;
         internal ulong m_Shape;
@@ -103,9 +104,9 @@ namespace UnityEngine
         internal virtual Bounds LocalBounds() => new Bounds(Vector3.zero, Vector3.zero);
 
         /// <summary>The shape must be rebuilt (a geometry or contact property changed).</summary>
-        internal void ShapeChanged()
+        internal void ShapeChanged(bool geometryChanged = true)
         {
-            if (m_Registered) W.MarkShapeDirty(this);
+            if (m_Registered) W.MarkShapeDirty(this, geometryChanged);
         }
 
         /// <summary>The scales a body-frame matrix applies along the collider's own axes.</summary>
@@ -140,7 +141,7 @@ namespace UnityEngine
             {
                 if (m_IsTrigger == value) return;
                 m_IsTrigger = value;
-                ShapeChanged();
+                ShapeChanged(geometryChanged: false);
             }
         }
 
@@ -170,7 +171,7 @@ namespace UnityEngine
             set
             {
                 m_Material = value;
-                ShapeChanged();
+                ShapeChanged(geometryChanged: false);
             }
         }
 
@@ -186,7 +187,7 @@ namespace UnityEngine
                     if (source != null) copy.CopyValues(source);
                     copy.m_IsInstance = true;
                     m_Material = copy;
-                    ShapeChanged();
+                    ShapeChanged(geometryChanged: false);
                 }
                 return m_Material;
             }
