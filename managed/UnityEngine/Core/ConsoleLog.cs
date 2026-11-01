@@ -48,6 +48,7 @@ namespace Unbound.Runtime
                 var cache = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
                 if (string.IsNullOrEmpty(cache)) cache = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache");
                 var policy = new ConsoleLogPath.Policy(UnityEngine.ProjectInfo.ProjectPath, cache);
+                string reportedPath = path;
                 path = policy.Validate(path);
                 string previous = policy.Validate(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(path),
                     System.IO.Path.GetFileNameWithoutExtension(path) + "-prev" + System.IO.Path.GetExtension(path)));
@@ -56,7 +57,8 @@ namespace Unbound.Runtime
                     File.Move(path, previous, true);
                 var stream = new FileStream(path, FileMode.Create, FileAccess.Write, FileShare.ReadWrite | FileShare.Delete);
                 s_Writer = new StreamWriter(stream) { AutoFlush = true };
-                s_Path = path;
+                // Reporting preserves the requested spelling; all I/O uses checked physical paths.
+                s_Path = reportedPath;
             }
             catch (Exception e)
             {

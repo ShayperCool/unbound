@@ -124,13 +124,13 @@ namespace UnityEngine.Tests
             Directory.CreateSymbolicLink(alias, Project);
             ProjectInfo.ProjectPath = alias;
             Open(Path.Combine(alias, "Library/Unbound/alias.log"));
-            Assert.Equal(Path.Combine(Logs, "alias.log"), ConsoleLog.Path);
+            Assert.Equal(Path.Combine(alias, "Library/Unbound/alias.log"), ConsoleLog.Path);
             Directory.CreateDirectory(Cache);
             string relocated = Path.Combine(root, "relocated");
             Directory.CreateDirectory(relocated);
             Directory.CreateSymbolicLink(Path.Combine(Cache, "unbound"), relocated);
             Open(Path.Combine(Cache, "unbound/session.log"));
-            Assert.Equal(Path.Combine(relocated, "session.log"), ConsoleLog.Path);
+            Assert.Equal(Path.Combine(Cache, "unbound/session.log"), ConsoleLog.Path);
             Directory.CreateSymbolicLink(Path.Combine(relocated, "escape"), Path.Combine(Project, "Assets"));
             Open(Path.Combine(Cache, "unbound/escape/sentinel.cs"));
             Assert.Equal("", ConsoleLog.Path);
@@ -146,7 +146,7 @@ namespace UnityEngine.Tests
             Directory.CreateDirectory(migrated);
             Directory.CreateSymbolicLink(validation, migrated);
             Open(Path.Combine(validation, "session.log"));
-            Assert.Equal(Path.Combine(migrated, "session.log"), ConsoleLog.Path);
+            Assert.Equal(Path.Combine(validation, "session.log"), ConsoleLog.Path);
             ConsoleLog.Reset();
             Directory.Delete(validation);
             Directory.CreateSymbolicLink(validation, Path.Combine(Project, "Assets"));
@@ -274,6 +274,94 @@ namespace UnityEngine.Tests
             Open(Path.Combine(Cache, "unbound/independent/session.log"));
             Assert.Contains("log sentinel", File.ReadAllText(ConsoleLog.Path));
             Assert.Equal("authored sentinel", File.ReadAllText(Path.Combine(external, "sentinel.cs")));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void Expanding_symlinks_have_one_total_follow_budget(bool authored)
+        {
+            string expanded = Path.Combine(Cache, "unbound/expanding");
+            Directory.CreateDirectory(expanded);
+            Directory.CreateSymbolicLink(Path.Combine(expanded, "L0"), ".");
+            for (int i = 1; i < 40; i++)
+                Directory.CreateSymbolicLink(Path.Combine(expanded, "L" + i), "L" + (i - 1) + "/L" + (i - 1));
+            if (authored)
+                Directory.CreateSymbolicLink(Path.Combine(Project, "Assets/expanded"), expanded + "/L39");
+            string path = authored ? Path.Combine(Logs, "session.log") : expanded + "/L39/session.log";
+            var before = FixtureState(root);
+            Assert.Throws<IOException>(() => ConsoleLogPath.Validate(path, Project, Cache));
+            Assert.Equal(before, FixtureState(root));
+        }
+
+        [Theory]
+        [InlineData(40)]
+        [InlineData(41)]
+        public void Total_symlink_follow_budget_allows_exactly_forty(int count)
+        {
+            string allowed = Path.Combine(Cache, "unbound");
+            Directory.CreateDirectory(allowed);
+            Directory.CreateSymbolicLink(Path.Combine(allowed, "step"), ".");
+            string path = allowed + "/" + string.Join("/", Enumerable.Repeat("step", count)) + "/session.log";
+            var before = FixtureState(root);
+            if (count == 40)
+                Assert.Equal(Path.Combine(allowed, "session.log"), ConsoleLogPath.Validate(path, Project, Cache));
+            else
+                Assert.Throws<IOException>(() => ConsoleLogPath.Validate(path, Project, Cache));
+            Assert.Equal(before, FixtureState(root));
+        }
+
+        [Theory]
+        [InlineData("direct")]
+        [InlineData("relative")]
+        [InlineData("rotation")]
+        [InlineData("project")]
+        public void Parent_segments_in_link_targets_follow_the_resolved_parent(string kind)
+        {
+            string allowed = Path.Combine(Cache, "unbound");
+            string packages = Path.Combine(allowed, "pkgs");
+            string deep = Path.Combine(allowed, "deep");
+            Directory.CreateDirectory(Path.Combine(packages, "real"));
+            Directory.CreateDirectory(Path.Combine(deep, "x"));
+            Directory.CreateDirectory(Path.Combine(deep, "real"));
+            Directory.CreateSymbolicLink(Path.Combine(packages, "s"), "../deep/x");
+            string sentinel = Path.Combine(deep, "real/sentinel.cs");
+            File.WriteAllText(sentinel, "authored parent-segment sentinel");
+            string alias = Path.Combine(Project, "Assets/shared");
+            string target = kind == "relative" ? "../../cache/unbound/pkgs/s/../real" : packages + "/s/../real";
+            Directory.CreateSymbolicLink(alias, target);
+            string path = sentinel;
+            if (kind == "rotation")
+            {
+                path = Path.Combine(allowed, "session.log");
+                File.WriteAllText(path, "previous log sentinel");
+                File.CreateSymbolicLink(Path.Combine(allowed, "session-prev.log"), sentinel);
+            }
+            if (kind == "project")
+            {
+                string physicalProject = Path.Combine(deep, "real");
+                Directory.CreateDirectory(Path.Combine(physicalProject, "Assets"));
+                sentinel = Path.Combine(physicalProject, "Assets/sentinel.cs");
+                File.WriteAllText(sentinel, "authored project-alias sentinel");
+                string projectAlias = Path.Combine(root, "project-through-parent");
+                Directory.CreateSymbolicLink(projectAlias, "cache/unbound/pkgs/s/../real");
+                ProjectInfo.ProjectPath = projectAlias;
+                path = sentinel;
+            }
+            var before = FixtureState(root);
+            Open(path);
+            Assert.Equal("", ConsoleLog.Path);
+            Assert.Equal(before, FixtureState(root));
+        }
+
+        [Fact]
+        public void Resolving_parent_segments_uses_the_physical_link_parent()
+        {
+            string allowed = Path.Combine(Cache, "unbound");
+            Directory.CreateDirectory(Path.Combine(allowed, "deep/x"));
+            Directory.CreateSymbolicLink(Path.Combine(allowed, "link"), "deep/x");
+            Assert.Equal(Path.Combine(allowed, "deep/session.log"),
+                ConsoleLogPath.Validate(Path.Combine(allowed, "link/../session.log"), Project, Cache));
         }
 
         public void Dispose()

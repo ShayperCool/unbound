@@ -80,7 +80,8 @@ namespace Unbound.Runtime
                     var membership = directory ? directories : files;
                     membership.Add(path);
                     if (target != null)
-                        membership.Add(System.IO.Path.GetFullPath(target, System.IO.Path.GetDirectoryName(path)));
+                        membership.Add(System.IO.Path.IsPathFullyQualified(target) ? target :
+                            System.IO.Path.Combine(System.IO.Path.GetDirectoryName(path), target));
                     membership.Add(resolved);
                     if (!directory) return;
                     if (active.Contains(resolved)) throw new IOException("authored directory alias cycle: " + path);
@@ -122,20 +123,39 @@ namespace Unbound.Runtime
 
         // Preserve membership before resolution discards a spelling. LinkTarget sees dangling
         // links, and targets are walked again so aliases in their ancestors are checked too.
-        static string Resolve(string path, Action<string> check = null, int links = 0)
+        static string Resolve(string path, Action<string> check = null)
         {
-            if (links > 40) throw new IOException("too many log path symlinks");
-            path = System.IO.Path.GetFullPath(path);
+            int followed = 0;
+            return ResolveSegments(path, check, ref followed);
+        }
+
+        static string ResolveSegments(string path, Action<string> check, ref int followed)
+        {
+            // GetFullPath would fold link/.. before the link's physical target is known.
+            if (!System.IO.Path.IsPathFullyQualified(path))
+                path = System.IO.Path.Combine(Environment.CurrentDirectory, path);
             check?.Invoke(path);
             string current = System.IO.Path.GetPathRoot(path);
             foreach (string part in path.Substring(current.Length).Split(System.IO.Path.DirectorySeparatorChar, StringSplitOptions.RemoveEmptyEntries))
             {
-                current = System.IO.Path.Combine(current, part);
-                check?.Invoke(current);
-                Attributes(current); // Access errors must not silently discard a branch.
-                string target = new FileInfo(current).LinkTarget;
-                if (target != null)
-                    current = Resolve(System.IO.Path.GetFullPath(target, System.IO.Path.GetDirectoryName(current)), check, links + 1);
+                if (part == ".") continue;
+                if (part == "..")
+                    current = System.IO.Path.GetDirectoryName(current) ?? System.IO.Path.GetPathRoot(current);
+                else
+                {
+                    current = System.IO.Path.Combine(current, part);
+                    check?.Invoke(current);
+                    Attributes(current); // Access errors must not silently discard a branch.
+                    string target = new FileInfo(current).LinkTarget;
+                    if (target != null)
+                    {
+                        // This counter is shared by every branch of this one resolution.
+                        if (++followed > 40) throw new IOException("too many log path symlinks");
+                        string next = System.IO.Path.IsPathFullyQualified(target) ? target :
+                            System.IO.Path.Combine(System.IO.Path.GetDirectoryName(current), target);
+                        current = ResolveSegments(next, check, ref followed);
+                    }
+                }
                 check?.Invoke(current);
             }
             return current;
