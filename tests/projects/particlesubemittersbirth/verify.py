@@ -89,9 +89,15 @@ def main():
     paths.append(broad_path)
     broad = load(broad_path)
     names = ('sub_emitters_birth', 'sub_emitters_birth_child')
-    original = {key: value for key, value in broad.items() if key[0] in names or key[0] in tuple(name+' inside' for name in names)}
-    focused = {key: value for key, value in ref.items() if key[0] in names or key[0] in tuple(name+' inside' for name in names)}
+    original = {key: value for key, value in broad.items() if key[0] in names}
+    focused = {key: value for key, value in ref.items() if key[0] in names}
     result['original_controls'] = report(original, focused)
+    # Registered subemitters advance even when hierarchy traversal is disabled.
+    child = {key: value for key, value in ref.items() if key[0] == 'single_birth_child'}
+    parent_only = {(key[0].replace('_parent_only', ''), key[1]): value
+                   for key, value in ref.items() if key[0] == 'single_birth_parent_only_child'}
+    if parent_only:
+        result['child_traversal_controls'] = report(child, parent_only)
     if args.actual:
         paths.append(args.actual)
         result['candidate'] = report(ref, load(args.actual))
@@ -112,7 +118,9 @@ def main():
            else {k: len(v) for k, v in value.items()} if key == 'union' else value
            for key, value in result.items() if key not in ('sha256', 'changed_retained')})
     return int(not result.get('exact_native_agreement', True) or not result.get('canonical_agrees_exactly', True)
-               or bool(result['original_controls']['failures']) or bool(result.get('candidate', {}).get('failures')))
+               or bool(result['original_controls']['failures'])
+               or bool(result.get('child_traversal_controls', {}).get('failures'))
+               or bool(result.get('candidate', {}).get('failures')))
 
 
 if __name__ == '__main__':

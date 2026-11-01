@@ -83,6 +83,7 @@ public class BirthProbe : MonoBehaviour
     {
         RunCase(false);
         RunCase(true);
+        RunCase(true, false);
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_BIRTH_OUT"), s_Out.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
@@ -91,9 +92,10 @@ public class BirthProbe : MonoBehaviour
 #endif
     }
 
-    static void RunCase(bool single)
+    static void RunCase(bool single, bool withChildren = true)
     {
         string name = single ? "single_birth" : "sub_emitters_birth";
+        if (!withChildren) name += "_parent_only";
         ParticleSystem child = null;
         var ps = Make(name, s =>
         {
@@ -129,7 +131,7 @@ public class BirthProbe : MonoBehaviour
             .Append("}}\n");
         for (int i = 0; i < (single ? 10 : 15); i++)
         {
-            ps.Simulate(0.05f, true, i == 0, false);
+            ps.Simulate(0.05f, withChildren, i == 0, false);
             string step = i.ToString(CultureInfo.InvariantCulture);
             RecordState(name, step, ps);
             RecordState(name + "_child", step, child);
