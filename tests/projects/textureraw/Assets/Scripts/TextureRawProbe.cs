@@ -81,7 +81,7 @@ public static class TextureRawProbe
                 for (int mip = 0; mip < texture.mipmapCount; mip++)
                 {
                     var pixels = texture.GetPixelData<byte>(mip);
-                    raw[offset] = 0;
+                    raw[offset] ^= 1;
                     Value(key + ".mip" + mip + ".raw_to_pixel", Bytes(pixels));
                     Value(key + ".mip" + mip + ".raw_to_colors", Pixels(texture, mip));
                     pixels[pixels.Length - 1] = 0x3f;
