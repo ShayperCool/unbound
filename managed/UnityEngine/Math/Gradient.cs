@@ -153,11 +153,15 @@ namespace UnityEngine
             GradientColorKey[] keys = m_ColorKeys;
             if (keys.Length == 0)
                 return Color.white;
+            // PerceptualBlend takes every color through Oklab, the end keys too: a gamma gradient's
+            // ends come back through the sRGB curve, one 8-bit step low for some channels
+            // (measured, tests/projects/lines line.color.PerceptualBlend).
+            bool perceptual = m_Mode == GradientMode.PerceptualBlend;
             if (time <= keys[0].time)
-                return keys[0].color;
+                return perceptual ? PerceptualLerp(keys[0].color, keys[0].color, 0f, m_ColorSpace == ColorSpace.Linear) : keys[0].color;
             int last = keys.Length - 1;
             if (time >= keys[last].time)
-                return keys[last].color;
+                return perceptual ? PerceptualLerp(keys[last].color, keys[last].color, 0f, m_ColorSpace == ColorSpace.Linear) : keys[last].color;
 
             int i = 1;
             while (keys[i].time < time)
@@ -167,7 +171,7 @@ namespace UnityEngine
                 return k1.color;
             float span = k1.time - k0.time;
             float t = span > 0f ? (time - k0.time) / span : 1f;
-            if (m_Mode == GradientMode.PerceptualBlend)
+            if (perceptual)
                 return PerceptualLerp(k0.color, k1.color, t, m_ColorSpace == ColorSpace.Linear);
             return Color.LerpUnclamped(k0.color, k1.color, t);
         }
@@ -223,18 +227,45 @@ namespace UnityEngine
             B = 0.0259040371 * l + 0.7827717662 * m - 0.8086757660 * s;
         }
 
+        // The way back inverts the two forward matrices exactly, so a color round-trips without
+        // drift (a linear gradient's end keys come back unchanged, measured in
+        // line.color.PerceptualLinear); the published 10-digit inverses lose the last 8-bit step.
+        private static readonly double[] s_LabToLms = Invert3(
+            0.2104542553, 0.7936177850, -0.0040720468,
+            1.9779984951, -2.4285922050, 0.4505937099,
+            0.0259040371, 0.7827717662, -0.8086757660);
+
+        private static readonly double[] s_LmsToLinear = Invert3(
+            0.4122214708, 0.5363325363, 0.0514459929,
+            0.2119034982, 0.6806995451, 0.1073969566,
+            0.0883024619, 0.2817188376, 0.6299787005);
+
+        private static double[] Invert3(double a, double b, double c, double d, double e, double f, double g, double h, double i)
+        {
+            double A = e * i - f * h, B = -(d * i - f * g), C = d * h - e * g;
+            double det = a * A + b * B + c * C;
+            return new[]
+            {
+                A / det, -(b * i - c * h) / det, (b * f - c * e) / det,
+                B / det, (a * i - c * g) / det, -(a * f - c * d) / det,
+                C / det, -(a * h - b * g) / det, (a * e - b * d) / det,
+            };
+        }
+
         private static Color OklabToLinear(double L, double A, double B)
         {
-            double l = L + 0.3963377774 * A + 0.2158037573 * B;
-            double m = L - 0.1055613458 * A - 0.0638541728 * B;
-            double s = L - 0.0894841775 * A - 1.2914855480 * B;
+            double[] k = s_LabToLms;
+            double l = k[0] * L + k[1] * A + k[2] * B;
+            double m = k[3] * L + k[4] * A + k[5] * B;
+            double s = k[6] * L + k[7] * A + k[8] * B;
             l = l * l * l;
             m = m * m * m;
             s = s * s * s;
+            k = s_LmsToLinear;
             return new Color(
-                (float)(4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s),
-                (float)(-1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s),
-                (float)(-0.0041960863 * l - 0.7034186147 * m + 1.7076147010 * s),
+                (float)(k[0] * l + k[1] * m + k[2] * s),
+                (float)(k[3] * l + k[4] * m + k[5] * s),
+                (float)(k[6] * l + k[7] * m + k[8] * s),
                 1f);
         }
 
