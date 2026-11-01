@@ -888,8 +888,10 @@ namespace Unbound.Runtime
             RenderTexture screenStandIn = null;
             try
             {
-                Camera.onPreCull?.Invoke(camera);
+                // The camera's own message first, then the static event (measured:
+                // tests/projects/cullinggroup; also before and after rendering).
                 SendToCamera(camera, m => m.OnPreCull);
+                Camera.onPreCull?.Invoke(camera);
                 // Culling groups: evaluated and their callbacks sent before renderers become
                 // visible (measured: tests/projects/cullinggroup).
                 CullingGroup.EvaluateForCamera(camera);
@@ -939,8 +941,8 @@ namespace Unbound.Runtime
                 SortForCamera(s_Items);
                 ForwardLights.BeginCamera(camera);
                 s_CameraView = context.View;
-                Camera.onPreRender?.Invoke(camera);
                 SendToCamera(camera, m => m.OnPreRender);
+                Camera.onPreRender?.Invoke(camera);
 
                 // Image effects render the scene into a temporary, then each effect into the next;
                 // [ImageEffectOpaque] ones run on it after the opaque objects.
@@ -1097,8 +1099,8 @@ namespace Unbound.Runtime
                 // OnPostRender, the halo and lens flare events (Unbound draws none: the events
                 // fire anyway), then OnRenderObject (measured: tests/projects/builtinrp
                 // events.*.orderWithMessages).
-                Camera.onPostRender?.Invoke(camera);
                 SendToCamera(camera, m => m.OnPostRender);
+                Camera.onPostRender?.Invoke(camera);
                 RunEvent(camera, CameraEvent.BeforeHaloAndLensFlares, sceneTarget);
                 RunEvent(camera, CameraEvent.AfterHaloAndLensFlares, sceneTarget);
                 SendToAll(m => m.OnRenderObject);
