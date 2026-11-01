@@ -36,6 +36,10 @@ public static class ProbeEntry
         foreach (float angle in new[] { 0f, 23f, 90f })
         foreach (Vector2 offset in new[] { new Vector2(0, 2), new Vector2(0, 3), Vector2.zero })
             CapsuleTips(horizontal, angle, offset);
+        foreach (bool horizontal in new[] { false, true })
+        foreach (float angle in new[] { 0f, 23f })
+        foreach (float offset in new[] { 0f, .25f })
+            DynamicTips(horizontal, angle, offset);
         File.WriteAllText(output, ProbeLog.Json());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
@@ -44,7 +48,7 @@ public static class ProbeEntry
 #endif
     }
 
-    static GameObject Make(string name, Vector2 position, float angle, bool body)
+    static GameObject Make(string name, Vector2 position, float angle, bool body, bool movable = false)
     {
         var go = new GameObject(name); Objects.Add(go);
         go.transform.position = position;
@@ -53,9 +57,9 @@ public static class ProbeEntry
         if (body)
         {
             var rb = go.AddComponent<Rigidbody2D>();
-            rb.bodyType = RigidbodyType2D.Kinematic;
+            rb.bodyType = movable ? RigidbodyType2D.Dynamic : RigidbodyType2D.Kinematic;
             rb.useFullKinematicContacts = true;
-            rb.constraints = RigidbodyConstraints2D.FreezeAll;
+            rb.constraints = movable ? RigidbodyConstraints2D.None : RigidbodyConstraints2D.FreezeAll;
             rb.sleepMode = RigidbodySleepMode2D.NeverSleep;
             Bodies.Add(rb);
         }
@@ -95,6 +99,35 @@ public static class ProbeEntry
         ProbeLog.Value("distance", d.distance); ProbeLog.Value("distance.normal", d.normal);
         ProbeLog.Value("distance.pointA", d.pointA); ProbeLog.Value("distance.pointB", d.pointB);
         Step("first"); Step("second");
+        Clear();
+    }
+
+    static void DynamicTips(bool horizontal, float angle, float offset)
+    {
+        ProbeLog.Begin("dynamics/"+horizontal+"/"+angle+"/"+offset);
+        var q = Quaternion.Euler(0, 0, angle);
+        Vector2 delta = q * (horizontal ? new Vector2(2.5f, offset) : new Vector2(offset, 2.5f));
+        var a = Make("target", Vector2.zero, angle, false).AddComponent<CapsuleCollider2D>();
+        var b = Make("moving", delta, angle, true, true).AddComponent<CapsuleCollider2D>();
+        a.direction = b.direction = horizontal ? CapsuleDirection2D.Horizontal : CapsuleDirection2D.Vertical;
+        a.size = b.size = horizontal ? new Vector2(3, 1) : new Vector2(1, 3);
+        var body = b.GetComponent<Rigidbody2D>();
+        body.linearDamping = body.angularDamping = 0;
+        body.linearVelocity = q * (horizontal ? new Vector2(-.5f, 0) : new Vector2(0, -.5f));
+        for (int i = 0; i < 8; i++)
+        {
+            string key = "step/"+i;
+            Step(key);
+            ProbeLog.Value(key+"/velocity", body.linearVelocity);
+            ProbeLog.Value(key+"/angularVelocity", body.angularVelocity);
+            ProbeLog.Value(key+"/rotation", body.rotation);
+            var contacts = new ContactPoint2D[8]; int count = body.GetContacts(contacts);
+            for (int j = 0; j < count; j++)
+            {
+                ProbeLog.Value(key+"/impulse/"+j+"/normal", contacts[j].normalImpulse);
+                ProbeLog.Value(key+"/impulse/"+j+"/tangent", contacts[j].tangentImpulse);
+            }
+        }
         Clear();
     }
 
