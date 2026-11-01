@@ -2,6 +2,9 @@
 
 Parity integration and new child briefs also follow [PARITY_WORKFLOW.md](PARITY_WORKFLOW.md).
 
+Use tests/editor_runner.py for supervised Native captures; see
+[../../tests/EDITOR_RUNNER.md](../../tests/EDITOR_RUNNER.md).
+
 `install_job_runner.py` installs the common `~/.cache/compat/with-heavy-job`
 entry point and the user systemd slices. The source policy is `job-limits.json`;
 the previous serial launcher is backed up before replacement.
@@ -108,6 +111,22 @@ python3 tools/validation/engine_benchmark.py --release 6000.0.71f1 \
   --cli /path/to/unbound --managed /path/to/managed \
   --work "${XDG_CACHE_HOME:-$HOME/.cache}/unbound/validation/runs/engine-pool-benchmark"
 ```
+
+## Measuring build throughput
+
+`build_benchmark.py --plan PLAN.json --out NEW_CACHE_DIRECTORY` runs explicit
+independent build batches serially and with two workers. Each build takes one
+installed lease; the driver is not wrapped. Every job needs an argv array, cwd,
+unique resource_key for its output/target and a name. Optional env, timeout_s
+and restore_checks make the inputs explicit. Source/package preparation belongs
+outside the measured batch. Use fresh outputs and equivalent source/flags in
+both cases, physical paths for private managed projects, and pre-restored packages.
+
+The tool saves complete logs, source plan, worker CPU/wall time and available
+lease wait/peak-memory records. It stops a serial batch at its first failure;
+canceling it terminates only the build scopes it created. Compare total batch
+completion time, not just individual job latency. A managed-only comparison
+does not establish the best Cargo parallelism or performance under Editor load.
 
 ## Moving active caches
 

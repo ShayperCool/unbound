@@ -23,6 +23,12 @@ runtime. Do not repeat unrelated physics, audio or rendering suites. Merge revie
 deliveries in batches and run one combined managed, API and affected-probe batch
 on the final candidate. Regenerate shared API stubs once for that candidate.
 
+Resolve private managed project and working-directory paths before restore when
+the cache is reached through a symlink. Verify the restored project-reference
+graph before a costly build: an exit0 restore can still omit those references
+with mixed logical/physical paths. Keep failed preparation separate from timing
+or runtime acceptance results.
+
 An introduced difference blocks the package that causes it. To attribute a
 difference elsewhere, use a controlled Root A/B with and without the package and
 hold all other source, runtime dependencies and probe inputs fixed. File ownership
