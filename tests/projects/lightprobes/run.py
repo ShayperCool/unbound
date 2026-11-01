@@ -10,6 +10,9 @@
                                                     unload event-order witness (Lifecycle/)
     run.py lifecycle-publish --release R --label L  checks they are complete, strict exit 0 and
                                                     identical; writes Reference/.../lifecycle.jsonl
+    run.py lifecycle-unbound --release R --label L  one Unbound capture of the same witness
+                                                    (UNBOUND_CLI: the binary); compare it with
+                                                    compare_lifecycle.py
 
 Every capture runs on a fresh copy of this project in the validation cache. Editors run through
 the shared heavy-job launcher on the GPU (a private Xvfb and VirtualGL); do not wrap this driver.
@@ -178,6 +181,24 @@ def lifecycle(work, release):
     return int(any(problems))
 
 
+def lifecycle_unbound(work):
+    """The witness on a fresh lifecycle copy in Unbound. It quits by itself after its completion
+    marker; the frame count only bounds the run."""
+    cli = os.environ.get('UNBOUND_CLI', str(REPO/'target/release/unbound'))
+    out = work/'unbound'
+    if out.exists():
+        sys.exit(f'refusing to overwrite capture: {out}')
+    project = lifecycle_project(work/'projects'/'unbound')
+    out.mkdir(parents=True)
+    env = dict(os.environ, LIGHT_PROBES_LIFECYCLE_OUT=str(out/LIFECYCLE))
+    with (out/'unbound.log').open('w') as log:
+        result = subprocess.run([str(LAUNCHER), 'timeout', '600', cli, 'run', '-p', str(project),
+                                 '--target', 'Standalone', '--no-watch', '--frames', '300', '--size', '320x180'],
+                                env=env, stdout=log, stderr=subprocess.STDOUT)
+    print('unbound exit', result.returncode, out/LIFECYCLE)
+    return result.returncode
+
+
 def lifecycle_problem(directory):
     """Strict: exit 0 without any forced stop, the NVIDIA renderer, a complete witness."""
     result = editor_runner.load_result(directory)
@@ -201,7 +222,8 @@ def lifecycle_publish(work):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'unbound', 'lifecycle', 'lifecycle-publish'))
+    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'unbound', 'lifecycle', 'lifecycle-publish',
+                                         'lifecycle-unbound'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
     args = parser.parse_args()
@@ -213,6 +235,8 @@ def main():
         return lifecycle(work, args.release)
     if args.mode == 'lifecycle-publish':
         return lifecycle_publish(work)
+    if args.mode == 'lifecycle-unbound':
+        return lifecycle_unbound(work)
     return {'create': create, 'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
 
 

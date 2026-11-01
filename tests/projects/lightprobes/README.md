@@ -80,6 +80,11 @@ Single `LoadScene` of Extra, with the global counts and each scene's validity an
   `cellCountSelf`. The incoming scene's probes are global by `activeSceneChanged`, with no event.
 * A scene created by a load but not loaded yet, and an invalid scene, have null shared probes.
 
+An engine capture of the witness (`run.py lifecycle-unbound`, UNBOUND_CLI / UNBOUND_MANAGED_DIR
+as above) is compared with `compare_lifecycle.py REFERENCE CAPTURE --report R`: row by row and
+strictly (every field of every row; missing/extra rows fail), with an informational alignment of
+the event sequences so a moved event shows as one insertion and one deletion.
+
 Unbound follows the relative order and the public state of both paths
 (`LightProbes.SceneUnloaded`, `LightProbes.SingleLoadReplacing`, `SceneManagerInternal.UnloadForSingleLoad`;
 unit tests in `managed/UnityEngine.Tests/LightProbesTests.cs`). It has not been run against this
