@@ -263,6 +263,7 @@ pub struct Source {
     component_playback: bool,
     completed_shots: Vec<u64>,
     completed_main: Option<u64>,
+    completion_frontier: u64,
 }
 
 impl Source {
@@ -1103,6 +1104,8 @@ impl Mixer {
             let mono_pan = (source.params.spatial_blend <= 0.0
                 && source.params.spatial_blend_curve.iter().all(|value| *value <= 0.0))
                 .then_some(source.params.pan_stereo);
+            let dsp_frames = config.buffer_size.max(1) as u64;
+            source.completion_frontier = (t0 + n as u64).div_ceil(dsp_frames) * dsp_frames;
             let generator = filter_only;
             if generator {
                 // The main generator receives zeros. One-shots retain their own gain
@@ -1125,6 +1128,7 @@ impl Mixer {
                             let mut input = std::mem::take(&mut source.filtered);
                             input.resize(length, 0.0);
                             input.fill(0.0);
+                            source.completion_frontier = t0 + (written + length) as u64 / 2;
                             // Keep voice ramps and interpolation in their existing DSP chunks.
                             for (block, chunk) in input.chunks_mut(BLOCK * 2).enumerate() {
                                 render_source_voices(source, clips, chunk, chunk.len() / 2,
@@ -1345,14 +1349,14 @@ fn render_source_voices(
         if render_voice(main, clips.get(&main.clip), n, t0, pitch, rate, target,
             mono_pan, looping, audible.then_some(&mut *out), callback) {
             source.pending_position = if source.component_playback { main.position } else { 0.0 };
-            if source.component_playback { source.completed_main = Some(t0 + n as u64); }
+            if source.component_playback { source.completed_main = Some(source.completion_frontier); }
             source.main = None;
         }
     }
     source.one_shots.retain_mut(|voice| {
         let finished = render_voice(voice, clips.get(&voice.clip), n, t0, pitch, rate, target,
             mono_pan, false, audible.then_some(&mut *out), callback);
-        if finished && source.component_playback { source.completed_shots.push(t0 + n as u64); }
+        if finished && source.component_playback { source.completed_shots.push(source.completion_frontier); }
         !finished
     });
 }
