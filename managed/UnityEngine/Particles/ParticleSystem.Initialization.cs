@@ -179,7 +179,7 @@ namespace UnityEngine
 
             internal static Random.State Advance(Random.State state, ulong draws)
             {
-                // Small batches avoid matrix work and the static tables altogether.
+                // Small batches use direct steps instead of matrix multiplication.
                 if (draws < 32)
                 {
                     for (ulong i = 0; i < draws; i++) state.NextValue();

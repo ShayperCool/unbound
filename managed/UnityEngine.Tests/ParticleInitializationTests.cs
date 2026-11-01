@@ -206,23 +206,25 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
 
-        [Fact]
-        public void ObsoleteParticleImportMaterializesAxisBeforeCopying()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ObsoleteParticleImportMaterializesAxisBeforeCopying(bool existingParticle)
         {
             var ps = Make();
             try
             {
-                ps.Emit(1);
+                if (existingParticle) ps.Emit(1);
 #pragma warning disable CS0618
                 ps.Emit(new ParticleSystem.Particle {
                     startLifetime = 2f, remainingLifetime = 2f,
                     axisOfRotation = Vector3.right, randomSeed = 77u });
 #pragma warning restore CS0618
                 var p = Read(ps);
-                Assert.Equal(Vector3.up, p[0].axisOfRotation);
-                Assert.Equal(Vector3.right, p[1].axisOfRotation);
+                if (existingParticle) Assert.Equal(Vector3.up, p[0].axisOfRotation);
+                Assert.Equal(Vector3.right, p[existingParticle ? 1 : 0].axisOfRotation);
                 ps.Emit(1);
-                Assert.Equal(Vector3.forward, Read(ps)[2].axisOfRotation);
+                Assert.Equal(Vector3.forward, Read(ps)[existingParticle ? 2 : 1].axisOfRotation);
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
@@ -278,6 +280,32 @@ namespace UnityEngine.Tests
                 for (int lane = 0; lane < 4; lane++) Assert.Equal(next[lane].randomSeed, actual[lane].randomSeed);
             }
             finally { Object.DestroyImmediate(limited.gameObject); Object.DestroyImmediate(complete.gameObject); }
+        }
+
+        [Theory]
+        [InlineData(132, false)]
+        [InlineData(516, true)]
+        public void LargeBatchAdvancesLikeRepeatedCompletePackedGroups(int count, bool threeD)
+        {
+            var bulk = Make(); var groups = Make();
+            try
+            {
+                var bm = bulk.main; var gm = groups.main;
+                bm.maxParticles = gm.maxParticles = count + 4;
+                bm.startSize3D = gm.startSize3D = threeD;
+                bm.startRotation3D = gm.startRotation3D = threeD;
+                bm.startLifetime = gm.startLifetime = new ParticleSystem.MinMaxCurve(2f, 4f);
+                bulk.Emit(count);
+                for (int i = 0; i < count; i += 4) groups.Emit(4);
+                bulk.Emit(4); groups.Emit(4);
+                var expected = Read(groups); var actual = Read(bulk);
+                for (int i = 0; i < count + 4; i++)
+                {
+                    Assert.Equal(expected[i].randomSeed, actual[i].randomSeed);
+                    Assert.Equal(expected[i].startLifetime, actual[i].startLifetime);
+                }
+            }
+            finally { Object.DestroyImmediate(bulk.gameObject); Object.DestroyImmediate(groups.gameObject); }
         }
     }
 }
