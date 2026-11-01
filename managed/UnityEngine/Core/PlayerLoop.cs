@@ -62,6 +62,7 @@ namespace UnityEngine.PlayerLoop
         public partial struct ClearLines { }
         public partial struct PresentBeforeUpdate { }
         public partial struct ResetFrameStatsAfterPresent { }
+        public partial struct UpdateAsyncInstantiate { }
         public partial struct UpdateAsyncReadbackManager { }
         public partial struct UpdateTextureStreamingManager { }
         public partial struct UpdatePreloading { }
