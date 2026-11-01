@@ -47,6 +47,11 @@ python3 tests/projects/appfacts/compare.py tests/projects/appfacts/Reference/uni
 python3 tests/projects/appfacts/compare.py --machine ~/.cache/unbound/validation/runs/appfacts/U/unbound
 ```
 
+The Unbound capture's `run.json` records the absolute project path the engine was given and the
+start time. `--machine` checks the reported console log (written as `<project>/...`) as that real
+file: it must exist, be non-empty and be written during the run. `test_compare.py OUT` checks the
+comparator itself on synthetic captures.
+
 Projects, captures, logs, `editor-run.json` and reports go to
 `$XDG_CACHE_HOME/unbound/validation/runs/appfacts/<label>/`. The Editor
 deadlines are counted from admission into the lease. The hard limit is 1200 s.

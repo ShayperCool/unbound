@@ -2450,3 +2450,12 @@ All thirteen affected captures match reviewed PCM/metadata exactly; both-rate su
 Introduced/retained zero; Rust audio 48/48, managed audio 19/19; Root RMS/wake/sink/thread guards preserved byte-for-byte.
 44.1k dense startup/callback lack Native oracles; reset/snapshot 2061 per rate and historical matrix raw deltas remain unclaimed. No controlled 4dd audio A/B, graphics replay or new Native capture.
 Full unions, runtime/input/compiler manifests and limits: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/audio-matching-validation-20261101-t3-174cb588/`.
+
+### 2026-11-01 application facts and platform constants
+
+Managed-only on accepted Root `a90ca416` runtime (CLI/native unchanged, own Core/Host): `isLoadingLevel`, `buildGUID`, `consoleLogPath`, `OpenURL`, `HasProLicense`, `ExtractStackTraceNoAlloc`, startup logs, Profiler memory sizes, SystemInfo CPU/OS facts.
+Appfacts 497/555 (before 38/555): 461 resolved, 84 retained (18 missing, 26 extra, 40 different), none introduced; tolerances unchanged.
+Platform, lifecycle exact; messages 316/316. Managed 1380/1391, same eleven names/messages.
+API 0 errors/2314 types; generated stubs byte-identical to the accepted generator output, no stub regeneration.
+Open: unload timing, stack frames (resolved project path, inlined dispatch), StackTraceUtility stub, audio/component/material sizes, compressed texture creation; GPU identity is not read (marshalling disabled in CoreModule).
+Report: `~/.cache/unbound/validation/runs/claude-fresh-20261101b/platformconsts/`.

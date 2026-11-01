@@ -12,6 +12,8 @@ namespace UnityEngine
     {
         RenderTextureDescriptor m_Descriptor;
         bool m_Created;
+        /// <summary>Released at least once: the profiler counts a smaller header from then on.</summary>
+        internal bool m_EverReleased;
         /// <summary>In the temporary pool and released (<see cref="ReleaseTemporary"/>).</summary>
         internal bool m_PooledFree;
         internal long m_PoolLease;
@@ -219,6 +221,7 @@ namespace UnityEngine
             if (m_NativeHandle != 0) Native.ReleaseTexture(m_NativeHandle);
             m_NativeHandle = 0;
             m_Created = false;
+            m_EverReleased = true;
         }
 
         public bool IsCreated() => m_Created;
