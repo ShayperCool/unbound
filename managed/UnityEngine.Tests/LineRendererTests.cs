@@ -40,6 +40,43 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(camera.gameObject);
         }
 
+        /// <summary>Segments shorter than twice the width blend their directions: a chain along the
+        /// line plus a look at the next segment, and joints that turn by only a few degrees ease
+        /// their miter out (Unity 6000.0.71f1, tests/projects/lines blend.asym.30.r1.5_1.25 and
+        /// blend.rev.Z.run.r1.25x3_1.25, width 0.4, View alignment, orthographic camera).</summary>
+        [Theory]
+        [InlineData(new[] { -0.5f, -0.4f, 0.1f, -0.4f, 0.5330126881599426f, -0.15f },
+            new[] { -0.461263955f, -0.5962129f, -0.538736045f, -0.203787073f, 0.150479227f, -0.5938946f,
+                0.049520772f, -0.2061054f, 0.597572744f, -0.33929342f, 0.468452632f, 0.0392933935f })]
+        [InlineData(new[] { 1f, 0.1f, 1f, -0.4f, 0.5f, -0.4f, 0f, -0.4f, -0.5f, -0.4f },
+            new[] { 0.8285014f, 0.202899158f, 1.17149854f, -0.00289914757f, 0.865540445f, -0.235369086f,
+                1.1344595f, -0.5646309f, 0.453644425f, -0.204268366f, 0.5463556f, -0.5957316f,
+                -0.0244478714f, -0.201498836f, 0.0244478714f, -0.5985012f, -0.5150504f, -0.2005671f,
+                -0.484949619f, -0.599432945f })]
+        public void ShortSegmentsBlendTheirDirections(float[] xy, float[] expected)
+        {
+            var points = new Vector3[xy.Length / 2];
+            for (int i = 0; i < points.Length; i++) points[i] = new Vector3(xy[2 * i], xy[2 * i + 1], 0f);
+            var line = new GameObject("line").AddComponent<LineRenderer>();
+            line.widthMultiplier = 0.4f;
+            line.positionCount = points.Length;
+            line.SetPositions(points);
+            var camera = new GameObject("camera").AddComponent<Camera>();
+            camera.orthographic = true;
+            camera.transform.position = new Vector3(0f, 0f, -10f);
+            var mesh = new Mesh();
+            line.BakeMesh(mesh, camera);
+            var vertices = mesh.vertices;
+            Assert.Equal(expected.Length / 2, vertices.Length);
+            for (int i = 0; i < vertices.Length; i++)
+            {
+                Assert.InRange(vertices[i].x, expected[2 * i] - 1e-5f, expected[2 * i] + 1e-5f);
+                Assert.InRange(vertices[i].y, expected[2 * i + 1] - 1e-5f, expected[2 * i + 1] + 1e-5f);
+            }
+            Object.DestroyImmediate(line.gameObject);
+            Object.DestroyImmediate(camera.gameObject);
+        }
+
         [Fact]
         public void LocalLinesFollowTheirTransformAndCapsRoundTheEnds()
         {
