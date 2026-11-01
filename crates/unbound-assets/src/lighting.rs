@@ -75,6 +75,17 @@ pub struct LightProbeData {
     pub tetrahedra: Vec<Tetrahedron>,
     /// Per probe on the hull, the direction outer cells extend it in.
     pub hull_rays: Vec<[f32; 3]>,
+    /// `m_BakedLightOcclusion`: per probe, how much of each of up to four mixed lights reaches it.
+    pub occlusion: Vec<ProbeOcclusion>,
+}
+
+/// A probe's occlusion of up to four mixed lights: each light's probe occlusion index (-1: none),
+/// its occlusion (0 shadowed .. 1 lit) and the shadow mask channel it was baked into (-1: none).
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct ProbeOcclusion {
+    pub light_index: [i32; 4],
+    pub occlusion: [f32; 4],
+    pub mask_channel: [i32; 4],
 }
 
 /// A cell: four probes (an outer cell's fourth is -1: a hull triangle extended along its probes'
@@ -222,6 +233,38 @@ pub fn read_lighting_data(
     })
 }
 
+/// A fixed array of four numbers: a sequence, or (SInt8 elements) the bytes as hex.
+fn four<T: std::str::FromStr + Default + Copy + From<i8>>(v: &Value, key: &str) -> Result<[T; 4]> {
+    let field = v
+        .get(key)
+        .with_context(|| format!("a probe occlusion without {key}"))?;
+    let mut out = [T::default(); 4];
+    if let Some(items) = field.as_seq() {
+        anyhow::ensure!(
+            items.len() == 4,
+            "{key} has {} elements, not 4",
+            items.len()
+        );
+        for (o, item) in out.iter_mut().zip(items) {
+            *o = item
+                .as_str()
+                .and_then(|s| s.parse().ok())
+                .with_context(|| format!("a malformed {key}"))?;
+        }
+    } else {
+        let hex = field
+            .as_str()
+            .with_context(|| format!("a malformed {key}"))?;
+        anyhow::ensure!(hex.len() == 8, "{key} has {} bytes, not 4", hex.len() / 2);
+        for (k, o) in out.iter_mut().enumerate() {
+            let byte = u8::from_str_radix(&hex[2 * k..2 * k + 2], 16)
+                .with_context(|| format!("a malformed {key}"))?;
+            *o = T::from(byte as i8);
+        }
+    }
+    Ok(out)
+}
+
 /// A LightProbes object's probes and tetrahedralization.
 fn read_light_probes(object: &Value) -> Result<LightProbeData> {
     let data = object.get("m_Data").context("light probes without data")?;
@@ -271,11 +314,29 @@ fn read_light_probes(object: &Value) -> Result<LightProbeData> {
         .iter()
         .map(xyz)
         .collect::<Result<Vec<_>>>()?;
+    let occlusion = seq(object, "m_BakedLightOcclusion")
+        .iter()
+        .map(|o| {
+            Ok(ProbeOcclusion {
+                light_index: four(o, "m_ProbeOcclusionLightIndex")?,
+                occlusion: four(o, "m_Occlusion")?,
+                mask_channel: four(o, "m_OcclusionMaskChannel")?,
+            })
+        })
+        .collect::<Result<Vec<_>>>()?;
+    if !occlusion.is_empty() && occlusion.len() != positions.len() {
+        anyhow::bail!(
+            "{} light probe positions but {} probe occlusions",
+            positions.len(),
+            occlusion.len()
+        );
+    }
     Ok(LightProbeData {
         positions,
         coefficients,
         tetrahedra,
         hull_rays,
+        occlusion,
     })
 }
 
@@ -287,7 +348,7 @@ pub struct BuiltinLightingImporter {
 impl Importer for BuiltinLightingImporter {
     type Output = LightingData;
     const KIND: &'static str = "builtin-lighting";
-    const VERSION: u32 = 5;
+    const VERSION: u32 = 6;
 
     fn import(&self, _source: &Path, bytes: &[u8], _meta: &Value) -> Result<LightingData> {
         let file = crate::serialized::SerializedFile::parse(bytes)?;
@@ -373,6 +434,8 @@ mod tests {
         assert_eq!(probes.tetrahedra.len(), 56);
         assert_eq!(probes.tetrahedra[0].indices, [7, 11, 17, 10]);
         assert!((probes.coefficients[0][0] - 0.86758685).abs() < 1e-7);
+        // Baked lights only: no mixed light to occlude.
+        assert!(probes.occlusion.iter().all(|o| o.light_index == [-1; 4]));
         // The probe's cubemap first, the skybox's last.
         assert_eq!(
             data.default_reflection,
@@ -393,6 +456,28 @@ mod tests {
                     path_id: 8900000
                 })
             )]
+        );
+    }
+
+    /// tests/projects/lightprobes' Main bake (6000.0.71f1, Shadowmask): its probes' occlusion.
+    #[test]
+    fn a_shadowmask_bakes_probe_occlusion() {
+        let file = Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/lightprobes/Assets/Scenes/Main/LightingData.asset");
+        let bytes = std::fs::read(&file).unwrap();
+        let data = BuiltinLightingImporter { path_id: 112000000 }
+            .import(&file, &bytes, &Value::Null)
+            .unwrap();
+        let probes = data.probes.unwrap();
+        assert_eq!(probes.occlusion.len(), probes.positions.len());
+        // The sun (probe occlusion light 1) is baked into channel 0, the lamp (0) into 1.
+        assert_eq!(
+            probes.occlusion[0],
+            ProbeOcclusion {
+                light_index: [1, 0, -1, -1],
+                occlusion: [1.0, 1.0, 0.0, 0.0],
+                mask_channel: [0, 1, -1, -1],
+            }
         );
     }
 }

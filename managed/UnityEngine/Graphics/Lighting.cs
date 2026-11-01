@@ -426,7 +426,7 @@ namespace UnityEngine
         /// <summary>Reads a scene's lighting data (LightmapSettings' m_LightingDataAsset): the
         /// ambient probe, the skybox's reflection and the baked lighting
         /// (<see cref="BakedLighting"/>) of the objects of <paramref name="file"/>.</summary>
-        internal static void ReadLightingData(ObjectRef reference, LoadedFile file = null, bool firstScene = true)
+        internal static void ReadLightingData(ObjectRef reference, LoadedFile file = null, bool firstScene = true, int scene = 0)
         {
             s_BakedProbe = null;
             s_BakedReflection = null;
@@ -447,7 +447,7 @@ namespace UnityEngine
                 }
                 s_BakedProbe = sh;
                 var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
-                BakedLighting.Read(root, file);
+                BakedLighting.Read(root, file, scene);
                 if (root.TryGetProperty("defaultReflection", out var reflection) && reflection.ValueKind == System.Text.Json.JsonValueKind.Object)
                     s_BakedReflection = BakedReflection(reflection.GetProperty("guid").GetString(), reflection.GetProperty("fileId").GetInt64());
             }
