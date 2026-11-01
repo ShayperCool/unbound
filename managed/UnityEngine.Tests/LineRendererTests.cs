@@ -316,6 +316,46 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>The old nonzero TransformZ trail establishes the inward cap plane.
+        /// Manual points reproduce its first cap without stepping the clock. Its complete
+        /// mesh remains in the offline full union; this test targets the displacement.</summary>
+        [Fact]
+        public void TransformZTrailCapBowsOverTheStrip()
+        {
+            var go = new GameObject("trail");
+            var camera = new GameObject("camera").AddComponent<Camera>();
+            var mesh = new Mesh();
+            try
+            {
+                go.transform.position = new Vector3(-2.3f, -0.374143f, 0f);
+                camera.transform.position = new Vector3(0f, 0f, -10f);
+                var trail = go.AddComponent<TrailRenderer>();
+                trail.time = 10000f;
+                trail.autodestruct = false;
+                trail.widthMultiplier = 0.3f;
+                trail.widthCurve = new AnimationCurve(new Keyframe(0f, 1f), new Keyframe(1f, 0.25f));
+                trail.numCornerVertices = 1;
+                trail.numCapVertices = 1;
+                trail.alignment = LineAlignment.TransformZ;
+                trail.Clear();
+                trail.AddPositions(new[] { new Vector3(-2.5f, -0.6f, 0f), go.transform.position });
+                trail.BakeMesh(mesh, camera);
+                var expected = new[] { new Vector3(-2.3f, -0.374143f, 0f),
+                    new Vector3(-2.18770075f, -0.473585844f, 0f),
+                    new Vector3(-2.39944267f, -0.486442268f, 0f),
+                    new Vector3(-2.41229916f, -0.274700165f, 0f) };
+                for (int i = 0; i < expected.Length; i++)
+                    for (int axis = 0; axis < 3; axis++)
+                        Assert.InRange(mesh.vertices[i][axis], expected[i][axis] - 1e-5f, expected[i][axis] + 1e-5f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(mesh);
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(camera.gameObject);
+            }
+        }
+
         [Fact]
         public void TrailsRecordMovementAndForgetOldPoints()
         {
