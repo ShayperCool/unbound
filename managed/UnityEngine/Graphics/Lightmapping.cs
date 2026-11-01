@@ -259,7 +259,7 @@ namespace UnityEngine
                 }
                 return properties;
             }
-            if (probes && renderer.lightProbeUsage == LightProbeUsage.CustomProvided) return ProvidedProbes(properties);
+            if (probes && renderer.lightProbeUsage == LightProbeUsage.CustomProvided) return ProvidedProbes(properties, renderer.m_PropertyBlock);
             var lightProbes = LightmapSettings.lightProbes;
             if (!probes || lightProbes == null || lightProbes.count == 0
                 || (renderer.lightProbeUsage != LightProbeUsage.BlendProbes && renderer.lightProbeUsage != LightProbeUsage.UseProxyVolume))
@@ -291,15 +291,19 @@ namespace UnityEngine
 
         /// <summary>A renderer with LightProbeUsage.CustomProvided: the probe its property block's
         /// arrays (MaterialPropertyBlock.CopySHCoefficientArraysFrom) hold first is its own
-        /// (measured: tests/projects/lightprobes, renderers whose block holds one probe).</summary>
-        static Dictionary<int, object> ProvidedProbes(Dictionary<int, object> properties)
+        /// (measured: tests/projects/lightprobes, renderers whose block holds one probe). A mesh
+        /// renderer's block reaches its draws inside a material copy
+        /// (<see cref="Renderer.DrawnMaterial"/>), not as draw properties, so the arrays are read
+        /// from <paramref name="block"/> when the draw's properties lack them.</summary>
+        static Dictionary<int, object> ProvidedProbes(Dictionary<int, object> properties, MaterialPropertyBlock block)
         {
-            if (properties == null) return null;
             Dictionary<int, object> result = null;
             foreach (var id in s_ShIds.Append(s_ProbesOcclusion))
             {
-                if (!properties.TryGetValue(id, out var value) || !(value is Vector4[] array) || array.Length == 0) continue;
-                result ??= new Dictionary<int, object>(properties);
+                object value = null;
+                if ((properties == null || !properties.TryGetValue(id, out value)) && block != null) block.m_Values.TryGetValue(id, out value);
+                if (!(value is Vector4[] array) || array.Length == 0) continue;
+                result ??= properties != null ? new Dictionary<int, object>(properties) : new Dictionary<int, object>();
                 result[id] = array[0];
             }
             return result ?? properties;

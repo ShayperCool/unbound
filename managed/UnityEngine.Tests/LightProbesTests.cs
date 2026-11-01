@@ -197,5 +197,44 @@ namespace Unbound.Tests
             Assert.Throws<ArgumentOutOfRangeException>(() => failed.CopyProbeOcclusionArrayFrom(new Vector4[1], 0, 0, 2));
             Assert.True(failed.isEmpty);
         }
+
+        /// <summary>A mesh renderer with LightProbeUsage.CustomProvided is lit by the first probe of
+        /// its own property block (set with Renderer.SetPropertyBlock), which its draws carry in a
+        /// material copy rather than as draw properties.</summary>
+        [Fact]
+        public void CustomProvidedRenderersTakeTheirBlocksFirstProbe()
+        {
+            var probes = new SphericalHarmonicsL2[2];
+            probes[0][0, 0] = 0.5f;
+            probes[0][1, 2] = 0.25f;
+            probes[0][2, 8] = -0.125f;
+            probes[1][0, 0] = 2f;
+            var go = new GameObject("Custom");
+            try
+            {
+                var renderer = go.AddComponent<MeshRenderer>();
+                renderer.lightProbeUsage = LightProbeUsage.CustomProvided;
+                var block = new MaterialPropertyBlock();
+                block.CopySHCoefficientArraysFrom(probes, 0, 0, 1);
+                block.CopyProbeOcclusionArrayFrom(new[] { new Vector4(0.5f, 1f, 1f, 1f) });
+                renderer.SetPropertyBlock(block);
+
+                var properties = BakedLighting.Apply(renderer, null, new List<string>());
+                Assert.NotNull(properties);
+                probes[0].ShaderConstants(out var ar, out var ag, out var ab, out var br, out var bg, out var bb, out var c);
+                var names = new[] { "unity_SHAr", "unity_SHAg", "unity_SHAb", "unity_SHBr", "unity_SHBg", "unity_SHBb", "unity_SHC" };
+                var expected = new[] { ar, ag, ab, br, bg, bb, c };
+                for (int k = 0; k < names.Length; k++) Assert.Equal(expected[k], (Vector4)properties[Shader.PropertyToID(names[k])]);
+                Assert.Equal(new Vector4(0.5f, 1f, 1f, 1f), (Vector4)properties[Shader.PropertyToID("unity_ProbesOcclusion")]);
+
+                // Without a block (or arrays) nothing is provided: the draw keeps what it had.
+                renderer.SetPropertyBlock(null);
+                Assert.Null(BakedLighting.Apply(renderer, null, new List<string>()));
+            }
+            finally
+            {
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
     }
 }
