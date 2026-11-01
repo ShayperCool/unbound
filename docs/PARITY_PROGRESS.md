@@ -2590,3 +2590,12 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - Open: trail 88 pixels = tex.Static render U offset (scale x travelled path, one witness); 8 zero-area join indices; mask; 15 time rows; sphere48/zero-life21.
 - Cap-two inward plane remains inference (hidden non-emitting points zero the width). Cap-count layout proposal prepared, not published; append stays refused.
 - Four managed tests UNBUILT/UNRUN; API/stub/ABI []. Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-corner-alpha-20261101-t3-dae2fa72/REPORT.md`.
+
+### Combined line runtime on the mask Root, 2026-11-01
+- Merged prepared line geometry (8dff) plus runner f60 onto mask Root 48db; published the Root-approved 16-row cap-count control file (main reference and images unchanged, append still refused).
+- One build plus one test correction (positionCount); 33 payloads bound, TestCore equals Core; managed 1534/1546 = known 11 plus one stale assertion that contradicts Native.
+- API (current platform-module discovery) 0/2314; stubs [], no public API delta.
+- Lines on matching Root cf0: 1702 -> 81 failing, 0 introduced keys/paths/pixels/channels; 8 of 9 images exact; trail image 88 (Static U); 15 time rows unchanged.
+- Autodestruct fully exercised: 1918 -> 3142 of 3557 pass, but 382 rows introduced (trail count +1 at early steps; passive step-0 witness). Resources 539+62 exact.
+- NOT accepted: one stale test and the 382 autodestruct rows stay open; no third cycle.
+- Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/combined-line-runtime-20261101-t3-ef952536/REPORT.md`.
