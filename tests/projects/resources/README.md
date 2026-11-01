@@ -59,6 +59,13 @@ The comparison exits with failure for missing output, differing values or images
 largest-channel difference exceeds 2/255. Its failure cases run with
 `python3 tests/projects/resources/test_compare.py`.
 
+When running a private cache copy, copy `Assets/`, `Packages/`, `ProjectSettings/` and
+`Reference/mip-bundles/`, preserving the bundle's path relative to the project root.
+`BundleMipmaps` loads `Reference/mip-bundles/mips` at runtime. Omitting it leaves all 26
+`bundlemips.MipDXT*` values missing and adds a `bundlemips.exception` record. Keep the full
+canonical reference in this checkout and pass it to the comparator; the project copy needs
+only the bundle fixture from that directory.
+
 ## What the Editor does (6000.0.71f1, Linux, OpenGL Core)
 
 * A renderer with a mask interaction draws inside (stencil 1 or more) or outside (0) the masks
