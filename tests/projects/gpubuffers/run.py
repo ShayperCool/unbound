@@ -89,7 +89,7 @@ def editor(work):
             env = dict(os.environ, DISPLAY=name, GPUBUFFERS_PROBE_OUT=str(out), PWD=str(project))
             env.pop('XAUTHORITY', None)
             job = subprocess.Popen(
-                [str(LAUNCHER), 'timeout', '-s', 'KILL', '1800', 'vglrun', '-d', 'egl', str(editor_path()),
+                [str(LAUNCHER), 'timeout', '-s', 'KILL', '600' if os.environ.get('GPUBUFFERS_REVIEW_ONLY') == '1' else '1800', 'vglrun', '-d', 'egl', str(editor_path()),
                  '-projectPath', str(project), '-logFile', str(out/'editor.log')], cwd=project, env=env)
             started.append((repeat, project, server, job))
         codes = [job.wait() for _, _, _, job in started]
