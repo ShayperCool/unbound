@@ -19,8 +19,9 @@ the scene file: there is no scripting API for it).
   colored Halo; a point light's halo by range, intensity, strength, color, disabled; spot and
   directional lights; the scene halo texture. `start.haloFalloff`, `h.falloff`, `t.haloFalloff*`
   read the global `_HaloFalloff` texture back.
-* **Order** (`o.*`): a command buffer clearing the target at AfterForwardAlpha,
-  BeforeHaloAndLensFlares and AfterHaloAndLensFlares, with a halo and a flare.
+* **Order** (`o.*`, `ho.*`): a command buffer clearing the target at AfterForwardAlpha,
+  BeforeHaloAndLensFlares and AfterHaloAndLensFlares, with a halo and a flare, then with a halo
+  alone; a halo with a flare; a Halo added by script (its defaults), also reactivated.
 * **Flare geometry** (`f.S*`, `f.P*`, `f.Rot*`, `f.L*`): sizes, fields of view, target aspect,
   orthographic, depth, rolled camera, positions along the line, rotation, layouts.
 * **Flare settings** (`f.*`, `q.*`): element switches while fading in, LensFlare color and
@@ -48,7 +49,7 @@ byte-identical complete captures and refuses to overwrite a reference. The compa
 whole key union and image manifest with the float tolerance of the render texture probes
 (absolute and relative 2e-4).
 
-`Reference/unity-6000.0.71f1/` holds the values and 203 images of two byte-identical captures
+`Reference/unity-6000.0.71f1/` holds the values and 212 images of two byte-identical captures
 (OpenGLCore, RTX 4060).
 
 ## What the Editor does (6000.0.71f1, Linux, OpenGL Core, Linear)
@@ -64,7 +65,9 @@ whole key union and image manifest with the float tolerance of the render textur
 * Colors reach the shaders as 8-bit sRGB vertex colors decoded to linear and stored in 8 bits
   again. A Halo component's color is its own; a light halo's is the light's color times its
   intensity times the sRGB encoding of haloStrength.
-* Halos and flares draw between BeforeHaloAndLensFlares and AfterHaloAndLensFlares.
+* Halos and flares draw between BeforeHaloAndLensFlares and AfterHaloAndLensFlares, halos
+  first. A camera with any command buffer draws no halos (its flares it does). A Halo added by
+  script draws nothing until it is given a size and color (it has no scripting API).
 * Lens flares need an enabled FlareLayer. An element is a quad at `position` along the line from
   the flare's point on screen through the screen center, half `size * 0.0100354` of the
   projection's vertical scale tall (constant on screen with a perspective camera, independent of

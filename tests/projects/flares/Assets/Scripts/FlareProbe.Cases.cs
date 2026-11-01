@@ -105,6 +105,7 @@ public partial class FlareProbe
         yield return FlareSettings();
         yield return Fading();
         yield return Matrix();
+        yield return HaloOrder();
         yield return HaloTexture();
     }
 
@@ -493,6 +494,41 @@ public partial class FlareProbe
         light.intensity = 0.5f;
         yield return Shot("q.directional.int05");
         Destroy(lightObject);
+        Flush();
+    }
+
+    /// <summary>A Halo added by script (its defaults), also reactivated; then a scene halo alone,
+    /// with a command buffer clearing the target at each event around the halos, and with a
+    /// flare.</summary>
+    IEnumerator HaloOrder()
+    {
+        var go = new GameObject("ScriptHalo");
+        var halo = go.AddComponent(typeof(Light).Assembly.GetType("UnityEngine.Halo"));
+        Value("ho.component", Q(halo == null ? "null" : halo.GetType().FullName));
+        yield return Shot("ho.added");
+        go.SetActive(false);
+        yield return null;
+        go.SetActive(true);
+        yield return Shot("ho.reactivated");
+        Destroy(go);
+        var white = SceneObject("HaloWhite");
+        white.SetActive(true);
+        yield return Shot("ho.scene");
+        foreach (var e in new[] { CameraEvent.AfterForwardAlpha, CameraEvent.BeforeHaloAndLensFlares, CameraEvent.AfterHaloAndLensFlares })
+        {
+            var cb = new CommandBuffer { name = "probe clear " + e };
+            cb.ClearRenderTarget(false, true, new Color(0.25f, 0.5f, 0.125f, 1f));
+            cam.AddCommandBuffer(e, cb);
+            yield return Shot("ho." + e);
+            cam.RemoveCommandBuffer(e, cb);
+            cb.Release();
+        }
+        yield return Shot("ho.sceneAfterBuffers");
+        var lens = Lens("S20", new Vector3(0.4f, 0.3f, 0f));
+        yield return Shot("ho.withFlare");
+        lens.gameObject.SetActive(false);
+        yield return Shot("ho.sceneAfterFlare");
+        white.SetActive(false);
         Flush();
     }
 }
