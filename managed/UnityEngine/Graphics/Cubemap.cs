@@ -22,6 +22,9 @@ namespace UnityEngine
         internal bool m_Rgbm;
         /// <summary>An imported readable cubemap whose faces the importer gives on first access.</summary>
         string m_AssetGuid;
+        /// <summary>The faces came from the importer, whose GPU faces keep their rows bottom-up:
+        /// uploads reverse the CPU faces' top-down rows back.</summary>
+        bool m_UploadBottomUp;
 
         public Cubemap(int width, TextureFormat textureFormat, bool mipChain) : this(width, textureFormat, mipChain ? -1 : 1, false) { }
         public Cubemap(int width, TextureFormat textureFormat, bool mipChain, bool createUninitialized) : this(width, textureFormat, mipChain ? -1 : 1, createUninitialized) { }
@@ -125,6 +128,7 @@ namespace UnityEngine
                     }
                 }
                 m_Pixels = pixels;
+                m_UploadBottomUp = true;
             }
             catch (Exception e)
             {
@@ -184,6 +188,8 @@ namespace UnityEngine
         public void Apply(bool updateMipmaps, bool makeNoLongerReadable)
         {
             if (!m_Readable) throw new UnityException($"Texture '{name}' is not readable.");
+            if (m_Pixels == null && m_AssetGuid != null) FetchImported();
+            if (m_Pixels == null) throw new UnityException($"Texture '{name}' is not readable.");
             if (updateMipmaps)
                 for (int f = 0; f < 6; f++)
                     for (int m = 1; m < m_MipCount; m++)
@@ -221,8 +227,12 @@ namespace UnityEngine
             int at = 0;
             for (int f = 0; f < 6; f++)
                 for (int m = 0; m < m_MipCount; m++)
-                    foreach (var c in m_Pixels[f][m])
+                {
+                    int s = Math.Max(1, m_Width >> m);
+                    var level = m_Pixels[f][m];
+                    for (int i = 0; i < level.Length; i++)
                     {
+                        var c = m_UploadBottomUp ? level[(s - 1 - i / s) * s + i % s] : level[i];
                         if (hdr)
                         {
                             BitConverter.TryWriteBytes(new Span<byte>(data, at, 4), c.r);
@@ -238,6 +248,7 @@ namespace UnityEngine
                             at += 4;
                         }
                     }
+                }
             fixed (byte* p = data)
             {
                 var packet = new TexturePacket
