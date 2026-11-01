@@ -78,7 +78,7 @@ def main():
         ('editor other file', dict(value=None, editor_log='other.log'), True, True),
         ('masked logical alias', dict(value=good, physical_alias=True), False, False),
         ('absolute physical alias', dict(value=None, physical_alias=True,
-                                         reported_path='expected physical'), False, False),
+                                         reported_path='expected physical'), False, True),
         ('different fresh file', dict(value=None, physical_alias=True,
                                       reported_path='different fresh'), False, True),
         ('relative reported path', dict(value='Library/Unbound/Editor.log'), False, True),

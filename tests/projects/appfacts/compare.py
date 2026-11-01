@@ -77,11 +77,8 @@ def licence_pro():
 
 
 def unbound_log_problem(capture, log):
-    """Why the reported console log is not the project's Library/Unbound/Editor.log written by
-    this run (None when it is). Accept the probe's <project> mask or an absolute spelling that
-    strictly resolves to the expected file, including a physical path through a project alias.
-    run.json holds
-    the absolute project path the engine was given and when the run started."""
+    """Require the probe's logical project spelling and a fresh real log file.
+    File identity is a separate diagnostic, not equality of the game-visible string."""
     try:
         run = json.loads((capture/'run.json').read_text())
         project, started = Path(run['project']), float(run['started'])
@@ -91,13 +88,7 @@ def unbound_log_problem(capture, log):
         return f'the recorded project path {project} is not absolute'
     path = project/'Library/Unbound/Editor.log'
     if log != '<project>/Library/Unbound/Editor.log':
-        if not isinstance(log, str) or not Path(log).is_absolute():
-            return 'not the project\'s Library/Unbound/Editor.log'
-        try:
-            if Path(log).resolve(strict=True) != path.resolve(strict=True):
-                return 'not the project\'s Library/Unbound/Editor.log'
-        except (OSError, ValueError):
-            return 'not the project\'s Library/Unbound/Editor.log'
+        return 'not the project\'s Library/Unbound/Editor.log spelling'
     if not path.is_file():
         return f'{path} does not exist'
     if path.stat().st_size == 0:
