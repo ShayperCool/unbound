@@ -562,15 +562,14 @@ public class AppFactsProbe : MonoBehaviour
         };
         foreach (var (k, url) in urls)
         {
+            // Take the offset before launch: a fast subprocess can finish during OpenURL.
+            int seen = AppFactsUrlRecording.Read(log).Length;
             Try("openurl." + k, () => Application.OpenURL(url));
             Logs("openurl." + k);
-            var deadline = Time.realtimeSinceStartup + 2f;
-            int seen = File.Exists(log) ? File.ReadAllLines(log).Length : 0;
-            while (Time.realtimeSinceStartup < deadline && (File.Exists(log) ? File.ReadAllLines(log).Length : 0) == seen)
-                yield return null;
-            var lines = File.Exists(log) ? File.ReadAllLines(log) : new string[0];
-            Value("openurl." + k + ".runs", A(lines.Skip(seen).Select(Norm)));
+            var lines = AppFactsUrlRecording.Wait(log, seen, TimeSpan.FromSeconds(5));
+            Value("openurl." + k + ".runs", A(lines.Select(Norm)));
         }
+        yield break;
     }
 
     // ------------------------------------------------------------------ machine facts
