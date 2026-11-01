@@ -1290,7 +1290,15 @@ namespace DotRecast.Detour.Crowd
                     // link's start, only those before it (measured: an agent walks straight up to
                     // the end of a partial path or a link on the NavMesh's edge,
                     // tests/projects/navlinks).
-                    _obstacleQuery.segmentReach = ag.ncorners > 0
+                    // The first plan of a new path heading for a link counts the edges before
+                    // the path's end (measured: a fast agent samples away from an edge beyond the
+                    // link it heads for only in the update that finds its path,
+                    // tests/projects/navlinks; an agent heading for an ordinary corner does not
+                    // count the edges beyond it, tests/projects/navmesh).
+                    _obstacleQuery.segmentReach = ag.newPath && ag.ncorners > 0
+                                                  && (ag.corners[0].flags & DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION) != 0
+                        ? RcVec.Dist2D(ag.npos, ag.targetPos) - 1e-3f
+                        : ag.ncorners > 0
                         ? RcVec.Dist2D(ag.npos, ag.corners[0].pos)
                           + ((ag.corners[0].flags & (DtStraightPathFlags.DT_STRAIGHTPATH_END | DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION)) != 0 ? -1e-3f : 1e-3f)
                         : float.MaxValue;

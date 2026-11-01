@@ -137,9 +137,14 @@ namespace DotRecast.Detour.Crowd
         /// steered to.
         public float steerDistance;
 
+        /// Unbound: the agent has a new path it has not planned with yet (the first plan of a
+        /// path heading for a link counts the NavMesh's edges for avoidance up to the path's end).
+        public bool newPath;
+
         public void Integrate(float dt)
         {
             planFromLink = false;
+            newPath = false;
             // Unbound: this update's plan waits for the next (see Accelerate).
             pvel = nvel;
             braking = brakingNow;

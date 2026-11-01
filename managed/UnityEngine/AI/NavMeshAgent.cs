@@ -883,7 +883,11 @@ namespace Unbound.Runtime
             bool onLink = agent.isOnOffMeshLink;
             ag.corridor.Reset(polys[0], onLink ? ag.animation.endPos : ag.npos);
             ag.corridor.SetCorridor(NavMesh.V(target), polys, polys.Length);
-            if (!replan) ag.boundary.Reset();
+            if (!replan)
+            {
+                ag.boundary.Reset();
+                ag.newPath = true;
+            }
             ag.partial = path.status == NavMeshPathStatus.PathPartial;
             ag.targetRef = polys[polys.Length - 1];
             ag.targetPos = NavMesh.V(target);
