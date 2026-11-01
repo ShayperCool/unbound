@@ -90,6 +90,9 @@ namespace UnityEngine
             if (Hdr)
             {
                 PixelFormats.DecodeFloat(Format, Level(image, mip), result);
+                // Channels an R or RG float format does not store read one
+                // (tests/projects/resources floatformats.*.cpu).
+                for (int i = 0; i < result.Length; i++) result[i] = PixelFormats.QuantizeFloat(Format, result[i]);
                 return result;
             }
             const float scale = 1f / 255f;
