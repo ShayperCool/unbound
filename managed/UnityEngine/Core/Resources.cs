@@ -79,8 +79,32 @@ namespace UnityEngine
 
         public static T GetBuiltinResource<T>(string path) where T : Object => (T)GetBuiltinResource(typeof(T), path);
 
-        public static void UnloadAsset(Object assetToUnload) =>
-            Unbound.Runtime.Stubs.Ignored("Resources.UnloadAsset", "does not unload the asset's data yet");
+        /// <summary>
+        /// As the Editor (measured, tests/projects/droppedparams unload.*): GameObjects, components
+        /// and asset bundles are refused with an error, as are objects that are not assets, and
+        /// null is ignored. An unloaded material reads its saved state again where it is referenced
+        /// (what was set from script is gone); an unloaded ScriptableObject is destroyed and the
+        /// next load reads a new one from its file. The Editor hands the reloaded material out as a
+        /// new wrapper of the same object; Unbound keeps the one object. Other asset kinds are not
+        /// unloaded yet (warns).
+        /// </summary>
+        public static void UnloadAsset(Object assetToUnload)
+        {
+            if (assetToUnload == null) return;
+            if (assetToUnload is GameObject || assetToUnload is Component || assetToUnload is AssetBundle)
+            {
+                Debug.LogError("UnloadAsset may only be used on individual assets and can not be used on GameObject's / Components / AssetBundles or GameManagers");
+                return;
+            }
+            if (!assetToUnload.IsPersistentAsset)
+            {
+                Debug.LogError("UnloadAsset can only be used on assets;");
+                return;
+            }
+            if (!Unbound.Runtime.AssetDatabaseRuntime.Unload(assetToUnload))
+                Unbound.Runtime.Stubs.Ignored("Resources.UnloadAsset(" + assetToUnload.GetType().Name + ")",
+                    "does not unload this kind of asset yet (materials and single ScriptableObjects are)");
+        }
 
         public static AsyncOperation UnloadUnusedAssets()
         {

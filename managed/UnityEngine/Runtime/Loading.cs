@@ -680,6 +680,57 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Resources.UnloadAsset of a loaded asset: a material reads its file again in
+        /// place; a ScriptableObject alone in its file is destroyed and the file forgotten, so the
+        /// next load reads it again. False for what is not unloaded (other kinds, sub-assets).</summary>
+        internal static bool Unload(Object asset)
+        {
+            string guid = null;
+            long fileId = 0;
+            foreach (var pair in s_Objects)
+                if (ReferenceEquals(pair.Value, asset)) { (guid, fileId) = pair.Key; break; }
+            if (guid == null || !s_Files.TryGetValue(guid, out var file) || file == null) return false;
+            switch (asset)
+            {
+                case ScriptableObject when file.Objects.Count == 1:
+                    Invalidate(guid);
+                    Object.DestroyImmediate(asset, true);
+                    return true;
+                case Material material:
+                    var saved = ReadAgain(guid, fileId) as Material;
+                    if (saved == null) return false;
+                    material.RevertTo(saved);
+                    return true;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>A new copy of one object of a file, read from it again; the loaded file and its
+        /// objects stay what they are. The copy's other objects are destroyed.</summary>
+        static Object ReadAgain(string guid, long fileId)
+        {
+            var loaded = s_Files[guid];
+            var objects = new Dictionary<(string, long), Object>();
+            foreach (var pair in s_Objects) if (string.Equals(pair.Key.Item1, guid, StringComparison.OrdinalIgnoreCase)) objects[pair.Key] = pair.Value;
+            s_Files.Remove(guid);
+            LoadedFile fresh;
+            try
+            {
+                fresh = LoadFile(guid);
+            }
+            finally
+            {
+                s_Files[guid] = loaded;
+                foreach (var pair in objects) s_Objects[pair.Key] = pair.Value;
+            }
+            if (fresh == null) return null;
+            fresh.Objects.TryGetValue(fileId, out var copy);
+            foreach (var o in fresh.Objects.Values)
+                if (!ReferenceEquals(o, copy) && !objects.ContainsValue(o)) Object.DestroyImmediate(o, true);
+            return copy;
+        }
+
         /// <summary>Forgets every loaded asset (a domain reload or a content change).</summary>
         internal static void Clear()
         {
