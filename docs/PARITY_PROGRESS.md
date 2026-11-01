@@ -2450,3 +2450,14 @@ All thirteen affected captures match reviewed PCM/metadata exactly; both-rate su
 Introduced/retained zero; Rust audio 48/48, managed audio 19/19; Root RMS/wake/sink/thread guards preserved byte-for-byte.
 44.1k dense startup/callback lack Native oracles; reset/snapshot 2061 per rate and historical matrix raw deltas remain unclaimed. No controlled 4dd audio A/B, graphics replay or new Native capture.
 Full unions, runtime/input/compiler manifests and limits: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/audio-matching-validation-20261101-t3-174cb588/`.
+
+## Trail automatic destruction, causal check, 2026-11-01
+Imported the logical line/trail source and test commits onto accepted 875cfacd; managed
+sources match cand3 exactly. No scheduling or shared loop/destruction change was made.
+Frozen source-bound cand3 retains 1276/1854 passing, 576 retained and 2 introduced keys;
+the 15 frameCount fields and four image differences remain in the complete raw union.
+A new independent Native CPU pair matched all 859 records but never expired either
+automatic trail. It cannot establish request timing or publish an autodestruction oracle.
+No new managed build/API/gates; reused all 33 verified cand3 runtime files for diagnosis only.
+Blocked on permission for a corrective GPU pair with camera/material. Full receipt:
+`/mnt/data/unbound-cache-20261031/unbound-validation/runs/trail-autodestruct-20261101-t3-01e21304/REPORT.md`.
