@@ -50,9 +50,20 @@ namespace UnityEngine.Tests
             readonly bool m_InFixedTimeStep = Time.s_InFixedTimeStep;
             readonly List<Object> m_Owned = new List<Object>();
 
-            internal Scope()
+            internal Scope(bool warmRegistration = false)
             {
+                // Initialize services used below before saving their registration state.
+                FrameBuilder.EnsureRegistered();
+                _ = SceneManager.sceneCount;
                 foreach (var pair in Engine) m_Engine.Add(pair.Key, new List<Action>(pair.Value));
+                if (warmRegistration)
+                {
+                    var warm = new GameObject("prior trail registration");
+                    try { warm.AddComponent<TrailRenderer>(); }
+                    finally { Object.DestroyImmediate(warm); }
+                }
+                // Synthetic nodes must not advance saved coroutines, Starts, Invokes or drains.
+                Engine.Clear();
                 State<List<TrailRenderer>>("s_Trails").Clear();
                 State<List<TrailRenderer>>("s_Snapshot").Clear();
                 Requests.Clear();
@@ -98,6 +109,54 @@ namespace UnityEngine.Tests
             }
         }
 
+        [Theory]
+        [InlineData(0)]
+        [InlineData(1)]
+        [InlineData(2)]
+        public void WarmRegistrationLeavesExactlyOneScopedDrain(int node)
+        {
+            using var scope = new Scope(warmRegistration: true);
+            var trail = scope.Trail();
+            Assert.Single(Engine[Node(node)], action => action.Method.DeclaringType == TrailSystem &&
+                action.Method.Name == "DrainDestroyRequests");
+            Time.s_Time += 1;
+            Collect(trail);
+            Run(Node(node));
+            Assert.True(trail.m_Destroyed);
+            Assert.Empty(Requests);
+        }
+
+        [Fact]
+        public void FirstRegistrationInsideActiveRendererUpdatePreservesItsCurrentActions()
+        {
+            using var scope = new Scope();
+            var node = typeof(PL.PostLateUpdate.UpdateAllRenderers);
+            GameObject target = null;
+            bool created = false, tailRan = false;
+            PlayerLoopDriver.Register(node, () =>
+            {
+                if (created) return;
+                created = true;
+                var trail = scope.Trail();
+                target = trail.gameObject;
+                Time.s_Time += 1;
+                Collect(trail);
+            });
+            PlayerLoopDriver.Register(node, () => tailRan = true);
+            var oldActions = Engine[node];
+            int oldCount = oldActions.Count;
+            Run(node);
+            Assert.True(created && tailRan);
+            Assert.Equal(oldCount, oldActions.Count);
+            Assert.NotSame(oldActions, Engine[node]);
+            Assert.True(target != null);
+            Assert.Single(Requests);
+            Assert.Equal(TrailSystem, Engine[node][Engine[node].Count - 1].Method.DeclaringType);
+            Run(Node(0));
+            Assert.True(target.m_Destroyed);
+            Assert.Empty(Requests);
+        }
+
         [Fact]
         public void StationaryExpiryRequestsDuringCollectionBeforeTheEmptyStripReturn()
         {
@@ -138,7 +197,6 @@ namespace UnityEngine.Tests
             Assert.Equal(0, trail.positionCount);
             Assert.Empty(Requests);
             Run(Node(1));
-            Destruction.FlushEndOfFrame();
             Assert.True(go);
             Collect(trail);
             Assert.Same(go, Assert.Single(Requests));
@@ -178,8 +236,6 @@ namespace UnityEngine.Tests
             foreach (var node in new[] { typeof(PL.EarlyUpdate.ScriptRunDelayedStartupFrame),
                 typeof(PL.PostLateUpdate.PlayerSendFrameStarted), typeof(PL.PostLateUpdate.PlayerSendFrameComplete),
                 typeof(PL.PostLateUpdate.TriggerEndOfFrameCallbacks) }) Run(node);
-            Destruction.RunDelayed();
-            Destruction.FlushEndOfFrame();
             Assert.True(go && trail.enabled);
             Assert.False(go.m_PendingDestroy);
             Assert.Single(Requests);
