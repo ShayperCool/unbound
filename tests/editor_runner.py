@@ -31,7 +31,9 @@ A probe runner describes each Editor as an `EditorJob` and calls `run(job)` (or
 completion marker, and byte-identical outputs across repeats; it never overwrites a target.
 """
 import argparse
+import base64
 import ctypes
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -60,7 +62,7 @@ class EditorJob:
     def __init__(self, project, log, out, args=(), *, batch=False, graphics=True, env=None,
                  timeout=1800, shutdown_grace=30, kill_grace=10, follow=30, label=None,
                  screen='1280x720x24', late_sweeps=LATE_SWEEPS, editor=None, cwd=None,
-                 progress_files=(), progress_timeout=None):
+                 progress_files=(), progress_timeout=None, launch_inputs=None):
         self.project = Path(project)
         self.log = Path(log)
         self.out = Path(out)
@@ -79,6 +81,7 @@ class EditorJob:
         self.cwd = Path(cwd) if cwd else self.project
         self.progress_files = [str(Path(p).resolve()) for p in progress_files]
         self.progress_timeout = progress_timeout
+        self.launch_inputs = launch_inputs
         if progress_timeout is not None and (progress_timeout <= 0 or not self.progress_files):
             raise ValueError('progress_timeout needs progress_files and a positive timeout')
 
@@ -410,10 +413,13 @@ def _supervise(spec, poll=.25):
     def cancel(number, frame):
         stopping.append(signal.Signals(number).name)
     previous = {s: signal.signal(s, cancel) for s in (signal.SIGTERM, signal.SIGINT, signal.SIGHUP)}
+    launch_env = dict(os.environ, DISPLAY=spec['display']) if spec.get('display') else dict(os.environ)
+    if spec.get('launch_inputs') is not None:
+        write_launch_inputs(spec, launch_env)
     with (out/'editor.stdout.log').open('ab') as stdout:
         editor = subprocess.Popen(spec['command'], cwd=spec.get('cwd'), stdin=subprocess.DEVNULL,
                                   stdout=stdout, stderr=subprocess.STDOUT,
-                                  env=dict(os.environ, DISPLAY=spec['display']) if spec.get('display') else None,
+                                  env=launch_env,
                                   preexec_fn=_kill_on_parent_death)
     current = Proc(editor.pid, os.getpid(), editor.pid, 'R', [])
     seen = {editor.pid}
@@ -543,6 +549,42 @@ class Display:
                 self.server.wait()
 
 
+def write_launch_inputs(spec, env):
+    """Bind optional input bytes inside the lease, immediately before Editor creation.
+
+    The caller supplies named files/directories, including the selected release's profile.
+    Save all input bytes except the executable, whose hash identifies the installed binary.
+    Ambient environment values are hashed to avoid publishing credentials; probe/display
+    settings and PATH are retained explicitly.
+    """
+    files = {}
+    for label, spelling in spec['launch_inputs']['paths'].items():
+        root = Path(spelling).resolve(strict=True)
+        for path in sorted(root.rglob('*')) if root.is_dir() else [root]:
+            if not path.is_file():
+                continue
+            data = path.read_bytes()
+            key = label+'/'+str(path.relative_to(root)) if root.is_dir() else label
+            files[key] = {'path': str(path), 'sha256': hashlib.sha256(data).hexdigest(),
+                          'bytes_base64': base64.b64encode(data).decode()}
+    executable = next(Path(arg) for arg in spec['command'] if arg.endswith('/Editor/Unity'))
+    environment = {k: v for k, v in env.items() if k in ('PATH', 'PWD', 'HOME', 'DISPLAY',
+                   'BROWSER', 'LD_LIBRARY_PATH') or k.startswith(('APPFACTS_', 'UNBOUND_PROBE_'))}
+    receipt = {'recorded': time.time(), 'supervisor_pid': os.getpid(), 'spec': spec,
+               'selected_release': spec['launch_inputs']['release'], 'files': files,
+               'editor': {'path': str(executable.resolve(strict=True)),
+                          'sha256': hashlib.sha256(executable.read_bytes()).hexdigest()},
+               'environment': environment,
+               'environment_value_sha256': {k: hashlib.sha256(v.encode()).hexdigest()
+                                             for k, v in sorted(env.items())}}
+    path = Path(spec['out'])/'prelaunch-inputs.json'
+    with path.open('x') as stream:
+        json.dump(receipt, stream, indent=2)
+        stream.write('\n')
+        stream.flush()
+        os.fsync(stream.fileno())
+
+
 def run(job):
     """Runs `job` through the heavy-job launcher and returns the supervisor's result."""
     job.out.mkdir(parents=True, exist_ok=True)
@@ -558,6 +600,8 @@ def run(job):
             'require_gpu': job.graphics, 'private_display': job.graphics, 'screen': job.screen,
             'owner_pid': owner.pid, 'owner_start_ticks': owner.start_ticks,
             'progress_files': job.progress_files, 'progress_timeout': job.progress_timeout}
+    if job.launch_inputs is not None:
+        spec['launch_inputs'] = job.launch_inputs
     spec_path = job.out/'editor-spec.json'
     write_json(spec_path, spec)
     scope = uuid.uuid4().hex

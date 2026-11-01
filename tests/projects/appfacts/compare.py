@@ -13,8 +13,11 @@ when anything fails.
 --machine checks CAPTURE/machine.jsonl against what the OS reported when it ran (os.json beside
 it, plus /etc/os-release and the Editor licence file read now): the GPU's PCI ids, OpenGL
 strings and memory, the CPU's vendor, model and current clock, the host, machine id, memory and
-OS release, the battery, the log path (--editor: the Editor's -logFile, else the project's
-Library/Unbound/Editor.log) and the licence.
+OS release, the battery, the log path (--editor: the Editor's -logFile; else the project's
+Library/Unbound/Editor.log, reported exactly as <project>/Library/Unbound/Editor.log:
+the file under the project path run.py recorded in run.json must exist, be non-empty
+and be written during the run) and the
+licence.
 """
 import argparse
 import json
@@ -73,6 +76,28 @@ def licence_pro():
     return any(g.get('Type') == 'EDITOR' and g.get('Tag') != 'UnityPersonal' for g in root.iter('EntitlementGroup'))
 
 
+def unbound_log_problem(capture, log):
+    """Require the probe's logical project spelling and a fresh real log file.
+    File identity is a separate diagnostic, not equality of the game-visible string."""
+    try:
+        run = json.loads((capture/'run.json').read_text())
+        project, started = Path(run['project']), float(run['started'])
+    except (OSError, ValueError, KeyError, TypeError):
+        return 'the capture records no project path and start (run.json)'
+    if not project.is_absolute():
+        return f'the recorded project path {project} is not absolute'
+    path = project/'Library/Unbound/Editor.log'
+    if log != '<project>/Library/Unbound/Editor.log':
+        return 'not the project\'s Library/Unbound/Editor.log spelling'
+    if not path.is_file():
+        return f'{path} does not exist'
+    if path.stat().st_size == 0:
+        return f'{path} is empty'
+    if path.stat().st_mtime < started:
+        return f'{path} was not written by this run'
+    return None
+
+
 def machine(capture, editor=False):
     """The machine facts that disagree with the OS (empty when all agree)."""
     capture = Path(capture)
@@ -127,8 +152,11 @@ def machine(capture, editor=False):
     want = str(capture/'editor.log') if editor else None
     if editor and log != want:
         failures.append({'key': 'application.consoleLogPath', 'os': want, 'actual': log})
-    if not editor and (not log.endswith('/Library/Unbound/Editor.log') or not Path(log).exists()):
-        failures.append({'key': 'application.consoleLogPath', 'os': 'the project\'s Library/Unbound/Editor.log, written', 'actual': log})
+    if not editor:
+        problem = unbound_log_problem(capture, log)
+        if problem:
+            failures.append({'key': 'application.consoleLogPath', 'os': 'the project\'s Library/Unbound/Editor.log, written',
+                             'actual': log, 'problem': problem})
     if not isinstance(facts.get('profiler.graphicsDriver.start'), int) or facts['profiler.graphicsDriver.start'] < 0:
         failures.append({'key': 'profiler.graphicsDriver.start', 'os': 'a byte count', 'actual': facts.get('profiler.graphicsDriver.start')})
     return failures

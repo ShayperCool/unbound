@@ -2471,3 +2471,78 @@ Independent migration audit uses 1122 changed OLD IDs, excluding the map header;
 Full-public target.flags stays red (Native166/engine130), as on the frozen parent; opaque Trails storage remains unclaimed.
 Final combined managed/API disposition is pending the platform integration; no duplicate GPU/seed/stream batch or new Native capture.
 Review, complete recursive manifest, receipt corrections and gate limits: `~/.cache/unbound/validation/runs/particle-root-integration-20261101b/root-adjudication.json`.
+
+### Dependency-fixed sphere trigger validation, 2026-11-01
+Root29df + ordinary merge41b3981e + ordered-discriminant fix/test a71f6fba; reviewed RNG/trails and protected sources retained.
+Literal Core-only attribution control has31 identical payload files and2 changed Core DLL/PDB files; no naturally built baseline claim.
+565 strict union144 resolved/551 retained/48 INTRODUCED stays red; all48 trace unchanged input/before/IgnoreOutside bits, owned by Root input-construction/CoreCLR-math.
+402 retains21 zero-life failures unchanged, introduces0; original55/150, focused9 and non-sphere96 pass. No prior28 substitution.
+Under Root's explicit package-causality policy, affected3D103, queries895+20, geometry59/capsule554/sweeps5610 and loading4656 per order pass.
+One matching-input broad1560/17-image capture resolves286/retains305/introduces0; all17 RGBA arrays equal Root baseline; original559 disposition286 resolved/273 unchanged.
+One managed build cycle, no Rust/new Native; full managed/API remains separately pending. Full unions/manifests/limits: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/sphere-dependency-fixed-20261101-t3-a9beda03/`.
+### 2026-11-01 application facts and platform constants
+
+Managed-only on accepted Root `a90ca416` runtime (CLI/native unchanged, own Core/Host): `isLoadingLevel`, `buildGUID`, `consoleLogPath`, `OpenURL`, `HasProLicense`, `ExtractStackTraceNoAlloc`, startup logs, Profiler memory sizes, SystemInfo CPU/OS facts.
+Appfacts 497/555 (before 38/555): 461 resolved, 84 retained (18 missing, 26 extra, 40 different), none introduced; tolerances unchanged.
+Platform, lifecycle exact; messages 316/316. Managed 1380/1391, same eleven names/messages.
+API 0 errors/2314 types; generated stubs byte-identical to the accepted generator output, no stub regeneration.
+Open: unload timing, stack frames (resolved project path, inlined dispatch), StackTraceUtility stub, audio/component/material sizes, compressed texture creation; GPU identity is not read (marshalling disabled in CoreModule).
+Report: `~/.cache/unbound/validation/runs/claude-fresh-20261101b/platformconsts/`.
+
+### 2026-11-01 platform facts integration on Root875, matching correction pending
+
+Ordinary merge of platform package `793acef7` onto `875cfacd`; accepted Rust/native/audio, CRT/callback/module behavior retained.
+Added pre-mutation log containment and rotation checks, stdout mode, real-time URL recording completion, and checked EGL cleanup without shared-display termination.
+Latest compiled source `022ee063`: TestCore equals packaged Core; 25/40 affected tests pass, including all seven injected EGL cleanup controls.
+Fifteen log tests failed at fixture setup because the existing validation-cache relocation was denied; corrected source adds that existing permitted cache root and an authored-target veto, not yet rebuilt.
+Comparator controls 9/9 and recording protocol controls 4/4; historical appfacts loaded 493/555 and solo 497/555 remain intact, including all 84 residuals and raw changes.
+Three pure-managed attempts retained, including the prior commit-metadata Core mismatch; no current-source runtime or affected-probe acceptance claimed. Additional correction-cycle authorization pending.
+No new Native/Cargo, ABI/version/stub changes, broad suites or reference edits. Newer Root particle integration and final managed/API combination remain Root-owned.
+Full attempts, source correction, historical capture hashes and prepared matching commands: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-root875-20261101-t3-394c2f9d/PENDING_HANDOFF.md`.
+
+### 2026-11-01 bounded current-Root platform correction, acceptance blocked
+- Ordinary merge of prepared ae110878 onto Root870 preserves RNG/trail/sphere/audio; log opening now snapshots reachable authored aliases once for both destinations before mutation.
+- Cheap exact-source log controls30/30 and packaged-Core original red witnesses4/4 preserve temporary authored sentinels; new alias controls13/13 pass in the sole full managed TRX.
+- One frozen f26e8eb9 Host/Core/test cycle: managed1464/1475, identical11 inherited names/messages; focused RNG27/trail2/sphere9/platform55 pass. TestCore equals packaged Core; all33 artifacts and PE/PDB/input audits pass.
+- Normal/delayed Appfacts497/555 each, retains84/introduces0; original loaded493/solo497 retained; platform/lifecycle exact and messages316/316. Both actual machine checks FAIL physical console-log spelling; rooted fresh nonempty files proved separately.
+- Exact prior-platform API reuse BLOCKED by inherited axis-allocation annotation removal and generated-stub deltas. Full/API recording overlap NOT established; initial API assertion prevented tests and actual API work started after recording.
+- Unchanged runner rewrites copied ProjectVersion.txt; strict fixture-equality audit fails, with complete differences retained. No correction/rebuild/recapture follows these failures; one corrective budget consumed, runtime REJECTED.
+- Full source, commands, TRX, metadata, manifests, 555-key raw unions and failures: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-corrected-root-20261101-t3-2f1786c1/HANDOFF.md`. Root48 strict introductions OPEN,21 zero-life unchanged,305 broad Native failures; no full Unity parity claim.
+
+### 2026-11-01 platform checker reevaluation, proof acceptance blocked
+- Checker accepts an absolute physical alias only when it strictly resolves to the recorded project's expected fresh, nonempty log; controls18/18, old checker17/18, protocol4/4.
+- Existing normal/delayed machine commands now pass with recorded checker hashes; raw captures and old failed reports remain unchanged. Exact Native comparisons remain497/555 with the same84 residuals and complete original unions.
+- Compiled ApiProjection on Root870 Core276a28c5 and candidate Corec2608dc1 retains65,228 rows each: four prepared-platform provenance annotations differ. Exact metadata equality is false; no projected Unity declaration delta or attribute filtering. Old-platform RNG annotation removal remains explicit.
+- Generated files equal Root870 exactly; separately retain the old generation's three additions/two changes. Historical API0/2314 is preserved, not claimed as a fully reused current gate.
+- Archived legacy runner hash and identical copy_project normalization verified; Native launch-to-runner/pre-launch-version binding is missing. Both file hashes and prior failed fixture audit remain; fixture acceptance BLOCKED.
+- No build, Native/engine capture or full-suite rerun. Reuse matching TestCore full1464/1475, identical11 failures; frozen33 verified before/after. Conditional load-overlap capture not started; independent source-safety verdict remains required. Root48 OPEN,21 zero-life/305 broad failures retained.
+- Commands, source hashes, complete metadata/stub/input/manifests and blockers: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-proof-checker-20261101-t3-ffc634df/HANDOFF.md`.
+
+### 2026-11-01 launch-bound platform corroboration, canonical disagreement
+- Added optional admitted prelaunch byte/hash receipts to the shared Editor runner; fake-Editor controls19/19. Production f26e8eb9, Generated and canonical files unchanged.
+- Root authorized one unchanged windowed GPU pair on6000.0.71f1 with private displays and hard1200/progress480 deadlines. Both exit0 on NVIDIA; OS/machine checks pass and complete555-field repeats are byte-identical.
+- Each matches551/555 canonical fields. Exact retained differences: stack.noalloc.4096.{empty,assets}.{return,written} are646 instead of577. No normalization, reference publishing/replacement or second pair.
+- Prelaunch runner/CS/assets/version/profile/spec/env receipts are bound inside each admitted lease; both copied fixtures equal the prepared engine inputs before Editor mutation. Post-mutation version bytes remain separate.
+- One isolated API-only no-stubs/entrypoint compilation passed; current-source/PDB/PE/revision/reference inputs verified. Proper source-aware API execution and delayed engine capture remain UNCONSUMED because Native corroboration failed; no runtime/Host build or managed rerun.
+- Matching full1464/1475 and exact11 failures, RNG27/trail2/sphere9/platform55 and existing497/555 exact84 unions reused. Frozen33 and old446 evidence files verified unchanged; source-safety remains separately owned. Root48 OPEN,21 zero-life/305 broad failures retained.
+- Full commands, launch bindings, all555 raw values/deltas, annotation diagnostics and limits: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-acceptance-20261101-t3-eaec5c99/FINAL-HANDOFF.md`. PLATFORM remains REJECTED; no consumable accepted runtime.
+
+### 2026-11-01 platform validation stopped on independent source review
+- Root rejects frozenf26e8eb9 after independent P2 findings: Resolve bounds recursion depth rather than total symlink follows; textual link/.. collapse can miss authored membership and clobber a sentinel. No review experiments or fixes repeated here.
+- The already-completed sole Native pair remains551/555 each with four identical canonical disagreements. No replacement pair/reference edit. Prepared API Check and delayed engine/overlap remain unexecuted; no runtime/Host rebuild or fullsuite repeat.
+- Existing same-file machine-check passes establish identity/freshness only. Both raw logical/physical consoleLogPath spelling disagreements remain game-visible and unmeasured; no string-equality claim.
+- Exact budgets, review hash, raw spellings, completed launch receipts and stop disposition: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-acceptance-20261101-t3-eaec5c99/ROOT-STOP-RECEIPT.md`. No consumable accepted runtime.
+
+
+### 2026-11-01: bounded platform resolver correction, focused gates only
+
+Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact40/41-link controls in ff28ada4/227643f9. One private coherent Host/Core/test cycle;64/64 focused, red4 preserved, checker18/protocol4 pass. Real current-source no-stubs API Check0 errors/2314; all33/PDB/source bindings and TestCore equality retained, CLI1b242614/PhysX487d450b reused. One delayed engine exits0, strict machine passes,497/555 with exact84 retained keys and no introduced/resolved keys. Nine raw stack4096 changes versus prior delayed capture, including four numerical worsenings, remain explicit; actual Check CPU overlaps opener delays. Prior1464/1475 exact11 suite is prior-source evidence only. Native pair remains551 corroborated plus four unresolved stack-fixture disagreements. No oracle/stub/ABI/cache change; Root combined disposition pending;48 sphere input bits OPEN,21 zero-life unchanged,305 broad failures. Full receipt: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-acceptance-fixes-20261101-t3-e6d30c4f/HANDOFF.md`.
+
+### 2026-11-01 Root platform integration, partial
+- What: measured application/SystemInfo/profiler facts, EGL identity and guarded session logs; source equals compiled227643f9.
+- Probe:497/555 reference fields;84 union failures retained,18 missing/26 extra/40 different.
+- Introduced:0 normalized leaf failures vs prior f26 and historical Root;9 stack values changed,4 numerical errors worsened and remain open.
+- Managed:64/64 current focused;1464/1475 with11 inherited failures is prior-source evidence only, not a current full-suite result.
+- API:real Check0/2314; checker18/18,protocol4/4,strict machine and actual Check CPU/load overlap pass;33 payloads verified.
+- Native:independent repeats agree,551/555 old-canonical fields;4 stack-fixture disagreements remain, no reference replacement.
+- Open:84 platform failures, filesystem/macOS/TOCTOU limits and current combined full suite; line package remains rejected. Receipt: `~/.cache/unbound/validation/runs/platform-root-integration-20261101b/root-adjudication.json`.

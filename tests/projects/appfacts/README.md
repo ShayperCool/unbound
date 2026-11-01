@@ -47,6 +47,12 @@ python3 tests/projects/appfacts/compare.py tests/projects/appfacts/Reference/uni
 python3 tests/projects/appfacts/compare.py --machine ~/.cache/unbound/validation/runs/appfacts/U/unbound
 ```
 
+The Unbound capture's `run.json` records the absolute project path the engine was given and the
+start time. `--machine` requires the probe to report exactly
+`<project>/Library/Unbound/Editor.log`. That real file must exist, be non-empty and be written
+during the run. An alternate spelling of the same physical file fails the string check.
+`test_compare.py OUT` checks these rules on 18 synthetic captures, including project aliases.
+
 Projects, captures, logs, `editor-run.json` and reports go to
 `$XDG_CACHE_HOME/unbound/validation/runs/appfacts/<label>/`. The Editor
 deadlines are counted from admission into the lease. The hard limit is 1200 s.
@@ -74,20 +80,52 @@ comparison time. The checks cover the GPU's PCI ids, OpenGL strings and memory,
 the CPU vendor and model, the host name, the machine id as the device unique
 identifier, memory and OS release, and the battery. They also cover the log
 path (with `--editor` the Editor's `-logFile`, otherwise the project's
-`Library/Unbound/Editor.log`, which must exist) and the licence. The CPU clock
+`Library/Unbound/Editor.log`) and the licence. The engine log can be reported as
+`<project>/Library/Unbound/Editor.log` or as an absolute path that strictly resolves
+to that same file under the absolute project recorded in `run.json`. This includes
+a physical cache path when the launch used a logical project alias. A different
+fresh file or a relative path cannot pass. The expected file must exist, contain
+bytes and have been written since the recorded start. The CPU clock
 must be a positive integer no greater than `cpuinfo_max_freq`, because it is a
 current reading. The graphics driver start figure must be a non-negative byte
 count. These facts are always compared with the machine that ran the capture,
 never with another machine's capture.
+
+`test_compare.py NEW_CACHE_OUT` checks masked and absolute physical alias paths,
+including refusal of different fresh, relative, missing, empty, stale and unrecorded
+logs. It starts no engine or Editor. Checker reevaluations must name the checker
+source hash and retain earlier failed reports and raw captures.
 
 ## Reference
 
 `Reference/unity-6000.0.71f1/values.jsonl` was published with `run.py publish`
 from two independent windowed GPU Editor captures (NVIDIA GeForce RTX 4060).
 Both exited with 0 after `Cleanup mono`, their `values.jsonl` (555 records) was
-byte-identical, and the machine facts of both agreed with the OS. They ran with
-the committed `Assets`, `Packages` and `ProjectSettings` (34 files,
-byte-identical) and the runner from before `editor_runner`. The ported runner
+byte-identical, and the machine facts of both agreed with the OS. The saved
+post-exit project audit matches the 34 committed fixture files; the Editor also
+created `ProjectSettings/PackageManagerSettings.asset`. This audit does not prove
+the bytes present before launch. The runner from before `editor_runner` and the
+current runner both rewrite the copied `ProjectSettings/ProjectVersion.txt` to
+one `m_EditorVersion` line for the explicitly selected release before launch.
+The authored fixture and saved Native post-exit files have two release/revision
+lines. Keep both hashes in any input audit. The archived legacy runner matches
+the committed source, but the saved pair lacks a receipt binding its hash or
+the version file's pre-launch bytes to each launch. Equal pre-launch inputs
+remain unproved; the post-exit audit cannot waive that gap. The ported runner
 was validated with `py_compile`, `--dry-run`, `check` and `publish` on those
 saved captures, plus a publish refusal on a saved pair whose values differ. No
 live capture has used it yet.
+
+## Recording stub completion
+
+The OpenURL fixture takes its file offset before launch and waits up to five seconds of
+`Stopwatch` elapsed time for a newline-terminated stub record. It blocks only this fixture
+step; simulated headless frame time cannot exhaust the wait. It records the exact appended
+lines, and a missing or incomplete record fails the capture at the deadline. It does not
+change keys, argv, reference bytes or comparison tolerances. Existing Native records use
+the same newline protocol, including the empty and null URL cases.
+
+`AppFactsUrlRecordingTests` covers immediate and delayed writes, absent, late and incomplete
+records. `test_recording.py NEW_CACHE_OUT` checks compatibility with the canonical protocol
+and runner/comparator refusal controls. A stressed capture may delay only the private
+recording stubs before their writes to reproduce the former process-start race.

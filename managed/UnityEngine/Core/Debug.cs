@@ -302,17 +302,23 @@ namespace UnityEngine
         [Unbound.EditorFaithful("drawn in the Scene view only, and in a Game view whose Gizmos are on (off by default)")]
         public static void DrawRay(Vector3 start, Vector3 dir) { }
 
+        /// <summary>The caller's stack in the Editor's format (this method's own frame first), as UTF-8
+        /// without a terminator: at most <c>bufferMax - 1</c> bytes, their count returned. Paths
+        /// starting with <paramref name="projectFolder"/> lose it. A buffer of no bytes answers -1
+        /// (measured: tests/projects/appfacts; there the Editor also writes past it, which is not
+        /// reproduced).</summary>
         public static unsafe int ExtractStackTraceNoAlloc(byte* buffer, int bufferMax, string projectFolder)
         {
-            Stubs.Ignored("Debug.ExtractStackTraceNoAlloc", "writes no stack trace");
-            return 0;
+            if (bufferMax <= 0) return -1;
+            var text = Unbound.Runtime.UnityStackTrace.Format(0, "UnityEngine.Debug:ExtractStackTraceNoAlloc (byte*,int,string)", projectFolder);
+            var bytes = System.Text.Encoding.UTF8.GetBytes(text);
+            int count = Math.Min(bytes.Length, bufferMax - 1);
+            for (int i = 0; i < count; i++) buffer[i] = bytes[i];
+            return count;
         }
 
-        public static StartupLog[] RetrieveStartupLogs()
-        {
-            Stubs.Ignored("Debug.RetrieveStartupLogs", "returns no startup logs");
-            return Array.Empty<StartupLog>();
-        }
+        [Unbound.EditorFaithful("the Editor keeps no startup logs (they exist in players): measured empty in tests/projects/appfacts")]
+        public static StartupLog[] RetrieveStartupLogs() => Array.Empty<StartupLog>();
 
         public partial struct StartupLog
         {
@@ -341,6 +347,7 @@ namespace Unbound.Runtime
             if (type == UnityEngine.LogType.Error || type == UnityEngine.LogType.Assert)
                 text = $"{message}\n{stackTrace}";
             Native.Log((int)type, text);
+            ConsoleLog.Append(text);
         }
     }
 }

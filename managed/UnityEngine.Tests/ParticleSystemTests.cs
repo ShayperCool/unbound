@@ -43,6 +43,102 @@ namespace UnityEngine.Tests
 
         static void Done(ParticleSystem ps) => Object.DestroyImmediate(ps.gameObject);
 
+        // Expected classifications come from the independent 6000.0.71f1 sphere recordings.
+        [Theory]
+        [InlineData(.4f, .441f, .588f, 0f, true)]
+        [InlineData(0f, .315f, .42f, 0f, true)]
+        [InlineData(.4f, 0f, .700006962f, 0f, true)]
+        [InlineData(.4f, 0f, .700069964f, 0f, false)]
+        [InlineData(.4f, 0f, .700000167f, 2f, true)]
+        [InlineData(.4f, 0f, .8000002f, 2f, false)]
+        public void SphereTriggerUsesPaddedSweptBoundsAndSphereSweep(float size, float x, float endZ, float velocity, bool retained)
+        {
+            var go = new GameObject("sphere");
+            var sphere = go.AddComponent<SphereCollider>();
+            sphere.isTrigger = true;
+            Physics.SyncTransforms();
+            try { Assert.Equal(retained, SphereTriggerRetains(sphere, new Vector3(x, 0f, endZ), size, velocity)); }
+            finally { Object.DestroyImmediate(go); }
+        }
+
+        [Fact]
+        public void SphereTriggerRejectsUnorderedDiscriminantFromFiniteOverflow()
+        {
+            // The finite segment passes the bounds check, but both discriminant products
+            // overflow. PhysX enters the real-root branch only when q >= 0.
+            float coordinate = 8589934592f; // 2^33
+            var start = new Vector3(coordinate, 0f, 0f);
+            var end = new Vector3(-coordinate, 0f, 0f);
+            float motion = end.x - start.x;
+            float a = motion * motion;
+            float b = 2f * (motion * coordinate);
+            float c = coordinate * coordinate - .75f * .75f;
+            Assert.True(float.IsNaN(b * b - (4f * a) * c));
+            var sweep = typeof(ParticleSystem).GetMethod("SphereTriggerSweep",
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static);
+            Assert.NotNull(sweep);
+            Assert.False((bool)sweep.Invoke(null, new object[] { start, end, .25f, Vector3.zero, .5f }));
+        }
+
+        static bool SphereTriggerRetains(SphereCollider sphere, Vector3 endpoint, float size, float velocity = 0f)
+        {
+            var ps = Make(system => {
+                var main = system.main; main.startSize = size;
+                var trigger = system.trigger; trigger.enabled = true; trigger.AddCollider(sphere);
+                trigger.inside = trigger.enter = trigger.exit = ParticleSystemOverlapAction.Ignore;
+                trigger.outside = ParticleSystemOverlapAction.Kill;
+            });
+            try
+            {
+                ps.Simulate(0f, true, true, false);
+                ps.SetParticles(new[] { new ParticleSystem.Particle {
+                    position = endpoint - Vector3.forward * (velocity * .05f), velocity = Vector3.forward * velocity,
+                    startLifetime = 2.013f, remainingLifetime = 1.713f, startSize = size, randomSeed = 12345
+                } }, 1);
+                ps.Simulate(.05f, true, false, false);
+                return ps.particleCount == 1;
+            }
+            finally { Done(ps); }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void SphereTriggerUsesCachedActorAndScaledShapeUntilSync(bool attached)
+        {
+            bool previous = Physics.autoSyncTransforms;
+            Physics.autoSyncTransforms = false;
+            var parent = new GameObject("body");
+            var child = new GameObject("sphere");
+            try
+            {
+                if (attached) parent.AddComponent<Rigidbody>().isKinematic = true;
+                child.transform.SetParent(parent.transform, false);
+                child.transform.localPosition = Vector3.right;
+                var sphere = child.AddComponent<SphereCollider>();
+                Physics.SyncTransforms();
+                parent.transform.position = Vector3.forward * 2.5f;
+                child.transform.localPosition = Vector3.right * 2f;
+                child.transform.localScale = Vector3.one * 2f;
+                sphere.isTrigger = true;
+                Assert.True(SphereTriggerRetains(sphere, Vector3.right, 0f));
+                Assert.False(SphereTriggerRetains(sphere, new Vector3(2.5f, 0f, 2.5f), 0f));
+                sphere.radius = .75f;
+                sphere.center = Vector3.right * .25f;
+                var cachedCenter = new Vector3(2.5f, 0f, attached ? 0f : 2.5f);
+                Assert.True(SphereTriggerRetains(sphere, cachedCenter + new Vector3(.9f, 0f, 1.2f), 0f));
+                Assert.False(SphereTriggerRetains(sphere, cachedCenter + Vector3.right * 1.51f, 0f));
+                Physics.SyncTransforms();
+                Assert.True(SphereTriggerRetains(sphere, new Vector3(2.5f, 0f, 2.5f), 0f));
+                Assert.False(SphereTriggerRetains(sphere, new Vector3(2.5f, 0f, 0f), 0f));
+            }
+            finally
+            {
+                Object.DestroyImmediate(child); Object.DestroyImmediate(parent);
+                Physics.autoSyncTransforms = previous;
+            }
+        }
+
         [Fact]
         public void AddingASystemAddsItsRendererAndPlaysOnAwake()
         {

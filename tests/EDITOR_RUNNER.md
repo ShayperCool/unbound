@@ -33,3 +33,12 @@ Also migrated: lines and appfacts (windowed GPU Editors). Their references were
 published by the ported publish gate from complete identical pairs recorded with
 the pre-migration runner and the same probe sources; no live capture has used
 the ported Editor path yet.
+
+An optional `EditorJob.launch_inputs` dictionary with `release` and named `paths`
+records input bytes in `prelaunch-inputs.json` inside the admitted lease, before
+starting the Editor. Include the private project's authored directories, actual
+runner sources and selected compatibility profile. The receipt includes the exact
+spec, Editor binary hash, input bytes/hashes and relevant environment values;
+other environment values are hashed to keep credentials out of the report.
+Editor mutations after launch must be recorded separately. This receipt does not
+retroactively establish the inputs of older launches.
