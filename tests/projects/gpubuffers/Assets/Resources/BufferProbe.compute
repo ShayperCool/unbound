@@ -4,6 +4,7 @@
 #pragma kernel Uncount
 #pragma kernel Groups
 #pragma kernel AppendPair
+#pragma kernel CopyWords
 
 AppendStructuredBuffer<uint> _Append;
 ConsumeStructuredBuffer<uint> _Consume;
@@ -12,6 +13,8 @@ RWStructuredBuffer<uint> _Counter;
 RWStructuredBuffer<uint> _Out;
 uint _Modulo;
 uint _Base;
+RWStructuredBuffer<uint> _CopyWords;
+float4 _CopyValue;
 
 // Threads whose index is a multiple of _Modulo append index + _Base.
 [numthreads(64, 1, 1)]
@@ -58,4 +61,13 @@ void AppendPair(uint3 id : SV_DispatchThreadID)
 {
     if (id.x % _Modulo == 0)
         _AppendPair.Append(uint2(id.x, id.x * 3 + _Base));
+}
+
+[numthreads(1, 1, 1)]
+void CopyWords(uint3 id : SV_DispatchThreadID)
+{
+    _CopyWords[0] = asuint(_CopyValue.x);
+    _CopyWords[1] = asuint(_CopyValue.y);
+    _CopyWords[2] = asuint(_CopyValue.z);
+    _CopyWords[3] = asuint(_CopyValue.w);
 }

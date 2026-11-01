@@ -98,14 +98,22 @@ public class GpuBuffersProbe : MonoBehaviour
             kUncount = cs.FindKernel("Uncount");
             kGroups = cs.FindKernel("Groups");
             kPair = cs.FindKernel("AppendPair");
-            Append();
-            Consume();
-            Counter();
-            Indirect();
-            Copy();
-            CommandBufferData();
-            SetGetData();
-            steps = Readbacks();
+            if (Environment.GetEnvironmentVariable("GPUBUFFERS_REVIEW_ONLY") == "1")
+            {
+                ReviewCopies();
+                steps = ReviewReadbacks();
+            }
+            else
+            {
+                Append();
+                Consume();
+                Counter();
+                Indirect();
+                Copy();
+                CommandBufferData();
+                SetGetData();
+                steps = Readbacks();
+            }
         }
         catch (Exception e)
         {
@@ -589,6 +597,85 @@ public class GpuBuffersProbe : MonoBehaviour
             Graphics.ExecuteCommandBuffer(cmd);
             Value("copy.cmd.larger", U(Read(b)));
         });
+    }
+
+    // ------------------------------------------------------------ review controls
+
+    static string FloatBits(float f) => BitConverter.ToUInt32(BitConverter.GetBytes(f), 0).ToString("x8");
+
+    string ReadColor(RenderTexture rt)
+    {
+        var saved = RenderTexture.active;
+        var pixels = new Texture2D(rt.width, rt.height, TextureFormat.RGBAFloat, false, true);
+        try
+        {
+            RenderTexture.active = rt;
+            pixels.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
+            return Q(string.Join(" ", pixels.GetPixels().Select(c => FloatBits(c.r) + "," + FloatBits(c.g) + "," + FloatBits(c.b) + "," + FloatBits(c.a))));
+        }
+        finally { RenderTexture.active = saved; UnityEngine.Object.Destroy(pixels); }
+    }
+
+    void ReviewCopies()
+    {
+        const GraphicsBuffer.Target CS = GraphicsBuffer.Target.CopySource, CD = GraphicsBuffer.Target.CopyDestination;
+        Try("review.copy.index6", () =>
+        {
+            using var source = new GraphicsBuffer(GraphicsBuffer.Target.Index | CS, 3, 2);
+            using var target = new GraphicsBuffer(GraphicsBuffer.Target.Index | CD, 3, 2);
+            source.SetData(new ushort[] { 0x1234, 0x5678, 0x9abc });
+            target.SetData(new ushort[] { 0xffff, 0xffff, 0xffff });
+            Graphics.CopyBuffer(source, target);
+            var values = new ushort[3];
+            target.GetData(values);
+            Value("review.copy.index6", "[" + string.Join(",", values) + "]");
+        });
+        Try("review.copy.constant", () =>
+        {
+            using var source = new GraphicsBuffer(GraphicsBuffer.Target.Structured | CS, 4, 4);
+            using var target = new GraphicsBuffer(GraphicsBuffer.Target.Constant | CD, 4, 4);
+            var material = new Material(Resources.Load<Shader>("CopyConstant"));
+            var rt = new RenderTexture(4, 4, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+            rt.Create();
+            try
+            {
+                target.SetData(new float[] { 0, 0, 0, 1 });
+                source.SetData(new float[] { .125f, .375f, .625f, 1 });
+                material.SetConstantBuffer("CopyValues", target, 0, 16);
+                Graphics.CopyBuffer(source, target);
+                Graphics.Blit(Texture2D.whiteTexture, rt, material);
+                Value("review.copy.constant.cpuSource", ReadColor(rt));
+
+                int kernel = cs.FindKernel("CopyWords");
+                cs.SetVector("_CopyValue", new Vector4(.75f, .5f, .25f, 1));
+                cs.SetBuffer(kernel, "_CopyWords", source);
+                using var commands = new CommandBuffer();
+                commands.DispatchCompute(cs, kernel, 1, 1, 1);
+                commands.CopyBuffer(source, target);
+                commands.Blit(Texture2D.whiteTexture, rt, material);
+                Graphics.ExecuteCommandBuffer(commands);
+                Value("review.copy.constant.gpuSource", ReadColor(rt));
+                Value("review.copy.constant.gpuWords", U(Read(target)));
+            }
+            finally { rt.Release(); UnityEngine.Object.Destroy(rt); UnityEngine.Object.Destroy(material); }
+        });
+    }
+
+    IEnumerator ReviewReadbacks()
+    {
+        var texture = new Texture2D(16, 1, TextureFormat.Alpha8, false, true);
+        try
+        {
+            byte[] alpha = { 0, 1, 2, 7, 15, 31, 63, 64, 127, 128, 129, 191, 223, 253, 254, 255 };
+            texture.LoadRawTextureData(alpha);
+            texture.Apply(false);
+            Value("review.alpha.input", Q(BitConverter.ToString(alpha).Replace("-", "").ToLowerInvariant()));
+            var own = Make("review.alpha.default", cb => AsyncGPUReadback.Request(texture, 0, cb));
+            yield return Settle(own);
+            var explicitAlpha = Make("review.alpha.explicit", cb => AsyncGPUReadback.Request(texture, 0, TextureFormat.Alpha8, cb));
+            yield return Settle(explicitAlpha);
+        }
+        finally { UnityEngine.Object.Destroy(texture); }
     }
 
     // ------------------------------------------------------------ command buffer data

@@ -146,6 +146,8 @@ def publish(work):
     if (a/'values.jsonl').read_bytes() != (b/'values.jsonl').read_bytes():
         sys.exit('the two Editor captures differ in values; not publishing')
     target = reference_root(PROBE)
+    if os.environ.get('GPUBUFFERS_REVIEW_ONLY') == '1':
+        target = target/'review'
     if target.exists():
         sys.exit(f'refusing to overwrite reference: {target}')
     target.mkdir(parents=True)
@@ -182,10 +184,13 @@ def main():
     parser.add_argument('mode', choices=('editor', 'publish', 'unbound', 'check'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
+    parser.add_argument('--controls', action='store_true', help='only buffer-copy and Alpha8 review controls')
     args = parser.parse_args()
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
+    if args.controls:
+        os.environ['GPUBUFFERS_REVIEW_ONLY'] = '1'
     work = run_root(PROBE, args.label)
     return {'editor': editor, 'publish': publish, 'unbound': unbound, 'check': check}[args.mode](work)
 
