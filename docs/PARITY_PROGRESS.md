@@ -2564,3 +2564,12 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - Measured package remains REJECTED with all60/95 introductions and15 time failures; no new build/capture, managed test UNRUN, API/stub changes[]. Mask/cap/tangent blockers and sphere48/zero-life21 remain.
 - Root combines platformd662 and separate runnerf60 later; no runner import here. CCC timeout124 closed and registration removed; no owned clients remain.
 - Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-trail-geometry-attribution-20261101-t3-dd198b0b/REPORT.md`.
+
+### Offline corner/per-segment line geometry, 2026-11-01
+- Source 5d86c5a2 on prepared 2c604df5: per-segment width/color by index, un-eased corner arc side/turn plus normalized position angle, TransformZ trail corner side swap. UNBUILT/UNACCEPTED.
+- Float32 replay reproduces all saved engine meshes before the change; prediction: affected components 5746->44, none introduced; tangents 368->0; whole failing keys 215->83.
+- All 8 original trail channels and alpha 2055 predict within 2/255; nine-image failures 864->536 pixels, 2630->1880 channels; Root introductions 80 mask pixels only.
+- Numeric vs Root/blend/final: introduced 0/0/0; 32 above-tolerance increases vs final, all inside already failing components (max 6.7e-5).
+- Open: trail 88 pixels = tex.Static render U offset (scale x travelled path, one witness); 8 zero-area join indices; mask; 15 time rows; sphere48/zero-life21.
+- Cap-two inward plane remains inference (hidden non-emitting points zero the width). Cap-count layout proposal prepared, not published; append stays refused.
+- Four managed tests UNBUILT/UNRUN; API/stub/ABI []. Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-corner-alpha-20261101-t3-dae2fa72/REPORT.md`.

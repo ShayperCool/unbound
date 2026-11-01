@@ -159,3 +159,38 @@ and adds alpha at pixel 2055. The 80 mask pixels remain separately owned.
 
 Full task receipt and immutable independent pair bindings:
 `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-cap-tangent-20261101-t3-ce24a7cc/REPORT.md`.
+
+### Corner sides, arc ends and per-segment widths (offline, unbuilt)
+
+Three general strip rules, each predicted from saved engine meshes and authored
+inputs, never fitted to a Native value. `strip_projection.py` replays the shared
+strip in float32 and first reproduces every saved engine mesh with the unchanged
+rules (zero baseline errors on 143 corner lines and every corner/per-segment trail):
+
+* DistributePerSegment and RepeatPerSegment evaluate width and gradient at
+  index / (n - 1); Stretch rejects it. Closes all 28 line and 3792 trail components.
+* The corner arc, its inner side and tangents follow the un-eased outgoing side;
+  only the miter eases. Positions use the length-normalized cosine, as tangents do.
+* A TransformZ trail's opposite face also swaps each corner's side.
+
+Together: 5746 component failures in the affected rows become 44, none introduced;
+round-trail tangents 368 -> 0. All eight original trail channels and pixel 2055
+pass. The trail image predicts 204 -> 88 failing pixels: exactly the 88 where the
+saved Native meshes do not raster to the Native image. All are under `tex.Static`,
+whose Native U is the bake U minus textureScale.x times the head's whole travelled
+path (3.8299 = 1.5 x 2.553281, one witness). It is a render-versus-bake rule, not
+geometry, and stays open. Eight zero-area round-trail join indices also stay open.
+
+Non-emitting manual trails mark the head and every added point hidden
+(`m_DrawHidden`), so the cap-count trails have zero half width at every point,
+as Native shows: a cap-two displacement there is zero by construction and the
+inward cap-two plane remains an inference. `capcount_layout.py prepare` proposes
+`Reference/unity-R/capcount.values.jsonl` with only the 16 cap-count rows; it
+writes nothing under Reference/ and leaves the refused append refused.
+
+```sh
+~/.cache/compat/with-heavy-job --kind tool python3 tests/projects/lines/capcount_layout.py prepare \
+  --release 6000.0.71f1 --label cap-count-20261101-t3-ce24a7cc --out ~/.cache/unbound/validation/runs/capcount-layout
+```
+
+Receipt: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-corner-alpha-20261101-t3-dae2fa72/REPORT.md`.
