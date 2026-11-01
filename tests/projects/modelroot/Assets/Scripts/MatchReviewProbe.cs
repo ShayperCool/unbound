@@ -30,7 +30,8 @@ public static class MatchReviewProbe
     {
         root = UnityEngine.Object.Instantiate(Resources.Load<GameObject>("Mover"));
         root.transform.SetPositionAndRotation(new Vector3(1, 0, -2), Quaternion.Euler(0, 20, 0));
-        var animator = root.GetComponent<Animator>() ?? root.AddComponent<Animator>();
+        var animator = root.GetComponent<Animator>();
+        if (animator == null) animator = root.AddComponent<Animator>();
         animator.runtimeAnimatorController = Resources.Load<RuntimeAnimatorController>("C_MatchReview");
         animator.applyRootMotion = true;
         return animator;
