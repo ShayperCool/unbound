@@ -2166,27 +2166,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static void EditorPrefsSetInt(string key, int value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlayerPrefs.EditorPrefsSetInt"); }
         [global::Unbound.Stub] internal static int EditorPrefsGetInt(string key, int defaultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlayerPrefs.EditorPrefsGetInt"); return default; }
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct Pose : global::System.IEquatable<global::UnityEngine.Pose>
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 position;
-        [global::Unbound.Stub] public global::UnityEngine.Quaternion rotation;
-        [global::Unbound.Stub] public Pose(global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.ctor"); }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.ToString"); return default; }
-        [global::Unbound.Stub] public string ToString(string format) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.ToString"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Pose GetTransformedBy(global::UnityEngine.Pose lhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.GetTransformedBy"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Pose GetTransformedBy(global::UnityEngine.Transform lhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.GetTransformedBy"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.Pose other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.Pose a, global::UnityEngine.Pose b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.Pose a, global::UnityEngine.Pose b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.op_Inequality"); return default; }
-        public global::UnityEngine.Vector3 forward { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.forward"); return default; } }
-        public global::UnityEngine.Vector3 right { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.right"); return default; } }
-        public global::UnityEngine.Vector3 up { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.up"); return default; } }
-        public static global::UnityEngine.Pose identity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.identity"); return default; } }
-    }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4)]
     [global::Unbound.Stub]
     public unsafe sealed partial class PreferBinarySerialization : global::System.Attribute
