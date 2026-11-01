@@ -20,14 +20,14 @@ public class BoundaryProbe : MonoBehaviour
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run() => new GameObject("BoundaryProbe").AddComponent<BoundaryProbe>();
 
-    static ParticleSystem Make(SphereCollider collider, bool kill)
+    static ParticleSystem Make(SphereCollider collider, bool kill, float startSize = .4f)
     {
         var go = new GameObject("boundary"); go.SetActive(false);
         var ps = go.AddComponent<ParticleSystem>();
         ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         ps.useAutoRandomSeed = false; ps.randomSeed = 12345;
         var m = ps.main; m.playOnAwake = false; m.startLifetime = 2.013f;
-        m.startSpeed = 2f; m.startSize = .4f;
+        m.startSpeed = 2f; m.startSize = startSize;
         var shape = ps.shape; shape.enabled = false;
         var emission = ps.emission; emission.rateOverTime = 10f;
         var t = ps.trigger; t.enabled = true; t.AddCollider(collider);
@@ -84,6 +84,67 @@ public class BoundaryProbe : MonoBehaviour
         Row(key, phase, s.Append("]}").ToString());
     }
 
+    // One bounded discriminator. Scale the whole pair, then change the radius split
+    // at fixed total radius. The diagonal distinguishes spherical distance from AABB.
+    static void Discriminator()
+    {
+        var go = new GameObject("sphere arithmetic");
+        var collider = go.AddComponent<SphereCollider>(); collider.isTrigger = true;
+        float[] colliderRadii = { .5f, .25f, 1f, .2f, .6f, .5f };
+        float[] particleSizes = { .4f, .2f, .8f, 1f, .2f, 0f };
+        var directions = new[] { Vector3.forward, new Vector3(.6f, 0f, .8f) };
+        // Relative separations, chosen before capture. No boundary search or fitted predicate.
+        float[] offsets = { -.001f, 0f, .0000002384185791015625f, .00001f, .0001f, .001f, .05f };
+        for (int geometry = 0; geometry < colliderRadii.Length; geometry++) {
+            collider.radius = colliderRadii[geometry];
+            Physics.SyncTransforms();
+            float cr = collider.radius, size = particleSizes[geometry], pr = size * .5f;
+            var bounds = collider.bounds;
+            Row("arithmetic/" + geometry, "geometry", "{\"colliderRadius\":" + F(cr)
+                + ",\"particleSize\":" + F(size) + ",\"particleRadius\":" + F(pr)
+                + ",\"transform\":" + V(go.transform.position) + ",\"scale\":" + V(go.transform.lossyScale)
+                + ",\"colliderCenter\":" + V(collider.center) + ",\"boundsCenter\":" + V(bounds.center)
+                + ",\"boundsSize\":" + V(bounds.size) + ",\"contactOffset\":" + F(collider.contactOffset) + "}");
+            for (int direction = 0; direction < directions.Length; direction++)
+            for (int separation = 0; separation < offsets.Length; separation++)
+            foreach (bool kill in new[] { false, true }) {
+                float sum = cr + pr;
+                var position = directions[direction] * (sum * (1f + offsets[separation]));
+                var delta = position - bounds.center;
+                float distanceSquared = delta.sqrMagnitude, distance = delta.magnitude;
+                var radial = delta - delta / distance * cr;
+                var normalized = delta / cr;
+                float normalizedRadius = 1f + pr / cr;
+                var closest = collider.ClosestPoint(position);
+                var key = "arithmetic/" + geometry + "/" + direction + "/" + separation
+                    + (kill ? "/killOutside" : "/ignoreOutside");
+                var ps = Make(collider, kill, size);
+                var p = new ParticleSystem.Particle {
+                    position = position, velocity = Vector3.zero,
+                    startLifetime = 2.013f, remainingLifetime = 1.713f, startSize = size,
+                    startColor = Color.white, randomSeed = 12345
+                };
+                Row(key, "input", "{\"relativeOffset\":" + F(offsets[separation])
+                    + ",\"direction\":" + V(directions[direction]) + ",\"sumRadius\":" + F(sum)
+                    + ",\"distanceSquared\":" + F(distanceSquared) + ",\"distance\":" + F(distance)
+                    + ",\"sumSquared\":" + F(sum * sum) + ",\"radialSquared\":" + F(radial.sqrMagnitude)
+                    + ",\"closest\":" + V(closest) + ",\"closestSquared\":" + F((position - closest).sqrMagnitude)
+                    + ",\"predicates\":{\"sumSquared\":" + B(distanceSquared <= sum * sum)
+                    + ",\"distance\":" + B(distance <= sum) + ",\"radialSquared\":" + B(radial.sqrMagnitude <= pr * pr)
+                    + ",\"normalizedSquared\":" + B(normalized.sqrMagnitude <= normalizedRadius * normalizedRadius)
+                    + ",\"publicClosestSquared\":" + B((position - closest).sqrMagnitude <= pr * pr)
+                    + ",\"expandedAabb\":" + B(Mathf.Max(Mathf.Abs(delta.x), Mathf.Max(Mathf.Abs(delta.y), Mathf.Abs(delta.z))) <= sum)
+                    + "},\"particle\":" + Particle(p, ps, collider) + "}");
+                ps.SetParticles(new[] { p }, 1);
+                State(key, "before", ps, collider);
+                ps.Simulate(Dt, true, false, false);
+                State(key, "after", ps, collider);
+                DestroyImmediate(ps.gameObject);
+            }
+        }
+        DestroyImmediate(go);
+    }
+
     void Start()
     {
         var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
@@ -123,6 +184,7 @@ public class BoundaryProbe : MonoBehaviour
             DestroyImmediate(ps.gameObject);
         }
         DestroyImmediate(sphere);
+        Discriminator();
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_TRIGGER_BOUNDARY_OUT"), output.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
