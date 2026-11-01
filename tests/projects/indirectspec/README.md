@@ -68,6 +68,15 @@ profiles; anything else is negative evidence. Nothing is fitted. The Standard sp
 consistency check against the BRDF factor of the recorded tier (BRDF1: 0.02 linear,
 0.72 * 0.2209 gamma).
 
+## Launch history
+
+The first four launches (label `indirectspec`, predeclare commit eb25b98a) failed to compile in
+all four Editors. The fixture's manifest enables only the imageconversion, imgui and
+jsonserialize modules, so `Collider` (PhysicsModule) does not resolve. The witness no longer
+references it. Nothing was published. An offline compile check must use the Editor's own
+reference set for this project (`Library/Bee/artifacts/*/Assembly-CSharp.rsp` of a copy), not
+every module in `Managed/UnityEngine`.
+
 Not covered: a Custom default reflection, `DynamicGI.UpdateEnvironment`, Skybox/Flat ambient
 modes, other skyboxes, authored (rather than script-set) intensities, and bakes other than this
 one.

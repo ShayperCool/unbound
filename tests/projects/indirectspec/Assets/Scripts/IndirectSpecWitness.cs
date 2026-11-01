@@ -231,7 +231,6 @@ public class IndirectSpecWitness : MonoBehaviour
 
         var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
         quad.name = "Dump Quad";
-        Destroy(quad.GetComponent<Collider>());
         quad.layer = DumpLayer;
         quad.transform.SetPositionAndRotation(dumpAt + new Vector3(0f, 0f, 3f), Quaternion.identity);
         quad.transform.localScale = new Vector3(100f, 10f, 1f);
@@ -243,7 +242,6 @@ public class IndirectSpecWitness : MonoBehaviour
 
         var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
         sphere.name = "Standard Sphere";
-        Destroy(sphere.GetComponent<Collider>());
         sphere.layer = SphereLayer;
         sphere.transform.SetPositionAndRotation(sphereAt + new Vector3(0f, 0f, 3f), Quaternion.identity);
         sphere.transform.localScale = Vector3.one * 1.6f;
