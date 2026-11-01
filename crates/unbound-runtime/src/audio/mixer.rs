@@ -297,6 +297,9 @@ impl Default for MixerConfig {
 
 pub struct Mixer {
     pub config: MixerConfig,
+    /// The engine submits component voices at its audio update; direct DSP users may render
+    /// immediately. Full AudioMixer graphs also require update-based submission.
+    pub defer_voice_submission: bool,
     frames: u64,
     clips: HashMap<u64, Clip>,
     sources: HashMap<u64, Source>,
@@ -327,6 +330,7 @@ impl Mixer {
     pub fn new(config: MixerConfig) -> Self {
         Self {
             config,
+            defer_voice_submission: false,
             frames: 0,
             clips: HashMap::new(),
             sources: HashMap::new(),
@@ -560,9 +564,10 @@ impl Mixer {
         let now = self.frames;
         let rate = self.config.sample_rate;
         let callback = self.callback;
-        let Self { sources, clips, group_nodes, .. } = self;
+        let Self { sources, clips, group_nodes, defer_voice_submission, .. } = self;
         let source = sources.entry(handle).or_default();
-        let routed = group_nodes.get(&source.params.group).is_some_and(|n| n.spec.mixer != 0);
+        let deferred = *defer_voice_submission
+            || group_nodes.get(&source.params.group).is_some_and(|n| n.spec.mixer != 0);
         let start_frame = |time: f64| -> u64 {
             if time < 0.0 {
                 now + frame_of(-time, rate)
@@ -590,8 +595,13 @@ impl Mixer {
                 if position == 0.0 && source.params.pitch < 0.0 && !clip.stream {
                     position = clip.frames as f64;
                 }
+                // A second Play before submission restarts the pending voice immediately.
+                // Unlike replay of an already submitted voice, this includes the explicit
+                // Play following playOnAwake on enable. The independent submission probe
+                // distinguishes replay, Stop/Play, two Play calls and disable/enable.
+                let restart_pending = source.main.as_ref().is_some_and(|v| !v.submitted);
                 let mut voice = Voice::new(clip_handle, position, start_frame(cmd.time), 1.0);
-                voice.submitted = !routed;
+                voice.submitted = !deferred || restart_pending;
                 if clip.stream {
                     voice.position = 0.0;
                     voice.stream = Some(StreamState::at((position as usize).min(clip.frames)));
@@ -639,7 +649,7 @@ impl Mixer {
                     0.0
                 };
                 let mut voice = Voice::new(cmd.clip, position, now, cmd.volume_scale);
-                voice.submitted = !routed;
+                voice.submitted = !deferred;
                 if clip.stream {
                     voice.stream = Some(StreamState::default());
                 }
@@ -1682,6 +1692,33 @@ mod tests {
         m.update_suspension();
         m.render(&mut output, 2);
         assert!(output.iter().any(|x| *x > 0.1));
+        assert_eq!(m.source_state(7).position, 1024.0);
+    }
+
+    #[test]
+    fn component_play_distinguishes_pending_restart_from_active_replay() {
+        let mut m = Mixer::new(MixerConfig::default());
+        m.defer_voice_submission = true;
+        m.add_clip(1, Clip::new(2, 48000, vec![0.125; 4096 * 2]));
+        source_with(&mut m, 7, 1, |_| {});
+        let mut output = vec![0.0; 2048];
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.render(&mut output, 2);
+        assert_eq!(m.source_state(7).position, 0.0);
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.render(&mut output, 2);
+        assert_eq!(m.source_state(7).position, 1024.0);
+        m.update_suspension();
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.render(&mut output, 2);
+        assert_eq!(m.source_state(7).position, 0.0);
+        assert!(output.iter().all(|x| *x == 0.0));
+        play(&mut m, 7, command::STOP, 0.0);
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.render(&mut output, 2);
+        assert_eq!(m.source_state(7).position, 0.0);
+        m.update_suspension();
+        m.render(&mut output, 2);
         assert_eq!(m.source_state(7).position, 1024.0);
     }
 

@@ -193,6 +193,8 @@ impl Engine {
     /// Starts the audio system with the project's settings; `open_device`: try the installed
     /// output device (else the virtual one).
     pub fn new(settings: ProjectAudioSettings, open_device: bool) -> Self {
+        let mut mixer = Mixer::new(MixerConfig::default());
+        mixer.defer_voice_submission = true;
         let configuration = AudioConfiguration {
             speaker_mode: settings.speaker_mode,
             dsp_buffer_size: settings.dsp_buffer_size,
@@ -201,7 +203,7 @@ impl Engine {
             num_virtual_voices: settings.virtual_voices,
         };
         let engine = Self {
-            mixer: Arc::new(Mutex::new(Mixer::new(MixerConfig::default()))),
+            mixer: Arc::new(Mutex::new(mixer)),
             clock: Arc::new(Clock::default()),
             device: Mutex::new(None),
             owed: Mutex::new(0.0),

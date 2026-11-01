@@ -20,3 +20,11 @@ agreeing Native runs at each claimed rate are required. Float tolerances remain
 ATOL 2e-5 / RTOL 2e-4; metadata and Native repeat bits are exact. There is no fixture
 sample alignment, buffer trimming or inferred delay compensation. Native and engine
 run the same coroutine and production audio update ordering.
+
+Both independent Native pairs agree exactly on 7,864,372 values per rate. A single
+Play after an ended or actively playing voice, Stop/Play, fresh source and reassignment
+wait for the audio update. Two Play calls before submission restart immediately.
+Disable/enable with playOnAwake followed by explicit Play has the latter behavior;
+disable/enable alone has the former. Pause/UnPause retains the submitted voice.
+The unrouted control has the same update boundary. These are measured public
+command sequences, without an inferred fixed block delay.
