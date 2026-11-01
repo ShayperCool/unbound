@@ -41,3 +41,59 @@ The runner enters the installed `with-heavy-job` once per capture. All generated
 projects, logs and reports belong under the validation cache. `engine` additionally
 requires `--cli` and `--runtime` pointing to a private verified matching runtime.
 No runtime build or production-code edit is part of this probe.
+
+## Measured result for 6000.0.71f1
+
+The independent pair agrees byte-for-byte on all 40 records. Counts equal the
+number of emitting calls, clocks stay zero, and reported remaining/start lifetime
+are equal at each observation. Manual emission retains a tiny nonzero z position
+of about 1e-10; its exact value remains in the reference.
+
+Both ordinary and manual emission use the same sequence for each child seed.
+Changing the supplied parent seed, its order, or inheritance flags does not change
+that sequence. Child seed 12345 produces 692788716, 1622567041, 3251230716;
+child seed 305419896 produces 1131246930, 3829280589, 3382565082.
+The supplied parent seeds themselves remain unchanged after the by-ref call.
+
+All nine predeclared causal hypotheses fail the requirement to predict all 30
+emitted seeds and all 60 stored seed observations. The existing script Random
+xorshift128 recurrence produces the observed values at words 1, 6 and 11.
+This is an observation about the stream, not an accepted draw-consumption rule.
+The control does not independently vary the number or kind of initialization
+samples, so hard-coding a five-word stride would be a fit to the output.
+`ParticleRandom.Hash`/`Value` and the current particle-system xorshift64* models
+predict none of the emitted seeds. No lookup, fitted stride or RNG patch is supplied.
+
+The first particle in every system reports axis [0,1,0]. Later ordinary particles
+and manual particles with flags 0 report [0,0,1]. Later manual particles with flags
+15 report [1,0,0], matching the supplied parent's axis. These are observations,
+not a proven ordinal initialization rule. Replacing every default axis with Y
+would contradict this control. The seed and first-axis residuals therefore already
+occur in ordinary emission. A Death-only initialization repair is not justified.
+
+Inheritance fields also remain explicit: flags 15 give start/remaining lifetime
+4.05216932, size [1.5,1.5,1.5], color [96,96,56,200] and rotation [0,0,47.188736].
+The reference retains these fields without narrowing the comparison to seeds.
+
+The private immutable v14 baseline completes all 40 records with correct counts.
+Strict parity fails with 240 paths in 30 records and 60 exact raw-seed mismatches
+across stored snapshots. The full union includes axis, seed, rotation and lifetime
+values. It is a baseline observation, not a v15 runtime acceptance or a new
+runtime regression. Production initialization, simulation, traversal, Birth,
+Death and removal code remain unchanged. No complete causal seed/axis mechanism
+or shared-helper implementation contract was established in the bounded control.
+
+## Review without recapture
+
+```bash
+python3 tests/projects/particleseedaxis/verify.py --unity-version 6000.0.71f1 --output "$RUN/reference-review.json"
+python3 tests/projects/particleseedaxis/analyze.py --unity-version 6000.0.71f1 --output "$RUN/algorithms.json"
+python3 tests/projects/particleseedaxis/diagnose.py --unity-version 6000.0.71f1 --output "$RUN/diagnostics.json"
+```
+
+`verify.py` exits zero for the canonical reference. Add `--native-a` and
+`--native-b` to verify exact independent agreement. Add `--actual` to retain the
+complete comparison union and get a nonzero exit on parity failure. Existing
+particle float/color tolerances remain unchanged; a separate audit requires exact
+raw uint seeds. `analyze.py` reports every model prediction and mismatch, including
+old particles in later snapshots. Its completion status does not accept a model.
