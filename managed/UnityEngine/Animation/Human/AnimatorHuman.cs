@@ -84,24 +84,6 @@ namespace Unbound.Runtime.Humanoid
 
         internal void ClearMotion() => m_HasSample = false;
 
-        /// <summary>The playing clip's root motion between the state's previous and current times:
-        /// the root's delta (given back when <paramref name="wantDelta"/>), the feet pivot, and the
-        /// body relative to the motion for this update's pose.</summary>
-        internal void EvaluateMotion(AnimationClip clip, HumanClipMotion motion, in HumanClipMotionInput input, float deltaTime,
-            bool wantDelta, out AnimatorRootMotion result, out bool applied)
-        {
-            float previous = HumanRootMotion.ClipTime(motion, input.PreviousTime, input.Speed, input.CycleOffset, out _);
-            float current = HumanRootMotion.ClipTime(motion, input.Time, input.Speed, input.CycleOffset, out _);
-            clip.SampleHuman(previous, m_Previous);
-            clip.SampleHuman(current, m_Current);
-            HumanRootMotion.Evaluate(motion, input, m_Previous, m_Current, clip.HumanPresent, out m_Sample);
-            m_HasSample = true;
-            HumanRootMotion.ApplyToAnimator(m_Sample, AvatarX(), deltaTime, m_Constant.Human.Scale, 1f, m_Memory, out result);
-            PivotPosition = result.PivotPosition;
-            HumanRootMotion.EndUpdate(m_Memory, deltaTime);
-            applied = wantDelta;
-        }
-
         // The layered evaluation: the pose of every layer mixed, the pose of the layers that place the
         // body, and their workspaces.
         readonly HumanPose m_Layered = new HumanPose(), m_LayeredBase = new HumanPose(), m_LayerPose = new HumanPose(),
