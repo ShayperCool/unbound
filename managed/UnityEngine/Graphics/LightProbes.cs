@@ -44,6 +44,13 @@ namespace UnityEngine
             HullRays = HullRays,
         };
 
+        /// <summary>The least weight a cell accepts a point with. Unbound's tolerance, not the
+        /// Editor's: its walk accepts only non-negative weights (tests/projects/lightprobes, Main's
+        /// probe 5 is found in hull cell 62 from cells 0, 39 and 72 alike, where this tolerance stops
+        /// at an inner cell with a weight of −2e-8). Exact acceptance is not adopted yet: at a probe on
+        /// the hull it leads into outer cells, where the Editor solves its stored cubic (an outer cell's
+        /// matrix rows are the coefficients of t², t and 1 of t³ + a·t² + b·t + c, affine in the point)
+        /// and still interpolates, by a rule not yet measured.</summary>
         const float Epsilon = -1e-4f;
 
         /// <summary>
