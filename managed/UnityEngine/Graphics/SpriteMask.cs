@@ -338,7 +338,7 @@ namespace Unbound.Runtime
                 // above. Filtering s_Wanted would wrongly decrement that existing contribution.
                 if (dispatch == RenderDispatchContext.BuiltinForwardOpaque)
                 {
-                    var material = mask.sharedMaterial ?? BuiltinObjects.SpritesMask;
+                    var material = mask.sharedMaterial != null ? mask.sharedMaterial : BuiltinObjects.SpritesMask;
                     if (material != null && material.renderQueue > (int)RenderQueue.GeometryLast) continue;
                 }
                 DrawMask(mask, StencilOp.IncrementSaturate);
