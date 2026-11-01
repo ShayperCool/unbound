@@ -63,6 +63,12 @@ provided the working executable/debug binding instead.
 `DispatchGeometryJobs`, `0x1d09a70`, indexes callbacks at
 `0x2b158 + rendererType * 0xc18`. For type 5 this is exactly `0x2edd0`; its
 `0x1d09b5f` indirect call invokes the registered ordinary callback.
+The camera edge is explicit: `Camera::CustomRender`, `0x1ccb1f0`, constructs
+`RendererCullingCallbackProperties` from the Camera at `0x1ccb8d2` and calls
+`DispatchGeometryJobs` at `0x1ccb8e1`. Its following instruction calls
+`RenderManager::UpdateAllRenderers` at `0x1ccb8e6`. This locates the permitted
+automatic request in camera geometry dispatch, without treating the separately
+observed PlayerLoop UpdateAllRenderers node as the request site.
 
 Two direct `RemoveOldPoints` callers were found in the executable:
 
