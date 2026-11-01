@@ -8,6 +8,7 @@ public static class ProbeEntry
     static readonly List<GameObject> Objects = new List<GameObject>();
     static readonly List<Rigidbody2D> Bodies = new List<Rigidbody2D>();
     public static int Event;
+    static bool SettingsObserved;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run()
@@ -18,6 +19,9 @@ public static class ProbeEntry
         Physics2D.gravity = Vector2.zero;
         Physics2D.defaultContactOffset = .01f;
         Physics2D.queriesStartInColliders = true;
+        ProbeLog.Begin("settings");
+        ProbeLog.Value("gravityAssigned", Physics2D.gravity);
+        ProbeLog.Value("simulationModeAssigned", Physics2D.simulationMode.ToString());
         foreach (bool horizontal in new[] { false, true })
         foreach (float angle in new[] { 0f, 23f, 90f })
         foreach (Vector2 offset in new[] { new Vector2(0, 2.5f), new Vector2(.25f, 2.5f), new Vector2(0, 3.1f), new Vector2(.9f, 0) })
@@ -77,6 +81,12 @@ public static class ProbeEntry
         a.direction = b.direction = horizontal ? CapsuleDirection2D.Horizontal : CapsuleDirection2D.Vertical;
         a.size = b.size = horizontal ? new Vector2(3, 1) : new Vector2(1, 3);
         Physics2D.SyncTransforms();
+        if (!SettingsObserved)
+        {
+            SettingsObserved = true;
+            ProbeLog.Value("settings.gravityAfterShapes", Physics2D.gravity);
+            ProbeLog.Value("settings.simulationModeAfterShapes", Physics2D.simulationMode.ToString());
+        }
         Shape("target", a); Shape("moving", b);
         var d = a.Distance(b);
         ProbeLog.Value("distance", d.distance); ProbeLog.Value("distance.normal", d.normal);

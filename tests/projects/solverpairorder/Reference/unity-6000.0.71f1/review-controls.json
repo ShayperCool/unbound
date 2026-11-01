@@ -1,5 +1,13 @@
 {
+  "settings": {
+    "gravityAssigned.x": 0,
+    "gravityAssigned.y": 0,
+    "simulationModeAssigned": "Script"
+  },
   "tips/False/0/0/2.5": {
+    "settings.gravityAfterShapes.x": 0,
+    "settings.gravityAfterShapes.y": 0,
+    "settings.simulationModeAfterShapes": "Script",
     "target/shapes": 1,
     "target/vertices": 2,
     "target/radius/0": 0.5,

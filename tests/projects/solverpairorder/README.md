@@ -126,10 +126,11 @@ collapsed cores against rotated boxes in both fixture orders, coincident and
 exactly touching core boundaries, and callback-driven removal of an earlier
 scene pair. Solid and trigger cases retain enter/stay order with both values of
 `callbacksOnDisable`, including the following simulation step. Two independent
-Editor recordings agree byte-for-byte on all 4,694 fields in 74 cases. Eight
+Editor recordings agree byte-for-byte on all 4,700 fields in 75 cases. Eight
 dynamic cases retain eight simulation steps, including position, rotation,
-linear/angular velocity and solved impulses. All 3,670 earlier fields remain
-unchanged in the expanded reference.
+linear/angular velocity and solved impulses. All 4,694 earlier fields remain
+unchanged. Initial gravity and simulation-mode reads also verify that the first
+collider preserves values assigned before the physics world exists.
 
 `public.py` reports newly missing observations separately from retained numeric
 failures. A baseline failure cannot make the loss of its field acceptable. Run
