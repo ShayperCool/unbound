@@ -16,6 +16,7 @@ isolate one thing each:
 | `runs` | long head-on and crossing runs |
 | `arrival`, `arrival-start` | braking at the end of the path (speeds, accelerations, radii; starts near the end) |
 | `walls-along`, `walls-towards` (`Walls.unity`) | walking along a wall, towards it, round its end |
+| `walls-corner` (`Walls.unity`) | heading at full speed for the corner at a wall's end: speeds, approach angles, start distances 0.0023·speed apart, radius, quality (when an agent stops keeping its desired velocity) |
 
 Measured (see `managed/UnityEngine/AI/DotRecast/UNBOUND.md`): Unity's avoidance is Detour's
 adaptive sampling (its four presets) around 0.7 of the desired velocity, offset right by 0.04 of
