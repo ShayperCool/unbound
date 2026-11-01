@@ -2286,7 +2286,10 @@ impl UnityRenderer {
                 {
                     handle = *h;
                 }
-                textures.get(&handle).map(|t| (t.width, t.height))
+                // A depth element is the size of its texture.
+                textures
+                    .get(&handle::split(handle).0)
+                    .map(|t| (t.width, t.height))
             };
             // A buffer bound by a cbuffer's name: the draw's, the material's, else a global one.
             let buffers = &self.buffers;
