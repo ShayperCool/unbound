@@ -94,10 +94,11 @@ def main():
     result['original_controls'] = report(original, focused)
     # Registered subemitters advance even when hierarchy traversal is disabled.
     child = {key: value for key, value in ref.items() if key[0] == 'single_birth_child'}
-    parent_only = {(key[0].replace('_parent_only', ''), key[1]): value
-                   for key, value in ref.items() if key[0] == 'single_birth_parent_only_child'}
-    if parent_only:
-        result['child_traversal_controls'] = report(child, parent_only)
+    for suffix in ('_parent_only', '_parent_only_detached'):
+        variant = {('single_birth_child', key[1]): value
+                   for key, value in ref.items() if key[0] == 'single_birth'+suffix+'_child'}
+        if variant:
+            result['child_traversal'+suffix] = report(child, variant)
     if args.actual:
         paths.append(args.actual)
         result['candidate'] = report(ref, load(args.actual))
@@ -119,7 +120,7 @@ def main():
            for key, value in result.items() if key not in ('sha256', 'changed_retained')})
     return int(not result.get('exact_native_agreement', True) or not result.get('canonical_agrees_exactly', True)
                or bool(result['original_controls']['failures'])
-               or bool(result.get('child_traversal_controls', {}).get('failures'))
+               or any(value['failures'] for key, value in result.items() if key.startswith('child_traversal'))
                or bool(result.get('candidate', {}).get('failures')))
 
 

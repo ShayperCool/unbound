@@ -84,6 +84,7 @@ public class BirthProbe : MonoBehaviour
         RunCase(false);
         RunCase(true);
         RunCase(true, false);
+        RunCase(true, false, true);
         File.WriteAllText(Environment.GetEnvironmentVariable("PARTICLE_BIRTH_OUT"), s_Out.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
@@ -92,10 +93,11 @@ public class BirthProbe : MonoBehaviour
 #endif
     }
 
-    static void RunCase(bool single, bool withChildren = true)
+    static void RunCase(bool single, bool withChildren = true, bool detached = false)
     {
         string name = single ? "single_birth" : "sub_emitters_birth";
         if (!withChildren) name += "_parent_only";
+        if (detached) name += "_detached";
         ParticleSystem child = null;
         var ps = Make(name, s =>
         {
@@ -115,6 +117,7 @@ public class BirthProbe : MonoBehaviour
                 cm.startLifetime = 0.413f;
                 var ce = c.emission; ce.rateOverTime = 10f;
             }, default, s.transform);
+            if (detached) child.transform.SetParent(null, true);
             var sub = s.subEmitters; sub.enabled = true;
             sub.AddSubEmitter(child, ParticleSystemSubEmitterType.Birth,
                 ParticleSystemSubEmitterProperties.InheritColor | ParticleSystemSubEmitterProperties.InheritSize);
@@ -136,6 +139,7 @@ public class BirthProbe : MonoBehaviour
             RecordState(name, step, ps);
             RecordState(name + "_child", step, child);
         }
+        if (detached) DestroyImmediate(child.gameObject);
         DestroyImmediate(ps.gameObject);
     }
 }
