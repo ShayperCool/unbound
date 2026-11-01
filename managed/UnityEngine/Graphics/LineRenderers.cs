@@ -290,6 +290,10 @@ namespace UnityEngine
                     m = sum.normalized;
                     length = h / Mathf.Max(Vector3.Dot(m, s1), 1f / MiterLimit);
                 }
+                // Clamped between h and 3h as Clamp(value, h, 3h) does, so a negative width keeps its
+                // half width (measured, tests/projects/lines line.width.negative).
+                if (length < h) length = h;
+                else if (length > MiterLimit * h) length = MiterLimit * h;
                 if (m_NoMiter[i]) length = h;
                 else if (i > 0 && i < segments && Mathf.Abs(length) > Mathf.Abs(h))
                 {
@@ -300,9 +304,9 @@ namespace UnityEngine
                 }
                 float turn = Vector3.Dot(Vector3.Cross(s1, s2), normal);
                 bool aInner = turn > 0f || (turn == 0f && Vector3.Dot(s1, s2) < 0f);
-                // A zero or negative width swaps the arc's fixed side (measured corner triangles,
-                // tests/projects/lines line.width.zero and line.width.negative).
-                if (h <= 0f) aInner = !aInner;
+                // A zero or negative width keeps the corner where the turn puts it but swaps its two
+                // sides (measured, tests/projects/lines line.width.zero and line.width.negative).
+                bool swap = h <= 0f;
                 if (corners == 0)
                 {
                     m_Pairs.Add(new Pair { A = point - m * length, B = point + m * length, Tangent = dout, U = u, Color = color });
@@ -315,22 +319,25 @@ namespace UnityEngine
                 perp = perp.sqrMagnitude > 1e-12f ? perp.normalized : din;
                 float turnAngle = Mathf.Acos(Mathf.Clamp(Vector3.Dot(din, dout), -1f, 1f));
                 var tangentPerp = dout - din * Vector3.Dot(din, dout);
-                tangentPerp = tangentPerp.sqrMagnitude > 1e-12f ? tangentPerp.normalized : (aInner ? -s1 : s1);
+                tangentPerp = tangentPerp.sqrMagnitude > 1e-12f ? tangentPerp.normalized : (aInner != swap ? -s1 : s1);
                 // A loop's first point keeps only the last step of its corner; the closing point has it all.
                 for (int k = loop && i == 0 ? corners : 0; k <= corners; k++)
                 {
                     float f = (float)k / corners;
                     var r = s1 * Mathf.Cos(angle * f) + perp * Mathf.Sin(angle * f);
                     var tangent = w * (din * Mathf.Cos(turnAngle * f) + tangentPerp * Mathf.Sin(turnAngle * f));
-                    var join = k == 0 ? Join.Quad : aInner ? Join.CornerA : Join.CornerB;
-                    if (aInner) m_Pairs.Add(new Pair { A = inner, B = inner + r * w, Tangent = tangent, U = u, Color = color, Join = join });
-                    else m_Pairs.Add(new Pair { A = inner - r * w, B = inner, Tangent = tangent, U = u, Color = color, Join = join });
+                    Vector3 a = aInner ? inner : inner - r * w, b = aInner ? inner + r * w : inner;
+                    bool fixedA = aInner != swap;
+                    var join = k == 0 ? Join.Quad : fixedA ? Join.CornerA : Join.CornerB;
+                    m_Pairs.Add(swap
+                        ? new Pair { A = b, B = a, Tangent = tangent, U = u, Color = color, Join = join }
+                        : new Pair { A = a, B = b, Tangent = tangent, U = u, Color = color, Join = join });
                 }
             }
 
             var faceNormal = facing.TransformZ ? new Vector3(0f, 0f, -1f) : -facing.CameraForward;
             int caps = loop ? 0 : Math.Max(0, p.NumCapVertices);
-            if (caps > 0) Cap(points[0], m_Pairs[0], m_Effective[0], true, caps, va, vb, facing, faceNormal);
+            if (caps > 0) Cap(points[0], m_Pairs[0], m_Effective[0], true, m_Half[0] < 0f, caps, va, vb, facing, faceNormal);
             int first = m_Vertices.Count;
             foreach (var pair in m_Pairs)
             {
@@ -347,7 +354,7 @@ namespace UnityEngine
                     default: Tri(a0, b0, a1); Tri(b0, b1, a1); break;
                 }
             }
-            if (caps > 0) Cap(points[(n - 1) % count], m_Pairs[m_Pairs.Count - 1], m_Effective[segments - 1], false, caps, va, vb, facing, faceNormal);
+            if (caps > 0) Cap(points[(n - 1) % count], m_Pairs[m_Pairs.Count - 1], m_Effective[segments - 1], false, m_Half[n - 1] < 0f, caps, va, vb, facing, faceNormal);
             return true;
         }
 
@@ -489,8 +496,9 @@ namespace UnityEngine
         }
 
         /// <summary>A half disc closing one end: its centre, then an arc from the end pair's plus
-        /// vertex around the end to its minus vertex, in the strip's facing plane.</summary>
-        void Cap(Vector3 center, Pair pair, Vector3 direction, bool start, int caps, float va, float vb, LineFacing facing, Vector3 normal)
+        /// vertex around the end to its minus vertex, in the strip's facing plane. At a negative
+        /// width the disc turns back over the strip (measured, line.width.negative).</summary>
+        void Cap(Vector3 center, Pair pair, Vector3 direction, bool start, bool negative, int caps, float va, float vb, LineFacing facing, Vector3 normal)
         {
             int at = m_Vertices.Count;
             Add(center, new Vector2(pair.U, 0.5f), pair.Color, normal, pair.Tangent);
@@ -499,6 +507,7 @@ namespace UnityEngine
             var plane = facing.TransformZ ? Vector3.forward : facing.CameraForward;
             var outward = Vector3.Cross(plane, radius).normalized;
             if (Vector3.Dot(outward, direction) < 0f) outward = -outward;
+            if (negative) outward = -outward;
             var back = outward * (start ? -r : r);
             for (int k = 0; k < caps + 2; k++)
             {
