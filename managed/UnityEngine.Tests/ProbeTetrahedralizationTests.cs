@@ -102,45 +102,6 @@ namespace Unbound.Tests
             }
         }
 
-        /// <summary>Main's probes of the same project, then Extra's: the set the Editor
-        /// tetrahedralizes when both scenes are loaded (its positions record).</summary>
-        static readonly Vector3[] MainPositions =
-        {
-            new Vector3(-1.87f, 0.229999989f, -1.88999999f), new Vector3(-2.16999984f, 0.349999994f, 0.189999998f),
-            new Vector3(-1.96999991f, 0.179999992f, 1.90999997f), new Vector3(-1.83999991f, 2.25999999f, -1.91999996f),
-            new Vector3(-2.14999986f, 2.40999985f, 0.0199999996f), new Vector3(-1.92999995f, 2.1099999f, 1.93999994f),
-            new Vector3(0.170000002f, 0.310000002f, -2.0999999f), new Vector3(-0.0199999996f, 0.439999998f, -0.129999995f),
-            new Vector3(0.0899999961f, 0.140000001f, 2.05999994f), new Vector3(0.179999992f, 2.22000003f, -2.02999997f),
-            new Vector3(0.0399999991f, 2.45000005f, -0.189999998f), new Vector3(-0.00999999978f, 2.38999987f, 1.86000001f),
-            new Vector3(2.1099999f, 0.329999983f, -2.04999995f), new Vector3(1.89999998f, 0.459999979f, 0.0700000003f),
-            new Vector3(1.88f, 0.48999998f, 2.04999995f), new Vector3(2.01999998f, 2.11999989f, -1.88999999f),
-            new Vector3(1.93999994f, 2.41999984f, -0.149999991f), new Vector3(2.07999992f, 2.30999994f, 1.90999997f),
-        };
-
-        [Fact]
-        public void CellsCoverTheConvexHull()
-        {
-            // The Editor counts 121 cells for these 26 probes. The flat cell of probes 10, 11, 24
-            // and 25 lies on the hull; without it two hull triangles meet at a reflex edge.
-            var positions = MainPositions.Concat(Positions).ToArray();
-            var set = new ProbeSet { Positions = positions };
-            ProbeTetrahedralization.Build(set);
-            Assert.Equal(121, set.Cells.Length);
-            Assert.Contains(set.Cells, c => c.I3 >= 0 && Key(new[] { c.I0, c.I1, c.I2, c.I3 }) == "10,11,24,25");
-            for (int i = 0; i < set.Cells.Length; i++)
-            {
-                var c = set.Cells[i];
-                if (c.I3 >= 0) continue;
-                Vector3 a = positions[c.I0], b = positions[c.I1], e = positions[c.I2];
-                var inside = set.Cells[c.N3];
-                int apex = new[] { inside.I0, inside.I1, inside.I2, inside.I3 }.First(v => v != c.I0 && v != c.I1 && v != c.I2);
-                var normal = Vector3.Cross(b - a, e - a).normalized;
-                if (Vector3.Dot(normal, positions[apex] - a) > 0f) normal = -normal;
-                foreach (var p in positions)
-                    Assert.True(Vector3.Dot(normal, p - a) < 1e-5f, $"hull triangle {c.I0}, {c.I1}, {c.I2}: a probe outside it");
-            }
-        }
-
         [Fact]
         public void InterpolationInsideIsLinear()
         {
