@@ -1884,6 +1884,48 @@ Validation:
   Linear 6032/6033, URP 7011 matching as before. Asset (71) and runtime (39) Rust tests, managed
   animation tests (32) pass; api-check: zero errors in 2288 hand-written types.
 
+### Humanoid layers, blends, Foot IK and translation DoF, 2026-11-01
+
+Each humanoid clip an Animator evaluates becomes its own human pose, its body placed relative to
+the clip's own motion, and its own root motion. A state blends its clips (blend trees), a layer
+its states (transitions): weighted sums with quaternions kept in the running sum's hemisphere and
+normalized, the missing weight going to the identity. Layers then mix in order with their weights
+and avatar masks' body parts (root, body/head/limb muscles, fingers, IK goals, translation DoFs):
+override layers interpolate the masked parts, additive layers add the clip's difference from its
+first frame and do not move the root. The mixed root motion (delta, motion, feet, their slips and
+speeds) drives the Animator as one clip's did; layers above the base place the body only with
+`layersAffectMassCenter`. A state's Foot IK sets the feet goals after the retarget step; with
+`stabilizeFeet` a foot goal moves from last update's by at most what the root's and the clip's
+foot speeds allow. `SetBoneLocalRotation` overrides a bone's local rotation for the IK step.
+Avatars with translation DoF: the importer measures the bones' translations while retargeting
+(moving the mass center and limb alignment) but keeps no translation DoF curves; playback places
+the bones at their T-pose translations. HumanPoseHandler can be made from joint paths (an avatar
+pose of seven floats per joint, no transforms).
+
+Validation:
+
+- tests/projects/humanoid, extended (two byte-identical Editor captures, 3596 records, every
+  record of the previous reference unchanged): Unbound matches 272744/272873 values (Root
+  c72de2b9 before this work: 240031/272874). Layers with arm, body/head (additive) and
+  leg/root masks, two full-body layers with and without layersAffectMassCenter, the transition,
+  the blend tree, Foot IK, stabilizeFeet, SetBoneLocalRotation, translation DoF on both rigs and
+  the joint-path handlers match except for these 129 values:
+  - 56 `velocity` values of the motion records (all cases): deltaPosition and velocity differ
+    from the Editor's by at most about 5e-6 of the step (root positions in clip units, times the
+    transform scale 100 and the human scale, over 1/30 s); velocity exceeds the 2e-4 tolerance
+    where it is large. Evaluating muscle curves in cached-coefficient form changed none of them.
+  - 72 values of muscles 41 and 43 (left arm and forearm twist) read back from the IK pose (80 on
+    Root before this work; 86 at the previous stage) and one foot twist read back with
+    stabilizeFeet. Measured: the forearm's twist alignment (FixMidDoF, minimum angle 0.1 degree)
+    does not converge on these poses (the angle stays near 0.6495 degree on HumanA and 0.1683 on
+    HumanB, changing by about 1e-5 per iteration) and stops when the angle grows, which float
+    noise decides; every differing value is a whole number of iteration steps (0.0036 on HumanA,
+    0.00093 on HumanB) and the two muscles' sum matches.
+  On the previous reference's records alone: 120578/120650.
+- animator 2236/2236, animatoradditive 1100/1100 (13200/13200 values), bundle animation 8/8;
+  modelimport Gamma and Linear 6032/6033, URP 7011/7687 as before. Managed animation tests (32)
+  pass; api-check: zero errors in 2289 hand-written types; the build without stubs compiles.
+
 
 ## Automatic sampler property updates (2026-10-31)
 
