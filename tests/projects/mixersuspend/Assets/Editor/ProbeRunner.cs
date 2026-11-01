@@ -48,7 +48,7 @@ public static class ProbeRunner
             if (key != "default") suspend.boolValue = !key.EndsWith("disabled");
             threshold.floatValue=SuspendProbe.Threshold(key);
             serialized.ApplyModifiedPropertiesWithoutUndo();
-            
+
             var master = Get(mixer,"masterGroup");
             var child = Call(mixer,"CreateNewGroup","Child",true); Call(mixer,"AddChildToParent",child,master);
             var sibling = Call(mixer,"CreateNewGroup","Sibling",true); Call(mixer,"AddChildToParent",sibling,master);
