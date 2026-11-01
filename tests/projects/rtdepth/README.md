@@ -56,6 +56,8 @@ float tolerance (absolute and relative 2e-4).
 
 `Reference/unity-6000.0.71f1/` holds 1,071 values and 368 images from two byte-identical captures
 (OpenGLCore 4.5, RTX 4060).
+`Reference/unity-6000.0.71f1/controls/` holds the controls' 40 values and 15 images, from two
+byte-identical complete captures (same device).
 
 ## What the Editor does (6000.0.71f1, Linux, OpenGL Core)
 
