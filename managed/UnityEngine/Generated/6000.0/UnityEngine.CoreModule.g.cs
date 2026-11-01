@@ -5031,11 +5031,6 @@ namespace UnityEngine.PlayerLoop
         }
         [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
         [global::Unbound.Stub]
-        public unsafe partial struct UpdateAsyncInstantiate
-        {
-        }
-        [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
-        [global::Unbound.Stub]
         public unsafe partial struct Physics2DEarlyUpdate
         {
         }
