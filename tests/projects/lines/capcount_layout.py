@@ -160,8 +160,9 @@ def known_order_delta(canonical_order, captured_order):
     return order_delta(canonical_order, captured_order) == expected and captured_order[-1] == 'complete'
 
 
-def source_binding(repeats, probe):
-    """Each repeat's recorded pre-launch probe inputs equal this checkout's probe files."""
+def source_binding(repeats, probe, release):
+    """Each repeat's recorded pre-launch probe inputs equal this checkout's probe files, with
+    ProjectVersion.txt as run.copy_project writes it for the selected release."""
     out = {}
     for repeat in repeats:
         files = json.loads((repeat/'prelaunch-inputs.json').read_text())['files']
@@ -171,6 +172,7 @@ def source_binding(repeats, probe):
             for f in sorted((probe/folder).rglob('*')):
                 if f.is_file():
                     current[name+'/'+f.relative_to(probe/folder).as_posix()] = sha(f.read_bytes())
+        current['settings/ProjectVersion.txt'] = sha(('m_EditorVersion: '+release+'\n').encode())
         differ = sorted(k for k in recorded.keys() | current.keys() if recorded.get(k) != current.get(k))
         if differ:
             sys.exit(f'{repeat.name}: recorded probe inputs differ from this checkout: {differ[:8]}')
@@ -204,7 +206,7 @@ def publish(release, label, receipt_path, probe=None):
         sys.exit(f'{target/FILE} already exists; not publishing')
     before = tree(target)
     c = checked(label, target)
-    binding = source_binding(c['repeats'], probe)
+    binding = source_binding(c['repeats'], probe, release)
     if not known_order_delta(c['canonical_order'], c['captured_order']):
         sys.exit('the capture order differs from the canonical order by more than the known completion move')
     per_repeat = []

@@ -54,6 +54,8 @@ class PublishTests(unittest.TestCase):
         (self.target/'a.rgba.gz').write_bytes(gzip.compress(IMAGE))
         (self.probe/'Assets').mkdir()
         (self.probe/'Assets/Probe.cs').write_bytes(b'class P {}')
+        (self.probe/'ProjectSettings').mkdir()
+        (self.probe/'ProjectSettings/ProjectVersion.txt').write_bytes(b'm_EditorVersion: other\nrevision\n')
         self.receipt = root/'receipt.json'
         run = layout.run
         for name, value in (('reference_root', lambda probe: self.target),
@@ -74,6 +76,7 @@ class PublishTests(unittest.TestCase):
             (d/'a.rgba').write_bytes(IMAGE)
             (d/'prelaunch-inputs.json').write_text(json.dumps({'files': {
                 'assets/Probe.cs': {'sha256': hashlib.sha256(source).hexdigest()},
+                'settings/ProjectVersion.txt': {'sha256': hashlib.sha256(b'm_EditorVersion: test\n').hexdigest()},
                 'runner': {'sha256': 'r'}}}))
 
     def refused(self, reason):
