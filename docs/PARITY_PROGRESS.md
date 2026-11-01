@@ -2303,3 +2303,39 @@ seven sampler RPC guards pass, including rejection of the obsolete four-value
 request. Broader source-identical delivery results were reused; no new Editor,
 full physics, audio or full-rendering runs were needed. Other sampler W policies
 and the separate humanoid IK blocker remain outside this acceptance.
+
+
+## Mixer suspension and initial cube upload review, 2026-11-01
+
+Root integrates the measured mixer-suspension delivery and fixes two review
+findings. Clipless callback sources participate in routed mixer activity, so a
+quiet generator stays awake and late attachment wakes a suspended route. RMS
+observation closes each configured DSP window even when a remote packet ends
+partway through it. Both focused checks and all 57 runtime tests pass. The normal
+managed build passes 1,290/1,301 tests, with the same eleven inherited failures
+and zero skips. Its tested and packaged Core bytes match. API checking reports
+zero errors in 2,290 types; the affected generated modules match regeneration.
+
+The short generator profile has two complete, byte-identical Native recordings.
+Its full Native/accepted-Root/candidate union has zero introduced observations,
+67,584 resolved and 104,448 retained. Those counts are PCM sample observations,
+not independent test cases. The retained source-callback phase and pre-activation
+sink differences remain explicit. A separate union against the unaccepted R6
+candidate retains its 4,096 newly failing device samples when output returns;
+those same samples already fail in the accepted Root baseline. No sample shifting,
+fixture quantization or tolerance changes were used. The original large suspension
+matrices were not replayed after these targeted review fixes; their delivery
+reports and unresolved reset/snapshot observations remain available separately.
+
+Imported cube faces reverse their mip rows only in the initial GPU upload buffer.
+Cached CPU pixels and managed Apply uploads are unchanged. Root's complete pixel
+captures are byte-identical to the dedicated fix delivery: all twelve initial
+samples pass per color profile, twelve previous differences resolve in each,
+134 Gamma and 136 Linear differences remain, with zero introduced or newly
+missing values. The 24 post-Apply sample differences per profile remain open.
+Resources pass 539/539 values and 62 images; built-in RP retains its existing
+124 expected value differences and all 33 images pass. All 95 image files are
+unchanged from the accepted controls. NativeApi 14, render 6, shader cache 16,
+PhysX shim 9 and texture cache 13 are unchanged. No unrelated physics, particle,
+animation or full-rendering replay was needed; frozen baseline artifacts remain
+untouched.
