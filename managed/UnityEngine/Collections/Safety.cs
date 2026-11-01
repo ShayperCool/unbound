@@ -582,12 +582,12 @@ namespace Unbound.Runtime
             {
                 node = RealNode(handle);
                 if (node == null || (handle.version & VersionMask) != (word & VersionMask)) throw Deallocated(handle);
-                if (node.ExternalWriter) throw ExternalWriteError();
+                if (node.ExternalWriter && operation == Dispose) throw ExternalWriteError();
                 writer = node.Writer;
                 writerField = node.WriterField;
                 if (node.Readers.Count > 0) reader = node.Readers[0];
             }
-            if (operation != Dispose && !node.AllowReadOrWrite)
+            if (operation != Dispose && (!node.AllowReadOrWrite || node.ExternalWriter))
                 throw new InvalidOperationException($"The {type} can no longer be accessed, since its owner has been invalidated. You can simply Dispose() the container and create a new one.");
             if (operation == Write && IsSecondary(handle) && !node.AllowSecondaryWriting)
                 throw new InvalidOperationException($"The {type} has been declared as [ReadOnly], but you are writing to it.");
