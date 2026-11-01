@@ -1390,6 +1390,12 @@ fn render_voice(
     for f in 0..n {
         let dsp = t0 + f as u64;
         if dsp < voice.start_at {
+            // The scheduled route has already started processing silence. Its
+            // startup matrix ramp elapses before the decoded clip becomes audible.
+            if voice.fade_frames < 64 {
+                for i in 0..4 { voice.fade_matrix[i] += voice.fade_initial[i] / 64.0; }
+                voice.fade_frames += 1;
+            }
             continue;
         }
         if dsp >= voice.end_at {
@@ -1603,14 +1609,15 @@ mod tests {
         let mut out = vec![0.0; 110 * 2];
         m.render(&mut out, 2);
         assert_eq!(out[104 * 2], 0.0);
-        assert_eq!(out[105 * 2], 0.0);
-        assert_eq!(out[106 * 2], mono_gain(1));
+        // The complete Native scheduled controls start at full gain after silent lead-in.
+        assert_eq!(out[105 * 2], mono_gain(105));
+        assert_eq!(out[106 * 2], mono_gain(106));
         assert_eq!(m.source_state(7).main, voice_state::PLAYING);
         assert_eq!(m.source_state(7).position, 5.0);
         // A scheduled end stops it on its frame.
         play(&mut m, 7, command::SET_SCHEDULED_END, 0.120);
         m.render(&mut out[..40], 2);
-        assert_eq!(out[9 * 2], mono_gain(14));
+        assert_eq!(out[9 * 2], mono_gain(119));
         assert_eq!(out[10 * 2], 0.0);
         assert_eq!(m.source_state(7).main, voice_state::NONE);
     }
