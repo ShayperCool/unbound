@@ -219,8 +219,9 @@ namespace Unbound.Runtime.Humanoid
             var ws7 = new SkeletonPose(hn);
             // One pose for every sample: the retargeting writes every value the curves read.
             var pose = new HumanPose();
-            // Avatars with translation DoF also get the translation DoF curves.
-            int first = RootFirst, end = h.HasTDoF ? CurveCount : HumanEnd;
+            int first = RootFirst, end = HumanEnd;
+            // Avatars with translation DoF: the bones' translations are measured while retargeting
+            // (they move the mass center and the limbs), but the clip gets no translation DoF curves.
             var tdofBase = h.HasTDoF ? HumanOps.RetargetFromTDoFBase(h, new SkeletonPose(hn)) : null;
             var values = new float[CurveCount][];
             for (int c = first; c < end; c++) values[c] = new float[frames];
