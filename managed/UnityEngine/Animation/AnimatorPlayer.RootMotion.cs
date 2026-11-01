@@ -169,8 +169,6 @@ namespace Unbound.Runtime
 
         static float ClipTime(AnimationClip clip, double normalized, bool loop) => ClipSampling.ClipTime(clip, normalized, loop);
 
-        internal bool LoopsInBaseLayer(StateRun run) => !(MotionOf(Layers[0].Def, run.Def) is AnimationClip clip) || clip.isLooping;
-
         /// <summary>Target matching: once the base layer's state reaches the match's start, each
         /// evaluation moves the root by its motion plus the part of the remaining correction the
         /// step covers, (min(t, end) − t₀) / (end − t₀), the correction being the target less where
@@ -181,9 +179,16 @@ namespace Unbound.Runtime
             var match = animator.m_Match;
             var run = Layers.Length > 0 ? Layers[0].Current : null;
             if (match == null || run == null) return;
+            if (match.Player != this || match.Run != run || Layers[0].Transition != null)
+            {
+                if (!match.CompleteOnInterruption) { animator.m_Match = null; return; }
+                match.Finish = true;
+                match.Player = this;
+                match.Run = run;
+            }
             double from = run.Previous, to = run.Normalized;
             if (to < match.Start || match.End <= from) { if (match.End <= from) animator.m_Match = null; return; }
-            double f = (Math.Min(to, match.End) - from) / (match.End - from);
+            double f = match.Finish ? 1.0 : (Math.Min(to, match.End) - from) / (match.End - from);
             // Where the base layer's motion would bring the root by the end of the match.
             var toEnd = Vector3.zero;
             var turnToEnd = Quaternion.identity;
@@ -206,7 +211,7 @@ namespace Unbound.Runtime
             if (Quaternion.Dot(remaining, Quaternion.identity) < 0f) remaining = new Quaternion(-remaining.x, -remaining.y, -remaining.z, -remaining.w);
             var part = new Quaternion(remaining.x * g, remaining.y * g, remaining.z * g, 1f - g + remaining.w * g).normalized;
             animator.m_DeltaRotation = (Quaternion.Inverse(rotation) * (part * turned)).normalized;
-            if (to >= match.End) animator.m_Match = null;
+            if (match.Finish || to >= match.End) animator.m_Match = null;
         }
 
         /// <summary>A clip's root movement from one time to another, in its root frame at the first.</summary>

@@ -13,6 +13,9 @@ namespace UnityEngine
             internal Vector3 Position;
             internal Quaternion Rotation;
             internal MatchTargetWeightMask Mask;
+            internal AnimatorPlayer Player;
+            internal StateRun Run;
+            internal bool CompleteOnInterruption, Finish;
             /// <summary>Unwrapped normalized times of the base layer's state.</summary>
             internal double Start, End;
         }
@@ -28,8 +31,8 @@ namespace UnityEngine
             float targetNormalizedTime) =>
             MatchTarget(matchPosition, matchRotation, targetBodyPart, weightMask, startNormalizedTime, targetNormalizedTime, true);
 
-        /// <summary>Queues one match at a time; another while matching is discarded. A start
-        /// before the state's time in the current loop moves the match to the next loop.</summary>
+        /// <summary>Queues one generic root match at a time. A start already passed in the
+        /// current loop begins at the state's current time (tests/projects/modelroot).</summary>
         public void MatchTarget(Vector3 matchPosition, Quaternion matchRotation, AvatarTarget targetBodyPart, MatchTargetWeightMask weightMask, float startNormalizedTime,
             float targetNormalizedTime, bool completeMatch)
         {
@@ -48,24 +51,21 @@ namespace UnityEngine
             var run = p != null && p.Layers.Length > 0 ? p.Layers[0].Current : null;
             if (run == null) return;
             double now = run.Normalized, loop = Math.Floor(now);
-            double start = loop + startNormalizedTime, end = loop + targetNormalizedTime;
-            if (start < now && p.LoopsInBaseLayer(run)) { start += 1.0; end += 1.0; }
-            m_Match = new MatchState { Position = matchPosition, Rotation = matchRotation, Mask = weightMask, Start = start, End = end };
+            double start = Math.Max(now, loop + startNormalizedTime), end = loop + targetNormalizedTime;
+            m_Match = new MatchState { Position = matchPosition, Rotation = matchRotation, Mask = weightMask,
+                Start = start, End = end, Player = p, Run = run, CompleteOnInterruption = completeMatch };
         }
 
         public void InterruptMatchTarget() => InterruptMatchTarget(true);
 
-        /// <summary>Stops matching; with <paramref name="completeMatch"/> the root moves to the target.</summary>
+        /// <summary>Cancels matching, or queues its remaining correction for root motion on the
+        /// next evaluation, including Animator.Update(0) (tests/projects/modelroot).</summary>
         public void InterruptMatchTarget(bool completeMatch)
         {
             var match = m_Match;
-            m_Match = null;
-            if (match == null || !completeMatch) return;
-            var t = transform;
-            var w = match.Mask.positionXYZWeight;
-            var p = t.position;
-            t.position = new Vector3(Mathf.Lerp(p.x, match.Position.x, w.x), Mathf.Lerp(p.y, match.Position.y, w.y), Mathf.Lerp(p.z, match.Position.z, w.z));
-            t.rotation = Quaternion.Slerp(t.rotation, match.Rotation, match.Mask.rotationWeight);
+            if (match == null) return;
+            if (completeMatch) match.Finish = true;
+            else m_Match = null;
         }
     }
 
