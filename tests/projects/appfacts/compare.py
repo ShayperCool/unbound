@@ -13,8 +13,9 @@ when anything fails.
 --machine checks CAPTURE/machine.jsonl against what the OS reported when it ran (os.json beside
 it, plus /etc/os-release and the Editor licence file read now): the GPU's PCI ids, OpenGL
 strings and memory, the CPU's vendor, model and current clock, the host, machine id, memory and
-OS release, the battery, the log path (--editor: the Editor's -logFile, else the project's
-Library/Unbound/Editor.log) and the licence.
+OS release, the battery, the log path (--editor: the Editor's -logFile; else the project's
+Library/Unbound/Editor.log, which the probe writes as <project>/... and which must exist in the
+run's projects/<capture name>) and the licence.
 """
 import argparse
 import json
@@ -127,7 +128,10 @@ def machine(capture, editor=False):
     want = str(capture/'editor.log') if editor else None
     if editor and log != want:
         failures.append({'key': 'application.consoleLogPath', 'os': want, 'actual': log})
-    if not editor and (not log.endswith('/Library/Unbound/Editor.log') or not Path(log).exists()):
+    # The probe writes the project's path as <project>; run.py plays the Unbound capture in
+    # projects/<capture name> beside the capture directory.
+    project = capture.parent/'projects'/capture.name
+    if not editor and (log != '<project>/Library/Unbound/Editor.log' or not (project/'Library/Unbound/Editor.log').is_file()):
         failures.append({'key': 'application.consoleLogPath', 'os': 'the project\'s Library/Unbound/Editor.log, written', 'actual': log})
     if not isinstance(facts.get('profiler.graphicsDriver.start'), int) or facts['profiler.graphicsDriver.start'] < 0:
         failures.append({'key': 'profiler.graphicsDriver.start', 'os': 'a byte count', 'actual': facts.get('profiler.graphicsDriver.start')})
