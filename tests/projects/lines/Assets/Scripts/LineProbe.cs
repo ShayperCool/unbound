@@ -21,6 +21,8 @@ using UnityEngine.Rendering;
 /// Trails (frame-stepped at a fixed capture frame rate): moving objects with several settings,
 /// recorded right after each move and at the end of each frame: positions, visible positions and
 /// the baked mesh; emitting toggles, autodestruct, Clear, Add/SetPosition(s).
+///
+/// Blend (last, synchronous): the predeclared short-segment cases of blend_cases.py.
 /// </summary>
 public class LineProbe : MonoBehaviour
 {
@@ -685,6 +687,26 @@ public class LineProbe : MonoBehaviour
         foreach (var t in trails) if (t.Object != null) Destroy(t.Object);
     }
 
+    // ---- short-segment blend ----
+
+    /// <summary>The predeclared blend cases (blend_cases.py, BlendCases.cs): plain lines whose
+    /// segments are given as ratios of the width, recorded after everything else so that the
+    /// existing records keep their order and values.</summary>
+    void Blend()
+    {
+        foreach (var (name, points) in BlendCases.All)
+        {
+            string key = "blend." + name;
+            try
+            {
+                Shapes[key] = points;
+                Bake(key, NewLine(key), main, false);
+            }
+            catch (Exception e) { Value(key + ".fatal", Q(e.ToString())); }
+            Clean();
+        }
+    }
+
     // ---- driver ----
 
     Camera NewCamera(string name, bool orthographic, Vector3 position, Vector3 lookAt)
@@ -746,6 +768,11 @@ public class LineProbe : MonoBehaviour
                 if (!more) break;
                 yield return steps.Current;
             }
+        }
+        if (code == 0)
+        {
+            try { Blend(); }
+            catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
         }
         Value("complete", B(code == 0));
         Flush();
