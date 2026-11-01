@@ -2234,3 +2234,29 @@ shader fixture remains explicitly excluded. API checking reports zero errors in
 2,290 types, with the affected generated modules unchanged after regeneration.
 The separate humanoid IK integration blocker remains open. RT acceptance does
 not imply full animation, rendering or engine parity.
+
+## Layered texture import combined integration, 2026-11-01
+
+The revised array, volume and serialized texture readers are integrated beside
+NativeApi 13 / render 6 / shader cache 16. Texture cache 13 prevents reuse of
+entries produced before the shape-specific compression correction. Layered
+storage checks texel, byte, upload and offset sizes before allocating or exposing
+raw views; cube-face counts cannot wrap before those checks.
+
+All three exact array comparisons preserve the revised delivery's results:
+37/37 info, 609/609 GetPixels, 573/573 GetPixels32, 573/609 raw reads and 14/16 GPU
+samples. The 38 retained fields per profile are the 36 imported cubemap raw
+reads and two WrapW samples. Pixel controls retain 146 Gamma and 148 Linear
+differences without introductions or newly missing fields. Texture import passes
+all 502 mips and 1,732,492 bytes per profile, at tolerance zero. Resources pass
+539/539 values and 62/62 images with the authored mip bundle staged; the sprite
+probe retains its one polygon-physics difference at 519/520. RT controls retain
+their previous complete result, without new failures or missing fields.
+
+The matching normal-stub build passes 1,289/1,300 managed tests, keeping the same
+eleven failures with none introduced and zero skips. The new oversized-storage
+control passes without large allocations. Rust assets 77, runtime 50 and app 20
+tests pass; API checking has zero errors in 2,290 types and affected generated
+modules match regeneration. No new Editor captures or unrelated physics, audio
+or full rendering suites were needed. Known texture gaps and the separate
+humanoid IK integration blocker remain open.
