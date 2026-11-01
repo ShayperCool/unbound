@@ -1626,19 +1626,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public global::UnityEngine.Texture texture;
         [global::Unbound.Stub] public global::UnityEngine.Material mat;
     }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct LazyLoadReference<T> where T : global::UnityEngine.Object
-    {
-        [global::Unbound.Stub] public LazyLoadReference(T asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.ctor"); }
-        [global::Unbound.Stub] public LazyLoadReference(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.ctor"); }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.LazyLoadReference<T>(T asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.LazyLoadReference<T>(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.op_Implicit"); return default; }
-        public bool isSet { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.isSet"); return default; } }
-        public bool isBroken { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.isBroken"); return default; } }
-        public T asset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.asset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.asset"); } }
-        public int instanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.instanceID"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.instanceID"); } }
-    }
     unsafe partial class Light
     {
         [global::Unbound.Stub] public void Reset() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Light.Reset"); }
@@ -2058,10 +2045,6 @@ namespace UnityEngine
     unsafe partial class Object
     {
         [global::System.Obsolete("Object.FindSceneObjectsOfType has been deprecated, Use Object.FindObjectsByType instead which lets you decide whether you need the results sorted or not.  FindSceneObjectsOfType sorts the results by InstanceID but if you do not need this using FindObjectSortMode.None is considerably faster.")] [global::Unbound.Stub] public static global::UnityEngine.Object[] FindSceneObjectsOfType(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.FindSceneObjectsOfType"); return global::System.Array.Empty<global::UnityEngine.Object>(); }
-        [global::Unbound.Stub] internal static bool IsPersistent(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.IsPersistent"); return default; }
-        [global::Unbound.Stub] internal static bool DoesObjectWithInstanceIDExist(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.DoesObjectWithInstanceIDExist"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Object FindObjectFromInstanceID(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.FindObjectFromInstanceID"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Object ForceLoadFromInstanceID(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.ForceLoadFromInstanceID"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Object CreateMissingReferenceObject(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.CreateMissingReferenceObject"); return default; }
         [global::Unbound.Stub] internal void MarkDirty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.MarkDirty"); }
         [global::Unbound.Stub]

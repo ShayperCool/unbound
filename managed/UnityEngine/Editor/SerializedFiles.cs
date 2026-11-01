@@ -305,6 +305,11 @@ namespace Unbound.Runtime
                     case Shape.Int: case Shape.UInt: case Shape.Long: case Shape.ULong:
                         return Convert.ToString(value, CultureInfo.InvariantCulture);
                     case Shape.UnityObject: return Reference(value as Object);
+                    case Shape.LazyReference:
+                    {
+                        int id = LazyReferences.Id(value);
+                        return Reference(id == 0 ? null : ObjectRegistry.FindById(id));
+                    }
                     case Shape.Vector2: { var v = (Vector2)value; return $"{{x: {F(v.x)}, y: {F(v.y)}}}"; }
                     case Shape.Vector3: { var v = (Vector3)value; return $"{{x: {F(v.x)}, y: {F(v.y)}, z: {F(v.z)}}}"; }
                     case Shape.Vector4: { var v = (Vector4)value; return $"{{x: {F(v.x)}, y: {F(v.y)}, z: {F(v.z)}, w: {F(v.w)}}}"; }

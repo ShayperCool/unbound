@@ -28,6 +28,32 @@ namespace Unbound.Runtime
         List,
         /// <summary>A [SerializeReference] field: polymorphic, by reference id.</summary>
         ManagedReference,
+        /// <summary>A LazyLoadReference&lt;T&gt;: stored as an object reference, held as an instance id.</summary>
+        LazyReference,
+    }
+
+    /// <summary>The instance id inside a boxed LazyLoadReference&lt;T&gt;.</summary>
+    internal static class LazyReferences
+    {
+        static readonly ConcurrentDictionary<Type, FieldInfo> s_Fields = new ConcurrentDictionary<Type, FieldInfo>();
+
+        internal static bool Is(Type t) => t.IsGenericType && t.GetGenericTypeDefinition() == typeof(LazyLoadReference<>);
+
+        static FieldInfo Field(Type t) => s_Fields.GetOrAdd(t, type => type.GetField("m_InstanceID", BindingFlags.Instance | BindingFlags.NonPublic));
+
+        internal static int Id(object boxed) => boxed == null ? 0 : (int)Field(boxed.GetType()).GetValue(boxed);
+
+        internal static object Make(Type t, int id)
+        {
+            var boxed = Activator.CreateInstance(t);
+            Field(t).SetValue(boxed, id);
+            return boxed;
+        }
+
+        /// <summary>The id a serialized reference gives: 0 for none, the object's id, else an id no
+        /// object has (one per missing target), so the reference is set but broken.</summary>
+        internal static int IdOf(ObjectRef reference, Object resolved) =>
+            reference.IsNull ? 0 : resolved != null ? resolved.GetInstanceID() : ObjectRegistry.MissingId(reference.Guid + ":" + reference.FileId);
     }
 
     internal sealed class SerializedMember
@@ -157,6 +183,7 @@ namespace Unbound.Runtime
             if (t == typeof(RectOffset)) return Shape.RectOffset;
             if (t.IsArray) return t.GetArrayRank() == 1 ? Shape.Array : Shape.Unsupported;
             if (t.IsGenericType && t.GetGenericTypeDefinition() == typeof(List<>)) return Shape.List;
+            if (LazyReferences.Is(t)) return Shape.LazyReference;
             if (depth > MaxDepth) return Shape.Unsupported;
             if (IsSerializableComposite(t)) return Shape.Composite;
             return Shape.Unsupported;
@@ -329,6 +356,14 @@ namespace Unbound.Runtime
                     if (reference.IsNull) return null;
                     var obj = m_Resolver.Resolve(reference, type);
                     return obj != null && type.IsInstanceOfType(obj) ? obj : null;
+                }
+                case Shape.LazyReference:
+                {
+                    // The target's type is not checked: a reference to another type is set and
+                    // not broken, and reading its asset fails the cast (measured).
+                    var reference = node.AsRef();
+                    var obj = reference.IsNull ? null : m_Resolver.Resolve(reference, typeof(Object));
+                    return LazyReferences.Make(type, LazyReferences.IdOf(reference, obj));
                 }
                 case Shape.Vector2: return new Vector2(node.Float("x"), node.Float("y"));
                 case Shape.Vector3: return new Vector3(node.Float("x"), node.Float("y"), node.Float("z"));
@@ -513,6 +548,14 @@ namespace Unbound.Runtime
             {
                 case Shape.UnityObject:
                     return m_Remap((Object)value);
+                case Shape.LazyReference:
+                {
+                    // References into the copied hierarchy point at the copies, as object references do.
+                    int id = LazyReferences.Id(value);
+                    var target = id == 0 ? null : ObjectRegistry.FindById(id);
+                    var mapped = target != null ? m_Remap(target) : null;
+                    return LazyReferences.Make(type, mapped != null ? mapped.GetInstanceID() : id);
+                }
                 case Shape.AnimationCurve:
                     return new AnimationCurve(((AnimationCurve)value).keys) { preWrapMode = ((AnimationCurve)value).preWrapMode, postWrapMode = ((AnimationCurve)value).postWrapMode };
                 case Shape.Gradient:
