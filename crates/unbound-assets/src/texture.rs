@@ -544,7 +544,8 @@ impl Importer for TextureImporter {
     type Output = ImportedTexture;
     const KIND: &'static str = "textures";
     // 12: Texture2DArray and Texture3D shapes import their flipbook cells (were a 2D texture).
-    const VERSION: u32 = 12;
+    // 13: single-cell arrays and volumes are no longer BC7-compressed.
+    const VERSION: u32 = 13;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -573,9 +574,12 @@ impl Importer for TextureImporter {
 
 /// The mips of a 2D RGBA8 texture whose size is divisible by 4, compressed to BC7 (levels below 4
 /// pixels padded with their edge, as the GPU's 4x4 blocks need); `None` for any other texture.
+/// Arrays and volumes stay RGBA8 even with a single slice: the renderer binds them through
+/// RGBA8 array and volume views.
 pub fn compress_bc7(texture: &ImportedTexture) -> Option<Vec<serde_bytes::ByteBuf>> {
     use rayon::prelude::*;
     if texture.format != TextureFormat::Rgba8
+        || texture.settings.shape != TextureShape::Texture2D
         || texture.layers != 1
         || texture.width % 4 != 0
         || texture.height % 4 != 0

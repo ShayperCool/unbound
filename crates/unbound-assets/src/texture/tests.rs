@@ -500,6 +500,35 @@ fn a_target_that_keeps_the_pixels_is_not_block_compressed() {
     assert!(texture.bc7.is_none());
 }
 
+#[test]
+fn single_cell_arrays_and_volumes_are_not_block_compressed() {
+    // A 1x1 flipbook is one slice, which passed the single-layer check; the renderer binds
+    // arrays and volumes through RGBA8 views, which a BC7 texture cannot provide.
+    let png = png(8, 8, |x, y| [x as u8 * 30, y as u8 * 30, 7, 255]);
+    let importer = TextureImporter {
+        build_target: "Standalone".into(),
+        compress: true,
+        gamma: false,
+        normal_maps_xyz: false,
+    };
+    for shape in [4, 8] {
+        let meta = unbound_yaml::parse_value(&format!(
+            "TextureImporter:\n  textureShape: {shape}\n  flipbookColumns: 1\n  flipbookRows: 1\n  sRGBTexture: 1\n  platformSettings:\n  - buildTarget: DefaultTexturePlatform\n    textureFormat: -1\n    textureCompression: 1\n"
+        ))
+        .unwrap();
+        let texture = importer.import(Path::new("Cell.png"), &png, &meta).unwrap();
+        assert_eq!(texture.layers, 1);
+        assert!(texture.bc7.is_none(), "shape {shape}");
+    }
+    // The same image as a 2D texture is still compressed.
+    let meta = unbound_yaml::parse_value(
+        "TextureImporter:\n  textureShape: 1\n  sRGBTexture: 1\n  platformSettings:\n  - buildTarget: DefaultTexturePlatform\n    textureFormat: -1\n    textureCompression: 1\n",
+    )
+    .unwrap();
+    let texture = importer.import(Path::new("Cell.png"), &png, &meta).unwrap();
+    assert!(texture.bc7.is_some());
+}
+
 fn import_with(meta: &str, bytes: &[u8], xyz: bool) -> ImportedTexture {
     TextureImporter {
         normal_maps_xyz: xyz,
