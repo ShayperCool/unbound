@@ -177,6 +177,7 @@ struct Voice {
     start_at: u64,
     end_at: u64,
     paused: bool,
+    submitted: bool,
     volume_scale: f32,
     /// The gain matrix of the last block (ramped from).
     matrix: [f32; 4],
@@ -196,6 +197,7 @@ impl Voice {
             start_at,
             end_at: u64::MAX,
             paused: false,
+            submitted: true,
             volume_scale,
             matrix: [0.0; 4],
             fresh: true,
@@ -521,6 +523,12 @@ impl Mixer {
     /// Unity 6000.0.71f1 observes suspension on audio updates, using the rendered DSP clock.
     /// Burst renders and no-render updates in tests/projects/mixersuspend constrain both clocks.
     pub fn update_suspension(&mut self) {
+        // Public Play can wake a mixer immediately, but its routed voice is submitted by
+        // the audio update. Burst renders without updates do not submit a new voice.
+        for source in self.sources.values_mut() {
+            if let Some(voice) = &mut source.main { voice.submitted = true; }
+            for voice in &mut source.one_shots { voice.submitted = true; }
+        }
         let active = self.active_mixer_roots();
         for (handle, node) in &mut self.group_nodes {
             if node.spec.mixer != *handle { continue; }
@@ -552,8 +560,9 @@ impl Mixer {
         let now = self.frames;
         let rate = self.config.sample_rate;
         let callback = self.callback;
-        let Self { sources, clips, .. } = self;
+        let Self { sources, clips, group_nodes, .. } = self;
         let source = sources.entry(handle).or_default();
+        let routed = group_nodes.get(&source.params.group).is_some_and(|n| n.spec.mixer != 0);
         let start_frame = |time: f64| -> u64 {
             if time < 0.0 {
                 now + frame_of(-time, rate)
@@ -582,6 +591,7 @@ impl Mixer {
                     position = clip.frames as f64;
                 }
                 let mut voice = Voice::new(clip_handle, position, start_frame(cmd.time), 1.0);
+                voice.submitted = !routed;
                 if clip.stream {
                     voice.position = 0.0;
                     voice.stream = Some(StreamState::at((position as usize).min(clip.frames)));
@@ -629,6 +639,7 @@ impl Mixer {
                     0.0
                 };
                 let mut voice = Voice::new(cmd.clip, position, now, cmd.volume_scale);
+                voice.submitted = !routed;
                 if clip.stream {
                     voice.stream = Some(StreamState::default());
                 }
@@ -1202,7 +1213,7 @@ fn render_voice(
     let Some(clip) = clip else {
         return true;
     };
-    if voice.paused {
+    if voice.paused || !voice.submitted {
         return false;
     }
     if clip.frames == 0 {
@@ -1651,6 +1662,27 @@ mod tests {
                 "cutoff": 1000.0, "resonance": 1.0 }]
         }))
         .unwrap()
+    }
+
+    #[test]
+    fn routed_voice_submission_waits_for_an_audio_update_without_shifting_the_clip() {
+        let mut m = Mixer::new(MixerConfig::default());
+        let mut group = filter_group(3, 0, "Attenuation");
+        group.mixer = 3;
+        group.effects[0].gain = 1.0;
+        m.configure_group(group).unwrap();
+        m.add_clip(1, Clip::new(2, 48000, vec![0.125; 4096 * 2]));
+        source_with(&mut m, 7, 1, |p| p.group = 3);
+        play(&mut m, 7, command::PLAY, 0.0);
+        let mut output = vec![0.0; 2048];
+        for _ in 0..10 { m.render(&mut output, 2); }
+        assert!(output.iter().all(|x| *x == 0.0));
+        assert_eq!(m.source_state(7).main, voice_state::PLAYING);
+        assert_eq!(m.source_state(7).position, 0.0);
+        m.update_suspension();
+        m.render(&mut output, 2);
+        assert!(output.iter().any(|x| *x > 0.1));
+        assert_eq!(m.source_state(7).position, 1024.0);
     }
 
     #[test]
