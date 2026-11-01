@@ -107,6 +107,7 @@ public partial class FlareProbe
         yield return Matrix();
         yield return HaloOrder();
         yield return HaloTexture();
+        yield return HaloBuffers();
     }
 
     IEnumerator Halos()
@@ -428,6 +429,35 @@ public partial class FlareProbe
         point.SetActive(true);
         yield return Shot("t.point");
         point.SetActive(false);
+        Flush();
+    }
+
+    /// <summary>A scene halo with one command buffer that does not clear: empty at
+    /// BeforeForwardOpaque, empty at AfterForwardAlpha, setting an unused global float at
+    /// BeforeImageEffects; then without buffers again.</summary>
+    IEnumerator HaloBuffers()
+    {
+        var white = SceneObject("HaloWhite");
+        white.SetActive(true);
+        yield return Shot("hb.scene");
+        var cases = new (string, CameraEvent, bool)[]
+        {
+            ("empty", CameraEvent.BeforeForwardOpaque, false),
+            ("empty", CameraEvent.AfterForwardAlpha, false),
+            ("setFloat", CameraEvent.BeforeImageEffects, true),
+        };
+        foreach (var (kind, e, setFloat) in cases)
+        {
+            var cb = new CommandBuffer { name = "probe " + kind + " " + e };
+            if (setFloat) cb.SetGlobalFloat("_FlareProbeUnused", 1f);
+            cam.AddCommandBuffer(e, cb);
+            Value("hb." + kind + "." + e + ".commandBufferCount", cam.commandBufferCount.ToString());
+            yield return Shot("hb." + kind + "." + e);
+            cam.RemoveCommandBuffer(e, cb);
+            cb.Release();
+        }
+        yield return Shot("hb.sceneAfterBuffers");
+        white.SetActive(false);
         Flush();
     }
 
