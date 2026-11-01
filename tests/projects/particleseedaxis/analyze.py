@@ -70,6 +70,7 @@ MODELS = {
 def analyze(path):
     rows = [json.loads(line) for line in path.read_text().splitlines()]
     observations, missing = [], []
+    histories = {}
     for row in rows:
         if row['step'] == 0:
             continue
@@ -80,19 +81,38 @@ def analyze(path):
         p = row['particles'][slot]
         manual = row['kind'] == 'manual'
         parent = row['supplied']['seed'] if manual else row['childSeed']
+        histories[(row['scenario'], slot)] = (parent, row['childSeed'], row['step'], manual)
         observations.append(dict(scenario=row['scenario'], step=row['step'],
                                  parent_seed=parent if manual else None, child_seed=row['childSeed'],
                                  flags=row['flags'], seed=p['seed'], axis=p['axis'],
                                  predictions={name: model(parent, row['childSeed'], row['step'], manual)
                                               for name, model in MODELS.items()}))
+    # Predict every stored seed in every snapshot too, without substituting observations
+    # into predictions for old particles. Their original input/call position is retained.
+    snapshots = []
+    for row in rows:
+        for slot, particle in enumerate(row['particles']):
+            inputs = histories.get((row['scenario'], slot))
+            if inputs is None:
+                missing.append(dict(scenario=row['scenario'], step=row['step'], slot=slot,
+                                    reason='No emitting call supplies this slot', particle=particle))
+                continue
+            snapshots.append(dict(scenario=row['scenario'], step=row['step'], slot=slot,
+                                  seed=particle['seed'], predictions={name: model(*inputs)
+                                      for name, model in MODELS.items()}))
     models = {}
     for name in MODELS:
         failures = [dict(scenario=o['scenario'], step=o['step'], expected=o['seed'],
                          predicted=o['predictions'][name]) for o in observations
                     if o['seed'] != o['predictions'][name]]
+        snapshot_failures = [dict(scenario=o['scenario'], step=o['step'], slot=o['slot'],
+                                 expected=o['seed'], predicted=o['predictions'][name])
+                             for o in snapshots if o['seed'] != o['predictions'][name]]
         models[name] = dict(tested=len(observations), passing=len(observations)-len(failures),
                             failing=len(failures), failures=failures,
-                            predicts_all=len(observations) == 30 and not missing and not failures)
+                            snapshot_tested=len(snapshots), snapshot_failures=snapshot_failures,
+                            predicts_all=len(observations) == 30 and len(snapshots) == 60
+                            and not missing and not failures and not snapshot_failures)
     sources = [REPO/'managed/UnityEngine/Particles/MinMaxCurve.cs',
                REPO/'managed/UnityEngine/Particles/ParticleSystem.cs',
                REPO/'managed/UnityEngine/Particles/ParticleSystem.Simulation.cs',
@@ -100,7 +120,7 @@ def analyze(path):
     return dict(capture_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
                 source_sha256={str(p.relative_to(REPO)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sources},
                 ordinary_parent_convention='No parent exists; parent-input hypotheses use child seed for Emit.',
-                missing=missing, observations=observations, models=models)
+                missing=missing, observations=observations, snapshots=snapshots, models=models)
 
 
 def main():
@@ -114,7 +134,8 @@ def main():
     result = analyze(source)
     a.output.parent.mkdir(parents=True, exist_ok=True)
     a.output.write_text(json.dumps(result, indent=2)+'\n')
-    print({name: {k: v for k, v in m.items() if k != 'failures'} for name, m in result['models'].items()})
+    print({name: {k: v for k, v in m.items() if k not in ('failures', 'snapshot_failures')}
+           for name, m in result['models'].items()})
     # Analysis completion is separate from model acceptance. All mismatches remain explicit.
 
 
