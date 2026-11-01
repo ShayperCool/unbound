@@ -134,3 +134,27 @@ samples. Speed and flip derive private samples from the stored particle seed.
 EmitParams consumes only unset fields, across the batch in rotation, size, color,
 seed and lifetime order. It uses the same four private lanes and leaves the
 script-global Random state untouched.
+
+### Initialization storage controls
+
+`ParticleInitializationTests` also checks reusable playback snapshots before and
+between births, all four randomized lanes, supplied axes through the obsolete
+single-particle overload, and bounded storage for ten million and `int.MaxValue`
+requested births with capacity one. Capacity truncation keeps the initializer's
+existing full-request draw advancement. These are managed regression controls;
+they do not establish Native capacity semantics or ring-buffer admission parity.
+
+The broad particle comparator omits randomized geometry. The focused runner below
+replays all six scenarios whose geometry that comparator omits, using their
+original setup, stepping, release reference and numeric/color thresholds. Its
+report retains every missing, extra and failing value plus every raw changed
+field. Numeric raw deltas include error increases even when both values pass.
+
+```sh
+python3 tests/projects/particleseedaxis/randomized.py prepare --unity-version 6000.0.71f1 --work "$RUN/randomized"
+python3 tests/projects/particleseedaxis/randomized.py engine --unity-version 6000.0.71f1 --work "$RUN/randomized" --cli "$CLI" --runtime "$MANAGED"
+python3 tests/projects/particleseedaxis/randomized.py verify --unity-version 6000.0.71f1 --work "$RUN/randomized" --baseline "$BEFORE_CAPTURE"
+```
+
+A red randomized gate blocks delivery even if the seed/axis gate has no introduced
+values. Do not run the broader affected suites until that blocker is closed.
