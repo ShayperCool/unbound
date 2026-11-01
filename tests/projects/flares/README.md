@@ -19,9 +19,11 @@ the scene file: there is no scripting API for it).
   colored Halo; a point light's halo by range, intensity, strength, color, disabled; spot and
   directional lights; the scene halo texture. `start.haloFalloff`, `h.falloff`, `t.haloFalloff*`
   read the global `_HaloFalloff` texture back.
-* **Order** (`o.*`, `ho.*`): a command buffer clearing the target at AfterForwardAlpha,
+* **Order** (`o.*`, `ho.*`, `hb.*`): a command buffer clearing the target at AfterForwardAlpha,
   BeforeHaloAndLensFlares and AfterHaloAndLensFlares, with a halo and a flare, then with a halo
-  alone; a halo with a flare; a Halo added by script (its defaults), also reactivated.
+  alone; a halo with a flare; a Halo added by script (its defaults), also reactivated; a halo
+  (in `HaloTexture.unity`) with a buffer that does not clear: empty at BeforeForwardOpaque and
+  at AfterForwardAlpha, setting an unused global float at BeforeImageEffects.
 * **Flare geometry** (`f.S*`, `f.P*`, `f.Rot*`, `f.L*`): sizes, fields of view, target aspect,
   orthographic, depth, rolled camera, positions along the line, rotation, layouts.
 * **Flare settings** (`f.*`, `q.*`): element switches while fading in, LensFlare color and
@@ -36,7 +38,8 @@ the scene file: there is no scripting API for it).
 ```
 python3 tests/projects/flares/run.py create --release 6000.0.71f1 --label <fresh-label>   # assets (already in Git)
 python3 tests/projects/flares/run.py editor --release 6000.0.71f1 --label <fresh-label>
-python3 tests/projects/flares/run.py publish --release 6000.0.71f1 --label <fresh-label>
+python3 tests/projects/flares/run.py publish --release 6000.0.71f1 --label <fresh-label>   # a new release
+python3 tests/projects/flares/run.py extend --release 6000.0.71f1 --label <fresh-label>    # new cases
 UNBOUND_CLI=/path/to/unbound python3 tests/projects/flares/run.py unbound --release 6000.0.71f1 --label <fresh-label>
 python3 tests/projects/flares/compare.py tests/projects/flares/Reference/unity-6000.0.71f1 \
     ~/.cache/unbound/validation/runs/flares/<label>/unbound --report <cache>/report.json
@@ -49,8 +52,9 @@ byte-identical complete captures and refuses to overwrite a reference. The compa
 whole key union and image manifest with the float tolerance of the render texture probes
 (absolute and relative 2e-4).
 
-`Reference/unity-6000.0.71f1/` holds the values and 212 images of two byte-identical captures
-(OpenGLCore, RTX 4060).
+`Reference/unity-6000.0.71f1/` holds the values and 217 images of two byte-identical captures
+(OpenGLCore, RTX 4060); the `hb.*` cases were appended later from two more byte-identical
+captures that reproduced every earlier value and image (`run.py extend`).
 
 ## What the Editor does (6000.0.71f1, Linux, OpenGL Core, Linear)
 
@@ -66,7 +70,9 @@ whole key union and image manifest with the float tolerance of the render textur
   again. A Halo component's color is its own; a light halo's is the light's color times its
   intensity times the sRGB encoding of haloStrength.
 * Halos and flares draw between BeforeHaloAndLensFlares and AfterHaloAndLensFlares, halos
-  first. A camera with any command buffer draws no halos (its flares it does). A Halo added by
+  first. A camera buffer clearing the color at AfterForwardAlpha or BeforeHaloAndLensFlares
+  hides the halos (the flares still draw over the clear); empty buffers (BeforeForwardOpaque,
+  AfterForwardAlpha) and a buffer setting a global float (BeforeImageEffects) leave them. A Halo added by
   script draws nothing until it is given a size and color (it has no scripting API).
 * Lens flares need an enabled FlareLayer. An element is a quad at `position` along the line from
   the flare's point on screen through the screen center, half `size * 0.0100354` of the
