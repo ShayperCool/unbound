@@ -723,17 +723,18 @@ namespace Unbound.Runtime
         /// <summary>A renderer's built-in forward passes: all of them at once, or one by one
         /// leaving out the LightModes its material disables.</summary>
         static void EmitForward(in DrawItem item, ulong material, bool lightmaps = true, bool probes = true,
-            Dictionary<int, object> extra = null, string extraKeyword = null, string extraKeyword2 = null)
+            Dictionary<int, object> extra = null, string extraKeyword = null, string extraKeyword2 = null,
+            RenderDispatchContext dispatch = RenderDispatchContext.Unknown)
         {
             var info = item.Material.HasDisabledPasses ? ShaderPassInfo.Of(item.Material.shader) : null;
             if (info == null)
             {
-                EmitDraw(item, material, GfxStream.ForwardPasses, lightmaps, probes, extra, extraKeyword, extraKeyword2);
+                EmitDraw(item, material, GfxStream.ForwardPasses, lightmaps, probes, extra, extraKeyword, extraKeyword2, dispatch: dispatch);
                 return;
             }
             foreach (var p in info.ForwardPasses)
                 if (!item.Material.PassDisabled(info.BuiltinLightMode(p)))
-                    EmitDraw(item, material, p, lightmaps, probes, extra, extraKeyword, extraKeyword2);
+                    EmitDraw(item, material, p, lightmaps, probes, extra, extraKeyword, extraKeyword2, dispatch: dispatch);
         }
 
         /// <summary>Renderers drawn as meshes are: lit by the forward lights, with baked lighting and
@@ -745,7 +746,8 @@ namespace Unbound.Runtime
         /// <summary>A draw, with what the baked lighting gives its renderer (lightmap or light
         /// probes, <see cref="BakedLighting.Apply"/>): its keywords are on for the draw alone.</summary>
         static void EmitDraw(in DrawItem item, ulong material, int pass, bool lightmaps = true, bool probes = true,
-            Dictionary<int, object> extra = null, string extraKeyword = null, string extraKeyword2 = null, string extraKeyword3 = null)
+            Dictionary<int, object> extra = null, string extraKeyword = null, string extraKeyword2 = null, string extraKeyword3 = null,
+            RenderDispatchContext dispatch = RenderDispatchContext.Unknown)
         {
             Describe(item);
             s_DrawCount++;
@@ -775,7 +777,7 @@ namespace Unbound.Runtime
             foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, true);
             var masked = item.Masked ?? item.Renderer;
             bool masking = masked != null && masked.MaskInteraction != SpriteMaskInteraction.None;
-            var previousState = masking ? SpriteMasking.Before(item, masked) : null;
+            var previousState = masking ? SpriteMasking.Before(item, masked, dispatch) : null;
             if (item.Setup is DrawSetup setup) GfxStream.DrawSetup(setup);
             bool restoreCanvasClip = item.CanvasDraw && Shader.s_GlobalKeywords.Contains("UNITY_UI_CLIP_RECT");
             if (restoreCanvasClip) GfxStream.Keyword("UNITY_UI_CLIP_RECT", false);
@@ -1101,7 +1103,8 @@ namespace Unbound.Runtime
                 if (!deferred || forwardOpaque < transparent)
                 {
                     RunEvent(camera, CameraEvent.BeforeForwardOpaque, sceneTarget);
-                    EmitItems(forwardOpaque, transparent);
+                    EmitItems(forwardOpaque, transparent, !deferred && !vertexLit
+                        ? RenderDispatchContext.BuiltinForwardOpaque : RenderDispatchContext.Unknown);
                     RunEvent(camera, CameraEvent.AfterForwardOpaque, sceneTarget);
                 }
                 // The sky's events come with the sky alone (measured: none with a solid color or
@@ -1440,7 +1443,7 @@ namespace Unbound.Runtime
         /// <summary><see cref="s_Items"/>[from..to] as draws (sorted). A lit renderer's draw is its
         /// base passes (with its vertex and SH lights), then its ForwardAdd pass once per pixel
         /// light (<see cref="ForwardLights"/>).</summary>
-        static void EmitItems(int from, int to)
+        static void EmitItems(int from, int to, RenderDispatchContext dispatch = RenderDispatchContext.Unknown)
         {
             // Materials upload their changes first: an upload hands over what was recorded before it.
             if (s_MaterialHandles.Length < s_Items.Count) Array.Resize(ref s_MaterialHandles, Math.Max(s_Items.Count, s_MaterialHandles.Length * 2));
@@ -1461,7 +1464,7 @@ namespace Unbound.Runtime
                 string shadowKeyword = s_ScreenShadows && !otherBase && meshLike && ReceivesShadows(item) ? "SHADOWS_SCREEN" : null;
                 if (!lit)
                 {
-                    EmitForward(item, s_MaterialHandles[i], true, true, null, shadowKeyword);
+                    EmitForward(item, s_MaterialHandles[i], true, true, null, shadowKeyword, dispatch: dispatch);
                     continue;
                 }
                 var bounds = BoundsOf(item);
@@ -1469,7 +1472,7 @@ namespace Unbound.Runtime
                 {
                     var vertexLit = new Dictionary<int, object>();
                     ForwardLights.VertexLitProperties(bounds, layer, s_CameraView, vertexLit);
-                    EmitForward(item, s_MaterialHandles[i], true, true, vertexLit);
+                    EmitForward(item, s_MaterialHandles[i], true, true, vertexLit, dispatch: dispatch);
                     continue;
                 }
                 var baseLight = otherBase ? ForwardLights.BaseLightFor(layer) : main;
@@ -1510,7 +1513,7 @@ namespace Unbound.Runtime
                     extra[Shader.PropertyToID("unity_SHBb")] = bb;
                     extra[Shader.PropertyToID("unity_SHC")] = c;
                 }
-                EmitForward(item, s_MaterialHandles[i], true, true, extra, keyword, shadowKeyword);
+                EmitForward(item, s_MaterialHandles[i], true, true, extra, keyword, shadowKeyword, dispatch);
                 if (s_ObjectLights.Pixel.Count == 0) continue;
                 int addPass = ForwardAddPass(item.Material.shader);
                 if (addPass < 0 || item.Material.PassDisabled("ForwardAdd")) continue;
@@ -1520,7 +1523,7 @@ namespace Unbound.Runtime
                     var properties = new Dictionary<int, object>();
                     string lightKeyword = ForwardLights.AddPassProperties(light, properties);
                     AddPassShadow(light, receives, properties, out var shadowDepth, out var shadowSoft);
-                    EmitDraw(item, s_MaterialHandles[i], addPass, false, false, properties, lightKeyword, shadowDepth, shadowSoft);
+                    EmitDraw(item, s_MaterialHandles[i], addPass, false, false, properties, lightKeyword, shadowDepth, shadowSoft, dispatch);
                 }
             }
         }

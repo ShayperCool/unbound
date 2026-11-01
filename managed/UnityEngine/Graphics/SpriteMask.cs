@@ -187,6 +187,14 @@ namespace Unbound.Runtime
 {
     using UnityEngine;
 
+    /// <summary>The dispatch stage proven by the emitting call site, never ambient camera state.
+    /// Untagged draws keep the existing mask behavior.</summary>
+    internal enum RenderDispatchContext
+    {
+        Unknown,
+        BuiltinForwardOpaque,
+    }
+
     /// <summary>
     /// Sprite masks as Unity draws them (measured: tests/projects/resources mask_*): a mask writes the
     /// stencil over the stretch of the draw order its range covers, within its sorting group (none:
@@ -305,7 +313,8 @@ namespace Unbound.Runtime
         /// <summary>Before a draw of a renderer with a mask interaction: brings the stencil to the
         /// masks covering it and sets the stencil test (over the current state override) to draw it
         /// with; returns the override to put back after.</summary>
-        internal static RenderStateBlock? Before(in FrameBuilder.DrawItem item, Renderer renderer)
+        internal static RenderStateBlock? Before(in FrameBuilder.DrawItem item, Renderer renderer,
+            RenderDispatchContext dispatch = RenderDispatchContext.Unknown)
         {
             var interaction = renderer.MaskInteraction;
             s_Wanted.Clear();
@@ -324,6 +333,14 @@ namespace Unbound.Runtime
             foreach (var mask in s_Wanted)
             {
                 if (current.Contains(mask)) continue;
+                // Only exclude NEW writes. A later-queue mask already in this target's stencil
+                // (for example from an explicit draw) still follows the range/group reconciliation
+                // above. Filtering s_Wanted would wrongly decrement that existing contribution.
+                if (dispatch == RenderDispatchContext.BuiltinForwardOpaque)
+                {
+                    var material = mask.sharedMaterial != null ? mask.sharedMaterial : BuiltinObjects.SpritesMask;
+                    if (material != null && material.renderQueue > (int)RenderQueue.GeometryLast) continue;
+                }
                 DrawMask(mask, StencilOp.IncrementSaturate);
                 current.Add(mask);
             }
