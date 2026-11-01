@@ -236,6 +236,7 @@ namespace UnityEngine
         {
             get
             {
+                EnsureHumanCurves();
                 foreach (var c in m_Curves)
                 {
                     var b = c.Binding;
