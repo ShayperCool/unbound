@@ -157,6 +157,9 @@ enum Planned {
     Draw(PlannedDraw),
     /// A `GrabPass`: the target copied into the texture, which the passes after it read.
     Grab(Copy),
+    /// A texture's values converted for the pass after it (integer bits), after any grab
+    /// before that pass.
+    Convert(DepthCopy),
 }
 
 enum PassItem {
@@ -1860,10 +1863,6 @@ impl UnityRenderer {
                             copied.push(texture);
                         }
                     }
-                    for copy in std::mem::take(&mut self.pre_draw) {
-                        open = false;
-                        passes.push(Op::DepthCopy(copy));
-                    }
                     if let Some((instances, args, offset, indexed)) = self.state.draw_setup.take() {
                         let buffer = (args != 0)
                             .then(|| self.buffers.get(&args).map(|b| b.buffer.clone()))
@@ -1897,6 +1896,10 @@ impl UnityRenderer {
                             Planned::Grab(copy) => {
                                 open = false;
                                 passes.push(Op::Copy(copy));
+                            }
+                            Planned::Convert(copy) => {
+                                open = false;
+                                passes.push(Op::DepthCopy(copy));
                             }
                         }
                     }
@@ -2261,8 +2264,13 @@ impl UnityRenderer {
                 &globals,
                 &draw.properties,
             ) else {
+                self.pre_draw.clear();
                 continue;
             };
+            // The conversions this pass reads run right before it, after the grabs before it.
+            for copy in std::mem::take(&mut self.pre_draw) {
+                planned.push(Planned::Convert(copy));
+            }
             let buffers_bg =
                 self.buffer_bind_group(id, &resolved.shader, overrides, material_props, &globals);
             let textures = &self.textures;
