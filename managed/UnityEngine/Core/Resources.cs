@@ -79,8 +79,12 @@ namespace UnityEngine
 
         public static T GetBuiltinResource<T>(string path) where T : Object => (T)GetBuiltinResource(typeof(T), path);
 
-        public static void UnloadAsset(Object assetToUnload) =>
+        public static void UnloadAsset(Object assetToUnload)
+        {
+            // A custom render texture stops updating (its unload event fires) and frees its GPU data.
+            if (assetToUnload is CustomRenderTexture crt) { crt.UnloadAsset(); return; }
             Unbound.Runtime.Stubs.Ignored("Resources.UnloadAsset", "does not unload the asset's data yet");
+        }
 
         public static AsyncOperation UnloadUnusedAssets()
         {
