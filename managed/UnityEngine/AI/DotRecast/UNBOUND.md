@@ -54,5 +54,7 @@ Altered (marked `Unbound:` in the sources):
   with a corner exactly at it; in the update an agent leaves a link onto a path ending in the
   polygon it lands in, it reports no path (`NavMeshAgent.hasPath`);
 - edges count for avoidance up to the next corner, but only those before it when the corner is
-  the path's end or a link's start (an edge the agent touches beyond them neither); a braking
-  agent takes its plan at once.
+  the path's end or a link's start (an edge the agent touches beyond them neither), in the first
+  plan towards a link's start those before the path's end; a braking agent takes its plan at
+  once; the corridor is shortened to what is visible ahead each update (Detour's
+  `DT_CROWD_OPTIMIZE_VIS`).

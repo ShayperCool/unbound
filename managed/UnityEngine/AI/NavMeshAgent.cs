@@ -754,6 +754,11 @@ namespace Unbound.Runtime
                 flags |= DtCrowdAgentUpdateFlags.DT_CROWD_OBSTACLE_AVOIDANCE | DtCrowdAgentUpdateFlags.DT_CROWD_SEPARATION
                     | DtCrowdAgentUpdateFlags.UNBOUND_AVOID_EDGES;
             if (!agent.autoBraking) flags |= DtCrowdAgentUpdateFlags.UNBOUND_NO_BRAKING;
+            // The corridor shortcuts to the corner after next where it is visible (Detour's
+            // optimizePathVisibility; measured: an agent crossing tile borders diagonally steers
+            // straight for its destination, not by corners on the borders,
+            // tests/projects/avoidance).
+            flags |= DtCrowdAgentUpdateFlags.DT_CROWD_OPTIMIZE_VIS;
             return new DtCrowdAgentParams
             {
                 radius = agent.radius,
