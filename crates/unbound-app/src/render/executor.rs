@@ -22,8 +22,9 @@ use std::{
 };
 use unbound_runtime::render_protocol::{
     commands::{self, Command},
-    owned,
+    handle, owned,
 };
+use unbound_shaders::SampleKind;
 
 /// Resource changes, applied in order with the commands.
 #[derive(Debug)]
@@ -51,8 +52,8 @@ struct DrawUniform {
 }
 
 /// A compiled program's texture bind group and what it was built from (program, color space,
-/// texture generations).
-type ProgramTextures = (wgpu::BindGroup, (u32, i32, Vec<u64>));
+/// per slot the handle as bound, element bits included, and its texture's generation).
+type ProgramTextures = (wgpu::BindGroup, (u32, i32, Vec<(u64, u64)>));
 
 struct GpuMaterial {
     /// Shared: each draw holds it while it is planned (a copy per draw cost more than drawing).
@@ -175,10 +176,32 @@ struct Copy {
     size: wgpu::Extent3d,
 }
 
-/// A depth-only render target's depth copied into its float color copy (what sampling it reads).
+/// A texture copied texel for texel into another of its size by a draw: a render target's depth
+/// into its float color copy (what sampling it reads), or a float texture's values as integer
+/// bits (what an integer slot reads of it).
 struct DepthCopy {
     depth: wgpu::TextureView,
     target: wgpu::TextureView,
+    kind: CopyKind,
+}
+
+/// What a [`DepthCopy`] reads and writes.
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum CopyKind {
+    /// A depth buffer into floats.
+    Depth,
+    /// A multisampled depth buffer's sample [`DEPTH_MSAA_SAMPLE`] into floats.
+    DepthMultisampled,
+    /// Floats as unsigned integer bits.
+    UintBits,
+    /// Floats as signed integer bits.
+    SintBits,
+}
+
+impl CopyKind {
+    fn index(self) -> usize {
+        self as usize
+    }
 }
 
 /// The work of a submission, in order.
@@ -242,11 +265,23 @@ pub struct UnityRenderer {
     error_program: Option<unbound_shaders::Program>,
     /// Far-plane depth textures (2D, cube) that unbound depth slots read.
     depth_default: [Option<wgpu::TextureView>; 2],
-    /// The depth-only render target being drawn into, whose depth is copied for sampling when
-    /// drawing moves on.
+    /// The render target with a depth copy being drawn into (a depth-only one, or one whose depth
+    /// element draws sample), whose depth is copied for sampling when drawing moves on.
     depth_target: Option<u64>,
-    /// The pipeline (and its layout) that copies a depth buffer into a float color texture.
-    depth_copy_pipeline: Option<(wgpu::RenderPipeline, wgpu::BindGroupLayout)>,
+    /// The pipelines (and their layouts) that copy a depth buffer into a float color texture:
+    /// single-sample and multisampled.
+    depth_copy_pipelines: [Option<(wgpu::RenderPipeline, wgpu::BindGroupLayout)>; 4],
+    /// Integer copies of float textures that integer slots read, by texture and signedness.
+    bit_views: HashMap<(u64, bool), (u32, u32, wgpu::TextureView)>,
+    /// Copies the draw being planned needs before it (integer copies of its textures).
+    pre_draw: Vec<DepthCopy>,
+    /// Render targets whose depth element the draw being planned samples, and whether their depth
+    /// copy must be brought up to date before it (made just now, or the current target's).
+    depth_reads: Vec<(u64, bool)>,
+    /// The current target's color and depth handles (`SetTarget`).
+    target_handles: (u64, u64),
+    /// Integer-texel slots' defaults (zeros): signed, unsigned.
+    integer_defaults: [Option<wgpu::TextureView>; 2],
     samplers: HashMap<SamplerKey, wgpu::Sampler>,
     materials: HashMap<u64, GpuMaterial>,
     buffers: HashMap<u64, compute::GpuBuffer>,
@@ -316,7 +351,12 @@ impl UnityRenderer {
             error_program: None,
             depth_default: [None, None],
             depth_target: None,
-            depth_copy_pipeline: None,
+            depth_copy_pipelines: [None, None, None, None],
+            bit_views: HashMap::default(),
+            pre_draw: Vec::new(),
+            depth_reads: Vec::new(),
+            target_handles: (0, 0),
+            integer_defaults: [None, None],
             samplers: HashMap::default(),
             materials: HashMap::default(),
             buffers: HashMap::default(),
@@ -782,14 +822,106 @@ impl UnityRenderer {
                 .collect()
         };
         let is_2d = |dim: unbound_shaders::TextureDim| dim == unbound_shaders::TextureDim::D2;
-        let generations: Vec<u64> = slots
+        // A handle may name the texture's depth element (render protocol 6): its view comes from
+        // the depth copy, brought up to date for this draw even when the bind group is cached.
+        let raw: Vec<u64> = slots.iter().map(|(h, ..)| *h).collect();
+        let mut element_views: Vec<Option<wgpu::TextureView>> = Vec::with_capacity(slots.len());
+        for (k, (h, _, dim, slot)) in slots.iter().enumerate() {
+            let (base, depth) = handle::split(*h);
+            element_views.push(if !depth {
+                None
+            } else if slot.sample == SampleKind::Float && is_2d(*dim) {
+                self.depth_element_view(base)
+            } else if slot.depth() && is_2d(*dim) {
+                None
+            } else {
+                let name = program.textures[k].clone();
+                self.warn_once(format!("depth-element-slot{id}{name}"), || {
+                    format!("texture `{name}` samples a render texture's depth element, which its slot ({:?}, {dim:?}) cannot read; the slot reads its default", slot.sample)
+                });
+                None
+            });
+        }
+        let slots: Vec<_> = slots
+            .into_iter()
+            .map(|(h, d, dim, slot)| (handle::split(h).0, d, dim, slot))
+            .collect();
+        // Integer slots read a float texture's values as their bits, within its size, and zeros
+        // where nothing is bound (as Unity does on OpenGL Core: tests/projects/rtdepth
+        // fmt.*.stencil.uint, fmt.*.globalStencil.uint). The bits are copied before every draw.
+        let mut integer_views: Vec<Option<wgpu::TextureView>> = Vec::with_capacity(slots.len());
+        for (k, (h, _, dim, slot)) in slots.iter().enumerate() {
+            if !slot.integer() {
+                integer_views.push(None);
+                continue;
+            }
+            let name = &program.textures[k];
+            let Some(t) = self.textures.get(h) else {
+                integer_views.push(None);
+                continue;
+            };
+            if !is_2d(*dim) || handle::split(raw[k]).1 || t.layers > 1 || t.volume {
+                let name = name.clone();
+                let h = *h;
+                self.warn_once(format!("integer-slot{id}{name}{h}"), || {
+                    format!("integer texture `{name}` ({dim:?}) of a shader is bound to texture {h}, whose shape or element it cannot read: the draw is skipped")
+                });
+                return None;
+            }
+            let (width, height, source) = (t.width, t.height, t.view_for(space).clone());
+            let signed = slot.sample == SampleKind::Sint;
+            let fits = self
+                .bit_views
+                .get(&(*h, signed))
+                .is_some_and(|(w, hh, _)| *w == width && *hh == height);
+            if !fits {
+                let view = self
+                    .device
+                    .create_texture(&wgpu::TextureDescriptor {
+                        label: Some("unbound integer bits"),
+                        size: wgpu::Extent3d {
+                            width,
+                            height,
+                            depth_or_array_layers: 1,
+                        },
+                        mip_level_count: 1,
+                        sample_count: 1,
+                        dimension: wgpu::TextureDimension::D2,
+                        format: if signed {
+                            wgpu::TextureFormat::Rgba32Sint
+                        } else {
+                            wgpu::TextureFormat::Rgba32Uint
+                        },
+                        usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                            | wgpu::TextureUsages::TEXTURE_BINDING,
+                        view_formats: &[],
+                    })
+                    .create_view(&wgpu::TextureViewDescriptor::default());
+                self.bit_views.insert((*h, signed), (width, height, view));
+            }
+            let target = self.bit_views[&(*h, signed)].2.clone();
+            self.pre_draw.push(DepthCopy {
+                depth: source,
+                target: target.clone(),
+                kind: if signed {
+                    CopyKind::SintBits
+                } else {
+                    CopyKind::UintBits
+                },
+            });
+            integer_views.push(Some(target));
+        }
+        let generations: Vec<(u64, u64)> = slots
             .iter()
-            .map(|(h, d, dim, _)| {
-                if is_2d(*dim) {
+            .zip(&raw)
+            .map(|((h, d, dim, _), raw)| {
+                let generation = if is_2d(*dim) {
                     self.texture_or_default(*h, d).generation
                 } else {
                     self.textures.get(h).map_or(0, |t| t.generation)
-                }
+                };
+                // The color and the depth element of one texture are different bindings.
+                (*raw, generation)
             })
             .collect();
         let stamp = (id, space, generations);
@@ -801,7 +933,8 @@ impl UnityRenderer {
         }
         let mut views = Vec::new();
         let mut samplers = Vec::new();
-        for (h, d, dim, slot) in &slots {
+        for (k, (h, d, dim, slot)) in slots.iter().enumerate() {
+            let depth_element = handle::split(raw[k]).1;
             // A sampler is the texture's, or the state its name spells; comparison samplers
             // compare less-or-equal (Unity's shadow maps, without reversed depth).
             let mut key = match slot.inline {
@@ -840,7 +973,32 @@ impl UnityRenderer {
                 key.lod_bias_bits = self.sampler_lod_bias(*h, key, is_2d(*dim) && !slot.comparison);
             }
 
-            if slot.depth {
+            if slot.integer() {
+                // Integers are read unfiltered.
+                samplers.push(self.sampler(resources::SamplerKey {
+                    filter: 0,
+                    wrap_u: 1,
+                    wrap_v: 1,
+                    aniso: 1,
+                    compare: 0,
+                    lod_bias_bits: 0,
+                }));
+                let view = match integer_views[k].take() {
+                    Some(view) => view,
+                    None => self.integer_default(slot.sample == SampleKind::Sint),
+                };
+                views.push(view);
+            } else if let Some(view) = element_views[k].take() {
+                samplers.push(self.sampler(key));
+                views.push(view);
+            } else if depth_element && !slot.depth() {
+                // A depth element the slot or the texture cannot provide: the slot's default.
+                samplers.push(self.sampler(key));
+                views.push(match is_2d(*dim) {
+                    true => self.texture_or_default(0, d).view_for(space).clone(),
+                    false => self.dim_default(*dim, d),
+                });
+            } else if slot.depth() {
                 samplers.push(self.sampler(key));
                 // The texture's depth when its shape is the slot's, else a far-plane default.
                 let cube_slot = *dim == unbound_shaders::TextureDim::Cube;
@@ -908,7 +1066,7 @@ impl UnityRenderer {
         Some(bg)
     }
 
-    /// Queues the copy of the depth-only target's depth into its color copy, when passes since
+    /// Queues the copy of the depth target's depth into its color copy, when passes since
     /// `mark` drew into it.
     fn copy_depth(&mut self, passes: &mut Vec<Op>, mark: usize) {
         let Some(handle) = self.depth_target else {
@@ -917,25 +1075,146 @@ impl UnityRenderer {
         if passes.len() <= mark {
             return;
         }
-        if let Some(t) = self.textures.get(&handle)
-            && let (Some(depth), Some(target)) = (&t.depth_sample, &t.depth_copy)
-        {
-            passes.push(Op::DepthCopy(DepthCopy {
-                depth: depth.clone(),
-                target: target.clone(),
-            }));
+        if let Some(copy) = self.depth_copy_op(handle) {
+            passes.push(Op::DepthCopy(copy));
         }
     }
 
+    /// The copy of a render target's depth into its float color copy.
+    fn depth_copy_op(&self, handle: u64) -> Option<DepthCopy> {
+        let t = self.textures.get(&handle)?;
+        let target = t.depth_copy.clone()?;
+        match (&t.depth_sample, &t.depth_msaa) {
+            (Some(depth), _) => Some(DepthCopy {
+                depth: depth.clone(),
+                target,
+                kind: CopyKind::Depth,
+            }),
+            (None, Some(depth)) => Some(DepthCopy {
+                depth: depth.clone(),
+                target,
+                kind: CopyKind::DepthMultisampled,
+            }),
+            _ => None,
+        }
+    }
+
+    /// A render target's depth element for a float slot: its depth copy, made the first time
+    /// (then brought up to date before the draw that samples it), and kept up to date after the
+    /// passes that draw into it. None (with an error) for a texture without a depth buffer.
+    fn depth_element_view(&mut self, handle: u64) -> Option<wgpu::TextureView> {
+        let Some(t) = self.textures.get(&handle) else {
+            self.warn_once(format!("depth-element-missing{handle}"), || {
+                format!("a draw samples the depth of texture {handle}, which does not exist; the slot reads its default")
+            });
+            return None;
+        };
+        if t.depth_sample.is_none() && t.depth_msaa.is_none() {
+            self.warn_once(format!("depth-element-none{handle}"), || {
+                format!("a draw samples the depth of texture {handle}, which has no depth buffer; the slot reads its default")
+            });
+            return None;
+        }
+        if t.layers > 1 || t.volume {
+            self.warn_once(format!("depth-element-layers{handle}"), || {
+                format!("a draw samples the depth of layered render texture {handle}, which is not supported; the slot reads its default")
+            });
+            return None;
+        }
+        let current = {
+            let (color, depth) = self.target_handles;
+            depth == handle || (color == handle && depth == 0)
+        };
+        if let Some(view) = &t.depth_copy {
+            let view = view.clone();
+            self.depth_reads.push((handle, current));
+            return Some(view);
+        }
+        let (width, height) = (t.width, t.height);
+        let view = resources::depth_copy_view(&self.device, width, height);
+        self.generation += 1;
+        let generation = self.generation;
+        let t = self.textures.get_mut(&handle).unwrap();
+        t.depth_copy = Some(view.clone());
+        t.generation = generation;
+        t.bind_groups = [None, None];
+        if current && self.depth_target.is_none() {
+            self.depth_target = Some(handle);
+        }
+        self.depth_reads.push((handle, true));
+        Some(view)
+    }
+
+    /// Zeros for an integer-texel slot (signed or unsigned).
+    fn integer_default(&mut self, signed: bool) -> wgpu::TextureView {
+        if let Some(view) = &self.integer_defaults[signed as usize] {
+            return view.clone();
+        }
+        let format = if signed {
+            wgpu::TextureFormat::Rgba32Sint
+        } else {
+            wgpu::TextureFormat::Rgba32Uint
+        };
+        // New textures are zeroed.
+        let view = self
+            .device
+            .create_texture(&wgpu::TextureDescriptor {
+                label: Some("unbound integer default"),
+                size: wgpu::Extent3d {
+                    width: 1,
+                    height: 1,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format,
+                usage: wgpu::TextureUsages::TEXTURE_BINDING,
+                view_formats: &[],
+            })
+            .create_view(&wgpu::TextureViewDescriptor::default());
+        self.integer_defaults[signed as usize] = Some(view.clone());
+        view
+    }
+
     /// The pipeline that writes a depth buffer's depth into a float color texture.
-    fn depth_copy_pipeline(&mut self) -> (wgpu::RenderPipeline, wgpu::BindGroupLayout) {
-        if let Some(p) = &self.depth_copy_pipeline {
+    fn depth_copy_pipeline(
+        &mut self,
+        kind: CopyKind,
+    ) -> (wgpu::RenderPipeline, wgpu::BindGroupLayout) {
+        if let Some(p) = &self.depth_copy_pipelines[kind.index()] {
             return p.clone();
         }
         let device = &self.device;
+        let source = match kind {
+            CopyKind::Depth => DEPTH_COPY_WGSL.to_string(),
+            CopyKind::DepthMultisampled => DEPTH_COPY_WGSL
+                .replace("texture_depth_2d", "texture_depth_multisampled_2d")
+                .replace(
+                    "vec2<i32>(p.xy), 0)",
+                    &format!("vec2<i32>(p.xy), {DEPTH_MSAA_SAMPLE})"),
+                ),
+            CopyKind::UintBits => BITS_COPY_WGSL.replace("SCALAR", "u32"),
+            CopyKind::SintBits => BITS_COPY_WGSL.replace("SCALAR", "i32"),
+        };
+        let (sample_type, target_format) = match kind {
+            CopyKind::Depth | CopyKind::DepthMultisampled => (
+                wgpu::TextureSampleType::Depth,
+                resources::depth_copy_format(device),
+            ),
+            CopyKind::UintBits => (
+                wgpu::TextureSampleType::Float { filterable: false },
+                wgpu::TextureFormat::Rgba32Uint,
+            ),
+            CopyKind::SintBits => (
+                wgpu::TextureSampleType::Float { filterable: false },
+                wgpu::TextureFormat::Rgba32Sint,
+            ),
+        };
+        let multisampled = kind == CopyKind::DepthMultisampled;
         let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
             label: Some("unbound depth copy"),
-            source: wgpu::ShaderSource::Wgsl(DEPTH_COPY_WGSL.into()),
+            source: wgpu::ShaderSource::Wgsl(source.into()),
         });
         let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("unbound depth copy"),
@@ -943,9 +1222,9 @@ impl UnityRenderer {
                 binding: 0,
                 visibility: wgpu::ShaderStages::FRAGMENT,
                 ty: wgpu::BindingType::Texture {
-                    sample_type: wgpu::TextureSampleType::Depth,
+                    sample_type,
                     view_dimension: wgpu::TextureViewDimension::D2,
-                    multisampled: false,
+                    multisampled,
                 },
                 count: None,
             }],
@@ -969,7 +1248,7 @@ impl UnityRenderer {
                 entry_point: Some("fs"),
                 compilation_options: Default::default(),
                 targets: &[Some(wgpu::ColorTargetState {
-                    format: resources::depth_copy_format(device),
+                    format: target_format,
                     blend: None,
                     write_mask: wgpu::ColorWrites::ALL,
                 })],
@@ -980,8 +1259,8 @@ impl UnityRenderer {
             multiview_mask: None,
             cache: None,
         });
-        self.depth_copy_pipeline = Some((pipeline, layout));
-        self.depth_copy_pipeline.clone().unwrap()
+        self.depth_copy_pipelines[kind.index()] = Some((pipeline, layout));
+        self.depth_copy_pipelines[kind.index()].clone().unwrap()
     }
 
     /// A 1x1 depth texture at the far plane (1): what an unbound depth texture reads, so that
@@ -1271,6 +1550,7 @@ impl UnityRenderer {
                     self.screen_touched = false;
                     self.frame_number += 1;
                     self.state.target = None;
+                    self.target_handles = (0, 0);
                     self.depth_target = None;
                     self.state.depth_bias = [0.0; 2];
                     self.state.state_override = None;
@@ -1321,6 +1601,7 @@ impl UnityRenderer {
                                 .is_some_and(|t| t.depth_copy.is_some())
                     });
                     depth_mark = passes.len();
+                    self.target_handles = (color, depth);
                     self.state.target = self.resolve_target(color, depth, mip, slice);
                     let size = self
                         .state
@@ -1525,7 +1806,27 @@ impl UnityRenderer {
                         passes.push(Op::Pass(pass));
                         open = true;
                     }
+                    self.depth_reads.clear();
+                    self.pre_draw.clear();
                     let mut planned = self.plan_draw(&draw, &target, time);
+                    // Depth elements the draw samples whose copies lag (made just now, or the
+                    // current target's): copied here, between what was drawn and this draw.
+                    let reads = std::mem::take(&mut self.depth_reads);
+                    let mut copied = Vec::new();
+                    for (texture, now) in reads {
+                        if !now || copied.contains(&texture) {
+                            continue;
+                        }
+                        if let Some(copy) = self.depth_copy_op(texture) {
+                            open = false;
+                            passes.push(Op::DepthCopy(copy));
+                            copied.push(texture);
+                        }
+                    }
+                    for copy in std::mem::take(&mut self.pre_draw) {
+                        open = false;
+                        passes.push(Op::DepthCopy(copy));
+                    }
                     if let Some((instances, args, offset, indexed)) = self.state.draw_setup.take() {
                         let buffer = (args != 0)
                             .then(|| self.buffers.get(&args).map(|b| b.buffer.clone()))
@@ -2280,7 +2581,7 @@ impl UnityRenderer {
                     continue;
                 }
                 Op::DepthCopy(c) => {
-                    let (pipeline, layout) = self.depth_copy_pipeline();
+                    let (pipeline, layout) = self.depth_copy_pipeline(c.kind);
                     let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                         label: Some("unbound depth copy"),
                         layout: &layout,
@@ -2595,6 +2896,28 @@ impl UnityRenderer {
 }
 
 /// The pass the commands are adding to (the last op is one while a pass is open).
+/// The sample a multisampled depth buffer's copy reads: the one a quarter pixel left of the
+/// center at 2 samples (Vulkan's standard positions), where Unity's resolved depth reads
+/// (measured: tests/projects/rtdepth fmt.msaa2.depth.*).
+const DEPTH_MSAA_SAMPLE: u32 = 1;
+
+/// Copies a float texture's values into an integer texture of its size as their bits, texel for
+/// texel (`SCALAR`: `u32` or `i32`).
+const BITS_COPY_WGSL: &str = r#"
+@group(0) @binding(0) var source: texture_2d<f32>;
+
+@vertex
+fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
+    let uv = vec2<f32>(f32((i << 1u) & 2u), f32(i & 2u));
+    return vec4<f32>(uv * 2.0 - 1.0, 0.0, 1.0);
+}
+
+@fragment
+fn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<SCALAR> {
+    return bitcast<vec4<SCALAR>>(textureLoad(source, vec2<i32>(p.xy), 0));
+}
+"#;
+
 /// Copies a depth buffer into a float color texture of its size, texel for texel.
 const DEPTH_COPY_WGSL: &str = r#"
 @group(0) @binding(0) var depth: texture_depth_2d;

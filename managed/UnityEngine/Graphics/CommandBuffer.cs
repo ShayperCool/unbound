@@ -86,7 +86,8 @@ namespace UnityEngine.Rendering
         internal int MipLevel => m_MipLevel;
         internal int Slice => m_CubeFace != CubemapFace.Unknown ? (int)m_CubeFace : Math.Max(0, m_DepthSlice);
 
-        public override string ToString() => $"Type {m_Type} NameID {m_NameID} InstanceID {m_InstanceID}";
+        public override string ToString() =>
+            $"Type {m_Type} NameID {m_NameID} InstanceID {m_InstanceID} BufferPointer {m_BufferPointer} MipLevel {m_MipLevel} CubeFace {m_CubeFace} DepthSlice {m_DepthSlice}";
 
         public override int GetHashCode() => HashCode.Combine(m_Type, m_NameID, m_InstanceID, m_BufferPointer, m_MipLevel, m_CubeFace, m_DepthSlice);
 
@@ -112,8 +113,11 @@ namespace UnityEngine.Rendering
         {
             /// <summary>The camera rendering (null for Graphics.ExecuteCommandBuffer).</summary>
             internal Camera Camera;
-            /// <summary>The camera's target: its render texture, or null for the screen.</summary>
+            /// <summary>The camera's target: its render texture, the texture that stands for the
+            /// screen while the camera draws, or null for the screen.</summary>
             internal RenderTexture CameraTarget;
+            /// <summary>The camera draws to the screen (CameraTarget, if any, stands for it).</summary>
+            internal bool Screen;
         }
 
         /// <summary>Temporaries made by GetTemporaryRT, by property id, until released or the end
@@ -176,7 +180,7 @@ namespace UnityEngine.Rendering
                 case BuiltinRenderTextureType.Depth:
                     return context.CameraTarget;
                 case BuiltinRenderTextureType.CurrentActive:
-                    return RenderTexture.active;
+                    return RenderTexture.ActiveTarget;
                 case BuiltinRenderTextureType.PropertyName:
                     if (NamedTemporaries.TryGetValue(id.NameID, out var temporary)) return temporary;
                     return Shader.GetGlobalTexture(id.NameID);
@@ -597,10 +601,44 @@ namespace UnityEngine.Rendering
         public void SetGlobalMatrixArray(int nameID, List<Matrix4x4> values) => SetGlobalMatrixArray(nameID, values.ToArray());
         public void SetGlobalMatrixArray(string propertyName, List<Matrix4x4> values) => SetGlobalMatrixArray(Shader.PropertyToID(propertyName), values.ToArray());
 
-        public void SetGlobalTexture(int nameID, RenderTargetIdentifier value) => Add(c => Shader.SetGlobalTexture(nameID, Resolve(value, c)));
+        public void SetGlobalTexture(int nameID, RenderTargetIdentifier value) => SetGlobalTexture(nameID, value, RenderTextureSubElement.Default);
         public void SetGlobalTexture(string name, RenderTargetIdentifier value) => SetGlobalTexture(Shader.PropertyToID(name), value);
-        public void SetGlobalTexture(int nameID, RenderTargetIdentifier value, RenderTextureSubElement element) => SetGlobalTexture(nameID, value);
-        public void SetGlobalTexture(string name, RenderTargetIdentifier value, RenderTextureSubElement element) => SetGlobalTexture(Shader.PropertyToID(name), value);
+        public void SetGlobalTexture(int nameID, RenderTargetIdentifier value, RenderTextureSubElement element) => Add(c => GlobalTexture(nameID, value, element, c));
+        public void SetGlobalTexture(string name, RenderTargetIdentifier value, RenderTextureSubElement element) => SetGlobalTexture(Shader.PropertyToID(name), value, element);
+
+        /// <summary>A global texture from a target identifier, as Unity binds it (measured:
+        /// tests/projects/rtdepth target.*): a screen camera's target, and the active target
+        /// while it is that, cannot be sampled and bind the gray default texture; so does the
+        /// built-in Depth; a ResolvedDepth that does not exist warns and leaves the global.</summary>
+        void GlobalTexture(int nameID, in RenderTargetIdentifier value, RenderTextureSubElement element, Context c)
+        {
+            switch (value.Type)
+            {
+                case BuiltinRenderTextureType.ResolvedDepth:
+                {
+                    // Logged once per message (measured: the same buffer at eight events warned once).
+                    var message = $"CommandBuffer: built-in render texture type {(int)value.Type} not found while executing {m_Name} (SetGlobalTexture)";
+                    if (s_NotFoundWarned.Add(message)) Debug.LogWarning(message);
+                    return;
+                }
+                case BuiltinRenderTextureType.Depth:
+                    if (c.Camera != null && c.Camera.depthTextureMode != DepthTextureMode.None && s_WarnedDepthMode.Add(c.Camera.GetInstanceID()))
+                        Debug.LogWarning("Unbound: the built-in Depth target of a camera with a depth texture mode is unmeasured; the gray default texture is bound.");
+                    Shader.SetGlobalTexture(nameID, TextureElements.Gray);
+                    return;
+                // The screen itself (not an HDR intermediate standing before it).
+                case BuiltinRenderTextureType.CameraTarget when c.Screen && (c.CameraTarget == null || c.CameraTarget == RenderTexture.ScreenStandIn):
+                    Shader.SetGlobalTexture(nameID, TextureElements.Gray);
+                    return;
+                case BuiltinRenderTextureType.CurrentActive when c.Screen && (RenderTexture.ActiveTarget == null || RenderTexture.ActiveTarget == RenderTexture.ScreenStandIn):
+                    Shader.SetGlobalTexture(nameID, TextureElements.Gray);
+                    return;
+            }
+            Shader.SetGlobalTextureElement(nameID, Resolve(value, c), element);
+        }
+
+        static readonly HashSet<int> s_WarnedDepthMode = new HashSet<int>();
+        static readonly HashSet<string> s_NotFoundWarned = new HashSet<string>();
 
         public void EnableShaderKeyword(string keyword) => Add(c => Shader.EnableKeyword(keyword));
         public void DisableShaderKeyword(string keyword) => Add(c => Shader.DisableKeyword(keyword));

@@ -104,7 +104,8 @@ namespace Unbound.Runtime
         /// <summary>Immediate drawing goes into the active render texture (the screen when none).</summary>
         internal static void EnsureActiveTarget()
         {
-            var active = UnityEngine.RenderTexture.active;
+            // The screen's stand-in, while a screen camera draws, is the screen.
+            var active = UnityEngine.RenderTexture.ActiveTarget;
             ulong handle = active != null ? active.EnsureCreated() : 0;
             if (GfxStream.Current.Color != handle) GfxStream.SetTarget(handle);
         }

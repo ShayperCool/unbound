@@ -14,6 +14,11 @@ namespace UnityEngine
         internal sealed class TextureSlot
         {
             internal Texture Texture;
+            /// <summary>The render texture's element the shader samples (SetTexture's element).</summary>
+            internal RenderTextureSubElement Element;
+            /// <summary>Set through the element overload: getters do not see it under a name the
+            /// shader does not declare (measured: tests/projects/rtdepth api.material.*).</summary>
+            internal bool ElementBinding;
             internal Vector2 Scale = Vector2.one;
             internal Vector2 Offset;
         }
@@ -119,7 +124,7 @@ namespace UnityEngine
             foreach (var p in source.m_Vectors) m_Vectors[p.Key] = p.Value;
             foreach (var p in source.m_Matrices) m_Matrices[p.Key] = p.Value;
             foreach (var p in source.m_Textures)
-                m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Scale = p.Value.Scale, Offset = p.Value.Offset };
+                m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Element = p.Value.Element, ElementBinding = p.Value.ElementBinding, Scale = p.Value.Scale, Offset = p.Value.Offset };
             foreach (var p in source.m_Buffers) m_Buffers[p.Key] = p.Value;
             foreach (var p in source.m_Arrays) m_Arrays[p.Key] = ((Array)p.Value).Clone();
             foreach (var k in source.m_Keywords) m_Keywords.Add(k);
@@ -305,7 +310,7 @@ namespace UnityEngine
                 foreach (var p in parent.m_Vectors) if (!Own(p.Key)) m_Vectors[p.Key] = p.Value;
                 foreach (var p in parent.m_Matrices) if (!Own(p.Key)) m_Matrices[p.Key] = p.Value;
                 foreach (var p in parent.m_Textures)
-                    if (!Own(p.Key)) m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Scale = p.Value.Scale, Offset = p.Value.Offset };
+                    if (!Own(p.Key)) m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Element = p.Value.Element, ElementBinding = p.Value.ElementBinding, Scale = p.Value.Scale, Offset = p.Value.Offset };
                 m_TextureNames.UnionWith(parent.m_TextureNames);
                 if (m_InheritKeywords)
                 {
@@ -613,22 +618,31 @@ namespace UnityEngine
 
         public void SetTexture(string name, Texture value) => SetTexture(Shader.PropertyToID(name), value);
 
-        public void SetTexture(int nameID, Texture value)
+        public void SetTexture(int nameID, Texture value) => SetTextureElement(nameID, value, RenderTextureSubElement.Default, false);
+
+        public void SetTexture(string name, RenderTexture value, RenderTextureSubElement element) => SetTexture(Shader.PropertyToID(name), value, element);
+        public void SetTexture(int nameID, RenderTexture value, RenderTextureSubElement element) => SetTextureElement(nameID, value, element, true);
+
+        /// <summary>A texture and the element of it the shader samples (Unbound.Runtime.TextureElements);
+        /// GetTexture returns the texture whatever the element.</summary>
+        void SetTextureElement(int nameID, Texture value, RenderTextureSubElement element, bool elementBinding)
         {
-            Slot(nameID).Texture = value;
+            var slot = Slot(nameID);
+            slot.Texture = value;
+            slot.Element = element;
+            slot.ElementBinding = elementBinding;
             m_ScriptSet.Add(nameID);
             MarkDirty();
         }
-
-        public void SetTexture(string name, RenderTexture value, RenderTextureSubElement element) => SetTexture(name, value);
-        public void SetTexture(int nameID, RenderTexture value, RenderTextureSubElement element) => SetTexture(nameID, value);
 
         public Texture GetTexture(string name) => GetTexture(Shader.PropertyToID(name));
         public Texture GetTexture(int nameID)
         {
             Inherit();
             if (!HasTextureSlot(nameID)) { Missing(nameID, "a texture"); return null; }
-            return m_Textures.TryGetValue(nameID, out var slot) ? slot.Texture : null;
+            if (!m_Textures.TryGetValue(nameID, out var slot)) return null;
+            if (slot.ElementBinding && Declared(nameID) != ShaderPropertyType.Texture) { Missing(nameID, "a texture"); return null; }
+            return slot.Texture;
         }
 
         TextureSlot Slot(int nameID)
@@ -787,7 +801,7 @@ namespace UnityEngine
             foreach (var p in mat.m_Vectors) if (Declares(p.Key)) m_Vectors[p.Key] = p.Value;
             foreach (var p in mat.m_Matrices) if (Declares(p.Key)) m_Matrices[p.Key] = p.Value;
             foreach (var p in mat.m_Textures)
-                if (Declares(p.Key)) m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Scale = p.Value.Scale, Offset = p.Value.Offset };
+                if (Declares(p.Key)) m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Element = p.Value.Element, ElementBinding = p.Value.ElementBinding, Scale = p.Value.Scale, Offset = p.Value.Offset };
             MarkDirty();
         }
 
@@ -1018,7 +1032,7 @@ namespace UnityEngine
             foreach (var p in m_Vectors)
                 Add(p.Key, 1, ConvertsProperty(p.Key) ? (Vector4)((Color)p.Value).linear : p.Value, 0, default);
             foreach (var p in m_Textures)
-                Add(p.Key, 2, default, TextureHandles.Of(p.Value.Texture), new Vector4(p.Value.Scale.x, p.Value.Scale.y, p.Value.Offset.x, p.Value.Offset.y));
+                Add(p.Key, 2, default, TextureElements.MaterialHandle(p.Value.Texture, p.Value.Element), new Vector4(p.Value.Scale.x, p.Value.Scale.y, p.Value.Offset.x, p.Value.Offset.y));
             foreach (var p in m_Buffers) Add(p.Key, 5, default, BufferHandle(p.Value), default);
             foreach (var p in m_Matrices)
             {
