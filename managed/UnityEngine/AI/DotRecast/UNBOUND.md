@@ -30,13 +30,16 @@ Altered (marked `Unbound:` in the sources):
   within the prediction time, against the neighbours' own velocities (not RVO's halves), no side
   penalty, grazing paths and overlapping neighbours moved away from free; a desired velocity meeting
   nothing in time is kept whole; NavMesh edges count up to the next corner (32 edges, 64 polygons
-  of local boundary); neighbours count by avoidance priority (as or more important than the agent);
+  of local boundary) with their time to impact as it is (Detour doubles it); neighbours count by
+  avoidance priority (as or more important than the agent);
 - crowd separation and collisions as Unity's: a push of 1.4·(1 − (d/2.5r)²) from more important
   neighbours (half from equals), overlaps resolved by the less important agent alone (half each
   between equals);
 - `DtNavMeshQuery.GetPathToNode` is visible to the engine (partial paths end at the reachable
   polygon nearest to the target);
-- off-mesh links as Unity's (`tests/projects/navlinks`): an agent enters a link when the step of
+- off-mesh links as Unity's (`tests/projects/navlinks`): a link's end connects within the agent's
+  radius of the mesh, a wide link's only where it lies on the mesh (`tests/projects/navmesh`), and
+  lands on the point of the detail surface closest to it in 3D; an agent enters a link when the step of
   the update has brought it within 2.25 radii of the link's start, and takes its first step on it
   in the same update; the crossing is Detour's (15% from where it entered to the link's start,
   then to its end) but advanced as a fraction of the start-to-end distance at twice the agent's
@@ -48,6 +51,8 @@ Altered (marked `Unbound:` in the sources):
   the crowd; a wide link's ends are segments (its portals), crossed straight where the path meets
   them; a link's corners are kept at both ends, a ground corner in line with the funnel's other
   side narrows it, a path starting on a link's start is on the link, and a path's end merges only
-  with a corner exactly at it;
+  with a corner exactly at it; in the update an agent leaves a link onto a path ending in the
+  polygon it lands in, it reports no path (`NavMeshAgent.hasPath`);
 - edges count for avoidance up to the next corner, but only those before it when the corner is
-  the path's end or a link's start; a braking agent takes its plan at once.
+  the path's end or a link's start (an edge the agent touches beyond them neither); a braking
+  agent takes its plan at once.
