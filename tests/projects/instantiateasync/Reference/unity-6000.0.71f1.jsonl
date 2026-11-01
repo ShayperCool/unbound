@@ -1,0 +1,770 @@
+{"f":-1,"p":"-","s":"-","who":"Template","e":"Awake active=1 root=Template scene=Probe pos=(0.000,0.000,-5.000) rot=(0.000,0.000,0.000,1.000)"}
+{"f":-1,"p":"-","s":"-","who":"Template","e":"OnEnable"}
+{"f":-1,"p":"ScriptRunDelayedStartupFrame","s":"-","who":"Template","e":"Start"}
+{"f":0,"p":"ScriptRunDelayedStartupFrame","s":"-","who":"probe","e":"start prefab=Item hidden=Hidden active=0"}
+{"f":0,"p":"ScriptRunDelayedStartupFrame","s":"-","who":"probe","e":"early update order UpdateAsyncInstantiate,UpdateAsyncReadbackManager,UpdatePreloading,ScriptRunDelayedStartupFrame"}
+{"f":0,"p":"ScriptRunBehaviourUpdate","s":"-","who":"Template","e":"first Update"}
+{"f":2,"p":"ScriptRunBehaviourUpdate","s":"single","who":"probe","e":"before awakened=1 alive=1 found=2"}
+{"f":2,"p":"ScriptRunBehaviourUpdate","s":"single","who":"probe","e":"returned type=AsyncInstantiateOperation`1 awakened=1 alive=1 found=2"}
+{"f":2,"p":"ScriptRunBehaviourUpdate","s":"single","who":"op","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=1"}
+{"f":2,"p":"ScriptRunBehaviourUpdate","s":"single","who":"probe","e":"result before done result=null"}
+{"f":3,"p":"UpdateAsyncInstantiate","s":"single","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":3,"p":"UpdateAsyncInstantiate","s":"single","who":"Item (Clone)","e":"OnEnable"}
+{"f":3,"p":"UpdateAsyncInstantiate","s":"single","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":3,"p":"UpdateAsyncInstantiate","s":"single","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":3,"p":"UpdateAsyncInstantiate","s":"single","who":"op","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=3 [GameObject Item (Clone) parent=- scene=Probe active=1 sibling=4 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":3,"p":"UpdateAsyncReadbackManager","s":"single","who":"op","e":"state done=1 result=1 allow=1 awakened=3"}
+{"f":3,"p":"ScriptRunDelayedStartupFrame","s":"single","who":"Item (Clone)","e":"Start"}
+{"f":3,"p":"ScriptRunDelayedStartupFrame","s":"single","who":"Item (Clone)/Child","e":"Start"}
+{"f":3,"p":"ScriptRunBehaviourUpdate","s":"single","who":"Item (Clone)","e":"first Update"}
+{"f":3,"p":"ScriptRunBehaviourUpdate","s":"single","who":"Item (Clone)/Child","e":"first Update"}
+{"f":4,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"parent3","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=3"}
+{"f":5,"p":"UpdateAsyncInstantiate","s":"spans","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(1.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":5,"p":"UpdateAsyncInstantiate","s":"spans","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":5,"p":"UpdateAsyncInstantiate","s":"spans","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(2.000,0.000,0.000) rot=(0.000,0.174,0.000,0.985)"}
+{"f":5,"p":"UpdateAsyncInstantiate","s":"spans","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":5,"p":"UpdateAsyncInstantiate","s":"spans","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(3.000,0.000,0.000) rot=(0.000,0.259,0.000,0.966)"}
+{"f":5,"p":"UpdateAsyncInstantiate","s":"spans","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":5,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(1.000,1.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":5,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":5,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(2.000,1.000,0.000) rot=(0.000,0.174,0.000,0.985)"}
+{"f":5,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":5,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(3.000,1.000,0.000) rot=(0.000,0.259,0.000,0.966)"}
+{"f":5,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":5,"p":"UpdateAsyncInstantiate","s":"spans","who":"parent3","e":"completed done=1 progress=1 result=3 waiting=0 allow=1 awakened=9 [GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=0 pos=(1.000,0.000,0.000) local=(0.000,0.000,-4.500) rot=(0.000,0.087,0.000,0.996) lrot=(0.000,-0.643,0.000,0.766) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000); GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=1 pos=(2.000,0.000,0.000) local=(0.000,0.000,-4.000) rot=(0.000,0.174,0.000,0.985) lrot=(0.000,-0.574,0.000,0.819) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000); GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=2 pos=(3.000,0.000,0.000) local=(0.000,0.000,-3.500) rot=(0.000,0.259,0.000,0.966) lrot=(0.000,-0.500,0.000,0.866) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)]"}
+{"f":5,"p":"UpdateAsyncReadbackManager","s":"spans","who":"parent3","e":"state done=1 result=3 allow=1 awakened=9"}
+{"f":5,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Parent/Item (Clone)","e":"Start"}
+{"f":5,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Parent/Item (Clone)","e":"Start"}
+{"f":5,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Parent/Item (Clone)","e":"Start"}
+{"f":5,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)/Child","e":"Start"}
+{"f":5,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)/Child","e":"Start"}
+{"f":5,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)/Child","e":"Start"}
+{"f":5,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":5,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":5,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":5,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)/Child","e":"first Update"}
+{"f":5,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)/Child","e":"first Update"}
+{"f":5,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)/Child","e":"first Update"}
+{"f":6,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"root3","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=9"}
+{"f":7,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":7,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)","e":"OnEnable"}
+{"f":7,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(2.000,0.000,0.000) rot=(0.000,0.174,0.000,0.985)"}
+{"f":7,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)","e":"OnEnable"}
+{"f":7,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(3.000,0.000,0.000) rot=(0.000,0.259,0.000,0.966)"}
+{"f":7,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)","e":"OnEnable"}
+{"f":7,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,0.500,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":7,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":7,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(2.000,0.500,0.000) rot=(0.000,0.174,0.000,0.985)"}
+{"f":7,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":7,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(3.000,0.500,0.000) rot=(0.000,0.259,0.000,0.966)"}
+{"f":7,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":7,"p":"UpdateAsyncInstantiate","s":"spans","who":"root3","e":"completed done=1 progress=1 result=3 waiting=0 allow=1 awakened=15 [GameObject Item (Clone) parent=- scene=Probe active=1 sibling=5 pos=(1.000,0.000,0.000) local=(1.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996) lrot=(0.000,0.087,0.000,0.996) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=6 pos=(2.000,0.000,0.000) local=(2.000,0.000,0.000) rot=(0.000,0.174,0.000,0.985) lrot=(0.000,0.174,0.000,0.985) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=7 pos=(3.000,0.000,0.000) local=(3.000,0.000,0.000) rot=(0.000,0.259,0.000,0.966) lrot=(0.000,0.259,0.000,0.966) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":7,"p":"UpdateAsyncReadbackManager","s":"spans","who":"root3","e":"state done=1 result=3 allow=1 awakened=15"}
+{"f":7,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)","e":"Start"}
+{"f":7,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)","e":"Start"}
+{"f":7,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)","e":"Start"}
+{"f":7,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)/Child","e":"Start"}
+{"f":7,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)/Child","e":"Start"}
+{"f":7,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)/Child","e":"Start"}
+{"f":7,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)","e":"first Update"}
+{"f":7,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)","e":"first Update"}
+{"f":7,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)","e":"first Update"}
+{"f":7,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)/Child","e":"first Update"}
+{"f":7,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)/Child","e":"first Update"}
+{"f":7,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)/Child","e":"first Update"}
+{"f":8,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"count2single","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=15"}
+{"f":9,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(5.000,6.000,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":9,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)","e":"OnEnable"}
+{"f":9,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(5.000,6.000,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":9,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)","e":"OnEnable"}
+{"f":9,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(5.000,6.500,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":9,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":9,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(5.000,6.500,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":9,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":9,"p":"UpdateAsyncInstantiate","s":"spans","who":"count2single","e":"completed done=1 progress=1 result=2 waiting=0 allow=1 awakened=19 [GameObject Item (Clone) parent=- scene=Probe active=1 sibling=8 pos=(5.000,6.000,7.000) local=(5.000,6.000,7.000) rot=(0.000,0.383,0.000,0.924) lrot=(0.000,0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=9 pos=(5.000,6.000,7.000) local=(5.000,6.000,7.000) rot=(0.000,0.383,0.000,0.924) lrot=(0.000,0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":9,"p":"UpdateAsyncReadbackManager","s":"spans","who":"count2single","e":"state done=1 result=2 allow=1 awakened=19"}
+{"f":9,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)","e":"Start"}
+{"f":9,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)","e":"Start"}
+{"f":9,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)/Child","e":"Start"}
+{"f":9,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)/Child","e":"Start"}
+{"f":9,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)","e":"first Update"}
+{"f":9,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)","e":"first Update"}
+{"f":9,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)/Child","e":"first Update"}
+{"f":9,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)/Child","e":"first Update"}
+{"f":10,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"count2","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=19"}
+{"f":11,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":11,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)","e":"OnEnable"}
+{"f":11,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":11,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)","e":"OnEnable"}
+{"f":11,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":11,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":11,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":11,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":11,"p":"UpdateAsyncInstantiate","s":"spans","who":"count2","e":"completed done=1 progress=1 result=2 waiting=0 allow=1 awakened=23 [GameObject Item (Clone) parent=- scene=Probe active=1 sibling=10 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=11 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":11,"p":"UpdateAsyncReadbackManager","s":"spans","who":"count2","e":"state done=1 result=2 allow=1 awakened=23"}
+{"f":11,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)","e":"Start"}
+{"f":11,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)","e":"Start"}
+{"f":11,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)/Child","e":"Start"}
+{"f":11,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)/Child","e":"Start"}
+{"f":11,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)","e":"first Update"}
+{"f":11,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)","e":"first Update"}
+{"f":11,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)/Child","e":"first Update"}
+{"f":11,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)/Child","e":"first Update"}
+{"f":12,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"count2parent","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=23"}
+{"f":13,"p":"UpdateAsyncInstantiate","s":"spans","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":13,"p":"UpdateAsyncInstantiate","s":"spans","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":13,"p":"UpdateAsyncInstantiate","s":"spans","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":13,"p":"UpdateAsyncInstantiate","s":"spans","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":13,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(0.582,2.853,3.312) rot=(0.128,0.145,0.239,0.952)"}
+{"f":13,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":13,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(0.582,2.853,3.312) rot=(0.128,0.145,0.239,0.952)"}
+{"f":13,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":13,"p":"UpdateAsyncInstantiate","s":"spans","who":"count2parent","e":"completed done=1 progress=1 result=2 waiting=0 allow=1 awakened=27 [GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=3 pos=(1.000,2.000,3.000) local=(-1.500,1.000,-4.500) rot=(0.128,0.145,0.239,0.952) lrot=(-0.079,-0.570,0.259,0.775) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000); GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=4 pos=(1.000,2.000,3.000) local=(-1.500,1.000,-4.500) rot=(0.128,0.145,0.239,0.952) lrot=(-0.079,-0.570,0.259,0.775) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)]"}
+{"f":13,"p":"UpdateAsyncReadbackManager","s":"spans","who":"count2parent","e":"state done=1 result=2 allow=1 awakened=27"}
+{"f":13,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Parent/Item (Clone)","e":"Start"}
+{"f":13,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Parent/Item (Clone)","e":"Start"}
+{"f":13,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)/Child","e":"Start"}
+{"f":13,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)/Child","e":"Start"}
+{"f":13,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":13,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":13,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)/Child","e":"first Update"}
+{"f":13,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)/Child","e":"first Update"}
+{"f":14,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"count2parentpos","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=27"}
+{"f":15,"p":"UpdateAsyncInstantiate","s":"spans","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(5.000,6.000,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":15,"p":"UpdateAsyncInstantiate","s":"spans","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":15,"p":"UpdateAsyncInstantiate","s":"spans","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(5.000,6.000,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":15,"p":"UpdateAsyncInstantiate","s":"spans","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":15,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(5.000,7.000,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":15,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":15,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(5.000,7.000,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":15,"p":"UpdateAsyncInstantiate","s":"spans","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":15,"p":"UpdateAsyncInstantiate","s":"spans","who":"count2parentpos","e":"completed done=1 progress=1 result=2 waiting=0 allow=1 awakened=31 [GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=5 pos=(5.000,6.000,7.000) local=(-3.500,3.000,-2.500) rot=(0.000,0.383,0.000,0.924) lrot=(0.000,-0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000); GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=6 pos=(5.000,6.000,7.000) local=(-3.500,3.000,-2.500) rot=(0.000,0.383,0.000,0.924) lrot=(0.000,-0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)]"}
+{"f":15,"p":"UpdateAsyncReadbackManager","s":"spans","who":"count2parentpos","e":"state done=1 result=2 allow=1 awakened=31"}
+{"f":15,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Parent/Item (Clone)","e":"Start"}
+{"f":15,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Parent/Item (Clone)","e":"Start"}
+{"f":15,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)/Child","e":"Start"}
+{"f":15,"p":"ScriptRunDelayedStartupFrame","s":"spans","who":"Item (Clone)/Child","e":"Start"}
+{"f":15,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":15,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":15,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)/Child","e":"first Update"}
+{"f":15,"p":"ScriptRunBehaviourUpdate","s":"spans","who":"Item (Clone)/Child","e":"first Update"}
+{"f":16,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"count4pos2rot1","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=31"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"OnEnable"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(2.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"OnEnable"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"OnEnable"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(2.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"OnEnable"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,0.500,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(2.000,0.500,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,0.500,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(2.000,0.500,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":17,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"count4pos2rot1","e":"completed done=1 progress=1 result=4 waiting=0 allow=1 awakened=39 [GameObject Item (Clone) parent=- scene=Probe active=1 sibling=12 pos=(1.000,0.000,0.000) local=(1.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996) lrot=(0.000,0.087,0.000,0.996) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=13 pos=(2.000,0.000,0.000) local=(2.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996) lrot=(0.000,0.087,0.000,0.996) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=14 pos=(1.000,0.000,0.000) local=(1.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996) lrot=(0.000,0.087,0.000,0.996) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=15 pos=(2.000,0.000,0.000) local=(2.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996) lrot=(0.000,0.087,0.000,0.996) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":17,"p":"UpdateAsyncReadbackManager","s":"mismatched","who":"count4pos2rot1","e":"state done=1 result=4 allow=1 awakened=39"}
+{"f":17,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)","e":"Start"}
+{"f":17,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)","e":"Start"}
+{"f":17,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)","e":"Start"}
+{"f":17,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)","e":"Start"}
+{"f":17,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":17,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":17,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":17,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":17,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)","e":"first Update"}
+{"f":17,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)","e":"first Update"}
+{"f":17,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)","e":"first Update"}
+{"f":17,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)","e":"first Update"}
+{"f":17,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":17,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":17,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":17,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":18,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"count2pos3rot2","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=39"}
+{"f":19,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":19,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"OnEnable"}
+{"f":19,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(2.000,0.000,0.000) rot=(0.000,0.174,0.000,0.985)"}
+{"f":19,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"OnEnable"}
+{"f":19,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,0.500,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":19,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":19,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(2.000,0.500,0.000) rot=(0.000,0.174,0.000,0.985)"}
+{"f":19,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":19,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"count2pos3rot2","e":"completed done=1 progress=1 result=2 waiting=0 allow=1 awakened=43 [GameObject Item (Clone) parent=- scene=Probe active=1 sibling=16 pos=(1.000,0.000,0.000) local=(1.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996) lrot=(0.000,0.087,0.000,0.996) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=17 pos=(2.000,0.000,0.000) local=(2.000,0.000,0.000) rot=(0.000,0.174,0.000,0.985) lrot=(0.000,0.174,0.000,0.985) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":19,"p":"UpdateAsyncReadbackManager","s":"mismatched","who":"count2pos3rot2","e":"state done=1 result=2 allow=1 awakened=43"}
+{"f":19,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)","e":"Start"}
+{"f":19,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)","e":"Start"}
+{"f":19,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":19,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":19,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)","e":"first Update"}
+{"f":19,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)","e":"first Update"}
+{"f":19,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":19,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":20,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"count3posEmptyRot1","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=43"}
+{"f":21,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":21,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"OnEnable"}
+{"f":21,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":21,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"OnEnable"}
+{"f":21,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":21,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"OnEnable"}
+{"f":21,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.500,3.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":21,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":21,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.500,3.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":21,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":21,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.500,3.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":21,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":21,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"count3posEmptyRot1","e":"completed done=1 progress=1 result=3 waiting=0 allow=1 awakened=49 [GameObject Item (Clone) parent=- scene=Probe active=1 sibling=18 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.000,0.087,0.000,0.996) lrot=(0.000,0.087,0.000,0.996) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=19 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.000,0.087,0.000,0.996) lrot=(0.000,0.087,0.000,0.996) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=20 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.000,0.087,0.000,0.996) lrot=(0.000,0.087,0.000,0.996) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":21,"p":"UpdateAsyncReadbackManager","s":"mismatched","who":"count3posEmptyRot1","e":"state done=1 result=3 allow=1 awakened=49"}
+{"f":21,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)","e":"Start"}
+{"f":21,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)","e":"Start"}
+{"f":21,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)","e":"Start"}
+{"f":21,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":21,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":21,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":21,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)","e":"first Update"}
+{"f":21,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)","e":"first Update"}
+{"f":21,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)","e":"first Update"}
+{"f":21,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":21,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":21,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":22,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"count3pos2rotEmpty","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=49"}
+{"f":23,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,0.000,0.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":23,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"OnEnable"}
+{"f":23,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(2.000,0.000,0.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":23,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"OnEnable"}
+{"f":23,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,0.000,0.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":23,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"OnEnable"}
+{"f":23,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,0.426,0.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":23,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":23,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.791,0.426,0.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":23,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":23,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,0.426,0.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":23,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":23,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"count3pos2rotEmpty","e":"completed done=1 progress=1 result=3 waiting=0 allow=1 awakened=55 [GameObject Item (Clone) parent=- scene=Probe active=1 sibling=21 pos=(1.000,0.000,0.000) local=(1.000,0.000,0.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=22 pos=(2.000,0.000,0.000) local=(2.000,0.000,0.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=23 pos=(1.000,0.000,0.000) local=(1.000,0.000,0.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":23,"p":"UpdateAsyncReadbackManager","s":"mismatched","who":"count3pos2rotEmpty","e":"state done=1 result=3 allow=1 awakened=55"}
+{"f":23,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)","e":"Start"}
+{"f":23,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)","e":"Start"}
+{"f":23,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)","e":"Start"}
+{"f":23,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":23,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":23,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":23,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)","e":"first Update"}
+{"f":23,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)","e":"first Update"}
+{"f":23,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)","e":"first Update"}
+{"f":23,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":23,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":23,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":24,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"count3empty","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=55"}
+{"f":25,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":25,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"OnEnable"}
+{"f":25,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":25,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"OnEnable"}
+{"f":25,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":25,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)","e":"OnEnable"}
+{"f":25,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":25,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":25,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":25,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":25,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":25,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":25,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"count3empty","e":"completed done=1 progress=1 result=3 waiting=0 allow=1 awakened=61 [GameObject Item (Clone) parent=- scene=Probe active=1 sibling=24 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=25 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=26 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":25,"p":"UpdateAsyncReadbackManager","s":"mismatched","who":"count3empty","e":"state done=1 result=3 allow=1 awakened=61"}
+{"f":25,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)","e":"Start"}
+{"f":25,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)","e":"Start"}
+{"f":25,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)","e":"Start"}
+{"f":25,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":25,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":25,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":25,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)","e":"first Update"}
+{"f":25,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)","e":"first Update"}
+{"f":25,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)","e":"first Update"}
+{"f":25,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":25,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":25,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":26,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"params2pos2rot1","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=61"}
+{"f":27,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(1.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":27,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":27,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(2.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":27,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":27,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(1.000,1.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":27,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":27,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(2.000,1.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":27,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":27,"p":"UpdateAsyncInstantiate","s":"mismatched","who":"params2pos2rot1","e":"completed done=1 progress=1 result=2 waiting=0 allow=1 awakened=65 [GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=7 pos=(1.000,0.000,0.000) local=(0.000,0.000,-4.500) rot=(0.000,0.087,0.000,0.996) lrot=(0.000,-0.643,0.000,0.766) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000); GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=8 pos=(2.000,0.000,0.000) local=(0.000,0.000,-4.000) rot=(0.000,0.087,0.000,0.996) lrot=(0.000,-0.643,0.000,0.766) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)]"}
+{"f":27,"p":"UpdateAsyncReadbackManager","s":"mismatched","who":"params2pos2rot1","e":"state done=1 result=2 allow=1 awakened=65"}
+{"f":27,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Parent/Item (Clone)","e":"Start"}
+{"f":27,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Parent/Item (Clone)","e":"Start"}
+{"f":27,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":27,"p":"ScriptRunDelayedStartupFrame","s":"mismatched","who":"Item (Clone)/Child","e":"Start"}
+{"f":27,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":27,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":27,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":27,"p":"ScriptRunBehaviourUpdate","s":"mismatched","who":"Item (Clone)/Child","e":"first Update"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"default","e":"returned GameObject Item(Clone) parent=- scene=Probe active=1 sibling=27 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"parent","e":"returned GameObject Item(Clone) parent=Parent scene=Probe active=1 sibling=9 pos=(16.000,4.000,-2.000) local=(1.000,2.000,3.000) rot=(0.259,0.775,0.079,0.570) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"parentWorld","e":"returned GameObject Item(Clone) parent=Parent scene=Probe active=1 sibling=10 pos=(1.000,2.000,3.000) local=(-1.500,1.000,-4.500) rot=(0.128,0.145,0.239,0.952) lrot=(-0.079,-0.570,0.259,0.775) scale=(0.250,0.250,0.250) lossy=(0.500,0.500,0.500)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"scene","e":"returned GameObject Item(Clone) parent=- scene=Extra active=1 sibling=0 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"parentScene","e":"returned GameObject Item(Clone) parent=Parent scene=Probe active=1 sibling=11 pos=(16.000,4.000,-2.000) local=(1.000,2.000,3.000) rot=(0.259,0.775,0.079,0.570) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"worldNoParent","e":"returned GameObject Item(Clone) parent=- scene=Probe active=1 sibling=28 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"posParent","e":"returned GameObject Item(Clone) parent=Parent scene=Probe active=1 sibling=12 pos=(24.000,12.000,-10.000) local=(5.000,6.000,7.000) rot=(0.000,0.924,0.000,0.383) lrot=(0.000,0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"posParentWorld","e":"returned GameObject Item(Clone) parent=Parent scene=Probe active=1 sibling=13 pos=(5.000,6.000,7.000) local=(-3.500,3.000,-2.500) rot=(0.000,0.383,0.000,0.924) lrot=(0.000,-0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"posScene","e":"returned GameObject Item(Clone) parent=- scene=Extra active=1 sibling=1 pos=(5.000,6.000,7.000) local=(5.000,6.000,7.000) rot=(0.000,0.383,0.000,0.924) lrot=(0.000,0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"immutable","e":"returned GameObject Item(Clone) parent=- scene=Probe active=1 sibling=29 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"component","e":"returned ItemProbe Template(Clone) parent=Parent scene=Probe active=1 sibling=14 pos=(0.000,0.000,-5.000) local=(2.500,0.000,-5.000) rot=(0.000,0.000,0.000,1.000) lrot=(0.000,-0.707,0.000,0.707) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"transform","e":"returned Transform Item(Clone) parent=Parent scene=Probe active=1 sibling=15 pos=(16.000,4.000,-2.000) local=(1.000,2.000,3.000) rot=(0.259,0.775,0.079,0.570) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"probe","e":"sync awake order"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Parent/Item(Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(24.000,12.000,-10.000) rot=(0.000,0.924,0.000,0.383)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Parent/Item(Clone)","e":"OnEnable"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(24.000,13.000,-10.000) rot=(0.000,0.924,0.000,0.383)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"OnEnable"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"awake","e":"returned GameObject Item(Clone) parent=Parent scene=Probe active=1 sibling=16 pos=(24.000,12.000,-10.000) local=(5.000,6.000,7.000) rot=(0.000,0.924,0.000,0.383) lrot=(0.000,0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)","e":"Awake active=1 root=Item(Clone) scene=Extra pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)","e":"OnEnable"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"Awake active=1 root=Item(Clone) scene=Extra pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"OnEnable"}
+{"f":28,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"awakeScene","e":"returned GameObject Item(Clone) parent=- scene=Extra active=1 sibling=2 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)/Child","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Parent/Item(Clone)","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)/Child","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Parent/Item(Clone)","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)/Child","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)/Child","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Parent/Item(Clone)","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)/Child","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)/Child","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Parent/Item(Clone)","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)/Child","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Parent/Item(Clone)","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)/Child","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)/Child","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)/Child","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Parent/Template(Clone)","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Parent/Item(Clone)","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)/Child","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Parent/Item(Clone)","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)/Child","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)","e":"Start"}
+{"f":28,"p":"ScriptRunDelayedDynamicFrameRate","s":"sync","who":"Item(Clone)/Child","e":"Start"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Parent/Item(Clone)","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Parent/Item(Clone)","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Parent/Item(Clone)","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Parent/Item(Clone)","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Parent/Item(Clone)","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Parent/Template(Clone)","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Parent/Item(Clone)","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Parent/Item(Clone)","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)","e":"first Update"}
+{"f":29,"p":"ScriptRunBehaviourUpdate","s":"sync","who":"Item(Clone)/Child","e":"first Update"}
+{"f":30,"p":"ScriptRunBehaviourUpdate","s":"async","who":"parentConvenience","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=92"}
+{"f":31,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":31,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":31,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(0.582,2.853,3.312) rot=(0.128,0.145,0.239,0.952)"}
+{"f":31,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":31,"p":"UpdateAsyncInstantiate","s":"async","who":"parentConvenience","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=94 [GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=17 pos=(1.000,2.000,3.000) local=(-1.500,1.000,-4.500) rot=(0.128,0.145,0.239,0.952) lrot=(-0.079,-0.570,0.259,0.775) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)]"}
+{"f":31,"p":"UpdateAsyncReadbackManager","s":"async","who":"parentConvenience","e":"state done=1 result=1 allow=1 awakened=94"}
+{"f":31,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Parent/Item (Clone)","e":"Start"}
+{"f":31,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":31,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":31,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":32,"p":"ScriptRunBehaviourUpdate","s":"async","who":"parentPosConvenience","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=94"}
+{"f":33,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(5.000,6.000,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":33,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":33,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(5.000,7.000,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":33,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":33,"p":"UpdateAsyncInstantiate","s":"async","who":"parentPosConvenience","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=96 [GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=18 pos=(5.000,6.000,7.000) local=(-3.500,3.000,-2.500) rot=(0.000,0.383,0.000,0.924) lrot=(0.000,-0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)]"}
+{"f":33,"p":"UpdateAsyncReadbackManager","s":"async","who":"parentPosConvenience","e":"state done=1 result=1 allow=1 awakened=96"}
+{"f":33,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Parent/Item (Clone)","e":"Start"}
+{"f":33,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":33,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":33,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":34,"p":"ScriptRunBehaviourUpdate","s":"async","who":"posConvenience","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=96"}
+{"f":35,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(5.000,6.000,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":35,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)","e":"OnEnable"}
+{"f":35,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(5.000,6.500,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":35,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":35,"p":"UpdateAsyncInstantiate","s":"async","who":"posConvenience","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=98 [GameObject Item (Clone) parent=- scene=Probe active=1 sibling=30 pos=(5.000,6.000,7.000) local=(5.000,6.000,7.000) rot=(0.000,0.383,0.000,0.924) lrot=(0.000,0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":35,"p":"UpdateAsyncReadbackManager","s":"async","who":"posConvenience","e":"state done=1 result=1 allow=1 awakened=98"}
+{"f":35,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)","e":"Start"}
+{"f":35,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":35,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)","e":"first Update"}
+{"f":35,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":36,"p":"ScriptRunBehaviourUpdate","s":"async","who":"default","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=98"}
+{"f":37,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":37,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)","e":"OnEnable"}
+{"f":37,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":37,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":37,"p":"UpdateAsyncInstantiate","s":"async","who":"default","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=100 [GameObject Item (Clone) parent=- scene=Probe active=1 sibling=31 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":37,"p":"UpdateAsyncReadbackManager","s":"async","who":"default","e":"state done=1 result=1 allow=1 awakened=100"}
+{"f":37,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)","e":"Start"}
+{"f":37,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":37,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)","e":"first Update"}
+{"f":37,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":38,"p":"ScriptRunBehaviourUpdate","s":"async","who":"parent","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=100"}
+{"f":39,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(16.000,4.000,-2.000) rot=(0.259,0.775,0.079,0.570)"}
+{"f":39,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":39,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(16.312,4.853,-1.582) rot=(0.259,0.775,0.079,0.570)"}
+{"f":39,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":39,"p":"UpdateAsyncInstantiate","s":"async","who":"parent","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=102 [GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=19 pos=(16.000,4.000,-2.000) local=(1.000,2.000,3.000) rot=(0.259,0.775,0.079,0.570) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)]"}
+{"f":39,"p":"UpdateAsyncReadbackManager","s":"async","who":"parent","e":"state done=1 result=1 allow=1 awakened=102"}
+{"f":39,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Parent/Item (Clone)","e":"Start"}
+{"f":39,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":39,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":39,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":40,"p":"ScriptRunBehaviourUpdate","s":"async","who":"parentWorld","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=102"}
+{"f":41,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":41,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":41,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(0.582,2.853,3.312) rot=(0.128,0.145,0.239,0.952)"}
+{"f":41,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":41,"p":"UpdateAsyncInstantiate","s":"async","who":"parentWorld","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=104 [GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=20 pos=(1.000,2.000,3.000) local=(-1.500,1.000,-4.500) rot=(0.128,0.145,0.239,0.952) lrot=(-0.079,-0.570,0.259,0.775) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)]"}
+{"f":41,"p":"UpdateAsyncReadbackManager","s":"async","who":"parentWorld","e":"state done=1 result=1 allow=1 awakened=104"}
+{"f":41,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Parent/Item (Clone)","e":"Start"}
+{"f":41,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":41,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":41,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":42,"p":"ScriptRunBehaviourUpdate","s":"async","who":"scene","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=104"}
+{"f":43,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Extra pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":43,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)","e":"OnEnable"}
+{"f":43,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Extra pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":43,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":43,"p":"UpdateAsyncInstantiate","s":"async","who":"scene","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=106 [GameObject Item (Clone) parent=- scene=Extra active=1 sibling=3 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":43,"p":"UpdateAsyncReadbackManager","s":"async","who":"scene","e":"state done=1 result=1 allow=1 awakened=106"}
+{"f":43,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)","e":"Start"}
+{"f":43,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":43,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)","e":"first Update"}
+{"f":43,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":44,"p":"ScriptRunBehaviourUpdate","s":"async","who":"parentScene","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=106"}
+{"f":45,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(16.000,4.000,-2.000) rot=(0.259,0.775,0.079,0.570)"}
+{"f":45,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":45,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(16.312,4.853,-1.582) rot=(0.259,0.775,0.079,0.570)"}
+{"f":45,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":45,"p":"UpdateAsyncInstantiate","s":"async","who":"parentScene","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=108 [GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=21 pos=(16.000,4.000,-2.000) local=(1.000,2.000,3.000) rot=(0.259,0.775,0.079,0.570) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)]"}
+{"f":45,"p":"UpdateAsyncReadbackManager","s":"async","who":"parentScene","e":"state done=1 result=1 allow=1 awakened=108"}
+{"f":45,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Parent/Item (Clone)","e":"Start"}
+{"f":45,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":45,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":45,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":46,"p":"ScriptRunBehaviourUpdate","s":"async","who":"posParent","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=108"}
+{"f":47,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(24.000,12.000,-10.000) rot=(0.000,0.924,0.000,0.383)"}
+{"f":47,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":47,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(24.000,13.000,-10.000) rot=(0.000,0.924,0.000,0.383)"}
+{"f":47,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":47,"p":"UpdateAsyncInstantiate","s":"async","who":"posParent","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=110 [GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=22 pos=(24.000,12.000,-10.000) local=(5.000,6.000,7.000) rot=(0.000,0.924,0.000,0.383) lrot=(0.000,0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)]"}
+{"f":47,"p":"UpdateAsyncReadbackManager","s":"async","who":"posParent","e":"state done=1 result=1 allow=1 awakened=110"}
+{"f":47,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Parent/Item (Clone)","e":"Start"}
+{"f":47,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":47,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":47,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":48,"p":"ScriptRunBehaviourUpdate","s":"async","who":"posParentWorld","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=110"}
+{"f":49,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(5.000,6.000,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":49,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":49,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(5.000,7.000,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":49,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":49,"p":"UpdateAsyncInstantiate","s":"async","who":"posParentWorld","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=112 [GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=23 pos=(5.000,6.000,7.000) local=(-3.500,3.000,-2.500) rot=(0.000,0.383,0.000,0.924) lrot=(0.000,-0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)]"}
+{"f":49,"p":"UpdateAsyncReadbackManager","s":"async","who":"posParentWorld","e":"state done=1 result=1 allow=1 awakened=112"}
+{"f":49,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Parent/Item (Clone)","e":"Start"}
+{"f":49,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":49,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":49,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":50,"p":"ScriptRunBehaviourUpdate","s":"async","who":"posScene","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=112"}
+{"f":51,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Extra pos=(5.000,6.000,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":51,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)","e":"OnEnable"}
+{"f":51,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Extra pos=(5.000,6.500,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":51,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":51,"p":"UpdateAsyncInstantiate","s":"async","who":"posScene","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=114 [GameObject Item (Clone) parent=- scene=Extra active=1 sibling=4 pos=(5.000,6.000,7.000) local=(5.000,6.000,7.000) rot=(0.000,0.383,0.000,0.924) lrot=(0.000,0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":51,"p":"UpdateAsyncReadbackManager","s":"async","who":"posScene","e":"state done=1 result=1 allow=1 awakened=114"}
+{"f":51,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)","e":"Start"}
+{"f":51,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":51,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)","e":"first Update"}
+{"f":51,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":52,"p":"ScriptRunBehaviourUpdate","s":"async","who":"count2posParent","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=114"}
+{"f":53,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(24.000,12.000,-10.000) rot=(0.000,0.924,0.000,0.383)"}
+{"f":53,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":53,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(24.000,12.000,-10.000) rot=(0.000,0.924,0.000,0.383)"}
+{"f":53,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":53,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(24.000,13.000,-10.000) rot=(0.000,0.924,0.000,0.383)"}
+{"f":53,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":53,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(24.000,13.000,-10.000) rot=(0.000,0.924,0.000,0.383)"}
+{"f":53,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":53,"p":"UpdateAsyncInstantiate","s":"async","who":"count2posParent","e":"completed done=1 progress=1 result=2 waiting=0 allow=1 awakened=118 [GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=24 pos=(24.000,12.000,-10.000) local=(5.000,6.000,7.000) rot=(0.000,0.924,0.000,0.383) lrot=(0.000,0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000); GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=25 pos=(24.000,12.000,-10.000) local=(5.000,6.000,7.000) rot=(0.000,0.924,0.000,0.383) lrot=(0.000,0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)]"}
+{"f":53,"p":"UpdateAsyncReadbackManager","s":"async","who":"count2posParent","e":"state done=1 result=2 allow=1 awakened=118"}
+{"f":53,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Parent/Item (Clone)","e":"Start"}
+{"f":53,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Parent/Item (Clone)","e":"Start"}
+{"f":53,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":53,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":53,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":53,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":53,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":53,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":54,"p":"ScriptRunBehaviourUpdate","s":"async","who":"immutable","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=118"}
+{"f":55,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":55,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)","e":"OnEnable"}
+{"f":55,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":55,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":55,"p":"UpdateAsyncInstantiate","s":"async","who":"immutable","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=120 [GameObject Item (Clone) parent=- scene=Probe active=1 sibling=32 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":55,"p":"UpdateAsyncReadbackManager","s":"async","who":"immutable","e":"state done=1 result=1 allow=1 awakened=120"}
+{"f":55,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)","e":"Start"}
+{"f":55,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":55,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)","e":"first Update"}
+{"f":55,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":56,"p":"ScriptRunBehaviourUpdate","s":"async","who":"parentToken","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=120"}
+{"f":57,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(5.000,6.000,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":57,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":57,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(5.000,7.000,7.000) rot=(0.000,0.383,0.000,0.924)"}
+{"f":57,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":57,"p":"UpdateAsyncInstantiate","s":"async","who":"parentToken","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=122 [GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=26 pos=(5.000,6.000,7.000) local=(-3.500,3.000,-2.500) rot=(0.000,0.383,0.000,0.924) lrot=(0.000,-0.383,0.000,0.924) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)]"}
+{"f":57,"p":"UpdateAsyncReadbackManager","s":"async","who":"parentToken","e":"state done=1 result=1 allow=1 awakened=122"}
+{"f":57,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Parent/Item (Clone)","e":"Start"}
+{"f":57,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":57,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":57,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":58,"p":"ScriptRunBehaviourUpdate","s":"async","who":"spansToken","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=122"}
+{"f":59,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(1.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":59,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":59,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(2.000,0.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":59,"p":"UpdateAsyncInstantiate","s":"async","who":"Parent/Item (Clone)","e":"OnEnable"}
+{"f":59,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(1.000,1.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":59,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":59,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"Awake active=1 root=Parent scene=Probe pos=(2.000,1.000,0.000) rot=(0.000,0.087,0.000,0.996)"}
+{"f":59,"p":"UpdateAsyncInstantiate","s":"async","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":59,"p":"UpdateAsyncInstantiate","s":"async","who":"spansToken","e":"completed done=1 progress=1 result=2 waiting=0 allow=1 awakened=126 [GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=27 pos=(1.000,0.000,0.000) local=(0.000,0.000,-4.500) rot=(0.000,0.087,0.000,0.996) lrot=(0.000,-0.643,0.000,0.766) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000); GameObject Item (Clone) parent=Parent scene=Probe active=1 sibling=28 pos=(2.000,0.000,0.000) local=(0.000,0.000,-4.000) rot=(0.000,0.087,0.000,0.996) lrot=(0.000,-0.643,0.000,0.766) scale=(0.500,0.500,0.500) lossy=(1.000,1.000,1.000)]"}
+{"f":59,"p":"UpdateAsyncReadbackManager","s":"async","who":"spansToken","e":"state done=1 result=2 allow=1 awakened=126"}
+{"f":59,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Parent/Item (Clone)","e":"Start"}
+{"f":59,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Parent/Item (Clone)","e":"Start"}
+{"f":59,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":59,"p":"ScriptRunDelayedStartupFrame","s":"async","who":"Item (Clone)/Child","e":"Start"}
+{"f":59,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":59,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Parent/Item (Clone)","e":"first Update"}
+{"f":59,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":59,"p":"ScriptRunBehaviourUpdate","s":"async","who":"Item (Clone)/Child","e":"first Update"}
+{"f":60,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"sceneTemplate","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=126"}
+{"f":61,"p":"UpdateAsyncInstantiate","s":"templates","who":"Template (Clone)","e":"Awake active=1 root=Template (Clone) scene=Probe pos=(0.000,0.000,-5.000) rot=(0.000,0.000,0.000,1.000)"}
+{"f":61,"p":"UpdateAsyncInstantiate","s":"templates","who":"Template (Clone)","e":"OnEnable"}
+{"f":61,"p":"UpdateAsyncInstantiate","s":"templates","who":"sceneTemplate","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=127 [GameObject Template (Clone) parent=- scene=Probe active=1 sibling=33 pos=(0.000,0.000,-5.000) local=(0.000,0.000,-5.000) rot=(0.000,0.000,0.000,1.000) lrot=(0.000,0.000,0.000,1.000) scale=(1.000,1.000,1.000) lossy=(1.000,1.000,1.000)]"}
+{"f":61,"p":"UpdateAsyncReadbackManager","s":"templates","who":"sceneTemplate","e":"state done=1 result=1 allow=1 awakened=127"}
+{"f":61,"p":"ScriptRunDelayedStartupFrame","s":"templates","who":"Template (Clone)","e":"Start"}
+{"f":61,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"Template (Clone)","e":"first Update"}
+{"f":62,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"hiddenTemplate","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=127"}
+{"f":63,"p":"UpdateAsyncInstantiate","s":"templates","who":"hiddenTemplate","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=127 [GameObject Hidden (Clone) parent=- scene=Probe active=0 sibling=34 pos=(0.000,0.000,0.000) local=(0.000,0.000,0.000) rot=(0.000,0.000,0.000,1.000) lrot=(0.000,0.000,0.000,1.000) scale=(1.000,1.000,1.000) lossy=(1.000,1.000,1.000)]"}
+{"f":63,"p":"UpdateAsyncReadbackManager","s":"templates","who":"hiddenTemplate","e":"state done=1 result=1 allow=1 awakened=127"}
+{"f":64,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"componentTemplate","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=127"}
+{"f":65,"p":"UpdateAsyncInstantiate","s":"templates","who":"Parent/Template (Clone)","e":"Awake active=1 root=Parent scene=Probe pos=(0.000,0.000,-5.000) rot=(0.000,0.000,0.000,1.000)"}
+{"f":65,"p":"UpdateAsyncInstantiate","s":"templates","who":"Parent/Template (Clone)","e":"OnEnable"}
+{"f":65,"p":"UpdateAsyncInstantiate","s":"templates","who":"componentTemplate","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=128 [ItemProbe Template (Clone) parent=Parent scene=Probe active=1 sibling=29 pos=(0.000,0.000,-5.000) local=(2.500,0.000,-5.000) rot=(0.000,0.000,0.000,1.000) lrot=(0.000,-0.707,0.000,0.707) scale=(1.000,1.000,1.000) lossy=(2.000,2.000,2.000)]"}
+{"f":65,"p":"UpdateAsyncReadbackManager","s":"templates","who":"componentTemplate","e":"state done=1 result=1 allow=1 awakened=128"}
+{"f":65,"p":"ScriptRunDelayedStartupFrame","s":"templates","who":"Parent/Template (Clone)","e":"Start"}
+{"f":65,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"Parent/Template (Clone)","e":"first Update"}
+{"f":66,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"transformPrefab","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=128"}
+{"f":67,"p":"UpdateAsyncInstantiate","s":"templates","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":67,"p":"UpdateAsyncInstantiate","s":"templates","who":"Item (Clone)","e":"OnEnable"}
+{"f":67,"p":"UpdateAsyncInstantiate","s":"templates","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":67,"p":"UpdateAsyncInstantiate","s":"templates","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":67,"p":"UpdateAsyncInstantiate","s":"templates","who":"transformPrefab","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=130 [Transform Item (Clone) parent=- scene=Probe active=1 sibling=35 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":67,"p":"UpdateAsyncReadbackManager","s":"templates","who":"transformPrefab","e":"state done=1 result=1 allow=1 awakened=130"}
+{"f":67,"p":"ScriptRunDelayedStartupFrame","s":"templates","who":"Item (Clone)","e":"Start"}
+{"f":67,"p":"ScriptRunDelayedStartupFrame","s":"templates","who":"Item (Clone)/Child","e":"Start"}
+{"f":67,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"Item (Clone)","e":"first Update"}
+{"f":67,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"Item (Clone)/Child","e":"first Update"}
+{"f":68,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"log","e":"Error: Cannot instantiate multiple objects that are not connected to GameObject, please use a loop over Instantiate"}
+{"f":68,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"texture","e":"threw System.NullReferenceException: Object reference not set to an instance of an object."}
+{"f":68,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"log","e":"Error: Cannot instantiate multiple objects that are not connected to GameObject, please use a loop over Instantiate"}
+{"f":68,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"textureCount2","e":"threw System.NullReferenceException: Object reference not set to an instance of an object."}
+{"f":68,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"log","e":"Error: Cannot instantiate multiple objects that are not connected to GameObject, please use a loop over Instantiate"}
+{"f":68,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"textureParent","e":"threw System.NullReferenceException: Object reference not set to an instance of an object."}
+{"f":68,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"syncTexture","e":"returned Texture2D Tex(Clone)"}
+{"f":68,"p":"ScriptRunBehaviourUpdate","s":"templates","who":"syncTextureParent","e":"returned Texture2D Tex(Clone)"}
+{"f":70,"p":"ScriptRunBehaviourUpdate","s":"modified","who":"Item(Clone)","e":"Awake active=1 root=Item(Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":70,"p":"ScriptRunBehaviourUpdate","s":"modified","who":"Item(Clone)","e":"OnEnable"}
+{"f":70,"p":"ScriptRunBehaviourUpdate","s":"modified","who":"Item(Clone)/Child","e":"Awake active=1 root=Item(Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":70,"p":"ScriptRunBehaviourUpdate","s":"modified","who":"Item(Clone)/Child","e":"OnEnable"}
+{"f":70,"p":"ScriptRunBehaviourUpdate","s":"modified","who":"probe","e":"source made awakened=132 alive=132 found=134"}
+{"f":70,"p":"ScriptRunBehaviourUpdate","s":"modified","who":"modified","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=132"}
+{"f":70,"p":"ScriptRunBehaviourUpdate","s":"modified","who":"Renamed/Child","e":"OnDisable"}
+{"f":70,"p":"ScriptRunBehaviourUpdate","s":"modified","who":"probe","e":"source changed"}
+{"f":70,"p":"ScriptRunDelayedDynamicFrameRate","s":"modified","who":"Renamed","e":"Start"}
+{"f":71,"p":"UpdateAsyncInstantiate","s":"modified","who":"Source (Clone)","e":"Awake active=1 root=Source (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":71,"p":"UpdateAsyncInstantiate","s":"modified","who":"Source (Clone)","e":"OnEnable"}
+{"f":71,"p":"UpdateAsyncInstantiate","s":"modified","who":"Source (Clone)/Child","e":"Awake active=1 root=Source (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":71,"p":"UpdateAsyncInstantiate","s":"modified","who":"Source (Clone)/Child","e":"OnEnable"}
+{"f":71,"p":"UpdateAsyncInstantiate","s":"modified","who":"modified","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=134 [GameObject Source (Clone) parent=- scene=Probe active=1 sibling=37 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":71,"p":"UpdateAsyncReadbackManager","s":"modified","who":"modified","e":"state done=1 result=1 allow=1 awakened=134"}
+{"f":71,"p":"ScriptRunDelayedStartupFrame","s":"modified","who":"Source (Clone)","e":"Start"}
+{"f":71,"p":"ScriptRunDelayedStartupFrame","s":"modified","who":"Source (Clone)/Child","e":"Start"}
+{"f":71,"p":"ScriptRunBehaviourUpdate","s":"modified","who":"Renamed","e":"first Update"}
+{"f":71,"p":"ScriptRunBehaviourUpdate","s":"modified","who":"Source (Clone)","e":"first Update"}
+{"f":71,"p":"ScriptRunBehaviourUpdate","s":"modified","who":"Source (Clone)/Child","e":"first Update"}
+{"f":74,"p":"ScriptRunBehaviourUpdate","s":"held","who":"held","e":"created progressAtMost0.9=1 done=0 result=null allow=0 awakened=134"}
+{"f":74,"p":"ScriptRunBehaviourUpdate","s":"held","who":"probe","e":"held awakened=134 alive=134 found=136"}
+{"f":74,"p":"ScriptRunBehaviourUpdate","s":"held","who":"probe","e":"held settled done=0 progress=0.9 result=null waiting=1 allow=0"}
+{"f":76,"p":"ScriptRunBehaviourUpdate","s":"held","who":"probe","e":"frame done=0 progress=0.9 result=null waiting=1 allow=0 awakened=134 alive=134 found=136"}
+{"f":77,"p":"ScriptRunBehaviourUpdate","s":"held","who":"probe","e":"frame done=0 progress=0.9 result=null waiting=1 allow=0 awakened=134 alive=134 found=136"}
+{"f":78,"p":"ScriptRunBehaviourUpdate","s":"held","who":"probe","e":"frame done=0 progress=0.9 result=null waiting=1 allow=0 awakened=134 alive=134 found=136"}
+{"f":79,"p":"ScriptRunBehaviourUpdate","s":"held","who":"probe","e":"allow awakened=134 alive=134 found=136"}
+{"f":79,"p":"ScriptRunBehaviourUpdate","s":"held","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":79,"p":"ScriptRunBehaviourUpdate","s":"held","who":"Item (Clone)","e":"OnEnable"}
+{"f":79,"p":"ScriptRunBehaviourUpdate","s":"held","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":79,"p":"ScriptRunBehaviourUpdate","s":"held","who":"Item (Clone)","e":"OnEnable"}
+{"f":79,"p":"ScriptRunBehaviourUpdate","s":"held","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":79,"p":"ScriptRunBehaviourUpdate","s":"held","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":79,"p":"ScriptRunBehaviourUpdate","s":"held","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":79,"p":"ScriptRunBehaviourUpdate","s":"held","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":79,"p":"ScriptRunBehaviourUpdate","s":"held","who":"held","e":"completed done=1 progress=1 result=2 waiting=0 allow=1 awakened=138 [GameObject Item (Clone) parent=- scene=Probe active=1 sibling=38 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=39 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":79,"p":"ScriptRunBehaviourUpdate","s":"held","who":"probe","e":"allowed awakened=138 alive=138 found=140"}
+{"f":79,"p":"ScriptRunDelayedDynamicFrameRate","s":"held","who":"held","e":"state done=1 result=2 allow=1 awakened=138"}
+{"f":79,"p":"ScriptRunDelayedDynamicFrameRate","s":"held","who":"Item (Clone)","e":"Start"}
+{"f":79,"p":"ScriptRunDelayedDynamicFrameRate","s":"held","who":"Item (Clone)","e":"Start"}
+{"f":79,"p":"ScriptRunDelayedDynamicFrameRate","s":"held","who":"Item (Clone)/Child","e":"Start"}
+{"f":79,"p":"ScriptRunDelayedDynamicFrameRate","s":"held","who":"Item (Clone)/Child","e":"Start"}
+{"f":80,"p":"ScriptRunBehaviourUpdate","s":"held","who":"Item (Clone)","e":"first Update"}
+{"f":80,"p":"ScriptRunBehaviourUpdate","s":"held","who":"Item (Clone)","e":"first Update"}
+{"f":80,"p":"ScriptRunBehaviourUpdate","s":"held","who":"Item (Clone)/Child","e":"first Update"}
+{"f":80,"p":"ScriptRunBehaviourUpdate","s":"held","who":"Item (Clone)/Child","e":"first Update"}
+{"f":83,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"probe","e":"before awakened=138 alive=138 found=140"}
+{"f":83,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"cancelNow","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=138"}
+{"f":83,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"probe","e":"cancelNow cancelled done=0 result=null allow=1 awakened=138 alive=138 found=140"}
+{"f":83,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"probe","e":"cancelNow again done=0 result=null allow=1"}
+{"f":83,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"probe","e":"cancelNow settled done=0 progress=0.9 result=null waiting=0 allow=1"}
+{"f":84,"p":"UpdateAsyncInstantiate","s":"cancel","who":"cancelNow","e":"completed done=1 progress=1 result=null waiting=0 allow=1 awakened=138 result=null"}
+{"f":84,"p":"UpdateAsyncReadbackManager","s":"cancel","who":"cancelNow","e":"state done=1 result=null allow=1 awakened=138"}
+{"f":85,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"preCancelled","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=138"}
+{"f":86,"p":"UpdateAsyncInstantiate","s":"cancel","who":"preCancelled","e":"completed done=1 progress=1 result=null waiting=0 allow=1 awakened=138 result=null"}
+{"f":86,"p":"UpdateAsyncReadbackManager","s":"cancel","who":"preCancelled","e":"state done=1 result=null allow=1 awakened=138"}
+{"f":87,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"tokenLater","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=138"}
+{"f":88,"p":"UpdateAsyncInstantiate","s":"cancel","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.000,0.000,0.000) rot=(0.000,0.000,0.000,1.000)"}
+{"f":88,"p":"UpdateAsyncInstantiate","s":"cancel","who":"Item (Clone)","e":"OnEnable"}
+{"f":88,"p":"UpdateAsyncInstantiate","s":"cancel","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.000,0.500,0.000) rot=(0.000,0.000,0.000,1.000)"}
+{"f":88,"p":"UpdateAsyncInstantiate","s":"cancel","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":88,"p":"UpdateAsyncInstantiate","s":"cancel","who":"tokenLater","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=140 [GameObject Item (Clone) parent=- scene=Probe active=1 sibling=40 pos=(0.000,0.000,0.000) local=(0.000,0.000,0.000) rot=(0.000,0.000,0.000,1.000) lrot=(0.000,0.000,0.000,1.000) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":88,"p":"UpdateAsyncReadbackManager","s":"cancel","who":"tokenLater","e":"state done=1 result=1 allow=1 awakened=140"}
+{"f":88,"p":"ScriptRunDelayedStartupFrame","s":"cancel","who":"Item (Clone)","e":"Start"}
+{"f":88,"p":"ScriptRunDelayedStartupFrame","s":"cancel","who":"Item (Clone)/Child","e":"Start"}
+{"f":88,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"Item (Clone)","e":"first Update"}
+{"f":88,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"Item (Clone)/Child","e":"first Update"}
+{"f":89,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"probe","e":"token cancel awakened=140 alive=140 found=142"}
+{"f":89,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"probe","e":"token cancelled awakened=140 alive=140 found=142"}
+{"f":91,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"waitingCancel","e":"created progressAtMost0.9=1 done=0 result=null allow=0 awakened=140"}
+{"f":91,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"probe","e":"waiting awakened=140 alive=140 found=142"}
+{"f":91,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"probe","e":"waiting settled done=0 progress=0.9 result=null waiting=1 allow=0"}
+{"f":93,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"probe","e":"cancel waiting awakened=140 alive=140 found=142"}
+{"f":93,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"probe","e":"cancelled waiting done=0 progress=0.9 result=null waiting=0 allow=0 awakened=140 alive=140 found=142"}
+{"f":95,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"probe","e":"frame done=0 progress=0.9 result=null waiting=0 allow=0 awakened=140 alive=140 found=142"}
+{"f":95,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"waitingCancel","e":"completed done=1 progress=1 result=null waiting=0 allow=1 awakened=140 result=null"}
+{"f":95,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"probe","e":"allowed done=1 progress=1 result=null waiting=0 allow=1 awakened=140 alive=140 found=142"}
+{"f":95,"p":"ScriptRunDelayedDynamicFrameRate","s":"cancel","who":"waitingCancel","e":"state done=1 result=null allow=1 awakened=140"}
+{"f":97,"p":"ScriptRunBehaviourUpdate","s":"cancel","who":"probe","e":"after done=1 progress=1 result=null waiting=0 allow=1 awakened=140 alive=140 found=142"}
+{"f":101,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"wait","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=140"}
+{"f":101,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"probe","e":"wait begin awakened=140 alive=140 found=142"}
+{"f":101,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":101,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"Item (Clone)","e":"OnEnable"}
+{"f":101,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":101,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"Item (Clone)","e":"OnEnable"}
+{"f":101,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":101,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":101,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":101,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":101,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"wait","e":"completed done=1 progress=1 result=2 waiting=0 allow=1 awakened=144 [GameObject Item (Clone) parent=- scene=Probe active=1 sibling=41 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500); GameObject Item (Clone) parent=- scene=Probe active=1 sibling=42 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":101,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"probe","e":"wait end done=1 progress=1 result=2 waiting=0 allow=1 awakened=144 alive=144 found=146"}
+{"f":101,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"probe","e":"wait again done=1 progress=1 result=2 waiting=0 allow=1"}
+{"f":101,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"probe","e":"late completed handler ran=1"}
+{"f":101,"p":"ScriptRunDelayedDynamicFrameRate","s":"wait","who":"wait","e":"state done=1 result=2 allow=1 awakened=144"}
+{"f":101,"p":"ScriptRunDelayedDynamicFrameRate","s":"wait","who":"Item (Clone)","e":"Start"}
+{"f":101,"p":"ScriptRunDelayedDynamicFrameRate","s":"wait","who":"Item (Clone)","e":"Start"}
+{"f":101,"p":"ScriptRunDelayedDynamicFrameRate","s":"wait","who":"Item (Clone)/Child","e":"Start"}
+{"f":101,"p":"ScriptRunDelayedDynamicFrameRate","s":"wait","who":"Item (Clone)/Child","e":"Start"}
+{"f":102,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"Item (Clone)","e":"first Update"}
+{"f":102,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"Item (Clone)","e":"first Update"}
+{"f":102,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"Item (Clone)/Child","e":"first Update"}
+{"f":102,"p":"ScriptRunBehaviourUpdate","s":"wait","who":"Item (Clone)/Child","e":"first Update"}
+{"f":105,"p":"ScriptRunBehaviourUpdate","s":"await","who":"probe","e":"await begin"}
+{"f":105,"p":"ScriptRunBehaviourUpdate","s":"await","who":"probe","e":"awaiter isCompleted=0"}
+{"f":106,"p":"UpdateAsyncInstantiate","s":"await","who":"Item (Clone)","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":106,"p":"UpdateAsyncInstantiate","s":"await","who":"Item (Clone)","e":"OnEnable"}
+{"f":106,"p":"UpdateAsyncInstantiate","s":"await","who":"Item (Clone)/Child","e":"Awake active=1 root=Item (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":106,"p":"UpdateAsyncInstantiate","s":"await","who":"Item (Clone)/Child","e":"OnEnable"}
+{"f":106,"p":"UpdateAsyncInstantiate","s":"await","who":"probe","e":"await resumed length=1 type=GameObject[] done=1 progress=1 result=1 waiting=0 allow=1"}
+{"f":106,"p":"UpdateAsyncInstantiate","s":"await","who":"probe","e":"await done op resumed length=1"}
+{"f":106,"p":"UpdateAsyncInstantiate","s":"await","who":"probe","e":"awaiter after isCompleted=1 result=1"}
+{"f":106,"p":"ScriptRunDelayedStartupFrame","s":"await","who":"Item (Clone)","e":"Start"}
+{"f":106,"p":"ScriptRunDelayedStartupFrame","s":"await","who":"Item (Clone)/Child","e":"Start"}
+{"f":106,"p":"ScriptRunBehaviourUpdate","s":"await","who":"Item (Clone)","e":"first Update"}
+{"f":106,"p":"ScriptRunBehaviourUpdate","s":"await","who":"Item (Clone)/Child","e":"first Update"}
+{"f":109,"p":"ScriptRunBehaviourUpdate","s":"slice","who":"probe","e":"default budget 2.000"}
+{"f":109,"p":"ScriptRunBehaviourUpdate","s":"slice","who":"probe","e":"set 0 threw System.ArgumentOutOfRangeException: integrationTimeMS was out of range. Must be greater than zero.\nParameter name: integrationTimeMS"}
+{"f":109,"p":"ScriptRunBehaviourUpdate","s":"slice","who":"probe","e":"set -1 threw System.ArgumentOutOfRangeException: integrationTimeMS was out of range. Must be greater than zero.\nParameter name: integrationTimeMS"}
+{"f":109,"p":"ScriptRunBehaviourUpdate","s":"slice","who":"probe","e":"set NaN ok budget=2.000"}
+{"f":109,"p":"ScriptRunBehaviourUpdate","s":"slice","who":"probe","e":"budget 0.0001"}
+{"f":-9,"p":"UpdateAsyncInstantiate","s":"slice","who":"probe","e":"tiny budget completed awakened=40 wokenBeforeCompletionFrame=0 done=1 progress=1 result=20 waiting=0 allow=1"}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"asyncNull","e":"threw System.ArgumentException: The Object you want to instantiate is null."}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncNull","e":"threw System.ArgumentException: The Object you want to instantiate is null."}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncPosNull","e":"threw System.ArgumentException: The Object you want to instantiate is null."}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"count0","e":"threw System.ArgumentException: Cannot call instantiate multiple with count less or equal to zero"}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"countMinus","e":"threw System.ArgumentException: Cannot call instantiate multiple with count less or equal to zero"}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"count0Null","e":"threw System.ArgumentException: The Object you want to instantiate is null."}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"asyncScriptable","e":"threw System.ArgumentException: Cannot call instantiate multiple for a ScriptableObject"}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncScriptable","e":"returned ProbeData Data(Clone)"}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncPosScriptable","e":"returned ProbeData Data(Clone)"}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"asyncDestroyed","e":"threw UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: original"}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncDestroyed","e":"threw UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: data"}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncPosDestroyed","e":"threw UnityEngine.MissingReferenceException: The object of type 'UnityEngine.GameObject' has been destroyed but you are still trying to access it.\nYour script should either check if it is null or you should not destroy the object. Parameter name: data"}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"Doomed/Item(Clone)","e":"Awake active=1 root=Doomed scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"Doomed/Item(Clone)","e":"OnEnable"}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"Item(Clone)/Child","e":"Awake active=1 root=Doomed scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"Item(Clone)/Child","e":"OnEnable"}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"syncDoomedParent","e":"returned GameObject Item(Clone) parent=Doomed scene=Probe active=1 sibling=0 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)"}
+{"f":121,"p":"ScriptRunBehaviourUpdate","s":"errors","who":"asyncDoomedParent","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=188"}
+{"f":121,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Doomed/Item(Clone)","e":"Start"}
+{"f":121,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Item(Clone)/Child","e":"Start"}
+{"f":121,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Item(Clone)/Child","e":"OnDisable"}
+{"f":121,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Doomed/Item(Clone)","e":"OnDisable"}
+{"f":121,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Doomed/Item(Clone)","e":"OnDestroy"}
+{"f":121,"p":"ScriptRunDelayedDynamicFrameRate","s":"errors","who":"Item(Clone)/Child","e":"OnDestroy"}
+{"f":122,"p":"UpdateAsyncInstantiate","s":"errors","who":"asyncDoomedParent","e":"completed done=1 progress=1 result=null waiting=0 allow=1 awakened=188 result=null"}
+{"f":122,"p":"UpdateAsyncReadbackManager","s":"errors","who":"asyncDoomedParent","e":"state done=1 result=null allow=1 awakened=188"}
+{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Item(Clone)","e":"Awake active=1 root=Item(Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Item(Clone)","e":"OnEnable"}
+{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Item(Clone)/Child","e":"Awake active=1 root=Item(Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Item(Clone)/Child","e":"OnEnable"}
+{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"pending","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=190"}
+{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source/Child","e":"OnDisable"}
+{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source","e":"OnDisable"}
+{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source","e":"OnDestroy"}
+{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source/Child","e":"OnDestroy"}
+{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"probe","e":"source destroyed done=0 result=null allow=1 awakened=190 alive=186 found=188"}
+{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"parentDestroyed","e":"created progressAtMost0.9=1 done=0 result=null allow=1 awakened=190"}
+{"f":125,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"probe","e":"parent destroyed done=0 result=null allow=1 awakened=190 alive=186 found=188"}
+{"f":126,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"Source (Clone)","e":"Awake active=1 root=Source (Clone) scene=Probe pos=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952)"}
+{"f":126,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"Source (Clone)","e":"OnEnable"}
+{"f":126,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"Source (Clone)/Child","e":"Awake active=1 root=Source (Clone) scene=Probe pos=(0.791,2.426,3.156) rot=(0.128,0.145,0.239,0.952)"}
+{"f":126,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"Source (Clone)/Child","e":"OnEnable"}
+{"f":126,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"pending","e":"completed done=1 progress=1 result=1 waiting=0 allow=1 awakened=192 [GameObject Source (Clone) parent=- scene=Probe active=1 sibling=64 pos=(1.000,2.000,3.000) local=(1.000,2.000,3.000) rot=(0.128,0.145,0.239,0.952) lrot=(0.128,0.145,0.239,0.952) scale=(0.500,0.500,0.500) lossy=(0.500,0.500,0.500)]"}
+{"f":126,"p":"UpdateAsyncInstantiate","s":"pendingDestroy","who":"parentDestroyed","e":"completed done=1 progress=1 result=null waiting=0 allow=1 awakened=192 result=null"}
+{"f":126,"p":"UpdateAsyncReadbackManager","s":"pendingDestroy","who":"pending","e":"state done=1 result=1 allow=1 awakened=192"}
+{"f":126,"p":"UpdateAsyncReadbackManager","s":"pendingDestroy","who":"parentDestroyed","e":"state done=1 result=null allow=1 awakened=192"}
+{"f":126,"p":"ScriptRunDelayedStartupFrame","s":"pendingDestroy","who":"Source (Clone)","e":"Start"}
+{"f":126,"p":"ScriptRunDelayedStartupFrame","s":"pendingDestroy","who":"Source (Clone)/Child","e":"Start"}
+{"f":126,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source (Clone)","e":"first Update"}
+{"f":126,"p":"ScriptRunBehaviourUpdate","s":"pendingDestroy","who":"Source (Clone)/Child","e":"first Update"}
+{"f":131,"p":"ScriptRunBehaviourUpdate","s":"finish","who":"probe","e":"finish awakened=192 alive=188 found=190"}
