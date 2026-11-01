@@ -169,6 +169,10 @@ namespace Unbound.Runtime
 
         static float ClipTime(AnimationClip clip, double normalized, bool loop) => ClipSampling.ClipTime(clip, normalized, loop);
 
+        internal bool CompletedNonLoopingBaseState(StateRun run) =>
+            run.Normalized >= 1.0 && MotionOf(Layers[0].Def, run.Def) is AnimationClip clip
+            && !Controller.MapClip(clip).isLooping;
+
         /// <summary>Target matching: once the base layer's state reaches the match's start, each
         /// evaluation moves the root by its motion plus the part of the remaining correction the
         /// step covers, (min(t, end) − t₀) / (end − t₀), the correction being the target less where

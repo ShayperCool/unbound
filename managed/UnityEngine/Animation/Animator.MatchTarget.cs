@@ -50,6 +50,7 @@ namespace UnityEngine
             var p = EnsurePlayer();
             var run = p != null && p.Layers.Length > 0 ? p.Layers[0].Current : null;
             if (run == null) return;
+            if (p.CompletedNonLoopingBaseState(run)) return;
             double now = run.Normalized, loop = Math.Floor(now);
             double start = Math.Max(now, loop + startNormalizedTime), end = loop + targetNormalizedTime;
             m_Match = new MatchState { Position = matchPosition, Rotation = matchRotation, Mask = weightMask,

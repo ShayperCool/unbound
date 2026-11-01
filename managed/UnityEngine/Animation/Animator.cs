@@ -279,6 +279,15 @@ namespace UnityEngine
             m_Player?.Bindings.WriteDefaults();
             m_Player = null;
             EnsurePlayer();
+            if (m_Match != null && m_Player != null && m_Player.Layers.Length > 0)
+            {
+                // Rebinding keeps the target and start but resets its end to one state cycle.
+                // Measured with several original target times in tests/projects/modelroot.
+                m_Match.Player = m_Player;
+                m_Match.Run = m_Player.Layers[0].Current;
+                m_Match.End = 1.0;
+                m_Match.Finish = false;
+            }
         }
 
         public void WriteDefaultValues() => m_Player?.Bindings.WriteDefaults();
