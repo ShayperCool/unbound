@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Rendering;
 
 namespace Unbound.Runtime
 {
@@ -10,8 +11,10 @@ namespace Unbound.Runtime
     /// BeforeHaloAndLensFlares and AfterHaloAndLensFlares events. Everything here is measured in the
     /// Editor (tests/projects/flares):
     /// <list type="bullet">
-    /// <item>Halos draw on cameras without command buffers, flares only on cameras with an
-    /// enabled FlareLayer.</item>
+    /// <item>Halos draw with or without a FlareLayer, flares only on cameras with an enabled
+    /// FlareLayer. A camera command buffer that clears the target's color at AfterForwardAlpha or
+    /// BeforeHaloAndLensFlares hides the halos (not the flares); empty buffers and buffers setting a
+    /// global float do not (see <see cref="HalosHidden"/>).</item>
     /// <item>A halo is a square fan of four triangles facing the camera (its right and up axes),
     /// half as wide as the halo's size (a Halo component's size, a light's range times
     /// <c>RenderSettings.haloStrength</c>), its center vertex a third of that size nearer the
@@ -28,6 +31,10 @@ namespace Unbound.Runtime
     /// out at half that speed; disabling it starts it over.</item>
     /// <item>Colors become 8-bit sRGB vertex colors that a linear project decodes again.</item>
     /// </list>
+    /// What was not measured is drawn as above with a warning, once per condition (see
+    /// <see cref="Unmeasured"/>): the Gamma color space, a halo or flare on a layer the camera's
+    /// cullingMask excludes, a camera with a replacement shader, a cube map face render, and one
+    /// flare drawn by several cameras in a frame.
     /// </summary>
     internal static class Halos
     {
@@ -53,6 +60,21 @@ namespace Unbound.Runtime
         static readonly List<Vector2> s_Uvs = new List<Vector2>();
         static readonly List<Color32> s_Colors = new List<Color32>();
         static readonly List<int> s_Indices = new List<int>();
+
+        /// <summary>The flares drawn in frame <see cref="s_DrawnFrame"/> and the camera that drew
+        /// each first.</summary>
+        static readonly Dictionary<UnityEngine.Object, Camera> s_DrawnBy = new Dictionary<UnityEngine.Object, Camera>();
+        static int s_DrawnFrame = -1;
+        static bool s_WarnedGamma;
+
+        /// <summary>A cube map face render is in progress (RenderToCubemap, a realtime reflection
+        /// probe).</summary>
+        internal static int CubeFaces;
+
+        /// <summary>Warns once per condition that halos or flares are drawn where the Editor was not
+        /// measured, naming what Unbound does (tests/projects/flares; docs/COMPATIBILITY_GAPS.md).</summary>
+        static void Unmeasured(string condition, string applied) =>
+            Stubs.Ignored("Halo/LensFlare (" + condition + ")", "is not measured against the Editor: " + applied);
 
         sealed class Fade
         {
@@ -120,7 +142,15 @@ namespace Unbound.Runtime
         static byte VertexByte(float gamma)
         {
             int g = (int)(Mathf.Clamp01(gamma) * 255f + 0.5f);
-            if (QualitySettings.activeColorSpace != ColorSpace.Linear) return (byte)g;
+            if (QualitySettings.activeColorSpace != ColorSpace.Linear)
+            {
+                if (!s_WarnedGamma)
+                {
+                    s_WarnedGamma = true;
+                    Unmeasured("Gamma color space", "the 8-bit sRGB colors are drawn as they are");
+                }
+                return (byte)g;
+            }
             return (byte)(int)(Mathf.GammaToLinearSpace(g / 255f) * 255f + 0.5f);
         }
 
@@ -136,14 +166,26 @@ namespace Unbound.Runtime
         /// target with its matrices.</summary>
         internal static void Render(Camera camera, in Matrix4x4 view, in Matrix4x4 projection, Rect viewport)
         {
-            // A camera with command buffers draws no halos (its flares it does).
-            if (camera.commandBufferCount == 0) DrawHalos(view);
+            bool drawn = DrawHalos(camera, view);
             var layer = camera.GetComponent<FlareLayer>();
-            if (layer != null && layer.enabled) DrawFlares(camera, view, projection, viewport);
+            if (layer != null && layer.enabled) drawn |= DrawFlares(camera, view, projection, viewport);
             else ForgetCamera(camera);
+            if (!drawn) return;
+            if (camera.m_ReplacementShader != null)
+                Unmeasured("camera with a replacement shader", "they are drawn with their own shaders");
+            if (CubeFaces > 0)
+                Unmeasured("cube map face render", "they are drawn into every face as into a camera's target");
         }
 
-        static void DrawHalos(in Matrix4x4 view)
+        /// <summary>Warns when the camera's cullingMask excludes the layer of a halo or flare it
+        /// draws.</summary>
+        static void CheckLayer(Camera camera, Component source, string what)
+        {
+            if ((camera.cullingMask & (1 << source.gameObject.layer)) == 0)
+                Unmeasured(what + " on a layer the camera's cullingMask excludes", "it is drawn anyway");
+        }
+
+        static bool DrawHalos(Camera camera, in Matrix4x4 view)
         {
             s_Vertices.Clear(); s_Uvs.Clear(); s_Colors.Clear(); s_Indices.Clear();
             var cameraToWorld = view.inverse;
@@ -154,6 +196,7 @@ namespace Unbound.Runtime
                 if (halo == null || !halo.isActiveAndEnabled || halo.m_Size <= 0f) continue;
                 // A Halo component's color is its own (its transform's scale does not matter).
                 var c = halo.m_Color;
+                CheckLayer(camera, halo, "halo");
                 AddHalo(halo.transform.position, halo.m_Size, VertexColor(c.r, c.g, c.b), right, up, forward);
             }
             float strength = RenderSettings.haloStrength;
@@ -165,10 +208,11 @@ namespace Unbound.Runtime
                 if (size <= 0f) continue;
                 // The light's sRGB color times its intensity and the strength's sRGB encoding.
                 var c = light.color;
+                CheckLayer(camera, light, "halo");
                 float k = light.intensity * scale;
                 AddHalo(light.transform.position, size, VertexColor(c.r * k, c.g * k, c.b * k), right, up, forward);
             }
-            if (s_Vertices.Count == 0) return;
+            if (s_Vertices.Count == 0 || HalosHidden(camera)) return false;
             s_HaloMesh ??= NewMesh("Unbound Halos");
             s_HaloMesh.Clear();
             s_HaloMesh.SetVertices(s_Vertices);
@@ -182,6 +226,45 @@ namespace Unbound.Runtime
             // The shader declares no properties: its scale and offset come with the draw.
             s_HaloProperties[s_FalloffStId] = new Vector4(1f, 1f, 0f, 0f);
             GfxStream.Draw(s_HaloMesh.Sync(), 0, s_HaloMaterial.Sync(), 0, Matrix4x4.identity, Color.white, properties: s_HaloProperties);
+            return true;
+        }
+
+        /// <summary>The camera events whose command buffers run after the halos.</summary>
+        static bool AfterHalos(CameraEvent e) => e == CameraEvent.AfterHaloAndLensFlares || e == CameraEvent.BeforeImageEffects
+            || e == CameraEvent.AfterImageEffects || e == CameraEvent.AfterEverything;
+
+        static readonly CameraEvent[] s_Events = (CameraEvent[])Enum.GetValues(typeof(CameraEvent));
+
+        /// <summary>Whether the camera's command buffers hide its halos. Measured
+        /// (tests/projects/flares ho.*, hb.*): a buffer clearing only the color at AfterForwardAlpha or
+        /// BeforeHaloAndLensFlares hides them; an empty buffer (at BeforeForwardOpaque,
+        /// AfterForwardAlpha) or one setting a global float (at BeforeImageEffects) does not. A
+        /// buffer running after the halos cannot change them. Any other buffer before the halos is
+        /// not measured: it warns once per camera, buffer and event, and hides them if it clears,
+        /// else not.</summary>
+        internal static bool HalosHidden(Camera camera)
+        {
+            if (camera.commandBufferCount == 0) return false;
+            bool hidden = false;
+            foreach (var e in s_Events)
+            {
+                if (AfterHalos(e)) continue;
+                var buffers = camera.CommandBuffersAt(e);
+                if (buffers == null) continue;
+                foreach (var buffer in buffers)
+                {
+                    bool clears = buffer.ColorClears + buffer.OtherClears > 0;
+                    bool measured = clears
+                        ? buffer.OtherClears == 0 && buffer.CommandCount == buffer.ColorClears
+                            && (e == CameraEvent.AfterForwardAlpha || e == CameraEvent.BeforeHaloAndLensFlares)
+                        : buffer.CommandCount == buffer.GlobalFloats;
+                    if (!measured)
+                        Stubs.Ignored("Halo (command buffer '" + buffer.name + "' at " + e + " of camera '" + camera.name + "' #" + camera.GetInstanceID() + ")",
+                            "is not measured against the Editor: halos are " + (clears ? "hidden, as by a buffer clearing the color before them" : "drawn, as with a buffer that does not clear"));
+                    hidden |= clears;
+                }
+            }
+            return hidden;
         }
 
         static void AddHalo(Vector3 center, float size, Color32 color, Vector3 right, Vector3 up, Vector3 forward)
@@ -261,12 +344,18 @@ namespace Unbound.Runtime
             foreach (var key in s_Stale) s_Fades.Remove(key);
         }
 
-        static void DrawFlares(Camera camera, in Matrix4x4 view, in Matrix4x4 projection, Rect viewport)
+        static bool DrawFlares(Camera camera, in Matrix4x4 view, in Matrix4x4 projection, Rect viewport)
         {
             CollectSources();
             foreach (var fade in s_Fades) if (fade.Key.Item2 == camera) fade.Value.Seen = false;
             float width = viewport.width, height = viewport.height;
-            if (width <= 0f || height <= 0f) return;
+            if (width <= 0f || height <= 0f) return false;
+            if (s_DrawnFrame != Time.frameCount)
+            {
+                s_DrawnFrame = Time.frameCount;
+                s_DrawnBy.Clear();
+            }
+            bool drawn = false;
             var center = new Vector2(width * 0.5f, height * 0.5f);
             var cameraPosition = view.inverse.MultiplyPoint3x4(Vector3.zero);
             bool orthographic = projection.m33 == 1f;
@@ -295,6 +384,12 @@ namespace Unbound.Runtime
                 // camera scales them by the flare's depth.
                 float unit = ElementScale * projection.m11 * height * 0.5f * (orthographic ? (source.Directional ? camera.farClipPlane : -viewPoint.z) : 1f);
                 if (!BuildFlare(source, fade.Visibility, screen, center, unit)) continue;
+                CheckLayer(camera, (Component)source.Key, "lens flare");
+                // Each camera fades its flares on its own; a flare drawn by a second camera in a
+                // frame was not measured.
+                if (!s_DrawnBy.TryGetValue(source.Key, out var first)) s_DrawnBy[source.Key] = camera;
+                else if (first != camera) Unmeasured("lens flare drawn by several cameras in a frame", "each camera fades it on its own");
+                drawn = true;
                 if (!matrices)
                 {
                     GfxStream.Camera(Matrix4x4.identity, Matrix4x4.Ortho(0f, width, 0f, height, -1f, 1f), saved.Flags);
@@ -318,6 +413,7 @@ namespace Unbound.Runtime
             foreach (var fade in s_Fades)
                 if (fade.Key.Item2 == camera && !fade.Value.Seen) s_Stale.Add(fade.Key);
             foreach (var key in s_Stale) s_Fades.Remove(key);
+            return drawn;
         }
 
         /// <summary>A collider between the camera and the flare (triggers too; for a directional

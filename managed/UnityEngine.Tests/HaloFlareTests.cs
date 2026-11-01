@@ -1,5 +1,6 @@
 using Unbound.Runtime;
 using UnityEngine;
+using UnityEngine.Rendering;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -43,6 +44,43 @@ namespace UnityEngine.Tests
             r = Halos.ImageRect(1, 10, 256, 256);
             Assert.Equal((192f + 0.375f) / 256f, r.xMin, 6);
             Assert.Equal((0f + 0.4375f) / 256f, r.yMin, 6);
+        }
+
+        [Fact]
+        public void OnlyMeasuredClearingBuffersHideHalos()
+        {
+            var camera = new GameObject("HaloBuffers").AddComponent<Camera>();
+            try
+            {
+                bool HiddenWith(CameraEvent e, CommandBuffer buffer)
+                {
+                    camera.AddCommandBuffer(e, buffer);
+                    bool hidden = Halos.HalosHidden(camera);
+                    camera.RemoveAllCommandBuffers();
+                    return hidden;
+                }
+                Assert.False(Halos.HalosHidden(camera));
+                // tests/projects/flares hb.*: buffers that do not clear leave the halos.
+                Assert.False(HiddenWith(CameraEvent.BeforeForwardOpaque, new CommandBuffer()));
+                Assert.False(HiddenWith(CameraEvent.AfterForwardAlpha, new CommandBuffer()));
+                var setFloat = new CommandBuffer();
+                setFloat.SetGlobalFloat("_HaloTestUnused", 1f);
+                Assert.False(HiddenWith(CameraEvent.BeforeImageEffects, setFloat));
+                // ho.*: a color clear before the halos hides them; after them it cannot.
+                var clear = new CommandBuffer();
+                clear.ClearRenderTarget(false, true, Color.green);
+                Assert.True(HiddenWith(CameraEvent.AfterForwardAlpha, clear));
+                Assert.True(HiddenWith(CameraEvent.BeforeHaloAndLensFlares, clear));
+                Assert.False(HiddenWith(CameraEvent.AfterHaloAndLensFlares, clear));
+                // Not measured (warns): a clear at another event before the halos hides them.
+                Assert.True(HiddenWith(CameraEvent.BeforeForwardOpaque, clear));
+                clear.Clear();
+                Assert.False(HiddenWith(CameraEvent.AfterForwardAlpha, clear));
+            }
+            finally
+            {
+                Object.DestroyImmediate(camera.gameObject);
+            }
         }
     }
 }
