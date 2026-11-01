@@ -289,6 +289,8 @@ namespace UnityEngine.Experimental.Rendering
 
         public static TextureFormat GetTextureFormat(GraphicsFormat format)
         {
+            if (format == GraphicsFormat.B8G8R8A8_UNorm || format == GraphicsFormat.B8G8R8A8_SRGB)
+                return TextureFormat.BGRA32;
             foreach (var (t, linear, srgb) in s_TextureFormats)
                 if (linear == format || srgb == format) return t;
             return 0;
