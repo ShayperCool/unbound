@@ -22,7 +22,8 @@ def diagnose(path):
         p = r['particles'][slot]
         events.append(dict(scenario=r['scenario'], step=r['step'], kind=r['kind'],
                            childSeed=r['childSeed'], flags=r['flags'], order=r['order'],
-                           parentSeed=r['supplied']['seed'] if r['supplied'] else None,
+                           parentSeed=[12345, 3735928559][(slot+r['order']) % 2] if r['supplied'] else None,
+                           parentSeedAfter=r['supplied']['seed'] if r['supplied'] else None,
                            particle=p))
 
     def groups(fields, value):

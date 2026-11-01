@@ -80,10 +80,14 @@ def analyze(path):
             continue
         p = row['particles'][slot]
         manual = row['kind'] == 'manual'
-        parent = row['supplied']['seed'] if manual else row['childSeed']
+        # Inputs come from the predeclared call sequence, independently of any
+        # post-call mutation of the by-ref Particle returned by the implementation.
+        parent = [12345, 3735928559][(slot + row['order']) % 2] if manual else row['childSeed']
         histories[(row['scenario'], slot)] = (parent, row['childSeed'], row['step'], manual)
         observations.append(dict(scenario=row['scenario'], step=row['step'],
-                                 parent_seed=parent if manual else None, child_seed=row['childSeed'],
+                                 parent_seed=parent if manual else None,
+                                 parent_seed_after=row['supplied']['seed'] if manual else None,
+                                 child_seed=row['childSeed'],
                                  flags=row['flags'], seed=p['seed'], axis=p['axis'],
                                  predictions={name: model(parent, row['childSeed'], row['step'], manual)
                                               for name, model in MODELS.items()}))
