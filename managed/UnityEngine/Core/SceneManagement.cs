@@ -454,12 +454,17 @@ namespace UnityEngine.SceneManagement
         /// needsRetetrahedralization (measured for one outgoing scene: tests/projects/lightprobes
         /// Reference lifecycle.jsonl). The Editor's OpenScene, Play mode entry and AssetBundle
         /// scenes are not measured and keep the per-scene unload.
+        /// A SceneManager load also keeps the outgoing active scene active through its
+        /// sceneUnloaded: GetActiveScene there answers that scene, valid and no longer loaded
+        /// (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference lifecycle.jsonl,
+        /// branch t3/light-probes-lifecycle-2, commit f8516528, row 22), and no untitled scene is
+        /// created. The other Single loads are not measured and clear it before, as before.
         /// </summary>
         internal static void UnloadForSingleLoad(SceneData incoming, bool sceneManagerLoad)
         {
             if (sceneManagerLoad) LightProbes.SingleLoadReplacing();
             foreach (var other in SceneRegistry.Loaded.ToArray())
-                if (other != incoming) UnloadNow(other, keepDontSave: true);
+                if (other != incoming) UnloadNow(other, keepDontSave: true, activeThroughUnloaded: sceneManagerLoad);
         }
 
         /// <summary>Loads a scene immediately: the first scene of a session.</summary>
@@ -536,7 +541,9 @@ namespace UnityEngine.SceneManagement
         /// (HideFlags.DontSave) leave their scene for none (measured: tests/projects/messages).</summary>
         static bool KeptBySingleLoad(GameObject root) => (root.hideFlags & HideFlags.DontSaveInEditor) != 0;
 
-        static void UnloadNow(SceneData data, bool keepDontSave = false)
+        /// <param name="activeThroughUnloaded">A SceneManager Single load: the scene, when active,
+        /// stays the active one until its sceneUnloaded handlers have run (UnloadForSingleLoad).</param>
+        static void UnloadNow(SceneData data, bool keepDontSave = false, bool activeThroughUnloaded = false)
         {
             data.LoadingState = Scene.LoadingState.Unloading;
             foreach (var root in data.Roots.ToArray())
@@ -548,17 +555,27 @@ namespace UnityEngine.SceneManagement
             data.IsLoaded = false;
             data.LoadingState = Scene.LoadingState.NotLoaded;
             SceneRegistry.Loaded.Remove(data);
-            if (SceneRegistry.Active == data) SceneRegistry.Active = null;
+            bool keepActive = activeThroughUnloaded && SceneRegistry.Active == data;
+            if (SceneRegistry.Active == data && !keepActive) SceneRegistry.Active = null;
             // Its probes leave the loaded set, raising needsRetetrahedralization before sceneUnloaded
             // (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference lifecycle.jsonl,
             // branch t3/light-probes-lifecycle-2, commit f8516528). A SceneManager Single load has
             // already taken its outgoing scenes' probes out of the set, so nothing is raised then.
             // Unity raises the group (needs, sceneUnloaded, the operation's completion) after
             // UnloadSceneAsync returns; here it happens within the call (not fixed).
-            LightProbes.SceneUnloaded(data.Handle.Value);
-            // sceneUnloaded sees the scene with its name (measured: tests/projects/editorcallbacks);
-            // it is forgotten after.
-            SceneManager.Internal_SceneUnloaded(new Scene(data.Handle));
+            try
+            {
+                LightProbes.SceneUnloaded(data.Handle.Value);
+                // sceneUnloaded sees the scene with its name (measured: tests/projects/editorcallbacks);
+                // it is forgotten after.
+                SceneManager.Internal_SceneUnloaded(new Scene(data.Handle));
+            }
+            finally
+            {
+                // The kept active scene is cleared once its handlers have run (also when one
+                // threw), unless a handler made another scene active.
+                if (keepActive && SceneRegistry.Active == data) SceneRegistry.Active = null;
+            }
             SceneRegistry.Forget(data);
         }
     }
