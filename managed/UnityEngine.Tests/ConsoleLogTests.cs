@@ -136,6 +136,26 @@ namespace UnityEngine.Tests
             Assert.Equal("", ConsoleLog.Path);
         }
 
+        [Fact]
+        public void Migrated_validation_cache_is_permitted_but_cannot_point_into_authored_content()
+        {
+            string global = Path.Combine(Cache, "unbound");
+            Directory.CreateDirectory(global);
+            string validation = Path.Combine(global, "validation");
+            string migrated = Path.Combine(root, "migrated-validation");
+            Directory.CreateDirectory(migrated);
+            Directory.CreateSymbolicLink(validation, migrated);
+            Open(Path.Combine(validation, "session.log"));
+            Assert.Equal(Path.Combine(migrated, "session.log"), ConsoleLog.Path);
+            ConsoleLog.Reset();
+            Directory.Delete(validation);
+            Directory.CreateSymbolicLink(validation, Path.Combine(Project, "Assets"));
+            var before = Authored();
+            Open(Path.Combine(validation, "sentinel.cs"));
+            Assert.Equal("", ConsoleLog.Path);
+            Assert.Equal(before, Authored());
+        }
+
         public void Dispose()
         {
             ConsoleLog.Reset();

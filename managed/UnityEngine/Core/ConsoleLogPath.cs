@@ -10,10 +10,18 @@ namespace Unbound.Runtime
         {
             string resolved = Resolve(path);
             // Resolve project aliases, but do not bless a Library symlink into authored content.
-            string projectRoot = string.IsNullOrEmpty(project) ? null : System.IO.Path.Combine(Resolve(project), "Library", "Unbound");
+            string projectPath = string.IsNullOrEmpty(project) ? null : Resolve(project);
+            string projectRoot = projectPath == null ? null : System.IO.Path.Combine(projectPath, "Library", "Unbound");
+            if (projectPath != null)
+                foreach (string authored in new[] { "Assets", "Packages", "ProjectSettings" })
+                    if (Inside(resolved, System.IO.Path.Combine(projectPath, authored)))
+                        throw new IOException("log path cannot write the project's authored files");
             // The global cache itself may be relocated by symlink, as supported by cache migration.
             string cacheRoot = Resolve(System.IO.Path.Combine(cacheHome, "unbound"));
-            if (!Inside(resolved, projectRoot) && !Inside(resolved, cacheRoot))
+            // Match tests/probe_paths.py's existing cache_artifact_path policy: validation
+            // has its own supported disk-migration symlink on this machine.
+            string validationRoot = Resolve(System.IO.Path.Combine(cacheHome, "unbound", "validation"));
+            if (!Inside(resolved, projectRoot) && !Inside(resolved, cacheRoot) && !Inside(resolved, validationRoot))
                 throw new IOException("log path must be inside this project's Library/Unbound or the global XDG cache/unbound directory");
             return resolved;
         }
