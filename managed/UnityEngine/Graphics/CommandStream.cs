@@ -65,7 +65,8 @@ namespace Unbound.Runtime
         {
             internal ulong Color, Depth;
             internal ulong[] Colors;
-            internal int Mip, Slice;
+            /// <summary>Slice: the target's layer, or -1 for all of them (<see cref="Layers"/>).</summary>
+            internal int Mip, Slice, Layers;
             internal Rect Viewport;
             internal Rect? Scissor;
             internal Matrix4x4 View, Projection;
@@ -79,8 +80,8 @@ namespace Unbound.Runtime
         {
             if (state.Color != s_State.Color || state.Depth != s_State.Depth || state.Mip != s_State.Mip || state.Slice != s_State.Slice || state.Colors != s_State.Colors)
             {
-                if (state.Colors != null) SetTargets(state.Colors, state.Depth, state.Mip, state.Slice);
-                else SetTarget(state.Color, state.Depth, state.Mip, state.Slice);
+                if (state.Colors != null) SetTargets(state.Colors, state.Depth, state.Mip, state.Slice, state.Layers);
+                else SetTarget(state.Color, state.Depth, state.Mip, state.Slice, state.Layers);
             }
             s_State.Scissor = state.Scissor;
             Viewport(state.Viewport);
@@ -88,6 +89,9 @@ namespace Unbound.Runtime
         }
 
         internal static bool Pending => s_Length > 0;
+
+        /// <summary>The commands recorded since the last hand-over (read by tests).</summary>
+        internal static ReadOnlySpan<byte> Recorded => new ReadOnlySpan<byte>(s_Buffer, 0, s_Length);
 
         /// <summary>Hands the recorded commands to the renderer.</summary>
         internal static void Flush()
@@ -189,29 +193,46 @@ namespace Unbound.Runtime
 
         /// <summary>Draws go into <paramref name="color"/> (0: the screen) and its depth buffer
         /// (<paramref name="depth"/> 0), another's or none (<see cref="NoTexture"/>); the viewport
-        /// becomes the whole target.</summary>
-        internal static void SetTarget(ulong color, ulong depth = 0, int mip = 0, int slice = 0)
+        /// becomes the whole target.
+        /// <para>A negative <paramref name="slice"/> binds every one of the target's
+        /// <paramref name="layers"/>, as the Editor's GL device does (measured,
+        /// tests/projects/droppedparams slice.*): a clear clears them all; a draw goes into the
+        /// first, as on GL when the shader picks no layer.</para></summary>
+        internal static void SetTarget(ulong color, ulong depth = 0, int mip = 0, int slice = 0, int layers = 1)
         {
             s_State.Color = color;
             s_State.Colors = null;
             s_State.Depth = depth;
             s_State.Mip = mip;
             s_State.Slice = slice;
+            s_State.Layers = layers;
             s_State.Viewport = new Rect(0, 0, float.MaxValue, float.MaxValue);
             U8(SetTargetOp);
             U64(color);
             U64(depth);
             I32(mip);
-            I32(slice);
+            I32(Math.Max(slice, 0));
         }
+
+        /// <summary>The layers a render target binds at once with slice -1: an array's or a
+        /// volume's depth, a cube's six faces, else one.</summary>
+        internal static int LayersOf(Texture texture) => texture is RenderTexture rt
+            ? rt.dimension switch
+            {
+                UnityEngine.Rendering.TextureDimension.Tex2DArray or UnityEngine.Rendering.TextureDimension.Tex3D => Math.Max(1, rt.volumeDepth),
+                UnityEngine.Rendering.TextureDimension.Cube => 6,
+                UnityEngine.Rendering.TextureDimension.CubeArray => 6 * Math.Max(1, rt.volumeDepth),
+                _ => 1,
+            }
+            : 1;
 
         /// <summary>Draws go into several colors at once (multiple render targets: the fragment
         /// program's outputs in order) and one depth buffer.</summary>
-        internal static void SetTargets(ulong[] colors, ulong depth = 0, int mip = 0, int slice = 0)
+        internal static void SetTargets(ulong[] colors, ulong depth = 0, int mip = 0, int slice = 0, int layers = 1)
         {
             if (colors.Length <= 1)
             {
-                SetTarget(colors.Length == 0 ? 0 : colors[0], depth, mip, slice);
+                SetTarget(colors.Length == 0 ? 0 : colors[0], depth, mip, slice, layers);
                 return;
             }
             s_State.Color = colors[0];
@@ -219,13 +240,14 @@ namespace Unbound.Runtime
             s_State.Depth = depth;
             s_State.Mip = mip;
             s_State.Slice = slice;
+            s_State.Layers = layers;
             s_State.Viewport = new Rect(0, 0, float.MaxValue, float.MaxValue);
             U8(SetTargetsOp);
             U32((uint)Math.Min(colors.Length, 8));
             for (int i = 0; i < colors.Length && i < 8; i++) U64(colors[i]);
             U64(depth);
             I32(mip);
-            I32(slice);
+            I32(Math.Max(slice, 0));
         }
 
         /// <summary>How the next draw runs: instances, or counts read on the GPU from an arguments
@@ -241,6 +263,21 @@ namespace Unbound.Runtime
 
         internal static void Clear(byte flags, Color color, float depth = 1f, uint stencil = 0)
         {
+            if (s_State.Slice < 0 && s_State.Layers > 1)
+            {
+                // Every layer of a target bound whole (slice -1) is cleared.
+                var whole = s_State;
+                for (int layer = 0; layer < whole.Layers; layer++)
+                {
+                    if (whole.Colors != null) SetTargets(whole.Colors, whole.Depth, whole.Mip, layer);
+                    else SetTarget(whole.Color, whole.Depth, whole.Mip, layer);
+                    Viewport(whole.Viewport);
+                    s_State.Scissor = whole.Scissor;
+                    Clear(flags, color, depth, stencil);
+                }
+                Restore(whole);
+                return;
+            }
             if ((flags & (ClearDepth | ClearStencil)) != 0) SpriteMasking.Cleared(s_State.Color, s_State.Depth);
             var viewport = s_State.Viewport;
             if (s_State.Scissor is Rect scissor) Viewport(Intersect(viewport, scissor));
@@ -261,7 +298,7 @@ namespace Unbound.Runtime
             for (int i = 0; i < count; i++)
             {
                 ulong color = state.Colors != null ? state.Colors[i] : state.Color;
-                SetTarget(color, state.Depth == 0 ? state.Color : state.Depth, state.Mip, state.Slice);
+                SetTarget(color, state.Depth == 0 ? state.Color : state.Depth, state.Mip, state.Slice, state.Layers);
                 Viewport(state.Viewport);
                 Clear(i == 0 ? flags : ClearColor, colors[i], depth, stencil);
             }

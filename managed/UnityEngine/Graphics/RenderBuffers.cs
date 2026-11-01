@@ -146,7 +146,7 @@ namespace UnityEngine
             for (int i = 0; i < colors.Length; i++) colors[i] = colorBuffers[i].Handle;
             var depthTexture = depthBuffer.Texture;
             ulong depth = depthTexture == first ? 0 : depthTexture != null ? depthTexture.EnsureCreated() : GfxStream.NoTexture;
-            GfxStream.SetTargets(colors, depth, mipLevel, face != CubemapFace.Unknown ? (int)face : depthSlice);
+            GfxStream.SetTargets(colors, depth, mipLevel, face != CubemapFace.Unknown ? (int)face : depthSlice, GfxStream.LayersOf(first));
         }
     }
 }

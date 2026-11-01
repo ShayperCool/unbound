@@ -36,7 +36,11 @@ namespace UnityEngine
         /// <summary>A `.renderTexture` asset: its size, formats, samples, mips, dimension and
         /// sampler as saved (measured: tests/projects/builtinrp rt.*). Older files name the formats
         /// by RenderTextureFormat and depth bits.</summary>
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver) => ReadRenderTexture(body);
+
+        /// <summary>The render texture fields of a serialized render texture (custom render
+        /// textures read theirs after these).</summary>
+        internal void ReadRenderTexture(YNode body)
         {
             int w = Math.Max(1, body.Int("m_Width", 256)), h = Math.Max(1, body.Int("m_Height", 256));
             bool sRGB = body.Bool("m_SRGB");
@@ -270,6 +274,15 @@ namespace UnityEngine
             return GraphicsFormatUtility.IsSRGBFormat(f) ? 0 : 1;
         }
 
+        /// <summary>The layers the renderer allocates: an array's depth, a cube's six faces, else one
+        /// (3D and cube-array targets have a 2D stand-in).</summary>
+        internal int GpuLayers => m_Descriptor.dimension switch
+        {
+            TextureDimension.Cube => 6,
+            TextureDimension.Tex2DArray => Math.Max(1, m_Descriptor.volumeDepth),
+            _ => 1,
+        };
+
         internal unsafe ulong EnsureCreated()
         {
             m_LastUsedFrame = Time.frameCount;
@@ -278,12 +291,7 @@ namespace UnityEngine
             var dimension = m_Descriptor.dimension;
             if (dimension == TextureDimension.Tex3D)
                 Debug.LogWarning($"Unbound: RenderTexture '{name}' is a {dimension}; 3D render textures are not drawn into yet (a 2D one stands in).");
-            int layers = dimension switch
-            {
-                TextureDimension.Cube => 6,
-                TextureDimension.Tex2DArray => Math.Max(1, m_Descriptor.volumeDepth),
-                _ => 1,
-            };
+            int layers = GpuLayers;
             int depthBits = GraphicsFormatUtility.GetDepthBits(m_Descriptor.depthStencilFormat);
             var packet = new TexturePacket
             {

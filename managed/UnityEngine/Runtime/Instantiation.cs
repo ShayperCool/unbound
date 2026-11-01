@@ -347,6 +347,11 @@ namespace Unbound.Runtime
                     so.RunDestroyCallbacks();
                     so.MarkDestroyed();
                     break;
+                case CustomRenderTexture crt:
+                    // textureUnloaded sees the texture before it is destroyed.
+                    CustomRenderTextureManager.Unregister(crt);
+                    crt.MarkDestroyed();
+                    break;
                 default:
                     obj.MarkDestroyed();
                     break;

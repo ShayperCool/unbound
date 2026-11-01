@@ -85,6 +85,20 @@ namespace Unbound.Runtime
                 shader.m_PipelineEditors.Add((m.Groups[1].Value, m.Groups[2].Value));
         }
 
+        /// <summary>A texture property's dimension by its type keyword, in any case (measured,
+        /// tests/projects/droppedparams dims.*: `2d`, `cube`, `cubearray` and `any` declare textures
+        /// as their capitalised forms do); null for a type that is not a texture.</summary>
+        static TextureDimension? TextureDimensionOf(string type) => type.ToLowerInvariant() switch
+        {
+            "2d" => TextureDimension.Tex2D,
+            "3d" => TextureDimension.Tex3D,
+            "cube" => TextureDimension.Cube,
+            "2darray" => TextureDimension.Tex2DArray,
+            "cubearray" => TextureDimension.CubeArray,
+            "any" => TextureDimension.Any,
+            _ => null,
+        };
+
         internal static List<ShaderPropertyInfo> Properties(string source)
         {
             var list = new List<ShaderPropertyInfo>();
@@ -120,14 +134,14 @@ namespace Unbound.Runtime
                         info.DefaultValue = v;
                         break;
                     }
-                    case "2D":
-                    case "3D":
-                    case "Cube":
-                    case "2DArray":
-                        info.Type = ShaderPropertyType.Texture;
-                        info.DefaultTexture = value.Split('"').Length > 1 ? value.Split('"')[1] : "";
-                        break;
                     default:
+                        if (TextureDimensionOf(type) is TextureDimension dimension)
+                        {
+                            info.Type = ShaderPropertyType.Texture;
+                            info.Dimension = dimension;
+                            info.DefaultTexture = value.Split('"').Length > 1 ? value.Split('"')[1] : "";
+                            break;
+                        }
                         // `Int` is the legacy type, a float (measured, 6000.0); `Integer` is an int.
                         info.Type = type == "Range" ? ShaderPropertyType.Range : type == "Integer" ? ShaderPropertyType.Int : ShaderPropertyType.Float;
                         if (float.TryParse(value, NumberStyles.Float, CultureInfo.InvariantCulture, out var number)) info.DefaultValue = new Vector4(number, 0, 0, 0);

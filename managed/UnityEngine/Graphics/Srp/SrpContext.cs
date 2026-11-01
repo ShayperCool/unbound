@@ -186,19 +186,14 @@ namespace UnityEngine.Rendering
             if (data != null) data.ProbeIndexMap = lightIndexMap.ToArray();
         }
 
+        /// <summary>The world bounds of the visible light's shadow casters; false without any
+        /// (see <see cref="ShadowCasterCulling"/>).</summary>
         public bool GetShadowCasterBounds(int lightIndex, out Bounds outBounds)
         {
             outBounds = default;
             var data = Data;
-            if (data == null || data.Renderers.Count == 0) return false;
-            bool any = false;
-            foreach (var r in data.Renderers)
-            {
-                if (!r || r.shadowCastingMode == ShadowCastingMode.Off) continue;
-                if (!any) { outBounds = r.bounds; any = true; }
-                else outBounds.Encapsulate(r.bounds);
-            }
-            return any;
+            if (data == null || lightIndex < 0 || lightIndex >= data.Lights.Length) return false;
+            return ShadowCasterCulling.CasterBounds(data, data.Lights[lightIndex], out outBounds);
         }
 
         /// <summary>
@@ -694,8 +689,8 @@ namespace Unbound.Runtime
         }
     }
 
-    /// <summary>Culling: the renderers a camera's mask sees and the enabled lights (directional ones
-    /// first, brightest first), kept until the frame ends.</summary>
+    /// <summary>Culling: the renderers a camera's mask sees and the enabled lights that reach the
+    /// view (directional ones first, brightest first), kept until the frame ends.</summary>
     internal static class Culling
     {
         static readonly Dictionary<IntPtr, CullingData> s_Results = new Dictionary<IntPtr, CullingData>();
@@ -729,8 +724,9 @@ namespace Unbound.Runtime
             // The camera's culling mask leaves lights alone (measured: the URP probe's camera_stack,
             // an overlay camera that sees one layer is lit by a light on another).
             // Lights baked alone are not visible lights (they light through lightmaps and probes).
+            // Local lights outside the frustum are not visible (measured: ShadowCasterCulling).
             foreach (var l in Light.s_Enabled)
-                if (l && l.isActiveAndEnabled && !l.IsFullyBaked) lights.Add(l);
+                if (l && l.isActiveAndEnabled && !l.IsFullyBaked && ShadowCasterCulling.LightVisible(l, ref parameters)) lights.Add(l);
             lights.Sort((a, b) =>
             {
                 int directional = (b.type == LightType.Directional).CompareTo(a.type == LightType.Directional);

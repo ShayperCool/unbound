@@ -123,12 +123,17 @@ namespace UnityEngine
     /// <summary>The default log handler: the native console and Application.logMessageReceived.</summary>
     internal sealed partial class DebugLogHandler : ILogHandler
     {
-        public void LogFormat(LogType logType, Object context, string format, params object[] args)
+        public void LogFormat(LogType logType, Object context, string format, params object[] args) =>
+            LogFormat(logType, LogOption.None, 4, context, format, args);
+
+        /// <summary><paramref name="skipFrames"/>: the frames between the stack trace and the
+        /// game's call (this method's included).</summary>
+        internal void LogFormat(LogType logType, LogOption options, int skipFrames, Object context, string format, params object[] args)
         {
             string message = args == null || args.Length == 0 ? format : Unbound.MonoNumberFormat.Format(CultureInfo.InvariantCulture, format, args);
-            var trace = logType == LogType.Log && Application.GetStackTraceLogType(logType) == StackTraceLogType.None
+            var trace = (options & LogOption.NoStacktrace) != 0 || logType == LogType.Log && Application.GetStackTraceLogType(logType) == StackTraceLogType.None
                 ? ""
-                : new StackTrace(3, true).ToString();
+                : new StackTrace(skipFrames, true).ToString();
             Log.Write(logType, message, trace, context);
         }
 
@@ -231,8 +236,20 @@ namespace UnityEngine
 
         public static void LogFormat(Object context, string format, params object[] args) => unityLogger.LogFormat(LogType.Log, context, format, args);
 
-        public static void LogFormat(LogType logType, LogOption logOptions, Object context, string format, params object[] args) =>
-            unityLogger.LogFormat(logType, context, format, args);
+        /// <summary>Through the default handler, the options apply: NoStacktrace gives log
+        /// callbacks no stack trace, whatever the type (measured, tests/projects/droppedparams
+        /// log.*). Another handler gets the message without them, as in Unity.</summary>
+        public static void LogFormat(LogType logType, LogOption logOptions, Object context, string format, params object[] args)
+        {
+            if (unityLogger.logHandler is DebugLogHandler handler)
+            {
+                if (unityLogger.IsLogTypeAllowed(logType)) handler.LogFormat(logType, logOptions, 2, context, format, args);
+            }
+            else
+            {
+                unityLogger.LogFormat(logType, context, format, args);
+            }
+        }
 
         public static void LogWarning(object message) => unityLogger.Log(LogType.Warning, message);
 
