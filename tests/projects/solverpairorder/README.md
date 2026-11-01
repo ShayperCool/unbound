@@ -70,7 +70,7 @@ transforms and rotations crossing 180 degrees. Its 988 exact fields distinguish
 the signed Z/W quaternion twist from the rotated right-axis projection.
 
 `--unattached-statics` selects `Sources/UnattachedStatics/ProbeEntry.cs`. The
-417 public fields and corresponding pair, update and island records distinguish
+793 public fields and corresponding pair, update and island records distinguish
 unattached colliders sharing one static scene body at `(0, 0)` from explicit
 static rigidbodies. Moving, rotating, resizing, disabling or recreating one
 collider preserves the other collider and exercises proxy lifetime.
