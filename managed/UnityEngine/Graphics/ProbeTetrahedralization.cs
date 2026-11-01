@@ -12,7 +12,8 @@ namespace UnityEngine
     /// neighbor k across the face opposite vertex k; after them one outer cell per hull triangle
     /// (fourth index -1, neighbor 3 the inner cell, neighbors 0..2 the outer cells across its
     /// edges); a hull probe's ray is the angle-weighted mean of the outward normals of its hull
-    /// triangles. The cells' matrices are rounded as the Editor's (<see cref="Matrix"/>). The cells' order and the order
+    /// triangles. The cells cover the probes' convex hull (<see cref="FillHull"/>) and their
+    /// matrices are rounded as the Editor's (<see cref="Matrix"/>). The cells' order and the order
     /// of each cell's vertices are Unbound's: the Editor's cells are consistent with the fourth
     /// vertex being the one inserted last (all 55 baked cells of tests/projects/lightprobes), but
     /// its insertion order depends on the probes (no sort by index, axis, lexicographic order or
@@ -141,6 +142,7 @@ namespace UnityEngine
                 inner.Add(v < 0 ? new[] { a, b, c, d } : new[] { b, a, c, d });
             }
             if (inner.Count == 0) return;
+            FillHull(inner, x, y, z, n);
 
             var faceCells = new Dictionary<(int, int, int), List<(int Cell, int Vertex)>>();
             for (int c = 0; c < inner.Count; c++)
@@ -306,6 +308,72 @@ namespace UnityEngine
             r0 = new Vector3(w0[4], w0[5], w0[6]);
             r1 = new Vector3(w1[4], w1[5], w1[6]);
             r2 = new Vector3(w2[4], w2[5], w2[6]);
+        }
+
+        /// <summary>
+        /// The cells the enclosing tetrahedron leaves out: a Delaunay cell whose circumsphere holds
+        /// one of its corners is never formed, which happens to flat cells on the hull, so the inner
+        /// cells can stop short of the probes' convex hull. Across every reflex hull edge (the far
+        /// corner of one hull triangle outside the other's plane) the cell of the two triangles is
+        /// added, oriented as the others, until the hull is convex. (tests/projects/lightprobes: the
+        /// Editor counts 121 cells for Main and Extra tetrahedralized together; without this Unbound
+        /// has 120, missing the flat cell of probes 10, 11, 24 and 25 behind a reflex hull edge.)
+        /// </summary>
+        static void FillHull(List<int[]> inner, double[] x, double[] y, double[] z, int n)
+        {
+            for (int round = 0; round < 4 * n + 16; round++)
+            {
+                var faces = new Dictionary<(int, int, int), int>();
+                var order = new List<((int, int, int) Key, int Cell, int Vertex)>();
+                for (int c = 0; c < inner.Count; c++)
+                    for (int k = 0; k < 4; k++)
+                    {
+                        var key = Opposite(inner[c], k);
+                        faces[key] = faces.TryGetValue(key, out var count) ? count + 1 : 1;
+                        order.Add((key, c, k));
+                    }
+                // Hull triangles, wound so that (b − a) × (c − a) points out of the hull.
+                var hull = new List<(int A, int B, int C)>();
+                foreach (var (key, c, k) in order)
+                {
+                    if (faces[key] != 1) continue;
+                    var cell = inner[c];
+                    var tri = new int[3];
+                    int m = 0;
+                    for (int j = 0; j < 4; j++) if (j != k) tri[m++] = cell[j];
+                    int ta = tri[0], tb = tri[1], tc = tri[2], apex = cell[k];
+                    double v = Det3(x[tb] - x[ta], y[tb] - y[ta], z[tb] - z[ta], x[tc] - x[ta], y[tc] - y[ta], z[tc] - z[ta],
+                        x[apex] - x[ta], y[apex] - y[ta], z[apex] - z[ta]);
+                    hull.Add(v > 0 ? (ta, tc, tb) : (ta, tb, tc));
+                }
+                var edges = new Dictionary<(int, int), List<int>>();
+                for (int h = 0; h < hull.Count; h++)
+                {
+                    var (a, b, c) = hull[h];
+                    foreach (var e in new[] { Edge(a, b), Edge(b, c), Edge(c, a) })
+                    {
+                        if (!edges.TryGetValue(e, out var list)) edges[e] = list = new List<int>();
+                        list.Add(h);
+                    }
+                }
+                var used = new HashSet<int>();
+                bool added = false;
+                foreach (var (e, list) in edges)
+                {
+                    if (list.Count != 2 || used.Contains(list[0]) || used.Contains(list[1])) continue;
+                    var (a, b, c) = hull[list[0]];
+                    var other = hull[list[1]];
+                    int d = other.A != e.Item1 && other.A != e.Item2 ? other.A : other.B != e.Item1 && other.B != e.Item2 ? other.B : other.C;
+                    double v = Det3(x[b] - x[a], y[b] - y[a], z[b] - z[a], x[c] - x[a], y[c] - y[a], z[c] - z[a], x[d] - x[a], y[d] - y[a], z[d] - z[a]);
+                    if (v <= 1e-12) continue;
+                    double o = Det3(x[a] - x[d], y[a] - y[d], z[a] - z[d], x[b] - x[d], y[b] - y[d], z[b] - z[d], x[c] - x[d], y[c] - y[d], z[c] - z[d]);
+                    inner.Add(o < 0 ? new[] { a, b, c, d } : new[] { b, a, c, d });
+                    used.Add(list[0]);
+                    used.Add(list[1]);
+                    added = true;
+                }
+                if (!added) return;
+            }
         }
 
         static (int, int, int) Sorted(int a, int b, int c)
