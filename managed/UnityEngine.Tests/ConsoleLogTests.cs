@@ -178,6 +178,104 @@ namespace UnityEngine.Tests
             }
         }
 
+        // These fixtures are wholly temporary, including the external authored targets.
+        // Do not follow links while recording names/parents/bytes, so cycle controls are safe.
+        static string[] FixtureState(string fixture)
+        {
+            var state = new System.Collections.Generic.List<string>();
+            var pending = new System.Collections.Generic.Stack<string>();
+            pending.Push(fixture);
+            while (pending.Count != 0)
+                foreach (string path in Directory.EnumerateFileSystemEntries(pending.Pop()))
+                {
+                    string link = new FileInfo(path).LinkTarget;
+                    if (link != null) state.Add(path + " -> " + link);
+                    else if (Directory.Exists(path)) { state.Add(path + "/"); pending.Push(path); }
+                    else state.Add(path + ":" + Convert.ToBase64String(File.ReadAllBytes(path)));
+                }
+            return state.OrderBy(x => x, StringComparer.Ordinal).ToArray();
+        }
+
+        [Theory]
+        [InlineData("directory")]
+        [InlineData("file")]
+        [InlineData("rotation")]
+        [InlineData("direct-directory")]
+        [InlineData("direct-file")]
+        [InlineData("nested-external")]
+        [InlineData("descendant-new")]
+        [InlineData("dangling-directory")]
+        [InlineData("dangling-file")]
+        [InlineData("cycle-directory")]
+        [InlineData("cycle-file")]
+        [InlineData("case-veto")]
+        public void Reachable_authored_aliases_leave_all_fixture_bytes_names_and_parents_unchanged(string kind)
+        {
+            string allowed = Path.Combine(Cache, "unbound");
+            string shared = Path.Combine(allowed, "shared");
+            Directory.CreateDirectory(shared);
+            string sentinel = Path.Combine(shared, "sentinel.cs");
+            File.WriteAllText(sentinel, "authored target sentinel");
+            string alias = Path.Combine(Project, "Assets/shared");
+            string path = Path.Combine(alias, "sentinel.cs");
+            if (kind == "file" || kind == "direct-file")
+            {
+                alias = Path.Combine(Project, "Assets/file.cs");
+                File.CreateSymbolicLink(alias, sentinel);
+                path = kind == "file" ? alias : sentinel;
+            }
+            else Directory.CreateSymbolicLink(alias, shared);
+            if (kind == "direct-directory") path = sentinel;
+            if (kind == "descendant-new") path = Path.Combine(alias, "new/sub/session.log");
+            if (kind == "rotation")
+            {
+                path = Path.Combine(allowed, "session.log");
+                File.WriteAllText(path, "previous session sentinel");
+                File.CreateSymbolicLink(Path.Combine(allowed, "session-prev.log"), Path.Combine(alias, "sentinel.cs"));
+            }
+            if (kind == "nested-external")
+            {
+                string external = Path.Combine(root, "external");
+                Directory.CreateDirectory(external);
+                Directory.Delete(alias);
+                Directory.CreateSymbolicLink(alias, external);
+                Directory.CreateSymbolicLink(Path.Combine(external, "second"), shared);
+                path = sentinel;
+            }
+            if (kind.StartsWith("dangling-", StringComparison.Ordinal))
+            {
+                string missing = Path.Combine(allowed, "missing");
+                if (kind == "dangling-file") File.CreateSymbolicLink(Path.Combine(Project, "Packages/missing.cs"), missing);
+                else Directory.CreateSymbolicLink(Path.Combine(Project, "Packages/missing"), missing);
+                path = Path.Combine(allowed, "innocent/new/session.log");
+            }
+            if (kind == "cycle-directory") Directory.CreateSymbolicLink(Path.Combine(shared, "cycle"), shared);
+            if (kind == "cycle-file")
+            {
+                string cycle = Path.Combine(Project, "ProjectSettings/cycle");
+                File.CreateSymbolicLink(cycle, cycle);
+            }
+            if (kind.StartsWith("cycle-", StringComparison.Ordinal)) path = Path.Combine(allowed, "innocent/new/session.log");
+            if (kind == "case-veto") path = Path.Combine(allowed, "SHARED/new/session.log");
+            var before = FixtureState(root);
+            Open(path);
+            Assert.Equal("", ConsoleLog.Path);
+            Assert.Equal(before, FixtureState(root));
+        }
+
+        [Fact]
+        public void Duplicate_authored_aliases_share_traversal_and_allow_an_independent_cache_log()
+        {
+            string external = Path.Combine(root, "external");
+            Directory.CreateDirectory(external);
+            File.WriteAllText(Path.Combine(external, "sentinel.cs"), "authored sentinel");
+            Directory.CreateSymbolicLink(Path.Combine(Project, "Assets/first"), external);
+            Directory.CreateSymbolicLink(Path.Combine(Project, "Assets/second"), external);
+            Open(Path.Combine(Cache, "unbound/independent/session.log"));
+            Assert.Contains("log sentinel", File.ReadAllText(ConsoleLog.Path));
+            Assert.Equal("authored sentinel", File.ReadAllText(Path.Combine(external, "sentinel.cs")));
+        }
+
         public void Dispose()
         {
             ConsoleLog.Reset();

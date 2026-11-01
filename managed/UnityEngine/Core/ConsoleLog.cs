@@ -47,10 +47,10 @@ namespace Unbound.Runtime
                 // Resolve and validate both destinations before even creating the parent directory.
                 var cache = Environment.GetEnvironmentVariable("XDG_CACHE_HOME");
                 if (string.IsNullOrEmpty(cache)) cache = System.IO.Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".cache");
-                path = ConsoleLogPath.Validate(path, UnityEngine.ProjectInfo.ProjectPath, cache);
-                string previous = ConsoleLogPath.Validate(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(path),
-                    System.IO.Path.GetFileNameWithoutExtension(path) + "-prev" + System.IO.Path.GetExtension(path)),
-                    UnityEngine.ProjectInfo.ProjectPath, cache);
+                var policy = new ConsoleLogPath.Policy(UnityEngine.ProjectInfo.ProjectPath, cache);
+                path = policy.Validate(path);
+                string previous = policy.Validate(System.IO.Path.Combine(System.IO.Path.GetDirectoryName(path),
+                    System.IO.Path.GetFileNameWithoutExtension(path) + "-prev" + System.IO.Path.GetExtension(path)));
                 Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path));
                 if (File.Exists(path))
                     File.Move(path, previous, true);
