@@ -109,6 +109,7 @@ namespace Unbound.Runtime.Humanoid
                 PreviousTime = (float)c.Run.Previous,
                 Speed = speed,
                 CycleOffset = c.Offset,
+                Mirror = c.Run.Def.Mirror,
             };
             float previous = HumanRootMotion.ClipTime(motion, input.PreviousTime, input.Speed, input.CycleOffset, out _);
             float current = HumanRootMotion.ClipTime(motion, input.Time, input.Speed, input.CycleOffset, out _);
