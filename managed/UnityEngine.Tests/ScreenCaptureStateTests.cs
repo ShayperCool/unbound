@@ -12,6 +12,7 @@ namespace UnityEngine.Tests
         {
             GfxStream.SetTargets(new ulong[] { 801, 802 }, 803, 1, 2);
             GfxStream.Viewport(new Rect(1, 2, 3, 4));
+            GfxStream.Scissor(new Rect(2, 3, 1, 1));
             GfxStream.Camera(Matrix4x4.Translate(new Vector3(2, 3, 4)), Matrix4x4.Scale(new Vector3(3, 4, 5)), GfxStream.CameraOverlay);
         }
 
@@ -36,20 +37,24 @@ namespace UnityEngine.Tests
             var saved = GfxStream.Current;
             var active = RenderTexture.ActiveTarget;
             bool wireframe = GL.wireframe;
+            bool srgbWrite = GL.sRGBWrite;
             var target = new RenderTexture(8, 8, 0);
             try
             {
                 SetCallerState();
                 GL.wireframe = true;
+                GL.sRGBWrite = false;
                 var expected = GfxStream.Current;
                 ScreenCapture.CaptureScreenshotIntoRenderTexture(target);
                 EqualState(expected);
                 Assert.True(GL.wireframe);
+                Assert.False(GL.sRGBWrite);
                 Assert.Same(active, RenderTexture.ActiveTarget);
             }
             finally
             {
                 GL.wireframe = wireframe;
+                GL.sRGBWrite = srgbWrite;
                 RenderTexture.SetActiveQuietly(active);
                 GfxStream.Restore(saved);
                 Object.DestroyImmediate(target);
@@ -100,6 +105,63 @@ namespace UnityEngine.Tests
             {
                 Camera.onPreRender -= fail;
                 Object.DestroyImmediate(go);
+                RenderTexture.SetActiveQuietly(active);
+                GfxStream.Restore(saved);
+            }
+        }
+
+        [Fact]
+        public void SupersizedCaptureDuringCameraRenderingFailsBeforeChangingTheStream()
+        {
+            var saved = GfxStream.Current;
+            var previousCamera = Camera.current;
+            var go = new GameObject("Nested capture state test");
+            try
+            {
+                Camera.current = go.AddComponent<Camera>();
+                SetCallerState();
+                var expected = GfxStream.Current;
+                Assert.Throws<NotSupportedException>(() => ScreenCapture.CaptureScreenshotAsTexture(2));
+                EqualState(expected);
+            }
+            finally
+            {
+                Camera.current = previousCamera;
+                GfxStream.Restore(saved);
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
+        public void LateCameraFailureReturnsItsIntermediateToThePool()
+        {
+            var saved = GfxStream.Current;
+            var active = RenderTexture.ActiveTarget;
+            var go = new GameObject("Camera temporary state test");
+            var camera = go.AddComponent<Camera>();
+            var target = new RenderTexture(8, 8, 24, RenderTextureFormat.ARGB32);
+            camera.targetTexture = target;
+            camera.allowHDR = true;
+            RenderTexture intermediate = null;
+            Camera.CameraCallback fail = c =>
+            {
+                if (c != camera) return;
+                intermediate = camera.m_RenderingInto;
+                throw new InvalidOperationException("late camera failure");
+            };
+            Camera.onPostRender += fail;
+            try
+            {
+                Assert.Throws<InvalidOperationException>(() => camera.Render());
+                Assert.NotNull(intermediate);
+                Assert.NotSame(target, intermediate);
+                Assert.True(intermediate.m_PooledFree);
+            }
+            finally
+            {
+                Camera.onPostRender -= fail;
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(target);
                 RenderTexture.SetActiveQuietly(active);
                 GfxStream.Restore(saved);
             }

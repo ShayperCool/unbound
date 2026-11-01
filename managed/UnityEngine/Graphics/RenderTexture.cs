@@ -14,6 +14,7 @@ namespace UnityEngine
         bool m_Created;
         /// <summary>In the temporary pool and released (<see cref="ReleaseTemporary"/>).</summary>
         internal bool m_PooledFree;
+        internal long m_PoolLease;
         internal int m_LastUsedFrame;
 
         static RenderTexture s_Active;
@@ -305,6 +306,7 @@ namespace UnityEngine
         // ---------------------------------------------------------------- temporaries
 
         static readonly List<RenderTexture> s_Temporaries = new List<RenderTexture>();
+        static long s_NextPoolLease;
         /// <summary>Frames a released temporary stays pooled before it is destroyed.</summary>
         const int TemporaryLifetime = 15;
 
@@ -315,6 +317,7 @@ namespace UnityEngine
                 if (t.m_PooledFree && SameShape(t.m_Descriptor, desc))
                 {
                     t.m_PooledFree = false;
+                    t.m_PoolLease = ++s_NextPoolLease;
                     t.m_LastUsedFrame = Time.frameCount;
                     return t;
                 }
@@ -323,6 +326,7 @@ namespace UnityEngine
             using (ObjectRegistry.AsAssets())
                 created = new RenderTexture(desc) { name = "TempBuffer " + s_Temporaries.Count, hideFlags = HideFlags.HideAndDontSave };
             created.m_LastUsedFrame = Time.frameCount;
+            created.m_PoolLease = ++s_NextPoolLease;
             s_Temporaries.Add(created);
             return created;
         }

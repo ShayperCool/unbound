@@ -91,9 +91,12 @@ namespace UnityEngine
             var saved = GfxStream.Current;
             var savedActive = RenderTexture.ActiveTarget;
             bool wireframe = GL.wireframe;
+            bool srgbWrite = GL.sRGBWrite;
             RenderTexture copy = null;
             try
             {
+                GfxStream.Scissor(null);
+                GL.sRGBWrite = true;
                 copy = RenderTexture.GetTemporary(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.sRGB);
                 copy.filterMode = FilterMode.Point;
                 ulong source = copy.EnsureCreated();
@@ -113,6 +116,7 @@ namespace UnityEngine
                 try
                 {
                     if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, true);
+                    GL.sRGBWrite = srgbWrite;
                     RenderTexture.SetActiveQuietly(savedActive);
                     GfxStream.Restore(saved);
                 }
@@ -157,11 +161,16 @@ namespace UnityEngine
             width = Screen.width * superSize;
             height = Screen.height * superSize;
             if (superSize == 1) return Native.ReadPixels(ScreenHandle, 0, 0, width, height, false);
+            if (Camera.current != null)
+                throw new NotSupportedException("Unbound: supersized screen capture inside a camera callback is not supported; capture after the camera finishes rendering.");
             var target = RenderTexture.GetTemporary(width, height, 24, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
             var savedActive = RenderTexture.ActiveTarget;
             var saved = GfxStream.Current;
+            bool srgbWrite = GL.sRGBWrite;
             try
             {
+                GfxStream.Scissor(null);
+                GL.sRGBWrite = true;
                 RenderTexture.active = target;
                 GL.Clear(true, true, Color.black);
                 RenderSupersized(target, superSize);
@@ -171,6 +180,7 @@ namespace UnityEngine
             {
                 try
                 {
+                    GL.sRGBWrite = srgbWrite;
                     RenderTexture.SetActiveQuietly(savedActive);
                     GfxStream.Restore(saved);
                 }

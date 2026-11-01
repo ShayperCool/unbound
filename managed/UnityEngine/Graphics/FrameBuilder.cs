@@ -886,6 +886,7 @@ namespace Unbound.Runtime
         /// </summary>
         internal static void RenderCamera(Camera camera, bool automatic = false, bool restoreActive = true)
         {
+            using var temporaries = new CameraTemporaries();
             var previousCamera = Camera.current;
             var previousActive = RenderTexture.ActiveTarget;
             var previousStandIn = RenderTexture.ScreenStandIn;
@@ -973,8 +974,8 @@ namespace Unbound.Runtime
                     && effects.Count == 0 && opaqueEffects.Count == 0 && camera.rect == new Rect(0f, 0f, 1f, 1f)
                     && camera.clearFlags is CameraClearFlags.Skybox or CameraClearFlags.SolidColor)
                 {
-                    screenStandIn = RenderTexture.GetTemporary(Math.Max(1, camera.pixelWidth), Math.Max(1, camera.pixelHeight), 24,
-                        RenderTextureFormat.Default, RenderTextureReadWrite.Default, 1);
+                    screenStandIn = temporaries.Own(RenderTexture.GetTemporary(Math.Max(1, camera.pixelWidth), Math.Max(1, camera.pixelHeight), 24,
+                        RenderTextureFormat.Default, RenderTextureReadWrite.Default, 1));
                     cameraTarget = screenStandIn;
                     RenderTexture.ScreenStandIn = screenStandIn;
                 }
@@ -990,8 +991,8 @@ namespace Unbound.Runtime
                     var readWrite = hdrIntermediate ? RenderTextureReadWrite.Linear
                         : cameraTarget != null ? (cameraTarget.sRGB ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear)
                         : RenderTextureReadWrite.Default;
-                    sceneTarget = RenderTexture.GetTemporary(Math.Max(1, camera.pixelWidth), Math.Max(1, camera.pixelHeight), 24,
-                        format, readWrite, cameraSamples);
+                    sceneTarget = temporaries.Own(RenderTexture.GetTemporary(Math.Max(1, camera.pixelWidth), Math.Max(1, camera.pixelHeight), 24,
+                        format, readWrite, cameraSamples));
                     viewport = new Rect(0, 0, sceneTarget.width, sceneTarget.height);
                 }
                 // Resolve the selected camera samples before image effects. Their temporary
@@ -1003,7 +1004,7 @@ namespace Unbound.Runtime
                     // target where the MSAA one is resolved.
                     int w = sceneTarget != null ? sceneTarget.width : Math.Max(1, Screen.width);
                     int h = sceneTarget != null ? sceneTarget.height : Math.Max(1, Screen.height);
-                    msaaTarget = RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear);
+                    msaaTarget = temporaries.Own(RenderTexture.GetTemporary(w, h, 0, RenderTextureFormat.ARGBHalf, RenderTextureReadWrite.Linear));
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
                 }
@@ -1023,7 +1024,7 @@ namespace Unbound.Runtime
                     // alpha; quantizing each sample first loses a byte at partial coverage.
                     var format = hdrIntermediate ? RenderTextureFormat.DefaultHDR : sceneTarget != null ? sceneTarget.format : RenderTextureFormat.Default;
                     var readWrite = !hdrIntermediate && (sceneTarget == null || sceneTarget.sRGB) ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear;
-                    msaaTarget = RenderTexture.GetTemporary(w, h, 24, format, readWrite, cameraSamples);
+                    msaaTarget = temporaries.Own(RenderTexture.GetTemporary(w, h, 24, format, readWrite, cameraSamples));
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
                 }
@@ -1092,7 +1093,7 @@ namespace Unbound.Runtime
                 // Motion vectors after the sky, before the opaque image effects (measured).
                 if (motion) RenderMotionVectors(camera, context, width, height, transparent, automatic);
                 RunEvent(camera, CameraEvent.BeforeImageEffectsOpaque, sceneTarget);
-                if (opaqueEffects.Count > 0) RunOpaqueImageEffects(opaqueEffects, sceneTarget);
+                if (opaqueEffects.Count > 0) RunOpaqueImageEffects(opaqueEffects, sceneTarget, temporaries);
                 RunEvent(camera, CameraEvent.AfterImageEffectsOpaque, sceneTarget);
                 RunEvent(camera, CameraEvent.BeforeForwardAlpha, sceneTarget);
                 EmitItems(transparent, s_Items.Count);
@@ -1122,7 +1123,7 @@ namespace Unbound.Runtime
                 // with its depth intact. Resolve only after those draws (resources commands probe).
                 if (deferred || effects.Count > 0 || opaqueEffects.Count > 0) ResolveIntermediate();
                 RunEvent(camera, CameraEvent.BeforeImageEffects, sceneTarget);
-                if (effects.Count > 0) RunImageEffects(effects, sceneTarget, cameraTarget, hdrIntermediate);
+                if (effects.Count > 0) RunImageEffects(effects, sceneTarget, cameraTarget, hdrIntermediate, temporaries);
                 else if (opaqueEffects.Count > 0)
                 {
                     // Only opaque effects: the scene goes to the camera's target as it is.
@@ -1189,18 +1190,18 @@ namespace Unbound.Runtime
         /// effects, and the last one writes it back into the scene's target, whose depth the
         /// transparent objects then test against (measured: tests/projects/builtinrp
         /// effect_opaque, the transparent sphere drawn over the inverted image).</summary>
-        static void RunOpaqueImageEffects(List<(MonoBehaviour Script, ScriptMessages Messages)> effects, RenderTexture scene)
+        static void RunOpaqueImageEffects(List<(MonoBehaviour Script, ScriptMessages Messages)> effects, RenderTexture scene, CameraTemporaries temporaries)
         {
             var saved = GfxStream.Current;
             var descriptor = scene.descriptor;
             descriptor.depthBufferBits = 0;
             descriptor.msaaSamples = 1;
-            var source = RenderTexture.GetTemporary(descriptor);
+            var source = temporaries.Own(RenderTexture.GetTemporary(descriptor));
             Graphics.Blit(scene, source);
             for (int i = 0; i < effects.Count; i++)
             {
                 bool last = i == effects.Count - 1;
-                var destination = last ? scene : RenderTexture.GetTemporary(descriptor);
+                var destination = last ? scene : temporaries.Own(RenderTexture.GetTemporary(descriptor));
                 RenderTexture.active = destination;
                 try { effects[i].Messages.OnRenderImage(effects[i].Script, source, destination); }
                 catch (Exception e) { Debug.LogException(e, effects[i].Script); }
@@ -1211,7 +1212,7 @@ namespace Unbound.Runtime
             RenderTexture.SetActiveQuietly(scene);
         }
 
-        static void RunImageEffects(List<(MonoBehaviour Script, ScriptMessages Messages)> effects, RenderTexture scene, RenderTexture cameraTarget, bool hdrIntermediate)
+        static void RunImageEffects(List<(MonoBehaviour Script, ScriptMessages Messages)> effects, RenderTexture scene, RenderTexture cameraTarget, bool hdrIntermediate, CameraTemporaries temporaries)
         {
             var source = scene;
             for (int i = 0; i < effects.Count; i++)
@@ -1221,9 +1222,9 @@ namespace Unbound.Runtime
                 // already converts HDR to LDR. Once an effect has supplied that temporary,
                 // the last effect in a chain writes directly to the camera target.
                 bool direct = last && (i > 0 || cameraTarget == null || hdrIntermediate);
-                var destination = direct ? cameraTarget : RenderTexture.GetTemporary(source.width, source.height, 0,
+                var destination = direct ? cameraTarget : temporaries.Own(RenderTexture.GetTemporary(source.width, source.height, 0,
                     GraphicsFormatUtility.IsHDRFormat(source.graphicsFormat)
-                        ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default);
+                        ? RenderTextureFormat.DefaultHDR : RenderTextureFormat.Default));
                 if (destination != null) destination.Create();
                 RenderTexture.active = source;
                 try { effects[i].Messages.OnRenderImage(effects[i].Script, source, destination); }
