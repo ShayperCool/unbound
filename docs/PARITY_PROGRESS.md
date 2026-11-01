@@ -2303,3 +2303,27 @@ seven sampler RPC guards pass, including rejection of the obsolete four-value
 request. Broader source-identical delivery results were reused; no new Editor,
 full physics, audio or full-rendering runs were needed. Other sampler W policies
 and the separate humanoid IK blocker remain outside this acceptance.
+
+## Texture2D and Cubemap CPU pixels, 2026-11-01
+
+Texture2D keeps every stored format's texels exactly and reads them as the Editor does
+(tests/projects/texturepixels README): RG16, R16, RGBA4444, ARGB4444 and RGB565 data set
+through `SetPixelData` no longer reads grey; R8 and RG16 fill the channels they lack with one
+(255 in `GetPixels32`), Alpha8's `GetPixels32` is (0, 0, 0, a); 4-bit channels, RGB565 and R16
+use their own scales. `GetPixelBilinear` mixes the four GetPixel values around (u w, v h) in
+single precision. `Texture2D.GetPixelData` and `Cubemap.GetPixelData` return views of the
+stored bytes that stay coherent with the pixel setters. A PNG loads as ARGB32; ARGB32, Alpha8,
+R8 and RG16 report the Editor's graphics formats. Applying an imported readable cubemap
+uploads its faces top row first.
+
+On Root's frozen CLI and native library with the new managed engine: texturepixels goes from
+146 Gamma and 148 Linear differences to 17 in each profile, none introduced. The 17 are the 12
+initial imported-cube GPU samples before any CPU access (Root's import upload), two
+`GraphicsFormatUtility.GetTextureFormat(B8G8R8A8_*)` table values, and three Texture3D RGFloat
+values whose inputs the Editor's script runtime computes in double precision (`i / 37f - 2f`;
+the stored values match the script's inputs in both engines). All 24 post-Apply cube samples
+per profile pass. texturearrays passes every value in Gamma, Linear and Android (36 imported
+`Cubemap.GetPixelData` reads per profile resolved). textureimport stays exact (502 levels,
+1,732,492 bytes per profile), spriteimport 519/520, resources 539/539 values and 62/62
+images; assetclones keeps its eight main differences and resolves the four Alpha8 graphics
+format values of each colour profile (109/109). No new Editor captures were needed.
