@@ -90,3 +90,12 @@ and image manifest, with the rtdepth probe's float tolerance (absolute and relat
 * 3D custom render textures work in the Editor (a depth buffer makes their creation fail with
   "3D textures with depth are not supported"); Unbound does not render into 3D render textures
   yet and reports that with an error instead.
+
+## Unbound (2026-11-01)
+
+349 of 352 values and 100 of 140 images match (13,888 of 14,896 image channels). The three
+values left: the api section's textures, made in the first frame of Play mode, load in that
+frame (`ev.api`, `api.all.next`), and the volume section logs Unbound's error for 3D custom
+render textures (`log.volume`); its 40 slice images differ because Unbound does not render into
+3D render textures. Before the implementation the probe ran into the generated stubs and
+stopped with a GPU validation error copying 3D render texture slices, writing no values.
