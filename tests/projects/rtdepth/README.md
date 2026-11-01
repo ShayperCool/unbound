@@ -34,11 +34,23 @@ python3 tests/projects/rtdepth/compare.py tests/projects/rtdepth/Reference/unity
     ~/.cache/unbound/validation/runs/rtdepth/<label>/unbound --report <cache>/report.json
 ```
 
+**Controls** (`run.py ... --mode controls`, `Reference/unity-6000.0.71f1/controls/`): the screen
+camera without and with an empty command buffer reads the screen in `OnPostRender` (`ctl.postRead.*`,
+an 8-bit sRGB screenshot), blits a texture to the screen in `OnPostRender` (`ctl.postBlit.*.final`)
+and draws with `GL.wireframe` on (`ctl.wireframe.*.final`); a camera draws a material whose
+`_MainTex` is a target's Depth element (`ctl.mainDepth`); `_Src_TexelSize` of a Depth element
+(`ctl.texelSize`); a target's depth cleared through `SetRenderTarget(A, B)` after both targets'
+Depth elements were sampled (`ctl.attachedDepth.*`); a `GrabPass` texture loaded as unsigned
+integers, twice with different colors (`ctl.grabUint.*`); an unbound `Texture2DArray<uint4>`
+(`ctl.uintArray`).
+
 Each Editor runs windowed on a private Xvfb with the GPU through VirtualGL (`ProbeRunner` opens
 the scene, sets the game view to 64x32, enters Play mode and quits with the probe's status; a
 watchdog quits after 600 s). Runs use fresh project copies under
 `$XDG_CACHE_HOME/unbound/validation/runs/rtdepth/<label>`; `publish` requires two byte-identical
-captures with a verified NVIDIA renderer and refuses to overwrite a reference. The comparator
+complete captures (verified NVIDIA renderer, Editor exit status 0, the probe's last record
+`complete: true` without `fatal`, exactly the recorded images at their sizes; `check` reports
+this without publishing) and refuses to overwrite a reference. The comparator
 keeps the whole key union and image manifest; numbers and channels use the camera MSAA probe's
 float tolerance (absolute and relative 2e-4).
 

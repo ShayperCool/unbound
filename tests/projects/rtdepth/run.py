@@ -5,12 +5,19 @@
     run.py editor  --release R --label L   two independent windowed Editor captures (native1, native2)
     run.py publish --release R --label L   checks that the two captures agree, writes Reference/unity-R
     run.py unbound --release R --label L   an Unbound capture (UNBOUND_CLI: the binary)
+    run.py check   --release R --label L   validates the two Editor captures without publishing
+
+--mode controls records the probe's controls (RTDEPTH_PROBE_MODE=controls) instead; their
+reference is Reference/unity-R/controls.
 
 Every capture runs on a fresh copy of the probe's Assets/Packages/ProjectSettings under
 $XDG_CACHE_HOME/unbound/validation/runs/rtdepth/<label>; nothing is written here except by
 publish, which refuses to overwrite an existing reference. Editors run through the shared
-heavy-job launcher, windowed on a private Xvfb each, on the GPU through VirtualGL.
+heavy-job launcher, windowed on a private Xvfb each, on the GPU through VirtualGL. Publishing
+requires each capture to be complete: the Editor exited with 0, the probe's last record is
+`complete: true` (and no `fatal`), and its images are exactly those it recorded, at their sizes.
 """
+import json
 import argparse
 import gzip
 import os
@@ -26,6 +33,7 @@ from probe_paths import editor_path, reference_root, run_root
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
+MODE = 'probe'
 
 
 def copy_project(dest):
@@ -91,13 +99,15 @@ def editor(work):
             project = copy_project(work/'projects'/repeat)
             out = fresh_output(work/repeat)
             name, server = display()
-            env = dict(os.environ, DISPLAY=name, RTDEPTH_PROBE_OUT=str(out), PWD=str(project))
+            env = dict(os.environ, DISPLAY=name, RTDEPTH_PROBE_OUT=str(out), PWD=str(project), RTDEPTH_PROBE_MODE=MODE)
             env.pop('XAUTHORITY', None)
             job = subprocess.Popen(
                 [str(LAUNCHER), 'timeout', '-s', 'KILL', '1800', 'vglrun', '-d', 'egl', str(editor_path()),
                  '-projectPath', str(project), '-logFile', str(out/'editor.log')], cwd=project, env=env)
             started.append((repeat, project, server, job))
         codes = [job.wait() for _, _, _, job in started]
+        for (repeat, _, _, _), code in zip(started, codes):
+            (work/repeat/'exit.txt').write_text(f'{code}\n')
     finally:
         for _, project, server, job in started:
             if job.poll() is None:
@@ -113,19 +123,55 @@ def images(directory):
     return sorted(p.name for p in directory.glob('*.rgba'))
 
 
+def incomplete(repeat, editor=True):
+    """Why a capture cannot be published (None when it is complete)."""
+    if editor:
+        log = (repeat/'editor.log').read_text(errors='replace') if (repeat/'editor.log').exists() else ''
+        if 'NVIDIA' not in next((line for line in log.splitlines() if 'Renderer:' in line), ''):
+            return 'NVIDIA GPU renderer was not verified'
+        exit_file = repeat/'exit.txt'
+        if not exit_file.exists() or exit_file.read_text().strip() != '0':
+            return 'the Editor did not exit with 0'
+    if (repeat/'watchdog.txt').exists() or not (repeat/'values.jsonl').exists():
+        return 'the capture did not finish'
+    try:
+        rows = [json.loads(line) for line in (repeat/'values.jsonl').read_text().splitlines() if line.strip()]
+    except json.JSONDecodeError:
+        return 'values.jsonl is not complete JSON lines'
+    keys = [r.get('k') for r in rows]
+    if not rows or rows[-1] != {'k': 'complete', 'v': True} or keys.count('complete') != 1:
+        return 'the probe did not record complete: true last'
+    if 'fatal' in keys:
+        return 'the probe recorded a fatal error'
+    if len(set(keys)) != len(keys):
+        return 'duplicate keys'
+    recorded = {r['k'].removesuffix('.pixels'): r['v'] for r in rows if r['k'].endswith('.pixels')}
+    present = {name.removesuffix('.rgba'): (repeat/name).stat().st_size for name in images(repeat)}
+    if set(recorded) != set(present):
+        return f'images differ from those recorded: {sorted(set(recorded) ^ set(present))[:5]}'
+    sizes = [k for k, v in recorded.items() if not isinstance(v, int) or present[k] != 16*v]
+    if sizes:
+        return f'image sizes differ from their pixel counts: {sizes[:5]}'
+    return None
+
+
+def check(work):
+    for repeat in (work/'native1', work/'native2'):
+        print(repeat.name, incomplete(repeat) or 'complete')
+    return 0
+
+
 def publish(work):
     a, b = work/'native1', work/'native2'
     for repeat in (a, b):
-        log = (repeat/'editor.log').read_text(errors='replace')
-        if 'NVIDIA' not in next((line for line in log.splitlines() if 'Renderer:' in line), ''):
-            sys.exit(f'{repeat.name}: NVIDIA GPU renderer was not verified')
-        if (repeat/'watchdog.txt').exists() or not (repeat/'values.jsonl').exists():
-            sys.exit(f'{repeat.name}: the capture did not finish')
+        reason = incomplete(repeat)
+        if reason:
+            sys.exit(f'{repeat.name}: {reason}; not publishing')
     if (a/'values.jsonl').read_bytes() != (b/'values.jsonl').read_bytes():
         sys.exit('the two Editor captures differ in values; not publishing')
     if images(a) != images(b) or any((a/n).read_bytes() != (b/n).read_bytes() for n in images(a)):
         sys.exit('the two Editor captures differ in images; not publishing')
-    target = reference_root(PROBE)
+    target = reference_root(PROBE)/'controls' if MODE == 'controls' else reference_root(PROBE)
     if target.exists():
         sys.exit(f'refusing to overwrite reference: {target}')
     target.mkdir(parents=True)
@@ -141,7 +187,7 @@ def unbound(work):
     cli = os.environ.get('UNBOUND_CLI', str(REPO/'target/release/unbound'))
     project = copy_project(work/'projects'/'unbound')
     out = fresh_output(work/'unbound')
-    env = dict(os.environ, RTDEPTH_PROBE_OUT=str(out))
+    env = dict(os.environ, RTDEPTH_PROBE_OUT=str(out), RTDEPTH_PROBE_MODE=MODE)
     with (out/'unbound.log').open('w') as log:
         result = subprocess.run([str(LAUNCHER), 'timeout', '900', cli, 'run', '-p', str(project),
                                  '--no-watch', '--frames', '600', '--size', '64x32'],
@@ -152,15 +198,18 @@ def unbound(work):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'unbound'))
+    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'unbound', 'check'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
+    parser.add_argument('--mode', dest='probe_mode', choices=('probe', 'controls'), default='probe')
     args = parser.parse_args()
+    global MODE
+    MODE = args.probe_mode
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
-    return {'create': create, 'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
+    return {'create': create, 'editor': editor, 'publish': publish, 'unbound': unbound, 'check': check}[args.mode](work)
 
 
 if __name__ == '__main__':
