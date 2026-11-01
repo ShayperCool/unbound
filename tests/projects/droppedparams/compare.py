@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Compares a dropped-parameters capture with the Editor's: every value exactly (floats are the
-hex of their bits; differing ones are shown decoded too). Lists each missing, extra or differing
+hex of their bits; differing ones are shown decoded too), after one normalisation: CoreCLR's
+" (Parameter 'x')" reads as Mono's "\nParameter name: x". Lists each missing, extra or differing
 value and exits non-zero on any; a summary per section (dims, log, gpuproj, slice, load, unload,
 shadow) follows.
 
@@ -13,11 +14,13 @@ import struct
 import sys
 
 HEX = re.compile(r'\b[0-9a-f]{8}\b')
+# CoreCLR words an argument exception's parameter as " (Parameter 'x')", Mono as "\nParameter name: x".
+CORECLR_PARAMETER = re.compile(r" \(Parameter '([^']*)'\)")
 
 
 def load(path):
     rows = [json.loads(line) for line in open(path, encoding='utf-8') if line.strip()]
-    values = {row['k']: row['v'] for row in rows}
+    values = {row['k']: CORECLR_PARAMETER.sub(r'\nParameter name: \1', row['v']) for row in rows}
     if len(values) != len(rows) or not rows:
         sys.exit(f'{path}: empty or duplicate keys')
     return values

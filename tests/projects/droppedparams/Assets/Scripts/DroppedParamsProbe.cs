@@ -24,7 +24,19 @@ public sealed class DroppedParamsProbe : MonoBehaviour
     readonly List<string> m_Logs = new List<string>();
     bool m_Capturing;
 
-    void Rec(string key, string value) =>
+    /// <summary>Keys starting with one of <c>DROPPED_PARAMS_PROBE_SKIP</c>'s comma-separated
+    /// prefixes are neither run nor recorded (a control run of an engine that cannot run them).</summary>
+    static readonly string[] s_Skip = (Environment.GetEnvironmentVariable("DROPPED_PARAMS_PROBE_SKIP") ?? "")
+        .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries);
+
+    static bool Skipped(string key) => s_Skip.Any(prefix => key.StartsWith(prefix, StringComparison.Ordinal));
+
+    void Rec(string key, string value)
+    {
+        if (!Skipped(key)) Append(key, value);
+    }
+
+    void Append(string key, string value) =>
         m_Out.Append("{\"k\":\"").Append(Escape(key)).Append("\",\"v\":\"").Append(Escape(value)).Append("\"}\n");
 
     static string Escape(string s) => s.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r").Replace("\t", "\\t");
@@ -47,6 +59,7 @@ public sealed class DroppedParamsProbe : MonoBehaviour
     /// <summary>Runs a case, recording what it returns, throws and logs.</summary>
     void Case(string key, Func<string> run)
     {
+        if (Skipped(key)) return;
         m_Logs.Clear();
         m_Capturing = true;
         string result;
@@ -176,9 +189,24 @@ public sealed class DroppedParamsProbe : MonoBehaviour
         RenderTexture.active = previous;
     }
 
+    static Material s_SampleSlice;
+    static RenderTexture s_Flat;
+
+    /// <summary>The 4x4 texels of a render texture's slice: an array's slice is sampled into a 2D
+    /// target first (point sampling at texel centres), which is then read back.</summary>
     static string Read(RenderTexture rt, int slice)
     {
         var previous = RenderTexture.active;
+        if (rt.dimension == TextureDimension.Tex2DArray)
+        {
+            if (s_SampleSlice == null) s_SampleSlice = new Material(Shader.Find("Probe/SampleSlice"));
+            if (s_Flat == null) s_Flat = Target(0);
+            s_SampleSlice.SetTexture("_Array", rt);
+            s_SampleSlice.SetFloat("_Layer", slice);
+            Graphics.Blit(null, s_Flat, s_SampleSlice, 0);
+            rt = s_Flat;
+            slice = 0;
+        }
         Graphics.SetRenderTarget(rt, 0, CubemapFace.Unknown, slice);
         var texture = new Texture2D(4, 4, TextureFormat.RGBA32, false, true);
         texture.ReadPixels(new Rect(0, 0, 4, 4), 0, 0, false);
