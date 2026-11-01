@@ -1,23 +1,28 @@
 #!/usr/bin/env python3
 """Records the application facts probe in the Unity Editor or runs it in Unbound.
 
-    run.py editor  --release R --label L   two independent windowed Editor captures (native1, native2)
+    run.py editor  --release R --label L [--dry-run]
+                    two independent windowed Editor captures (native1, native2)
     run.py check   --release R --label L   validates the captures and their machine facts
     run.py publish --release R --label L   checks that the two captures agree, writes Reference/unity-R
     run.py unbound --release R --label L   an Unbound capture (UNBOUND_CLI: the binary)
 
 Every capture runs on a fresh copy of the probe's Assets/Packages/ProjectSettings under
 $XDG_CACHE_HOME/unbound/validation/runs/appfacts/<label>; nothing is written here except by
-publish, which refuses to overwrite an existing reference. Editors run through the shared
-heavy-job launcher, windowed on a private Xvfb each, on the GPU through VirtualGL.
+publish, which refuses to overwrite an existing reference. Each Editor runs through
+tests/editor_runner.py: one launcher lease per repeat, a private Xvfb started inside the
+lease, the GPU through VirtualGL, the renderer checked, hard and progress deadlines, and the
+project copy's Hub/Roslyn helpers swept afterwards. Do not wrap this driver in with-heavy-job.
 
 URL openers (xdg-open, open and the browsers) are stubs first on PATH that append their name
 and arguments to openurl.log, so Application.OpenURL never starts a browser. Unbound's capture
 also sets UNBOUND_OPEN_URL to the xdg-open stub.
 
-values.jsonl must be byte-identical between the two Editor captures. machine.jsonl is what the
-machine decides; each capture saves what the OS reports (os.json) beside it, and `check` /
-compare.py --machine verify the facts against it rather than against another machine's capture.
+Publishing requires each Editor to exit with 0 without a forced stop on the NVIDIA GPU, and
+values.jsonl to end with `complete: true` and be byte-identical between the two captures.
+machine.jsonl is what the machine decides; each capture saves what the OS reports (os.json)
+beside it, and `check` / compare.py --machine verify the facts against it rather than against
+another machine's capture. Neither file is published: they identify this machine and its user.
 """
 import argparse
 import json
@@ -25,12 +30,13 @@ import os
 from pathlib import Path
 import platform
 import shutil
-import signal
 import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import editor_path, reference_root, run_root
+from probe_paths import reference_root, run_root
+from editor_runner import EditorJob, load_result, publish as publish_repeats, result_problem, \
+    run_parallel, summary
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
@@ -38,6 +44,18 @@ LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 OPENERS = ('xdg-open', 'open', 'gio', 'gnome-open', 'kde-open', 'kde-open5', 'gvfs-open', 'x-www-browser',
            'sensible-browser', 'www-browser', 'google-chrome', 'google-chrome-stable', 'chromium',
            'chromium-browser', 'firefox')
+REPEATS = ('native1', 'native2')
+# Deadlines, counted from admission into the lease (the old runner's 1800 s also covered the
+# wait for it). The probe flushes its records after each step. In the published pair the
+# first write came 34 s and 172 s after the Editor started (the slower repeat spent 133 s
+# resolving packages) and the Editor exited within 40 s of it. With the 140 s AssetDatabase
+# refresh outlier of tools/validation/README.md on top of that start, 480 s without a write
+# is a stall. A stall inside Play mode therefore ends as no-progress before ProbeRunner's own
+# 600 s watchdog; neither can publish. The hard timeout stays as the outer bound
+# (EDITOR_RUNNER.md), above the progress budget plus that watchdog.
+PROGRESS_TIMEOUT = 480
+HARD_TIMEOUT = 1200
+PROGRESS_FILES = ('values.jsonl', 'machine.jsonl', 'openurl.log')
 
 
 def copy_project(dest):
@@ -57,6 +75,13 @@ def fresh_output(directory):
     return directory
 
 
+def stub_env(out):
+    """The environment that puts the recording URL openers in `out` first on PATH."""
+    directory = out/'stubs'
+    return {'APPFACTS_OPENURL_LOG': str(out/'openurl.log'), 'APPFACTS_OPENURL_STUBS': str(directory),
+            'PATH': f'{directory}:{os.environ["PATH"]}', 'BROWSER': str(directory/'sensible-browser')}
+
+
 def stubs(out):
     """Recording URL openers and the environment that puts them first on PATH."""
     directory = out/'stubs'
@@ -67,8 +92,7 @@ def stubs(out):
         script.write_text('#!/bin/sh\n{ printf "%s" "$(basename "$0")"; for a in "$@"; do printf "\\t%s" "$a"; done; '
                           f'printf "\\n"; }} >> "{log}"\n')
         script.chmod(0o755)
-    return {'APPFACTS_OPENURL_LOG': str(log), 'APPFACTS_OPENURL_STUBS': str(directory),
-            'PATH': f'{directory}:{os.environ["PATH"]}', 'BROWSER': str(directory/'sensible-browser')}
+    return stub_env(out)
 
 
 def read(path, default=None):
@@ -116,76 +140,48 @@ def os_facts():
     return facts
 
 
-def display():
-    """A private X server for one Editor."""
-    for number in range(120, 200):
-        if not Path(f'/tmp/.X{number}-lock').exists() and not Path(f'/tmp/.X11-unix/X{number}').exists():
-            server = subprocess.Popen(['Xvfb', f':{number}', '-screen', '0', '1280x720x24', '-nolisten', 'tcp'],
-                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            return f':{number}', server
-    sys.exit('no free X display')
+def job(work, repeat):
+    project, out = work/'projects'/repeat, work/repeat
+    return EditorJob(project, out/'editor.log', out, env={'APPFACTS_PROBE_OUT': str(out), **stub_env(out)},
+                     timeout=HARD_TIMEOUT, progress_files=[out/name for name in PROGRESS_FILES],
+                     progress_timeout=PROGRESS_TIMEOUT, label='appfacts-'+repeat)
 
 
-def stop_compilers(project):
-    """Stops only the Unity Roslyn servers and the Hub a windowed Editor started for this
-    project copy (the Hub's command line names the project)."""
-    for process in Path('/proc').glob('[0-9]*'):
-        try:
-            command = (process/'cmdline').read_bytes()
-            if b'unityhub-bin' in command and str(project).encode()+b'\0' in command:
-                os.kill(int(process.name), signal.SIGTERM)
-                continue
-            if b'VBCSCompiler' not in command:
-                continue
-            env = dict(i.split(b'=', 1) for i in (process/'environ').read_bytes().split(b'\0') if b'=' in i)
-            if env.get(b'PWD') == str(project).encode():
-                os.kill(int(process.name), signal.SIGTERM)
-        except (FileNotFoundError, ProcessLookupError, PermissionError):
-            pass
-
-
-def editor(work):
-    started = []
-    codes = []
-    try:
-        for repeat in ('native1', 'native2'):
-            project = copy_project(work/'projects'/repeat)
-            out = fresh_output(work/repeat)
-            (out/'os.json').write_text(json.dumps(os_facts(), indent=1, sort_keys=True)+'\n')
-            name, server = display()
-            env = dict(os.environ, DISPLAY=name, APPFACTS_PROBE_OUT=str(out), PWD=str(project), **stubs(out))
-            env.pop('XAUTHORITY', None)
-            job = subprocess.Popen(
-                [str(LAUNCHER), 'timeout', '-s', 'KILL', '1800', 'vglrun', '-d', 'egl', str(editor_path()),
-                 '-projectPath', str(project), '-logFile', str(out/'editor.log')], cwd=project, env=env)
-            started.append((repeat, project, server, job))
-        codes = [job.wait() for _, _, _, job in started]
-        for (repeat, _, _, _), code in zip(started, codes):
-            (work/repeat/'exit.txt').write_text(f'{code}\n')
-    finally:
-        for _, project, server, job in started:
-            if job.poll() is None:
-                job.kill()
-            server.terminate()
-            server.wait()
-            stop_compilers(project)
-    print('editor exits', codes)
-    return int(any(codes))
+def editor(work, dry_run=False):
+    jobs = [job(work, repeat) for repeat in REPEATS]
+    if dry_run:
+        for j in jobs:
+            print(json.dumps({'label': j.label, 'kind': j.kind, 'command': j.command(),
+                              'env': {k: v for k, v in j.env.items() if k != 'PATH'},
+                              'path_prefix': j.env['PATH'].split(':', 1)[0], 'timeout': j.timeout,
+                              'progress_files': j.progress_files, 'progress_timeout': j.progress_timeout},
+                             indent=1))
+        return 0
+    for j in jobs:
+        copy_project(j.project)
+        out = fresh_output(j.out)
+        stubs(out)
+        (out/'os.json').write_text(json.dumps(os_facts(), indent=1, sort_keys=True)+'\n')
+    results = run_parallel(jobs)
+    for result in results:
+        print(summary(result))
+    return int(any(r['exit_code'] != 0 or r.get('forced_exit') for r in results))
 
 
 def rows(path):
     return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
 
 
-def incomplete(repeat, editor=True):
-    """Why a capture cannot be published (None when it is complete)."""
-    if editor:
-        log = (repeat/'editor.log').read_text(errors='replace') if (repeat/'editor.log').exists() else ''
-        if 'NVIDIA' not in next((line for line in log.splitlines() if 'Renderer:' in line), ''):
-            return 'NVIDIA GPU renderer was not verified'
-        exit_file = repeat/'exit.txt'
-        if not exit_file.exists() or exit_file.read_text().strip() != '0':
-            return 'the Editor did not exit with 0'
+def editor_problem(repeat):
+    """Why the Editor run cannot back a reference: strict exit 0 on the NVIDIA GPU."""
+    reason = result_problem(repeat, gpu=True)
+    if not reason and (load_result(repeat) or {}).get('forced_exit'):
+        reason = 'forced exits are not accepted by this probe'
+    return reason
+
+
+def capture_problem(repeat):
+    """Why the probe output is incomplete (None when it is complete)."""
     if (repeat/'watchdog.txt').exists() or not (repeat/'values.jsonl').exists() or not (repeat/'machine.jsonl').exists():
         return 'the capture did not finish'
     try:
@@ -207,8 +203,8 @@ def check(work):
     sys.path.insert(0, str(PROBE))
     import compare
     status = 0
-    for repeat in (work/'native1', work/'native2'):
-        reason = incomplete(repeat)
+    for repeat in (work/r for r in REPEATS):
+        reason = editor_problem(repeat) or capture_problem(repeat)
         print(repeat.name, reason or 'complete')
         if reason is None:
             failures = compare.machine(repeat, editor=True)
@@ -218,21 +214,22 @@ def check(work):
     return int(status)
 
 
+def write_reference(target, first):
+    target.mkdir(parents=True)
+    shutil.copyfile(first/'values.jsonl', target/'values.jsonl')
+    print('published', target)
+
+
 def publish(work):
-    a, b = work/'native1', work/'native2'
-    for repeat in (a, b):
-        reason = incomplete(repeat)
+    repeats = [work/r for r in REPEATS]
+    for repeat in repeats:
+        if not repeat.is_dir():
+            sys.exit(f'{repeat.name}: no capture; not publishing')
+        reason = editor_problem(repeat)
         if reason:
             sys.exit(f'{repeat.name}: {reason}; not publishing')
-    if (a/'values.jsonl').read_bytes() != (b/'values.jsonl').read_bytes():
-        sys.exit('the two Editor captures differ in values; not publishing')
-    target = reference_root(PROBE)
-    if target.exists():
-        sys.exit(f'refusing to overwrite reference: {target}')
-    target.mkdir(parents=True)
-    shutil.copyfile(a/'values.jsonl', target/'values.jsonl')
-    print('published', target)
-    return 0
+    return publish_repeats(repeats, reference_root(PROBE), lambda d: ['values.jsonl'],
+                           write_reference, complete=[capture_problem], gpu=True)
 
 
 def unbound(work):
@@ -256,12 +253,18 @@ def main():
     parser.add_argument('mode', choices=('editor', 'publish', 'unbound', 'check'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
+    parser.add_argument('--dry-run', action='store_true',
+                        help='editor: print the Editor jobs without copying projects or launching')
     args = parser.parse_args()
     if not args.label or Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
+    if args.dry_run and args.mode != 'editor':
+        parser.error('--dry-run applies to editor only')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
-    return {'editor': editor, 'publish': publish, 'unbound': unbound, 'check': check}[args.mode](work)
+    if args.mode == 'editor':
+        return editor(work, args.dry_run)
+    return {'publish': publish, 'unbound': unbound, 'check': check}[args.mode](work)
 
 
 if __name__ == '__main__':
