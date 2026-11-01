@@ -116,7 +116,7 @@ jobs.append(spawn('heavy','writer',.3))
 jobs.append(spawn('editor-cpu','late-reader',.2))
 jobs.append(spawn('engine-cpu','late-engine',.2))
 join(jobs)
-# Builds overlap Editors and engines, never each other or the exclusive writer.
+# Builds overlap Editors and engines, each other up to build_slots, never the exclusive writer.
 jobs=[spawn('build','build-'+str(i),.6) for i in range(2)]
 jobs += [spawn('editor-cpu','build-editor-'+str(i),.6) for i in range(5)]
 jobs.append(spawn('engine-cpu','build-engine',.6))
@@ -176,7 +176,7 @@ for row in sorted(rows,key=lambda r:r['time']):
         gpu_count=sum(k.endswith('-gpu') for k in active_kinds.values())
         assert engine_count<=ENGINES,('engine cap',active_kinds)
         assert editor_count<=EDITORS,('Editor cap',active_kinds)
-        assert build_count<=1,('build cap',active_kinds)
+        assert build_count<=config['build_slots'],('build cap',active_kinds)
         assert gpu_count<=GPUS,('GPU cap',active_kinds)
         build_overlap |= build_count>0 and editor_count+engine_count>0
         engine_peak=max(engine_peak,engine_count)
@@ -224,7 +224,7 @@ for kind in ['editor-cpu','engine-cpu']:
     engine_peak=engine_peak,engine_slot_limit=ENGINES,gpu_peak=gpu_peak,gpu_slot_limit=GPUS,
     mixed_overlap=mixed_overlap,no_head_of_line_blocking=True,
     combined_memory_max_bytes=16*2**30,engine_memory_max_bytes=8*2**30,
-    engine_job_memory_max_bytes=4*2**30,swap_allowed=True,exclusive_builds=False,build_slots=1,
+    engine_job_memory_max_bytes=4*2**30,swap_allowed=True,exclusive_builds=False,build_slots=config['build_slots'],
     build_overlap=build_overlap,project_serial=True,cancellation=True),indent=2)+'\n')
 print('Editor/engine/build/GPU slots, no head-of-line blocking, exclusive writer and cancellation verified;',
       'Editor peak',peak,'engine peak',engine_peak,'GPU peak',gpu_peak)

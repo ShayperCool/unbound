@@ -5,7 +5,7 @@ entry point and the user systemd slices. The source policy is `job-limits.json`;
 the previous serial launcher is backed up before replacement.
 
 Admission is by count: at most eight Unity Editors (`-nographics` or graphics),
-four direct `unbound run` engine jobs (`--headless` selects CPU mode), one build
+four direct `unbound run` engine jobs (`--headless` selects CPU mode), two builds
 (`cargo`, `rustc`, `dotnet build/test/publish/restore/msbuild/pack/format`, also
 behind time, timeout and env; pass `--kind build` for a script that only builds)
 `tool_slots` CPU tools (other `unbound` subcommands such as `compile`, `.NET` tools
