@@ -22,7 +22,10 @@ the end of a frame.
   directory). Each file's first bytes, PNG header and chunk types, and the image `LoadImage`
   decodes.
 
-Every case records its log messages and exceptions.
+Every case records its log messages and exceptions. In Gamma the Editor crashes (exit 139, in
+both repeats) when `CaptureScreenshotAsTexture` is called in Update or with a superSize below one;
+the probe skips those calls and the render texture capture in Update there, recording
+`<case>.skipped`, and writes its values before every capture call.
 
 ## Recording
 
@@ -44,7 +47,8 @@ render texture probe's (`tests/projects/rtdepth/compare.py`): the whole key unio
 channel, absolute and relative tolerance 2e-4.
 
 `Reference/unity-6000.0.71f1/{Linear,Gamma}` hold the values and images of two byte-identical
-captures each (OpenGLCore, RTX 4060).
+captures each (OpenGLCore, RTX 4060): Linear 187 values and 39 images, Gamma 174 values and 35
+images.
 
 ## What the Editor does (6000.0.71f1, Linux, OpenGL Core)
 
@@ -55,16 +59,16 @@ captures each (OpenGLCore, RTX 4060).
 * `CaptureScreenshotAsTexture` reads the screen when it is called (a marker drawn before is in
   it): a readable RGBA32 texture, `R8G8B8A8_UNorm`, one mip, bilinear, repeat, with the stored
   bytes and alpha. In Update it holds the Editor window's framebuffer, without a message; in
-  Gamma the Editor crashes there (the Gamma probe skips the two calls in Update).
+  Gamma the Editor crashes there.
 * superSize N gives N times the size, the cameras rendered again: pixel j samples the screen at
   j / N (pixel 0 is the screen's corner, not a pixel center). superSize 0 or below asserts
   "Assertion failed on expression: 'superSize > 0'" (below 0 also "Image invalid width!" and
   "Image invalid height!"), logs "Texture must have width greater than 0." and "No texture data
-  is available to upload." and returns a 0x0 ARGB32 linear texture whose `GetPixels` throws.
-  Stereo modes capture the screen (no XR).
+  is available to upload." and returns a 0x0 ARGB32 linear texture whose `GetPixels` throws
+  (in Gamma the Editor crashes). Stereo modes capture the screen (no XR).
 * `CaptureScreenshotIntoRenderTexture` draws the screen into the target when it is called, one
   texel per pixel from the corner: an sRGB target gets the same bytes, linear and float targets
-  the decoded values, alpha kept; a larger target keeps its other texels, a smaller one is
+  the decoded values (in Gamma every target gets the bytes), alpha kept; a larger target keeps its other texels, a smaller one is
   cropped. A null target logs "CaptureScreenshotIntoRenderTexture() The RenderTexture passed in
   argument is null. Please allocate it prior to calling this function."
 * `CaptureScreenshot` writes the frame's final image after the end-of-frame callbacks (GL drawn
@@ -74,4 +78,27 @@ captures each (OpenGLCore, RTX 4060).
   "CaptureScreenshot() the superSize argument must be greater than or equal to 1." and writes
   nothing. A relative name is under the working directory (the project folder).
 * `LoadImage` of those PNGs gives ARGB32 textures (their `graphicsFormat` is a value the public
-  enum does not name: 87, 88 for a linear texture).
+  enum does not name: 87 in Linear, 88 in Gamma and for the linear 0x0 texture above).
+* In Gamma the screen holds the written values unencoded; everything above reads those bytes.
+
+## Unbound
+
+`Graphics/ScreenCapture.cs` implements the three calls as measured; the screen is 8-bit RGBA,
+sRGB-encoded in Linear (`crates/unbound-app/src/render/executor.rs`), so readbacks, copies and
+captures see its stored bytes. A frame's requested file is written in
+`PostLateUpdate.GUIClearEvents`, after the end-of-frame callbacks, and `ReadPixels` of the screen
+outside the frame's drawing (no camera rendering) logs the Editor's error. superSize N renders
+the screen cameras again into a target N times the size, shifted half of its pixel; overlay
+canvases and OnGUI are not drawn there (a warning says so).
+
+Against the reference: Linear 174/187 values and 33/39 images, Gamma 163/174 values and 33/35
+images (Root's runtime with stubs: Linear 88/187 values and 0/39 images). Retained:
+
+* `LoadImage` of a PNG gives RGBA32 with `R8G8B8A8_SRGB`/`B8G8R8A8_UNorm` names, not ARGB32 with
+  87/88 (11 `*.image.texture` values per space, and the 0x0 texture's `graphicsFormat` in Linear):
+  texture format gaps outside ScreenCapture.
+* Reads in Update (`read.update.float`, and in Linear `asTexture.update`, `rt.update.*`): the
+  Editor returns its window's framebuffer; Unbound returns the last frame.
+* `asTexture.superSize3`: 567 (Linear) and 191 (Gamma) of 18,432 pixels differ by one 8-bit step,
+  all at samples on the screen's pixel corners where the ramp's 8-bit value lies within 0.06 of
+  a rounding boundary; superSize 2 matches.

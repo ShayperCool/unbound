@@ -2303,3 +2303,32 @@ seven sampler RPC guards pass, including rejection of the obsolete four-value
 request. Broader source-identical delivery results were reused; no new Editor,
 full physics, audio or full-rendering runs were needed. Other sampler W policies
 and the separate humanoid IK blocker remain outside this acceptance.
+
+## Screen storage and ScreenCapture, 2026-11-01
+
+The screen is stored as the Editor's game view stores it: 8-bit RGBA, drawn through
+an sRGB view in Linear color space, and read back or copied as its bytes. It was a
+half-float target: float reads returned linear values and byte reads were re-encoded
+on the CPU, one step off at exact halves. The render texture probe now passes all
+1,071 values and 368/368 images (316 before) and its controls 46/46 values and 16/17
+images (13 before); the unsupported integer-array default binding remains. The camera
+MSAA probe's Linear screen reads match as its Gamma ones do: 3,219/3,261 records and
+405/433 images (3,201 and 381 before), none introduced. Graphics, resources,
+built-in pipeline and effects, clipping, colors, focused camera, UI Toolkit and
+materials keep byte-identical outputs.
+
+`ScreenCapture` is implemented from tests/projects/screencapture, a new Linear and
+Gamma reference of two byte-identical Editor captures each: the texture capture at
+the call (RGBA32, linear, one mip, alpha kept, superSize re-rendering the cameras),
+the render texture capture (one texel per pixel from the corner, decoded into linear
+and float targets), and the file written after the end-of-frame callbacks as an RGB
+PNG. Unbound passes Linear 174/187 values and 33/39 images, Gamma 163/174 and 33/35
+(stubs: 88/187 and 0/39, 83/174 and 3/35). Retained: `LoadImage`'s ARGB32 format
+names, reads in Update (the Editor's window framebuffer), and one-step superSize 3
+differences at rounding boundaries. ReadPixels of the screen outside the frame logs
+the Editor's error. In Gamma the Editor crashes on texture captures in Update or below
+superSize one; the probe skips those there.
+
+Managed tests pass 1,289/1,300 with the same eleven failures; runtime 50 and app 20
+Rust tests pass; API checking has zero errors in 2,292 types and regeneration only
+removes the ScreenCapture module's stubs. No ABI, protocol or cache version changed.

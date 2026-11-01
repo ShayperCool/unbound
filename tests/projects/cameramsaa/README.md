@@ -16,11 +16,14 @@ Only the Native oracle belongs in `Reference`.
 `compare.py` checks every observation, buffer and captured PNG name with its
 original absolute/relative tolerance of 2e-4. Missing and unexpected keys fail.
 Rejected inactive resolves and differing Editor framebuffer reads remain in the
-strict totals. The expanded engine comparison retains 3,201/3,261 observations
-and 381/433 images in Linear, 3,219/3,261 and 405/433 in Gamma. Both focused
+strict totals. The expanded engine comparison retains 3,219/3,261 observations
+and 405/433 images in each of Linear and Gamma (Linear was 3,201 and 381 before
+the screen was stored as the game view's 8-bit sRGB bytes). Both focused
 comparisons pass 481/481 observations, 54/54 images and 3,268,608 channels.
-The retained full failures concern rejected resolves and screen-source/attachment
-differences. They do not establish full screen API parity.
+The retained full failures concern rejected resolves, reads of the Editor's
+system framebuffer (`boundary.screenPublic.*`) and the Editor's game view texture
+described as the read's target (`boundary.screen.*.target*`; Unbound has no such
+texture object). They do not establish full screen API parity.
 
 Run outputs, logs, manifests and reports default to
 `${XDG_CACHE_HOME:-$HOME/.cache}/unbound/validation/runs/cameramsaa/<label>/`.
