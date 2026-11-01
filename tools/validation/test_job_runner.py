@@ -120,6 +120,13 @@ jobs.append(spawn('engine-cpu','build-engine',.6))
 join(jobs)
 join([spawn('editor-gpu','gpu-editor-'+str(i),.6) for i in range(GPUS)]+
      [spawn('engine-gpu','gpu-engine-'+str(i),.6) for i in range(2)])
+# A long-waiting build (behind another build) never delays an Editor.
+jobs=[spawn('build','wait-build-a',3.0)]
+time.sleep(.4)
+jobs.append(spawn('build','wait-build-b',.2))
+time.sleep(1.5)
+jobs.append(spawn('editor-gpu','wait-editor',.2))
+join(jobs)
 # No head-of-line blocking: with every engine slot busy and more engines queued,
 # an Editor whose own slot is free starts at once.
 jobs=[spawn('engine-cpu','hol-engine-'+str(i),2.5) for i in range(ENGINES+2)]
@@ -131,6 +138,7 @@ starts={r['name']:r['time'] for r in rows if r['phase']=='start'}
 ends={r['name']:r['time'] for r in rows if r['phase']=='end'}
 first_engine_end=min(ends['hol-engine-'+str(i)] for i in range(ENGINES+2))
 assert starts['hol-editor']<first_engine_end,'an Editor waited behind queued engine jobs'
+assert starts['wait-editor']<ends['wait-build-a'],'an Editor waited behind a queued build'
 active=set()
 peak=0
 engine_peak=0

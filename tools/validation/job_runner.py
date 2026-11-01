@@ -5,9 +5,8 @@ Every pooled job reserves all it needs at once, without blocking while it holds
 anything: Editor count slots, memory tokens (one GiB each, weighted by kind from
 measured peaks), engine slots, a build slot and a GPU slot. A job that cannot get
 everything releases what it took and retries, so a waiting job never pins tokens
-and never blocks other jobs whose resources are free. A job that has waited longer
-than aging_seconds (and every exclusive 'heavy' job) keeps the entry lock while it
-retries, so newer jobs queue behind it and large reservations cannot starve.
+and never blocks other jobs whose resources are free. Only an exclusive 'heavy' job
+keeps the entry lock while it waits, so newer pooled jobs queue behind it.
 Every job appends its wait and run time to job-timings.jsonl."""
 import contextlib
 import fcntl
@@ -48,7 +47,6 @@ def policy():
     value.setdefault('build_slots', 1)
     value.setdefault('engine_slots', 2)
     value.setdefault('gpu_slots', 1)
-    value.setdefault('aging_seconds', 30)
     # Optional memory tokens (one GiB each, weighted by kind). Without them only
     # the count caps and the systemd slices bound the pools.
     value.setdefault('memory_tokens', 0)
@@ -61,7 +59,6 @@ def policy():
     if value['memory_tokens']:
         for kind in ['editor-cpu', 'editor-gpu', 'engine-cpu', 'engine-gpu', 'build']:
             assert 1 <= value['weights'][kind] <= value['memory_tokens'], kind
-    assert value['aging_seconds'] >= 0
     return value
 
 
@@ -150,15 +147,17 @@ def attempt(kind, config):
 
 
 def admit(kind, config):
-    started = time.monotonic()
+    # Only an exclusive job keeps the entry lock while it waits, so new pooled
+    # jobs cannot keep bypassing it. A pooled job takes the entry lock just for
+    # one attempt: a pooled waiter never delays jobs that need other slots.
+    # Pooled jobs each need one slot per pool, so retrying cannot starve them.
     while True:
-        aged = kind == 'heavy' or time.monotonic()-started >= config['aging_seconds']
         with lock('parity-heavy-entry.lock'):
             while True:
                 held = attempt(kind, config)
                 if held is not None:
                     return held
-                if not aged:
+                if kind != 'heavy':
                     break
                 time.sleep(.05)
         # Outside the entry lock, so other jobs can be admitted meanwhile.

@@ -13,6 +13,5 @@
   "build_memory_high_bytes": 7516192768,
   "build_memory_max_bytes": 9663676416,
   "gpu_slots": 4,
-  "aging_seconds": 30,
   "memory_tokens": 0
 }

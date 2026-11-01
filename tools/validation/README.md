@@ -12,9 +12,9 @@ and `gpu_slots` GPU jobs, shared by graphics Editors and non-headless engine run
 A job reserves everything it needs at once, without blocking while it holds any
 of it: a job that cannot get all its slots releases them and retries. A waiting
 job therefore never pins slots and never delays jobs whose own slots are free.
-A job that has waited longer than `aging_seconds`, and every exclusive `heavy`
-job, keeps the entry lock while it retries; newer jobs queue behind it, so a
-writer or a long-waiting job cannot starve. Other (`heavy`) commands keep the
+Only an exclusive `heavy` job keeps the entry lock while it waits, so newer jobs
+queue behind it and a writer cannot starve; a waiting pooled job (for example a
+second build behind a running one) never delays jobs that need other slots. Other (`heavy`) commands keep the
 exclusive lock, because they may start Editors without going through the pool.
 Direct engine runs on the same resolved project directory are serialized before
 admission; different spellings and symlinks share the same project lock.
