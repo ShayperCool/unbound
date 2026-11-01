@@ -946,8 +946,12 @@ namespace UnityEngine
             }
         }
 
+        // Setting or reading points first records the object's pending movement, as the other
+        // API reads do (measured: a point set after a move is not the one the move aged out).
+
         public void SetPosition(int index, Vector3 position)
         {
+            TrackMovement();
             if (index < 0 || index >= m_Points.Count) throw new ArgumentOutOfRangeException(nameof(index));
             var p = m_Points[index];
             p.Position = position;
@@ -956,6 +960,7 @@ namespace UnityEngine
 
         public Vector3 GetPosition(int index)
         {
+            TrackMovement();
             if (index < 0 || index >= m_Points.Count) throw new ArgumentOutOfRangeException(nameof(index));
             return m_Points[index].Position;
         }
@@ -988,6 +993,7 @@ namespace UnityEngine
         public void SetPositions(Vector3[] positions)
         {
             if (positions == null) throw new ArgumentNullException(nameof(positions));
+            TrackMovement();
             int n = Math.Min(positions.Length, m_Points.Count);
             for (int i = 0; i < n; i++)
             {
