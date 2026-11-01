@@ -1,0 +1,252 @@
+{"k":"dims.Probe/Dims.count","v":"8"}
+{"k":"dims.Probe/Dims.0.name","v":"_Float"}
+{"k":"dims.Probe/Dims.0.type","v":"Float"}
+{"k":"dims.Probe/Dims.0.dimension","v":"throws ArgumentException: Property type is not TexEnv."}
+{"k":"dims.Probe/Dims.1.name","v":"_Tex2D"}
+{"k":"dims.Probe/Dims.1.type","v":"Texture"}
+{"k":"dims.Probe/Dims.1.dimension","v":"Tex2D"}
+{"k":"dims.Probe/Dims.2.name","v":"_Tex3D"}
+{"k":"dims.Probe/Dims.2.type","v":"Texture"}
+{"k":"dims.Probe/Dims.2.dimension","v":"Tex3D"}
+{"k":"dims.Probe/Dims.3.name","v":"_TexCube"}
+{"k":"dims.Probe/Dims.3.type","v":"Texture"}
+{"k":"dims.Probe/Dims.3.dimension","v":"Cube"}
+{"k":"dims.Probe/Dims.4.name","v":"_Tex2DArray"}
+{"k":"dims.Probe/Dims.4.type","v":"Texture"}
+{"k":"dims.Probe/Dims.4.dimension","v":"Tex2DArray"}
+{"k":"dims.Probe/Dims.5.name","v":"_TexCubeArray"}
+{"k":"dims.Probe/Dims.5.type","v":"Texture"}
+{"k":"dims.Probe/Dims.5.dimension","v":"CubeArray"}
+{"k":"dims.Probe/Dims.6.name","v":"_TexAny"}
+{"k":"dims.Probe/Dims.6.type","v":"Texture"}
+{"k":"dims.Probe/Dims.6.dimension","v":"Any"}
+{"k":"dims.Probe/Dims.7.name","v":"_Color"}
+{"k":"dims.Probe/Dims.7.type","v":"Color"}
+{"k":"dims.Probe/Dims.7.dimension","v":"throws ArgumentException: Property type is not TexEnv."}
+{"k":"dims.Probe/Dims.8.name","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: propertyIndex"}
+{"k":"dims.Probe/Dims.8.type","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: propertyIndex"}
+{"k":"dims.Probe/Dims.8.dimension","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: propertyIndex"}
+{"k":"dims.Probe/DimsLower.count","v":"6"}
+{"k":"dims.Probe/DimsLower.0.name","v":"_Lower2D"}
+{"k":"dims.Probe/DimsLower.0.type","v":"Texture"}
+{"k":"dims.Probe/DimsLower.0.dimension","v":"Tex2D"}
+{"k":"dims.Probe/DimsLower.1.name","v":"_Lower3D"}
+{"k":"dims.Probe/DimsLower.1.type","v":"Texture"}
+{"k":"dims.Probe/DimsLower.1.dimension","v":"Tex3D"}
+{"k":"dims.Probe/DimsLower.2.name","v":"_LowerCube"}
+{"k":"dims.Probe/DimsLower.2.type","v":"Texture"}
+{"k":"dims.Probe/DimsLower.2.dimension","v":"Cube"}
+{"k":"dims.Probe/DimsLower.3.name","v":"_Lower2DArray"}
+{"k":"dims.Probe/DimsLower.3.type","v":"Texture"}
+{"k":"dims.Probe/DimsLower.3.dimension","v":"Tex2DArray"}
+{"k":"dims.Probe/DimsLower.4.name","v":"_LowerCubeArray"}
+{"k":"dims.Probe/DimsLower.4.type","v":"Texture"}
+{"k":"dims.Probe/DimsLower.4.dimension","v":"CubeArray"}
+{"k":"dims.Probe/DimsLower.5.name","v":"_LowerAny"}
+{"k":"dims.Probe/DimsLower.5.type","v":"Texture"}
+{"k":"dims.Probe/DimsLower.5.dimension","v":"Any"}
+{"k":"dims.Probe/DimsLower.6.name","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: propertyIndex"}
+{"k":"dims.Probe/DimsLower.6.type","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: propertyIndex"}
+{"k":"dims.Probe/DimsLower.6.dimension","v":"throws ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: propertyIndex"}
+{"k":"log.Log.None","v":"logged"}
+{"k":"log.Log.None.log0","v":"Log|probe Log None|stack"}
+{"k":"log.Log.NoStacktrace","v":"logged"}
+{"k":"log.Log.NoStacktrace.log0","v":"Log|probe Log NoStacktrace|nostack"}
+{"k":"log.Warning.None","v":"logged"}
+{"k":"log.Warning.None.log0","v":"Warning|probe Warning None|stack"}
+{"k":"log.Warning.NoStacktrace","v":"logged"}
+{"k":"log.Warning.NoStacktrace.log0","v":"Warning|probe Warning NoStacktrace|nostack"}
+{"k":"log.Error.None","v":"logged"}
+{"k":"log.Error.None.log0","v":"Error|probe Error None|stack"}
+{"k":"log.Error.NoStacktrace","v":"logged"}
+{"k":"log.Error.NoStacktrace.log0","v":"Error|probe Error NoStacktrace|nostack"}
+{"k":"log.logger.Warning","v":"logged"}
+{"k":"log.logger.Warning.log0","v":"Warning|probe logger 1|stack"}
+{"k":"gpuproj.perspective.false","v":"3f93cd3a 00000000 00000000 00000000 00000000 3fddb3d7 00000000 00000000 00000000 00000000 bf80c534 bf800000 00000000 00000000 bf1a0fec 00000000"}
+{"k":"gpuproj.perspective.true","v":"3f93cd3a 00000000 00000000 00000000 00000000 3fddb3d7 00000000 00000000 00000000 00000000 bf80c534 bf800000 00000000 00000000 bf1a0fec 00000000"}
+{"k":"gpuproj.ortho.false","v":"3f000000 00000000 00000000 00000000 00000000 3f800000 00000000 00000000 00000000 00000000 be4ede63 00000000 80000000 80000000 bf8295fb 3f800000"}
+{"k":"gpuproj.ortho.true","v":"3f000000 00000000 00000000 00000000 00000000 3f800000 00000000 00000000 00000000 00000000 be4ede63 00000000 80000000 80000000 bf8295fb 3f800000"}
+{"k":"slice.none","v":"0a141eff | 28323cff | 46505aff"}
+{"k":"slice.graphics.copy","v":"fa0a0aff | 28323cff | 46505aff"}
+{"k":"slice.graphics.copy.slices.0.1","v":"0a141eff | fa0a0aff | 46505aff"}
+{"k":"slice.graphics.copy.array.2.0","v":"0000c8ff | 28323cff | 46505aff"}
+{"k":"slice.graphics.copy.scale.0.2","v":"0a141eff | 28323cff | fa0a0aff"}
+{"k":"slice.graphics.copy.array","v":"c80000ff | 00c800ff | 0000c8ff"}
+{"k":"slice.graphics.material","v":"00ffffff | 28323cff | 46505aff"}
+{"k":"slice.graphics.material.slice.2","v":"0a141eff | 28323cff | 00ffffff"}
+{"k":"slice.graphics.active.material.slice.1","v":"00ffffff | 28323cff | 46505aff"}
+{"k":"slice.cmd.copy","v":"fa0a0aff | 28323cff | 46505aff"}
+{"k":"slice.cmd.copy.array","v":"80808080 | 28323cff | 46505aff"}
+{"k":"slice.cmd.copy.slices.0.1","v":"0a141eff | fa0a0aff | 46505aff"}
+{"k":"slice.cmd.copy.array.2.0","v":"0000c8ff | 28323cff | 46505aff"}
+{"k":"slice.cmd.copy.scale.0.2","v":"0a141eff | 28323cff | fa0a0aff"}
+{"k":"slice.cmd.material.slice.2","v":"0a141eff | 28323cff | 00ffffff"}
+{"k":"slice.cmd.copy.identifier.slice.1","v":"fa0a0aff | 28323cff | 46505aff"}
+{"k":"slice.cmd.clear.identifier.slice.2","v":"0a141eff | 28323cff | ffff00ff"}
+{"k":"slice.cmd.clear.identifier.all","v":"ffff00ff | ffff00ff | ffff00ff"}
+{"k":"slice.cmd.clear.target.all","v":"ffff00ff | ffff00ff | ffff00ff"}
+{"k":"slice.graphics.copy.array.1.flat","v":"00c800ff"}
+{"k":"slice.cmd.copy.array.1.flat","v":"00c800ff"}
+{"k":"load.load","v":"0a141eff"}
+{"k":"load.clear","v":"throws ArgumentException: RenderBufferLoadAction.Clear is not supported"}
+{"k":"load.clear.both","v":"throws ArgumentException: RenderBufferLoadAction.Clear is not supported"}
+{"k":"load.clear.draw","v":"throws ArgumentException: RenderBufferLoadAction.Clear is not supported"}
+{"k":"unload.material","v":"ok"}
+{"k":"unload.material.alive","v":"True"}
+{"k":"unload.material.color","v":"3f800000 3f800000 3f800000 3f800000"}
+{"k":"unload.material.reload","v":"False True 3f800000 3f800000 3f800000 3f800000"}
+{"k":"unload.data","v":"ok"}
+{"k":"unload.data.alive","v":"False"}
+{"k":"unload.data.value","v":"99"}
+{"k":"unload.data.reload","v":"False 7"}
+{"k":"unload.prefab","v":"ok"}
+{"k":"unload.prefab.log0","v":"Error|UnloadAsset may only be used on individual assets and can not be used on GameObject's / Components / AssetBundles or GameManagers|stack"}
+{"k":"unload.prefab.transform","v":"ok"}
+{"k":"unload.prefab.transform.log0","v":"Error|UnloadAsset may only be used on individual assets and can not be used on GameObject's / Components / AssetBundles or GameManagers|stack"}
+{"k":"unload.runtime","v":"True 00000000 3f800000 00000000 3f800000"}
+{"k":"unload.runtime.log0","v":"Error|UnloadAsset can only be used on assets;|stack"}
+{"k":"unload.null","v":"ok"}
+{"k":"shadow.quality","v":"All 43160000"}
+{"k":"shadow.none.Ldir","v":"false"}
+{"k":"shadow.none.LdirNone","v":"false"}
+{"k":"shadow.none.Lpoint","v":"false"}
+{"k":"shadow.none.LpointEmpty","v":"false"}
+{"k":"shadow.none.LpointFar","v":"false"}
+{"k":"shadow.none.LpointMask","v":"false"}
+{"k":"shadow.none.Lspot","v":"false"}
+{"k":"shadow.none.LspotAway","v":"false"}
+{"k":"shadow.none.lights","v":"Ldir LdirNone Lpoint LpointEmpty LpointFar LpointMask Lspot LspotAway"}
+{"k":"shadow.none.directionalFirst","v":"2 0"}
+{"k":"shadow.none.culls","v":"1"}
+{"k":"shadow.A.Ldir","v":"true 00000000 00000000 00000000 3f000000 3f000000 3f000000"}
+{"k":"shadow.A.LdirNone","v":"false"}
+{"k":"shadow.A.Lpoint","v":"true 00000000 00000000 00000000 3f000000 3f000000 3f000000"}
+{"k":"shadow.A.LpointEmpty","v":"false"}
+{"k":"shadow.A.LpointFar","v":"false"}
+{"k":"shadow.A.LpointMask","v":"false"}
+{"k":"shadow.A.Lspot","v":"true 00000000 00000000 00000000 3f000000 3f000000 3f000000"}
+{"k":"shadow.A.LspotAway","v":"false"}
+{"k":"shadow.A.lights","v":"Ldir LdirNone Lpoint LpointEmpty LpointFar LpointMask Lspot LspotAway"}
+{"k":"shadow.A.directionalFirst","v":"2 0"}
+{"k":"shadow.A.culls","v":"1"}
+{"k":"shadow.B.Ldir","v":"true 40800000 00000000 41200000 3f800000 3f800000 3f800000"}
+{"k":"shadow.B.LdirNone","v":"false"}
+{"k":"shadow.B.Lpoint","v":"false"}
+{"k":"shadow.B.LpointEmpty","v":"false"}
+{"k":"shadow.B.LpointFar","v":"false"}
+{"k":"shadow.B.LpointMask","v":"false"}
+{"k":"shadow.B.Lspot","v":"false"}
+{"k":"shadow.B.LspotAway","v":"false"}
+{"k":"shadow.B.lights","v":"Ldir LdirNone Lpoint LpointEmpty LpointFar LpointMask Lspot LspotAway"}
+{"k":"shadow.B.directionalFirst","v":"2 0"}
+{"k":"shadow.B.culls","v":"1"}
+{"k":"shadow.C.Ldir","v":"false"}
+{"k":"shadow.C.LdirNone","v":"false"}
+{"k":"shadow.C.Lpoint","v":"false"}
+{"k":"shadow.C.LpointEmpty","v":"false"}
+{"k":"shadow.C.LpointFar","v":"false"}
+{"k":"shadow.C.LpointMask","v":"false"}
+{"k":"shadow.C.Lspot","v":"false"}
+{"k":"shadow.C.LspotAway","v":"false"}
+{"k":"shadow.C.lights","v":"Ldir LdirNone Lpoint LpointEmpty LpointFar LpointMask Lspot LspotAway"}
+{"k":"shadow.C.directionalFirst","v":"2 0"}
+{"k":"shadow.C.culls","v":"1"}
+{"k":"shadow.D.Ldir","v":"false"}
+{"k":"shadow.D.LdirNone","v":"false"}
+{"k":"shadow.D.Lpoint","v":"false"}
+{"k":"shadow.D.LpointEmpty","v":"false"}
+{"k":"shadow.D.LpointFar","v":"false"}
+{"k":"shadow.D.LpointMask","v":"false"}
+{"k":"shadow.D.Lspot","v":"false"}
+{"k":"shadow.D.LspotAway","v":"false"}
+{"k":"shadow.D.lights","v":"Ldir LdirNone Lpoint LpointEmpty LpointFar LpointMask Lspot LspotAway"}
+{"k":"shadow.D.directionalFirst","v":"2 0"}
+{"k":"shadow.D.culls","v":"1"}
+{"k":"shadow.E.Ldir","v":"false"}
+{"k":"shadow.E.LdirNone","v":"false"}
+{"k":"shadow.E.Lpoint","v":"false"}
+{"k":"shadow.E.LpointEmpty","v":"false"}
+{"k":"shadow.E.LpointFar","v":"false"}
+{"k":"shadow.E.LpointMask","v":"false"}
+{"k":"shadow.E.Lspot","v":"false"}
+{"k":"shadow.E.LspotAway","v":"false"}
+{"k":"shadow.E.lights","v":"Ldir LdirNone Lpoint LpointEmpty LpointFar LpointMask Lspot LspotAway"}
+{"k":"shadow.E.directionalFirst","v":"2 0"}
+{"k":"shadow.E.culls","v":"1"}
+{"k":"shadow.F.Ldir","v":"true 40c00000 00000000 00000000 3f000000 3f000000 3f000000"}
+{"k":"shadow.F.LdirNone","v":"false"}
+{"k":"shadow.F.Lpoint","v":"false"}
+{"k":"shadow.F.LpointEmpty","v":"false"}
+{"k":"shadow.F.LpointFar","v":"false"}
+{"k":"shadow.F.LpointMask","v":"false"}
+{"k":"shadow.F.Lspot","v":"false"}
+{"k":"shadow.F.LspotAway","v":"false"}
+{"k":"shadow.F.lights","v":"Ldir LdirNone Lpoint LpointEmpty LpointFar LpointMask Lspot LspotAway"}
+{"k":"shadow.F.directionalFirst","v":"2 0"}
+{"k":"shadow.F.culls","v":"1"}
+{"k":"shadow.G.Ldir","v":"false"}
+{"k":"shadow.G.LdirNone","v":"false"}
+{"k":"shadow.G.Lpoint","v":"false"}
+{"k":"shadow.G.LpointEmpty","v":"false"}
+{"k":"shadow.G.LpointFar","v":"false"}
+{"k":"shadow.G.LpointMask","v":"false"}
+{"k":"shadow.G.Lspot","v":"false"}
+{"k":"shadow.G.LspotAway","v":"false"}
+{"k":"shadow.G.lights","v":"Ldir LdirNone Lpoint LpointEmpty LpointFar LpointMask Lspot LspotAway"}
+{"k":"shadow.G.directionalFirst","v":"2 0"}
+{"k":"shadow.G.culls","v":"1"}
+{"k":"shadow.H.Ldir","v":"false"}
+{"k":"shadow.H.LdirNone","v":"false"}
+{"k":"shadow.H.Lpoint","v":"false"}
+{"k":"shadow.H.LpointEmpty","v":"false"}
+{"k":"shadow.H.LpointFar","v":"false"}
+{"k":"shadow.H.LpointMask","v":"false"}
+{"k":"shadow.H.Lspot","v":"false"}
+{"k":"shadow.H.LspotAway","v":"false"}
+{"k":"shadow.H.lights","v":"Ldir LdirNone Lpoint LpointEmpty LpointFar LpointMask Lspot LspotAway"}
+{"k":"shadow.H.directionalFirst","v":"2 0"}
+{"k":"shadow.H.culls","v":"1"}
+{"k":"shadow.I.Ldir","v":"false"}
+{"k":"shadow.I.LdirNone","v":"false"}
+{"k":"shadow.I.Lpoint","v":"false"}
+{"k":"shadow.I.LpointEmpty","v":"false"}
+{"k":"shadow.I.LpointFar","v":"false"}
+{"k":"shadow.I.LpointMask","v":"false"}
+{"k":"shadow.I.Lspot","v":"false"}
+{"k":"shadow.I.LspotAway","v":"false"}
+{"k":"shadow.I.lights","v":"Ldir LdirNone Lpoint LpointEmpty LpointFar LpointMask Lspot LspotAway"}
+{"k":"shadow.I.directionalFirst","v":"2 0"}
+{"k":"shadow.I.culls","v":"1"}
+{"k":"shadow.J.Ldir","v":"false"}
+{"k":"shadow.J.LdirNone","v":"false"}
+{"k":"shadow.J.Lpoint","v":"false"}
+{"k":"shadow.J.LpointEmpty","v":"false"}
+{"k":"shadow.J.LpointFar","v":"false"}
+{"k":"shadow.J.LpointMask","v":"false"}
+{"k":"shadow.J.Lspot","v":"false"}
+{"k":"shadow.J.LspotAway","v":"false"}
+{"k":"shadow.J.lights","v":"Ldir LdirNone Lpoint LpointEmpty LpointFar LpointMask Lspot LspotAway"}
+{"k":"shadow.J.directionalFirst","v":"2 0"}
+{"k":"shadow.J.culls","v":"1"}
+{"k":"shadow.K.Ldir","v":"true 40400000 40400000 00000000 3f000000 3f000000 3f000000"}
+{"k":"shadow.K.LdirNone","v":"false"}
+{"k":"shadow.K.Lpoint","v":"true 40400000 40400000 00000000 3f000000 3f000000 3f000000"}
+{"k":"shadow.K.LpointEmpty","v":"false"}
+{"k":"shadow.K.LpointFar","v":"false"}
+{"k":"shadow.K.LpointMask","v":"false"}
+{"k":"shadow.K.Lspot","v":"false"}
+{"k":"shadow.K.LspotAway","v":"false"}
+{"k":"shadow.K.lights","v":"Ldir LdirNone Lpoint LpointEmpty LpointFar LpointMask Lspot LspotAway"}
+{"k":"shadow.K.directionalFirst","v":"2 0"}
+{"k":"shadow.K.culls","v":"1"}
+{"k":"shadow.all.Ldir","v":"true 40400000 3fa00000 40a80000 40600000 40100000 40b80000"}
+{"k":"shadow.all.LdirNone","v":"false"}
+{"k":"shadow.all.Lpoint","v":"true 3fc00000 3fc00000 00000000 40000000 40000000 3f000000"}
+{"k":"shadow.all.LpointEmpty","v":"false"}
+{"k":"shadow.all.LpointFar","v":"false"}
+{"k":"shadow.all.LpointMask","v":"false"}
+{"k":"shadow.all.Lspot","v":"true 00000000 00000000 00000000 3f000000 3f000000 3f000000"}
+{"k":"shadow.all.LspotAway","v":"false"}
+{"k":"shadow.all.lights","v":"Ldir LdirNone Lpoint LpointEmpty LpointFar LpointMask Lspot LspotAway"}
+{"k":"shadow.all.directionalFirst","v":"2 0"}
+{"k":"shadow.all.culls","v":"1"}
