@@ -3,6 +3,7 @@
 
     run.py create --release R --label L    makes the models' import settings and controllers
                                            in a copy and copies them back into Assets/
+    run.py create-review --release R --label L   creates the MatchTarget review controller
     run.py editor --release R --label L    two independent Editor captures (native1, native2)
     run.py publish --release R --label L   checks that the two captures agree, copies one to Reference/
     run.py unbound --release R --label L   an Unbound capture (UNBOUND_CLI: the binary)
@@ -13,6 +14,7 @@ Editors run through the shared heavy-job launcher, on the GPU (a private Xvfb an
 """
 import argparse
 import filecmp
+import json
 import os
 from pathlib import Path
 import shutil
@@ -34,6 +36,10 @@ def copy_project(dest):
         shutil.copytree(PROBE/part, dest/part)
     (dest/'ProjectSettings/ProjectVersion.txt').write_text(
         'm_EditorVersion: '+os.environ['UNBOUND_PROBE_UNITY_VERSION']+'\n')
+    # Reuse the humanoid probe's authored rig; no repeated model input in Git.
+    rig = PROBE.parent/'humanoid/Assets/Resources/HumanA.fbx'
+    for suffix in ('', '.meta'):
+        shutil.copyfile(str(rig)+suffix, dest/('Assets/Resources/ReviewHumanA.fbx'+suffix))
     return dest
 
 
@@ -63,6 +69,8 @@ def editor(work):
                  '-batchmode', '-projectPath', str(project), '-executeMethod', 'ProbeRunner.Record',
                  '-logFile', str(work/repeat/'editor.log')], env=env))
         codes = [job.wait() for job in jobs]
+        for repeat, code in zip(('native1', 'native2'), codes):
+            (work/repeat/'exit-code.txt').write_text(str(code)+'\n')
     finally:
         server.terminate()
     print('editor exits', codes)
@@ -80,6 +88,8 @@ def create(work):
         sys.exit(f'ProbeRunner.Create failed ({code}), see {work/"create"/"editor.log"}')
     copied = []
     for path in sorted((project/'Assets').rglob('*')):
+        if path.name in ('ReviewHumanA.fbx', 'ReviewHumanA.fbx.meta'):
+            continue
         target = PROBE/path.relative_to(project)
         if path.is_file() and (not target.exists() or not filecmp.cmp(path, target, shallow=False)):
             target.parent.mkdir(parents=True, exist_ok=True)
@@ -89,10 +99,32 @@ def create(work):
     return 0
 
 
+def create_review(work):
+    project = copy_project(work/'projects'/'create-review')
+    work.mkdir(parents=True, exist_ok=True)
+    code = subprocess.run([str(LAUNCHER), 'timeout', '-s', 'KILL', '900', str(editor_path()), '-batchmode',
+                           '-nographics', '-projectPath', str(project), '-executeMethod', 'ProbeRunner.CreateReviewController',
+                           '-logFile', str(work/'create-review.log')]).returncode
+    if code:
+        sys.exit(f'CreateReviewController failed ({code}), see {work/"create-review.log"}')
+    for suffix in ('', '.meta'):
+        relative = 'Assets/Resources/C_MatchReview.controller'+suffix
+        shutil.copyfile(project/relative, PROBE/relative)
+    return 0
+
+
 def publish(work):
     a, b = work/'native1'/'values.jsonl', work/'native2'/'values.jsonl'
     if not filecmp.cmp(a, b, shallow=False):
         sys.exit('the two Editor captures differ; not publishing')
+    rows = [json.loads(line) for line in a.read_text().splitlines() if line.strip()]
+    if not rows or rows[-1] != {'k': 'complete', 'v': True} or any(row['k'] == 'error' for row in rows):
+        sys.exit('captures did not complete successfully; not publishing')
+    if len({row['k'] for row in rows}) != len(rows):
+        sys.exit('capture contains duplicate keys; not publishing')
+    for repeat in ('native1', 'native2'):
+        if (work/repeat/'exit-code.txt').read_text().strip() != '0':
+            sys.exit(f'{repeat} did not exit successfully; not publishing')
     target = reference_file(PROBE, 'jsonl')
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(a, target)
@@ -118,7 +150,7 @@ def unbound(work):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'unbound'))
+    parser.add_argument('mode', choices=('create', 'create-review', 'editor', 'publish', 'unbound'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
     args = parser.parse_args()
@@ -126,7 +158,7 @@ def main():
         parser.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
-    return {'create': create, 'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
+    return {'create': create, 'create-review': create_review, 'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
 
 
 if __name__ == '__main__':

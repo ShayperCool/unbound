@@ -101,6 +101,29 @@ public static class ProbeRunner
         EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity");
         EditorApplication.EnterPlaymode();
     }
+
+    public static void CreateReviewController()
+    {
+        try
+        {
+            string path = Dir + "C_MatchReview.controller";
+            AssetDatabase.DeleteAsset(path);
+            var clips = AssetDatabase.LoadAllAssetsAtPath(Dir + "Mover.fbx").OfType<AnimationClip>().ToArray();
+            var controller = AnimatorController.CreateAnimatorControllerAtPath(path);
+            var states = controller.layers[0].stateMachine;
+            var loop = states.AddState("Loop"); loop.motion = clips.First(c => c.name == "Loop");
+            var full = states.AddState("Full"); full.motion = clips.First(c => c.name == "Full");
+            states.AddState("OtherLoop").motion = loop.motion;
+            states.defaultState = loop;
+            controller.AddParameter("Go", AnimatorControllerParameterType.Trigger);
+            var transition = loop.AddTransition(full);
+            transition.hasExitTime = false; transition.duration = .25f;
+            transition.AddCondition(AnimatorConditionMode.If, 0, "Go");
+            AssetDatabase.SaveAssets();
+            EditorApplication.Exit(0);
+        }
+        catch (Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+    }
 }
 
 /// <summary>Watchdog of a recording (re-armed after every domain reload): the probe exits after

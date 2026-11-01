@@ -21,7 +21,7 @@ public class RootProbe : MonoBehaviour
     static string Q(Quaternion q) => "[" + F(q.x) + "," + F(q.y) + "," + F(q.z) + "," + F(q.w) + "]";
     static string S(string s) => "\"" + (s ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n") + "\"";
 
-    static void Record(string key, string value) =>
+    internal static void Record(string key, string value) =>
         s_Output.Append("{\"k\":").Append(S(key)).Append(",\"v\":").Append(value).Append("}\n");
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
@@ -65,7 +65,7 @@ public class RootProbe : MonoBehaviour
         }
     }
 
-    static string Snapshot(Animator animator, string body, bool log)
+    internal static string Snapshot(Animator animator, string body, bool log)
     {
         var root = animator.transform;
         var parts = new List<string>
@@ -145,6 +145,8 @@ public class RootProbe : MonoBehaviour
                         animator.MatchTarget(new Vector3(3f, 0.5f, 4f), Quaternion.Euler(0f, 90f, 0f), AvatarTarget.Root,
                             new MatchTargetWeightMask(Vector3.one, 1f), 0.3f, 0.8f);
                 });
+            MatchReviewProbe.Run();
+            Record("complete", "true");
         }
         catch (Exception e)
         {
