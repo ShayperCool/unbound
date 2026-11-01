@@ -800,6 +800,35 @@ namespace UnityEngine.Tests
             Assert.Contains(collider, Physics.OverlapSphere(moved, 0.1f));
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ShapeRebuildsSeparateContactPropertiesFromGeometryTransforms(bool attached)
+        {
+            Physics.autoSyncTransforms = false;
+            var parent = Make("parent", Vector3.zero);
+            if (attached) parent.AddComponent<Rigidbody>().isKinematic = true;
+            var child = Make("child", Vector3.zero);
+            child.transform.SetParent(parent.transform, false);
+            child.transform.localPosition = Vector3.right;
+            var sphere = child.AddComponent<SphereCollider>();
+            Physics.SyncTransforms();
+            parent.transform.position = new Vector3(0f, 0f, 2.5f);
+            child.transform.localPosition = Vector3.right * 2f;
+            child.transform.localScale = Vector3.one * 2f;
+            sphere.isTrigger = true;
+            Assert.Equal(Vector3.right, sphere.bounds.center);
+            Assert.Equal(Vector3.one, sphere.bounds.size);
+
+            sphere.radius = 0.75f;
+            sphere.center = Vector3.right * 0.25f;
+            Assert.Equal(new Vector3(2.5f, 0f, attached ? 0f : 2.5f), sphere.bounds.center);
+            Assert.Equal(Vector3.one * 3f, sphere.bounds.size);
+            Physics.SyncTransforms();
+            Assert.Equal(new Vector3(2.5f, 0f, 2.5f), sphere.bounds.center);
+            Assert.Equal(Vector3.one * 3f, sphere.bounds.size);
+        }
+
         [Fact]
         public void ShapeQueriesFindOverlapsAndCasts()
         {
