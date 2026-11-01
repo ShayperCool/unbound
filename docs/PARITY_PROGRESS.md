@@ -1864,7 +1864,7 @@ captures are byte-identical to the earlier ones in all three profiles (the same 
 Linear 6032/6033, URP 7011/7687 with 550 missing, 126 differing and 81 extra keys, union 7768;
 descriptions 0 differences) captures are byte-identical to those of the runtime without the
 texture array work. unbound-assets 73/73; api-check 0 errors in 2289 types; regenerating the
-compatibility stubs changes nothing. Texture cache VERSION 12; native and render protocol
+compatibility stubs changes nothing. Texture cache VERSION 12 (13 since the storage corrections below); native and render protocol
 versions and texture packet layouts unchanged.
 
 ### Texture2D GetPixels byte conversion, 2026-11-01
@@ -1888,6 +1888,38 @@ of R8 and RG16) and the loaded PNG's format, R8 reading (r, 0, 0, 1) instead of 
 `SetPixelData` cases (11 values). tests/projects/resources at its 2e-3 tolerance is unchanged (501/539 values, 62/62
 images); exact float bits of its 208 Texture2D mip values go from 149 to 176 (none lost).
 Managed tests 1264/1275 (the 11 failures of the runtime before, 4 new tests pass).
+
+### Layered texture storage corrections, 2026-11-01
+
+The texture pixel probe adds script-made volumes, BGRA32 array and volume `.asset` files, an
+imported readable PNG encoded to EXR as its first read and GPU draws of the fixture's imported
+readable cubemaps before and after `Apply(false)`; a new pair of independent Editor captures per
+profile agrees byte for byte and keeps every earlier reference line. Measured: `Texture3D.GetPixel`
+reads b / 255 (its `GetPixels` b * (1 / 255)) and `SetPixel` rounds halves up; B8G8R8A8 assets hold
+B, G, R, A bytes and report BGRA32; EXR encoding succeeds as the first access; `Apply(false)`
+leaves an imported cubemap's GPU faces unchanged.
+
+Corrections: R and RG float arrays, volumes and cube arrays read one in the channels they do not
+store (12 resources values had read zero); layered sizes are computed in 64 bits and a texture
+larger than one array fails with its size instead of wrapping; EXR encoding fetches an imported
+texture's pixels; an imported readable cubemap's `Apply` fetches its faces and uploads them in the
+import's row order; B8G8R8A8 assets read as BGRA32 bytes; `Texture3D.GetPixel`/`SetPixel` touch
+one texel (b / 255, halves rounded up); single-cell flipbook arrays and volumes stay uncompressed
+like the others, because the renderer binds them through RGBA8 views (texture cache VERSION 13).
+
+Against the runtime without the texture array work: the texture pixel probe goes from 240 to 146
+differences in Gamma and 242 to 148 in Linear (94 resolved, none introduced). Remaining there,
+unchanged: the Texture2D gaps above, `GetPixelData` of the imported PNG, `GraphicsFormatUtility.
+GetTextureFormat(B8G8R8A8_*)` returning ARGB32 instead of BGRA32, the imported cubemaps' GPU faces
+drawn upside down already before any CPU access (36 values: the import upload's row order), and
+one-ulp RGFloat differences that come from the probe's own float arithmetic in the Editor. The
+texture array probe, which that runtime could not run (it stopped with an exception before
+writing), keeps the earlier 37/37, 609/609, 573/573, 573/609 and 14/16 values in every profile.
+tests/projects/resources is identical to that runtime's (513/539 values, 62/62 images, every
+image byte for byte); exact float bits rise from 472 to 499 of its 540 keys (the 27 Texture2D
+`GetPixels` mip values), none lost. textureimport, spriteimport and modelimport captures are
+byte-identical to it. Managed tests 1275/1286 with the same 11 failures; unbound-assets 74/74;
+api-check 0 errors in 2289 types; regenerating the compatibility stubs changes nothing.
 
 ### HDR and count rendering preservation, 2026-10-31
 
