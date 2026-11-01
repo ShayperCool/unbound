@@ -45,17 +45,28 @@ namespace Unbound.Runtime
             return clone;
         }
 
-        static Object CloneGameObject(Object original, GameObject sourceGo, Transform parent, bool instantiateInWorldSpace, Vector3? position, Quaternion? rotation)
+        /// <summary>PrefabUtility.InstantiatePrefab: a copy named as the original, in the parent or
+        /// scene given, whose objects <paramref name="linked"/> sees (originals to copies) before
+        /// they wake up.</summary>
+        internal static GameObject CloneLinked(GameObject original, Transform parent, Scene? scene, Action<Dictionary<Object, Object>> linked)
+        {
+            SceneHandle? target = scene.HasValue && scene.Value.Data is SceneData data ? data.Handle : null;
+            return (GameObject)CloneGameObject(original, original, parent, false, null, null, original.m_Name, target, linked);
+        }
+
+        static Object CloneGameObject(Object original, GameObject sourceGo, Transform parent, bool instantiateInWorldSpace, Vector3? position, Quaternion? rotation,
+            string name = null, SceneHandle? scene = null, Action<Dictionary<Object, Object>> linked = null)
         {
             var map = new Dictionary<Object, Object>();
             var pairs = new List<(Component Source, Component Clone)>();
             var source = sourceGo.m_Transform;
             var targetScene = parent != null ? parent.m_GameObject.m_Scene : SceneRegistry.EnsureActive().Handle;
             if (parent == null && SceneManagerInternal.ActiveScene != null) targetScene = SceneManagerInternal.ActiveScene.Handle;
+            if (parent == null && scene.HasValue) targetScene = scene.Value;
 
             var rootClone = CloneTree(source, null, targetScene, map, pairs);
             var rootGo = rootClone.m_GameObject;
-            rootGo.m_Name = sourceGo.m_Name + "(Clone)";
+            rootGo.m_Name = name ?? sourceGo.m_Name + "(Clone)";
 
             // Remap references into the cloned set, then copy component state.
             Object Remap(Object o) => o != null && map.TryGetValue(o, out var clone) ? clone : o;
@@ -114,6 +125,7 @@ namespace Unbound.Runtime
             foreach (var (_, dst) in pairs)
                 if (dst is Rigidbody rb) rb.CaptureInactivePose();
 
+            linked?.Invoke(map);
             if (rootGo.activeInHierarchy)
             {
                 var components = new List<Component>();
