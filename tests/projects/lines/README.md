@@ -15,6 +15,11 @@ targets (`Assets/Scripts/LineProbe.cs`).
   visible positions, the baked mesh); emitting toggles, autodestruct, `Clear`,
   `AddPosition(s)`/`SetPosition(s)`.
 - Nine 96x64 float RGBA images (`img.*.rgba`): colors, UVs, masks and trails.
+- Short-segment blend (`blend.*`, recorded last): sixteen predeclared lines at the default
+  width whose segment lengths are ratios of that width (one corner with equal or unequal
+  lengths, staircase/U/short-middle/collinear-run polylines, and five of them reversed).
+  `blend_cases.py` defines them and generates `Assets/Scripts/BlendCases.cs`
+  (`--check` verifies it, `--list` prints the points).
 
 `Assets/Editor/ProbeRunner.cs` opens the scene at a 96x64 game view, enters
 Play mode and quits when the record is written. Its own Play-mode watchdog
@@ -48,7 +53,10 @@ package resolution and import. See `run.py` for the measurements behind both.
 without a forced stop, end with exactly one `complete: true`, have no `fatal`
 or duplicate key, have exactly the images they recorded at their pixel sizes,
 and are byte-identical in `values.jsonl` and every image. It never overwrites
-an existing reference. Images are stored gzip-compressed with a zero
+an existing reference. `publish --append PREFIX` adds keys to an existing reference
+instead: after the same checks, the captures without their `PREFIX` keys must reproduce
+the reference line for line and every reference image byte for byte, and the reference
+must not hold a `PREFIX` key yet; the new lines are then appended to `values.jsonl`. Images are stored gzip-compressed with a zero
 timestamp, so republishing the same capture gives the same bytes.
 
 ## Comparison and tolerances
