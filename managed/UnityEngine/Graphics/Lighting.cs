@@ -103,7 +103,7 @@ namespace UnityEngine
         public bool useShadowMatrixOverride { get => m_UseShadowMatrixOverride; set => m_UseShadowMatrixOverride = value; }
         public Flare flare { get => m_Flare; set => m_Flare = value; }
 
-        /// <summary>The light's halo (serialized only: no API sets it).</summary>
+        /// <summary>The light's halo (serialized only: no API sets it), drawn by <see cref="Halos"/>.</summary>
         internal bool m_DrawHalo;
         public LightBakingOutput bakingOutput { get => m_BakingOutput; set => m_BakingOutput = value; }
 
@@ -190,8 +190,6 @@ namespace UnityEngine
             var flare = body.Ref("m_Flare");
             m_Flare = flare.IsNull ? null : resolver.Resolve(flare, typeof(Flare)) as Flare;
             m_DrawHalo = body.Bool("m_DrawHalo");
-            if (m_DrawHalo) Halos.WarnHalo();
-            if (m_Flare != null) Halos.WarnFlare();
             m_RenderMode = (LightRenderMode)body.Int("m_RenderMode");
             m_ColorTemperature = body.Float("m_ColorTemperature", 6570f);
             m_UseColorTemperature = body.Bool("m_UseColorTemperature");
@@ -258,6 +256,7 @@ namespace UnityEngine
         static float s_HaloStrength = 0.5f;
         static float s_FlareStrength = 1f;
         static float s_FlareFadeSpeed = 3f;
+        static Texture s_HaloTexture;
         static Material s_Skybox;
         static Light s_Sun;
         // The sun is resolved on first use: the scene's objects are not all built when the settings
@@ -286,7 +285,7 @@ namespace UnityEngine
             nameof(s_CustomProbe), nameof(s_SubtractiveShadowColor), nameof(s_IndirectSpecular), nameof(s_ReflectionIntensity),
             nameof(s_ReflectionBounces), nameof(s_DefaultReflectionMode), nameof(s_DefaultReflectionResolution), nameof(s_CustomReflection),
             nameof(s_SerializedProbe), nameof(s_SerializedReflection), nameof(s_HaloStrength), nameof(s_FlareStrength),
-            nameof(s_FlareFadeSpeed), nameof(s_Skybox), nameof(s_Sun), nameof(s_PendingSun),
+            nameof(s_FlareFadeSpeed), nameof(s_HaloTexture), nameof(s_Skybox), nameof(s_Sun), nameof(s_PendingSun),
         }, n => typeof(RenderSettings).GetField(n, System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic));
 
         /// <summary>A scene's RenderSettings document was loaded. Each scene keeps its own; the
@@ -325,6 +324,7 @@ namespace UnityEngine
             {
                 for (int i = 0; i < s_StateFields.Length; i++) s_StateFields[i].SetValue(null, next.Saved[i]);
                 next.Saved = null;
+                Halos.UseHaloTexture(s_HaloTexture);
             }
             else
             {
@@ -372,6 +372,9 @@ namespace UnityEngine
             s_HaloStrength = b.Float("m_HaloStrength", 0.5f);
             s_FlareStrength = b.Float("m_FlareStrength", 1f);
             s_FlareFadeSpeed = b.Float("m_FlareFadeSpeed", 3f);
+            var halo = b.Ref("m_HaloTexture");
+            s_HaloTexture = halo.IsNull ? null : resolver.Resolve(halo, typeof(Texture)) as Texture;
+            Halos.UseHaloTexture(s_HaloTexture);
             var skybox = b.Ref("m_SkyboxMaterial");
             s_Skybox = skybox.IsNull ? null : resolver.Resolve(skybox, typeof(Material)) as Material;
             s_Sun = null;
@@ -555,6 +558,10 @@ namespace UnityEngine
         public static float haloStrength { get => s_HaloStrength; set => s_HaloStrength = value; }
         public static float flareStrength { get => s_FlareStrength; set => s_FlareStrength = value; }
         public static float flareFadeSpeed { get => s_FlareFadeSpeed; set => s_FlareFadeSpeed = value; }
+
+        /// <summary>The scene's halo texture (Lighting window; no scripting API): halos draw with
+        /// it instead of the built-in falloff.</summary>
+        internal static Texture haloTexture => s_HaloTexture;
 
         internal static Color IndirectSpecularColor => s_IndirectSpecular;
     }
