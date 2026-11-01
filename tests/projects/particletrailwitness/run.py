@@ -100,12 +100,31 @@ def rows(p):
     return result
 
 
+def leaf_differences(a, b, path=()):
+    """Keep every mismatched leaf, including raw float bits and missing elements."""
+    if type(a) is type(b) and isinstance(a, (dict, list)):
+        keys = sorted(a.keys() | b.keys()) if isinstance(a, dict) else range(max(len(a), len(b)))
+        result = []
+        for k in keys:
+            ap = k in a if isinstance(a, dict) else k < len(a)
+            bp = k in b if isinstance(b, dict) else k < len(b)
+            if ap and bp:
+                result.extend(leaf_differences(a[k], b[k], (*path, k)))
+            else:
+                result.append({'path': [*path, k], 'a_present': ap, 'b_present': bp,
+                               'a': a[k] if ap else None, 'b': b[k] if bp else None})
+        return result
+    return [] if a == b else [{'path': list(path), 'a_present': True, 'b_present': True, 'a': a, 'b': b}]
+
+
 def compare(work):
     # Full exact union, including unused/raw fields. No tolerance or mask for padding.
     a, b = [rows(work/s/'capture/witness.jsonl') for s in ('native-a', 'native-b')]
     union = [{'key': k, 'a_present': k in a, 'b_present': k in b, 'a': a.get(k), 'b': b.get(k),
               'equal': k in a and k in b and a[k] == b[k]} for k in sorted(a.keys() | b.keys())]
     save(work/'native-full-union.json', union)
+    leaves = leaf_differences(a, b)
+    save(work/'native-leaf-differences.json', leaves)
     from PIL import Image
     import numpy as np
     original = np.array(Image.open(HERE.parent/'particles/Reference/images/trails.png').convert('RGBA'))
@@ -123,9 +142,14 @@ def compare(work):
     save(work/'original-image-full-union.json', images)
     differences = [r for r in union if not r['equal']]
     problems = {s: result_problem(work/s, gpu=True) for s in ('native-a', 'native-b')}
+    binary = {name: {'a_sha256': sha(work/'native-a/capture'/name),
+                     'b_sha256': sha(work/'native-b/capture'/name),
+                     'equal': (work/'native-a/capture'/name).read_bytes() == (work/'native-b/capture'/name).read_bytes()}
+              for name in ('witness.jsonl', 'trails.rgba', 'trails.png')}
     summary = {'records': len(union), 'differences': len(differences), 'different_keys': [r['key'] for r in differences],
+        'different_leaves': len(leaves), 'binary_comparisons': binary,
         'editor_problems': problems, 'images': {s: {k:v for k,v in r.items() if k != 'raw_rgba_union'} for s,r in images.items()}}
-    summary['publishable'] = not differences and not any(problems.values()) and all(
+    summary['publishable'] = not differences and all(r['equal'] for r in binary.values()) and not any(problems.values()) and all(
         r['changed_pixels'] == 0 and r['raw_matches_png_bottom_first'] for r in images.values())
     save(work/'repeat-summary.json', summary)
     print(json.dumps(summary, indent=2))
