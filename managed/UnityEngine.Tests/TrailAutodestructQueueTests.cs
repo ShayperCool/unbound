@@ -83,6 +83,7 @@ namespace UnityEngine.Tests
                 var trail = go.AddComponent<TrailRenderer>();
                 trail.time = 0.1f;
                 trail.autodestruct = true;
+                Assert.Equal(0, trail.positionCount); // Looked at unmoved: the first move records both ends.
                 go.transform.position = Vector3.right;
                 trail.UpdateTrail(); // Movement ages nonempty points and sets the nonempty latch.
                 Assert.Equal(2, trail.positionCount);

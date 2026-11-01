@@ -882,6 +882,9 @@ namespace UnityEngine
         readonly List<Point> m_Points = new List<Point>();
         Vector3 m_LastPosition;
         bool m_HasLastPosition;
+        /// <summary>Whether <see cref="m_LastPosition"/> was looked at (read, rendered, moved to
+        /// or cleared at) rather than only the enable position.</summary>
+        bool m_LastObserved;
         bool m_HadPoints;
         readonly LineStrip m_Strip = new LineStrip();
         readonly List<Vector3> m_Draw = new List<Vector3>();
@@ -938,14 +941,23 @@ namespace UnityEngine
             {
                 m_LastPosition = position;
                 m_HasLastPosition = true;
+                m_LastObserved = true;
                 return;
             }
-            if (position == m_LastPosition) return;
+            if (position == m_LastPosition)
+            {
+                m_LastObserved = true;
+                return;
+            }
             float now = Now;
-            if (m_Points.Count == 0) m_Points.Add(new Point { Position = m_LastPosition, Time = now, Visible = m_Emitting });
-            if ((position - m_Points[m_Points.Count - 1].Position).sqrMagnitude >= m_MinVertexDistance * m_MinVertexDistance)
+            // A first move records where the trail last looked as well, but not the enable
+            // position nothing looked at (measured: read unmoved, then moved, gives both points;
+            // moved before any read or render gives only the new one).
+            if (m_Points.Count == 0 && m_LastObserved) m_Points.Add(new Point { Position = m_LastPosition, Time = now, Visible = m_Emitting });
+            if (m_Points.Count == 0 || (position - m_Points[m_Points.Count - 1].Position).sqrMagnitude >= m_MinVertexDistance * m_MinVertexDistance)
                 m_Points.Add(new Point { Position = position, Time = now, Visible = m_Emitting });
             m_LastPosition = position;
+            m_LastObserved = true;
             Age(now);
         }
 
@@ -999,8 +1011,10 @@ namespace UnityEngine
             m_Points.Clear();
             if (m_GameObject != null)
             {
+                // Measured: a move after Clear records the cleared-at position too.
                 m_LastPosition = transform.position;
                 m_HasLastPosition = true;
+                m_LastObserved = true;
             }
         }
 
@@ -1149,8 +1163,10 @@ namespace UnityEngine
         internal override void OnEngineEnable()
         {
             base.OnEngineEnable();
+            // Where the object is enabled is not yet a point the trail looked at.
             m_LastPosition = transform.position;
             m_HasLastPosition = true;
+            m_LastObserved = false;
             TrailSystem.Add(this);
         }
 
