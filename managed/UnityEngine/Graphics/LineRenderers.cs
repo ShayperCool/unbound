@@ -212,8 +212,7 @@ namespace UnityEngine
                 float t = total > 0f ? m_Dist[i] / total : 0f;
                 bool hide = hidden != null && hidden[i % count];
                 m_Half[i] = hide ? 0f : 0.5f * p.WidthMultiplier * p.WidthCurve.Evaluate(t);
-                var color = p.ColorGradient.Evaluate(t);
-                m_Color[i] = linear ? color.linear : color;
+                m_Color[i] = VertexColor(p.ColorGradient.Evaluate(t), linear);
             }
 
             bool allZero = true;
@@ -405,6 +404,23 @@ namespace UnityEngine
             for (int j = segments - 1; j >= 0; j--)
                 if (m_Effective[j].sqrMagnitude == 0f && j + 1 < segments) m_Effective[j] = m_Effective[j + 1];
         }
+
+        /// <summary>A vertex color: the gradient's color at 8 bits (rounded half up), its color
+        /// channels taken to linear from those 8 bits in a linear project (measured,
+        /// tests/projects/lines line.color.*).</summary>
+        static Color32 VertexColor(Color color, bool linear)
+        {
+            byte r = ToByte(color.r), g = ToByte(color.g), b = ToByte(color.b), a = ToByte(color.a);
+            if (linear)
+            {
+                r = ToByte(Mathf.GammaToLinearSpace(r / 255f));
+                g = ToByte(Mathf.GammaToLinearSpace(g / 255f));
+                b = ToByte(Mathf.GammaToLinearSpace(b / 255f));
+            }
+            return new Color32(r, g, b, a);
+        }
+
+        static byte ToByte(float value) => (byte)(Mathf.Clamp01(value) * 255f + 0.5f);
 
         static Vector3 Side(Vector3 direction, Vector3 normal, LineFacing facing)
         {
