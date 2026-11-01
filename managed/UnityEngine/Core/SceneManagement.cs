@@ -533,6 +533,11 @@ namespace UnityEngine.SceneManagement
             data.LoadingState = Scene.LoadingState.NotLoaded;
             SceneRegistry.Loaded.Remove(data);
             if (SceneRegistry.Active == data) SceneRegistry.Active = null;
+            // Its probes leave the loaded set, raising needsRetetrahedralization within the unload
+            // (measured: tests/projects/lightprobes). Whether that comes before or after
+            // sceneUnloaded is not measured; this keeps the order the light probe change was
+            // written against (before it).
+            LightProbes.SceneUnloaded(data.Handle.Value);
             // sceneUnloaded sees the scene with its name (measured: tests/projects/editorcallbacks);
             // it is forgotten after.
             SceneManager.Internal_SceneUnloaded(new Scene(data.Handle));

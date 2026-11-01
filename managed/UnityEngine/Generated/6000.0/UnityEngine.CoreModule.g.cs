@@ -1674,18 +1674,8 @@ namespace UnityEngine
         [global::Unbound.Stub] public bool SetPositionsSelf(global::UnityEngine.Vector3[] positions, bool checkForDuplicatePositions) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.SetPositionsSelf"); return default; }
         [global::Unbound.Stub] internal static int GetCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbes.GetCount"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct LightProbesQuery : global::System.IDisposable
+    unsafe partial struct LightProbesQuery
     {
-        [global::Unbound.Stub] internal global::System.IntPtr m_LightProbeContextWrapper;
-        [global::Unbound.Stub] internal global::Unity.Collections.Allocator m_AllocatorLabel;
-        [global::Unbound.Stub] internal global::Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle m_Safety;
-        [global::Unbound.Stub] public LightProbesQuery(global::Unity.Collections.Allocator allocator) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbesQuery.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbesQuery.Dispose"); }
-        [global::Unbound.Stub] public global::Unity.Jobs.JobHandle Dispose(global::Unity.Jobs.JobHandle inputDeps) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbesQuery.Dispose"); return default; }
-        [global::Unbound.Stub] public void CalculateInterpolatedLightAndOcclusionProbe(global::UnityEngine.Vector3 position, ref int tetrahedronIndex, out global::UnityEngine.Rendering.SphericalHarmonicsL2 lightProbe, out global::UnityEngine.Vector4 occlusionProbe) { lightProbe = default; occlusionProbe = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbesQuery.CalculateInterpolatedLightAndOcclusionProbe"); }
-        [global::Unbound.Stub] public void CalculateInterpolatedLightAndOcclusionProbes(global::Unity.Collections.NativeArray<global::UnityEngine.Vector3> positions, global::Unity.Collections.NativeArray<int> tetrahedronIndices, global::Unity.Collections.NativeArray<global::UnityEngine.Rendering.SphericalHarmonicsL2> lightProbes, global::Unity.Collections.NativeArray<global::UnityEngine.Vector4> occlusionProbes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbesQuery.CalculateInterpolatedLightAndOcclusionProbes"); }
-        public bool IsCreated { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightProbesQuery.IsCreated"); return default; } }
         [global::Unbound.Stub]
         internal unsafe partial struct LightProbesQueryDispose
         {
@@ -1911,14 +1901,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public bool HasConstantBuffer(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MaterialPropertyBlock.HasConstantBuffer"); return default; }
         [global::Unbound.Stub] public int GetInteger(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MaterialPropertyBlock.GetInteger"); return default; }
         [global::Unbound.Stub] public int GetInteger(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MaterialPropertyBlock.GetInteger"); return default; }
-        [global::Unbound.Stub] public void CopySHCoefficientArraysFrom(global::System.Collections.Generic.List<global::UnityEngine.Rendering.SphericalHarmonicsL2> lightProbes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MaterialPropertyBlock.CopySHCoefficientArraysFrom"); }
-        [global::Unbound.Stub] public void CopySHCoefficientArraysFrom(global::UnityEngine.Rendering.SphericalHarmonicsL2[] lightProbes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MaterialPropertyBlock.CopySHCoefficientArraysFrom"); }
-        [global::Unbound.Stub] public void CopySHCoefficientArraysFrom(global::System.Collections.Generic.List<global::UnityEngine.Rendering.SphericalHarmonicsL2> lightProbes, int sourceStart, int destStart, int count) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MaterialPropertyBlock.CopySHCoefficientArraysFrom"); }
-        [global::Unbound.Stub] public void CopySHCoefficientArraysFrom(global::UnityEngine.Rendering.SphericalHarmonicsL2[] lightProbes, int sourceStart, int destStart, int count) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MaterialPropertyBlock.CopySHCoefficientArraysFrom"); }
-        [global::Unbound.Stub] public void CopyProbeOcclusionArrayFrom(global::System.Collections.Generic.List<global::UnityEngine.Vector4> occlusionProbes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MaterialPropertyBlock.CopyProbeOcclusionArrayFrom"); }
-        [global::Unbound.Stub] public void CopyProbeOcclusionArrayFrom(global::UnityEngine.Vector4[] occlusionProbes) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MaterialPropertyBlock.CopyProbeOcclusionArrayFrom"); }
-        [global::Unbound.Stub] public void CopyProbeOcclusionArrayFrom(global::System.Collections.Generic.List<global::UnityEngine.Vector4> occlusionProbes, int sourceStart, int destStart, int count) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MaterialPropertyBlock.CopyProbeOcclusionArrayFrom"); }
-        [global::Unbound.Stub] public void CopyProbeOcclusionArrayFrom(global::UnityEngine.Vector4[] occlusionProbes, int sourceStart, int destStart, int count) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MaterialPropertyBlock.CopyProbeOcclusionArrayFrom"); }
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {

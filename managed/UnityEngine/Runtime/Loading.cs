@@ -464,7 +464,7 @@ namespace Unbound.Runtime
                 // The first scene loaded (the others unloaded) replaces the baked lighting; an
                 // additive one adds to it.
                 bool first = scene == null || SceneRegistry.Loaded.TrueForAll(s => s == scene || SceneRegistry.IsDontDestroyOnLoad(s) || !s.IsLoaded);
-                RenderSettings.ReadLightingData(doc.Body.Ref("m_LightingDataAsset"), resolver as LoadedFile, first);
+                RenderSettings.ReadLightingData(doc.Body.Ref("m_LightingDataAsset"), resolver as LoadedFile, first, scene?.Handle.Value ?? 0);
             }
             Loaded?.Invoke(doc);
         }

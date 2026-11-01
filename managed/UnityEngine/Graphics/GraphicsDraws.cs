@@ -74,6 +74,17 @@ namespace UnityEngine
             return one;
         }
 
+        static Bounds Transformed(Bounds local, Matrix4x4 matrix)
+        {
+            var center = matrix.MultiplyPoint3x4(local.center);
+            var e = local.extents;
+            var extents = new Vector3(
+                Mathf.Abs(matrix.m00) * e.x + Mathf.Abs(matrix.m01) * e.y + Mathf.Abs(matrix.m02) * e.z,
+                Mathf.Abs(matrix.m10) * e.x + Mathf.Abs(matrix.m11) * e.y + Mathf.Abs(matrix.m12) * e.z,
+                Mathf.Abs(matrix.m20) * e.x + Mathf.Abs(matrix.m21) * e.y + Mathf.Abs(matrix.m22) * e.z);
+            return new Bounds(center, extents * 2f);
+        }
+
         static void CheckInstanced(Mesh mesh, int submeshIndex, Material material, int count)
         {
             if (!SystemInfo.supportsInstancing) throw new InvalidOperationException("Instancing is not supported.");
@@ -91,6 +102,15 @@ namespace UnityEngine
             count = Math.Min(count, matrices.Length);
             CheckInstanced(mesh, submeshIndex, material, count);
             var lighting = ImmediateLighting.Of(castShadows, receiveShadows, lightProbeUsage);
+            if (lightProbeUsage == LightProbeUsage.BlendProbes && count > 0)
+            {
+                // One probe lights the whole batch: the one at the instances' bounds centre
+                // (measured: tests/projects/lightprobes, a row of instances all lit alike).
+                lighting = new ImmediateLighting { Cast = lighting.Cast, Receive = lighting.Receive, Probes = lighting.Probes, Reflections = lighting.Reflections };
+                var bounds = Transformed(mesh.bounds, matrices[0]);
+                for (int i = 1; i < count; i++) bounds.Encapsulate(Transformed(mesh.bounds, matrices[i]));
+                lighting.ProbePosition = bounds.center;
+            }
             for (int i = 0; i < count; i++)
                 Immediate.Queue(mesh, matrices[i], material, layer, camera, submeshIndex, Instance(properties, i), lighting);
         }

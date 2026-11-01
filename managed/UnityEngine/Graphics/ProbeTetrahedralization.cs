@@ -1,0 +1,280 @@
+using System;
+using System.Collections.Generic;
+using UnityEngine.Rendering;
+
+namespace UnityEngine
+{
+    /// <summary>
+    /// Tetrahedralizes the probes of several scenes together, as LightProbes.Tetrahedralize does
+    /// with additively loaded scenes. The cells follow the conventions of the Editor's own bakes
+    /// (checked against them): the inner cells are the Delaunay tetrahedralization of the probes,
+    /// each with det(p0 − p3, p1 − p3, p2 − p3) &lt; 0 and the matrix inverting those columns, its
+    /// neighbor k across the face opposite vertex k; after them one outer cell per hull triangle
+    /// (fourth index -1, neighbor 3 the inner cell, neighbors 0..2 the outer cells across its
+    /// edges); a hull probe's ray is the angle-weighted mean of the outward normals of its hull
+    /// triangles. The cells' order and float rounding are Unbound's: inside the probes' hull the
+    /// interpolation is the same blend, tetrahedron indices differ from the Editor's.
+    /// </summary>
+    internal static class ProbeTetrahedralization
+    {
+        internal static ProbeSet Combine(List<ProbeSet> sets)
+        {
+            var positions = new List<Vector3>();
+            var probes = new List<SphericalHarmonicsL2>();
+            var occlusion = new List<Vector4>();
+            foreach (var set in sets)
+            {
+                positions.AddRange(set.Positions);
+                probes.AddRange(set.Probes);
+                for (int i = 0; i < set.Positions.Length; i++)
+                    occlusion.Add(i < set.Occlusion.Length ? set.Occlusion[i] : Vector4.one);
+            }
+            var result = new ProbeSet { Positions = positions.ToArray(), Probes = probes.ToArray(), Occlusion = occlusion.ToArray() };
+            Build(result);
+            return result;
+        }
+
+        struct Tet
+        {
+            public int A, B, C, D;
+            public double Cx, Cy, Cz, R2;
+            public bool Dead;
+        }
+
+        static double Det3(double ax, double ay, double az, double bx, double by, double bz, double cx, double cy, double cz) =>
+            ax * (by * cz - bz * cy) - ay * (bx * cz - bz * cx) + az * (bx * cy - by * cx);
+
+        /// <summary>The cells of <paramref name="set"/>'s positions (none for fewer than four
+        /// probes not in a plane).</summary>
+        internal static void Build(ProbeSet set)
+        {
+            var p = set.Positions;
+            int n = p.Length;
+            set.Cells = Array.Empty<ProbeSet.Cell>();
+            set.HullRays = new Vector3[n];
+            if (n < 4) return;
+
+            // Points in double, the four corners of an enclosing tetrahedron after them.
+            var x = new double[n + 4];
+            var y = new double[n + 4];
+            var z = new double[n + 4];
+            double minX = double.MaxValue, minY = double.MaxValue, minZ = double.MaxValue;
+            double maxX = double.MinValue, maxY = double.MinValue, maxZ = double.MinValue;
+            for (int i = 0; i < n; i++)
+            {
+                x[i] = p[i].x; y[i] = p[i].y; z[i] = p[i].z;
+                minX = Math.Min(minX, x[i]); minY = Math.Min(minY, y[i]); minZ = Math.Min(minZ, z[i]);
+                maxX = Math.Max(maxX, x[i]); maxY = Math.Max(maxY, y[i]); maxZ = Math.Max(maxZ, z[i]);
+            }
+            double size = Math.Max(Math.Max(maxX - minX, maxY - minY), Math.Max(maxZ - minZ, 1e-6)) * 64;
+            double mx = (minX + maxX) / 2, my = (minY + maxY) / 2, mz = (minZ + maxZ) / 2;
+            (x[n], y[n], z[n]) = (mx - size, my - size, mz - size);
+            (x[n + 1], y[n + 1], z[n + 1]) = (mx + 3 * size, my - size, mz - size);
+            (x[n + 2], y[n + 2], z[n + 2]) = (mx - size, my + 3 * size, mz - size);
+            (x[n + 3], y[n + 3], z[n + 3]) = (mx - size, my - size, mz + 3 * size);
+
+            var tets = new List<Tet>();
+            bool Sphere(ref Tet t)
+            {
+                double bx = x[t.B] - x[t.A], by = y[t.B] - y[t.A], bz = z[t.B] - z[t.A];
+                double cx = x[t.C] - x[t.A], cy = y[t.C] - y[t.A], cz = z[t.C] - z[t.A];
+                double dx = x[t.D] - x[t.A], dy = y[t.D] - y[t.A], dz = z[t.D] - z[t.A];
+                double det = 2 * Det3(bx, by, bz, cx, cy, cz, dx, dy, dz);
+                if (Math.Abs(det) < 1e-18) return false;
+                double b2 = bx * bx + by * by + bz * bz, c2 = cx * cx + cy * cy + cz * cz, d2 = dx * dx + dy * dy + dz * dz;
+                double ox = Det3(b2, by, bz, c2, cy, cz, d2, dy, dz) / det;
+                double oy = Det3(bx, b2, bz, cx, c2, cz, dx, d2, dz) / det;
+                double oz = Det3(bx, by, b2, cx, cy, c2, dx, dy, d2) / det;
+                t.Cx = x[t.A] + ox; t.Cy = y[t.A] + oy; t.Cz = z[t.A] + oz;
+                t.R2 = ox * ox + oy * oy + oz * oz;
+                return true;
+            }
+            var first = new Tet { A = n, B = n + 1, C = n + 2, D = n + 3 };
+            Sphere(ref first);
+            tets.Add(first);
+
+            var faces = new Dictionary<(int, int, int), int>();
+            var faceOrder = new List<(int, int, int)>();
+            for (int i = 0; i < n; i++)
+            {
+                faces.Clear();
+                faceOrder.Clear();
+                for (int t = 0; t < tets.Count; t++)
+                {
+                    var tet = tets[t];
+                    if (tet.Dead) continue;
+                    double ex = x[i] - tet.Cx, ey = y[i] - tet.Cy, ez = z[i] - tet.Cz;
+                    if (ex * ex + ey * ey + ez * ez >= tet.R2 * (1 - 1e-12)) continue;
+                    tet.Dead = true;
+                    tets[t] = tet;
+                    foreach (var f in new[] { (tet.B, tet.C, tet.D), (tet.A, tet.C, tet.D), (tet.A, tet.B, tet.D), (tet.A, tet.B, tet.C) })
+                    {
+                        var key = Sorted(f.Item1, f.Item2, f.Item3);
+                        if (faces.TryGetValue(key, out var seen)) faces[key] = seen + 1;
+                        else { faces[key] = 1; faceOrder.Add(key); }
+                    }
+                }
+                foreach (var key in faceOrder)
+                {
+                    if (faces[key] != 1) continue;
+                    var tet = new Tet { A = key.Item1, B = key.Item2, C = key.Item3, D = i };
+                    if (Sphere(ref tet)) tets.Add(tet);
+                }
+                if (tets.Count > 4096) tets.RemoveAll(t => t.Dead);
+            }
+
+            // The inner cells, oriented as the Editor's.
+            var inner = new List<int[]>();
+            foreach (var t in tets)
+            {
+                if (t.Dead || t.A >= n || t.B >= n || t.C >= n || t.D >= n) continue;
+                int a = t.A, b = t.B, c = t.C, d = t.D;
+                double v = Det3(x[a] - x[d], y[a] - y[d], z[a] - z[d], x[b] - x[d], y[b] - y[d], z[b] - z[d], x[c] - x[d], y[c] - y[d], z[c] - z[d]);
+                if (Math.Abs(v) < 1e-12) continue;
+                inner.Add(v < 0 ? new[] { a, b, c, d } : new[] { b, a, c, d });
+            }
+            if (inner.Count == 0) return;
+
+            var faceCells = new Dictionary<(int, int, int), List<(int Cell, int Vertex)>>();
+            for (int c = 0; c < inner.Count; c++)
+                for (int k = 0; k < 4; k++)
+                {
+                    var f = Opposite(inner[c], k);
+                    if (!faceCells.TryGetValue(f, out var list)) faceCells[f] = list = new List<(int, int)>();
+                    list.Add((c, k));
+                }
+
+            var cells = new List<ProbeSet.Cell>();
+            var neighbors = new int[inner.Count, 4];
+            var hull = new List<(int[] Tri, int Inner, int Apex)>();
+            for (int c = 0; c < inner.Count; c++)
+                for (int k = 0; k < 4; k++)
+                {
+                    var list = faceCells[Opposite(inner[c], k)];
+                    int other = -1;
+                    foreach (var (cell, _) in list) if (cell != c) other = cell;
+                    if (other < 0)
+                    {
+                        var tri = new int[3];
+                        int m = 0;
+                        for (int j = 0; j < 4; j++) if (j != k) tri[m++] = inner[c][j];
+                        other = inner.Count + hull.Count;
+                        hull.Add((tri, c, inner[c][k]));
+                    }
+                    neighbors[c, k] = other;
+                }
+
+            for (int c = 0; c < inner.Count; c++)
+            {
+                var v = inner[c];
+                Vector3 p3 = p[v[3]];
+                Matrix(p[v[0]] - p3, p[v[1]] - p3, p[v[2]] - p3, out var r0, out var r1, out var r2);
+                cells.Add(new ProbeSet.Cell
+                {
+                    I0 = v[0], I1 = v[1], I2 = v[2], I3 = v[3],
+                    N0 = neighbors[c, 0], N1 = neighbors[c, 1], N2 = neighbors[c, 2], N3 = neighbors[c, 3],
+                    R0 = r0, R1 = r1, R2 = r2,
+                });
+            }
+
+            // Outer cells: across each hull edge, the hull triangle sharing it.
+            var edges = new Dictionary<(int, int), List<int>>();
+            for (int h = 0; h < hull.Count; h++)
+                for (int k = 0; k < 3; k++)
+                {
+                    var tri = hull[h].Tri;
+                    var e = Edge(tri[(k + 1) % 3], tri[(k + 2) % 3]);
+                    if (!edges.TryGetValue(e, out var list)) edges[e] = list = new List<int>();
+                    list.Add(h);
+                }
+            var rays = new Vector3d[n];
+            for (int h = 0; h < hull.Count; h++)
+            {
+                var (tri, cell, apex) = hull[h];
+                var across = new int[3];
+                for (int k = 0; k < 3; k++)
+                {
+                    across[k] = -1;
+                    foreach (var o in edges[Edge(tri[(k + 1) % 3], tri[(k + 2) % 3])]) if (o != h) across[k] = inner.Count + o;
+                }
+                cells.Add(new ProbeSet.Cell
+                {
+                    I0 = tri[0], I1 = tri[1], I2 = tri[2], I3 = -1,
+                    N0 = across[0], N1 = across[1], N2 = across[2], N3 = cell,
+                });
+                // The outward normal (away from the cell's fourth probe), weighted at each corner
+                // by the triangle's angle there.
+                var a = new Vector3d(x[tri[0]], y[tri[0]], z[tri[0]]);
+                var b = new Vector3d(x[tri[1]], y[tri[1]], z[tri[1]]);
+                var c3 = new Vector3d(x[tri[2]], y[tri[2]], z[tri[2]]);
+                var normal = Vector3d.Cross(b - a, c3 - a).Normalized();
+                if (Vector3d.Dot(normal, new Vector3d(x[apex], y[apex], z[apex]) - a) > 0) normal = -normal;
+                var corners = new[] { a, b, c3 };
+                for (int k = 0; k < 3; k++)
+                {
+                    var e1 = (corners[(k + 1) % 3] - corners[k]).Normalized();
+                    var e2 = (corners[(k + 2) % 3] - corners[k]).Normalized();
+                    double angle = Math.Acos(Math.Clamp(Vector3d.Dot(e1, e2), -1, 1));
+                    rays[tri[k]] += normal * angle;
+                }
+            }
+            for (int i = 0; i < n; i++)
+            {
+                var r = rays[i].Normalized();
+                set.HullRays[i] = new Vector3((float)r.X, (float)r.Y, (float)r.Z);
+            }
+            set.Cells = cells.ToArray();
+        }
+
+        /// <summary>Rows of the inverse of the matrix with columns c0, c1, c2.</summary>
+        static void Matrix(Vector3 c0, Vector3 c1, Vector3 c2, out Vector3 r0, out Vector3 r1, out Vector3 r2)
+        {
+            var a = new Vector3d(c0.x, c0.y, c0.z);
+            var b = new Vector3d(c1.x, c1.y, c1.z);
+            var c = new Vector3d(c2.x, c2.y, c2.z);
+            var x0 = Vector3d.Cross(b, c);
+            var x1 = Vector3d.Cross(c, a);
+            var x2 = Vector3d.Cross(a, b);
+            double det = Vector3d.Dot(a, x0);
+            r0 = (x0 * (1 / det)).ToFloat();
+            r1 = (x1 * (1 / det)).ToFloat();
+            r2 = (x2 * (1 / det)).ToFloat();
+        }
+
+        static (int, int, int) Sorted(int a, int b, int c)
+        {
+            if (a > b) (a, b) = (b, a);
+            if (b > c) (b, c) = (c, b);
+            if (a > b) (a, b) = (b, a);
+            return (a, b, c);
+        }
+
+        static (int, int, int) Opposite(int[] cell, int k)
+        {
+            Span<int> v = stackalloc int[3];
+            int m = 0;
+            for (int j = 0; j < 4; j++) if (j != k) v[m++] = cell[j];
+            return Sorted(v[0], v[1], v[2]);
+        }
+
+        static (int, int) Edge(int a, int b) => a < b ? (a, b) : (b, a);
+
+        struct Vector3d
+        {
+            public double X, Y, Z;
+            public Vector3d(double x, double y, double z) { X = x; Y = y; Z = z; }
+            public static Vector3d operator +(Vector3d a, Vector3d b) => new Vector3d(a.X + b.X, a.Y + b.Y, a.Z + b.Z);
+            public static Vector3d operator -(Vector3d a, Vector3d b) => new Vector3d(a.X - b.X, a.Y - b.Y, a.Z - b.Z);
+            public static Vector3d operator -(Vector3d a) => new Vector3d(-a.X, -a.Y, -a.Z);
+            public static Vector3d operator *(Vector3d a, double s) => new Vector3d(a.X * s, a.Y * s, a.Z * s);
+            public static double Dot(Vector3d a, Vector3d b) => a.X * b.X + a.Y * b.Y + a.Z * b.Z;
+            public static Vector3d Cross(Vector3d a, Vector3d b) => new Vector3d(a.Y * b.Z - a.Z * b.Y, a.Z * b.X - a.X * b.Z, a.X * b.Y - a.Y * b.X);
+            public Vector3d Normalized()
+            {
+                double l = Math.Sqrt(Dot(this, this));
+                return l > 0 ? this * (1 / l) : this;
+            }
+            public Vector3 ToFloat() => new Vector3((float)X, (float)Y, (float)Z);
+        }
+    }
+}
