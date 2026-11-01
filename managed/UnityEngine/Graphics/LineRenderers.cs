@@ -256,6 +256,7 @@ namespace UnityEngine
             else EffectiveDirections(segments);
 
             int corners = Math.Max(0, p.NumCornerVertices);
+            var faceNormal = facing.TransformZ ? new Vector3(0f, 0f, -1f) : -facing.CameraForward;
             float va = 0.5f + 0.5f * p.TextureScale.y, vb = 0.5f - 0.5f * p.TextureScale.y;
             for (int i = 0; i < n; i++)
             {
@@ -272,7 +273,7 @@ namespace UnityEngine
                 {
                     var d = hasOut ? dout : din;
                     var s = Side(d, normal, facing);
-                    m_Pairs.Add(new Pair { A = point - s * h, B = point + s * h, Tangent = d, U = u, Color = color });
+                    m_Pairs.Add(new Pair { A = point - s * h, B = point + s * h, Tangent = Vector3.Cross(faceNormal, s), U = u, Color = color });
                     continue;
                 }
                 var s1 = Side(din, normal, facing);
@@ -309,7 +310,7 @@ namespace UnityEngine
                 bool swap = h <= 0f;
                 if (corners == 0)
                 {
-                    m_Pairs.Add(new Pair { A = point - m * length, B = point + m * length, Tangent = dout, U = u, Color = color });
+                    m_Pairs.Add(new Pair { A = point - m * length, B = point + m * length, Tangent = Vector3.Cross(faceNormal, s2), U = u, Color = color });
                     continue;
                 }
                 float w = 2f * h;
@@ -317,15 +318,14 @@ namespace UnityEngine
                 float angle = Mathf.Acos(Mathf.Clamp(Vector3.Dot(s1, s2), -1f, 1f));
                 var perp = s2 - s1 * Vector3.Dot(s1, s2);
                 perp = perp.sqrMagnitude > 1e-12f ? perp.normalized : din;
-                float turnAngle = Mathf.Acos(Mathf.Clamp(Vector3.Dot(din, dout), -1f, 1f));
-                var tangentPerp = dout - din * Vector3.Dot(din, dout);
-                tangentPerp = tangentPerp.sqrMagnitude > 1e-12f ? tangentPerp.normalized : (aInner != swap ? -s1 : s1);
                 // A loop's first point keeps only the last step of its corner; the closing point has it all.
                 for (int k = loop && i == 0 ? corners : 0; k <= corners; k++)
                 {
                     float f = (float)k / corners;
                     var r = s1 * Mathf.Cos(angle * f) + perp * Mathf.Sin(angle * f);
-                    var tangent = w * (din * Mathf.Cos(turnAngle * f) + tangentPerp * Mathf.Sin(turnAngle * f));
+                    // The tangent lies in the strip's face, across the step's side (measured,
+                    // line.light.persp.spatial.c2cap2).
+                    var tangent = w * Vector3.Cross(faceNormal, r);
                     Vector3 a = aInner ? inner : inner - r * w, b = aInner ? inner + r * w : inner;
                     bool fixedA = aInner != swap;
                     var join = k == 0 ? Join.Quad : fixedA ? Join.CornerA : Join.CornerB;
@@ -335,7 +335,6 @@ namespace UnityEngine
                 }
             }
 
-            var faceNormal = facing.TransformZ ? new Vector3(0f, 0f, -1f) : -facing.CameraForward;
             int caps = loop ? 0 : Math.Max(0, p.NumCapVertices);
             if (caps > 0) Cap(points[0], m_Pairs[0], m_Effective[0], true, m_Half[0] < 0f, caps, va, vb, facing, faceNormal);
             int first = m_Vertices.Count;
