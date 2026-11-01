@@ -28,3 +28,8 @@ arbitrary forced exit into success because two partial captures happen to match.
 Migrated controls: textureraw and quaternioneuler. Their probe sources, oracles
 and comparisons stay unchanged. CPU captures verify this path; GPU supervision
 has fake-process renderer and private-Xvfb controls, not a new GPU parity claim.
+
+Also migrated: lines and appfacts (windowed GPU Editors). Their references were
+published by the ported publish gate from complete identical pairs recorded with
+the pre-migration runner and the same probe sources; no live capture has used
+the ported Editor path yet.
