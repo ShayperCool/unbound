@@ -34,12 +34,14 @@ Capture. Measured:
   The Editor log has both texts; `compare.py` takes the Console's.
 * A runtime assembly reaching such a type through the Editor-only helper gets CS0012, unchanged.
 * With declaration errors (a field of a left-out type), the compiler reports no errors from method
-  bodies.
+  bodies: as the command-line compiler, it stops after parsing when that has errors, then after
+  declarations.
 
 `play` enters Play mode in `Assets/Scenes/Probe.unity` (made by `ProbeRunner.Create`): a box
 with a Rigidbody and a BoxCollider, both from the left-out Physics module. When Play mode loads the
 scene, the Editor deletes both components, logging (LogType.Log) `BoxCollider component deleted:
-Component belongs to a disabled built-in package.` and then the same for the Rigidbody. The box
+Component belongs to a disabled built-in package.` and then the same for the Rigidbody: the order
+the GameObject lists its components (the scene file has the Rigidbody first). The box
 keeps its Transform and does not fall. The module's types are still found by name. Opening the
 scene in Edit mode logs nothing. Prefabs instantiated at runtime were not measured.
 
