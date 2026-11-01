@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using Unity.Collections;
 using UnityEngine;
 
 /// <summary>Records what the humanoid avatars of the probe's rigs give a game: the HumanTrait tables,
@@ -115,7 +116,7 @@ public class HumanoidProbe : MonoBehaviour
 
     /// <summary>The default pose read back, then poses written and read back: no muscles, each
     /// muscle at -1 and 1 alone, and seeded random poses (muscles beyond the limits too).</summary>
-    static void Handler(string key, Avatar avatar, Transform root, Transform hips)
+    static void Handler(string key, Avatar avatar, Transform root, Transform hips, bool allMuscles = true)
     {
         var handler = new HumanPoseHandler(avatar, root);
         var pose = new HumanPose();
@@ -131,7 +132,7 @@ public class HumanoidProbe : MonoBehaviour
             Pose(key + "." + name + ".back", back);
         }
         Write("zero", new Vector3(0, 1, 0), Quaternion.identity, new float[HumanTrait.MuscleCount]);
-        for (int m = 0; m < HumanTrait.MuscleCount; m++)
+        for (int m = 0; m < (allMuscles ? HumanTrait.MuscleCount : 0); m++)
             foreach (float v in new[] { -1f, 1f })
             {
                 var muscles = new float[HumanTrait.MuscleCount];
@@ -149,7 +150,7 @@ public class HumanoidProbe : MonoBehaviour
         handler.Dispose();
     }
 
-    static void Model(string name)
+    static void Model(string name, bool allMuscles = true)
     {
         var avatar = Resources.Load<Avatar>(name);
         Avatar(name + ".avatar", avatar);
@@ -157,7 +158,7 @@ public class HumanoidProbe : MonoBehaviour
         var animator = instance.GetComponent<Animator>();
         Animator(name + ".animator", animator);
         Locals(name + ".rest", instance.transform);
-        Handler(name + ".handler", avatar, instance.transform, animator.GetBoneTransform(HumanBodyBones.Hips));
+        Handler(name + ".handler", avatar, instance.transform, animator.GetBoneTransform(HumanBodyBones.Hips), allMuscles);
         Destroy(instance);
 
         // Avatars built at run time from a fresh instance and the imported description.
@@ -206,6 +207,8 @@ public class HumanoidProbe : MonoBehaviour
             + ",\"rootPosition\":" + V(animator.rootPosition) + ",\"rootRotation\":" + Q(animator.rootRotation)
             + ",\"position\":" + V(animator.transform.position) + ",\"pivotWeight\":" + F(animator.pivotWeight)
             + ",\"pivotPosition\":" + V(animator.pivotPosition) + "}");
+        Put(key + ".motion", "{\"velocity\":" + V(animator.velocity) + ",\"angularVelocity\":" + V(animator.angularVelocity)
+            + ",\"deltaPosition\":" + V(animator.deltaPosition) + ",\"deltaRotation\":" + Q(animator.deltaRotation) + "}");
     }
 
     /// <summary>Plays a controller on a fresh instance of a rig: Update(0), then 24 steps of 1/30 s
@@ -230,6 +233,41 @@ public class HumanoidProbe : MonoBehaviour
 
     internal static string s_IKKey;
 
+    /// <summary>A HumanPoseHandler made from joint paths (no transforms): a human pose written and the
+    /// avatar pose read (seven floats per joint), then the rest pose's locals written as the avatar
+    /// pose and the human pose read back.</summary>
+    static void JointHandler(string name)
+    {
+        var avatar = Resources.Load<Avatar>(name);
+        var instance = Instantiate(Resources.Load<GameObject>(name));
+        var transforms = instance.GetComponentsInChildren<Transform>();
+        var paths = new string[transforms.Length];
+        for (int i = 0; i < paths.Length; i++) paths[i] = Path(transforms[i], instance.transform);
+        var handler = new HumanPoseHandler(avatar, paths);
+        var random = new System.Random(77);
+        var muscles = new float[HumanTrait.MuscleCount];
+        for (int m = 0; m < muscles.Length; m++) muscles[m] = (float)(random.NextDouble() * 2 - 1);
+        var pose = new HumanPose { bodyPosition = new Vector3(0.1f, 0.9f, -0.2f), bodyRotation = Quaternion.Euler(10f, 30f, -5f), muscles = muscles };
+        handler.SetInternalHumanPose(ref pose);
+        var avatarPose = new NativeArray<float>(paths.Length * 7, Allocator.Temp);
+        handler.GetInternalAvatarPose(avatarPose);
+        Put(name + ".joints.avatarPose", Floats(avatarPose.ToArray()));
+        for (int i = 0; i < transforms.Length; i++)
+        {
+            var p = transforms[i].localPosition;
+            var q = transforms[i].localRotation;
+            avatarPose[i * 7] = p.x; avatarPose[i * 7 + 1] = p.y; avatarPose[i * 7 + 2] = p.z;
+            avatarPose[i * 7 + 3] = q.x; avatarPose[i * 7 + 4] = q.y; avatarPose[i * 7 + 5] = q.z; avatarPose[i * 7 + 6] = q.w;
+        }
+        handler.SetInternalAvatarPose(avatarPose);
+        var back = new HumanPose();
+        handler.GetInternalHumanPose(ref back);
+        Pose(name + ".joints.back", back);
+        avatarPose.Dispose();
+        handler.Dispose();
+        Destroy(instance);
+    }
+
     internal static void PutIK(string key, string json) => Put(key, json);
 
     void Start()
@@ -249,6 +287,24 @@ public class HumanoidProbe : MonoBehaviour
             Play("retargetBA", "HumanA", "HumanB");
             Play("ik", "HumanA", "HumanAIK", animator => animator.gameObject.AddComponent<HumanoidIK>());
             Play("ikB", "HumanB", "HumanAIK", animator => animator.gameObject.AddComponent<HumanoidIK>());
+
+            // Stage four: masks, blends, Foot IK, bone overrides, translation DoF, joint paths.
+            Play("maskArms", "HumanA", "MaskArms");
+            Play("maskBodyAdd", "HumanA", "MaskBodyAdd");
+            Play("maskLegTransform", "HumanA", "MaskLegTransform");
+            Play("twoLayers", "HumanA", "TwoLayers");
+            Play("twoLayersMass", "HumanA", "TwoLayers", animator => animator.layersAffectMassCenter = true);
+            Play("transition", "HumanA", "Transition");
+            Play("tree", "HumanA", "Tree", animator => animator.SetFloat("blend", 0.4f));
+            Play("footIK", "HumanA", "FootIK");
+            Play("footIKStable", "HumanA", "FootIK", animator => animator.stabilizeFeet = true);
+            Play("boneLocal", "HumanA", "BoneLocal", animator => animator.gameObject.AddComponent<HumanoidBoneLocal>());
+            Model("HumanT", allMuscles: false);
+            foreach (var clip in Resources.LoadAll<AnimationClip>("HumanT")) Clip("HumanT.clip." + clip.name, clip);
+            Play("tdof", "HumanT", "HumanT");
+            Play("tdofOnB", "HumanB", "HumanT");
+            JointHandler("HumanA");
+            JointHandler("HumanB");
         }
         catch (Exception e)
         {
