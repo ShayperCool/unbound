@@ -847,7 +847,9 @@ namespace UnityEngine
 
         static float Now => Time.time;
 
-        /// <summary>Records the object's movement since the trail last looked.</summary>
+        /// <summary>Records the object's movement since the trail last looked; a move also drops
+        /// the points that have outlived the trail's time (measured: a moving trail ages when
+        /// it is read, a still one once a frame).</summary>
         void TrackMovement()
         {
             if (m_GameObject == null) return;
@@ -864,15 +866,22 @@ namespace UnityEngine
             if ((position - m_Points[m_Points.Count - 1].Position).sqrMagnitude >= m_MinVertexDistance * m_MinVertexDistance)
                 m_Points.Add(new Point { Position = position, Time = now, Visible = m_Emitting });
             m_LastPosition = position;
+            Age(now);
+        }
+
+        /// <summary>Drops the oldest point while the next one is older than <see cref="time"/>,
+        /// and a last point that is.</summary>
+        void Age(float now)
+        {
+            while (m_Points.Count >= 2 && now - m_Points[1].Time > m_Time) m_Points.RemoveAt(0);
+            if (m_Points.Count == 1 && now - m_Points[0].Time > m_Time) m_Points.Clear();
         }
 
         /// <summary>Once a frame, before rendering: movement, ageing and autodestruction.</summary>
         internal void UpdateTrail()
         {
             TrackMovement();
-            float now = Now;
-            while (m_Points.Count >= 2 && now - m_Points[1].Time > m_Time) m_Points.RemoveAt(0);
-            if (m_Points.Count == 1 && now - m_Points[0].Time > m_Time) m_Points.Clear();
+            Age(Now);
             if (m_Points.Count > 0) m_HadPoints = true;
             else if (m_HadPoints && m_Autodestruct && Application.isPlaying)
             {
@@ -974,14 +983,16 @@ namespace UnityEngine
 
         public void AddPosition(Vector3 position) => AddPositions(new[] { position });
 
-        /// <summary>Appends points stamped evenly from the newest point's time up to now.</summary>
+        /// <summary>Appends points after the object's pending movement, stamped evenly between the
+        /// newest point's time and now, short of now (measured: n points at the (i+1)/(n+1) steps).</summary>
         public void AddPositions(Vector3[] positions)
         {
             if (positions == null) throw new ArgumentNullException(nameof(positions));
+            TrackMovement();
             float now = Now;
             float from = m_Points.Count > 0 ? m_Points[m_Points.Count - 1].Time : now;
             for (int i = 0; i < positions.Length; i++)
-                m_Points.Add(new Point { Position = positions[i], Time = from + (now - from) * (i + 1) / positions.Length, Visible = m_Emitting });
+                m_Points.Add(new Point { Position = positions[i], Time = from + (now - from) * (i + 1) / (positions.Length + 1), Visible = m_Emitting });
         }
 
         public void SetPositions(NativeArray<Vector3> positions) => SetPositions(positions.ToArray());
