@@ -179,7 +179,8 @@ public sealed class CompilerService
             using var peStream = new MemoryStream();
             using var pdbStream = new MemoryStream();
             using var refStream = new MemoryStream();
-            var emit = compilation.Emit(
+            var failedStage = FailedEarlyStage(compilation);
+            var emit = failedStage != null ? null : compilation.Emit(
                 peStream,
                 pdbStream,
                 metadataPEStream: refStream,
@@ -189,7 +190,7 @@ public sealed class CompilerService
                     // the symbols of stack traces.
                     pdbFilePath: key + ".pdb",
                     includePrivateMembers: false));
-            foreach (var diagnostic in generatorDiagnostics.Concat(emit.Diagnostics))
+            foreach (var diagnostic in generatorDiagnostics.Concat(failedStage ?? emit!.Diagnostics))
             {
                 if (diagnostic.Severity == DiagnosticSeverity.Error || GeneratorFailed(diagnostic))
                 {
@@ -201,7 +202,7 @@ public sealed class CompilerService
                     result.Warnings++;
                 }
             }
-            if (!emit.Success || generatorDiagnostics.Any(GeneratorFailed))
+            if (emit == null || !emit.Success || generatorDiagnostics.Any(GeneratorFailed))
             {
                 state.Key = null;
                 state.Result = null;
@@ -554,6 +555,18 @@ public sealed class CompilerService
             stream.CopyTo(file);
         }
         File.Move(temp, path, overwrite: true);
+    }
+
+    /// <summary>As the command-line compiler the Editor runs: errors in parsing end the compile with
+    /// that stage's diagnostics, then errors in declarations with those; method bodies are compiled
+    /// (and their errors reported) only after both are free of errors. Null when they are.</summary>
+    static IReadOnlyList<Diagnostic>? FailedEarlyStage(CSharpCompilation compilation)
+    {
+        var parse = compilation.GetParseDiagnostics();
+        if (parse.Any(d => d.Severity == DiagnosticSeverity.Error)) return parse;
+        var declaration = compilation.GetDeclarationDiagnostics();
+        if (declaration.Any(d => d.Severity == DiagnosticSeverity.Error)) return parse.AddRange(declaration);
+        return null;
     }
 
     const string AddReferenceHint = " Consider adding a reference to that assembly.";
