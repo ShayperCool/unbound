@@ -26,7 +26,7 @@ namespace UnityEngine
         /// instead of <see cref="m_Pixels"/> until a script reads or writes pixels.</summary>
         byte[] m_Raw;
         byte[] m_SourceRaw;
-        internal long RawBytes => (m_Raw?.LongLength ?? 0) + (m_UnreadableRaw?.LongLength ?? 0) + (m_SourceRaw?.LongLength ?? 0);
+        internal long RawBytes => (m_Raw?.LongLength ?? 0) + (m_UnreadableRaw?.LongLength ?? 0) + (m_SourceRaw?.LongLength ?? 0) + (m_Store?.LongLength ?? 0);
         internal bool m_PixelsDirty;
         /// <summary>The asset GUID of an imported texture.</summary>
         internal string m_AssetGuid;
@@ -75,6 +75,7 @@ namespace UnityEngine
         {
             if (width <= 0 || height <= 0)
                 throw new UnityException($"Failed to create texture because of invalid parameters. Width {width}, height {height}.");
+            ReleaseStore();
             m_Width = width;
             m_Height = height;
             m_Format = format;
@@ -92,7 +93,7 @@ namespace UnityEngine
             m_SourceRaw = null;
             m_AssetGuid = null;
             // A new texture is grey (205,205,205,205) until written, as in Unity.
-            if (GraphicsFormatUtility.IsHDRFormat(format))
+            if (Texture2DTexels.FloatStored(format))
             {
                 m_Pixels = null;
                 m_Hdr = new Color[width * height];
@@ -150,8 +151,16 @@ namespace UnityEngine
         public static Texture2D linearGrayTexture => DefaultTextures.Gray;
         public static Texture2D normalTexture => DefaultTextures.Normal;
 
-        /// <summary>The pixels as colors, decoded from the raw data when only that is kept.</summary>
+        /// <summary>The cells for an engine path that reads or writes <see cref="m_Pixels"/> itself:
+        /// decoded from the raw data when only that is kept, taken back from a pixel data store.</summary>
         internal Color32[] EnsurePixels()
+        {
+            DecodeRaw();
+            LeaveStore();
+            return m_Pixels;
+        }
+
+        void DecodeRaw()
         {
             if (m_Raw != null)
             {
@@ -159,7 +168,6 @@ namespace UnityEngine
                 m_Raw = null;
                 DecodeMipChain(raw);
             }
-            return m_Pixels;
         }
 
         void RequireReadable(bool pixelArray = false)
@@ -170,7 +178,7 @@ namespace UnityEngine
                 if (pixelArray) throw new ArgumentException(message);
                 throw new UnityException(message);
             }
-            EnsurePixels();
+            DecodeRaw();
             if (m_Pixels == null && m_Hdr == null)
             {
                 if (m_IsReadable && m_AssetGuid != null) FetchImportedPixels();
@@ -212,7 +220,8 @@ namespace UnityEngine
         /// <summary>The pixels for the engine's own use (a terrain's detail atlas), readable or not.</summary>
         internal Color32[] EnginePixels32()
         {
-            EnsurePixels();
+            DecodeRaw();
+            SyncFromStore();
             if (m_Pixels == null && m_Hdr == null && m_AssetGuid != null) FetchImportedPixels();
             if (m_Pixels != null) return (Color32[])m_Pixels.Clone();
             if (m_Hdr != null)
@@ -262,6 +271,7 @@ namespace UnityEngine
             Upload();
             if (makeNoLongerReadable)
             {
+                ReleaseStore();
                 m_Pixels = null;
                 m_Hdr = null;
                 m_Raw = null;
@@ -418,6 +428,7 @@ namespace UnityEngine
         {
             if (m_IsReadable) return;
             m_UnreadableRaw ??= m_Raw != null ? (byte[])m_Raw.Clone() : EncodeMipChain();
+            ReleaseStore();
             m_Pixels = null;
             m_Hdr = null;
             m_Raw = null;
@@ -456,7 +467,7 @@ namespace UnityEngine
             m_GpuMipCount = m_MipCount;
             if (m_Format != TextureFormat.Alpha8 && m_Format != TextureFormat.RGBA32)
             {
-                EnsurePixels();
+                DecodeRaw();
                 if (m_Hdr != null) UploadHdr();
                 else UploadPixels();
                 return;
@@ -488,7 +499,7 @@ namespace UnityEngine
                 Width = m_Width,
                 Height = m_Height,
                 // The format the texels went up in: a different one would make a new, empty texture.
-                Format = m_Format == TextureFormat.Alpha8 ? 3 : GraphicsFormatUtility.IsHDRFormat(m_Format) ? PixelFormats.GpuFloatFormat(m_Format) : m_Linear ? 1 : 0,
+                Format = m_Format == TextureFormat.Alpha8 ? 3 : Texture2DTexels.FloatStored(m_Format) ? PixelFormats.GpuFloatFormat(m_Format) : m_Linear ? 1 : 0,
                 MipCount = m_GpuMipCount,
                 FilterMode = (int)filterMode,
                 WrapU = (int)wrapModeU,
@@ -582,6 +593,7 @@ namespace UnityEngine
         /// <summary>A texture serialized in an asset file (TextMeshPro atlases): pixels as hex.</summary>
         void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
         {
+            ReleaseStore();
             m_Width = body.Int("m_Width");
             m_Height = body.Int("m_Height");
             m_Format = (TextureFormat)body.Int("m_TextureFormat", (int)TextureFormat.RGBA32);
@@ -613,7 +625,7 @@ namespace UnityEngine
             else
             {
                 var bytes = Convert.FromHexString(hex.Length % 2 == 0 ? hex : hex.Substring(0, hex.Length - 1));
-                int levelSize = PixelFormats.Size(m_Format, m_Width, m_Height);
+                int levelSize = Texture2DTexels.Size(m_Format, m_Width, m_Height);
                 if (levelSize > 0 && bytes.Length >= levelSize)
                 {
                     m_Raw = bytes;
@@ -634,6 +646,7 @@ namespace UnityEngine
 
         internal override void OnEngineDestroy()
         {
+            ReleaseStore();
             Native.ReleaseTexture(m_NativeHandle);
             m_NativeHandle = 0;
         }
@@ -679,7 +692,7 @@ namespace Unbound.Runtime
     {
         internal static int GpuFloatFormat(UnityEngine.TextureFormat format) => format switch
         {
-            UnityEngine.TextureFormat.RFloat => 6,
+            UnityEngine.TextureFormat.RFloat or UnityEngine.TextureFormat.R16 => 6,
             UnityEngine.TextureFormat.RGBAFloat => 9,
             UnityEngine.TextureFormat.RGFloat => 10,
             UnityEngine.TextureFormat.RHalf => 11,
