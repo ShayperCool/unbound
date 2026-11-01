@@ -77,6 +77,38 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(camera.gameObject);
         }
 
+        static Mesh BakeFacing(System.Action<LineRenderer> configure, params Vector3[] points)
+        {
+            var line = new GameObject("line").AddComponent<LineRenderer>();
+            line.alignment = LineAlignment.TransformZ;
+            line.widthCurve = AnimationCurve.Constant(0f, 1f, 1f);
+            line.widthMultiplier = 0.4f;
+            line.positionCount = points.Length;
+            line.SetPositions(points);
+            configure?.Invoke(line);
+            var camera = new GameObject("camera").AddComponent<Camera>();
+            var mesh = new Mesh();
+            line.BakeMesh(mesh, camera);
+            Object.DestroyImmediate(line.gameObject);
+            Object.DestroyImmediate(camera.gameObject);
+            return mesh;
+        }
+
+        [Fact]
+        public void ANegativeWidthKeepsItsHalfWidthAndTurnsItsCapsBack()
+        {
+            var mesh = BakeFacing(l => { l.widthMultiplier = -0.5f; l.numCornerVertices = 2; l.numCapVertices = 2; },
+                new Vector3(-1f, -0.5f, 0f), new Vector3(1f, -0.5f, 0f), new Vector3(1f, 1f, 0f));
+            var v = mesh.vertices;
+            // Measured (line.width.negative): the start cap bulges over the strip...
+            Unbound.Tests.Near.Equal(-0.783493638f, v[2].x, 1e-5f);
+            // ...and the corner pivots half a width outside the turn, with the arc on the other side.
+            Unbound.Tests.Near.Equal(1.1767776f, v[7].x, 1e-5f);
+            Unbound.Tests.Near.Equal(-0.6767758f, v[7].y, 1e-5f);
+            Unbound.Tests.Near.Equal(0.6767776f, v[12].x, 1e-5f);
+            Unbound.Tests.Near.Equal(0.783493638f, v[17].y, 1e-5f);
+        }
+
         [Fact]
         public void LocalLinesFollowTheirTransformAndCapsRoundTheEnds()
         {
