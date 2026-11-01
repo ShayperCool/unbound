@@ -159,6 +159,98 @@ namespace UnityEngine.Tests
             }
         }
 
+        /// <summary>The saved first round trail has a repeated head. Its sides round to
+        /// squared length below one but its tangent direction has zero turn. Preserve all
+        /// components of its three corner pairs, even though its position arc is nonzero.</summary>
+        [Fact]
+        public void CoincidentCornerDirectionsKeepAConstantTangent()
+        {
+            var go = new GameObject("line");
+            var camera = new GameObject("camera").AddComponent<Camera>();
+            var mesh = new Mesh();
+            try
+            {
+                camera.transform.position = new Vector3(0f, 0f, -10f);
+                var line = go.AddComponent<LineRenderer>();
+                line.widthMultiplier = 0.3f;
+                line.numCornerVertices = 2;
+                line.numCapVertices = 2;
+                line.generateLightingData = true;
+                line.SetPositions(new[] { new Vector3(-2.3f, 0.325857f, 0f),
+                    new Vector3(-2.3f, 0.325857f, 0f), new Vector3(-2.5f, 0.1f, 0f) });
+                line.BakeMesh(mesh, camera);
+                Assert.Equal(20, mesh.vertexCount);
+                for (int i = 7; i < 13; i++)
+                {
+                    var t = mesh.tangents[i];
+                    Assert.InRange(t.x, -0.198885649f - 1e-5f, -0.198885649f + 1e-5f);
+                    Assert.InRange(t.y, -0.224598646f - 1e-5f, -0.224598646f + 1e-5f);
+                    Assert.Equal(0f, t.z);
+                    Assert.Equal(1f, t.w);
+                }
+                Assert.True((mesh.vertices[7] - mesh.vertices[11]).magnitude > 1e-5f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(mesh);
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(camera.gameObject);
+            }
+        }
+
+        /// <summary>All 26 Native tangent vertices, including the 78 spatial components
+        /// that a direction-space tangent revert would lose. Unity 6000.0.71f1,
+        /// line.light.persp.spatial.c2cap2, unchanged canonical reference.</summary>
+        [Fact]
+        public void SpatialCornerTangentsStayInTheCameraPlane()
+        {
+            var go = new GameObject("line");
+            var camera = new GameObject("camera").AddComponent<Camera>();
+            var mesh = new Mesh();
+            try
+            {
+                camera.transform.position = new Vector3(1.5f, 1.2f, -5f);
+                camera.transform.LookAt(new Vector3(0.3f, 0.2f, 0f));
+                var line = go.AddComponent<LineRenderer>();
+                line.widthMultiplier = 0.4f;
+                line.numCornerVertices = 2;
+                line.numCapVertices = 2;
+                line.generateLightingData = true;
+                line.SetPositions(new[] { new Vector3(-1f, -0.5f, 0f), new Vector3(0f, 0.5f, 1f),
+                    new Vector3(1f, -0.3f, -0.5f), new Vector3(1.5f, 0.8f, 0.5f) });
+                line.BakeMesh(mesh, camera);
+                float[] expected = {
+                    0.695946038f, 0.653468668f, 0.2977208f, 1f, 0.695946038f, 0.653468668f, 0.2977208f, 1f,
+                    0.695946038f, 0.653468668f, 0.2977208f, 1f, 0.695946038f, 0.653468668f, 0.2977208f, 1f,
+                    0.695946038f, 0.653468668f, 0.2977208f, 1f, 0.695946038f, 0.653468668f, 0.2977208f, 1f,
+                    0.695946038f, 0.653468668f, 0.2977208f, 1f, 0.278378457f, 0.261387467f, 0.119088322f, 1f,
+                    0.278378457f, 0.261387467f, 0.119088322f, 1f, 0.387433857f, -0.0568770319f, 0.08160872f, 1f,
+                    0.387433857f, -0.0568770319f, 0.08160872f, 1f, 0.219013751f, -0.334406883f, -0.0143180788f, 1f,
+                    0.219013751f, -0.334406883f, -0.0143180788f, 1f, 0.219013721f, -0.3344069f, -0.0143180825f, 1f,
+                    0.219013721f, -0.3344069f, -0.0143180825f, 1f, 0.3875888f, 0.0195121076f, 0.09692373f, 1f,
+                    0.3875888f, 0.0195121076f, 0.09692373f, 1f, 0.153916985f, 0.353181124f, 0.107576311f, 1f,
+                    0.153916985f, 0.353181124f, 0.107576311f, 1f, 0.38479206f, 0.882952869f, 0.2689407f, 1f,
+                    0.38479206f, 0.882952869f, 0.2689407f, 1f, 0.38479206f, 0.882952869f, 0.2689407f, 1f,
+                    0.38479206f, 0.882952869f, 0.2689407f, 1f, 0.38479206f, 0.882952869f, 0.2689407f, 1f,
+                    0.38479206f, 0.882952869f, 0.2689407f, 1f, 0.38479206f, 0.882952869f, 0.2689407f, 1f,
+                };
+                Assert.Equal(expected.Length / 4, mesh.vertexCount);
+                for (int i = 0; i < mesh.vertexCount; i++)
+                    for (int axis = 0; axis < 4; axis++)
+                    {
+                        float value = expected[4 * i + axis];
+                        float tolerance = 1e-5f + 1e-5f * System.Math.Abs(value);
+                        Assert.InRange(mesh.tangents[i][axis], value - tolerance, value + tolerance);
+                    }
+            }
+            finally
+            {
+                Object.DestroyImmediate(mesh);
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(camera.gameObject);
+            }
+        }
+
         [Fact]
         public void TrailsRecordMovementAndForgetOldPoints()
         {

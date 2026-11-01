@@ -315,6 +315,13 @@ namespace UnityEngine
                 float angle = Mathf.Acos(Mathf.Clamp(Vector3.Dot(s1, s2), -1f, 1f));
                 var perp = s2 - s1 * Vector3.Dot(s1, s2);
                 perp = perp.sqrMagnitude > 1e-12f ? perp.normalized : din;
+                // The tangent arc uses the angle between the side directions. Even normalized
+                // float vectors can have squared length below one; dividing by their lengths
+                // keeps coincident directions at zero angle (saved round-trail controls), while
+                // retaining the face-plane tangents of spatial lines. Positions keep their arc.
+                float tangentDenominator = Mathf.Sqrt(s1.sqrMagnitude * s2.sqrMagnitude);
+                float tangentAngle = tangentDenominator > 0f
+                    ? Mathf.Acos(Mathf.Clamp(Vector3.Dot(s1, s2) / tangentDenominator, -1f, 1f)) : 0f;
                 // A loop's first point keeps only the last step of its corner; the closing point has it all.
                 for (int k = loop && i == 0 ? corners : 0; k <= corners; k++)
                 {
@@ -322,7 +329,8 @@ namespace UnityEngine
                     var r = s1 * Mathf.Cos(angle * f) + perp * Mathf.Sin(angle * f);
                     // The tangent lies in the strip's face, across the step's side (measured,
                     // line.light.persp.spatial.c2cap2).
-                    var tangent = w * Vector3.Cross(faceNormal, r);
+                    var tangentSide = s1 * Mathf.Cos(tangentAngle * f) + perp * Mathf.Sin(tangentAngle * f);
+                    var tangent = w * Vector3.Cross(faceNormal, tangentSide);
                     var join = k == 0 ? Join.Quad : aInner ? Join.CornerA : Join.CornerB;
                     if (aInner) m_Pairs.Add(new Pair { A = inner, B = inner + r * w, Tangent = tangent, U = u, Color = color, Join = join });
                     else m_Pairs.Add(new Pair { A = inner - r * w, B = inner, Tangent = tangent, U = u, Color = color, Join = join });
