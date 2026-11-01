@@ -95,6 +95,49 @@ class AppendTests(unittest.TestCase):
         self.capture(b''.join(record(r) for r in OLD + NEW))
         self.refused('does not end with a newline')
 
+    def test_mixed_terminators_are_kept_per_record(self):
+        old = [{'k': f'line.{i}', 'v': i} for i in range(200)]
+        ends = [b'\r\n' if i % 3 == 0 else b'\n' for i in range(len(old))]
+        self.write_reference(b''.join(record(r, e) for r, e in zip(old, ends)))
+        captured = [record(r, e) for r, e in zip(old, ends)]
+        captured[57:57] = [record(NEW[0], b'\r\n')]
+        captured.append(record(NEW[1]))
+        self.capture(b''.join(captured))
+        self.assertEqual(run.publish_append(self.work, 'blend.'), 0)
+        self.assertEqual((self.reference/'values.jsonl').read_bytes(),
+                         self.before + record(NEW[0], b'\r\n') + record(NEW[1]))
+
+    def test_disagreeing_repeats_are_refused(self):
+        self.write_reference(b''.join(record(r) for r in OLD + [COMPLETE]))
+        self.capture(b''.join(record(r) for r in OLD + NEW + [COMPLETE]))
+        (self.work/run.REPEATS[1]/'values.jsonl').write_bytes(
+            b''.join(record(r) for r in OLD + [NEW[0], {'k': 'blend.y', 'v': 5}, COMPLETE]))
+        self.refused('the repeats differ')
+
+    def test_a_changed_old_value_is_refused(self):
+        self.write_reference(b''.join(record(r) for r in OLD + [COMPLETE]))
+        self.capture(b''.join(record(r) for r in [OLD[0], {'k': 'line.b', 'v': [0.5, 2.0000001]}] + NEW + [COMPLETE]))
+        self.refused('do not reproduce the reference (first difference at line 2)')
+
+    def test_a_missing_old_record_is_refused(self):
+        self.write_reference(b''.join(record(r) for r in OLD + [COMPLETE]))
+        self.capture(b''.join(record(r) for r in [OLD[0]] + NEW + [COMPLETE]))
+        self.refused('do not reproduce the reference (first difference at line 2)')
+
+    def test_a_changed_image_is_refused(self):
+        self.write_reference(b''.join(record(r) for r in OLD + [COMPLETE]))
+        self.capture(b''.join(record(r) for r in OLD + NEW + [COMPLETE]))
+        for repeat in run.REPEATS:
+            (self.work/repeat/'a.rgba').write_bytes(IMAGE[:-1] + b'\xff')
+        self.refused('do not reproduce the reference images')
+
+    def test_an_extra_image_is_refused(self):
+        self.write_reference(b''.join(record(r) for r in OLD + [COMPLETE]))
+        self.capture(b''.join(record(r) for r in OLD + NEW + [COMPLETE]))
+        for repeat in run.REPEATS:
+            (self.work/repeat/'b.rgba').write_bytes(IMAGE)
+        self.refused('other images than the reference')
+
     def test_a_second_append_is_refused(self):
         self.write_reference(b''.join(record(r) for r in OLD + NEW))
         self.capture(b''.join(record(r) for r in OLD + NEW))
