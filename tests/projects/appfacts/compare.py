@@ -14,9 +14,9 @@ when anything fails.
 it, plus /etc/os-release and the Editor licence file read now): the GPU's PCI ids, OpenGL
 strings and memory, the CPU's vendor, model and current clock, the host, machine id, memory and
 OS release, the battery, the log path (--editor: the Editor's -logFile; else the project's
-Library/Unbound/Editor.log, masked as <project>/... or an absolute path resolving to that file:
-the file under the project
-path run.py recorded in run.json must exist, be non-empty and be written during the run) and the
+Library/Unbound/Editor.log, reported exactly as <project>/Library/Unbound/Editor.log:
+the file under the project path run.py recorded in run.json must exist, be non-empty
+and be written during the run) and the
 licence.
 """
 import argparse

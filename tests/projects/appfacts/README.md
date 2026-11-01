@@ -48,9 +48,10 @@ python3 tests/projects/appfacts/compare.py --machine ~/.cache/unbound/validation
 ```
 
 The Unbound capture's `run.json` records the absolute project path the engine was given and the
-start time. `--machine` checks the reported console log (written as `<project>/...`) as that real
-file: it must exist, be non-empty and be written during the run. `test_compare.py OUT` checks the
-comparator itself on synthetic captures.
+start time. `--machine` requires the probe to report exactly
+`<project>/Library/Unbound/Editor.log`. That real file must exist, be non-empty and be written
+during the run. An alternate spelling of the same physical file fails the string check.
+`test_compare.py OUT` checks these rules on 18 synthetic captures, including project aliases.
 
 Projects, captures, logs, `editor-run.json` and reports go to
 `$XDG_CACHE_HOME/unbound/validation/runs/appfacts/<label>/`. The Editor
