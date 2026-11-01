@@ -254,7 +254,10 @@ namespace UnityEngine
                 m_TrailGeometry.IndexCount = 0;
             }
             if (built)
+            {
                 m_TrailGeometry.WriteTo(mesh, Matrix4x4.identity);
+                mesh.m_SubMeshes[0].Measure(mesh.m_Vertices);
+            }
             else if (ps.m_Count > 0)
                 m_TrailGeometry.WriteEmptyStreamLayout(mesh);
         }

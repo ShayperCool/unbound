@@ -59,7 +59,14 @@ namespace UnityEngine.Tests
                 var reference = File.ReadAllLines(Reference()).Select(s => JsonDocument.Parse(s).RootElement.Clone())
                     .ToDictionary(r => r.GetProperty("k").GetString(), r => r.GetProperty("v"));
                 Assert.Equal(reference["mesh.vertexCount"].GetInt32(), mesh.vertexCount);
+                Assert.Equal(reference["mesh.submesh.0.vertexCount"].GetInt32(), mesh.GetSubMesh(0).vertexCount);
                 float Value(JsonElement value) => BitConverter.Int32BitsToSingle(Convert.ToInt32(value.GetProperty("bits").GetString(), 16));
+                var bounds = mesh.GetSubMesh(0).bounds;
+                for (int j = 0; j < 3; j++)
+                {
+                    Near(Value(reference["mesh.submesh.0.bounds"].GetProperty("center")[j]), bounds.center[j]);
+                    Near(Value(reference["mesh.submesh.0.bounds"].GetProperty("extents")[j]), bounds.extents[j]);
+                }
                 var positions = mesh.vertices; var uvs = mesh.uv; var colors = mesh.colors32;
                 for (int i = 0; i < positions.Length; i++)
                 {
