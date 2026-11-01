@@ -12,7 +12,8 @@ from probe_paths import cache_artifact_path
 
 def diagnose(path):
     rows = [json.loads(line) for line in path.read_text().splitlines()]
-    calls = [r for r in rows if r['step'] > 0]
+    original = [r for r in rows if r['scenario'].startswith(('manual_', 'emit_'))]
+    calls = [r for r in original if r['step'] > 0]
     events, missing = [], []
     for r in calls:
         slot = r['step'] - 1
@@ -38,6 +39,7 @@ def diagnose(path):
 
     # Every member and its full raw value survives, even when an invariant fails.
     return dict(records=len(rows), emitting_calls=len(calls), observed_events=len(events),
+                initialization_interventions=[r for r in rows if r not in original],
                 missing_events=missing, events=events,
                 seed_by_kind_parent=groups(['kind', 'parentSeed'], 'seed'),
                 seed_by_kind_child_call=groups(['kind', 'childSeed', 'step'], 'seed'),
@@ -45,7 +47,7 @@ def diagnose(path):
                 initial_age=[dict(scenario=e['scenario'], step=e['step'],
                                   value=e['particle']['startLife']-e['particle']['life']) for e in events],
                 nonzero_clocks=[r for r in rows if r['time'] != 0],
-                count_failures=[r for r in rows if r['count'] != r['step'] or r['readCount'] != r['step']])
+                count_failures=[r for r in original if r['count'] != r['step'] or r['readCount'] != r['step']])
 
 
 def main():

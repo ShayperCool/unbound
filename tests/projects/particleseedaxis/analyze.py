@@ -68,7 +68,10 @@ MODELS = {
 
 
 def analyze(path):
-    rows = [json.loads(line) for line in path.read_text().splitlines()]
+    all_rows = [json.loads(line) for line in path.read_text().splitlines()]
+    # These nine rejected hypotheses were declared for separate one-particle calls.
+    # Keep the later batch interventions in full, outside that call-accounting model.
+    rows = [r for r in all_rows if r['scenario'].startswith(('manual_', 'emit_'))]
     observations, missing = [], []
     histories = {}
     for row in rows:
@@ -124,6 +127,7 @@ def analyze(path):
     return dict(capture_sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
                 source_sha256={str(p.relative_to(REPO)): hashlib.sha256(p.read_bytes()).hexdigest() for p in sources},
                 ordinary_parent_convention='No parent exists; parent-input hypotheses use child seed for Emit.',
+                initialization_interventions=[r for r in all_rows if r not in rows],
                 missing=missing, observations=observations, snapshots=snapshots, models=models)
 
 
