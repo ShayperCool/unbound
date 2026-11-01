@@ -154,7 +154,9 @@ def _effective(dirs, lens, zero, width, loop):
             return F(0)
         if zero[j]:
             return F(1)
-        return F(np.clip(F(F(F(2) * width) / lens[j] - F(1)), 0, 1))
+        # A coincident-only strip keeps zero lengths: 2 width / 0 is +inf, clamped to 1 as in C#.
+        with np.errstate(divide='ignore'):
+            return F(np.clip(F(F(F(2) * width) / lens[j] - F(1)), 0, 1))
 
     def ahead(j):
         if j >= segments:
@@ -327,9 +329,14 @@ PREPARED = {'arc', 'reverse', 'normalized'}
 LINE_PREPARED = PREPARED - {'reverse'}
 
 
-def _saved(values):
-    """Float32 values as the probe writes them (nine significant digits)."""
-    return [float(f'{float(x):.9g}') for x in np.asarray(values, dtype='f').reshape(-1)]
+def _saved(values, old):
+    """Float32 values in the probe's shortest round-trip spelling, keeping each saved
+    value whose float32 is unchanged, so representation alone never counts as a change."""
+    new = np.asarray(values, dtype='f').reshape(-1)
+    old_f = np.asarray(old, dtype='f').reshape(-1)
+    if new.shape != old_f.shape:
+        raise ValueError('stream length changed')
+    return [o if n == of else float(str(n)) for n, o, of in zip(new, np.asarray(old, dtype=float).reshape(-1), old_f)]
 
 
 def _trail_half(points, index=False):
@@ -384,19 +391,19 @@ def project_rows(by):
         if baseline:
             raise ValueError(f'{key}: unchanged rules do not reproduce the saved mesh: {baseline[:6]}')
         nv, nt = splice(prepared, caps, pairs_new)
-        new_v = _saved(nv)
-        changed = new_v != _saved(prepared['v']) or nt != prepared['idx'][0]['i']
+        new_v = _saved(nv, prepared['v'])
+        changed = new_v != list(prepared['v']) or nt != prepared['idx'][0]['i']
         if colors is not None:
             if [round(x * 255) for x in final['c']] != [round(x * 255) for c in colors[0] for x in c]:
                 raise ValueError(f'{key}: unchanged rules do not reproduce the saved colors')
-            new_c = _saved([x for c in colors[1] for x in c])
-            if new_c != _saved(prepared['c']):
+            new_c = _saved([x for c in colors[1] for x in c], prepared['c'])
+            if new_c != list(prepared['c']):
                 changed = True
                 prepared['c'] = new_c
         if changed:
             prepared['v'] = new_v
             prepared['idx'][0]['i'] = nt
-            prepared['bounds'] = [_saved(x) for x in _bounds(nv)]
+            prepared['bounds'] = [_saved(x, o) for x, o in zip(_bounds(nv), prepared['bounds'])]
         checks.append(dict(key=key, family=family, baseline_errors=[], changed=bool(changed)))
 
     for key, row in by.items():
