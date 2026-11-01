@@ -1517,7 +1517,8 @@ namespace DotRecast.Detour.Crowd
         /// Unbound: Unity's crossing (measured, tests/projects/navlinks). Detour's two parts, 15%
         /// of the crossing from where the agent entered to the link's start and the rest to its
         /// end, but the progress is a fraction of the start-to-end distance (in 3D) advanced at
-        /// twice the agent's current speed, and only while the agent traverses links by itself and
+        /// twice the agent's current speed (the distance travelled, 2·speed·dt per update, divided
+        /// by the length when placing the agent: Unity's rounding), and only while the agent traverses links by itself and
         /// is not stopped. The desired velocity points along the current part at the agent's
         /// speed, and is the velocity the agent walks on with when a script completes the link. The update that passes the end
         /// leaves the link: the agent goes from the link's end towards where the rest of the step
@@ -1537,18 +1538,20 @@ namespace DotRecast.Detour.Crowd
 
                 const float approach = 0.15f;
                 float speed = ag.option.linkSpeed;
+                // anim.t: the distance travelled along the crossing; anim.tmax: its length.
+                float approachLength = approach * anim.tmax;
                 if (ag.option.linkTraverse && anim.tmax > 0.0f)
                 {
-                    anim.t += dt * 2.0f * speed / anim.tmax;
+                    anim.t += 2.0f * speed * dt;
                 }
                 else if (anim.tmax <= 0.0f && ag.option.linkTraverse)
                 {
                     anim.t = float.PositiveInfinity;
                 }
 
-                if (anim.t > 1.0f)
+                if (anim.t > anim.tmax)
                 {
-                    float u = float.IsInfinity(anim.t) ? 1.0f : (anim.t - approach) / (1.0f - approach);
+                    float u = float.IsInfinity(anim.t) ? 1.0f : (anim.t - approachLength) / ((1.0f - approach) * anim.tmax);
                     RcVec3f target = anim.startPos + (anim.endPos - anim.startPos) * u;
                     CompleteOffMeshConnection(ag);
                     ag.corridor.MovePosition(target, _navQuery, _filters[ag.option.queryFilterType]);
@@ -1572,17 +1575,17 @@ namespace DotRecast.Detour.Crowd
                 // script put it).
                 bool moving = ag.option.linkTraverse;
                 RcVec3f from, to;
-                if (anim.t < approach)
+                if (anim.t < approachLength)
                 {
                     from = anim.initPos;
                     to = anim.startPos;
-                    if (moving) ag.npos = Lerp(from, to, anim.t / approach);
+                    if (moving) ag.npos = Lerp(from, to, anim.t / approachLength);
                 }
                 else
                 {
                     from = anim.startPos;
                     to = anim.endPos;
-                    if (moving) ag.npos = Lerp(from, to, (anim.t - approach) / (1.0f - approach));
+                    if (moving) ag.npos = Lerp(from, to, (anim.t - approachLength) / ((1.0f - approach) * anim.tmax));
                 }
 
                 RcVec3f dir = to - from;
