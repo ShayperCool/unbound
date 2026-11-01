@@ -142,11 +142,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal global::UnityEngine.ScriptableObject[] InternalGetBehaviours(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.InternalGetBehaviours"); return global::System.Array.Empty<global::UnityEngine.ScriptableObject>(); }
         [global::Unbound.Stub] internal global::UnityEngine.ScriptableObject[] InternalGetBehavioursByKey(int fullPathHash, int layerIndex, global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.InternalGetBehavioursByKey"); return global::System.Array.Empty<global::UnityEngine.ScriptableObject>(); }
         [global::Unbound.Stub] internal int GetAnimatorClipInfoCount(int layerIndex, bool current) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.GetAnimatorClipInfoCount"); return default; }
-        [global::Unbound.Stub] public void MatchTarget(global::UnityEngine.Vector3 matchPosition, global::UnityEngine.Quaternion matchRotation, global::UnityEngine.AvatarTarget targetBodyPart, global::UnityEngine.MatchTargetWeightMask weightMask, float startNormalizedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.MatchTarget"); }
-        [global::Unbound.Stub] public void MatchTarget(global::UnityEngine.Vector3 matchPosition, global::UnityEngine.Quaternion matchRotation, global::UnityEngine.AvatarTarget targetBodyPart, global::UnityEngine.MatchTargetWeightMask weightMask, float startNormalizedTime, float targetNormalizedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.MatchTarget"); }
-        [global::Unbound.Stub] public void MatchTarget(global::UnityEngine.Vector3 matchPosition, global::UnityEngine.Quaternion matchRotation, global::UnityEngine.AvatarTarget targetBodyPart, global::UnityEngine.MatchTargetWeightMask weightMask, float startNormalizedTime, float targetNormalizedTime, bool completeMatch) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.MatchTarget"); }
-        [global::Unbound.Stub] public void InterruptMatchTarget() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.InterruptMatchTarget"); }
-        [global::Unbound.Stub] public void InterruptMatchTarget(bool completeMatch) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.InterruptMatchTarget"); }
         [global::System.Obsolete("ForceStateNormalizedTime is deprecated. Please use Play or CrossFade instead.")] [global::Unbound.Stub] public void ForceStateNormalizedTime(float normalizedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.ForceStateNormalizedTime"); }
         [global::Unbound.Stub] public void SetTarget(global::UnityEngine.AvatarTarget targetIndex, float targetNormalizedTime) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.SetTarget"); }
         [global::System.Obsolete("Use mask and layers to control subset of transfroms in a skeleton.")] [global::Unbound.Stub] public bool IsControlled(global::UnityEngine.Transform transform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.IsControlled"); return default; }
@@ -179,7 +174,6 @@ namespace UnityEngine
         internal global::UnityEngine.Quaternion bodyRotationInternal { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyRotationInternal"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.bodyRotationInternal"); } }
         public bool stabilizeFeet { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.stabilizeFeet"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.stabilizeFeet"); } }
         public float feetPivotActive { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.feetPivotActive"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.feetPivotActive"); } }
-        public bool isMatchingTarget { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.isMatchingTarget"); return default; } }
         public global::UnityEngine.Vector3 targetPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.targetPosition"); return default; } }
         public global::UnityEngine.Quaternion targetRotation { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.targetRotation"); return default; } }
         public float playbackTime { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.playbackTime"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animator.playbackTime"); } }
@@ -370,13 +364,6 @@ namespace UnityEngine
         FootInOut = 6,
         ToesUpDown = 7,
         LastLegDof = 8,
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct MatchTargetWeightMask
-    {
-        [global::Unbound.Stub] public MatchTargetWeightMask(global::UnityEngine.Vector3 positionXYZWeight, float rotationWeight) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MatchTargetWeightMask.ctor"); }
-        public global::UnityEngine.Vector3 positionXYZWeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MatchTargetWeightMask.positionXYZWeight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MatchTargetWeightMask.positionXYZWeight"); } }
-        public float rotationWeight { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MatchTargetWeightMask.rotationWeight"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MatchTargetWeightMask.rotationWeight"); } }
     }
     unsafe partial class Motion
     {

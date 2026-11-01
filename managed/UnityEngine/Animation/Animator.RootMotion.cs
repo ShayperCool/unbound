@@ -5,7 +5,7 @@ namespace UnityEngine
         internal Vector3 m_RootVelocity, m_RootAngularVelocity;
         internal bool m_RootMotionReady, m_RootMotionApplied;
         internal Quaternion m_MotionRootRotation = Quaternion.identity;
-        Vector3 m_MotionRootPosition;
+        internal Vector3 m_MotionRootPosition;
         Vector3 m_RootPosition;
         Quaternion m_RootRotation = Quaternion.identity;
         int m_RootPoseVersion = int.MinValue;

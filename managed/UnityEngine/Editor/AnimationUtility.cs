@@ -240,6 +240,18 @@ namespace UnityEditor
                 hasAdditiveReferencePose = clip.m_HasAdditiveReferencePose,
                 additiveReferencePoseClip = clip.m_AdditiveReferencePoseClip,
                 additiveReferencePoseTime = clip.m_AdditiveReferencePoseTime,
+                loopBlend = clip.m_LoopBlend,
+                cycleOffset = clip.m_CycleOffset,
+                mirror = clip.m_Mirror,
+                orientationOffsetY = clip.m_OrientationOffsetY,
+                level = clip.m_Level,
+                loopBlendOrientation = clip.m_LoopBlendOrientation,
+                loopBlendPositionY = clip.m_LoopBlendPositionY,
+                loopBlendPositionXZ = clip.m_LoopBlendPositionXZ,
+                keepOriginalOrientation = clip.m_KeepOriginalOrientation,
+                keepOriginalPositionY = clip.m_KeepOriginalPositionY,
+                keepOriginalPositionXZ = clip.m_KeepOriginalPositionXZ,
+                heightFromFeet = clip.m_HeightFromFeet,
             };
         }
 
@@ -254,6 +266,18 @@ namespace UnityEditor
             clip.m_HasAdditiveReferencePose = srcClipInfo.hasAdditiveReferencePose;
             clip.m_AdditiveReferencePoseClip = srcClipInfo.additiveReferencePoseClip;
             clip.m_AdditiveReferencePoseTime = srcClipInfo.additiveReferencePoseTime;
+            clip.m_LoopBlend = srcClipInfo.loopBlend;
+            clip.m_CycleOffset = srcClipInfo.cycleOffset;
+            clip.m_Mirror = srcClipInfo.mirror;
+            clip.m_OrientationOffsetY = srcClipInfo.orientationOffsetY;
+            clip.m_Level = srcClipInfo.level;
+            clip.m_LoopBlendOrientation = srcClipInfo.loopBlendOrientation;
+            clip.m_LoopBlendPositionY = srcClipInfo.loopBlendPositionY;
+            clip.m_LoopBlendPositionXZ = srcClipInfo.loopBlendPositionXZ;
+            clip.m_KeepOriginalOrientation = srcClipInfo.keepOriginalOrientation;
+            clip.m_KeepOriginalPositionY = srcClipInfo.keepOriginalPositionY;
+            clip.m_KeepOriginalPositionXZ = srcClipInfo.keepOriginalPositionXZ;
+            clip.m_HeightFromFeet = srcClipInfo.heightFromFeet;
             clip.m_Version++;
         }
 
