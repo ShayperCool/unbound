@@ -115,7 +115,20 @@ namespace UnityEngine
         /// another (an AssetBundle's block-compressed texture, decoded).</summary>
         TextureFormat? m_SourceFormat;
         int m_SourceMips;
-        internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(format, !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear);
+        /// <summary>The graphics format a Texture2D reports: ARGB32 and Alpha8 report formats without a
+        /// GraphicsFormat name (87/88 and 54), R8 and RG16 have sRGB variants (tests/projects/texturepixels).</summary>
+        internal override GraphicsFormat GraphicsFormatOf()
+        {
+            bool srgb = !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear;
+            return format switch
+            {
+                TextureFormat.ARGB32 => (GraphicsFormat)(srgb ? 87 : 88),
+                TextureFormat.Alpha8 => (GraphicsFormat)54,
+                TextureFormat.R8 => srgb ? GraphicsFormat.R8_SRGB : GraphicsFormat.R8_UNorm,
+                TextureFormat.RG16 => srgb ? GraphicsFormat.R8G8_SRGB : GraphicsFormat.R8G8_UNorm,
+                _ => GraphicsFormatUtility.GetGraphicsFormat(format, srgb),
+            };
+        }
         public override bool isReadable => m_IsReadable;
         internal override int MipmapCount() => m_SourceMips > 0 ? m_SourceMips : m_MipCount;
         public bool alphaIsTransparency { get; set; }
