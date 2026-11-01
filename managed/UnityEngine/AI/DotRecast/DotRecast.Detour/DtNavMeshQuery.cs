@@ -2016,6 +2016,31 @@ namespace DotRecast.Detour
         ///  @param[out]	visitedCount	The number of polygons visited during the move.
         ///  @param[in]		maxVisitedSize	The maximum number of polygons the @p visited array can hold.
         /// @returns The status flags for the query.
+        /// Unbound: the squared distance in the plane from a position to a polygon (0 inside it).
+        private float PolyDistanceSqr2D(long refs, RcVec3f pos)
+        {
+            m_nav.GetTileAndPolyByRefUnsafe(refs, out var tile, out var poly);
+            int nverts = poly.vertCount;
+            Span<float> pverts = stackalloc float[nverts * 3];
+            for (int i = 0; i < nverts; ++i)
+            {
+                RcSpans.Copy(tile.data.verts, poly.verts[i] * 3, pverts, i * 3, 3);
+            }
+
+            if (DtUtils.PointInPolygon(pos, pverts, nverts))
+            {
+                return 0.0f;
+            }
+
+            float best = float.MaxValue;
+            for (int i = 0, j = nverts - 1; i < nverts; j = i++)
+            {
+                best = Math.Min(best, DtUtils.DistancePtSegSqr2D(pos, pverts, j * 3, i * 3, out _));
+            }
+
+            return best;
+        }
+
         public DtStatus MoveAlongSurface(long startRef, RcVec3f startPos, RcVec3f endPos,
             IDtQueryFilter filter,
             out RcVec3f resultPos, Span<long> visited, out int visitedCount, int maxVisitedSize)
@@ -2161,7 +2186,25 @@ namespace DotRecast.Detour
                             // Mark as the node as visited and push to queue.
                             neighbourNode.pidx = m_tinyNodePool.GetNodeIdx(curNode);
                             neighbourNode.flags |= DtNodeFlags.DT_NODE_CLOSED;
-                            stack.AddLast(neighbourNode);
+                            // Unbound: the polygons nearest the end position are visited first (ties
+                            // in order): the move takes the way through the polygon it moves
+                            // into first (measured: an agent stepping off a corner of four tiles
+                            // passes the tile its step crosses into first, tests/projects/avoidance).
+                            neighbourNode.total = PolyDistanceSqr2D(neis[k], endPos);
+                            var after = stack.Last;
+                            while (after != null && after.Value.total > neighbourNode.total)
+                            {
+                                after = after.Previous;
+                            }
+
+                            if (after == null)
+                            {
+                                stack.AddFirst(neighbourNode);
+                            }
+                            else
+                            {
+                                stack.AddAfter(after, neighbourNode);
+                            }
                         }
                     }
                 }
