@@ -2610,7 +2610,9 @@ namespace DotRecast.Detour
                     // int va = a * 3;
                     // int vb = b * 3;
                     float dx = verts[b].X - verts[a].X;
-                    float dz = verts[b].Z - verts[a].X;
+                    // Unbound: the edge's z extent (the port subtracted its start's x; Detour's
+                    // normal is of the edge itself).
+                    float dz = verts[b].Z - verts[a].Z;
                     hit.hitNormal = RcVec3f.Normalize(new RcVec3f(dz, 0, -dx));
 
                     hit.pathCount = n;

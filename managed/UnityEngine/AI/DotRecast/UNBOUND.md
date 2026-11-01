@@ -20,6 +20,8 @@ Altered (marked `Unbound:` in the sources):
 - the closest point of a polygon to a position outside it is the closest in 3D on its boundary
   (Unity's: on a slope it moves along the edge), not in the xz plane;
 - rasterized spans take the cell above the surface (`floor + 1`), as Unity's voxelization does;
+- `DtNavMeshQuery.Raycast` gives the normal of the wall edge it hits (the port took the edge's z
+  extent from its start's x);
 - crowd agents as Unity's (`tests/projects/avoidance`): each update first steps the velocity
   towards the previous update's plan (`DtCrowdAgent.pvel`; a braking agent's speed follows it at
   once), then steers with that velocity in 3D (a corner above slows them in the plane) and plans;
