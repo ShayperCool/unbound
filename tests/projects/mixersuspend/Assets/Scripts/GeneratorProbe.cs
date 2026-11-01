@@ -60,6 +60,7 @@ public class GeneratorProbe : MonoBehaviour
                 var source = go.AddComponent<AudioSource>();
                 source.outputAudioMixerGroup = child;
                 generator = go.AddComponent<SilentThenTone>();
+                source.Play();
             }
             if (key == "attached") Attach();
             using (var sink = new NativeArray<float>(2048, Allocator.Persistent))
@@ -74,9 +75,11 @@ public class GeneratorProbe : MonoBehaviour
                     Fill(sink, -3f);
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("Sink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("Render failed");
+                    if (block == 81) records.Add("\"" + key + ".callbackAfterSilence\":" + (generator.Calls > 0 ? "true" : "false"));
                     for (int i = 0; i < buffer.Length; i++) { pcm.Write(buffer[i]); group.Write(sink[i]); }
                 }
             }
+            records.Add("\"" + key + ".callbackAfterTone\":" + (generator.Calls > 0 ? "true" : "false"));
             foreach (string suffix in new[] { "", ".master" })
                 records.Add("\"" + key + suffix + "\":{\"file\":\"" + key + suffix + ".f32\",\"frames\":" + (Blocks * 1024) + ",\"channels\":2}");
             DestroyImmediate(go);
@@ -90,5 +93,6 @@ public class GeneratorProbe : MonoBehaviour
 public class SilentThenTone : MonoBehaviour
 {
     public volatile float Amplitude;
-    void OnAudioFilterRead(float[] values, int channels) { for (int i = 0; i < values.Length; i++) values[i] = Amplitude; }
+    public volatile int Calls;
+    void OnAudioFilterRead(float[] values, int channels) { Calls++; for (int i = 0; i < values.Length; i++) values[i] = Amplitude; }
 }
