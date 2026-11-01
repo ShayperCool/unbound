@@ -38,6 +38,8 @@ def prepare(label):
     shutil.copytree(fixture/'Assets/Scenes', project/'Assets/Scenes')
     (project/'Assets/Resources').mkdir()
     shutil.copy2(fixture/'Assets/Resources/LineColor.shader', project/'Assets/Resources/LineColor.shader')
+    # The Editor generates missing metadata; source-only Resources lookup needs it delivered.
+    shutil.copy2(fixture/'Assets/Resources/LineColor.shader.meta', project/'Assets/Resources/LineColor.shader.meta')
     (project/'Packages').mkdir()
     write(project/'Packages/manifest.json', {'dependencies': {}})
     (project/'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: '+a.release+'\n')
@@ -110,7 +112,7 @@ else:
     assert a.cli and a.runtime
     out, project = prepare('engine')
     cmd = [str(Path.home()/'.cache/compat/with-heavy-job'), 'timeout', '--kill-after=15', '180', str(a.cli.resolve()),
-        'run', '-p', str(project), '--headless', '20', '--no-watch']
+        'run', '-p', str(project), '--frames', '100', '--size', '128x128', '--no-watch']
     write(out/'command.json', {'command': cmd, 'runtime': {str(f.relative_to(a.runtime)): sha(f) for f in a.runtime.rglob('*') if f.is_file()}, 'cli': sha(a.cli)})
     with (out/'stdout.log').open('x') as log:
         result = subprocess.run(cmd, env=dict(os.environ, TRAIL_AUTODESTRUCT_OUT=str(out/'events.jsonl'),

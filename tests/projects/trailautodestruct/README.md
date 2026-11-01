@@ -34,6 +34,25 @@ deadline and a 300 s output-progress deadline. Each engine command takes its own
 installed lease and a 180 s deadline. Do not wrap either driver in another lease.
 Projects, manifests, logs and raw events stay in the selected cache directory.
 
+The engine runner uses a graphical 128 by 128 window with a 100-frame ceiling,
+so the unchanged probe can render and quit after its 50 Update steps. The former
+headless 20-frame command could not complete that control. Fixture preparation
+copies both `LineColor.shader` and its tracked `.meta` from `lines`. The asset
+database discovers Resources assets through metadata. An Editor generates a
+missing `.meta` during import, but a source-only engine run does not. Copying just
+the shader caused `Resources.Load<Shader>("LineColor")` to return null before
+any trails were created on both frozen Root and the candidate.
+
+These runner corrections preserve both C# sources, shader bytes and the canonical
+reference. They are source preparation, with no new runtime acceptance claim.
+The earlier setup failures remain rejected, including completion-only outputs.
+The runner controls intercept all child launches and check delivered bytes,
+the graphical frame allowance and rejection of a lone completion marker:
+
+```sh
+python3 tests/projects/trailautodestruct/test_run.py
+```
+
 The first pair on 2026-11-01 used the prior camera-free nographics fixture.
 It completed with byte-identical 859-record captures, but neither automatic
 trail expired. Both retained three points through step 14. That pair remains
