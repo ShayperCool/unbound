@@ -2059,10 +2059,12 @@ transforms. The humanoid probe's takes start at 0, so this matches both probes. 
 carry a mask asset and a Humanoid model's avatar. A clip is human only with root, goal or muscle
 curves; MotionT/MotionQ alone are a generic root node's motion. A Humanoid model's root node
 (`motionNodeName`) is ignored with a warning. `MatchTarget` on a humanoid avatar warns and does
-nothing. The motion statistics use the humanoid motion for muscle clips and the root-node curves
+nothing. Humanoid clips now get every root setting of the meta; any setting other than the
+default still throws, as before. Model clips cropped from their take or masked by transforms
+carry an import warning, because their muscle curves are unmeasured. The motion statistics use the humanoid motion for muscle clips and the root-node curves
 for the rest. `apparentSpeed` is `|averageSpeed| · (1 + (averageAngularSpeed / 2)²)` for both:
 this formula gives all 102 Editor clip values of the root-node probe exactly. The model cache
-format is 10.
+format is 11.
 
 Validation (candidate against the Root runtime it was merged into, same commands):
 
