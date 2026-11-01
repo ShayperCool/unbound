@@ -256,6 +256,10 @@ pub struct Source {
 }
 
 impl Source {
+    fn filter_only(&self) -> bool {
+        self.params.clip == 0 && self.params.has(source_flags::FILTER)
+    }
+
     fn active(&self) -> bool {
         self.main.as_ref().is_some_and(|v| !v.paused) || self.one_shots.iter().any(|v| !v.paused)
     }
@@ -549,7 +553,9 @@ impl Mixer {
 
     fn active_mixer_roots(&self) -> std::collections::HashSet<u64> {
         let mut active = std::collections::HashSet::new();
-        for source in self.sources.values().filter(|s| s.active()) {
+        // Clipless callbacks generate mixer input without a decoded clip voice. The
+        // generator control stays awake through silence and wakes a quiet route on attach.
+        for source in self.sources.values().filter(|s| s.active() || s.filter_only()) {
             let mut handle = source.params.group;
             for _ in 0..self.group_nodes.len() {
                 let Some(group) = self.group_nodes.get(&handle) else { break; };
@@ -954,7 +960,7 @@ impl Mixer {
             let filter = flags & source_flags::FILTER != 0;
             let has_voices = source.main.is_some() || !source.one_shots.is_empty();
             // A filter-only source (no clip) runs its filter all the time.
-            let filter_only = filter && source.params.clip == 0;
+            let filter_only = source.filter_only();
             if !has_voices && !filter_only {
                 continue;
             }
@@ -1820,6 +1826,40 @@ mod tests {
             assert!(mixer.group_nodes[&3].suspended, "packet={packet}");
         }
         assert_eq!(dsp.group_nodes[&3].last_active, remote.group_nodes[&3].last_active);
+    }
+
+    #[test]
+    fn clipless_generator_keeps_or_wakes_its_mixer_after_silence() {
+        use std::cell::Cell;
+        thread_local! { static TONE: Cell<bool> = const { Cell::new(false) }; }
+        extern "C" fn generator(kind: i32, _: u64, data: *mut f32, frames: i32, channels: i32, _: i64) {
+            if kind != callback::SOURCE_FILTER { return; }
+            let output = unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+            output.fill(TONE.with(|tone| if tone.get() { 0.125 } else { 0.0 }));
+        }
+        for attach in [0, 80] {
+            TONE.with(|tone| tone.set(false));
+            let mut mixer = Mixer::new(MixerConfig::default());
+            let mut root = filter_group(3, 0, "Attenuation");
+            root.mixer = 3;
+            root.enable_suspend = true;
+            root.suspend_threshold = 0.0001;
+            root.effects[0].gain = 1.0;
+            mixer.configure_group(root).unwrap();
+            mixer.set_callback(Some(generator));
+            let mut output = vec![0.0; 2048];
+            for block in 0..84 {
+                if block == attach {
+                    if attach > 0 { assert!(mixer.group_nodes[&3].suspended); }
+                    source_with(&mut mixer, 7, 0, |p| { p.group = 3; p.flags = source_flags::FILTER; });
+                }
+                if block == 82 { TONE.with(|tone| tone.set(true)); }
+                mixer.update_suspension();
+                mixer.render(&mut output, 2);
+                if block >= attach { assert!(!mixer.group_nodes[&3].suspended); }
+                assert!(output.iter().all(|sample| *sample == if block < 82 { 0.0 } else { 0.125 }));
+            }
+        }
     }
 
     #[test]
