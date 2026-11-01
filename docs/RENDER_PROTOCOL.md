@@ -189,8 +189,9 @@ Unity's canvas sets it.
 A texture slot's texel type comes from its declaration (shader cache format 15): floats, signed or
 unsigned integers (`Texture2D<uint2>`, read unfiltered) or depth. An integer slot reads a float
 texture's values as their bits within its size and zeros where nothing is bound, as Unity does on
-OpenGL Core (tests/projects/rtdepth); the bits are copied into an integer texture before each draw.
-An integer slot bound to a layered texture or a depth element skips the draw with a message.
+OpenGL Core (tests/projects/rtdepth); the bits are copied into an integer texture right before
+each pass that reads them (after a `GrabPass` before it). An integer slot that is not 2D (bound or
+not), or bound to a layered texture or a depth element, skips the draw with a message.
 
 A material's shader name selects its shader: the project's `.shader` source, else Unity's built-in
 one (compiled from the release's `builtin_shaders` sources). The renderer draws the forward passes

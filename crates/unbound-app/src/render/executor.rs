@@ -902,11 +902,14 @@ impl UnityRenderer {
                 continue;
             }
             let name = &program.textures[k];
-            let Some(t) = self.textures.get(h) else {
-                integer_views.push(None);
-                continue;
-            };
-            if !is_2d(*dim) || handle::split(raw[k]).1 || t.layers > 1 || t.volume {
+            // Integer slots read 2D textures only (their default is a 2D texture of zeros): any
+            // other slot shape skips the draw, bound or not, as does a layered texture or a
+            // depth element.
+            let texture = self.textures.get(h);
+            if !is_2d(*dim)
+                || handle::split(raw[k]).1
+                || texture.is_some_and(|t| t.layers > 1 || t.volume)
+            {
                 let name = name.clone();
                 let h = *h;
                 self.warn_once(format!("integer-slot{id}{name}{h}"), || {
@@ -914,6 +917,10 @@ impl UnityRenderer {
                 });
                 return None;
             }
+            let Some(t) = texture else {
+                integer_views.push(None);
+                continue;
+            };
             let (width, height, source) = (t.width, t.height, t.view_for(space).clone());
             let signed = slot.sample == SampleKind::Sint;
             let fits = self
