@@ -9,7 +9,7 @@ namespace UnityEngine.Audio
     /// volumes (dB) and pitches are parameters. A parameter's value comes from the current snapshot
     /// (blended during a transition), unless an exposed parameter is set by <c>SetFloat</c>.
     /// Each frame the audio update sends the group graph and current parameters to the native
-    /// mixer. Lowpass and Highpass process the summed group signal in serialized effect order.
+    /// mixer. Lowpass, Highpass and Echo process the summed group signal in serialized effect order.
     /// </summary>
     [ClassId(241)]
     public partial class AudioMixer : Object, ISerializedAsset
@@ -294,6 +294,14 @@ namespace UnityEngine.Audio
             {
                 if (effect.Parameter("Cutoff freq") is string cutoff) m_Defaults[cutoff] = 5000f;
                 if (effect.Parameter("Resonance") is string resonance) m_Defaults[resonance] = 1f;
+                if (effect.m_EffectName == "Echo")
+                {
+                    if (effect.Parameter("Delay") is string delay) m_Defaults[delay] = 500f;
+                    if (effect.Parameter("Decay") is string decay) m_Defaults[decay] = 0f;
+                    if (effect.Parameter("Max channels") is string channels) m_Defaults[channels] = 0f;
+                    if (effect.Parameter("Drymix") is string dry) m_Defaults[dry] = 1f;
+                    if (effect.Parameter("Wetmix") is string wet) m_Defaults[wet] = 1f;
+                }
             }
             foreach (var guid in group.m_EffectParameters) if (!m_Defaults.ContainsKey(guid)) m_Defaults[guid] = 0f;
             foreach (var child in group.m_Children) if (child != null) Collect(child, group);
@@ -377,7 +385,7 @@ namespace UnityEngine.Audio
             foreach (var effect in m_Effects)
             {
                 bool bypass = m_BypassEffects || effect.m_Bypass;
-                if (!bypass && effect.m_EffectName != "Attenuation" && effect.m_EffectName != "Lowpass" && effect.m_EffectName != "Highpass")
+                if (!bypass && effect.m_EffectName != "Attenuation" && effect.m_EffectName != "Lowpass" && effect.m_EffectName != "Highpass" && effect.m_EffectName != "Echo")
                     throw new NotSupportedException("Unsupported AudioMixer effect '" + effect.m_EffectName + "' in group '" + Path + "'");
                 if (!bypass && effect.m_EnableWetMix)
                     throw new NotSupportedException("AudioMixer wet mixing is unsupported for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
@@ -386,6 +394,11 @@ namespace UnityEngine.Audio
                     gain = AudioMixer.DspGain(m_Mixer.Value(m_VolumeGuid)),
                     cutoff = effect.Parameter("Cutoff freq") is string cutoff ? m_Mixer.Value(cutoff) : 5000f,
                     resonance = effect.Parameter("Resonance") is string resonance ? m_Mixer.Value(resonance) : 1f,
+                    delay = effect.Parameter("Delay") is string delay ? m_Mixer.Value(delay) : 500f,
+                    decay = effect.Parameter("Decay") is string decay ? m_Mixer.Value(decay) : 0f,
+                    maxChannels = effect.Parameter("Max channels") is string channels ? m_Mixer.Value(channels) : 0f,
+                    dryMix = effect.Parameter("Drymix") is string dry ? m_Mixer.Value(dry) : 1f,
+                    wetMix = effect.Parameter("Wetmix") is string wet ? m_Mixer.Value(wet) : 1f,
                 });
             }
             var parent = m_Parent ?? m_Mixer?.m_OutputGroup;

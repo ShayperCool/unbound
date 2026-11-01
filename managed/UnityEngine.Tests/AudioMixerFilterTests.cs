@@ -104,10 +104,41 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void EchoDefaultsAndExposedValuesMatchTheNativeStereoMatrix()
+        {
+            var (mixer, group, effect) = Fixture();
+            effect.m_EffectName = "Echo";
+            effect.m_ParameterGuids.Clear(); mixer.m_Exposed.Clear();
+            string[] names = { "Delay", "Decay", "Max channels", "Drymix", "Wetmix" };
+            float[] defaults = { 500, 0, 0, 1, 1 };
+            float[] updates = { 40.125f, 0.25f, 0, 0.25f, 0.5f };
+            for (int i = 0; i < names.Length; i++)
+            {
+                effect.m_ParameterGuids[names[i]] = names[i];
+                mixer.m_Exposed[names[i]] = names[i];
+            }
+            for (int i = 0; i < names.Length; i++)
+            {
+                Assert.True(mixer.GetFloat(names[i], out float value));
+                Assert.Equal(defaults[i], value);
+                Assert.True(mixer.SetFloat(names[i], updates[i]));
+                Assert.True(mixer.GetFloat(names[i], out value));
+                Assert.Equal(updates[i], value);
+            }
+            using var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration()));
+            var dsp = payload.RootElement.GetProperty("effects")[0];
+            string[] fields = { "delay", "decay", "maxChannels", "dryMix", "wetMix" };
+            Assert.Equal("Echo", dsp.GetProperty("kind").GetString());
+            for (int i = 0; i < fields.Length; i++) Assert.Equal(updates[i], dsp.GetProperty(fields[i]).GetSingle());
+            effect.m_EnableWetMix = true;
+            Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+        }
+
+        [Fact]
         public void ActiveUnsupportedEffectsAndWetMixFailLoudly()
         {
             var (_, group, effect) = Fixture();
-            effect.m_EffectName = "Echo";
+            effect.m_EffectName = "Chorus";
             Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
             effect.m_Bypass = true;
             group.DspConfiguration();

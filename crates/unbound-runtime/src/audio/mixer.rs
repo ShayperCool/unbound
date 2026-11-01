@@ -449,7 +449,7 @@ impl Mixer {
     pub fn configure_group(&mut self, spec: GroupSpec) -> anyhow::Result<()> {
         for effect in &spec.effects {
             anyhow::ensure!(
-                matches!(effect.kind.as_str(), "Attenuation" | "Lowpass" | "Highpass")
+                matches!(effect.kind.as_str(), "Attenuation" | "Lowpass" | "Highpass" | "Echo")
                     || effect.bypass
                     || spec.bypass,
                 "unsupported AudioMixer effect '{}'",
@@ -965,10 +965,12 @@ impl Mixer {
         }
         for &handle in &self.group_order {
             let node = self.group_nodes.get_mut(&handle).unwrap();
-            let active = !node.spec.bypass
-                && node.effects.iter().any(|e| {
-                    !e.spec.bypass && matches!(e.spec.kind.as_str(), "Lowpass" | "Highpass")
-                });
+            // Echo retains the measured group input fade even when bypassed.
+            let active = node.effects.iter().any(|e| e.spec.kind == "Echo")
+                || (!node.spec.bypass
+                    && node.effects.iter().any(|e| {
+                        !e.spec.bypass && matches!(e.spec.kind.as_str(), "Lowpass" | "Highpass")
+                    }));
             if active {
                 for (frame, stereo) in node.buffer[..n * 2].chunks_exact_mut(2).enumerate() {
                     let gain = ((node.rendered + frame) as f32 / config.buffer_size.max(1) as f32)
@@ -1604,10 +1606,65 @@ mod tests {
         let mut m = Mixer::new(MixerConfig::default());
         m.configure_group(filter_group(3, 4, "Lowpass")).unwrap();
         assert!(m.configure_group(filter_group(4, 3, "Highpass")).is_err());
-        assert!(m.configure_group(filter_group(3, 0, "Echo")).is_err());
+        assert!(m.configure_group(filter_group(3, 0, "Chorus")).is_err());
         assert_eq!(m.group_nodes[&3].spec.parent, 4);
         assert_eq!(m.group_nodes[&3].spec.effects[0].kind, "Lowpass");
     }
+    #[test]
+    fn echo_matches_complete_native_stereo_impulse_and_tone_tails() {
+        for rate in [48000, 44100] {
+            for (key, delay, decay, bypass) in [
+                ("default_stereo", 500.0, 0.0, false),
+                ("delay1_01", 1.01, 0.5, false),
+                ("delay10_125", 10.125, 0.5, false),
+                ("delay25_3", 25.3, 0.5, false),
+                ("delay5000", 5000.0, 0.0, false),
+                ("tone_stereo", 25.0, 0.5, false),
+                ("effect_bypass", 25.0, 0.5, true),
+            ] {
+                let mut m = Mixer::new(MixerConfig { sample_rate: rate, ..Default::default() });
+                let mut group = filter_group(3, 0, "Echo");
+                group.effects[0].delay = delay;
+                group.effects[0].decay = decay;
+                group.effects[0].bypass = bypass;
+                m.configure_group(group.clone()).unwrap();
+                let mut input = vec![0.0; 8192 * 2];
+                for frame in 0..8192 {
+                    for channel in 0..2 {
+                        input[frame * 2 + channel] = if key == "tone_stereo" {
+                            if frame < 4096 {
+                                (0.125 * (2.0 * std::f64::consts::PI
+                                    * if channel == 0 { 400.0 } else { 1700.0 }
+                                    * frame as f64 / rate as f64).sin()) as f32
+                            } else { 0.0 }
+                        } else if channel == 0 && (frame == 0 || frame == 2048) {
+                            0.25
+                        } else if channel == 1 && (frame == 31 || frame == 3072) {
+                            -0.125
+                        } else { 0.0 };
+                    }
+                }
+                m.add_clip(1, Clip::new(2, rate, input));
+                source_with(&mut m, 7, 1, |p| p.group = 3);
+                play(&mut m, 7, command::PLAY, 0.0);
+                let file = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+                    .join(format!("../../tests/projects/mixerecho/Reference/unity-6000.0.71f1/rate-{rate}/{key}.master.f32"));
+                let reference = std::fs::read(file).unwrap();
+                let mut output = vec![0.0; reference.len() / 4];
+                // Repeated graph submissions must preserve the delay after the source ends.
+                for block in output.chunks_mut(2048) {
+                    m.configure_group(group.clone()).unwrap();
+                    m.render(block, 2);
+                }
+                for (i, (bytes, actual)) in reference.chunks_exact(4).zip(output).enumerate() {
+                    let native = f32::from_le_bytes(bytes.try_into().unwrap());
+                    assert!((native - actual).abs() <= 2e-5 + 2e-4 * native.abs(),
+                        "{rate}/{key} sample {i}: native={native}, engine={actual}");
+                }
+            }
+        }
+    }
+
     #[test]
     fn dry_voice_matches_the_complete_native_step_capture() {
         let reference = include_bytes!(

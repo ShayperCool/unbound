@@ -16,6 +16,20 @@ pub struct EffectSpec {
     pub cutoff: f32,
     #[serde(default = "one")]
     pub resonance: f32,
+    #[serde(default = "echo_delay")]
+    pub delay: f32,
+    #[serde(default)]
+    pub decay: f32,
+    /// Measured channel limits 0, 1, 2 and 16 all retain both stereo channels.
+    #[serde(default)]
+    pub max_channels: f32,
+    #[serde(default = "one")]
+    pub dry_mix: f32,
+    #[serde(default = "one")]
+    pub wet_mix: f32,
+}
+fn echo_delay() -> f32 {
+    500.0
 }
 fn one() -> f32 {
     1.0
@@ -119,10 +133,44 @@ impl Biquad {
     }
 }
 
+/// Unity 6000.0.71f1 Echo kernels, independently captured at both output rates.
+#[derive(Default)]
+struct Echo {
+    history: Vec<[i16; 2]>,
+    position: usize,
+}
+impl Echo {
+    fn tune(&mut self, delay: f32, rate: u32) {
+        // Truncate fractional frames, then round up to the measured eight-frame boundary.
+        let frames = (delay.clamp(1.0, 5000.0) * rate as f32 / 1000.0) as usize;
+        let frames = ((frames + 7) & !7).max(8);
+        if self.history.len() != frames {
+            self.history = vec![[0; 2]; frames];
+            self.position = 0;
+        }
+    }
+    fn process(&mut self, samples: &mut [f32], spec: &EffectSpec) {
+        let decay = spec.decay.clamp(0.0, 1.0);
+        let dry = spec.dry_mix.clamp(0.0, 1.0);
+        let wet = spec.wet_mix.clamp(0.0, 1.0);
+        for stereo in samples.chunks_exact_mut(2) {
+            let history = &mut self.history[self.position];
+            for (channel, input) in stereo.iter_mut().enumerate() {
+                // The reciprocal multiply is observable in the tone feedback tail.
+                let delayed = history[channel] as f32 * (1.0 / 32767.0);
+                history[channel] = ((*input + delayed * decay) * 32767.0) as i16;
+                *input = *input * dry + delayed * wet;
+            }
+            self.position = (self.position + 1) % self.history.len();
+        }
+    }
+}
+
 pub struct Effect {
     pub spec: EffectSpec,
     stages: [Biquad; 2],
     lowpass: Lowpass,
+    echo: Echo,
     cutoff: f32,
     resonance: f32,
     rate: u32,
@@ -134,6 +182,7 @@ impl Effect {
             spec: spec.clone(),
             stages: Default::default(),
             lowpass: Default::default(),
+            echo: Default::default(),
             cutoff: 5000.0,
             resonance: 1.0,
             rate,
@@ -149,6 +198,7 @@ impl Effect {
     }
     fn tune(&mut self) {
         match self.spec.kind.as_str() {
+            "Echo" => self.echo.tune(self.spec.delay, self.rate),
             "Lowpass" => self.lowpass.tune(self.cutoff, self.resonance, self.rate),
             "Highpass" => self.stages[0].tune(true, self.cutoff, self.resonance, self.rate),
             _ => {}
@@ -170,6 +220,10 @@ impl Effect {
                 }
             }
             self.gain = self.spec.gain;
+        } else if self.spec.kind == "Echo" {
+            if !bypass && !self.spec.bypass {
+                self.echo.process(samples, &self.spec);
+            }
         } else if !bypass && !self.spec.bypass {
             for stereo in samples.chunks_exact_mut(2) {
                 let cutoff = Self::slew(self.cutoff, self.spec.cutoff.clamp(10.0, 22000.0));
