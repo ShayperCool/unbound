@@ -224,7 +224,8 @@ impl UnityRenderer {
     }
 
     /// A copy of `size` bytes between buffers, or `None` (logged) when it cannot be made: the
-    /// buffers must exist, the ranges fit and the offsets and size be multiples of 4.
+    /// buffers must exist, the ranges fit and offsets be multiples of 4. A partial final word
+    /// uses the padding present in both backing allocations.
     pub(super) fn plan_buffer_copy(
         &mut self,
         source: u64,
@@ -248,11 +249,17 @@ impl UnityRenderer {
             }
             return None;
         }
-        let fits = source_offset.checked_add(size).is_some_and(|e| e <= s.size)
+        let Some(copy_size) = size.checked_add(3).map(|n| n & !3) else {
+            self.warn_once(format!("copybufrange{source}-{destination}"), || {
+                "a buffer copy size exceeds the supported range: skipped".into()
+            });
+            return None;
+        };
+        let fits = source_offset.checked_add(copy_size).is_some_and(|e| e <= s.size)
             && destination_offset
-                .checked_add(size)
+                .checked_add(copy_size)
                 .is_some_and(|e| e <= d.size);
-        if !fits || (source_offset | destination_offset | size) % 4 != 0 {
+        if !fits || (source_offset | destination_offset) % 4 != 0 {
             self.warn_once(format!("copybufrange{source}-{destination}"), || {
                 format!("a copy of {size} bytes from buffer {source} at {source_offset} to buffer {destination} at {destination_offset} does not fit or is not 4-byte aligned: skipped")
             });
@@ -263,7 +270,7 @@ impl UnityRenderer {
             source_offset,
             destination: d.buffer.clone(),
             destination_offset,
-            size,
+            size: copy_size,
         })
     }
 

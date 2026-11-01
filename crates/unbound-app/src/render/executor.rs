@@ -1971,6 +1971,27 @@ impl UnityRenderer {
                         size,
                     ) {
                         passes.push(Op::BufferCopy(copy));
+                        if self
+                            .buffers
+                            .get(&destination)
+                            .is_some_and(|b| b.shadow.is_some())
+                        {
+                            // Draw constants are packed from a CPU shadow. Read the completed
+                            // destination so preceding dispatches and copies are reflected too.
+                            self.flush_ops(&mut passes, &mut open);
+                            let bytes = self
+                                .read_buffer(destination, destination_offset, size)
+                                .expect("could not synchronize a copied constant buffer");
+                            let shadow = self
+                                .buffers
+                                .get_mut(&destination)
+                                .unwrap()
+                                .shadow
+                                .as_mut()
+                                .unwrap();
+                            let start = destination_offset as usize;
+                            shadow[start..start + bytes.len()].copy_from_slice(&bytes);
+                        }
                     }
                 }
                 Command::SetCounter { buffer, value } => {
