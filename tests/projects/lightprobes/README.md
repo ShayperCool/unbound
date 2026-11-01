@@ -124,3 +124,9 @@ the objects may come in any order. Each repeat must satisfy these predicates (pa
 The pair publishes the canonical form, `Reference/unity-<release>/creation-ownership.jsonl`, only if
 the two canonical forms are byte-identical; everything outside the families stays strict.
 `creation-ownership-publish` writes `publication.json` with every raw difference and its family.
+
+The schema-2 pair (two sequential repeats, each exit 0 on the NVIDIA renderer and gated, the first
+before the second started) satisfied the contract in both repeats. Its 12 raw leaf differences
+were all inside the declared families: 5 or 4 outgoing roots destroyed before the destroyer, the
+error's name order, and the t2 cleanup order. The canonical forms were byte-identical, and that
+form is the 6000.0.71f1 `creation-ownership.jsonl` Reference.
