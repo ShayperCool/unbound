@@ -2517,3 +2517,12 @@ Full attempts, source correction, historical capture hashes and prepared matchin
 - Archived legacy runner hash and identical copy_project normalization verified; Native launch-to-runner/pre-launch-version binding is missing. Both file hashes and prior failed fixture audit remain; fixture acceptance BLOCKED.
 - No build, Native/engine capture or full-suite rerun. Reuse matching TestCore full1464/1475, identical11 failures; frozen33 verified before/after. Conditional load-overlap capture not started; independent source-safety verdict remains required. Root48 OPEN,21 zero-life/305 broad failures retained.
 - Commands, source hashes, complete metadata/stub/input/manifests and blockers: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-proof-checker-20261101-t3-ffc634df/HANDOFF.md`.
+
+### 2026-11-01 launch-bound platform corroboration, canonical disagreement
+- Added optional admitted prelaunch byte/hash receipts to the shared Editor runner; fake-Editor controls19/19. Production f26e8eb9, Generated and canonical files unchanged.
+- Root authorized one unchanged windowed GPU pair on6000.0.71f1 with private displays and hard1200/progress480 deadlines. Both exit0 on NVIDIA; OS/machine checks pass and complete555-field repeats are byte-identical.
+- Each matches551/555 canonical fields. Exact retained differences: stack.noalloc.4096.{empty,assets}.{return,written} are646 instead of577. No normalization, reference publishing/replacement or second pair.
+- Prelaunch runner/CS/assets/version/profile/spec/env receipts are bound inside each admitted lease; both copied fixtures equal the prepared engine inputs before Editor mutation. Post-mutation version bytes remain separate.
+- One isolated API-only no-stubs/entrypoint compilation passed; current-source/PDB/PE/revision/reference inputs verified. Proper source-aware API execution and delayed engine capture remain UNCONSUMED because Native corroboration failed; no runtime/Host build or managed rerun.
+- Matching full1464/1475 and exact11 failures, RNG27/trail2/sphere9/platform55 and existing497/555 exact84 unions reused. Frozen33 and old446 evidence files verified unchanged; source-safety remains separately owned. Root48 OPEN,21 zero-life/305 broad failures retained.
+- Full commands, launch bindings, all555 raw values/deltas, annotation diagnostics and limits: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-acceptance-20261101-t3-eaec5c99/FINAL-HANDOFF.md`. PLATFORM remains REJECTED; no consumable accepted runtime.
