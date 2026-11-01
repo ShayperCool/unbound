@@ -821,6 +821,8 @@ namespace DotRecast.Detour
                 }
 
                 // Make sure the location is on current mesh.
+                GetTileAndPolyByRefUnsafe(refs, out var snapTile, out var snapPoly);
+                nearestPt = ClosestPointOnDetail3D(snapTile, snapPoly, p);
                 target.data.verts[targetPoly.verts[1] * 3] = nearestPt.X;
                 target.data.verts[targetPoly.verts[1] * 3 + 1] = nearestPt.Y;
                 target.data.verts[targetPoly.verts[1] * 3 + 2] = nearestPt.Z;
@@ -995,6 +997,8 @@ namespace DotRecast.Detour
                 }
 
                 // Make sure the location is on current mesh.
+                GetTileAndPolyByRefUnsafe(refs, out var startTile, out var startPoly);
+                nearestPt = ClosestPointOnDetail3D(startTile, startPoly, p[0]);
                 tile.data.verts[poly.verts[0] * 3] = nearestPt.X;
                 tile.data.verts[poly.verts[0] * 3 + 1] = nearestPt.Y;
                 tile.data.verts[poly.verts[0] * 3 + 2] = nearestPt.Z;
@@ -1032,6 +1036,67 @@ namespace DotRecast.Detour
          * @param pos
          * @return
          */
+        /// Unbound: the point of a polygon's detail surface nearest to pos in 3D (where an
+        /// off-mesh link's end lands on the mesh; measured: its rounding shows in the link's
+        /// corners, tests/projects/navlinks).
+        RcVec3f ClosestPointOnDetail3D(DtMeshTile tile, DtPoly poly, RcVec3f pos)
+        {
+            RcVec3f best = pos;
+            float dmin = float.MaxValue;
+            if (tile.data.detailMeshes == null)
+            {
+                return best;
+            }
+
+            ref DtPolyDetail pd = ref tile.data.detailMeshes[poly.index];
+            Span<RcVec3f> v = stackalloc RcVec3f[3];
+            for (int j = 0; j < pd.triCount; ++j)
+            {
+                int t = (pd.triBase + j) * 4;
+                for (int k = 0; k < 3; ++k)
+                {
+                    int index = tile.data.detailTris[t + k] < poly.vertCount
+                        ? poly.verts[tile.data.detailTris[t + k]] * 3
+                        : -1 - (pd.vertBase + (tile.data.detailTris[t + k] - poly.vertCount)) * 3;
+                    v[k] = index >= 0
+                        ? new RcVec3f(tile.data.verts[index], tile.data.verts[index + 1], tile.data.verts[index + 2])
+                        : new RcVec3f(tile.data.detailVerts[-1 - index], tile.data.detailVerts[-index], tile.data.detailVerts[1 - index]);
+                }
+
+                RcVec3f c = ClosestPtPointTriangle(pos, v[0], v[1], v[2]);
+                float d = RcVec3f.DistanceSquared(c, pos);
+                if (d < dmin)
+                {
+                    dmin = d;
+                    best = c;
+                }
+            }
+
+            return best;
+        }
+
+        static RcVec3f ClosestPtPointTriangle(RcVec3f p, RcVec3f a, RcVec3f b, RcVec3f c)
+        {
+            RcVec3f ab = b - a, ac = c - a, ap = p - a;
+            float d1 = RcVec3f.Dot(ab, ap), d2 = RcVec3f.Dot(ac, ap);
+            if (d1 <= 0.0f && d2 <= 0.0f) return a;
+            RcVec3f bp = p - b;
+            float d3 = RcVec3f.Dot(ab, bp), d4 = RcVec3f.Dot(ac, bp);
+            if (d3 >= 0.0f && d4 <= d3) return b;
+            float vc = d1 * d4 - d3 * d2;
+            if (vc <= 0.0f && d1 >= 0.0f && d3 <= 0.0f) return a + ab * (d1 / (d1 - d3));
+            RcVec3f cp = p - c;
+            float d5 = RcVec3f.Dot(ab, cp), d6 = RcVec3f.Dot(ac, cp);
+            if (d6 >= 0.0f && d5 <= d6) return c;
+            float vb = d5 * d2 - d1 * d6;
+            if (vb <= 0.0f && d2 >= 0.0f && d6 <= 0.0f) return a + ac * (d2 / (d2 - d6));
+            float va = d3 * d6 - d5 * d4;
+            if (va <= 0.0f && (d4 - d3) >= 0.0f && (d5 - d6) >= 0.0f) return b + (c - b) * ((d4 - d3) / ((d4 - d3) + (d5 - d6)));
+            float denom = 1.0f / (va + vb + vc);
+            float vv = vb * denom, ww = vc * denom;
+            return a + ab * vv + ac * ww;
+        }
+
         RcVec3f ClosestPointOnDetailEdges(DtMeshTile tile, DtPoly poly, RcVec3f pos, bool onlyBoundary, bool in3D = false)
         {
             const int ANY_BOUNDARY_EDGE = (DtDetailTriEdgeFlags.DT_DETAIL_EDGE_BOUNDARY << 0) |
