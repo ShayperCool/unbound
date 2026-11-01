@@ -2450,3 +2450,14 @@ All thirteen affected captures match reviewed PCM/metadata exactly; both-rate su
 Introduced/retained zero; Rust audio 48/48, managed audio 19/19; Root RMS/wake/sink/thread guards preserved byte-for-byte.
 44.1k dense startup/callback lack Native oracles; reset/snapshot 2061 per rate and historical matrix raw deltas remain unclaimed. No controlled 4dd audio A/B, graphics replay or new Native capture.
 Full unions, runtime/input/compiler manifests and limits: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/audio-matching-validation-20261101-t3-174cb588/`.
+
+### Curved trail birth samples and shallow joins, 2026-11-01
+
+- Adopted d909 RNG history onto 875cfacd on the child branch; preserved Root audio/CRT/callback/flares sources and all generated stubs.
+- Reused the existing Native pair only: all 124 public records exact; full reflected storage remains REJECTED with all 530 Vector4 deltas outside Git.
+- Retained the first scheduled birth coordinate without an extra point; camera-plane sides and Native shallow miter blend close all 13 regressions. Trail raw RGBA equals Native; encoded PNG bytes differ.
+- Focused managed 2/2 and RNG 27/27; all 65/40 uint seed controls exact, same 96 inherited full-value failures; streams 3544/3544 plus 3/3 image RGBA exact.
+- One broad 1560-record/17-image run: numeric resolved1579/retained591/introduced0, original559 unchanged; randomized44 retained32/introduced0. Zero raw RGB-error worsenings across 17 images.
+- Full raw image union retains 3271 differing pixels and diagnostic over8 retains1587/introduces0; 14/17 image RGBA exact. No image pass inferred from script exit0.
+- All mesh fields pass original 2e-4 tolerance; 582 raw mesh bytes differ. Two RenderTexture flag fields remain, reproduced on frozen parent. Backing storage/GetTrails and capacity/rejected births remain unclaimed.
+- Matching 33-artifact runtime, private build/OUT_DIR/PDB receipts, full unions and limits: `~/.cache/unbound/validation/runs/particle-trail-geometry-20261101-t3-4bbbf024/HANDOFF.md`.
