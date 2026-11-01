@@ -2526,3 +2526,9 @@ Full attempts, source correction, historical capture hashes and prepared matchin
 - One isolated API-only no-stubs/entrypoint compilation passed; current-source/PDB/PE/revision/reference inputs verified. Proper source-aware API execution and delayed engine capture remain UNCONSUMED because Native corroboration failed; no runtime/Host build or managed rerun.
 - Matching full1464/1475 and exact11 failures, RNG27/trail2/sphere9/platform55 and existing497/555 exact84 unions reused. Frozen33 and old446 evidence files verified unchanged; source-safety remains separately owned. Root48 OPEN,21 zero-life/305 broad failures retained.
 - Full commands, launch bindings, all555 raw values/deltas, annotation diagnostics and limits: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-acceptance-20261101-t3-eaec5c99/FINAL-HANDOFF.md`. PLATFORM remains REJECTED; no consumable accepted runtime.
+
+### 2026-11-01 platform validation stopped on independent source review
+- Root rejects frozenf26e8eb9 after independent P2 findings: Resolve bounds recursion depth rather than total symlink follows; textual link/.. collapse can miss authored membership and clobber a sentinel. No review experiments or fixes repeated here.
+- The already-completed sole Native pair remains551/555 each with four identical canonical disagreements. No replacement pair/reference edit. Prepared API Check and delayed engine/overlap remain unexecuted; no runtime/Host rebuild or fullsuite repeat.
+- Existing same-file machine-check passes establish identity/freshness only. Both raw logical/physical consoleLogPath spelling disagreements remain game-visible and unmeasured; no string-equality claim.
+- Exact budgets, review hash, raw spellings, completed launch receipts and stop disposition: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-acceptance-20261101-t3-eaec5c99/ROOT-STOP-RECEIPT.md`. No consumable accepted runtime.
