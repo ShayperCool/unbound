@@ -138,7 +138,8 @@ namespace UnityEngine
     /// between its neighbouring effective directions (length half width / cos, at most three half
     /// widths), a joint turning by less than about 8 degrees easing its outgoing direction back;
     /// with corner vertices the outer side becomes an arc of that many steps around the inner miter
-    /// vertex at the full width. Caps are half discs of extra vertices before and after the strip.
+    /// vertex at the full width, ending on the un-eased outgoing side. Caps are half discs of extra
+    /// vertices before and after the strip.
     /// The side of a segment is cross(direction, camera position - point) projected onto the view
     /// plane (View) or cross(direction, -Z) (TransformZ).
     /// </summary>
@@ -275,6 +276,7 @@ namespace UnityEngine
                 bool hasIn = i > 0 || loop, hasOut = i < segments || loop;
                 var din = hasIn ? m_Effective[i > 0 ? i - 1 : segments - 1] : Vector3.zero;
                 var dout = hasOut ? m_Effective[i < segments ? i : 0] : Vector3.zero;
+                var arcOut = dout;
                 if (hasIn && hasOut && !loop) dout = EaseSmallTurn(din, dout);
                 if (!hasIn || !hasOut)
                 {
@@ -306,31 +308,37 @@ namespace UnityEngine
                     float reach = 0.75f * Mathf.Max(m_Zero[i - 1] ? 0f : m_Length[i - 1], m_Zero[i] ? 0f : m_Length[i]);
                     if (reach > 0f) length = Mathf.Sign(h) * Mathf.Max(Mathf.Abs(h), Mathf.Min(Mathf.Abs(length), reach));
                 }
-                float turn = Vector3.Dot(Vector3.Cross(s1, s2), normal);
-                bool aInner = turn > 0f || (turn == 0f && Vector3.Dot(s1, s2) < 0f);
+                if (corners == 0)
+                {
+                    m_Pairs.Add(new Pair { A = point - m * length, B = point + m * length, Tangent = Vector3.Cross(faceNormal, s2), U = u, Color = color });
+                    continue;
+                }
+                // The arc runs from the incoming side to the un-eased outgoing side, so that it meets
+                // the next point's pair, and turns on that side's outer side even where the eased
+                // miter is straight (measured round and TransformZ trails, positions, corner
+                // triangles and tangents). Only the miter eases.
+                var arcSide = Side(arcOut, normal, facing);
+                float turn = Vector3.Dot(Vector3.Cross(s1, arcSide), normal);
+                bool aInner = turn > 0f || (turn == 0f && Vector3.Dot(s1, arcSide) < 0f);
                 // A zero or negative width swaps the arc's fixed side (measured corner triangles,
                 // tests/projects/lines line.width.zero and line.width.negative).
                 if (h <= 0f) aInner = !aInner;
                 // A TransformZ trail's opposite face also swaps the arc's side (measured corner
                 // triangles and vertices, tests/projects/lines trail.*.transformZ).
                 if (facing.ReverseFace) aInner = !aInner;
-                if (corners == 0)
-                {
-                    m_Pairs.Add(new Pair { A = point - m * length, B = point + m * length, Tangent = Vector3.Cross(faceNormal, s2), U = u, Color = color });
-                    continue;
-                }
                 float w = 2f * h;
                 var inner = aInner ? point - m * length : point + m * length;
-                float angle = Mathf.Acos(Mathf.Clamp(Vector3.Dot(s1, s2), -1f, 1f));
-                var perp = s2 - s1 * Vector3.Dot(s1, s2);
+                // The arc uses the angle between the side directions. Even normalized float vectors
+                // can have squared length below one; dividing by their lengths keeps coincident
+                // directions at zero angle, for positions and tangents alike (measured round
+                // trails, line.dup.*.c2, line.sweep.L.c2.* and line.loop.two.c2), while retaining
+                // the face-plane tangents of spatial lines.
+                float cosine = Vector3.Dot(s1, arcSide);
+                float denominator = Mathf.Sqrt(s1.sqrMagnitude * arcSide.sqrMagnitude);
+                float angle = Mathf.Acos(Mathf.Clamp(denominator > 0f ? cosine / denominator : cosine, -1f, 1f));
+                float tangentAngle = denominator > 0f ? angle : 0f;
+                var perp = arcSide - s1 * cosine;
                 perp = perp.sqrMagnitude > 1e-12f ? perp.normalized : din;
-                // The tangent arc uses the angle between the side directions. Even normalized
-                // float vectors can have squared length below one; dividing by their lengths
-                // keeps coincident directions at zero angle (saved round-trail controls), while
-                // retaining the face-plane tangents of spatial lines. Positions keep their arc.
-                float tangentDenominator = Mathf.Sqrt(s1.sqrMagnitude * s2.sqrMagnitude);
-                float tangentAngle = tangentDenominator > 0f
-                    ? Mathf.Acos(Mathf.Clamp(Vector3.Dot(s1, s2) / tangentDenominator, -1f, 1f)) : 0f;
                 // A loop's first point keeps only the last step of its corner; the closing point has it all.
                 for (int k = loop && i == 0 ? corners : 0; k <= corners; k++)
                 {
