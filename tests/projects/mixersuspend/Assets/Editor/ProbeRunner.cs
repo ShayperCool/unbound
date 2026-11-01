@@ -38,7 +38,8 @@ public static class ProbeRunner
     {
         T("MixerEffectDefinitions").GetMethod("Refresh", F).Invoke(null, null);
         Directory.CreateDirectory("Assets/Resources");
-        foreach (string key in SuspendProbe.Cases) {
+        bool generators = Environment.GetEnvironmentVariable("SUSPEND_GENERATORS") == "1";
+        foreach (string key in generators ? new[] { "enabled", "enabled_late" } : SuspendProbe.Cases) {
             var mixer = T("AudioMixerController").GetMethod("CreateMixerControllerAtPath", F).Invoke(null,new object[]{"Assets/Resources/"+key+".mixer"});
             var serialized = new SerializedObject((UnityEngine.Object)mixer);
             var suspend = serialized.FindProperty("m_EnableSuspend");
@@ -77,7 +78,9 @@ public static class ProbeRunner
         AssetDatabase.SaveAssets();
         if(Environment.GetEnvironmentVariable("SUSPEND_LIFECYCLE_PREPARE")=="1") LifecycleRunner.PrepareAsset();
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);
-        new GameObject("SuspendProbe").AddComponent<SuspendProbe>(); Directory.CreateDirectory("Assets/Scenes");
+        var probe = new GameObject("SuspendProbe");
+        if (generators) probe.AddComponent<GeneratorProbe>(); else probe.AddComponent<SuspendProbe>();
+        Directory.CreateDirectory("Assets/Scenes");
         EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(),"Assets/Scenes/Probe.unity");
         EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene("Assets/Scenes/Probe.unity",true)};
         EditorApplication.Exit(0);

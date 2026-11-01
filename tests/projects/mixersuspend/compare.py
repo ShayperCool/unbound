@@ -195,7 +195,7 @@ if __name__ == '__main__':
     p.add_argument('--release', required=True)
     p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
     p.add_argument('--reference', type=Path)
-    p.add_argument('--profile', choices=('suspension','submission','lifecycle'), default='suspension')
+    p.add_argument('--profile', choices=('suspension','submission','lifecycle','generators'), default='suspension')
     p.add_argument('--candidate', type=Path, required=True)
     p.add_argument('--before', type=Path)
     p.add_argument('--report', type=Path, required=True)

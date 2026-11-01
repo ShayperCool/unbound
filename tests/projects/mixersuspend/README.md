@@ -117,6 +117,10 @@ preserves the missing entry separately.
 
 ## Additional stable profiles
 
+The short `--generators` control is defined in
+[GENERATOR_MEASUREMENT.md](GENERATOR_MEASUREMENT.md). It records clipless callback
+activity before and after a quiet interval, independently of the large matrices.
+
 The `--submission` runner selects the experiment defined in
 [SUBMISSION_MEASUREMENT.md](SUBMISSION_MEASUREMENT.md). Its canonical data is in
 `submission-rate-<rate>/`. The `--lifecycle` runner selects
