@@ -440,10 +440,12 @@ namespace UnityEngine
                 if (index < 0) break;
                 int si = spreadIndex >= 0 ? spreadIndex : k;
                 int sn = spreadIndex >= 0 ? spreadCount : count;
-                if (!InitParticle(ref m_Particles[index], emitter, nt, hasOverrides, ref overrides, si, sn, null, k, count) ||
-                    (simulate && !Integrate(ref m_Particles[index], preAge, ref m_Context)))
+                if (!InitParticle(ref m_Particles[index], emitter, nt, hasOverrides, ref overrides, si, sn, null, k, count))
+                { RemoveAt(index); continue; }
+                var trailBirthPosition = m_Particles[index].m_Position;
+                if (simulate && !Integrate(ref m_Particles[index], preAge, ref m_Context))
                     RemoveAt(index);
-                else StartTrail(ref m_Particles[index]);
+                else StartTrail(ref m_Particles[index], simulate ? trailBirthPosition : null);
             }
             m_Newborn = false;
         }

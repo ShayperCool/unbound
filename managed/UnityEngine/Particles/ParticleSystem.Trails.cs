@@ -26,6 +26,7 @@ namespace UnityEngine
             internal List<float> Widths;
             internal List<Color32> Colors;
             internal float WidthRandom, ColorRandom;
+            internal Vector3? BirthPosition;
         }
 
         /// <summary>Trails by id (a particle's m_TrailId − 1); null slots are free.</summary>
@@ -37,7 +38,7 @@ namespace UnityEngine
         bool TrailsEnabled => m_Trails.enabled;
 
         /// <summary>A newborn particle gets its trail (or not, by the ratio).</summary>
-        void StartTrail(ref Particle p)
+        void StartTrail(ref Particle p, Vector3? birthPosition = null)
         {
             p.m_TrailId = 0;
             if (!m_Trails.enabled) return;
@@ -58,6 +59,7 @@ namespace UnityEngine
             }
             p.m_TrailId = id + 1;
             UpdateTrailHead(ref p, trail);
+            trail.BirthPosition = birthPosition.HasValue ? TrailSpacePoint(birthPosition.Value) : null;
         }
 
         Vector3 TrailSpacePoint(Vector3 simulationPoint) =>
@@ -113,8 +115,11 @@ namespace UnityEngine
                 if (p.m_AgePercent >= 100f) continue;
                 if (trail.Points.Count == 0 || (trail.Head - trail.Points[trail.Points.Count - 1]).sqrMagnitude > minDistance * minDistance)
                 {
-                    trail.Points.Add(trail.Head);
+                    // Automatic births keep their emission coordinate in the first scheduled
+                    // sample, even when newborn integration already moved the live head.
+                    trail.Points.Add(trail.BirthPosition ?? trail.Head);
                     trail.Times.Add(m_TrailTime);
+                    trail.BirthPosition = null;
                 }
             }
             for (int id = 0; id < m_TrailList.Count; id++)

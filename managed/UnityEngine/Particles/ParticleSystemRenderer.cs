@@ -596,6 +596,8 @@ namespace UnityEngine
                             direction = points[j] - points[i];
                         var toCamera = view.Orthographic ? -view.Forward : (view.Position - points[i]).normalized;
                         var side = Vector3.Cross(direction.normalized, toCamera).normalized;
+                        // Native stores the facing offset as two camera-plane components.
+                        side = (side - view.Forward * Vector3.Dot(side, view.Forward)).normalized;
                         segmentSides.Add(side.sqrMagnitude > 0f ? side : view.Right);
                     }
                     float smoothingWidth = (trail.Ribbon ? maximumSize * T.widthOverTrail.curveMultiplier : trail.Width) * uniformScale;
@@ -621,7 +623,14 @@ namespace UnityEngine
                         {
                             var incoming = segmentSides[i - 1];
                             float denominator = 1f + Vector3.Dot(incoming, side);
-                            if (denominator > 1e-6f) side = (incoming + side) / denominator;
+                            if (denominator > 1e-6f)
+                            {
+                                // StoreLineData blends nearly parallel and reversing joins
+                                // toward the incoming side before applying the length cap.
+                                float blend = Mathf.Clamp01(50f * Mathf.Min((side - incoming).sqrMagnitude,
+                                    (side + incoming).sqrMagnitude));
+                                side = Vector3.LerpUnclamped(incoming, (incoming + side) / denominator, blend);
+                            }
                             int capSegment = Math.Max(i - 1, 1);
                             float cap = smoothingWidth > 0f ? Mathf.Max(1f, 3f * Mathf.Clamp01(
                                 (distances[capSegment] - distances[capSegment - 1]) / (2f * smoothingWidth))) : 3f;
