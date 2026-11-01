@@ -353,15 +353,20 @@ namespace UnityEngine
         /// <summary>A loop's segment directions: a zero-length segment takes the next non-zero one.</summary>
         void LoopDirections(int segments)
         {
-            for (int j = 0; j < segments; j++)
+            int first = 0;
+            while (first < segments && m_Zero[first]) first++;
+            if (first == segments)
             {
-                m_Effective[j] = m_Dir[j];
-                if (!m_Zero[j]) continue;
-                for (int k = 1; k < segments; k++)
-                {
-                    int at = (j + k) % segments;
-                    if (!m_Zero[at]) { m_Effective[j] = m_Dir[at]; break; }
-                }
+                for (int j = 0; j < segments; j++) m_Effective[j] = m_Dir[j];
+                return;
+            }
+            var next = m_Dir[first];
+            int at = first;
+            for (int remaining = segments; remaining > 0; remaining--)
+            {
+                at = at > 0 ? at - 1 : segments - 1;
+                if (!m_Zero[at]) next = m_Dir[at];
+                m_Effective[at] = next;
             }
         }
 
@@ -913,7 +918,9 @@ namespace UnityEngine
         /// and a last point that is.</summary>
         void Age(float now)
         {
-            while (m_Points.Count >= 2 && now - m_Points[1].Time > m_Time) m_Points.RemoveAt(0);
+            int expired = 0;
+            while (m_Points.Count - expired >= 2 && now - m_Points[expired + 1].Time > m_Time) expired++;
+            if (expired > 0) m_Points.RemoveRange(0, expired);
             if (m_Points.Count == 1 && now - m_Points[0].Time > m_Time) m_Points.Clear();
         }
 
