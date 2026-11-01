@@ -84,45 +84,40 @@ namespace Unbound.Runtime
         const uint GL_VENDOR = 0x1F00, GL_RENDERER = 0x1F01, GL_VERSION = 0x1F02;
         const uint GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX = 0x9047, GL_NO_ERROR = 0;
 
-        [DllImport("libEGL.so.1")] static extern IntPtr eglGetProcAddress(string name);
-        [DllImport("libEGL.so.1")] static extern bool eglInitialize(IntPtr display, out int major, out int minor);
-        [DllImport("libEGL.so.1")] static extern bool eglTerminate(IntPtr display);
-        [DllImport("libEGL.so.1")] static extern bool eglBindAPI(int api);
-        [DllImport("libEGL.so.1")] static extern IntPtr eglCreateContext(IntPtr display, IntPtr config, IntPtr share, int[] attributes);
-        [DllImport("libEGL.so.1")] static extern bool eglDestroyContext(IntPtr display, IntPtr context);
-        [DllImport("libEGL.so.1")] static extern bool eglMakeCurrent(IntPtr display, IntPtr draw, IntPtr read, IntPtr context);
+        // CoreModule disables runtime marshalling: blittable signatures and function pointers only.
+        [DllImport("libEGL.so.1")] static extern unsafe IntPtr eglGetProcAddress(byte* name);
+        [DllImport("libEGL.so.1")] static extern unsafe uint eglInitialize(IntPtr display, int* major, int* minor);
+        [DllImport("libEGL.so.1")] static extern uint eglTerminate(IntPtr display);
+        [DllImport("libEGL.so.1")] static extern uint eglBindAPI(int api);
+        [DllImport("libEGL.so.1")] static extern unsafe IntPtr eglCreateContext(IntPtr display, IntPtr config, IntPtr share, int* attributes);
+        [DllImport("libEGL.so.1")] static extern uint eglDestroyContext(IntPtr display, IntPtr context);
+        [DllImport("libEGL.so.1")] static extern uint eglMakeCurrent(IntPtr display, IntPtr draw, IntPtr read, IntPtr context);
 
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate bool QueryDevices(int max, IntPtr[] devices, out int count);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate IntPtr GetPlatformDisplay(int platform, IntPtr device, int[] attributes);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate IntPtr QueryDeviceString(IntPtr device, int name);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate IntPtr GetString(uint name);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate void GetIntegerv(uint name, out int value);
-        [UnmanagedFunctionPointer(CallingConvention.Cdecl)] delegate uint GetError();
-
-        static T Proc<T>(string name) where T : Delegate
+        static unsafe IntPtr Proc(string name)
         {
-            var address = eglGetProcAddress(name);
-            return address == IntPtr.Zero ? null : Marshal.GetDelegateForFunctionPointer<T>(address);
+            var bytes = System.Text.Encoding.ASCII.GetBytes(name + "\0");
+            fixed (byte* p = bytes) return eglGetProcAddress(p);
         }
 
-        static Gpu ReadGpu()
+        static unsafe Gpu ReadGpu()
         {
             try
             {
-                var queryDevices = Proc<QueryDevices>("eglQueryDevicesEXT");
-                var platformDisplay = Proc<GetPlatformDisplay>("eglGetPlatformDisplayEXT");
-                var deviceString = Proc<QueryDeviceString>("eglQueryDeviceStringEXT");
+                var queryDevices = (delegate* unmanaged[Cdecl]<int, IntPtr*, int*, uint>)Proc("eglQueryDevicesEXT");
+                var platformDisplay = (delegate* unmanaged[Cdecl]<int, IntPtr, int*, IntPtr>)Proc("eglGetPlatformDisplayEXT");
+                var deviceString = (delegate* unmanaged[Cdecl]<IntPtr, int, IntPtr>)Proc("eglQueryDeviceStringEXT");
                 if (queryDevices == null || platformDisplay == null) return Fail("EGL cannot list the GPUs");
-                var devices = new IntPtr[16];
-                if (!queryDevices(devices.Length, devices, out int count) || count == 0) return Fail("EGL lists no GPU");
-                for (int i = 0; i < count; i++)
+                var devices = stackalloc IntPtr[16];
+                int count;
+                if (queryDevices(16, devices, &count) == 0 || count == 0) return Fail("EGL lists no GPU");
+                for (int i = 0; i < Math.Min(count, 16); i++)
                 {
                     var gpu = ReadDevice(devices[i], platformDisplay, deviceString);
                     if (gpu != null) return gpu;
                 }
                 return Fail("no GPU makes an OpenGL 4.5 Core context");
             }
-            catch (Exception e) when (e is DllNotFoundException || e is EntryPointNotFoundException || e is MarshalDirectiveException)
+            catch (Exception e) when (e is DllNotFoundException || e is EntryPointNotFoundException)
             {
                 return Fail("libEGL is not available: " + e.Message);
             }
@@ -135,25 +130,29 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The device's OpenGL strings, from a 4.5 Core context without a surface.</summary>
-        static Gpu ReadDevice(IntPtr device, GetPlatformDisplay platformDisplay, QueryDeviceString deviceString)
+        static unsafe Gpu ReadDevice(IntPtr device, delegate* unmanaged[Cdecl]<int, IntPtr, int*, IntPtr> platformDisplay,
+            delegate* unmanaged[Cdecl]<IntPtr, int, IntPtr> deviceString)
         {
-            var display = platformDisplay(EGL_PLATFORM_DEVICE_EXT, device, new[] { EGL_NONE });
-            if (display == IntPtr.Zero || !eglInitialize(display, out _, out _)) return null;
+            int none = EGL_NONE;
+            var display = platformDisplay(EGL_PLATFORM_DEVICE_EXT, device, &none);
+            int major, minor;
+            if (display == IntPtr.Zero || eglInitialize(display, &major, &minor) == 0) return null;
             try
             {
-                if (!eglBindAPI(EGL_OPENGL_API)) return null;
-                var context = eglCreateContext(display, IntPtr.Zero, IntPtr.Zero, new[]
+                if (eglBindAPI(EGL_OPENGL_API) == 0) return null;
+                var attributes = stackalloc int[]
                 {
                     EGL_CONTEXT_MAJOR_VERSION, 4, EGL_CONTEXT_MINOR_VERSION, 5,
                     EGL_CONTEXT_OPENGL_PROFILE_MASK, EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT, EGL_NONE,
-                });
+                };
+                var context = eglCreateContext(display, IntPtr.Zero, IntPtr.Zero, attributes);
                 if (context == IntPtr.Zero) return null;
                 try
                 {
-                    if (!eglMakeCurrent(display, IntPtr.Zero, IntPtr.Zero, context)) return null;
-                    var getString = Proc<GetString>("glGetString");
-                    var getInteger = Proc<GetIntegerv>("glGetIntegerv");
-                    var getError = Proc<GetError>("glGetError");
+                    if (eglMakeCurrent(display, IntPtr.Zero, IntPtr.Zero, context) == 0) return null;
+                    var getString = (delegate* unmanaged[Cdecl]<uint, IntPtr>)Proc("glGetString");
+                    var getInteger = (delegate* unmanaged[Cdecl]<uint, int*, void>)Proc("glGetIntegerv");
+                    var getError = (delegate* unmanaged[Cdecl]<uint>)Proc("glGetError");
                     if (getString == null) return null;
                     var gpu = new Gpu
                     {
@@ -164,7 +163,8 @@ namespace Unbound.Runtime
                     if (getInteger != null && getError != null)
                     {
                         while (getError() != GL_NO_ERROR) { }
-                        getInteger(GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX, out int kib);
+                        int kib = 0;
+                        getInteger(GL_GPU_MEMORY_INFO_DEDICATED_VIDMEM_NVX, &kib);
                         if (getError() == GL_NO_ERROR && kib > 0) gpu.MemoryMb = kib / 1024;
                     }
                     eglMakeCurrent(display, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
