@@ -31,7 +31,7 @@ namespace Unbound.Runtime
                 string file = frame.GetFileName();
                 if (!string.IsNullOrEmpty(file))
                 {
-                    file = file.Replace('\\', '/');
+                    file = InProject(file.Replace('\\', '/'));
                     if (!string.IsNullOrEmpty(projectFolder) && file.StartsWith(projectFolder, StringComparison.Ordinal))
                         file = file.Substring(projectFolder.Length);
                     text.Append(" (at ").Append(file).Append(':').Append(frame.GetFileLineNumber()).Append(')');
@@ -41,11 +41,56 @@ namespace Unbound.Runtime
             return text.ToString();
         }
 
+        /// <summary>A game source path under the project's real directory, spelled under the
+        /// project path the session was given (Application.dataPath's parent), as the Editor
+        /// names the files it compiled. The compiler records the resolved directory, which differs
+        /// when the project is reached through a symbolic link.</summary>
+        static string InProject(string file)
+        {
+            string project = UnityEngine.ProjectInfo.ProjectPath?.Replace('\\', '/').TrimEnd('/');
+            if (string.IsNullOrEmpty(project)) return file;
+            string real = s_RealProject.Value;
+            if (real != null && real != project && file.StartsWith(real + "/", StringComparison.Ordinal))
+                return project + file.Substring(real.Length);
+            return file;
+        }
+
+        static readonly Lazy<string> s_RealProject = new Lazy<string>(() =>
+        {
+            string project = UnityEngine.ProjectInfo.ProjectPath;
+            return string.IsNullOrEmpty(project) ? null : RealPath(project.Replace('\\', '/').TrimEnd('/'));
+        });
+
+        /// <summary>The path with every symbolic link along it resolved.</summary>
+        static string RealPath(string path)
+        {
+            try
+            {
+                string resolved = "";
+                foreach (var part in System.IO.Path.GetFullPath(path).Split('/', StringSplitOptions.RemoveEmptyEntries))
+                {
+                    string next = resolved + "/" + part;
+                    for (int hops = 0; hops < 40; hops++)
+                    {
+                        string target = new System.IO.FileInfo(next).LinkTarget;
+                        if (target == null) break;
+                        next = System.IO.Path.GetFullPath(target, System.IO.Path.GetDirectoryName(next) ?? "/").TrimEnd('/');
+                    }
+                    resolved = next;
+                }
+                return resolved.Length == 0 ? "/" : resolved;
+            }
+            catch (Exception) { return null; }
+        }
+
         static readonly Assembly s_Engine = typeof(UnityStackTrace).Assembly;
         static readonly Assembly s_CoreLib = typeof(object).Assembly;
 
         static bool IsGameMethod(MethodBase method)
         {
+            // The engine's compiled message dispatch (lambda_method, without a declaring type)
+            // stands for the Editor's native invocation, which writes no frame.
+            if (method.DeclaringType == null) return false;
             var assembly = method.DeclaringType?.Assembly ?? method.Module.Assembly;
             if (assembly == s_Engine || assembly == s_CoreLib) return false;
             string name = assembly.GetName().Name ?? "";
