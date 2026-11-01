@@ -272,12 +272,11 @@ namespace UnityEngine
             s_Events.Clear();
             foreach (var (group, start, count) in sends)
             {
-                var callback = group.m_OnStateChanged;
-                if (callback == null) continue;
+                if (group.m_OnStateChanged == null) continue;
                 // A callback that throws ends its group's callbacks for this evaluation.
                 try
                 {
-                    for (int i = 0; i < count; i++) callback(events[start + i]);
+                    for (int i = 0; i < count; i++) group.m_OnStateChanged(events[start + i]);
                 }
                 catch (Exception e)
                 {

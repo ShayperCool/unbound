@@ -40,6 +40,26 @@ namespace Unbound.Tests
         }
 
         [Fact]
+        public void ReplacingTheCallbackTakesEffectForTheNextSphere()
+        {
+            var camera = MakeCamera(Vector3.zero);
+            var events = new List<string>();
+            var group = MakeGroup(events, "unused");
+            group.targetCamera = camera;
+            group.SetBoundingSpheres(new[] {
+                new BoundingSphere(new Vector3(0, 0, 10), 1),
+                new BoundingSphere(new Vector3(1, 0, 10), 1),
+                new BoundingSphere(new Vector3(2, 0, 10), 1),
+            });
+            group.onStateChanged = e => {
+                events.Add("old" + e.index);
+                group.onStateChanged = next => events.Add("new" + next.index);
+            };
+            CullingGroup.EvaluateForCamera(camera);
+            Assert.Equal(new[] { "old0", "new1", "new2" }, events);
+        }
+
+        [Fact]
         public void BandsAndFrustumPlanesDecideTheStateAndChangesSendCallbacks()
         {
             var camera = MakeCamera(Vector3.zero);
