@@ -282,6 +282,13 @@ namespace UnityEngine
                     length = h / Mathf.Max(Vector3.Dot(m, s1), 1f / MiterLimit);
                 }
                 if (m_NoMiter[i]) length = h;
+                else if (i > 0 && i < segments && Mathf.Abs(length) > Mathf.Abs(h))
+                {
+                    // A miter reaches at most three quarters of the longer neighbouring segment,
+                    // never inside the half width (measured, line.sweep.Z and line.sweep.repeat).
+                    float reach = 0.75f * Mathf.Max(m_Zero[i - 1] ? 0f : m_Length[i - 1], m_Zero[i] ? 0f : m_Length[i]);
+                    if (reach > 0f) length = Mathf.Sign(h) * Mathf.Max(Mathf.Abs(h), Mathf.Min(Mathf.Abs(length), reach));
+                }
                 float turn = Vector3.Dot(Vector3.Cross(s1, s2), normal);
                 bool aInner = turn > 0f || (turn == 0f && Vector3.Dot(s1, s2) < 0f);
                 // A zero or negative width swaps the arc's fixed side (measured corner triangles,
