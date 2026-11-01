@@ -24,7 +24,9 @@ namespace UnityEngine.SceneManagement
             get => Data?.Name;
             set { if (Data != null) Data.Name = value; }
         }
-        public bool isLoaded => Data?.IsLoaded ?? false;
+        /// <summary>Not yet while the scene's objects wake up and the scene is processed
+        /// (measured: tests/projects/editorcallbacks).</summary>
+        public bool isLoaded => Data != null && Data.IsLoaded && Data.LoadingState != LoadingState.Loading;
         public int buildIndex => Data?.BuildIndex ?? -1;
         public bool isDirty => Data?.IsDirty ?? false;
         public int dirtyID => 0;
@@ -44,7 +46,8 @@ namespace UnityEngine.SceneManagement
         {
             if (rootGameObjects == null) throw new ArgumentNullException(nameof(rootGameObjects));
             if (!IsValid()) throw new ArgumentException("The scene is invalid.");
-            if (!isLoaded) throw new ArgumentException("The scene is not loaded.");
+            // A loading scene lists its roots to the scene processors (measured: tests/projects/editorcallbacks).
+            if (!Data.IsLoaded) throw new ArgumentException("The scene is not loaded.");
             rootGameObjects.Clear();
             foreach (var go in Data.Roots)
                 if (!go.m_Destroyed) rootGameObjects.Add(go);
@@ -404,10 +407,14 @@ namespace UnityEngine.SceneManagement
             }
             SceneRegistry.Loaded.Add(data);
             data.IsLoaded = true;
+            data.LoadingState = Scene.LoadingState.Loading;
             var previousActive = SceneRegistry.Active;
             if (parameters.loadSceneMode == LoadSceneMode.Single || previousActive == null)
                 SceneRegistry.Active = data;
             SceneLoader.LoadInto(data);
+            // Play mode processes the loaded scene after its objects woke up (measured:
+            // tests/projects/editorcallbacks); Edit mode opens scenes unprocessed.
+            if (Unbound.Runtime.EditorSession.IsPlaying) UnityEditor.EditorInitialization.ProcessScene(new Scene(data.Handle));
             data.LoadingState = Scene.LoadingState.Loaded;
             if (parameters.loadSceneMode == LoadSceneMode.Single) Time.LevelLoaded();
             SceneManager.Internal_SceneLoaded(new Scene(data.Handle), parameters.loadSceneMode);
