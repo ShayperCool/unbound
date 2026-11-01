@@ -38,10 +38,21 @@ ref = a.reference or ROOT/'Reference'/('unity-'+a.release)/('manifolds.json' if 
 if a.contact_inputs and not a.reference: ref = ROOT.parent/'query2dties/Reference'/('unity-'+a.release+'.json')
 tolerance = 0 if a.exact else 1e-3
 reference = c.load(ref)
-result = c.compare(reference, c.load(a.candidate), tolerance)
-if a.baseline: result = c.changes(c.compare(reference, c.load(a.baseline), tolerance), result)
+candidate = c.load(a.candidate)
+result = c.compare(reference, candidate, tolerance)
+result['newly_missing'] = []
+if a.baseline:
+    baseline = c.load(a.baseline)
+    result = c.changes(c.compare(reference, baseline, tolerance), result)
+    # Losing an observation is a regression even if its earlier numeric value failed.
+    result['newly_missing'] = [
+        {'scenario': scenario, 'key': key, 'reference': expected,
+         'baseline': baseline[scenario][key]}
+        for scenario, values in reference.items() for key, expected in values.items()
+        if key in baseline.get(scenario, {}) and key not in candidate.get(scenario, {})]
 result['inputs_sha256'] = {str(f.resolve()):c.sha(f) for f in [ref, a.candidate]+([a.baseline] if a.baseline else [])}
 a.output.parent.mkdir(parents=True, exist_ok=True)
 a.output.write_text(json.dumps(result, indent=2)+'\n')
 c.describe('contact pair order', result)
-raise SystemExit(bool(result['introduced'] if a.baseline else result['failures']))
+raise SystemExit(bool(result['newly_missing'] or
+                      (result['introduced'] if a.baseline else result['failures'])))
