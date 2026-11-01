@@ -133,6 +133,23 @@ class FakeEditorTest(unittest.TestCase):
         self.assertEqual(json.loads((self.out/er.RESULT).read_text())['exit_code'], 0)
         self.assertIsNone(er.result_problem(self.out))
 
+    def test_launch_receipt_precedes_editor_and_preserves_input_bytes(self):
+        import base64
+        import hashlib
+        version = self.project/'ProjectVersion.txt'
+        version.write_bytes(b'm_EditorVersion: selected\n')
+        result = self.supervise('clean', hub=False, launch_inputs={
+            'release': 'selected', 'paths': {'version': str(version)}})
+        receipt = json.loads((self.out/'prelaunch-inputs.json').read_text())
+        saved = receipt['files']['version']
+        self.assertEqual(base64.b64decode(saved['bytes_base64']), version.read_bytes())
+        self.assertEqual(saved['sha256'], hashlib.sha256(version.read_bytes()).hexdigest())
+        self.assertEqual(receipt['selected_release'], 'selected')
+        self.assertLessEqual(receipt['recorded'], (self.root/'editor.log').stat().st_mtime)
+        self.assertEqual(result['exit_code'], 0)
+        version.write_text('Editor mutation')
+        self.assertEqual(base64.b64decode(saved['bytes_base64']), b'm_EditorVersion: selected\n')
+
     def test_shutdown_guard_kills_the_group_but_not_licensing(self):
         result = self.supervise('hang-after-shutdown')
         self.assertEqual(result['forced_exit'], 'shutdown-guard')

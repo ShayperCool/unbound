@@ -45,30 +45,71 @@ namespace UnityEngine
             return Environment.MachineName;
         });
 
-        /// <summary>The GPU's name, reported by the renderer at start.</summary>
-        internal static string s_GraphicsDeviceName = "Unbound wgpu";
-        internal static string s_GraphicsDeviceVendor = "Unbound";
+        static Unbound.Runtime.MachineIdentity.Gpu Gpu => Unbound.Runtime.MachineIdentity.Graphics;
 
-        /// <summary>The Linux Editor reads no battery (-1, Unknown); the macOS Editor reads the
-        /// laptop's, which Unbound does not yet.</summary>
-        public static float batteryLevel { get { if (OperatingSystem.IsMacOS()) Unbound.Runtime.Stubs.Ignored("SystemInfo.batteryLevel", "is not read from the machine yet"); return -1f; } }
-        public static BatteryStatus batteryStatus { get { if (OperatingSystem.IsMacOS()) Unbound.Runtime.Stubs.Ignored("SystemInfo.batteryStatus", "is not read from the machine yet"); return BatteryStatus.Unknown; } }
-        /// <summary>As the Editor words it: <c>Mac OS X 15.3.1</c>, <c>Linux 6.8.0 64bit</c>.</summary>
+        /// <summary>The Linux Editor on a machine without a battery answers -1 and Full; a
+        /// battery's own state (Linux laptops, macOS) is not read yet.</summary>
+        public static float batteryLevel { get { WarnBattery(); return -1f; } }
+        public static BatteryStatus batteryStatus { get { WarnBattery(); return BatteryStatus.Full; } }
+
+        static readonly Lazy<bool> s_HasBattery = new Lazy<bool>(() =>
+        {
+            if (OperatingSystem.IsMacOS()) return true;
+            try
+            {
+                foreach (var supply in Directory.GetDirectories("/sys/class/power_supply"))
+                    if (File.Exists(Path.Combine(supply, "type")) && File.ReadAllText(Path.Combine(supply, "type")).Trim() == "Battery") return true;
+            }
+            catch (Exception) { }
+            return false;
+        });
+
+        static void WarnBattery()
+        {
+            if (s_HasBattery.Value) Unbound.Runtime.Stubs.Ignored("SystemInfo.batteryLevel/batteryStatus", "do not read the battery yet: they answer -1 and Full, as for a machine without one");
+        }
+
+        /// <summary>As the Editor words it: <c>Mac OS X 15.3.1</c>, <c>Linux 7.0 Ubuntu 26.04 64bit</c>
+        /// (measured: tests/projects/appfacts).</summary>
         public static string operatingSystem => OperatingSystem.IsMacOS()
             ? $"Mac OS X {Environment.OSVersion.Version.ToString(3)}"
-            : $"Linux {Environment.OSVersion.Version} {Environment.Is64BitOperatingSystem switch { true => "64bit", false => "32bit" }}";
+            : Unbound.Runtime.MachineIdentity.LinuxOperatingSystem();
         public static OperatingSystemFamily operatingSystemFamily =>
             OperatingSystem.IsMacOS() ? OperatingSystemFamily.MacOSX :
             OperatingSystem.IsWindows() ? OperatingSystemFamily.Windows : OperatingSystemFamily.Linux;
         public static string processorType => s_Processor.Value;
         public static string processorModel => s_Processor.Value;
-        public static string processorManufacturer { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.processorManufacturer", "is not read from the machine yet: it answers \"\""); return ""; } }
-        public static int processorFrequency { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.processorFrequency", "is not read from the machine yet: it answers 0"); return 0; } }
+        /// <summary>/proc/cpuinfo's vendor_id (<c>AuthenticAMD</c>, <c>GenuineIntel</c>).</summary>
+        public static string processorManufacturer
+        {
+            get
+            {
+                var vendor = OperatingSystem.IsLinux() ? Unbound.Runtime.MachineIdentity.CpuField("vendor_id") : null;
+                if (vendor == null) Unbound.Runtime.Stubs.Ignored("SystemInfo.processorManufacturer", "is not read on this OS: it answers \"\"");
+                return vendor ?? "";
+            }
+        }
+
+        /// <summary>The first processor's clock when first asked, in whole MHz (/proc/cpuinfo's
+        /// "cpu MHz", which follows frequency scaling).</summary>
+        public static int processorFrequency
+        {
+            get
+            {
+                var mhz = OperatingSystem.IsLinux() ? Unbound.Runtime.MachineIdentity.CpuField("cpu MHz") : null;
+                if (mhz != null && double.TryParse(mhz, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out double value))
+                    return (int)value;
+                Unbound.Runtime.Stubs.Ignored("SystemInfo.processorFrequency", "is not read on this machine: it answers 0");
+                return 0;
+            }
+        }
         public static int processorCount => Environment.ProcessorCount;
         public static int systemMemorySize => s_MemoryMb.Value;
         public static string deviceUniqueIdentifier => s_DeviceId.Value;
         public static string deviceName => Environment.MachineName;
-        public static string deviceModel { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.deviceModel", "is not read from the machine yet: it answers \"PC\""); return "PC"; } }
+        /// <summary>"PC" on Linux (measured: tests/projects/appfacts); the macOS Editor's hardware
+        /// model is not read yet.</summary>
+        public static string deviceModel { get { if (OperatingSystem.IsMacOS()) Unbound.Runtime.Stubs.Ignored("SystemInfo.deviceModel", "is not read on macOS yet: it answers \"PC\""); return "PC"; } }
         public static DeviceType deviceType => DeviceType.Desktop;
         [Unbound.EditorFaithful("measured: tests/projects/platform")]
         public static bool supportsAccelerometer => false;
@@ -80,15 +121,16 @@ namespace UnityEngine
         public static bool supportsVibration => false;
         [Unbound.EditorFaithful("the Editor plays audio")]
         public static bool supportsAudio => true;
-        public static int graphicsMemorySize { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.graphicsMemorySize", "is not read from the GPU yet: it answers 4096"); return 4096; } }
-        public static string graphicsDeviceName => s_GraphicsDeviceName;
-        public static string graphicsDeviceVendor => s_GraphicsDeviceVendor;
-        public static int graphicsDeviceID { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.graphicsDeviceID", "is not read from the GPU yet: it answers 0"); return 0; } }
-        public static int graphicsDeviceVendorID { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.graphicsDeviceVendorID", "is not read from the GPU yet: it answers 0"); return 0; } }
+        // The GPU as the Editor's OpenGL device names it (Unbound.Runtime.MachineIdentity).
+        public static int graphicsMemorySize => Gpu?.MemoryMb ?? 0;
+        public static string graphicsDeviceName => Gpu?.Name ?? "Unbound wgpu";
+        public static string graphicsDeviceVendor => Gpu?.Vendor ?? "Unbound";
+        public static int graphicsDeviceID => Gpu?.DeviceId ?? 0;
+        public static int graphicsDeviceVendorID => Gpu?.VendorId ?? 0;
         public static GraphicsDeviceType graphicsDeviceType => GraphicsDeviceType.OpenGLCore;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static bool graphicsUVStartsAtTop => false;
-        public static string graphicsDeviceVersion { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.graphicsDeviceVersion", "names no GPU driver yet: it answers \"OpenGL 4.5.0 (Unbound)\""); return "OpenGL 4.5.0 (Unbound)"; } }
+        public static string graphicsDeviceVersion => Gpu?.Version ?? "OpenGL 4.5.0 (Unbound)";
         [Unbound.EditorFaithful("the Editor's OpenGLCore 4.5 device is shader level 5.0")]
         public static int graphicsShaderLevel => 50;
         [Unbound.EditorFaithful("measured renderingThreadingMode is Direct (tests/projects/urp CapsProbe): no render thread")]
