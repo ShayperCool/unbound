@@ -33,7 +33,7 @@ public class SeedAxisProbe : MonoBehaviour
         main.startLifetime = 2.013f; main.startSpeed = 1f;
         main.startSize3D = false; main.startSize = .75f;
         main.startRotation3D = false; main.startRotation = .3f; main.flipRotation = 0f;
-        main.startColor = new Color32(192, 128, 224, 200); main.gravityModifier = 0f;
+        main.startColor = (Color)new Color32(192, 128, 224, 200); main.gravityModifier = 0f;
         var shape = ps.shape; shape.enabled = false;
         var emission = ps.emission; emission.enabled = true;
         emission.rateOverTime = 0f; emission.rateOverDistance = 0f;
