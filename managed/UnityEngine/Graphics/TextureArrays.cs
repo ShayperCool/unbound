@@ -236,7 +236,7 @@ namespace UnityEngine
 
         /// <summary>To the renderer: RGBA bytes (single channels sampled as (r, 0, 0, 1) and
         /// (0, 0, 0, a)), or floats for HDR formats.</summary>
-        internal unsafe void Upload(ulong handle, bool linear, FilterMode filter, TextureWrapMode wrapU, TextureWrapMode wrapV, int aniso,
+        internal unsafe void Upload(ulong handle, bool linear, FilterMode filter, TextureWrapMode wrapU, TextureWrapMode wrapV, TextureWrapMode wrapW, int aniso,
             TextureDimension? dimension = null)
         {
             bool hdr = Hdr;
@@ -283,6 +283,7 @@ namespace UnityEngine
                     FilterMode = (int)filter,
                     WrapU = (int)wrapU,
                     WrapV = (int)wrapV,
+                    WrapW = (int)wrapW,
                     AnisoLevel = aniso,
                     Layers = Layers,
                     Dimension = (int)(dimension ?? (Volume ? TextureDimension.Tex3D : TextureDimension.Tex2DArray)),
@@ -364,14 +365,14 @@ namespace UnityEngine
             return new Serialized(format, srgb, body.Bool("m_IsReadable"), Math.Max(1, body.Int("m_MipCount", 1)), data);
         }
 
-        /// <summary>An imported texture's images, mips, wrapW and mip bias (<c>texture-layers</c>).</summary>
-        internal static (int Layers, int Mips, int WrapW, float MipBias) ImportedLayers(string guid)
+        /// <summary>An imported texture's images, mips and mip bias (<c>texture-layers</c>).</summary>
+        internal static (int Layers, int Mips, float MipBias) ImportedLayers(string guid)
         {
             var json = Native.Call("texture-layers", JsonSerializer.Serialize(new { guid }));
             using var doc = JsonDocument.Parse(json);
             var root = doc.RootElement;
             return (root.GetProperty("layers").GetInt32(), root.GetProperty("mipCount").GetInt32(),
-                root.GetProperty("wrapW").GetInt32(), root.GetProperty("mipBias").GetSingle());
+                root.GetProperty("mipBias").GetSingle());
         }
 
         /// <summary>The CPU copy of an imported readable texture, each image's levels from the
@@ -536,7 +537,7 @@ namespace UnityEngine
             var pixels = Pixels("Texture2DArray.Apply");
             if (updateMipmaps) pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
-            pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel);
+            pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, wrapModeW, anisoLevel);
             if (mipMapBias != 0f) EmitSamplerMetadata();
             updateCount++;
             if (makeNoLongerReadable)
@@ -563,7 +564,7 @@ namespace UnityEngine
             if (read.Data == null) return;
             var pixels = new LayeredPixels(m_Width, m_Height, m_Depth, m_MipCount, false, m_Format, read.Data);
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
-            pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel);
+            pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, wrapModeW, anisoLevel);
             if (mipMapBias != 0f) EmitSamplerMetadata();
             m_Pixels = m_Readable ? pixels : null;
         }
@@ -575,7 +576,7 @@ namespace UnityEngine
             Texture2DArray texture;
             using (ObjectRegistry.AsAssets())
                 texture = new Texture2DArray { m_Name = name, IsPersistentAsset = true };
-            var (layers, mips, wrapW, mipBias) = LayeredTextures.ImportedLayers(guid);
+            var (layers, mips, mipBias) = LayeredTextures.ImportedLayers(guid);
             texture.m_NativeHandle = handle;
             texture.m_AssetGuid = guid;
             texture.m_Width = info.Width;
@@ -592,7 +593,7 @@ namespace UnityEngine
                 _ => TextureFormat.RGBA32,
             };
             texture.SetSamplerQuietly((FilterMode)info.FilterMode, (TextureWrapMode)info.WrapU, (TextureWrapMode)info.WrapV,
-                (TextureWrapMode)wrapW, info.AnisoLevel, mipBias);
+                (TextureWrapMode)info.WrapW, info.AnisoLevel, mipBias);
             texture.ReadSamplerMetadata();
             return texture;
         }
@@ -696,7 +697,7 @@ namespace UnityEngine
             if (!m_Readable || m_Pixels == null) throw new UnityException($"Texture '{name}' is not readable.");
             if (updateMipmaps) m_Pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
-            m_Pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel, TextureDimension.CubeArray);
+            m_Pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, wrapModeW, anisoLevel, TextureDimension.CubeArray);
             if (mipMapBias != 0f) EmitSamplerMetadata();
             updateCount++;
             if (makeNoLongerReadable)
@@ -723,7 +724,7 @@ namespace UnityEngine
             if (read.Data == null) return;
             var pixels = new LayeredPixels(m_Width, m_Width, m_Count * 6, m_MipCount, false, m_Format, read.Data);
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
-            pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel, TextureDimension.CubeArray);
+            pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, wrapModeW, anisoLevel, TextureDimension.CubeArray);
             if (mipMapBias != 0f) EmitSamplerMetadata();
             m_Pixels = m_Readable ? pixels : null;
         }
@@ -841,7 +842,7 @@ namespace UnityEngine
             var pixels = Level("Texture3D.Apply", 0);
             if (updateMipmaps) pixels.BuildMips();
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
-            pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel);
+            pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, wrapModeW, anisoLevel);
             if (mipMapBias != 0f) EmitSamplerMetadata();
             updateCount++;
             if (makeNoLongerReadable)
@@ -868,7 +869,7 @@ namespace UnityEngine
             if (read.Data == null) return;
             var pixels = new LayeredPixels(m_Width, m_Height, m_Depth, m_MipCount, true, m_Format, read.Data);
             if (m_NativeHandle == 0) m_NativeHandle = RenderHandles.Next();
-            pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, anisoLevel);
+            pixels.Upload(m_NativeHandle, m_Linear, filterMode, wrapModeU, wrapModeV, wrapModeW, anisoLevel);
             if (mipMapBias != 0f) EmitSamplerMetadata();
             m_Pixels = m_Readable ? pixels : null;
         }
@@ -880,7 +881,7 @@ namespace UnityEngine
             Texture3D texture;
             using (ObjectRegistry.AsAssets())
                 texture = new Texture3D { m_Name = name, IsPersistentAsset = true };
-            var (layers, mips, wrapW, mipBias) = LayeredTextures.ImportedLayers(guid);
+            var (layers, mips, mipBias) = LayeredTextures.ImportedLayers(guid);
             texture.m_NativeHandle = handle;
             texture.m_AssetGuid = guid;
             texture.m_Width = info.Width;
@@ -897,7 +898,7 @@ namespace UnityEngine
                 _ => TextureFormat.RGBA32,
             };
             texture.SetSamplerQuietly((FilterMode)info.FilterMode, (TextureWrapMode)info.WrapU, (TextureWrapMode)info.WrapV,
-                (TextureWrapMode)wrapW, info.AnisoLevel, mipBias);
+                (TextureWrapMode)info.WrapW, info.AnisoLevel, mipBias);
             texture.ReadSamplerMetadata();
             return texture;
         }

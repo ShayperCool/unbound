@@ -249,6 +249,70 @@ public class TextureArrayProbe : MonoBehaviour
         Record("PixelsImported", imported);
     }
 
+    string SampleVolume(Texture3D volume, float z)
+    {
+        volumeMaterial.SetFloat("_Z", z);
+        volumeMaterial.SetFloat("_Lod", 0);
+        var rt = RenderTexture.GetTemporary(volume.width, volume.height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear);
+        var previous = RenderTexture.active;
+        try
+        {
+            Graphics.Blit(null, rt, volumeMaterial);
+            RenderTexture.active = rt;
+            var read = new Texture2D(volume.width, volume.height, TextureFormat.RGBA32, false, true);
+            read.ReadPixels(new Rect(0, 0, volume.width, volume.height), 0, 0, false);
+            read.Apply(false);
+            var result = Bytes(read.GetPixels32());
+            Destroy(read);
+            return result;
+        }
+        finally
+        {
+            RenderTexture.active = previous;
+            RenderTexture.ReleaseTemporary(rt);
+        }
+    }
+
+    /// <summary>One bound Texture3D whose wrapModeW changes Repeat, Clamp, Repeat, then Clamp with an
+    /// Apply and Repeat again: each state samples depths beyond the volume (slices 5 and -2 of 4).</summary>
+    void LiveWrapW()
+    {
+        var volume = new Texture3D(4, 4, 4, TextureFormat.RGBA32, false);
+        var data = new byte[4 * 4 * 4 * 4];
+        for (int i = 0; i < 64; i++)
+        {
+            int z = i / 16;
+            data[i * 4] = (byte)(40 + 60 * z);
+            data[i * 4 + 1] = (byte)(i * 13 & 255);
+            data[i * 4 + 2] = (byte)(255 - 50 * z);
+            data[i * 4 + 3] = 255;
+        }
+        volume.SetPixelData(data, 0);
+        volume.filterMode = FilterMode.Point;
+        volume.wrapModeU = TextureWrapMode.Clamp;
+        volume.wrapModeV = TextureWrapMode.Clamp;
+        volume.wrapModeW = TextureWrapMode.Repeat;
+        volume.Apply(false);
+        volumeMaterial.SetTexture("_Vol", volume);
+        string size = volume.width + "x" + volume.height;
+        void Sample(string state)
+        {
+            foreach (int slice in new[] { 5, -2 })
+                Value("LiveWrapW." + state + ".sample" + slice, size, () => SampleVolume(volume, (slice + 0.5f) / 4f));
+        }
+        Sample("repeat");
+        volume.wrapModeW = TextureWrapMode.Clamp;
+        Sample("clamp");
+        volume.wrapModeW = TextureWrapMode.Repeat;
+        Sample("repeatAgain");
+        volume.wrapModeW = TextureWrapMode.Clamp;
+        volume.Apply(false);
+        Sample("clampApplied");
+        volume.wrapModeW = TextureWrapMode.Repeat;
+        Sample("repeatAfterApply");
+        Add("LiveWrapW.wrapModeW", volume.wrapModeW.ToString());
+    }
+
     Texture2D Make(TextureFormat format, bool mips, bool linear)
     {
         var t = new Texture2D(Size, Size, format, mips, linear);
@@ -286,6 +350,7 @@ public class TextureArrayProbe : MonoBehaviour
             Assets();
             ImportedCube("CubeStrip");
             ImportedCube("CubeStripLinear");
+            LiveWrapW();
             var path = Environment.GetEnvironmentVariable("TEXTURE_PIXELS_PROBE_OUT");
             if (!string.IsNullOrEmpty(path))
             {

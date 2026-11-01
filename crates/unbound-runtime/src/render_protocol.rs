@@ -159,6 +159,8 @@ pub struct TexturePacket {
     pub layers: i32,
     /// Unity's TextureDimension (2 2D, 3 3D, 4 cube, 5 2D array).
     pub dimension: i32,
+    /// Unity's TextureWrapMode along W, the depth of a Texture3D (`NativeApi` 14).
+    pub wrap_w: i32,
 }
 
 #[repr(C)]
@@ -179,6 +181,8 @@ pub struct ImportedTextureInfo {
     /// TextureDimension: 2 a 2D texture, 3 a Texture3D, 4 a cubemap, 5 a Texture2DArray (an
     /// array's slices and a volume's depth come from the `texture-layers` JSON call).
     pub dimension: i32,
+    /// The importer's `wrapW` (`NativeApi` 14).
+    pub wrap_w: i32,
 }
 
 #[repr(C)]
@@ -272,6 +276,8 @@ pub mod owned {
         pub filter_mode: i32,
         pub wrap_u: i32,
         pub wrap_v: i32,
+        /// TextureWrapMode along W: only a Texture3D's samples use it.
+        pub wrap_w: i32,
         pub aniso_level: i32,
         pub render_target: bool,
         /// A render target kernels write (RenderTexture.enableRandomWrite).
@@ -300,6 +306,7 @@ pub mod owned {
                 filter_mode: p.filter_mode,
                 wrap_u: p.wrap_u,
                 wrap_v: p.wrap_v,
+                wrap_w: p.wrap_w,
                 aniso_level: p.aniso_level,
                 render_target: p.render_target & 1 != 0,
                 random_write: p.render_target & 2 != 0,
@@ -531,7 +538,7 @@ pub trait RenderBackend: Send + Sync {
     fn upload_texture(&self, handle: u64, texture: owned::Texture);
     /// Sampler metadata delivered separately from the ABI-stable texture packet.
     fn texture_mip_bias(&self, _handle: u64, _bias: f32) {}
-    fn texture_sampler(&self, _handle: u64, _properties: [i32; 4]) {}
+    fn texture_sampler(&self, _handle: u64, _properties: [i32; 5]) {}
     fn release_texture(&self, handle: u64);
     fn update_material(&self, handle: u64, material: owned::Material);
     fn release_material(&self, handle: u64);

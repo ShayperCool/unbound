@@ -225,6 +225,8 @@ pub struct SamplerKey {
     pub filter: i32,
     pub wrap_u: i32,
     pub wrap_v: i32,
+    /// Along W (a Texture3D's depth); samplers that are not a texture's own repeat there.
+    pub wrap_w: i32,
     pub aniso: i32,
     /// A comparison sampler's function (Unity's CompareFunction; 0: none).
     pub compare: i32,
@@ -262,7 +264,7 @@ pub fn create_sampler(device: &wgpu::Device, key: SamplerKey) -> wgpu::Sampler {
         label: Some("unbound texture sampler"),
         address_mode_u: wrap(key.wrap_u),
         address_mode_v: wrap(key.wrap_v),
-        address_mode_w: wgpu::AddressMode::Repeat,
+        address_mode_w: wrap(key.wrap_w),
         mag_filter: mag,
         min_filter: mag,
         mipmap_filter: mip,
@@ -516,6 +518,7 @@ pub fn upload_texture(
         filter: t.filter_mode,
         wrap_u: t.wrap_u,
         wrap_v: t.wrap_v,
+        wrap_w: t.wrap_w,
         aniso: t.aniso_level,
         compare: 0,
         lod_bias_bits: 0,
@@ -824,6 +827,7 @@ pub fn default_textures(
         filter_mode: 1,
         wrap_u: 0,
         wrap_v: 0,
+        wrap_w: 0,
         aniso_level: 1,
         render_target: false,
         random_write: false,

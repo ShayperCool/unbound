@@ -443,6 +443,7 @@ namespace UnityEngine
                     FilterMode = (int)filterMode,
                     WrapU = (int)wrapModeU,
                     WrapV = (int)wrapModeV,
+                    WrapW = (int)wrapModeW,
                     AnisoLevel = anisoLevel,
                 };
                 UploadTexture(&packet);
@@ -473,6 +474,7 @@ namespace UnityEngine
                     FilterMode = (int)filterMode,
                     WrapU = (int)wrapModeU,
                     WrapV = (int)wrapModeV,
+                    WrapW = (int)wrapModeW,
                     AnisoLevel = anisoLevel,
                 };
                 UploadTexture(&packet);
@@ -491,6 +493,7 @@ namespace UnityEngine
                 FilterMode = (int)filterMode,
                 WrapU = (int)wrapModeU,
                 WrapV = (int)wrapModeV,
+                WrapW = (int)wrapModeW,
                 AnisoLevel = anisoLevel,
             };
             UploadTexture(&packet);
@@ -519,6 +522,7 @@ namespace UnityEngine
                         FilterMode = (int)filterMode,
                         WrapU = (int)wrapModeU,
                         WrapV = (int)wrapModeV,
+                        WrapW = (int)wrapModeW,
                         AnisoLevel = anisoLevel,
                     };
                     UploadTexture(&packet);
@@ -538,6 +542,7 @@ namespace UnityEngine
                     FilterMode = (int)filterMode,
                     WrapU = (int)wrapModeU,
                     WrapV = (int)wrapModeV,
+                    WrapW = (int)wrapModeW,
                     AnisoLevel = anisoLevel,
                 };
                 UploadTexture(&packet);
@@ -565,6 +570,7 @@ namespace UnityEngine
                 9 => TextureFormat.RGBAFloat,
                 _ => TextureFormat.RGBA32,
             };
+            texture.m_WrapModeW = (TextureWrapMode)info.WrapW;
             texture.filterMode = (FilterMode)info.FilterMode;
             texture.wrapModeU = (TextureWrapMode)info.WrapU;
             texture.wrapModeV = (TextureWrapMode)info.WrapV;

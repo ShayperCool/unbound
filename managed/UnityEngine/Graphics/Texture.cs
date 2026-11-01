@@ -15,7 +15,7 @@ namespace UnityEngine
         FilterMode m_FilterMode = FilterMode.Bilinear;
         TextureWrapMode m_WrapModeU = TextureWrapMode.Repeat;
         TextureWrapMode m_WrapModeV = TextureWrapMode.Repeat;
-        TextureWrapMode m_WrapModeW = TextureWrapMode.Repeat;
+        internal TextureWrapMode m_WrapModeW = TextureWrapMode.Repeat;
         int m_AnisoLevel = 1;
         float m_MipMapBias;
 
@@ -67,11 +67,11 @@ namespace UnityEngine
             Unbound.Runtime.GfxStream.Flush();
             Unbound.Runtime.Native.Call("texture-sampling-properties", System.Text.Json.JsonSerializer.Serialize(
                 new { handle = m_NativeHandle, filterMode = (int)m_FilterMode,
-                    wrapU = (int)m_WrapModeU, wrapV = (int)m_WrapModeV, anisoLevel = m_AnisoLevel }));
+                    wrapU = (int)m_WrapModeU, wrapV = (int)m_WrapModeV, wrapW = (int)m_WrapModeW, anisoLevel = m_AnisoLevel }));
         }
 
-        // Sampler metadata uses the JSON control channel; the native texture packet layout stays
-        // unchanged. Initial quiet sampler state must be sent when its first handle is uploaded.
+        // The mip bias uses the JSON control channel, outside the texture packet. Initial quiet
+        // sampler state must be sent when its first handle is uploaded.
         internal unsafe void UploadTexture(TexturePacket* packet)
         {
             Unbound.Runtime.Native.UploadTexture(m_NativeHandle, packet);
