@@ -1,0 +1,61 @@
+#pragma kernel Append
+#pragma kernel Consume
+#pragma kernel Count
+#pragma kernel Uncount
+#pragma kernel Groups
+#pragma kernel AppendPair
+
+AppendStructuredBuffer<uint> _Append;
+ConsumeStructuredBuffer<uint> _Consume;
+AppendStructuredBuffer<uint2> _AppendPair;
+RWStructuredBuffer<uint> _Counter;
+RWStructuredBuffer<uint> _Out;
+uint _Modulo;
+uint _Base;
+
+// Threads whose index is a multiple of _Modulo append index + _Base.
+[numthreads(64, 1, 1)]
+void Append(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x % _Modulo == 0)
+        _Append.Append(id.x + _Base);
+}
+
+// Each thread consumes one element into _Out[thread].
+[numthreads(8, 1, 1)]
+void Consume(uint3 id : SV_DispatchThreadID)
+{
+    _Out[id.x] = _Consume.Consume();
+}
+
+// Each thread increments the hidden counter and writes at the index it returns.
+[numthreads(16, 1, 1)]
+void Count(uint3 id : SV_DispatchThreadID)
+{
+    uint i = _Counter.IncrementCounter();
+    _Counter[i] = id.x + _Base;
+}
+
+// Each thread decrements the hidden counter and records the value it returns.
+[numthreads(4, 1, 1)]
+void Uncount(uint3 id : SV_DispatchThreadID)
+{
+    _Out[id.x] = _Counter.DecrementCounter() + _Base;
+}
+
+// One thread per group: _Out[0] counts the groups, _Out[1 + x + 4y + 16z] marks each one.
+[numthreads(1, 1, 1)]
+void Groups(uint3 gid : SV_GroupID)
+{
+    uint cell = 1 + gid.x + gid.y * 4 + gid.z * 16;
+    InterlockedAdd(_Out[0], 1);
+    _Out[cell] = cell + _Base;
+}
+
+// An 8-byte element type.
+[numthreads(16, 1, 1)]
+void AppendPair(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x % _Modulo == 0)
+        _AppendPair.Append(uint2(id.x, id.x * 3 + _Base));
+}
