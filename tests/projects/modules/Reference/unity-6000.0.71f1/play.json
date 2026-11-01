@@ -1,0 +1,38 @@
+{
+  "scenario": "play",
+  "exitCode": 0,
+  "rows": [
+    {
+      "what": "log",
+      "value": "Log: BoxCollider component deleted: Component belongs to a disabled built-in package."
+    },
+    {
+      "what": "log",
+      "value": "Log: Rigidbody component deleted: Component belongs to a disabled built-in package."
+    },
+    {
+      "what": "body",
+      "value": "found"
+    },
+    {
+      "what": "component",
+      "value": "UnityEngine.Transform in UnityEngine.CoreModule"
+    },
+    {
+      "what": "type UnityEngine.Rigidbody, UnityEngine.PhysicsModule",
+      "value": "found"
+    },
+    {
+      "what": "type UnityEngine.ScreenCapture, UnityEngine.ScreenCaptureModule",
+      "value": "found"
+    },
+    {
+      "what": "start y",
+      "value": "10"
+    },
+    {
+      "what": "y after 10 fixed steps",
+      "value": "10"
+    }
+  ]
+}

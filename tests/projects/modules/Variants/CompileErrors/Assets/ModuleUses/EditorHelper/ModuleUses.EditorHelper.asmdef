@@ -1,0 +1,6 @@
+{
+    "name": "ModuleUses.EditorHelper",
+    "includePlatforms": [
+        "Editor"
+    ]
+}

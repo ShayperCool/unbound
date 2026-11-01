@@ -13,8 +13,14 @@ public sealed class CompileRequest
     /// <summary>Class library references of the .NET Standard 2.1 profile, for the assemblies marked
     /// <see cref="AssemblySpec.NetStandard"/>.</summary>
     public List<string> NetStandardReferences { get; set; } = new();
-    /// <summary>Unity engine (and Editor) reference assemblies.</summary>
+    /// <summary>Unity engine (and Editor) reference assemblies of the Editor-only assemblies: every
+    /// engine module.</summary>
     public List<string> EngineReferences { get; set; } = new();
+    /// <summary>The engine references of the other assemblies: without the modules the build target
+    /// or the project's packages leave out.</summary>
+    public List<string> RuntimeEngineReferences { get; set; } = new();
+    /// <summary>The modules the project's packages leave out of the runtime assemblies.</summary>
+    public List<DisabledModule> DisabledModules { get; set; } = new();
     public string LanguageVersion { get; set; } = "9.0";
     /// <summary>Command-line style options the Editor passes: <c>/nowarn:0169</c>.</summary>
     public List<string> CompilerOptions { get; set; } = new();
@@ -36,6 +42,9 @@ public sealed class AssemblySpec
     public List<string> Analyzers { get; set; } = new();
     public bool AllowUnsafe { get; set; }
     public bool NoEngineReferences { get; set; }
+    /// <summary>Compiles against <see cref="CompileRequest.EngineReferences"/> rather than
+    /// <see cref="CompileRequest.RuntimeEngineReferences"/>.</summary>
+    public bool EditorOnly { get; set; }
     /// <summary>Compiles against <see cref="CompileRequest.NetStandardReferences"/>.</summary>
     public bool NetStandard { get; set; }
     /// <summary>Not IL post-processed (the Editor's skip list).</summary>
@@ -43,6 +52,17 @@ public sealed class AssemblySpec
     /// <summary>Compiled with optimizations (<c>/optimize+</c>): the Editor's Release code
     /// optimization, or a package that cannot be edited.</summary>
     public bool Optimize { get; set; }
+}
+
+/// <summary>An engine module whose built-in package the project does not have.</summary>
+public sealed class DisabledModule
+{
+    /// <summary><c>UnityEngine.ScreenCaptureModule</c></summary>
+    public string Assembly { get; set; } = "";
+    /// <summary><c>com.unity.modules.screencapture</c></summary>
+    public string Package { get; set; } = "";
+    /// <summary>The package's display name: <c>Screen Capture</c>.</summary>
+    public string DisplayName { get; set; } = "";
 }
 
 public sealed class CompileResponse

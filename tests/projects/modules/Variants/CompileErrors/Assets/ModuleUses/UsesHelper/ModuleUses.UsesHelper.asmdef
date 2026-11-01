@@ -1,0 +1,6 @@
+{
+    "name": "ModuleUses.UsesHelper",
+    "references": [
+        "ModuleUses.EditorHelper"
+    ]
+}

@@ -265,6 +265,16 @@ pub fn prepare(project: &Project, runtime: &ManagedRuntime, options: &GameOption
     }
     // Outside the literal above, which is at json!'s recursion limit.
     config["codeOptimization"] = json!(options.code_optimization.name());
+    // The Editor deletes those modules' components when Play mode loads a scene; opening one in
+    // Edit mode keeps them.
+    config["disabledModules"] = json!(
+        graph
+            .disabled_modules
+            .iter()
+            .filter(|_| !options.edit_mode)
+            .map(|m| project.install.managed_engine_dir().join(format!("{}.dll", m.assembly)))
+            .collect::<Vec<_>>()
+    );
     tracing::info!("prepared the game in {:.2?}", start.elapsed());
     Ok(config)
 }

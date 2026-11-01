@@ -6,6 +6,7 @@ pub mod builtin_shaders;
 pub mod compile;
 pub mod editor_archive;
 pub mod install;
+pub mod modules;
 pub mod packages;
 pub mod net;
 pub mod plugins;
@@ -258,7 +259,7 @@ impl Project {
             .iter()
             .filter_map(|p| Some(p.file_name()?.to_str()?.to_string()))
             .collect();
-        assemblies::build(&assemblies::GraphInput {
+        let mut graph = assemblies::build(&assemblies::GraphInput {
             bcl_names: &bcl_names,
             net_standard,
             roots: &roots,
@@ -269,7 +270,39 @@ impl Project {
             package_versions: &package_versions,
             plugins: &plugins,
             asmdef_guid: &guid_of,
-        })
+        })?;
+        (graph.excluded_modules, graph.disabled_modules) = self.excluded_modules(mode, target_group)?;
+        Ok(graph)
+    }
+
+    /// The engine modules runtime script assemblies leave out for `target_group`: those its
+    /// player's module list lacks and those whose built-in package the project does not have.
+    /// Without a module list in the installation, none (with a warning).
+    fn excluded_modules(
+        &self,
+        mode: CompileMode,
+        target_group: &str,
+    ) -> Result<(std::collections::BTreeSet<String>, Vec<modules::DisabledModule>)> {
+        let Some((list, _)) = modules::modules_for(&self.install, target_group)? else {
+            tracing::warn!(
+                "the Unity installation has no module list (Resources/modules.asset): script assemblies \
+                 compile against every engine module, whatever the project's packages"
+            );
+            return Ok(Default::default());
+        };
+        let engine: Vec<String> = self
+            .engine_references(mode)
+            .iter()
+            .filter_map(|p| Some(p.file_stem()?.to_str()?.to_string()))
+            .collect();
+        let packages = packages::module_packages(&self.root, &self.install, &self.packages);
+        let names: std::collections::BTreeSet<&str> = packages.iter().map(String::as_str).collect();
+        let builtin = self.install.builtin_packages_dir();
+        Ok(modules::excluded(&list, &engine, &names, &|package| {
+            let json: serde_json::Value =
+                serde_json::from_slice(&std::fs::read(builtin.join(package).join("package.json")).ok()?).ok()?;
+            Some(json["displayName"].as_str()?.to_string())
+        }))
     }
 }
 

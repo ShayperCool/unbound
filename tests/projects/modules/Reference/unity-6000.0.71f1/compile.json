@@ -1,0 +1,73 @@
+{
+  "scenario": "compile",
+  "exitCode": 1,
+  "scriptsHaveCompilerErrors": true,
+  "compiledAssemblies": [
+    "ModuleUses.EditorHelper"
+  ],
+  "errors": [
+    {
+      "file": "Assets/ModuleUses/NoEngine/NoEngineUses.cs",
+      "line": 4,
+      "column": 33,
+      "id": "CS0103",
+      "message": "The name 'UnityEngine' does not exist in the current context"
+    },
+    {
+      "file": "Assets/ModuleUses/Override/OverrideUses.cs",
+      "line": 5,
+      "column": 33,
+      "id": "CS1069",
+      "message": "The type name 'ScreenCapture' could not be found in the namespace 'UnityEngine'. This type has been forwarded to assembly 'UnityEngine.ScreenCaptureModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null' Consider adding a reference to that assembly."
+    },
+    {
+      "file": "Assets/ModuleUses/Override/OverrideUses.cs",
+      "line": 5,
+      "column": 33,
+      "id": "CS1069",
+      "message": "The type name 'ScreenCapture' could not be found in the namespace 'UnityEngine'. This type has been forwarded to assembly 'UnityEngine.ScreenCaptureModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null' Enable the built in package 'Screen Capture' in the Package Manager window to fix this error."
+    },
+    {
+      "file": "Assets/ModuleUses/Runtime/RuntimeUses.cs",
+      "line": 7,
+      "column": 5,
+      "id": "CS1069",
+      "message": "The type name 'Rigidbody' could not be found in the namespace 'UnityEngine'. This type has been forwarded to assembly 'UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null' Consider adding a reference to that assembly."
+    },
+    {
+      "file": "Assets/ModuleUses/Runtime/RuntimeUses.cs",
+      "line": 7,
+      "column": 5,
+      "id": "CS1069",
+      "message": "The type name 'Rigidbody' could not be found in the namespace 'UnityEngine'. This type has been forwarded to assembly 'UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null' Enable the built in package 'Physics' in the Package Manager window to fix this error."
+    },
+    {
+      "file": "Assets/ModuleUses/Runtime/RuntimeUses.cs",
+      "line": 8,
+      "column": 17,
+      "id": "CS1069",
+      "message": "The type name 'BoxCollider' could not be found in the namespace 'UnityEngine'. This type has been forwarded to assembly 'UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null' Consider adding a reference to that assembly."
+    },
+    {
+      "file": "Assets/ModuleUses/Runtime/RuntimeUses.cs",
+      "line": 8,
+      "column": 17,
+      "id": "CS1069",
+      "message": "The type name 'BoxCollider' could not be found in the namespace 'UnityEngine'. This type has been forwarded to assembly 'UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null' Enable the built in package 'Physics' in the Package Manager window to fix this error."
+    },
+    {
+      "file": "Assets/ModuleUses/UsesHelper/UsesHelper.cs",
+      "line": 9,
+      "column": 32,
+      "id": "CS0012",
+      "message": "The type 'ScreenCapture.StereoScreenCaptureMode' is defined in an assembly that is not referenced. You must add a reference to assembly 'UnityEngine.ScreenCaptureModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null'."
+    },
+    {
+      "file": "Assets/ModuleUses/UsesHelper/UsesHelper.cs",
+      "line": 10,
+      "column": 19,
+      "id": "CS0012",
+      "message": "The type 'Rigidbody' is defined in an assembly that is not referenced. You must add a reference to assembly 'UnityEngine.PhysicsModule, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null'."
+    }
+  ]
+}

@@ -154,6 +154,11 @@ pub struct Graph {
     /// In dependency order: every assembly after the assemblies it references.
     pub assemblies: Vec<ScriptAssembly>,
     pub warnings: Vec<String>,
+    /// The engine module assemblies (`UnityEngine.<Name>Module`) the assemblies that are not
+    /// Editor-only do not compile against: see [`crate::modules`].
+    pub excluded_modules: std::collections::BTreeSet<String>,
+    /// The modules of those a built-in package controls, which the project's packages leave out.
+    pub disabled_modules: Vec<crate::modules::DisabledModule>,
 }
 
 impl Graph {
