@@ -10,7 +10,10 @@ main Play, a played generator, a played generator plus one-shot, scheduled
 start inside a block, scheduled end inside a block, and a scheduled window
 entirely inside one 256-frame interval. Three corresponding clip-backed cases
 check the same scheduling calls with an assigned clip. Scheduling uses absolute DSP time,
-8192 frames of lead time, and offsets 73 and 185. Scheduled cases retain 88
+8192 frames of lead time, offsets 73 and 185, and fixed start/end
+phases of one quarter and three quarters of a sample. Both absolute times and
+durations stay away from exact integer sample conversion edges. Absolute DSP
+clock bits are retained in each run log; scheduling uses the unrounded DSP clock. Scheduled cases retain 88
 render blocks to observe natural completion and route quietness before Stop.
 
 Callbacks only access preallocated managed arrays and counters. Setup, source
