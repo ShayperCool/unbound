@@ -2563,3 +2563,30 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - API:0/2314 through existing legacy-discovery entry; no public/API/stub/ABI/cache change;33payloads Root-verified.
 - Controls:builtinrp/lighting/graphics/urp unchanged; one flare image change remains unattributed, not a mask claim.
 - Open:maskedCB/SRP/deferred/retained-target runtime coverage, line/LP packages and original gaps. Receipt: `~/.cache/unbound/validation/runs/mask-root-integration-20261101b/root-adjudication.json`.
+
+### Combined line/trail queue validation, 2026-11-01
+- Integrated authoritative5a plus Root COW append and isolated queue tests; production confined to LineRenderers/PlayerLoopDriver.
+- One coherent Host/Core/test cycle, all33/PDB inputs bound, TestCore equals packaged Core; full managed1451/1462, exact known11 unchanged, line/queue33/33, Python8/8.
+- API/no-stubs0 errors/2314 types; source stub changes[]. Resources539 values+62 images pass with mip-bundles.
+- Required line1870 union:1654 pass/215 fail/1 resolved-extra; full Root/blend/final1887 keeps17 baseline-only keys. Both EOF introductions and state resolve;15 timing rows remain.
+- REJECTED:60 newly failing numeric/index paths and95 pixels versus matching Root, inside retained failing keys;36 numeric paths versus blend. All raw/error changes retained, no masks/tolerance changes.
+- Auto3557 BLOCKED at shader setup in Root/final; one runner correction failed, attempts preserved. No extra build/capture/Native; sphere48 and zero-life21 remain OPEN.
+- Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-trail-combined-20261101-t3-9d5972f4/REPORT.md`.
+
+### Offline line geometry attribution, 2026-11-01
+- Source `186e411d` on authorized ba658956; world TransformZ render plane prepared separately from measured BakeMesh, UNBUILT/UNACCEPTED.
+- All60 Root index introductions are30 one-cap TransformZ trail meshes; all36 blend introductions are round-trail tangent components. Full171-cap/37-lighting controls retained.
+- All95 pixel/388-channel introductions predate blend; exact witnesses and CPU replays retained. Native trail replay still differs at88 pixels.
+- Offline only: tilted image212->0 failing pixels, complete image864->652; Root introductions95->80 pixels/388->328 channels. Numeric60/36, retained4968/136, increases1279/480 unchanged.
+- Measured package remains REJECTED with all60/95 introductions and15 time failures; no new build/capture, managed test UNRUN, API/stub changes[]. Mask/cap/tangent blockers and sphere48/zero-life21 remain.
+- Root combines platformd662 and separate runnerf60 later; no runner import here. CCC timeout124 closed and registration removed; no owned clients remain.
+- Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-trail-geometry-attribution-20261101-t3-dd198b0b/REPORT.md`.
+
+### Offline corner/per-segment line geometry, 2026-11-01
+- Source 5d86c5a2 on prepared 2c604df5: per-segment width/color by index, un-eased corner arc side/turn plus normalized position angle, TransformZ trail corner side swap. UNBUILT/UNACCEPTED.
+- Float32 replay reproduces all saved engine meshes before the change; prediction: affected components 5746->44, none introduced; tangents 368->0; whole failing keys 215->83.
+- All 8 original trail channels and alpha 2055 predict within 2/255; nine-image failures 864->536 pixels, 2630->1880 channels; Root introductions 80 mask pixels only.
+- Numeric vs Root/blend/final: introduced 0/0/0; 32 above-tolerance increases vs final, all inside already failing components (max 6.7e-5).
+- Open: trail 88 pixels = tex.Static render U offset (scale x travelled path, one witness); 8 zero-area join indices; mask; 15 time rows; sphere48/zero-life21.
+- Cap-two inward plane remains inference (hidden non-emitting points zero the width). Cap-count layout proposal prepared, not published; append stays refused.
+- Four managed tests UNBUILT/UNRUN; API/stub/ABI []. Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-corner-alpha-20261101-t3-dae2fa72/REPORT.md`.
