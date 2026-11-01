@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Unbound.Runtime;
 using Unity.Collections;
+using PL = UnityEngine.PlayerLoop;
 
 namespace UnityEngine
 {
@@ -12,6 +13,7 @@ namespace UnityEngine
         internal float WidthMultiplier = 1f;
         internal AnimationCurve WidthCurve = new AnimationCurve(new Keyframe(0f, 1f));
         internal Gradient ColorGradient = new Gradient();
+        /// <summary>Kept as set (negative counts read back unchanged); the strip uses at least 0.</summary>
         internal int NumCornerVertices;
         internal int NumCapVertices;
         internal LineAlignment Alignment = LineAlignment.View;
@@ -53,12 +55,14 @@ namespace UnityEngine
 
         static Gradient CloneGradient(Gradient g)
         {
-            var copy = new Gradient { mode = g.mode };
+            var copy = new Gradient { mode = g.mode, colorSpace = g.colorSpace };
             copy.SetKeys(g.colorKeys, g.alphaKeys);
             return copy;
         }
 
-        // The start/end shortcuts edit the first and last keys, as in Unity.
+        // The start/end shortcuts edit the first and last keys (measured, tests/projects/lines api.*):
+        // a one-key width curve keeps its key for the start and gains a key at 1 for the end; colors
+        // are stored at 8 bits per channel.
 
         internal float StartWidth
         {
@@ -76,14 +80,10 @@ namespace UnityEngine
         {
             float value = WidthMultiplier != 0f ? width / WidthMultiplier : width;
             var keys = WidthCurve.keys;
-            if (keys.Length < 2)
-            {
-                float other = keys.Length == 1 ? keys[0].value : value;
-                keys = new[] { new Keyframe(0f, other), new Keyframe(1f, other) };
-            }
-            int index = end == 0 ? 0 : keys.Length - 1;
-            keys[index].value = value;
-            WidthCurve = new AnimationCurve(keys);
+            if (keys.Length == 0) keys = new[] { new Keyframe(end == 0 ? 0f : 1f, value) };
+            else if (keys.Length == 1 && end == 1 && keys[0].time < 1f) keys = new[] { keys[0], new Keyframe(1f, value) };
+            else keys[end == 0 ? 0 : keys.Length - 1].value = value;
+            WidthCurve = new AnimationCurve(keys) { preWrapMode = WidthCurve.preWrapMode, postWrapMode = WidthCurve.postWrapMode };
         }
 
         internal Color StartColor
@@ -100,168 +100,420 @@ namespace UnityEngine
 
         void SetColorKey(int end, Color color)
         {
+            Color stored = (Color32)color;
             var colors = ColorGradient.colorKeys;
             var alphas = ColorGradient.alphaKeys;
             if (colors.Length < 2) colors = new[] { new GradientColorKey(StartColor, 0f), new GradientColorKey(EndColor, 1f) };
             if (alphas.Length < 2) alphas = new[] { new GradientAlphaKey(StartColor.a, 0f), new GradientAlphaKey(EndColor.a, 1f) };
             int ci = end == 0 ? 0 : colors.Length - 1;
             int ai = end == 0 ? 0 : alphas.Length - 1;
-            colors[ci].color = new Color(color.r, color.g, color.b, 1f);
-            alphas[ai].alpha = color.a;
-            var g = new Gradient { mode = ColorGradient.mode };
+            colors[ci].color = new Color(stored.r, stored.g, stored.b, 1f);
+            alphas[ai].alpha = stored.a;
+            var g = new Gradient { mode = ColorGradient.mode, colorSpace = ColorGradient.colorSpace };
             g.SetKeys(colors, alphas);
             ColorGradient = g;
         }
     }
 
-    /// <summary>Builds the triangle strip of a line or trail: a quad per segment facing the camera
-    /// (or perpendicular to the transform's Z), colored and sized by the parameters along the
-    /// strip's length, with round caps.</summary>
+    /// <summary>How a strip faces: towards a camera (View: the camera's position and forward, in the
+    /// strip's build space) or along the build space's Z axis (TransformZ).</summary>
+    internal struct LineFacing
+    {
+        internal bool TransformZ;
+        internal Vector3 CameraPosition;
+        internal Vector3 CameraForward;
+    }
+
+    /// <summary>
+    /// The mesh of a line or trail, as Unity generates it (measured, tests/projects/lines):
+    /// a pair of vertices per point (v = 0.5 + scale/2 on the minus side, 0.5 - scale/2 on the
+    /// plus side), joined by quads. Each segment has an effective direction: its own unless it is
+    /// short compared with the width (2 width / length - 1 > 0, clamped to 1) or has zero length
+    /// (squared length below 1e-5), in which case it blends with the previous segment's effective
+    /// direction and looks ahead to the next one. A point's pair is the miter between its
+    /// neighbouring effective directions (length half width / cos, at most three half widths);
+    /// with corner vertices the outer side becomes an arc of that many steps around the inner miter
+    /// vertex at the full width. Caps are half discs of extra vertices before and after the strip.
+    /// The side of a segment is cross(direction, camera position - point) projected onto the view
+    /// plane (View) or cross(direction, -Z) (TransformZ).
+    /// </summary>
     internal sealed class LineStrip
     {
+        const float ZeroLengthSqr = 1e-5f;
+        const float MiterLimit = 3f;
+
         readonly List<Vector3> m_Vertices = new List<Vector3>();
-        readonly List<Color> m_Colors = new List<Color>();
+        readonly List<Vector3> m_Normals = new List<Vector3>();
+        readonly List<Vector4> m_Tangents = new List<Vector4>();
+        readonly List<Color32> m_Colors = new List<Color32>();
         readonly List<Vector2> m_Uvs = new List<Vector2>();
         readonly List<int> m_Triangles = new List<int>();
-        float[] m_Distances = Array.Empty<float>();
+        bool m_Lighting;
 
-        /// <summary>Builds the strip through world-space points (first is the start, t = 0). Returns
-        /// false when there is nothing to draw.</summary>
-        internal bool Build(IReadOnlyList<Vector3> points, bool loop, LineParameters p, Vector3 viewPoint, Vector3 viewForward, bool orthographic, Vector3 transformZ)
+        // Per point and per segment scratch.
+        float[] m_Dist = Array.Empty<float>();
+        float[] m_Half = Array.Empty<float>();
+        Color32[] m_Color = Array.Empty<Color32>();
+        Vector3[] m_Dir = Array.Empty<Vector3>();
+        Vector3[] m_Effective = Array.Empty<Vector3>();
+        float[] m_Length = Array.Empty<float>();
+        bool[] m_Zero = Array.Empty<bool>();
+        bool[] m_NoMiter = Array.Empty<bool>();
+
+        enum Join : byte { Quad, CornerA, CornerB }
+
+        struct Pair
+        {
+            internal Vector3 A, B, Tangent;
+            internal float U;
+            internal Color32 Color;
+            internal Join Join;
+        }
+
+        readonly List<Pair> m_Pairs = new List<Pair>();
+
+        static void Grow<T>(ref T[] array, int count)
+        {
+            if (array.Length < count) array = new T[Math.Max(count, array.Length * 2)];
+        }
+
+        /// <summary>Builds the strip through the points (first is t = 0). <paramref name="hidden"/>
+        /// marks points drawn at zero width (a trail's points added while it was not emitting).
+        /// Returns false when there is nothing to draw (fewer than two points).</summary>
+        internal bool Build(IReadOnlyList<Vector3> points, IReadOnlyList<bool> hidden, bool loop, LineParameters p, LineFacing facing)
         {
             m_Vertices.Clear();
+            m_Normals.Clear();
+            m_Tangents.Clear();
             m_Colors.Clear();
             m_Uvs.Clear();
             m_Triangles.Clear();
-            int n = points.Count;
-            if (n < 2) return false;
-            int count = loop ? n + 1 : n;
-            if (m_Distances.Length < count) m_Distances = new float[count];
-            m_Distances[0] = 0f;
-            for (int i = 1; i < count; i++) m_Distances[i] = m_Distances[i - 1] + Vector3.Distance(points[(i - 1) % n], points[i % n]);
-            float total = m_Distances[count - 1];
+            m_Pairs.Clear();
+            m_Lighting = p.GenerateLightingData;
+            int count = points.Count;
+            if (count < 2) return false;
+            int n = loop ? count + 1 : count;
+            int segments = n - 1;
+            Grow(ref m_Dist, n);
+            Grow(ref m_Half, n);
+            Grow(ref m_Color, n);
+            Grow(ref m_Dir, segments);
+            Grow(ref m_Effective, segments);
+            Grow(ref m_Length, segments);
+            Grow(ref m_Zero, segments);
+            Grow(ref m_NoMiter, n);
 
-            for (int i = 0; i < count; i++)
+            m_Dist[0] = 0f;
+            for (int i = 1; i < n; i++) m_Dist[i] = m_Dist[i - 1] + Vector3.Distance(points[(i - 1) % count], points[i % count]);
+            float total = m_Dist[n - 1];
+            bool linear = QualitySettings.activeColorSpace == ColorSpace.Linear;
+            for (int i = 0; i < n; i++)
             {
-                var point = points[i % n];
-                float t = total > 0f ? m_Distances[i] / total : (float)i / (count - 1);
-                var tangent = Tangent(points, i, n, loop);
-                Vector3 normal;
-                if (p.Alignment == LineAlignment.TransformZ) normal = transformZ;
-                else normal = orthographic ? -viewForward : viewPoint - point;
-                var side = Vector3.Cross(tangent, normal);
-                if (side.sqrMagnitude < 1e-12f) side = Vector3.Cross(tangent, Vector3.up);
-                if (side.sqrMagnitude < 1e-12f) side = Vector3.Cross(tangent, Vector3.right);
-                side.Normalize();
-                float half = 0.5f * p.WidthMultiplier * p.WidthCurve.Evaluate(t);
-                var color = p.ColorGradient.Evaluate(t);
-                float u = U(p, i, count, m_Distances[i], total, half);
-                int at = m_Vertices.Count;
-                m_Vertices.Add(point - side * half);
-                m_Vertices.Add(point + side * half);
-                m_Colors.Add(color);
-                m_Colors.Add(color);
-                m_Uvs.Add(new Vector2(u, 0f));
-                m_Uvs.Add(new Vector2(u, 1f));
-                if (i > 0)
+                float t = total > 0f ? m_Dist[i] / total : 0f;
+                bool hide = hidden != null && hidden[i % count];
+                m_Half[i] = hide ? 0f : 0.5f * p.WidthMultiplier * p.WidthCurve.Evaluate(t);
+                m_Color[i] = VertexColor(p.ColorGradient.Evaluate(t), linear);
+            }
+
+            bool allZero = true;
+            for (int j = 0; j < segments; j++)
+            {
+                var d = points[(j + 1) % count] - points[j % count];
+                m_Length[j] = d.magnitude;
+                m_Zero[j] = d.sqrMagnitude < ZeroLengthSqr;
+                m_Dir[j] = m_Zero[j] ? Vector3.zero : d / m_Length[j];
+                if (!m_Zero[j]) allZero = false;
+            }
+            if (allZero)
+            {
+                // Nothing but coincident points: the raw directions, else a fixed one.
+                for (int j = 0; j < segments; j++)
                 {
-                    m_Triangles.Add(at - 2);
-                    m_Triangles.Add(at - 1);
-                    m_Triangles.Add(at);
-                    m_Triangles.Add(at - 1);
-                    m_Triangles.Add(at + 1);
-                    m_Triangles.Add(at);
+                    var d = points[(j + 1) % count] - points[j % count];
+                    m_Dir[j] = m_Length[j] > 0f ? d / m_Length[j] : Vector3.left;
+                    m_Zero[j] = false;
                 }
             }
-            if (!loop && p.NumCapVertices > 0)
+            for (int i = 0; i < n; i++) m_NoMiter[i] = false;
+            // The joint two points after a zero-length segment keeps the half width (no miter).
+            for (int j = 0; j < segments; j++)
+                if (m_Zero[j])
+                {
+                    int at = loop ? (j + 2) % segments : j + 2;
+                    if (at < n) m_NoMiter[at] = true;
+                    if (loop && at == 0) m_NoMiter[n - 1] = true;
+                }
+            if (loop) LoopDirections(segments);
+            else EffectiveDirections(segments);
+
+            int corners = Math.Max(0, p.NumCornerVertices);
+            float va = 0.5f + 0.5f * p.TextureScale.y, vb = 0.5f - 0.5f * p.TextureScale.y;
+            for (int i = 0; i < n; i++)
             {
-                Cap(points[0], -Tangent(points, 0, n, false), 0, p, 0f);
-                Cap(points[n - 1], Tangent(points, n - 1, n, false), 2 * (count - 1), p, 1f);
+                var point = points[i % count];
+                float h = m_Half[i];
+                var normal = facing.TransformZ ? new Vector3(0f, 0f, -1f) : facing.CameraPosition - point;
+                float u = U(p, i, n, loop, total);
+                var color = m_Color[i];
+                bool hasIn = i > 0 || loop, hasOut = i < segments || loop;
+                var din = hasIn ? m_Effective[i > 0 ? i - 1 : segments - 1] : Vector3.zero;
+                var dout = hasOut ? m_Effective[i < segments ? i : 0] : Vector3.zero;
+                if (!hasIn || !hasOut)
+                {
+                    var d = hasOut ? dout : din;
+                    var s = Side(d, normal, facing);
+                    m_Pairs.Add(new Pair { A = point - s * h, B = point + s * h, Tangent = d, U = u, Color = color });
+                    continue;
+                }
+                var s1 = Side(din, normal, facing);
+                var s2 = Side(dout, normal, facing);
+                var sum = s1 + s2;
+                Vector3 m;
+                float length;
+                if (sum.sqrMagnitude < 1e-12f)
+                {
+                    m = s1;
+                    length = h;
+                }
+                else
+                {
+                    m = sum.normalized;
+                    length = h / Mathf.Max(Vector3.Dot(m, s1), 1f / MiterLimit);
+                }
+                if (m_NoMiter[i]) length = h;
+                else if (i > 0 && i < segments && Mathf.Abs(length) > Mathf.Abs(h))
+                {
+                    // A miter reaches at most three quarters of the longer neighbouring segment,
+                    // never inside the half width (measured, line.sweep.Z and line.sweep.repeat).
+                    float reach = 0.75f * Mathf.Max(m_Zero[i - 1] ? 0f : m_Length[i - 1], m_Zero[i] ? 0f : m_Length[i]);
+                    if (reach > 0f) length = Mathf.Sign(h) * Mathf.Max(Mathf.Abs(h), Mathf.Min(Mathf.Abs(length), reach));
+                }
+                float turn = Vector3.Dot(Vector3.Cross(s1, s2), normal);
+                bool aInner = turn > 0f || (turn == 0f && Vector3.Dot(s1, s2) < 0f);
+                // A zero or negative width swaps the arc's fixed side (measured corner triangles,
+                // tests/projects/lines line.width.zero and line.width.negative).
+                if (h <= 0f) aInner = !aInner;
+                if (corners == 0)
+                {
+                    m_Pairs.Add(new Pair { A = point - m * length, B = point + m * length, Tangent = dout, U = u, Color = color });
+                    continue;
+                }
+                float w = 2f * h;
+                var inner = aInner ? point - m * length : point + m * length;
+                float angle = Mathf.Acos(Mathf.Clamp(Vector3.Dot(s1, s2), -1f, 1f));
+                var perp = s2 - s1 * Vector3.Dot(s1, s2);
+                perp = perp.sqrMagnitude > 1e-12f ? perp.normalized : din;
+                float turnAngle = Mathf.Acos(Mathf.Clamp(Vector3.Dot(din, dout), -1f, 1f));
+                var tangentPerp = dout - din * Vector3.Dot(din, dout);
+                tangentPerp = tangentPerp.sqrMagnitude > 1e-12f ? tangentPerp.normalized : (aInner ? -s1 : s1);
+                // A loop's first point keeps only the last step of its corner; the closing point has it all.
+                for (int k = loop && i == 0 ? corners : 0; k <= corners; k++)
+                {
+                    float f = (float)k / corners;
+                    var r = s1 * Mathf.Cos(angle * f) + perp * Mathf.Sin(angle * f);
+                    var tangent = w * (din * Mathf.Cos(turnAngle * f) + tangentPerp * Mathf.Sin(turnAngle * f));
+                    var join = k == 0 ? Join.Quad : aInner ? Join.CornerA : Join.CornerB;
+                    if (aInner) m_Pairs.Add(new Pair { A = inner, B = inner + r * w, Tangent = tangent, U = u, Color = color, Join = join });
+                    else m_Pairs.Add(new Pair { A = inner - r * w, B = inner, Tangent = tangent, U = u, Color = color, Join = join });
+                }
             }
+
+            var faceNormal = facing.TransformZ ? new Vector3(0f, 0f, -1f) : -facing.CameraForward;
+            int caps = loop ? 0 : Math.Max(0, p.NumCapVertices);
+            if (caps > 0) Cap(points[0], m_Pairs[0], m_Effective[0], true, caps, va, vb, facing, faceNormal);
+            int first = m_Vertices.Count;
+            foreach (var pair in m_Pairs)
+            {
+                Add(pair.A, new Vector2(pair.U, va), pair.Color, faceNormal, pair.Tangent);
+                Add(pair.B, new Vector2(pair.U, vb), pair.Color, faceNormal, pair.Tangent);
+            }
+            for (int i = 1; i < m_Pairs.Count; i++)
+            {
+                int a0 = first + 2 * i - 2, b0 = a0 + 1, a1 = a0 + 2, b1 = a0 + 3;
+                switch (m_Pairs[i].Join)
+                {
+                    case Join.CornerB: Tri(a0, b1, a1); break;
+                    case Join.CornerA: Tri(b0, b1, a1); break;
+                    default: Tri(a0, b0, a1); Tri(b0, b1, a1); break;
+                }
+            }
+            if (caps > 0) Cap(points[(n - 1) % count], m_Pairs[m_Pairs.Count - 1], m_Effective[segments - 1], false, caps, va, vb, facing, faceNormal);
             return true;
         }
 
-        static Vector3 Tangent(IReadOnlyList<Vector3> points, int i, int n, bool loop)
+        /// <summary>A loop's segment directions: a zero-length segment takes the next non-zero one.</summary>
+        void LoopDirections(int segments)
         {
-            Vector3 a, b;
-            if (loop)
+            for (int j = 0; j < segments; j++)
             {
-                a = points[(i - 1 + n) % n];
-                b = points[(i + 1) % n];
+                m_Effective[j] = m_Dir[j];
+                if (!m_Zero[j]) continue;
+                for (int k = 1; k < segments; k++)
+                {
+                    int at = (j + k) % segments;
+                    if (!m_Zero[at]) { m_Effective[j] = m_Dir[at]; break; }
+                }
             }
-            else
-            {
-                a = points[Math.Max(0, i - 1)];
-                b = points[Math.Min(n - 1, i + 1)];
-            }
-            var d = b - a;
-            return d.sqrMagnitude > 1e-12f ? d.normalized : Vector3.right;
         }
 
-        static float U(LineParameters p, int i, int count, float distance, float total, float half)
+        /// <summary>How much a segment blends with its neighbours: none while it is at least twice
+        /// the width long, fully at the width or below, and fully for zero length. A short segment
+        /// between two long ones stays itself.</summary>
+        float Shortness(int j, int segments)
+        {
+            if (j < 0 || j >= segments) return 0f;
+            if (m_Zero[j]) return 1f;
+            float r = RawShortness(j, segments);
+            if (r > 0f && RawShortness(j - 1, segments) <= 0f && RawShortness(j + 1, segments) <= 0f) return 0f;
+            return r;
+        }
+
+        float RawShortness(int j, int segments)
+        {
+            if (j < 0 || j >= segments) return 0f;
+            if (m_Zero[j]) return 1f;
+            float width = 2f * Mathf.Max(Mathf.Abs(m_Half[j]), Mathf.Abs(m_Half[j + 1]));
+            return Mathf.Clamp01(2f * width / m_Length[j] - 1f);
+        }
+
+        /// <summary>A segment's direction ahead of a blend: its own, or a zero-length segment's next.</summary>
+        Vector3 Ahead(int j, int segments)
+        {
+            if (j >= segments) return Vector3.zero;
+            if (!m_Zero[j]) return m_Dir[j];
+            return j + 1 < segments ? m_Dir[j + 1] : Vector3.zero;
+        }
+
+        void EffectiveDirections(int segments)
+        {
+            for (int j = 0; j < segments; j++)
+            {
+                Vector3 own;
+                if (j == 0) own = m_Dir[0];
+                else
+                {
+                    float s = Shortness(j, segments);
+                    own = m_Dir[j] * (1f - s) + m_Effective[j - 1] * s;
+                }
+                var e = own + Ahead(j + 1, segments) * Shortness(j + 1, segments);
+                if (e.sqrMagnitude > 0f) e.Normalize();
+                else e = j > 0 ? m_Effective[j - 1] : Ahead(j + 1, segments);
+                m_Effective[j] = e;
+            }
+            // Leading zero-length segments with nothing ahead take the first direction found.
+            for (int j = segments - 1; j >= 0; j--)
+                if (m_Effective[j].sqrMagnitude == 0f && j + 1 < segments) m_Effective[j] = m_Effective[j + 1];
+        }
+
+        /// <summary>A vertex color: the gradient's color at 8 bits (rounded half up), its color
+        /// channels taken to linear from those 8 bits in a linear project (measured,
+        /// tests/projects/lines line.color.*).</summary>
+        static Color32 VertexColor(Color color, bool linear)
+        {
+            byte r = ToByte(color.r), g = ToByte(color.g), b = ToByte(color.b), a = ToByte(color.a);
+            if (linear)
+            {
+                r = ToByte(Mathf.GammaToLinearSpace(r / 255f));
+                g = ToByte(Mathf.GammaToLinearSpace(g / 255f));
+                b = ToByte(Mathf.GammaToLinearSpace(b / 255f));
+            }
+            return new Color32(r, g, b, a);
+        }
+
+        static byte ToByte(float value) => (byte)(Mathf.Clamp01(value) * 255f + 0.5f);
+
+        static Vector3 Side(Vector3 direction, Vector3 normal, LineFacing facing)
+        {
+            var s = Vector3.Cross(direction, normal);
+            if (!facing.TransformZ) s -= facing.CameraForward * Vector3.Dot(s, facing.CameraForward);
+            return s.normalized;
+        }
+
+        /// <summary>The texture coordinate along the strip: distance over length (Stretch), distance
+        /// (Tile, Static), point index over count (DistributePerSegment) or index
+        /// (RepeatPerSegment), times the scale; a loop's indices count from 1.</summary>
+        float U(LineParameters p, int i, int n, bool loop, float total)
         {
             switch (p.TextureMode)
             {
                 case LineTextureMode.Tile:
-                    return distance * p.TextureScale.x;
+                case LineTextureMode.Static:
+                    return m_Dist[i] * p.TextureScale.x;
                 case LineTextureMode.DistributePerSegment:
-                    return count > 1 ? (float)i / (count - 1) * p.TextureScale.x : 0f;
+                    return (loop ? (float)(i + 1) / (n + 1) : (float)i / (n - 1)) * p.TextureScale.x;
                 case LineTextureMode.RepeatPerSegment:
-                    return i * p.TextureScale.x;
+                    return (loop ? i + 1 : i) * p.TextureScale.x;
                 default:
-                    return (total > 0f ? distance / total : (float)i / Math.Max(1, count - 1)) * p.TextureScale.x;
+                    return (total > 0f ? m_Dist[i] / total : 0f) * p.TextureScale.x;
             }
         }
 
-        /// <summary>A half disc of triangles closing one end of the strip, between its two edge vertices.</summary>
-        void Cap(Vector3 center, Vector3 outward, int edgeStart, LineParameters p, float t)
+        void Add(Vector3 position, Vector2 uv, Color32 color, Vector3 normal, Vector3 tangent)
         {
-            var left = m_Vertices[edgeStart];
-            var right = m_Vertices[edgeStart + 1];
-            var side = (right - left) * 0.5f;
-            float radius = side.magnitude;
-            if (radius <= 0f) return;
-            var color = p.ColorGradient.Evaluate(t);
-            float u = m_Uvs[edgeStart].x;
-            int centerIndex = m_Vertices.Count;
-            m_Vertices.Add(center);
+            m_Vertices.Add(position);
+            m_Uvs.Add(uv);
             m_Colors.Add(color);
-            m_Uvs.Add(new Vector2(u, 0.5f));
-            int previous = edgeStart;
-            int steps = p.NumCapVertices + 1;
-            var a = -side;
-            var b = outward * radius;
-            for (int k = 1; k <= steps; k++)
+            if (!m_Lighting) return;
+            m_Normals.Add(normal);
+            m_Tangents.Add(new Vector4(tangent.x, tangent.y, tangent.z, 1f));
+        }
+
+        void Tri(int a, int b, int c)
+        {
+            m_Triangles.Add(a);
+            m_Triangles.Add(b);
+            m_Triangles.Add(c);
+        }
+
+        /// <summary>A half disc closing one end: its centre, then an arc from the end pair's plus
+        /// vertex around the end to its minus vertex, in the strip's facing plane.</summary>
+        void Cap(Vector3 center, Pair pair, Vector3 direction, bool start, int caps, float va, float vb, LineFacing facing, Vector3 normal)
+        {
+            int at = m_Vertices.Count;
+            Add(center, new Vector2(pair.U, 0.5f), pair.Color, normal, pair.Tangent);
+            var radius = pair.B - center;
+            float r = radius.magnitude;
+            var plane = facing.TransformZ ? Vector3.forward : facing.CameraForward;
+            var outward = Vector3.Cross(plane, radius).normalized;
+            if (Vector3.Dot(outward, direction) < 0f) outward = -outward;
+            var back = outward * (start ? -r : r);
+            for (int k = 0; k < caps + 2; k++)
             {
-                int index;
-                if (k == steps)
-                {
-                    index = edgeStart + 1;
-                }
-                else
-                {
-                    float angle = Mathf.PI * k / steps;
-                    var offset = a * Mathf.Cos(angle) + b * Mathf.Sin(angle);
-                    index = m_Vertices.Count;
-                    m_Vertices.Add(center + offset);
-                    m_Colors.Add(color);
-                    m_Uvs.Add(new Vector2(u, 0.5f - 0.5f * Mathf.Cos(angle)));
-                }
-                m_Triangles.Add(centerIndex);
-                m_Triangles.Add(previous);
-                m_Triangles.Add(index);
-                previous = index;
+                float angle = Mathf.PI * k / (caps + 1);
+                float v = vb + (va - vb) * k / (caps + 1);
+                Add(center + radius * Mathf.Cos(angle) + back * Mathf.Sin(angle), new Vector2(pair.U, v), pair.Color, normal, pair.Tangent);
+            }
+            for (int k = 0; k < caps + 1; k++)
+            {
+                if (start) Tri(at, at + 2 + k, at + 1 + k);
+                else Tri(at, at + 1 + k, at + 2 + k);
             }
         }
 
+        /// <summary>Writes the strip, its vertices taken through <paramref name="toMesh"/>.</summary>
         internal void WriteTo(Mesh mesh, Matrix4x4 toMesh)
         {
             mesh.Clear();
             var vertices = m_Vertices.ToArray();
-            if (!toMesh.isIdentity)
+            bool identity = toMesh.isIdentity;
+            if (!identity)
                 for (int i = 0; i < vertices.Length; i++) vertices[i] = toMesh.MultiplyPoint3x4(vertices[i]);
             mesh.vertices = vertices;
-            mesh.colors = m_Colors.ToArray();
+            if (m_Lighting)
+            {
+                var normals = m_Normals.ToArray();
+                var tangents = m_Tangents.ToArray();
+                if (!identity)
+                    for (int i = 0; i < normals.Length; i++)
+                    {
+                        normals[i] = toMesh.MultiplyVector(normals[i]).normalized;
+                        var t = toMesh.MultiplyVector(tangents[i]);
+                        tangents[i] = new Vector4(t.x, t.y, t.z, tangents[i].w);
+                    }
+                mesh.normals = normals;
+                mesh.tangents = tangents;
+            }
+            mesh.colors32 = m_Colors.ToArray();
             mesh.uv = m_Uvs.ToArray();
             mesh.triangles = m_Triangles.ToArray();
             mesh.RecalculateBounds();
@@ -287,12 +539,12 @@ namespace UnityEngine
             return mesh;
         }
 
-        internal static void Draw(Renderer renderer, LineStrip strip, Dictionary<Camera, Mesh> meshes, FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into, string name)
+        internal static LineFacing Facing(LineParameters p, Vector3 cameraPosition, Vector3 cameraForward) => new LineFacing
         {
-            var mesh = MeshFor(meshes, camera.Camera, name);
-            strip.WriteTo(mesh, Matrix4x4.identity);
-            FrameBuilder.AddMeshDraws(renderer, mesh, Matrix4x4.identity, Color.white, camera, into);
-        }
+            TransformZ = p.Alignment == LineAlignment.TransformZ,
+            CameraPosition = cameraPosition,
+            CameraForward = cameraForward.normalized,
+        };
 
         internal static Bounds BoundsOf(IReadOnlyList<Vector3> worldPoints, float width, Matrix4x4 worldToLocal)
         {
@@ -303,19 +555,13 @@ namespace UnityEngine
             return b;
         }
 
-        internal static void Bake(Mesh mesh, Renderer renderer, LineStrip strip, IReadOnlyList<Vector3> points, bool loop, LineParameters p, Camera camera, bool useTransform)
+        /// <summary>The transform's rotation and scale without its position (what BakeMesh's
+        /// useTransform applies to a local-space strip, measured).</summary>
+        internal static Matrix4x4 RotationScale(Transform transform)
         {
-            if (mesh == null) throw new ArgumentNullException(nameof(mesh));
-            camera ??= Camera.main;
-            var position = camera != null ? camera.transform.position : Vector3.zero;
-            var forward = camera != null ? camera.transform.forward : Vector3.forward;
-            bool ortho = camera != null && camera.orthographic;
-            if (!strip.Build(points, loop, p, position, forward, ortho, renderer.transform.forward))
-            {
-                mesh.Clear();
-                return;
-            }
-            strip.WriteTo(mesh, useTransform ? renderer.transform.worldToLocalMatrix : Matrix4x4.identity);
+            var m = transform.localToWorldMatrix;
+            m.m03 = m.m13 = m.m23 = 0f;
+            return m;
         }
     }
 
@@ -337,8 +583,8 @@ namespace UnityEngine
         public float startWidth { get => m_Parameters.StartWidth; set => m_Parameters.StartWidth = value; }
         public float endWidth { get => m_Parameters.EndWidth; set => m_Parameters.EndWidth = value; }
         public float widthMultiplier { get => m_Parameters.WidthMultiplier; set => m_Parameters.WidthMultiplier = value; }
-        public int numCornerVertices { get => m_Parameters.NumCornerVertices; set => m_Parameters.NumCornerVertices = Mathf.Max(0, value); }
-        public int numCapVertices { get => m_Parameters.NumCapVertices; set => m_Parameters.NumCapVertices = Mathf.Max(0, value); }
+        public int numCornerVertices { get => m_Parameters.NumCornerVertices; set => m_Parameters.NumCornerVertices = value; }
+        public int numCapVertices { get => m_Parameters.NumCapVertices; set => m_Parameters.NumCapVertices = value; }
         public bool useWorldSpace { get => m_UseWorldSpace; set => m_UseWorldSpace = value; }
         public bool loop { get => m_Loop; set => m_Loop = value; }
         public Color startColor { get => m_Parameters.StartColor; set => m_Parameters.StartColor = value; }
@@ -384,22 +630,38 @@ namespace UnityEngine
         [Obsolete("Use positionCount instead.", false)]
         public void SetVertexCount(int count) => positionCount = count;
 
+        // Out-of-range indices and short arrays log an error instead of throwing (measured).
+
         public void SetPosition(int index, Vector3 position)
         {
-            if (index < 0 || index >= m_Positions.Count) throw new ArgumentOutOfRangeException(nameof(index), $"Index out of bounds: {index} (positionCount {m_Positions.Count})");
+            if (index < 0 || index >= m_Positions.Count)
+            {
+                Debug.LogError("LineRenderer.SetPosition index out of bounds!");
+                return;
+            }
             m_Positions[index] = position;
         }
 
         public Vector3 GetPosition(int index)
         {
-            if (index < 0 || index >= m_Positions.Count) throw new ArgumentOutOfRangeException(nameof(index), $"Index out of bounds: {index} (positionCount {m_Positions.Count})");
+            if (index < 0 || index >= m_Positions.Count)
+            {
+                Debug.LogError("LineRenderer.GetPosition index out of bounds!");
+                return Vector3.zero;
+            }
             return m_Positions[index];
+        }
+
+        int CopyCount(int length)
+        {
+            if (length < m_Positions.Count) Debug.LogError("LineRenderer.GetPositions array is too small!");
+            return Math.Min(length, m_Positions.Count);
         }
 
         public int GetPositions(Vector3[] positions)
         {
             if (positions == null) throw new ArgumentNullException(nameof(positions));
-            int n = Math.Min(positions.Length, m_Positions.Count);
+            int n = CopyCount(positions.Length);
             m_Positions.CopyTo(0, positions, 0, n);
             return n;
         }
@@ -417,14 +679,14 @@ namespace UnityEngine
 
         public int GetPositions(NativeArray<Vector3> positions)
         {
-            int n = Math.Min(positions.Length, m_Positions.Count);
+            int n = CopyCount(positions.Length);
             for (int i = 0; i < n; i++) positions[i] = m_Positions[i];
             return n;
         }
 
         public int GetPositions(NativeSlice<Vector3> positions)
         {
-            int n = Math.Min(positions.Length, m_Positions.Count);
+            int n = CopyCount(positions.Length);
             for (int i = 0; i < n; i++) positions[i] = m_Positions[i];
             return n;
         }
@@ -449,18 +711,48 @@ namespace UnityEngine
             return m_World;
         }
 
+        /// <summary>Builds the strip in the line's own space (world, or local for a local-space
+        /// line) as seen from a camera. A local line facing the view is built from its world
+        /// points (widths are world units) and taken back to local space; facing its Z axis it is
+        /// built in local space. Returns the matrix from build space to line space.</summary>
+        bool BuildStrip(Vector3 cameraPosition, Vector3 cameraForward, out Matrix4x4 toLineSpace)
+        {
+            toLineSpace = Matrix4x4.identity;
+            var facing = LineDrawing.Facing(m_Parameters, cameraPosition, cameraForward);
+            if (m_UseWorldSpace || facing.TransformZ)
+                return m_Strip.Build(m_Positions, null, m_Loop, m_Parameters, facing);
+            toLineSpace = transform.worldToLocalMatrix;
+            return m_Strip.Build(WorldPoints(), null, m_Loop, m_Parameters, facing);
+        }
+
         public void BakeMesh(Mesh mesh, [Internal.DefaultValue("false")] bool useTransform = false) => BakeMesh(mesh, Camera.main, useTransform);
 
-        public void BakeMesh(Mesh mesh, Camera camera, [Internal.DefaultValue("false")] bool useTransform = false) =>
-            LineDrawing.Bake(mesh, this, m_Strip, WorldPoints(), m_Loop, m_Parameters, camera, useTransform);
+        /// <summary>The strip as seen from <paramref name="camera"/>: world-space lines bake in world
+        /// space; local-space lines in local space, with the transform's rotation and scale (not its
+        /// position) when <paramref name="useTransform"/> is set (measured).</summary>
+        public void BakeMesh(Mesh mesh, Camera camera, [Internal.DefaultValue("false")] bool useTransform = false)
+        {
+            if (mesh == null) throw new ArgumentNullException(nameof(mesh));
+            if (camera == null) throw new ArgumentNullException(nameof(camera));
+            var ct = camera.transform;
+            if (!BuildStrip(ct.position, ct.forward, out var toLine))
+            {
+                mesh.Clear();
+                return;
+            }
+            var toMesh = !m_UseWorldSpace && useTransform ? LineDrawing.RotationScale(transform) * toLine : toLine;
+            m_Strip.WriteTo(mesh, toMesh);
+        }
 
         internal override Bounds GetLocalBounds() =>
             LineDrawing.BoundsOf(WorldPoints(), Mathf.Abs(m_Parameters.WidthMultiplier), transform.worldToLocalMatrix);
 
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
-            if (!m_Strip.Build(WorldPoints(), m_Loop, m_Parameters, camera.Position, camera.Forward, camera.Orthographic, transform.forward)) return;
-            LineDrawing.Draw(this, m_Strip, m_Meshes, camera, into, "LineRenderer");
+            if (!BuildStrip(camera.Position, camera.Forward, out var toLine)) return;
+            var mesh = LineDrawing.MeshFor(m_Meshes, camera.Camera, "LineRenderer");
+            m_Strip.WriteTo(mesh, toLine);
+            FrameBuilder.AddMeshDraws(this, mesh, m_UseWorldSpace ? Matrix4x4.identity : transform.localToWorldMatrix, Color.white, camera, into);
         }
 
         internal override void OnEngineDestroy()
@@ -494,8 +786,17 @@ namespace UnityEngine
         }
     }
 
-    /// <summary>A strip behind a moving object: a point every minVertexDistance, each fading out
-    /// after <see cref="time"/> seconds; width and color run from the object (0) to the tail (1).</summary>
+    /// <summary>
+    /// A strip behind a moving object (measured, tests/projects/lines trail.*). When its object has
+    /// moved since the trail last looked (an API read, or once a frame before rendering), the trail
+    /// first records the previous position if it has no points, then the new position once it is
+    /// at least minVertexDistance from the newest point; points are stamped with Time.time and
+    /// remember whether the trail was emitting (non-emitting points are drawn at zero width).
+    /// Once a frame the oldest point is dropped while the next one is older than <see cref="time"/>,
+    /// and a last point when it is. The strip runs from the object's position through the points,
+    /// newest first; the oldest point is drawn moved towards the next one by the fraction of their
+    /// time difference it has outlived.
+    /// </summary>
     [ClassId(96)]
     public sealed partial class TrailRenderer : Renderer
     {
@@ -503,6 +804,7 @@ namespace UnityEngine
         {
             internal Vector3 Position;
             internal float Time;
+            internal bool Visible;
         }
 
         internal LineParameters m_Parameters = new LineParameters();
@@ -514,10 +816,12 @@ namespace UnityEngine
         SpriteMaskInteraction m_MaskInteraction;
         /// <summary>Oldest first.</summary>
         readonly List<Point> m_Points = new List<Point>();
-        int m_UpdatedFrame = -1;
+        Vector3 m_LastPosition;
+        bool m_HasLastPosition;
         bool m_HadPoints;
         readonly LineStrip m_Strip = new LineStrip();
         readonly List<Vector3> m_Draw = new List<Vector3>();
+        readonly List<bool> m_DrawHidden = new List<bool>();
         readonly Dictionary<Camera, Mesh> m_Meshes = new Dictionary<Camera, Mesh>();
 
         public TrailRenderer() { }
@@ -528,8 +832,8 @@ namespace UnityEngine
         public float endWidth { get => m_Parameters.EndWidth; set => m_Parameters.EndWidth = value; }
         public float widthMultiplier { get => m_Parameters.WidthMultiplier; set => m_Parameters.WidthMultiplier = value; }
         public bool autodestruct { get => m_Autodestruct; set => m_Autodestruct = value; }
-        public int numCornerVertices { get => m_Parameters.NumCornerVertices; set => m_Parameters.NumCornerVertices = Mathf.Max(0, value); }
-        public int numCapVertices { get => m_Parameters.NumCapVertices; set => m_Parameters.NumCapVertices = Mathf.Max(0, value); }
+        public int numCornerVertices { get => m_Parameters.NumCornerVertices; set => m_Parameters.NumCornerVertices = value; }
+        public int numCapVertices { get => m_Parameters.NumCapVertices; set => m_Parameters.NumCapVertices = value; }
         public float minVertexDistance { get => m_MinVertexDistance; set => m_MinVertexDistance = value; }
         public Color startColor { get => m_Parameters.StartColor; set => m_Parameters.StartColor = value; }
         public Color endColor { get => m_Parameters.EndColor; set => m_Parameters.EndColor = value; }
@@ -543,21 +847,13 @@ namespace UnityEngine
         public AnimationCurve widthCurve { get => m_Parameters.WidthCurve; set => m_Parameters.WidthCurve = value ?? new AnimationCurve(new Keyframe(0f, 1f)); }
         public Gradient colorGradient { get => m_Parameters.ColorGradient; set => m_Parameters.ColorGradient = value ?? new Gradient(); }
 
-        public bool emitting
-        {
-            get => m_Emitting;
-            set
-            {
-                if (value && !m_Emitting) m_UpdatedFrame = -1;
-                m_Emitting = value;
-            }
-        }
+        public bool emitting { get => m_Emitting; set => m_Emitting = value; }
 
         public int positionCount
         {
             get
             {
-                Advance();
+                TrackMovement();
                 return m_Points.Count;
             }
         }
@@ -567,22 +863,41 @@ namespace UnityEngine
 
         static float Now => Time.time;
 
-        /// <summary>Ages the trail and adds the object's position when it moved far enough; once a frame.</summary>
-        void Advance()
+        /// <summary>Records the object's movement since the trail last looked; a move also drops
+        /// the points that have outlived the trail's time (measured: a moving trail ages when
+        /// it is read, a still one once a frame).</summary>
+        void TrackMovement()
         {
-            int frame = Time.frameCount;
-            if (m_UpdatedFrame == frame) return;
-            m_UpdatedFrame = frame;
-            float now = Now;
-            int expired = 0;
-            while (expired < m_Points.Count && now - m_Points[expired].Time > m_Time) expired++;
-            if (expired > 0) m_Points.RemoveRange(0, expired);
-            if (m_Emitting && m_GameObject != null && m_GameObject.activeInHierarchy)
+            if (m_GameObject == null) return;
+            var position = transform.position;
+            if (!m_HasLastPosition)
             {
-                var position = transform.position;
-                if (m_Points.Count == 0 || (position - m_Points[m_Points.Count - 1].Position).sqrMagnitude >= m_MinVertexDistance * m_MinVertexDistance)
-                    m_Points.Add(new Point { Position = position, Time = now });
+                m_LastPosition = position;
+                m_HasLastPosition = true;
+                return;
             }
+            if (position == m_LastPosition) return;
+            float now = Now;
+            if (m_Points.Count == 0) m_Points.Add(new Point { Position = m_LastPosition, Time = now, Visible = m_Emitting });
+            if ((position - m_Points[m_Points.Count - 1].Position).sqrMagnitude >= m_MinVertexDistance * m_MinVertexDistance)
+                m_Points.Add(new Point { Position = position, Time = now, Visible = m_Emitting });
+            m_LastPosition = position;
+            Age(now);
+        }
+
+        /// <summary>Drops the oldest point while the next one is older than <see cref="time"/>,
+        /// and a last point that is.</summary>
+        void Age(float now)
+        {
+            while (m_Points.Count >= 2 && now - m_Points[1].Time > m_Time) m_Points.RemoveAt(0);
+            if (m_Points.Count == 1 && now - m_Points[0].Time > m_Time) m_Points.Clear();
+        }
+
+        /// <summary>Once a frame, before rendering: movement, ageing and autodestruction.</summary>
+        internal void UpdateTrail()
+        {
+            TrackMovement();
+            Age(Now);
             if (m_Points.Count > 0) m_HadPoints = true;
             else if (m_HadPoints && m_Autodestruct && Application.isPlaying)
             {
@@ -594,25 +909,49 @@ namespace UnityEngine
         /// <summary>The strip's points from the object (head) to the oldest point.</summary>
         List<Vector3> DrawPoints()
         {
-            Advance();
+            TrackMovement();
             m_Draw.Clear();
-            if (m_Emitting && m_GameObject != null)
+            m_DrawHidden.Clear();
+            int count = m_Points.Count;
+            if (count == 0 || m_GameObject == null) return m_Draw;
+            m_Draw.Add(transform.position);
+            m_DrawHidden.Add(!m_Emitting);
+            for (int i = count - 1; i >= 1; i--)
             {
-                var head = transform.position;
-                if (m_Points.Count == 0 || head != m_Points[m_Points.Count - 1].Position) m_Draw.Add(head);
+                m_Draw.Add(m_Points[i].Position);
+                m_DrawHidden.Add(!m_Points[i].Visible);
             }
-            for (int i = m_Points.Count - 1; i >= 0; i--) m_Draw.Add(m_Points[i].Position);
+            var oldest = m_Points[0];
+            var tail = oldest.Position;
+            if (count >= 2)
+            {
+                var next = m_Points[1];
+                float over = Now - m_Time - oldest.Time;
+                float span = next.Time - oldest.Time;
+                float f = span > 0f ? over / span : (over > 0f ? 1f : 0f);
+                tail = Vector3.Lerp(oldest.Position, next.Position, Mathf.Clamp01(f));
+            }
+            m_Draw.Add(tail);
+            m_DrawHidden.Add(!oldest.Visible);
             return m_Draw;
         }
 
         public void Clear()
         {
             m_Points.Clear();
-            m_UpdatedFrame = Time.frameCount;
+            if (m_GameObject != null)
+            {
+                m_LastPosition = transform.position;
+                m_HasLastPosition = true;
+            }
         }
+
+        // Setting or reading points first records the object's pending movement, as the other
+        // API reads do (measured: a point set after a move is not the one the move aged out).
 
         public void SetPosition(int index, Vector3 position)
         {
+            TrackMovement();
             if (index < 0 || index >= m_Points.Count) throw new ArgumentOutOfRangeException(nameof(index));
             var p = m_Points[index];
             p.Position = position;
@@ -621,6 +960,7 @@ namespace UnityEngine
 
         public Vector3 GetPosition(int index)
         {
+            TrackMovement();
             if (index < 0 || index >= m_Points.Count) throw new ArgumentOutOfRangeException(nameof(index));
             return m_Points[index].Position;
         }
@@ -628,26 +968,53 @@ namespace UnityEngine
         public int GetPositions(Vector3[] positions)
         {
             if (positions == null) throw new ArgumentNullException(nameof(positions));
+            TrackMovement();
             int n = Math.Min(positions.Length, m_Points.Count);
             for (int i = 0; i < n; i++) positions[i] = m_Points[i].Position;
             return n;
         }
 
-        public int GetVisiblePositions(Vector3[] positions) => GetPositions(positions);
+        /// <summary>The points recorded while emitting, oldest first.</summary>
+        public int GetVisiblePositions(Vector3[] positions)
+        {
+            if (positions == null) throw new ArgumentNullException(nameof(positions));
+            TrackMovement();
+            int n = 0;
+            foreach (var p in m_Points)
+            {
+                if (!p.Visible) continue;
+                if (n >= positions.Length) break;
+                positions[n++] = p.Position;
+            }
+            return n;
+        }
 
+        /// <summary>Replaces the positions of the first points (as many as both have).</summary>
         public void SetPositions(Vector3[] positions)
         {
             if (positions == null) throw new ArgumentNullException(nameof(positions));
-            m_Points.Clear();
-            AddPositions(positions);
+            TrackMovement();
+            int n = Math.Min(positions.Length, m_Points.Count);
+            for (int i = 0; i < n; i++)
+            {
+                var p = m_Points[i];
+                p.Position = positions[i];
+                m_Points[i] = p;
+            }
         }
 
-        public void AddPosition(Vector3 position) => m_Points.Add(new Point { Position = position, Time = Now });
+        public void AddPosition(Vector3 position) => AddPositions(new[] { position });
 
+        /// <summary>Appends points after the object's pending movement, stamped evenly between the
+        /// newest point's time and now, short of now (measured: n points at the (i+1)/(n+1) steps).</summary>
         public void AddPositions(Vector3[] positions)
         {
             if (positions == null) throw new ArgumentNullException(nameof(positions));
-            foreach (var p in positions) AddPosition(p);
+            TrackMovement();
+            float now = Now;
+            float from = m_Points.Count > 0 ? m_Points[m_Points.Count - 1].Time : now;
+            for (int i = 0; i < positions.Length; i++)
+                m_Points.Add(new Point { Position = positions[i], Time = from + (now - from) * (i + 1) / (positions.Length + 1), Visible = m_Emitting });
         }
 
         public void SetPositions(NativeArray<Vector3> positions) => SetPositions(positions.ToArray());
@@ -657,45 +1024,81 @@ namespace UnityEngine
 
         public int GetPositions(NativeArray<Vector3> positions)
         {
-            int n = Math.Min(positions.Length, m_Points.Count);
-            for (int i = 0; i < n; i++) positions[i] = m_Points[i].Position;
+            var copy = new Vector3[positions.Length];
+            int n = GetPositions(copy);
+            for (int i = 0; i < n; i++) positions[i] = copy[i];
             return n;
         }
 
         public int GetPositions(NativeSlice<Vector3> positions)
         {
-            int n = Math.Min(positions.Length, m_Points.Count);
-            for (int i = 0; i < n; i++) positions[i] = m_Points[i].Position;
+            var copy = new Vector3[positions.Length];
+            int n = GetPositions(copy);
+            for (int i = 0; i < n; i++) positions[i] = copy[i];
             return n;
         }
 
-        public int GetVisiblePositions(NativeArray<Vector3> positions) => GetPositions(positions);
-        public int GetVisiblePositions(NativeSlice<Vector3> positions) => GetPositions(positions);
+        public int GetVisiblePositions(NativeArray<Vector3> positions)
+        {
+            var copy = new Vector3[positions.Length];
+            int n = GetVisiblePositions(copy);
+            for (int i = 0; i < n; i++) positions[i] = copy[i];
+            return n;
+        }
+
+        public int GetVisiblePositions(NativeSlice<Vector3> positions)
+        {
+            var copy = new Vector3[positions.Length];
+            int n = GetVisiblePositions(copy);
+            for (int i = 0; i < n; i++) positions[i] = copy[i];
+            return n;
+        }
 
         public void BakeMesh(Mesh mesh, [Internal.DefaultValue("false")] bool useTransform = false) => BakeMesh(mesh, Camera.main, useTransform);
 
-        public void BakeMesh(Mesh mesh, Camera camera, [Internal.DefaultValue("false")] bool useTransform = false) =>
-            LineDrawing.Bake(mesh, this, m_Strip, DrawPoints(), false, m_Parameters, camera, useTransform);
+        /// <summary>The trail's strip in world space as seen from <paramref name="camera"/>.</summary>
+        public void BakeMesh(Mesh mesh, Camera camera, [Internal.DefaultValue("false")] bool useTransform = false)
+        {
+            if (mesh == null) throw new ArgumentNullException(nameof(mesh));
+            if (camera == null) throw new ArgumentNullException(nameof(camera));
+            var ct = camera.transform;
+            if (!m_Strip.Build(DrawPoints(), m_DrawHidden, false, m_Parameters, LineDrawing.Facing(m_Parameters, ct.position, ct.forward)))
+            {
+                mesh.Clear();
+                return;
+            }
+            m_Strip.WriteTo(mesh, Matrix4x4.identity);
+        }
 
         internal override Bounds GetLocalBounds() =>
             LineDrawing.BoundsOf(DrawPoints(), Mathf.Abs(m_Parameters.WidthMultiplier), transform.worldToLocalMatrix);
 
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
-            if (!m_Strip.Build(DrawPoints(), false, m_Parameters, camera.Position, camera.Forward, camera.Orthographic, transform.forward)) return;
-            LineDrawing.Draw(this, m_Strip, m_Meshes, camera, into, "TrailRenderer");
+            if (!m_Strip.Build(DrawPoints(), m_DrawHidden, false, m_Parameters, LineDrawing.Facing(m_Parameters, camera.Position, camera.Forward))) return;
+            var mesh = LineDrawing.MeshFor(m_Meshes, camera.Camera, "TrailRenderer");
+            m_Strip.WriteTo(mesh, Matrix4x4.identity);
+            FrameBuilder.AddMeshDraws(this, mesh, Matrix4x4.identity, Color.white, camera, into);
         }
 
         internal override void OnEngineEnable()
         {
             base.OnEngineEnable();
-            // A trail starts afresh where its object is.
-            m_UpdatedFrame = -1;
+            m_LastPosition = transform.position;
+            m_HasLastPosition = true;
+            TrailSystem.Add(this);
+        }
+
+        internal override void OnEngineDisable()
+        {
+            base.OnEngineDisable();
+            TrailSystem.Remove(this);
         }
 
         internal override void OnEngineDestroy()
         {
             base.OnEngineDestroy();
+            TrailSystem.Remove(this);
             foreach (var mesh in m_Meshes.Values) if (mesh != null) DestroyImmediate(mesh);
             m_Meshes.Clear();
         }
@@ -723,6 +1126,34 @@ namespace UnityEngine
             m_MaskInteraction = s.m_MaskInteraction;
             m_Autodestruct = s.m_Autodestruct;
             m_Emitting = s.m_Emitting;
+        }
+
+        /// <summary>The enabled trails, updated once a frame before rendering.</summary>
+        static class TrailSystem
+        {
+            static readonly List<TrailRenderer> s_Trails = new List<TrailRenderer>();
+            static readonly List<TrailRenderer> s_Snapshot = new List<TrailRenderer>();
+            static bool s_Registered;
+
+            internal static void Add(TrailRenderer trail)
+            {
+                if (!s_Registered)
+                {
+                    s_Registered = true;
+                    PlayerLoopDriver.Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), UpdateAll);
+                }
+                if (!s_Trails.Contains(trail)) s_Trails.Add(trail);
+            }
+
+            internal static void Remove(TrailRenderer trail) => s_Trails.Remove(trail);
+
+            static void UpdateAll()
+            {
+                s_Snapshot.Clear();
+                s_Snapshot.AddRange(s_Trails);
+                foreach (var trail in s_Snapshot)
+                    if (trail != null) trail.UpdateTrail();
+            }
         }
     }
 
