@@ -1857,6 +1857,16 @@ profiles. textureimport, spriteimport and modelimport (Gamma, Linear, URP failur
 unchanged; unbound-assets 73/73; api-check 0 errors in 2279 types. ImportedTextureInfo's
 documented dimensions now include 3 and 5 (layout unchanged).
 
+Combined with the later physics, audio and sampler-property work (2026-11-01): the texture array
+captures are byte-identical to the earlier ones in all three profiles (the same 38 differences:
+36 imported-cube `GetPixelData` values and 2 wrapW-Clamp samples). textureimport (502/502 mips,
+1,732,492/1,732,492 bytes in each profile), spriteimport (519/520) and modelimport (Gamma and
+Linear 6032/6033, URP 7011/7687 with 550 missing, 126 differing and 81 extra keys, union 7768;
+descriptions 0 differences) captures are byte-identical to those of the runtime without the
+texture array work. unbound-assets 73/73; api-check 0 errors in 2289 types; regenerating the
+compatibility stubs changes nothing. Texture cache VERSION 12; native and render protocol
+versions and texture packet layouts unchanged.
+
 ### HDR and count rendering preservation, 2026-10-31
 
 The matched count/HDR runtime at674c8eae completes the unchanged strict checkers
