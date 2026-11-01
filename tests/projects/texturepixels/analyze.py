@@ -17,7 +17,7 @@ import struct
 import sys
 from collections import Counter
 
-PIXELS = re.compile(r'^(\d+)x(\d+):(.*)$', re.S)
+PIXELS = re.compile(r'^(\d+)x(\d+)(?:x\d+)?:(.*)$', re.S)
 
 
 def f32(x):

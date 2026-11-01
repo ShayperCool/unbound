@@ -4,6 +4,7 @@ using System.IO;
 using System.Text;
 using Unity.Collections;
 using UnityEngine;
+using UnityEngine.Experimental.Rendering;
 
 /// <summary>
 /// Staged by run.py over the texture array fixture's probe script (same class and GUID, so the
@@ -115,6 +116,139 @@ public class TextureArrayProbe : MonoBehaviour
         Value(name + ".all.px", t.width + "x" + t.height, () => Floats(t.GetPixels()));
     }
 
+    void RecordLayered(string name, Texture t)
+    {
+        int depth = t is Texture2DArray a ? a.depth : t is Texture3D v ? v.depth : 1;
+        TextureFormat format = t is Texture2DArray fa ? fa.format : ((Texture3D)t).format;
+        Add(name + ".info", string.Format(CultureInfo.InvariantCulture, "{0} {1}x{2}x{3} mips {4} {5} {6} readable {7}",
+            t.GetType().Name, t.width, t.height, depth, t.mipmapCount, format, t.graphicsFormat, t.isReadable));
+        string size = t.width + "x" + t.height;
+        if (t is Texture2DArray array)
+            for (int e = 0; e < depth; e++)
+            {
+                int el = e;
+                string key = name + ".e" + e + ".mip0";
+                Value(key + ".px32", size, () => Bytes(array.GetPixels32(el, 0)));
+                Value(key + ".px", size, () => Floats(array.GetPixels(el, 0)));
+                Value(key + ".raw", size, () => Convert.ToBase64String(array.GetPixelData<byte>(0, el).ToArray()));
+            }
+        else
+        {
+            var volume = (Texture3D)t;
+            string key = name + ".mip0";
+            size += "x" + depth;
+            Value(key + ".px32", size, () => Bytes(volume.GetPixels32(0)));
+            Value(key + ".px", size, () => Floats(volume.GetPixels(0)));
+            Value(key + ".raw", size, () => Convert.ToBase64String(volume.GetPixelData<byte>(0).ToArray()));
+            Value(key + ".pixel", size, () =>
+            {
+                var colors = new Color[volume.width * volume.height * depth];
+                for (int z = 0; z < depth; z++)
+                    for (int y = 0; y < volume.height; y++)
+                        for (int x = 0; x < volume.width; x++) colors[(z * volume.height + y) * volume.width + x] = volume.GetPixel(x, y, z);
+                return Floats(colors);
+            });
+        }
+    }
+
+    /// <summary>Script-made volumes: GetPixel against GetPixels (byte and float formats), and
+    /// the bytes SetPixel stores for values half way between two bytes.</summary>
+    void Volumes()
+    {
+        foreach (var format in new[] { TextureFormat.RGBA32, TextureFormat.BGRA32, TextureFormat.R8, TextureFormat.RHalf, TextureFormat.RGFloat })
+        {
+            var volume = new Texture3D(Size, Size, 2, format, false);
+            if (format == TextureFormat.RHalf || format == TextureFormat.RGFloat)
+            {
+                var colors = new Color[Size * Size * 2];
+                for (int i = 0; i < colors.Length; i++) colors[i] = new Color(i / 37f - 2f, 1.5f - i / 91f, 0.25f, 0.75f);
+                volume.SetPixels(colors);
+            }
+            else
+            {
+                volume.SetPixelData(Pattern(format, Size * Size * 2, 0), 0);
+            }
+            volume.Apply(false);
+            RecordLayered("Volume" + format, volume);
+        }
+        var set = new Texture3D(Size, Size, 1, TextureFormat.RGBA32, false);
+        for (int i = 0; i < Size * Size; i++)
+        {
+            float v = (i + 0.5f) / 255f;
+            set.SetPixel(i % Size, i / Size, 0, new Color(v, i / 255f, 1 - v, (255 - i + 0.5f) / 255f));
+        }
+        Value("VolumeSetPixel.mip0.raw", Size + "x" + Size, () => Convert.ToBase64String(set.GetPixelData<byte>(0).ToArray()));
+    }
+
+    string SampleCube(Cubemap cube, int face)
+    {
+        var material = new Material(Shader.Find("Probe/SampleCube"));
+        material.SetTexture("_Cube", cube);
+        material.SetFloat("_Face", face);
+        material.SetFloat("_Lod", 0);
+        var rt = RenderTexture.GetTemporary(cube.width, cube.width, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
+        var previous = RenderTexture.active;
+        try
+        {
+            Graphics.Blit(null, rt, material);
+            RenderTexture.active = rt;
+            var read = new Texture2D(cube.width, cube.width, TextureFormat.RGBA32, false);
+            read.ReadPixels(new Rect(0, 0, cube.width, cube.width), 0, 0, false);
+            read.Apply(false);
+            var result = Bytes(read.GetPixels32());
+            Destroy(read);
+            return result;
+        }
+        finally
+        {
+            RenderTexture.active = previous;
+            RenderTexture.ReleaseTemporary(rt);
+            Destroy(material);
+        }
+    }
+
+    /// <summary>An imported readable cubemap: its faces drawn by the GPU before any CPU access,
+    /// after Apply(false) as the first access, and after GetPixels then Apply(false).</summary>
+    void ImportedCube(string name)
+    {
+        var cube = Array.Find(textures, t => t != null && t.name == name) as Cubemap;
+        if (cube == null)
+        {
+            Add(name + ".missing", "True");
+            return;
+        }
+        string size = cube.width + "x" + cube.width;
+        for (int f = 0; f < 6; f++) { int face = f; Value(name + ".before.f" + f + ".sample", size, () => SampleCube(cube, face)); }
+        Value(name + ".apply", "first", () => { cube.Apply(false); return "ok"; });
+        for (int f = 0; f < 6; f++) { int face = f; Value(name + ".applied.f" + f + ".sample", size, () => SampleCube(cube, face)); }
+        for (int f = 0; f < 6; f++) { int face = f; Value(name + ".f" + f + ".mip0.px", size, () => Floats(cube.GetPixels((CubemapFace)face, 0))); }
+        Value(name + ".reapply", "after GetPixels", () => { cube.Apply(false); return "ok"; });
+        for (int f = 0; f < 6; f++) { int face = f; Value(name + ".reapplied.f" + f + ".sample", size, () => SampleCube(cube, face)); }
+    }
+
+    /// <summary>The probe's own assets: BGRA32 array and volume files, and an imported readable
+    /// PNG encoded to EXR before any other CPU read.</summary>
+    void Assets()
+    {
+        foreach (var suffix in new[] { "", "Linear" })
+        {
+            var array = Resources.Load<Texture2DArray>("PixelsBgraArray" + suffix);
+            if (array == null) Add("PixelsBgraArray" + suffix + ".missing", "True"); else RecordLayered("PixelsBgraArray" + suffix, array);
+            var volume = Resources.Load<Texture3D>("PixelsBgraVolume" + suffix);
+            if (volume == null) Add("PixelsBgraVolume" + suffix + ".missing", "True"); else RecordLayered("PixelsBgraVolume" + suffix, volume);
+        }
+        Add("Utility.B8G8R8A8_SRGB", GraphicsFormatUtility.GetTextureFormat(GraphicsFormat.B8G8R8A8_SRGB).ToString());
+        Add("Utility.B8G8R8A8_UNorm", GraphicsFormatUtility.GetTextureFormat(GraphicsFormat.B8G8R8A8_UNorm).ToString());
+        var imported = Resources.Load<Texture2D>("PixelsImported");
+        if (imported == null)
+        {
+            Add("PixelsImported.missing", "True");
+            return;
+        }
+        Value("PixelsImported.exr", "first", () => imported.EncodeToEXR().Length > 0 ? "ok" : "empty");
+        Record("PixelsImported", imported);
+    }
+
     Texture2D Make(TextureFormat format, bool mips, bool linear)
     {
         var t = new Texture2D(Size, Size, format, mips, linear);
@@ -148,6 +282,10 @@ public class TextureArrayProbe : MonoBehaviour
             var loaded = new Texture2D(2, 2);
             Add("Loaded.load", loaded.LoadImage(png, false) ? "True" : "False");
             Record("Loaded", loaded);
+            Volumes();
+            Assets();
+            ImportedCube("CubeStrip");
+            ImportedCube("CubeStripLinear");
             var path = Environment.GetEnvironmentVariable("TEXTURE_PIXELS_PROBE_OUT");
             if (!string.IsNullOrEmpty(path))
             {

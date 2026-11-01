@@ -1,13 +1,16 @@
 #!/usr/bin/env python3
 """Records the Texture2D pixel read probe in the Unity Editor or runs it in Unbound.
 
+    run.py create --release R --label L    the Editor makes Assets/Pixels/Resources (BGRA32 array and
+                                           volume assets, an imported PNG) on a copy, copied back here
     run.py editor --release R --label L    two independent Editor captures per profile
     run.py publish --release R --label L   checks the two captures agree, copies one to Reference/
     run.py unbound --release R --label L   one Unbound capture per profile (UNBOUND_CLI: the binary)
 
 The probe reuses the texture array fixture (tests/projects/texturearrays): every capture runs on
 a fresh copy of that fixture in the validation cache, with its probe script replaced by
-Assets/Scripts/TexturePixelsProbe.cs (same class and GUID) and ProjectSettings switched to the
+Assets/Scripts/TexturePixelsProbe.cs (same class and GUID), this probe's Assets/Pixels added (its
+assets, the cube sampling shader and the asset maker) and ProjectSettings switched to the
 profile's color space. Profiles: Gamma and Linear on the Standalone target. Editors run through
 the shared heavy-job launcher on the GPU (a private Xvfb and VirtualGL); do not wrap this driver.
 """
@@ -35,7 +38,25 @@ _spec.loader.exec_module(fixture)
 def copy_project(dest, profile):
     fixture.copy_project(dest, profile)
     shutil.copyfile(PROBE/'Assets/Scripts/TexturePixelsProbe.cs', dest/'Assets/Scripts/TextureArrayProbe.cs')
+    shutil.copytree(PROBE/'Assets/Pixels', dest/'Assets/Pixels')
+    if (PROBE/'Assets/Pixels.meta').exists():
+        shutil.copyfile(PROBE/'Assets/Pixels.meta', dest/'Assets/Pixels.meta')
     return dest
+
+
+def create(work):
+    project = copy_project(work/'projects'/'create', 'Gamma')
+    log = work/'create.log'
+    code = subprocess.run([str(LAUNCHER), 'timeout', '-s', 'KILL', '900', str(editor_path()), '-batchmode',
+                           '-nographics', '-projectPath', str(project), '-executeMethod', 'PixelsAssets.Create',
+                           '-logFile', str(log)]).returncode
+    print('editor exit', code)
+    if code:
+        return code
+    shutil.copytree(project/'Assets/Pixels', PROBE/'Assets/Pixels', dirs_exist_ok=True)
+    shutil.copyfile(project/'Assets/Pixels.meta', PROBE/'Assets/Pixels.meta')
+    print('copied the Editor-made assets and metas into', PROBE/'Assets/Pixels')
+    return 0
 
 
 def editor(work):
@@ -97,7 +118,7 @@ def unbound(work):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=('editor', 'publish', 'unbound'))
+    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'unbound'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
     args = parser.parse_args()
@@ -105,7 +126,7 @@ def main():
         parser.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
-    return {'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
+    return {'create': create, 'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
 
 
 if __name__ == '__main__':

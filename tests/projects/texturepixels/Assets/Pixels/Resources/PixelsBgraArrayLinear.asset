@@ -1,0 +1,41 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!187 &18700000
+Texture2DArray:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: PixelsBgraArrayLinear
+  m_ImageContentsHash:
+    serializedVersion: 2
+    Hash: 00000000000000000000000000000000
+  m_IsAlphaChannelOptional: 0
+  serializedVersion: 3
+  m_ColorSpace: 0
+  m_Format: 59
+  m_Width: 4
+  m_Height: 4
+  m_Depth: 2
+  m_MipCount: 1
+  m_MipsStripped: 0
+  m_DataSize: 128
+  m_TextureSettings:
+    serializedVersion: 2
+    m_FilterMode: 0
+    m_Aniso: 1
+    m_MipBias: 0
+    m_WrapU: 0
+    m_WrapV: 0
+    m_WrapW: 0
+  m_UsageMode: 0
+  m_IsReadable: 1
+  m_IgnoreMipmapLimit: 1
+  m_MipmapLimitGroupName: 
+  image data: 128
+  _typelessdata: 034383c32868a8e84d8dcd0d72b2f23297d71757bcfc3c7ce12161a1064686c62b6babeb5090d01075b5f5359ada1a5abfff3f7fe42464a4094989c92e6eaeee68a8e8288dcd0d4db2f23272d7175797fc3c7cbc2161a1e14686c6066babeb2b90d01050b5f53575da1a5a9aff3f7fbf2464a4e44989c9096eaeee2e93d31353
+  m_StreamData:
+    serializedVersion: 2
+    offset: 0
+    size: 0
+    path: 
