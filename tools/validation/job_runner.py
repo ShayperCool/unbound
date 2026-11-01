@@ -156,6 +156,11 @@ def admit(kind, config):
     # one attempt: a pooled waiter never delays jobs that need other slots.
     # Pooled jobs each need one slot per pool, so retrying cannot starve them.
     while True:
+        # Re-read the policy while waiting, so a raised limit admits queued jobs.
+        try:
+            config = policy()
+        except (OSError, ValueError, AssertionError):
+            pass
         with lock('parity-heavy-entry.lock'):
             while True:
                 held = attempt(kind, config)
