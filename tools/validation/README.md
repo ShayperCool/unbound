@@ -1,45 +1,45 @@
 # Validation job limits
 
 `install_job_runner.py` installs the common `~/.cache/compat/with-heavy-job`
-entry point and the user systemd slices. Every checkout uses the same eight
-memory tokens and the same combined 16 GiB memory budget. The source policy is
-`job-limits.json`; the previous serial launcher is backed up before replacement.
+entry point and the user systemd slices. The source policy is `job-limits.json`;
+the previous serial launcher is backed up before replacement.
 
-The launcher recognizes the actual Unity Editor executable in the command,
-including commands wrapped by timeout or time. Editors with `-nographics` share
-the heavy-job lock and occupy one global slot. Graphics Editors also acquire
-one GPU mutex. Direct `unbound run` commands use the engine pool: at most two
-jobs, with `--headless` selecting CPU mode and other runs sharing the Editor GPU
-mutex. Known `time`, `timeout` and `env` wrappers are recognized. An executable
-passed as an argument to a Python driver does not pool that whole driver.
-Builds (`cargo`, `rustc`, and `dotnet build/test/publish/restore/msbuild/pack/format`,
-also behind time, timeout and env) share the heavy-job lock with the pools: one build at a
-time, holding four of the eight memory tokens, in `unbound-builds.slice` (MemoryHigh 7 GiB,
-MemoryMax 9 GiB, no swap) inside the same 16 GiB `unbound.slice` budget. A build therefore
-runs beside up to four Editors (or two engines) instead of stopping every pool. Build scripts
-are not recognized: pass `--kind build` for a script that only builds. Other jobs keep the
+Admission is by count: at most eight Unity Editors (`-nographics` or graphics),
+four direct `unbound run` engine jobs (`--headless` selects CPU mode), two builds
+(`cargo`, `rustc`, `dotnet build/test/publish/restore/msbuild/pack/format`, also
+behind time, timeout and env; pass `--kind build` for a script that only builds)
+`tool_slots` CPU tools (other `unbound` subcommands such as `compile`, `.NET` tools
+run as `dotnet Tool.dll` such as ApiCheck, or anything passed with `--kind tool`)
+and `gpu_slots` GPU jobs, shared by graphics Editors and non-headless engine runs.
+Wrap build scripts with `--kind build` and analysis scripts that start no Editor or
+engine run with `--kind tool`: an unrecognized command is an exclusive `heavy` job
+and stops every pool while it runs.
+A job reserves everything it needs at once, without blocking while it holds any
+of it: a job that cannot get all its slots releases them and retries. A waiting
+job therefore never pins slots and never delays jobs whose own slots are free.
+Only an exclusive `heavy` job keeps the entry lock while it waits, so newer jobs
+queue behind it and a writer cannot starve; a waiting pooled job (for example a
+second build behind a running one) never delays jobs that need other slots. Other (`heavy`) commands keep the
 exclusive lock, because they may start Editors without going through the pool.
-Every job appends its kind, queue wait, run time, exit code and the scope's memory peak to
-`~/.cache/compat/job-timings.jsonl`; use it to tune the build token weight and limits.
 Direct engine runs on the same resolved project directory are serialized before
-taking pool tokens; different spellings and symlinks share the same project lock.
-The entry lock prevents new readers from continuously bypassing a waiting writer.
-Never put a whole driver under the launcher if its child commands already use it.
+admission; different spellings and symlinks share the same project lock.
+Known `time`, `timeout` and `env` wrappers are recognized. An executable passed as
+an argument to a Python driver does not pool that whole driver. Never put a whole
+driver under the launcher if its child commands already use it.
 
-An Editor consumes one of eight memory tokens; an engine job consumes two.
-Engines have a separate two-job cap, a 4 GiB limit per job and an 8 GiB pool
-limit. Both
-pools are children of `unbound.slice`, whose combined MemoryMax is 16 GiB,
-MemoryHigh is 14 GiB and MemorySwapMax is zero. This prevents running eight
-Editors plus two engines with independent memory allowances. These are
-capacity limits; a job that exceeds them can be killed by the OS.
-
-The Editor slice retains MemoryMax16GiB, MemoryHigh14GiB and MemorySwapMax0. All
-Editor children, import workers and compiler servers count toward that budget.
-The slice limits are enforced by the OS; slots add an independent process-count
-bound. Lock descriptors are closed for child commands. At pool idle, only owned
-Unity Roslyn servers in the pool's scopes are terminated. Shared licensing and
-other users' compiler processes are excluded.
+Memory is not divided into tokens (`memory_tokens` stays 0; the runner still
+accepts weighted one-GiB tokens if a policy sets them). The systemd slices bound
+RAM: `unbound.slice` MemoryHigh 14 GiB / MemoryMax 16 GiB for all pools, the
+engine slice 8 GiB with 4 GiB per engine job, the build slice 7/9 GiB. Swap is
+allowed in all of them, so a peak above the RAM bound swaps instead of being
+killed. All Editor children, import workers and compiler servers count toward the
+Editor slice. Lock descriptors are closed for child commands. At pool idle, only
+owned Unity Roslyn servers in the pool's scopes are terminated. Shared licensing
+and other users' compiler processes are excluded.
+Every job appends its kind, queue wait, run time, exit code and the scope's memory
+peak to `~/.cache/compat/job-timings.jsonl`; use it to tune the limits.
+`test_job_runner.py OUT` checks the checkout's runner with private lock files and
+policy (`UNBOUND_JOB_RUNNER_STATE`), so it neither waits for nor blocks live jobs.
 The launcher disables .NET shared compilation, node reuse and the MSBuild server
 for its children, so build servers do not retain memory after a lease ends.
 
