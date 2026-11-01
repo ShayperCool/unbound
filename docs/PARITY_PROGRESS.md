@@ -2599,3 +2599,11 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - Autodestruct fully exercised: 1918 -> 3142 of 3557 pass, but 382 rows introduced (trail count +1 at early steps; passive step-0 witness). Resources 539+62 exact.
 - NOT accepted: one stale test and the 382 autodestruct rows stay open; no third cycle.
 - Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/combined-line-runtime-20261101-t3-ef952536/REPORT.md`.
+
+### Trail first-move recording on Root cf0, 2026-11-01
+- Validated source 6ef53d16 (private trail state bit plus Root test fixes); one build/test cycle, 33 payloads bound, TestCore equals Core, CLI/PhysX from cf0.
+- Managed 1537/1548 = exactly the known 11; line tests 28/28. API: reused 0/2314 report, public metadata equal (65228 rows), stubs [].
+- Lines: 1702 -> 81 failing, 0 introduced keys/paths/pixels/channels vs Root, blend and the earlier combined run (raw values identical to it).
+- Autodestruct: 3545/6/6/6 of 3557, all 382 earlier introductions closed, 0 introduced; 18 manual-destroy delivery rows retained (fail on Root too).
+- Resources 539+62 byte-identical. Open: Static U 88 px, 15 time rows, 8 zero-area indices, cap-two plane inference.
+- Report: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/trail-recording-runtime-20261101-t3-fcf65aff/REPORT.md`.
