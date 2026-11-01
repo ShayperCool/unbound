@@ -10,6 +10,11 @@
                                            no error record) and are byte-identical; then writes
                                            Reference/unity-R/<profile>.jsonl. A profile whose
                                            pair fails is not published (no replacement pair).
+    run.py unbound --release R --label L --profile P
+                                           one Unbound capture of profile P (UNBOUND_CLI: the
+                                           binary; the environment's UNBOUND_MANAGED_DIR selects
+                                           the engine), one launcher lease; compare it with
+                                           compare.py against Reference/unity-R/P.jsonl
 
 Profiles: `linear` is this project as committed (m_ActiveColorSpace 1); `gamma` is the same
 copy with m_ActiveColorSpace 0 and nothing else changed. No bake runs: the scenes' lighting
@@ -22,6 +27,7 @@ import json
 import os
 from pathlib import Path
 import shutil
+import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
@@ -32,6 +38,7 @@ import gate  # noqa: E402
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
+LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 OUT = 'indirectspec.jsonl'
 PROFILES = ('linear', 'gamma')
 REPEATS = ('native1', 'native2')
@@ -130,9 +137,28 @@ def publish(work, release):
     return failed
 
 
+def unbound(work, profile, release):
+    """One engine capture of a profile on a fresh copy (same color-space edit as the Editor's).
+    The witness quits by itself after its completion marker; the frame count only bounds it."""
+    cli = os.environ.get('UNBOUND_CLI', str(REPO/'target/release/unbound'))
+    out = work/profile/'unbound'
+    if out.exists():
+        sys.exit(f'refusing to overwrite capture: {out}')
+    project = copy_project(work/'projects'/f'{profile}-unbound', profile, release)
+    out.mkdir(parents=True)
+    env = dict(os.environ, INDIRECT_SPEC_OUT=str(out/OUT))
+    with (out/'unbound.log').open('w') as log:
+        result = subprocess.run([str(LAUNCHER), 'timeout', '900', cli, 'run', '-p', str(project),
+                                 '--target', 'Standalone', '--no-watch', '--frames', '600', '--size', '320x180'],
+                                env=env, stdout=log, stderr=subprocess.STDOUT)
+    print('unbound exit', result.returncode, out/OUT)
+    return result.returncode
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=('editor', 'publish'))
+    parser.add_argument('mode', choices=('editor', 'publish', 'unbound'))
+    parser.add_argument('--profile', choices=PROFILES, help='unbound mode: the profile to run')
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
     args = parser.parse_args()
@@ -144,6 +170,10 @@ def main():
     work = run_root(PROBE, args.label)
     if args.mode == 'editor':
         return editor(work, args.release)
+    if args.mode == 'unbound':
+        if not args.profile:
+            parser.error('unbound mode needs --profile')
+        return unbound(work, args.profile, args.release)
     return publish(work, args.release)
 
 

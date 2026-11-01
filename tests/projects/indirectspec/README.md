@@ -65,6 +65,15 @@ dump, and exactly one completion marker, last. A profile is published only if bo
 pass the gate and their outputs are byte-identical.
 Run outputs stay in `$XDG_CACHE_HOME/unbound/validation/runs/indirectspec/<L>/`.
 
+An engine capture of one profile runs the same witness on a fresh copy (one launcher lease) and
+is compared with that profile's Reference, key by key and strictly (exact strings; missing,
+extra and duplicate keys fail; metadata the engine reports differently stays a failing key;
+the largest numeric token difference is reported as information only):
+
+    UNBOUND_CLI=<unbound> UNBOUND_MANAGED_DIR=<managed> python3 tests/projects/indirectspec/run.py unbound --release 6000.0.71f1 --label <L> --profile linear
+    python3 tests/projects/indirectspec/compare.py tests/projects/indirectspec/Reference/unity-6000.0.71f1/linear.jsonl \
+        ~/.cache/unbound/validation/runs/indirectspec/<L>/linear/unbound/indirectspec.jsonl --profile linear --report <report.json>
+
 ## Analysis (predeclared)
 
 `analyze.py` tests a fixed set of parameter-free rules:
