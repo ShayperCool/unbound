@@ -405,7 +405,7 @@ namespace Unbound.Runtime
                 return;
             }
             float length = StateLength(layer, run);
-            run.Normalized += dt * SpeedOf(def) / length;
+            run.Normalized = (float)(run.Normalized + dt * SpeedOf(def) / length);
         }
 
         float SpeedOf(StateDef def) => def.Speed * (def.SpeedParameter >= 0 ? Floats[def.SpeedParameter] : 1f);

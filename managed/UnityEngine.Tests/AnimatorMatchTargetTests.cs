@@ -88,5 +88,34 @@ namespace UnityEngine.Tests
             }
             finally { Object.DestroyImmediate(root); }
         }
+
+        // Native controls: matchReview.precision, including a clip duration of 1.3 seconds.
+        [Fact]
+        public void PlaybackTimeRoundsEachNormalizedStepToSinglePrecision()
+        {
+            var animator = Create(out var root);
+            try
+            {
+                var clip = animator.runtimeAnimatorController.animationClips[0];
+                clip.m_HasRange = true;
+                clip.m_StartTime = 0;
+                clip.m_StopTime = 1.3f;
+                clip.m_LoopTime = true;
+                clip.m_Version++;
+                animator.applyRootMotion = false;
+                animator.Play("Move", 0, .17f); animator.Update(0);
+                for (int i = 0; i < 20; i++)
+                {
+                    animator.Update(.03f);
+                    if (i == 7) Assert.Equal(0x3eb59026, System.BitConverter.SingleToInt32Bits(animator.GetCurrentAnimatorStateInfo(0).normalizedTime));
+                }
+                Assert.Equal(0x3f21ac84, System.BitConverter.SingleToInt32Bits(animator.GetCurrentAnimatorStateInfo(0).normalizedTime));
+                for (int i = 0; i < 20; i++) animator.Update(.1f);
+                Assert.Equal(0x400ae14c, System.BitConverter.SingleToInt32Bits(animator.GetCurrentAnimatorStateInfo(0).normalizedTime));
+                for (int i = 0; i < 20; i++) animator.Update(.37f);
+                Assert.Equal(0x40fb980e, System.BitConverter.SingleToInt32Bits(animator.GetCurrentAnimatorStateInfo(0).normalizedTime));
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
     }
 }
