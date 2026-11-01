@@ -132,10 +132,13 @@ namespace UnityEngine
             return c[0];
         }
 
-        /// <summary>One texel of a level as <see cref="SetPixels"/> stores it, encoding only its bytes.</summary>
+        /// <summary>One texel of a level, encoding only its bytes: Texture3D.SetPixel rounds a byte
+        /// half way between two values upward (tests/projects/texturepixels VolumeSetPixel).</summary>
         internal void SetPixel(int image, int mip, int index, Color color)
         {
-            var bytes = Hdr ? PixelFormats.EncodeFloat(Format, new[] { color }) : PixelFormats.Encode(Format, new Color32[] { color });
+            static byte Channel(float v) => (byte)Math.Floor(Mathf.Clamp01(v) * 255f + 0.5f);
+            var bytes = Hdr ? PixelFormats.EncodeFloat(Format, new[] { color })
+                : PixelFormats.Encode(Format, new[] { new Color32(Channel(color.r), Channel(color.g), Channel(color.b), Channel(color.a)) });
             int size = PixelFormats.Size(Format, 1, 1);
             Buffer.BlockCopy(bytes, 0, Data, Offset(image, mip) + index * size, Math.Min(bytes.Length, size));
         }

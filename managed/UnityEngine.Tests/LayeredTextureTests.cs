@@ -54,6 +54,16 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(expected);
         }
 
+        // tests/projects/texturepixels VolumeSetPixel: 2.5 / 255 stores 3 (Color32's rounding gives 2).
+        [Fact]
+        public void VolumeSetPixelRoundsHalfUp()
+        {
+            var volume = new Texture3D(1, 1, 1, TextureFormat.RGBA32, false) { hideFlags = HideFlags.HideAndDontSave };
+            volume.SetPixel(0, 0, 0, new Color(2.5f / 255f, 0.5f / 255f, 254.5f / 255f, 1));
+            Assert.Equal(new byte[] { 3, 1, 255, 255 }, volume.GetPixelData<byte>(0).ToArray());
+            Object.DestroyImmediate(volume);
+        }
+
         // tests/projects/resources floatformats.*.array/volume/cubearray.cpu: two independent
         // Unity 6000.0.71f1 captures read one in the channels R and RG formats do not store.
         [Theory]
