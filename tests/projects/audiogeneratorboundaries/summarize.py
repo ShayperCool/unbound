@@ -65,7 +65,7 @@ if __name__ == '__main__':
     p.add_argument('--report', type=Path, required=True)
     a = p.parse_args()
     assert header(a.reference)['release'] == a.release
-    if a.candidate is not None:
+    if a.candidate is not None and 'release' in header(a.candidate):
         assert header(a.candidate)['release'] == a.release
     result = observations(a.reference) if a.candidate is None else summarize(a.reference, a.candidate)
     a.report.write_text(json.dumps(result, indent=2) + '\n')

@@ -17,5 +17,8 @@ p.add_argument('--exact', action='store_true')
 a = p.parse_args()
 assert a.report.name.endswith('.jsonl.gz')
 reference = a.reference or Path(__file__).parent / 'Reference' / ('unity-' + a.release)
-assert header(reference)['release'] == a.release and header(a.candidate)['release'] == a.release
+assert header(reference)['release'] == a.release
+for root in (a.candidate, a.before):
+    if root is not None and 'release' in header(root):
+        assert header(root)['release'] == a.release
 raise SystemExit(bool(compare(reference, a.candidate, a.report, a.exact, a.before, True)))
