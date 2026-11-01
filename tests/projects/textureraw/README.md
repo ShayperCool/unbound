@@ -22,6 +22,7 @@ launcher for each child; do not wrap it again.
 ```sh
 python3 tests/projects/textureraw/run.py native --release 6000.0.71f1 --label paired-cpu
 python3 tests/projects/textureraw/run.py publish --release 6000.0.71f1 --label paired-cpu
+python3 tests/projects/textureraw/managed.py --release 6000.0.71f1 --label managed-cpu
 python3 tests/projects/textureraw/run.py engine --release 6000.0.71f1 --label runtime-cpu \
   --runtime /path/to/matching/runtime --manifest /path/to/runtime-manifest.json
 python3 tests/projects/textureraw/compare.py \
