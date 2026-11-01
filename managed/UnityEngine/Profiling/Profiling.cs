@@ -725,15 +725,41 @@ namespace UnityEngine.Profiling
         [Unbound.EditorFaithful("only the Profiler window shows it; nothing a game can read in Play mode depends on it")]
         public static void EndThreadProfiling() { }
 
-        public static long GetRuntimeMemorySizeLong(Object o) { Unbound.Runtime.Stubs.Ignored("Profiler.GetRuntimeMemorySizeLong", "is not measured yet: it answers 0"); return 0; }
+        /// <summary>The Editor's accounting of the object (see Unbound.Runtime.MemorySizes): textures,
+        /// render textures, meshes, created audio clips and game objects; other kinds warn and answer 0.</summary>
+        public static long GetRuntimeMemorySizeLong(Object o)
+        {
+            if (ReferenceEquals(o, null)) throw new ArgumentNullException("o");
+            if (o.m_Destroyed)
+                throw new MissingReferenceException(
+                    $"The object of type '{o.GetType().FullName}' has been destroyed but you are still trying to access it.\n" +
+                    "Your script should either check if it is null or you should not destroy the object. Parameter name: o");
+            var size = Unbound.Runtime.MemorySizes.RuntimeSize(o);
+            if (size == null)
+            {
+                Unbound.Runtime.Stubs.Ignored("Profiler.GetRuntimeMemorySizeLong(" + o.GetType().Name + ")",
+                    "is not measured for this kind of object: it answers 0");
+                return 0;
+            }
+            if (o.IsPersistentAsset)
+                Unbound.Runtime.Stubs.Ignored("Profiler.GetRuntimeMemorySizeLong(imported " + o.GetType().Name + ")",
+                    "uses the formula measured for objects created at runtime");
+            return size.Value;
+        }
         public static long GetMonoHeapSizeLong() => GC.GetGCMemoryInfo().HeapSizeBytes;
         public static long GetMonoUsedSizeLong() => GC.GetTotalMemory(false);
         public static long GetTotalAllocatedMemoryLong() => Environment.WorkingSet;
         public static long GetTotalReservedMemoryLong() => System.Diagnostics.Process.GetCurrentProcess().VirtualMemorySize64;
         public static long GetTotalUnusedReservedMemoryLong() => Math.Max(0, GetTotalReservedMemoryLong() - GetTotalAllocatedMemoryLong());
-        public static long GetAllocatedMemoryForGraphicsDriver() { Unbound.Runtime.Stubs.Ignored("Profiler.GetAllocatedMemoryForGraphicsDriver", "is not measured yet: it answers 0"); return 0; }
-        public static uint GetTempAllocatorSize() { Unbound.Runtime.Stubs.Ignored("Profiler.GetTempAllocatorSize", "answers 0: Unbound has no native temp allocator"); return 0; }
-        public static bool SetTempAllocatorRequestedSize(uint size) { Unbound.Runtime.Stubs.Ignored("Profiler.SetTempAllocatorRequestedSize", "changes nothing: Unbound has no native temp allocator"); return true; }
+        /// <summary>The GPU copies of the game's live textures, created render textures and uploaded
+        /// meshes, as the Editor counts them; the Editor's figure also holds its own windows' textures.</summary>
+        public static long GetAllocatedMemoryForGraphicsDriver() => Unbound.Runtime.MemorySizes.GraphicsDriver();
+        /// <summary>The Editor's main-thread temp allocator: 16 MiB, which a request does not change
+        /// in Play mode (measured: tests/projects/appfacts).</summary>
+        [Unbound.EditorFaithful("measured: tests/projects/appfacts")]
+        public static uint GetTempAllocatorSize() => 16u << 20;
+        [Unbound.EditorFaithful("measured: tests/projects/appfacts (accepted, the size stays)")]
+        public static bool SetTempAllocatorRequestedSize(uint size) => true;
 
         internal const uint invalidProfilerArea = 4294967295U;
 

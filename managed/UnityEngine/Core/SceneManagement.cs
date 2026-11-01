@@ -326,6 +326,22 @@ namespace UnityEngine.SceneManagement
 
         static readonly List<(AsyncOperation Op, int Index, LoadSceneParameters Parameters, SceneData Scene)> s_Pending =
             new List<(AsyncOperation, int, LoadSceneParameters, SceneData)>();
+        /// <summary>Scenes requested by LoadScene/LoadSceneAsync (from an AssetBundle too) and not
+        /// integrated yet: pending, held at 0.9 for allowSceneActivation, or being loaded.</summary>
+        static readonly HashSet<SceneData> s_Requested = new HashSet<SceneData>();
+
+        /// <summary>Application.isLoadingLevel: a requested scene is still in
+        /// <see cref="Scene.LoadingState.Loading"/>, held loads included. A scene is Loaded before
+        /// its sceneLoaded, where the value is already false (measured: tests/projects/appfacts).</summary>
+        internal static bool IsLoading
+        {
+            get
+            {
+                foreach (var data in s_Requested)
+                    if (data.LoadingState == Scene.LoadingState.Loading) return true;
+                return false;
+            }
+        }
 
         /// <summary>Build index of a scene given by name or path, as LoadScene accepts it.</summary>
         internal static int FindBuildScene(string sceneName)
@@ -349,6 +365,7 @@ namespace UnityEngine.SceneManagement
             var (path, _) = ProjectInfo.BuildScenes[buildIndex];
             var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, buildIndex);
             data.LoadingState = Scene.LoadingState.Loading;
+            s_Requested.Add(data);
             var op = new AsyncOperation();
             if (async)
             {
@@ -368,6 +385,7 @@ namespace UnityEngine.SceneManagement
             var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, -1);
             data.LoadKey = key;
             data.LoadingState = Scene.LoadingState.Loading;
+            s_Requested.Add(data);
             var op = new AsyncOperation();
             s_Pending.Add((op, -1, parameters, data));
             return new LoadResult { Scene = new Scene(data.Handle), Operation = op };
@@ -392,6 +410,7 @@ namespace UnityEngine.SceneManagement
                 // and the load still completes.
                 try { Perform(data, parameters); }
                 catch (Exception e) { Debug.LogException(e); }
+                finally { s_Requested.Remove(data); }
                 Unbound.Runtime.Trace.Scenes($"loaded scene '{data.Name}'");
                 op.Complete();
             }

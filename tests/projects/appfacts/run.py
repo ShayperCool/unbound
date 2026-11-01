@@ -32,6 +32,7 @@ import platform
 import shutil
 import subprocess
 import sys
+import time
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from probe_paths import reference_root, run_root
@@ -239,10 +240,12 @@ def unbound(work):
     (out/'os.json').write_text(json.dumps(os_facts(), indent=1, sort_keys=True)+'\n')
     env = dict(os.environ, APPFACTS_PROBE_OUT=str(out), **stubs(out))
     env['UNBOUND_OPEN_URL'] = str(out/'stubs/xdg-open')
+    command = [str(LAUNCHER), 'timeout', '900', cli, 'run', '-p', str(project), '--no-watch', '--headless', '3000', '--size', '64x32']
+    # The project path the engine is given, for checking the files it reports under <project>.
+    assert project.is_absolute(), project
+    (out/'run.json').write_text(json.dumps({'project': str(project), 'command': command, 'started': time.time()}, indent=1)+'\n')
     with (out/'unbound.log').open('w') as log:
-        result = subprocess.run([str(LAUNCHER), 'timeout', '900', cli, 'run', '-p', str(project),
-                                 '--no-watch', '--headless', '3000', '--size', '64x32'],
-                                env=env, stdout=log, stderr=subprocess.STDOUT, cwd=project)
+        result = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, cwd=project)
     (out/'exit.txt').write_text(f'{result.returncode}\n')
     print('unbound exit', result.returncode, out)
     return result.returncode
