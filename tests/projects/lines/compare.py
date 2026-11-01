@@ -2,6 +2,7 @@
 """Compares a line/trail probe capture with the Unity reference.
 
     compare.py <reference dir> <capture dir> [--report out.json] [--before <capture dir>]
+               [--mode canonical|capcount]
 
 Keeps the whole key union: every missing, extra and differing key is reported. Numbers match
 within an absolute 1e-5 plus a relative 1e-5 (float geometry); strings, booleans, list lengths
@@ -9,9 +10,14 @@ and object keys match exactly. Images (`<key>.rgba`, float RGBA, in the referenc
 match when no channel differs by more than 2/255; the report counts the differing pixels.
 With --before, each failure is classified as retained (the before capture fails it too),
 introduced (it passed before) or resolved (failed before, passes now).
+
+--mode selects the reference records: `canonical` (default) reads values.jsonl alone;
+`capcount` also reads the verified capcount.values.jsonl control file of the same release
+directory (see capcount_layout.py). The capture is always read whole.
 """
 import argparse
 import gzip
+import importlib.util
 import json
 import math
 from pathlib import Path
@@ -72,8 +78,17 @@ def differ(a, b, path=''):
     return (path, f'{type(a).__name__} != {type(b).__name__}', math.inf)
 
 
-def failures(reference, capture):
-    ref, cap = load(reference), load(capture)
+def load_reference(directory, mode='canonical'):
+    if mode == 'canonical':
+        return load(directory)
+    spec = importlib.util.spec_from_file_location('capcount_layout', Path(__file__).with_name('capcount_layout.py'))
+    layout = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(layout)
+    return layout.load_reference(directory, mode)
+
+
+def failures(reference, capture, mode='canonical'):
+    ref, cap = load_reference(reference, mode), load(capture)
     out = {}
     for k in sorted(set(ref) | set(cap)):
         if k not in cap:
@@ -104,11 +119,12 @@ def main():
     parser.add_argument('capture')
     parser.add_argument('--before')
     parser.add_argument('--report')
+    parser.add_argument('--mode', choices=('canonical', 'capcount'), default='canonical')
     args = parser.parse_args()
-    now, union = failures(args.reference, args.capture)
-    report = {'keys': union, 'failing': len(now), 'failures': now}
+    now, union = failures(args.reference, args.capture, args.mode)
+    report = {'mode': args.mode, 'keys': union, 'failing': len(now), 'failures': now}
     if args.before:
-        before, _ = failures(args.reference, args.before)
+        before, _ = failures(args.reference, args.before, args.mode)
         report['retained'] = sorted(k for k in now if k in before)
         report['introduced'] = sorted(k for k in now if k not in before)
         report['resolved'] = sorted(k for k in before if k not in now)
