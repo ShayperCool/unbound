@@ -121,3 +121,41 @@ No replacement pair or tolerance changes. The unchanged append guard remains
 mandatory: the current reference ends with blend rows after its original
 complete marker, so a future complete capture may fail its raw-order check.
 Such a refusal leaves the canonical reference unchanged.
+
+The sole cap-count pair (`cap-count-20261101-t3-ce24a7cc`, cases precommitted
+in `bf2ace6f`) exited 0 twice on NVIDIA with 1885 byte-identical records and
+nine byte-identical images. Every old record, including its terminator, matches
+by key. Publication was refused at record 1853 because the old append left
+`complete` before `blend.*`; the unchanged guards require a final completion
+marker and exact old record order. No reference was changed or replacement run.
+Unity spells TransformZ as its enum alias `Local` in these new keys/readbacks.
+Both counts reverse the fans only for TransformZ trails. Those non-emitting
+manual trails have zero effective width despite positive configured width:
+their indices discriminate topology, while the 30 old nonzero cap-one meshes
+establish the inward displacement. Extending that plane to nonzero cap-two
+trails is an inference from the shared cap/fan rule, not a new observation.
+
+The prepared tangent rule computes a separate arc angle from the side dot
+product divided by the product of their actual lengths. Positions retain the
+original arc. The float32 replay matches all 37 saved lighting streams within
+the original tolerance before the change; the prediction closes all 36 tangent
+introductions and preserves all 78 spatial fixes. No runtime was built.
+
+`project_geometry.py` reuses the saved raster and full 1887-row union, adding
+all predicted values, component failures, numeric increases and nine image
+arrays. `project_cap_controls.py` checks every component of all eight new
+meshes. These are offline diagnostics and cannot establish GPU acceptance.
+The full projection still has all eight original trail channel introductions,
+and adds alpha at pixel 2055. The 80 mask pixels remain separately owned.
+
+```sh
+~/.cache/compat/with-heavy-job --kind tool python3 tests/projects/lines/project_geometry.py \
+  --batch /path/to/combined-report --attribution /path/to/saved-attribution \
+  --out ~/.cache/unbound/validation/runs/geometry-prediction --source-revision REV
+~/.cache/compat/with-heavy-job --kind tool python3 tests/projects/lines/project_cap_controls.py \
+  --controls /path/to/new-native-controls.json \
+  --out ~/.cache/unbound/validation/runs/geometry-prediction
+```
+
+Full task receipt and immutable independent pair bindings:
+`/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-cap-tangent-20261101-t3-ce24a7cc/REPORT.md`.
