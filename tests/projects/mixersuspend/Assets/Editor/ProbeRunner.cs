@@ -75,6 +75,7 @@ public static class ProbeRunner
             EditorUtility.SetDirty((UnityEngine.Object)mixer);
         }
         AssetDatabase.SaveAssets();
+        if(Environment.GetEnvironmentVariable("SUSPEND_LIFECYCLE_PREPARE")=="1") LifecycleRunner.PrepareAsset();
         EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);
         new GameObject("SuspendProbe").AddComponent<SuspendProbe>(); Directory.CreateDirectory("Assets/Scenes");
         EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(),"Assets/Scenes/Probe.unity");
