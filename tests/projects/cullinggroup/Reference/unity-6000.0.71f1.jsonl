@@ -1,0 +1,1149 @@
+{"f":-1,"k":"api","what":"enabled","result":true}
+{"f":-1,"k":"api","what":"targetCamera","result":true}
+{"f":-1,"k":"api","what":"onStateChanged","result":true}
+{"f":-1,"k":"api","what":"empty IsVisible(0)","result":"System.IndexOutOfRangeException: Sphere index is out of range."}
+{"f":-1,"k":"api","what":"empty GetDistance(0)","result":"System.IndexOutOfRangeException: Sphere index is out of range."}
+{"f":-1,"k":"api","what":"empty QueryIndices(true)","result":0}
+{"f":-1,"k":"api","what":"empty QueryIndices(false)","result":0}
+{"f":-1,"k":"log","type":"Warning","msg":"Bounding sphere count must be less or equal to the bounding sphere array."}
+{"f":-1,"k":"api","what":"empty SetBoundingSphereCount(1)","result":"ok"}
+{"f":-1,"k":"api","what":"empty count 1 QueryIndices(false)","result":0}
+{"f":-1,"k":"api","what":"SetBoundingSpheres(null)","result":"ok"}
+{"f":-1,"k":"api","what":"null QueryIndices(false)","result":0}
+{"f":-1,"k":"api","what":"SetBoundingSpheres(4)","result":"ok"}
+{"f":-1,"k":"api","what":"fresh IsVisible(0)","result":false}
+{"f":-1,"k":"api","what":"fresh GetDistance(0)","result":0}
+{"f":-1,"k":"api","what":"fresh QueryIndices(true)","result":0}
+{"f":-1,"k":"api","what":"fresh QueryIndices(false)","result":"4 [0,1,2,3]"}
+{"f":-1,"k":"api","what":"fresh QueryIndices(0)","result":"4 [0,1,2,3]"}
+{"f":-1,"k":"api","what":"fresh QueryIndices(1)","result":0}
+{"f":-1,"k":"api","what":"fresh QueryIndices(false, 0)","result":4}
+{"f":-1,"k":"api","what":"IsVisible(3)","result":false}
+{"f":-1,"k":"api","what":"IsVisible(4)","result":"System.IndexOutOfRangeException: Sphere index is out of range."}
+{"f":-1,"k":"api","what":"IsVisible(-1)","result":"System.IndexOutOfRangeException: Sphere index is out of range."}
+{"f":-1,"k":"api","what":"GetDistance(4)","result":"System.IndexOutOfRangeException: Sphere index is out of range."}
+{"f":-1,"k":"api","what":"GetDistance(-1)","result":"System.IndexOutOfRangeException: Sphere index is out of range."}
+{"f":-1,"k":"api","what":"QueryIndices(null)","result":4}
+{"f":-1,"k":"api","what":"QueryIndices(small)","result":"2 [0,1]"}
+{"f":-1,"k":"api","what":"QueryIndices(first 2)","result":"2 [2,3]"}
+{"f":-1,"k":"api","what":"QueryIndices(first 4)","result":0}
+{"f":-1,"k":"api","what":"QueryIndices(first 9)","result":0}
+{"f":-1,"k":"api","what":"QueryIndices(first -1)","result":"System.IndexOutOfRangeException: firstIndex must not be negative."}
+{"f":-1,"k":"api","what":"QueryIndices(empty result)","result":4}
+{"f":-1,"k":"log","type":"Warning","msg":"Bounding sphere count must be less or equal to the bounding sphere array."}
+{"f":-1,"k":"api","what":"SetBoundingSphereCount(5)","result":"ok"}
+{"f":-1,"k":"api","what":"count 5 QueryIndices(false)","result":4}
+{"f":-1,"k":"log","type":"Warning","msg":"Bounding sphere count must be less or equal to the bounding sphere array."}
+{"f":-1,"k":"api","what":"SetBoundingSphereCount(-1)","result":"ok"}
+{"f":-1,"k":"api","what":"count -1 QueryIndices(false)","result":4}
+{"f":-1,"k":"api","what":"SetBoundingSphereCount(0)","result":"ok"}
+{"f":-1,"k":"api","what":"count 0 QueryIndices(false)","result":0}
+{"f":-1,"k":"api","what":"SetBoundingSphereCount(2)","result":"ok"}
+{"f":-1,"k":"api","what":"count 2 IsVisible(3)","result":"System.IndexOutOfRangeException: Sphere index is out of range."}
+{"f":-1,"k":"api","what":"count 2 QueryIndices(false)","result":2}
+{"f":-1,"k":"api","what":"SetBoundingSphereCount(4)","result":"ok"}
+{"f":-1,"k":"api","what":"SetBoundingDistances(null)","result":"ok"}
+{"f":-1,"k":"api","what":"SetBoundingDistances(empty)","result":"ok"}
+{"f":-1,"k":"log","type":"Error","msg":"CullingGroup only supports a maximum of 7 bounding distances."}
+{"f":-1,"k":"api","what":"SetBoundingDistances(200)","result":"ok"}
+{"f":-1,"k":"log","type":"Error","msg":"CullingGroup bounding distances must be sorted in ascending order."}
+{"f":-1,"k":"api","what":"SetBoundingDistances(unsorted)","result":"ok"}
+{"f":-1,"k":"api","what":"SetDistanceReferencePoint(null)","result":"ok"}
+{"f":-1,"k":"log","type":"Error","msg":"CullingGroup index is out of bounds"}
+{"f":-1,"k":"api","what":"EraseSwapBack(9)","result":"ok"}
+{"f":-1,"k":"log","type":"Error","msg":"CullingGroup index is out of bounds"}
+{"f":-1,"k":"api","what":"EraseSwapBack(-1)","result":"ok"}
+{"f":-1,"k":"api","what":"EraseSwapBack(0)","result":"ok"}
+{"f":-1,"k":"api","what":"erased QueryIndices(false)","result":3}
+{"f":-1,"k":"api","what":"erased array","result":"3;1;2;3"}
+{"f":-1,"k":"api","what":"static EraseSwapBack(1)","result":"3 [10,13,12,13]"}
+{"f":-1,"k":"api","what":"static EraseSwapBack(5)","result":"System.IndexOutOfRangeException: Index was outside the bounds of the array."}
+{"f":-1,"k":"api","what":"static EraseSwapBack size","result":2}
+{"f":-1,"k":"api","what":"enabled=false","result":"ok"}
+{"f":-1,"k":"api","what":"disabled enabled","result":false}
+{"f":-1,"k":"api","what":"targetCamera=Main","result":"ok"}
+{"f":-1,"k":"api","what":"Dispose","result":"ok"}
+{"f":-1,"k":"api","what":"Dispose again","result":"System.NullReferenceException: Object reference not set to an instance of an object."}
+{"f":-1,"k":"api","what":"disposed enabled","result":"System.NullReferenceException: Object reference not set to an instance of an object."}
+{"f":-1,"k":"api","what":"disposed enabled=true","result":"System.NullReferenceException: Object reference not set to an instance of an object."}
+{"f":-1,"k":"api","what":"disposed targetCamera","result":"System.NullReferenceException: Object reference not set to an instance of an object."}
+{"f":-1,"k":"api","what":"disposed onStateChanged","result":true}
+{"f":-1,"k":"api","what":"disposed onStateChanged=","result":"ok"}
+{"f":-1,"k":"api","what":"disposed SetBoundingSpheres","result":"System.NullReferenceException: Object reference not set to an instance of an object."}
+{"f":-1,"k":"api","what":"disposed SetBoundingSphereCount","result":"System.NullReferenceException: Object reference not set to an instance of an object."}
+{"f":-1,"k":"api","what":"disposed SetBoundingDistances","result":"System.NullReferenceException: Object reference not set to an instance of an object."}
+{"f":-1,"k":"api","what":"disposed SetDistanceReferencePoint","result":"System.NullReferenceException: Object reference not set to an instance of an object."}
+{"f":-1,"k":"api","what":"disposed IsVisible(0)","result":"System.NullReferenceException: Object reference not set to an instance of an object."}
+{"f":-1,"k":"api","what":"disposed GetDistance(0)","result":"System.NullReferenceException: Object reference not set to an instance of an object."}
+{"f":-1,"k":"api","what":"disposed QueryIndices","result":"System.NullReferenceException: Object reference not set to an instance of an object."}
+{"f":-1,"k":"api","what":"disposed EraseSwapBack","result":"System.NullReferenceException: Object reference not set to an instance of an object."}
+{"f":-1,"k":"awake","g":"A","vis":"00000000000000000","dist":"0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"}
+{"f":-1,"k":"awake","g":"B","vis":"00","dist":"0,0"}
+{"f":-1,"k":"awake","g":"C","vis":"0","dist":"0"}
+{"f":-1,"k":"awake","g":"D","vis":"00","dist":"0,0"}
+{"f":-1,"k":"awake","g":"E","vis":"000000","dist":"0,0,0,0,0,0"}
+{"f":-1,"k":"awake","g":"F","vis":"0","dist":"0"}
+{"f":-1,"k":"awake","g":"G","vis":"0","dist":"0"}
+{"f":-1,"k":"awake","g":"H","vis":"0","dist":"0"}
+{"f":-1,"k":"awake","g":"I","vis":"0","dist":"0"}
+{"f":-1,"k":"awake","g":"J","vis":"0","dist":"0"}
+{"f":-1,"k":"start","g":"A","vis":"00000000000000000","dist":"0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"}
+{"f":-1,"k":"start","g":"B","vis":"00","dist":"0,0"}
+{"f":-1,"k":"start","g":"C","vis":"0","dist":"0"}
+{"f":-1,"k":"start","g":"D","vis":"00","dist":"0,0"}
+{"f":-1,"k":"start","g":"E","vis":"000000","dist":"0,0,0,0,0,0"}
+{"f":-1,"k":"start","g":"F","vis":"0","dist":"0"}
+{"f":-1,"k":"start","g":"G","vis":"0","dist":"0"}
+{"f":-1,"k":"start","g":"H","vis":"0","dist":"0"}
+{"f":-1,"k":"start","g":"I","vis":"0","dist":"0"}
+{"f":-1,"k":"start","g":"J","vis":"0","dist":"0"}
+{"f":0,"k":"Update"}
+{"f":0,"k":"update","g":"A","vis":"00000000000000000","dist":"0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"}
+{"f":0,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":0,"k":"update","g":"C","vis":"0","dist":"0"}
+{"f":0,"k":"update","g":"D","vis":"00","dist":"0,0"}
+{"f":0,"k":"update","g":"E","vis":"000000","dist":"0,0,0,0,0,0"}
+{"f":0,"k":"update","g":"F","vis":"0","dist":"0"}
+{"f":0,"k":"update","g":"G","vis":"0","dist":"0"}
+{"f":0,"k":"update","g":"H","vis":"0","dist":"0"}
+{"f":0,"k":"update","g":"I","vis":"0","dist":"0"}
+{"f":0,"k":"update","g":"J","vis":"0","dist":"0"}
+{"f":0,"k":"camera","aspect":1.7777777910232544,"w":960,"h":540}
+{"f":0,"k":"LateUpdate"}
+{"f":0,"k":"lateupdate","g":"A","vis":"00000000000000000","dist":"0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"}
+{"f":0,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":0,"k":"lateupdate","g":"C","vis":"0","dist":"0"}
+{"f":0,"k":"lateupdate","g":"D","vis":"00","dist":"0,0"}
+{"f":0,"k":"lateupdate","g":"E","vis":"000000","dist":"0,0,0,0,0,0"}
+{"f":0,"k":"lateupdate","g":"F","vis":"0","dist":"0"}
+{"f":0,"k":"lateupdate","g":"G","vis":"0","dist":"0"}
+{"f":0,"k":"lateupdate","g":"H","vis":"0","dist":"0"}
+{"f":0,"k":"lateupdate","g":"I","vis":"0","dist":"0"}
+{"f":0,"k":"lateupdate","g":"J","vis":"0","dist":"0"}
+{"f":0,"k":"OnPreCull","cam":"Main"}
+{"f":0,"k":"onPreCull","cam":"Main"}
+{"f":0,"k":"event","g":"A","cam":"Main","i":0,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":1,"prev":0}
+{"f":0,"k":"event","g":"A","cam":"Main","i":1,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":1,"prev":0}
+{"f":0,"k":"event","g":"A","cam":"Main","i":2,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":3,"prev":0}
+{"f":0,"k":"event","g":"A","cam":"Main","i":3,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":2,"prev":0}
+{"f":0,"k":"event","g":"A","cam":"Main","i":4,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":2,"prev":0}
+{"f":0,"k":"event","g":"A","cam":"Main","i":5,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":2,"prev":0}
+{"f":0,"k":"event","g":"A","cam":"Main","i":6,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":2,"prev":0}
+{"f":0,"k":"event","g":"A","cam":"Main","i":8,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":3,"prev":0}
+{"f":0,"k":"event","g":"A","cam":"Main","i":9,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":3,"prev":0}
+{"f":0,"k":"event","g":"A","cam":"Main","i":10,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":0,"prev":0}
+{"f":0,"k":"event","g":"A","cam":"Main","i":11,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":0,"prev":0}
+{"f":0,"k":"event","g":"A","cam":"Main","i":12,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":0,"prev":0}
+{"f":0,"k":"event","g":"A","cam":"Main","i":13,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":1,"prev":0}
+{"f":0,"k":"event","g":"A","cam":"Main","i":14,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":2,"prev":0}
+{"f":0,"k":"event","g":"A","cam":"Main","i":15,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":0,"prev":0}
+{"f":0,"k":"event","g":"A","cam":"Main","i":16,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":2,"prev":0}
+{"f":0,"k":"event","g":"F","cam":"Main","i":0,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":1,"prev":0}
+{"f":0,"k":"event","g":"G","cam":"Main","i":0,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":6,"prev":0}
+{"f":0,"k":"event","g":"H","cam":"Main","i":0,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":2,"prev":0}
+{"f":0,"k":"event","g":"J","cam":"Main","i":0,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":7,"prev":0}
+{"f":0,"k":"OnBecameVisible","cam":"Main"}
+{"f":0,"k":"OnWillRenderObject","cam":"Main"}
+{"f":0,"k":"OnPreRender","cam":"Main"}
+{"f":0,"k":"onPreRender","cam":"Main"}
+{"f":0,"k":"OnPostRender","cam":"Main"}
+{"f":0,"k":"onPostRender","cam":"Main"}
+{"f":0,"k":"OnPreCull","cam":"Second"}
+{"f":0,"k":"onPreCull","cam":"Second"}
+{"f":0,"k":"event","g":"E","cam":"Second","i":1,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":0,"prev":0}
+{"f":0,"k":"event","g":"E","cam":"Second","i":2,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":0,"prev":0}
+{"f":0,"k":"event","g":"E","cam":"Second","i":4,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":0,"prev":0}
+{"f":0,"k":"OnPreRender","cam":"Second"}
+{"f":0,"k":"onPreRender","cam":"Second"}
+{"f":0,"k":"OnPostRender","cam":"Second"}
+{"f":0,"k":"onPostRender","cam":"Second"}
+{"f":1,"k":"Update"}
+{"f":1,"k":"update","g":"A","vis":"10010110001111111","dist":"1,1,3,2,2,2,2,0,3,3,0,0,0,1,2,0,2"}
+{"f":1,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":1,"k":"update","g":"C","vis":"0","dist":"0"}
+{"f":1,"k":"update","g":"D","vis":"00","dist":"0,0"}
+{"f":1,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":1,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":1,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":1,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":1,"k":"update","g":"I","vis":"0","dist":"0"}
+{"f":1,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":1,"k":"LateUpdate"}
+{"f":1,"k":"lateupdate","g":"A","vis":"10010110001111111","dist":"1,1,3,2,2,2,2,0,3,3,0,0,0,1,2,0,2"}
+{"f":1,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":1,"k":"lateupdate","g":"C","vis":"0","dist":"0"}
+{"f":1,"k":"lateupdate","g":"D","vis":"00","dist":"0,0"}
+{"f":1,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":1,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":1,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":1,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":1,"k":"lateupdate","g":"I","vis":"0","dist":"0"}
+{"f":1,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":1,"k":"OnPreCull","cam":"Main"}
+{"f":1,"k":"onPreCull","cam":"Main"}
+{"f":1,"k":"OnWillRenderObject","cam":"Main"}
+{"f":1,"k":"OnPreRender","cam":"Main"}
+{"f":1,"k":"onPreRender","cam":"Main"}
+{"f":1,"k":"OnPostRender","cam":"Main"}
+{"f":1,"k":"onPostRender","cam":"Main"}
+{"f":1,"k":"OnPreCull","cam":"Second"}
+{"f":1,"k":"onPreCull","cam":"Second"}
+{"f":1,"k":"OnPreRender","cam":"Second"}
+{"f":1,"k":"onPreRender","cam":"Second"}
+{"f":1,"k":"OnPostRender","cam":"Second"}
+{"f":1,"k":"onPostRender","cam":"Second"}
+{"f":1,"k":"EndOfFrame"}
+{"f":2,"k":"Update"}
+{"f":2,"k":"update","g":"A","vis":"10010110001111111","dist":"1,1,3,2,2,2,2,0,3,3,0,0,0,1,2,0,2"}
+{"f":2,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":2,"k":"update","g":"C","vis":"0","dist":"0"}
+{"f":2,"k":"update","g":"D","vis":"00","dist":"0,0"}
+{"f":2,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":2,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":2,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":2,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":2,"k":"update","g":"I","vis":"0","dist":"0"}
+{"f":2,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":2,"k":"step","what":"sphere 0 behind (array only), witness away"}
+{"f":2,"k":"LateUpdate"}
+{"f":2,"k":"lateupdate","g":"A","vis":"10010110001111111","dist":"1,1,3,2,2,2,2,0,3,3,0,0,0,1,2,0,2"}
+{"f":2,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":2,"k":"lateupdate","g":"C","vis":"0","dist":"0"}
+{"f":2,"k":"lateupdate","g":"D","vis":"00","dist":"0,0"}
+{"f":2,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":2,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":2,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":2,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":2,"k":"lateupdate","g":"I","vis":"0","dist":"0"}
+{"f":2,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":2,"k":"OnPreCull","cam":"Main"}
+{"f":2,"k":"onPreCull","cam":"Main"}
+{"f":2,"k":"event","g":"A","cam":"Main","i":0,"vis":false,"was":true,"becameVis":false,"becameInvis":true,"cur":1,"prev":1}
+{"f":2,"k":"OnPreRender","cam":"Main"}
+{"f":2,"k":"onPreRender","cam":"Main"}
+{"f":2,"k":"OnPostRender","cam":"Main"}
+{"f":2,"k":"onPostRender","cam":"Main"}
+{"f":2,"k":"OnPreCull","cam":"Second"}
+{"f":2,"k":"onPreCull","cam":"Second"}
+{"f":2,"k":"OnPreRender","cam":"Second"}
+{"f":2,"k":"onPreRender","cam":"Second"}
+{"f":2,"k":"OnPostRender","cam":"Second"}
+{"f":2,"k":"onPostRender","cam":"Second"}
+{"f":2,"k":"EndOfFrame"}
+{"f":2,"k":"OnBecameInvisible","cam":null}
+{"f":3,"k":"Update"}
+{"f":3,"k":"update","g":"A","vis":"00010110001111111","dist":"1,1,3,2,2,2,2,0,3,3,0,0,0,1,2,0,2"}
+{"f":3,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":3,"k":"update","g":"C","vis":"0","dist":"0"}
+{"f":3,"k":"update","g":"D","vis":"00","dist":"0,0"}
+{"f":3,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":3,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":3,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":3,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":3,"k":"update","g":"I","vis":"0","dist":"0"}
+{"f":3,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":3,"k":"query","what":"visible","r":"10 [3,5,6,10,11,12,13,14,15,16]"}
+{"f":3,"k":"query","what":"invisible","r":"7 [0,1,2,4,7,8,9]"}
+{"f":3,"k":"query","what":"visible from 5","r":"9 [5,6,10,11,12,13,14,15,16]"}
+{"f":3,"k":"query","what":"distance 0","r":"5 [7,10,11,12,15]"}
+{"f":3,"k":"query","what":"visible distance 0","r":"4 [10,11,12,15]"}
+{"f":3,"k":"query","what":"invisible distance 0","r":"1 [7]"}
+{"f":3,"k":"query","what":"distance 1","r":"3 [0,1,13]"}
+{"f":3,"k":"query","what":"visible distance 1","r":"1 [13]"}
+{"f":3,"k":"query","what":"invisible distance 1","r":"2 [0,1]"}
+{"f":3,"k":"query","what":"distance 2","r":"6 [3,4,5,6,14,16]"}
+{"f":3,"k":"query","what":"visible distance 2","r":"5 [3,5,6,14,16]"}
+{"f":3,"k":"query","what":"invisible distance 2","r":"1 [4]"}
+{"f":3,"k":"query","what":"distance 3","r":"3 [2,8,9]"}
+{"f":3,"k":"query","what":"visible distance 3","r":"0 []"}
+{"f":3,"k":"query","what":"invisible distance 3","r":"3 [2,8,9]"}
+{"f":3,"k":"query","what":"distance 4","r":"0 []"}
+{"f":3,"k":"query","what":"visible distance 4","r":"0 []"}
+{"f":3,"k":"query","what":"invisible distance 4","r":"0 []"}
+{"f":3,"k":"query","what":"invisible into 3","r":"3 [0,1,2]"}
+{"f":3,"k":"LateUpdate"}
+{"f":3,"k":"lateupdate","g":"A","vis":"00010110001111111","dist":"1,1,3,2,2,2,2,0,3,3,0,0,0,1,2,0,2"}
+{"f":3,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":3,"k":"lateupdate","g":"C","vis":"0","dist":"0"}
+{"f":3,"k":"lateupdate","g":"D","vis":"00","dist":"0,0"}
+{"f":3,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":3,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":3,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":3,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":3,"k":"lateupdate","g":"I","vis":"0","dist":"0"}
+{"f":3,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":3,"k":"OnPreCull","cam":"Main"}
+{"f":3,"k":"onPreCull","cam":"Main"}
+{"f":3,"k":"OnPreRender","cam":"Main"}
+{"f":3,"k":"onPreRender","cam":"Main"}
+{"f":3,"k":"OnPostRender","cam":"Main"}
+{"f":3,"k":"onPostRender","cam":"Main"}
+{"f":3,"k":"OnPreCull","cam":"Second"}
+{"f":3,"k":"onPreCull","cam":"Second"}
+{"f":3,"k":"OnPreRender","cam":"Second"}
+{"f":3,"k":"onPreRender","cam":"Second"}
+{"f":3,"k":"OnPostRender","cam":"Second"}
+{"f":3,"k":"onPostRender","cam":"Second"}
+{"f":3,"k":"EndOfFrame"}
+{"f":4,"k":"Update"}
+{"f":4,"k":"update","g":"A","vis":"00010110001111111","dist":"1,1,3,2,2,2,2,0,3,3,0,0,0,1,2,0,2"}
+{"f":4,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":4,"k":"update","g":"C","vis":"0","dist":"0"}
+{"f":4,"k":"update","g":"D","vis":"00","dist":"0,0"}
+{"f":4,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":4,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":4,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":4,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":4,"k":"update","g":"I","vis":"0","dist":"0"}
+{"f":4,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":4,"k":"step","what":"A count 10, witness back"}
+{"f":4,"k":"LateUpdate"}
+{"f":4,"k":"lateupdate","g":"A","vis":"0001011000xxxxxxx","dist":"1,1,3,2,2,2,2,0,3,3,x,x,x,x,x,x,x"}
+{"f":4,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":4,"k":"lateupdate","g":"C","vis":"0","dist":"0"}
+{"f":4,"k":"lateupdate","g":"D","vis":"00","dist":"0,0"}
+{"f":4,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":4,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":4,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":4,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":4,"k":"lateupdate","g":"I","vis":"0","dist":"0"}
+{"f":4,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":4,"k":"OnPreCull","cam":"Main"}
+{"f":4,"k":"onPreCull","cam":"Main"}
+{"f":4,"k":"OnBecameVisible","cam":"Main"}
+{"f":4,"k":"OnWillRenderObject","cam":"Main"}
+{"f":4,"k":"OnPreRender","cam":"Main"}
+{"f":4,"k":"onPreRender","cam":"Main"}
+{"f":4,"k":"OnPostRender","cam":"Main"}
+{"f":4,"k":"onPostRender","cam":"Main"}
+{"f":4,"k":"OnPreCull","cam":"Second"}
+{"f":4,"k":"onPreCull","cam":"Second"}
+{"f":4,"k":"OnPreRender","cam":"Second"}
+{"f":4,"k":"onPreRender","cam":"Second"}
+{"f":4,"k":"OnPostRender","cam":"Second"}
+{"f":4,"k":"onPostRender","cam":"Second"}
+{"f":4,"k":"EndOfFrame"}
+{"f":5,"k":"Update"}
+{"f":5,"k":"update","g":"A","vis":"0001011000xxxxxxx","dist":"1,1,3,2,2,2,2,0,3,3,x,x,x,x,x,x,x"}
+{"f":5,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":5,"k":"update","g":"C","vis":"0","dist":"0"}
+{"f":5,"k":"update","g":"D","vis":"00","dist":"0,0"}
+{"f":5,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":5,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":5,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":5,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":5,"k":"update","g":"I","vis":"0","dist":"0"}
+{"f":5,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":5,"k":"step","what":"spheres 10 and 12 moved, A count 17"}
+{"f":5,"k":"LateUpdate"}
+{"f":5,"k":"lateupdate","g":"A","vis":"00010110000000000","dist":"1,1,3,2,2,2,2,0,3,3,0,0,0,0,0,0,0"}
+{"f":5,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":5,"k":"lateupdate","g":"C","vis":"0","dist":"0"}
+{"f":5,"k":"lateupdate","g":"D","vis":"00","dist":"0,0"}
+{"f":5,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":5,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":5,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":5,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":5,"k":"lateupdate","g":"I","vis":"0","dist":"0"}
+{"f":5,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":5,"k":"OnPreCull","cam":"Main"}
+{"f":5,"k":"onPreCull","cam":"Main"}
+{"f":5,"k":"event","g":"A","cam":"Main","i":11,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":0,"prev":0}
+{"f":5,"k":"event","g":"A","cam":"Main","i":12,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":3,"prev":0}
+{"f":5,"k":"event","g":"A","cam":"Main","i":13,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":1,"prev":0}
+{"f":5,"k":"event","g":"A","cam":"Main","i":14,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":2,"prev":0}
+{"f":5,"k":"event","g":"A","cam":"Main","i":15,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":0,"prev":0}
+{"f":5,"k":"event","g":"A","cam":"Main","i":16,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":2,"prev":0}
+{"f":5,"k":"OnWillRenderObject","cam":"Main"}
+{"f":5,"k":"OnPreRender","cam":"Main"}
+{"f":5,"k":"onPreRender","cam":"Main"}
+{"f":5,"k":"OnPostRender","cam":"Main"}
+{"f":5,"k":"onPostRender","cam":"Main"}
+{"f":5,"k":"OnPreCull","cam":"Second"}
+{"f":5,"k":"onPreCull","cam":"Second"}
+{"f":5,"k":"OnPreRender","cam":"Second"}
+{"f":5,"k":"onPreRender","cam":"Second"}
+{"f":5,"k":"OnPostRender","cam":"Second"}
+{"f":5,"k":"onPostRender","cam":"Second"}
+{"f":5,"k":"EndOfFrame"}
+{"f":6,"k":"Update"}
+{"f":6,"k":"update","g":"A","vis":"00010110000101111","dist":"1,1,3,2,2,2,2,0,3,3,0,0,3,1,2,0,2"}
+{"f":6,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":6,"k":"update","g":"C","vis":"0","dist":"0"}
+{"f":6,"k":"update","g":"D","vis":"00","dist":"0,0"}
+{"f":6,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":6,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":6,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":6,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":6,"k":"update","g":"I","vis":"0","dist":"0"}
+{"f":6,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":6,"k":"step","what":"C enabled"}
+{"f":6,"k":"LateUpdate"}
+{"f":6,"k":"lateupdate","g":"A","vis":"00010110000101111","dist":"1,1,3,2,2,2,2,0,3,3,0,0,3,1,2,0,2"}
+{"f":6,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":6,"k":"lateupdate","g":"C","vis":"0","dist":"0"}
+{"f":6,"k":"lateupdate","g":"D","vis":"00","dist":"0,0"}
+{"f":6,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":6,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":6,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":6,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":6,"k":"lateupdate","g":"I","vis":"0","dist":"0"}
+{"f":6,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":6,"k":"OnPreCull","cam":"Main"}
+{"f":6,"k":"onPreCull","cam":"Main"}
+{"f":6,"k":"event","g":"C","cam":"Main","i":0,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":1,"prev":0}
+{"f":6,"k":"OnWillRenderObject","cam":"Main"}
+{"f":6,"k":"OnPreRender","cam":"Main"}
+{"f":6,"k":"onPreRender","cam":"Main"}
+{"f":6,"k":"OnPostRender","cam":"Main"}
+{"f":6,"k":"onPostRender","cam":"Main"}
+{"f":6,"k":"OnPreCull","cam":"Second"}
+{"f":6,"k":"onPreCull","cam":"Second"}
+{"f":6,"k":"OnPreRender","cam":"Second"}
+{"f":6,"k":"onPreRender","cam":"Second"}
+{"f":6,"k":"OnPostRender","cam":"Second"}
+{"f":6,"k":"onPostRender","cam":"Second"}
+{"f":6,"k":"EndOfFrame"}
+{"f":7,"k":"Update"}
+{"f":7,"k":"update","g":"A","vis":"00010110000101111","dist":"1,1,3,2,2,2,2,0,3,3,0,0,3,1,2,0,2"}
+{"f":7,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":7,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":7,"k":"update","g":"D","vis":"00","dist":"0,0"}
+{"f":7,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":7,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":7,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":7,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":7,"k":"update","g":"I","vis":"0","dist":"0"}
+{"f":7,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":7,"k":"step","what":"A reference transform"}
+{"f":7,"k":"LateUpdate"}
+{"f":7,"k":"step","what":"reference moved to z 4 in LateUpdate"}
+{"f":7,"k":"lateupdate","g":"A","vis":"00010110000101111","dist":"1,1,3,2,2,2,2,0,3,3,0,0,3,1,2,0,2"}
+{"f":7,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":7,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":7,"k":"lateupdate","g":"D","vis":"00","dist":"0,0"}
+{"f":7,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":7,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":7,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":7,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":7,"k":"lateupdate","g":"I","vis":"0","dist":"0"}
+{"f":7,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":7,"k":"OnPreCull","cam":"Main"}
+{"f":7,"k":"onPreCull","cam":"Main"}
+{"f":7,"k":"event","g":"A","cam":"Main","i":0,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":2,"prev":1}
+{"f":7,"k":"event","g":"A","cam":"Main","i":1,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":2,"prev":1}
+{"f":7,"k":"event","g":"A","cam":"Main","i":6,"vis":true,"was":true,"becameVis":false,"becameInvis":false,"cur":1,"prev":2}
+{"f":7,"k":"event","g":"A","cam":"Main","i":10,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":1,"prev":0}
+{"f":7,"k":"OnWillRenderObject","cam":"Main"}
+{"f":7,"k":"OnPreRender","cam":"Main"}
+{"f":7,"k":"onPreRender","cam":"Main"}
+{"f":7,"k":"OnPostRender","cam":"Main"}
+{"f":7,"k":"onPostRender","cam":"Main"}
+{"f":7,"k":"OnPreCull","cam":"Second"}
+{"f":7,"k":"onPreCull","cam":"Second"}
+{"f":7,"k":"OnPreRender","cam":"Second"}
+{"f":7,"k":"onPreRender","cam":"Second"}
+{"f":7,"k":"OnPostRender","cam":"Second"}
+{"f":7,"k":"onPostRender","cam":"Second"}
+{"f":7,"k":"EndOfFrame"}
+{"f":8,"k":"Update"}
+{"f":8,"k":"update","g":"A","vis":"00010110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":8,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":8,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":8,"k":"update","g":"D","vis":"00","dist":"0,0"}
+{"f":8,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":8,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":8,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":8,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":8,"k":"update","g":"I","vis":"0","dist":"0"}
+{"f":8,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":8,"k":"step","what":"Disabled.Render begin"}
+{"f":8,"k":"OnPreCull","cam":"Disabled"}
+{"f":8,"k":"onPreCull","cam":"Disabled"}
+{"f":8,"k":"event","g":"D","cam":"Disabled","i":0,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":1,"prev":0}
+{"f":8,"k":"event","g":"D","cam":"Disabled","i":1,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":1,"prev":0}
+{"f":8,"k":"event","g":"I","cam":"Disabled","i":0,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":0,"prev":0}
+{"f":8,"k":"OnWillRenderObject","cam":"Disabled"}
+{"f":8,"k":"OnPreRender","cam":"Disabled"}
+{"f":8,"k":"onPreRender","cam":"Disabled"}
+{"f":8,"k":"OnPostRender","cam":"Disabled"}
+{"f":8,"k":"onPostRender","cam":"Disabled"}
+{"f":8,"k":"step","what":"Disabled.Render end"}
+{"f":8,"k":"rendered","g":"A","vis":"00010110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":8,"k":"rendered","g":"B","vis":"00","dist":"0,0"}
+{"f":8,"k":"rendered","g":"C","vis":"0","dist":"1"}
+{"f":8,"k":"rendered","g":"D","vis":"00","dist":"1,1"}
+{"f":8,"k":"rendered","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":8,"k":"rendered","g":"F","vis":"0","dist":"1"}
+{"f":8,"k":"rendered","g":"G","vis":"1","dist":"6"}
+{"f":8,"k":"rendered","g":"H","vis":"1","dist":"2"}
+{"f":8,"k":"rendered","g":"I","vis":"1","dist":"0"}
+{"f":8,"k":"rendered","g":"J","vis":"1","dist":"7"}
+{"f":8,"k":"LateUpdate"}
+{"f":8,"k":"lateupdate","g":"A","vis":"00010110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":8,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":8,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":8,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":8,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":8,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":8,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":8,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":8,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":8,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":8,"k":"OnPreCull","cam":"Main"}
+{"f":8,"k":"onPreCull","cam":"Main"}
+{"f":8,"k":"OnWillRenderObject","cam":"Main"}
+{"f":8,"k":"OnPreRender","cam":"Main"}
+{"f":8,"k":"onPreRender","cam":"Main"}
+{"f":8,"k":"OnPostRender","cam":"Main"}
+{"f":8,"k":"onPostRender","cam":"Main"}
+{"f":8,"k":"OnPreCull","cam":"Second"}
+{"f":8,"k":"onPreCull","cam":"Second"}
+{"f":8,"k":"OnPreRender","cam":"Second"}
+{"f":8,"k":"onPreRender","cam":"Second"}
+{"f":8,"k":"OnPostRender","cam":"Second"}
+{"f":8,"k":"onPostRender","cam":"Second"}
+{"f":8,"k":"EndOfFrame"}
+{"f":9,"k":"Update"}
+{"f":9,"k":"update","g":"A","vis":"00010110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":9,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":9,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":9,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":9,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":9,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":9,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":9,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":9,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":9,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":9,"k":"step","what":"A disabled, sphere 0 in view","enabled":false}
+{"f":9,"k":"LateUpdate"}
+{"f":9,"k":"lateupdate","g":"A","vis":"00010110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":9,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":9,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":9,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":9,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":9,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":9,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":9,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":9,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":9,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":9,"k":"OnPreCull","cam":"Main"}
+{"f":9,"k":"onPreCull","cam":"Main"}
+{"f":9,"k":"OnWillRenderObject","cam":"Main"}
+{"f":9,"k":"OnPreRender","cam":"Main"}
+{"f":9,"k":"onPreRender","cam":"Main"}
+{"f":9,"k":"OnPostRender","cam":"Main"}
+{"f":9,"k":"onPostRender","cam":"Main"}
+{"f":9,"k":"OnPreCull","cam":"Second"}
+{"f":9,"k":"onPreCull","cam":"Second"}
+{"f":9,"k":"OnPreRender","cam":"Second"}
+{"f":9,"k":"onPreRender","cam":"Second"}
+{"f":9,"k":"OnPostRender","cam":"Second"}
+{"f":9,"k":"onPostRender","cam":"Second"}
+{"f":9,"k":"EndOfFrame"}
+{"f":10,"k":"Update"}
+{"f":10,"k":"update","g":"A","vis":"00010110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":10,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":10,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":10,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":10,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":10,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":10,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":10,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":10,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":10,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":10,"k":"LateUpdate"}
+{"f":10,"k":"lateupdate","g":"A","vis":"00010110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":10,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":10,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":10,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":10,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":10,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":10,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":10,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":10,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":10,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":10,"k":"OnPreCull","cam":"Main"}
+{"f":10,"k":"onPreCull","cam":"Main"}
+{"f":10,"k":"OnWillRenderObject","cam":"Main"}
+{"f":10,"k":"OnPreRender","cam":"Main"}
+{"f":10,"k":"onPreRender","cam":"Main"}
+{"f":10,"k":"OnPostRender","cam":"Main"}
+{"f":10,"k":"onPostRender","cam":"Main"}
+{"f":10,"k":"OnPreCull","cam":"Second"}
+{"f":10,"k":"onPreCull","cam":"Second"}
+{"f":10,"k":"OnPreRender","cam":"Second"}
+{"f":10,"k":"onPreRender","cam":"Second"}
+{"f":10,"k":"OnPostRender","cam":"Second"}
+{"f":10,"k":"onPostRender","cam":"Second"}
+{"f":10,"k":"EndOfFrame"}
+{"f":11,"k":"Update"}
+{"f":11,"k":"update","g":"A","vis":"00010110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":11,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":11,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":11,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":11,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":11,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":11,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":11,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":11,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":11,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":11,"k":"step","what":"A enabled"}
+{"f":11,"k":"LateUpdate"}
+{"f":11,"k":"lateupdate","g":"A","vis":"00010110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":11,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":11,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":11,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":11,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":11,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":11,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":11,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":11,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":11,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":11,"k":"OnPreCull","cam":"Main"}
+{"f":11,"k":"onPreCull","cam":"Main"}
+{"f":11,"k":"event","g":"A","cam":"Main","i":0,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":0,"prev":2}
+{"f":11,"k":"OnWillRenderObject","cam":"Main"}
+{"f":11,"k":"OnPreRender","cam":"Main"}
+{"f":11,"k":"onPreRender","cam":"Main"}
+{"f":11,"k":"OnPostRender","cam":"Main"}
+{"f":11,"k":"onPostRender","cam":"Main"}
+{"f":11,"k":"OnPreCull","cam":"Second"}
+{"f":11,"k":"onPreCull","cam":"Second"}
+{"f":11,"k":"OnPreRender","cam":"Second"}
+{"f":11,"k":"onPreRender","cam":"Second"}
+{"f":11,"k":"OnPostRender","cam":"Second"}
+{"f":11,"k":"onPostRender","cam":"Second"}
+{"f":11,"k":"EndOfFrame"}
+{"f":12,"k":"Update"}
+{"f":12,"k":"update","g":"A","vis":"10010110000101111","dist":"0,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":12,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":12,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":12,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":12,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":12,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":12,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":12,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":12,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":12,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":12,"k":"step","what":"A target null, sphere 0 behind"}
+{"f":12,"k":"LateUpdate"}
+{"f":12,"k":"lateupdate","g":"A","vis":"10010110000101111","dist":"0,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":12,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":12,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":12,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":12,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":12,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":12,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":12,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":12,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":12,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":12,"k":"OnPreCull","cam":"Main"}
+{"f":12,"k":"onPreCull","cam":"Main"}
+{"f":12,"k":"OnWillRenderObject","cam":"Main"}
+{"f":12,"k":"OnPreRender","cam":"Main"}
+{"f":12,"k":"onPreRender","cam":"Main"}
+{"f":12,"k":"OnPostRender","cam":"Main"}
+{"f":12,"k":"onPostRender","cam":"Main"}
+{"f":12,"k":"OnPreCull","cam":"Second"}
+{"f":12,"k":"onPreCull","cam":"Second"}
+{"f":12,"k":"OnPreRender","cam":"Second"}
+{"f":12,"k":"onPreRender","cam":"Second"}
+{"f":12,"k":"OnPostRender","cam":"Second"}
+{"f":12,"k":"onPostRender","cam":"Second"}
+{"f":12,"k":"EndOfFrame"}
+{"f":13,"k":"Update"}
+{"f":13,"k":"update","g":"A","vis":"10010110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":13,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":13,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":13,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":13,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":13,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":13,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":13,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":13,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":13,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":13,"k":"LateUpdate"}
+{"f":13,"k":"lateupdate","g":"A","vis":"10010110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":13,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":13,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":13,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":13,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":13,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":13,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":13,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":13,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":13,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":13,"k":"OnPreCull","cam":"Main"}
+{"f":13,"k":"onPreCull","cam":"Main"}
+{"f":13,"k":"OnWillRenderObject","cam":"Main"}
+{"f":13,"k":"OnPreRender","cam":"Main"}
+{"f":13,"k":"onPreRender","cam":"Main"}
+{"f":13,"k":"OnPostRender","cam":"Main"}
+{"f":13,"k":"onPostRender","cam":"Main"}
+{"f":13,"k":"OnPreCull","cam":"Second"}
+{"f":13,"k":"onPreCull","cam":"Second"}
+{"f":13,"k":"OnPreRender","cam":"Second"}
+{"f":13,"k":"onPreRender","cam":"Second"}
+{"f":13,"k":"OnPostRender","cam":"Second"}
+{"f":13,"k":"onPostRender","cam":"Second"}
+{"f":13,"k":"EndOfFrame"}
+{"f":14,"k":"Update"}
+{"f":14,"k":"update","g":"A","vis":"10010110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":14,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":14,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":14,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":14,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":14,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":14,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":14,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":14,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":14,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":14,"k":"step","what":"A target Main"}
+{"f":14,"k":"LateUpdate"}
+{"f":14,"k":"lateupdate","g":"A","vis":"10010110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":14,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":14,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":14,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":14,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":14,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":14,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":14,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":14,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":14,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":14,"k":"OnPreCull","cam":"Main"}
+{"f":14,"k":"onPreCull","cam":"Main"}
+{"f":14,"k":"event","g":"A","cam":"Main","i":0,"vis":false,"was":true,"becameVis":false,"becameInvis":true,"cur":2,"prev":0}
+{"f":14,"k":"OnWillRenderObject","cam":"Main"}
+{"f":14,"k":"OnPreRender","cam":"Main"}
+{"f":14,"k":"onPreRender","cam":"Main"}
+{"f":14,"k":"OnPostRender","cam":"Main"}
+{"f":14,"k":"onPostRender","cam":"Main"}
+{"f":14,"k":"OnPreCull","cam":"Second"}
+{"f":14,"k":"onPreCull","cam":"Second"}
+{"f":14,"k":"OnPreRender","cam":"Second"}
+{"f":14,"k":"onPreRender","cam":"Second"}
+{"f":14,"k":"OnPostRender","cam":"Second"}
+{"f":14,"k":"onPostRender","cam":"Second"}
+{"f":14,"k":"EndOfFrame"}
+{"f":15,"k":"Update"}
+{"f":15,"k":"update","g":"A","vis":"00010110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":15,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":15,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":15,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":15,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":15,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":15,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":15,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":15,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":15,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":15,"k":"LateUpdate"}
+{"f":15,"k":"step","what":"sphere 3 out of view in LateUpdate"}
+{"f":15,"k":"lateupdate","g":"A","vis":"00010110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":15,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":15,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":15,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":15,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":15,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":15,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":15,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":15,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":15,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":15,"k":"OnPreCull","cam":"Main"}
+{"f":15,"k":"onPreCull","cam":"Main"}
+{"f":15,"k":"event","g":"A","cam":"Main","i":3,"vis":false,"was":true,"becameVis":false,"becameInvis":true,"cur":2,"prev":2}
+{"f":15,"k":"OnWillRenderObject","cam":"Main"}
+{"f":15,"k":"OnPreRender","cam":"Main"}
+{"f":15,"k":"onPreRender","cam":"Main"}
+{"f":15,"k":"OnPostRender","cam":"Main"}
+{"f":15,"k":"onPostRender","cam":"Main"}
+{"f":15,"k":"OnPreCull","cam":"Second"}
+{"f":15,"k":"onPreCull","cam":"Second"}
+{"f":15,"k":"OnPreRender","cam":"Second"}
+{"f":15,"k":"onPreRender","cam":"Second"}
+{"f":15,"k":"OnPostRender","cam":"Second"}
+{"f":15,"k":"onPostRender","cam":"Second"}
+{"f":15,"k":"EndOfFrame"}
+{"f":16,"k":"Update"}
+{"f":16,"k":"update","g":"A","vis":"00000110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":16,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":16,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":16,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":16,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":16,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":16,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":16,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":16,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":16,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":16,"k":"step","what":"A distances {3}"}
+{"f":16,"k":"LateUpdate"}
+{"f":16,"k":"lateupdate","g":"A","vis":"00000110000101111","dist":"2,2,3,2,2,2,1,0,3,3,1,0,3,1,2,0,2"}
+{"f":16,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":16,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":16,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":16,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":16,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":16,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":16,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":16,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":16,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":16,"k":"OnPreCull","cam":"Main"}
+{"f":16,"k":"onPreCull","cam":"Main"}
+{"f":16,"k":"event","g":"A","cam":"Main","i":0,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":1,"prev":2}
+{"f":16,"k":"event","g":"A","cam":"Main","i":1,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":1,"prev":2}
+{"f":16,"k":"event","g":"A","cam":"Main","i":2,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":1,"prev":3}
+{"f":16,"k":"event","g":"A","cam":"Main","i":3,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":1,"prev":2}
+{"f":16,"k":"event","g":"A","cam":"Main","i":4,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":1,"prev":2}
+{"f":16,"k":"event","g":"A","cam":"Main","i":5,"vis":false,"was":true,"becameVis":false,"becameInvis":true,"cur":1,"prev":2}
+{"f":16,"k":"event","g":"A","cam":"Main","i":6,"vis":false,"was":true,"becameVis":false,"becameInvis":true,"cur":1,"prev":1}
+{"f":16,"k":"event","g":"A","cam":"Main","i":7,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":1,"prev":0}
+{"f":16,"k":"event","g":"A","cam":"Main","i":8,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":1,"prev":3}
+{"f":16,"k":"event","g":"A","cam":"Main","i":9,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":1,"prev":3}
+{"f":16,"k":"event","g":"A","cam":"Main","i":12,"vis":false,"was":false,"becameVis":false,"becameInvis":false,"cur":1,"prev":3}
+{"f":16,"k":"event","g":"A","cam":"Main","i":13,"vis":false,"was":true,"becameVis":false,"becameInvis":true,"cur":1,"prev":1}
+{"f":16,"k":"event","g":"A","cam":"Main","i":14,"vis":false,"was":true,"becameVis":false,"becameInvis":true,"cur":1,"prev":2}
+{"f":16,"k":"event","g":"A","cam":"Main","i":16,"vis":false,"was":true,"becameVis":false,"becameInvis":true,"cur":1,"prev":2}
+{"f":16,"k":"OnWillRenderObject","cam":"Main"}
+{"f":16,"k":"OnPreRender","cam":"Main"}
+{"f":16,"k":"onPreRender","cam":"Main"}
+{"f":16,"k":"OnPostRender","cam":"Main"}
+{"f":16,"k":"onPostRender","cam":"Main"}
+{"f":16,"k":"OnPreCull","cam":"Second"}
+{"f":16,"k":"onPreCull","cam":"Second"}
+{"f":16,"k":"OnPreRender","cam":"Second"}
+{"f":16,"k":"onPreRender","cam":"Second"}
+{"f":16,"k":"OnPostRender","cam":"Second"}
+{"f":16,"k":"onPostRender","cam":"Second"}
+{"f":16,"k":"EndOfFrame"}
+{"f":17,"k":"Update"}
+{"f":17,"k":"update","g":"A","vis":"00000000000100010","dist":"1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,0,1"}
+{"f":17,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":17,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":17,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":17,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":17,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":17,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":17,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":17,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":17,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":17,"k":"step","what":"A EraseSwapBack(1)","count":16}
+{"f":17,"k":"query","what":"visible","r":"2 [11,15]"}
+{"f":17,"k":"query","what":"invisible","r":"14 [0,1,2,3,4,5,6,7,8,9,10,12,13,14]"}
+{"f":17,"k":"query","what":"visible from 5","r":"2 [11,15]"}
+{"f":17,"k":"query","what":"distance 0","r":"2 [11,15]"}
+{"f":17,"k":"query","what":"visible distance 0","r":"2 [11,15]"}
+{"f":17,"k":"query","what":"invisible distance 0","r":"0 []"}
+{"f":17,"k":"query","what":"distance 1","r":"14 [0,1,2,3,4,5,6,7,8,9,10,12,13,14]"}
+{"f":17,"k":"query","what":"visible distance 1","r":"0 []"}
+{"f":17,"k":"query","what":"invisible distance 1","r":"14 [0,1,2,3,4,5,6,7,8,9,10,12,13,14]"}
+{"f":17,"k":"query","what":"distance 2","r":"0 []"}
+{"f":17,"k":"query","what":"visible distance 2","r":"0 []"}
+{"f":17,"k":"query","what":"invisible distance 2","r":"0 []"}
+{"f":17,"k":"query","what":"distance 3","r":"0 []"}
+{"f":17,"k":"query","what":"visible distance 3","r":"0 []"}
+{"f":17,"k":"query","what":"invisible distance 3","r":"0 []"}
+{"f":17,"k":"query","what":"distance 4","r":"0 []"}
+{"f":17,"k":"query","what":"visible distance 4","r":"0 []"}
+{"f":17,"k":"query","what":"invisible distance 4","r":"0 []"}
+{"f":17,"k":"query","what":"invisible into 3","r":"3 [0,1,2]"}
+{"f":17,"k":"LateUpdate"}
+{"f":17,"k":"lateupdate","g":"A","vis":"0000000000010001","dist":"1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,0"}
+{"f":17,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":17,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":17,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":17,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":17,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":17,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":17,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":17,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":17,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":17,"k":"OnPreCull","cam":"Main"}
+{"f":17,"k":"onPreCull","cam":"Main"}
+{"f":17,"k":"OnWillRenderObject","cam":"Main"}
+{"f":17,"k":"OnPreRender","cam":"Main"}
+{"f":17,"k":"onPreRender","cam":"Main"}
+{"f":17,"k":"OnPostRender","cam":"Main"}
+{"f":17,"k":"onPostRender","cam":"Main"}
+{"f":17,"k":"OnPreCull","cam":"Second"}
+{"f":17,"k":"onPreCull","cam":"Second"}
+{"f":17,"k":"OnPreRender","cam":"Second"}
+{"f":17,"k":"onPreRender","cam":"Second"}
+{"f":17,"k":"OnPostRender","cam":"Second"}
+{"f":17,"k":"onPostRender","cam":"Second"}
+{"f":17,"k":"EndOfFrame"}
+{"f":18,"k":"Update"}
+{"f":18,"k":"update","g":"A","vis":"0000000000010001","dist":"1,1,1,1,1,1,1,1,1,1,1,0,1,1,1,0"}
+{"f":18,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":18,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":18,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":18,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":18,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":18,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":18,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":18,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":18,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":18,"k":"step","what":"A new array of 3"}
+{"f":18,"k":"replaced","g":"A","vis":"000","dist":"1,1,1"}
+{"f":18,"k":"replaced","g":"B","vis":"00","dist":"0,0"}
+{"f":18,"k":"replaced","g":"C","vis":"0","dist":"1"}
+{"f":18,"k":"replaced","g":"D","vis":"00","dist":"1,1"}
+{"f":18,"k":"replaced","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":18,"k":"replaced","g":"F","vis":"0","dist":"1"}
+{"f":18,"k":"replaced","g":"G","vis":"1","dist":"6"}
+{"f":18,"k":"replaced","g":"H","vis":"1","dist":"2"}
+{"f":18,"k":"replaced","g":"I","vis":"1","dist":"0"}
+{"f":18,"k":"replaced","g":"J","vis":"1","dist":"7"}
+{"f":18,"k":"LateUpdate"}
+{"f":18,"k":"lateupdate","g":"A","vis":"000","dist":"1,1,1"}
+{"f":18,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":18,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":18,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":18,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":18,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":18,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":18,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":18,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":18,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":18,"k":"OnPreCull","cam":"Main"}
+{"f":18,"k":"onPreCull","cam":"Main"}
+{"f":18,"k":"event","g":"A","cam":"Main","i":2,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":0,"prev":1}
+{"f":18,"k":"OnWillRenderObject","cam":"Main"}
+{"f":18,"k":"OnPreRender","cam":"Main"}
+{"f":18,"k":"onPreRender","cam":"Main"}
+{"f":18,"k":"OnPostRender","cam":"Main"}
+{"f":18,"k":"onPostRender","cam":"Main"}
+{"f":18,"k":"OnPreCull","cam":"Second"}
+{"f":18,"k":"onPreCull","cam":"Second"}
+{"f":18,"k":"OnPreRender","cam":"Second"}
+{"f":18,"k":"onPreRender","cam":"Second"}
+{"f":18,"k":"OnPostRender","cam":"Second"}
+{"f":18,"k":"onPostRender","cam":"Second"}
+{"f":18,"k":"EndOfFrame"}
+{"f":19,"k":"Update"}
+{"f":19,"k":"update","g":"A","vis":"001","dist":"1,1,0"}
+{"f":19,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":19,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":19,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":19,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":19,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":19,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":19,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":19,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":19,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":19,"k":"query","what":"visible","r":"1 [2]"}
+{"f":19,"k":"query","what":"invisible","r":"2 [0,1]"}
+{"f":19,"k":"query","what":"visible from 5","r":"0 []"}
+{"f":19,"k":"query","what":"distance 0","r":"1 [2]"}
+{"f":19,"k":"query","what":"visible distance 0","r":"1 [2]"}
+{"f":19,"k":"query","what":"invisible distance 0","r":"0 []"}
+{"f":19,"k":"query","what":"distance 1","r":"2 [0,1]"}
+{"f":19,"k":"query","what":"visible distance 1","r":"0 []"}
+{"f":19,"k":"query","what":"invisible distance 1","r":"2 [0,1]"}
+{"f":19,"k":"query","what":"distance 2","r":"0 []"}
+{"f":19,"k":"query","what":"visible distance 2","r":"0 []"}
+{"f":19,"k":"query","what":"invisible distance 2","r":"0 []"}
+{"f":19,"k":"query","what":"distance 3","r":"0 []"}
+{"f":19,"k":"query","what":"visible distance 3","r":"0 []"}
+{"f":19,"k":"query","what":"invisible distance 3","r":"0 []"}
+{"f":19,"k":"query","what":"distance 4","r":"0 []"}
+{"f":19,"k":"query","what":"visible distance 4","r":"0 []"}
+{"f":19,"k":"query","what":"invisible distance 4","r":"0 []"}
+{"f":19,"k":"query","what":"invisible into 3","r":"2 [0,1]"}
+{"f":19,"k":"LateUpdate"}
+{"f":19,"k":"lateupdate","g":"A","vis":"001","dist":"1,1,0"}
+{"f":19,"k":"lateupdate","g":"B","vis":"00","dist":"0,0"}
+{"f":19,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":19,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":19,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":19,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":19,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":19,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":19,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":19,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":19,"k":"OnPreCull","cam":"Main"}
+{"f":19,"k":"onPreCull","cam":"Main"}
+{"f":19,"k":"OnWillRenderObject","cam":"Main"}
+{"f":19,"k":"OnPreRender","cam":"Main"}
+{"f":19,"k":"onPreRender","cam":"Main"}
+{"f":19,"k":"OnPostRender","cam":"Main"}
+{"f":19,"k":"onPostRender","cam":"Main"}
+{"f":19,"k":"OnPreCull","cam":"Second"}
+{"f":19,"k":"onPreCull","cam":"Second"}
+{"f":19,"k":"OnPreRender","cam":"Second"}
+{"f":19,"k":"onPreRender","cam":"Second"}
+{"f":19,"k":"OnPostRender","cam":"Second"}
+{"f":19,"k":"onPostRender","cam":"Second"}
+{"f":19,"k":"EndOfFrame"}
+{"f":20,"k":"Update"}
+{"f":20,"k":"update","g":"A","vis":"001","dist":"1,1,0"}
+{"f":20,"k":"update","g":"B","vis":"00","dist":"0,0"}
+{"f":20,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":20,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":20,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":20,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":20,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":20,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":20,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":20,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":20,"k":"step","what":"B disposed, E disabled"}
+{"f":20,"k":"LateUpdate"}
+{"f":20,"k":"lateupdate","g":"A","vis":"001","dist":"1,1,0"}
+{"f":20,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":20,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":20,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":20,"k":"lateupdate","g":"F","vis":"0","dist":"1"}
+{"f":20,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":20,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":20,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":20,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":20,"k":"OnPreCull","cam":"Main"}
+{"f":20,"k":"onPreCull","cam":"Main"}
+{"f":20,"k":"OnWillRenderObject","cam":"Main"}
+{"f":20,"k":"OnPreRender","cam":"Main"}
+{"f":20,"k":"onPreRender","cam":"Main"}
+{"f":20,"k":"OnPostRender","cam":"Main"}
+{"f":20,"k":"onPostRender","cam":"Main"}
+{"f":20,"k":"OnPreCull","cam":"Second"}
+{"f":20,"k":"onPreCull","cam":"Second"}
+{"f":20,"k":"OnPreRender","cam":"Second"}
+{"f":20,"k":"onPreRender","cam":"Second"}
+{"f":20,"k":"OnPostRender","cam":"Second"}
+{"f":20,"k":"onPostRender","cam":"Second"}
+{"f":20,"k":"EndOfFrame"}
+{"f":21,"k":"Update"}
+{"f":21,"k":"update","g":"A","vis":"001","dist":"1,1,0"}
+{"f":21,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":21,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":21,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":21,"k":"update","g":"F","vis":"0","dist":"1"}
+{"f":21,"k":"update","g":"G","vis":"1","dist":"6"}
+{"f":21,"k":"update","g":"H","vis":"1","dist":"2"}
+{"f":21,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":21,"k":"update","g":"J","vis":"1","dist":"7"}
+{"f":21,"k":"step","what":"F disposed; A, G, H and J spheres moved"}
+{"f":21,"k":"LateUpdate"}
+{"f":21,"k":"lateupdate","g":"A","vis":"001","dist":"1,1,0"}
+{"f":21,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":21,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":21,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":21,"k":"lateupdate","g":"G","vis":"1","dist":"6"}
+{"f":21,"k":"lateupdate","g":"H","vis":"1","dist":"2"}
+{"f":21,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":21,"k":"lateupdate","g":"J","vis":"1","dist":"7"}
+{"f":21,"k":"OnPreCull","cam":"Main"}
+{"f":21,"k":"onPreCull","cam":"Main"}
+{"f":21,"k":"event","g":"A","cam":"Main","i":0,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":0,"prev":1}
+{"f":21,"k":"event","g":"J","cam":"Main","i":0,"vis":true,"was":true,"becameVis":false,"becameInvis":false,"cur":1,"prev":7}
+{"f":21,"k":"event","g":"G","cam":"Main","i":0,"vis":true,"was":true,"becameVis":false,"becameInvis":false,"cur":1,"prev":6}
+{"f":21,"k":"event","g":"H","cam":"Main","i":0,"vis":false,"was":true,"becameVis":false,"becameInvis":true,"cur":1,"prev":2}
+{"f":21,"k":"OnWillRenderObject","cam":"Main"}
+{"f":21,"k":"OnPreRender","cam":"Main"}
+{"f":21,"k":"onPreRender","cam":"Main"}
+{"f":21,"k":"OnPostRender","cam":"Main"}
+{"f":21,"k":"onPostRender","cam":"Main"}
+{"f":21,"k":"OnPreCull","cam":"Second"}
+{"f":21,"k":"onPreCull","cam":"Second"}
+{"f":21,"k":"OnPreRender","cam":"Second"}
+{"f":21,"k":"onPreRender","cam":"Second"}
+{"f":21,"k":"OnPostRender","cam":"Second"}
+{"f":21,"k":"onPostRender","cam":"Second"}
+{"f":21,"k":"EndOfFrame"}
+{"f":22,"k":"Update"}
+{"f":22,"k":"update","g":"A","vis":"101","dist":"0,1,0"}
+{"f":22,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":22,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":22,"k":"update","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":22,"k":"update","g":"G","vis":"1","dist":"1"}
+{"f":22,"k":"update","g":"H","vis":"0","dist":"1"}
+{"f":22,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":22,"k":"update","g":"J","vis":"1","dist":"1"}
+{"f":22,"k":"step","what":"E enabled"}
+{"f":22,"k":"LateUpdate"}
+{"f":22,"k":"lateupdate","g":"A","vis":"101","dist":"0,1,0"}
+{"f":22,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":22,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":22,"k":"lateupdate","g":"E","vis":"011010","dist":"0,0,0,0,0,0"}
+{"f":22,"k":"lateupdate","g":"G","vis":"1","dist":"1"}
+{"f":22,"k":"lateupdate","g":"H","vis":"0","dist":"1"}
+{"f":22,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":22,"k":"lateupdate","g":"J","vis":"1","dist":"1"}
+{"f":22,"k":"OnPreCull","cam":"Main"}
+{"f":22,"k":"onPreCull","cam":"Main"}
+{"f":22,"k":"OnWillRenderObject","cam":"Main"}
+{"f":22,"k":"OnPreRender","cam":"Main"}
+{"f":22,"k":"onPreRender","cam":"Main"}
+{"f":22,"k":"OnPostRender","cam":"Main"}
+{"f":22,"k":"onPostRender","cam":"Main"}
+{"f":22,"k":"OnPreCull","cam":"Second"}
+{"f":22,"k":"onPreCull","cam":"Second"}
+{"f":22,"k":"event","g":"E","cam":"Second","i":0,"vis":true,"was":false,"becameVis":true,"becameInvis":false,"cur":0,"prev":0}
+{"f":22,"k":"OnPreRender","cam":"Second"}
+{"f":22,"k":"onPreRender","cam":"Second"}
+{"f":22,"k":"OnPostRender","cam":"Second"}
+{"f":22,"k":"onPostRender","cam":"Second"}
+{"f":22,"k":"EndOfFrame"}
+{"f":23,"k":"Update"}
+{"f":23,"k":"update","g":"A","vis":"101","dist":"0,1,0"}
+{"f":23,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":23,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":23,"k":"update","g":"E","vis":"111010","dist":"0,0,0,0,0,0"}
+{"f":23,"k":"update","g":"G","vis":"1","dist":"1"}
+{"f":23,"k":"update","g":"H","vis":"0","dist":"1"}
+{"f":23,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":23,"k":"update","g":"J","vis":"1","dist":"1"}
+{"f":23,"k":"LateUpdate"}
+{"f":23,"k":"lateupdate","g":"A","vis":"101","dist":"0,1,0"}
+{"f":23,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":23,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":23,"k":"lateupdate","g":"E","vis":"111010","dist":"0,0,0,0,0,0"}
+{"f":23,"k":"lateupdate","g":"G","vis":"1","dist":"1"}
+{"f":23,"k":"lateupdate","g":"H","vis":"0","dist":"1"}
+{"f":23,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":23,"k":"lateupdate","g":"J","vis":"1","dist":"1"}
+{"f":23,"k":"OnPreCull","cam":"Main"}
+{"f":23,"k":"onPreCull","cam":"Main"}
+{"f":23,"k":"OnWillRenderObject","cam":"Main"}
+{"f":23,"k":"OnPreRender","cam":"Main"}
+{"f":23,"k":"onPreRender","cam":"Main"}
+{"f":23,"k":"OnPostRender","cam":"Main"}
+{"f":23,"k":"onPostRender","cam":"Main"}
+{"f":23,"k":"OnPreCull","cam":"Second"}
+{"f":23,"k":"onPreCull","cam":"Second"}
+{"f":23,"k":"OnPreRender","cam":"Second"}
+{"f":23,"k":"onPreRender","cam":"Second"}
+{"f":23,"k":"OnPostRender","cam":"Second"}
+{"f":23,"k":"onPostRender","cam":"Second"}
+{"f":23,"k":"EndOfFrame"}
+{"f":24,"k":"Update"}
+{"f":24,"k":"update","g":"A","vis":"101","dist":"0,1,0"}
+{"f":24,"k":"update","g":"C","vis":"0","dist":"1"}
+{"f":24,"k":"update","g":"D","vis":"00","dist":"1,1"}
+{"f":24,"k":"update","g":"E","vis":"111010","dist":"0,0,0,0,0,0"}
+{"f":24,"k":"update","g":"G","vis":"1","dist":"1"}
+{"f":24,"k":"update","g":"H","vis":"0","dist":"1"}
+{"f":24,"k":"update","g":"I","vis":"1","dist":"0"}
+{"f":24,"k":"update","g":"J","vis":"1","dist":"1"}
+{"f":24,"k":"LateUpdate"}
+{"f":24,"k":"lateupdate","g":"A","vis":"101","dist":"0,1,0"}
+{"f":24,"k":"lateupdate","g":"C","vis":"0","dist":"1"}
+{"f":24,"k":"lateupdate","g":"D","vis":"00","dist":"1,1"}
+{"f":24,"k":"lateupdate","g":"E","vis":"111010","dist":"0,0,0,0,0,0"}
+{"f":24,"k":"lateupdate","g":"G","vis":"1","dist":"1"}
+{"f":24,"k":"lateupdate","g":"H","vis":"0","dist":"1"}
+{"f":24,"k":"lateupdate","g":"I","vis":"1","dist":"0"}
+{"f":24,"k":"lateupdate","g":"J","vis":"1","dist":"1"}
+{"f":24,"k":"OnPreCull","cam":"Main"}
+{"f":24,"k":"onPreCull","cam":"Main"}
+{"f":24,"k":"OnWillRenderObject","cam":"Main"}
+{"f":24,"k":"OnPreRender","cam":"Main"}
+{"f":24,"k":"onPreRender","cam":"Main"}
+{"f":24,"k":"OnPostRender","cam":"Main"}
+{"f":24,"k":"onPostRender","cam":"Main"}
+{"f":24,"k":"OnPreCull","cam":"Second"}
+{"f":24,"k":"onPreCull","cam":"Second"}
+{"f":24,"k":"OnPreRender","cam":"Second"}
+{"f":24,"k":"onPreRender","cam":"Second"}
+{"f":24,"k":"OnPostRender","cam":"Second"}
+{"f":24,"k":"onPostRender","cam":"Second"}
+{"f":24,"k":"EndOfFrame"}
+{"f":25,"k":"end"}
