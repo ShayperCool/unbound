@@ -6,6 +6,8 @@ Scenarios:
            manifest leaves out. Records which assemblies compile and every compiler error.
   play     the project as committed: Play mode in a scene whose components come from a module
            the manifest leaves out. Records what ModulesProbe writes.
+  editor-play  (engine only) open the scene in Edit mode, then enter Play mode. Also checks
+               that a user-assembly component with an engine type's name survives pruning.
   create   (native only) makes the probe scene with ProbeRunner.Create in a fresh copy.
 
 Every run goes to <work>/<label> (write-once, under $XDG_CACHE_HOME/unbound) and ends with
@@ -31,7 +33,7 @@ ENGINE_ERROR = re.compile(r'^\s+(.+?)\((\d+),(\d+)\): (CS\d+): (.*)$')
 
 p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
 p.add_argument('mode', choices=['native', 'engine'])
-p.add_argument('scenario', choices=['compile', 'play', 'create'])
+p.add_argument('scenario', choices=['compile', 'play', 'editor-play', 'create'])
 p.add_argument('--release', required=True)
 p.add_argument('--label', required=True)
 p.add_argument('--work', type=Path, required=True)
@@ -42,6 +44,8 @@ if Path(a.label).name != a.label or a.label in ['', '.', '..']:
     p.error('label must be a single directory name')
 if a.mode == 'engine' and a.scenario == 'create':
     p.error('create is Editor-only')
+if a.mode == 'native' and a.scenario == 'editor-play':
+    p.error('editor-play is an engine integration control of the existing Native play reference')
 try:
     cache_artifact_path(a.work)
 except ValueError as error:
@@ -56,10 +60,14 @@ if a.scenario == 'create':
     (project / 'Assets/Scenes.meta').unlink(missing_ok=True)
 if a.scenario == 'compile':
     shutil.copytree(ROOT / 'Variants/CompileErrors/Assets', project / 'Assets', dirs_exist_ok=True)
+if a.scenario == 'editor-play':
+    shutil.copytree(ROOT / 'Variants/EditorTransition/Assets', project / 'Assets', dirs_exist_ok=True)
 (project / 'ProjectSettings/ProjectVersion.txt').write_text('m_EditorVersion: ' + a.release + '\n')
 
 output = work / 'probe.jsonl'
 env = dict(os.environ, MODULES_PROBE_OUT=str(output))
+if a.scenario == 'editor-play':
+    env['MODULES_TRANSITION_OUT'] = str(work / 'transition.json')
 log = work / 'editor.log'
 if a.mode == 'native':
     editor = os.environ.get('UNBOUND_PROBE_UNITY', str(Path.home() / 'Unity/Hub/Editor' / a.release / 'Editor/Unity'))
@@ -72,9 +80,13 @@ else:
     env.update(UNBOUND_MANAGED_DIR=str(a.runtime.resolve()), LD_LIBRARY_PATH=str(a.runtime.resolve()))
     if a.scenario == 'compile':
         command = [str(a.cli.resolve()), 'compile', '-p', str(project), '--editor-assemblies']
+    elif a.scenario == 'editor-play':
+        command = [str(a.cli.resolve()), 'test', '-p', str(project), '--platform', 'EditMode',
+                   '--results', str(work / 'unused-nunit.xml')]
     else:
         command = [str(a.cli.resolve()), 'run', '-p', str(project), '--headless', '30', '--no-watch']
-command = [str(Path.home() / '.cache/compat/with-heavy-job'), 'timeout', '600', *command]
+kind = ['--kind', 'engine-cpu'] if a.scenario == 'editor-play' else []
+command = [str(Path.home() / '.cache/compat/with-heavy-job'), *kind, 'timeout', '600', *command]
 audit = {'command': command, 'scenario': a.scenario}
 if a.mode == 'engine':
     audit['sha256'] = {str(path): hashlib.sha256(path.read_bytes()).hexdigest()
@@ -84,7 +96,11 @@ if a.mode == 'engine':
 with (work / 'stdout.log').open('x') as out:
     exit_code = subprocess.run(command, env=env, stdout=out, stderr=subprocess.STDOUT).returncode
 
-result = {'scenario': a.scenario, 'exitCode': exit_code}
+result = {'scenario': 'play' if a.scenario == 'editor-play' else a.scenario, 'exitCode': exit_code}
+if a.scenario == 'editor-play':
+    result['execution'] = a.scenario
+    transition = work / 'transition.json'
+    result['transition'] = json.loads(transition.read_text()) if transition.exists() else None
 if a.scenario == 'compile':
     errors = set()
     if a.mode == 'native':
@@ -113,7 +129,7 @@ if a.scenario == 'compile':
         result['compiledAssemblies'] = sorted(d.name for d in (project / 'Library/Unbound/ScriptAssemblies').iterdir()
                                               if d.is_dir() and any(d.glob('*.dll')))
     result['errors'] = [dict(zip(['file', 'line', 'column', 'id', 'message'], e)) for e in sorted(errors)]
-elif a.scenario == 'play':
+elif a.scenario in ['play', 'editor-play']:
     result['rows'] = [json.loads(line) for line in output.read_text().splitlines()] if output.exists() else None
 else:
     result['created'] = sorted(str(f.relative_to(project)) for f in [*(project / 'Assets').rglob('*.meta'),
@@ -122,3 +138,5 @@ else:
                                if f.exists())
 (work / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
 print(work / 'result.json', flush=True)
+if a.scenario == 'editor-play' and (exit_code or not result['transition'] or not all(result['transition'].values())):
+    sys.exit('Edit-to-Play/assembly identity integration control failed; see result.json')

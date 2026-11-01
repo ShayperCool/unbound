@@ -62,3 +62,10 @@ Unbound (the CLI and the managed directory of one build):
 
 `unbound graph -p <project> --compare-bee <project>/Library/Bee/*-inputdata.json` also compares
 every assembly's engine module references with an Editor's record.
+
+`run.py engine editor-play` uses the same arguments as `engine play`, starts in Edit mode,
+opens the scene and requests Play mode. Its cached `transition.json` checks that the disabled
+engine components exist in Edit mode and are pruned on entry to Play, while a user assembly's
+component named `UnityEngine.BoxCollider` survives. The probe does not add the test-framework
+package, whose dependencies could change module availability. Compare its `result.json` with
+the existing Native Play reference using `compare.py`; all eight original rows must still match.
