@@ -114,3 +114,9 @@ following step, including a second sleeping body on the shared scene body. The
 canonical profile retains touching flags, point and collider views, and both
 bodies' sleep state for solid and trigger pairs. Two independent Native
 recordings agree on all 793 fields, including the original 417.
+
+`--manifold-controls` records 216 near-parallel controls with complete physical
+contact arrays and cast results. Four arbitrary angles, small positive and
+negative angular differences, three offsets and three centers retain every
+indexed point, normal and separation. Body basis vectors and side rays separate
+pose arithmetic from clipping. Two Native recordings agree on all 28,512 fields.
