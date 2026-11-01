@@ -159,7 +159,7 @@ namespace UnityEngine
             var half = (end - start) * 0.5f;
             var midpoint = start + half;
             var pe = new Vector3(Mathf.Abs(half.x) + radius, Mathf.Abs(half.y) + radius, Mathf.Abs(half.z) + radius);
-            float pad = BitConverter.Int32BitsToSingle(0x3727c5ac);
+            float pad = System.BitConverter.Int32BitsToSingle(0x3727c5ac);
             var ce = bounds.extents + Vector3.one * pad;
             var offset = midpoint - bounds.center;
             if (!(Mathf.Abs(offset.x) <= pe.x + ce.x && Mathf.Abs(offset.y) <= pe.y + ce.y && Mathf.Abs(offset.z) <= pe.z + ce.z)) return false;
