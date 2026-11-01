@@ -62,3 +62,33 @@ Two independent captures agree byte for byte (Renderer: NVIDIA GeForce RTX 4060)
   `Tetrahedralize` (26 probes, 121 cells, `countSelf` 18); unloading it raises the event again
   and keeps the 26 probes until the next `Tetrahedralize`. A scene load raises no
   `lightProbesUpdated`.
+
+### Scene unload and Single replacement (`lifecycle.jsonl`)
+
+`Lifecycle/LightProbesLifecycle.cs` (`run.py lifecycle`, `run.py lifecycle-publish`) records by
+sequence index every probe and scene event of an additive `UnloadSceneAsync` of Extra and a
+Single `LoadScene` of Extra, with the global counts and each scene's validity and
+`GetSharedLightProbesForScene`. The Reference was published from two byte-identical captures.
+
+* Additive unload: `UnloadSceneAsync` returns first (the scene is valid, not loaded, and its
+  shared probes are its own). Then come `needsRetetrahedralization`, `sceneUnloaded` and the
+  operation's `completed`, with no probe change in between. `completed` already sees an invalid
+  scene whose shared probes are null. The global keeps the combined 26 probes / 121 cells until an
+  explicit `Tetrahedralize`.
+* Single load: no `needsRetetrahedralization` at all. At the outgoing `sceneUnloaded` the global
+  probes (the outgoing scene's own) have `count` and `cellCount` 0 but keep `countSelf` and
+  `cellCountSelf`. The incoming scene's probes are global by `activeSceneChanged`, with no event.
+* A scene created by a load but not loaded yet, and an invalid scene, have null shared probes.
+
+Unbound follows the relative order and the public state of both paths
+(`LightProbes.SceneUnloaded`, `LightProbes.SingleLoadReplacing`, `SceneManagerInternal.UnloadForSingleLoad`;
+unit tests in `managed/UnityEngine.Tests/LightProbesTests.cs`). It has not been run against this
+Reference. Still open:
+
+* Unbound unloads within `UnloadSceneAsync`. The scene is already invalid when the call returns,
+  and the needs / `sceneUnloaded` group fires inside the call, so the lifecycle rows of that
+  window do not match yet.
+* Unmeasured: a Single load replacing several scenes (Unbound resets once for all of them), the
+  Editor's `OpenScene`, Play mode entry and AssetBundle scenes (they keep the per-scene unload),
+  `LoadSceneAsync` Single (it shares `LoadScene`'s path in Unbound), and `TetrahedralizeAsync`'s
+  completion frame. The witness records no frame numbers.
