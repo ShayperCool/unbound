@@ -489,6 +489,7 @@ impl UnityRenderer {
                 self.generation += 1;
                 self.textures.remove(&handle);
                 self.texture_mip_biases.remove(&handle);
+                self.bit_views.retain(|(h, _), _| *h != handle);
             }
             Upload::TextureMipBias(handle, bias) => {
                 self.texture_mip_biases.insert(handle, bias);
