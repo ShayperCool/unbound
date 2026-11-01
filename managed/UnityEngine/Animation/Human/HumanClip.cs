@@ -189,7 +189,9 @@ namespace UnityEngine
                 var slopes = curvesOut.Slopes[i];
                 var keys = new Keyframe[values.Length];
                 for (int k = 0; k < keys.Length; k++)
-                    keys[k] = new Keyframe(curvesOut.Times[k], values[k], slopes[k], slopes[k], 1f / 3f, 1f / 3f);
+                    // Imported keys retain their weights without enabling weighted interpolation.
+                    keys[k] = new Keyframe(curvesOut.Times[k], values[k], slopes[k], slopes[k], 1f / 3f, 1f / 3f)
+                    { weightedMode = WeightedMode.None };
                 m_Curves.Add(new ClipCurve
                 {
                     Binding = new CurveBinding { Path = "", Attribute = HumanClipImport.CurveNames[i], ClassId = AnimatorClassId },
