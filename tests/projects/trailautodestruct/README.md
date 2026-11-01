@@ -49,3 +49,18 @@ destruction, passive expiry and complete manual observations. It also requires
 complete byte-identical independent repeats and strict successful GPU Editor
 results. It preserves raw order and never overwrites a canonical reference.
 Do not infer a global destruction rule from this diagnostic alone.
+
+The corrective pair on 2026-11-01 passed with 3,557 byte-identical records per
+repeat and 128 nonblack pixels in every lane. Its canonical reference is
+`Reference/unity-6000.0.71f1.jsonl`. The short trail first becomes empty during
+the explicit render at step 5, frame 6; the long trail at step 8, frame 9.
+Both remain alive through that frame's final EOF observation. Their OnDisable
+and OnDestroy callbacks carry the next frame's raw clock and precede its Update.
+The callback phase string is the last snapshot label, not the internal callback
+node. These observations bracket destruction but do not expose the automatic
+request phase. A pre-ageing decision at the next UpdateAllRenderers would occur
+after the Update where Native already reports the object dead. No production
+timing change is justified by this pair alone.
+
+The report and both complete repeats remain outside Git at
+`/mnt/data/unbound-cache-20261031/unbound-validation/runs/trail-autodestruct-cause-20261101-t3-3141edbd/REPORT.md`.
