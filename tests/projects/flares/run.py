@@ -172,10 +172,11 @@ def editor(work):
             server.terminate()
             server.wait()
             stop_compilers(project)
-        # An exiting Editor can start its Hub after the first sweep.
-        time.sleep(10)
-        for _, project, _, _ in started:
-            stop_compilers(project)
+        # An exiting Editor can start its Hub after the first sweep (seen up to a minute later).
+        for _ in range(9):
+            time.sleep(10)
+            for _, project, _, _ in started:
+                stop_compilers(project)
     print('editor exits', codes)
     return int(any(codes))
 
