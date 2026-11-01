@@ -326,6 +326,34 @@ public class CustomRtProbe : MonoBehaviour
         foreach (var s in Volumes()) yield return s;
         foreach (var s in Variables()) yield return s;
         foreach (var s in Assets()) yield return s;
+        foreach (var s in Loading()) yield return s;
+    }
+
+    /// <summary>When textures made with default settings are first seen, late in the run: one
+    /// untouched, one created, one with its update mode set, one with a material.</summary>
+    IEnumerable Loading()
+    {
+        Begin("loading");
+        var plain = Own(new CustomRenderTexture(2, 2) { name = "crt.loading.plain" });
+        var created = Own(new CustomRenderTexture(2, 2) { name = "crt.loading.created" });
+        created.Create();
+        var mode = Own(new CustomRenderTexture(2, 2) { name = "crt.loading.mode" });
+        mode.updateMode = CustomRenderTextureUpdateMode.OnLoad;
+        var material = Own(new CustomRenderTexture(2, 2) { name = "crt.loading.material" });
+        material.material = Mat(coords);
+        for (int i = 0; i < 3; i++)
+        {
+            var all = new List<CustomRenderTexture>();
+            CustomRenderTextureManager.GetAllCustomRenderTextures(all);
+            var names = new List<string>();
+            foreach (var t in all) if (t != null && t.name.StartsWith("crt.")) names.Add(t.name);
+            names.Sort(StringComparer.Ordinal);
+            Value("loading.all." + i, L(names));
+            Value("loading.created." + i, L(new[] { B(plain.IsCreated()), B(created.IsCreated()), B(mode.IsCreated()), B(material.IsCreated()) }));
+            yield return null;
+        }
+        End();
+        yield return null;
     }
 
     /// <summary>Constructors, defaults, zones and the manager's list.</summary>
@@ -631,11 +659,13 @@ public class CustomRtProbe : MonoBehaviour
         var earlySource = Crt("depend.early.source", 2, 2);
         earlySource.updateMode = CustomRenderTextureUpdateMode.Realtime;
         earlySource.initializationColor = Color.clear;
+        earlySource.initializationMode = CustomRenderTextureUpdateMode.OnLoad;
         earlySource.material = Mat(self);
         earlySource.doubleBuffered = true;
         var lateReader = Crt("depend.late.reader", 2, 2);
         lateReader.updateMode = CustomRenderTextureUpdateMode.Realtime;
         lateReader.initializationColor = Color.clear;
+        lateReader.initializationMode = CustomRenderTextureUpdateMode.OnLoad;
         var lateMaterial = Mat(depend);
         lateMaterial.SetTexture("_Other", earlySource);
         lateReader.material = lateMaterial;
@@ -644,9 +674,11 @@ public class CustomRtProbe : MonoBehaviour
         var reader = Crt("depend.reader", 2, 2);
         reader.updateMode = CustomRenderTextureUpdateMode.Realtime;
         reader.initializationColor = Color.clear;
+        reader.initializationMode = CustomRenderTextureUpdateMode.OnLoad;
         var source = Crt("depend.source", 2, 2);
         source.updateMode = CustomRenderTextureUpdateMode.Realtime;
         source.initializationColor = Color.clear;
+        source.initializationMode = CustomRenderTextureUpdateMode.OnLoad;
         source.material = Mat(self);
         source.doubleBuffered = true;
         var m = Mat(depend);
