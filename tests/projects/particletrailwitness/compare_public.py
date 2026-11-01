@@ -36,6 +36,20 @@ def main():
     a = p.parse_args()
     reference = rows(Path(__file__).resolve().parent/'Reference'/('unity-'+a.release)/'public.jsonl')
     actual = rows(a.actual)
+    # Every candidate raw byte must be represented by the declared typed views.
+    # A float bit delta is tolerated only through its typed numerical comparison.
+    def validate_buffers(data):
+        raw = base64.b64decode(data['mesh.buffer.0.bytes'])
+        count = data['mesh.vertexCount']; stride = data['mesh.buffer.0.stride']
+        assert data['mesh.vertexBufferCount'] == 1 and stride == 24 and len(raw) == count*stride
+        for i in range(count):
+            pos = b''.join(bytes.fromhex(x['bits'])[::-1] for x in data['mesh.vertices'][i])
+            uv = b''.join(bytes.fromhex(x['bits'])[::-1] for x in data['mesh.uv0'][i][:2])
+            assert raw[i*stride:(i+1)*stride] == pos + bytes(data['mesh.colors32'][i]) + uv
+        indices = data['mesh.submesh.0.indicesWithBase']
+        assert base64.b64decode(data['mesh.indexBytes']) == struct.pack('<'+'H'*len(indices), *indices)
+    validate_buffers(reference)
+    validate_buffers(actual)
     full=[]; byte_union=[]
     for key in sorted(reference.keys()|actual.keys()):
         expected,observed=reference.get(key,'MISSING'),actual.get(key,'MISSING')

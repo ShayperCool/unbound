@@ -44,3 +44,39 @@ matched the baked mesh bytes, but differed in 530 raw Vector4 storage slots in
 `Trails.positions`. All other 132 records matched. Per the declared stop rule,
 no canonical reference was published and no production change was made. The raw
 captures and complete mismatch report remain in the validation cache handoff.
+
+
+## Public rendering contract disposition
+
+The full reflected storage repeat remains rejected. All seven Trails backing fields
+are assembly-internal in the installed ParticleSystemModule metadata. A separate,
+explicit contract was approved for the already captured public output. It includes
+all 124 non-Trails records, with every raw mesh byte, typed attribute, index, particle,
+camera, target and quality field. Both captures match exactly. The canonical file is
+`Reference/unity-6000.0.71f1/public.jsonl`; `contract.json` binds its scope and inputs.
+No second Native pair was run.
+
+`public_contract.py` checks every count-described ring, including slot 4, and retains
+all 530 raw Vector4 differences and the full rejected union outside Git. None lies
+in any of the 93 count-described entries. All 95 baked center pairs are accounted
+for by the three returned particle heads and their reversed rings, with only the
+mathematical float rounding bound. The extra counted entry equals an existing birth
+coordinate; its lifecycle meaning remains unknown. No active/dead assumption is used.
+Backing-storage parity and the public GetTrails implementation remain unclaimed.
+
+To audit an existing pair, supply its cache directory and the JSON output of the
+offline `InspectLayout.cs` tool. This does not execute Native:
+
+```sh
+python3 tests/projects/particletrailwitness/public_contract.py --release 6000.0.71f1 \
+  --pair "$PAIR" --layout "$LAYOUT" --out "$REPORT"
+```
+
+`engine.py --release 6000.0.71f1 --work "$WORK"` prepares the same authored trial
+for public-only engine inspection. Run the engine with `PARTICLES_IMAGE_DIR` set
+to `$WORK/capture`. `compare_public.py --release 6000.0.71f1 --actual
+"$WORK/capture/witness.jsonl" --out "$REPORT"` retains every public field and all
+raw byte/leaf differences. Numerical geometry keeps the streams comparator's
+2e-4 absolute/relative tolerance. Raw buffers must agree with their complete typed
+views. Tolerated coordinate bit differences are explicitly reported, never called
+bit-exact parity. The original full-storage `publish` command still fails honestly.
