@@ -81,7 +81,10 @@ namespace TextureRaw.Tests
                 Assert.Equal(BitConverter.GetBytes(0.5f), raw.ToArray().Skip(4).Take(4));
                 triples[0] = new TextureRawProbe.ThreeBytes { A = 3, B = 5, C = 7 };
                 Assert.Equal(new byte[] { 3, 5, 7 }, raw.ToArray().Take(3));
-                Assert.Throws<InvalidOperationException>(() => raw.Dispose());
+                // jobs/Reference: Allocator.None disposal clears this view, not its owner.
+                raw.Dispose();
+                Assert.False(raw.IsCreated);
+                Assert.Equal((ushort)0x0503, words[0]);
                 Assert.Equal((byte)3, texture.GetPixelData<byte>(0)[0]);
             }
             finally { Object.DestroyImmediate(texture); }
