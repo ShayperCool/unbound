@@ -78,7 +78,7 @@ namespace Unbound.Runtime
         // ------------------------------------------------------------------ GPU through EGL
 
         const uint EGL_PLATFORM_DEVICE_EXT = 0x313F, EGL_OPENGL_API = 0x30A2;
-        const int EGL_DRM_DEVICE_FILE_EXT = 0x3233, EGL_NONE = 0x3038, EGL_VERSION = 0x3054;
+        const int EGL_DRM_DEVICE_FILE_EXT = 0x3233, EGL_NONE = 0x3038;
         const int EGL_DRAW = 0x3059, EGL_READ = 0x305A;
         const int EGL_CONTEXT_MAJOR_VERSION = 0x3098, EGL_CONTEXT_MINOR_VERSION = 0x30FB;
         const int EGL_CONTEXT_OPENGL_PROFILE_MASK = 0x30FD, EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT = 1;
@@ -90,8 +90,6 @@ namespace Unbound.Runtime
         // IntPtr, strings and lists pointers; extension and GL entry points are function pointers.
         [DllImport("libEGL.so.1")] static extern unsafe IntPtr eglGetProcAddress(byte* name);
         [DllImport("libEGL.so.1")] static extern unsafe uint eglInitialize(IntPtr display, int* major, int* minor);
-        [DllImport("libEGL.so.1")] static extern uint eglTerminate(IntPtr display);
-        [DllImport("libEGL.so.1")] static extern IntPtr eglQueryString(IntPtr display, int name);
         [DllImport("libEGL.so.1")] static extern uint eglBindAPI(uint api);
         [DllImport("libEGL.so.1")] static extern uint eglQueryAPI();
         [DllImport("libEGL.so.1")] static extern IntPtr eglGetCurrentDisplay();
@@ -109,9 +107,8 @@ namespace Unbound.Runtime
 
         /// <summary>The calling thread's EGL state this read changes: the bound client API and the
         /// OpenGL context current on the thread with its display and surfaces.</summary>
-        struct Binding
+        internal struct Binding
         {
-            internal uint Api;
             internal IntPtr Display, Draw, Read, Context;
         }
 
@@ -123,33 +120,30 @@ namespace Unbound.Runtime
                 var platformDisplay = (delegate* unmanaged[Cdecl]<uint, IntPtr, int*, IntPtr>)Proc("eglGetPlatformDisplayEXT");
                 var deviceString = (delegate* unmanaged[Cdecl]<IntPtr, int, IntPtr>)Proc("eglQueryDeviceStringEXT");
                 if (queryDevices == null || platformDisplay == null) return Fail("EGL cannot list the GPUs");
-                var devices = stackalloc IntPtr[16];
+                var devices = new IntPtr[16];
                 int count = 0;
-                if (queryDevices(16, devices, &count) == 0 || count <= 0) return Fail("EGL lists no GPU");
-                var previous = new Binding { Api = eglQueryAPI() };
-                if (eglBindAPI(EGL_OPENGL_API) == 0) return Fail("EGL has no OpenGL API");
-                try
+                fixed (IntPtr* p = devices)
+                    if (queryDevices(16, p, &count) == 0 || count <= 0) return Fail("EGL lists no GPU");
+                int deviceCount = Math.Min(count, 16);
+                var egl = new DriverEgl();
+                return WithOpenGl(egl, () =>
                 {
-                    // The OpenGL context (if any) the thread had: restored after each device.
-                    previous.Display = eglGetCurrentDisplay();
-                    previous.Draw = eglGetCurrentSurface(EGL_DRAW);
-                    previous.Read = eglGetCurrentSurface(EGL_READ);
-                    previous.Context = eglGetCurrentContext();
-                    for (int i = 0; i < Math.Min(count, 16); i++)
+                    var previous = new Binding
                     {
-                        var gpu = ReadDevice(devices[i], platformDisplay, deviceString, previous);
+                        Display = eglGetCurrentDisplay(), Draw = eglGetCurrentSurface(EGL_DRAW),
+                        Read = eglGetCurrentSurface(EGL_READ), Context = eglGetCurrentContext(),
+                    };
+                    for (int i = 0; i < deviceCount; i++)
+                    {
+                        var gpu = ReadDevice(devices[i], platformDisplay, deviceString, previous, egl);
                         if (gpu != null) return gpu;
                     }
-                }
-                finally
-                {
-                    eglBindAPI(previous.Api);
-                }
-                return Fail("no GPU makes an OpenGL 4.5 Core context");
+                    return Fail("no GPU makes an OpenGL 4.5 Core context");
+                });
             }
-            catch (Exception e) when (e is DllNotFoundException || e is EntryPointNotFoundException)
+            catch (Exception e) when (e is DllNotFoundException || e is EntryPointNotFoundException || e is InvalidOperationException)
             {
-                return Fail("libEGL is not available: " + e.Message);
+                return Fail("EGL identity read failed: " + e.Message);
             }
         }
 
@@ -159,57 +153,108 @@ namespace Unbound.Runtime
             return null;
         }
 
-        /// <summary>The device's OpenGL strings, from a 4.5 Core context without a surface. The
-        /// thread's previous OpenGL binding is restored (else released) before the context is
-        /// destroyed; the display is terminated only when this read initialized it.</summary>
-        static unsafe Gpu ReadDevice(IntPtr device, delegate* unmanaged[Cdecl]<uint, IntPtr, int*, IntPtr> platformDisplay,
-            delegate* unmanaged[Cdecl]<IntPtr, int, IntPtr> deviceString, Binding previous)
+        // Local injection seam for the identity reader's ownership and failure paths. There is
+        // deliberately no Terminate operation: device displays have process-shared lifetimes.
+        internal abstract class EglCalls
         {
-            int none = EGL_NONE;
-            var display = platformDisplay(EGL_PLATFORM_DEVICE_EXT, device, &none);
-            if (display == IntPtr.Zero) return null;
-            // A display is shared by the process: one initialized elsewhere answers its version.
-            bool initializedElsewhere = eglQueryString(display, EGL_VERSION) != IntPtr.Zero;
-            int major, minor;
-            if (eglInitialize(display, &major, &minor) == 0) return null;
-            try
+            internal abstract uint QueryApi();
+            internal abstract bool BindApi(uint api);
+            internal abstract bool Initialize(IntPtr display);
+            internal abstract IntPtr CreateContext(IntPtr display);
+            internal abstract bool MakeCurrent(IntPtr display, IntPtr draw, IntPtr read, IntPtr context);
+            internal abstract bool DestroyContext(IntPtr display, IntPtr context);
+        }
+
+        sealed unsafe class DriverEgl : EglCalls
+        {
+            internal override uint QueryApi() => eglQueryAPI();
+            internal override bool BindApi(uint api) => eglBindAPI(api) != 0;
+            internal override bool Initialize(IntPtr display)
+            {
+                int major, minor;
+                return eglInitialize(display, &major, &minor) != 0;
+            }
+            internal override IntPtr CreateContext(IntPtr display)
             {
                 var attributes = stackalloc int[]
                 {
                     EGL_CONTEXT_MAJOR_VERSION, 4, EGL_CONTEXT_MINOR_VERSION, 5,
                     EGL_CONTEXT_OPENGL_PROFILE_MASK, EGL_CONTEXT_OPENGL_CORE_PROFILE_BIT, EGL_NONE,
                 };
-                var context = eglCreateContext(display, IntPtr.Zero, IntPtr.Zero, attributes);
-                if (context == IntPtr.Zero) return null;
-                Gpu gpu = null;
-                try
-                {
-                    if (eglMakeCurrent(display, IntPtr.Zero, IntPtr.Zero, context) == 0) return null;
-                    try
-                    {
-                        gpu = ReadStrings();
-                    }
-                    finally
-                    {
-                        if (previous.Context != IntPtr.Zero) eglMakeCurrent(previous.Display, previous.Draw, previous.Read, previous.Context);
-                        else eglMakeCurrent(display, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
-                    }
-                }
-                finally
-                {
-                    eglDestroyContext(display, context);
-                }
-                if (gpu == null) return null;
-                string node = deviceString != null ? Marshal.PtrToStringUTF8(deviceString(device, EGL_DRM_DEVICE_FILE_EXT)) : null;
-                ReadPci(gpu, node);
-                if (gpu.MemoryMb == 0)
-                    Stubs.Ignored("SystemInfo.graphicsMemorySize", $"is not read for {gpu.Name}: it answers 0");
-                return gpu;
+                return eglCreateContext(display, IntPtr.Zero, IntPtr.Zero, attributes);
             }
-            finally
+            internal override bool MakeCurrent(IntPtr display, IntPtr draw, IntPtr read, IntPtr context) =>
+                eglMakeCurrent(display, draw, read, context) != 0;
+            internal override bool DestroyContext(IntPtr display, IntPtr context) => eglDestroyContext(display, context) != 0;
+        }
+
+        internal static Gpu WithOpenGl(EglCalls egl, Func<Gpu> read)
+        {
+            uint api = egl.QueryApi();
+            if (!egl.BindApi(EGL_OPENGL_API)) throw new InvalidOperationException("cannot bind the OpenGL API");
+            Gpu gpu = null;
+            Exception failure = null;
+            try { gpu = read(); }
+            catch (Exception e) { failure = e; }
+            if (!egl.BindApi(api))
+                throw new InvalidOperationException("cannot restore the caller's EGL API" + (failure == null ? "" : ": " + failure.Message), failure);
+            if (failure != null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(failure).Throw();
+            return gpu;
+        }
+
+        internal static Gpu ReadContext(EglCalls egl, IntPtr display, Binding previous, Func<Gpu> read)
+        {
+            // Initialization is retained for the process, bounded by the single Lazy read of at
+            // most 16 devices. Querying a version cannot prove exclusive display ownership.
+            if (!egl.Initialize(display)) return null;
+            var context = egl.CreateContext(display);
+            if (context == IntPtr.Zero) return null;
+            bool current = false;
+            string cleanupFailure = null;
+            Gpu gpu = null;
+            Exception readFailure = null;
+            try
             {
-                if (!initializedElsewhere) eglTerminate(display);
+                current = egl.MakeCurrent(display, IntPtr.Zero, IntPtr.Zero, context);
+                if (current) gpu = read();
             }
+            catch (Exception e) { readFailure = e; }
+            if (current)
+            {
+                bool restored = previous.Context != IntPtr.Zero
+                    ? egl.MakeCurrent(previous.Display, previous.Draw, previous.Read, previous.Context)
+                    : egl.MakeCurrent(display, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
+                if (!restored)
+                {
+                    cleanupFailure = "cannot restore the caller's EGL context/surfaces";
+                    // A failed restore leaves our context current. Release it before destruction.
+                    // On release failure retain it, report failure and never touch foreign state.
+                    if (!egl.MakeCurrent(display, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero))
+                        throw new InvalidOperationException(cleanupFailure + "; temporary context release failed; current context retained", readFailure);
+                }
+            }
+            if (!egl.DestroyContext(display, context))
+                cleanupFailure = (cleanupFailure == null ? "" : cleanupFailure + "; ") + "temporary EGL context destruction failed";
+            if (cleanupFailure != null) throw new InvalidOperationException(cleanupFailure, readFailure);
+            if (readFailure != null) System.Runtime.ExceptionServices.ExceptionDispatchInfo.Capture(readFailure).Throw();
+            return gpu;
+        }
+
+        /// <summary>The device's OpenGL strings, using an owned temporary context on a retained
+        /// process-shared display. Cleanup failures cannot produce a successful identity.</summary>
+        static unsafe Gpu ReadDevice(IntPtr device, delegate* unmanaged[Cdecl]<uint, IntPtr, int*, IntPtr> platformDisplay,
+            delegate* unmanaged[Cdecl]<IntPtr, int, IntPtr> deviceString, Binding previous, EglCalls egl)
+        {
+            int none = EGL_NONE;
+            var display = platformDisplay(EGL_PLATFORM_DEVICE_EXT, device, &none);
+            if (display == IntPtr.Zero) return null;
+            var gpu = ReadContext(egl, display, previous, ReadStrings);
+            if (gpu == null) return null;
+            string node = deviceString != null ? Marshal.PtrToStringUTF8(deviceString(device, EGL_DRM_DEVICE_FILE_EXT)) : null;
+            ReadPci(gpu, node);
+            if (gpu.MemoryMb == 0)
+                Stubs.Ignored("SystemInfo.graphicsMemorySize", $"is not read for {gpu.Name}: it answers 0");
+            return gpu;
         }
 
         /// <summary>GL_RENDERER, GL_VENDOR, "OpenGL " + GL_VERSION and the dedicated video memory
