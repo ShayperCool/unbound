@@ -84,8 +84,8 @@ public class GeneratorBoundaryProbe : MonoBehaviour
             yield return null;
             double originTime = AudioSettings.dspTime;
             long origin = Tick(originTime);
-            double start = scheduled ? 8192.5 + (kind == "endInside" ? 0 : 73) : -1;
-            double end = !scheduled ? -1 : kind == "windowInside" ? 8192.5 + 185 : kind == "endInside" ? 10240.5 + 185 : 12288.5;
+            double start = scheduled ? 8192.25 + (kind == "endInside" ? 0 : 73) : -1;
+            double end = !scheduled ? -1 : kind == "windowInside" ? 8192.75 + 185 : kind == "endInside" ? 10240.75 + 185 : 12288.75;
             double startTime = originTime + start / Rate, endTime = originTime + end / Rate;
             Debug.Log("BoundaryClock " + key + " originBits=" + BitConverter.DoubleToInt64Bits(originTime)
                 + " startBits=" + BitConverter.DoubleToInt64Bits(startTime) + " endBits=" + BitConverter.DoubleToInt64Bits(endTime));
