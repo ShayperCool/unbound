@@ -314,6 +314,7 @@ pub struct Mixer {
     pub listener_filter: bool,
     listener_output: Ring,
     callback: Option<Callback>,
+    capture_listener_batch: bool,
     /// Nothing listens (the virtual device): voices only advance, unless their samples are
     /// asked for (filters, output data).
     pub discard_output: bool,
@@ -345,6 +346,7 @@ impl Mixer {
             listener_filter: false,
             listener_output: Ring::new(),
             callback: None,
+            capture_listener_batch: false,
             discard_output: false,
             listener_output_wanted: false,
             mix: vec![0.0; BLOCK * 2],
@@ -799,7 +801,19 @@ impl Mixer {
         // untouched in the caller's NativeArray, including buffers shorter than one DSP block.
         let block_samples = self.config.buffer_size.max(1) as usize * 2;
         let mut samples = vec![0.0; length / block_samples * block_samples];
-        self.render(&mut samples, 2);
+        // Preserve the internal DSP chunks and their arithmetic. Native capture delivers the
+        // listener at the configured DSP-buffer boundary, as the submission profile records.
+        // This renders no extra samples and leaves partial caller buffers untouched.
+        self.capture_listener_batch = true;
+        for block in samples.chunks_mut(block_samples) {
+            self.render(block, 2);
+            if self.listener_filter && self.has_listener && let Some(cb) = self.callback {
+                cb(callback::LISTENER_FILTER, 0, block.as_mut_ptr(),
+                    (block.len() / 2) as i32, 2, 0);
+            }
+            self.listener_output.push(block);
+        }
+        self.capture_listener_batch = false;
         self.discard_output = discarded;
         for value in &mut samples {
             *value = capture::pcm16(*value);
@@ -1118,6 +1132,7 @@ impl Mixer {
             self.group_nodes.get_mut(&handle).unwrap().buffer = buffer;
         }
         if self.listener_filter
+            && !self.capture_listener_batch
             && has_listener
             && let Some(cb) = callback
         {
@@ -1130,7 +1145,9 @@ impl Mixer {
                 0,
             );
         }
-        self.listener_output.push(&self.mix[..n * 2]);
+        if !self.capture_listener_batch {
+            self.listener_output.push(&self.mix[..n * 2]);
+        }
         self.frames += n as u64;
     }
 }
@@ -1695,6 +1712,39 @@ mod tests {
         m.render(&mut output, 2);
         assert!(output.iter().any(|x| *x > 0.1));
         assert_eq!(m.source_state(7).position, 1024.0);
+    }
+
+    #[test]
+    fn captured_listener_delivery_uses_dsp_buffers_and_preserves_pcm_and_partial_suffixes() {
+        use std::cell::RefCell;
+        thread_local! { static SIZES: RefCell<Vec<i32>> = const { RefCell::new(Vec::new()) }; }
+        extern "C" fn listener(kind: i32, _: u64, data: *mut f32, frames: i32, channels: i32, _: i64) {
+            if kind != callback::LISTENER_FILTER { return; }
+            SIZES.with(|sizes| sizes.borrow_mut().push(frames));
+            let values = unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+            for value in values { *value *= 0.5; }
+        }
+        fn prepared() -> Mixer {
+            let mut m = Mixer::new(MixerConfig::default());
+            m.add_clip(1, Clip::new(2, 48000, vec![0.25; 8192 * 2]));
+            source_with(&mut m, 7, 1, |_| {});
+            play(&mut m, 7, command::PLAY, 0.0);
+            m
+        }
+        let mut control = prepared();
+        let mut expected = vec![0.0; 4096];
+        control.render(&mut expected, 2);
+        for sample in &mut expected { *sample = capture::pcm16(*sample * 0.5); }
+        let mut m = prepared();
+        m.set_callback(Some(listener));
+        m.listener_filter = true;
+        let output = m.capture(4097, Vec::new()).unwrap();
+        assert_eq!(output.samples, expected);
+        assert_eq!(m.frames(), 2048);
+        SIZES.with(|sizes| assert_eq!(*sizes.borrow(), [1024, 1024]));
+        // The capture frontier does not alter the device/direct DSP callback path.
+        m.render(&mut vec![0.0; 512], 2);
+        SIZES.with(|sizes| assert_eq!(*sizes.borrow(), [1024, 1024, 256]));
     }
 
     #[test]
