@@ -31,11 +31,11 @@ namespace UnityEngine.Tests
             var colors = new Color[4 * 3 * 2];
             for (int i = 0; i < colors.Length; i++) colors[i] = new Color(i / 23f, 1 - i / 31f, (i * 7 % 24) / 24f, 0.25f + i / 64f);
             volume.SetPixels(colors);
-            volume.SetPixel(1, 2, 1, new Color(0.3f, 0.6f, 0.9f, 0.5f));
+            volume.SetPixel(1, 2, 1, new Color(0.31f, 0.62f, 0.91f, 0.51f));
             volume.SetPixel(5, 0, 0, Color.red); // outside: ignored
             var level = volume.GetPixels();
             var expected = new Texture3D(4, 3, 2, format, true) { hideFlags = HideFlags.HideAndDontSave };
-            colors[(1 * 3 + 2) * 4 + 1] = new Color(0.3f, 0.6f, 0.9f, 0.5f);
+            colors[(1 * 3 + 2) * 4 + 1] = new Color(0.31f, 0.62f, 0.91f, 0.51f);
             expected.SetPixels(colors);
             Assert.Equal(expected.GetPixels(), level);
             // GetPixel reads a byte b as b / 255, GetPixels as b * (1 / 255)
