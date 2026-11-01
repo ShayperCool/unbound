@@ -777,6 +777,16 @@ namespace UnityEngine
             MarkDirty();
         }
 
+        /// <summary>Takes every setting of <paramref name="saved"/> (the material read from its file
+        /// again) and destroys it: Resources.UnloadAsset.</summary>
+        internal void RevertTo(Material saved)
+        {
+            m_Tags.Clear();
+            CopyPropertiesFromMaterial(saved);
+            m_Shader = saved.m_Shader;
+            DestroyImmediate(saved, true);
+        }
+
         public void CopyPropertiesFromMaterial(Material mat)
         {
             if (mat == null) throw new ArgumentNullException(nameof(mat));

@@ -52,35 +52,90 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>The default blit of a slice of a texture array (measured, tests/projects/droppedparams
+        /// slice.*.array.*: the source slice is read into the destination slice). The renderer binds
+        /// a blit's source as a 2D texture, so the slice is copied texel for texel, which gives the
+        /// Editor's result between targets of the same size and format without scale or offset;
+        /// another such blit is refused (warns) rather than drawn wrong. True when it was handled
+        /// (the source is an array).</summary>
+        internal static bool BlitArraySlice(UnityEngine.Texture source, UnityEngine.Texture destination, int sourceSlice, int destinationSlice,
+            UnityEngine.Vector2 scale, UnityEngine.Vector2 offset)
+        {
+            if (ArraySlices(source) == 0) return false;
+            if (destination == null || destination.width != source.width || destination.height != source.height
+                || destination.graphicsFormat != source.graphicsFormat || scale != UnityEngine.Vector2.one || offset != UnityEngine.Vector2.zero)
+            {
+                Stubs.Ignored("Blit from a texture array",
+                    "is done only into a target of the array's size and format, without scale or offset: this blit is skipped");
+                return true;
+            }
+            ulong from = source is UnityEngine.RenderTexture rs ? rs.EnsureCreated() : TextureHandles.Of(source);
+            ulong to = destination is UnityEngine.RenderTexture rd ? rd.EnsureCreated() : TextureHandles.Of(destination);
+            GfxStream.CopyTexture(from, sourceSlice, 0, new UnityEngine.RectInt(0, 0, -1, -1), to, destinationSlice, 0, 0, 0);
+            return true;
+        }
+
+        /// <summary>A texture array's slice count (0: not an array).</summary>
+        internal static int ArraySlices(UnityEngine.Texture texture) => texture switch
+        {
+            UnityEngine.RenderTexture rt when rt.dimension == UnityEngine.Rendering.TextureDimension.Tex2DArray => Math.Max(1, rt.volumeDepth),
+            UnityEngine.Texture2DArray array => array.depth,
+            _ => 0,
+        };
+
+        static UnityEngine.Texture2D s_HalfGray;
+
+        /// <summary>0.5 in every channel, alpha too: what a CommandBuffer blit of an array without
+        /// slices reads (measured, slice.cmd.copy.array).</summary>
+        internal static UnityEngine.Texture2D HalfGray
+        {
+            get
+            {
+                if (s_HalfGray) return s_HalfGray;
+                using (ObjectRegistry.AsAssets())
+                    s_HalfGray = new UnityEngine.Texture2D(1, 1, UnityEngine.TextureFormat.RGBA32, false, true) { hideFlags = UnityEngine.HideFlags.HideAndDontSave };
+                s_HalfGray.SetPixel(0, 0, new UnityEngine.Color32(128, 128, 128, 128));
+                s_HalfGray.Apply(false, false);
+                return s_HalfGray;
+            }
+        }
+
         static readonly int s_MainTex = UnityEngine.Shader.PropertyToID("_MainTex");
         static readonly Dictionary<int, object> s_BlitProperties = new Dictionary<int, object>();
 
         /// <summary>Graphics.Blit: the source as <c>_MainTex</c>, a unit quad over the destination (the
         /// screen when null) with the material's passes (all when <paramref name="pass"/> is -1); the
-        /// destination becomes the active render texture.</summary>
+        /// destination becomes the active render texture.
+        /// <para>The slices: the array slice the default copy reads (<see cref="BlitArraySlice"/>),
+        /// and the destination's slice drawn into (measured, tests/projects/droppedparams slice.*).</para></summary>
         internal static void Blit(UnityEngine.Texture source, UnityEngine.RenderTexture destination, UnityEngine.Material material, int pass,
-            UnityEngine.Vector2 scale, UnityEngine.Vector2 offset)
+            UnityEngine.Vector2 scale, UnityEngine.Vector2 offset, int sourceSlice = 0, int destinationSlice = 0)
         {
             // The screen, while a screen camera draws into its stand-in, is the stand-in: what is
             // drawn there is presented with the camera's image.
             destination ??= UnityEngine.RenderTexture.ScreenStandIn;
+            if (material == null && BlitArraySlice(source, destination, sourceSlice, destinationSlice, scale, offset))
+            {
+                UnityEngine.RenderTexture.SetActiveQuietly(destination);
+                return;
+            }
+            s_BlitProperties.Clear();
             material ??= BlitCopy;
             if (source != null) material.SetTexture(s_MainTex, source);
-            s_BlitProperties.Clear();
             if (scale != UnityEngine.Vector2.one || offset != UnityEngine.Vector2.zero)
                 s_BlitProperties[UnityEngine.Shader.PropertyToID("_MainTex_ST")] = new UnityEngine.Vector4(scale.x, scale.y, offset.x, offset.y);
-            BlitWith(destination != null ? destination.EnsureCreated() : 0, material, pass, s_BlitProperties);
+            BlitWith(destination != null ? destination.EnsureCreated() : 0, material, pass, s_BlitProperties, destinationSlice);
             UnityEngine.RenderTexture.SetActiveQuietly(destination);
         }
 
-        /// <summary>A unit quad over a target with a material. The destination stays active;
-        /// the current view and projection are restored after.</summary>
-        internal static void BlitWith(ulong target, UnityEngine.Material material, int pass, Dictionary<int, object> properties)
+        /// <summary>A unit quad over a target (its slice <paramref name="slice"/>) with a material.
+        /// The destination stays active; the current view and projection are restored after.</summary>
+        internal static void BlitWith(ulong target, UnityEngine.Material material, int pass, Dictionary<int, object> properties, int slice = 0)
         {
             ulong mesh = BlitQuad.Sync();
             ulong handle = material.Sync();
             var saved = GfxStream.Current;
-            GfxStream.SetTarget(target);
+            GfxStream.SetTarget(target, 0, 0, slice);
             GfxStream.Camera(UnityEngine.Matrix4x4.identity, Ortho);
             GfxStream.Draw(mesh, 0, handle, pass < 0 ? GfxStream.AllPasses : pass, UnityEngine.Matrix4x4.identity, UnityEngine.Color.white,
                 properties: properties != null && properties.Count > 0 ? properties : null);
@@ -274,15 +329,35 @@ namespace UnityEngine
 {
     public partial class Graphics
     {
-        public static void Blit(Texture source, RenderTexture dest) => Immediate.Blit(source, dest, null, -1, Vector2.one, Vector2.zero);
-        public static void Blit(Texture source, RenderTexture dest, int sourceDepthSlice, int destDepthSlice) => Blit(source, dest);
+        /// <summary>A copy; from a texture array, of each slice into the destination's slice of
+        /// the same index (measured, tests/projects/droppedparams slice.graphics.copy.array: all
+        /// three slices of an array into an array; into a 2D target that is the first).</summary>
+        public static void Blit(Texture source, RenderTexture dest)
+        {
+            int slices = Immediate.ArraySlices(source);
+            if (slices == 0)
+            {
+                Immediate.Blit(source, dest, null, -1, Vector2.one, Vector2.zero);
+                return;
+            }
+            int count = Math.Min(slices, dest != null ? GfxStream.LayersOf(dest) : 1);
+            for (int slice = 0; slice < count; slice++) Immediate.Blit(source, dest, null, -1, Vector2.one, Vector2.zero, slice, slice);
+        }
+        public static void Blit(Texture source, RenderTexture dest, int sourceDepthSlice, int destDepthSlice) =>
+            Immediate.Blit(source, dest, null, -1, Vector2.one, Vector2.zero, sourceDepthSlice, destDepthSlice);
         public static void Blit(Texture source, RenderTexture dest, Vector2 scale, Vector2 offset) => Immediate.Blit(source, dest, null, -1, scale, offset);
-        public static void Blit(Texture source, RenderTexture dest, Vector2 scale, Vector2 offset, int sourceDepthSlice, int destDepthSlice) => Blit(source, dest, scale, offset);
+        public static void Blit(Texture source, RenderTexture dest, Vector2 scale, Vector2 offset, int sourceDepthSlice, int destDepthSlice) =>
+            Immediate.Blit(source, dest, null, -1, scale, offset, sourceDepthSlice, destDepthSlice);
         public static void Blit(Texture source, RenderTexture dest, Material mat, [Internal.DefaultValue("-1")] int pass) => Immediate.Blit(source, dest, mat, pass, Vector2.one, Vector2.zero);
-        public static void Blit(Texture source, RenderTexture dest, Material mat, int pass, int destDepthSlice) => Blit(source, dest, mat, pass);
+        public static void Blit(Texture source, RenderTexture dest, Material mat, int pass, int destDepthSlice) =>
+            Immediate.Blit(source, dest, mat, pass, Vector2.one, Vector2.zero, 0, destDepthSlice);
         public static void Blit(Texture source, RenderTexture dest, Material mat) => Blit(source, dest, mat, -1);
         public static void Blit(Texture source, Material mat, [Internal.DefaultValue("-1")] int pass) => Immediate.Blit(source, null, mat, pass, Vector2.one, Vector2.zero);
-        public static void Blit(Texture source, Material mat, int pass, int destDepthSlice) => Blit(source, mat, pass);
+        // Into the active render texture (the screen when none), its first slice whatever
+        // destDepthSlice says (measured, tests/projects/droppedparams
+        // slice.graphics.active.material.slice.1).
+        public static void Blit(Texture source, Material mat, int pass, int destDepthSlice) =>
+            Immediate.Blit(source, RenderTexture.ActiveTarget, mat, pass, Vector2.one, Vector2.zero);
         public static void Blit(Texture source, Material mat) => Blit(source, mat, -1);
 
         public static void ExecuteCommandBuffer(CommandBuffer buffer)
@@ -374,7 +449,7 @@ namespace UnityEngine
         public static void SetRenderTarget(RenderTexture rt, [Internal.DefaultValue("0")] int mipLevel, [Internal.DefaultValue("CubemapFace.Unknown")] CubemapFace face, [Internal.DefaultValue("0")] int depthSlice)
         {
             RenderTexture.SetActiveQuietly(rt);
-            GfxStream.SetTarget(rt != null ? rt.EnsureCreated() : 0, 0, mipLevel, face == CubemapFace.Unknown ? depthSlice : (int)face);
+            GfxStream.SetTarget(rt != null ? rt.EnsureCreated() : 0, 0, mipLevel, face == CubemapFace.Unknown ? depthSlice : (int)face, GfxStream.LayersOf(rt));
         }
 
         [Unbound.EditorFaithful("no-op is equivalent: random write targets are never bound (SetRandomWriteTarget is not implemented and warns)")]
