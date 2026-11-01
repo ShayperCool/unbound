@@ -45,3 +45,19 @@ Before Root regenerates the declared stub, the focused project can build with
 `-p:UnboundNoStubs=true`. Use a private `UnboundTarget` and disable build servers,
 shared compilation and node reuse. A successful managed run does not establish
 acceptance of a combined runtime. Never pair a new v15 CoreModule with a v14 CLI.
+
+## Measured lifetime differences
+
+The 207-value release reference records `UnityException` from both generic raw
+and pixel getters after `Apply(false, true)`, while the non-generic getter still
+returns the twelve-byte chain. Reinitialization and destruction invalidate old
+raw and pixel views with `ObjectDisposedException`.
+
+After `Apply(false, true)`, Native's old raw and pixel safety handles still permit
+reads. The witness checks those handles without dereferencing the removed CPU
+data. Unbound's existing store releases and invalidates these handles, and its
+pixel getter currently throws `ArgumentException` for unreadable textures. The
+new raw getter preserves owner-driven invalidation and throws `UnityException`.
+The exact comparator and managed witness retain all three disagreements. They
+must be resolved by the storage/API owner before declaring full parity; this
+task does not loosen lifetime checks or alter the existing pixel getter.
