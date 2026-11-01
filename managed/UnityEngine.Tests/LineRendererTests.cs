@@ -171,42 +171,24 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(go);
         }
 
-        /// <summary>Expiring many points at once keeps exactly the points the one-at-a-time rule
-        /// kept: drop the oldest while the next one is older than the trail's time, then a last
-        /// point that is.</summary>
-        [Fact]
-        public void TrailsExpireAPrefixAsTheOneAtATimeRuleDid()
+        /// <summary>Ages <paramref name="trail"/> at its render after each step and checks it keeps
+        /// exactly the points the one-at-a-time rule keeps: drop the oldest while the next one is
+        /// older than the trail's time, then a last point that is.</summary>
+        static void CheckPrefixExpiry(TrailRenderer trail, System.Collections.Generic.List<Vector3> positions,
+            System.Collections.Generic.List<float> times, float[] steps)
         {
-            var go = new GameObject("trail");
-            var trail = go.AddComponent<TrailRenderer>();
-            trail.time = 1f;
-            var positions = new System.Collections.Generic.List<Vector3>();
-            var times = new System.Collections.Generic.List<float>();
-            // AddPositions stamps a point between the newest point's time and now (half way for one).
-            trail.AddPosition(Vector3.zero);
-            positions.Add(Vector3.zero);
-            times.Add(Time.time);
-            for (int k = 1; k <= 40; k++)
-            {
-                Frame(k % 3 == 0 ? 0.07f : 0.03f);
-                var p = new Vector3(k, 0f, 0f);
-                trail.AddPosition(p);
-                float now = Time.time, from = times[times.Count - 1];
-                positions.Add(p);
-                times.Add(from + (now - from) * 1 / 2);
-            }
             Assert.Equal(positions.Count, trail.positionCount);
-            foreach (float step in new[] { 1.13f, 0.41f, 5f })
+            foreach (float step in steps)
             {
                 Frame(step);
                 trail.AgeForRender();
                 float now = Time.time;
-                while (positions.Count >= 2 && now - times[1] > 1f)
+                while (positions.Count >= 2 && now - times[1] > trail.time)
                 {
                     positions.RemoveAt(0);
                     times.RemoveAt(0);
                 }
-                if (positions.Count == 1 && now - times[0] > 1f)
+                if (positions.Count == 1 && now - times[0] > trail.time)
                 {
                     positions.Clear();
                     times.Clear();
@@ -214,57 +196,147 @@ namespace UnityEngine.Tests
                 Assert.Equal(positions.Count, trail.positionCount);
                 for (int i = 0; i < positions.Count; i++) Assert.Equal(positions[i], trail.GetPosition(i));
             }
-            Assert.Equal(0, trail.positionCount);
-            Object.DestroyImmediate(go);
         }
 
-        /// <summary>A loop's zero-length segments take the next non-zero segment's direction around
-        /// the loop, as the per-segment forward scan did, for every zero pattern up to nine segments
-        /// (runs at the start, the end and across the wrap, and all zero).</summary>
+        /// <summary>A still trail with <paramref name="count"/> points added one at a time, a frame
+        /// apart, and the times AddPosition stamps them with (half way from the newest point's time
+        /// to now for one point).</summary>
+        static TrailRenderer AddedTrail(int count, System.Func<int, float> frame,
+            System.Collections.Generic.List<Vector3> positions, System.Collections.Generic.List<float> times)
+        {
+            var trail = new GameObject("trail").AddComponent<TrailRenderer>();
+            trail.time = 1f;
+            trail.AddPosition(Vector3.zero);
+            positions.Add(Vector3.zero);
+            times.Add(Time.time);
+            for (int k = 1; k < count; k++)
+            {
+                Frame(frame(k));
+                var p = new Vector3(k, 0f, 0f);
+                trail.AddPosition(p);
+                float now = Time.time, from = times[times.Count - 1];
+                positions.Add(p);
+                times.Add(from + (now - from) * 1 / 2);
+            }
+            return trail;
+        }
+
+        /// <summary>Expiring many points at once keeps exactly the points the one-at-a-time rule
+        /// kept.</summary>
+        [Fact]
+        public void TrailsExpireAPrefixAsTheOneAtATimeRuleDid()
+        {
+            var positions = new System.Collections.Generic.List<Vector3>();
+            var times = new System.Collections.Generic.List<float>();
+            var trail = AddedTrail(41, k => k % 3 == 0 ? 0.07f : 0.03f, positions, times);
+            CheckPrefixExpiry(trail, positions, times, new[] { 1.13f, 0.41f, 5f });
+            Assert.Equal(0, trail.positionCount);
+            Object.DestroyImmediate(trail.gameObject);
+        }
+
+        /// <summary>A long trail whose thousands of points expire in a few renders, most of them in
+        /// one long prefix, keeps exactly the points the one-at-a-time rule kept.</summary>
+        [Fact]
+        public void ALongTrailExpiresItsLongPrefixAsTheOneAtATimeRuleDid()
+        {
+            var positions = new System.Collections.Generic.List<Vector3>();
+            var times = new System.Collections.Generic.List<float>();
+            var trail = AddedTrail(3000, k => k % 7 == 0 ? 0.0011f : 0.0004f, positions, times);
+            CheckPrefixExpiry(trail, positions, times, new[] { 0.05f, 0.6f, 0.001f, 0.3f, 5f });
+            Assert.Equal(0, trail.positionCount);
+            Object.DestroyImmediate(trail.gameObject);
+        }
+
+        const System.Reflection.BindingFlags Private = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
+        static readonly System.Reflection.FieldInfo s_Dir = typeof(LineStrip).GetField("m_Dir", Private);
+        static readonly System.Reflection.FieldInfo s_Zero = typeof(LineStrip).GetField("m_Zero", Private);
+        static readonly System.Reflection.FieldInfo s_Effective = typeof(LineStrip).GetField("m_Effective", Private);
+        static readonly System.Reflection.MethodInfo s_LoopDirections = typeof(LineStrip).GetMethod("LoopDirections", Private);
+
+        /// <summary>Runs a loop's direction pass over the zero pattern and checks it against the
+        /// per-segment forward scan: a zero-length segment takes the next non-zero segment's
+        /// direction around the loop, all zero keeps the raw directions. The scratch arrays are
+        /// grown, not trimmed, so they keep stale entries past the segments, which stay as they are.</summary>
+        static void CheckLoopDirections(bool[] zeroPattern)
+        {
+            Assert.NotNull(s_Dir);
+            Assert.NotNull(s_Zero);
+            Assert.NotNull(s_Effective);
+            Assert.NotNull(s_LoopDirections);
+            int segments = zeroPattern.Length;
+            var dir = new Vector3[segments + 2];
+            var zero = new bool[segments + 2];
+            var effective = new Vector3[segments + 2];
+            var stale = new Vector3(-99f, -99f, -99f);
+            for (int j = 0; j < dir.Length; j++)
+            {
+                dir[j] = new Vector3(j + 1, 0.5f * j, -j);
+                effective[j] = stale;
+            }
+            for (int j = 0; j < segments; j++) zero[j] = zeroPattern[j];
+            var expected = new Vector3[segments];
+            for (int j = 0; j < segments; j++)
+            {
+                expected[j] = dir[j];
+                if (!zero[j]) continue;
+                for (int k = 1; k < segments; k++)
+                {
+                    int at = (j + k) % segments;
+                    if (!zero[at]) { expected[j] = dir[at]; break; }
+                }
+            }
+            var strip = new LineStrip();
+            s_Dir.SetValue(strip, dir);
+            s_Zero.SetValue(strip, zero);
+            s_Effective.SetValue(strip, effective);
+            s_LoopDirections.Invoke(strip, new object[] { segments });
+            for (int j = 0; j < segments; j++) Assert.Equal(expected[j], effective[j]);
+            for (int j = segments; j < effective.Length; j++) Assert.Equal(stale, effective[j]);
+        }
+
+        /// <summary>Every zero pattern up to nine segments (runs at the start, the end and across
+        /// the wrap, and all zero).</summary>
         [Fact]
         public void LoopZeroRunsTakeTheNextNonZeroDirectionAsTheScanDid()
         {
-            const System.Reflection.BindingFlags Private = System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance;
-            var strip = new LineStrip();
-            var dirField = typeof(LineStrip).GetField("m_Dir", Private);
-            var zeroField = typeof(LineStrip).GetField("m_Zero", Private);
-            var effectiveField = typeof(LineStrip).GetField("m_Effective", Private);
-            var loopDirections = typeof(LineStrip).GetMethod("LoopDirections", Private);
-            Assert.NotNull(dirField);
-            Assert.NotNull(zeroField);
-            Assert.NotNull(effectiveField);
-            Assert.NotNull(loopDirections);
             for (int segments = 1; segments <= 9; segments++)
-            {
                 for (int mask = 0; mask < 1 << segments; mask++)
                 {
-                    // Scratch arrays are grown, not trimmed: keep stale entries past the segments.
-                    var dir = new Vector3[segments + 2];
-                    var zero = new bool[segments + 2];
-                    var effective = new Vector3[segments + 2];
-                    for (int j = 0; j < dir.Length; j++)
-                    {
-                        dir[j] = new Vector3(j + 1, 0.5f * j, -j);
-                        effective[j] = new Vector3(-99f, -99f, -99f);
-                    }
-                    for (int j = 0; j < segments; j++) zero[j] = (mask & (1 << j)) != 0;
-                    var expected = new Vector3[segments];
-                    for (int j = 0; j < segments; j++)
-                    {
-                        expected[j] = dir[j];
-                        if (!zero[j]) continue;
-                        for (int k = 1; k < segments; k++)
-                        {
-                            int at = (j + k) % segments;
-                            if (!zero[at]) { expected[j] = dir[at]; break; }
-                        }
-                    }
-                    dirField.SetValue(strip, dir);
-                    zeroField.SetValue(strip, zero);
-                    effectiveField.SetValue(strip, effective);
-                    loopDirections.Invoke(strip, new object[] { segments });
-                    for (int j = 0; j < segments; j++) Assert.Equal(expected[j], effective[j]);
+                    var pattern = new bool[segments];
+                    for (int j = 0; j < segments; j++) pattern[j] = (mask & (1 << j)) != 0;
+                    CheckLoopDirections(pattern);
                 }
+        }
+
+        /// <summary>Long duplicate runs in a closed loop: one non-zero segment among thousands
+        /// (first, last, middle), runs across the wrap, alternating long runs, and all zero.</summary>
+        [Fact]
+        public void LongLoopZeroRunsTakeTheNextNonZeroDirectionAsTheScanDid()
+        {
+            foreach (int segments in new[] { 600, 2001 })
+            {
+                foreach (int only in new[] { 0, 1, segments / 2, segments - 2, segments - 1 })
+                {
+                    var single = new bool[segments];
+                    for (int j = 0; j < segments; j++) single[j] = j != only;
+                    CheckLoopDirections(single);
+                }
+                // A zero run across the wrap: the last third and the first third.
+                var wrap = new bool[segments];
+                for (int j = 0; j < segments; j++) wrap[j] = j < segments / 3 || j >= segments - segments / 3;
+                CheckLoopDirections(wrap);
+                // Long zero runs of growing length between single non-zero segments.
+                var runs = new bool[segments];
+                for (int j = 0, run = 1; j < segments; run++)
+                {
+                    for (int k = 0; k < run && j < segments; k++) runs[j++] = true;
+                    if (j < segments) runs[j++] = false;
+                }
+                CheckLoopDirections(runs);
+                CheckLoopDirections(new bool[segments]);
+                var all = new bool[segments];
+                for (int j = 0; j < segments; j++) all[j] = true;
+                CheckLoopDirections(all);
             }
         }
 
