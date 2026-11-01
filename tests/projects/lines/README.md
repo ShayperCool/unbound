@@ -104,3 +104,20 @@ See [the attribution and remaining blockers](../../../docs/LINE_GEOMETRY_ATTRIBU
   --preblend /path/to/saved/pre-blend/unbound \
   --out ~/.cache/unbound/validation/runs/geometry-attribution
 ```
+
+## Predeclared cap-count control
+
+`capcount.*` adds exactly eight synchronous public BakeMesh controls. Renderer
+Line/Trail, alignment View/TransformZ and cap count 1/2 vary; all share points
+`(-1,0,0), (1,0.5,0)`, identity object transform, the existing orthographic
+camera at `(0,0,-10)` facing +Z, constant positive width 0.4 and LineColor.
+Normals, tangents, positions, indices, UVs, colors and bounds are captured.
+Public readbacks verify points, width, cap count and alignment. Trails use
+Clear/AddPositions with emission and autodestruct disabled and time 10000,
+without yielding. They run after all existing observations and add no images.
+
+The authorized budget is one independent complete Native pair on 6000.0.71f1.
+No replacement pair or tolerance changes. The unchanged append guard remains
+mandatory: the current reference ends with blend rows after its original
+complete marker, so a future complete capture may fail its raw-order check.
+Such a refusal leaves the canonical reference unchanged.

@@ -707,6 +707,96 @@ public class LineProbe : MonoBehaviour
         }
     }
 
+    // ---- cap count discrimination ----
+
+    /// <summary>Eight predeclared controls: renderer type, alignment and one/two cap
+    /// vertices, with all other public inputs identical. Synchronous public trail
+    /// population excludes emission, movement, scheduling and expiration.</summary>
+    void CapCounts()
+    {
+        var points = new[] { new Vector3(-1f, 0f, 0f), new Vector3(1f, 0.5f, 0f) };
+        foreach (bool trail in new[] { false, true })
+            foreach (var alignment in new[] { LineAlignment.View, LineAlignment.TransformZ })
+                foreach (int caps in new[] { 1, 2 })
+                {
+                    string key = "capcount." + (trail ? "trail." : "line.") + alignment + ".cap" + caps;
+                    var go = new GameObject(key);
+                    go.transform.position = Vector3.zero;
+                    go.transform.rotation = Quaternion.identity;
+                    go.transform.localScale = Vector3.one;
+                    Renderer renderer;
+                    var readback = new Vector3[2];
+                    int count;
+                    float width;
+                    int capCount;
+                    LineAlignment align;
+                    string lifecycle;
+                    if (trail)
+                    {
+                        var r = go.AddComponent<TrailRenderer>();
+                        r.emitting = false;
+                        r.autodestruct = false;
+                        r.time = 10000f;
+                        r.minVertexDistance = 0f;
+                        r.widthCurve = AnimationCurve.Constant(0f, 1f, 1f);
+                        r.widthMultiplier = 0.4f;
+                        r.colorGradient = WhiteGradient();
+                        r.numCornerVertices = 0;
+                        r.numCapVertices = caps;
+                        r.alignment = alignment;
+                        r.textureMode = LineTextureMode.Stretch;
+                        r.textureScale = Vector2.one;
+                        r.generateLightingData = true;
+                        r.sharedMaterial = colorMat;
+                        r.Clear();
+                        r.AddPositions(points);
+                        count = r.GetPositions(readback);
+                        width = r.widthMultiplier;
+                        capCount = r.numCapVertices;
+                        align = r.alignment;
+                        lifecycle = ",\"emitting\":" + B(r.emitting) + ",\"autodestruct\":" + B(r.autodestruct)
+                            + ",\"time\":" + F(r.time) + ",\"minVertexDistance\":" + F(r.minVertexDistance);
+                        renderer = r;
+                    }
+                    else
+                    {
+                        var r = go.AddComponent<LineRenderer>();
+                        r.useWorldSpace = true;
+                        r.loop = false;
+                        r.widthCurve = AnimationCurve.Constant(0f, 1f, 1f);
+                        r.widthMultiplier = 0.4f;
+                        r.colorGradient = WhiteGradient();
+                        r.numCornerVertices = 0;
+                        r.numCapVertices = caps;
+                        r.alignment = alignment;
+                        r.textureMode = LineTextureMode.Stretch;
+                        r.textureScale = Vector2.one;
+                        r.generateLightingData = true;
+                        r.sharedMaterial = colorMat;
+                        r.positionCount = points.Length;
+                        r.SetPositions(points);
+                        count = r.GetPositions(readback);
+                        width = r.widthMultiplier;
+                        capCount = r.numCapVertices;
+                        align = r.alignment;
+                        lifecycle = ",\"useWorldSpace\":" + B(r.useWorldSpace) + ",\"loop\":" + B(r.loop);
+                        renderer = r;
+                    }
+                    if (count != 2 || readback[0] != points[0] || readback[1] != points[1]
+                        || width != 0.4f || capCount != caps || align != alignment)
+                        throw new InvalidOperationException(key + " public input readback differs");
+                    Value(key + ".inputs", "{\"p\":" + Flat(readback) + ",\"count\":" + count
+                        + ",\"width\":" + F(width) + ",\"caps\":" + capCount + ",\"alignment\":" + Q(align.ToString())
+                        + ",\"objectPosition\":" + V3(go.transform.position) + ",\"objectForward\":" + V3(go.transform.forward)
+                        + ",\"objectScale\":" + V3(go.transform.localScale) + ",\"cameraPosition\":" + V3(main.transform.position)
+                        + ",\"cameraForward\":" + V3(main.transform.forward) + ",\"cameraUp\":" + V3(main.transform.up)
+                        + ",\"orthographic\":" + B(main.orthographic) + ",\"material\":" + Q(renderer.sharedMaterial.shader.name)
+                        + lifecycle + "}");
+                    Bake(key + ".mesh", renderer, main, false);
+                    DestroyImmediate(go);
+                }
+    }
+
     // ---- driver ----
 
     Camera NewCamera(string name, bool orthographic, Vector3 position, Vector3 lookAt)
@@ -771,7 +861,7 @@ public class LineProbe : MonoBehaviour
         }
         if (code == 0)
         {
-            try { Blend(); }
+            try { Blend(); CapCounts(); }
             catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
         }
         Value("complete", B(code == 0));
