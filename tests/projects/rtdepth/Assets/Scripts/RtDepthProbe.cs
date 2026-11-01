@@ -534,7 +534,7 @@ public class RtDepthProbe : MonoBehaviour
 
     void OnControlPreRender(Camera c)
     {
-        if (c == cam && control == "wireframe") GL.wireframe = true;
+        if (c == cam && control is "wireframe" or "wireframeKept") GL.wireframe = true;
     }
 
     void OnControlPostRender()
@@ -577,7 +577,8 @@ public class RtDepthProbe : MonoBehaviour
     /// Screen camera (LDR, the 64x32 game view), each without and with an empty command buffer
     /// at AfterEverything: <c>postRead</c> reads the screen in OnPostRender; <c>postBlit</c> blits
     /// a texture to the screen in OnPostRender (the screen read after the frame);
-    /// <c>wireframe</c> draws with GL.wireframe on from OnPreRender to OnPostRender. Then render
+    /// <c>wireframe</c> draws with GL.wireframe on from OnPreRender to OnPostRender,
+    /// <c>wireframeKept</c> from OnPreRender to the end of the frame. Then render
     /// targets: <c>mainDepth</c> binds a target's Depth element as a material's _MainTex drawn by
     /// a camera; <c>texelSize</c> returns _Src_TexelSize of a Depth element; <c>attachedDepth</c>
     /// clears target B's depth through SetRenderTarget(A, B) after both depth elements were
@@ -589,7 +590,7 @@ public class RtDepthProbe : MonoBehaviour
     {
         const int Layer = 31;
         cam.cullingMask = ~(1 << Layer);
-        foreach (var name in new[] { "postRead", "postBlit", "wireframe" })
+        foreach (var name in new[] { "postRead", "postBlit", "wireframe", "wireframeKept" })
         foreach (bool withBuffer in new[] { false, true })
         {
             string key = "ctl." + name + (withBuffer ? ".buffer" : ".none");
@@ -605,6 +606,7 @@ public class RtDepthProbe : MonoBehaviour
             yield return new WaitForEndOfFrame();
             EndLogs(key);
             control = null;
+            GL.wireframe = false;
             Value(key + ".renders", renders.ToString());
             if (name == "postRead") WriteImage(key, postImage);
             else WriteImage(key + ".final", ScreenBytes());

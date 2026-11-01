@@ -37,7 +37,8 @@ python3 tests/projects/rtdepth/compare.py tests/projects/rtdepth/Reference/unity
 **Controls** (`run.py ... --mode controls`, `Reference/unity-6000.0.71f1/controls/`): the screen
 camera without and with an empty command buffer reads the screen in `OnPostRender` (`ctl.postRead.*`,
 an 8-bit sRGB screenshot), blits a texture to the screen in `OnPostRender` (`ctl.postBlit.*.final`)
-and draws with `GL.wireframe` on (`ctl.wireframe.*.final`); a camera draws a material whose
+and draws with `GL.wireframe` on until `OnPostRender` (`ctl.wireframe.*.final`) or until the end of the
+frame (`ctl.wireframeKept.*.final`); a camera draws a material whose
 `_MainTex` is a target's Depth element (`ctl.mainDepth`); `_Src_TexelSize` of a Depth element
 (`ctl.texelSize`); a target's depth cleared through `SetRenderTarget(A, B)` after both targets'
 Depth elements were sampled (`ctl.attachedDepth.*`); a `GrabPass` texture loaded as unsigned
@@ -56,7 +57,7 @@ float tolerance (absolute and relative 2e-4).
 
 `Reference/unity-6000.0.71f1/` holds 1,071 values and 368 images from two byte-identical captures
 (OpenGLCore 4.5, RTX 4060).
-`Reference/unity-6000.0.71f1/controls/` holds the controls' 40 values and 15 images, from two
+`Reference/unity-6000.0.71f1/controls/` holds the controls' values and images, from two
 byte-identical complete captures (same device).
 
 ## What the Editor does (6000.0.71f1, Linux, OpenGL Core)
