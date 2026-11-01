@@ -25,8 +25,8 @@ using UnityEngine;
 /// at the end of a frame before the marker, with superSize 2, stereo modes, twice in one frame,
 /// with a .jpg name, without an extension, and to a relative path (the working directory).
 /// Every case records its log messages and exceptions. In Gamma color space the Editor crashes
-/// when CaptureScreenshotAsTexture reads the screen in Update: the two calls in Update are
-/// skipped there (<c>.skipped</c>).
+/// in CaptureScreenshotAsTexture called in Update or with a superSize below one: those calls,
+/// and the render texture capture in Update, are skipped there (<c>.skipped</c>).
 /// </summary>
 public class ScreenCaptureProbe : MonoBehaviour
 {
@@ -161,6 +161,8 @@ public class ScreenCaptureProbe : MonoBehaviour
     void AsTexture(string key, Func<Texture2D> capture)
     {
         Frame(key);
+        // On disk before the call: the Editor can crash in it.
+        Flush();
         BeginLogs();
         Texture2D t = null;
         try { t = capture(); }
@@ -196,6 +198,7 @@ public class ScreenCaptureProbe : MonoBehaviour
     void IntoTarget(string key, RenderTexture rt)
     {
         Frame(key);
+        Flush();
         BeginLogs();
         try { ScreenCapture.CaptureScreenshotIntoRenderTexture(rt); }
         catch (Exception e) { Value(key + ".exception", Q(e.GetType().Name + ": " + e.Message)); }
@@ -301,7 +304,9 @@ public class ScreenCaptureProbe : MonoBehaviour
         {
             yield return null;
             yield return new WaitForEndOfFrame();
-            AsTexture("asTexture.superSize" + size, () => ScreenCapture.CaptureScreenshotAsTexture(size));
+            // In Gamma the Editor crashes on a size below one.
+            if (gamma && size < 1) Value("asTexture.superSize" + size + ".skipped", "true");
+            else AsTexture("asTexture.superSize" + size, () => ScreenCapture.CaptureScreenshotAsTexture(size));
         }
         foreach (ScreenCapture.StereoScreenCaptureMode mode in Enum.GetValues(typeof(ScreenCapture.StereoScreenCaptureMode)))
         {
