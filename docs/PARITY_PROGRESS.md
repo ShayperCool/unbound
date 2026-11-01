@@ -2101,7 +2101,12 @@ differences does not make those ten acceptable; they are assigned to the
 humanoid follow-up. No full Core, math or engine parity is claimed.
 
 Generic model target-matching review has a separate expanded Editor reference:
-11,476 records, with the old 3,714-record prefix unchanged. The current local
-candidate preserves that old scope and matches 88,224/90,968 expanded values.
-Its remaining differences and strict before/after union are retained outside
-Git; the model review package is not yet accepted.
+11,536 records, with the old 3,714-record prefix unchanged. The source-matched
+candidate passes all 91,088 expanded values, including lifecycle, overrides,
+callbacks, Rebind and single-precision normalized playback time. The full
+managed differential keeps the same eleven failures and introduces none;
+API checking has zero errors in 2,290 types. Model clips, additive layers,
+Animator and bundled animation pass their affected controls. The model
+review package remains unaccepted: humanoid IK readback resolves 24 values,
+retains 62 and introduces eight against the prior accepted capture. The
+complete before/after union is retained outside Git.

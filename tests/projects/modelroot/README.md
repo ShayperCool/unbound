@@ -72,12 +72,18 @@ What the Editor does (measured):
   precision, as for humanoid clips: the speed's length for clips that do not turn, more for clips
   that turn about the up axis (1.154 times for a 90 degree turn in two seconds).
 
-The expanded canonical reference has 11,476 records from two successful,
+The expanded canonical reference has 11,536 records from two successful,
 byte-identical Editor runs. All original 3,714 records remain byte-identical.
 Publication requires successful exits, unique keys and the terminal completion
 record; matching partial captures cannot replace the reference.
 
-The original 3,714 records still pass. Review corrections are in progress:
-the current candidate matches 10,873/11,476 records and 88,224/90,968 values.
-Remaining lifecycle, timing and override differences stay in the complete
-comparison; the expanded scope is not certified.
+All 11,536 records and 91,088 values pass, including lifecycle, override,
+callback, Rebind and nonbinary-duration playback controls. Playback rounds each
+normalized-time step to single precision, and matching stays active at the
+exact end until time advances past it. Interrupt completion goes through the
+next movement evaluation rather than changing the Transform synchronously.
+
+The combined model package remains unaccepted. Its humanoid IK readback control
+resolves 24 values, retains 62 and introduces eight against the prior accepted
+capture, all in muscles 41 and 43. The focused generic results do not waive
+those introduced values. Full reports and rejected candidates remain in cache.
