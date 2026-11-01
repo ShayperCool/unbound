@@ -2427,3 +2427,15 @@ GPU: Awaitable 225/225, buffers 389/389, review controls 15/15; all timing gates
 RT 1071/1071 and 368/368 images; twelve GPU jobs introduce no regressions; all 33 files unchanged.
 Existing async/culling, screenshot and texture residuals remain; no full-parity claim or new Native capture.
 Reports/manifests: `~/.cache/unbound/validation/runs/{integrated-root-validation-20261101-t3-6df242fc,matching-root-gpu-20261101-t3-c0b643d0}/`.
+
+### 2026-11-01 combined callback and rendering validation
+
+Source `4dd529c6`, frozen 33-file runtime; current-checkout Rust freshness and tested/package Core equality verified.
+Early resources: 539/539 values, 62/62 images on both frozen before and candidate; omitted bundle fixture caused the same 26 missing plus one extra on both.
+Managed 1380/1391, same eleven names/messages; affected Rust 146/146 and existing CLI fixture pass.
+API 0 errors/2314 handwritten types, PhysicsModule consistent; inherited two-file generator differences byte-proved, no rewrites.
+Callbacks retain 29 missing/29 extra, nine changed unmatched records and 25 ordering inversions; prefab fields retain 21/6280 differences.
+InstantiateAsync retains 731/777, 46 missing/46 extra; CullingGroup 1149/1149 plus initial EndOfFrame extra; module compile 7/7, Play/transition 8/8 and five identity checks pass.
+Matching GPU: 15 captures, zero introduced failures; CRT 349/352 + 100/140 images, flares 689/689 + 140/217; strict residuals retained.
+One builtinfx residual improves pointwise; all unions/tolerances and 33 runtime files retained, with no new builds or Native captures.
+Report/runtime/input/command manifests: `~/.cache/unbound/validation/runs/{combined-root-validation-20261101-t3-42333086,matching-closure-gpu-20261101-t3-de3d0dea}/`.

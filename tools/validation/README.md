@@ -147,7 +147,7 @@ current workspace was compiled and that its `OUT_DIR`s are its own. Invalidate o
 copied or owned workspace units, not the whole registry.
 
 The `unbound-host` build script writes `libunbound_physx.so` and the managed build to
-`$CARGO_TARGET_DIR/managed`, or to `<checkout>/target` when that variable is not set in the
+`$CARGO_TARGET_DIR/managed`, or to `<checkout>/target/managed` when that variable is not set in the
 environment (for example when the target directory comes only from a config file). These
 files are outside `OUT_DIR` and Cargo does not track them, so check that they exist in the
 private target. `UNBOUND_SKIP_MANAGED_BUILD=1` skips the managed build.

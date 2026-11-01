@@ -878,6 +878,28 @@ namespace Unbound.Runtime
             });
         }
 
+        /// <summary>Culling-group callbacks can change renderer visibility. Read the camera and
+        /// renderers afterwards, notify newly visible renderers, then send OnWillRenderObject
+        /// before gathering draws (measured: tests/projects/cullinggroup).</summary>
+        internal static CameraContext CullCamera(Camera camera)
+        {
+            CullingGroup.EvaluateForCamera(camera);
+            var context = ContextOf(camera);
+            SpriteMasking.Begin(camera, context);
+            int mask = camera.cullingMask;
+            var culling = Culler.ForCamera(camera, context.Position, context.Forward);
+            foreach (var renderer in RenderRegistry.Renderers)
+            {
+                if (!renderer || renderer.forceRenderingOff) continue;
+                if ((mask & (1 << renderer.m_GameObject.m_Layer)) == 0) continue;
+                if (!LODGroup.Drawn(renderer, camera, context.Position)) continue;
+                if (renderer.shadowCastingMode == ShadowCastingMode.ShadowsOnly) continue;
+                if (culling.Sees(renderer)) renderer.MarkRendered();
+            }
+            Renderer.SendWillRenderObject(context.Projection * context.View, mask);
+            return context;
+        }
+
         /// <summary>
         /// Renders a camera with the built-in forward pipeline, as Unity orders it: OnPreCull, culling,
         /// OnPreRender, the clear, command buffers at each camera event around the opaque and the
@@ -900,14 +922,9 @@ namespace Unbound.Runtime
                 // tests/projects/cullinggroup; also before and after rendering).
                 SendToCamera(camera, m => m.OnPreCull);
                 Camera.onPreCull?.Invoke(camera);
-                // Culling groups: evaluated and their callbacks sent before renderers become
-                // visible (measured: tests/projects/cullinggroup).
-                CullingGroup.EvaluateForCamera(camera);
-                var context = ContextOf(camera);
-                SpriteMasking.Begin(camera, context);
+                var context = CullCamera(camera);
                 s_Items.Clear();
                 int mask = camera.cullingMask;
-                Renderer.SendWillRenderObject(context.Projection * context.View, mask);
                 var culling = Culler.ForCamera(camera, context.Position, context.Forward);
                 s_Visible.Clear();
                 foreach (var renderer in RenderRegistry.Renderers)
@@ -922,8 +939,7 @@ namespace Unbound.Runtime
                     // drawn anyway (the draw of an off-screen one shows nothing).
                     bool inView = culling.Sees(renderer);
                     if (renderer.shadowCastingMode == ShadowCastingMode.ShadowsOnly) continue;
-                    if (inView) renderer.MarkRendered();
-                    else if (Culler.TrustsBounds(renderer)) continue;
+                    if (!inView && Culler.TrustsBounds(renderer)) continue;
                     try
                     {
                         renderer.CollectDraws(context, s_Items);
@@ -1104,12 +1120,21 @@ namespace Unbound.Runtime
                 EmitItems(transparent, s_Items.Count);
                 CameraPlanes?.Invoke(camera, true);
                 RunEvent(camera, CameraEvent.AfterForwardAlpha, sceneTarget);
-                // OnPostRender, the halo and lens flare events (Unbound draws none: the events
-                // fire anyway), then OnRenderObject (measured: tests/projects/builtinrp
-                // events.*.orderWithMessages).
+                // OnPostRender (the message, then Camera.onPostRender), the halos and lens flares
+                // between their events, then OnRenderObject (measured: tests/projects/builtinrp
+                // events.*.orderWithMessages, tests/projects/flares o.*).
                 SendToCamera(camera, m => m.OnPostRender);
                 Camera.onPostRender?.Invoke(camera);
                 RunEvent(camera, CameraEvent.BeforeHaloAndLensFlares, sceneTarget);
+                {
+                    ulong haloTarget = sceneTarget != null ? TextureHandles.Of(sceneTarget) : 0;
+                    if (GfxStream.Current.Color != haloTarget)
+                    {
+                        GfxStream.SetTarget(haloTarget);
+                        GfxStream.Viewport(viewport);
+                    }
+                    Halos.Render(camera, context.View, context.Projection, viewport);
+                }
                 RunEvent(camera, CameraEvent.AfterHaloAndLensFlares, sceneTarget);
                 SendToAll(m => m.OnRenderObject);
                 void ResolveIntermediate()

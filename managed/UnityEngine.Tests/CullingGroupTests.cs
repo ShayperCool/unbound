@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unbound.Runtime;
 using UnityEngine;
 using Xunit;
 
@@ -37,6 +38,88 @@ namespace Unbound.Tests
             group.onStateChanged = e => events.Add($"{name}{e.index} {(e.isVisible ? 1 : 0)}{(e.wasVisible ? 1 : 0)} {e.currentDistance}{e.previousDistance}" +
                 (e.hasBecomeVisible ? " +" : "") + (e.hasBecomeInvisible ? " -" : ""));
             return group;
+        }
+
+        public class VisibilityWitness : MonoBehaviour
+        {
+            internal List<string> Events;
+            void OnBecameVisible() => Events.Add("visible");
+            void OnWillRenderObject() => Events.Add(GetComponent<Renderer>().isVisible ? "will-visible" : "will-invisible");
+        }
+
+        Renderer MakeWitness(List<string> events)
+        {
+            var go = new GameObject("witness");
+            m_Objects.Add(go);
+            var renderer = go.AddComponent<MeshRenderer>();
+            renderer.bounds = new Bounds(new Vector3(0, 0, 10), Vector3.one);
+            go.AddComponent<VisibilityWitness>().Events = events;
+            return renderer;
+        }
+
+        [Theory]
+        [InlineData(false, true, false)]
+        [InlineData(true, true, false)]
+        [InlineData(false, false, false)]
+        [InlineData(false, true, true)]
+        public void CameraCullingNotifiesVisibilityBeforeWillRender(bool orthographic, bool enabled, bool texture)
+        {
+            var camera = MakeCamera(Vector3.zero);
+            camera.orthographic = orthographic;
+            camera.enabled = enabled;
+            if (texture)
+            {
+                camera.targetTexture = new RenderTexture(32, 32, 0);
+                m_Objects.Add(camera.targetTexture);
+            }
+            var events = new List<string>();
+            MakeWitness(events);
+            var group = MakeGroup(events, "group");
+            group.targetCamera = camera;
+            group.SetBoundingSpheres(new[] { new BoundingSphere(new Vector3(0, 0, 10), 1) });
+
+            FrameBuilder.CullCamera(camera);
+            Assert.Equal(new[] { "group0 10 00 +", "visible", "will-visible" }, events);
+            events.Clear();
+            FrameBuilder.CullCamera(camera);
+            Assert.Equal(new[] { "will-visible" }, events);
+        }
+
+        [Theory]
+        [InlineData("enable", true)]
+        [InlineData("disable", false)]
+        [InlineData("move-in", true)]
+        [InlineData("move-out", false)]
+        [InlineData("mask-in", true)]
+        [InlineData("mask-out", false)]
+        public void CullingGroupCallbackChangesAreReadBeforeRendererVisibility(string change, bool visible)
+        {
+            var camera = MakeCamera(Vector3.zero);
+            var events = new List<string>();
+            var renderer = MakeWitness(events);
+            if (change == "enable") renderer.enabled = false;
+            if (change == "move-in") renderer.bounds = new Bounds(new Vector3(0, 0, -10), Vector3.one);
+            if (change == "mask-in") camera.cullingMask = 0;
+            var group = MakeGroup(events, "unused");
+            group.targetCamera = camera;
+            group.SetBoundingSpheres(new[] { new BoundingSphere(new Vector3(0, 0, 10), 1) });
+            group.onStateChanged = e =>
+            {
+                events.Add("group");
+                switch (change)
+                {
+                    case "enable": renderer.enabled = true; break;
+                    case "disable": renderer.enabled = false; break;
+                    case "move-in": renderer.bounds = new Bounds(new Vector3(0, 0, 10), Vector3.one); break;
+                    case "move-out": renderer.bounds = new Bounds(new Vector3(0, 0, -10), Vector3.one); break;
+                    case "mask-in": camera.cullingMask = -1; break;
+                    case "mask-out": camera.cullingMask = 0; break;
+                }
+            };
+
+            FrameBuilder.CullCamera(camera);
+            Assert.Equal(visible, renderer.isVisible);
+            Assert.Equal(visible ? new[] { "group", "visible", "will-visible" } : new[] { "group" }, events);
         }
 
         [Fact]

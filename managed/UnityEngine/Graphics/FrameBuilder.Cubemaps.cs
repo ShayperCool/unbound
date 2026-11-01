@@ -33,6 +33,7 @@ namespace Unbound.Runtime
             var face = RenderTexture.GetTemporary(descriptor);
             var state = camera.SaveRenderState();
             bool inverted = GL.invertCulling;
+            Halos.CubeFaces++;
             try
             {
                 camera.targetTexture = face;
@@ -50,6 +51,7 @@ namespace Unbound.Runtime
             }
             finally
             {
+                Halos.CubeFaces--;
                 GL.invertCulling = inverted;
                 camera.RestoreRenderState(state);
                 RenderTexture.ReleaseTemporary(face);

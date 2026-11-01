@@ -789,6 +789,8 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
     let mut vertex = parse(&vertex_scan.words).context("vertex program")?;
     let mut fragment = parse(&fragment_scan.words).context("fragment program")?;
     pad_fragment_outputs(&mut fragment);
+    flat_integer_varyings(&mut vertex, naga::ShaderStage::Vertex);
+    flat_integer_varyings(&mut fragment, naga::ShaderStage::Fragment);
 
     // Textures of both stages, bound alike.
     let mut names = BTreeSet::new();
@@ -1843,6 +1845,89 @@ fn to_wgsl(module: &Module) -> Result<String> {
 /// Fragment outputs of fewer than four components (Unity writes them into any target, the
 /// missing channels undefined; wgpu wants the target's): the entry point becomes a function the
 /// new entry point calls, padding each such output to a vec4 with zeros.
+/// Integer varyings (vertex outputs and fragment inputs at locations) interpolate flat, as HLSL
+/// defines them (`uint primitiveID : TEXCOORD2;` in Unity's UnityCustomRenderTexture.cginc);
+/// glslang leaves them unqualified and naga requires the qualifier. A program that had such a
+/// varying failed validation before, so no program that compiled changes.
+fn flat_integer_varyings(module: &mut Module, stage: naga::ShaderStage) {
+    let integer = |types: &naga::UniqueArena<Type>, ty: Handle<Type>| match types[ty].inner {
+        TypeInner::Scalar(s) | TypeInner::Vector { scalar: s, .. } => {
+            matches!(s.kind, naga::ScalarKind::Sint | naga::ScalarKind::Uint)
+        }
+        _ => false,
+    };
+    let flatten = |binding: &mut Option<Binding>| {
+        if let Some(Binding::Location {
+            interpolation,
+            sampling,
+            ..
+        }) = binding
+            && *interpolation != Some(naga::Interpolation::Flat)
+        {
+            *interpolation = Some(naga::Interpolation::Flat);
+            *sampling = None;
+        }
+    };
+    let mut structs = Vec::new();
+    for e in 0..module.entry_points.len() {
+        if module.entry_points[e].stage != stage {
+            continue;
+        }
+        let function = &module.entry_points[e].function;
+        // The varyings: a vertex program's result, a fragment program's arguments.
+        let count = match stage {
+            naga::ShaderStage::Vertex => usize::from(function.result.is_some()),
+            naga::ShaderStage::Fragment => function.arguments.len(),
+            _ => 0,
+        };
+        for i in 0..count {
+            let function = &mut module.entry_points[e].function;
+            let (ty, binding) = match stage {
+                naga::ShaderStage::Vertex => {
+                    let result = function.result.as_mut().unwrap();
+                    (result.ty, &mut result.binding)
+                }
+                _ => {
+                    let argument = &mut function.arguments[i];
+                    (argument.ty, &mut argument.binding)
+                }
+            };
+            match module.types[ty].inner {
+                TypeInner::Struct { .. } => {
+                    if !structs.contains(&ty) {
+                        structs.push(ty);
+                    }
+                }
+                _ if integer(&module.types, ty) => flatten(binding),
+                _ => {}
+            }
+        }
+    }
+    for ty in structs {
+        let TypeInner::Struct { members, span } = &module.types[ty].inner else {
+            continue;
+        };
+        let (mut members, span) = (members.clone(), *span);
+        let mut changed = false;
+        for m in members.iter_mut() {
+            if integer(&module.types, m.ty) {
+                let before = m.binding.clone();
+                flatten(&mut m.binding);
+                changed |= before != m.binding;
+            }
+        }
+        if changed {
+            module.types.replace(
+                ty,
+                Type {
+                    name: module.types[ty].name.clone(),
+                    inner: TypeInner::Struct { members, span },
+                },
+            );
+        }
+    }
+}
+
 fn pad_fragment_outputs(module: &mut Module) {
     let short = |module: &Module, ty: Handle<Type>| -> Option<(naga::Scalar, u32)> {
         match module.types[ty].inner {

@@ -361,18 +361,18 @@ impl Props<'_> {
 
 fn blend_factor(v: &Value, props: &Props, default: u8) -> u8 {
     match v {
-        Value::Word(w) => match w.as_str() {
-            "Zero" => 0,
-            "One" => 1,
-            "DstColor" => 2,
-            "SrcColor" => 3,
-            "OneMinusDstColor" => 4,
-            "SrcAlpha" => 5,
-            "OneMinusSrcColor" => 6,
-            "DstAlpha" => 7,
-            "OneMinusDstAlpha" => 8,
-            "SrcAlphaSaturate" => 9,
-            "OneMinusSrcAlpha" => 10,
+        Value::Word(w) => match w.to_ascii_lowercase().as_str() {
+            "zero" => 0,
+            "one" => 1,
+            "dstcolor" => 2,
+            "srccolor" => 3,
+            "oneminusdstcolor" => 4,
+            "srcalpha" => 5,
+            "oneminussrccolor" => 6,
+            "dstalpha" => 7,
+            "oneminusdstalpha" => 8,
+            "srcalphasaturate" => 9,
+            "oneminussrcalpha" => 10,
             _ => default,
         },
         other => props.number(other, default as f32) as u8,
@@ -381,11 +381,11 @@ fn blend_factor(v: &Value, props: &Props, default: u8) -> u8 {
 
 fn blend_op(v: &Value, props: &Props) -> u8 {
     match v {
-        Value::Word(w) => match w.as_str() {
-            "Sub" => 1,
-            "RevSub" => 2,
-            "Min" => 3,
-            "Max" => 4,
+        Value::Word(w) => match w.to_ascii_lowercase().as_str() {
+            "sub" => 1,
+            "revsub" => 2,
+            "min" => 3,
+            "max" => 4,
             _ => 0,
         },
         other => props.number(other, 0.0) as u8,
@@ -394,15 +394,15 @@ fn blend_op(v: &Value, props: &Props) -> u8 {
 
 fn compare(v: &Value, props: &Props, default: u8) -> u8 {
     let n = match v {
-        Value::Word(w) => match w.as_str() {
-            "Never" => 1,
-            "Less" => 2,
-            "Equal" => 3,
-            "LEqual" => 4,
-            "Greater" => 5,
-            "NotEqual" => 6,
-            "GEqual" => 7,
-            "Always" | "Off" | "Disabled" => 8,
+        Value::Word(w) => match w.to_ascii_lowercase().as_str() {
+            "never" => 1,
+            "less" => 2,
+            "equal" => 3,
+            "lequal" => 4,
+            "greater" => 5,
+            "notequal" => 6,
+            "gequal" => 7,
+            "always" | "off" | "disabled" => 8,
             _ => default,
         },
         other => props.number(other, default as f32) as u8,
@@ -413,15 +413,15 @@ fn compare(v: &Value, props: &Props, default: u8) -> u8 {
 
 fn stencil_op(v: &Value, props: &Props, default: u8) -> u8 {
     match v {
-        Value::Word(w) => match w.as_str() {
-            "Keep" => 0,
-            "Zero" => 1,
-            "Replace" => 2,
-            "IncrSat" => 3,
-            "DecrSat" => 4,
-            "Invert" => 5,
-            "IncrWrap" => 6,
-            "DecrWrap" => 7,
+        Value::Word(w) => match w.to_ascii_lowercase().as_str() {
+            "keep" => 0,
+            "zero" => 1,
+            "replace" => 2,
+            "incrsat" => 3,
+            "decrsat" => 4,
+            "invert" => 5,
+            "incrwrap" => 6,
+            "decrwrap" => 7,
             _ => default,
         },
         other => (props.number(other, default as f32) as u8).min(7),
@@ -433,7 +433,8 @@ fn render_state(props: &Props, pass: &PassInfo) -> (RenderState, u32) {
     let s = &pass.states;
     let mut state = RenderState::default();
     if let Some(values) = &s.blend {
-        let off = values.first() == Some(&Value::Word("Off".into())) || values.len() < 2;
+        let off = matches!(values.first(), Some(Value::Word(w)) if w.eq_ignore_ascii_case("off"))
+            || values.len() < 2;
         if !off {
             let src = blend_factor(&values[0], props, 1);
             let dst = blend_factor(&values[1], props, 0);
@@ -468,9 +469,10 @@ fn render_state(props: &Props, pass: &PassInfo) -> (RenderState, u32) {
     }
     if let Some(v) = &s.cull {
         state.cull = match v {
-            Value::Word(w) => match w.as_str() {
-                "Off" => 0,
-                "Front" => 1,
+            // ShaderLab words are case-insensitive (`Cull off`).
+            Value::Word(w) => match w.to_ascii_lowercase().as_str() {
+                "off" => 0,
+                "front" => 1,
                 _ => 2,
             },
             other => (props.number(other, 2.0) as u8).min(2),
@@ -480,7 +482,7 @@ fn render_state(props: &Props, pass: &PassInfo) -> (RenderState, u32) {
         state.color_mask = match v {
             Value::Num(n) => *n as u8 & 15,
             Value::Word(w) => w.chars().fold(0, |m, c| {
-                m | match c {
+                m | match c.to_ascii_uppercase() {
                     'R' => 8,
                     'G' => 4,
                     'B' => 2,
@@ -613,6 +615,34 @@ SubShader {
             plain.texture("_Other"),
             (0, "unbound-unassigned".to_string())
         );
+    }
+
+    #[test]
+    fn state_words_ignore_case() {
+        // As Unity's Hidden/Internal-Halo writes them.
+        let halo = r#"Shader "Probe/LowerCase" {
+SubShader {
+    ZWrite off Cull off // the halo meshes flip handedness
+    Blend oneminusdstcolor one
+    ColorMask rgb
+    ZTest lequal
+    Pass {
+        CGPROGRAM
+        #pragma vertex vert
+        ENDCG
+    }
+}}"#;
+        // Three shaders: a scan directory of its own (the others use one and two).
+        let other = r#"Shader "Probe/Other" { SubShader { Pass { } } }"#;
+        let mut r = Resolver::new(index(&[halo, UI, other]));
+        let m = r.resolve(&material("Probe/LowerCase", vec![]));
+        let p = &m.passes[0];
+        assert_eq!(
+            (p.state.cull, p.state.ztest, p.state.color_mask),
+            (0, 4, 14)
+        );
+        assert!(!p.state.zwrite);
+        assert_eq!(p.state.blend, Some([4, 1, 4, 1]));
     }
 
     #[test]

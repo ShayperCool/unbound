@@ -101,7 +101,8 @@ namespace UnityEngine
         public static bool supportsShadows => true;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static bool supportsRawShadowDepthSampling => true;
-        public static bool supportsMotionVectors { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsMotionVectors", "is claimed, but no motion vectors are rendered yet"); return true; } }
+        [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer draws camera and object motion vectors (tests/projects/builtinrp)")]
+        public static bool supportsMotionVectors => true;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static bool supportsRenderToCubemap => true;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
@@ -110,7 +111,7 @@ namespace UnityEngine
         public static bool supports3DTextures => true;
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static bool supports2DArrayTextures => true;
-        public static bool supports3DRenderTextures { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supports3DRenderTextures", "is claimed, but 3D render textures are not drawn into yet"); return true; } }
+        public static bool supports3DRenderTextures { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supports3DRenderTextures", "answers false, what Unbound's renderer does (the Editor answers true; a 2D target stands in for a 3D one): games take their fallback path"); return false; } }
         [Unbound.EditorFaithful("the Editor's OpenGLCore device answers this, and the renderer does it")]
         public static bool supportsCubemapArrayTextures => true;
         public static CopyTextureSupport copyTextureSupport => CopyTextureSupport.Basic | CopyTextureSupport.Copy3D | CopyTextureSupport.DifferentTypes | CopyTextureSupport.TextureToRT | CopyTextureSupport.RTToTexture;

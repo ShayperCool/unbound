@@ -292,13 +292,21 @@ namespace UnityEngine
 
         public string GetPropertyTextureDefaultName(int propertyIndex) => Property(propertyIndex).DefaultTexture ?? "";
 
-        public TextureDimension GetPropertyTextureDimension(int propertyIndex) => TextureDimension.Tex2D;
-
-        ShaderPropertyInfo Property(int index)
+        /// <summary>The dimension a texture property declares; another property throws, as in the
+        /// Editor (measured, tests/projects/droppedparams dims.*).</summary>
+        public TextureDimension GetPropertyTextureDimension(int propertyIndex)
         {
-            if (index < 0 || index >= m_Properties.Count)
-                throw new ArgumentOutOfRangeException(nameof(index), "Property index is out of bounds.");
-            return m_Properties[index];
+            var property = Property(propertyIndex);
+            if (property.Type != ShaderPropertyType.Texture) throw new ArgumentException("Property type is not TexEnv.");
+            return property.Dimension;
+        }
+
+        /// <summary>The property at an index; out of range, the Editor's exception (measured).</summary>
+        ShaderPropertyInfo Property(int propertyIndex)
+        {
+            if (propertyIndex < 0 || propertyIndex >= m_Properties.Count)
+                throw new ArgumentOutOfRangeException(nameof(propertyIndex));
+            return m_Properties[propertyIndex];
         }
 
         /// <summary>The declared property of a name id, else null.</summary>
@@ -477,6 +485,8 @@ namespace UnityEngine
         internal ShaderPropertyType Type;
         internal Vector4 DefaultValue;
         internal string DefaultTexture;
+        /// <summary>A texture property's declared dimension.</summary>
+        internal TextureDimension Dimension = TextureDimension.Tex2D;
         internal Vector2 Range;
         internal ShaderPropertyFlags Flags;
         internal string[] Attributes = Array.Empty<string>();

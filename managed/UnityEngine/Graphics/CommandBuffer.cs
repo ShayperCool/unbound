@@ -86,6 +86,8 @@ namespace UnityEngine.Rendering
         internal int InstanceID => m_InstanceID;
         internal int MipLevel => m_MipLevel;
         internal int Slice => m_CubeFace != CubemapFace.Unknown ? (int)m_CubeFace : Math.Max(0, m_DepthSlice);
+        internal CubemapFace CubeFace => m_CubeFace;
+        internal int DepthSlice => m_DepthSlice;
 
         public override string ToString() =>
             $"Type {m_Type} NameID {m_NameID} InstanceID {m_InstanceID} BufferPointer {m_BufferPointer} MipLevel {m_MipLevel} CubeFace {m_CubeFace} DepthSlice {m_DepthSlice}";
@@ -127,6 +129,14 @@ namespace UnityEngine.Rendering
 
         readonly List<Action<Context>> m_Commands = new List<Action<Context>>();
         string m_Name = "";
+        // What a camera's halos depend on (Unbound.Runtime.Halos): the color-only and other
+        // ClearRenderTarget commands and the SetGlobalFloat commands recorded.
+        int m_ColorClears, m_OtherClears, m_GlobalFloats;
+
+        internal int CommandCount => m_Commands.Count;
+        internal int ColorClears => m_ColorClears;
+        internal int OtherClears => m_OtherClears;
+        internal int GlobalFloats => m_GlobalFloats;
         static bool s_WarnedPluginEvent;
 
         public CommandBuffer() { }
@@ -138,6 +148,7 @@ namespace UnityEngine.Rendering
         public void Clear()
         {
             m_Commands.Clear();
+            m_ColorClears = m_OtherClears = m_GlobalFloats = 0;
             ReleaseOwnedArrays();
         }
 
@@ -200,10 +211,31 @@ namespace UnityEngine.Rendering
 
         // ------------------------------------------------------------ targets
 
-        public void SetRenderTarget(RenderTargetIdentifier rt) => SetRenderTarget(rt, 0, CubemapFace.Unknown, 0);
-        public void SetRenderTarget(RenderTargetIdentifier rt, RenderBufferLoadAction loadAction, RenderBufferStoreAction storeAction) => SetRenderTarget(rt);
+        // A target set by its identifier alone draws into the identifier's mip, face and slice
+        // (measured, tests/projects/droppedparams slice.cmd.clear.identifier.*).
+        public void SetRenderTarget(RenderTargetIdentifier rt) => SetRenderTarget(rt, rt.MipLevel, rt.CubeFace, rt.DepthSlice);
+
+        // The Editor refuses the Clear load action when the command is recorded (measured,
+        // tests/projects/droppedparams load.*); Load, DontCare and the store actions change nothing
+        // a later read sees on its GL device.
+        public void SetRenderTarget(RenderTargetIdentifier rt, RenderBufferLoadAction loadAction, RenderBufferStoreAction storeAction)
+        {
+            RefuseClearLoad(loadAction);
+            SetRenderTarget(rt);
+        }
+
         public void SetRenderTarget(RenderTargetIdentifier rt, RenderBufferLoadAction colorLoadAction, RenderBufferStoreAction colorStoreAction,
-            RenderBufferLoadAction depthLoadAction, RenderBufferStoreAction depthStoreAction) => SetRenderTarget(rt);
+            RenderBufferLoadAction depthLoadAction, RenderBufferStoreAction depthStoreAction)
+        {
+            RefuseClearLoad(colorLoadAction);
+            RefuseClearLoad(depthLoadAction);
+            SetRenderTarget(rt);
+        }
+
+        static void RefuseClearLoad(RenderBufferLoadAction action)
+        {
+            if (action == RenderBufferLoadAction.Clear) throw new ArgumentException("RenderBufferLoadAction.Clear is not supported");
+        }
         public void SetRenderTarget(RenderTargetIdentifier rt, int mipLevel) => SetRenderTarget(rt, mipLevel, CubemapFace.Unknown, 0);
         public void SetRenderTarget(RenderTargetIdentifier rt, int mipLevel, CubemapFace cubemapFace) => SetRenderTarget(rt, mipLevel, cubemapFace, 0);
 
@@ -212,10 +244,11 @@ namespace UnityEngine.Rendering
             var color = Resolve(rt, c);
             ulong handle = TextureHandles.Of(color);
             RenderTexture.SetActiveQuietly(color as RenderTexture);
-            GfxStream.SetTarget(handle, 0, mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice);
+            GfxStream.SetTarget(handle, 0, mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice, GfxStream.LayersOf(color));
         });
 
-        public void SetRenderTarget(RenderTargetIdentifier color, RenderTargetIdentifier depth) => SetRenderTarget(color, depth, 0, CubemapFace.Unknown, 0);
+        public void SetRenderTarget(RenderTargetIdentifier color, RenderTargetIdentifier depth) =>
+            SetRenderTarget(color, depth, color.MipLevel, color.CubeFace, color.DepthSlice);
         public void SetRenderTarget(RenderTargetIdentifier color, RenderTargetIdentifier depth, int mipLevel) => SetRenderTarget(color, depth, mipLevel, CubemapFace.Unknown, 0);
         public void SetRenderTarget(RenderTargetIdentifier color, RenderTargetIdentifier depth, int mipLevel, CubemapFace cubemapFace) => SetRenderTarget(color, depth, mipLevel, cubemapFace, 0);
 
@@ -225,11 +258,16 @@ namespace UnityEngine.Rendering
             ulong colorHandle = TextureHandles.Of(colorTexture);
             ulong depthHandle = depth == color ? 0 : TextureHandles.Of(Resolve(depth, c));
             RenderTexture.SetActiveQuietly(colorTexture as RenderTexture);
-            GfxStream.SetTarget(colorHandle, depthHandle, mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice);
+            GfxStream.SetTarget(colorHandle, depthHandle, mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice, GfxStream.LayersOf(colorTexture));
         });
 
         public void SetRenderTarget(RenderTargetIdentifier color, RenderBufferLoadAction colorLoadAction, RenderBufferStoreAction colorStoreAction,
-            RenderTargetIdentifier depth, RenderBufferLoadAction depthLoadAction, RenderBufferStoreAction depthStoreAction) => SetRenderTarget(color, depth);
+            RenderTargetIdentifier depth, RenderBufferLoadAction depthLoadAction, RenderBufferStoreAction depthStoreAction)
+        {
+            RefuseClearLoad(colorLoadAction);
+            RefuseClearLoad(depthLoadAction);
+            SetRenderTarget(color, depth);
+        }
 
         public void SetRenderTarget(RenderTargetIdentifier[] colors, RenderTargetIdentifier depth) =>
             SetRenderTarget(colors, depth, 0, CubemapFace.Unknown, 0);
@@ -246,7 +284,7 @@ namespace UnityEngine.Rendering
                 for (int i = 0; i < copy.Length; i++) handles[i] = TextureHandles.Of(Resolve(copy[i], c));
                 ulong depthHandle = depth == copy[0] ? 0 : TextureHandles.Of(Resolve(depth, c));
                 RenderTexture.SetActiveQuietly(first as RenderTexture);
-                GfxStream.SetTargets(handles, depthHandle, mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice);
+                GfxStream.SetTargets(handles, depthHandle, mipLevel, cubemapFace != CubemapFace.Unknown ? (int)cubemapFace : depthSlice, GfxStream.LayersOf(first));
             });
         }
 
@@ -256,13 +294,18 @@ namespace UnityEngine.Rendering
         public void ClearRenderTarget(bool clearDepth, bool clearColor, Color backgroundColor, [Internal.DefaultValue("1.0f")] float depth, [Internal.DefaultValue("0")] uint stencil) =>
             ClearRenderTarget((clearColor ? RTClearFlags.Color : 0) | (clearDepth ? RTClearFlags.DepthStencil : 0), backgroundColor, depth, stencil);
 
-        public void ClearRenderTarget(RTClearFlags clearFlags, Color backgroundColor, [Internal.DefaultValue("1.0f")] float depth, [Internal.DefaultValue("0")] uint stencil) => Add(c =>
+        public void ClearRenderTarget(RTClearFlags clearFlags, Color backgroundColor, [Internal.DefaultValue("1.0f")] float depth, [Internal.DefaultValue("0")] uint stencil)
         {
-            byte flags = (byte)(((clearFlags & RTClearFlags.Color) != 0 ? GfxStream.ClearColor : 0)
-                | ((clearFlags & RTClearFlags.Depth) != 0 ? GfxStream.ClearDepth : 0)
-                | ((clearFlags & RTClearFlags.Stencil) != 0 ? GfxStream.ClearStencil : 0));
-            if (flags != 0) GfxStream.Clear(flags, backgroundColor, depth, stencil);
-        });
+            if (clearFlags == RTClearFlags.Color) m_ColorClears++;
+            else if (clearFlags != 0) m_OtherClears++;
+            Add(c =>
+            {
+                byte flags = (byte)(((clearFlags & RTClearFlags.Color) != 0 ? GfxStream.ClearColor : 0)
+                    | ((clearFlags & RTClearFlags.Depth) != 0 ? GfxStream.ClearDepth : 0)
+                    | ((clearFlags & RTClearFlags.Stencil) != 0 ? GfxStream.ClearStencil : 0));
+                if (flags != 0) GfxStream.Clear(flags, backgroundColor, depth, stencil);
+            });
+        }
 
         public void ClearRenderTarget(RTClearFlags clearFlags, Color[] backgroundColors, [Internal.DefaultValue("1.0f")] float depth, [Internal.DefaultValue("0")] uint stencil)
         {
@@ -270,6 +313,7 @@ namespace UnityEngine.Rendering
             if (backgroundColors.Length < 1 || backgroundColors.Length > 8)
                 throw new ArgumentException("The number of background colors must be between 1 and 8.", nameof(backgroundColors));
             var colors = (Color[])backgroundColors.Clone();
+            if ((clearFlags & RTClearFlags.All) != RTClearFlags.None) m_OtherClears++;
             Add(c =>
             {
                 if (colors.Length < (GfxStream.Current.Colors?.Length ?? 1))
@@ -455,14 +499,25 @@ namespace UnityEngine.Rendering
         static readonly int s_MainTex = Shader.PropertyToID("_MainTex");
         static readonly int s_MainTexST = Shader.PropertyToID("_MainTex_ST");
 
-        void BlitCommand(RenderTargetIdentifier? source, Texture sourceTexture, RenderTargetIdentifier dest, Material mat, int pass, Vector2 scale, Vector2 offset) => Add(c =>
+        /// <summary>A blit: the destination identifier's texture (its mip, face and slice are not
+        /// used), the slices drawn into and read (by the default copy of an array) as the
+        /// Editor's (measured, tests/projects/droppedparams slice.cmd.*). A default copy of an array
+        /// without slices given reads 0.5 in every channel, alpha too (slice.cmd.copy.array).</summary>
+        void BlitCommand(RenderTargetIdentifier? source, Texture sourceTexture, RenderTargetIdentifier dest, Material mat, int pass, Vector2 scale, Vector2 offset,
+            int sourceSlice = -1, int destSlice = 0) => Add(c =>
         {
             var texture = sourceTexture ?? (source.HasValue ? Resolve(source.Value, c) : null);
             var properties = new Dictionary<int, object>();
+            if (mat == null && sourceSlice < 0 && Immediate.ArraySlices(texture) > 0) texture = Immediate.HalfGray;
             if (texture != null) properties[s_MainTex] = texture;
             if (scale != Vector2.one || offset != Vector2.zero) properties[s_MainTexST] = new Vector4(scale.x, scale.y, offset.x, offset.y);
             var target = Resolve(dest, c);
-            Immediate.BlitWith(TextureHandles.Of(target), mat ?? Immediate.BlitCopy, pass, properties);
+            if (mat == null && Immediate.BlitArraySlice(texture, target, Math.Max(0, sourceSlice), destSlice, scale, offset))
+            {
+                RenderTexture.SetActiveQuietly(target as RenderTexture);
+                return;
+            }
+            Immediate.BlitWith(TextureHandles.Of(target), mat ?? Immediate.BlitCopy, pass, properties, destSlice);
             RenderTexture.SetActiveQuietly(target as RenderTexture);
         });
 
@@ -474,9 +529,12 @@ namespace UnityEngine.Rendering
         public void Blit(RenderTargetIdentifier source, RenderTargetIdentifier dest, Vector2 scale, Vector2 offset) => BlitCommand(source, null, dest, null, -1, scale, offset);
         public void Blit(RenderTargetIdentifier source, RenderTargetIdentifier dest, Material mat) => BlitCommand(source, null, dest, mat, -1, Vector2.one, Vector2.zero);
         public void Blit(RenderTargetIdentifier source, RenderTargetIdentifier dest, Material mat, int pass) => BlitCommand(source, null, dest, mat, pass, Vector2.one, Vector2.zero);
-        public void Blit(RenderTargetIdentifier source, RenderTargetIdentifier dest, int sourceDepthSlice, int destDepthSlice) => Blit(source, dest);
-        public void Blit(RenderTargetIdentifier source, RenderTargetIdentifier dest, Vector2 scale, Vector2 offset, int sourceDepthSlice, int destDepthSlice) => Blit(source, dest, scale, offset);
-        public void Blit(RenderTargetIdentifier source, RenderTargetIdentifier dest, Material mat, int pass, int destDepthSlice) => Blit(source, dest, mat, pass);
+        public void Blit(RenderTargetIdentifier source, RenderTargetIdentifier dest, int sourceDepthSlice, int destDepthSlice) =>
+            BlitCommand(source, null, dest, null, -1, Vector2.one, Vector2.zero, sourceDepthSlice, destDepthSlice);
+        public void Blit(RenderTargetIdentifier source, RenderTargetIdentifier dest, Vector2 scale, Vector2 offset, int sourceDepthSlice, int destDepthSlice) =>
+            BlitCommand(source, null, dest, null, -1, scale, offset, sourceDepthSlice, destDepthSlice);
+        public void Blit(RenderTargetIdentifier source, RenderTargetIdentifier dest, Material mat, int pass, int destDepthSlice) =>
+            BlitCommand(source, null, dest, mat, pass, Vector2.one, Vector2.zero, 0, destDepthSlice);
 
         public void CopyTexture(RenderTargetIdentifier src, RenderTargetIdentifier dst) => CopyTexture(src, 0, 0, -1, -1, -1, -1, dst, 0, 0, 0, 0);
         public void CopyTexture(RenderTargetIdentifier src, int srcElement, RenderTargetIdentifier dst, int dstElement) => CopyTexture(src, srcElement, 0, -1, -1, -1, -1, dst, dstElement, 0, 0, 0);
@@ -658,7 +716,11 @@ namespace UnityEngine.Rendering
 
         // ------------------------------------------------------------ global state
 
-        public void SetGlobalFloat(int nameID, float value) => Add(c => Shader.SetGlobalFloat(nameID, value));
+        public void SetGlobalFloat(int nameID, float value)
+        {
+            m_GlobalFloats++;
+            Add(c => Shader.SetGlobalFloat(nameID, value));
+        }
         public void SetGlobalFloat(string name, float value) => SetGlobalFloat(Shader.PropertyToID(name), value);
         public void SetGlobalInt(int nameID, int value) => Add(c => Shader.SetGlobalInt(nameID, value));
         public void SetGlobalInt(string name, int value) => SetGlobalInt(Shader.PropertyToID(name), value);
