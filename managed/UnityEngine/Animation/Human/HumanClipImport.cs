@@ -207,8 +207,6 @@ namespace Unbound.Runtime.Humanoid
             if (avatar == null || !avatar.IsHuman)
                 throw new NotSupportedException("humanoid clip import needs a human avatar");
             var h = avatar.Human;
-            if (h.HasTDoF)
-                throw new NotSupportedException("humanoid clip import for avatars with translation DoF is not supported");
             int frames = times.Length;
             var skel = avatar.AvatarSkeleton;
             int n = skel.Count, hn = h.Skeleton.Count;
@@ -221,7 +219,9 @@ namespace Unbound.Runtime.Humanoid
             var ws7 = new SkeletonPose(hn);
             // One pose for every sample: the retargeting writes every value the curves read.
             var pose = new HumanPose();
-            int first = RootFirst, end = HumanEnd;
+            // Avatars with translation DoF also get the translation DoF curves.
+            int first = RootFirst, end = h.HasTDoF ? CurveCount : HumanEnd;
+            var tdofBase = h.HasTDoF ? HumanOps.RetargetFromTDoFBase(h, new SkeletonPose(hn)) : null;
             var values = new float[CurveCount][];
             for (int c = first; c < end; c++) values[c] = new float[frames];
             int hipsParent = avatar.HumanSkeletonIndexArray[0];
@@ -233,7 +233,7 @@ namespace Unbound.Runtime.Humanoid
                 Skel.ComputeGlobal(skel, local, global, hipsParent, 0);
                 Skel.CopyById(skel, local, h.Skeleton, humanLocal);
                 humanLocal.X[0] = global.X[hipsParent];
-                HumanOps.RetargetFrom(h, humanLocal, pose, ws4, ws5, ws6, ws7, null);
+                HumanOps.RetargetFrom(h, humanLocal, pose, ws4, ws5, ws6, ws7, tdofBase);
                 for (int c = first; c < end; c++)
                 {
                     values[c][i] = CurveValue(pose, c);
