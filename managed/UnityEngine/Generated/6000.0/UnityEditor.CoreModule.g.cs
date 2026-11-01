@@ -5305,13 +5305,6 @@ namespace UnityEditor
         public bool active { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CallbackController.active"); return default; } }
     }
     [global::Unbound.Stub]
-    public unsafe abstract partial class CallbackOrderAttribute : global::System.Attribute
-    {
-        [global::Unbound.Stub] protected int m_CallbackOrder;
-        [global::Unbound.Stub] protected CallbackOrderAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CallbackOrderAttribute.ctor"); }
-        internal int callbackOrder { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.CallbackOrderAttribute.callbackOrder"); return default; } }
-    }
-    [global::Unbound.Stub]
     public unsafe partial class CameraEditor : global::UnityEditor.Editor
     {
         [global::Unbound.Stub] internal static readonly global::System.Collections.Generic.List<global::UnityEngine.XR.XRDisplaySubsystemDescriptor> k_DisplayDescriptors;
@@ -29708,10 +29701,6 @@ namespace UnityEditor.Build
     public unsafe partial interface IIl2CppProcessor : global::UnityEditor.Build.IOrderedCallback
     {
     }
-    public unsafe partial interface IOrderedCallback
-    {
-        int callbackOrder { get; }
-    }
     public unsafe partial interface IPostBuildPlayerScriptDLLs : global::UnityEditor.Build.IOrderedCallback
     {
         void OnPostBuildPlayerScriptDLLs(global::UnityEditor.Build.Reporting.BuildReport report);
@@ -29741,15 +29730,6 @@ namespace UnityEditor.Build
     public unsafe partial interface IPreprocessShaders : global::UnityEditor.Build.IOrderedCallback
     {
         void OnProcessShader(global::UnityEngine.Shader shader, global::UnityEditor.Rendering.ShaderSnippetData snippet, global::System.Collections.Generic.IList<global::UnityEditor.Rendering.ShaderCompilerData> data);
-    }
-    [global::System.Obsolete("Use IProcessSceneWithReport instead")]
-    public unsafe partial interface IProcessScene : global::UnityEditor.Build.IOrderedCallback
-    {
-        void OnProcessScene(global::UnityEngine.SceneManagement.Scene scene);
-    }
-    public unsafe partial interface IProcessSceneWithReport : global::UnityEditor.Build.IOrderedCallback
-    {
-        void OnProcessScene(global::UnityEngine.SceneManagement.Scene scene, global::UnityEditor.Build.Reporting.BuildReport report);
     }
     public unsafe partial interface IUnityLinkerProcessor : global::UnityEditor.Build.IOrderedCallback
     {
@@ -30600,8 +30580,7 @@ namespace UnityEditor.Build.Reporting
         public string role { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.Reporting.BuildFile.role"); return default; } }
         public ulong size { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.Reporting.BuildFile.size"); return default; } }
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class BuildReport : global::UnityEngine.Object
+    unsafe partial class BuildReport
     {
         [global::Unbound.Stub] public global::UnityEditor.Build.Reporting.BuildFile[] GetFiles() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.Reporting.BuildReport.GetFiles"); return global::System.Array.Empty<global::UnityEditor.Build.Reporting.BuildFile>(); }
         [global::Unbound.Stub] internal void RecordFilesMoved(string originalPathPrefix, string newPathPrefix) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Build.Reporting.BuildReport.RecordFilesMoved"); }
@@ -30816,12 +30795,6 @@ namespace UnityEditor.Build.Reporting
 namespace UnityEditor.Callbacks
 {
     [global::Unbound.Stub]
-    public unsafe sealed partial class DidReloadScripts : global::UnityEditor.CallbackOrderAttribute
-    {
-        [global::Unbound.Stub] public DidReloadScripts() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Callbacks.DidReloadScripts.ctor"); }
-        [global::Unbound.Stub] public DidReloadScripts(int callbackOrder) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Callbacks.DidReloadScripts.ctor"); }
-    }
-    [global::Unbound.Stub]
     public unsafe sealed partial class OnOpenAssetAttribute : global::UnityEditor.CallbackOrderAttribute
     {
         [global::Unbound.Stub] public OnOpenAssetAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Callbacks.OnOpenAssetAttribute.ctor"); }
@@ -30866,14 +30839,6 @@ namespace UnityEditor.Callbacks
     {
         [global::Unbound.Stub] public PostProcessBuildAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Callbacks.PostProcessBuildAttribute.ctor"); }
         [global::Unbound.Stub] public PostProcessBuildAttribute(int callbackOrder) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Callbacks.PostProcessBuildAttribute.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class PostProcessSceneAttribute : global::UnityEditor.CallbackOrderAttribute
-    {
-        [global::Unbound.Stub] public PostProcessSceneAttribute() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Callbacks.PostProcessSceneAttribute.ctor"); }
-        [global::Unbound.Stub] public PostProcessSceneAttribute(int callbackOrder) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Callbacks.PostProcessSceneAttribute.ctor"); }
-        [global::Unbound.Stub] public PostProcessSceneAttribute(int callbackOrder, int version) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Callbacks.PostProcessSceneAttribute.ctor"); }
-        [global::Unbound.Stub] internal int GetVersion() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.Callbacks.PostProcessSceneAttribute.GetVersion"); return default; }
     }
     [global::Unbound.Stub]
     internal unsafe sealed partial class RegisterPluginsAttribute : global::UnityEditor.CallbackOrderAttribute

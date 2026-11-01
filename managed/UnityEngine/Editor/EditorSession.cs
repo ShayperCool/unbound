@@ -26,7 +26,24 @@ namespace Unbound.Runtime
         /// <summary>1: enter Play mode on the next update; -1: leave it.</summary>
         static int s_Request;
 
-        internal static bool WillChange => s_Request != 0;
+        internal static bool WillChange => s_Request != 0 || s_EnteringPlayMode;
+
+        /// <summary>The editor domain is loading for Play mode: `isPlaying` is still false and
+        /// `isPlayingOrWillChangePlaymode` already true, until the runtime initialization starts
+        /// (measured: tests/projects/editorcallbacks).</summary>
+        static bool s_EnteringPlayMode;
+
+        internal static void BeginEnteringPlayMode()
+        {
+            IsPlaying = false;
+            s_EnteringPlayMode = true;
+        }
+
+        internal static void EndEnteringPlayMode()
+        {
+            s_EnteringPlayMode = false;
+            IsPlaying = true;
+        }
 
         internal static void Request(bool play)
         {
@@ -70,7 +87,11 @@ namespace Unbound.Runtime
             foreach (var scene in SceneRegistry.Loaded.ToArray())
                 foreach (var root in scene.Roots.ToArray())
                     if (root != null) Collect(root.m_Transform, components);
+            // As the scenes the Editor reloads for Play mode: their objects wake up, are processed,
+            // then sceneLoaded.
             Lifecycle.Activate(components);
+            foreach (var scene in SceneRegistry.Loaded.ToArray())
+                EditorInitialization.ProcessScene(new Scene(scene.Handle));
             foreach (var scene in SceneRegistry.Loaded.ToArray())
                 SceneManager.Internal_SceneLoaded(new Scene(scene.Handle), LoadSceneMode.Single);
             PlayerLoopDriver.SendPlayModeStart();
