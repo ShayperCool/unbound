@@ -44,6 +44,7 @@ namespace UnityEngine.AI
         internal Vector3 m_NextPosition;
         Vector3 m_Destination = new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity);
         bool m_HasDestination;
+        Vector3 m_ShownDestination;
         bool m_PathPending;
         NavMeshPath m_RequestedPath;
         // A new agent reports a complete path, also while its first path is pending (measured).
@@ -51,7 +52,6 @@ namespace UnityEngine.AI
         Vector3 m_WrittenPosition;
         bool m_OnNavMesh;
         int m_WorldVersion = -1;
-        internal int m_LinkId;
 
         public NavMeshAgent() { }
 
@@ -139,6 +139,14 @@ namespace UnityEngine.AI
                 if (m_Crowd == null) return;
                 // Moved along the NavMesh surface towards the position.
                 var target = value - Vector3.up * m_BaseOffset;
+                // On a link the agent goes where it is put (measured: a script moving an agent
+                // over a link moves it off the mesh).
+                if (isOnOffMeshLink)
+                {
+                    m_Crowd.npos = NavMesh.V(target);
+                    m_NextPosition = target;
+                    return;
+                }
                 if (m_Crowd.corridor.MovePosition(NavMesh.V(target), m_Surface.Query, Filter))
                 {
                     m_Crowd.npos = m_Crowd.corridor.GetPos();
@@ -165,14 +173,48 @@ namespace UnityEngine.AI
             }
         }
 
-        public Vector3 desiredVelocity => m_Crowd != null ? NavMesh.V(m_Crowd.nvel) : Vector3.zero;
+        /// <summary>Within this distance of the corner it steers to, an agent's desired velocity
+        /// keeps its height (measured with the default agent: 3.93 m keeps it, 4.0 m drops it).</summary>
+        const float SteerHeightReach = 4f;
 
-        public Vector3 steeringTarget =>
-            m_Crowd != null && m_Crowd.ncorners > 0 ? NavMesh.V(m_Crowd.corners[0].pos) : m_NextPosition;
+        /// <summary>The planned velocity (in 3D towards the next corner); planned on the mesh far
+        /// from that corner, it is reported along the ground (measured); on and leaving a link
+        /// with its height.</summary>
+        public Vector3 desiredVelocity
+        {
+            get
+            {
+                if (m_Crowd == null) return Vector3.zero;
+                var v = NavMesh.V(m_Crowd.nvel);
+                if (!m_Crowd.planFromLink && m_Crowd.steerDistance >= SteerHeightReach) v.y = 0f;
+                return v;
+            }
+        }
+
+        /// <summary>The next corner from where the agent stands; on a link, the link's end
+        /// (measured).</summary>
+        public Vector3 steeringTarget
+        {
+            get
+            {
+                if (m_Crowd == null) return m_NextPosition;
+                if (isOnOffMeshLink) return NavMesh.V(m_Crowd.animation.endPos);
+                // The next corner as seen from where the agent stands now (measured: after the
+                // step that leaves a path running along a polygon edge, the edge's end).
+                if (m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID)
+                {
+                    var corners = new DtStraightPath[DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS];
+                    int n = m_Crowd.corridor.FindCorners(corners, corners.Length, m_Surface.Query, Filter);
+                    if (n > 0) return NavMesh.V(corners[0].pos);
+                }
+                return m_NextPosition;
+            }
+        }
 
         public Vector3 destination
         {
-            get => m_HasDestination ? m_Destination : m_NextPosition;
+            get => m_Crowd == null ? new Vector3(float.PositiveInfinity, float.PositiveInfinity, float.PositiveInfinity)
+                : m_HasDestination ? m_ShownDestination : m_NextPosition;
             set => SetDestination(value);
         }
 
@@ -184,7 +226,10 @@ namespace UnityEngine.AI
                 Debug.LogError("\"SetDestination\" can only be called on an active agent that has been placed on a NavMesh.", this);
                 return false;
             }
+            // The destination is the nearest NavMesh position until the path's end replaces it
+            // (measured: also while the path is pending; a partial path's end).
             m_Destination = target;
+            m_ShownDestination = NavMesh.Nearest(m_Surface, target, NavMesh.AgentExtents(m_AgentTypeID), Filter, out _, out var nearest) ? nearest : target;
             m_HasDestination = true;
             m_PathPending = true;
             m_RequestedPath = null;
@@ -212,16 +257,31 @@ namespace UnityEngine.AI
         {
             m_HasDestination = false;
             m_PathPending = false;
-            m_PathStatus = NavMeshPathStatus.PathInvalid;
             if (m_Crowd != null)
             {
+                // On a link the agent stays where it is on it, its corridor beyond the link: its
+                // next step takes it onto the link's far polygon (measured).
+                if (isOnOffMeshLink)
+                {
+                    m_Crowd.animation.active = false;
+                    m_Crowd.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING;
+                }
                 AgentSystem.CrowdOf(m_Surface)?.ResetMoveTarget(m_Crowd);
                 m_Crowd.corridor.Reset(m_Crowd.corridor.GetFirstPoly(), m_Crowd.npos);
                 m_Crowd.ncorners = 0;
             }
         }
 
-        public bool hasPath => m_Crowd != null && m_HasDestination && !m_PathPending && !m_Arrived && m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID;
+        /// <summary>Whether the agent follows a path (also while a new one is pending; measured).</summary>
+        public bool hasPath => m_Crowd != null && m_HasDestination && !m_Arrived && !m_LeftLinkMidway
+            && m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID;
+
+        /// <summary>A crossing under way was completed by a script: until the next update the
+        /// agent reports no path (measured; not after completing a link it waited on).</summary>
+        internal bool m_LeftLinkMidway;
+
+        /// <summary>Time since the agent's partial path was found (see ReplanPartialPaths).</summary>
+        internal float m_ReplanTime;
 
         bool m_Arrived;
         internal void SetArrived(bool arrived) => m_Arrived = arrived;
@@ -237,9 +297,15 @@ namespace UnityEngine.AI
             }
         }
 
-        public NavMeshPathStatus pathStatus => m_PathStatus;
+        /// <summary>The last path's status, kept when the path is reset; invalid for an agent
+        /// that is not on the NavMesh (measured).</summary>
+        public NavMeshPathStatus pathStatus => m_Crowd != null ? m_PathStatus : NavMeshPathStatus.PathInvalid;
 
-        public Vector3 pathEndPosition => m_Crowd != null && hasPath ? NavMesh.V(m_Crowd.corridor.GetTarget()) : m_NextPosition;
+        /// <summary>The end of the path, also while the agent closes in on it (measured).</summary>
+        public Vector3 pathEndPosition =>
+            m_Crowd != null && m_HasDestination && m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID
+                ? NavMesh.V(m_Crowd.corridor.GetTarget())
+                : m_NextPosition;
 
         /// <summary>The distance left along the corners the agent sees; unknown (infinity) while
         /// the path's end is beyond them (measured).</summary>
@@ -247,8 +313,25 @@ namespace UnityEngine.AI
         {
             get
             {
-                if (m_Crowd == null || m_PathPending || m_Crowd.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID) return 0f;
-                if (m_Crowd.ncorners == 0) return 0f;
+                // Unknown off the NavMesh and while crossing a link (measured).
+                if (m_Crowd == null || isOnOffMeshLink) return float.PositiveInfinity;
+                if (m_PathPending || m_Crowd.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID) return 0f;
+                if (m_Crowd.ncorners == 0)
+                {
+                    // Just off a link (left by a script): measured from where it stands.
+                    var corners = new DtStraightPath[DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS];
+                    int n = m_Crowd.corridor.FindCorners(corners, corners.Length, m_Surface.Query, Filter);
+                    if (n == 0) return 0f;
+                    if ((corners[n - 1].flags & DtStraightPathFlags.DT_STRAIGHTPATH_END) == 0) return float.PositiveInfinity;
+                    float sum = 0f;
+                    var q = m_Crowd.npos;
+                    for (int i = 0; i < n; i++)
+                    {
+                        sum += RcVec3f.Distance(q, corners[i].pos);
+                        q = corners[i].pos;
+                    }
+                    return sum;
+                }
                 if ((m_Crowd.corners[m_Crowd.ncorners - 1].flags & DtStraightPathFlags.DT_STRAIGHTPATH_END) == 0) return float.PositiveInfinity;
                 float d = 0f;
                 var p = m_Crowd.npos;
@@ -277,18 +360,23 @@ namespace UnityEngine.AI
             result.ClearCorners();
             if (m_Crowd == null) return;
             result.m_Status = m_PathStatus;
-            if (m_PathPending || m_Crowd.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID)
+            if (m_Crowd.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID)
             {
-                // No path to follow: the path is where the agent stands.
+                // No path to follow: the path is where the agent stands (while a new one is
+                // pending, the old one is shown; measured).
                 result.m_Corners = new[] { m_NextPosition };
                 return;
             }
             var corridor = m_Crowd.corridor.GetPath();
             int count = m_Crowd.corridor.GetPathCount();
             var straight = new DtStraightPath[256];
-            m_Surface.Query.FindStraightPath(m_Crowd.npos, m_Crowd.corridor.GetTarget(), corridor, count, straight, out int n, straight.Length, 0);
+            bool onLink = isOnOffMeshLink;
+            var start = onLink ? m_Crowd.animation.endPos : m_Crowd.npos;
+            m_Surface.Query.FindStraightPath(start, m_Crowd.corridor.GetTarget(), corridor, count, straight, out int n, straight.Length, 0);
             var corners = new Vector3[n];
             for (int i = 0; i < n; i++) corners[i] = NavMesh.V(straight[i].pos);
+            // On a link the path begins at the link's own end, also off the mesh (measured).
+            if (onLink && n > 0) corners[0] = NavMesh.V(start);
             result.m_Corners = corners;
             result.m_Polygons = corridor.Slice(0, count).ToArray();
             result.m_Status = m_PathStatus;
@@ -305,10 +393,18 @@ namespace UnityEngine.AI
 
         // ------------------------------------------------------------------ queries
 
+        /// <summary>The transform takes the position as given, the agent the nearest NavMesh
+        /// position (written to the transform by its next move); a path or link is dropped
+        /// (measured).</summary>
         public bool Warp(Vector3 newPosition)
         {
             transform.position = newPosition;
-            return AgentSystem.Place(this, newPosition - Vector3.up * m_BaseOffset);
+            bool placed = AgentSystem.Place(this, newPosition - Vector3.up * m_BaseOffset, writeTransform: false);
+            m_HasDestination = false;
+            m_PathPending = false;
+            m_Velocity = Vector3.zero;
+            WrittenPosition = transform.position;
+            return placed;
         }
 
         public void Move(Vector3 offset)
@@ -368,54 +464,95 @@ namespace UnityEngine.AI
 
         public bool isOnOffMeshLink => m_Crowd != null && m_Crowd.state == DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH;
 
+        /// <summary>The link the agent is on (its id in the NavMesh world), or 0.</summary>
+        internal int CurrentLinkId => isOnOffMeshLink ? m_Crowd.animation.linkId : 0;
+
         public OffMeshLinkData currentOffMeshLinkData => GetCurrentOffMeshLinkDataInternal();
 
         public OffMeshLinkData nextOffMeshLinkData => GetNextOffMeshLinkDataInternal();
 
-        internal OffMeshLinkData GetCurrentOffMeshLinkDataInternal()
+        static OffMeshLinkData LinkData(int linkId, Vector3 start, Vector3 end)
         {
-            var data = new OffMeshLinkData();
-            if (!isOnOffMeshLink) return data;
-            var anim = m_Crowd.animation;
-            data.m_Valid = 1;
-            data.m_Activated = 1;
-            data.m_StartPos = NavMesh.V(anim.startPos);
-            data.m_EndPos = NavMesh.V(anim.endPos);
-            var link = NavWorld.FindLink(m_LinkId);
-            data.m_InstanceID = link?.Owner ?? 0;
-            return data;
+            var link = NavWorld.FindLink(linkId);
+            return new OffMeshLinkData
+            {
+                m_Valid = 1,
+                m_Activated = link == null || link.Active ? 1 : 0,
+                m_LinkType = OffMeshLinkType.LinkTypeManual,
+                m_StartPos = start,
+                m_EndPos = end,
+                m_InstanceID = link?.Owner ?? 0,
+            };
         }
 
+        /// <summary>The link being crossed: from where the agent met it on the mesh to the link's
+        /// own end (measured).</summary>
+        internal OffMeshLinkData GetCurrentOffMeshLinkDataInternal()
+        {
+            if (!isOnOffMeshLink) return new OffMeshLinkData();
+            var anim = m_Crowd.animation;
+            return LinkData(anim.linkId, NavMesh.V(anim.startPos), NavMesh.V(anim.endPos));
+        }
+
+        /// <summary>The link the agent's corners lead to, its own ends in the direction of
+        /// travel (measured).</summary>
         internal OffMeshLinkData GetNextOffMeshLinkDataInternal()
         {
-            var data = new OffMeshLinkData();
-            if (m_Crowd == null || m_Crowd.ncorners == 0) return data;
-            var last = m_Crowd.corners[m_Crowd.ncorners - 1];
-            if ((last.flags & DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION) == 0) return data;
-            data.m_Valid = 1;
-            data.m_Activated = 1;
-            data.m_StartPos = NavMesh.V(last.pos);
-            if (m_Surface.LinkOfPoly.TryGetValue(last.refs, out int linkId) && NavWorld.FindLink(linkId) is NavWorld.LinkInstance link)
+            if (m_Crowd == null) return new OffMeshLinkData();
+            DtStraightPath last;
+            if (isOnOffMeshLink)
             {
-                data.m_EndPos = (data.m_StartPos - link.Start).sqrMagnitude < (data.m_StartPos - link.End).sqrMagnitude ? link.End : link.Start;
-                data.m_InstanceID = link.Owner;
+                // On a link: the next link of the path beyond it (measured).
+                if (m_Crowd.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID) return new OffMeshLinkData();
+                var ahead = new DtStraightPath[DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS];
+                int n = m_Surface.Query.FindStraightPath(m_Crowd.animation.endPos, m_Crowd.corridor.GetTarget(), m_Crowd.corridor.GetPath(),
+                    m_Crowd.corridor.GetPathCount(), ahead, out int aheadCount, ahead.Length, 0).Succeeded() ? aheadCount : 0;
+                int found = -1;
+                for (int i = 0; i < n && found < 0; i++)
+                    if ((ahead[i].flags & DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION) != 0) found = i;
+                if (found < 0) return new OffMeshLinkData();
+                last = ahead[found];
             }
-            return data;
+            else
+            {
+                if (m_Crowd.ncorners == 0) return new OffMeshLinkData();
+                last = m_Crowd.corners[m_Crowd.ncorners - 1];
+            }
+            if ((last.flags & DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION) == 0) return new OffMeshLinkData();
+            var path = m_Crowd.corridor.GetPath();
+            int count = m_Crowd.corridor.GetPathCount();
+            long prev = 0;
+            for (int i = 0; i < count; i++)
+            {
+                if (path[i] == last.refs) break;
+                prev = path[i];
+            }
+            if (!m_Surface.Mesh.GetOffMeshConnectionRawEndPoints(prev, last.refs, out var start, out var end, out int linkId, out float width))
+                return new OffMeshLinkData();
+            // A wide link: where the agent's corners meet it (measured).
+            if (width > 0f)
+            {
+                var offset = DtCrowd.LinkOffset(start, end, last.pos);
+                start += offset;
+                end += offset;
+            }
+            return LinkData(linkId, NavMesh.V(start), NavMesh.V(end));
         }
 
         public void ActivateCurrentOffMeshLink(bool activated)
         {
-            if (m_LinkId != 0) NavMesh.SetOffMeshConnectionActive(m_LinkId, activated);
+            if (CurrentLinkId != 0) NavMesh.SetOffMeshConnectionActive(CurrentLinkId, activated);
         }
 
+        /// <summary>The agent stands at the link's end at once (its transform follows with its
+        /// next move) and walks on with the velocity it had (measured).</summary>
         public void CompleteOffMeshLink()
         {
             if (!isOnOffMeshLink) return;
-            m_Crowd.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING;
-            m_Crowd.npos = m_Crowd.animation.endPos;
+            bool midway = m_Crowd.animation.t > 0f;
+            AgentSystem.CrowdOf(m_Surface)?.CompleteOffMeshConnection(m_Crowd);
             m_NextPosition = NavMesh.V(m_Crowd.npos);
-            m_LinkId = 0;
-            if (m_UpdatePosition) AgentSystem.WriteTransform(this);
+            m_LeftLinkMidway = midway;
         }
 
         internal static bool LinkOccupied(int linkId) => AgentSystem.LinkOccupied(linkId);
@@ -432,6 +569,7 @@ namespace UnityEngine.AI
         // ------------------------------------------------------------------ system hooks
 
         internal void SetPathPending(bool pending) => m_PathPending = pending;
+        internal void SetDestinationReached(Vector3 pathEnd) => m_ShownDestination = pathEnd;
         internal void SetPathStatus(NavMeshPathStatus status) => m_PathStatus = status;
         internal bool HasDestination => m_HasDestination;
         internal Vector3 RequestedDestination => m_Destination;
@@ -442,7 +580,14 @@ namespace UnityEngine.AI
 
         internal override void OnEngineEnable() => AgentSystem.Add(this);
 
-        internal override void OnEngineDisable() => AgentSystem.Remove(this);
+        /// <summary>A disabled agent forgets its path (measured: enabled again, it stands).</summary>
+        internal override void OnEngineDisable()
+        {
+            AgentSystem.Remove(this);
+            m_HasDestination = false;
+            m_PathPending = false;
+            m_Velocity = Vector3.zero;
+        }
 
         internal override void OnEngineDestroy() => AgentSystem.Remove(this);
 
@@ -504,14 +649,19 @@ namespace Unbound.Runtime
         {
             if (s_Registered) return;
             s_Registered = true;
-            // After the scripts: the frame's path requests, then the crowds steer from where the
-            // agents stand and move (measured: a path asked for in Start has its desired velocity
-            // by LateUpdate, and the agents move one frame later).
-            PlayerLoopDriver.Register(typeof(PL.PreLateUpdate.AIUpdatePostScript), () =>
+            // Before the scripts' Update: the path requests made since the last update, then the
+            // crowds move, steer and plan (measured, tests/projects/navlinks: an agent reaching a
+            // link is on it, and a path asked for in Update is pending, when Update runs; a path
+            // asked for in Start has its desired velocity by LateUpdate, the agents moving one
+            // frame later). After the scripts: transforms moved by them move the agents.
+            PlayerLoopDriver.Register(typeof(PL.PreUpdate.AIUpdate), () =>
             {
+                SyncMovedTransforms();
                 ProcessRequests();
+                ReplanPartialPaths();
                 UpdateCrowds();
             });
+            PlayerLoopDriver.Register(typeof(PL.PreLateUpdate.AIUpdatePostScript), SyncMovedTransforms);
         }
 
         internal static void Add(NavMeshAgent agent)
@@ -612,6 +762,8 @@ namespace Unbound.Runtime
                 queryFilterType = 0,
                 userData = agent,
                 avoidancePriority = agent.avoidancePriority,
+                linkSpeed = agent.speed,
+                linkTraverse = agent.autoTraverseOffMeshLink && !agent.isStopped,
             };
         }
 
@@ -640,7 +792,7 @@ namespace Unbound.Runtime
                 Place(agent, agent.transform.position - Vector3.up * agent.baseOffset);
         }
 
-        internal static bool Place(NavMeshAgent agent, Vector3 position)
+        internal static bool Place(NavMeshAgent agent, Vector3 position, bool writeTransform = true)
         {
             Detach(agent);
             agent.WorldVersion = NavWorld.Version;
@@ -656,7 +808,7 @@ namespace Unbound.Runtime
             agent.m_Crowd = crowd.AddAgent(NavMesh.V(point), Params(agent));
             agent.m_NextPosition = point;
             agent.SetOnNavMesh(true);
-            if (agent.updatePosition) WriteTransform(agent);
+            if (agent.updatePosition && writeTransform) WriteTransform(agent);
             return true;
         }
 
@@ -685,7 +837,7 @@ namespace Unbound.Runtime
                 }
                 if (!s_Searches.TryGetValue(agent, out var search))
                 {
-                    search = NavMesh.PathSearch.Begin(agent.m_Surface, agent.m_NextPosition, agent.RequestedDestination, agent.Filter, agent.agentTypeID);
+                    search = NavMesh.PathSearch.Begin(agent.m_Surface, PathStart(agent), agent.RequestedDestination, agent.Filter, agent.agentTypeID);
                     if (search == null)
                     {
                         s_PathRequests.RemoveAt(0);
@@ -708,15 +860,22 @@ namespace Unbound.Runtime
             }
         }
 
-        internal static void ApplyPath(NavMeshAgent agent, NavMeshPath path)
+        /// <summary>Where the agent's paths begin: where it stands, or the end of the link it is
+        /// crossing (measured: a path asked for on a link leads on from the link's end).</summary>
+        static Vector3 PathStart(NavMeshAgent agent) =>
+            agent.isOnOffMeshLink ? NavMesh.V(agent.m_Crowd.animation.endPos) : agent.m_NextPosition;
+
+        /// <summary>The agent follows the path; a replanned path leaves its steering as it is.</summary>
+        internal static void ApplyPath(NavMeshAgent agent, NavMeshPath path, bool replan = false)
         {
             var crowd = CrowdOf(agent.m_Surface);
             var ag = agent.m_Crowd;
             var polys = path.m_Polygons;
             var target = path.m_Corners.Length > 0 ? path.m_Corners[path.m_Corners.Length - 1] : agent.m_NextPosition;
-            ag.corridor.Reset(polys[0], ag.npos);
+            bool onLink = agent.isOnOffMeshLink;
+            ag.corridor.Reset(polys[0], onLink ? ag.animation.endPos : ag.npos);
             ag.corridor.SetCorridor(NavMesh.V(target), polys, polys.Length);
-            ag.boundary.Reset();
+            if (!replan) ag.boundary.Reset();
             ag.partial = path.status == NavMeshPathStatus.PathPartial;
             ag.targetRef = polys[polys.Length - 1];
             ag.targetPos = NavMesh.V(target);
@@ -725,9 +884,11 @@ namespace Unbound.Runtime
             ag.targetReplan = false;
             agent.SetPathPending(false);
             agent.SetArrived(false);
+            agent.m_ReplanTime = 0f;
             agent.SetPathStatus(path.status);
-            // The corners the agent steers by, for this frame's queries.
-            ag.ncorners = ag.corridor.FindCorners(ag.corners, DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS, crowd.GetNavMeshQuery(), crowd.GetFilter(0));
+            agent.SetDestinationReached(target);
+            // The corners the agent steers by, for this frame's queries (none on a link).
+            ag.ncorners = onLink ? 0 : ag.corridor.FindCorners(ag.corners, DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS, crowd.GetNavMeshQuery(), crowd.GetFilter(0));
         }
 
         /// <summary>The crowds step: steering, avoidance, motion; then transforms follow.</summary>
@@ -739,9 +900,7 @@ namespace Unbound.Runtime
             float dt = Time.deltaTime;
             foreach (var agent in s_Agents)
             {
-                // A transform moved by script moves the agent (constrained to the NavMesh).
-                if (agent.m_Crowd != null && agent.updatePosition && (agent.transform.position - agent.WrittenPosition).sqrMagnitude > 1e-8f)
-                    agent.nextPosition = agent.transform.position;
+                agent.m_LeftLinkMidway = false;
                 if (agent.m_Crowd != null)
                 {
                     CrowdOf(agent.m_Surface).UpdateAgentParameters(agent.m_Crowd, Params(agent));
@@ -761,6 +920,44 @@ namespace Unbound.Runtime
                 StopAtDestination(agent, dt, NavMesh.V(previous));
                 if (agent.updatePosition) WriteTransform(agent);
                 if (agent.updateRotation) Rotate(agent, dt);
+            }
+        }
+
+        /// <summary>An agent following a partial path searches it again once more than a second
+        /// has passed since the path was found, counting the update that found it, while it walks
+        /// towards the path's end (measured, tests/projects/navlinks: a link activated meanwhile
+        /// is taken at the next search; an agent that has reached the end searches no more).</summary>
+        static void ReplanPartialPaths()
+        {
+            float dt = Time.deltaTime;
+            if (dt <= 0f) return;
+            foreach (var agent in s_Agents)
+            {
+                var ag = agent.m_Crowd;
+                if (ag == null || ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING || agent.pathPending || !agent.hasPath
+                    || ag.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID || !ag.partial)
+                    continue;
+                agent.m_ReplanTime += dt;
+                if (agent.m_ReplanTime <= 1f || ag.corridor.GetPathCount() >= 10) continue;
+                var search = NavMesh.PathSearch.Begin(agent.m_Surface, agent.m_NextPosition, agent.RequestedDestination, agent.Filter, agent.agentTypeID);
+                if (search == null) continue;
+                int budget = int.MaxValue;
+                search.Step(ref budget);
+                if (search.Result != null) ApplyPath(agent, search.Result, replan: true);
+                agent.m_ReplanTime = dt;
+            }
+        }
+
+        /// <summary>A transform moved by a script moves its agent (along the NavMesh; freely on a link).</summary>
+        static void SyncMovedTransforms()
+        {
+            foreach (var agent in s_Agents)
+            {
+                if (agent.m_Crowd != null && agent.updatePosition && (agent.transform.position - agent.WrittenPosition).sqrMagnitude > 1e-8f)
+                {
+                    agent.nextPosition = agent.transform.position;
+                    agent.WrittenPosition = agent.transform.position;
+                }
             }
         }
 
@@ -792,8 +989,9 @@ namespace Unbound.Runtime
                 agent.SetArrived(true);
                 return;
             }
-            // The step that reaches the end from where the update began lands on it (measured).
-            if (leftBefore <= 1e-3f || (agent.autoBraking && step >= leftBefore))
+            // The step that reaches the end from where the update began lands on it, also without
+            // auto braking (measured, tests/projects/navlinks).
+            if (leftBefore <= 1e-3f || step >= leftBefore)
             {
                 ag.npos = last.pos;
                 ag.vel = RcVec3f.Zero;
@@ -817,19 +1015,26 @@ namespace Unbound.Runtime
             agent.WrittenPosition = position;
         }
 
+        /// <summary>The agent turns towards the velocity it moves on with (on a link, the link's
+        /// desired velocity) by a share dt·(1 + speed along the ground) of the angle left, at
+        /// most its angular speed (measured, tests/projects/navlinks).</summary>
         static void Rotate(NavMeshAgent agent, float dt)
         {
-            var v = agent.velocity;
+            var v = NavMesh.V(agent.m_Crowd.NextVelocity(dt));
             v.y = 0f;
-            if (v.sqrMagnitude < 1e-6f) return;
+            float speed = v.magnitude;
+            if (speed < 1e-6f) return;
+            var current = agent.transform.rotation;
             var target = Quaternion.LookRotation(v);
-            agent.transform.rotation = Quaternion.RotateTowards(agent.transform.rotation, target, agent.angularSpeed * dt);
+            float angle = Quaternion.Angle(current, target);
+            float step = Mathf.Min(agent.angularSpeed * dt, angle * Mathf.Min(1f, dt * (1f + speed)));
+            agent.transform.rotation = Quaternion.RotateTowards(current, target, step);
         }
 
         internal static bool LinkOccupied(int linkId)
         {
             foreach (var agent in s_Agents)
-                if (agent.isOnOffMeshLink && agent.m_LinkId == linkId) return true;
+                if (agent.CurrentLinkId == linkId) return true;
             return false;
         }
     }

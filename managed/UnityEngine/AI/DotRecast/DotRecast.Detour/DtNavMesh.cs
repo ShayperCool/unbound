@@ -1541,6 +1541,44 @@ namespace DotRecast.Detour
             return DtStatus.DT_SUCCESS;
         }
 
+        /// Unbound: the off-mesh connection of a polygon as authored (Unity's links keep their own
+        /// ends: an agent crosses to the link's end, not to where it meets the mesh), oriented for
+        /// a crossing entered from prevRef; userId is the connection's.
+        public bool GetOffMeshConnectionRawEndPoints(long prevRef, long polyRef, out RcVec3f startPos, out RcVec3f endPos, out int userId, out float width)
+        {
+            startPos = endPos = default;
+            userId = 0;
+            width = 0;
+            if (polyRef == 0) return false;
+            DecodePolyId(polyRef, out var salt, out var it, out var ip);
+            if (it >= m_maxTiles || m_tiles[it].salt != salt || m_tiles[it].data?.header == null) return false;
+            DtMeshTile tile = m_tiles[it];
+            if (ip >= tile.data.header.polyCount) return false;
+            DtPoly poly = tile.data.polys[ip];
+            if (poly.GetPolyType() != DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION) return false;
+            int idx = ip - tile.data.header.offMeshBase;
+            if (idx < 0 || idx >= tile.data.offMeshCons.Length) return false;
+            var con = tile.data.offMeshCons[idx];
+            int idx0 = 0, idx1 = 1;
+            for (int i = poly.firstLink; i != DT_NULL_LINK; i = tile.links[i].next)
+            {
+                if (tile.links[i].edge == 0)
+                {
+                    if (tile.links[i].refs != prevRef)
+                    {
+                        idx0 = 1;
+                        idx1 = 0;
+                    }
+                    break;
+                }
+            }
+            startPos = con.pos[idx0];
+            endPos = con.pos[idx1];
+            userId = con.userId;
+            width = con.width;
+            return true;
+        }
+
         public int GetMaxVertsPerPoly()
         {
             return m_maxVertPerPoly;

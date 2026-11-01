@@ -93,6 +93,24 @@ namespace Unbound.Runtime
 
         internal static LinkInstance FindLink(int id) => s_Links.Find(l => l.Id == id);
 
+        /// <summary>The cost modifier of an off-mesh connection polygon's link, when it has one.</summary>
+        internal static float? LinkCostModifier(DtMeshTile tile, DtPoly poly)
+        {
+            int idx = poly.index - tile.data.header.offMeshBase;
+            if (idx < 0 || idx >= tile.data.offMeshCons.Length) return null;
+            var link = FindLink(tile.data.offMeshCons[idx].userId);
+            return link != null && link.Link.costModifier >= 0f ? link.Link.costModifier : null;
+        }
+
+        /// <summary>Whether the link of an off-mesh connection polygon may be crossed.</summary>
+        internal static bool LinkPolyActive(DtMeshTile tile, DtPoly poly)
+        {
+            int idx = poly.index - tile.data.header.offMeshBase;
+            if (idx < 0 || idx >= tile.data.offMeshCons.Length) return true;
+            var link = FindLink(tile.data.offMeshCons[idx].userId);
+            return link == null || link.Active;
+        }
+
         internal static void MarkDirty() => s_Dirty = true;
 
         /// <summary>A data instance's tiles changed (rebuilt or updated in place).</summary>
@@ -293,9 +311,13 @@ namespace Unbound.Runtime
             var add = new List<(LinkInstance Link, Vector3 Start, Vector3 End)>();
             foreach (var link in s_Links)
             {
-                if (!link.Active || link.Link.agentTypeID != surface.AgentTypeID) continue;
+                // Inactive links are in the mesh too; the query filters skip them (switching a link
+                // leaves the mesh and the agents on it as they are).
+                if (link.Link.agentTypeID != surface.AgentTypeID) continue;
                 var start = link.Start;
-                if (start.x < h.bmin.X || start.x > h.bmax.X || start.z < h.bmin.Z || start.z > h.bmax.Z) continue;
+                // The one tile whose bounds hold the start (a start on a border belongs to the
+                // tile above it).
+                if (start.x < h.bmin.X || start.x >= h.bmax.X || start.z < h.bmin.Z || start.z >= h.bmax.Z) continue;
                 add.Add((link, start, link.End));
             }
             if (add.Count == 0) return;
@@ -323,11 +345,15 @@ namespace Unbound.Runtime
                 var con = new DtOffMeshConnection
                 {
                     pos = new[] { new RcVec3f(start.x, start.y, start.z), new RcVec3f(end.x, end.y, end.z) },
-                    rad = LinkSnapRadius,
+                    // A link meets the mesh within the agent's radius of its ends (measured: 0.3
+                    // and 0.47 off the mesh connect, 0.62 does not, for a 0.5 radius).
+                    rad = h.walkableRadius,
                     poly = basePoly + i,
                     flags = link.Link.bidirectional ? DtDetour.DT_OFFMESH_CON_BIDIR : 0,
-                    side = 0xff,
+                    // A link ending in another tile connects there (towards that side).
+                    side = DtNavMeshBuilder.ClassifyOffMeshPoint(new RcVec3f(end.x, end.y, end.z), h.bmin, h.bmax),
                     userId = link.Id,
+                    width = Math.Max(0f, link.Link.width),
                 };
                 cons[tile.offMeshCons.Length + i] = con;
             }
@@ -343,9 +369,6 @@ namespace Unbound.Runtime
         }
 
         static int s_PolyDumps;
-
-        /// <summary>How far a link's end may lie from the NavMesh and still connect.</summary>
-        internal const float LinkSnapRadius = 0.1f;
     }
 
     /// <summary>Unity's area mask and costs as a Detour filter.</summary>
@@ -360,12 +383,18 @@ namespace Unbound.Runtime
             return new AreaFilter { Mask = mask, Costs = costs ?? NavMeshAreas.Costs };
         }
 
-        public bool PassFilter(long refs, DtMeshTile tile, DtPoly poly) => (Mask & (1 << poly.GetArea())) != 0;
+        public bool PassFilter(long refs, DtMeshTile tile, DtPoly poly) =>
+            (Mask & (1 << poly.GetArea())) != 0
+            && (poly.GetPolyType() != DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION || NavWorld.LinkPolyActive(tile, poly));
 
         public float GetCost(RcVec3f pa, RcVec3f pb, long prevRef, DtMeshTile prevTile, DtPoly prevPoly, long curRef, DtMeshTile curTile,
             DtPoly curPoly, long nextRef, DtMeshTile nextTile, DtPoly nextPoly)
         {
-            return RcVec3f.Distance(pa, pb) * Costs[curPoly.GetArea()];
+            float cost = Costs[curPoly.GetArea()];
+            // A link's non-negative cost modifier replaces its area's cost.
+            if (curPoly.GetPolyType() == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION && NavWorld.LinkCostModifier(curTile, curPoly) is float modifier)
+                cost = modifier;
+            return RcVec3f.Distance(pa, pb) * cost;
         }
     }
 

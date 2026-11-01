@@ -104,6 +104,13 @@ namespace DotRecast.Detour.Crowd
         /// Resets the path corridor to the specified position.
         ///  @param[in]		ref		The polygon reference containing the position.
         ///  @param[in]		pos		The new position in the corridor. [(x, y, z)]
+        /// Unbound: moves the corridor's position without moving along the mesh (an agent leaving
+        /// an off-mesh link stands at the link's own end, which may lie off the polygon).
+        public void SetPos(RcVec3f pos)
+        {
+            m_pos = pos;
+        }
+
         public void Reset(long refs, RcVec3f pos)
         {
             m_pos = pos;

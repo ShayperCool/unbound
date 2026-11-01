@@ -231,6 +231,10 @@ namespace UnityEngine.AI
                 foreach (var node in m_Query.GetNodePool().AsEnumerable())
                 {
                     if (node == null || node.id == 0 || (node.flags & (DtNodeFlags.DT_NODE_OPEN | DtNodeFlags.DT_NODE_CLOSED)) == 0) continue;
+                    // A path ends on the ground, not on a link (measured: a link whose far end
+                    // meets no polygon ends no partial path).
+                    if (m_Surface.Mesh.GetTileAndPolyByRef(node.id, out _, out var nodePoly).Succeeded()
+                        && nodePoly.GetPolyType() == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION) continue;
                     if (node.id == m_EndRef) complete = true;
                     m_Query.ClosestPointOnPoly(node.id, V(m_End), out var p, out _);
                     float d = RcVec3f.DistanceSquared(p, V(m_End));
@@ -490,7 +494,6 @@ namespace UnityEngine.AI
             var link = NavWorld.FindLink(linkHandle);
             if (link == null || link.Active == activated) return;
             link.Active = activated;
-            NavWorld.MarkDirty();
         }
 
         [Obsolete("AddOffMeshLinks has no effect and is deprecated.")]

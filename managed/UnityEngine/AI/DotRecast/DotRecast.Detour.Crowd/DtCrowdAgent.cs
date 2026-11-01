@@ -99,13 +99,12 @@ namespace DotRecast.Detour.Crowd
         {
             // Fake dynamic constraint.
             float maxDelta = option.maxAcceleration * dt;
-            // Unbound: a braking agent's speed follows its plan whatever its acceleration (Unity's;
-            // measured).
+            // Unbound: a braking agent takes its plan whatever its acceleration (Unity's; measured,
+            // also speeding up to it, tests/projects/navlinks).
             if (braking)
             {
-                float speedLoss = vel.Length() - pvel.Length();
-                if (speedLoss > maxDelta)
-                    maxDelta = speedLoss;
+                vel = pvel;
+                return;
             }
             RcVec3f dv = RcVec3f.Subtract(pvel, vel);
             float ds = dv.Length();
@@ -114,8 +113,33 @@ namespace DotRecast.Detour.Crowd
             vel = RcVec3f.Add(vel, dv);
         }
 
+        /// Unbound: the velocity the next update's step towards the current plan gives (Unity's
+        /// agents turn towards it).
+        public RcVec3f NextVelocity(float dt)
+        {
+            if (state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING)
+                return nvel;
+            float maxDelta = option.maxAcceleration * dt;
+            if (braking)
+                return pvel;
+            RcVec3f dv = RcVec3f.Subtract(pvel, vel);
+            float ds = dv.Length();
+            if (ds > maxDelta)
+                dv = dv * (maxDelta / ds);
+            return RcVec3f.Add(vel, dv);
+        }
+
+        /// Unbound: whether nvel was set by an off-mesh link (reported with its height) rather
+        /// than planned on the mesh (reported along the ground).
+        public bool planFromLink;
+
+        /// Unbound: the distance (in the plane) from the agent to the corner its last plan
+        /// steered to.
+        public float steerDistance;
+
         public void Integrate(float dt)
         {
+            planFromLink = false;
             // Unbound: this update's plan waits for the next (see Accelerate).
             pvel = nvel;
             braking = brakingNow;

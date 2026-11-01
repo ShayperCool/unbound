@@ -441,9 +441,6 @@ namespace DotRecast.Detour.Crowd
             // Find next corner to steer to.
             FindCorners(agents, debug);
 
-            // Trigger off-mesh connections (depends on corners).
-            TriggerOffMeshConnections(agents);
-
             // Unbound: Unity's agents take the step towards the last plan before steering and
             // planning anew, and steer and plan with the velocity they move at this update (measured).
             Accelerate(dt, agents);
@@ -461,6 +458,11 @@ namespace DotRecast.Detour.Crowd
             HandleCollisions(agents);
 
             MoveAgents(agents);
+
+            // Unbound: Unity's agents enter a link from where this update's step took them (the
+            // trigger radius measured from the moved position), and take their first step along
+            // it in the same update (measured, tests/projects/navlinks).
+            TriggerOffMeshConnections(agents);
 
             // Update agents using off-mesh connection.
             UpdateOffMeshConnections(agents, dt);
@@ -556,15 +558,8 @@ namespace DotRecast.Detour.Crowd
                     replan = true;
                 }
 
-                // If the end of the path is near and it is not the requested location, replan.
-                if (ag.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID)
-                {
-                    if (ag.targetReplanTime > _config.targetReplanDelay && ag.corridor.GetPathCount() < _config.checkLookAhead
-                                                                        && ag.corridor.GetLastPoly() != ag.targetRef)
-                    {
-                        replan = true;
-                    }
-                }
+                // Unbound: a partial path is searched again by the engine, as Unity's agents do
+                // (with Unity's search; see AgentSystem.ReplanPartialPaths), not here.
 
                 // Try to replan path to goal.
                 if (replan)
@@ -1060,6 +1055,8 @@ namespace DotRecast.Detour.Crowd
             }
         }
 
+        private readonly DtStraightPath[] _triggerCorners = new DtStraightPath[DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS];
+
         private void TriggerOffMeshConnections(IList<DtCrowdAgent> agents)
         {
             using var timer = _telemetry.ScopedTimer(DtCrowdTimerLabel.TriggerOffMeshConnections);
@@ -1072,41 +1069,76 @@ namespace DotRecast.Detour.Crowd
                     continue;
                 }
 
-                if (ag.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_NONE
-                    || ag.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VELOCITY)
+                if (ag.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID)
                 {
                     continue;
                 }
 
-                // Check
-                float triggerRadius = ag.option.radius * 2.25f;
-                if (ag.OverOffmeshConnection(triggerRadius))
+                // Unbound: the corners as seen from where the agent now stands (the agent's own
+                // corners stay those it steered by this update).
+                int n = ag.corridor.FindCorners(_triggerCorners, DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS, _navQuery, _filters[ag.option.queryFilterType]);
+                if (n == 0 || (_triggerCorners[n - 1].flags & DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION) == 0)
                 {
-                    // Prepare to off-mesh connection.
-                    DtCrowdAgentAnimation anim = ag.animation;
+                    continue;
+                }
 
-                    // Adjust the path over the off-mesh connection.
-                    RcFixedArray2<long> refs = new RcFixedArray2<long>();
-                    if (ag.corridor.MoveOverOffmeshConnection(ag.corners[ag.ncorners - 1].refs, refs.AsSpan(), ref anim.startPos,
-                            ref anim.endPos, _navQuery))
-                    {
-                        anim.initPos = ag.npos;
-                        anim.polyRef = refs[1];
-                        anim.active = true;
-                        anim.t = 0.0f;
-                        anim.tmax = (RcVec.Dist2D(anim.startPos, anim.endPos) / ag.option.maxSpeed) * 0.5f;
+                float triggerRadius = ag.option.radius * 2.25f;
+                if (RcVec.Dist2DSqr(ag.npos, _triggerCorners[n - 1].pos) >= triggerRadius * triggerRadius)
+                {
+                    continue;
+                }
 
-                        ag.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH;
-                        ag.ncorners = 0;
-                        ag.nneis = 0;
-                        continue;
-                    }
-                    else
+                DtCrowdAgentAnimation anim = ag.animation;
+                RcFixedArray2<long> refs = new RcFixedArray2<long>();
+                if (ag.corridor.MoveOverOffmeshConnection(_triggerCorners[n - 1].refs, refs.AsSpan(), ref anim.startPos, ref anim.endPos, _navQuery))
+                {
+                    // Unity's crossing: from where the agent meets the link on the mesh to the
+                    // link's own end (also off the mesh), where the agent stands when it leaves.
+                    if (_navQuery.GetAttachedNavMesh().GetOffMeshConnectionRawEndPoints(refs[0], refs[1], out var rawStart, out var rawEnd, out int linkId, out float width))
                     {
-                        // Path validity check will ensure that bad/blocked connections will be replanned.
+                        anim.endPos = rawEnd;
+                        anim.linkId = linkId;
+                        // A wide link is crossed straight from where the agent meets it.
+                        if (width > 0.0f)
+                        {
+                            anim.startPos = _triggerCorners[n - 1].pos;
+                            anim.endPos = rawEnd + LinkOffset(rawStart, rawEnd, anim.startPos);
+                        }
                     }
+                    ag.corridor.SetPos(anim.endPos);
+                    anim.initPos = ag.npos;
+                    anim.polyRef = refs[1];
+                    anim.active = true;
+                    anim.t = 0.0f;
+                    anim.tmax = RcVec3f.Distance(anim.startPos, anim.endPos);
+
+                    ag.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_OFFMESH;
+                    ag.ncorners = 0;
+                    ag.nneis = 0;
                 }
             }
+        }
+
+        /// Unbound: how far across a wide link a point on its start segment lies.
+        internal static RcVec3f LinkOffset(RcVec3f start, RcVec3f end, RcVec3f at)
+        {
+            RcVec3f d = end - start;
+            float len = MathF.Sqrt(d.X * d.X + d.Z * d.Z);
+            if (len <= 0.0f)
+            {
+                return RcVec3f.Zero;
+            }
+
+            var r = new RcVec3f(d.Z / len, 0.0f, -d.X / len);
+            float across = (at.X - start.X) * r.X + (at.Z - start.Z) * r.Z;
+            return r * across;
+        }
+
+        /// Unbound: an agent placed on a link's start enters it at once (Unity's: an agent whose
+        /// path begins with a link it stands on is on the link in the update that finds the path).
+        internal void TriggerOffMeshConnection(DtCrowdAgent ag)
+        {
+            TriggerOffMeshConnections(new[] { ag });
         }
 
         private void CalculateSteering(IList<DtCrowdAgent> agents, float dt)
@@ -1144,6 +1176,10 @@ namespace DotRecast.Detour.Crowd
                     {
                         dvel = ag.CalcStraightSteerDirection();
                     }
+
+                    // Unbound: how far the corner steered to is (Unity reports the height of the
+                    // desired velocity only near it; see DtCrowdAgent.steerDistance).
+                    ag.steerDistance = ag.ncorners > 0 ? RcVec.Dist2D(ag.npos, ag.corners[0].pos) : 0.0f;
 
                     // Unbound: Unity's agents brake at the end of their path once they would reach it
                     // within the time two radii take at full speed: their speed falls by the
@@ -1250,7 +1286,14 @@ namespace DotRecast.Detour.Crowd
                 if (avoid)
                 {
                     _obstacleQuery.Reset();
-                    _obstacleQuery.segmentReach = ag.ncorners > 0 ? RcVec.Dist2D(ag.npos, ag.corners[0].pos) + 1e-3f : float.MaxValue;
+                    // Unbound: edges count up to the next corner; when that is the path's end or a
+                    // link's start, only those before it (measured: an agent walks straight up to
+                    // the end of a partial path or a link on the NavMesh's edge,
+                    // tests/projects/navlinks).
+                    _obstacleQuery.segmentReach = ag.ncorners > 0
+                        ? RcVec.Dist2D(ag.npos, ag.corners[0].pos)
+                          + ((ag.corners[0].flags & (DtStraightPathFlags.DT_STRAIGHTPATH_END | DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION)) != 0 ? -1e-3f : 1e-3f)
+                        : float.MaxValue;
 
                     // Add neighbours as obstacles.
                     for (int j = 0; j < ag.nneis; ++j)
@@ -1463,6 +1506,14 @@ namespace DotRecast.Detour.Crowd
             }
         }
 
+        /// Unbound: Unity's crossing (measured, tests/projects/navlinks). Detour's two parts, 15%
+        /// of the crossing from where the agent entered to the link's start and the rest to its
+        /// end, but the progress is a fraction of the start-to-end distance (in 3D) advanced at
+        /// twice the agent's current speed, and only while the agent traverses links by itself and
+        /// is not stopped. The desired velocity points along the current part at the agent's
+        /// speed, and is the velocity the agent walks on with when a script completes the link. The update that passes the end
+        /// leaves the link: the agent goes from the link's end towards where the rest of the step
+        /// would take it, along the mesh, and its velocity becomes that step (at most its speed).
         private void UpdateOffMeshConnections(IList<DtCrowdAgent> agents, float dt)
         {
             using var timer = _telemetry.ScopedTimer(DtCrowdTimerLabel.UpdateOffMeshConnections);
@@ -1476,34 +1527,86 @@ namespace DotRecast.Detour.Crowd
                     continue;
                 }
 
-                anim.t += dt;
-                if (anim.t > anim.tmax)
+                const float approach = 0.15f;
+                float speed = ag.option.linkSpeed;
+                if (ag.option.linkTraverse && anim.tmax > 0.0f)
                 {
-                    // Reset animation
-                    anim.active = false;
-                    // Prepare agent for walking.
-                    ag.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING;
+                    anim.t += dt * 2.0f * speed / anim.tmax;
+                }
+                else if (anim.tmax <= 0.0f && ag.option.linkTraverse)
+                {
+                    anim.t = float.PositiveInfinity;
+                }
+
+                if (anim.t > 1.0f)
+                {
+                    float u = float.IsInfinity(anim.t) ? 1.0f : (anim.t - approach) / (1.0f - approach);
+                    RcVec3f target = anim.startPos + (anim.endPos - anim.startPos) * u;
+                    CompleteOffMeshConnection(ag);
+                    ag.corridor.MovePosition(target, _navQuery, _filters[ag.option.queryFilterType]);
+                    ag.npos = ag.corridor.GetPos();
+                    RcVec3f v = (ag.npos - anim.endPos) * (1.0f / dt);
+                    float len = v.Length();
+                    if (len > speed)
+                    {
+                        v = v * (len > 0.0f ? speed / len : 0.0f);
+                    }
+
+                    ag.vel = v;
+                    ag.nvel = v;
+                    ag.pvel = v;
+                    ag.dvel = v;
+                    ag.planFromLink = true;
                     continue;
                 }
 
-                // Update position
-                float ta = anim.tmax * 0.15f;
-                float tb = anim.tmax;
-                if (anim.t < ta)
+                // An agent that does not move along its link stays where it is (also where a
+                // script put it).
+                bool moving = ag.option.linkTraverse;
+                RcVec3f from, to;
+                if (anim.t < approach)
                 {
-                    float u = Tween(anim.t, 0.0f, ta);
-                    ag.npos = RcVec3f.Lerp(anim.initPos, anim.startPos, u);
+                    from = anim.initPos;
+                    to = anim.startPos;
+                    if (moving) ag.npos = Lerp(from, to, anim.t / approach);
                 }
                 else
                 {
-                    float u = Tween(anim.t, ta, tb);
-                    ag.npos = RcVec3f.Lerp(anim.startPos, anim.endPos, u);
+                    from = anim.startPos;
+                    to = anim.endPos;
+                    if (moving) ag.npos = Lerp(from, to, (anim.t - approach) / (1.0f - approach));
                 }
 
-                // Update velocity.
-                ag.vel = RcVec3f.Zero;
-                ag.dvel = RcVec3f.Zero;
+                RcVec3f dir = to - from;
+                float d = dir.Length();
+                ag.nvel = d > 1e-4f ? dir * (speed / d) : RcVec3f.Zero;
+                ag.pvel = ag.nvel;
+                ag.dvel = ag.nvel;
+                ag.vel = ag.nvel;
+                ag.planFromLink = true;
             }
+        }
+
+        /// Unbound: Unity's interpolation along a link, a·(1 − u) + b·u.
+        private static RcVec3f Lerp(RcVec3f a, RcVec3f b, float u)
+        {
+            return new RcVec3f(a.X * (1.0f - u) + b.X * u, a.Y * (1.0f - u) + b.Y * u, a.Z * (1.0f - u) + b.Z * u);
+        }
+
+        /// Unbound: the agent leaves its link at the link's end (Unity's CompleteOffMeshLink and
+        /// the end of a crossing), keeping its velocity.
+        internal void CompleteOffMeshConnection(DtCrowdAgent ag)
+        {
+            DtCrowdAgentAnimation anim = ag.animation;
+            if (!anim.active)
+            {
+                return;
+            }
+
+            anim.active = false;
+            ag.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING;
+            ag.npos = anim.endPos;
+            ag.corridor.SetPos(anim.endPos);
         }
 
         private float Tween(float t, float t0, float t1)

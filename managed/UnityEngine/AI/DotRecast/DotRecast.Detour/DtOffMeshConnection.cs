@@ -45,5 +45,9 @@ namespace DotRecast.Detour
 
         /// The id of the offmesh connection. (User assigned when the navigation mesh is built.)
         public int userId;
+
+        /// Unbound: the width of a Unity link (its ends are segments across the link, crossed
+        /// anywhere along them; 0 for a point link).
+        public float width;
     }
 }

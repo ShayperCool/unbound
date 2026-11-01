@@ -54,5 +54,13 @@ namespace DotRecast.Detour.Crowd
         /// Unbound: Unity's avoidance priority (0 the most important): an agent avoids the
         /// neighbours as or more important than itself, and ignores the others.
         public int avoidancePriority;
+
+        /// Unbound: Unity's speed property (maxSpeed is 0 while stopped): an off-mesh link is
+        /// crossed at twice this speed, and its desired velocity has this length.
+        public float linkSpeed;
+
+        /// Unbound: whether the agent moves along the off-mesh link it is on (Unity's
+        /// autoTraverseOffMeshLink and not isStopped); otherwise it stays where it is on it.
+        public bool linkTraverse = true;
     }
 }

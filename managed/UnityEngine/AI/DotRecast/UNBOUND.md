@@ -35,4 +35,19 @@ Altered (marked `Unbound:` in the sources):
   neighbours (half from equals), overlaps resolved by the less important agent alone (half each
   between equals);
 - `DtNavMeshQuery.GetPathToNode` is visible to the engine (partial paths end at the reachable
-  polygon nearest to the target).
+  polygon nearest to the target);
+- off-mesh links as Unity's (`tests/projects/navlinks`): an agent enters a link when the step of
+  the update has brought it within 2.25 radii of the link's start, and takes its first step on it
+  in the same update; the crossing is Detour's (15% from where it entered to the link's start,
+  then to its end) but advanced as a fraction of the start-to-end distance at twice the agent's
+  current speed, frozen while the agent does not traverse links itself or is stopped, and ends
+  at the link's own end (also off the mesh); the update that passes the end moves the agent on
+  along the mesh by the rest of the step, which becomes its velocity (at most its speed); the
+  desired velocity on a link points along the current part; the corridor keeps the link's end as
+  its position (`DtPathCorridor.SetPos`); partial paths are searched again by the engine, not by
+  the crowd; a wide link's ends are segments (its portals), crossed straight where the path meets
+  them; a link's corners are kept at both ends, a ground corner in line with the funnel's other
+  side narrows it, a path starting on a link's start is on the link, and a path's end merges only
+  with a corner exactly at it;
+- edges count for avoidance up to the next corner, but only those before it when the corner is
+  the path's end or a link's start; a braking agent takes its plan at once.

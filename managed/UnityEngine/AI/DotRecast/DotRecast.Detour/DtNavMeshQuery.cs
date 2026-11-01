@@ -1556,7 +1556,12 @@ namespace DotRecast.Detour
 
         protected DtStatus AppendVertex(RcVec3f pos, byte flags, long refs, Span<DtStraightPath> straightPath, ref int straightPathCount, int maxStraightPath)
         {
-            if (straightPathCount > 0 && RcVec.Equal(straightPath[straightPathCount - 1].pos, pos))
+            // Unbound: the path's end merges only with a corner exactly where it is (Unity's: a
+            // path ending at a link's end keeps both; measured, tests/projects/navlinks).
+            bool same = flags == DtStraightPathFlags.DT_STRAIGHTPATH_END
+                ? straightPathCount > 0 && straightPath[straightPathCount - 1].pos == pos
+                : straightPathCount > 0 && RcVec.Equal(straightPath[straightPathCount - 1].pos, pos);
+            if (same)
             {
                 // The vertices are equal, update flags and poly.
                 straightPath[straightPathCount - 1] = new DtStraightPath(straightPath[straightPathCount - 1].pos, flags, refs);
@@ -1662,6 +1667,44 @@ namespace DotRecast.Detour
         ///  @param[in]		maxStraightPath		The maximum number of points the straight path arrays can hold.  [Limit: > 0]
         ///  @param[in]		options				Query options. (see: #dtStraightPathOptions)
         /// @returns The status flags for the query.
+        /// Unbound: the portal of a wide Unity link is the segment across the link's own end
+        /// (at the link's own height; measured: an agent crosses a wide link straight where it
+        /// meets it, tests/projects/navlinks). v is the link's end at the portal; exit tells
+        /// whether the agent leaves the link there.
+        private static void WideLinkPortal(DtMeshTile tile, DtPoly poly, int v, bool exit, ref RcVec3f left, ref RcVec3f right)
+        {
+            int idx = poly.index - tile.data.header.offMeshBase;
+            if (idx < 0 || idx >= tile.data.offMeshCons.Length)
+            {
+                return;
+            }
+
+            var con = tile.data.offMeshCons[idx];
+            if (con.width <= 0.0f)
+            {
+                return;
+            }
+
+            RcVec3f here = con.pos[v];
+            RcVec3f other = con.pos[1 - v];
+            RcVec3f d = exit ? here - other : other - here;
+            float len = MathF.Sqrt(d.X * d.X + d.Z * d.Z);
+            if (len <= 0.0f)
+            {
+                return;
+            }
+
+            var r = new RcVec3f(d.Z / len, 0.0f, -d.X / len) * (con.width * 0.5f);
+            right = here + r;
+            left = here - r;
+        }
+
+        private bool IsOffMeshConnection(long polyRef)
+        {
+            return m_nav.GetTileAndPolyByRef(polyRef, out _, out var poly).Succeeded()
+                   && poly.GetPolyType() == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION;
+        }
+
         public virtual DtStatus FindStraightPath(RcVec3f startPos, RcVec3f endPos,
             Span<long> path, int pathSize,
             Span<DtStraightPath> straightPath, out int straightPathCount, int maxStraightPath,
@@ -1713,6 +1756,7 @@ namespace DotRecast.Detour
 
                 long leftPolyRef = path[0];
                 long rightPolyRef = path[0];
+                float wideAcross = 0.5f;
 
                 for (int i = 0; i < pathSize; ++i)
                 {
@@ -1726,6 +1770,21 @@ namespace DotRecast.Detour
 
                         // Next portal.
                         var ppStatus = GetPortalPoints(path[i], path[i + 1], out left, out right, out fromType, out toType);
+                        // Unbound: a wide link is entered where its start segment is nearest to the
+                        // path so far and left as far across its end segment (Unity's: crossed
+                        // straight; measured, tests/projects/navlinks); both are corners.
+                        if (ppStatus.Succeeded() && !RcVec.Equal(left, right))
+                        {
+                            if (toType == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION)
+                            {
+                                DtUtils.DistancePtSegSqr2D(portalApex, left, right, out wideAcross);
+                                left = right = RcVec3f.Lerp(left, right, wideAcross);
+                            }
+                            else if (fromType == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION)
+                            {
+                                left = right = RcVec3f.Lerp(left, right, wideAcross);
+                            }
+                        }
                         if (ppStatus.Failed())
                         {
                             // Failed to get portal points, in practice this means that path[i+1] is invalid polygon.
@@ -1750,11 +1809,32 @@ namespace DotRecast.Detour
                         }
 
                         // If starting really close the portal, advance.
-                        if (i == 0)
+                        // Unbound: also from an off-mesh connection's end, where the path starts
+                        // anew (Unity's: a link ending on a polygon edge adds no corner along it).
+                        if (i == 0 || (i == apexIndex + 1 && IsOffMeshConnection(path[apexIndex])))
                         {
                             var distSqr = DtUtils.DistancePtSegSqr2D(portalApex, left, right, out var t);
                             if (distSqr < RcMath.Sqr(0.001f))
                             {
+                                // Unbound: starting on an off-mesh connection's start, the start is
+                                // that connection's corner (Unity's: an agent placed there is on the
+                                // link at once).
+                                if (toType == DtPolyTypes.DT_POLYTYPE_OFFMESH_CONNECTION)
+                                {
+                                    stat = AppendVertex(left, DtStraightPathFlags.DT_STRAIGHTPATH_OFFMESH_CONNECTION, path[i + 1], straightPath, ref straightPathCount, maxStraightPath);
+                                    if (!stat.InProgress())
+                                    {
+                                        return stat;
+                                    }
+
+                                    portalApex = left;
+                                    apexIndex = i;
+                                    leftIndex = i;
+                                    rightIndex = i;
+                                    portalLeft = portalApex;
+                                    portalRight = portalApex;
+                                }
+
                                 continue;
                             }
                         }
@@ -1770,7 +1850,14 @@ namespace DotRecast.Detour
                     // Right vertex.
                     if (DtUtils.TriArea2D(portalApex, portalRight, right) <= 0.0f)
                     {
-                        if (RcVec.Equal(portalApex, portalRight) || DtUtils.TriArea2D(portalApex, portalLeft, right) > 0.0f)
+                        // Unbound: a ground vertex in line with the other side's ground vertex
+                        // narrows the funnel (Unity's: a path running straight through a portal's
+                        // end turns no corner there; off-mesh connections keep their corners at
+                        // both ends).
+                        float area = DtUtils.TriArea2D(portalApex, portalLeft, right);
+                        if (RcVec.Equal(portalApex, portalRight) || area > 0.0f
+                            || (area == 0.0f && toType == DtPolyTypes.DT_POLYTYPE_GROUND && leftPolyType == DtPolyTypes.DT_POLYTYPE_GROUND
+                                && !IsOffMeshConnection(path[leftIndex])))
                         {
                             portalRight = right;
                             rightPolyRef = (i + 1 < pathSize) ? path[i + 1] : 0;
@@ -1826,7 +1913,10 @@ namespace DotRecast.Detour
                     // Left vertex.
                     if (DtUtils.TriArea2D(portalApex, portalLeft, left) >= 0.0f)
                     {
-                        if (RcVec.Equal(portalApex, portalLeft) || DtUtils.TriArea2D(portalApex, portalRight, left) < 0.0f)
+                        float area = DtUtils.TriArea2D(portalApex, portalRight, left);
+                        if (RcVec.Equal(portalApex, portalLeft) || area < 0.0f
+                            || (area == 0.0f && toType == DtPolyTypes.DT_POLYTYPE_GROUND && rightPolyType == DtPolyTypes.DT_POLYTYPE_GROUND
+                                && !IsOffMeshConnection(path[rightIndex])))
                         {
                             portalLeft = left;
                             leftPolyRef = (i + 1 < pathSize) ? path[i + 1] : 0;
@@ -2180,6 +2270,7 @@ namespace DotRecast.Detour
                         right.Y = fromTile.data.verts[fromPoly.verts[v] * 3 + 1];
                         right.Z = fromTile.data.verts[fromPoly.verts[v] * 3 + 2];
 
+                        WideLinkPortal(fromTile, fromPoly, v, true, ref left, ref right);
                         return DtStatus.DT_SUCCESS;
                     }
                 }
@@ -2202,6 +2293,7 @@ namespace DotRecast.Detour
                         right.Y = toTile.data.verts[toPoly.verts[v] * 3 + 1];
                         right.Z = toTile.data.verts[toPoly.verts[v] * 3 + 2];
 
+                        WideLinkPortal(toTile, toPoly, v, false, ref left, ref right);
                         return DtStatus.DT_SUCCESS;
                     }
                 }

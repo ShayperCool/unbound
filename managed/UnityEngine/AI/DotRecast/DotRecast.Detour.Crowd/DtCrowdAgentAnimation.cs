@@ -30,5 +30,7 @@ namespace DotRecast.Detour.Crowd
         public RcVec3f endPos = new RcVec3f();
         public long polyRef;
         public float t, tmax;
+        /// Unbound: the link's id (its connection's userId).
+        public int linkId;
     }
 }
