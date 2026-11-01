@@ -10,11 +10,13 @@
 
 Every run works on a fresh copy of the probe's Assets/Packages/ProjectSettings under
 $XDG_CACHE_HOME/unbound/validation/runs/editorcallbacks/<label>; nothing is written here.
-Editors run through the shared heavy-job launcher, on the GPU (a private Xvfb and VirtualGL),
-each under a watchdog.
+Editors run through tests/editor_runner.py: each takes its own GPU lease of the shared launcher,
+whose supervisor starts the private Xvfb and VirtualGL inside it, checks the renderer, and stops
+the Editor at the hard deadline or when the capture goes silent too long. Do not wrap this
+driver in with-heavy-job.
 """
 import argparse
-import filecmp
+import json
 import os
 from pathlib import Path
 import shutil
@@ -22,12 +24,19 @@ import subprocess
 import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import editor_path, reference_file, run_root
+from probe_paths import reference_file, run_root
+from editor_runner import EditorJob, publish as publish_reference, run_parallel, summary
 
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 OUT = 'EDITOR_CALLBACKS_OUT'
+# The hard deadline of every Editor run (the earlier runner's watchdog).
+TIMEOUT = 900
+# The longest silence of values.jsonl, cold import before its first line included. Two parallel
+# GPU captures of 6000.0.71f1 loaded their fresh projects in 26.3 s and wrote all 399 lines
+# 39 s after start; the budget leaves room for the 140 s cold-refresh outliers seen elsewhere.
+PROGRESS_TIMEOUT = 300
 
 
 def copy_project(dest, authored=True):
@@ -45,40 +54,28 @@ def copy_project(dest, authored=True):
     return dest
 
 
-def display():
-    """A private X server for the Editors, which draw with the GPU through VirtualGL."""
-    for number in range(120, 161):
-        if not Path(f'/tmp/.X{number}-lock').exists():
-            server = subprocess.Popen(['Xvfb', f':{number}', '-screen', '0', '1920x1080x24', '-nolisten', 'tcp'],
-                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            return f':{number}', server
-    sys.exit('no free X display')
-
-
 def run_editors(work, repeats, method, batchmode=True):
-    name, server = display()
-    try:
-        jobs = []
-        for repeat in repeats:
-            project = copy_project(work/'projects'/repeat, authored=method != 'ProbeSetup.Build')
-            out = work/repeat/'values.jsonl'
-            out.parent.mkdir(parents=True, exist_ok=True)
-            if out.exists():
-                sys.exit(f'refusing to overwrite capture: {out}')
-            env = dict(os.environ, DISPLAY=name)
-            if method != 'ProbeSetup.Build':
-                env[OUT] = str(out)
-            command = [str(LAUNCHER), 'timeout', '-s', 'KILL', '900', 'vglrun', '-d', 'egl', str(editor_path()),
-                       *(['-batchmode'] if batchmode else []), '-projectPath', str(project),
-                       '-executeMethod', method, '-logFile', str(work/repeat/'editor.log')]
-            if method == 'ProbeSetup.Build':
-                command.append('-quit')
-            jobs.append(subprocess.Popen(command, env=env))
-        codes = [job.wait() for job in jobs]
-    finally:
-        server.terminate()
-    print('editor exits', codes)
-    return int(any(codes))
+    jobs = []
+    for repeat in repeats:
+        project = copy_project(work/'projects'/repeat, authored=method != 'ProbeSetup.Build')
+        out = work/repeat/'values.jsonl'
+        out.parent.mkdir(parents=True, exist_ok=True)
+        if out.exists():
+            sys.exit(f'refusing to overwrite capture: {out}')
+        env, progress = {}, {}
+        args = ['-executeMethod', method]
+        if method == 'ProbeSetup.Build':
+            args.append('-quit')
+        else:
+            env[OUT] = str(out)
+            progress = {'progress_files': [out], 'progress_timeout': PROGRESS_TIMEOUT}
+        jobs.append(EditorJob(project, work/repeat/'editor.log', work/repeat, args, batch=batchmode,
+                              graphics=True, env=env, timeout=TIMEOUT, screen='1920x1080x24',
+                              label=repeat, **progress))
+    results = run_parallel(jobs)
+    for result in results:
+        print(summary(result))
+    return int(any(r.get('exit_code') != 0 or r.get('forced_exit') for r in results))
 
 
 def create(work):
@@ -91,19 +88,27 @@ def editor(work, batchmode):
     return run_editors(work, ['native1', 'native2'], 'ProbeSetup.Record', batchmode)
 
 
+def finished(directory):
+    """A capture that reached the probe's last step (its done record)."""
+    path = Path(directory)/'values.jsonl'
+    if not path.exists():
+        return 'values.jsonl is missing'
+    try:
+        rows = [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+    except json.JSONDecodeError:
+        return 'values.jsonl is not complete JSON lines'
+    if not any(row.get('event') == 'done' for row in rows):
+        return 'values.jsonl has no done record'
+    return None
+
+
 def publish(work):
-    a, b = work/'native1'/'values.jsonl', work/'native2'/'values.jsonl'
-    if not filecmp.cmp(a, b, shallow=False):
-        sys.exit('the two Editor captures differ; not publishing')
-    for repeat in ('native1', 'native2'):
-        log = (work/repeat/'editor.log').read_text(errors='replace')
-        if 'NVIDIA' not in next((line for line in log.splitlines() if 'Renderer:' in line), ''):
-            sys.exit(f'{repeat}: NVIDIA GPU renderer was not verified')
-    target = reference_file(PROBE, 'jsonl')
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(a, target)
-    print('published', target)
-    return 0
+    def write(target, first):
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(first/'values.jsonl', target)
+        print('published', target)
+    return publish_reference([work/'native1', work/'native2'], reference_file(PROBE, 'jsonl'),
+                             lambda directory: ['values.jsonl'], write, complete=[finished], gpu=True)
 
 
 def unbound(work):

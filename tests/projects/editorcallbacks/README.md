@@ -37,7 +37,9 @@ python3 tests/projects/editorcallbacks/compare.py tests/projects/editorcallbacks
 ```
 
 `editor` runs two independent interactive Editors (windows on a private Xvfb, on the GPU through
-VirtualGL; `--batchmode` for batch-mode ones) on fresh cache copies; `publish` requires the two
-captures to be byte-identical and the NVIDIA renderer in both logs. `compare.py` compares the
+VirtualGL; `--batchmode` for batch-mode ones) on fresh cache copies through `tests/editor_runner.py`
+(each in its own GPU lease, hard deadline 900 s, stopped after 300 s without a new capture line);
+`publish` requires both Editor results to be complete with the NVIDIA renderer, both captures to
+reach their `done` record and be byte-identical, and no existing reference. `compare.py` compares the
 event sequence in order and every prefab record field by field, exactly, and lists every
 difference (see its docstring for the one normalization: the Editor's Edit mode domain).
