@@ -128,6 +128,35 @@ canceling it terminates only the build scopes it created. Compare total batch
 completion time, not just individual job latency. A managed-only comparison
 does not establish the best Cargo parallelism or performance under Editor load.
 
+## Build isolation
+
+Every child build keeps both its intermediates and its final outputs private. Give each
+build its own `CARGO_TARGET_DIR` on the SSD cache and do not set a shared
+`CARGO_BUILD_BUILD_DIR`. A private target directory is not enough if the build
+directory is shared.
+
+A pilot of two worktrees sharing one build directory showed the failure. Their workspace
+crates resolved to the same unit directories and build-script `OUT_DIR`s. Because Cargo
+judges freshness by modification time, the second build reused the first worktree's stale
+compiled crate, overwrote its build-script outputs and compiled its `native/` sources.
+Shared `OUT_DIR`s and mtime freshness are therefore not isolation.
+
+Copying or reusing a warm target from another worktree has the same risk: dep-info and
+build-script inputs record absolute paths. Before trusting such a target, show that the
+current workspace was compiled and that its `OUT_DIR`s are its own. Invalidate only the
+copied or owned workspace units, not the whole registry.
+
+The `unbound-host` build script writes `libunbound_physx.so` and the managed build to
+`$CARGO_TARGET_DIR/managed`, or to `<checkout>/target` when that variable is not set in the
+environment (for example when the target directory comes only from a config file). These
+files are outside `OUT_DIR` and Cargo does not track them, so check that they exist in the
+private target. `UNBOUND_SKIP_MANAGED_BUILD=1` skips the managed build.
+
+Native builds are not byte-reproducible across target directories. PhysX rebuilt from
+unchanged source and ABI has produced different `.so` hashes. Reuse is still decided by
+the actual bytes in the complete artifact manifest. A differing new library is a
+different artifact: it never rewrites a frozen runtime or its manifest.
+
 ## Moving active caches
 
 Stop new jobs and wait for existing commands and their project-specific helpers
