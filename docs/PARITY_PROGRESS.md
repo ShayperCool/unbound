@@ -2459,3 +2459,14 @@ Platform, lifecycle exact; messages 316/316. Managed 1380/1391, same eleven name
 API 0 errors/2314 types; generated stubs byte-identical to the accepted generator output, no stub regeneration.
 Open: unload timing, stack frames (resolved project path, inlined dispatch), StackTraceUtility stub, audio/component/material sizes, compressed texture creation; GPU identity is not read (marshalling disabled in CoreModule).
 Report: `~/.cache/unbound/validation/runs/claude-fresh-20261101b/platformconsts/`.
+
+### 2026-11-01 platform facts integration on Root875, matching correction pending
+
+Ordinary merge of platform package `793acef7` onto `875cfacd`; accepted Rust/native/audio, CRT/callback/module behavior retained.
+Added pre-mutation log containment and rotation checks, stdout mode, real-time URL recording completion, and checked EGL cleanup without shared-display termination.
+Latest compiled source `022ee063`: TestCore equals packaged Core; 25/40 affected tests pass, including all seven injected EGL cleanup controls.
+Fifteen log tests failed at fixture setup because the existing validation-cache relocation was denied; corrected source adds that existing permitted cache root and an authored-target veto, not yet rebuilt.
+Comparator controls 9/9 and recording protocol controls 4/4; historical appfacts loaded 493/555 and solo 497/555 remain intact, including all 84 residuals and raw changes.
+Three pure-managed attempts retained, including the prior commit-metadata Core mismatch; no current-source runtime or affected-probe acceptance claimed. Additional correction-cycle authorization pending.
+No new Native/Cargo, ABI/version/stub changes, broad suites or reference edits. Newer Root particle integration and final managed/API combination remain Root-owned.
+Full attempts, source correction, historical capture hashes and prepared matching commands: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-root875-20261101-t3-394c2f9d/PENDING_HANDOFF.md`.
