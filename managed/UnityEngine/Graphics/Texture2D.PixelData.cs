@@ -21,7 +21,7 @@ namespace UnityEngine
         /// <summary>The stored bytes of a mip level (no copy, as in Unity).</summary>
         public unsafe NativeArray<T> GetPixelData<T>(int mipLevel) where T : struct
         {
-            RequireReadable(true);
+            RequireReadable();
             CheckMip(mipLevel);
             EnterStore();
             int size = UnsafeUtility.SizeOf<T>();
