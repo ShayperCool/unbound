@@ -348,13 +348,19 @@ namespace UnityEngine.Tests
                             foreach (var list in lists) { list.List.Clear(); foreach (var entry in list.Items) list.List.Add(entry); }
                             dictionary.Clear();
                             foreach (var entry in entries) dictionary.Add(entry.Key, entry.Value);
+                            if (!field.IsInitOnly) field.SetValue(target, value);
                         });
                         if (clear) dictionary.Clear();
                     }
                     else if (value is IList list)
                     {
                         var entries = list.Cast<object>().ToArray();
-                        restore.Add(() => { list.Clear(); foreach (var entry in entries) list.Add(entry); });
+                        restore.Add(() =>
+                        {
+                            list.Clear();
+                            foreach (var entry in entries) list.Add(entry);
+                            if (!field.IsInitOnly) field.SetValue(target, value);
+                        });
                         if (clear) list.Clear();
                     }
                     else restore.Add(() => field.SetValue(target, value));
