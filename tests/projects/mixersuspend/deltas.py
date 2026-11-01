@@ -5,7 +5,7 @@ import gzip
 import json
 import struct
 from pathlib import Path
-from compare import ATOL, RTOL, header
+from compare import ATOL, RTOL, header, raw
 
 p = argparse.ArgumentParser()
 p.add_argument('--release', required=True)
@@ -20,7 +20,7 @@ summary = {}
 with gzip.open(a.report, 'xt') as out:
     for key, meta in left.items():
         if not isinstance(meta, dict) or 'file' not in meta: continue
-        x, y = [(root/meta['file']).read_bytes() for root in (reference, a.candidate)]
+        x, y = [raw(root,meta) for root in (reference, a.candidate)]
         assert len(x) == len(y)
         changed = outside = 0
         max_absolute = 0.0

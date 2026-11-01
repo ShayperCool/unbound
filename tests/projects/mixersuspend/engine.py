@@ -28,10 +28,13 @@ artifacts = [a.runtime/'unbound', *sorted((a.runtime/'managed').rglob('*'))]
 hashes = {str(f.relative_to(a.runtime)): hashlib.sha256(f.read_bytes()).hexdigest() for f in artifacts if f.is_file()}
 (a.work/'runtime-hashes.json').write_text(json.dumps(hashes, indent=2)+'\n')
 (a.work/'command.json').write_text(json.dumps(command, indent=2)+'\n')
-env = dict(os.environ, SUSPEND_PROBE_OUT=str(output), SUSPEND_PROBE_RATE=str(a.rate), SUSPEND_PROBE_ENGINE='1', UNBOUND_MANAGED_DIR=str(a.runtime/'managed'), LD_LIBRARY_PATH=str(a.runtime/'managed'))
+env = dict(os.environ, UseSharedCompilation="false", MSBUILDDISABLENODEREUSE="1", DOTNET_CLI_USE_MSBUILD_SERVER="0", SUSPEND_PROBE_OUT=str(output), SUSPEND_PROBE_RATE=str(a.rate), SUSPEND_PROBE_ENGINE='1', UNBOUND_MANAGED_DIR=str(a.runtime/'managed'), LD_LIBRARY_PATH=str(a.runtime/'managed'))
 with (a.work/'engine.log').open('w') as log:
     result = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT)
 (a.work/'exit.json').write_text(json.dumps({'returncode':result.returncode})+'\n')
 if result.returncode: raise SystemExit(result.returncode)
 from verify import verify
 verify(output, a.release, a.rate)
+
+from pack import pack
+pack(output)

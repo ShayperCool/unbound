@@ -28,6 +28,14 @@ public static class ProbeRunner
     }
     public static void Record()
     {
+        try { EditorSceneManager.OpenScene("Assets/Scenes/Probe.unity"); EditorApplication.EnterPlaymode(); } catch(Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+    }
+    public static void Prepare()
+    {
+        try { Create(); } catch(Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+    }
+    static void Create()
+    {
         T("MixerEffectDefinitions").GetMethod("Refresh", F).Invoke(null, null);
         Directory.CreateDirectory("Assets/Resources");
         foreach (string key in SuspendProbe.Cases) {
@@ -40,10 +48,11 @@ public static class ProbeRunner
             if (key != "default") suspend.boolValue = !key.EndsWith("disabled");
             threshold.floatValue=SuspendProbe.Threshold(key);
             serialized.ApplyModifiedPropertiesWithoutUndo();
+            
             var master = Get(mixer,"masterGroup");
             var child = Call(mixer,"CreateNewGroup","Child",true); Call(mixer,"AddChildToParent",child,master);
             var sibling = Call(mixer,"CreateNewGroup","Sibling",true); Call(mixer,"AddChildToParent",sibling,master);
-            var effect = Effect(mixer,key == "parent" ? master : child,"Echo",new float[]{SuspendProbe.Delay(key),0,0,1,1},key=="effect_bypassed");
+            var effect = Effect(mixer,key == "parent" ? master : child,"Echo",new float[]{SuspendProbe.Delay(key),key.StartsWith("threshold")||key.StartsWith("level")?1:0,0,1,1},key=="effect_bypassed");
             if(key.StartsWith("lp") || key.StartsWith("hp")) {
                 var filter=Effect(mixer,child,key.StartsWith("lp")?"Lowpass":"Highpass",null);
                 Call(filter,"SetValueForParameter",mixer,Get(mixer,"TargetSnapshot"),"Cutoff freq",10f);
@@ -70,6 +79,6 @@ public static class ProbeRunner
         new GameObject("SuspendProbe").AddComponent<SuspendProbe>(); Directory.CreateDirectory("Assets/Scenes");
         EditorSceneManager.SaveScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene(),"Assets/Scenes/Probe.unity");
         EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene("Assets/Scenes/Probe.unity",true)};
-        EditorApplication.EnterPlaymode();
+        EditorApplication.Exit(0);
     }
 }

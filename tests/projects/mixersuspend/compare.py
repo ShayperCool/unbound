@@ -18,12 +18,22 @@ def header(root):
     return json.loads(file.read_text()) if file.exists() else {}
 
 
+def raw(root, meta):
+    if not isinstance(meta,dict) or "file" not in meta: return b""
+    file=root/meta["file"]
+    if file.exists(): return file.read_bytes()
+    packed=file.with_suffix(file.suffix+".gz")
+    return gzip.open(packed,"rb").read() if packed.exists() else b""
+
+
 def samples(root, meta):
     values = array.array('f')
-    if isinstance(meta, dict) and 'file' in meta:
-        file = root/meta['file']
-        if file.exists(): values.frombytes(file.read_bytes())
+    data=raw(root,meta)
+    if len(data)%4: raise ValueError('Partial float in '+str(root)+'/'+str(meta))
+    values.frombytes(data)
+    if __import__('sys').byteorder != 'little': values.byteswap()
     return values
+
 
 
 def bad(a, b, sample, exact):
@@ -66,9 +76,23 @@ def compare(reference, candidate, report, exact=False, before=None):
         for key in sorted(set().union(*(m.keys() for m in manifests))):
             values = [m.get(key, MISSING) for m in manifests]
             record(key, values)
-            data = [samples(root, meta) for root, meta in zip(roots, values)]
-            for i in range(max(map(len, data))):
-                record(key, [v[i] if i < len(v) else MISSING for v in data], i)
+            data = [raw(root, meta) for root, meta in zip(roots, values)]
+            for start in range(0,max(map(len,data)),4096):
+                chunks=[v[start:start+4096] for v in data]
+                if len({v for v in chunks})==1:
+                    tested+=len(chunks[0])//4
+                    continue
+                floats=[]
+                for chunk in chunks:
+                    if len(chunk)%4: raise ValueError('Partial float for '+key)
+                    floats.append(struct.unpack('<'+'f'*(len(chunk)//4),chunk))
+                for i in range(max(map(len,floats))):
+                    record(key,[v[i] if i<len(v) else MISSING for v in floats],start//4+i)
+        for root,manifest in zip(roots,manifests):
+            expected={v['file'] for v in manifest.values() if isinstance(v,dict) and 'file' in v}
+            actual={p.name.removesuffix('.gz') for p in root.iterdir() if p.name!='capture.json'}
+            for file in sorted(actual-expected):
+                record('extra_file:'+str(root/file),[MISSING,file])
         result = dict(tested=tested, failed=failed, exact=exact, atol=0 if exact else ATOL,
                       rtol=0 if exact else RTOL, bit_changed=bit_changed, tolerated_changed=tolerated_changed,
                       roots=list(map(str, roots)), counts=counts)
