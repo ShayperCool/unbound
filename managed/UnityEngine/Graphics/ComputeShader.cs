@@ -157,6 +157,23 @@ namespace UnityEngine
             GfxStream.Dispatch(m_File, kernel, string.Join(" ", m_Keywords), threadGroupsX, threadGroupsY, threadGroupsZ, properties);
         }
 
+        public void DispatchIndirect(int kernelIndex, ComputeBuffer argsBuffer) => DispatchIndirect(kernelIndex, argsBuffer, 0);
+        public void DispatchIndirect(int kernelIndex, ComputeBuffer argsBuffer, uint argsOffset) =>
+            DispatchIndirect(kernelIndex, argsBuffer?.Storage, argsOffset, null);
+        public void DispatchIndirect(int kernelIndex, GraphicsBuffer argsBuffer) => DispatchIndirect(kernelIndex, argsBuffer, 0);
+        public void DispatchIndirect(int kernelIndex, GraphicsBuffer argsBuffer, uint argsOffset) =>
+            DispatchIndirect(kernelIndex, argsBuffer?.Storage, argsOffset, null);
+
+        /// <summary>A dispatch whose thread group counts are three <c>uint</c>s of a buffer at a
+        /// byte offset, read on the GPU when it runs.</summary>
+        internal void DispatchIndirect(int kernelIndex, GpuBufferStorage args, uint argsOffset, Dictionary<int, object> overrides)
+        {
+            var kernel = Kernel(kernelIndex);
+            if (!GpuBufferOps.IndirectArguments(args, argsOffset)) return;
+            var properties = Properties(kernelIndex, overrides);
+            GfxStream.Dispatch(m_File, kernel, string.Join(" ", m_Keywords), 0, 0, 0, properties, args.Handle, argsOffset);
+        }
+
         static readonly List<GfxStream.DispatchProperty> s_Properties = new List<GfxStream.DispatchProperty>();
 
         /// <summary>The dispatch's properties, handles resolved (resolving can upload, which must
