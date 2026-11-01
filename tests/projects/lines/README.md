@@ -89,3 +89,18 @@ first live pair through `editor_runner` (label `lines-blend-20261101b`, cases co
 `Cleanup mono` (36.8 s each), were complete (1869 records), byte-identical in `values.jsonl`
 and all nine images, and reproduced all 1853 existing records and the nine images byte for
 byte. The existing bytes of `values.jsonl` are unchanged; the new records follow them.
+
+## Offline geometry attribution
+
+`attribute_geometry.py` reads the saved combined raw union, image arrays and a
+pre-blend capture. It writes full component witnesses, cap/tangent controls and
+CPU raster diagnostics to an explicit cache directory. It starts no engine,
+Editor or build, and does not change the reference, comparator or tolerances.
+See [the attribution and remaining blockers](../../../docs/LINE_GEOMETRY_ATTRIBUTION.md).
+
+```sh
+~/.cache/compat/with-heavy-job --kind tool python3 tests/projects/lines/attribute_geometry.py \
+  --batch /path/to/saved/combined-report \
+  --preblend /path/to/saved/pre-blend/unbound \
+  --out ~/.cache/unbound/validation/runs/geometry-attribution
+```

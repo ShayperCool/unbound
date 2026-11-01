@@ -120,6 +120,7 @@ namespace UnityEngine
     internal struct LineFacing
     {
         internal bool TransformZ;
+        internal Vector3 TransformForward;
         internal Vector3 CameraPosition;
         internal Vector3 CameraForward;
     }
@@ -256,13 +257,13 @@ namespace UnityEngine
             else EffectiveDirections(segments);
 
             int corners = Math.Max(0, p.NumCornerVertices);
-            var faceNormal = facing.TransformZ ? new Vector3(0f, 0f, -1f) : -facing.CameraForward;
+            var faceNormal = facing.TransformZ ? -facing.TransformForward : -facing.CameraForward;
             float va = 0.5f + 0.5f * p.TextureScale.y, vb = 0.5f - 0.5f * p.TextureScale.y;
             for (int i = 0; i < n; i++)
             {
                 var point = points[i % count];
                 float h = m_Half[i];
-                var normal = facing.TransformZ ? new Vector3(0f, 0f, -1f) : facing.CameraPosition - point;
+                var normal = facing.TransformZ ? faceNormal : facing.CameraPosition - point;
                 float u = U(p, i, n, loop, total);
                 var color = m_Color[i];
                 bool hasIn = i > 0 || loop, hasOut = i < segments || loop;
@@ -501,7 +502,7 @@ namespace UnityEngine
             Add(center, new Vector2(pair.U, 0.5f), pair.Color, normal, pair.Tangent);
             var radius = pair.B - center;
             float r = radius.magnitude;
-            var plane = facing.TransformZ ? Vector3.forward : facing.CameraForward;
+            var plane = facing.TransformZ ? facing.TransformForward : facing.CameraForward;
             var outward = Vector3.Cross(plane, radius).normalized;
             if (Vector3.Dot(outward, direction) < 0f) outward = -outward;
             if (negative) outward = -outward;
@@ -571,6 +572,7 @@ namespace UnityEngine
         internal static LineFacing Facing(LineParameters p, Vector3 cameraPosition, Vector3 cameraForward) => new LineFacing
         {
             TransformZ = p.Alignment == LineAlignment.TransformZ,
+            TransformForward = Vector3.forward,
             CameraPosition = cameraPosition,
             CameraForward = cameraForward.normalized,
         };
@@ -744,10 +746,14 @@ namespace UnityEngine
         /// line) as seen from a camera. A local line facing the view is built from its world
         /// points (widths are world units) and taken back to local space; facing its Z axis it is
         /// built in local space. Returns the matrix from build space to line space.</summary>
-        bool BuildStrip(Vector3 cameraPosition, Vector3 cameraForward, out Matrix4x4 toLineSpace)
+        bool BuildStrip(Vector3 cameraPosition, Vector3 cameraForward, out Matrix4x4 toLineSpace, bool rendering = false)
         {
             toLineSpace = Matrix4x4.identity;
             var facing = LineDrawing.Facing(m_Parameters, cameraPosition, cameraForward);
+            // BakeMesh uses the build space's Z axis. Rendering a world-space TransformZ line
+            // uses its object's forward instead; local lines receive that rotation in their model.
+            // Existing tilted image: tests/projects/lines img.TransformZ.L.c2cap2.color.
+            if (rendering && m_UseWorldSpace && facing.TransformZ) facing.TransformForward = transform.forward;
             if (m_UseWorldSpace || facing.TransformZ)
                 return m_Strip.Build(m_Positions, null, m_Loop, m_Parameters, facing);
             toLineSpace = transform.worldToLocalMatrix;
@@ -778,7 +784,7 @@ namespace UnityEngine
 
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
-            if (!BuildStrip(camera.Position, camera.Forward, out var toLine)) return;
+            if (!BuildStrip(camera.Position, camera.Forward, out var toLine, rendering: true)) return;
             var mesh = LineDrawing.MeshFor(m_Meshes, camera.Camera, "LineRenderer");
             m_Strip.WriteTo(mesh, toLine);
             FrameBuilder.AddMeshDraws(this, mesh, m_UseWorldSpace ? Matrix4x4.identity : transform.localToWorldMatrix, Color.white, camera, into);

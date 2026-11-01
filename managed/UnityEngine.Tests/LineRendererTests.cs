@@ -100,6 +100,65 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(camera.gameObject);
         }
 
+        /// <summary>The authored tilted TransformZ image uses the object's forward for rendering,
+        /// while its BakeMesh reference stays in XY. These render vertices are an offline replay
+        /// whose raster matches the saved Native image at the original 2/255 threshold, not a new
+        /// Native mesh capture. See docs/LINE_GEOMETRY_ATTRIBUTION.md.</summary>
+        [Fact]
+        public void WorldTransformZLineRendersInItsTransformPlaneAndKeepsItsBakePlane()
+        {
+            var go = new GameObject("line");
+            var camera = new GameObject("camera").AddComponent<Camera>();
+            var baked = new Mesh();
+            try
+            {
+                camera.transform.position = new Vector3(0f, 0f, -10f);
+                var line = go.AddComponent<LineRenderer>();
+                line.alignment = LineAlignment.TransformZ;
+                line.widthMultiplier = 0.4f;
+                line.numCornerVertices = 2;
+                line.numCapVertices = 2;
+                line.positionCount = 3;
+                line.SetPositions(new[] { new Vector3(-1f, -0.5f, 0f), new Vector3(1f, -0.5f, 0f), new Vector3(1f, 1f, 0f) });
+                go.transform.rotation = Quaternion.Euler(30f, 20f, 0f);
+                line.BakeMesh(baked, camera);
+                var before = baked.vertices;
+                Assert.Equal(20, before.Length);
+                foreach (var v in before) Assert.InRange(v.z, -1e-5f, 1e-5f);
+
+                // No material is needed to inspect the collection mesh, so this test needs no GPU.
+                line.CollectDraws(new Unbound.Runtime.FrameBuilder.CameraContext
+                {
+                    Camera = camera, Position = camera.transform.position, Forward = Vector3.forward,
+                }, new System.Collections.Generic.List<Unbound.Runtime.FrameBuilder.DrawItem>());
+                var meshes = (System.Collections.Generic.Dictionary<Camera, Mesh>)typeof(LineRenderer)
+                    .GetField("m_Meshes", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic)
+                    .GetValue(line);
+                float[] expected = {
+                    -1f, -0.5f, 0f, -1f, -0.329593742f, 0.104698171f, -1.16543277f, -0.441653534f, 0.0960608654f,
+                    -1.16543277f, -0.612059792f, -0.00863730605f, -1f, -0.670406258f, -0.104698171f, -1f, -0.670406258f, -0.104698171f,
+                    -1f, -0.329593742f, 0.104698171f, 0.840600981f, -0.696283391f, -0.0625806696f, 0.840600981f, -0.355470875f, 0.146815673f,
+                    1.08537523f, -0.57741081f, -0.0786355013f, 0.840600981f, -0.355470875f, 0.146815673f, 1.21647803f, -0.355470875f, 0.010007616f,
+                    0.840600981f, -0.355470875f, 0.146815673f, 1.18793852f, 1f, -0.0684040287f, 0.812061476f, 1f, 0.0684040287f,
+                    1f, 1f, 0f, 0.812061476f, 1f, 0.0684040287f, 0.935650551f, 1.15f, 0.115581782f,
+                    1.12358908f, 1.15f, 0.0471777538f, 1.18793852f, 1f, -0.0684040287f,
+                };
+                var rendered = meshes[camera].vertices;
+                Assert.Equal(expected.Length / 3, rendered.Length);
+                for (int i = 0; i < rendered.Length; i++)
+                    for (int axis = 0; axis < 3; axis++)
+                        Assert.InRange(rendered[i][axis], expected[3 * i + axis] - 1e-5f, expected[3 * i + axis] + 1e-5f);
+                line.BakeMesh(baked, camera);
+                Assert.Equal(before, baked.vertices);
+            }
+            finally
+            {
+                Object.DestroyImmediate(baked);
+                Object.DestroyImmediate(go);
+                Object.DestroyImmediate(camera.gameObject);
+            }
+        }
+
         [Fact]
         public void TrailsRecordMovementAndForgetOldPoints()
         {
