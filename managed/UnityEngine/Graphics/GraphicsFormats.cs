@@ -269,6 +269,24 @@ namespace UnityEngine.Experimental.Rendering
             return GraphicsFormat.None;
         }
 
+        // What a Texture2D reports as its graphicsFormat where that differs from GetGraphicsFormat,
+        // measured on Unity 6000.0.71f1 (tests/projects/texturepixels *.info). ARGB32 and Alpha8
+        // report GraphicsFormat values without an enum name.
+        internal const GraphicsFormat Texture2DARGB32UNorm = (GraphicsFormat)88;
+        internal const GraphicsFormat Texture2DARGB32SRGB = (GraphicsFormat)87;
+        internal const GraphicsFormat Texture2DAlpha8 = (GraphicsFormat)54;
+
+        /// <summary>A Texture2D's graphicsFormat: ARGB32 and Alpha8 report the unnamed values above, R8
+        /// and RG16 their sRGB formats for sRGB data; other formats as <see cref="GetGraphicsFormat(TextureFormat, bool)"/>.</summary>
+        internal static GraphicsFormat Texture2DGraphicsFormat(TextureFormat format, bool isSRGB) => format switch
+        {
+            TextureFormat.ARGB32 => isSRGB ? Texture2DARGB32SRGB : Texture2DARGB32UNorm,
+            TextureFormat.Alpha8 => Texture2DAlpha8,
+            TextureFormat.R8 => isSRGB ? GraphicsFormat.R8_SRGB : GraphicsFormat.R8_UNorm,
+            TextureFormat.RG16 => isSRGB ? GraphicsFormat.R8G8_SRGB : GraphicsFormat.R8G8_UNorm,
+            _ => GetGraphicsFormat(format, isSRGB),
+        };
+
         public static TextureFormat GetTextureFormat(GraphicsFormat format)
         {
             foreach (var (t, linear, srgb) in s_TextureFormats)

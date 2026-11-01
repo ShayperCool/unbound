@@ -128,8 +128,9 @@ namespace UnityEngine.Tests
         {
             var argb = new Texture2D(1, 1, TextureFormat.ARGB32, false, true) { hideFlags = HideFlags.HideAndDontSave };
             var alpha = new Texture2D(1, 1, TextureFormat.Alpha8, false, true) { hideFlags = HideFlags.HideAndDontSave };
-            Assert.Equal((GraphicsFormat)88, argb.graphicsFormat);
-            Assert.Equal((GraphicsFormat)54, alpha.graphicsFormat);
+            Assert.Equal(GraphicsFormatUtility.Texture2DARGB32UNorm, argb.graphicsFormat);
+            Assert.Equal(88, (int)argb.graphicsFormat);
+            Assert.Equal(54, (int)alpha.graphicsFormat);
             Object.DestroyImmediate(argb);
             Object.DestroyImmediate(alpha);
         }
