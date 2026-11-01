@@ -100,6 +100,16 @@ offline parse of the same bake (LightingData.asset sha256 `e5de0e37…`):
 `0.18028377 0.22571412 0.30692285`. That value only binds the input. It neither confirms nor
 refutes anything.
 
+Result (4 launches, all gated, repeats byte-identical; linear `ea1a9761…`, gamma `05e8aeb7…`):
+one predeclared rule holds for all 8 settings, `A=one R=x M=srgb`. That is
+`unity_IndirectSpecColor.rgb = L0 * reflectionIntensity` in linear, and
+`LinearToGammaSpace(L0 * reflectionIntensity)` per channel in gamma; ambientIntensity has no effect.
+The largest errors are 3e-9 (linear) and 6e-8 (gamma). Every other candidate misses by at least 0.011.
+The immediate capture equals the settled one in every setting. Alpha is reflectionIntensity (recorded,
+not part of the rule). The Editor exposes no serialized ambient probe, so L0 is the offline parse above.
+The Standard sphere (tier High, BRDF1) is 0.02 x ISC in linear and 0.72 x 0.2209163 x ISC in gamma,
+within 3.4e-9, and its bytes are the predicted encodings.
+
 Not covered: a Custom default reflection, `DynamicGI.UpdateEnvironment`, Skybox/Flat ambient
 modes, other skyboxes, authored (rather than script-set) intensities, and bakes other than this
 one.
