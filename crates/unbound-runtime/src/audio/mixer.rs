@@ -357,20 +357,31 @@ impl Mixer {
 
     /// Switches to another configuration (`AudioSettings.Reset`): every voice stops, the dsp
     /// clock keeps its time in seconds.
-    pub fn reconfigure(&mut self, config: MixerConfig) {
+    pub fn validate_configuration(&self, config: &MixerConfig) -> anyhow::Result<()> {
+        for node in self.group_nodes.values() {
+            for effect in &node.spec.effects {
+                effect.validate(config.sample_rate)?;
+            }
+        }
+        Ok(())
+    }
+
+    pub fn reconfigure(&mut self, config: MixerConfig) -> anyhow::Result<()> {
+        self.validate_configuration(&config)?;
         let seconds = self.dsp_time();
         self.config = config;
         self.frames = frame_of(seconds, config.sample_rate);
         for node in self.group_nodes.values_mut() {
             node.rendered = 0;
             node.effects.clear();
-            node.update(node.spec.clone(), config.sample_rate);
+            node.update(node.spec.clone(), config.sample_rate)?;
         }
         for source in self.sources.values_mut() {
             source.main = None;
             source.one_shots.clear();
             source.pending_position = 0.0;
         }
+        Ok(())
     }
 
     pub fn set_callback(&mut self, callback: Option<Callback>) {
@@ -448,6 +459,7 @@ impl Mixer {
     /// Updates routing and parameters without discarding the filters' delay lines.
     pub fn configure_group(&mut self, spec: GroupSpec) -> anyhow::Result<()> {
         for effect in &spec.effects {
+            effect.validate(self.config.sample_rate)?;
             anyhow::ensure!(
                 matches!(effect.kind.as_str(), "Attenuation" | "Lowpass" | "Highpass" | "Echo")
                     || effect.bypass
@@ -478,7 +490,7 @@ impl Mixer {
             effects: Vec::new(),
             buffer: vec![0.0; BLOCK * 2],
         });
-        node.update(spec, self.config.sample_rate);
+        node.update(spec, self.config.sample_rate)?;
         // Children mix into parents. Stable order also makes independent sibling sums deterministic.
         let depth = |h: u64| {
             let mut d = 0;
@@ -1610,6 +1622,39 @@ mod tests {
         assert_eq!(m.group_nodes[&3].spec.parent, 4);
         assert_eq!(m.group_nodes[&3].spec.effects[0].kind, "Lowpass");
     }
+    #[test]
+    fn malformed_echo_rates_fail_before_allocating_or_replacing_groups() {
+        for delay in [500.0, 5000.0] {
+            let mut mixer = Mixer::new(MixerConfig {
+                sample_rate: i32::MAX as u32,
+                ..Default::default()
+            });
+            let mut spec = filter_group(3, 0, "Echo");
+            spec.effects[0].delay = delay;
+            let error = mixer.configure_group(spec).unwrap_err();
+            assert!(error.to_string().contains("8 MiB"));
+            assert!(mixer.group_nodes.is_empty());
+
+            let mut mixer = Mixer::new(MixerConfig::default());
+            mixer.configure_group(filter_group(3, 0, "Echo")).unwrap();
+            let before = mixer.config;
+            let spec = mixer.group_nodes[&3].spec.clone();
+            let error = mixer.reconfigure(MixerConfig {
+                sample_rate: i32::MAX as u32,
+                ..before
+            }).unwrap_err();
+            assert!(error.to_string().contains("8 MiB"));
+            assert_eq!(mixer.config, before);
+            assert_eq!(mixer.group_nodes[&3].spec, spec);
+            assert_eq!(mixer.group_nodes[&3].effects.len(), 1);
+        }
+        // The resource limit still admits a five-second stereo delay at 384 kHz.
+        let mut mixer = Mixer::new(MixerConfig { sample_rate: 384000, ..Default::default() });
+        let mut spec = filter_group(3, 0, "Echo");
+        spec.effects[0].delay = 5000.0;
+        mixer.configure_group(spec).unwrap();
+    }
+
     #[test]
     fn echo_matches_complete_native_stereo_impulse_and_tone_tails() {
         for rate in [48000, 44100] {

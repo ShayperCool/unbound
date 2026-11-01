@@ -28,6 +28,14 @@ pub struct EffectSpec {
     #[serde(default = "one")]
     pub wet_mix: f32,
 }
+impl EffectSpec {
+    pub(crate) fn validate(&self, rate: u32) -> anyhow::Result<()> {
+        if self.kind == "Echo" {
+            Echo::frames(self.delay, rate)?;
+        }
+        Ok(())
+    }
+}
 fn echo_delay() -> f32 {
     500.0
 }
@@ -140,14 +148,28 @@ struct Echo {
     position: usize,
 }
 impl Echo {
-    fn tune(&mut self, delay: f32, rate: u32) {
+    fn frames(delay: f32, rate: u32) -> anyhow::Result<usize> {
+        // A backend resource limit, not a restriction on Unity's parameter range.
+        const MAX_HISTORY_BYTES: usize = 8 * 1024 * 1024;
+        anyhow::ensure!(delay.is_finite(), "AudioMixer Echo delay must be finite");
         // Truncate fractional frames, then round up to the measured eight-frame boundary.
         let frames = (delay.clamp(1.0, 5000.0) * rate as f32 / 1000.0) as usize;
-        let frames = ((frames + 7) & !7).max(8);
+        let frames = frames.checked_add(7).map(|n| (n & !7).max(8));
+        let frames = frames.filter(|n| *n <= MAX_HISTORY_BYTES / std::mem::size_of::<[i16; 2]>());
+        frames.ok_or_else(|| anyhow::anyhow!(
+            "AudioMixer Echo delay buffer exceeds the supported 8 MiB limit at {rate} Hz"
+        ))
+    }
+    fn tune(&mut self, delay: f32, rate: u32) -> anyhow::Result<()> {
+        let frames = Self::frames(delay, rate)?;
         if self.history.len() != frames {
-            self.history = vec![[0; 2]; frames];
+            let mut history = Vec::new();
+            history.try_reserve_exact(frames)?;
+            history.resize(frames, [0; 2]);
+            self.history = history;
             self.position = 0;
         }
+        Ok(())
     }
     fn process(&mut self, samples: &mut [f32], spec: &EffectSpec) {
         let decay = spec.decay.clamp(0.0, 1.0);
@@ -177,7 +199,7 @@ pub struct Effect {
     gain: f32,
 }
 impl Effect {
-    pub fn new(spec: EffectSpec, rate: u32) -> Self {
+    pub fn new(spec: EffectSpec, rate: u32) -> anyhow::Result<Self> {
         let mut effect = Self {
             spec: spec.clone(),
             stages: Default::default(),
@@ -188,17 +210,20 @@ impl Effect {
             rate,
             gain: spec.gain,
         };
-        effect.update(spec, rate);
-        effect
+        effect.update(spec, rate)?;
+        Ok(effect)
     }
-    pub fn update(&mut self, spec: EffectSpec, rate: u32) {
+    pub fn update(&mut self, spec: EffectSpec, rate: u32) -> anyhow::Result<()> {
+        if spec.kind == "Echo" {
+            self.echo.tune(spec.delay, rate)?;
+        }
         self.rate = rate;
         self.spec = spec;
         self.tune();
+        Ok(())
     }
     fn tune(&mut self) {
         match self.spec.kind.as_str() {
-            "Echo" => self.echo.tune(self.spec.delay, self.rate),
             "Lowpass" => self.lowpass.tune(self.cutoff, self.resonance, self.rate),
             "Highpass" => self.stages[0].tune(true, self.cutoff, self.resonance, self.rate),
             _ => {}
@@ -252,7 +277,10 @@ pub struct GroupNode {
     pub rendered: usize,
 }
 impl GroupNode {
-    pub fn update(&mut self, spec: GroupSpec, rate: u32) {
+    pub fn update(&mut self, spec: GroupSpec, rate: u32) -> anyhow::Result<()> {
+        for effect in &spec.effects {
+            effect.validate(rate)?;
+        }
         let mut old = std::mem::take(&mut self.effects);
         self.effects = spec
             .effects
@@ -263,13 +291,14 @@ impl GroupNode {
                     .position(|e| e.spec.id == s.id && e.spec.kind == s.kind)
                 {
                     let mut effect = old.remove(index);
-                    effect.update(s.clone(), rate);
-                    effect
+                    effect.update(s.clone(), rate)?;
+                    Ok(effect)
                 } else {
                     Effect::new(s.clone(), rate)
                 }
             })
-            .collect();
+            .collect::<anyhow::Result<_>>()?;
         self.spec = spec;
+        Ok(())
     }
 }

@@ -211,7 +211,8 @@ impl Engine {
             capturing: Arc::new(AtomicBool::new(false)),
             capture_pending: Mutex::new(0.0),
         };
-        engine.start(configuration, open_device);
+        engine.start(configuration, open_device)
+            .expect("initial audio configuration has no mixer effects");
         engine
     }
 
@@ -220,7 +221,7 @@ impl Engine {
     }
 
     /// Opens the device (or not) and configures the mixer for it.
-    fn start(&self, requested: AudioConfiguration, open_device: bool) {
+    fn start(&self, requested: AudioConfiguration, open_device: bool) -> Result<()> {
         let mut rate = if requested.sample_rate > 0 {
             requested.sample_rate
         } else {
@@ -272,11 +273,12 @@ impl Engine {
                 virtual_voices: requested.num_virtual_voices.max(1) as usize,
                 rolloff_scale: self.settings.rolloff_scale,
                 doppler_factor: self.settings.doppler_factor,
-            });
+            })?;
             mixer.discard_output = device.is_none();
             self.clock.store(&mixer);
         }
         *self.device.lock().unwrap() = device;
+        Ok(())
     }
 
     pub fn has_device(&self) -> bool {
@@ -294,10 +296,24 @@ impl Engine {
 
     /// `AudioSettings.Reset`: restarts the output with another configuration; every voice stops.
     pub fn reset(&self, configuration: AudioConfiguration) -> bool {
+        let config = {
+            let mixer = self.mixer();
+            MixerConfig {
+                sample_rate: if configuration.sample_rate == 0 { VIRTUAL_SAMPLE_RATE } else { configuration.sample_rate },
+                ..mixer.config
+            }
+        };
+        if let Err(error) = self.mixer().validate_configuration(&config) {
+            tracing::warn!("audio reset rejected: {error:#}");
+            return false;
+        }
         let had_device = self.device.lock().unwrap().take().is_some();
-        *self.configuration.lock().unwrap() = configuration;
         let open = had_device || OPENER.read().unwrap().is_some();
-        self.start(configuration, open);
+        if let Err(error) = self.start(configuration, open) {
+            tracing::warn!("audio reset failed: {error:#}");
+            return false;
+        }
+        *self.configuration.lock().unwrap() = configuration;
         true
     }
 
@@ -567,5 +583,25 @@ mod tests {
         assert!(engine.reset(configuration));
         assert_eq!(engine.configuration().sample_rate, 2000);
         assert_eq!(engine.dsp_time(), 1.0);
+    }
+
+    #[test]
+    fn reset_rejects_oversized_echo_before_changing_the_configuration() {
+        let engine = Engine::new(ProjectAudioSettings::default(), false);
+        for delay in [500.0, 5000.0] {
+            let spec = serde_json::from_value(serde_json::json!({
+                "handle": 1, "parent": 0, "muted": false, "bypass": false,
+                "effects": [{ "id": "echo", "kind": "Echo", "delay": delay }]
+            })).unwrap();
+            engine.mixer().configure_group(spec).unwrap();
+            let before = engine.configuration();
+            assert!(!engine.reset(AudioConfiguration {
+                sample_rate: i32::MAX as u32,
+                ..before
+            }));
+            assert_eq!(engine.configuration(), before);
+        }
+        assert!(engine.reset(AudioConfiguration { sample_rate: 44100, ..engine.configuration() }));
+        assert_eq!(engine.configuration().sample_rate, 44100);
     }
 }

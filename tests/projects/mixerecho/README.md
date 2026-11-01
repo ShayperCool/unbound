@@ -43,6 +43,12 @@ Global effect-slot wet mixing is distinct from Echo's Drymix and Wetmix and rema
 Other releases, surround output, mixer auto-suspend and timed parameter changes are unmeasured.
 This fixture establishes only the listed Echo behavior, not full audio parity.
 
+The backend limits each stereo Echo history to 8 MiB. Group configuration and audio resets
+validate this limit before replacing the current configuration. Oversized histories caused by
+malformed sample rates fail explicitly; the measured delay bounds remain unchanged. Allocations
+within the limit use a fallible reserve. A five-second history at 384 kHz fits this resource
+budget, which does not establish behavior parity at that unmeasured rate.
+
 ## Reproduce
 
 Choose a fresh cache directory for every label. Both capture scripts wrap only their child
