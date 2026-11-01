@@ -15,14 +15,15 @@ namespace UnityEngine
         const int AnimatorClassId = 95;
         bool m_HumanConverted;
 
-        /// <summary>Whether the clip animates a human (muscle curves on the Animator).</summary>
+        /// <summary>Whether the clip animates a human (root, goal or muscle curves on the Animator);
+        /// MotionT/MotionQ alone are a generic root node's motion.</summary>
         internal bool HasHumanCurves
         {
             get
             {
                 EnsureHumanCurves();
                 foreach (var c in m_Curves)
-                    if (c.Binding.ClassId == AnimatorClassId && HumanClipImport.CurveIndex(c.Binding.Attribute) >= 0) return true;
+                    if (c.Binding.ClassId == AnimatorClassId && HumanClipImport.CurveIndex(c.Binding.Attribute) >= HumanClipImport.RootFirst) return true;
                 return false;
             }
         }

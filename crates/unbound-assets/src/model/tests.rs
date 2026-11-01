@@ -188,7 +188,7 @@ fn bind_pose_conversion_mirrors_and_scales() {
         node_index: HashMap::new(),
         sources: Vec::new(),
         material_index: HashMap::new(),
-        rest_anim: None,
+        rest_pose: None,
     };
     // A translation by (1, 2, 3) and a rotation of 90° about Z (x → y).
     let m = ufbx::Matrix {
@@ -341,4 +341,75 @@ fn omitted_settings_take_the_defaults_of_the_meta_version() {
     assert_eq!(old.material_import, MaterialImportMode::Legacy);
     assert_eq!(old.material_location, MaterialLocation::External);
     assert_eq!(old.avatar_setup, 1);
+}
+
+#[test]
+fn clip_frames_start_and_end_off_the_take_frames() {
+    let fps = 24.0;
+    let times = frame_times(4.5 / fps, 7.5 / fps, fps);
+    let frames: Vec<f64> = times.iter().map(|t| (t * fps * 100.0).round() / 100.0).collect();
+    assert_eq!(frames, vec![4.5, 5.0, 6.0, 7.0, 7.5]);
+    let whole = frame_times(0.0, 2.0 / fps, fps);
+    assert_eq!(whole.len(), 3);
+}
+
+#[test]
+fn clip_ranges_interpolate_their_ends() {
+    let keys: Vec<Key<1>> = (0..5).map(|i| Key { time: i as f32, value: [i as f32 * 2.0] }).collect();
+    let out = clip_range(&keys, 0.5, 2.5, lerp_key);
+    let pairs: Vec<(f32, f32)> = out.iter().map(|k| (k.time, k.value[0])).collect();
+    assert_eq!(pairs, vec![(0.0, 1.0), (0.5, 2.0), (1.5, 4.0), (2.0, 5.0)]);
+}
+
+#[test]
+fn reads_clip_masks_curves_and_references() {
+    let item = meta(
+        r#"name: Walk
+takeName: Take 001
+internalID: -623603649343465320
+firstFrame: 6
+lastFrame: 30
+hasAdditiveReferencePose: 1
+additiveReferencePoseFrame: 18
+mirror: 1
+keepOriginalPositionY: 0
+curves:
+- name: Speed
+  curve:
+    serializedVersion: 2
+    curve:
+    - serializedVersion: 3
+      time: 0.5
+      value: 2
+      inSlope: 4
+      outSlope: -2
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0
+    preInfinity: 2
+    postInfinity: 1
+transformMask:
+- path: 
+  weight: 1
+- path: Hips/Spine
+  weight: 0
+maskType: 0
+"#,
+    );
+    let range = ClipRange::read(&item);
+    assert_eq!(range.internal_id, Some(-623603649343465320));
+    assert_eq!(range.take, "Take 001");
+    assert!(range.has_additive_reference);
+    assert_eq!(range.additive_frame, Some(18.0));
+    assert!(range.settings.mirror && !range.settings.keep_original_position_y);
+    assert_eq!(range.parameters[0].name, "Speed");
+    assert_eq!(range.parameters[0].keys[0].out_slope, -2.0);
+    assert_eq!(range.parameters[0].post_infinity, 1);
+    assert!(range.mask.keeps(""));
+    assert!(!range.mask.keeps("Hips/Spine"));
+    // Not listed while the mask lists others: left out.
+    assert!(!range.mask.keeps("Hips"));
+    let none = ClipRange::read(&meta("name: A\nmaskType: 3\ntransformMask:\n- path: A\n  weight: 0\n"));
+    assert!(none.mask.keeps("A"));
 }

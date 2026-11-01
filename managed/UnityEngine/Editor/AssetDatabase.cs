@@ -114,7 +114,7 @@ namespace UnityEditor
             var guid = AssetPathToGUID(assetPath);
             if (string.IsNullOrEmpty(guid)) return Array.Empty<Object>();
             var main = AssetDatabaseRuntime.LoadMain(guid, null);
-            return AssetDatabaseRuntime.LoadAll(guid).Where(o => o != main).ToArray();
+            return AssetDatabaseRuntime.LoadAll(guid).Where(o => o != main && !AssetDatabaseRuntime.IsTakePreview(o)).ToArray();
         }
 
         public static Type GetMainAssetTypeAtPath(string assetPath) => LoadMainAssetAtPath(assetPath)?.GetType();

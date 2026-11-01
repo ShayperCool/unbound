@@ -76,20 +76,22 @@ namespace Unbound.Runtime
         /// <summary>Adds the clip's values at <paramref name="time"/> (on the clip's own timeline) with
         /// a weight. <paramref name="mask"/>, when given, excludes channels (layer masks, mixing transforms).
         /// With a <paramref name="reference"/> pose (additive layers) the values are differences from it:
-        /// v - reference, and for rotations reference⁻¹·q.</summary>
+        /// v - reference, and for rotations reference⁻¹·q.
+        /// <paramref name="loopPose"/>: the Animator's sampling, which applies the clip's loop pose.</summary>
         internal static void Sample(BoundClip bound, float time, float weight, AnimationPose pose, bool[] mask = null, bool[] objectMask = null,
-            float[] reference = null)
+            float[] reference = null, bool loopPose = false)
         {
             if (weight <= 0f) return;
             pose.Total += weight;
             var curves = bound.Clip.m_Curves;
+            float phase = loopPose ? bound.Clip.LoopPosePhase(time) : -1f;
             var channels = bound.Float;
             for (int i = 0; i < curves.Count && i < channels.Length; i++)
             {
                 var curve = curves[i];
                 if (curve.QuaternionStart && i + 3 < curves.Count)
                 {
-                    SampleQuaternion(bound, i, time, weight, pose, mask, reference);
+                    SampleQuaternion(bound, i, time, weight, pose, mask, reference, phase);
                     i += 3;
                     continue;
                 }
@@ -98,7 +100,9 @@ namespace Unbound.Runtime
                     int first = bound.EulerRotation[i];
                     if (first >= 0 && (mask == null || mask[first]))
                     {
-                        var q = Quaternion.Euler(curve.Evaluate(time), curves[i + 1].Evaluate(time), curves[i + 2].Evaluate(time));
+                        var clip = bound.Clip;
+                        var q = Quaternion.Euler(clip.LoopPose(i, curve.Evaluate(time), phase), clip.LoopPose(i + 1, curves[i + 1].Evaluate(time), phase),
+                            clip.LoopPose(i + 2, curves[i + 2].Evaluate(time), phase));
                         // Euler curves measure from the identity where the reference has no rotation.
                         if (reference != null) q = Difference(reference, first, first + 1, first + 2, first + 3, q.x, q.y, q.z, q.w, true);
                         AddQuaternion(pose, first, q.x, q.y, q.z, q.w, weight);
@@ -108,7 +112,8 @@ namespace Unbound.Runtime
                 }
                 int ch = channels[i];
                 if (ch < 0 || (mask != null && !mask[ch])) continue;
-                pose.Value[ch] += weight * (reference != null ? curve.Evaluate(time) - reference[ch] : curve.Evaluate(time));
+                float value = bound.Clip.LoopPose(i, curve.Evaluate(time), phase);
+                pose.Value[ch] += weight * (reference != null ? value - reference[ch] : value);
                 pose.Weight[ch] += weight;
             }
             var objectCurves = bound.Clip.m_ObjectCurves;
@@ -124,7 +129,7 @@ namespace Unbound.Runtime
             }
         }
 
-        static void SampleQuaternion(BoundClip bound, int first, float time, float weight, AnimationPose pose, bool[] mask, float[] reference)
+        static void SampleQuaternion(BoundClip bound, int first, float time, float weight, AnimationPose pose, bool[] mask, float[] reference, float phase)
         {
             var curves = bound.Clip.m_Curves;
             int cx = bound.Float[first], cy = bound.Float[first + 1], cz = bound.Float[first + 2], cw = bound.Float[first + 3];
@@ -137,6 +142,11 @@ namespace Unbound.Runtime
             float m = MathF.Sqrt(x * x + y * y + z * z + w * w);
             if (m < 1e-6f) return;
             x /= m; y /= m; z /= m; w /= m;
+            if (phase >= 0f)
+            {
+                var looped = bound.Clip.LoopPose(first, new Quaternion(x, y, z, w), phase);
+                x = looped.x; y = looped.y; z = looped.z; w = looped.w;
+            }
             if (reference != null)
             {
                 var d = Difference(reference, cx, cy, cz, cw, x, y, z, w, false);

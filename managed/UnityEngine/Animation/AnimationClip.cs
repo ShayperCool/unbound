@@ -12,34 +12,22 @@ namespace UnityEngine
 
         public float averageDuration => GetAverageDuration();
 
-        public float averageAngularSpeed
+        public float averageAngularSpeed => GetMotionStats().AngularSpeed;
+
+        public Vector3 averageSpeed => GetMotionStats().Speed;
+
+        public float apparentSpeed => GetMotionStats().ApparentSpeed;
+
+        internal virtual (Vector3 Speed, float AngularSpeed, float ApparentSpeed) GetMotionStats()
         {
-            get
-            {
-                if (TryHumanMotion(out var m)) return m.AverageAngularSpeed;
-                Unbound.Runtime.Stubs.Ignored("Motion.averageAngularSpeed", "is 0 for generic clips (their root motion is not measured yet)");
-                return 0f;
-            }
+            Unbound.Runtime.Stubs.Ignored("Motion.averageSpeed", "is zero for blend trees (their children's root motion is not averaged yet)");
+            return (Vector3.zero, 0f, 0f);
         }
 
-        public Vector3 averageSpeed
+        /// <summary>A humanoid clip's averages, from its muscle clip's root motion.</summary>
+        internal static (Vector3, float, float) HumanMotionStats(Unbound.Runtime.Humanoid.HumanClipMotion m)
         {
-            get
-            {
-                if (TryHumanMotion(out var m)) return new Vector3(m.AverageSpeed.x, m.AverageSpeed.y, m.AverageSpeed.z);
-                Unbound.Runtime.Stubs.Ignored("Motion.averageSpeed", "is zero for generic clips (their root motion is not measured yet)");
-                return Vector3.zero;
-            }
-        }
-
-        public float apparentSpeed
-        {
-            get
-            {
-                if (TryHumanMotion(out var m)) return m.ApparentSpeed;
-                Unbound.Runtime.Stubs.Ignored("Motion.apparentSpeed", "is 0 for generic clips (their root motion is not measured yet)");
-                return 0f;
-            }
+            return (new Vector3(m.AverageSpeed.x, m.AverageSpeed.y, m.AverageSpeed.z), m.AverageAngularSpeed, m.ApparentSpeed);
         }
 
         /// <summary>A humanoid clip's root motion constants.</summary>
@@ -90,6 +78,18 @@ namespace UnityEngine
         internal bool m_HasAdditiveReferencePose;
         internal AnimationClip m_AdditiveReferencePoseClip;
         internal float m_AdditiveReferencePoseTime;
+        /// <summary>Settings kept as they are (mirror has no effect on generic clips, measured in
+        /// tests/projects/modelclips).</summary>
+        internal bool m_Mirror;
+        internal float m_OrientationOffsetY;
+        internal float m_Level;
+        internal bool m_LoopBlendOrientation;
+        internal bool m_LoopBlendPositionY;
+        internal bool m_LoopBlendPositionXZ;
+        internal bool m_KeepOriginalOrientation;
+        internal bool m_KeepOriginalPositionY = true;
+        internal bool m_KeepOriginalPositionXZ;
+        internal bool m_HeightFromFeet;
         /// <summary>Bumped when curves change, so bindings made from the old curves are redone.</summary>
         internal int m_Version;
         /// <summary>The serialized m_HasGenericRootTransform (player data), else computed.</summary>
@@ -108,6 +108,54 @@ namespace UnityEngine
 
         /// <summary>Where the clip's time 0 is on its curves.</summary>
         internal float StartTime => m_HasRange ? m_StartTime : 0f;
+
+        float[] m_LoopStart, m_LoopStop;
+        int m_LoopVersion = -1;
+
+        /// <summary>Loop pose (m_LoopBlend, with loop time): where the Animator samples the clip at
+        /// a time, the phase (time from the start over the length) it corrects the values by, else
+        /// -1. The curves themselves stay as they are (measured, tests/projects/modelclips).</summary>
+        internal float LoopPosePhase(float time)
+        {
+            float length = this.length;
+            if (!m_LoopTime || !m_LoopBlend || length <= 0f) return -1f;
+            if (m_LoopVersion != m_Version || m_LoopStart == null || m_LoopStart.Length != m_Curves.Count)
+            {
+                m_LoopStart = new float[m_Curves.Count];
+                m_LoopStop = new float[m_Curves.Count];
+                for (int i = 0; i < m_Curves.Count; i++)
+                {
+                    m_LoopStart[i] = m_Curves[i].Evaluate(StartTime);
+                    m_LoopStop[i] = m_Curves[i].Evaluate(StartTime + length);
+                }
+                m_LoopVersion = m_Version;
+            }
+            return Math.Clamp((time - StartTime) / length, 0f, 1f);
+        }
+
+        /// <summary>A float value under loop pose: (start − stop) × phase added.</summary>
+        internal float LoopPose(int curve, float value, float phase) =>
+            phase < 0f ? value : value + (m_LoopStart[curve] - m_LoopStop[curve]) * phase;
+
+        /// <summary>A rotation (curves <paramref name="first"/>..+3) under loop pose: turned by
+        /// normalize(phase · d.xyz, d.w), d = stop⁻¹ · start, of the sampled first and last frames.</summary>
+        internal Quaternion LoopPose(int first, Quaternion q, float phase)
+        {
+            if (phase < 0f) return q;
+            var start = Unit(m_LoopStart, first);
+            var stop = Unit(m_LoopStop, first);
+            var d = new Quaternion(-stop.x, -stop.y, -stop.z, stop.w) * start;
+            float x = d.x * phase, y = d.y * phase, z = d.z * phase, w = d.w;
+            float m = MathF.Sqrt(x * x + y * y + z * z + w * w);
+            if (m < 1e-12f) return q;
+            return q * new Quaternion(x / m, y / m, z / m, w / m);
+        }
+
+        static Quaternion Unit(float[] v, int i)
+        {
+            float m = MathF.Sqrt(v[i] * v[i] + v[i + 1] * v[i + 1] + v[i + 2] * v[i + 2] + v[i + 3] * v[i + 3]);
+            return m < 1e-12f ? Quaternion.identity : new Quaternion(v[i] / m, v[i + 1] / m, v[i + 2] / m, v[i + 3] / m);
+        }
 
         float CurveEnd()
         {
@@ -165,34 +213,99 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>Root motion of a humanoid or root-node clip: none in generic clips.</summary>
-        internal bool hasRootMotion => false;
+        /// <summary>Whether the clip has a root node's MotionT/MotionQ curves (the model importer
+        /// makes them for a generic avatar's root node).</summary>
+        internal bool hasRootMotion => MotionCurves() != null;
 
-        public bool hasMotionFloatCurves
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("AnimationClip.hasMotionFloatCurves", "is always false (root motion curves are not read yet)");
-                return false;
-            }
-        }
+        public bool hasMotionFloatCurves => MotionCurves() != null;
 
-        public bool hasMotionCurves
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("AnimationClip.hasMotionCurves", "is always false (root motion curves are not read yet)");
-                return false;
-            }
-        }
+        public bool hasMotionCurves => MotionCurves() != null;
 
+        /// <summary>Humanoid body curves (RootT/RootQ); generic clips have none.</summary>
         public bool hasRootCurves
         {
             get
             {
-                Unbound.Runtime.Stubs.Ignored("AnimationClip.hasRootCurves", "is always false (root curves are not read yet)");
+                foreach (var c in m_Curves)
+                {
+                    var b = c.Binding;
+                    if (b.Path.Length == 0 && b.ClassId == AnimatorClassId
+                        && (b.Attribute.StartsWith("RootT.", StringComparison.Ordinal) || b.Attribute.StartsWith("RootQ.", StringComparison.Ordinal)))
+                        return true;
+                }
                 return false;
             }
+        }
+
+        int[] m_MotionCurves;
+        int m_MotionVersion = -1;
+
+        /// <summary>The indices of the MotionT.x/y/z and MotionQ.x/y/z/w curves (on the root's
+        /// Animator), or null when the clip has not all of them.</summary>
+        internal int[] MotionCurves()
+        {
+            if (m_MotionVersion == m_Version) return m_MotionCurves;
+            m_MotionVersion = m_Version;
+            m_MotionCurves = null;
+            var names = new[] { "MotionT.x", "MotionT.y", "MotionT.z", "MotionQ.x", "MotionQ.y", "MotionQ.z", "MotionQ.w" };
+            var found = new int[names.Length];
+            for (int n = 0; n < names.Length; n++)
+            {
+                found[n] = -1;
+                for (int i = 0; i < m_Curves.Count; i++)
+                {
+                    var b = m_Curves[i].Binding;
+                    if (b.Path.Length == 0 && b.ClassId == AnimatorClassId && b.Attribute == names[n]) { found[n] = i; break; }
+                }
+                if (found[n] < 0) return null;
+            }
+            return m_MotionCurves = found;
+        }
+
+        (Vector3, float, float) m_Stats;
+        int m_StatsVersion = -1;
+
+        /// <summary>Root motion statistics of a root node's motion (none without MotionT/MotionQ
+        /// curves, root curves included): the motion over twenty equal parts of the clip, each in
+        /// the node's frame at its start, over the length; the turn about the up axis likewise.
+        /// Bake Into Pose zeroes the baked components of the speed, not the turn. The apparent
+        /// speed is the speed's length; the Editor's is larger for clips that turn about the up
+        /// axis (measured, tests/projects/modelroot).</summary>
+        internal override (Vector3 Speed, float AngularSpeed, float ApparentSpeed) GetMotionStats()
+        {
+            if (TryHumanMotion(out var human)) return HumanMotionStats(human);
+            if (m_StatsVersion == m_Version) return m_Stats;
+            m_StatsVersion = m_Version;
+            m_Stats = (Vector3.zero, 0f, 0f);
+            float length = this.length;
+            if (MotionCurves() == null || length <= 0f) return m_Stats;
+            const int Parts = 20;
+            var speed = Vector3.zero;
+            float turn = 0f;
+            var (p0, q0) = MotionPose(StartTime);
+            for (int i = 1; i <= Parts; i++)
+            {
+                var (p1, q1) = MotionPose(StartTime + length * i / Parts);
+                var inverse = Quaternion.Inverse(q0);
+                speed += inverse * (p1 - p0);
+                var d = inverse * q1;
+                turn += 2f * MathF.Atan2(d.y, d.w);
+                (p0, q0) = (p1, q1);
+            }
+            speed /= length;
+            if (m_LoopBlendPositionY) speed.y = 0f;
+            if (m_LoopBlendPositionXZ) { speed.x = 0f; speed.z = 0f; }
+            return m_Stats = (speed, turn / length, speed.magnitude);
+        }
+
+        /// <summary>The root node's pose at a time on the clip's curves (MotionT, MotionQ).</summary>
+        internal (Vector3, Quaternion) MotionPose(float time)
+        {
+            var c = MotionCurves();
+            var p = new Vector3(m_Curves[c[0]].Evaluate(time), m_Curves[c[1]].Evaluate(time), m_Curves[c[2]].Evaluate(time));
+            var q = new Quaternion(m_Curves[c[3]].Evaluate(time), m_Curves[c[4]].Evaluate(time), m_Curves[c[5]].Evaluate(time), m_Curves[c[6]].Evaluate(time));
+            float n = MathF.Sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
+            return (p, n > 1e-6f ? new Quaternion(q.x / n, q.y / n, q.z / n, q.w / n) : Quaternion.identity);
         }
 
         public AnimationEvent[] events
@@ -326,6 +439,16 @@ namespace UnityEngine
                 m_HasAdditiveReferencePose = m_HasAdditiveReferencePose,
                 m_AdditiveReferencePoseClip = m_AdditiveReferencePoseClip,
                 m_AdditiveReferencePoseTime = m_AdditiveReferencePoseTime,
+                m_Mirror = m_Mirror,
+                m_OrientationOffsetY = m_OrientationOffsetY,
+                m_Level = m_Level,
+                m_LoopBlendOrientation = m_LoopBlendOrientation,
+                m_LoopBlendPositionY = m_LoopBlendPositionY,
+                m_LoopBlendPositionXZ = m_LoopBlendPositionXZ,
+                m_KeepOriginalOrientation = m_KeepOriginalOrientation,
+                m_KeepOriginalPositionY = m_KeepOriginalPositionY,
+                m_KeepOriginalPositionXZ = m_KeepOriginalPositionXZ,
+                m_HeightFromFeet = m_HeightFromFeet,
                 m_GenericRoot = m_GenericRoot,
             };
             foreach (var e in m_Events) clip.m_Events.Add(e.Copy());
@@ -629,7 +752,19 @@ namespace Unbound.Runtime
                 var reference = settings.Ref("m_AdditiveReferencePoseClip");
                 clip.m_AdditiveReferencePoseClip = reference.IsNull ? null : resolver.Resolve(reference, typeof(AnimationClip)) as AnimationClip;
                 clip.m_AdditiveReferencePoseTime = settings.Float("m_AdditiveReferencePoseTime");
+                clip.m_Mirror = settings.Bool("m_Mirror");
+                clip.m_OrientationOffsetY = settings.Float("m_OrientationOffsetY");
+                clip.m_Level = settings.Float("m_Level");
+                clip.m_LoopBlendOrientation = settings.Bool("m_LoopBlendOrientation");
+                clip.m_LoopBlendPositionY = settings.Bool("m_LoopBlendPositionY");
+                clip.m_LoopBlendPositionXZ = settings.Bool("m_LoopBlendPositionXZ");
+                clip.m_KeepOriginalOrientation = settings.Bool("m_KeepOriginalOrientation");
+                clip.m_KeepOriginalPositionY = settings.Get("m_KeepOriginalPositionY") == null || settings.Bool("m_KeepOriginalPositionY");
+                clip.m_KeepOriginalPositionXZ = settings.Bool("m_KeepOriginalPositionXZ");
+                clip.m_HeightFromFeet = settings.Bool("m_HeightFromFeet");
             }
+            // Imported clips are NotEditable, a take's preview clip also HideInHierarchy.
+            clip.hideFlags = (HideFlags)body.Int("m_ObjectHideFlags");
 
             clip.m_Events.Clear();
             foreach (var e in Items(body, "m_Events"))
