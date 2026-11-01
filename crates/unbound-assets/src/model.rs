@@ -578,7 +578,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 10;
+    const VERSION: u32 = 11;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -661,10 +661,10 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     builder.add_renderers(&mut ids);
     builder.assign_material_ids(imp, &mut ids);
 
-    let clips = if settings.import_animation && settings.animation_type != 0 {
+    let (clips, clip_warnings) = if settings.import_animation && settings.animation_type != 0 {
         builder.clips(&scene, imp, &mut ids)
     } else {
-        Vec::new()
+        (Vec::new(), Vec::new())
     };
     let animator = match settings.animation_type {
         1 => Some(
@@ -689,6 +689,7 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     builder.lod_group(&mut ids);
     let mut model = builder.model;
     model.clips = clips;
+    model.warnings.extend(clip_warnings);
     model.animator = animator;
     if matches!(settings.animation_type, 2 | 3) && settings.avatar_setup == 1 {
         model.avatar = Some(ids.id(class::AVATAR, ROOT_NODE_NAME, None).into());
@@ -871,7 +872,13 @@ impl<'a> Builder<'a> {
 
     /// The clips: those the meta's `clipAnimations` define (ranges of takes), or one per take;
     /// then the Editor's hidden `__preview__<take>` clip of every take.
-    fn clips(&self, scene: &ufbx::Scene, imp: &Value, ids: &mut FileIdAllocator) -> Vec<ModelClip> {
+    /// The model's clips, and warnings about content they do not reproduce.
+    fn clips(
+        &self,
+        scene: &ufbx::Scene,
+        imp: &Value,
+        ids: &mut FileIdAllocator,
+    ) -> (Vec<ModelClip>, Vec<String>) {
         let fps = if scene.settings.frames_per_second > 0.0 {
             scene.settings.frames_per_second
         } else {
@@ -952,6 +959,7 @@ impl<'a> Builder<'a> {
                 found
             });
         let mut clips = Vec::new();
+        let mut warnings = Vec::new();
         let preview_ranges = takes.iter().map(|stack| {
             let name = stack.element.name.to_string();
             let mut range = ClipRange::take(&name, stack.time_begin * fps, stack.time_end * fps);
@@ -977,6 +985,25 @@ impl<'a> Builder<'a> {
             // A range past the take's end ends with the take (measured).
             let start = range.first / fps;
             let end = (range.last.max(range.first) / fps).min(stack.time_end.max(start));
+            // Humanoid clips are converted to muscle curves from these transform curves; that
+            // conversion is measured for whole takes without a transform mask only.
+            if self.settings.animation_type == 3 && !range.preview {
+                let half_frame = 0.5 / fps;
+                if (start - stack.time_begin).abs() > half_frame
+                    || (stack.time_end - end).abs() > half_frame
+                {
+                    warnings.push(format!(
+                        "humanoid clip '{}' covers only a part of its take: its muscle curves are not measured (not supported)",
+                        range.name
+                    ));
+                }
+                if range.mask != ClipMask::None {
+                    warnings.push(format!(
+                        "humanoid clip '{}' has a transform mask: its muscle curves are not measured (not supported)",
+                        range.name
+                    ));
+                }
+            }
             let mut curves = Vec::new();
             for node in baked.nodes.iter() {
                 let Some(&index) = self.node_index.get(&node.element_id) else {
@@ -1188,7 +1215,7 @@ impl<'a> Builder<'a> {
                 preview: range.preview,
             });
         }
-        clips
+        (clips, warnings)
     }
 
     /// The MotionT (position) and MotionQ (rotation) curves of a root node: its pose relative to
