@@ -159,9 +159,9 @@ namespace UnityEngine.Tests
             }
         }
 
-        /// <summary>The saved first round trail has a repeated head. Its sides round to
-        /// squared length below one but its tangent direction has zero turn. Preserve all
-        /// components of its three corner pairs, even though its position arc is nonzero.</summary>
+        /// <summary>The saved first round trail has a repeated head. Length-normalized corner
+        /// directions give zero turn, so its corner pairs coincide while every tangent component
+        /// stays constant (Native trail.f1.round.mid.mesh and trail.f1.round.end.mesh).</summary>
         [Fact]
         public void CoincidentCornerDirectionsKeepAConstantTangent()
         {
@@ -189,7 +189,7 @@ namespace UnityEngine.Tests
                     Assert.Equal(0f, t.z);
                     Assert.Equal(1f, t.w);
                 }
-                Assert.True((mesh.vertices[7] - mesh.vertices[11]).magnitude > 1e-5f);
+                Assert.InRange((mesh.vertices[7] - mesh.vertices[11]).magnitude, 0f, 1e-5f);
             }
             finally
             {
