@@ -17,6 +17,10 @@ public class GeneratorBoundaryProbe : MonoBehaviour
     const BindingFlags F = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static;
     static string Json(string text) => "\"" + text.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "\\r") + "\"";
     static long Tick(double time) => (long)Math.Round(time * Rate);
+    static void Fill(NativeArray<float> data, float value)
+    {
+        for (int i = 0; i < data.Length; i++) data[i] = value;
+    }
     static void Exit(int code)
     {
         if (Environment.GetEnvironmentVariable("GENERATOR_BOUNDARY_ENGINE") == "1") { Application.Quit(code); return; }
@@ -104,7 +108,7 @@ public class GeneratorBoundaryProbe : MonoBehaviour
                 for (int block = 0; block < blocks; block++) {
                     yield return null;
                     State("beforeRender", block);
-                    for (int i = 0; i < sink.Length; i++) { sink[i] = -3f; childSink[i] = -3f; buffer[i] = -7f; }
+                    Fill(sink, -3f); Fill(childSink, -3f); Fill(buffer, -7f);
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false }) ||
                         !(bool)addSink.Invoke(null, new object[] { child, childSink, false })) throw new Exception("Sink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("Render failed");

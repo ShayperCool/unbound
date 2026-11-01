@@ -12,7 +12,7 @@ import sys
 fixture = Path(__file__).resolve().parent
 sys.path.insert(0, str(fixture.parent / 'mixersuspend'))
 from pack import pack
-from verify import verify
+from verify_boundary import verify
 
 p = argparse.ArgumentParser()
 p.add_argument('backend', choices=('native', 'engine'))
