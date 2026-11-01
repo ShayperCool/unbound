@@ -49,6 +49,7 @@ namespace Unbound.Runtime
             public bool Nested;
             public bool ExclusiveWeak;
             public bool Undisposable;
+            public bool ExternalWriter;
             /// <summary>The unsynced job that writes the container, and the field it uses.</summary>
             public Jobs.JobRecord Writer;
             public string WriterField;
@@ -119,6 +120,7 @@ namespace Unbound.Runtime
                 node.Nested = false;
                 node.ExclusiveWeak = false;
                 node.Undisposable = false;
+                node.ExternalWriter = false;
                 node.Writer = null;
                 node.WriterField = null;
                 node.Readers.Clear();
@@ -169,12 +171,14 @@ namespace Unbound.Runtime
                 var node = RealNode(handle);
                 // Releasing an already released handle is allowed (Unity ignores it).
                 if (node == null || !Matches(handle)) return;
+                if (node.ExternalWriter) throw ExternalWriteError();
                 ReleaseNode(node);
             }
         }
 
         static void ReleaseNode(Node node)
         {
+            if (node.ExternalWriter) throw ExternalWriteError();
             int next = s_NextVersion;
             s_NextVersion += AtomicSafetyHandle.VersionIncrement;
             int tempBit = node.Temp ? AtomicSafetyHandle.TempVersion : 0;
@@ -184,6 +188,49 @@ namespace Unbound.Runtime
             node.Writer = null;
             node.Readers.Clear();
             s_FreeNodes.Push(node);
+        }
+
+        internal sealed class ExternalWriteReservation : IDisposable
+        {
+            Node m_Node;
+            internal ExternalWriteReservation(Node node) { m_Node = node; }
+
+            public void Dispose()
+            {
+                lock (s_Lock)
+                {
+                    if (m_Node == null) return;
+                    m_Node.ExternalWriter = false;
+                    UpdateBits(m_Node);
+                    m_Node = null;
+                }
+            }
+        }
+
+        static InvalidOperationException ExternalWriteError() =>
+            new InvalidOperationException("The native container is the destination of a pending GPU readback and cannot be accessed, scheduled or deallocated until it completes.");
+
+        internal static ExternalWriteReservation ReserveExternalWrite(in AtomicSafetyHandle handle)
+        {
+            lock (s_Lock)
+            {
+                var node = RealNode(handle);
+                if (node == null || !Matches(handle)) throw Deallocated(handle);
+                if (node.Temp)
+                    throw new ArgumentException("A GPU readback destination cannot use Allocator.Temp because its memory expires at the end of the frame.");
+                if (node.ExternalWriter) throw ExternalWriteError();
+                if (!node.AllowReadOrWrite || node.Writer != null || node.Readers.Count != 0)
+                    throw new InvalidOperationException("A GPU readback destination must be writable and have no outstanding jobs.");
+                node.ExternalWriter = true;
+                UpdateBits(node);
+                return new ExternalWriteReservation(node);
+            }
+        }
+
+        internal static void CheckExternalWrite(in AtomicSafetyHandle handle)
+        {
+            lock (s_Lock)
+                if (Matches(handle) && RealNode(handle) is { ExternalWriter: true }) throw ExternalWriteError();
         }
 
         internal static void SetFlag(in AtomicSafetyHandle handle, Action<Node> set)
@@ -214,6 +261,7 @@ namespace Unbound.Runtime
             if (node.Readers.Count > 0) deny |= Write | Dispose;
             if (!node.AllowReadOrWrite) deny |= Read | Write;
             if (node.Undisposable) deny |= Dispose;
+            if (node.ExternalWriter) deny |= Read | Write | Dispose;
             int secondaryDeny = deny | (node.AllowSecondaryWriting ? 0 : Write);
             Volatile.Write(ref node.Memory[0], (node.Memory[0] & ~AccessBits) | deny);
             Volatile.Write(ref node.Memory[1], (node.Memory[1] & ~AccessBits) | secondaryDeny);
@@ -345,6 +393,7 @@ namespace Unbound.Runtime
             {
                 var node = RealNode(handle);
                 if (node == null) return null;
+                if (node.ExternalWriter) return ExternalWriteError().Message;
                 if (node.Writer != null && node.Writer != job && !isDependency(node.Writer))
                     return Conflict(node.Writer.Name, "writes to", node.WriterField, jobName, writes, containerType, field);
                 if (writes)
@@ -533,11 +582,12 @@ namespace Unbound.Runtime
             {
                 node = RealNode(handle);
                 if (node == null || (handle.version & VersionMask) != (word & VersionMask)) throw Deallocated(handle);
+                if (node.ExternalWriter && operation == Dispose) throw ExternalWriteError();
                 writer = node.Writer;
                 writerField = node.WriterField;
                 if (node.Readers.Count > 0) reader = node.Readers[0];
             }
-            if (operation != Dispose && !node.AllowReadOrWrite)
+            if (operation != Dispose && (!node.AllowReadOrWrite || node.ExternalWriter))
                 throw new InvalidOperationException($"The {type} can no longer be accessed, since its owner has been invalidated. You can simply Dispose() the container and create a new one.");
             if (operation == Write && IsSecondary(handle) && !node.AllowSecondaryWriting)
                 throw new InvalidOperationException($"The {type} has been declared as [ReadOnly], but you are writing to it.");

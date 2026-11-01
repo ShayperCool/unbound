@@ -87,6 +87,29 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AGenericResultIsConsumedOnceInsideItsContinuation()
+        {
+            var source = new AwaitableCompletionSource<int>();
+            var awaited = source.Awaitable;
+            int first = 0;
+            bool repeated = false;
+            awaited.GetAwaiter().OnCompleted(() =>
+            {
+                first = awaited.GetAwaiter().GetResult();
+                Assert.Throws<NullReferenceException>(() => awaited.GetAwaiter().GetResult());
+                repeated = true;
+            });
+            source.SetResult(7);
+            Assert.Equal(7, first);
+            Assert.True(repeated);
+            Assert.False(source.TrySetResult(8));
+            source.Reset();
+            source.SetResult(9);
+            Assert.Equal(9, source.Awaitable.GetAwaiter().GetResult());
+            Assert.Throws<NullReferenceException>(() => awaited.GetAwaiter().GetResult());
+        }
+
+        [Fact]
         public void AsyncOperationsCanBeAwaited()
         {
             var op = new AsyncOperation();

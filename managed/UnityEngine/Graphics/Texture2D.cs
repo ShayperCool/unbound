@@ -26,7 +26,7 @@ namespace UnityEngine
         /// instead of <see cref="m_Pixels"/> until a script reads or writes pixels.</summary>
         byte[] m_Raw;
         byte[] m_SourceRaw;
-        internal long RawBytes => (m_Raw?.LongLength ?? 0) + (m_UnreadableRaw?.LongLength ?? 0) + (m_SourceRaw?.LongLength ?? 0);
+        internal long RawBytes => (m_Raw?.LongLength ?? 0) + (m_UnreadableRaw?.LongLength ?? 0) + (m_SourceRaw?.LongLength ?? 0) + (m_Store?.LongLength ?? 0);
         internal bool m_PixelsDirty;
         /// <summary>The asset GUID of an imported texture.</summary>
         internal string m_AssetGuid;
@@ -75,6 +75,7 @@ namespace UnityEngine
         {
             if (width <= 0 || height <= 0)
                 throw new UnityException($"Failed to create texture because of invalid parameters. Width {width}, height {height}.");
+            ReleaseStore();
             m_Width = width;
             m_Height = height;
             m_Format = format;
@@ -92,7 +93,7 @@ namespace UnityEngine
             m_SourceRaw = null;
             m_AssetGuid = null;
             // A new texture is grey (205,205,205,205) until written, as in Unity.
-            if (GraphicsFormatUtility.IsHDRFormat(format))
+            if (Texture2DTexels.FloatStored(format))
             {
                 m_Pixels = null;
                 m_Hdr = new Color[width * height];
@@ -108,13 +109,26 @@ namespace UnityEngine
             m_PixelsDirty = true;
         }
 
+        /// <summary>The texture <c>ScreenCapture.CaptureScreenshotAsTexture</c> returns for a size
+        /// below one: ARGB32, linear, readable, 0x0 and without pixels (tests/projects/screencapture).</summary>
+        internal static Texture2D EmptyCapture()
+        {
+            var texture = new Texture2D(1, 1, TextureFormat.ARGB32, false, true);
+            texture.m_Width = 0;
+            texture.m_Height = 0;
+            texture.m_Pixels = null;
+            texture.m_PixelsDirty = false;
+            return texture;
+        }
+
         public TextureFormat format => m_SourceFormat ?? m_Format;
 
         /// <summary>A serialized texture's own format and mip count when Unbound keeps its pixels in
         /// another (an AssetBundle's block-compressed texture, decoded).</summary>
         TextureFormat? m_SourceFormat;
         int m_SourceMips;
-        internal override GraphicsFormat GraphicsFormatOf() => GraphicsFormatUtility.GetGraphicsFormat(format, !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear);
+        internal override GraphicsFormat GraphicsFormatOf() =>
+            GraphicsFormatUtility.Texture2DGraphicsFormat(format, !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear);
         public override bool isReadable => m_IsReadable;
         internal override int MipmapCount() => m_SourceMips > 0 ? m_SourceMips : m_MipCount;
         public bool alphaIsTransparency { get; set; }
@@ -150,8 +164,16 @@ namespace UnityEngine
         public static Texture2D linearGrayTexture => DefaultTextures.Gray;
         public static Texture2D normalTexture => DefaultTextures.Normal;
 
-        /// <summary>The pixels as colors, decoded from the raw data when only that is kept.</summary>
+        /// <summary>The cells for an engine path that reads or writes <see cref="m_Pixels"/> itself:
+        /// decoded from the raw data when only that is kept, taken back from a pixel data store.</summary>
         internal Color32[] EnsurePixels()
+        {
+            DecodeRaw();
+            LeaveStore();
+            return m_Pixels;
+        }
+
+        void DecodeRaw()
         {
             if (m_Raw != null)
             {
@@ -159,7 +181,6 @@ namespace UnityEngine
                 m_Raw = null;
                 DecodeMipChain(raw);
             }
-            return m_Pixels;
         }
 
         void RequireReadable(bool pixelArray = false)
@@ -170,7 +191,7 @@ namespace UnityEngine
                 if (pixelArray) throw new ArgumentException(message);
                 throw new UnityException(message);
             }
-            EnsurePixels();
+            DecodeRaw();
             if (m_Pixels == null && m_Hdr == null)
             {
                 if (m_IsReadable && m_AssetGuid != null) FetchImportedPixels();
@@ -212,7 +233,8 @@ namespace UnityEngine
         /// <summary>The pixels for the engine's own use (a terrain's detail atlas), readable or not.</summary>
         internal Color32[] EnginePixels32()
         {
-            EnsurePixels();
+            DecodeRaw();
+            SyncFromStore();
             if (m_Pixels == null && m_Hdr == null && m_AssetGuid != null) FetchImportedPixels();
             if (m_Pixels != null) return (Color32[])m_Pixels.Clone();
             if (m_Hdr != null)
@@ -262,6 +284,7 @@ namespace UnityEngine
             Upload();
             if (makeNoLongerReadable)
             {
+                ReleaseStore();
                 m_Pixels = null;
                 m_Hdr = null;
                 m_Raw = null;
@@ -319,7 +342,10 @@ namespace UnityEngine
                 return;
             }
             int w = x1 - x0, h = y1 - y0;
-            bool hdr = m_Hdr != null;
+            // Outside the frame's drawing the Editor reads its window's framebuffer (measured in
+            // Update: tests/projects/screencapture read.update), with an error.
+            if (active == null && Camera.current == null && !FrameBuilder.InDrawingFrame)
+                Debug.LogError("ReadPixels was called to read pixels from system frame buffer, while not inside drawing frame.");
             var bytes = Native.ReadPixels(active != null ? active.EnsureCreated() : 0, x0, y0, w, h, true);
             if (bytes == null)
             {
@@ -327,9 +353,8 @@ namespace UnityEngine
                 return;
             }
             // ReadPixels copies attachment values, including float-to-byte reads, regardless
-            // of the destination's linear flag. The engine's linear screen storage needs its
-            // existing presentation encoding for a byte screenshot; it is not an explicit RT.
-            bool encode = active == null && !hdr && !m_Linear && QualitySettings.activeColorSpace == ColorSpace.Linear;
+            // of the destination's linear flag; the screen's are its 8-bit (in Linear,
+            // sRGB-encoded) bytes.
             unsafe
             {
                 fixed (byte* p = bytes)
@@ -343,7 +368,6 @@ namespace UnityEngine
                             int tx = destX + (x0 - (int)source.x) + col;
                             var c = new Color(f[0], f[1], f[2], f[3]);
                             f += 4;
-                            if (encode) c = c.gamma;
                             Write(ty * m_Width + tx, c);
                         }
                     }
@@ -418,6 +442,7 @@ namespace UnityEngine
         {
             if (m_IsReadable) return;
             m_UnreadableRaw ??= m_Raw != null ? (byte[])m_Raw.Clone() : EncodeMipChain();
+            ReleaseStore();
             m_Pixels = null;
             m_Hdr = null;
             m_Raw = null;
@@ -456,7 +481,7 @@ namespace UnityEngine
             m_GpuMipCount = m_MipCount;
             if (m_Format != TextureFormat.Alpha8 && m_Format != TextureFormat.RGBA32)
             {
-                EnsurePixels();
+                DecodeRaw();
                 if (m_Hdr != null) UploadHdr();
                 else UploadPixels();
                 return;
@@ -488,7 +513,7 @@ namespace UnityEngine
                 Width = m_Width,
                 Height = m_Height,
                 // The format the texels went up in: a different one would make a new, empty texture.
-                Format = m_Format == TextureFormat.Alpha8 ? 3 : GraphicsFormatUtility.IsHDRFormat(m_Format) ? PixelFormats.GpuFloatFormat(m_Format) : m_Linear ? 1 : 0,
+                Format = m_Format == TextureFormat.Alpha8 ? 3 : Texture2DTexels.FloatStored(m_Format) ? PixelFormats.GpuFloatFormat(m_Format) : m_Linear ? 1 : 0,
                 MipCount = m_GpuMipCount,
                 FilterMode = (int)filterMode,
                 WrapU = (int)wrapModeU,
@@ -582,6 +607,7 @@ namespace UnityEngine
         /// <summary>A texture serialized in an asset file (TextMeshPro atlases): pixels as hex.</summary>
         void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
         {
+            ReleaseStore();
             m_Width = body.Int("m_Width");
             m_Height = body.Int("m_Height");
             m_Format = (TextureFormat)body.Int("m_TextureFormat", (int)TextureFormat.RGBA32);
@@ -613,7 +639,7 @@ namespace UnityEngine
             else
             {
                 var bytes = Convert.FromHexString(hex.Length % 2 == 0 ? hex : hex.Substring(0, hex.Length - 1));
-                int levelSize = PixelFormats.Size(m_Format, m_Width, m_Height);
+                int levelSize = Texture2DTexels.Size(m_Format, m_Width, m_Height);
                 if (levelSize > 0 && bytes.Length >= levelSize)
                 {
                     m_Raw = bytes;
@@ -634,6 +660,7 @@ namespace UnityEngine
 
         internal override void OnEngineDestroy()
         {
+            ReleaseStore();
             Native.ReleaseTexture(m_NativeHandle);
             m_NativeHandle = 0;
         }
@@ -679,7 +706,7 @@ namespace Unbound.Runtime
     {
         internal static int GpuFloatFormat(UnityEngine.TextureFormat format) => format switch
         {
-            UnityEngine.TextureFormat.RFloat => 6,
+            UnityEngine.TextureFormat.RFloat or UnityEngine.TextureFormat.R16 => 6,
             UnityEngine.TextureFormat.RGBAFloat => 9,
             UnityEngine.TextureFormat.RGFloat => 10,
             UnityEngine.TextureFormat.RHalf => 11,
@@ -771,15 +798,27 @@ namespace Unbound.Runtime
                 return;
             }
             for (int i = 0; i < into.Length && (i + 1) * channels * size <= data.Length; i++)
+                into[i] = DecodeFloatTexel(format, data.AsSpan(i * channels * size, channels * size));
+        }
+
+        internal static UnityEngine.Color DecodeFloatTexel(UnityEngine.TextureFormat format, ReadOnlySpan<byte> data)
+        {
+            var (channels, size) = FloatLayout(format);
+            if (channels == 0) throw new NotSupportedException($"Unbound: floating texels in {format} are not supported.");
+            var color = new UnityEngine.Color(0f, 0f, 0f, 1f);
+            for (int k = 0; k < channels; k++)
+                color[k] = size == 2 ? (float)BitConverter.ToHalf(data.Slice(k * size, size)) : BitConverter.ToSingle(data.Slice(k * size, size));
+            return color;
+        }
+
+        internal static void EncodeFloatTexel(UnityEngine.TextureFormat format, UnityEngine.Color pixel, Span<byte> data)
+        {
+            var (channels, size) = FloatLayout(format);
+            if (channels == 0) throw new NotSupportedException($"Unbound: floating texels in {format} are not supported.");
+            for (int k = 0; k < channels; k++)
             {
-                var c = new UnityEngine.Color(0f, 0f, 0f, 1f);
-                for (int k = 0; k < channels; k++)
-                {
-                    int at = (i * channels + k) * size;
-                    float v = size == 2 ? (float)BitConverter.ToHalf(data, at) : BitConverter.ToSingle(data, at);
-                    c[k] = v;
-                }
-                into[i] = c;
+                if (size == 2) BitConverter.TryWriteBytes(data.Slice(k * size, size), (Half)pixel[k]);
+                else BitConverter.TryWriteBytes(data.Slice(k * size, size), pixel[k]);
             }
         }
 
@@ -789,12 +828,7 @@ namespace Unbound.Runtime
             if (channels == 0) return new byte[0];
             var bytes = new byte[pixels.Length * channels * size];
             for (int i = 0; i < pixels.Length; i++)
-                for (int k = 0; k < channels; k++)
-                {
-                    int at = (i * channels + k) * size;
-                    if (size == 2) BitConverter.TryWriteBytes(new Span<byte>(bytes, at, 2), (Half)pixels[i][k]);
-                    else BitConverter.TryWriteBytes(new Span<byte>(bytes, at, 4), pixels[i][k]);
-                }
+                EncodeFloatTexel(format, pixels[i], bytes.AsSpan(i * channels * size, channels * size));
             return bytes;
         }
 

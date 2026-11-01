@@ -242,6 +242,7 @@ namespace UnityEngine
     {
         readonly Awaitable m_Inner = new Awaitable();
         T m_Result;
+        int m_Consumed;
 
         internal Awaitable() { }
 
@@ -271,8 +272,14 @@ namespace UnityEngine
 
             public T GetResult()
             {
-                m_Awaited.m_Inner.ThrowIfFailed();
-                return m_Awaited.m_Result;
+                if (Interlocked.Exchange(ref m_Awaited.m_Consumed, 1) != 0)
+                    throw new NullReferenceException("Object reference not set to an instance of an object");
+                try
+                {
+                    m_Awaited.m_Inner.ThrowIfFailed();
+                    return m_Awaited.m_Result;
+                }
+                finally { m_Awaited.m_Result = default; }
             }
         }
     }

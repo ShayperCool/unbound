@@ -1,0 +1,389 @@
+{"k":"caps","v":{"computeShaders":true,"asyncReadback":true}}
+{"k":"append.cb.created","v":[4294967295,4294967295,4294967295,4294967295]}
+{"k":"append.cb.first.count","v":[22,4294967295,4294967295,4294967295]}
+{"k":"append.cb.first.data","v":[0,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,51,54,57,60,63,2863267862,2863267863,2863267864,2863267865,2863267866,2863267867,2863267868,2863267869,2863267870,2863267871,2863267872,2863267873,2863267874,2863267875,2863267876,2863267877,2863267878,2863267879,2863267880,2863267881,2863267882,2863267883,2863267884,2863267885,2863267886,2863267887,2863267888,2863267889,2863267890,2863267891,2863267892,2863267893,2863267894,2863267895,2863267896,2863267897,2863267898,2863267899,2863267900,2863267901,2863267902,2863267903]}
+{"k":"append.cb.again.count","v":[44,4294967295,4294967295,4294967295]}
+{"k":"append.cb.again.data","v":[0,3,6,9,12,15,18,21,24,27,30,33,36,39,42,45,48,51,54,57,60,63,1000,1003,1006,1009,1012,1015,1018,1021,1024,1027,1030,1033,1036,1039,1042,1045,1048,1051,1054,1057,1060,1063,2863267884,2863267885,2863267886,2863267887,2863267888,2863267889,2863267890,2863267891,2863267892,2863267893,2863267894,2863267895,2863267896,2863267897,2863267898,2863267899,2863267900,2863267901,2863267902,2863267903]}
+{"k":"append.cb.reset.count","v":[8,4294967295,4294967295,4294967295]}
+{"k":"append.cb.reset.data","v":[24,27,30,33,36,39,42,45,48,51,54,57,60,63,1000,1003,1006,1009,1012,1015,1018,1021,1024,1027,1030,1033,1036,1039,1042,1045,1048,1051,1054,1057,1060,1063,2000,2008,2016,2024,2032,2040,2048,2056,2863267884,2863267885,2863267886,2863267887,2863267888,2863267889,2863267890,2863267891,2863267892,2863267893,2863267894,2863267895,2863267896,2863267897,2863267898,2863267899,2863267900,2863267901,2863267902,2863267903]}
+{"k":"append.cb.start10.count","v":[14,4294967295,4294967295,4294967295]}
+{"k":"append.cb.start10.data","v":[24,27,42,45,48,51,54,57,60,63,1000,1003,1006,1009,1012,1015,1018,1021,1024,1027,1030,1033,1036,1039,1042,1045,1048,1051,1054,1057,1060,1063,2000,2008,2016,2024,2032,2040,2048,2056,3000,3016,3032,3048,2863267884,2863267885,2863267886,2863267887,2863267888,2863267889,2863267890,2863267891,2863267892,2863267893,2863267894,2863267895,2863267896,2863267897,2863267898,2863267899,2863267900,2863267901,2863267902,2863267903]}
+{"k":"append.cb.setdata.count","v":[14,4294967295,4294967295,4294967295]}
+{"k":"append.cb.set70.count","v":[70,4294967295,4294967295,4294967295]}
+{"k":"append.cb.copyoffset","v":[4294967295,4294967295,9,4294967295]}
+{"k":"append.cb.copyunaligned","v":[655359,4294901760,4294967295,4294967295]}
+{"k":"append.cb.copyunaligned.log","v":["Warning: dstOffsetBytes must be a multiple of 4"]}
+{"k":"append.cb.copybeyond","v":[4294967295,4294967295,4294967295,4294967295]}
+{"k":"append.cb.copybeyond.log","v":["Assert: Assertion failed on expression: 'dstOffset + size <= m_size'"]}
+{"k":"append.cb.copyraw","v":[4294967295,9,4294967295,4294967295]}
+{"k":"append.cb.copydefault","v":[9,4294967295,4294967295,4294967295]}
+{"k":"append.gb.first.count","v":[16,4294967295,4294967295,4294967295]}
+{"k":"append.gb.first.data","v":[0,4,8,12,16,20,24,28,32,36,40,44,48,52,56,60,2863267856,2863267857,2863267858,2863267859,2863267860,2863267861,2863267862,2863267863,2863267864,2863267865,2863267866,2863267867,2863267868,2863267869,2863267870,2863267871,2863267872,2863267873,2863267874,2863267875,2863267876,2863267877,2863267878,2863267879,2863267880,2863267881,2863267882,2863267883,2863267884,2863267885,2863267886,2863267887,2863267888,2863267889,2863267890,2863267891,2863267892,2863267893,2863267894,2863267895,2863267896,2863267897,2863267898,2863267899,2863267900,2863267901,2863267902,2863267903]}
+{"k":"append.gb.start5.count","v":[7,4294967295,4294967295,4294967295]}
+{"k":"append.gb.start5.data","v":[0,4,8,12,16,28,32,36,40,44,48,52,56,60,500,532,2863267856,2863267857,2863267858,2863267859,2863267860,2863267861,2863267862,2863267863,2863267864,2863267865,2863267866,2863267867,2863267868,2863267869,2863267870,2863267871,2863267872,2863267873,2863267874,2863267875,2863267876,2863267877,2863267878,2863267879,2863267880,2863267881,2863267882,2863267883,2863267884,2863267885,2863267886,2863267887,2863267888,2863267889,2863267890,2863267891,2863267892,2863267893,2863267894,2863267895,2863267896,2863267897,2863267898,2863267899,2863267900,2863267901,2863267902,2863267903]}
+{"k":"append.gb.mixed","v":[4294967295,7]}
+{"k":"append.cbgroups.count","v":[39,4294967295,4294967295,4294967295]}
+{"k":"append.cbgroups.data","v":[0,5,10,15,20,25,30,35,40,45,50,55,60,65,70,75,80,85,90,95,100,105,110,115,120,125,130,135,140,145,150,155,160,165,170,175,180,185,190,2863267879,2863267880,2863267881,2863267882,2863267883,2863267884,2863267885,2863267886,2863267887,2863267888,2863267889,2863267890,2863267891,2863267892,2863267893,2863267894,2863267895,2863267896,2863267897,2863267898,2863267899,2863267900,2863267901,2863267902,2863267903,2863267904,2863267905,2863267906,2863267907,2863267908,2863267909,2863267910,2863267911,2863267912,2863267913,2863267914,2863267915,2863267916,2863267917,2863267918,2863267919,2863267920,2863267921,2863267922,2863267923,2863267924,2863267925,2863267926,2863267927,2863267928,2863267929,2863267930,2863267931,2863267932,2863267933,2863267934,2863267935,2863267936,2863267937,2863267938,2863267939,2863267940,2863267941,2863267942,2863267943,2863267944,2863267945,2863267946,2863267947,2863267948,2863267949,2863267950,2863267951,2863267952,2863267953,2863267954,2863267955,2863267956,2863267957,2863267958,2863267959,2863267960,2863267961,2863267962,2863267963,2863267964,2863267965,2863267966,2863267967,2863267968,2863267969,2863267970,2863267971,2863267972,2863267973,2863267974,2863267975,2863267976,2863267977,2863267978,2863267979,2863267980,2863267981,2863267982,2863267983,2863267984,2863267985,2863267986,2863267987,2863267988,2863267989,2863267990,2863267991,2863267992,2863267993,2863267994,2863267995,2863267996,2863267997,2863267998,2863267999,2863268000,2863268001,2863268002,2863268003,2863268004,2863268005,2863268006,2863268007,2863268008,2863268009,2863268010,2863268011,2863268012,2863268013,2863268014,2863268015,2863268016,2863268017,2863268018,2863268019,2863268020,2863268021,2863268022,2863268023,2863268024,2863268025,2863268026,2863268027,2863268028,2863268029,2863268030,2863268031,2863268032,2863268033,2863268034,2863268035,2863268036,2863268037,2863268038,2863268039,2863268040,2863268041,2863268042,2863268043,2863268044,2863268045,2863268046,2863268047,2863268048,2863268049,2863268050,2863268051,2863268052,2863268053,2863268054,2863268055,2863268056,2863268057,2863268058,2863268059,2863268060,2863268061,2863268062,2863268063,2863268064,2863268065,2863268066,2863268067,2863268068,2863268069,2863268070,2863268071,2863268072,2863268073,2863268074,2863268075,2863268076,2863268077,2863268078,2863268079,2863268080,2863268081,2863268082,2863268083,2863268084,2863268085,2863268086,2863268087,2863268088,2863268089,2863268090,2863268091,2863268092,2863268093,2863268094,2863268095]}
+{"k":"append.pair.count","v":[4,4294967295,4294967295,4294967295]}
+{"k":"append.pair.data","v":["0:7","12:43","2863267848:2863267849","2863267850:2863267851","2863267852:2863267853","2863267854:2863267855","2863267856:2863267857","2863267858:2863267859","2863267860:2863267861","2863267862:2863267863","2863267864:2863267865","2863267866:2863267867","2863267868:2863267869","2863267870:2863267871","4:19","8:31"]}
+{"k":"append.boundonly","v":[4294967295,4294967295,4294967295,4294967295]}
+{"k":"append.plainbind","v":[4294967295,4294967295,4294967295,4294967295]}
+{"k":"append.afterfirst.count","v":[5,4294967295,4294967295,4294967295]}
+{"k":"append.afterfirst.set","v":[11,4294967295,4294967295,4294967295]}
+{"k":"append.default.copycount","v":[4294967295,4294967295,4294967295,4294967295]}
+{"k":"append.default.setcounter.data","v":[0,1,2,3,4,5,6,7]}
+{"k":"append.gbdefault.copycount","v":[4294967295,4294967295,4294967295,4294967295]}
+{"k":"consume.out","v":[108,109,110,111,112,113,114,115]}
+{"k":"consume.count","v":[8,4294967295,4294967295,4294967295]}
+{"k":"consume.again.out","v":[100,101,102,103,104,105,106,107]}
+{"k":"consume.again.count","v":[0,4294967295,4294967295,4294967295]}
+{"k":"counter.created","v":[4294967295,4294967295,4294967295,4294967295]}
+{"k":"counter.first.count","v":[16,4294967295,4294967295,4294967295]}
+{"k":"counter.first.data","v":[1000,1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015,2863267856,2863267857,2863267858,2863267859,2863267860,2863267861,2863267862,2863267863,2863267864,2863267865,2863267866,2863267867,2863267868,2863267869,2863267870,2863267871]}
+{"k":"counter.again.count","v":[32,4294967295,4294967295,4294967295]}
+{"k":"counter.again.data","v":[1000,1001,1002,1003,1004,1005,1006,1007,1008,1009,1010,1011,1012,1013,1014,1015,2000,2001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015]}
+{"k":"counter.down.out","v":[28,29,30,31]}
+{"k":"counter.down.count","v":[28,4294967295,4294967295,4294967295]}
+{"k":"counter.set2.count","v":[18,4294967295,4294967295,4294967295]}
+{"k":"counter.set2.data","v":[1000,1001,2002,2003,2004,2005,2006,2007,2008,2009,2010,2011,2012,2013,2014,2015,3000,3001,3002,3003,3004,3005,3006,3007,3008,3009,3010,3011,3012,3013,3014,3015]}
+{"k":"counter.gb.count","v":[16,4294967295,4294967295,4294967295]}
+{"k":"counter.gb.data","v":[4000,4001,4002,4003,4004,4005,4006,4007,4008,4009,4010,4011,4012,4013,4014,4015,2863267856,2863267857,2863267858,2863267859,2863267860,2863267861,2863267862,2863267863,2863267864,2863267865,2863267866,2863267867,2863267868,2863267869,2863267870,2863267871]}
+{"k":"counter.gb.set1","v":[1,4294967295,4294967295,4294967295]}
+{"k":"counter.cbtype","v":[4294967295,4294967295,4294967295,4294967295]}
+{"k":"indirect.cb","v":[2,1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"k":"indirect.cb.offset","v":[12,1,2,3,0,5,6,7,0,0,0,0,0,0,0,0,0,17,18,19,0,21,22,23,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"k":"indirect.cb.direct","v":[12,1,2,3,0,5,6,7,0,0,0,0,0,0,0,0,0,17,18,19,0,21,22,23,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"k":"indirect.copycount","v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"k":"indirect.gb","v":[4,1,2,3,4,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"k":"indirect.gb.offset","v":[3,1,0,0,0,5,0,0,0,9,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"k":"indirect.structured","v":[2,1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"k":"indirect.gbstructured","v":[2,1,2,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"k":"indirect.unaligned","v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"k":"indirect.beyond","v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"k":"indirect.null.error","v":"ArgumentNullException: Value cannot be null.\nParameter name: argsBuffer"}
+{"k":"indirect.zero","v":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"k":"indirect.gpu","v":[6,1,2,3,0,5,6,7,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"k":"indirect.cmd","v":[12,1,2,3,0,5,6,7,0,0,0,0,0,0,0,0,0,17,18,19,0,21,22,23,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"k":"indirect.cmd.gb","v":[4,1,2,0,0,5,6,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"k":"indirect.cmd.late","v":[3,1,2,3,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]}
+{"k":"copy.flags","v":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]}
+{"k":"copy.noflags.error","v":"ArgumentException: CopyBuffer source must have CopySource target\nParameter name: source"}
+{"k":"copy.nodest.error","v":"ArgumentException: CopyBuffer destination must have CopyDestination target\nParameter name: dest"}
+{"k":"copy.swapped.error","v":"ArgumentException: CopyBuffer source must have CopySource target\nParameter name: source"}
+{"k":"copy.both","v":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]}
+{"k":"copy.raw","v":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]}
+{"k":"copy.stride","v":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]}
+{"k":"copy.smaller.error","v":"ArgumentException: CopyBuffer source and destination buffers must be the same size, source was 32 bytes, dest was 64 bytes"}
+{"k":"copy.larger.error","v":"ArgumentException: CopyBuffer source and destination buffers must be the same size, source was 64 bytes, dest was 32 bytes"}
+{"k":"copy.vertex","v":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]}
+{"k":"copy.index","v":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]}
+{"k":"copy.args","v":[1,2,3,4]}
+{"k":"copy.append","v":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]}
+{"k":"copy.constant","v":[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]}
+{"k":"copy.self","v":[1,2,3,4,5,6,7,8]}
+{"k":"copy.null.error","v":"ArgumentNullException: Value cannot be null.\nParameter name: dest"}
+{"k":"copy.nullsource.error","v":"ArgumentNullException: Value cannot be null.\nParameter name: source"}
+{"k":"copy.released.error","v":"NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"copy.cmd.before","v":[2863267840,2863267841,2863267842,2863267843,2863267844,2863267845,2863267846,2863267847]}
+{"k":"copy.cmd.after","v":[50,51,52,53,54,55,56,57]}
+{"k":"copy.cmd.nodest.error","v":"ArgumentException: CopyBuffer destination must have CopyDestination target\nParameter name: dest"}
+{"k":"copy.cmd.larger.error","v":"ArgumentException: CopyBuffer source and destination buffers must be the same size, source was 64 bytes, dest was 32 bytes"}
+{"k":"cmddata.array.before","v":[2863267840,2863267841,2863267842,2863267843,2863267844,2863267845,2863267846,2863267847]}
+{"k":"cmddata.array.after","v":[10,11,12,13,14,15,16,17]}
+{"k":"cmddata.array.twice","v":[10,11,12,13,14,15,16,17]}
+{"k":"cmddata.range","v":[2863267840,2863267841,2863267842,2863267843,12,13,14,2863267847]}
+{"k":"cmddata.native","v":[20,21,22,23,24,25,26,27]}
+{"k":"cmddata.nativerange","v":[2863267840,2863267841,2863267842,2863267843,2863267844,31,32,2863267847]}
+{"k":"cmddata.list","v":[2863267840,2863267841,2863267842,2863267843,2863267844,2863267845,40,41]}
+{"k":"cmddata.bytes","v":[2863267840,67305985,2863267842,2863267843,2863267844,2863267845,2863267846,2863267847]}
+{"k":"cmddata.cb","v":[60,61,62,63,70,71,72,73]}
+{"k":"cmddata.overflow.error","v":"ArgumentException: GraphicsBuffer.SetData(): Accessing 16 bytes at offset 24 for Buffer of size 32 bytes is not possible."}
+{"k":"cmddata.badrange.error","v":"ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: Bad indices/count arguments (managedBufferStartIndex:2 graphicsBufferStartIndex:0 count:4)"}
+{"k":"cmddata.counter.before","v":[4294967295,4294967295,4294967295,4294967295]}
+{"k":"cmddata.counter.after","v":[4294967295,4294967295,4294967295,4294967295]}
+{"k":"cmddata.counter.gb","v":[4294967295,4294967295,4294967295,4294967295]}
+{"k":"setdata.native.all","v":[1,2,3,4,5,6,7,8]}
+{"k":"setdata.native.range","v":[1,2,3,4,2,3,4,8]}
+{"k":"setdata.gbnative","v":[102,103,2863267842,2863267843,2863267844,2863267845,2863267846,2863267847]}
+{"k":"setdata.list","v":[2863267840,203,204,2863267843,2863267844,2863267845,2863267846,2863267847]}
+{"k":"setdata.bytes","v":[2863267840,67305985,2863267842,2863267843,2863267844,2863267845,2863267846,2863267847]}
+{"k":"setdata.wide","v":[2863267840,2863267841,572662306,286331153,1145324612,858993459,2863267846,2863267847]}
+{"k":"setdata.overflow.error","v":"ArgumentException: SetData(): Accessing 16 bytes at offset 24 for Buffer of size 32 bytes is not possible."}
+{"k":"setdata.badrange.error","v":"ArgumentOutOfRangeException: Specified argument was out of the range of valid values.\nParameter name: Bad indices/count arguments (managedBufferStartIndex:2 computeBufferStartIndex:0 count:4)"}
+{"k":"setdata.nativeoverflow.error","v":"ArgumentException: SetData(): Accessing 16 bytes at offset 24 for Buffer of size 32 bytes is not possible."}
+{"k":"getdata.range","v":[1,2863267842,2863267843,2863267844,1,1]}
+{"k":"getdata.bytes.error","v":"ArgumentException: GetData(): Buffer offset (5 bytes) is not integer multiple of Buffer stride (4 bytes)."}
+{"k":"getdata.overflow.error","v":"ArgumentException: GetData(): Accessing 16 bytes at offset 24 for Buffer of size 32 bytes is not possible."}
+{"k":"getdata.released.error","v":"NullReferenceException: Object reference not set to an instance of an object."}
+{"k":"rb.buffer.shape","v":[64,1,1,1,64]}
+{"k":"rb.buffer.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.buffer.events","v":["r0:--","un:d-"]}
+{"k":"rb.callback.callback.shape","v":[64,1,1,1,64]}
+{"k":"rb.callback.callback.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.callback.shape","v":[64,1,1,1,64]}
+{"k":"rb.callback.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.callback.events","v":["r0:--","cn:d-"]}
+{"k":"rb.range.callback.shape","v":[16,1,1,1,16]}
+{"k":"rb.range.callback.data","v":["0f000000160000001d00000024000000"]}
+{"k":"rb.range.shape","v":[16,1,1,1,16]}
+{"k":"rb.range.data","v":["0f000000160000001d00000024000000"]}
+{"k":"rb.range.events","v":["r0:--","cn:d-"]}
+{"k":"rb.range.beyond.log","v":["Error: AsyncGPUReadback - Out of bounds arguments - src offset:8 dst size:64 src size:64"]}
+{"k":"rb.range.beyond.shape","v":[0,0,0,0,0]}
+{"k":"rb.range.beyond.dataerror","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"rb.range.beyond.events","v":["c0:de","r0:de"]}
+{"k":"rb.range.unaligned.callback.shape","v":[6,1,1,1,6]}
+{"k":"rb.range.unaligned.callback.data","v":["000008000000"]}
+{"k":"rb.range.unaligned.shape","v":[6,1,1,1,6]}
+{"k":"rb.range.unaligned.data","v":["000008000000"]}
+{"k":"rb.range.unaligned.events","v":["r0:--","cn:d-"]}
+{"k":"rb.range.zero.log","v":["Error: AsyncGPUReadback - Out of bounds arguments - src offset:0 dst size:0 src size:64"]}
+{"k":"rb.range.zero.shape","v":[0,0,0,0,0]}
+{"k":"rb.range.zero.dataerror","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"rb.range.zero.events","v":["c0:de","r0:de"]}
+{"k":"rb.gb.callback.shape","v":[16,1,1,1,16]}
+{"k":"rb.gb.callback.data","v":["05000000060000000700000008000000"]}
+{"k":"rb.gb.shape","v":[16,1,1,1,16]}
+{"k":"rb.gb.data","v":["05000000060000000700000008000000"]}
+{"k":"rb.gb.events","v":["r0:--","cn:d-"]}
+{"k":"rb.order.callback.shape","v":[64,1,1,1,64]}
+{"k":"rb.order.callback.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.order.shape","v":[64,1,1,1,64]}
+{"k":"rb.order.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.order.events","v":["r0:--","cn:d-"]}
+{"k":"rb.early.getdata.error","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"rb.early.callback.shape","v":[64,1,1,1,64]}
+{"k":"rb.early.callback.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.early.shape","v":[64,1,1,1,64]}
+{"k":"rb.early.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.early.events","v":["r0:--","cn:d-"]}
+{"k":"rb.later1.error","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"rb.later1.layer.error","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"rb.later1.type.error","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"rb.later3.error","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"rb.later3.state","v":[true,true]}
+{"k":"rb.wait.callback.shape","v":[64,1,1,1,64]}
+{"k":"rb.wait.callback.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.wait.shape","v":[64,1,1,1,64]}
+{"k":"rb.wait.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.wait.events","v":["r0:--","c0:d-","w0:d-"]}
+{"k":"rb.wait.order","v":["waiting","callback","waited"]}
+{"k":"rb.waitall.a.callback.shape","v":[64,1,1,1,64]}
+{"k":"rb.waitall.a.callback.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.waitall.b.callback.shape","v":[8,1,1,1,8]}
+{"k":"rb.waitall.b.callback.data","v":["0100000008000000"]}
+{"k":"rb.waitall.a.shape","v":[64,1,1,1,64]}
+{"k":"rb.waitall.a.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.waitall.b.shape","v":[8,1,1,1,8]}
+{"k":"rb.waitall.b.data","v":["0100000008000000"]}
+{"k":"rb.waitall.a.events","v":["r0:--","c0:d-","w0:d-"]}
+{"k":"rb.waitall.b.events","v":["r0:--","c0:d-","w0:d-"]}
+{"k":"rb.waitall.order","v":["waiting","a","b","waited"]}
+{"k":"rb.update.callback.shape","v":[64,1,1,1,64]}
+{"k":"rb.update.callback.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.update.shape","v":[64,1,1,1,64]}
+{"k":"rb.update.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.update.events","v":["r0:--","w0:--","cn:d-"]}
+{"k":"rb.update.order","v":["updating","updated","callback"]}
+{"k":"rb.native.atrequest.error","v":"InvalidOperationException: The Unity.Collections.NativeArray`1[System.UInt32] can no longer be accessed, since its owner has been invalidated. You can simply Dispose() the container and create a new one."}
+{"k":"rb.native.callback.shape","v":[64,1,1,1,64]}
+{"k":"rb.native.callback.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.native.callback.extra","v":[1,8,15,22,29,36,43,50,57,64,71,78,85,92,99,106]}
+{"k":"rb.native.shape","v":[64,1,1,1,64]}
+{"k":"rb.native.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.native.extra","v":[1,8,15,22,29,36,43,50,57,64,71,78,85,92,99,106]}
+{"k":"rb.native.events","v":["r0:--","cn:d-"]}
+{"k":"rb.native.final","v":[1,8,15,22,29,36,43,50,57,64,71,78,85,92,99,106]}
+{"k":"rb.native.larger.callback.shape","v":[64,1,1,1,64]}
+{"k":"rb.native.larger.callback.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.native.larger.shape","v":[64,1,1,1,64]}
+{"k":"rb.native.larger.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.native.larger.events","v":["r0:--","cn:d-"]}
+{"k":"rb.native.larger.final","v":[1,8,15,22,29,36,43,50,57,64,71,78,85,92,99,106,4008636142,4008636142,4008636142,4008636142]}
+{"k":"rb.native.small.log","v":["Error: Size of source buffer data (64 bytes) is larger than the destination nativeArray (16 bytes)."]}
+{"k":"rb.native.small.shape","v":[0,0,0,0,0]}
+{"k":"rb.native.small.dataerror","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"rb.native.small.events","v":["c0:de","r0:de"]}
+{"k":"rb.native.small.final","v":[4008636142,4008636142,4008636142,4008636142]}
+{"k":"rb.native.range.callback.shape","v":[8,1,1,1,8]}
+{"k":"rb.native.range.callback.data","v":["1d00000024000000"]}
+{"k":"rb.native.range.shape","v":[8,1,1,1,8]}
+{"k":"rb.native.range.data","v":["1d00000024000000"]}
+{"k":"rb.native.range.events","v":["r0:--","cn:d-"]}
+{"k":"rb.native.range.final","v":[29,36,4008636142,4008636142]}
+{"k":"rb.released.error","v":"ArgumentNullException: Value cannot be null.\nParameter name: buffer"}
+{"k":"rb.null.error","v":"ArgumentNullException: Value cannot be null.\nParameter name: buffer"}
+{"k":"rb.cmd.callback.shape","v":[64,1,1,1,64]}
+{"k":"rb.cmd.callback.data","v":["f4010000f5010000f6010000f7010000f8010000f9010000fa010000fb010000fc010000fd010000fe010000ff01000000020000010200000202000003020000"]}
+{"k":"rb.cmd.events","v":["cn:d-"]}
+{"k":"rb.cmd.final","v":[600,601,602,603,604,605,606,607,608,609,610,611,612,613,614,615]}
+{"k":"rb.cmd.wait.callback.shape","v":[8,1,1,1,8]}
+{"k":"rb.cmd.wait.callback.data","v":["080000000f000000"]}
+{"k":"rb.cmd.wait.events","v":["c0:d-"]}
+{"k":"rb.cmd.wait.order","v":["executing","callback","executed"]}
+{"k":"rb.cmd.native.atrequest.error","v":"InvalidOperationException: The Unity.Collections.NativeArray`1[System.UInt32] can no longer be accessed, since its owner has been invalidated. You can simply Dispose() the container and create a new one."}
+{"k":"rb.cmd.native.callback.shape","v":[64,1,1,1,64]}
+{"k":"rb.cmd.native.callback.data","v":["01000000080000000f000000160000001d000000240000002b000000320000003900000040000000470000004e000000550000005c000000630000006a000000"]}
+{"k":"rb.cmd.native.events","v":["cn:d-"]}
+{"k":"rb.cmd.native.final","v":[1,8,15,22,29,36,43,50,57,64,71,78,85,92,99,106]}
+{"k":"rb.tex.mips","v":4}
+{"k":"rb.tex.mip0.callback.shape","v":[8,8,1,1,256]}
+{"k":"rb.tex.mip0.callback.data","v":["000000ff031400ff062800ff093c00ff0c5000ff0f6400ff127800ff158c00ff180014ff1b1414ff1e2814ff213c14ff245014ff276414ff2a7814ff2d8c14ff300028ff331428ff362828ff393c28ff3c5028ff3f6428ff427828ff458c28ff48003cff4b143cff4e283cff513c3cff54503cff57643cff5a783cff5d8c3cff600050ff631450ff662850ff693c50ff6c5050ff6f6450ff727850ff758c50ff780064ff7b1464ff7e2864ff813c64ff845064ff876464ff8a7864ff8d8c64ff900078ff931478ff962878ff993c78ff9c5078ff9f6478ffa27878ffa58c78ffa8008cffab148cffae288cffb13c8cffb4508cffb7648cffba788cffbd8c8cff"]}
+{"k":"rb.tex.mip0.shape","v":[8,8,1,1,256]}
+{"k":"rb.tex.mip0.data","v":["000000ff031400ff062800ff093c00ff0c5000ff0f6400ff127800ff158c00ff180014ff1b1414ff1e2814ff213c14ff245014ff276414ff2a7814ff2d8c14ff300028ff331428ff362828ff393c28ff3c5028ff3f6428ff427828ff458c28ff48003cff4b143cff4e283cff513c3cff54503cff57643cff5a783cff5d8c3cff600050ff631450ff662850ff693c50ff6c5050ff6f6450ff727850ff758c50ff780064ff7b1464ff7e2864ff813c64ff845064ff876464ff8a7864ff8d8c64ff900078ff931478ff962878ff993c78ff9c5078ff9f6478ffa27878ffa58c78ffa8008cffab148cffae288cffb13c8cffb4508cffb7648cffba788cffbd8c8cff"]}
+{"k":"rb.tex.mip0.events","v":["r0:--","cn:d-"]}
+{"k":"rb.tex.mip1.callback.shape","v":[4,4,1,1,64]}
+{"k":"rb.tex.mip1.callback.data","v":["280000e12b1400e12e2800e1313c00e1340014e1371414e13a2814e13d3c14e1400028e1431428e1462828e1493c28e14c003ce14f143ce152283ce1553c3ce1"]}
+{"k":"rb.tex.mip1.shape","v":[4,4,1,1,64]}
+{"k":"rb.tex.mip1.data","v":["280000e12b1400e12e2800e1313c00e1340014e1371414e13a2814e13d3c14e1400028e1431428e1462828e1493c28e14c003ce14f143ce152283ce1553c3ce1"]}
+{"k":"rb.tex.mip1.events","v":["r0:--","cn:d-"]}
+{"k":"rb.tex.mip3.callback.shape","v":[1,1,1,1,4]}
+{"k":"rb.tex.mip3.callback.data","v":["780000a5"]}
+{"k":"rb.tex.mip3.shape","v":[1,1,1,1,4]}
+{"k":"rb.tex.mip3.data","v":["780000a5"]}
+{"k":"rb.tex.mip3.events","v":["r0:--","cn:d-"]}
+{"k":"rb.tex.mip4.log","v":["Error: AsyncGPUReadback - Invalid mipIndex: 4"]}
+{"k":"rb.tex.mip4.shape","v":[0,0,0,0,0]}
+{"k":"rb.tex.mip4.dataerror","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"rb.tex.mip4.events","v":["c0:de","r0:de"]}
+{"k":"rb.tex.region.callback.shape","v":[3,4,1,1,48]}
+{"k":"rb.tex.region.callback.data","v":["1e2814ff213c14ff245014ff362828ff393c28ff3c5028ff4e283cff513c3cff54503cff662850ff693c50ff6c5050ff"]}
+{"k":"rb.tex.region.shape","v":[3,4,1,1,48]}
+{"k":"rb.tex.region.data","v":["1e2814ff213c14ff245014ff362828ff393c28ff3c5028ff4e283cff513c3cff54503cff662850ff693c50ff6c5050ff"]}
+{"k":"rb.tex.region.events","v":["r0:--","cn:d-"]}
+{"k":"rb.tex.region.mip1.callback.shape","v":[2,2,1,1,16]}
+{"k":"rb.tex.region.mip1.callback.data","v":["431428e1462828e14f143ce152283ce1"]}
+{"k":"rb.tex.region.mip1.shape","v":[2,2,1,1,16]}
+{"k":"rb.tex.region.mip1.data","v":["431428e1462828e14f143ce152283ce1"]}
+{"k":"rb.tex.region.mip1.events","v":["r0:--","cn:d-"]}
+{"k":"rb.tex.region.beyond.log","v":["Error: AsyncGPUReadback - Out of bounds arguments - src offset:(6,0,0) dst dim:(4,2,1) src dim:(8,8,1)"]}
+{"k":"rb.tex.region.beyond.shape","v":[0,0,0,0,0]}
+{"k":"rb.tex.region.beyond.dataerror","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"rb.tex.region.beyond.events","v":["c0:de","r0:de"]}
+{"k":"rb.tex.region.depth.log","v":["Error: AsyncGPUReadback - Out of bounds arguments - src offset:(0,0,0) dst dim:(2,2,2) src dim:(8,8,1)"]}
+{"k":"rb.tex.region.depth.shape","v":[0,0,0,0,0]}
+{"k":"rb.tex.region.depth.dataerror","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"rb.tex.region.depth.events","v":["c0:de","r0:de"]}
+{"k":"rb.tex.format.RGBAFloat.callback.shape","v":[4,4,1,1,256]}
+{"k":"rb.tex.format.RGBAFloat.callback.data","v":["a1a0203e0000000000000000e3e1613fadac2c3ea1a0a03d00000000e3e1613fb9b8383ea1a0203e00000000e3e1613fc6c4443ef2f0703e00000000e3e1613fd2d0503e00000000a1a0a03de3e1613fdedc5c3ea1a0a03da1a0a03de3e1613feae8683ea1a0203ea1a0a03de3e1613ff6f4743ef2f0703ea1a0a03de3e1613f8180803e00000000a1a0203ee3e1613f8786863ea1a0a03da1a0203ee3e1613f8d8c8c3ea1a0203ea1a0203ee3e1613f9392923ef2f0703ea1a0203ee3e1613f9998983e00000000f2f0703ee3e1613f9f9e9e3ea1a0a03df2f0703ee3e1613fa5a4a43ea1a0203ef2f0703ee3e1613fabaaaa3ef2f0703ef2f0703ee3e1613f"]}
+{"k":"rb.tex.format.RGBAFloat.shape","v":[4,4,1,1,256]}
+{"k":"rb.tex.format.RGBAFloat.data","v":["a1a0203e0000000000000000e3e1613fadac2c3ea1a0a03d00000000e3e1613fb9b8383ea1a0203e00000000e3e1613fc6c4443ef2f0703e00000000e3e1613fd2d0503e00000000a1a0a03de3e1613fdedc5c3ea1a0a03da1a0a03de3e1613feae8683ea1a0203ea1a0a03de3e1613ff6f4743ef2f0703ea1a0a03de3e1613f8180803e00000000a1a0203ee3e1613f8786863ea1a0a03da1a0203ee3e1613f8d8c8c3ea1a0203ea1a0203ee3e1613f9392923ef2f0703ea1a0203ee3e1613f9998983e00000000f2f0703ee3e1613f9f9e9e3ea1a0a03df2f0703ee3e1613fa5a4a43ea1a0203ef2f0703ee3e1613fabaaaa3ef2f0703ef2f0703ee3e1613f"]}
+{"k":"rb.tex.format.RGBAFloat.events","v":["r0:--","cn:d-"]}
+{"k":"rb.tex.format.RGBAHalf.callback.shape","v":[4,4,1,1,128]}
+{"k":"rb.tex.format.RGBAHalf.callback.data","v":["0531000000000f3b6531052d00000f3bc631053100000f3b2632883300000f3b87320000052d0f3be732052d052d0f3b47330531052d0f3ba8338833052d0f3b0434000005310f3b3434052d05310f3b6434053105310f3b9534883305310f3bc534000088330f3bf534052d88330f3b2535053188330f3b5535883388330f3b"]}
+{"k":"rb.tex.format.RGBAHalf.shape","v":[4,4,1,1,128]}
+{"k":"rb.tex.format.RGBAHalf.data","v":["0531000000000f3b6531052d00000f3bc631053100000f3b2632883300000f3b87320000052d0f3be732052d052d0f3b47330531052d0f3ba8338833052d0f3b0434000005310f3b3434052d05310f3b6434053105310f3b9534883305310f3bc534000088330f3bf534052d88330f3b2535053188330f3b5535883388330f3b"]}
+{"k":"rb.tex.format.RGBAHalf.events","v":["r0:--","cn:d-"]}
+{"k":"rb.tex.format.BGRA32.callback.shape","v":[4,4,1,1,64]}
+{"k":"rb.tex.format.BGRA32.callback.data","v":["000028e100142be100282ee1003c31e1140034e1141437e114283ae1143c3de1280040e1281443e1282846e1283c49e13c004ce13c144fe13c2852e13c3c55e1"]}
+{"k":"rb.tex.format.BGRA32.shape","v":[4,4,1,1,64]}
+{"k":"rb.tex.format.BGRA32.data","v":["000028e100142be100282ee1003c31e1140034e1141437e114283ae1143c3de1280040e1281443e1282846e1283c49e13c004ce13c144fe13c2852e13c3c55e1"]}
+{"k":"rb.tex.format.BGRA32.events","v":["r0:--","cn:d-"]}
+{"k":"rb.tex.format.ARGB32.callback.shape","v":[4,4,1,1,64]}
+{"k":"rb.tex.format.ARGB32.callback.data","v":["e1280000e12b1400e12e2800e1313c00e1340014e1371414e13a2814e13d3c14e1400028e1431428e1462828e1493c28e14c003ce14f143ce152283ce1553c3c"]}
+{"k":"rb.tex.format.ARGB32.shape","v":[4,4,1,1,64]}
+{"k":"rb.tex.format.ARGB32.data","v":["e1280000e12b1400e12e2800e1313c00e1340014e1371414e13a2814e13d3c14e1400028e1431428e1462828e1493c28e14c003ce14f143ce152283ce1553c3c"]}
+{"k":"rb.tex.format.ARGB32.events","v":["r0:--","cn:d-"]}
+{"k":"rb.tex.format.R8.callback.shape","v":[4,4,1,1,16]}
+{"k":"rb.tex.format.R8.callback.data","v":["282b2e3134373a3d404346494c4f5255"]}
+{"k":"rb.tex.format.R8.shape","v":[4,4,1,1,16]}
+{"k":"rb.tex.format.R8.data","v":["282b2e3134373a3d404346494c4f5255"]}
+{"k":"rb.tex.format.R8.events","v":["r0:--","cn:d-"]}
+{"k":"rb.tex.format.RGB24.callback.shape","v":[4,4,1,1,48]}
+{"k":"rb.tex.format.RGB24.callback.data","v":["2800002b14002e2800313c003400143714143a28143d3c14400028431428462828493c284c003c4f143c52283c553c3c"]}
+{"k":"rb.tex.format.RGB24.shape","v":[4,4,1,1,48]}
+{"k":"rb.tex.format.RGB24.data","v":["2800002b14002e2800313c003400143714143a28143d3c14400028431428462828493c284c003c4f143c52283c553c3c"]}
+{"k":"rb.tex.format.RGB24.events","v":["r0:--","cn:d-"]}
+{"k":"rb.tex.gformat.srgb.callback.shape","v":[4,4,1,1,64]}
+{"k":"rb.tex.gformat.srgb.callback.data","v":["280000e12b1400e12e2800e1313c00e1340014e1371414e13a2814e13d3c14e1400028e1431428e1462828e1493c28e14c003ce14f143ce152283ce1553c3ce1"]}
+{"k":"rb.tex.gformat.srgb.shape","v":[4,4,1,1,64]}
+{"k":"rb.tex.gformat.srgb.data","v":["280000e12b1400e12e2800e1313c00e1340014e1371414e13a2814e13d3c14e1400028e1431428e1462828e1493c28e14c003ce14f143ce152283ce1553c3ce1"]}
+{"k":"rb.tex.gformat.srgb.events","v":["r0:--","cn:d-"]}
+{"k":"rb.tex.gformat.r32.callback.shape","v":[4,4,1,1,64]}
+{"k":"rb.tex.gformat.r32.callback.data","v":["a1a0203eadac2c3eb9b8383ec6c4443ed2d0503ededc5c3eeae8683ef6f4743e8180803e8786863e8d8c8c3e9392923e9998983e9f9e9e3ea5a4a43eabaaaa3e"]}
+{"k":"rb.tex.gformat.r32.shape","v":[4,4,1,1,64]}
+{"k":"rb.tex.gformat.r32.data","v":["a1a0203eadac2c3eb9b8383ec6c4443ed2d0503ededc5c3eeae8683ef6f4743e8180803e8786863e8d8c8c3e9392923e9998983e9f9e9e3ea5a4a43eabaaaa3e"]}
+{"k":"rb.tex.gformat.r32.events","v":["r0:--","cn:d-"]}
+{"k":"rb.tex.native.callback.shape","v":[8,8,1,1,256]}
+{"k":"rb.tex.native.callback.data","v":["000000ff031400ff062800ff093c00ff0c5000ff0f6400ff127800ff158c00ff180014ff1b1414ff1e2814ff213c14ff245014ff276414ff2a7814ff2d8c14ff300028ff331428ff362828ff393c28ff3c5028ff3f6428ff427828ff458c28ff48003cff4b143cff4e283cff513c3cff54503cff57643cff5a783cff5d8c3cff600050ff631450ff662850ff693c50ff6c5050ff6f6450ff727850ff758c50ff780064ff7b1464ff7e2864ff813c64ff845064ff876464ff8a7864ff8d8c64ff900078ff931478ff962878ff993c78ff9c5078ff9f6478ffa27878ffa58c78ffa8008cffab148cffae288cffb13c8cffb4508cffb7648cffba788cffbd8c8cff"]}
+{"k":"rb.tex.native.shape","v":[8,8,1,1,256]}
+{"k":"rb.tex.native.data","v":["000000ff031400ff062800ff093c00ff0c5000ff0f6400ff127800ff158c00ff180014ff1b1414ff1e2814ff213c14ff245014ff276414ff2a7814ff2d8c14ff300028ff331428ff362828ff393c28ff3c5028ff3f6428ff427828ff458c28ff48003cff4b143cff4e283cff513c3cff54503cff57643cff5a783cff5d8c3cff600050ff631450ff662850ff693c50ff6c5050ff6f6450ff727850ff758c50ff780064ff7b1464ff7e2864ff813c64ff845064ff876464ff8a7864ff8d8c64ff900078ff931478ff962878ff993c78ff9c5078ff9f6478ffa27878ffa58c78ffa8008cffab148cffae288cffb13c8cffb4508cffb7648cffba788cffbd8c8cff"]}
+{"k":"rb.tex.native.events","v":["r0:--","cn:d-"]}
+{"k":"rb.tex.native.final","v":"0,0,0,255 3,20,0,255 6,40,0,255 9,60,0,255"}
+{"k":"rb.tex.unreadable.callback.shape","v":[4,4,1,1,64]}
+{"k":"rb.tex.unreadable.callback.data","v":["280000e12b1400e12e2800e1313c00e1340014e1371414e13a2814e13d3c14e1400028e1431428e1462828e1493c28e14c003ce14f143ce152283ce1553c3ce1"]}
+{"k":"rb.tex.unreadable.shape","v":[4,4,1,1,64]}
+{"k":"rb.tex.unreadable.data","v":["280000e12b1400e12e2800e1313c00e1340014e1371414e13a2814e13d3c14e1400028e1431428e1462828e1493c28e14c003ce14f143ce152283ce1553c3ce1"]}
+{"k":"rb.tex.unreadable.events","v":["r0:--","cn:d-"]}
+{"k":"rb.array.full.callback.shape","v":[4,4,3,3,64]}
+{"k":"rb.array.full.callback.data","v":["000000c8010a00c8021400c8031e00c8042800c8053200c8063c00c8074600c8085000c8095a00c80a6400c80b6e00c80c7800c80d8200c80e8c00c80f9600c8","500032c9510a32c9521432c9531e32c9542832c9553232c9563c32c9574632c9585032c9595a32c95a6432c95b6e32c95c7832c95d8232c95e8c32c95f9632c9","a00064caa10a64caa21464caa31e64caa42864caa53264caa63c64caa74664caa85064caa95a64caaa6464caab6e64caac7864caad8264caae8c64caaf9664ca"]}
+{"k":"rb.array.full.shape","v":[4,4,3,3,64]}
+{"k":"rb.array.full.data","v":["000000c8010a00c8021400c8031e00c8042800c8053200c8063c00c8074600c8085000c8095a00c80a6400c80b6e00c80c7800c80d8200c80e8c00c80f9600c8","500032c9510a32c9521432c9531e32c9542832c9553232c9563c32c9574632c9585032c9595a32c95a6432c95b6e32c95c7832c95d8232c95e8c32c95f9632c9","a00064caa10a64caa21464caa31e64caa42864caa53264caa63c64caa74664caa85064caa95a64caaa6464caab6e64caac7864caad8264caae8c64caaf9664ca"]}
+{"k":"rb.array.full.events","v":["r0:--","cn:d-"]}
+{"k":"rb.array.layers.callback.shape","v":[4,4,2,2,64]}
+{"k":"rb.array.layers.callback.data","v":["500032c9510a32c9521432c9531e32c9542832c9553232c9563c32c9574632c9585032c9595a32c95a6432c95b6e32c95c7832c95d8232c95e8c32c95f9632c9","a00064caa10a64caa21464caa31e64caa42864caa53264caa63c64caa74664caa85064caa95a64caaa6464caab6e64caac7864caad8264caae8c64caaf9664ca"]}
+{"k":"rb.array.layers.shape","v":[4,4,2,2,64]}
+{"k":"rb.array.layers.data","v":["500032c9510a32c9521432c9531e32c9542832c9553232c9563c32c9574632c9585032c9595a32c95a6432c95b6e32c95c7832c95d8232c95e8c32c95f9632c9","a00064caa10a64caa21464caa31e64caa42864caa53264caa63c64caa74664caa85064caa95a64caaa6464caab6e64caac7864caad8264caae8c64caaf9664ca"]}
+{"k":"rb.array.layers.events","v":["r0:--","cn:d-"]}
+{"k":"rb.array.region.callback.shape","v":[2,2,3,3,16]}
+{"k":"rb.array.region.callback.data","v":["053200c8063c00c8095a00c80a6400c8","553232c9563c32c9595a32c95a6432c9","a53264caa63c64caa95a64caaa6464ca"]}
+{"k":"rb.array.region.shape","v":[2,2,3,3,16]}
+{"k":"rb.array.region.data","v":["053200c8063c00c8095a00c80a6400c8","553232c9563c32c9595a32c95a6432c9","a53264caa63c64caa95a64caaa6464ca"]}
+{"k":"rb.array.region.events","v":["r0:--","cn:d-"]}
+{"k":"rb.array.beyond.log","v":["Error: AsyncGPUReadback - Out of bounds arguments - src offset:(0,0,2) dst dim:(4,4,2) src dim:(4,4,3)"]}
+{"k":"rb.array.beyond.shape","v":[0,0,0,0,0]}
+{"k":"rb.array.beyond.dataerror","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"rb.array.beyond.events","v":["c0:de","r0:de"]}
+{"k":"rb.volume.full.callback.shape","v":[4,4,4,4,64]}
+{"k":"rb.volume.full.callback.data","v":["000000ff041000ff082000ff0c3000ff104000ff145000ff186000ff1c7000ff208000ff249000ff28a000ff2cb000ff30c000ff34d000ff38e000ff3cf000ff","40003cff44103cff48203cff4c303cff50403cff54503cff58603cff5c703cff60803cff64903cff68a03cff6cb03cff70c03cff74d03cff78e03cff7cf03cff","800078ff841078ff882078ff8c3078ff904078ff945078ff986078ff9c7078ffa08078ffa49078ffa8a078ffacb078ffb0c078ffb4d078ffb8e078ffbcf078ff","c000b4ffc410b4ffc820b4ffcc30b4ffd040b4ffd450b4ffd860b4ffdc70b4ffe080b4ffe490b4ffe8a0b4ffecb0b4fff0c0b4fff4d0b4fff8e0b4fffcf0b4ff"]}
+{"k":"rb.volume.full.shape","v":[4,4,4,4,64]}
+{"k":"rb.volume.full.data","v":["000000ff041000ff082000ff0c3000ff104000ff145000ff186000ff1c7000ff208000ff249000ff28a000ff2cb000ff30c000ff34d000ff38e000ff3cf000ff","40003cff44103cff48203cff4c303cff50403cff54503cff58603cff5c703cff60803cff64903cff68a03cff6cb03cff70c03cff74d03cff78e03cff7cf03cff","800078ff841078ff882078ff8c3078ff904078ff945078ff986078ff9c7078ffa08078ffa49078ffa8a078ffacb078ffb0c078ffb4d078ffb8e078ffbcf078ff","c000b4ffc410b4ffc820b4ffcc30b4ffd040b4ffd450b4ffd860b4ffdc70b4ffe080b4ffe490b4ffe8a0b4ffecb0b4fff0c0b4fff4d0b4fff8e0b4fffcf0b4ff"]}
+{"k":"rb.volume.full.events","v":["r0:--","cn:d-"]}
+{"k":"rb.volume.slices.callback.shape","v":[4,4,2,2,64]}
+{"k":"rb.volume.slices.callback.data","v":["40003cff44103cff48203cff4c303cff50403cff54503cff58603cff5c703cff60803cff64903cff68a03cff6cb03cff70c03cff74d03cff78e03cff7cf03cff","800078ff841078ff882078ff8c3078ff904078ff945078ff986078ff9c7078ffa08078ffa49078ffa8a078ffacb078ffb0c078ffb4d078ffb8e078ffbcf078ff"]}
+{"k":"rb.volume.slices.shape","v":[4,4,2,2,64]}
+{"k":"rb.volume.slices.data","v":["40003cff44103cff48203cff4c303cff50403cff54503cff58603cff5c703cff60803cff64903cff68a03cff6cb03cff70c03cff74d03cff78e03cff7cf03cff","800078ff841078ff882078ff8c3078ff904078ff945078ff986078ff9c7078ffa08078ffa49078ffa8a078ffacb078ffb0c078ffb4d078ffb8e078ffbcf078ff"]}
+{"k":"rb.volume.slices.events","v":["r0:--","cn:d-"]}
+{"k":"rb.volume.beyond.log","v":["Error: AsyncGPUReadback - Out of bounds arguments - src offset:(0,0,3) dst dim:(4,4,2) src dim:(4,4,4)"]}
+{"k":"rb.volume.beyond.shape","v":[0,0,0,0,0]}
+{"k":"rb.volume.beyond.dataerror","v":"InvalidOperationException: Cannot access the data as it is not available"}
+{"k":"rb.volume.beyond.events","v":["c0:de","r0:de"]}
+{"k":"rb.rt.mip0.callback.shape","v":[8,4,1,1,128]}
+{"k":"rb.rt.mip0.callback.data","v":["407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff"]}
+{"k":"rb.rt.mip0.shape","v":[8,4,1,1,128]}
+{"k":"rb.rt.mip0.data","v":["407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff407fbfff"]}
+{"k":"rb.rt.mip0.events","v":["r0:--","cn:d-"]}
+{"k":"rb.rt.mip1.callback.shape","v":[4,2,1,1,32]}
+{"k":"rb.rt.mip1.callback.data","v":["ff007f40ff007f40ff007f40ff007f40ff007f40ff007f40ff007f40ff007f40"]}
+{"k":"rb.rt.mip1.shape","v":[4,2,1,1,32]}
+{"k":"rb.rt.mip1.data","v":["ff007f40ff007f40ff007f40ff007f40ff007f40ff007f40ff007f40ff007f40"]}
+{"k":"rb.rt.mip1.events","v":["r0:--","cn:d-"]}
+{"k":"rb.rt.cmd.callback.shape","v":[8,4,1,1,128]}
+{"k":"rb.rt.cmd.callback.data","v":["00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f00ff007f"]}
+{"k":"rb.rt.cmd.events","v":["cn:d-"]}
+{"k":"rb.rt.float.callback.shape","v":[8,4,1,1,512]}
+{"k":"rb.rt.float.callback.data","v":["0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f"]}
+{"k":"rb.rt.float.shape","v":[8,4,1,1,512]}
+{"k":"rb.rt.float.data","v":["0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f0000803f"]}
+{"k":"rb.rt.float.events","v":["r0:--","cn:d-"]}
+{"k":"rb.rtfloat.callback.shape","v":[4,2,1,1,128]}
+{"k":"rb.rtfloat.callback.data","v":["0000c03f000000c00000803e0000803f0000c03f000000c00000803e0000803f0000c03f000000c00000803e0000803f0000c03f000000c00000803e0000803f0000c03f000000c00000803e0000803f0000c03f000000c00000803e0000803f0000c03f000000c00000803e0000803f0000c03f000000c00000803e0000803f"]}
+{"k":"rb.rtfloat.shape","v":[4,2,1,1,128]}
+{"k":"rb.rtfloat.data","v":["0000c03f000000c00000803e0000803f0000c03f000000c00000803e0000803f0000c03f000000c00000803e0000803f0000c03f000000c00000803e0000803f0000c03f000000c00000803e0000803f0000c03f000000c00000803e0000803f0000c03f000000c00000803e0000803f0000c03f000000c00000803e0000803f"]}
+{"k":"rb.rtfloat.events","v":["r0:--","cn:d-"]}
+{"k":"rb.rtfloat.bytes.callback.shape","v":[4,2,1,1,32]}
+{"k":"rb.rtfloat.bytes.callback.data","v":["ff0040ffff0040ffff0040ffff0040ffff0040ffff0040ffff0040ffff0040ff"]}
+{"k":"rb.rtfloat.bytes.shape","v":[4,2,1,1,32]}
+{"k":"rb.rtfloat.bytes.data","v":["ff0040ffff0040ffff0040ffff0040ffff0040ffff0040ffff0040ffff0040ff"]}
+{"k":"rb.rtfloat.bytes.events","v":["r0:--","cn:d-"]}
+{"k":"rb.rtarray.callback.shape","v":[4,4,3,3,64]}
+{"k":"rb.rtarray.callback.data","v":["00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff","40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff","7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff"]}
+{"k":"rb.rtarray.shape","v":[4,4,3,3,64]}
+{"k":"rb.rtarray.data","v":["00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff","40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff","7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff"]}
+{"k":"rb.rtarray.events","v":["r0:--","cn:d-"]}
+{"k":"rb.rtarray.default.callback.shape","v":[4,4,3,3,64]}
+{"k":"rb.rtarray.default.callback.data","v":["00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff","40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff","7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff"]}
+{"k":"rb.rtarray.default.shape","v":[4,4,3,3,64]}
+{"k":"rb.rtarray.default.data","v":["00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff00ff7fff","40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff40bf7fff","7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff7f7f7fff"]}
+{"k":"rb.rtarray.default.events","v":["r0:--","cn:d-"]}
+{"k":"complete","v":true}

@@ -119,7 +119,9 @@ pub(crate) fn scan(words: &[u32], stage: Stage) -> Result<Scanned> {
 }
 
 /// SPIR-V without `RelaxedPrecision` decorations (glslang's for `min16float` and `half`): naga
-/// does not know them and warns for each; everything runs at full precision anyway.
+/// does not know them and warns for each; everything runs at full precision anyway. Also without
+/// `OpDecorateId`, which naga cannot read: glslang links a buffer to its counter block with one
+/// (`HlslCounterBufferGOOGLE`), a reflection hint; the renderer finds the counter by its name.
 pub(crate) fn strip_relaxed_precision(words: &[u32]) -> Vec<u32> {
     if words.len() < 5 {
         return words.to_vec();
@@ -133,6 +135,7 @@ pub(crate) fn strip_relaxed_precision(words: &[u32]) -> Vec<u32> {
         let relaxed = match inst[0] & 0xffff {
             71 => inst.len() == 3 && inst[2] == 0,
             72 => inst.len() == 4 && inst[3] == 0,
+            332 => true,
             _ => false,
         };
         if !relaxed {

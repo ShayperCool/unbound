@@ -155,6 +155,27 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>A rectangle of a mip level of a texture's layer (an array slice, a cube face, a
+        /// volume's depth slice) after every command so far, as <see cref="ReadPixels"/> gives it;
+        /// null without a GPU or when the texture has no such level or layer.</summary>
+        internal static byte[] ReadTexture(ulong texture, int mip, int layer, int x, int y, int width, int height, bool asFloat)
+        {
+            if (!s_Ready) return null;
+            GfxStream.Flush();
+            NativeBuffer buffer;
+            if (s_Api.ReadTexture(texture, mip, layer, x, y, width, height, asFloat ? 1 : 0, &buffer) == 0) return null;
+            try
+            {
+                var bytes = new byte[buffer.Length];
+                new ReadOnlySpan<byte>(buffer.Data, (int)buffer.Length).CopyTo(bytes);
+                return bytes;
+            }
+            finally
+            {
+                Free(buffer);
+            }
+        }
+
         /// <summary>A buffer's bytes after every command so far; null without a GPU.</summary>
         internal static byte[] ReadBuffer(ulong buffer, long offset, long size)
         {

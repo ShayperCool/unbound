@@ -14,6 +14,7 @@ namespace UnityEngine
         bool m_Created;
         /// <summary>In the temporary pool and released (<see cref="ReleaseTemporary"/>).</summary>
         internal bool m_PooledFree;
+        internal long m_PoolLease;
         internal int m_LastUsedFrame;
 
         static RenderTexture s_Active;
@@ -249,7 +250,9 @@ namespace UnityEngine
             var f = m_Descriptor.graphicsFormat;
             if (f == GraphicsFormat.None && m_Descriptor.depthStencilFormat != GraphicsFormat.None) return 5;
             if (f == GraphicsFormat.B10G11R11_UFloatPack32) return 4;
-            if (f == GraphicsFormat.R32_SFloat) return 6;
+            // R16's Texture2D storage also uses the existing single-channel float backend.
+            // Keep matching public R16 formats copy-compatible; normalized RT precision is separate.
+            if (f == GraphicsFormat.R32_SFloat || f == GraphicsFormat.R16_UNorm) return 6;
             if (f == GraphicsFormat.R32G32B32A32_SFloat) return 9;
             if (f == GraphicsFormat.R32G32_SFloat) return 10;
             if (f == GraphicsFormat.R16_SFloat) return 11;
@@ -303,6 +306,7 @@ namespace UnityEngine
         // ---------------------------------------------------------------- temporaries
 
         static readonly List<RenderTexture> s_Temporaries = new List<RenderTexture>();
+        static long s_NextPoolLease;
         /// <summary>Frames a released temporary stays pooled before it is destroyed.</summary>
         const int TemporaryLifetime = 15;
 
@@ -313,6 +317,7 @@ namespace UnityEngine
                 if (t.m_PooledFree && SameShape(t.m_Descriptor, desc))
                 {
                     t.m_PooledFree = false;
+                    t.m_PoolLease = ++s_NextPoolLease;
                     t.m_LastUsedFrame = Time.frameCount;
                     return t;
                 }
@@ -321,6 +326,7 @@ namespace UnityEngine
             using (ObjectRegistry.AsAssets())
                 created = new RenderTexture(desc) { name = "TempBuffer " + s_Temporaries.Count, hideFlags = HideFlags.HideAndDontSave };
             created.m_LastUsedFrame = Time.frameCount;
+            created.m_PoolLease = ++s_NextPoolLease;
             s_Temporaries.Add(created);
             return created;
         }

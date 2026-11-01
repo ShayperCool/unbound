@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Unbound.Runtime;
+using Unity.Collections;
 using UnityEngine.Experimental.Rendering;
 
 namespace UnityEngine.Rendering
@@ -553,26 +554,107 @@ namespace UnityEngine.Rendering
         public void SetGlobalConstantBuffer(GraphicsBuffer buffer, int nameID, int offset, int size) => Add(c => Shader.SetGlobalConstantBuffer(nameID, buffer, offset, size));
         public void SetGlobalConstantBuffer(GraphicsBuffer buffer, string name, int offset, int size) => SetGlobalConstantBuffer(buffer, Shader.PropertyToID(name), offset, size);
 
-        public void SetBufferData(GraphicsBuffer buffer, Array data)
+        // The data is checked and copied when recorded, written when the command runs.
+        void SetBufferData(GpuBufferStorage buffer, Array data, int start, int bufferStart, int count, GpuBufferStorage.Names names)
         {
-            var copy = (Array)data.Clone();
-            Add(c => buffer.SetData(copy));
+            var (offset, bytes) = buffer.Prepare(data, start, bufferStart, count, names);
+            Add(c => buffer.Write(offset, bytes));
         }
-        public void SetBufferData(GraphicsBuffer buffer, Array data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count)
+
+        unsafe void SetBufferData<T>(GpuBufferStorage buffer, NativeArray<T> data, int start, int bufferStart, int count, GpuBufferStorage.Names names) where T : struct
         {
-            var copy = (Array)data.Clone();
-            Add(c => buffer.SetData(copy, managedBufferStartIndex, graphicsBufferStartIndex, count));
+            var (offset, bytes) = buffer.Prepare(Unity.Collections.LowLevel.Unsafe.NativeArrayUnsafeUtility.GetUnsafeReadOnlyPtr(data), data.Length,
+                Unity.Collections.LowLevel.Unsafe.UnsafeUtility.SizeOf<T>(), start, bufferStart, count, names);
+            Add(c => buffer.Write(offset, bytes));
         }
-        public void SetBufferData(ComputeBuffer buffer, Array data)
+
+        static readonly GpuBufferStorage.Names s_GraphicsNames = GpuBufferStorage.Commands;
+        static readonly GpuBufferStorage.Names s_ComputeNames = new GpuBufferStorage.Names("graphicsBufferStartIndex", "ComputeBuffer.SetData()");
+
+        public void SetBufferData(GraphicsBuffer buffer, Array data) => SetBufferData(buffer.Storage, data, 0, 0, data?.Length ?? 0, s_GraphicsNames);
+        public void SetBufferData(GraphicsBuffer buffer, Array data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count) =>
+            SetBufferData(buffer.Storage, data, managedBufferStartIndex, graphicsBufferStartIndex, count, s_GraphicsNames);
+        public void SetBufferData(ComputeBuffer buffer, Array data) => SetBufferData(buffer.Storage, data, 0, 0, data?.Length ?? 0, s_ComputeNames);
+        public void SetBufferData(ComputeBuffer buffer, Array data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count) =>
+            SetBufferData(buffer.Storage, data, managedBufferStartIndex, graphicsBufferStartIndex, count, s_ComputeNames);
+        public void SetBufferData<T>(GraphicsBuffer buffer, List<T> data) where T : struct => SetBufferData(buffer.Storage, data.ToArray(), 0, 0, data.Count, s_GraphicsNames);
+        public void SetBufferData<T>(GraphicsBuffer buffer, List<T> data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count) where T : struct =>
+            SetBufferData(buffer.Storage, data.ToArray(), managedBufferStartIndex, graphicsBufferStartIndex, count, s_GraphicsNames);
+        public void SetBufferData<T>(GraphicsBuffer buffer, NativeArray<T> data) where T : struct => SetBufferData(buffer.Storage, data, 0, 0, data.Length, s_GraphicsNames);
+        public void SetBufferData<T>(GraphicsBuffer buffer, NativeArray<T> data, int nativeBufferStartIndex, int graphicsBufferStartIndex, int count) where T : struct =>
+            SetBufferData(buffer.Storage, data, nativeBufferStartIndex, graphicsBufferStartIndex, count, s_GraphicsNames);
+        public void SetBufferData<T>(ComputeBuffer buffer, List<T> data) where T : struct => SetBufferData(buffer.Storage, data.ToArray(), 0, 0, data.Count, s_ComputeNames);
+        public void SetBufferData<T>(ComputeBuffer buffer, List<T> data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count) where T : struct =>
+            SetBufferData(buffer.Storage, data.ToArray(), managedBufferStartIndex, graphicsBufferStartIndex, count, s_ComputeNames);
+        public void SetBufferData<T>(ComputeBuffer buffer, NativeArray<T> data) where T : struct => SetBufferData(buffer.Storage, data, 0, 0, data.Length, s_ComputeNames);
+        public void SetBufferData<T>(ComputeBuffer buffer, NativeArray<T> data, int nativeBufferStartIndex, int graphicsBufferStartIndex, int count) where T : struct =>
+            SetBufferData(buffer.Storage, data, nativeBufferStartIndex, graphicsBufferStartIndex, count, s_ComputeNames);
+
+        public void SetBufferCounterValue(ComputeBuffer buffer, uint counterValue) => Add(c => buffer.SetCounterValue(counterValue));
+        public void SetBufferCounterValue(GraphicsBuffer buffer, uint counterValue) => Add(c => buffer.SetCounterValue(counterValue));
+        public void CopyCounterValue(ComputeBuffer src, ComputeBuffer dst, uint dstOffsetBytes) => Add(c => GpuBufferOps.CopyCount(src?.Storage, dst?.Storage, dstOffsetBytes));
+        public void CopyCounterValue(GraphicsBuffer src, ComputeBuffer dst, uint dstOffsetBytes) => Add(c => GpuBufferOps.CopyCount(src?.Storage, dst?.Storage, dstOffsetBytes));
+        public void CopyCounterValue(ComputeBuffer src, GraphicsBuffer dst, uint dstOffsetBytes) => Add(c => GpuBufferOps.CopyCount(src?.Storage, dst?.Storage, dstOffsetBytes));
+        public void CopyCounterValue(GraphicsBuffer src, GraphicsBuffer dst, uint dstOffsetBytes) => Add(c => GpuBufferOps.CopyCount(src?.Storage, dst?.Storage, dstOffsetBytes));
+        public void CopyBuffer(GraphicsBuffer source, GraphicsBuffer dest)
         {
-            var copy = (Array)data.Clone();
-            Add(c => buffer.SetData(copy));
+            GpuBufferOps.ValidateCopy(source, dest);
+            Add(c => GpuBufferOps.CopyChecked(source.Storage, dest.Storage));
         }
-        public void SetBufferData(ComputeBuffer buffer, Array data, int managedBufferStartIndex, int graphicsBufferStartIndex, int count)
+
+        public void DispatchCompute(ComputeShader computeShader, int kernelIndex, ComputeBuffer indirectBuffer, uint argsOffset) =>
+            Add(c => computeShader.DispatchIndirect(kernelIndex, indirectBuffer, argsOffset));
+        public void DispatchCompute(ComputeShader computeShader, int kernelIndex, GraphicsBuffer indirectBuffer, uint argsOffset) =>
+            Add(c => computeShader.DispatchIndirect(kernelIndex, indirectBuffer, argsOffset));
+
+        // ------------------------------------------------------------ readbacks
+
+        public void WaitAllAsyncReadbackRequests() => Add(c => AsyncGPUReadback.WaitAllRequests());
+        public void RequestAsyncReadback(ComputeBuffer src, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncGPUReadback.Request(src, callback));
+        public void RequestAsyncReadback(GraphicsBuffer src, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncGPUReadback.Request(src, callback));
+        public void RequestAsyncReadback(ComputeBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncGPUReadback.Request(src, size, offset, callback));
+        public void RequestAsyncReadback(GraphicsBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncGPUReadback.Request(src, size, offset, callback));
+        public void RequestAsyncReadback(Texture src, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncGPUReadback.Request(src, 0, callback));
+        public void RequestAsyncReadback(Texture src, int mipIndex, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncGPUReadback.Request(src, mipIndex, callback));
+        public void RequestAsyncReadback(Texture src, int mipIndex, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncGPUReadback.Request(src, mipIndex, dstFormat, callback));
+        public void RequestAsyncReadback(Texture src, int mipIndex, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) => Add(c => AsyncGPUReadback.Request(src, mipIndex, dstFormat, callback));
+        public void RequestAsyncReadback(Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, Action<AsyncGPUReadbackRequest> callback) =>
+            Add(c => AsyncGPUReadback.Request(src, mipIndex, x, width, y, height, z, depth, callback));
+        public void RequestAsyncReadback(Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) =>
+            Add(c => AsyncGPUReadback.Request(src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
+        public void RequestAsyncReadback(Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) =>
+            Add(c => AsyncGPUReadback.Request(src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
+
+        /// <summary>The native array a command fills: its memory, captured when recorded (Unity
+        /// takes the array by reference; the command writes into it when its request completes).</summary>
+        unsafe void Into<T>(ref NativeArray<T> output, Func<NativeArray<T>, AsyncGPUReadbackRequest> request) where T : struct
         {
-            var copy = (Array)data.Clone();
-            Add(c => buffer.SetData(copy, managedBufferStartIndex, graphicsBufferStartIndex, count));
+            var array = output;
+            Add(c => request(array));
         }
+
+        public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, ComputeBuffer src, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, callback));
+        public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, ComputeBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, size, offset, callback));
+        public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, GraphicsBuffer src, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, callback));
+        public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, GraphicsBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, size, offset, callback));
+        public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, Texture src, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, 0, callback));
+        public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, mipIndex, callback));
+        public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, mipIndex, dstFormat, callback));
+        public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, mipIndex, dstFormat, callback));
+        public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, mipIndex, x, width, y, height, z, depth, src?.graphicsFormat ?? GraphicsFormat.R8G8B8A8_SRGB, callback));
+        public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
+        public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
 
         // ------------------------------------------------------------ global state
 

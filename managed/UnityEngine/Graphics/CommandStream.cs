@@ -18,7 +18,9 @@ namespace Unbound.Runtime
             CameraOp = 6, GlobalOp = 7, KeywordOp = 8, DrawOp = 9, CopyTextureOp = 10,
             CreateBufferOp = 11, BufferDataOp = 12, ReleaseBufferOp = 13, DispatchOp = 14,
             RenderPipelineOp = 15, PassTagsOp = 16, DepthBiasOp = 17, StateOverrideOp = 18, ColorSpaceOp = 19, AnisotropyOp = 20,
-            SetTargetsOp = 21, DrawSetupOp = 22, GenerateMipsOp = 23;
+            SetTargetsOp = 21, DrawSetupOp = 22, GenerateMipsOp = 23,
+            // Render protocol 7.
+            CopyBufferOp = 24, SetCounterOp = 25, CopyCounterOp = 26, DispatchIndirectOp = 27;
 
         internal const ulong NoTexture = ulong.MaxValue;
         internal const byte ClearColor = 1, ClearDepth = 2, ClearStencil = 4;
@@ -615,10 +617,47 @@ namespace Unbound.Runtime
             internal ulong Handle;
         }
 
-        /// <summary>Runs a kernel of a <c>.compute</c> file over thread groups.</summary>
-        internal static void Dispatch(string file, string kernel, string keywords, int x, int y, int z, List<DispatchProperty> properties)
+        /// <summary>Copies <paramref name="size"/> bytes between buffers.</summary>
+        internal static void CopyBuffer(ulong source, long sourceOffset, ulong destination, long destinationOffset, long size)
         {
-            U8(DispatchOp);
+            U8(CopyBufferOp);
+            U64(source);
+            U64((ulong)sourceOffset);
+            U64(destination);
+            U64((ulong)destinationOffset);
+            U64((ulong)size);
+        }
+
+        /// <summary>Sets the hidden counter of an Append or Counter buffer.</summary>
+        internal static void SetCounter(ulong buffer, uint value)
+        {
+            U8(SetCounterOp);
+            U64(buffer);
+            U32(value);
+        }
+
+        /// <summary>Writes the hidden counter of an Append or Counter buffer into another buffer.</summary>
+        internal static void CopyCounter(ulong source, ulong destination, uint offset)
+        {
+            U8(CopyCounterOp);
+            U64(source);
+            U64(destination);
+            U32(offset);
+        }
+
+        /// <summary>Runs a kernel of a <c>.compute</c> file over thread groups; with an
+        /// <paramref name="args"/> buffer (not 0) the group counts are its three <c>uint</c>s at
+        /// <paramref name="argsOffset"/>, read on the GPU.</summary>
+        internal static void Dispatch(string file, string kernel, string keywords, int x, int y, int z, List<DispatchProperty> properties,
+            ulong args = 0, uint argsOffset = 0)
+        {
+            if (args != 0)
+            {
+                U8(DispatchIndirectOp);
+                U64(args);
+                U32(argsOffset);
+            }
+            else U8(DispatchOp);
             String(file);
             String(kernel);
             String(keywords);

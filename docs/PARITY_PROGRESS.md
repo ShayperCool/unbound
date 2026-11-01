@@ -2339,3 +2339,78 @@ unchanged from the accepted controls. NativeApi 14, render 6, shader cache 16,
 PhysX shim 9 and texture cache 13 are unchanged. No unrelated physics, particle,
 animation or full-rendering replay was needed; frozen baseline artifacts remain
 untouched.
+
+## Texture2D and Cubemap CPU pixels, 2026-11-01
+
+Texture2D keeps every stored format's texels exactly and reads them as the Editor does
+(tests/projects/texturepixels README): RG16, R16, RGBA4444, ARGB4444 and RGB565 data set
+through `SetPixelData` no longer reads grey; R8 and RG16 fill the channels they lack with one
+(255 in `GetPixels32`), Alpha8's `GetPixels32` is (0, 0, 0, a); 4-bit channels, RGB565 and R16
+use their own scales. `GetPixelBilinear` mixes the four GetPixel values around (u w, v h) in
+single precision. `Texture2D.GetPixelData` and `Cubemap.GetPixelData` return views of the
+stored bytes that stay coherent with the pixel setters. A PNG loads as ARGB32; ARGB32, Alpha8,
+R8 and RG16 report the Editor's graphics formats. Applying an imported readable cubemap
+uploads its faces top row first.
+
+On Root's frozen CLI and native library with the new managed engine: texturepixels goes from
+146 Gamma and 148 Linear differences to 17 in each profile, none introduced. The 17 are the 12
+initial imported-cube GPU samples before any CPU access (Root's import upload), two
+`GraphicsFormatUtility.GetTextureFormat(B8G8R8A8_*)` table values, and three Texture3D RGFloat
+values whose inputs the Editor's script runtime computes in double precision (`i / 37f - 2f`;
+the stored values match the script's inputs in both engines). All 24 post-Apply cube samples
+per profile pass. texturearrays passes every value in Gamma, Linear and Android (36 imported
+`Cubemap.GetPixelData` reads per profile resolved). textureimport stays exact (502 levels,
+1,732,492 bytes per profile), spriteimport 519/520, resources 539/539 values and 62/62
+images; assetclones keeps its eight main differences and resolves the four Alpha8 graphics
+format values of each colour profile (109/109). No new Editor captures were needed.
+
+## GPU buffer counters, copies, indirect dispatch and readbacks, 2026-11-01
+
+NativeApi 15 with render protocol 7 (buffer copies, hidden counters, indirect
+dispatches, texture level and layer readback); shader cache 16 and texture
+cache 13 are unchanged. tests/projects/gpubuffers records Append, Consume and
+Counter buffers, CopyCount, SetCounterValue, indirect dispatches, buffer copies,
+command-buffer buffer data, SetData/GetData overloads and AsyncGPUReadback of
+buffers and textures on OpenGL Core. Two windowed Native repeats are
+byte-identical in their 389 values; readback completion frames differ between
+repeats (one or two frames), so they are compared against the range the Editor
+showed. Root's runtime passes 130 of the 442 compared keys and none of the 54
+timings; the candidate passes 389/389 values and 53/53 timings. graphics 80/80,
+materials 1004/1004, resources 539/539 values and 62/62 images, rtdepth
+1071/1071 values and 316/368 images, controls 46/46 and 13/17, builtinfx
+213/215 (2 expected) and 92/92 images, editor 170/174 (4 expected) and all 26
+URP scenarios byte-identical to Root's runtime: none changed. Managed tests pass
+1,289/1,300 with the same eleven failures; runtime 50, app 20 and shader 37
+Rust tests pass; API checking has zero errors in 2,290 types with regenerated
+stubs. Readbacks into unmeasured formats (16-bit normalized, compressed
+sources) fail loudly; RequestIntoNativeSlice and the Awaitable overloads remain
+stubs.
+
+## Screen storage and ScreenCapture, 2026-11-01
+
+The screen is stored as the Editor's game view stores it: 8-bit RGBA, drawn through
+an sRGB view in Linear color space, and read back or copied as its bytes. It was a
+half-float target: float reads returned linear values and byte reads were re-encoded
+on the CPU, one step off at exact halves. The render texture probe now passes all
+1,071 values and 368/368 images (316 before) and its controls 46/46 values and 16/17
+images (13 before); the unsupported integer-array default binding remains. The camera
+MSAA probe's Linear screen reads match as its Gamma ones do: 3,219/3,261 records and
+405/433 images (3,201 and 381 before), none introduced. Graphics, resources,
+built-in pipeline and effects, clipping, colors, focused camera, UI Toolkit and
+materials keep byte-identical outputs.
+
+`ScreenCapture` is implemented from tests/projects/screencapture, a new Linear and
+Gamma reference of two byte-identical Editor captures each: the texture capture at
+the call (RGBA32, linear, one mip, alpha kept, superSize re-rendering the cameras),
+the render texture capture (one texel per pixel from the corner, decoded into linear
+and float targets), and the file written after the end-of-frame callbacks as an RGB
+PNG. Unbound passes Linear 174/187 values and 33/39 images, Gamma 163/174 and 33/35
+(stubs: 88/187 and 0/39, 83/174 and 3/35). Retained: `LoadImage`'s ARGB32 format
+names, reads in Update (the Editor's window framebuffer), and one-step superSize 3
+differences at rounding boundaries. ReadPixels of the screen outside the frame logs
+the Editor's error. In Gamma the Editor crashes on texture captures in Update or below
+superSize one; the probe skips those there.
+
+Managed tests pass 1,289/1,300 with the same eleven failures; runtime 50 and app 20
+Rust tests pass; API checking has zero errors in 2,292 types and regeneration only
+removes the ScreenCapture module's stubs. No ABI, protocol or cache version changed.

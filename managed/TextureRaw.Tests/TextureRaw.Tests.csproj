@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <Nullable>disable</Nullable>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <DefineConstants>$(DefineConstants);ENABLE_UNITY_COLLECTIONS_CHECKS</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.11.0" />
+    <PackageReference Include="xunit" Version="2.9.3" />
+    <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <ProjectReference Include="../UnityEngine/UnityEngine.csproj" />
+    <Compile Include="../../tests/projects/textureraw/Assets/Scripts/TextureRawProbe.cs" Link="TextureRawProbe.cs" />
+    <None Include="../../tests/projects/textureraw/Reference/unity-6000.0.71f1.jsonl" Link="unity-6000.0.71f1.jsonl" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>
