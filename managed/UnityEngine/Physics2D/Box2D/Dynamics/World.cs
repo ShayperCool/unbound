@@ -126,6 +126,10 @@ namespace Unbound.Box2D.Dynamics
         /// </summary>
         public LinkedList<Body> BodyList { get; private set; } = new LinkedList<Body>();
 
+        // Nonstatic bodies retain their creation slot until removal. Native visits
+        // these slots in ascending order; removal fills a hole with the last body.
+        private readonly List<Body> _solverBodies = new List<Body>();
+
         /// <summary>
         /// 关节链表
         /// </summary>
@@ -191,6 +195,7 @@ namespace Unbound.Box2D.Dynamics
             }
 
             BodyList?.Clear();
+            _solverBodies.Clear();
             BodyList = null;
             JointList?.Clear();
             JointList = null;
@@ -250,7 +255,34 @@ namespace Unbound.Box2D.Dynamics
             // Add to world doubly linked list.
             // 添加物体到物体链表头部
             body.Node = BodyList.AddFirst(body);
+            UpdateSolverBodyType(body, body.BodyType);
             return body;
+        }
+
+        internal void UpdateSolverBodyType(Body body, BodyType type)
+        {
+            if (type != BodyType.StaticBody)
+            {
+                if (body.SolverStorageIndex >= 0) return;
+                body.SolverStorageIndex = _solverBodies.Count;
+                _solverBodies.Add(body);
+            }
+            else if (body.SolverStorageIndex >= 0)
+            {
+                RemoveSolverBody(body);
+            }
+        }
+
+        private void RemoveSolverBody(Body body)
+        {
+            int index = body.SolverStorageIndex;
+            if (index < 0) return;
+            int last = _solverBodies.Count - 1;
+            var moved = _solverBodies[last];
+            _solverBodies[index] = moved;
+            moved.SolverStorageIndex = index;
+            _solverBodies.RemoveAt(last);
+            body.SolverStorageIndex = -1;
         }
 
         /// <summary>
@@ -302,6 +334,7 @@ namespace Unbound.Box2D.Dynamics
 
             // Remove world body list.
             BodyList.Remove(body.Node);
+            RemoveSolverBody(body);
             body.Dispose();
             return true;
         }
@@ -714,11 +747,9 @@ namespace Unbound.Box2D.Dynamics
             var stack = _solveStack;
             stack.Clear();
 
-            bodyNode = BodyList.First;
-            while (bodyNode != null)
+            for (int seedIndex = 0; seedIndex < _solverBodies.Count; seedIndex++)
             {
-                var body = bodyNode.Value;
-                bodyNode = bodyNode.Next;
+                var body = _solverBodies[seedIndex];
                 if (body.Flags.IsSet(BodyFlags.Island)) // 已经分配到岛屿则跳过
                 {
                     continue;

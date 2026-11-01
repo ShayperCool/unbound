@@ -107,10 +107,18 @@ namespace UnityEngine
         }
         public bool autoConfigureConnectedAnchor { get => m_AutoAnchor; set { m_AutoAnchor = value; AnchorsChanged(); } }
         // Box2D anchors use the physics pose and signed lossy scale, excluding hierarchy shear.
-        internal static Vector2 WorldPoint(Rigidbody2D rb, Vector2 point)
+        internal static System.Numerics.Vector2 ScaledAnchor(Rigidbody2D rb, Vector2 point)
         {
             var scale = rb.transform.lossyScale;
-            var local = W.ToB2(new Vector2(point.x * scale.x, point.y * scale.y));
+            return new System.Numerics.Vector2(point.x * scale.x, point.y * scale.y);
+        }
+        internal System.Numerics.Vector2 BodyAnchorA => ScaledAnchor(attachedRigidbody, m_Anchor);
+        internal System.Numerics.Vector2 BodyAnchorB => m_ConnectedBody != null
+            ? ScaledAnchor(m_ConnectedBody, m_ConnectedAnchor) : W.ToB2(m_ConnectedAnchor);
+
+        internal static Vector2 WorldPoint(Rigidbody2D rb, Vector2 point)
+        {
+            var local = ScaledAnchor(rb, point);
             var body = rb.Body;
             if (body != null) return W.ToUnity(body.GetWorldPoint(local));
             W.PoseOf(rb.transform, out var position, out var angle);

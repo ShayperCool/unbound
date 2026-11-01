@@ -24,7 +24,7 @@ namespace Unbound.Runtime
     ///
     /// Each simulated Rigidbody2D owns a body; its attached colliders (on its GameObject and on
     /// children without a nearer Rigidbody2D) add their shapes to it in the body's frame. A collider
-    /// without a Rigidbody2D gets a static body of its own at its transform. Transform changes reach
+    /// without a Rigidbody2D adds world-space shapes to the shared static scene body. Transform changes reach
     /// the bodies when transforms are synced: before every simulation step, and before queries when
     /// Physics2D.autoSyncTransforms is set. After a step, moved bodies write their poses back to their
     /// transforms, then the contact callbacks (OnCollision*2D, OnTrigger*2D) are sent.
@@ -39,6 +39,7 @@ namespace Unbound.Runtime
     internal static class Physics2DWorld
     {
         static World s_World;
+        static Body s_StaticBody;
         static bool s_Registered;
         static bool s_StructureDirty;
         static bool s_AttachmentDirty;
@@ -104,6 +105,7 @@ namespace Unbound.Runtime
             s_Listener.Clear();
             s_IgnoredPairs.Clear();
             s_World = null;
+            s_StaticBody = null;
             s_StructureDirty = false;
             s_AttachmentDirty = false;
             s_Removing = s_SilentRemoval = s_Dispatching = s_Stepping = false;
@@ -120,15 +122,30 @@ namespace Unbound.Runtime
         {
             var p = t.position;
             position = new Vector2(p.x, p.y);
-            var right = t.rotation * Vector3.right;
-            angle = Mathf.Atan2(right.y, right.x);
+            angle = RotationAngle(t.rotation);
+        }
+
+        // Native Physics2D takes the quaternion's Z/W twist, including tilted
+        // transforms. Projecting the rotated right axis changes the body angle.
+        internal static float RotationAngle(Quaternion rotation)
+        {
+            if (rotation.w < 0f) return 2f * MathF.Atan2(-rotation.z, -rotation.w);
+            return 2f * MathF.Atan2(rotation.z, rotation.w);
         }
 
         /// <summary>Maps points of a collider's transform space into the frame of the body at the given pose.</summary>
         internal static Matrix4x4 ToBodyMatrix(Transform collider, Vector2 bodyPosition, float bodyAngle)
         {
-            var pose = Matrix4x4.TRS(new Vector3(bodyPosition.x, bodyPosition.y, 0f), Quaternion.Euler(0f, 0f, bodyAngle * Mathf.Rad2Deg), Vector3.one);
-            var m = pose.inverse * collider.localToWorldMatrix;
+            // Native uses the conjugate of the pose quaternion. A general
+            // matrix inverse adds determinant division and changes local vertices.
+            var rotation = Quaternion.FromEulerRad(new Vector3(0f, 0f, bodyAngle));
+            var inverse = Matrix4x4.Rotate(Quaternion.Inverse(rotation));
+            var world = collider.localToWorldMatrix;
+            var m = inverse * world;
+            // Compose both translations in the rotated frame before subtracting.
+            // Tilted and nested frame controls retain this accumulation order.
+            m.m03 -= inverse.m00 * bodyPosition.x + inverse.m01 * bodyPosition.y;
+            m.m13 -= inverse.m10 * bodyPosition.x + inverse.m11 * bodyPosition.y;
             // The XY plane only: the depth of the collider does not matter.
             m.m23 = 0f;
             return m;
@@ -201,7 +218,6 @@ namespace Unbound.Runtime
             DestroyFixtures(c, removing: true);
             if (c.m_StaticBody != null)
             {
-                s_World.DestroyBody(c.m_StaticBody);
                 c.m_StaticBody = null;
             }
             s_Listener.DispatchRemovals();
@@ -380,7 +396,6 @@ namespace Unbound.Runtime
             {
                 if (c.m_StaticBody != null)
                 {
-                    s_World.DestroyBody(c.m_StaticBody);
                     c.m_StaticBody = null;
                 }
                 body = rb.m_Body;
@@ -389,26 +404,19 @@ namespace Unbound.Runtime
             }
             else
             {
-                PoseOf(transform, out framePosition, out frameAngle);
-                if (c.m_StaticBody == null)
+                // Native keeps unattached collider geometry in world space on
+                // one scene body. Its pose stays at the world origin.
+                framePosition = Vector2.zero;
+                frameAngle = 0f;
+                if (s_StaticBody == null)
                 {
-                    c.m_StaticBody = s_World.CreateBody(new BodyDef
+                    s_StaticBody = s_World.CreateBody(new BodyDef
                     {
                         BodyType = BodyType.StaticBody,
-                        Position = ToB2(framePosition),
-                        Angle = frameAngle,
                         Enabled = true,
-                        UserData = c,
                     });
                 }
-                else
-                {
-                    var oldPose = c.m_StaticBody.GetTransform();
-                    if (oldPose.Position != ToB2(framePosition) || !Mathf.Approximately(oldPose.Rotation.Angle, frameAngle))
-                        c.CaptureSkin();
-                    c.m_StaticBody.SetTransform(ToB2(framePosition), frameAngle);
-                }
-                body = c.m_StaticBody;
+                body = c.m_StaticBody = s_StaticBody;
             }
 
             var matrix = ToBodyMatrix(transform, framePosition, frameAngle);
@@ -450,6 +458,37 @@ namespace Unbound.Runtime
                 // A new shape on a sleeping body must not stay unnoticed.
                 if (c.m_Fixtures.Count > 0 && rb.m_SleepingMode != RigidbodySleepMode2D.StartAsleep) body.IsAwake = true;
             }
+        }
+
+        static bool UpdateStaticGeometry(Collider2D c, Matrix4x4 matrix)
+        {
+            s_ShapeBuffer.Clear();
+            try
+            {
+                c.m_ErrorState = ColliderErrorState2D.None;
+                if (c.m_CompositeOperation != Collider2D.CompositeOperation.None && c.HasComposite()) return false;
+                c.BuildShapes(matrix, s_ShapeBuffer);
+                if (s_ShapeBuffer.Count == 0 || s_ShapeBuffer.Count != c.m_Fixtures.Count) return false;
+                for (int i = 0; i < s_ShapeBuffer.Count; i++)
+                    if (s_ShapeBuffer[i].ShapeType != c.m_Fixtures[i].ShapeType ||
+                        s_ShapeBuffer[i].GetChildCount() != c.m_Fixtures[i].Shape.GetChildCount()) return false;
+                // Static pose changes wake the bodies connected to the scene body.
+                // Controls: tests/projects/solverpairorder/Sources/UnattachedStatics.
+                foreach (var edge in c.m_StaticBody.ContactEdges) edge.Other.IsAwake = true;
+                var broadPhase = s_World.ContactManager.BroadPhase;
+                foreach (var fixture in c.m_Fixtures) fixture.DestroyProxies(broadPhase);
+                for (int i = 0; i < c.m_Fixtures.Count; i++) c.m_Fixtures[i].ReplaceGeometry(s_ShapeBuffer[i]);
+                foreach (var fixture in c.m_Fixtures) fixture.CreateProxies(broadPhase, c.m_StaticBody.GetTransform());
+                c.m_ShapeMatrix = matrix;
+                s_World.HasNewContacts = true;
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e, c);
+                return false;
+            }
+            finally { s_ShapeBuffer.Clear(); }
         }
 
         /// <summary>Contact filtering changed for a collider (layer, ignore pairs): its contacts are
@@ -510,16 +549,11 @@ namespace Unbound.Runtime
                 if (rb == null)
                 {
                     if (c.m_StaticBody == null) { Rebuild(c); continue; }
-                    PoseOf(t, out var position, out var angle);
-                    var matrix = ToBodyMatrix(t, position, angle);
-                    var current = c.m_StaticBody.GetTransform();
-                    bool changedShape = !SameShapeMatrix(matrix, c.m_ShapeMatrix);
-                    bool changedPose = current.Position != ToB2(position) || !Mathf.Approximately(current.Rotation.Angle, angle);
-                    if (changedShape || changedPose)
+                    var matrix = ToBodyMatrix(t, Vector2.zero, 0f);
+                    if (!SameShapeMatrix(matrix, c.m_ShapeMatrix) || matrix.m03 != c.m_ShapeMatrix.m03 || matrix.m13 != c.m_ShapeMatrix.m13)
                     {
                         c.CaptureSkin();
-                        if (changedShape || c is BoxCollider2D box && box.SkinDiffersFromFixtures()) { Rebuild(c); continue; }
-                        c.m_StaticBody.SetTransform(ToB2(position), angle);
+                        if (!UpdateStaticGeometry(c, matrix)) Rebuild(c);
                     }
                 }
                 else if (rb.m_Body != null)
@@ -793,13 +827,41 @@ namespace Unbound.Runtime
             internal bool RemovalExit;
             internal bool FirstIsB;
             internal bool VelocityCaptured;
+            internal bool PublicListed;
             /// <summary>B's velocity relative to A's at the first contact point, before the solver
             /// resolved the impact.</summary>
             internal Vector2 EnterRelativeVelocity;
         }
 
         static readonly Dictionary<PairKey, Pair> s_Pairs = new Dictionary<PairKey, Pair>();
-        static readonly List<Pair> s_PairOrder = new List<Pair>();
+        // Native getters filter the scene's dense touching-pair list. Removal
+        // fills a slot from the end. Solver edges keep their linked order.
+        static readonly List<Pair> s_ContactPairs = new List<Pair>();
+        sealed class ContactObservation
+        {
+            internal readonly Vector2[] Points = new Vector2[2];
+            internal readonly Vector2[] Velocities = new Vector2[2];
+            internal readonly float[] Separations = new float[2];
+        }
+        static readonly Dictionary<Contact, ContactObservation> s_ContactObservations = new Dictionary<Contact, ContactObservation>();
+
+        internal static IEnumerable<Pair> PublicContactPairs(Object view)
+        {
+            if (view == null) yield break;
+            foreach (var pair in s_ContactPairs)
+                if (pair.Touching > 0 && (pair.A == (object)view || pair.B == (object)view ||
+                    pair.A.m_AttachedBody == (object)view || pair.B.m_AttachedBody == (object)view))
+                    yield return pair;
+        }
+
+        static void RemovePublicContactPair(Pair pair)
+        {
+            if (!pair.PublicListed) return;
+            int index = s_ContactPairs.IndexOf(pair);
+            s_ContactPairs[index] = s_ContactPairs[s_ContactPairs.Count - 1];
+            s_ContactPairs.RemoveAt(s_ContactPairs.Count - 1);
+            pair.PublicListed = false;
+        }
 
         internal static Pair FindPair(Collider2D a, Collider2D b) =>
             s_Pairs.TryGetValue(new PairKey(a, b), out var pair) ? pair : null;
@@ -807,9 +869,9 @@ namespace Unbound.Runtime
         /// <summary>The pairs a collider is part of.</summary>
         internal static IEnumerable<Pair> PairsOf(Collider2D c)
         {
-            for (int i = 0; i < s_PairOrder.Count; i++)
+            for (int i = 0; i < s_ContactPairs.Count; i++)
             {
-                var p = s_PairOrder[i];
+                var p = s_ContactPairs[i];
                 if (p.Touching > 0 && (p.A == (object)c || p.B == (object)c)) yield return p;
             }
         }
@@ -819,7 +881,8 @@ namespace Unbound.Runtime
             internal void Clear()
             {
                 s_Pairs.Clear();
-                s_PairOrder.Clear();
+                s_ContactPairs.Clear();
+                s_ContactObservations.Clear();
             }
 
             public void BeginContact(Contact contact)
@@ -832,12 +895,16 @@ namespace Unbound.Runtime
                 {
                     pair = new Pair { A = a, B = b, FirstIsB = b.m_ContactOrder > a.m_ContactOrder };
                     s_Pairs[key] = pair;
-                    s_PairOrder.Add(pair);
                 }
                 pair.IsTrigger = contact.FixtureA.IsSensor || contact.FixtureB.IsSensor;
                 pair.Touching++;
                 if (pair.Touching == 1)
                 {
+                    if (!pair.PublicListed)
+                    {
+                        s_ContactPairs.Add(pair);
+                        pair.PublicListed = true;
+                    }
                     if (pair.ExitPending) pair.ExitPending = false; // left and came back before the callbacks: it stays
                     else
                     {
@@ -849,6 +916,7 @@ namespace Unbound.Runtime
 
             public void EndContact(Contact contact)
             {
+                s_ContactObservations.Remove(contact);
                 Physics2DEffectors.End(contact);
                 var a = contact.FixtureA.UserData as Collider2D;
                 var b = contact.FixtureB.UserData as Collider2D;
@@ -871,6 +939,17 @@ namespace Unbound.Runtime
                 var b = contact.FixtureB.UserData as Collider2D;
                 if (a == null || b == null) return;
                 Physics2DEffectors.PreSolve(contact, a, b);
+                if (!s_ContactObservations.TryGetValue(contact, out var observation))
+                    s_ContactObservations[contact] = observation = new ContactObservation();
+                contact.GetWorldManifold(out var observedWorld);
+                for (int i = 0; i < contact.Manifold.PointCount; i++)
+                {
+                    var point = observedWorld.Points[i];
+                    observation.Points[i] = ToUnity(point);
+                    observation.Separations[i] = observedWorld.Separations[i];
+                    observation.Velocities[i] = ToUnity(contact.FixtureB.Body.GetLinearVelocityFromWorldPoint(point)
+                        - contact.FixtureA.Body.GetLinearVelocityFromWorldPoint(point));
+                }
                 if (!contact.EnterPointVelocitiesCaptured)
                 {
                     contact.GetWorldManifold(out var enteringWorld);
@@ -897,7 +976,7 @@ namespace Unbound.Runtime
             static void Forget(Pair pair)
             {
                 s_Pairs.Remove(new PairKey(pair.A, pair.B));
-                s_PairOrder.Remove(pair);
+                RemovePublicContactPair(pair);
             }
 
             // Drain real EndContact notifications only after fixture/body removal is complete.
@@ -911,10 +990,13 @@ namespace Unbound.Runtime
                     while (true)
                     {
                         Pair next = null;
-                        foreach (var pair in s_PairOrder)
-                            if (pair.RemovalExit && pair.ExitPending) { next = pair; break; }
+                        for (int kind = 0; kind < 2 && next == null; kind++)
+                            foreach (var pair in s_ContactPairs)
+                                if (pair.IsTrigger == (kind == 0) && pair.RemovalExit && pair.ExitPending)
+                                { next = pair; break; }
                         if (next == null) break;
                         next.RemovalExit = next.ExitPending = false;
+                        RemovePublicContactPair(next);
                         Send(next, Phase.Exit);
                         if (next.Touching == 0 && !next.EnterPending) Forget(next);
                     }
@@ -925,8 +1007,7 @@ namespace Unbound.Runtime
             /// <summary>Sends the callbacks of the step that just ended.</summary>
             internal void Dispatch()
             {
-                if (s_PairOrder.Count == 0) return;
-                var pairs = s_PairOrder.ToArray();
+                if (s_ContactPairs.Count == 0) return;
                 s_Dispatching = true;
                 try
                 {
@@ -934,25 +1015,35 @@ namespace Unbound.Runtime
                     // reentry after a solid contact has already begun. Preserve order within each
                     // phase; creation order across the two kinds must not interleave callbacks.
                     for (int kind = 0; kind < 2; kind++)
-                    foreach (var pair in pairs)
                     {
-                        if (pair.IsTrigger != (kind == 0) || !s_PairOrder.Contains(pair)) continue;
-                        bool enter = pair.EnterPending, exit = pair.ExitPending;
-                        pair.EnterPending = false;
-                        pair.ExitPending = false;
-                        pair.RemovalExit = false;
-                        if (enter)
+                        var dispatched = new HashSet<Pair>();
+                        for (int i = 0; i < s_ContactPairs.Count;)
                         {
-                            Send(pair, Phase.Enter);
-                        }
-                        else if (!exit && pair.Touching > 0 && IsAwake(pair))
-                        {
-                            Send(pair, Phase.Stay);
-                        }
-                        if (exit)
-                        {
-                            Send(pair, Phase.Exit);
-                            if (pair.Touching == 0 && !pair.EnterPending) Forget(pair);
+                            var pair = s_ContactPairs[i];
+                            if (pair.IsTrigger != (kind == 0) ||
+                                !dispatched.Add(pair)) { i++; continue; }
+                            bool enter = pair.EnterPending, exit = pair.ExitPending;
+                            pair.EnterPending = false;
+                            pair.ExitPending = false;
+                            pair.RemovalExit = false;
+                            // Native keeps an ended pair in its scene slot until
+                            // notification, after new touching pairs have appended.
+                            // Its tail replacement is the next pair visited here.
+                            if (exit && pair.Touching == 0) RemovePublicContactPair(pair);
+                            if (enter)
+                            {
+                                Send(pair, Phase.Enter);
+                            }
+                            else if (!exit && pair.Touching > 0 && IsAwake(pair))
+                            {
+                                Send(pair, Phase.Stay);
+                            }
+                            if (exit)
+                            {
+                                Send(pair, Phase.Exit);
+                                if (pair.Touching == 0 && !pair.EnterPending) Forget(pair);
+                            }
+                            if (i < s_ContactPairs.Count && ReferenceEquals(s_ContactPairs[i], pair)) i++;
                         }
                     }
                 }
@@ -1032,7 +1123,7 @@ namespace Unbound.Runtime
             collision.m_CollisionEnabled = enabled;
             collision.m_CollisionRelativeVelocity = phase == Phase.Enter && pair.VelocityCaptured
                 ? (flip ? -pair.EnterRelativeVelocity : pair.EnterRelativeVelocity)
-                : RelativeVelocity(self, other);
+                : points.Count > 0 ? points[0].relativeVelocity : RelativeVelocity(self, other);
             return collision;
         }
 
@@ -1058,6 +1149,22 @@ namespace Unbound.Runtime
                     if (!contact.IsTouching || !contact.IsEnabled) continue;
                     if (contact.FixtureA == fixture && contact.FixtureB.UserData == (object)other
                         || contact.FixtureB == fixture && contact.FixtureA.UserData == (object)other) return true;
+                }
+            }
+            return false;
+        }
+
+        internal static bool HasContactPoints(Collider2D self, Collider2D other)
+        {
+            foreach (var fixture in self.m_Fixtures)
+            {
+                if (fixture.Body == null) continue;
+                foreach (var edge in fixture.Body.ContactEdges)
+                {
+                    var contact = edge.Contact;
+                    if (!contact.IsTouching || contact.Manifold.PointCount == 0) continue;
+                    if (contact.FixtureA == fixture && contact.FixtureB.UserData == (object)other ||
+                        contact.FixtureB == fixture && contact.FixtureA.UserData == (object)other) return true;
                 }
             }
             return false;
@@ -1090,14 +1197,17 @@ namespace Unbound.Runtime
                     if (selfIsA) normal = -normal;
                     var selfBody = selfIsA ? contact.FixtureA.Body : contact.FixtureB.Body;
                     var otherBody = selfIsA ? contact.FixtureB.Body : contact.FixtureA.Body;
+                    s_ContactObservations.TryGetValue(contact, out var observation);
                     for (int i = 0; i < count; i++)
                     {
                         var p = world.Points[i];
                         var mp = contact.Manifold.Points[i];
-                        var rel = entering && contact.EnterPointVelocitiesCaptured
+                        var rel = observation != null ? (selfIsA ? observation.Velocities[i] : -observation.Velocities[i])
+                            : entering && contact.EnterPointVelocitiesCaptured
                             ? ToUnity(selfIsA ? contact.EnterPointVelocities[i] : -contact.EnterPointVelocities[i])
                             : ToUnity(otherBody.GetLinearVelocityFromWorldPoint(p) - selfBody.GetLinearVelocityFromWorldPoint(p));
-                        into.Add(new ContactPoint2D(ToUnity(p), normal, rel, contact.Friction, contact.Restitution, world.Separations[i],
+                        into.Add(new ContactPoint2D(observation != null ? observation.Points[i] : ToUnity(p), normal, rel, contact.Friction, contact.Restitution,
+                            observation != null ? observation.Separations[i] : world.Separations[i],
                             mp.NormalImpulse, mp.TangentImpulse, otherCollider, self, contact.IsEnabled));
                     }
                 }

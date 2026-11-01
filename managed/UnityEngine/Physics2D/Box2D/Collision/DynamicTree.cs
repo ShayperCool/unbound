@@ -140,6 +140,10 @@ namespace Unbound.Box2D.Collision
 
             Debug.Assert(_treeNodes[proxyId].IsLeaf());
 
+            // The measured Native tree keeps a containing fat proxy as-is.
+            // Shrinking it changes the simulation barrier that allocates pairs.
+            if (_treeNodes[proxyId].AABB.Contains(aabb)) return false;
+
             // Extend AABB
             var r = new Vector2(Settings.AABBExtension, Settings.AABBExtension);
             var fatAABB = new AABB
@@ -170,28 +174,6 @@ namespace Unbound.Box2D.Collision
             }
 
             ref var proxyNode = ref _treeNodes[proxyId];
-            ref var treeAABB = ref proxyNode.AABB;
-            if (treeAABB.Contains(aabb))
-            {
-                // The tree AABB still contains the object, but it might be too large.
-                // Perhaps the object was moving fast but has since gone to sleep.
-                // The huge AABB is larger than the new fat AABB.
-                var hugeAABB = new AABB
-                {
-                    LowerBound = fatAABB.LowerBound - 4.0f * r,
-                    UpperBound = fatAABB.UpperBound + 4.0f * r
-                };
-
-                if (hugeAABB.Contains(treeAABB))
-                {
-                    // The tree AABB contains the object AABB and the tree AABB is
-                    // not too large. No tree update needed.
-                    return false;
-                }
-
-                // Otherwise the tree AABB is huge and needs to be shrunk
-            }
-
             RemoveLeaf(proxyId);
 
             proxyNode.AABB = fatAABB;

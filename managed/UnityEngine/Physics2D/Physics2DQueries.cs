@@ -314,7 +314,9 @@ namespace Unbound.Runtime
                 // A segment query against a circle fixture has its own coincident-core
                 // face convention. Fixture segments retain the common manifold rule.
                 case (CircleShape ca, PolygonShape pb): CollisionUtils.CollidePolygonAndCircle(ref manifold, pb, xfB, ca, xfA, querySegmentCoincidence: true); flip = true; break;
-                case (PolygonShape pa, PolygonShape pb): CollisionUtils.CollidePolygons(ref manifold, pa, xfA, pb, xfB); break;
+                case (PolygonShape pa, CapsuleShape cb) when pa is not CapsuleShape:
+                    CollisionUtils.CollidePolygons(ref manifold, pa, xfA, cb, xfB); break;
+                case (PolygonShape pa, PolygonShape pb): CollisionUtils.CollidePolygons(ref manifold, pb, xfB, pa, xfA); flip = true; break;
                 case (EdgeShape ea, CircleShape cb): CollisionUtils.CollideEdgeAndCircle(ref manifold, ea, xfA, cb, xfB); break;
                 case (EdgeShape ea, PolygonShape pb): CollisionUtils.CollideEdgeAndPolygon(ref manifold, ea, xfA, pb, xfB); break;
                 case (CircleShape ca, EdgeShape eb): CollisionUtils.CollideEdgeAndCircle(ref manifold, eb, xfB, ca, xfA); flip = true; break;

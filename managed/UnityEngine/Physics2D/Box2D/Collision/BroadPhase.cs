@@ -140,6 +140,9 @@ namespace Unbound.Box2D.Collision
                 _tree.Query(this, fatAABB);
             }
 
+            // Native sorts numeric proxy pairs before contact creation.
+            Array.Sort(_pairBuffer, 0, _pairCount, PairComparer.Instance);
+
             // Send pairs to caller
             for (var i = 0; i < _pairCount; ++i)
             {
@@ -148,6 +151,9 @@ namespace Unbound.Box2D.Collision
                 var userDataB = _tree.GetUserData(primaryPair.ProxyIdB);
 
                 callback.AddPairCallback(userDataA, userDataB);
+                while (i + 1 < _pairCount &&
+                    _pairBuffer[i + 1].ProxyIdA == primaryPair.ProxyIdA &&
+                    _pairBuffer[i + 1].ProxyIdB == primaryPair.ProxyIdB) ++i;
             }
 
             // Clear move flags
@@ -269,6 +275,16 @@ namespace Unbound.Box2D.Collision
             ++_pairCount;
 
             return true;
+        }
+    }
+
+    internal sealed class PairComparer : System.Collections.Generic.IComparer<Pair>
+    {
+        internal static readonly PairComparer Instance = new PairComparer();
+        public int Compare(Pair a, Pair b)
+        {
+            int first = a.ProxyIdA.CompareTo(b.ProxyIdA);
+            return first != 0 ? first : a.ProxyIdB.CompareTo(b.ProxyIdB);
         }
     }
 
