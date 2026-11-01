@@ -35,9 +35,9 @@ Intervals are half-open.
 
 | Case | Requested start | Requested end | Clipless output | Clip-backed voice interval |
 | --- | ---: | ---: | --- | --- |
-| Start inside block | 8265.25 | 12288.75 | 0.0625 throughout | measured in canonical PCM |
-| End inside block | 8192.25 | 10425.75 | 0.0625 throughout | measured in canonical PCM |
-| Window inside block | 8265.25 | 8377.75 | 0.0625 throughout | measured in canonical PCM |
+| Start inside block | 8265.25 | 12288.75 | 0.0625 throughout | [8265,12288) |
+| End inside block | 8192.25 | 10425.75 | 0.0625 throughout | [8192,10425) |
+| Window inside block | 8265.25 | 8377.75 | 0.0625 throughout | [8265,8377) |
 
 The clipless generator ignores both scheduled boundaries in these controls. It
 runs from the first captured sample through frame 90111, makes 89 callbacks,
@@ -66,3 +66,9 @@ The full replay reports retain every per-channel sample interval, callback
 metadata value, missing/extra value and comparison union in the run cache.
 The clip-backed witnesses also expose existing filter behavior; their failures
 remain visible when they fall outside the reviewed fixes.
+
+The final 955 replay fails 5,166,198 observations. The complete accepted-Root
+to 955 union retains 2,738,882 introduced, 2,427,316 retained and 147,463
+resolved differences. The one-shot-only filtering failure is introduced; the
+generator-plus-one-shot overwrite is retained. Clip-backed witness failures
+are retained. No tolerance or observation was removed.
