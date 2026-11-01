@@ -56,8 +56,11 @@ and are byte-identical in `values.jsonl` and every image. It never overwrites
 an existing reference. `publish --append PREFIX` adds keys to an existing reference
 instead: after the same checks, the captures without their `PREFIX` keys must reproduce
 the reference line for line and every reference image byte for byte, and the reference
-must not hold a `PREFIX` key yet; the new lines are then appended to `values.jsonl`. Images are stored gzip-compressed with a zero
-timestamp, so republishing the same capture gives the same bytes.
+must not hold a `PREFIX` key yet; the new lines are then appended to `values.jsonl`. Records
+are compared and appended as raw bytes with their own terminators: a CRLF record on either
+side, or a captured record without a newline, is refused, and a refusal leaves the reference
+unchanged (`test_run.py`). Images are stored as gzip-compressed raw RGBA (`*.rgba.gz`, not
+PNG) with a zero timestamp, so republishing the same capture gives the same bytes.
 
 ## Comparison and tolerances
 
