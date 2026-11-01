@@ -124,4 +124,20 @@ impl RenderBackend for GpuBackend {
             .as_mut()?
             .read_pixels(texture, rect, float)
     }
+
+    fn read_texture(
+        &self,
+        texture: u64,
+        mip: u32,
+        layer: u32,
+        rect: [i32; 4],
+        float: bool,
+    ) -> Option<Vec<u8>> {
+        self.inner
+            .lock()
+            .unwrap()
+            .renderer
+            .as_mut()?
+            .read_texture(texture, mip, layer, rect, float)
+    }
 }

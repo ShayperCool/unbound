@@ -10,7 +10,7 @@ namespace Unbound.Runtime
     [System.Runtime.InteropServices.StructLayout(System.Runtime.InteropServices.LayoutKind.Sequential)]
     internal unsafe struct NativeApi
     {
-        internal const uint CurrentVersion = 14;
+        internal const uint CurrentVersion = 15;
 
         internal uint Version;
         /// <summary>(level, UTF-8 text, length): writes a console line.</summary>
@@ -89,5 +89,11 @@ namespace Unbound.Runtime
         /// into the planes, 0 when it was not (yet), -1 on an error (its message in the buffer).
         /// </summary>
         internal delegate* unmanaged<ulong, long, ulong*, NativeBuffer*, int> VideoFrame;
+        /// <summary>
+        /// (texture handle, mip level, layer: an array slice, cube face or volume depth slice; x, y,
+        /// width, height; float; out pixels): 1 with the rectangle's pixels as `read_pixels` gives
+        /// them, 0 when the texture has no such level or layer.
+        /// </summary>
+        internal delegate* unmanaged<ulong, int, int, int, int, int, int, int, NativeBuffer*, int> ReadTexture;
     }
 }

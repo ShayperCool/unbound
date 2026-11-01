@@ -104,6 +104,9 @@ pub struct Dispatch {
     pub kernel: String,
     pub keywords: Vec<String>,
     pub groups: [u32; 3],
+    /// The thread group counts read on the GPU instead: three `u32`s of a buffer (its handle)
+    /// at a byte offset (`ComputeShader.DispatchIndirect`, render protocol 7).
+    pub indirect: Option<(u64, u32)>,
     pub properties: Vec<(String, PropertyValue)>,
 }
 
@@ -207,6 +210,27 @@ pub enum Command {
         data: Vec<u8>,
     },
     ReleaseBuffer(u64),
+    /// Copies `size` bytes from one buffer to another (`Graphics.CopyBuffer`, render protocol 7).
+    CopyBuffer {
+        source: u64,
+        source_offset: u64,
+        destination: u64,
+        destination_offset: u64,
+        size: u64,
+    },
+    /// Sets the hidden counter of an Append or Counter buffer (`SetCounterValue`, render
+    /// protocol 7).
+    SetCounter {
+        buffer: u64,
+        value: u32,
+    },
+    /// Writes the hidden counter of an Append or Counter buffer, a `u32`, into another buffer at
+    /// a byte offset (`CopyCount`, render protocol 7).
+    CopyCounter {
+        source: u64,
+        destination: u64,
+        offset: u32,
+    },
     /// Runs a compute kernel of a `.compute` file over thread groups, with the dispatch's
     /// properties (uniform values, buffers, textures, RW texture mips) over the global ones.
     Dispatch(Box<Dispatch>),
@@ -249,6 +273,11 @@ mod op {
     pub const SET_TARGETS: u8 = 21;
     pub const DRAW_SETUP: u8 = 22;
     pub const GENERATE_MIPS: u8 = 23;
+    // Render protocol 7.
+    pub const COPY_BUFFER: u8 = 24;
+    pub const SET_COUNTER: u8 = 25;
+    pub const COPY_COUNTER: u8 = 26;
+    pub const DISPATCH_INDIRECT: u8 = 27;
 }
 
 /// Property kinds in the stream.
@@ -373,7 +402,8 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
     let mut r = Reader { bytes, at: 0 };
     let mut out = Vec::new();
     while r.at < bytes.len() {
-        let command = match r.u8()? {
+        let opcode = r.u8()?;
+        let command = match opcode {
             op::BEGIN_FRAME => Command::BeginFrame {
                 screen_width: r.i32()?,
                 screen_height: r.i32()?,
@@ -529,7 +559,28 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 }
             }
             op::RELEASE_BUFFER => Command::ReleaseBuffer(r.u64()?),
-            op::DISPATCH => {
+            op::COPY_BUFFER => Command::CopyBuffer {
+                source: r.u64()?,
+                source_offset: r.u64()?,
+                destination: r.u64()?,
+                destination_offset: r.u64()?,
+                size: r.u64()?,
+            },
+            op::SET_COUNTER => Command::SetCounter {
+                buffer: r.u64()?,
+                value: r.u32()?,
+            },
+            op::COPY_COUNTER => Command::CopyCounter {
+                source: r.u64()?,
+                destination: r.u64()?,
+                offset: r.u32()?,
+            },
+            op::DISPATCH | op::DISPATCH_INDIRECT => {
+                let indirect = if opcode == op::DISPATCH_INDIRECT {
+                    Some((r.u64()?, r.u32()?))
+                } else {
+                    None
+                };
                 let file = r.string()?;
                 let kernel = r.string()?;
                 let keywords = r.string()?.split_whitespace().map(String::from).collect();
@@ -544,6 +595,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     kernel,
                     keywords,
                     groups,
+                    indirect,
                     properties,
                 }))
             }
@@ -789,8 +841,42 @@ impl Writer {
                 self.bytes.push(op::RELEASE_BUFFER);
                 self.u64(*handle);
             }
+            Command::CopyBuffer {
+                source,
+                source_offset,
+                destination,
+                destination_offset,
+                size,
+            } => {
+                self.bytes.push(op::COPY_BUFFER);
+                for v in [source, source_offset, destination, destination_offset, size] {
+                    self.u64(*v);
+                }
+            }
+            Command::SetCounter { buffer, value } => {
+                self.bytes.push(op::SET_COUNTER);
+                self.u64(*buffer);
+                self.u32(*value);
+            }
+            Command::CopyCounter {
+                source,
+                destination,
+                offset,
+            } => {
+                self.bytes.push(op::COPY_COUNTER);
+                self.u64(*source);
+                self.u64(*destination);
+                self.u32(*offset);
+            }
             Command::Dispatch(d) => {
-                self.bytes.push(op::DISPATCH);
+                match d.indirect {
+                    Some((args, offset)) => {
+                        self.bytes.push(op::DISPATCH_INDIRECT);
+                        self.u64(args);
+                        self.u32(offset);
+                    }
+                    None => self.bytes.push(op::DISPATCH),
+                }
                 self.string(&d.file);
                 self.string(&d.kernel);
                 self.string(&d.keywords.join(" "));
@@ -965,6 +1051,7 @@ mod tests {
                 kernel: "CSMain".into(),
                 keywords: vec!["ON".into()],
                 groups: [2, 3, 1],
+                indirect: None,
                 properties: vec![
                     ("_Values".into(), PropertyValue::Buffer(8)),
                     (
@@ -976,6 +1063,30 @@ mod tests {
                     ),
                     ("_Out".into(), PropertyValue::Image { handle: 3, mip: 1 }),
                 ],
+            })),
+            Command::CopyBuffer {
+                source: 8,
+                source_offset: 4,
+                destination: 9,
+                destination_offset: 12,
+                size: 16,
+            },
+            Command::SetCounter {
+                buffer: 8,
+                value: 7,
+            },
+            Command::CopyCounter {
+                source: 8,
+                destination: 9,
+                offset: 4,
+            },
+            Command::Dispatch(Box::new(Dispatch {
+                file: "Assets/A.compute".into(),
+                kernel: "CSMain".into(),
+                keywords: Vec::new(),
+                groups: [0, 0, 0],
+                indirect: Some((9, 12)),
+                properties: vec![("_Values".into(), PropertyValue::Buffer(8))],
             })),
             Command::ReleaseBuffer(8),
             Command::EndFrame,
@@ -1028,6 +1139,7 @@ mod tests {
                 kernel: "Main".into(),
                 keywords: Vec::new(),
                 groups: [1, 1, 1],
+                indirect: None,
                 properties: vec![("_Src".into(), texture(h))],
             }))
         };

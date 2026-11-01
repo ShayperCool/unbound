@@ -497,6 +497,41 @@ void Scale(uint3 id : SV_DispatchThreadID)
         assert_eq!(module.entry_points[0].name, kernel.entry);
     }
 
+    /// Append, Consume and counter methods compile with each buffer's hidden counter in a block
+    /// of its own, `<name>@count`, which the renderer binds to the buffer's counter.
+    #[test]
+    fn counters_are_blocks_named_after_their_buffers() {
+        let program = ComputeProgram {
+            file: PathBuf::from("Counters.compute"),
+            source: r#"
+#pragma kernel Append
+#pragma kernel Consume
+#pragma kernel Count
+AppendStructuredBuffer<uint> _Append;
+ConsumeStructuredBuffer<uint> _Consume;
+RWStructuredBuffer<uint> _Counter;
+RWStructuredBuffer<uint> _Out;
+[numthreads(64, 1, 1)] void Append(uint3 id : SV_DispatchThreadID) { if (id.x % 3 == 0) _Append.Append(id.x); }
+[numthreads(8, 1, 1)] void Consume(uint3 id : SV_DispatchThreadID) { _Out[id.x] = _Consume.Consume(); }
+[numthreads(16, 1, 1)] void Count(uint3 id : SV_DispatchThreadID) { uint i = _Counter.IncrementCounter(); _Counter[i] = id.x; InterlockedAdd(_Out[0], 1); }
+"#
+            .into(),
+        };
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        for (kernel, buffer) in [
+            ("Append", "_Append"),
+            ("Consume", "_Consume"),
+            ("Count", "_Counter"),
+        ] {
+            let k = compiler.compile_kernel(&program, kernel, &[], &[]).unwrap();
+            let names: Vec<_> = k.resources.iter().map(|r| r.name.as_str()).collect();
+            let counter = format!("{buffer}@count");
+            assert!(names.contains(&buffer), "{kernel}: {names:?}");
+            assert!(names.contains(&counter.as_str()), "{kernel}: {names:?}");
+            naga::front::wgsl::parse_str(&k.wgsl).unwrap();
+        }
+    }
+
     #[test]
     fn kernels_and_keywords() {
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();

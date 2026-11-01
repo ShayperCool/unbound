@@ -16,6 +16,16 @@ Meshes, textures and materials are identified by `u64` handles the managed side 
 is destroyed. Imported textures are uploaded by the native side itself (`import_texture`), which
 knows the asset pipeline and its cache.
 
+### Render protocol 7: buffer copies, counters, indirect dispatches (NativeApi 15)
+
+NativeApi 15 adds the commands `CopyBuffer`, `SetCounter`, `CopyCounter` and `DispatchIndirect`
+(below) and the `read_texture` call, which reads a mip level of a texture's layer (an array
+slice, cube face or volume depth slice). Append and Counter buffers (`CreateBuffer` usage bits 64
+and 128) have a hidden counter of their own, bound where a kernel declares the buffer's counter
+block (`<name>@count`, as glslang compiles `Append`, `Consume` and `IncrementCounter`); the
+renderer copies a counter only after a dispatch has bound it, as Unity does. A 14 side and a 15
+side refuse each other at startup in either pairing.
+
 ### Render protocol 6: texture handle element bits (NativeApi 13)
 
 NativeApi 14 appends `wrap_w` to `TexturePacket` and `ImportedTextureInfo`, and the
@@ -62,6 +72,7 @@ before anything renders, in both directions.
 | `submit_commands(*const u8, i64)` | Rendering commands (below), executed on the GPU in order before returning (version 9). |
 | `read_pixels(texture, x, y, w, h, float, *mut NativeBuffer) -> i32` | A rectangle of a texture (0: the screen) after everything submitted: RGBA, rows bottom first, 4 bytes per pixel or 4 floats (version 9). |
 | `read_buffer(buffer, offset, size, *mut NativeBuffer) -> i32` | A buffer's bytes after everything submitted (version 10). |
+| `read_texture(texture, mip, layer, x, y, w, h, float, *mut NativeBuffer) -> i32` | As `read_pixels`, from a mip level of a layer; 0 when the texture has no such level or layer (version 15). |
 | `font_glyph(font, codepoint, size, style, *mut GlyphInfo, *mut NativeBuffer) -> i32` | Rasterizes a glyph of a font opened with the `font-open` call (version 3); 1 when the font has it. The buffer holds `width * height` coverage bytes, top row first. |
 
 ## Conventions
@@ -172,13 +183,18 @@ before and after it, as on Unity's render thread) and a read back.
                                                 // first instance; else vertex count, instances, first vertex,
                                                 // first instance)
 23 GenerateMips u64 texture                      // filter a render target's lower mip levels
+24 CopyBuffer   u64 src, u64 src_offset, u64 dst, u64 dst_offset, u64 size   // bytes, multiples of 4
+25 SetCounter   u64 buffer, u32 value               // an Append/Counter buffer's hidden counter
+26 CopyCounter  u64 src, u64 dst, u32 offset         // the counter (a u32) into dst at a byte offset;
+                                                // nothing before a dispatch has bound the counter
+27 DispatchIndirect u64 args, u32 offset, then Dispatch's fields   // group counts: 3 u32s of args
 property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 (element bits in Draw and Global
             only, see render protocol 6) + f32x4 st, 3 int i32, 4 matrix,
             5 buffer u64, 6 array u32 components (0: consecutive values) u32 n f32[n], 7 image u64 texture i32 mip)
 ```
 
 A buffer command hands over the work planned before it, so it lands between what came before and
-after. A dispatch compiles its kernel from the `.compute` file (`unbound-shaders::compute`: resources
+after; copies and counter copies are encoded in order with the passes around them. A dispatch compiles its kernel from the `.compute` file (`unbound-shaders::compute`: resources
 keep their names, bound in group 0; RW textures compile in the formats of the textures bound to
 them) and binds its own properties, then the global ones, by name.
 

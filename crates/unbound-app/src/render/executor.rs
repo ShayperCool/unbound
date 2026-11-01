@@ -213,6 +213,7 @@ enum Op {
     Copy(Copy),
     DepthCopy(DepthCopy),
     Dispatch(compute::DispatchOp),
+    BufferCopy(compute::BufferCopyOp),
     Mips(wgpu::Texture, wgpu::TextureFormat, u32),
 }
 
@@ -294,6 +295,8 @@ pub struct UnityRenderer {
     /// Bound for a buffer a draw reads that nothing set: zeros.
     empty_storage: Option<wgpu::Buffer>,
     kernels: compute::KernelCache,
+    /// The pass writing a counter at a byte offset that is not a multiple of 4.
+    unaligned_count: Option<(wgpu::ComputePipeline, wgpu::BindGroupLayout)>,
     generation: u64,
     draw_buffer: Option<wgpu::Buffer>,
     draw_bind_group: Option<wgpu::BindGroup>,
@@ -369,6 +372,7 @@ impl UnityRenderer {
             buffers: HashMap::default(),
             empty_storage: None,
             kernels: Default::default(),
+            unaligned_count: None,
             generation: 1,
             draw_buffer: None,
             draw_bind_group: None,
@@ -1951,6 +1955,39 @@ impl UnityRenderer {
                         passes.push(op);
                     }
                 }
+                Command::CopyBuffer {
+                    source,
+                    source_offset,
+                    destination,
+                    destination_offset,
+                    size,
+                } => {
+                    open = false;
+                    if let Some(copy) = self.plan_buffer_copy(
+                        source,
+                        source_offset,
+                        destination,
+                        destination_offset,
+                        size,
+                    ) {
+                        passes.push(Op::BufferCopy(copy));
+                    }
+                }
+                Command::SetCounter { buffer, value } => {
+                    // Earlier work in this submission runs first, as for buffer data.
+                    self.flush_ops(&mut passes, &mut open);
+                    self.set_counter(buffer, value);
+                }
+                Command::CopyCounter {
+                    source,
+                    destination,
+                    offset,
+                } => {
+                    open = false;
+                    if let Some(op) = self.plan_counter_copy(source, destination, offset) {
+                        passes.push(op);
+                    }
+                }
                 Command::CopyTexture {
                     source,
                     source_slice,
@@ -2650,6 +2687,10 @@ impl UnityRenderer {
                     compute::encode(&mut encoder, d);
                     continue;
                 }
+                Op::BufferCopy(c) => {
+                    compute::encode_copy(&mut encoder, c);
+                    continue;
+                }
                 Op::DepthCopy(c) => {
                     let (pipeline, layout) = self.depth_copy_pipeline(c.kind);
                     let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -2834,13 +2875,33 @@ impl UnityRenderer {
     /// The pixels of a rectangle of a texture (0: this frame's screen) after everything queued:
     /// RGBA rows bottom first, 4 bytes per pixel, or 4 `f32`s when `float`.
     pub fn read_pixels(&mut self, texture: u64, rect: [i32; 4], float: bool) -> Option<Vec<u8>> {
+        self.read_texture(texture, 0, 0, rect, float)
+    }
+
+    /// As [`Self::read_pixels`], from a mip level of a layer (an array slice, a cube face or a
+    /// volume's depth slice at that level); `None` when the texture has no such level or layer.
+    pub fn read_texture(
+        &mut self,
+        texture: u64,
+        mip: u32,
+        layer: u32,
+        rect: [i32; 4],
+        float: bool,
+    ) -> Option<Vec<u8>> {
         let source = if texture == 0 {
             self.screens[self.screen_slot].as_ref()?.texture.clone()
         } else {
             self.textures.get(&texture)?.texture.clone()
         };
+        if mip >= source.mip_level_count() {
+            return None;
+        }
+        let level = source.size().mip_level_size(mip, source.dimension());
+        if layer >= level.depth_or_array_layers {
+            return None;
+        }
         let format = source.format();
-        let (tw, th) = (source.width() as i32, source.height() as i32);
+        let (tw, th) = (level.width as i32, level.height as i32);
         let x0 = rect[0].clamp(0, tw);
         let y0 = rect[1].clamp(0, th);
         let x1 = (rect[0] + rect[2]).clamp(0, tw);
@@ -2865,11 +2926,11 @@ impl UnityRenderer {
         encoder.copy_texture_to_buffer(
             wgpu::TexelCopyTextureInfo {
                 texture: &source,
-                mip_level: 0,
+                mip_level: mip,
                 origin: wgpu::Origin3d {
                     x: x0 as u32,
                     y: y0 as u32,
-                    z: 0,
+                    z: layer,
                 },
                 aspect: wgpu::TextureAspect::All,
             },

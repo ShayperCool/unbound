@@ -16,7 +16,8 @@ use crate::{
 
 /// 13: render protocol 6, texture handle element bits (`render_protocol::handle`).
 /// 14: `wrap_w` at the end of `TexturePacket` and `ImportedTextureInfo`.
-pub const NATIVE_API_VERSION: u32 = 14;
+/// 15: render protocol 7 (buffer copies, counters, indirect dispatches) and `read_texture`.
+pub const NATIVE_API_VERSION: u32 = 15;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]
@@ -138,6 +139,12 @@ pub struct NativeApi {
     /// (decoder, frame, the Y, U and V plane textures, out error): 1 when the frame was decoded
     /// into the planes, 0 when it was not (yet), -1 on an error (its message in the buffer).
     pub video_frame: extern "C" fn(u64, i64, *const u64, *mut NativeBuffer) -> i32,
+    // Version 15: texture levels and layers.
+    /// (texture handle, mip level, layer: an array slice, cube face or volume depth slice; x, y,
+    /// width, height; float; out pixels): 1 with the rectangle's pixels as `read_pixels` gives
+    /// them, 0 when the texture has no such level or layer.
+    pub read_texture:
+        extern "C" fn(u64, i32, i32, i32, i32, i32, i32, i32, *mut NativeBuffer) -> i32,
 }
 
 pub fn api() -> NativeApi {
@@ -177,6 +184,7 @@ pub fn api() -> NativeApi {
         read_buffer,
         gamepads_state,
         video_frame,
+        read_texture,
     }
 }
 
@@ -471,6 +479,40 @@ extern "C" fn read_pixels(
         return 0;
     }
     match state::backend().read_pixels(texture, [x, y, width, height], float != 0) {
+        Some(pixels) => {
+            unsafe { *out = NativeBuffer::from_vec(pixels) };
+            1
+        }
+        None => 0,
+    }
+}
+
+#[allow(clippy::too_many_arguments)]
+extern "C" fn read_texture(
+    texture: u64,
+    mip: i32,
+    layer: i32,
+    x: i32,
+    y: i32,
+    width: i32,
+    height: i32,
+    float: i32,
+    out: *mut NativeBuffer,
+) -> i32 {
+    if let Err(error) = handle::plain(texture, "read_texture") {
+        tracing::error!("{error}");
+        return 0;
+    }
+    if mip < 0 || layer < 0 {
+        return 0;
+    }
+    match state::backend().read_texture(
+        texture,
+        mip as u32,
+        layer as u32,
+        [x, y, width, height],
+        float != 0,
+    ) {
         Some(pixels) => {
             unsafe { *out = NativeBuffer::from_vec(pixels) };
             1
