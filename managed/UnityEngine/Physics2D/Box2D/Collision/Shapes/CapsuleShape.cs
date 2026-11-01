@@ -13,6 +13,8 @@ namespace Unbound.Box2D.Collision.Shapes
     /// </summary>
     internal sealed class CapsuleShape : PolygonShape
     {
+        readonly EdgeShape _edge = new EdgeShape();
+
         public CapsuleShape(Vector2 p1, Vector2 p2, float radius)
         {
             Count = 2;
@@ -20,7 +22,7 @@ namespace Unbound.Box2D.Collision.Shapes
             Vertices[1] = p2;
             var axis = p2 - p1;
             var length = axis.Length();
-            var n = length > Settings.Epsilon ? new Vector2(axis.Y, -axis.X) / length : new Vector2(1.0f, 0.0f);
+            var n = length > Settings.Epsilon ? new Vector2(axis.Y, -axis.X) * (1.0f / length) : new Vector2(1.0f, 0.0f);
             Normals[0] = n;
             Normals[1] = -n;
             Centroid = 0.5f * (p1 + p2);
@@ -30,6 +32,16 @@ namespace Unbound.Box2D.Collision.Shapes
         public Vector2 P1 => Vertices[0];
 
         public Vector2 P2 => Vertices[1];
+
+        // Native converts a capsule core to a two-sided edge for circle contact.
+        internal EdgeShape AsEdge()
+        {
+            _edge.Vertex1 = P1;
+            _edge.Vertex2 = P2;
+            _edge.Radius = Radius;
+            _edge.OneSided = false;
+            return _edge;
+        }
 
         public override Shape Clone() => new CapsuleShape(Vertices[0], Vertices[1], Radius);
 

@@ -800,6 +800,32 @@ namespace UnityEngine
         /// collider capsules retain their minimum segment; short query capsules become circles.</summary>
         internal static Shape CapsuleShapeOf(Matrix4x4 toBody, Vector2 offset, Vector2 size, CapsuleDirection2D direction, bool collider = false)
         {
+            if (collider)
+            {
+                // Native measures the transformed full tips, including their translation,
+                // before normalizing the axes and insetting the segment endpoints.
+                var x = new Vector2(Mathf.Abs(size.x) * .5f, 0f);
+                var y = new Vector2(0f, Mathf.Abs(size.y) * .5f);
+                var left = ToBody(toBody, offset - x);
+                var right = ToBody(toBody, offset + x);
+                var bottom = ToBody(toBody, offset - y);
+                var top = ToBody(toBody, offset + y);
+                var dx = right - left;
+                var dy = top - bottom;
+                float width = dx.Length(), height = dy.Length();
+                if (width >= B2Settings.Epsilon) dx *= 1f / width;
+                if (height >= B2Settings.Epsilon) dy *= 1f / height;
+                float extra = Mathf.Abs(width - height) <= .005f ? .005f : 0f;
+                bool vertical = direction == CapsuleDirection2D.Vertical;
+                float r = (vertical ? width : height) * .5f;
+                if (r * r < 6.25e-6f) return null;
+                float inset = vertical
+                    ? ((width < height ? width : height - .0001f) + extra) * .5f
+                    : ((height < width ? height : width - .0001f) + extra) * .5f;
+                var insetDirection = vertical ? dy : dx;
+                return new CapsuleShape((vertical ? bottom : left) + insetDirection * inset,
+                    (vertical ? top : right) - insetDirection * inset, r);
+            }
             var scales = AxisScales(toBody);
             float w = Mathf.Abs(size.x) * scales.x;
             float h = Mathf.Abs(size.y) * scales.y;
@@ -821,12 +847,15 @@ namespace UnityEngine
                 axis = axisX;
             }
             if (!(radius > B2Settings.LinearSlop * 0.5f)) return null;
-            // Collider capsules retain a short segment even when authored as a circle.
-            // Measured Unity minimum endpoint separation: 0.0049 world units.
-            if (collider) half = Mathf.Max(half, .00245f);
-            if (!collider && half <= B2Settings.LinearSlop * 0.5f)
+            if (half <= B2Settings.LinearSlop * 0.5f)
                 return new CircleShape { Position = center, Radius = Mathf.Max(w, h) * 0.5f };
-            return new CapsuleShape(center - axis * half, center + axis * half, radius);
+            // Native transforms the full tips before insetting by the radius.
+            // Combining these operations first changes translated endpoints.
+            var extent = direction == CapsuleDirection2D.Vertical
+                ? new Vector2(0f, Mathf.Abs(size.y) * .5f)
+                : new Vector2(Mathf.Abs(size.x) * .5f, 0f);
+            return new CapsuleShape(ToBody(toBody, offset - extent) + axis * radius,
+                ToBody(toBody, offset + extent) - axis * radius, radius);
         }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)

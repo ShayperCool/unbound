@@ -37,7 +37,9 @@ namespace Unbound.Box2D.Collision
             var e = B - A;
 
             // Normal points to the right for a CCW winding
-            var n = new Vector2(e.Y, -e.X);
+            // The Native two-sided edge starts with its left normal. Its sign
+            // at exact core coincidence is observable through capsule contacts.
+            var n = edgeA.OneSided ? new Vector2(e.Y, -e.X) : new Vector2(-e.Y, e.X);
             var offset = Vector2.Dot(n, Q - A);
 
             var oneSided = edgeA.OneSided;
