@@ -364,7 +364,11 @@ namespace UnityEngine
         public void Emit(Particle particle)
         {
             int index = Allocate();
-            if (index >= 0) m_Particles[index] = particle;
+            if (index >= 0)
+            {
+                MaterializeAxisOfRotation();
+                m_Particles[index] = particle;
+            }
         }
 
         public void TriggerSubEmitter(int subEmitterIndex)
@@ -552,6 +556,11 @@ namespace UnityEngine
             m_Loop = m_Loop,
             m_BurstCycles = (int[])m_BurstCycles.Clone(),
             m_RandomState = m_RandomState,
+            m_InitialRandom0 = m_InitialRandom[0],
+            m_InitialRandom1 = m_InitialRandom[1],
+            m_InitialRandom2 = m_InitialRandom[2],
+            m_InitialRandom3 = m_InitialRandom[3],
+            m_InitialRandomReady = m_InitialRandomReady,
         };
 
         public void SetPlaybackState(PlaybackState playbackState)
@@ -566,6 +575,11 @@ namespace UnityEngine
             m_PlaybackRestored = true;
             m_BurstCycles = (int[])playbackState.m_BurstCycles?.Clone() ?? Array.Empty<int>();
             m_RandomState = playbackState.m_RandomState;
+            m_InitialRandom[0] = playbackState.m_InitialRandom0;
+            m_InitialRandom[1] = playbackState.m_InitialRandom1;
+            m_InitialRandom[2] = playbackState.m_InitialRandom2;
+            m_InitialRandom[3] = playbackState.m_InitialRandom3;
+            m_InitialRandomReady = playbackState.m_InitialRandomReady;
         }
 
         public Trails GetTrails()
