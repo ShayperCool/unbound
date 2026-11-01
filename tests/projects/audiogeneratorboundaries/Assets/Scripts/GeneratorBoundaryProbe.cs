@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Globalization;
 using System.Reflection;
 using Unity.Collections;
 using UnityEngine;
@@ -81,9 +82,13 @@ public class GeneratorBoundaryProbe : MonoBehaviour
             if (!shot.SetData(shotData, 0)) throw new Exception("SetData failed");
             if (key.Contains("Clip")) source.clip = shot;
             yield return null;
-            long origin = Tick(AudioSettings.dspTime);
-            long start = scheduled ? 8192 + (kind == "endInside" ? 0 : 73) : -1;
-            long end = !scheduled ? -1 : kind == "windowInside" ? 8192 + 185 : kind == "endInside" ? 10240 + 185 : 12288;
+            double originTime = AudioSettings.dspTime;
+            long origin = Tick(originTime);
+            double start = scheduled ? 8192.5 + (kind == "endInside" ? 0 : 73) : -1;
+            double end = !scheduled ? -1 : kind == "windowInside" ? 8192.5 + 185 : kind == "endInside" ? 10240.5 + 185 : 12288.5;
+            double startTime = originTime + start / Rate, endTime = originTime + end / Rate;
+            Debug.Log("BoundaryClock " + key + " originBits=" + BitConverter.DoubleToInt64Bits(originTime)
+                + " startBits=" + BitConverter.DoubleToInt64Bits(startTime) + " endBits=" + BitConverter.DoubleToInt64Bits(endTime));
             var events = new List<string>();
             void State(string phase, int block) {
                 events.Add("{\"phase\":" + Json(phase) + ",\"block\":" + block + ",\"dsp\":" + (Tick(AudioSettings.dspTime) - origin)
@@ -95,7 +100,7 @@ public class GeneratorBoundaryProbe : MonoBehaviour
             State("beforeSubmit", -1);
             string submit = "ok";
             try {
-                if (scheduled) { source.PlayScheduled((origin + start) / (double)Rate); source.SetScheduledEndTime((origin + end) / (double)Rate); }
+                if (scheduled) { source.PlayScheduled(startTime); source.SetScheduledEndTime(endTime); }
                 else {
                     if (key == "generator" || key == "generatorShot") source.Play();
                     if (key == "shotPlain" || key == "shotFilter" || key == "generatorShot") source.PlayOneShot(shot);
@@ -140,7 +145,7 @@ public class GeneratorBoundaryProbe : MonoBehaviour
                 records.Add(Json(key + "." + suffix) + ":{\"file\":" + Json(key + "." + suffix + ".f32") + ",\"frames\":" + samples + ",\"channels\":1}");
             records.Add(Json(key + ".callbacks") + ":[" + string.Join(",", calls) + "]");
             records.Add(Json(key + ".events") + ":[" + string.Join(",", events) + "]");
-            records.Add(Json(key + ".schedule") + ":{\"start\":" + start + ",\"end\":" + end + ",\"submit\":" + Json(submit) + ",\"clipAssigned\":" + (source.clip != null ? "true" : "false") + "}");
+            records.Add(Json(key + ".schedule") + ":{\"start\":" + start.ToString("R", CultureInfo.InvariantCulture) + ",\"end\":" + end.ToString("R", CultureInfo.InvariantCulture) + ",\"submit\":" + Json(submit) + ",\"clipAssigned\":" + (source.clip != null ? "true" : "false") + "}");
             DestroyImmediate(go); DestroyImmediate(shot);
         }
         AudioRenderer.Stop(); records.Add("\"complete\":true");
