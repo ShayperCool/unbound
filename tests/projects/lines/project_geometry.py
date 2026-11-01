@@ -114,7 +114,7 @@ def failure(a,b):
 # Use the original whole-value comparator unchanged.
 ABS=REL=1e-5
 exec(compile(ast.Module(body=[x for x in ast.parse((REPO/'tests/projects/lines/compare.py').read_text()).body if isinstance(x,ast.FunctionDef) and x.name=='differ'],type_ignores=[]),'<original comparator>','exec'))
-deltas={base:{state:dict(introduced_numeric_paths=[],changed_retained_numeric_paths=[],all_numeric_worsenings=[]) for state in ('final','prepared')} for base in ('root','blend')}
+deltas={base:{state:dict(introduced_numeric_paths=[],changed_retained_numeric_paths=[],all_numeric_worsenings=[]) for state in ('final','prepared')} for base in ('root','blend','final')}
 whole={base:{} for base in ('reference','root','blend','final','prepared')}
 for row in ROWS:
  key=row['key'];maps={base:leafmap(v) for base,v in row['raw'].items()};ref=maps['reference'];pr=maps['prepared'];component_fail=[]
