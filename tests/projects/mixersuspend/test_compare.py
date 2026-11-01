@@ -46,6 +46,23 @@ class ReportTests(unittest.TestCase):
             rows=records(root/'partial.jsonl.gz')
             self.assertTrue(any(r.get('sample')==0 and r.get('before')==9. for r in rows))
             self.assertTrue(any(r.get('key')=='undeclared_file:extra.f32' and r.get('before')==7. for r in rows))
+            for exact in (False, True):
+                for name,values in [('native',[0.,-0.,2.,3.]),('before',[9.]),('after',[0.,0.,4.,3.,5.])]:
+                    (root/name/'signal.f32').write_bytes(struct.pack('<'+'f'*len(values),*values))
+                suffix='exact' if exact else 'tolerance'
+                legacy=root/('unequal-'+suffix+'-legacy.jsonl.gz')
+                batch=root/('unequal-'+suffix+'-batch.jsonl.gz')
+                fallback=root/('unequal-'+suffix+'-fallback.jsonl.gz')
+                compare(root/'native',root/'after',legacy,before=root/'before',exact=exact)
+                compare(root/'native',root/'after',batch,before=root/'before',exact=exact,batch=True)
+                with patch.dict('sys.modules',{'numpy':None}):
+                    compare(root/'native',root/'after',fallback,before=root/'before',exact=exact,batch=True)
+                self.assertEqual(records(legacy),records(batch))
+                self.assertEqual(records(legacy),records(fallback))
+                summaries=[json.loads(gzip.open(f,'rt').readlines()[-1])['summary'] for f in (legacy,batch,fallback)]
+                for field in ('tested','failed','counts','bit_changed','tolerated_changed'):
+                    self.assertEqual(summaries[0][field],summaries[1][field])
+                    self.assertEqual(summaries[0][field],summaries[2][field])
 
     def test_complete_union_and_exact_repeats(self):
         with self.temporary() as directory:

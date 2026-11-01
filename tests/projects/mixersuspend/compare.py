@@ -128,15 +128,20 @@ def compare(reference, candidate, report, exact=False, before=None, batch=False)
                 if len(set(chunks)) == 1:
                     tested += len(chunks[0])//4
                     continue
-                if np is not None and len({len(c) for c in chunks}) == 1:
-                    floats = [np.frombuffer(c, dtype='<f4') for c in chunks]
+                if np is not None:
+                    length = max(map(len, chunks))//4
+                    present = [np.arange(length) < len(c)//4 for c in chunks]
+                    floats = [np.pad(np.frombuffer(c, dtype='<f4'),
+                                     (0, length-len(c)//4)) for c in chunks]
                     x = floats[0].astype('f8')
                     wrong = [(floats[0].view('<u4') != v.view('<u4')) if exact
                              else np.abs(x-v.astype('f8')) > ATOL+RTOL*np.abs(x)
                              for v in floats[1:]]
                     for i, v in enumerate(floats[1:]):
                         wrong[i] |= ~np.isfinite(x) | ~np.isfinite(v)
-                    changed = np.logical_or.reduce([floats[0].view('<u4') != v.view('<u4') for v in floats[1:]])
+                        wrong[i] = (present[0] != present[i+1]) | (present[0] & present[i+1] & wrong[i])
+                    changed = np.logical_and.reduce(present) & np.logical_or.reduce(
+                        [floats[0].view('<u4') != v.view('<u4') for v in floats[1:]])
                     failing = np.logical_or.reduce(wrong)
                     tested += len(x)
                     bit_changed += int(np.count_nonzero(changed))
@@ -147,8 +152,8 @@ def compare(reference, candidate, report, exact=False, before=None, batch=False)
                         flush()
                         row = dict(key=key, samples=(indexes+start//4).tolist())
                         fields = ['reference', 'candidate'] if before is None else ['native', 'before', 'after']
-                        for field, v in zip(fields, floats):
-                            row[field] = [safe(float(n)) for n in v[indexes]]
+                        for field, v, available in zip(fields, floats, present):
+                            row[field] = [safe(float(v[i])) if available[i] else MISSING for i in indexes]
                         if before is not None:
                             statuses = np.where(wrong[0][indexes], np.where(wrong[1][indexes], 'retained', 'resolved'), 'introduced')
                             row['status'] = statuses.tolist()
