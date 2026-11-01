@@ -132,6 +132,8 @@ public class TriggerProbe : MonoBehaviour
             RecordQuery(name, "afterSync", collider, 0.2f);
             DestroyImmediate(sphere);
         }
+        ShapeRebuildControl(false);
+        ShapeRebuildControl(true);
         foreach (string order in new[] { "original", "triggerFirst", "synced" })
         {
             RunCase("trigger_kill_inside", 1.5f, 1f, 30, ParticleSystemOverlapAction.Kill, ParticleSystemOverlapAction.Ignore, order);
@@ -181,6 +183,39 @@ public class TriggerProbe : MonoBehaviour
         RecordQuery(scenario, "afterSync", collider, size * 0.5f);
         Done(ps);
         DestroyImmediate(sphere);
+    }
+
+    // Keep geometry edits distinct from pending transform changes, both on a static actor
+    // and in a child collider's cached frame on a Rigidbody.
+    static void ShapeRebuildControl(bool attached)
+    {
+        var parent = new GameObject("shape-parent");
+        if (attached) parent.AddComponent<Rigidbody>().isKinematic = true;
+        var child = new GameObject("shape-child");
+        child.transform.SetParent(parent.transform, false);
+        child.transform.localPosition = new Vector3(1f, 0f, 0f);
+        var sphere = child.AddComponent<SphereCollider>();
+        Physics.SyncTransforms();
+        string scenario = attached ? "shape_rebuild_attached" : "shape_rebuild_static";
+        RecordShape("initial");
+        parent.transform.position = new Vector3(0f, 0f, 2.5f);
+        child.transform.localPosition = new Vector3(2f, 0f, 0f);
+        child.transform.localScale = new Vector3(2f, 2f, 2f);
+        sphere.isTrigger = true;
+        RecordShape("propertyBeforeSync");
+        sphere.radius = 0.75f;
+        sphere.center = new Vector3(0.25f, 0f, 0f);
+        RecordShape("beforeSync");
+        Physics.SyncTransforms();
+        RecordShape("afterSync");
+        DestroyImmediate(parent);
+
+        void RecordShape(string step)
+        {
+            var bounds = sphere.bounds;
+            RecordValue(scenario, step, "{\"boundsCenter\":" + V(bounds.center)
+                + ",\"boundsSize\":" + V(bounds.size) + "}");
+        }
     }
 
     static void RecordQuery(string scenario, string step, Collider collider, float radius)
