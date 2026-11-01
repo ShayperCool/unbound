@@ -2078,3 +2078,30 @@ Validation (candidate against the Root runtime it was merged into, same commands
   animation from bundles 8/8. These equal Root's.
 - api-check: 0 errors in 2290 hand-written types. unbound-assets 75 and unbound-runtime 49 tests,
   and 31 managed animation/animator/humanoid tests, pass.
+
+## Combined Core and physics review follow-up, 2026-11-01
+
+The integration at `691f0ed6` includes shared rounded-tip and collapsed-core
+contacts, callback traversal after pair removal, first-access project settings,
+and strict reporting of newly missing observations. Its 4,700-field Editor
+control passes 4,570 observations, resolves 562 and introduces none; 130
+`Collider2D.Distance` normal and witness-point differences remain. Broad physics
+passes 11,626/11,626, motion 3,364,863/3,364,863, and the scene-settings matrix
+5,055/5,055 with its original rounding bounds. Managed tests pass 1,265/1,276:
+48 differences from the accepted parent are resolved, the same eleven failures
+remain, and none are introduced. API checking has zero errors in 2,289 types.
+
+All scheduled regression groups finished, including animation, input, clock,
+particles, UI and rendering. Their raw deltas are retained. The broad particles
+suite keeps the same 559 failing values. One trails pixel changes RGB error
+four to five, below the unchanged threshold of eight. Full integration
+acceptance remains open: humanoid IK readback resolves sixteen values, retains
+seventy and introduces ten against the prior accepted capture. Fewer total
+differences does not make those ten acceptable; they are assigned to the
+humanoid follow-up. No full Core, math or engine parity is claimed.
+
+Generic model target-matching review has a separate expanded Editor reference:
+11,476 records, with the old 3,714-record prefix unchanged. The current local
+candidate preserves that old scope and matches 88,224/90,968 expanded values.
+Its remaining differences and strict before/after union are retained outside
+Git; the model review package is not yet accepted.

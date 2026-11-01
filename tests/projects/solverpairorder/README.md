@@ -136,3 +136,20 @@ collider preserves values assigned before the physics world exists.
 failures. A baseline failure cannot make the loss of its field acceptable. Run
 the CLI regression controls with `python3 -m unittest discover -s
 tests/projects/solverpairorder -p test_public.py`.
+
+Integrated review controls retain all 4,700 observations: 4,570 match, 562
+previous differences are resolved, and no previously passing or present field
+is lost. The 130 retained differences are `Collider2D.Distance` normals and
+witness points; the physical capsule contacts, callback-removal cases and
+initial-settings controls pass. The wider physics capture matches all 11,626
+values, the motion capture all 3,364,863 values, and the scene-settings matrix
+all 5,055 values under their original tolerances.
+
+The combined managed differential passes 1,265 of 1,276 tests, retaining the
+same eleven failures, with 48 newly passing tests. The API check reports zero
+errors across 2,289 types. These results certify the measured physics scope,
+not all effects of the shared Core arithmetic changes: the full integration
+audit retains ten newly failing humanoid IK readback values against the prior
+accepted capture. Its overall acceptance remains open. Raw rendering changes
+also remain visible, including one trails pixel whose RGB error changes from
+four to five while staying within the original threshold of eight.

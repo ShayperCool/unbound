@@ -2,7 +2,8 @@
 
 Root motion of imported generic clips on Unity 6000.0.71f1: a root node (`motionNodeName`), Bake
 Into Pose and its related clip settings, the clips' motion statistics and `MatchTarget` on generic
-rigs. Humanoid rigs are not covered.
+rigs. Humanoid motion is not covered; a shared humanoid rig checks that the
+`hasRootCurves` flag does not depend on reading `humanMotion` first.
 
 `make_models.py` (Blender, 24 fps, one take of frames 0..48) writes `Walker.fbx` (top-level Hips
 walking forward with sway, bob, a 90 degree turn and tilts; child Leg; a Prop) and `Mover.fbx`
@@ -19,12 +20,20 @@ every clip with `Animator.Update(0)` and twenty steps of 0.125 s with root motio
 also off), recording the root's pose, the deltas, velocities, root pose API and the animated
 nodes. The `match.*` cases call `MatchTarget` for the root (start 0.3, target 0.8 of the state).
 
+`MatchReviewProbe` adds state replacement, controller replacement, rebinding,
+transitions, explicit interruption, clip overrides and movement callbacks.
+Position weights include individual root axes. The timing cases vary the
+requested match end before rebinding. The runner stages `HumanA.fbx` and its
+meta from the sibling humanoid probe as `ReviewHumanA`; there is one authored
+copy of that model in the repository.
+
 The assets are committed. To make them again, regenerate the models and let a disposable Editor
 copy write the `.meta` files and controllers back:
 
 ```bash
 blender -b --factory-startup --python tests/projects/modelroot/make_models.py
 python3 tests/projects/modelroot/run.py create --release 6000.0.71f1 --label <label>
+python3 tests/projects/modelroot/run.py create-review --release 6000.0.71f1 --label <review-label>
 ```
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run
@@ -63,4 +72,12 @@ What the Editor does (measured):
   precision, as for humanoid clips: the speed's length for clips that do not turn, more for clips
   that turn about the up axis (1.154 times for a 90 degree turn in two seconds).
 
-Unbound matches 3714/3714 records.
+The expanded canonical reference has 11,476 records from two successful,
+byte-identical Editor runs. All original 3,714 records remain byte-identical.
+Publication requires successful exits, unique keys and the terminal completion
+record; matching partial captures cannot replace the reference.
+
+The original 3,714 records still pass. Review corrections are in progress:
+the current candidate matches 10,873/11,476 records and 88,224/90,968 values.
+Remaining lifecycle, timing and override differences stay in the complete
+comparison; the expanded scope is not certified.
