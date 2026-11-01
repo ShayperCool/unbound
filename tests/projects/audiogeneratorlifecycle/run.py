@@ -10,6 +10,8 @@ import subprocess
 import sys
 
 fixture = Path(__file__).resolve().parent
+sys.path.insert(0, str(fixture.parents[1]))
+from editor_runner import EditorJob, run as run_editor
 sys.path.insert(0, str(fixture.parent / 'mixersuspend'))
 from pack import pack
 from verify_activity import verify
@@ -38,20 +40,31 @@ commands = []
 if a.backend == 'native':
     editor = a.editor or Path.home() / 'Unity/Hub/Editor' / a.release / 'Editor/Unity'
     for stage in ('Prepare', 'Record'):
-        command = [heavy, 'timeout', '300', str(editor), '-batchmode', '-nographics', '-projectPath', str(project),
-                   '-executeMethod', 'ProbeRunner.' + stage, '-logFile', str(a.work / (stage + '.log'))]
-        commands.append(command)
+        job = EditorJob(project, a.work / (stage + '.log'), a.work / (stage + '-editor'),
+                        args=['-executeMethod', 'ProbeRunner.' + stage], batch=True,
+                        graphics=False, editor=editor, env=env, timeout=300,
+                        progress_files=[output / 'capture.json', output],
+                        progress_timeout=240 if stage == 'Record' else None)
+        commands.append(job.command())
+        (a.work / 'commands.json').write_text(json.dumps(commands, indent=2) + '\n')
+        result = run_editor(job)
+        if result.get('exit_code') != 0 or result.get('forced_exit'):
+            raise SystemExit('Native ' + stage + ' failed: ' + json.dumps(result))
 else:
     env.update(GENERATOR_LIFECYCLE_ENGINE='1', UNBOUND_CACHE=str(a.work / 'cache'),
                UNBOUND_MANAGED_DIR=str(a.runtime / 'managed'), LD_LIBRARY_PATH=str(a.runtime / 'managed'))
     artifacts = [a.runtime / 'unbound', *sorted((a.runtime / 'managed').rglob('*'))]
-    (a.work / 'runtime-hashes.json').write_text(json.dumps({str(f.relative_to(a.runtime)): hashlib.sha256(f.read_bytes()).hexdigest() for f in artifacts if f.is_file()}, indent=2) + '\n')
-    commands.append([heavy, 'timeout', '300', str(a.runtime / 'unbound'), 'run', '-p', str(project),
+    runtime_hashes = {str(f.relative_to(a.runtime)): hashlib.sha256(f.read_bytes()).hexdigest() for f in artifacts if f.is_file()}
+    assert runtime_hashes == json.loads((a.runtime / 'runtime-manifest.json').read_text()), 'Runtime manifest mismatch'
+    (a.work / 'runtime-hashes.json').write_text(json.dumps(runtime_hashes, indent=2) + '\n')
+    commands.append([heavy, 'timeout', '--kill-after=15', '300', str(a.runtime / 'unbound'), 'run', '-p', str(project),
                      '--scene', 'Assets/Scenes/Probe.unity', '--headless', '100', '--no-watch', '--fixed-fps', '60'])
 (a.work / 'commands.json').write_text(json.dumps(commands, indent=2) + '\n')
-for i, command in enumerate(commands):
+for i, command in enumerate(commands if a.backend == 'engine' else []):
     with (a.work / ('stdout-' + str(i) + '.log')).open('x') as log:
         subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, check=True)
+if a.backend == 'engine':
+    assert runtime_hashes == {str(f.relative_to(a.runtime)): hashlib.sha256(f.read_bytes()).hexdigest() for f in artifacts if f.is_file()}, 'Runtime mutated during capture'
 (a.work / 'input-hashes.json').write_text(json.dumps({str(f.relative_to(project)): hashlib.sha256(f.read_bytes()).hexdigest() for f in sorted((project / 'Assets').rglob('*')) if f.is_file()}, indent=2) + '\n')
 verify(output, a.release)
 pack(output)
