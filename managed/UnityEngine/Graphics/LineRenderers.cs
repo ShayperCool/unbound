@@ -291,10 +291,6 @@ namespace UnityEngine
                     m = sum.normalized;
                     length = h / Mathf.Max(Vector3.Dot(m, s1), 1f / MiterLimit);
                 }
-                // Clamped between h and 3h as Clamp(value, h, 3h) does, so a negative width keeps its
-                // half width (measured, tests/projects/lines line.width.negative).
-                if (length < h) length = h;
-                else if (length > MiterLimit * h) length = MiterLimit * h;
                 if (m_NoMiter[i]) length = h;
                 else if (i > 0 && i < segments && Mathf.Abs(length) > Mathf.Abs(h))
                 {
@@ -305,9 +301,9 @@ namespace UnityEngine
                 }
                 float turn = Vector3.Dot(Vector3.Cross(s1, s2), normal);
                 bool aInner = turn > 0f || (turn == 0f && Vector3.Dot(s1, s2) < 0f);
-                // A zero or negative width keeps the corner where the turn puts it but swaps its two
-                // sides (measured, tests/projects/lines line.width.zero and line.width.negative).
-                bool swap = h <= 0f;
+                // A zero or negative width swaps the arc's fixed side (measured corner triangles,
+                // tests/projects/lines line.width.zero and line.width.negative).
+                if (h <= 0f) aInner = !aInner;
                 if (corners == 0)
                 {
                     m_Pairs.Add(new Pair { A = point - m * length, B = point + m * length, Tangent = Vector3.Cross(faceNormal, s2), U = u, Color = color });
@@ -326,12 +322,9 @@ namespace UnityEngine
                     // The tangent lies in the strip's face, across the step's side (measured,
                     // line.light.persp.spatial.c2cap2).
                     var tangent = w * Vector3.Cross(faceNormal, r);
-                    Vector3 a = aInner ? inner : inner - r * w, b = aInner ? inner + r * w : inner;
-                    bool fixedA = aInner != swap;
-                    var join = k == 0 ? Join.Quad : fixedA ? Join.CornerA : Join.CornerB;
-                    m_Pairs.Add(swap
-                        ? new Pair { A = b, B = a, Tangent = tangent, U = u, Color = color, Join = join }
-                        : new Pair { A = a, B = b, Tangent = tangent, U = u, Color = color, Join = join });
+                    var join = k == 0 ? Join.Quad : aInner ? Join.CornerA : Join.CornerB;
+                    if (aInner) m_Pairs.Add(new Pair { A = inner, B = inner + r * w, Tangent = tangent, U = u, Color = color, Join = join });
+                    else m_Pairs.Add(new Pair { A = inner - r * w, B = inner, Tangent = tangent, U = u, Color = color, Join = join });
                 }
             }
 
