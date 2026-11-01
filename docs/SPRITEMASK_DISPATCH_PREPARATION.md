@@ -42,14 +42,12 @@ coroutine, Invoke or player-loop step. Permanent engine static initialization is
 retained; test-specific state is restored even on fixture-construction failure.
 These tests do not exercise the complete camera lifecycle or nested Camera.Render.
 
-Saved Unity `6000.0.71f1` proof binds this exclusion to effective material queues
-and real render stages. In `native-render-loop.asm`, `DoRenderLoop` compares to
-2501 at `0x1da4c08`, dispatches the opaque vector at `0x1da4f76`, then the
-transparent vector at `0x1da509d`. Mask nodes use flattened material data in
-`native-mask-prepare.asm`; `native-mask-node-draw.asm` contains the scheduled
-mask write. `native-line-inside.asm` calls masking stencil setup at `0x1e9f47d`.
-`native-stencil-create.asm` installs the Inside/Outside comparisons and reference
-1. This is saved binary-backed reconstruction, not a new GPU trace.
+Saved Unity `6000.0.71f1` research establishes the relevant material-queue order:
+queue-2000 lines draw before the queue-3000 mask writes stencil. The opaque stage
+contains queues through 2500; later queues draw in the transparent stage.
+Inside/Outside keep reference 1 with LessEqual/Greater, respectively. The full
+research report remains in the run directory linked below. This is source and
+saved-measurement evidence, not a new runtime result.
 
 Evidence directory:
 `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-mask-dispatch-research-20261101-t3-e46c0814/`.
