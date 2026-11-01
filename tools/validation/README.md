@@ -8,7 +8,12 @@ Admission is by count: at most eight Unity Editors (`-nographics` or graphics),
 four direct `unbound run` engine jobs (`--headless` selects CPU mode), one build
 (`cargo`, `rustc`, `dotnet build/test/publish/restore/msbuild/pack/format`, also
 behind time, timeout and env; pass `--kind build` for a script that only builds)
+`tool_slots` CPU tools (other `unbound` subcommands such as `compile`, `.NET` tools
+run as `dotnet Tool.dll` such as ApiCheck, or anything passed with `--kind tool`)
 and `gpu_slots` GPU jobs, shared by graphics Editors and non-headless engine runs.
+Wrap build scripts with `--kind build` and analysis scripts that start no Editor or
+engine run with `--kind tool`: an unrecognized command is an exclusive `heavy` job
+and stops every pool while it runs.
 A job reserves everything it needs at once, without blocking while it holds any
 of it: a job that cannot get all its slots releases them and retries. A waiting
 job therefore never pins slots and never delays jobs whose own slots are free.

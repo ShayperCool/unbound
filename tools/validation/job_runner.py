@@ -47,6 +47,7 @@ def policy():
     value.setdefault('build_slots', 1)
     value.setdefault('engine_slots', 2)
     value.setdefault('gpu_slots', 1)
+    value.setdefault('tool_slots', 2)
     # Optional memory tokens (one GiB each, weighted by kind). Without them only
     # the count caps and the systemd slices bound the pools.
     value.setdefault('memory_tokens', 0)
@@ -54,10 +55,11 @@ def policy():
     assert 1 <= value['engine_slots'] <= 8
     assert 1 <= value['build_slots'] <= 2
     assert 1 <= value['gpu_slots'] <= len(GPU_SLOT_NAMES)
+    assert 1 <= value['tool_slots'] <= 8
     assert 0 <= value['memory_tokens'] <= 64
     assert value['memory_tokens']*2**30 <= value['memory_max_bytes']
     if value['memory_tokens']:
-        for kind in ['editor-cpu', 'editor-gpu', 'engine-cpu', 'engine-gpu', 'build']:
+        for kind in ['editor-cpu', 'editor-gpu', 'engine-cpu', 'engine-gpu', 'build', 'tool']:
             assert 1 <= value['weights'][kind] <= value['memory_tokens'], kind
     return value
 
@@ -124,6 +126,8 @@ def needs(kind, config):
         result.append((['parity-engine-slot-'+str(i)+'.lock' for i in range(config['engine_slots'])], 1))
     if kind == 'build':
         result.append((['parity-build-slot-'+str(i)+'.lock' for i in range(config['build_slots'])], 1))
+    if kind == 'tool':
+        result.append((['parity-tool-slot-'+str(i)+'.lock' for i in range(config['tool_slots'])], 1))
     if kind.endswith('-gpu'):
         result.append((GPU_SLOT_NAMES[:config['gpu_slots']], 1))
     return result
@@ -224,7 +228,7 @@ def clean_idle_compilers(config):
 def execute(command, kind, config):
     editor = kind.startswith('editor-')
     engine = kind.startswith('engine-')
-    build = kind=='build'
+    build = kind in ('build', 'tool')
     pooled = editor or engine or build
     queued = time.time()
     with contextlib.ExitStack() as held:
@@ -295,6 +299,12 @@ def classify(command):
     # Keep support for Editor debugging through gdb --args.
     if any(Path(arg).name=='Unity' and Path(arg).parent.name=='Editor' for arg in command):
         return 'editor-cpu' if '-nographics' in command else 'editor-gpu'
+    # Other unbound subcommands (compile, shaders, ...) and .NET tools run as
+    # `dotnet Tool.dll` do CPU work without starting Editors or engine runs.
+    if len(args)>1 and Path(args[0]).name=='unbound':
+        return 'tool'
+    if len(args)>1 and Path(args[0]).name=='dotnet' and args[1].endswith('.dll'):
+        return 'tool'
     if args and Path(args[0]).name in BUILD_TOOLS:
         verbs = BUILD_TOOLS[Path(args[0]).name]
         if verbs is None or (len(args)>1 and args[1] in verbs):
@@ -331,13 +341,13 @@ def main(args):
     if args and args[0]=='--':
         args = args[1:]
     if not args:
-        raise SystemExit('usage: with-heavy-job [--kind editor-cpu|editor-gpu|engine-cpu|engine-gpu|build|heavy] COMMAND...')
+        raise SystemExit('usage: with-heavy-job [--kind editor-cpu|editor-gpu|engine-cpu|engine-gpu|build|tool|heavy] COMMAND...')
     if kind is None:
         kind = classify(args)
-    assert kind in ['editor-cpu','editor-gpu','engine-cpu','engine-gpu','build','heavy'], 'invalid job kind'
+    assert kind in ['editor-cpu','editor-gpu','engine-cpu','engine-gpu','build','tool','heavy'], 'invalid job kind'
     if kind!='heavy' and not worker:
         editor = kind.startswith('editor-')
-        build = kind=='build'
+        build = kind in ('build', 'tool')
         unit = ('unbound-editor-' if editor else 'unbound-build-' if build else
                 'unbound-engine-')+scope_id+'.scope'
         if editor:

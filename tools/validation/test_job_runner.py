@@ -23,7 +23,7 @@ if len(sys.argv)>1 and sys.argv[1]=='worker':
         relative=Path('/proc/self/cgroup').read_text().split('::',1)[1].strip()
         group=Path('/sys/fs/cgroup')/relative.lstrip('/')
         pool=group.parent
-        if kind=='build':
+        if kind in ('build','tool'):
             assert pool.name=='unbound-builds.slice',pool
             assert int((group/'memory.max').read_text())==9*2**30
             assert int((group/'memory.high').read_text())==7*2**30
@@ -70,6 +70,9 @@ for command,expected in [
     (['./build.sh'],'heavy'),
     (['bash','-c','cargo build'],'heavy'),
     (['gdb','--args','/opt/Editor/Unity','-batchmode','-nographics'],'editor-cpu'),
+    (['timeout','600','/tmp/unbound','compile','-p','x'],'tool'),
+    (['dotnet','/tmp/api/ApiCheck.dll','a','b'],'tool'),
+    (['python3','build-all.py'],'heavy'),
 ]:
     assert runner.classify(command)==expected,(command,expected)
 
@@ -120,6 +123,10 @@ jobs.append(spawn('engine-cpu','build-engine',.6))
 join(jobs)
 join([spawn('editor-gpu','gpu-editor-'+str(i),.6) for i in range(GPUS)]+
      [spawn('engine-gpu','gpu-engine-'+str(i),.6) for i in range(2)])
+# Tools run beside each other and the pools, not exclusively.
+jobs=[spawn('tool','tool-'+str(i),.8) for i in range(config['tool_slots'])]
+jobs.append(spawn('editor-cpu','tool-editor',.8))
+join(jobs)
 # A long-waiting build (behind another build) never delays an Editor.
 jobs=[spawn('build','wait-build-a',3.0)]
 time.sleep(.4)
@@ -162,6 +169,10 @@ for row in sorted(rows,key=lambda r:r['time']):
         engine_count=sum(k.startswith('engine-') for k in active_kinds.values())
         editor_count=sum(k.startswith('editor-') for k in active_kinds.values())
         build_count=sum(k=='build' for k in active_kinds.values())
+        tool_count=sum(k=='tool' for k in active_kinds.values())
+        assert tool_count<=config['tool_slots'],('tool cap',active_kinds)
+        tool_peak=max(globals().get('tool_peak',0),tool_count)
+        globals()['tool_peak']=tool_peak
         gpu_count=sum(k.endswith('-gpu') for k in active_kinds.values())
         assert engine_count<=ENGINES,('engine cap',active_kinds)
         assert editor_count<=EDITORS,('Editor cap',active_kinds)
@@ -182,6 +193,7 @@ assert not active
 assert peak==EDITORS,('Editor jobs did not fill their slots',peak)
 assert engine_peak==ENGINES,('engine jobs did not fill their slots',engine_peak)
 assert gpu_peak==GPUS,('GPU jobs did not fill their slots',gpu_peak)
+assert globals().get('tool_peak',0)==config['tool_slots'],'tools were serialized'
 assert mixed_overlap,'Editor and engine never overlapped'
 assert build_overlap,'builds still stop the Editor and engine pools'
 
