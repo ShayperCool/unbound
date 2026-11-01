@@ -117,5 +117,23 @@ namespace UnityEngine.Tests
             }
             finally { Object.DestroyImmediate(root); }
         }
+
+        // Native control: matchReview.timing.0.4.0.6.False.step2 reaches the end exactly.
+        [Fact]
+        public void MatchingRemainsTrueAtTheExactEndUntilTimeAdvancesPastIt()
+        {
+            var animator = Create(out var root);
+            try
+            {
+                animator.MatchTarget(new Vector3(10, 0, 0), Quaternion.identity, AvatarTarget.Root,
+                    new MatchTargetWeightMask(Vector3.one, 1), .2f, .5f, false);
+                animator.Update(.5f);
+                Assert.Equal(.5f, animator.GetCurrentAnimatorStateInfo(0).normalizedTime);
+                Assert.True(animator.isMatchingTarget);
+                animator.Update(.1f);
+                Assert.False(animator.isMatchingTarget);
+            }
+            finally { Object.DestroyImmediate(root); }
+        }
     }
 }
