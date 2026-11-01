@@ -110,7 +110,7 @@ def main():
     else:
         if not a.baseline: p.error('verify requires --baseline')
         ref = load(ROOT.parent/'particles/Reference'/('unity-'+a.unity_version+'.jsonl'))
-        result = full_union(ref, load(a.baseline), load(work/'capture.jsonl'))
+        result = full_union(ref, load(a.baseline), compare.load(work/'capture.jsonl'))
         (work/'full-union.json').write_text(json.dumps(result, indent=2)+'\n')
         print({name: len(values) for name, values in result['union'].items()})
         print('raw deltas:', len(result['raw_delta']))
