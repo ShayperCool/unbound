@@ -113,6 +113,33 @@ namespace UnityEngine
             return result;
         }
 
+        /// <summary>One texel of a level as <see cref="GetPixels"/> reads it, decoding only its bytes.</summary>
+        internal Color GetPixel(int image, int mip, int index)
+        {
+            int size = PixelFormats.Size(Format, 1, 1);
+            var bytes = new byte[size];
+            Buffer.BlockCopy(Data, Offset(image, mip) + index * size, bytes, 0, size);
+            if (Hdr)
+            {
+                var one = new Color[1];
+                PixelFormats.DecodeFloat(Format, bytes, one);
+                return PixelFormats.QuantizeFloat(Format, one[0]);
+            }
+            var c = new Color32[1];
+            if (Format == TextureFormat.R8) c[0] = new Color32(bytes[0], 255, 255, 255);
+            else PixelFormats.Decode(Format, bytes, c);
+            const float scale = 1f / 255f;
+            return new Color(c[0].r * scale, c[0].g * scale, c[0].b * scale, c[0].a * scale);
+        }
+
+        /// <summary>One texel of a level as <see cref="SetPixels"/> stores it, encoding only its bytes.</summary>
+        internal void SetPixel(int image, int mip, int index, Color color)
+        {
+            var bytes = Hdr ? PixelFormats.EncodeFloat(Format, new[] { color }) : PixelFormats.Encode(Format, new Color32[] { color });
+            int size = PixelFormats.Size(Format, 1, 1);
+            Buffer.BlockCopy(bytes, 0, Data, Offset(image, mip) + index * size, Math.Min(bytes.Length, size));
+        }
+
         internal void SetPixels(int image, int mip, Color[] colors)
         {
             if (colors == null || colors.Length != Size(mip)) throw new ArgumentException("Array size must match the mip level's size.", nameof(colors));
@@ -770,9 +797,7 @@ namespace UnityEngine
             var pixels = Level("Texture3D.SetPixel", mipLevel);
             int w = pixels.W(mipLevel), h = pixels.H(mipLevel), d = pixels.D(mipLevel);
             if (x < 0 || y < 0 || z < 0 || x >= w || y >= h || z >= d) return;
-            var level = pixels.GetPixels(0, mipLevel);
-            level[(z * h + y) * w + x] = color;
-            pixels.SetPixels(0, mipLevel, level);
+            pixels.SetPixel(0, mipLevel, (z * h + y) * w + x, color);
         }
 
         public Color GetPixel(int x, int y, int z) => GetPixel(x, y, z, 0);
@@ -784,7 +809,7 @@ namespace UnityEngine
             x = Mathf.Clamp(x, 0, w - 1);
             y = Mathf.Clamp(y, 0, h - 1);
             z = Mathf.Clamp(z, 0, d - 1);
-            return pixels.GetPixels(0, mipLevel)[(z * h + y) * w + x];
+            return pixels.GetPixel(0, mipLevel, (z * h + y) * w + x);
         }
 
         public void Apply() => Apply(true, false);

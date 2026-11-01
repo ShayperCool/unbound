@@ -19,6 +19,36 @@ namespace UnityEngine.Tests
             Assert.Throws<UnityException>(() => new Texture2DArray(16384, 16384, 2, TextureFormat.R8, false));
         }
 
+        [Theory]
+        [InlineData(TextureFormat.RGBA32)]
+        [InlineData(TextureFormat.BGRA32)]
+        [InlineData(TextureFormat.R8)]
+        [InlineData(TextureFormat.RGBAHalf)]
+        [InlineData(TextureFormat.RFloat)]
+        public void VolumeTexelAccessMatchesTheWholeLevel(TextureFormat format)
+        {
+            var volume = new Texture3D(4, 3, 2, format, true) { hideFlags = HideFlags.HideAndDontSave };
+            var colors = new Color[4 * 3 * 2];
+            for (int i = 0; i < colors.Length; i++) colors[i] = new Color(i / 23f, 1 - i / 31f, (i * 7 % 24) / 24f, 0.25f + i / 64f);
+            volume.SetPixels(colors);
+            volume.SetPixel(1, 2, 1, new Color(0.3f, 0.6f, 0.9f, 0.5f));
+            volume.SetPixel(5, 0, 0, Color.red); // outside: ignored
+            var level = volume.GetPixels();
+            var expected = new Texture3D(4, 3, 2, format, true) { hideFlags = HideFlags.HideAndDontSave };
+            colors[(1 * 3 + 2) * 4 + 1] = new Color(0.3f, 0.6f, 0.9f, 0.5f);
+            expected.SetPixels(colors);
+            Assert.Equal(expected.GetPixels(), level);
+            for (int z = 0; z < 2; z++)
+                for (int y = 0; y < 3; y++)
+                    for (int x = 0; x < 4; x++)
+                        Assert.Equal(level[(z * 3 + y) * 4 + x], volume.GetPixel(x, y, z));
+            Assert.Equal(level[(1 * 3 + 2) * 4 + 3], volume.GetPixel(9, 7, 5)); // clamped
+            volume.SetPixel(0, 0, 0, Color.green, 1);
+            Assert.Equal(volume.GetPixels(1)[0], volume.GetPixel(0, 0, 0, 1));
+            Object.DestroyImmediate(volume);
+            Object.DestroyImmediate(expected);
+        }
+
         // tests/projects/resources floatformats.*.array/volume/cubearray.cpu: two independent
         // Unity 6000.0.71f1 captures read one in the channels R and RG formats do not store.
         [Theory]
