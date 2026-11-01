@@ -1,0 +1,286 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Xunit;
+
+namespace UnityEngine.Tests
+{
+    public class Physics2DContactEnumerationTests : IDisposable
+    {
+        readonly List<GameObject> objects = new List<GameObject>();
+        public Physics2DContactEnumerationTests()
+        {
+            SharedPairObserver.Events.Clear();
+            Physics2D.SyncTransforms(); Physics2D.simulationMode = SimulationMode2D.Script;
+            Physics2D.gravity = Vector2.zero;
+        }
+        BoxCollider2D Box(string name, float x, float y = 0, bool dynamic = false)
+        {
+            var o = new GameObject(name); objects.Add(o); o.transform.position = new Vector3(1000+x, y, 0);
+            var rb = o.AddComponent<Rigidbody2D>();
+            rb.bodyType = dynamic ? RigidbodyType2D.Dynamic : RigidbodyType2D.Static;
+            rb.constraints = RigidbodyConstraints2D.FreezeAll; rb.gravityScale = 0;
+            rb.sleepMode = RigidbodySleepMode2D.NeverSleep;
+            return o.AddComponent<BoxCollider2D>();
+        }
+        static void Step() { Physics2D.SyncTransforms(); Physics2D.Simulate(.02f); }
+        static string[] Names(Rigidbody2D rb)
+        {
+            var list = new List<Collider2D>(); rb.GetContacts(list);
+            return list.Select(c => c.name).ToArray();
+        }
+        [Fact]
+        public void RemovingContactCanFillItsPublicSlotWithAnUnrelatedPair()
+        {
+            var h = Box("seed",0, dynamic:true); var body = h.GetComponent<Rigidbody2D>();
+            var l = Box("Z",-.9f); Step();
+            Box("A",.9f); Step(); Box("Q",0,.9f); Step();
+            var trigger = Box("trigger",0); trigger.isTrigger = true; Step();
+            Box("peer",20, dynamic:true); Box("peer-contact",20.9f); Step();
+            Assert.Equal(new[] { "Z", "A", "Q", "trigger" }, Names(body));
+            Physics2D.IgnoreCollision(h,l,true); Step();
+            // The last scene pair belongs to peer, so filtering seed's view
+            // leaves A first. A per-body swap would incorrectly put trigger first.
+            Assert.Equal(new[] { "A", "Q", "trigger" }, Names(body));
+            var colliders = new List<Collider2D> { l }; h.GetContacts(colliders);
+            Assert.Equal(Names(body), colliders.Select(c => c.name).ToArray());
+            Physics2D.IgnoreCollision(h,l,false); Step();
+            Assert.Equal(new[] { "A", "Q", "trigger", "Z" }, Names(body));
+        }
+        [Fact]
+        public void BodyViewsInterleaveAttachedCollidersAndKeepArrayPrefixes()
+        {
+            var h = Box("seed",0,dynamic:true); var body = h.GetComponent<Rigidbody2D>();
+            var o = new GameObject("child"); objects.Add(o); o.transform.parent = h.transform;
+            o.transform.localPosition = new Vector3(3,0,0); var child = o.AddComponent<BoxCollider2D>();
+            Box("Z",-.9f); Step(); Box("A",3.9f); Step(); Box("Q",0,.9f); Step();
+            Assert.Equal(new[] { "Z", "A", "Q" }, Names(body));
+            var points = new List<ContactPoint2D> { default }; body.GetContacts(points);
+            Assert.Equal(new[] { "Z", "Z", "A", "A", "Q", "Q" }, points.Select(c => c.collider.name).ToArray());
+            var limited = new ContactPoint2D[3]; Assert.Equal(3,body.GetContacts(limited));
+            Assert.Equal(points.Take(3).Select(c => c.collider),limited.Select(c => c.collider));
+            var colliders = new Collider2D[2]; Assert.Equal(2,Physics2D.GetContacts(body,colliders));
+            Assert.Equal(new[] { "Z", "A" },colliders.Select(c => c.name).ToArray());
+            var childPoints = new List<ContactPoint2D>(); child.GetContacts(childPoints);
+            Assert.All(childPoints,c=>Assert.Equal("A",c.collider.name));
+            Assert.Equal(2,childPoints.Count);
+        }
+        [Fact]
+        public void GetterAndDispatchShareTheSlotMovedByTriggerRemoval()
+        {
+            var h=Box("seed",0,dynamic:true);h.gameObject.AddComponent<SharedPairObserver>();
+            var trigger=Box("trigger",0);trigger.isTrigger=true;Step();
+            Box("Z",-.9f);Step();
+            var peer=Box("peer",20,dynamic:true);peer.gameObject.AddComponent<SharedPairObserver>();
+            Box("X",20.9f);Step();Box("A",.9f);Step();
+            SharedPairObserver.Events.Clear();
+            Physics2D.IgnoreCollision(h,trigger,true);Step();
+            Assert.Equal(new[] { "exit:A,Z", "seed:A", "seed:Z", "peer:X" }, SharedPairObserver.Events);
+        }
+        [Fact]
+        public void ContactPointDataSurvivesVelocityEditsUntilTheNextStep()
+        {
+            var a=Box("A",-.45f,dynamic:true).GetComponent<Rigidbody2D>();
+            var b=Box("B",.45f,dynamic:true).GetComponent<Rigidbody2D>();
+            a.constraints=b.constraints=RigidbodyConstraints2D.None;
+            a.linearVelocity=new Vector2(2,.3f);b.linearVelocity=new Vector2(-1,-.1f);
+            a.angularVelocity=33;b.angularVelocity=-17;Step();
+            var before=new List<ContactPoint2D>();a.GetContacts(before);Assert.Equal(2,before.Count);
+            a.linearVelocity=new Vector2(5,-3);b.linearVelocity=new Vector2(-7,2);
+            var after=new List<ContactPoint2D>();a.GetContacts(after);Assert.Equal(before.Count,after.Count);
+            for(int i=0;i<before.Count;i++)
+            {
+                Assert.Equal(before[i].point,after[i].point);
+                Assert.Equal(before[i].separation,after[i].separation);
+                Assert.Equal(before[i].relativeVelocity,after[i].relativeVelocity);
+                Assert.Equal(before[i].normalImpulse,after[i].normalImpulse);
+            }
+        }
+        [Fact]
+        public void NewTouchingPairAppendsBeforeAnEndedPairReleasesItsSceneSlot()
+        {
+            var h = Box("seed", 0, dynamic: true);
+            h.gameObject.AddComponent<PairLifetimeObserver>();
+            var l = Box("L", -.9f); Step();
+            Box("R", .9f); Step(); Box("M", 0, .9f); Step();
+            PairLifetimeObserver.Events.Clear();
+            Physics2D.IgnoreCollision(h, l, true);
+            Box("N", 0, -.9f); Step();
+            Assert.Equal(new[] { "N", "R", "M" }, Names(h.GetComponent<Rigidbody2D>()));
+            Assert.Equal(new[] { "exit:L:N,R,M", "enter:N:N,R,M", "stay:R:N,R,M", "stay:M:N,R,M" },
+                PairLifetimeObserver.Events);
+        }
+        public sealed class PairLifetimeObserver : MonoBehaviour
+        {
+            public static readonly List<string> Events = new List<string>();
+            void Record(string phase, Collision2D collision) => Events.Add(phase + ":" + collision.collider.name + ":" +
+                string.Join(",", Names(GetComponent<Rigidbody2D>())));
+            void OnCollisionEnter2D(Collision2D collision) => Record("enter", collision);
+            void OnCollisionStay2D(Collision2D collision) => Record("stay", collision);
+            void OnCollisionExit2D(Collision2D collision) => Record("exit", collision);
+        }
+        [Theory]
+        [InlineData(0f, 0f, 7f, 7f)]
+        [InlineData(23f, 0f, 7f, 7.00000048f)]
+        [InlineData(0f, 35f, 7f, 7.00000048f)]
+        [InlineData(23f, 35f, 7f, -.34079054f)]
+        [InlineData(0f, 0f, 181f, -179f)]
+        public void BodyAndQuaternionSetterUseTheNativeTwistAngle(float x, float y, float z, float expected)
+        {
+            var o = new GameObject("rotation"); objects.Add(o);
+            var q = Quaternion.Euler(x, y, z); o.transform.rotation = q;
+            var rb = o.AddComponent<Rigidbody2D>();
+            rb.constraints = RigidbodyConstraints2D.FreezeAll;
+            o.AddComponent<BoxCollider2D>(); Step();
+            Assert.InRange(Mathf.Abs(rb.rotation - expected), 0f, .0001f);
+            rb.SetRotation(q);
+            Assert.InRange(Mathf.Abs(rb.rotation - expected), 0f, .0001f);
+        }
+        [Fact]
+        public void PendingRotationSubtractsTheCurrentRadianAngle()
+        {
+            var o = new GameObject("moving"); objects.Add(o);
+            var rb = o.AddComponent<Rigidbody2D>(); rb.bodyType = RigidbodyType2D.Kinematic;
+            o.AddComponent<BoxCollider2D>();
+            for (int i = 0; i < 8; i++)
+            {
+                Step(); rb.MoveRotation(rb.rotation + 1f);
+            }
+            // The independent full-prefix Native captures both report exactly
+            // seven degrees here, before the eighth pending move is applied.
+            Assert.Equal(7f, rb.rotation);
+        }
+        [Fact]
+        public void AttachedBoxKeepsItsNativeLocalCenterAwayFromTheOrigin()
+        {
+            var o = new GameObject("center"); objects.Add(o);
+            o.transform.position = new Vector3(.3f, 3.53f, 0);
+            o.transform.rotation = Quaternion.Euler(0, 0, 7);
+            o.AddComponent<BoxCollider2D>(); var rb = o.AddComponent<Rigidbody2D>();
+            Physics2D.SyncTransforms();
+            Assert.Equal(Vector2.zero, rb.centerOfMass);
+        }
+        [Fact]
+        public void RotatedBodyKeepsTheNativeLocalPolygonVertices()
+        {
+            var o = new GameObject("polygon"); objects.Add(o);
+            o.transform.position = new Vector3(.3f, -.2f, 2f);
+            o.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
+            o.transform.localScale = new Vector3(1f, .8f, 1f);
+            o.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+            var box = o.AddComponent<BoxCollider2D>(); box.size = new Vector2(2f, 1f);
+            Physics2D.SyncTransforms();
+            var shape = (Unbound.Box2D.Collision.Shapes.PolygonShape)box.m_Fixtures[0].Shape;
+            Assert.Equal(4, shape.Count);
+            // Complete local vertices read independently from Native's polygon input.
+            var expected = new[] {
+                new System.Numerics.Vector2(1.000000119f, -.399999857f),
+                new System.Numerics.Vector2(.999999940f, .400000215f),
+                new System.Numerics.Vector2(-1.000000119f, .399999857f),
+                new System.Numerics.Vector2(-.999999940f, -.400000215f) };
+            for (int i = 0; i < expected.Length; i++) Assert.Equal(expected[i], shape.Vertices[i]);
+        }
+        [Fact]
+        public void TranslatedCapsulesKeepTheNativeTipInsetOrder()
+        {
+            var v = new GameObject("vertical"); objects.Add(v);
+            v.transform.position = new Vector3(.3f, -.2f, 2f);
+            v.transform.rotation = Quaternion.Euler(0f, 0f, 23f);
+            v.transform.localScale = new Vector3(1f, .8f, 1f);
+            var vertical = v.AddComponent<CapsuleCollider2D>(); vertical.size = new Vector2(1f, 3f);
+            var h = new GameObject("horizontal"); objects.Add(h);
+            h.transform.position = new Vector3(.3f, -.2f, 2f);
+            h.transform.localScale = new Vector3(1f, .8f, 1f);
+            var horizontal = h.AddComponent<CapsuleCollider2D>();
+            horizontal.direction = CapsuleDirection2D.Horizontal; horizontal.size = new Vector2(3f, 1f);
+            Physics2D.SyncTransforms();
+            var a = (Unbound.Box2D.Collision.Shapes.CapsuleShape)vertical.m_Fixtures[0].Shape;
+            var b = (Unbound.Box2D.Collision.Shapes.CapsuleShape)horizontal.m_Fixtures[0].Shape;
+            Assert.Equal(new System.Numerics.Vector2(.573511779f, -.844353437f), a.P1);
+            Assert.Equal(new System.Numerics.Vector2(.0264882594f, .444353372f), a.P2);
+            Assert.Equal(new System.Numerics.Vector2(-.8000000715f, -.2f), b.P1);
+            Assert.Equal(new System.Numerics.Vector2(1.399999976f, -.2f), b.P2);
+        }
+        [Theory]
+        [InlineData(false, .7000001072883606f, 8.344650836988876e-8f, .5000000596046448f, -1.1920928244535389e-7f, 1f)]
+        [InlineData(true, 1.2516976255483314e-7f, -.7000000476837158f, .5f, 1f, 1.7881393432617188e-7f)]
+        public void QuarterTurnCapsulesKeepMeasuredTipsAndNormals(bool attached, float x, float y, float radius, float nx, float ny)
+        {
+            var o = new GameObject("capsule"); objects.Add(o);
+            o.transform.position = new Vector3(0f, 0f, 2f);
+            o.transform.rotation = Quaternion.Euler(0f, 0f, 90f);
+            o.transform.localScale = new Vector3(1f, .8f, 1f);
+            if (attached) o.AddComponent<Rigidbody2D>().bodyType = RigidbodyType2D.Kinematic;
+            var c = o.AddComponent<CapsuleCollider2D>(); c.size = new Vector2(1f, 3f);
+            Physics2D.SyncTransforms();
+            var shape = (Unbound.Box2D.Collision.Shapes.CapsuleShape)c.m_Fixtures[0].Shape;
+            Assert.Equal(new System.Numerics.Vector2(x, y), shape.P1);
+            Assert.Equal(new System.Numerics.Vector2(-x, -y), shape.P2);
+            Assert.Equal(radius, shape.Radius);
+            Assert.Equal(new System.Numerics.Vector2(nx, ny), shape.Normals[0]);
+            Assert.Equal(new System.Numerics.Vector2(-nx, -ny), shape.Normals[1]);
+            var group = new PhysicsShapeGroup2D(); c.GetShapes(group);
+            var points = new List<Vector2>(); group.GetShapeVertices(0,points);
+            Assert.Equal(new Vector2(x,y),points[0]); Assert.Equal(new Vector2(-x,-y),points[1]);
+
+        }
+        [Fact]
+        public void CapsuleCircleCoreCoincidenceUsesTheNativeEdgeNormal()
+        {
+            var capsule = new Unbound.Box2D.Collision.Shapes.CapsuleShape(
+                new System.Numerics.Vector2(-.8000000715f, -.2f),
+                new System.Numerics.Vector2(1.399999976f, -.2f), .4f);
+            var circle = new Unbound.Box2D.Collision.Shapes.CircleShape {
+                Position = new System.Numerics.Vector2(.3f, -.2f), Radius = .3f };
+            var pose = new Unbound.Box2D.Common.Transform(System.Numerics.Vector2.Zero, new Unbound.Box2D.Common.Rotation(0f));
+            var manifold = new Unbound.Box2D.Collision.Collider.Manifold();
+            Unbound.Box2D.Collision.CollisionUtils.CollidePolygonAndCircle(ref manifold, capsule, pose, circle, pose);
+            Assert.Equal(1, manifold.PointCount);
+            Assert.Equal(new System.Numerics.Vector2(0f, 1f), manifold.LocalNormal);
+        }
+        [Fact]
+        public void WheelConstraintKeepsTheNativeLocalAnchorAndMotion()
+        {
+            Physics2D.gravity = new Vector2(0f, -9.81f);
+            var own = new GameObject("own"); objects.Add(own);
+            own.transform.position = new Vector3(1f, -3f, 0f);
+            own.transform.rotation = Quaternion.Euler(0f, 0f, 20f);
+            var a = own.AddComponent<Rigidbody2D>(); a.mass = 2f;
+            a.linearDamping = a.angularDamping = 0f; a.angularVelocity = 30f;
+            own.AddComponent<BoxCollider2D>().size = new Vector2(1f, .5f);
+            var peer = new GameObject("peer"); objects.Add(peer);
+            peer.transform.position = new Vector3(-1f, 1f, 0f);
+            peer.transform.rotation = Quaternion.Euler(0f, 0f, -15f);
+            var b = peer.AddComponent<Rigidbody2D>(); b.mass = 3f;
+            b.linearDamping = b.angularDamping = 0f;
+            peer.AddComponent<BoxCollider2D>().size = new Vector2(1f, .5f);
+            var joint = own.AddComponent<WheelJoint2D>(); joint.connectedBody = b;
+            joint.anchor = new Vector2(.25f, .1f);
+            joint.suspension = new JointSuspension2D { angle = 0f, frequency = 2f, dampingRatio = .7f };
+            joint.motor = new JointMotor2D { motorSpeed = 45f, maxMotorTorque = 5f };
+            Physics2D.SyncTransforms();
+            var constraint = (Unbound.Box2D.Dynamics.Joints.WheelJoint)joint.CurrentJoint;
+            Assert.Equal(new System.Numerics.Vector2(.25f, .1f), constraint.GetLocalAnchorA());
+            Step(); Step();
+            Assert.InRange(Mathf.Abs(a.angularVelocity - 7.38356924f), 0f, .0002f);
+            Assert.InRange(Mathf.Abs(a.linearVelocity.y - 1.66361785f), 0f, .0002f);
+        }
+        public sealed class SharedPairObserver:MonoBehaviour
+        {
+            public static readonly List<string> Events=new List<string>();
+            void OnCollisionStay2D(Collision2D collision)=>Events.Add(name+":"+collision.collider.name);
+            void OnTriggerExit2D(Collider2D other)
+            {
+                var colliders=new List<Collider2D>();GetComponent<Rigidbody2D>().GetContacts(colliders);
+                Events.Add("exit:"+string.Join(",",colliders.Select(c=>c.name)));
+            }
+        }
+        public void Dispose()
+        {
+            foreach(var o in objects) if(o) Object.DestroyImmediate(o);
+            Physics2D.gravity = new Vector2(0,-9.81f); Physics2D.Simulate(.02f);
+            SharedPairObserver.Events.Clear();
+            PairLifetimeObserver.Events.Clear();
+        }
+    }
+}

@@ -35,6 +35,39 @@ namespace Unbound.Box2D.Dynamics
         public IContactFilter ContactFilter = DefaultContactFilter;
 
         public LinkedList<Contact> ContactList { get; private set; } = new LinkedList<Contact>();
+        private readonly List<Contact> _discreteContacts = new List<Contact>();
+        private readonly List<Contact> _continuousContacts = new List<Contact>();
+        private readonly Dictionary<Contact, (List<Contact> list, int index)> _contactSlots = new Dictionary<Contact, (List<Contact>, int)>();
+
+        internal IEnumerable<Contact> ContactsInUpdateOrder
+        {
+            get
+            {
+                foreach (var contact in _discreteContacts) yield return contact;
+                foreach (var contact in _continuousContacts) yield return contact;
+            }
+        }
+
+        private static bool ContinuousContact(Contact contact) =>
+            !contact.FixtureA.IsSensor && !contact.FixtureB.IsSensor &&
+            (contact.FixtureA.Body.UnityContinuous || contact.FixtureB.Body.UnityContinuous);
+
+        private void AddContactSlot(Contact contact)
+        {
+            var list = ContinuousContact(contact) ? _continuousContacts : _discreteContacts;
+            _contactSlots.Add(contact, (list, list.Count));
+            list.Add(contact);
+        }
+
+        private void RemoveContactSlot(Contact contact)
+        {
+            var (list, index) = _contactSlots[contact];
+            var moved = list[list.Count - 1];
+            list[index] = moved;
+            _contactSlots[moved] = (list, index);
+            list.RemoveAt(list.Count - 1);
+            _contactSlots.Remove(contact);
+        }
 
         public IContactListener ContactListener;
 
@@ -81,6 +114,9 @@ namespace Unbound.Box2D.Dynamics
             BroadPhase = null;
             ContactList?.Clear();
             ContactList = null;
+            _discreteContacts.Clear();
+            _continuousContacts.Clear();
+            _contactSlots.Clear();
 
             ContactFilter = null;
             ContactListener = null;
@@ -191,12 +227,19 @@ namespace Unbound.Box2D.Dynamics
             bodyA = fixtureA.Body;
             bodyB = fixtureB.Body;
 
-            if (bodyA.BodyType == BodyType.StaticBody) bodyB.IsAwake = true;
-            if (bodyB.BodyType == BodyType.StaticBody) bodyA.IsAwake = true;
+            // Native wakes both nonstatic participants when a solid pair is
+            // allocated, before its narrowphase first reports touching.
+            if (!fixtureA.IsSensor && !fixtureB.IsSensor ||
+                bodyA.BodyType == BodyType.StaticBody || bodyB.BodyType == BodyType.StaticBody)
+            {
+                if (bodyA.BodyType != BodyType.StaticBody) bodyA.IsAwake = true;
+                if (bodyB.BodyType != BodyType.StaticBody) bodyB.IsAwake = true;
+            }
 
             // Insert into the world.
             c.Node.Value = c;
             ContactList.AddFirst(c.Node);
+            AddContactSlot(c);
 
             // Connect to island graph.
 
@@ -233,6 +276,7 @@ namespace Unbound.Box2D.Dynamics
 
             // Remove from the world.
             ContactList.Remove(c.Node);
+            RemoveContactSlot(c);
 
             // Remove from body 1
             bodyA.ContactEdges.Remove(c.NodeA.Node);
@@ -246,13 +290,16 @@ namespace Unbound.Box2D.Dynamics
 
         public void Collide(bool sensorsOnly = false)
         {
-            var node = ContactList.First;
+            Collide(_discreteContacts, sensorsOnly);
+            Collide(_continuousContacts, sensorsOnly);
+        }
 
+        private void Collide(List<Contact> contacts, bool sensorsOnly)
+        {
             // Update awake contacts.
-            while (node != default)
+            for (int i = 0; i < contacts.Count; i++)
             {
-                var c = node.Value;
-                node = node.Next;
+                var c = contacts[i];
                 var fixtureA = c.FixtureA;
                 var fixtureB = c.FixtureB;
                 if (sensorsOnly && !fixtureA.IsSensor && !fixtureB.IsSensor)
@@ -271,6 +318,7 @@ namespace Unbound.Box2D.Dynamics
                     if (bodyB.ShouldCollide(bodyA) == false)
                     {
                         Destroy(c);
+                        --i;
                         continue;
                     }
 
@@ -278,6 +326,7 @@ namespace Unbound.Box2D.Dynamics
                     if (ContactFilter?.ShouldCollide(fixtureA, fixtureB) == false)
                     {
                         Destroy(c);
+                        --i;
                         continue;
                     }
 
@@ -302,6 +351,7 @@ namespace Unbound.Box2D.Dynamics
                 if (overlap == false)
                 {
                     Destroy(c);
+                    --i;
                     continue;
                 }
 

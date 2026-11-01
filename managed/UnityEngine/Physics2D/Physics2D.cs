@@ -405,37 +405,43 @@ namespace UnityEngine
             return false;
         }
 
-        static List<ContactPoint2D> ContactPoints(IEnumerable<Collider2D> colliders, Collider2D only, ContactFilter2D filter)
+        static List<ContactPoint2D> ContactPoints(IEnumerable<Collider2D> colliders, Collider2D only, ContactFilter2D filter, Object view = null)
         {
             var result = new List<ContactPoint2D>();
             var points = new List<ContactPoint2D>();
-            foreach (var self in colliders)
+            var attached = new HashSet<Collider2D>(colliders);
+            foreach (var pair in view != null ? W.PublicContactPairs(view) : PublicColliderPairs(attached))
             {
-                foreach (var pair in W.PairsOf(self))
-                {
-                    var other = ReferenceEquals(pair.A, self) ? pair.B : pair.A;
-                    if (only != null && !ReferenceEquals(other, only)) continue;
-                    if (pair.IsTrigger || !PairPasses(pair, self, filter)) continue;
-                    points.Clear();
-                    W.CollectContacts(self, other, points, false);
-                    foreach (var p in points)
-                        if (!filter.IsFilteringNormalAngle(p.normal)) result.Add(p);
-                }
+                var self = attached.Contains(pair.A) ? pair.A : pair.B;
+                var other = ReferenceEquals(pair.A, self) ? pair.B : pair.A;
+                if (only != null && !ReferenceEquals(other, only)) continue;
+                if (pair.IsTrigger || !PairPasses(pair, self, filter)) continue;
+                points.Clear();
+                W.CollectContacts(self, other, points, false);
+                foreach (var p in points)
+                    if (!filter.IsFilteringNormalAngle(p.normal)) result.Add(p);
             }
             return result;
         }
 
-        static List<Collider2D> ContactColliders(IEnumerable<Collider2D> colliders, ContactFilter2D filter)
+        static IEnumerable<W.Pair> PublicColliderPairs(IEnumerable<Collider2D> colliders)
+        {
+            foreach (var collider in colliders)
+                foreach (var pair in W.PublicContactPairs(collider)) yield return pair;
+        }
+
+        static List<Collider2D> ContactColliders(IEnumerable<Collider2D> colliders, ContactFilter2D filter, Object view = null)
         {
             var result = new List<Collider2D>();
-            foreach (var self in colliders)
-                foreach (var pair in W.PairsOf(self))
-                {
-                    var other = ReferenceEquals(pair.A, self) ? pair.B : pair.A;
-                    if (!PairPasses(pair, self, filter) || result.Contains(other)) continue;
-                    if (!pair.IsTrigger && !W.HasContactPoints(self, other)) continue;
-                    result.Add(other);
-                }
+            var attached = new HashSet<Collider2D>(colliders);
+            foreach (var pair in view != null ? W.PublicContactPairs(view) : PublicColliderPairs(attached))
+            {
+                var self = attached.Contains(pair.A) ? pair.A : pair.B;
+                var other = ReferenceEquals(pair.A, self) ? pair.B : pair.A;
+                if (!PairPasses(pair, self, filter) || result.Contains(other)) continue;
+                if (!pair.IsTrigger && !W.HasContactPoints(self, other)) continue;
+                result.Add(other);
+            }
             return result;
         }
 
@@ -467,18 +473,18 @@ namespace UnityEngine
         public static int GetContacts(Collider2D collider, Collider2D[] colliders) => GetContacts(collider, new ContactFilter2D().NoFilter(), colliders);
         public static int GetContacts(Collider2D collider, ContactFilter2D contactFilter, Collider2D[] colliders) => Copy(ContactColliders(new[] { collider }, contactFilter), colliders);
         public static int GetContacts(Rigidbody2D rigidbody, ContactPoint2D[] contacts) => GetContacts(rigidbody, new ContactFilter2D().NoFilter(), contacts);
-        public static int GetContacts(Rigidbody2D rigidbody, ContactFilter2D contactFilter, ContactPoint2D[] contacts) => Copy(ContactPoints(Attached(rigidbody), null, contactFilter), contacts);
+        public static int GetContacts(Rigidbody2D rigidbody, ContactFilter2D contactFilter, ContactPoint2D[] contacts) => Copy(ContactPoints(Attached(rigidbody), null, contactFilter, rigidbody), contacts);
         public static int GetContacts(Rigidbody2D rigidbody, Collider2D[] colliders) => GetContacts(rigidbody, new ContactFilter2D().NoFilter(), colliders);
-        public static int GetContacts(Rigidbody2D rigidbody, ContactFilter2D contactFilter, Collider2D[] colliders) => Copy(ContactColliders(Attached(rigidbody), contactFilter), colliders);
+        public static int GetContacts(Rigidbody2D rigidbody, ContactFilter2D contactFilter, Collider2D[] colliders) => Copy(ContactColliders(Attached(rigidbody), contactFilter, rigidbody), colliders);
         public static int GetContacts(Collider2D collider1, Collider2D collider2, ContactFilter2D contactFilter, List<ContactPoint2D> contacts) => Copy(ContactPoints(new[] { collider1 }, collider2, contactFilter), contacts);
         public static int GetContacts(Collider2D collider, List<ContactPoint2D> contacts) => GetContacts(collider, new ContactFilter2D().NoFilter(), contacts);
         public static int GetContacts(Collider2D collider, ContactFilter2D contactFilter, List<ContactPoint2D> contacts) => Copy(ContactPoints(new[] { collider }, null, contactFilter), contacts);
         public static int GetContacts(Collider2D collider, List<Collider2D> colliders) => GetContacts(collider, new ContactFilter2D().NoFilter(), colliders);
         public static int GetContacts(Collider2D collider, ContactFilter2D contactFilter, List<Collider2D> colliders) => Copy(ContactColliders(new[] { collider }, contactFilter), colliders);
         public static int GetContacts(Rigidbody2D rigidbody, List<ContactPoint2D> contacts) => GetContacts(rigidbody, new ContactFilter2D().NoFilter(), contacts);
-        public static int GetContacts(Rigidbody2D rigidbody, ContactFilter2D contactFilter, List<ContactPoint2D> contacts) => Copy(ContactPoints(Attached(rigidbody), null, contactFilter), contacts);
+        public static int GetContacts(Rigidbody2D rigidbody, ContactFilter2D contactFilter, List<ContactPoint2D> contacts) => Copy(ContactPoints(Attached(rigidbody), null, contactFilter, rigidbody), contacts);
         public static int GetContacts(Rigidbody2D rigidbody, List<Collider2D> colliders) => GetContacts(rigidbody, new ContactFilter2D().NoFilter(), colliders);
-        public static int GetContacts(Rigidbody2D rigidbody, ContactFilter2D contactFilter, List<Collider2D> colliders) => Copy(ContactColliders(Attached(rigidbody), contactFilter), colliders);
+        public static int GetContacts(Rigidbody2D rigidbody, ContactFilter2D contactFilter, List<Collider2D> colliders) => Copy(ContactColliders(Attached(rigidbody), contactFilter, rigidbody), colliders);
 
         // ------------------------------------------------------------------ distance
 

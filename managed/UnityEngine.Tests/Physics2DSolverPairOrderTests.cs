@@ -63,6 +63,41 @@ namespace UnityEngine.Tests
             Assert.Same(tail, h.Body.ContactEdges.Last);
             Assert.Equal(ids, fixtures.Select(f => f.Proxies[0].ProxyId).ToArray());
         }
+
+        [Fact]
+        public void ContactUpdatesAppendAndSwapRemoveIndependentlyOfBodyEdges()
+        {
+            using var world = new World(B2Vector.Zero);
+            var h = Fixture(world, "H", BodyType.DynamicBody);
+            var neighbours = new[] { Fixture(world, "L", BodyType.StaticBody),
+                Fixture(world, "R", BodyType.StaticBody), Fixture(world, "M", BodyType.StaticBody) };
+            foreach (var neighbour in neighbours)
+                world.ContactManager.AddPairCallback(h.Proxies[0], neighbour.Proxies[0]);
+            string[] Updates() => world.ContactManager.ContactsInUpdateOrder.Select(c =>
+                (string)(c.FixtureA.Body == h.Body ? c.FixtureB.Body : c.FixtureA.Body).UserData).ToArray();
+            Assert.Equal(new[] { "L", "R", "M" }, Updates());
+            world.ContactManager.Destroy(h.Body.ContactEdges.Last.Value.Contact);
+            Assert.Equal(new[] { "M", "R" }, Updates());
+            world.ContactManager.AddPairCallback(h.Proxies[0], neighbours[0].Proxies[0]);
+            Assert.Equal(new[] { "M", "R", "L" }, Updates());
+            Assert.Equal(new[] { "L", "M", "R" }, Neighbours(h.Body));
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void NewNonstaticSolidPairWakesBodiesBeforeItTouches(bool sensor)
+        {
+            using var world = new World(B2Vector.Zero);
+            var a = Fixture(world, "dynamic", BodyType.DynamicBody);
+            var b = Fixture(world, "kinematic", BodyType.KinematicBody);
+            b.IsSensor = sensor;
+            a.Body.IsAwake = b.Body.IsAwake = false;
+            world.ContactManager.AddPairCallback(a.Proxies[0], b.Proxies[0]);
+            Assert.Equal(!sensor, a.Body.IsAwake);
+            Assert.Equal(!sensor, b.Body.IsAwake);
+            Assert.False(a.Body.ContactEdges.First.Value.Contact.IsTouching);
+        }
         [Fact]
         public void MovingProxyPredictsTwoDisplacementsAndRetainsContainingPadding()
         {
@@ -78,5 +113,24 @@ namespace UnityEngine.Tests
             Assert.Equal(fat.UpperBound, tree.GetFatAABB(id).UpperBound);
         }
 
+        [Fact]
+        public void ContinuousUpdatesFollowOrdinaryAndSensorContactsForTheirLifetime()
+        {
+            using var world = new World(B2Vector.Zero);
+            var h = Fixture(world, "H", BodyType.DynamicBody); h.Body.IsBullet = true;
+            var cc = Fixture(world, "continuous", BodyType.StaticBody);
+            world.ContactManager.AddPairCallback(h.Proxies[0], cc.Proxies[0]);
+            var ordinary = Fixture(world, "ordinary", BodyType.DynamicBody);
+            var peer = Fixture(world, "peer", BodyType.StaticBody);
+            world.ContactManager.AddPairCallback(ordinary.Proxies[0], peer.Proxies[0]);
+            var sensor = Fixture(world, "sensor", BodyType.StaticBody); sensor.IsSensor = true;
+            world.ContactManager.AddPairCallback(h.Proxies[0], sensor.Proxies[0]);
+            var order = world.ContactManager.ContactsInUpdateOrder.ToArray();
+            Assert.Contains(ordinary, new[] { order[0].FixtureA, order[0].FixtureB });
+            Assert.Contains(sensor, new[] { order[1].FixtureA, order[1].FixtureB });
+            Assert.Contains(cc, new[] { order[2].FixtureA, order[2].FixtureB });
+            h.Body.IsBullet = false;
+            Assert.Equal(order, world.ContactManager.ContactsInUpdateOrder.ToArray());
+        }
     }
 }
