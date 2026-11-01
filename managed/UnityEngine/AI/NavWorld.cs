@@ -346,8 +346,11 @@ namespace Unbound.Runtime
                 {
                     pos = new[] { new RcVec3f(start.x, start.y, start.z), new RcVec3f(end.x, end.y, end.z) },
                     // A link meets the mesh within the agent's radius of its ends (measured: 0.3
-                    // and 0.47 off the mesh connect, 0.62 does not, for a 0.5 radius).
-                    rad = h.walkableRadius,
+                    // and 0.47 off the mesh connect, 0.62 does not, for a 0.5 radius); a wide
+                    // link's ends only where they lie on the mesh (measured: a 1 m wide link
+                    // with an end 0.17 off the mesh leaves the path partial,
+                    // tests/projects/navmesh).
+                    rad = link.Link.width > 0f ? 0f : h.walkableRadius,
                     poly = basePoly + i,
                     flags = link.Link.bidirectional ? DtDetour.DT_OFFMESH_CON_BIDIR : 0,
                     // A link ending in another tile connects there (towards that side).
