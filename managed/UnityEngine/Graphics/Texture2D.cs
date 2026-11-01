@@ -108,6 +108,18 @@ namespace UnityEngine
             m_PixelsDirty = true;
         }
 
+        /// <summary>The texture <c>ScreenCapture.CaptureScreenshotAsTexture</c> returns for a size
+        /// below one: ARGB32, linear, readable, 0x0 and without pixels (tests/projects/screencapture).</summary>
+        internal static Texture2D EmptyCapture()
+        {
+            var texture = new Texture2D(1, 1, TextureFormat.ARGB32, false, true);
+            texture.m_Width = 0;
+            texture.m_Height = 0;
+            texture.m_Pixels = null;
+            texture.m_PixelsDirty = false;
+            return texture;
+        }
+
         public TextureFormat format => m_SourceFormat ?? m_Format;
 
         /// <summary>A serialized texture's own format and mip count when Unbound keeps its pixels in
@@ -319,6 +331,10 @@ namespace UnityEngine
                 return;
             }
             int w = x1 - x0, h = y1 - y0;
+            // Outside the frame's drawing the Editor reads its window's framebuffer (measured in
+            // Update: tests/projects/screencapture read.update), with an error.
+            if (active == null && Camera.current == null && !FrameBuilder.InDrawingFrame)
+                Debug.LogError("ReadPixels was called to read pixels from system frame buffer, while not inside drawing frame.");
             var bytes = Native.ReadPixels(active != null ? active.EnsureCreated() : 0, x0, y0, w, h, true);
             if (bytes == null)
             {

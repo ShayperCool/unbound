@@ -331,8 +331,13 @@ namespace Unbound.Runtime
         static int s_CameraCount, s_DrawCount;
         static ulong[] s_MaterialHandles = new ulong[256];
 
+        /// <summary>From the frame's rendering until its end-of-frame callbacks and screenshot
+        /// are done: reads of the screen outside it read another framebuffer in the Editor.</summary>
+        internal static bool InDrawingFrame;
+
         static void Render()
         {
+            InDrawingFrame = true;
             Camera.current = null;
             s_DrawDescriptions.Clear();
             s_CameraCount = s_DrawCount = 0;

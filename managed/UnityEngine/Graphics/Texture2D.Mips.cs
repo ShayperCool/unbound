@@ -141,6 +141,7 @@ namespace UnityEngine
         public Color[] GetPixels() => GetPixels(0);
         public Color[] GetPixels(int miplevel)
         {
+            if (m_Width == 0) throw LayeredTextures.NotReadable("Texture2D.GetPixels", name);
             RequireReadable(true);
             CheckMip(miplevel);
             return GetPixels(0, 0, MipWidth(miplevel), MipHeight(miplevel), miplevel);

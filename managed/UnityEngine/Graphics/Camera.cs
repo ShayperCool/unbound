@@ -60,6 +60,7 @@ namespace UnityEngine
         bool m_AllowMSAA = true;
         float m_Aspect = -1f;
         bool m_HasCustomProjection;
+        internal bool HasCustomProjection => m_HasCustomProjection;
         Matrix4x4 m_CustomProjection;
         bool m_HasCustomWorldToCamera;
         Matrix4x4 m_CustomWorldToCamera;
