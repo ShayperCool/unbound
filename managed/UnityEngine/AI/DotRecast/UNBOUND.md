@@ -35,6 +35,8 @@ Altered (marked `Unbound:` in the sources):
 - crowd separation and collisions as Unity's: a push of 1.4·(1 − (d/2.5r)²) from more important
   neighbours (half from equals), overlaps resolved by the less important agent alone (half each
   between equals);
+- `DtNavMeshQuery.MoveAlongSurface` visits the polygons nearest the target first (Unity's: an
+  agent stepping off a corner of four tiles keeps to the tile its step crosses into first);
 - `DtNavMeshQuery.GetPathToNode` is visible to the engine (partial paths end at the reachable
   polygon nearest to the target);
 - off-mesh links as Unity's (`tests/projects/navlinks`): a link's end connects within the agent's
@@ -42,8 +44,8 @@ Altered (marked `Unbound:` in the sources):
   lands on the point of the detail surface closest to it in 3D; an agent enters a link when the step of
   the update has brought it within 2.25 radii of the link's start, and takes its first step on it
   in the same update; the crossing is Detour's (15% from where it entered to the link's start,
-  then to its end) but advanced as a fraction of the start-to-end distance at twice the agent's
-  current speed, frozen while the agent does not traverse links itself or is stopped, and ends
+  then to its end) but advanced along the start-to-end distance at twice the agent's current
+  speed (the distance travelled, divided by the length where the agent is placed), frozen while the agent does not traverse links itself or is stopped, and ends
   at the link's own end (also off the mesh); the update that passes the end moves the agent on
   along the mesh by the rest of the step, which becomes its velocity (at most its speed); the
   desired velocity on a link points along the current part; the corridor keeps the link's end as
