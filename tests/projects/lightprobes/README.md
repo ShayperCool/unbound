@@ -107,3 +107,11 @@ The two Editor repeats run one after the other; the second starts only if the fi
 every gate. `CreationOwnership/offline_compile.py` compiles the witness with an Editor-compiled
 fixture copy's own compiler arguments, and `CreationOwnership/guards.py` checks the gate against
 damaged synthetic captures.
+
+No `creation-ownership.jsonl` Reference is published for 6000.0.71f1 yet. The one pair run so far
+(both repeats exit 0, gated) differed in 11 order-only leaves: which outgoing roots were already
+destroyed when the destroyer's `OnDestroy` ran, the name order in Unity's "Some objects were not
+cleaned up when closing the scene" error, and the destruction order of the four leftover objects at
+the next Single load. The schema would need to declare those orders unordered before a new pair can
+publish. Every existence, scene, parent/root, `Find`/`FindObjectsByType` and light probe value
+agreed between the two repeats.
