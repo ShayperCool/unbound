@@ -2508,3 +2508,12 @@ Full attempts, source correction, historical capture hashes and prepared matchin
 - Exact prior-platform API reuse BLOCKED by inherited axis-allocation annotation removal and generated-stub deltas. Full/API recording overlap NOT established; initial API assertion prevented tests and actual API work started after recording.
 - Unchanged runner rewrites copied ProjectVersion.txt; strict fixture-equality audit fails, with complete differences retained. No correction/rebuild/recapture follows these failures; one corrective budget consumed, runtime REJECTED.
 - Full source, commands, TRX, metadata, manifests, 555-key raw unions and failures: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-corrected-root-20261101-t3-2f1786c1/HANDOFF.md`. Root48 strict introductions OPEN,21 zero-life unchanged,305 broad Native failures; no full Unity parity claim.
+
+### 2026-11-01 platform checker reevaluation, proof acceptance blocked
+- Checker accepts an absolute physical alias only when it strictly resolves to the recorded project's expected fresh, nonempty log; controls18/18, old checker17/18, protocol4/4.
+- Existing normal/delayed machine commands now pass with recorded checker hashes; raw captures and old failed reports remain unchanged. Exact Native comparisons remain497/555 with the same84 residuals and complete original unions.
+- Compiled ApiProjection on Root870 Core276a28c5 and candidate Corec2608dc1 retains65,228 rows each: four prepared-platform provenance annotations differ. Exact metadata equality is false; no projected Unity declaration delta or attribute filtering. Old-platform RNG annotation removal remains explicit.
+- Generated files equal Root870 exactly; separately retain the old generation's three additions/two changes. Historical API0/2314 is preserved, not claimed as a fully reused current gate.
+- Archived legacy runner hash and identical copy_project normalization verified; Native launch-to-runner/pre-launch-version binding is missing. Both file hashes and prior failed fixture audit remain; fixture acceptance BLOCKED.
+- No build, Native/engine capture or full-suite rerun. Reuse matching TestCore full1464/1475, identical11 failures; frozen33 verified before/after. Conditional load-overlap capture not started; independent source-safety verdict remains required. Root48 OPEN,21 zero-life/305 broad failures retained.
+- Commands, source hashes, complete metadata/stub/input/manifests and blockers: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-proof-checker-20261101-t3-ffc634df/HANDOFF.md`.

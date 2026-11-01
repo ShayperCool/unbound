@@ -100,9 +100,17 @@ source hash and retain earlier failed reports and raw captures.
 `Reference/unity-6000.0.71f1/values.jsonl` was published with `run.py publish`
 from two independent windowed GPU Editor captures (NVIDIA GeForce RTX 4060).
 Both exited with 0 after `Cleanup mono`, their `values.jsonl` (555 records) was
-byte-identical, and the machine facts of both agreed with the OS. They ran with
-the committed `Assets`, `Packages` and `ProjectSettings` (34 files,
-byte-identical) and the runner from before `editor_runner`. The ported runner
+byte-identical, and the machine facts of both agreed with the OS. The saved
+post-exit project audit matches the 34 committed fixture files; the Editor also
+created `ProjectSettings/PackageManagerSettings.asset`. This audit does not prove
+the bytes present before launch. The runner from before `editor_runner` and the
+current runner both rewrite the copied `ProjectSettings/ProjectVersion.txt` to
+one `m_EditorVersion` line for the explicitly selected release before launch.
+The authored fixture and saved Native post-exit files have two release/revision
+lines. Keep both hashes in any input audit. The archived legacy runner matches
+the committed source, but the saved pair lacks a receipt binding its hash or
+the version file's pre-launch bytes to each launch. Equal pre-launch inputs
+remain unproved; the post-exit audit cannot waive that gap. The ported runner
 was validated with `py_compile`, `--dry-run`, `check` and `publish` on those
 saved captures, plus a publish refusal on a saved pair whose values differ. No
 live capture has used it yet.
