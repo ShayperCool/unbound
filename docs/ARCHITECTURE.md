@@ -141,7 +141,11 @@ Modelled on what the Unity Editor itself records in `Library/Bee/*-inputdata.jso
   a dispatch binds `SetBuffer`/`SetTexture`/`SetFloat` values (then global ones) by name. RW
   textures compile in the formats of the render textures bound to them (`enableRandomWrite`).
   `ComputeBuffer`/`GraphicsBuffer` live on the GPU; `GetData` reads them back after everything
-  submitted.
+  submitted. Append and Counter buffers carry a hidden counter bound to the kernel's
+  `<name>@count` block; copies, counter copies and indirect dispatches run in order with the
+  rendering commands. `AsyncGPUReadback` reads the source when requested and completes the
+  request at the next frame's `UpdateAsyncReadbackManager`, as the Editor does at the earliest
+  (tests/projects/gpubuffers).
 * **Shaders**: every shader draws with its own code; there are no hand-written ports. A material's
   shader is the project's `.shader` (Assets, packages), else Unity's built-in one, compiled from
   the release's `builtin_shaders` sources (MIT; downloaded once into the global cache,
