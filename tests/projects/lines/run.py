@@ -185,10 +185,12 @@ def publish_append(work, prefix):
     reference = (target/'values.jsonl').read_bytes()
     if not reference.endswith(b'\n'):
         sys.exit('the reference does not end with a newline; not appending')
-    old = reference.decode().splitlines()
+    old = reference.splitlines(keepends=True)
     if any(json.loads(line)['k'].startswith(prefix) for line in old if line.strip()):
         sys.exit(f'the reference already holds {prefix} keys; not appending')
-    captured = (repeats[0]/'values.jsonl').read_text().splitlines()
+    captured = (repeats[0]/'values.jsonl').read_bytes().splitlines(keepends=True)
+    if any(not line.endswith(b'\n') for line in captured):
+        sys.exit('a captured record has no newline terminator; not appending')
     new = [line for line in captured if json.loads(line)['k'].startswith(prefix)]
     kept = [line for line in captured if not json.loads(line)['k'].startswith(prefix)]
     if not new:
@@ -203,7 +205,7 @@ def publish_append(work, prefix):
     if changed:
         sys.exit(f'the captures do not reproduce the reference images {changed[:5]}; not appending')
     with open(target/'values.jsonl', 'ab') as out:
-        out.write(''.join(line+'\n' for line in new).encode())
+        out.write(b''.join(new))
     print('appended', len(new), prefix, 'records to', target/'values.jsonl', '; reproduced', len(old), 'records and',
           len(present), 'images')
     return 0
