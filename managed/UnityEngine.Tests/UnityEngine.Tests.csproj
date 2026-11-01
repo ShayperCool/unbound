@@ -18,6 +18,10 @@
     <ProjectReference Include="../UnityEngine/UnityEngine.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="../../tests/projects/appfacts/Assets/Scripts/AppFactsUrlRecording.cs" Link="AppFactsUrlRecording.cs" />
+  </ItemGroup>
+
   <!-- The native libraries the engine calls, as `cargo build` puts them next to it. -->
   <ItemGroup>
     <None Include="$(UnboundNativeDir)/*unbound_physx.*" CopyToOutputDirectory="PreserveNewest" Link="%(Filename)%(Extension)" />

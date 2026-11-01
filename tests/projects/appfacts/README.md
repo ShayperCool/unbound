@@ -47,6 +47,11 @@ python3 tests/projects/appfacts/compare.py tests/projects/appfacts/Reference/uni
 python3 tests/projects/appfacts/compare.py --machine ~/.cache/unbound/validation/runs/appfacts/U/unbound
 ```
 
+The Unbound capture's `run.json` records the absolute project path the engine was given and the
+start time. `--machine` checks the reported console log (written as `<project>/...`) as that real
+file: it must exist, be non-empty and be written during the run. `test_compare.py OUT` checks the
+comparator itself on synthetic captures.
+
 Projects, captures, logs, `editor-run.json` and reports go to
 `$XDG_CACHE_HOME/unbound/validation/runs/appfacts/<label>/`. The Editor
 deadlines are counted from admission into the lease. The hard limit is 1200 s.
@@ -91,3 +96,17 @@ byte-identical) and the runner from before `editor_runner`. The ported runner
 was validated with `py_compile`, `--dry-run`, `check` and `publish` on those
 saved captures, plus a publish refusal on a saved pair whose values differ. No
 live capture has used it yet.
+
+## Recording stub completion
+
+The OpenURL fixture takes its file offset before launch and waits up to five seconds of
+`Stopwatch` elapsed time for a newline-terminated stub record. It blocks only this fixture
+step; simulated headless frame time cannot exhaust the wait. It records the exact appended
+lines, and a missing or incomplete record fails the capture at the deadline. It does not
+change keys, argv, reference bytes or comparison tolerances. Existing Native records use
+the same newline protocol, including the empty and null URL cases.
+
+`AppFactsUrlRecordingTests` covers immediate and delayed writes, absent, late and incomplete
+records. `test_recording.py NEW_CACHE_OUT` checks compatibility with the canonical protocol
+and runner/comparator refusal controls. A stressed capture may delay only the private
+recording stubs before their writes to reproduce the former process-start race.

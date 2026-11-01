@@ -116,14 +116,9 @@ namespace UnityEngine
         public static bool isConsolePlatform => false;
         public static bool isFocused { get; internal set; } = true;
         public static bool runInBackground { get; set; } = true;
-        public static bool isLoadingLevel
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("Application.isLoadingLevel", "is always false (queued scene loads are not reported)");
-                return false;
-            }
-        }
+        /// <summary>True from a LoadScene/LoadSceneAsync call (held loads too) until the scene is
+        /// integrated; already false in sceneLoaded (measured: tests/projects/appfacts).</summary>
+        public static bool isLoadingLevel => SceneManagement.SceneManagerInternal.IsLoading;
         [Unbound.EditorFaithful("the Editor is not a tampered player build")]
         public static bool genuine => true;
         [Unbound.EditorFaithful("the genuine check exists in player builds only")]
@@ -142,14 +137,8 @@ namespace UnityEngine
         public static ApplicationInstallMode installMode => ApplicationInstallMode.Editor;
         public static ApplicationSandboxType sandboxType => ApplicationSandboxType.NotSandboxed;
         public static string cloudProjectId => ProjectInfo.CloudProjectId;
-        public static string buildGUID
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("Application.buildGUID", "is empty (the Editor's value is not reproduced)");
-                return "";
-            }
-        }
+        [Unbound.EditorFaithful("the Editor has no build: 32 zeros (measured: tests/projects/appfacts)")]
+        public static string buildGUID => "00000000000000000000000000000000";
         public static string absoluteURL { get; private set; } = "";
         public static SystemLanguage systemLanguage => Unbound.Runtime.SystemLocale.Language;
         public static NetworkReachability internetReachability => NetworkReachability.ReachableViaLocalAreaNetwork;
@@ -174,14 +163,10 @@ namespace UnityEngine
                 return path;
             }
         }
-        public static string consoleLogPath
-        {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("Application.consoleLogPath", "is empty (the Editor answers its Editor.log path)");
-                return "";
-            }
-        }
+        /// <summary>The log file the session writes, as the Editor answers its own log: the
+        /// command line's <c>-logFile</c> when given (measured: tests/projects/appfacts), else
+        /// <c>Library/Unbound/Editor.log</c> in the project (Unbound's stand-in for Editor.log).</summary>
+        public static string consoleLogPath => Unbound.Runtime.ConsoleLog.Path;
 
         /// <summary>As the Editor computes it: <c>~/.config/unity3d/&lt;company&gt;/&lt;product&gt;</c> on Linux,
         /// <c>~/Library/Application Support/&lt;company&gt;/&lt;product&gt;</c> on macOS.</summary>
@@ -205,7 +190,25 @@ namespace UnityEngine
 
         public static void Unload() => Quit(0);
 
-        public static void OpenURL(string url) => Native.Log((int)LogType.Log, $"[Unbound] Application.OpenURL({url}) ignored");
+        /// <summary>As the Editor in Play mode: the URL, whatever it is (empty for null), goes to the
+        /// desktop's opener, <c>xdg-open</c> on Linux, <c>open</c> on macOS, without a message
+        /// (measured: tests/projects/appfacts). <c>UNBOUND_OPEN_URL</c> names another program, so
+        /// tests never start a browser.</summary>
+        public static void OpenURL(string url)
+        {
+            string opener = Environment.GetEnvironmentVariable("UNBOUND_OPEN_URL");
+            if (string.IsNullOrEmpty(opener)) opener = OperatingSystem.IsMacOS() ? "open" : "xdg-open";
+            try
+            {
+                var start = new System.Diagnostics.ProcessStartInfo(opener) { UseShellExecute = false };
+                start.ArgumentList.Add(url ?? "");
+                System.Diagnostics.Process.Start(start)?.Dispose();
+            }
+            catch (Exception e)
+            {
+                Native.Log((int)LogType.Warning, $"{Unbound.Runtime.Log.DiagnosticPrefix}Application.OpenURL could not run {opener}: {e.Message}");
+            }
+        }
 
         public static bool CanStreamedLevelBeLoaded(int levelIndex) => levelIndex >= 0 && levelIndex < ProjectInfo.BuildScenes.Count;
 
@@ -230,11 +233,9 @@ namespace UnityEngine
 
         public static AsyncOperation RequestUserAuthorization(UserAuthorization mode) => AsyncOperation.Completed();
 
-        public static bool HasProLicense()
-        {
-            Unbound.Runtime.Stubs.Ignored("Application.HasProLicense", "answers true whatever the licence");
-            return true;
-        }
+        /// <summary>From the Editor licence on the machine: false for Unity Personal (measured:
+        /// tests/projects/appfacts).</summary>
+        public static bool HasProLicense() => Unbound.Runtime.EditorLicense.HasPro;
 
         [Unbound.EditorFaithful("obsolete WebGL browser call: nothing to call outside a web player")]
         public static void ExternalCall(string functionName, params object[] args) { }
