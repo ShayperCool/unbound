@@ -80,5 +80,9 @@ Gamma and Linear read the same floats.
   every face the GPU draws unchanged.
 * A script-made R16 texture samples on the GPU as (n / 65535, 0, 0, 1) in single precision for
   every 16-bit n: the GPU keeps all 16 bits.
+* The R16 copy control uses the same 256 source values. It clears an R16 render target to a
+  distinct value, copies Texture2D to it, then copies back into a zero-filled R16 Texture2D.
+  Both GPU results are read through the existing ARGBFloat path. This tests format-compatible
+  copies in both directions; it does not establish quantization of arbitrary R16 target draws.
 * Changing a bound Texture3D's `wrapModeW` takes effect on the next draw: Clamp repeats the edge
   slice beyond the depth, Repeat wraps again, with or without an `Apply` in between.

@@ -334,27 +334,55 @@ public class TextureArrayProbe : MonoBehaviour
         Buffer.BlockCopy(values, 0, bytes, 0, bytes.Length);
         Add("R16Gpu.values", Convert.ToBase64String(bytes));
         string size = Size + "x" + Size;
-        Value("R16Gpu.blit.float", size, () =>
+        Value("R16Gpu.blit.float", size, () => ReadGpuFloat(texture));
+
+        var copied = new RenderTexture(Size, Size, 0, RenderTextureFormat.R16, RenderTextureReadWrite.Linear);
+        var roundtrip = new Texture2D(Size, Size, TextureFormat.R16, false, true);
+        copied.filterMode = roundtrip.filterMode = FilterMode.Point;
+        var prior = RenderTexture.active;
+        try
         {
-            var rt = RenderTexture.GetTemporary(Size, Size, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
-            var previous = RenderTexture.active;
-            try
-            {
-                Graphics.Blit(texture, rt);
-                RenderTexture.active = rt;
-                var read = new Texture2D(Size, Size, TextureFormat.RGBAFloat, false, true);
-                read.ReadPixels(new Rect(0, 0, Size, Size), 0, 0, false);
-                read.Apply(false);
-                var result = Floats(read.GetPixels());
-                Destroy(read);
-                return result;
-            }
-            finally
-            {
-                RenderTexture.active = previous;
-                RenderTexture.ReleaseTemporary(rt);
-            }
-        });
+            if (!copied.Create()) throw new Exception("R16 copy target creation failed");
+            RenderTexture.active = copied;
+            GL.Clear(false, true, new Color(0.375f, 0f, 0f, 1f));
+            RenderTexture.active = prior;
+            roundtrip.SetPixelData(new ushort[Size * Size], 0);
+            roundtrip.Apply(false);
+            Graphics.CopyTexture(texture, copied);
+            Value("R16Gpu.copyToRT.float", size, () => ReadGpuFloat(copied));
+            Graphics.CopyTexture(copied, roundtrip);
+            Value("R16Gpu.copyToTexture.float", size, () => ReadGpuFloat(roundtrip));
+        }
+        finally
+        {
+            RenderTexture.active = prior;
+            copied.Release();
+            Destroy(copied);
+            Destroy(roundtrip);
+            Destroy(texture);
+        }
+    }
+
+    static string ReadGpuFloat(Texture source)
+    {
+        var rt = RenderTexture.GetTemporary(Size, Size, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear);
+        var previous = RenderTexture.active;
+        try
+        {
+            Graphics.Blit(source, rt);
+            RenderTexture.active = rt;
+            var read = new Texture2D(Size, Size, TextureFormat.RGBAFloat, false, true);
+            read.ReadPixels(new Rect(0, 0, Size, Size), 0, 0, false);
+            read.Apply(false);
+            var result = Floats(read.GetPixels());
+            Destroy(read);
+            return result;
+        }
+        finally
+        {
+            RenderTexture.active = previous;
+            RenderTexture.ReleaseTemporary(rt);
+        }
     }
 
     Texture2D Make(TextureFormat format, bool mips, bool linear)
