@@ -2047,6 +2047,32 @@ end completes it. Body-part targets are left to humanoid avatars (ignored with a
 Validation:
 
 - tests/projects/modelroot: two independent GPU Editor captures are byte-identical (3714 records);
-  Unbound matches 3699/3714 records, 35781/35796 values. The 15 others are `apparentSpeed` of the
-  clips that turn about the up axis: the Editor's value is the speed's length times a factor that
-  grows with the turn, which is not identified; Unbound returns the length.
+  Unbound matched 3699/3714 records, 35781/35796 values; the 15 others were `apparentSpeed` of
+  the clips that turn about the up axis (see below for the merged result).
+
+## Model clip settings and generic root nodes with humanoid avatars, 2026-11-01
+
+The generic model clip and root-node work now sits beside the humanoid avatars, muscle clips and
+humanoid root motion. Both paths read the same parsed clip settings. With animation import a
+model's nodes rest in the first take's pose at its start; without it they keep the file's static
+transforms. The humanoid probe's takes start at 0, so this matches both probes. Clip documents
+carry a mask asset and a Humanoid model's avatar. A clip is human only with root, goal or muscle
+curves; MotionT/MotionQ alone are a generic root node's motion. A Humanoid model's root node
+(`motionNodeName`) is ignored with a warning. `MatchTarget` on a humanoid avatar warns and does
+nothing. The motion statistics use the humanoid motion for muscle clips and the root-node curves
+for the rest. `apparentSpeed` is `|averageSpeed| · (1 + (averageAngularSpeed / 2)²)` for both:
+this formula gives all 102 Editor clip values of the root-node probe exactly. The model cache
+format is 10.
+
+Validation (candidate against the Root runtime it was merged into, same commands):
+
+- tests/projects/modelclips 2949/2949 records, 31391/31391 values (Root: 585/2949);
+  tests/projects/modelroot 3714/3714 records, 35796/35796 values (Root: 764/3714).
+- tests/projects/humanoid 120574/120650 values (Root: 120570/120650). In both, every difference
+  is muscle 41 or 43 of the IK pose read back with HumanPoseHandler, the known twist-split
+  residual. Its count changes with last-bit differences of the IK pose.
+- modelimport Gamma and Linear 6032/6033, URP 7011/7687 (550 missing, 126 differing, 81 extra),
+  descriptions 35/0; animatoradditive 1100/1100 (13200/13200 values); animator 2236/2236;
+  animation from bundles 8/8. These equal Root's.
+- api-check: 0 errors in 2290 hand-written types. unbound-assets 75 and unbound-runtime 49 tests,
+  and 31 managed animation/animator/humanoid tests, pass.
