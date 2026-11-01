@@ -264,7 +264,15 @@ namespace UnityEngine
         /// over to the next call (measured); otherwise in the frame's steps (see Advance).</summary>
         public void Simulate(float t, [Internal.DefaultValue("true")] bool withChildren, [Internal.DefaultValue("true")] bool restart, [Internal.DefaultValue("true")] bool fixedTimeStep)
         {
-            foreach (var ps in Systems(withChildren, includeSubEmitters: true))
+            // Registered subemitters simulate with their parent even when transform-child
+            // traversal is disabled. A system can be reachable through both paths.
+            var systems = Systems(withChildren, includeSubEmitters: true);
+            var visited = new HashSet<ParticleSystem>(systems);
+            for (int i = 0; i < systems.Count; i++)
+                foreach (var sub in systems[i].m_SubEmitters.emitters)
+                    if (sub.system != null && !sub.system.m_Destroyed && visited.Add(sub.system))
+                        systems.Add(sub.system);
+            foreach (var ps in systems)
             {
                 if (restart)
                 {
