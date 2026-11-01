@@ -255,7 +255,9 @@ impl UnityRenderer {
             });
             return None;
         };
-        let fits = source_offset.checked_add(copy_size).is_some_and(|e| e <= s.size)
+        let fits = source_offset
+            .checked_add(copy_size)
+            .is_some_and(|e| e <= s.size)
             && destination_offset
                 .checked_add(copy_size)
                 .is_some_and(|e| e <= d.size);
