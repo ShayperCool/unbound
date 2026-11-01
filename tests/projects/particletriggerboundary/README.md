@@ -115,3 +115,40 @@ This pair did not establish a general replacement predicate. No runtime edit,
 runtime build, further Native discriminator, broad gate, or installation of the
 unaccepted 3D pose change followed it. The original 402-row control union remains
 separate evidence. In particular, no resolution of its 20 introductions is claimed.
+
+## Sphere predicate implementation receipt
+
+The sphere trigger path now uses the measured padded swept bounds and sphere
+sweep described in `SPHERE_MECHANISM.md`. The cached actor pose comes from the
+existing native body query; sphere local geometry uses the same cached
+collider-to-body matrix and shape-construction formula as `CreateShape`.
+It does not read the collider's current Transform. Public query bindings and
+non-sphere trigger classification are unchanged.
+
+The matched 875 runtime replay on 2026-11-01 closes all 20 introductions from the
+old cached-pose package. All 55 original boundary rows and all 150 original
+histories pass. The 402-row control has 608 resolved, 21 retained and zero
+introduced failing values. The remaining values belong to synced inside-kill
+histories with Native zero-life particles; lifetime/removal code was not changed.
+
+The complete 565-row strict union remains red: 144 resolved, 551 retained and
+48 introduced values. These 48 paths are three exact z-bit strings for each of
+16 restored particles. Each restored particle equals its pre-existing baseline
+IgnoreOutside twin byte for byte, including the original construction drift.
+The recorded classification agrees for all 84 arithmetic and nine boundary
+configurations, but that does not waive any bit-string difference. Conditional
+Physics3D and broad particle/image gates were not run because the strict
+zero-introduction condition was not met. Eight focused unit cases pass.
+
+`Sources/CrossKindProbe.cs` is a baseline/candidate equivalence control for box
+and capsule triggers, with inside/outside/enter/exit Kill histories. Prepare two
+private engine projects using `run.py prepare`, replace their generated
+`Assets/Scripts/BoundaryProbe.cs` with that source, then run each with `run.py
+engine` and its matching runtime. No Native oracle is claimed for that control.
+All 96 rows were byte-identical in this replay.
+
+Full before/candidate/Native unions, causal twins, all 33 runtime hashes, source
+bindings, inherited references and commands are retained under
+`~/.cache/unbound/validation/runs/sphere-trigger-implementation-20261101-t3-9132e216/`.
+There were no new Native captures or tolerance changes. Root integration requires
+review of the strict introductions and matching conditional gates.
