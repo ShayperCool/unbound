@@ -1166,7 +1166,7 @@ impl UnityRenderer {
         }
         let current = {
             let (color, depth) = self.target_handles;
-            depth == handle || (color == handle && depth == 0)
+            depth_owner(color, depth) == Some(handle)
         };
         if let Some(view) = &t.depth_copy {
             let view = view.clone();
@@ -1633,16 +1633,10 @@ impl UnityRenderer {
                     extra,
                 } => {
                     self.copy_depth(&mut passes, depth_mark);
-                    // A depth-only render texture drawn into (as the target, or as the depth
-                    // buffer of another: a G-buffer's) is copied where shaders sample it.
-                    self.depth_target = [color, depth].into_iter().find(|&h| {
-                        h != 0
-                            && h != commands::NO_TEXTURE
-                            && self
-                                .textures
-                                .get(&h)
-                                .is_some_and(|t| t.depth_copy.is_some())
-                    });
+                    // The texture whose depth buffer is attached (the color's own, or another's:
+                    // a G-buffer's) is copied where shaders sample it when it has a depth copy.
+                    self.depth_target = depth_owner(color, depth)
+                        .filter(|h| self.textures.get(h).is_some_and(|t| t.depth_copy.is_some()));
                     depth_mark = passes.len();
                     self.target_handles = (color, depth);
                     self.state.target = self.resolve_target(color, depth, mip, slice);
@@ -2941,7 +2935,17 @@ impl UnityRenderer {
     }
 }
 
-/// The pass the commands are adding to (the last op is one while a pass is open).
+/// The texture whose depth buffer a target binds (`SetTarget`'s color and depth handles, as
+/// `resolve_target` attaches them): none for [`commands::NO_TEXTURE`] or the screen, the color's
+/// own for 0 or the color itself, else the depth handle's.
+fn depth_owner(color: u64, depth: u64) -> Option<u64> {
+    match depth {
+        commands::NO_TEXTURE => None,
+        0 => (color != 0).then_some(color),
+        d => Some(d),
+    }
+}
+
 /// The sample a multisampled depth buffer's copy reads: the one a quarter pixel left of the
 /// center at 2 samples (Vulkan's standard positions), where Unity's resolved depth reads
 /// (measured: tests/projects/rtdepth fmt.msaa2.depth.*).

@@ -32,10 +32,11 @@ as malformed, the material update or the call is refused, with a logged message.
 The renderer binds a depth element through the texture's depth copy (a float color texture of its
 size), made the first time a draw samples it. A multisampled depth buffer copies one sample (the
 one a quarter pixel left of the center at 2 samples). The copy is brought up to date before the
-draw that samples it, also when the texture is the current target. It is then copied after
-every group of passes that draws into the texture. Comparison (depth) slots read the depth
-buffer itself. Bind groups are keyed by the handle as bound, element bits included, and the
-texture's generation, so a texture's color and depth element never share one. Managed getters
+draw that samples it, also when the texture's depth buffer is the current target's (its own or
+attached to another color). It is then copied after every group of passes that draws into that
+depth buffer. Comparison (depth) slots read the depth buffer itself. Bind groups are keyed by the
+handle as bound, element bits included, and the texture's generation, so a texture's color and
+depth element never share one; `_MainTex` too, and `<name>_TexelSize` is the texture's. Managed getters
 (`Material.GetTexture`) return the texture: the bit exists only on the wire.
 
 The managed side refuses a native side of another `NativeApi.Version` at startup (`Native.Initialize`),
