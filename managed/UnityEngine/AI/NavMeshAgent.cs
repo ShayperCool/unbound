@@ -273,12 +273,20 @@ namespace UnityEngine.AI
         }
 
         /// <summary>Whether the agent follows a path (also while a new one is pending; measured).</summary>
-        public bool hasPath => m_Crowd != null && m_HasDestination && !m_Arrived && !m_LeftLinkMidway
+        public bool hasPath => m_Crowd != null && m_HasDestination && !m_Arrived && !m_LeftLinkOntoEnd
             && m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID;
 
-        /// <summary>A crossing under way was completed by a script: until the next update the
-        /// agent reports no path (measured; not after completing a link it waited on).</summary>
-        internal bool m_LeftLinkMidway;
+        /// <summary>The agent left a link (crossed or completed by a script) onto a path that
+        /// ends in the polygon it landed in: until the next update it reports no path (measured,
+        /// tests/projects/navlinks: the same crossing reports a path where the rest of the path
+        /// spans polygons of two tiles).</summary>
+        internal bool m_LeftLinkOntoEnd;
+
+        /// <summary>Whether the agent was on a link when the update began.</summary>
+        internal bool m_WasOnLink;
+
+        /// <summary>After leaving a link: whether the rest of the path lies in one polygon.</summary>
+        internal void LeftLink() => m_LeftLinkOntoEnd = m_Crowd != null && m_Crowd.corridor.GetPathCount() <= 1;
 
         /// <summary>Time since the agent's partial path was found (see ReplanPartialPaths).</summary>
         internal float m_ReplanTime;
@@ -549,10 +557,9 @@ namespace UnityEngine.AI
         public void CompleteOffMeshLink()
         {
             if (!isOnOffMeshLink) return;
-            bool midway = m_Crowd.animation.t > 0f;
             AgentSystem.CrowdOf(m_Surface)?.CompleteOffMeshConnection(m_Crowd);
             m_NextPosition = NavMesh.V(m_Crowd.npos);
-            m_LeftLinkMidway = midway;
+            LeftLink();
         }
 
         internal static bool LinkOccupied(int linkId) => AgentSystem.LinkOccupied(linkId);
@@ -900,7 +907,8 @@ namespace Unbound.Runtime
             float dt = Time.deltaTime;
             foreach (var agent in s_Agents)
             {
-                agent.m_LeftLinkMidway = false;
+                agent.m_LeftLinkOntoEnd = false;
+                agent.m_WasOnLink = agent.isOnOffMeshLink;
                 if (agent.m_Crowd != null)
                 {
                     CrowdOf(agent.m_Surface).UpdateAgentParameters(agent.m_Crowd, Params(agent));
@@ -915,6 +923,7 @@ namespace Unbound.Runtime
                 if (agent.m_Crowd == null) continue;
                 var previous = agent.m_NextPosition;
                 agent.m_NextPosition = NavMesh.V(agent.m_Crowd.npos);
+                if (agent.m_WasOnLink && !agent.isOnOffMeshLink) agent.LeftLink();
                 // The step over the frame, pushes out of other agents included (measured).
                 agent.m_Velocity = (agent.m_NextPosition - previous) / dt;
                 StopAtDestination(agent, dt, NavMesh.V(previous));
