@@ -72,7 +72,7 @@ public class GeneratorBoundaryProbe : MonoBehaviour
             source.playOnAwake = false; source.outputAudioMixerGroup = child;
             source.spatialBlend = 0; source.volume = 1; source.pitch = 1;
             BoundaryFilter filter = key == "shotPlain" ? null : go.AddComponent<BoundaryFilter>();
-            if (filter != null) filter.Configure(128, Frames * Channels);
+            if (filter != null) filter.Configure(512, Frames * Channels);
             var shot = AudioClip.Create("Shot", 4096, Channels, Rate, false);
             var shotData = new float[4096 * Channels];
             for (int frame = 0; frame < 4096; frame++) {
