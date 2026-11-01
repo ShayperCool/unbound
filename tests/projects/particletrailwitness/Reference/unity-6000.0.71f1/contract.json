@@ -1,0 +1,81 @@
+{
+  "release": "6000.0.71f1",
+  "public_repeat_exact": true,
+  "public_records": 124,
+  "full_raw_snapshot": "REJECTED",
+  "storage_parity": "UNCLAIMED / NOT IMPLEMENTED",
+  "raw_vector_differences": 530,
+  "counted_entries": 93,
+  "counted_differences": 0,
+  "mesh_vertices": 190,
+  "mesh_indices": 552,
+  "extra_counted_slots": [
+    {
+      "slot": 4,
+      "count": 1,
+      "front": 0,
+      "back": 0,
+      "indices": [
+        256
+      ]
+    }
+  ],
+  "scope": "All non-trails records: public particles, complete mesh bytes and typed attributes, camera, quality and target. Reflected Trails backing storage and GetTrails implementation are excluded.",
+  "input_sha256": {
+    "input-0": "4e1cab30d7dd4e0d4404c03dd3c658fc8e9985079b9e7c2ada13615cd04b68c7",
+    "input-1": "6dac1ce989414c8b866c0abea8889db854c08f9c73fbd0ffb996e2231f0f5f7e",
+    "input-2": "5f3821ddc918535641dac6178d4352bfeb7a217d35b7a18bcd0eddf4846c7e24",
+    "input-3": "206dbc594e92cbb26890db2f39348df35ec2cc7e6effa5b5f6c0842bf4e624e9"
+  },
+  "field_layout": [
+    {
+      "name": "positions",
+      "type": "System.Collections.Generic.List`1<UnityEngine.Vector4>",
+      "visibility": "Assembly",
+      "isPublic": false,
+      "isAssembly": true
+    },
+    {
+      "name": "frontPositions",
+      "type": "System.Collections.Generic.List`1<System.Int32>",
+      "visibility": "Assembly",
+      "isPublic": false,
+      "isAssembly": true
+    },
+    {
+      "name": "backPositions",
+      "type": "System.Collections.Generic.List`1<System.Int32>",
+      "visibility": "Assembly",
+      "isPublic": false,
+      "isAssembly": true
+    },
+    {
+      "name": "positionCounts",
+      "type": "System.Collections.Generic.List`1<System.Int32>",
+      "visibility": "Assembly",
+      "isPublic": false,
+      "isAssembly": true
+    },
+    {
+      "name": "textureOffsets",
+      "type": "System.Collections.Generic.List`1<System.Single>",
+      "visibility": "Assembly",
+      "isPublic": false,
+      "isAssembly": true
+    },
+    {
+      "name": "maxTrailCount",
+      "type": "System.Int32",
+      "visibility": "Assembly",
+      "isPublic": false,
+      "isAssembly": true
+    },
+    {
+      "name": "maxPositionsPerTrailCount",
+      "type": "System.Int32",
+      "visibility": "Assembly",
+      "isPublic": false,
+      "isAssembly": true
+    }
+  ]
+}
