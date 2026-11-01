@@ -182,6 +182,7 @@ if __name__ == '__main__':
     p.add_argument('--release', required=True)
     p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
     p.add_argument('--reference', type=Path)
+    p.add_argument('--profile', choices=('suspension','submission','lifecycle'), default='suspension')
     p.add_argument('--candidate', type=Path, required=True)
     p.add_argument('--before', type=Path)
     p.add_argument('--report', type=Path, required=True)
@@ -190,6 +191,7 @@ if __name__ == '__main__':
     a = p.parse_args()
     if not a.report.name.endswith('.jsonl.gz'):
         p.error('report must end in .jsonl.gz')
-    reference = a.reference or Path(__file__).parent/'Reference'/('unity-'+a.release)/('rate-'+str(a.rate))
+    prefix = '' if a.profile == 'suspension' else a.profile+'-'
+    reference = a.reference or Path(__file__).parent/'Reference'/('unity-'+a.release)/(prefix+'rate-'+str(a.rate))
     assert header(reference)['release'] == a.release and header(reference)['rate'] == a.rate
     raise SystemExit(bool(compare(reference, a.candidate, a.report, a.exact, a.before, a.batch)))
