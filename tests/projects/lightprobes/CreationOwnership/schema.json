@@ -1,9 +1,10 @@
 {
   "suite": "creation-ownership",
-  "schema": 1,
+  "schema": 2,
   "release": "6000.0.71f1",
   "output": "creation-ownership.jsonl",
   "raw_output": "creation-ownership-raw.jsonl",
+  "teardown_output": "creation-ownership-teardown.jsonl",
   "aliases": ["destroyer", "i-new", "ii-prefab", "iii-child", "iv-ondestroy"],
   "points": ["setup",
              "t1.a.start", "t1.a.i", "t1.a.ii", "t1.a.iii.parented", "t1.a.iii.detached", "t1.a.iv",
@@ -24,5 +25,44 @@
   "row_kinds": ["snapshot", "lifecycle", "create", "log", "note"],
   "rejected_row_kinds": ["error"],
   "membership_order": "state.findByType holds the declared aliases (or name:<name>) of FindObjectsByType<CreationOwnershipTracker>(FindObjectsInactive.Include, FindObjectsSortMode.None), sorted ordinally by alias; the returned order is in raw_output under the same seq. Scene roots keep GetRootGameObjects order. Nothing else is sorted, renamed or renumbered.",
-  "points_doc": "tN.a.start: the first sceneUnloaded of transition N; t1.a.i..iii: after each creation in that handler; t1.a.iv: after the creation in the destroyer's OnDestroy; t2.a.made: after CreateScene(\"Made\") + SetActiveScene in t2's handler; tN.b: the first sceneLoaded of tN; tN.c: the first controller LateUpdate after it. t1 = LoadScene(Extra, Single), t2 = LoadScene(Main, Single), t3 = LoadScene(Extra, Single)."
+  "points_doc": "tN.a.start: the first sceneUnloaded of transition N; t1.a.i..iii: after each creation in that handler; t1.a.iv: after the creation in the destroyer's OnDestroy; t2.a.made: after CreateScene(\"Made\") + SetActiveScene in t2's handler; tN.b: the first sceneLoaded of tN; tN.c: the first controller LateUpdate after it. t1 = LoadScene(Extra, Single), t2 = LoadScene(Main, Single), t3 = LoadScene(Extra, Single).",
+ "contract": {
+  "version": 1,
+  "rule": "Two repeats publish only if each satisfies every predicate below against its own trace and their canonical forms (contract.py) are byte-identical. The canonical form is the main output with exactly the three families below rewritten; every other row and leaf is copied unchanged and compared strictly. Raw outputs (main, raw_output, teardown_output) are kept as captured; nothing is widened after a capture.",
+  "families": {
+   "outgoing-roots-destruction-prefix": {
+    "where": "the snapshot at point t1.a.iv (inside the destroyer's OnDestroy): state.scenes[ref = the scene t1.a.start reports unloaded].roots and .rootCount",
+    "predicates": [
+     "teardown_output holds one 'attached' row per teardown-witnessed root, all at stage setup, and their 'name:<name>' refs are exactly the roots of that scene at point setup that carry no declared alias",
+     "every attached root has exactly one 'OnDestroy' row, at stage t1, in that scene, with mainSeq <= the seq of the t1.a.start snapshot (destroyed before the scene's sceneUnloaded)",
+     "the observed roots equal the setup roots in setup order minus exactly the witnessed roots whose OnDestroy mainSeq <= the seq of the t1.a.iv snapshot (the set destroyed so far in this repeat's own trace), and rootCount equals their number"
+    ],
+    "canonical": "roots -> {\"contract\": \"destruction-prefix\", \"unwitnessed\": the observed roots that carry no teardown witness, in observed order (strict)}; rootCount -> \"contract:destruction-prefix\"; a contract row after the source row lists the destroyed witnessed roots as a sorted set"
+   },
+   "not-cleaned-up-error-names": {
+    "where": "log rows with at Error whose message starts with the header",
+    "header": "Some objects were not cleaned up when closing the scene. (Did you spawn new GameObjects from OnDestroy?)\nThe following scene GameObjects were found:\n",
+    "predicates": [
+     "message == header + each name + \"\\n\", at least one name, no name repeated"
+    ],
+    "canonical": "message -> {\"header\": header, \"names\": the names sorted ordinally (an unordered set)}"
+   },
+   "inter-object-cleanup-order": {
+    "where": "stage t2: the lifecycle rows OnDisable/OnDestroy of the made aliases before the t2.a.start snapshot",
+    "aliases": [
+     "i-new",
+     "ii-prefab",
+     "iii-child",
+     "iv-ondestroy"
+    ],
+    "predicates": [
+     "they form one contiguous block of seqs with no other row inside it",
+     "every made alias has exactly one OnDisable and one OnDestroy there, OnDisable first (strict per object)",
+     "none of them has an OnDisable/OnDestroy row in stage t2 after the t2.a.start snapshot (destruction before the owning scene's sceneUnloaded)"
+    ],
+    "canonical": "the block's rows sorted by (alias in declared order, OnDisable before OnDestroy), renumbered with the block's own seqs; every other field of each row is unchanged; the contract row records whether each OnDisable was immediately followed by the same object's OnDestroy (strict)"
+   }
+  },
+  "strict": "Ownership, existence, scene membership, parent/root, Find/FindObjectsByType membership (sorted), light probes, per-object message order and every row outside the three families stay strict. The raw FindObjectsByType order (raw_output) and the teardown_output order are recorded, not compared."
+ }
 }

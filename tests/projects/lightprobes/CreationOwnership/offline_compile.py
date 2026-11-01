@@ -6,7 +6,7 @@
 DAG is Library/Bee/artifacts/<hash>.dag of an existing valid lightprobes witness project copy
 (an Editor-compiled one). Its Assembly-CSharp.rsp / Assembly-CSharp-Editor.rsp (+ .rsp2) are
 reused line for line: every reference, define, analyzer and option stays, only the source
-lines change (Assembly-CSharp: the two witness scripts instead of the lifecycle witness; the
+lines change (Assembly-CSharp: the three witness scripts instead of the lifecycle witness; the
 Editor assembly keeps its two sources) and the additional file names the staging project. The
 compiler is the Editor's own Roslyn on its own .NET runtime, as Bee calls it, without /shared
 (no compiler server is left behind). Writes NEW_DIR/compile.json with every hash and argument.
@@ -22,7 +22,7 @@ import sys
 
 SUITE = Path(__file__).resolve().parent
 PROBE = SUITE.parent
-SCRIPTS = ('SceneCreationOwnership.cs', 'CreationOwnershipTracker.cs')
+SCRIPTS = ('SceneCreationOwnership.cs', 'CreationOwnershipTracker.cs', 'CreationTeardownWitness.cs')
 EXPECTED_SOURCES = {'Assembly-CSharp': ['"Assets/Scripts/LightProbesLifecycle.cs"'],
                     'Assembly-CSharp-Editor': ['"Assets/Editor/LightProbesSetup.cs"', '"Assets/Editor/ProbeRunner.cs"']}
 

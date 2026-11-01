@@ -7,15 +7,19 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 /// <summary>
-/// Creation-ownership witness (suite "creation-ownership", schema 1): which scene owns, and what
+/// Creation-ownership witness (suite "creation-ownership", schema 2): which scene owns, and what
 /// becomes of, objects made while a SceneManager Single load unloads the outgoing scene.
 /// JSON lines go to <c>LIGHT_PROBES_CREATION_OUT</c>: a source row, then rows by sequence index,
 /// then <c>{"k":"complete","v":true}</c>; the Editor then quits. The unordered
 /// FindObjectsByType results are written in their returned order, by the same sequence index, to
 /// <c>LIGHT_PROBES_CREATION_RAW_OUT</c>; the main output holds them sorted by alias (ordinal).
+/// Schema 2 adds <c>LIGHT_PROBES_CREATION_TEARDOWN_OUT</c>: the authored Main roots carry a
+/// <see cref="CreationTeardownWitness"/>, and every one of their OnDestroy messages is written there
+/// in its actual order, stamped with the next main sequence number (no main row is consumed). The
+/// schema's contract checks the outgoing scene's roots inside the destroyer's OnDestroy against it.
 ///
-/// Setup (Main active): Resources.Load of the tiny prefab, and "destroyer", a new root in Main
-/// whose tracker makes a root in its OnDestroy.
+/// Setup (Main active): Resources.Load of the tiny prefab, a teardown witness on every authored
+/// Main root, and "destroyer", a new root in Main whose tracker makes a root in its OnDestroy.
 /// t1, LoadScene("Extra", Single); the first sceneUnloaded handler makes
 ///   (i) "i-new", new GameObject + tracker; (ii) "ii-prefab", Instantiate of the loaded prefab;
 ///   (iii) "iii-child", new GameObject + tracker, SetParent(ii), then SetParent(null);
@@ -39,12 +43,12 @@ using UnityEngine.SceneManagement;
 public class SceneCreationOwnership : MonoBehaviour
 {
     const string Suite = "creation-ownership";
-    const int Schema = 1;
+    const int Schema = 2;
     const int TransitionFrames = 600;
     static readonly string[] Aliases = { "destroyer", "i-new", "ii-prefab", "iii-child", "iv-ondestroy" };
     static readonly string[] Targets = { null, "Extra", "Main", "Extra" };
 
-    static string s_Out, s_RawOut;
+    static string s_Out, s_RawOut, s_TeardownOut;
     static int s_Seq;
     static string s_Stage = "play";
     static string s_NextAlias;
@@ -270,6 +274,16 @@ public class SceneCreationOwnership : MonoBehaviour
         Write(Obj(pairs.ToArray()));
     }
 
+    /// <summary>An authored outgoing root's OnDestroy, written to the teardown file only: its
+    /// order is Unity's, and <c>mainSeq</c> is the next main sequence number at that moment.</summary>
+    public static void Teardown(CreationTeardownWitness witness)
+    {
+        if (!Open || string.IsNullOrEmpty(s_TeardownOut)) return;
+        File.AppendAllText(s_TeardownOut, Obj("event", Q("OnDestroy"), "name", Safe(() => Q(witness.gameObject.name)),
+            "stage", Q(s_Stage), "mainSeq", s_Seq.ToString(),
+            "scene", Safe(() => Q(Ref(witness.gameObject.scene)))) + "\n");
+    }
+
     static void Error(string at, Exception e) => Row("error", at, "exception", e == null ? "null" : Thrown(e));
 
     public static void Lifecycle(CreationOwnershipTracker tracker, string message)
@@ -377,8 +391,10 @@ public class SceneCreationOwnership : MonoBehaviour
         s_Out = Environment.GetEnvironmentVariable("LIGHT_PROBES_CREATION_OUT");
         if (string.IsNullOrEmpty(s_Out)) { s_Out = null; return; }
         s_RawOut = Environment.GetEnvironmentVariable("LIGHT_PROBES_CREATION_RAW_OUT");
+        s_TeardownOut = Environment.GetEnvironmentVariable("LIGHT_PROBES_CREATION_TEARDOWN_OUT");
         File.WriteAllText(s_Out, "");
         if (!string.IsNullOrEmpty(s_RawOut)) File.WriteAllText(s_RawOut, "");
+        if (!string.IsNullOrEmpty(s_TeardownOut)) File.WriteAllText(s_TeardownOut, "");
         var aliases = new List<string>();
         foreach (var alias in Aliases) aliases.Add(Q(alias));
         Write(Obj("k", Q("source"), "suite", Q(Suite), "schema", Schema.ToString(),
@@ -472,6 +488,21 @@ public class SceneCreationOwnership : MonoBehaviour
             s_Prefab = Resources.Load<GameObject>("CreationTiny");
             return Q(s_Prefab == null ? "null" : "prefab " + s_Prefab.name);
         });
+        Create("attach teardown witnesses", () =>
+        {
+            var names = new List<string>();
+            foreach (var root in SceneManager.GetActiveScene().GetRootGameObjects())
+            {
+                if (root.GetComponent<CreationOwnershipTracker>() != null) continue;
+                root.AddComponent<CreationTeardownWitness>();
+                names.Add(Q(ObjRef(root)));
+                if (!string.IsNullOrEmpty(s_TeardownOut))
+                    File.AppendAllText(s_TeardownOut, Obj("event", Q("attached"), "name", Q(root.name),
+                        "stage", Q(s_Stage), "mainSeq", s_Seq.ToString(),
+                        "scene", Q(Ref(root.scene))) + "\n");
+            }
+            return Arr(names);
+        });
         Create("destroyer new GameObject", () =>
         {
             var go = NewTracked("destroyer", "CreationDestroyer");
@@ -519,6 +550,7 @@ public class SceneCreationOwnership : MonoBehaviour
         // Shutdown destroys the remaining trackers: their messages must neither query nor write.
         s_Out = null;
         s_RawOut = null;
+        s_TeardownOut = null;
         File.AppendAllText(output, "{\"k\":\"complete\",\"v\":true}\n");
         Debug.Log("scene creation ownership witness written to " + output);
 #if UNITY_EDITOR

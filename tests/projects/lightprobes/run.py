@@ -15,7 +15,9 @@
                                                              (CreationOwnership/); the second starts
                                                              only if the first passes every gate
     run.py creation-ownership-publish --release R --label L  checks both are complete, strict exit 0,
-                                                             gated and identical; writes
+                                                             gated, satisfy the schema's contract and
+                                                             have identical canonical forms; writes
+                                                             that canonical form to
                                                              Reference/.../creation-ownership.jsonl
 
 Every capture runs on a fresh copy of this project in the validation cache. Editors run through
@@ -208,7 +210,9 @@ def lifecycle_publish(work):
 
 
 CREATION = PROBE/'CreationOwnership'
-CREATION_SCRIPTS = ('SceneCreationOwnership.cs', 'CreationOwnershipTracker.cs')
+CREATION_SCRIPTS = ('SceneCreationOwnership.cs', 'CreationOwnershipTracker.cs', 'CreationTeardownWitness.cs')
+sys.path.insert(0, str(CREATION))
+import contract as creation_contract  # noqa: E402
 
 
 def creation_schema():
@@ -294,13 +298,15 @@ def creation_rows_problem(directory, schema=None):
 
 
 def creation_problem(directory):
-    """Strict: exit 0 without any forced stop, the NVIDIA renderer, the witness gate."""
+    """Strict: exit 0 without any forced stop, the NVIDIA renderer, the witness gate and the
+    schema contract's predicates against this repeat's own trace."""
     result = editor_runner.load_result(directory)
     if result is None:
         return 'no Editor result'
     if result.get('forced_exit'):
         return f"forced exit ({result['forced_exit']}: {result.get('forced_detail')})"
-    return editor_runner.result_problem(directory, gpu=True) or creation_rows_problem(directory)
+    return (editor_runner.result_problem(directory, gpu=True) or creation_rows_problem(directory)
+            or creation_contract.problem(directory))
 
 
 def creation_ownership(work, release):
@@ -323,7 +329,8 @@ def creation_ownership(work, release):
         result = editor_runner.run(editor_runner.EditorJob(
             project, out/'editor.log', out, ['-buildTarget', 'Standalone', '-executeMethod', 'ProbeRunner.Record'],
             batch=True, env={'LIGHT_PROBES_CREATION_OUT': str(out/schema['output']),
-                             'LIGHT_PROBES_CREATION_RAW_OUT': str(out/schema['raw_output'])},
+                             'LIGHT_PROBES_CREATION_RAW_OUT': str(out/schema['raw_output']),
+                             'LIGHT_PROBES_CREATION_TEARDOWN_OUT': str(out/schema['teardown_output'])},
             timeout=LIFECYCLE_TIMEOUT, progress_files=[out/schema['output']], progress_timeout=LIFECYCLE_PROGRESS,
             label='creation-ownership-'+repeat, launch_inputs=inputs))
         print(editor_runner.summary(result))
@@ -335,17 +342,40 @@ def creation_ownership(work, release):
     return 0
 
 
+def creation_publish(directories, target, report=None):
+    """Both repeats pass every gate and the contract; their canonical forms are byte-identical
+    (every raw difference is in a declared family); `target` is new. Writes the canonical form."""
+    directories = [Path(d) for d in directories]
+    if len(directories) != 2:
+        sys.exit('publishing needs exactly two independent repeats')
+    for directory in directories:
+        problem = creation_problem(directory)
+        if problem:
+            sys.exit(f'{directory.name}: {problem}; not publishing')
+    texts = [creation_contract.dumps(creation_contract.canonical(d)) for d in directories]
+    raw = creation_contract.differences(*directories)
+    strict = [d for d in raw if d['family'] is None]
+    if report is not None:
+        Path(report).write_text(json.dumps({
+            'repeats': [str(d) for d in directories], 'canonical_identical': texts[0] == texts[1],
+            'raw_differences': raw, 'strict_differences': strict,
+            'canonical_differences': creation_contract.canonical_differences(*directories)},
+            indent=1, default=str)+'\n')
+    if texts[0] != texts[1] or strict:
+        sys.exit(f'the canonical forms differ ({len(strict)} strict raw differences of {len(raw)}); not publishing')
+    target = Path(target)
+    if target.exists():
+        sys.exit(f'refusing to overwrite reference: {target}')
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(texts[0])
+    print('published', target)
+    return 0
+
+
 def creation_ownership_publish(work):
     schema = creation_schema()
-    for repeat in ('native1', 'native2'):
-        problem = creation_problem(work/repeat)
-        if problem:
-            sys.exit(f'{repeat}: {problem}; not publishing')
-    name = schema['output']
-    return editor_runner.publish(
-        [work/'native1', work/'native2'], reference_root(PROBE)/name, lambda d: [name],
-        lambda target, first: (shutil.copyfile(first/name, target), print('published', target)),
-        complete=[creation_rows_problem], gpu=True)
+    return creation_publish([work/'native1', work/'native2'], reference_root(PROBE)/schema['output'],
+                            report=work/'publication.json')
 
 
 def main():

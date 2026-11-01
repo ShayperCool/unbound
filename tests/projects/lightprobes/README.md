@@ -108,10 +108,19 @@ every gate. `CreationOwnership/offline_compile.py` compiles the witness with an 
 fixture copy's own compiler arguments, and `CreationOwnership/guards.py` checks the gate against
 damaged synthetic captures.
 
-No `creation-ownership.jsonl` Reference is published for 6000.0.71f1 yet. The one pair run so far
-(both repeats exit 0, gated) differed in 11 order-only leaves: which outgoing roots were already
-destroyed when the destroyer's `OnDestroy` ran, the name order in Unity's "Some objects were not
-cleaned up when closing the scene" error, and the destruction order of the four leftover objects at
-the next Single load. The schema would need to declare those orders unordered before a new pair can
-publish. Every existence, scene, parent/root, `Find`/`FindObjectsByType` and light probe value
-agreed between the two repeats.
+The first pair (schema 1; both repeats exit 0, gated) was not published: it differed in 11
+order-only leaves, namely which outgoing roots were already destroyed when the destroyer's
+`OnDestroy` ran, the name order in Unity's "Some objects were not cleaned up when closing the scene"
+error, and the destruction order of the four leftover objects at the next Single load. Every
+existence, scene, parent/root, `Find`/`FindObjectsByType` and light probe value agreed.
+
+Schema 2 predeclares a contract for exactly those three families (`schema.json` "contract",
+implemented only by `CreationOwnership/contract.py`). A `CreationTeardownWitness` on every authored
+Main root writes its `OnDestroy` to `creation-ownership-teardown.jsonl`. The outgoing roots at
+`t1.a.iv` must then equal the setup roots minus those already destroyed in that repeat's own
+trace. The error's names are an unordered set, with the text otherwise exact. At t2 every made
+object still gets `OnDisable` before its own `OnDestroy`, all before its scene's `sceneUnloaded`, but
+the objects may come in any order. Each repeat must satisfy these predicates (part of its gate).
+The pair publishes the canonical form, `Reference/unity-<release>/creation-ownership.jsonl`, only if
+the two canonical forms are byte-identical; everything outside the families stays strict.
+`creation-ownership-publish` writes `publication.json` with every raw difference and its family.
