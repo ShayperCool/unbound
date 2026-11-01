@@ -640,8 +640,10 @@ namespace UnityEngine
 
         internal override void BuildShapes(Matrix4x4 toBody, List<Shape> shapes)
         {
-            var scales = AxisScales(toBody);
-            float r = m_Radius * Mathf.Max(scales.x, scales.y);
+            // Circle radii use public world scale, including its measured rotation arithmetic.
+            // Frame controls: tests/projects/solverpairorder/Sources/TransformInputs.
+            var scales = m_GameObject.m_Transform.lossyScale;
+            float r = m_Radius * Mathf.Max(Mathf.Abs(scales.x), Mathf.Abs(scales.y));
             if (!(r > B2Settings.LinearSlop * 0.5f))
             {
                 m_ErrorState = ColliderErrorState2D.NoShapes;
