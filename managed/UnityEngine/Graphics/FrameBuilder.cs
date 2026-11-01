@@ -165,6 +165,8 @@ namespace Unbound.Runtime
         static FrameBuilder()
         {
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.FinishFrameRendering), Render);
+            // The frame's drawing ends after its end-of-frame callbacks.
+            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.GUIClearEvents), () => InDrawingFrame = false);
         }
 
         internal static void EnsureRegistered() { }

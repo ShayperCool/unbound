@@ -121,8 +121,6 @@ namespace Unbound.Runtime
             Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), Application.Internal_BeforeRender);
             Register(typeof(PL.PostLateUpdate.FinishFrameRendering), () => Time.s_RenderedFrameCount++);
             Register(typeof(PL.PostLateUpdate.TriggerEndOfFrameCallbacks), () => Coroutines.Run(Coroutines.Phase.EndOfFrame));
-            // A requested screenshot holds what the end-of-frame callbacks drew (tests/projects/screencapture).
-            Register(typeof(PL.PostLateUpdate.GUIClearEvents), ScreenCapture.EndFrame);
             Register(typeof(PL.PostLateUpdate.PlayerSendFrameComplete), Destruction.FlushEndOfFrame);
             Register(typeof(PL.PostLateUpdate.InputEndFrame), Input.EndFrame);
         }

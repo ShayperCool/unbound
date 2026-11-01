@@ -111,14 +111,11 @@ namespace UnityEngine
         static readonly int MainTexST = Shader.PropertyToID("_MainTex_ST");
         static readonly Dictionary<int, object> s_Properties = new Dictionary<int, object>();
 
-        /// <summary>Writes the frame's requested screenshot (after the end-of-frame callbacks), which
-        /// ends the frame's drawing.</summary>
-        internal static void EndFrame()
-        {
-            try { WritePending(); }
-            finally { FrameBuilder.InDrawingFrame = false; }
-        }
+        // A requested screenshot holds what the end-of-frame callbacks drew (tests/projects/screencapture).
+        static ScreenCapture() =>
+            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.GUIClearEvents), WritePending);
 
+        /// <summary>Writes the frame's requested screenshot (after the end-of-frame callbacks).</summary>
         static void WritePending()
         {
             if (s_PendingPath == null) return;
