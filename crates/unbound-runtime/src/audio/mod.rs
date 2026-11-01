@@ -581,8 +581,10 @@ mod tests {
         });
         let mut configuration = engine.configuration();
         assert_eq!(configuration.sample_rate, 1000);
+        assert!(engine.capture_start());
         configuration.sample_rate = 2000;
         assert!(engine.reset(configuration));
+        assert!(!engine.capturing.load(Ordering::Acquire));
         assert_eq!(engine.configuration().sample_rate, 2000);
         assert_eq!(engine.dsp_time(), 1.0);
     }
@@ -597,11 +599,13 @@ mod tests {
             })).unwrap();
             engine.mixer().configure_group(spec).unwrap();
             let before = engine.configuration();
+            if !engine.capturing.load(Ordering::Acquire) { assert!(engine.capture_start()); }
             assert!(!engine.reset(AudioConfiguration {
                 sample_rate: i32::MAX as u32,
                 ..before
             }));
             assert_eq!(engine.configuration(), before);
+            assert!(engine.capturing.load(Ordering::Acquire));
         }
         assert!(engine.reset(AudioConfiguration { sample_rate: 44100, ..engine.configuration() }));
         assert_eq!(engine.configuration().sample_rate, 44100);
