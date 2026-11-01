@@ -2537,3 +2537,12 @@ Full attempts, source correction, historical capture hashes and prepared matchin
 ### 2026-11-01: bounded platform resolver correction, focused gates only
 
 Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact40/41-link controls in ff28ada4/227643f9. One private coherent Host/Core/test cycle;64/64 focused, red4 preserved, checker18/protocol4 pass. Real current-source no-stubs API Check0 errors/2314; all33/PDB/source bindings and TestCore equality retained, CLI1b242614/PhysX487d450b reused. One delayed engine exits0, strict machine passes,497/555 with exact84 retained keys and no introduced/resolved keys. Nine raw stack4096 changes versus prior delayed capture, including four numerical worsenings, remain explicit; actual Check CPU overlaps opener delays. Prior1464/1475 exact11 suite is prior-source evidence only. Native pair remains551 corroborated plus four unresolved stack-fixture disagreements. No oracle/stub/ABI/cache change; Root combined disposition pending;48 sphere input bits OPEN,21 zero-life unchanged,305 broad failures. Full receipt: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/platform-acceptance-fixes-20261101-t3-e6d30c4f/HANDOFF.md`.
+
+### 2026-11-01 Root platform integration, partial
+- What: measured application/SystemInfo/profiler facts, EGL identity and guarded session logs; source equals compiled227643f9.
+- Probe:497/555 reference fields;84 union failures retained,18 missing/26 extra/40 different.
+- Introduced:0 normalized leaf failures vs prior f26 and historical Root;9 stack values changed,4 numerical errors worsened and remain open.
+- Managed:64/64 current focused;1464/1475 with11 inherited failures is prior-source evidence only, not a current full-suite result.
+- API:real Check0/2314; checker18/18,protocol4/4,strict machine and actual Check CPU/load overlap pass;33 payloads verified.
+- Native:independent repeats agree,551/555 old-canonical fields;4 stack-fixture disagreements remain, no reference replacement.
+- Open:84 platform failures, filesystem/macOS/TOCTOU limits and current combined full suite; line package remains rejected. Receipt: `~/.cache/unbound/validation/runs/platform-root-integration-20261101b/root-adjudication.json`.
