@@ -59,9 +59,13 @@ def observations(root):
 
 if __name__ == '__main__':
     p = argparse.ArgumentParser()
+    p.add_argument('--release', required=True)
     p.add_argument('--reference', type=Path, required=True)
     p.add_argument('--candidate', type=Path)
     p.add_argument('--report', type=Path, required=True)
     a = p.parse_args()
+    assert header(a.reference)['release'] == a.release
+    if a.candidate is not None:
+        assert header(a.candidate)['release'] == a.release
     result = observations(a.reference) if a.candidate is None else summarize(a.reference, a.candidate)
     a.report.write_text(json.dumps(result, indent=2) + '\n')
