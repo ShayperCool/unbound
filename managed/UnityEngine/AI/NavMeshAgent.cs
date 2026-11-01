@@ -323,7 +323,8 @@ namespace UnityEngine.AI
             {
                 // Unknown off the NavMesh and while crossing a link (measured).
                 if (m_Crowd == null || isOnOffMeshLink) return float.PositiveInfinity;
-                if (m_PathPending || m_Crowd.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID) return 0f;
+                // While a new path is pending, along the path followed so far (measured); none: 0.
+                if (m_Crowd.targetState != DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID) return 0f;
                 if (m_Crowd.ncorners == 0)
                 {
                     // Just off a link (left by a script): measured from where it stands.
