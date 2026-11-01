@@ -1077,6 +1077,18 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     };
     let mip_count = texture.mip_count();
     let dimension = texture.dimension();
+    if dimension == 4 {
+        // The import cache keeps bottom-up rows for CPU reads. Cube sampling addresses
+        // each GPU face top-down, so reverse each face's mip rows only for this upload.
+        for mip in &mut texture.mips {
+            let rows = mip.height as usize;
+            let stride = mip.data.len() / rows;
+            for y in 0..rows / 2 {
+                let (top, bottom) = mip.data.split_at_mut((rows - 1 - y) * stride);
+                top[y * stride..(y + 1) * stride].swap_with_slice(&mut bottom[..stride]);
+            }
+        }
+    }
     // BC7 blocks when the GPU samples them (format 7 sRGB-capable, 8 linear), else RGBA8.
     let (gpu_format, data) = match texture.bc7.take() {
         Some(blocks) if GPU_BC7.load(std::sync::atomic::Ordering::Relaxed) => {
