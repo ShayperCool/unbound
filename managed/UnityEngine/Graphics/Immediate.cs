@@ -390,6 +390,14 @@ namespace UnityEngine
         {
             if (src == null) throw new ArgumentNullException(nameof(src));
             if (dst == null) throw new ArgumentNullException(nameof(dst));
+            // A 3D render texture is a single 2D layer on the GPU (RenderTexture.EnsureCreated):
+            // its slices cannot be copied, and a copy of a missing slice would stop the renderer.
+            if ((src is RenderTexture { dimension: TextureDimension.Tex3D } && srcElement > 0)
+                || (dst is RenderTexture { dimension: TextureDimension.Tex3D } && dstElement > 0))
+            {
+                Debug.LogError($"Graphics.CopyTexture: slices of 3D render textures are not supported by Unbound yet ('{(src is RenderTexture { dimension: TextureDimension.Tex3D } ? src.name : dst.name)}'); nothing is copied.");
+                return;
+            }
             if (src is Texture2D s2 && dst is Texture2D d2 && srcMip == 0 && dstMip == 0)
             {
                 int w = srcWidth < 0 ? s2.width : srcWidth, h = srcHeight < 0 ? s2.height : srcHeight;
