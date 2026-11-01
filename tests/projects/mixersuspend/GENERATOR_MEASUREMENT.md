@@ -19,3 +19,8 @@ terminal `complete` field. Publish one
 canonical profile only after independent Native captures agree exactly. This
 control measures generator activity and wake behavior; it does not certify reset,
 remote output or other callback configurations.
+
+The canonical 48000 Hz profile matches two complete independent Unity
+6000.0.71f1 Editor captures exactly. An attached generator writes silence through
+the quiet interval; a later attachment starts writing the master sink at block
+80. Both emit the tone from block 83. This profile does not certify 44100 Hz.
