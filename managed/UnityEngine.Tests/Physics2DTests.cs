@@ -541,7 +541,10 @@ namespace UnityEngine.Tests
             d = Physics2D.Distance(ca, cb);
             Assert.True(d.isOverlapped);
             Assert.InRange(d.distance, -0.22f, -0.18f);
-            Assert.True(Vector2.Distance(d.pointA - d.pointB, d.normal * d.distance) < 1e-3f);
+            Assert.InRange(d.pointA.x, 0.49f, 0.51f);
+            Assert.InRange(d.pointB.x, 0.28f, 0.32f);
+            Assert.True(d.normal.x > 0.99f);
+            Assert.True(Vector2.Distance(d.pointA - d.pointB, d.normal * Mathf.Abs(d.distance)) < 1e-3f);
 
             var closest = cb.ClosestPoint(new Vector2(5f, 0f));
             Assert.InRange(closest.x, 1.29f, 1.32f);
