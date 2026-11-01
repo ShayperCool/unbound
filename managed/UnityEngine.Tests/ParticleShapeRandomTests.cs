@@ -36,6 +36,25 @@ namespace UnityEngine.Tests
             for (int i = 0; i < expected.Length; i++) Assert.Equal(expected[i].position, actual[i].position);
         }
 
+        [Fact]
+        public void SphereKeepsTheMeasuredFourthPositionAcrossLaterSteps()
+        {
+            var ps = Make();
+            try
+            {
+                var emission = ps.emission; emission.enabled = true; emission.rateOverTime = 40f;
+                // Existing particles reference: random_sphere particle 3, steps 0..4.
+                const float expected = .6186267f;
+                for (int step = 0; step < 5; step++)
+                {
+                    ps.Simulate(.1f, false, step == 0, false);
+                    float actual = Read(ps)[3].position.x;
+                    Assert.InRange(Math.Abs(actual - expected), 0f, .001f + .001f * Math.Max(Math.Abs(expected), Math.Abs(actual)));
+                }
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
         [Theory]
         [InlineData(false)]
         [InlineData(true)]
