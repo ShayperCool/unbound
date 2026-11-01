@@ -11,7 +11,7 @@ namespace UnityEngine
 {
     /// <summary>
     /// Base of the 2D colliders. While active and enabled, a collider adds Box2D shapes (fixtures) to
-    /// the body of the Rigidbody2D it is attached to, or to a static body of its own.
+    /// the body of the Rigidbody2D it is attached to, or to the shared static scene body.
     /// </summary>
     [RequireComponent(typeof(Transform))]
     public partial class Collider2D : Behaviour

@@ -91,6 +91,17 @@ namespace Unbound.Box2D.Dynamics
 
         public Shape Shape { get; private set; }
 
+        internal void ReplaceGeometry(Shape shape)
+        {
+            Debug.Assert(shape.ShapeType == Shape.ShapeType && shape.GetChildCount() == Shape.GetChildCount());
+            Shape = shape.Clone();
+            // Geometry changes clear public points while the touching flag and
+            // contact edges survive until the next collision update.
+            foreach (var edge in Body.ContactEdges)
+                if (edge.Contact.FixtureA == this || edge.Contact.FixtureB == this)
+                    edge.Contact.Manifold.PointCount = 0;
+        }
+
         /// <summary>
         /// the user data that was assigned in the fixture definition. Use this to store your application specific data.
         /// </summary>

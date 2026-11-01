@@ -24,7 +24,7 @@ namespace Unbound.Runtime
     ///
     /// Each simulated Rigidbody2D owns a body; its attached colliders (on its GameObject and on
     /// children without a nearer Rigidbody2D) add their shapes to it in the body's frame. A collider
-    /// without a Rigidbody2D gets a static body of its own at its transform. Transform changes reach
+    /// without a Rigidbody2D adds world-space shapes to the shared static scene body. Transform changes reach
     /// the bodies when transforms are synced: before every simulation step, and before queries when
     /// Physics2D.autoSyncTransforms is set. After a step, moved bodies write their poses back to their
     /// transforms, then the contact callbacks (OnCollision*2D, OnTrigger*2D) are sent.
@@ -39,6 +39,7 @@ namespace Unbound.Runtime
     internal static class Physics2DWorld
     {
         static World s_World;
+        static Body s_StaticBody;
         static bool s_Registered;
         static bool s_StructureDirty;
         static bool s_AttachmentDirty;
@@ -104,6 +105,7 @@ namespace Unbound.Runtime
             s_Listener.Clear();
             s_IgnoredPairs.Clear();
             s_World = null;
+            s_StaticBody = null;
             s_StructureDirty = false;
             s_AttachmentDirty = false;
             s_Removing = s_SilentRemoval = s_Dispatching = s_Stepping = false;
@@ -216,7 +218,6 @@ namespace Unbound.Runtime
             DestroyFixtures(c, removing: true);
             if (c.m_StaticBody != null)
             {
-                s_World.DestroyBody(c.m_StaticBody);
                 c.m_StaticBody = null;
             }
             s_Listener.DispatchRemovals();
@@ -395,7 +396,6 @@ namespace Unbound.Runtime
             {
                 if (c.m_StaticBody != null)
                 {
-                    s_World.DestroyBody(c.m_StaticBody);
                     c.m_StaticBody = null;
                 }
                 body = rb.m_Body;
@@ -404,26 +404,19 @@ namespace Unbound.Runtime
             }
             else
             {
-                PoseOf(transform, out framePosition, out frameAngle);
-                if (c.m_StaticBody == null)
+                // Native keeps unattached collider geometry in world space on
+                // one scene body. Its pose stays at the world origin.
+                framePosition = Vector2.zero;
+                frameAngle = 0f;
+                if (s_StaticBody == null)
                 {
-                    c.m_StaticBody = s_World.CreateBody(new BodyDef
+                    s_StaticBody = s_World.CreateBody(new BodyDef
                     {
                         BodyType = BodyType.StaticBody,
-                        Position = ToB2(framePosition),
-                        Angle = frameAngle,
                         Enabled = true,
-                        UserData = c,
                     });
                 }
-                else
-                {
-                    var oldPose = c.m_StaticBody.GetTransform();
-                    if (oldPose.Position != ToB2(framePosition) || !Mathf.Approximately(oldPose.Rotation.Angle, frameAngle))
-                        c.CaptureSkin();
-                    c.m_StaticBody.SetTransform(ToB2(framePosition), frameAngle);
-                }
-                body = c.m_StaticBody;
+                body = c.m_StaticBody = s_StaticBody;
             }
 
             var matrix = ToBodyMatrix(transform, framePosition, frameAngle);
@@ -465,6 +458,37 @@ namespace Unbound.Runtime
                 // A new shape on a sleeping body must not stay unnoticed.
                 if (c.m_Fixtures.Count > 0 && rb.m_SleepingMode != RigidbodySleepMode2D.StartAsleep) body.IsAwake = true;
             }
+        }
+
+        static bool UpdateStaticGeometry(Collider2D c, Matrix4x4 matrix)
+        {
+            s_ShapeBuffer.Clear();
+            try
+            {
+                c.m_ErrorState = ColliderErrorState2D.None;
+                if (c.m_CompositeOperation != Collider2D.CompositeOperation.None && c.HasComposite()) return false;
+                c.BuildShapes(matrix, s_ShapeBuffer);
+                if (s_ShapeBuffer.Count == 0 || s_ShapeBuffer.Count != c.m_Fixtures.Count) return false;
+                for (int i = 0; i < s_ShapeBuffer.Count; i++)
+                    if (s_ShapeBuffer[i].ShapeType != c.m_Fixtures[i].ShapeType ||
+                        s_ShapeBuffer[i].GetChildCount() != c.m_Fixtures[i].Shape.GetChildCount()) return false;
+                // Static pose changes wake the bodies connected to the scene body.
+                // Controls: tests/projects/solverpairorder/Sources/UnattachedStatics.
+                foreach (var edge in c.m_StaticBody.ContactEdges) edge.Other.IsAwake = true;
+                var broadPhase = s_World.ContactManager.BroadPhase;
+                foreach (var fixture in c.m_Fixtures) fixture.DestroyProxies(broadPhase);
+                for (int i = 0; i < c.m_Fixtures.Count; i++) c.m_Fixtures[i].ReplaceGeometry(s_ShapeBuffer[i]);
+                foreach (var fixture in c.m_Fixtures) fixture.CreateProxies(broadPhase, c.m_StaticBody.GetTransform());
+                c.m_ShapeMatrix = matrix;
+                s_World.HasNewContacts = true;
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogException(e, c);
+                return false;
+            }
+            finally { s_ShapeBuffer.Clear(); }
         }
 
         /// <summary>Contact filtering changed for a collider (layer, ignore pairs): its contacts are
@@ -525,16 +549,11 @@ namespace Unbound.Runtime
                 if (rb == null)
                 {
                     if (c.m_StaticBody == null) { Rebuild(c); continue; }
-                    PoseOf(t, out var position, out var angle);
-                    var matrix = ToBodyMatrix(t, position, angle);
-                    var current = c.m_StaticBody.GetTransform();
-                    bool changedShape = !SameShapeMatrix(matrix, c.m_ShapeMatrix);
-                    bool changedPose = current.Position != ToB2(position) || !Mathf.Approximately(current.Rotation.Angle, angle);
-                    if (changedShape || changedPose)
+                    var matrix = ToBodyMatrix(t, Vector2.zero, 0f);
+                    if (!SameShapeMatrix(matrix, c.m_ShapeMatrix) || matrix.m03 != c.m_ShapeMatrix.m03 || matrix.m13 != c.m_ShapeMatrix.m13)
                     {
                         c.CaptureSkin();
-                        if (changedShape || c is BoxCollider2D box && box.SkinDiffersFromFixtures()) { Rebuild(c); continue; }
-                        c.m_StaticBody.SetTransform(ToB2(position), angle);
+                        if (!UpdateStaticGeometry(c, matrix)) Rebuild(c);
                     }
                 }
                 else if (rb.m_Body != null)
@@ -1073,6 +1092,22 @@ namespace Unbound.Runtime
                     if (!contact.IsTouching || !contact.IsEnabled) continue;
                     if (contact.FixtureA == fixture && contact.FixtureB.UserData == (object)other
                         || contact.FixtureB == fixture && contact.FixtureA.UserData == (object)other) return true;
+                }
+            }
+            return false;
+        }
+
+        internal static bool HasContactPoints(Collider2D self, Collider2D other)
+        {
+            foreach (var fixture in self.m_Fixtures)
+            {
+                if (fixture.Body == null) continue;
+                foreach (var edge in fixture.Body.ContactEdges)
+                {
+                    var contact = edge.Contact;
+                    if (!contact.IsTouching || contact.Manifold.PointCount == 0) continue;
+                    if (contact.FixtureA == fixture && contact.FixtureB.UserData == (object)other ||
+                        contact.FixtureB == fixture && contact.FixtureA.UserData == (object)other) return true;
                 }
             }
             return false;

@@ -433,6 +433,7 @@ namespace UnityEngine
                 {
                     var other = ReferenceEquals(pair.A, self) ? pair.B : pair.A;
                     if (!PairPasses(pair, self, filter) || result.Contains(other)) continue;
+                    if (!pair.IsTrigger && !W.HasContactPoints(self, other)) continue;
                     result.Add(other);
                 }
             return result;
