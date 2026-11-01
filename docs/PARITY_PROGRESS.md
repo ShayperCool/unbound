@@ -1920,7 +1920,14 @@ Validation:
     does not converge on these poses (the angle stays near 0.6495 degree on HumanA and 0.1683 on
     HumanB, changing by about 1e-5 per iteration) and stops when the angle grows, which float
     noise decides; every differing value is a whole number of iteration steps (0.0036 on HumanA,
-    0.00093 on HumanB) and the two muscles' sum matches.
+    0.00093 on HumanB) and the two muscles' sum matches. Recomputing each readback with the
+    forearm alignment forced to k iterations reproduces the Editor's values at every HumanA step
+    with one k between 1 and 4 and no pattern, while the angle the stop rule compares changes by
+    1e-6 to 3e-5 degree per iteration: the count follows the last bits of the IK pose, whose
+    transforms differ from the Editor's by tens of ULPs (as in plain playback). Which steps differ
+    therefore changes with any change to the arithmetic before the readback (86, 80 and 72 values
+    on three successive runtimes, each with steps resolved and others introduced); matching them
+    needs bit-identical arithmetic from the IK solve to the readback, not a local correction.
   On the previous reference's records alone: 120578/120650.
 - animator 2236/2236, animatoradditive 1100/1100 (13200/13200 values), bundle animation 8/8;
   modelimport Gamma and Linear 6032/6033, URP 7011/7687 as before. Managed animation tests (32)
