@@ -372,6 +372,13 @@ LightmapSettings:
         [Fact]
         public void SingleLoadKeepsTheOutgoingSceneActiveThroughSceneUnloaded()
         {
+            // SceneSettings.Apply reads the LightmapSettings document and clears these globals.
+            // Keep the lighting state that belonged to the surrounding test process.
+            var bakedProbe = RenderSettings.s_BakedProbe;
+            var environmentProbe = RenderSettings.s_EnvironmentProbe;
+            var bakedReflectionField = typeof(RenderSettings).GetField("s_BakedReflection",
+                System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            var bakedReflection = bakedReflectionField.GetValue(null);
             var events = new List<string>();
             var scenes = new Scenes();
             SceneData mainScene = null;
@@ -431,8 +438,17 @@ LightmapSettings:
                 LightProbes.lightProbesUpdated -= updated;
                 SceneManager.activeSceneChanged -= changed;
                 SceneManager.sceneUnloaded -= unloaded;
-                LightmapSettings.Reset();
-                scenes.Dispose();
+                try
+                {
+                    LightmapSettings.Reset();
+                    scenes.Dispose();
+                }
+                finally
+                {
+                    RenderSettings.s_BakedProbe = bakedProbe;
+                    RenderSettings.s_EnvironmentProbe = environmentProbe;
+                    bakedReflectionField.SetValue(null, bakedReflection);
+                }
             }
         }
 
