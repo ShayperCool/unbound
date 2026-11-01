@@ -101,6 +101,9 @@ pub mod handle {
     pub const DEPTH_ELEMENT: u64 = 1 << 62;
     /// The bits no allocated handle uses.
     pub const RESERVED: u64 = 3 << 62;
+    /// The largest plain handle. Textures the renderer makes itself (`GrabPass` textures) count
+    /// down from it, clear of the element bits and of the "no texture" `u64::MAX`.
+    pub const PLAIN_MAX: u64 = !RESERVED;
 
     /// A handle with no element bits (`what` names its use in the error).
     pub fn plain(h: u64, what: &str) -> Result<u64, String> {

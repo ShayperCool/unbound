@@ -2355,7 +2355,7 @@ impl UnityRenderer {
             wgpu::TextureFormat::Rg11b10Ufloat => 4,
             _ => 0,
         };
-        let next = u64::MAX - self.grabs.len() as u64;
+        let next = handle::PLAIN_MAX - self.grabs.len() as u64;
         let handle = *self.grabs.entry(name.to_string()).or_insert(next);
         let fits = self.textures.get(&handle).is_some_and(|t| {
             t.width == width

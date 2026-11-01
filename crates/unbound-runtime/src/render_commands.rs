@@ -1038,5 +1038,9 @@ mod tests {
         );
         assert_eq!(handle::split(depth), (7, true));
         assert_eq!(handle::split(7), (7, false));
+        // The renderer's own textures keep their handles through a sampled binding.
+        let grab = handle::PLAIN_MAX - 3;
+        assert_eq!(handle::split(grab), (grab, false));
+        assert_eq!(handle::sampled(grab, "grab"), Ok(grab));
     }
 }

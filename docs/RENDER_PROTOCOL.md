@@ -18,7 +18,8 @@ knows the asset pipeline and its cache.
 
 ### Render protocol 6: texture handle element bits (NativeApi 13)
 
-Allocated handles never set bits 62 and 63 (`render_protocol::handle::RESERVED`, `3 << 62`).
+Allocated handles never set bits 62 and 63 (`render_protocol::handle::RESERVED`, `3 << 62`);
+the renderer's own textures (`GrabPass`) count down from `handle::PLAIN_MAX` (`!RESERVED`).
 A **sampled binding** may set bit 62, `DEPTH_ELEMENT` (`1 << 62`): the render texture's depth
 buffer, sampled as `(d, 0, 0, 1)` (`RenderTextureSubElement.Depth`). Sampled bindings are a
 material's texture property (`update_material`), a draw's per-draw texture property (`Draw`) and a
