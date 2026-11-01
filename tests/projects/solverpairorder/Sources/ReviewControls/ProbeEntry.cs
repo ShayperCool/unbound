@@ -30,6 +30,12 @@ public static class ProbeEntry
         foreach (bool callbacks in new[] { false, true })
         foreach (bool enter in new[] { false, true })
             CallbackRemoval(trigger, callbacks, enter);
+        // Append boundary cases after the existing controls so their allocation
+        // and callback history remains part of the original measurement.
+        foreach (bool horizontal in new[] { false, true })
+        foreach (float angle in new[] { 0f, 23f, 90f })
+        foreach (Vector2 offset in new[] { new Vector2(0, 2), new Vector2(0, 3), Vector2.zero })
+            CapsuleTips(horizontal, angle, offset);
         File.WriteAllText(output, ProbeLog.Json());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
