@@ -2423,5 +2423,7 @@ API preflight reused: 0/2301 errors/types; only the ten Core RequestAsync stubs 
 InstantiateAsync 731/777, retained 46 missing/46 extra; CullingGroup 1147/1149, retained 2/3.
 Module compile 7/7, Play and Edit-to-Play 8/8; five assembly-identity/transition checks pass.
 CLI fixture expectation corrected to measured ARGB32 and passed; no runtime-source changes.
-GPU Awaitable replay and final Root acceptance remain pending; no new Native captures.
-Full reports/manifests: `~/.cache/unbound/validation/runs/integrated-root-validation-20261101-t3-6df242fc/`.
+GPU: Awaitable 225/225, buffers 389/389, review controls 15/15; all timing gates pass.
+RT 1071/1071 and 368/368 images; twelve GPU jobs introduce no regressions; all 33 files unchanged.
+Existing async/culling, screenshot and texture residuals remain; no full-parity claim or new Native capture.
+Reports/manifests: `~/.cache/unbound/validation/runs/{integrated-root-validation-20261101-t3-6df242fc,matching-root-gpu-20261101-t3-c0b643d0}/`.
