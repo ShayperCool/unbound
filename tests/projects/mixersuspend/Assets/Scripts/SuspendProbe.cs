@@ -26,23 +26,6 @@ public class SuspendProbe : MonoBehaviour
     BinaryWriter listener;
     bool captured;
     public void RecordListener(float[] values) { if (listener != null) foreach (float x in values) listener.Write(x); }
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Bootstrap()
-    {
-        if (!Engine) return;
-        foreach (var old in UnityEngine.Object.FindObjectsOfType<SuspendProbe>()) DestroyImmediate(old.gameObject);
-        var probe = new GameObject("SuspendProbe").AddComponent<SuspendProbe>();
-        try { var run = probe.Capture(); while (run.MoveNext()) {} }
-        catch (Exception e) { Debug.LogException(e); Application.Quit(1); }
-    }
-    void Flush()
-    {
-        if (!Engine) return;
-        var assembly = Type.GetType("Unbound.Runtime.AudioBackend, UnityEngine.CoreModule", true).Assembly;
-        typeof(Time).GetField("s_RealDeltaTime", F).SetValue(null, 0.0);
-        typeof(Time).GetField("s_DeltaTime", F).SetValue(null, 0f);
-        assembly.GetType("Unbound.Runtime.AudioSystem").GetMethod("Update", F).Invoke(null, null);
-    }
     System.Collections.IEnumerator Start()
     {
         var run = Capture();
@@ -120,36 +103,35 @@ public class SuspendProbe : MonoBehaviour
             var sink = new NativeArray<float>(2048,Allocator.Persistent); sinks.Add(sink);
             var buffer = new NativeArray<float>(2048,Allocator.Persistent);
             var addSink = typeof(AudioRenderer).GetMethod("AddMixerGroupSink",F);
-            source.Play(); Flush();
+            source.Play();
             using (var lw = new BinaryWriter(File.Create(Path.Combine(output,key+".listener.f32"))))
             using (var mw = new BinaryWriter(File.Create(Path.Combine(output,key+".master.f32"))))
             using (var pw = new BinaryWriter(File.Create(Path.Combine(output,key+".f32")))) {
                 listener=lw;
                 for (int block=0;block<Blocks;block++) {
-                    if (!Engine && (key != "burst" || block == 0)) yield return null;
+                    if (key != "burst" || block == 0) yield return null;
                     if (block == 8 && key == "wall_gap") System.Threading.Thread.Sleep(2500);
-                    if (block == 8 && key == "update_gap") for (int i=0;i<160;i++) { if (!Engine) yield return null; Flush(); }
+                    if (block == 8 && key == "update_gap") for (int i=0;i<160;i++) { yield return null; }
                     if (block == 384) {
                         if (key == "wake_voice") source.Play();
                         if (Hold(key)) other.Play();
                         if (key == "wake_snapshot") mixer.FindSnapshot("Other").TransitionTo(0);
                         if (key == "reset") { if(!AudioSettings.Reset(config)) throw new Exception("Reset failed"); if(!AudioRenderer.Start()) throw new Exception("Renderer restart failed"); source.Play(); }
-                        if (key == "disable") { source.enabled=false; Flush(); source.enabled=true; source.Play(); }
+                        if (key == "disable") { source.enabled=false; source.enabled=true; source.Play(); }
                         if (key == "wake_gain" && !mixer.SetFloat("Gain",-6)) throw new Exception("SetFloat failed");
                         if (key == "wake_wet" && !mixer.SetFloat("Wet",0.5f)) throw new Exception("SetFloat failed");
-                        Flush();
+                       
                     }
                     if (!(bool)addSink.Invoke(null,new object[]{master,sink,false})) throw new Exception("Sink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("Render failed");
                     for(int i=0;i<buffer.Length;i++) { pw.Write(buffer[i]); mw.Write(sink[i]); }
-                    if(key!="burst") Flush();
                 }
                 listener=null;
             }
             foreach (string suffix in new[]{"",".master",".listener"})
                 records.Add("\""+key+suffix+"\":{\"file\":\""+key+suffix+".f32\",\"frames\":"+(suffix==".listener" ? new FileInfo(Path.Combine(output,key+suffix+".f32")).Length/8 : Blocks*1024)+",\"channels\":2}");
             Debug.Log("Completed "+key+" elapsed_ms="+elapsed.ElapsedMilliseconds);
-            if(!mixer.SetFloat("Wet",0)) throw new Exception("Tail cleanup failed"); Flush();
+            if(!mixer.SetFloat("Wet",0)) throw new Exception("Tail cleanup failed");
             Save(); buffer.Dispose(); source.Stop(); DestroyImmediate(go); DestroyImmediate(clip); if(sustained) DestroyImmediate(sustained);
         }
         AudioRenderer.Stop(); foreach(var sink in sinks) sink.Dispose(); Save(); Exit(0);

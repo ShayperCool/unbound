@@ -59,6 +59,12 @@ transitions are unmeasured. This fixture does not establish full audio parity.
 
 ## Reproduce
 
+The primary fixture runs its coroutine through the production player loop on both
+Native and engine. One yield gives one audio update; burst rendering gives none
+between renders. The engine does not inject additional AudioSystem.Update calls
+between a public Play request and Render. This control sequence is part of the
+measurement, including wake requests made between audio updates.
+
 Both runners wrap only their child Editor or engine in the current installed
 `~/.cache/compat/with-heavy-job`. Do not wrap either runner again. Native authoring
 and capture use separate Editor processes so the capture reloads the saved assets.
