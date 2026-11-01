@@ -1131,8 +1131,12 @@ namespace Unbound.Runtime
                 ResolveIntermediate();
                 if (screenStandIn != null)
                 {
+                    // Presenting the stand-in is a copy, not a draw: GL.wireframe leaves it alone.
                     RenderTexture.ScreenStandIn = previousStandIn;
+                    bool wireframe = GL.wireframe;
+                    if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
                     Graphics.Blit(screenStandIn, (RenderTexture)null);
+                    if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, true);
                 }
                 // What the player loop rendered is the next render's previous view (measured:
                 // Camera.Render leaves it).
