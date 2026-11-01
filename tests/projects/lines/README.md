@@ -79,3 +79,10 @@ byte-identical) and the runner from before `editor_runner`. The ported runner
 was validated with `py_compile`, `--dry-run`, `check` and `publish` on those
 saved captures and a publish refusal on an altered copy. No live capture has
 used it yet.
+
+The sixteen `blend.*` records were appended with `run.py publish --append blend.` from the
+first live pair through `editor_runner` (label `lines-blend-20261101b`, cases committed in
+002b7f76 before the capture): both repeats exited with 0 on the NVIDIA GeForce RTX 4060 after
+`Cleanup mono` (36.8 s each), were complete (1869 records), byte-identical in `values.jsonl`
+and all nine images, and reproduced all 1853 existing records and the nine images byte for
+byte. The existing bytes of `values.jsonl` are unchanged; the new records follow them.
