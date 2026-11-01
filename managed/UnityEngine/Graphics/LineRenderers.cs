@@ -847,7 +847,10 @@ namespace UnityEngine
         readonly List<Point> m_Points = new List<Point>();
         Vector3 m_LastPosition;
         bool m_HasLastPosition;
+        /// <summary>Ageing has seen points since the last automatic destruction request.</summary>
         bool m_HadPoints;
+        /// <summary>An automatic destruction request is queued and not yet drained.</summary>
+        internal bool m_AutodestructRequested;
         readonly LineStrip m_Strip = new LineStrip();
         readonly List<Vector3> m_Draw = new List<Vector3>();
         readonly List<bool> m_DrawHidden = new List<bool>();
@@ -894,7 +897,7 @@ namespace UnityEngine
 
         /// <summary>Records the object's movement since the trail last looked; a move also drops
         /// the points that have outlived the trail's time (measured: a moving trail ages when
-        /// it is read, a still one once a frame).</summary>
+        /// it is read, a still one when a camera's render collects it).</summary>
         void TrackMovement()
         {
             if (m_GameObject == null) return;
@@ -915,26 +918,34 @@ namespace UnityEngine
         }
 
         /// <summary>Drops the oldest point while the next one is older than <see cref="time"/>,
-        /// and a last point that is.</summary>
+        /// and a last point that is. Points that remain set the latch an automatic destruction
+        /// request needs. Movement and bounds ageing only age: they never request.</summary>
         void Age(float now)
         {
             int expired = 0;
             while (m_Points.Count - expired >= 2 && now - m_Points[expired + 1].Time > m_Time) expired++;
             if (expired > 0) m_Points.RemoveRange(0, expired);
             if (m_Points.Count == 1 && now - m_Points[0].Time > m_Time) m_Points.Clear();
+            if (m_Points.Count > 0) m_HadPoints = true;
         }
 
-        /// <summary>Once a frame, before rendering: movement, ageing and autodestruction.</summary>
-        internal void UpdateTrail()
+        /// <summary>Once a frame, before rendering: the object's movement (which may age).</summary>
+        internal void UpdateTrail() => TrackMovement();
+
+        /// <summary>A camera's render collecting the trail, before its empty check: ages at the
+        /// render's time and, when that leaves a trail that had points empty, requests its
+        /// object's automatic destruction once. Native does this in the trail's culling callback
+        /// and queues a delayed call that only the next fixed or dynamic delayed-callback update
+        /// runs (not the end of the frame); the object stays alive and not pending until then
+        /// (tests/projects/lines/TRAIL_AUTODESTRUCT_NATIVE.md).</summary>
+        internal void AgeForRender()
         {
             TrackMovement();
             Age(Now);
-            if (m_Points.Count > 0) m_HadPoints = true;
-            else if (m_HadPoints && m_Autodestruct && Application.isPlaying)
-            {
-                m_HadPoints = false;
-                Destroy(m_GameObject);
-            }
+            if (m_Points.Count > 0 || !m_HadPoints || !m_Autodestruct || !Application.isPlaying) return;
+            if (m_AutodestructRequested || m_GameObject == null) return;
+            m_HadPoints = false;
+            TrailSystem.RequestAutodestruct(this);
         }
 
         /// <summary>The strip's points from the object (head) to the oldest point.</summary>
@@ -1106,6 +1117,7 @@ namespace UnityEngine
 
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
+            AgeForRender();
             if (!m_Strip.Build(DrawPoints(), m_DrawHidden, false, m_Parameters, LineDrawing.Facing(m_Parameters, camera.Position, camera.Forward))) return;
             var mesh = LineDrawing.MeshFor(m_Meshes, camera.Camera, "TrailRenderer");
             m_Strip.WriteTo(mesh, Matrix4x4.identity);
@@ -1159,21 +1171,56 @@ namespace UnityEngine
             m_Emitting = s.m_Emitting;
         }
 
-        /// <summary>The enabled trails, updated once a frame before rendering.</summary>
+        /// <summary>The enabled trails, updated once a frame before rendering, and the queue of
+        /// their automatic destruction requests.</summary>
         static class TrailSystem
         {
             static readonly List<TrailRenderer> s_Trails = new List<TrailRenderer>();
             static readonly List<TrailRenderer> s_Snapshot = new List<TrailRenderer>();
+            static readonly List<(TrailRenderer Trail, GameObject Target)> s_Requests = new List<(TrailRenderer, GameObject)>();
             static bool s_Registered;
+
+            static void EnsureRegistered()
+            {
+                if (s_Registered) return;
+                s_Registered = true;
+                PlayerLoopDriver.Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), UpdateAll);
+                // Native queues the request as a delayed call due 100 seconds before the clocks,
+                // so the delayed-callback updates of fixed and dynamic delayed calls run it before
+                // their other delayed work (coroutines); the end-of-frame update does not run it.
+                PlayerLoopDriver.RegisterFirst(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), DrainAutodestruct);
+                PlayerLoopDriver.RegisterFirst(typeof(PL.Update.ScriptRunDelayedDynamicFrameRate), DrainAutodestruct);
+                PlayerLoopDriver.RegisterFirst(typeof(PL.PostLateUpdate.ScriptRunDelayedDynamicFrameRate), DrainAutodestruct);
+            }
 
             internal static void Add(TrailRenderer trail)
             {
-                if (!s_Registered)
-                {
-                    s_Registered = true;
-                    PlayerLoopDriver.Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), UpdateAll);
-                }
+                EnsureRegistered();
                 if (!s_Trails.Contains(trail)) s_Trails.Add(trail);
+            }
+
+            /// <summary>Queues the trail's object for destruction at the next drain. The object
+            /// stays alive and is not pending destruction until then.</summary>
+            internal static void RequestAutodestruct(TrailRenderer trail)
+            {
+                EnsureRegistered();
+                trail.m_AutodestructRequested = true;
+                s_Requests.Add((trail, trail.m_GameObject));
+            }
+
+            /// <summary>Destroys the objects of the requests queued before this drain started;
+            /// requests made while it runs wait for the next one. The request already decided
+            /// the destruction: the drain neither re-checks expiry nor needs the trail enabled.</summary>
+            static void DrainAutodestruct()
+            {
+                if (s_Requests.Count == 0) return;
+                var batch = s_Requests.ToArray();
+                s_Requests.Clear();
+                foreach (var (trail, target) in batch)
+                {
+                    trail.m_AutodestructRequested = false;
+                    if (target != null) DestroyImmediate(target);
+                }
             }
 
             internal static void Remove(TrailRenderer trail) => s_Trails.Remove(trail);

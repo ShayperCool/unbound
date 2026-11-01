@@ -121,10 +121,13 @@ namespace UnityEngine.Tests
             Frame(0.1f);
             Assert.Equal(5, trail.positionCount);
             Assert.Equal(new Vector3(0f, 0f, 0f), trail.GetPosition(0));
-            // Points age in the per-frame update: after the trail's time they are all gone.
+            // A still trail ages when a camera's render collects it, not in the per-frame
+            // movement update: after the trail's time they are all gone.
             Frame(2f);
             Assert.Equal(5, trail.positionCount);
             trail.UpdateTrail();
+            Assert.Equal(5, trail.positionCount);
+            trail.AgeForRender();
             Assert.Equal(0, trail.positionCount);
             go.transform.position = new Vector3(6f, 0f, 0f);
             Assert.Equal(2, trail.positionCount);
@@ -161,7 +164,7 @@ namespace UnityEngine.Tests
             foreach (float step in new[] { 1.13f, 0.41f, 5f })
             {
                 Frame(step);
-                trail.UpdateTrail();
+                trail.AgeForRender();
                 float now = Time.time;
                 while (positions.Count >= 2 && now - times[1] > 1f)
                 {
