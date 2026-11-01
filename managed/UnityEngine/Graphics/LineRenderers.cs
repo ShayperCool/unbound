@@ -857,7 +857,7 @@ namespace UnityEngine
         }
 
         /// <summary>Once a frame, before rendering: movement, ageing and autodestruction.</summary>
-        void UpdateTrail()
+        internal void UpdateTrail()
         {
             TrackMovement();
             float now = Now;
