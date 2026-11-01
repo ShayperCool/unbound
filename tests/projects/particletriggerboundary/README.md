@@ -68,3 +68,50 @@ particle trigger test at these values. It does not identify the exact internal
 arithmetic, effective radius or general rule for other geometry. No radius
 margin, snapping, shape rewrite, phase change or lifetime patch is supported by
 this bounded control alone. Physical actor/query poses remain separate concerns.
+
+The canonical reference also includes one bounded arithmetic discriminator,
+bringing the total to 565 rows. Its original 55 rows are byte-identical. Six
+collider-radius/particle-size pairs are `.5/.4`, `.25/.2`, `1/.8`, `.2/1`,
+`.6/.2`, and `.5/0`. The first three scale the same geometry; the next two change
+the radius split at the original summed radius; the last removes particle size.
+Each uses axial `[0,0,1]` and diagonal `[.6,0,.8]` directions with relative
+separations `-.001`, `0`, `2^-22`, `.00001`, `.0001`, `.001`, and `.05` from
+the summed-radius boundary. All 84 configurations have stationary Ignore/Kill
+twins and positive life. Inputs record ordinary scalar float predicates before
+simulation. The separations were fixed before either Native capture.
+
+Both independent Native captures agree byte for byte. Every tested diagonal
+retains its particle, including radius `.5`, zero particle size and distance
+`.525`. Every axial case at relative separation `.0001` is removed. At radius
+`.5`/size `.4`, axial distance `.700006962` survives and `.700069964` is removed.
+At radius `1`/size `.8`, the corresponding relative `.00001` case is removed.
+This rejects a simple spherical-distance interpretation across these directions.
+It does not establish the complete geometry or its internal arithmetic.
+
+Run the recorded predicate analysis without a new capture:
+
+```sh
+python3 tests/projects/particletriggerboundary/analyze.py --unity-version 6000.0.71f1 \
+  --output "$work/arithmetic-native.json"
+```
+
+Of the 84 Native classifications, squared summed-radius distance disagrees on
+47, scalar distance on 41, analytic radial projection on 45, collider-normalized
+squared distance on 46, public closest-point distance on 43, and expanded AABB
+on 11. The analysis retains every case, predicate disagreement, input, geometry,
+before/after state and Ignore twin. An expanded AABB alone is also insufficient.
+No fitted margin, approximate reciprocal, snapping or bit condition is justified.
+
+The accepted replay has 42 new retention disagreements, plus the original six.
+The complete unchanged-tolerance union has 356 passing and 209 failing rows,
+695 differing values, and no missing or extra recording keys. This includes
+pre-simulation position-bit and public-query differences. The constructed new
+positions differ by up to two float32 ULPs between runtimes in 40 of 84 distinct
+configurations, which limits near-boundary cross-runtime attribution. The raw
+observations and all such failures are retained rather than masked. The large
+diagonal discrepancy is independently repeated in Native and exceeds this drift.
+
+This pair did not establish a general replacement predicate. No runtime edit,
+runtime build, further Native discriminator, broad gate, or installation of the
+unaccepted 3D pose change followed it. The original 402-row control union remains
+separate evidence. In particular, no resolution of its 20 introductions is claimed.
