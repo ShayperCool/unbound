@@ -24,6 +24,10 @@ scripts use --kind build, CPU tools --kind tool. Do not nest leases. Never write
 to another owner's target or frozen runtime. Background long commands, do useful
 independent work, then use completion events/waits. No sleep/status polling by
 the agent. Use tests/editor_runner.py for new or migrated Native runners.
+Keep build intermediates and outputs private: give each build its own
+CARGO_TARGET_DIR in the environment and no shared CARGO_BUILD_BUILD_DIR (see README,
+Build isolation). Unchanged native source does not mean identical bytes; reuse
+follows the actual artifact hashes.
 
 Do not open another feature when three deliveries already await integration.
 Free workers help review or prepare the existing batch. Do not delegate again
