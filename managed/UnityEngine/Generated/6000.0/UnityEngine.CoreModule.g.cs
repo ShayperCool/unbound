@@ -1077,50 +1077,14 @@ namespace UnityEngine
         [global::Unbound.Stub] public void CopyPixels(global::UnityEngine.Texture src, int srcElement, int srcMip, int dstElement, int dstMip) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CubemapArray.CopyPixels"); }
         [global::Unbound.Stub] public void CopyPixels(global::UnityEngine.Texture src, int srcElement, int srcMip, int srcX, int srcY, int srcWidth, int srcHeight, int dstElement, int dstMip, int dstX, int dstY) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CubemapArray.CopyPixels"); }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class CullingGroup : global::System.IDisposable
+    unsafe partial class CullingGroup
     {
         [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
-        [global::Unbound.Stub] public CullingGroup() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.ctor"); }
-        [global::Unbound.Stub] public void Dispose() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.Dispose"); }
-        [global::Unbound.Stub] public void SetBoundingSpheres(global::UnityEngine.BoundingSphere[] array) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.SetBoundingSpheres"); }
-        [global::Unbound.Stub] public void SetBoundingSphereCount(int count) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.SetBoundingSphereCount"); }
-        [global::Unbound.Stub] public void EraseSwapBack(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.EraseSwapBack"); }
-        [global::Unbound.Stub] public static void EraseSwapBack<T>(int index, T[] myArray, ref int size) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.EraseSwapBack"); }
-        [global::Unbound.Stub] public int QueryIndices(bool visible, int[] result, int firstIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.QueryIndices"); return default; }
-        [global::Unbound.Stub] public int QueryIndices(int distanceIndex, int[] result, int firstIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.QueryIndices"); return default; }
-        [global::Unbound.Stub] public int QueryIndices(bool visible, int distanceIndex, int[] result, int firstIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.QueryIndices"); return default; }
-        [global::Unbound.Stub] public bool IsVisible(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.IsVisible"); return default; }
-        [global::Unbound.Stub] public int GetDistance(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.GetDistance"); return default; }
-        [global::Unbound.Stub] public void SetBoundingDistances(float[] distances) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.SetBoundingDistances"); }
-        [global::Unbound.Stub] public void SetDistanceReferencePoint(global::UnityEngine.Vector3 point) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.SetDistanceReferencePoint"); }
-        [global::Unbound.Stub] public void SetDistanceReferencePoint(global::UnityEngine.Transform transform) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.SetDistanceReferencePoint"); }
-        public global::UnityEngine.CullingGroup.StateChanged onStateChanged { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.onStateChanged"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.onStateChanged"); } }
-        public bool enabled { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.enabled"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.enabled"); } }
-        public global::UnityEngine.Camera targetCamera { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.targetCamera"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.targetCamera"); } }
-        public unsafe delegate void StateChanged(global::UnityEngine.CullingGroupEvent sphere);
         [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.CullingGroup cullingGroup) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroup.BindingsMarshaller.ConvertToNative"); return default; }
         }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct CullingGroupEvent
-    {
-        public int index { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroupEvent.index"); return default; } }
-        public bool isVisible { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroupEvent.isVisible"); return default; } }
-        public bool wasVisible { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroupEvent.wasVisible"); return default; } }
-        public bool hasBecomeVisible { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroupEvent.hasBecomeVisible"); return default; } }
-        public bool hasBecomeInvisible { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroupEvent.hasBecomeInvisible"); return default; } }
-        public int currentDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroupEvent.currentDistance"); return default; } }
-        public int previousDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CullingGroupEvent.previousDistance"); return default; } }
-    }
-    internal enum CullingQueryOptions
-    {
-        Normal = 0,
-        IgnoreVisibility = 1,
-        IgnoreDistance = 2,
     }
     [global::Unbound.Stub]
     public unsafe sealed partial class CustomRenderTexture : global::UnityEngine.RenderTexture
