@@ -452,6 +452,24 @@ namespace UnityEngine
             if (s_Scenes.RemoveAll(s => s.Scene == scene) > 0) needsRetetrahedralization?.Invoke();
         }
 
+        /// <summary>
+        /// A SceneManager Single load replaces the loaded scenes, before the first of them is
+        /// unloaded: their probes leave the loaded set without needsRetetrahedralization, and the
+        /// current probes, when they are one of those scenes' own, lose their combined set
+        /// (count and cellCount 0) but keep their own (countSelf, cellCountSelf), already during
+        /// the outgoing sceneUnloaded. The incoming scene's probes then become the current ones
+        /// as its lighting data is read, before activeSceneChanged, again without an event
+        /// (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference lifecycle.jsonl,
+        /// branch t3/light-probes-lifecycle-2, commit f8516528; one outgoing scene). With several
+        /// outgoing scenes the same reset is applied once for all of them: inferred, not measured.
+        /// </summary>
+        internal static void SingleLoadReplacing()
+        {
+            var current = LightmapSettings.lightProbes;
+            if (current != null && s_Scenes.Exists(s => s.Probes == current)) current.m_Set = ProbeSet.Empty;
+            s_Scenes.Clear();
+        }
+
         /// <summary>The current probes take those of every loaded scene: a scene's own baked cells
         /// when it is the only one, else all probes tetrahedralized together.</summary>
         static void Retetrahedralize()

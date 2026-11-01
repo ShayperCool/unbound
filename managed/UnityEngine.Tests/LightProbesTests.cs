@@ -241,6 +241,118 @@ namespace Unbound.Tests
             }
         }
 
+        /// <summary>
+        /// A SceneManager Single load replacing one scene, as Unity 6000.0.71f1 does it
+        /// (tests/projects/lightprobes Reference lifecycle.jsonl, seq 20-24): no
+        /// needsRetetrahedralization; at the outgoing sceneUnloaded the global probes (the outgoing
+        /// scene's own) have lost their combined set (count and cellCount 0) but keep their own
+        /// counts, and the incoming scene, created but not loaded, has no shared probes; the
+        /// outgoing scene is forgotten after. The incoming scene's lighting data then resets the set
+        /// (RenderSettings.ReadLightingData for a first scene) and its probes become global, without
+        /// an event. That this precedes activeSceneChanged follows from SceneManagerInternal.Perform
+        /// reading the scene (SceneLoader.LoadInto) before raising it; this unit test does not load
+        /// a scene file. Several outgoing scenes are not measured and not tested.
+        /// </summary>
+        [Fact]
+        public void SingleLoadClearsTheCombinedSetBeforeSceneUnloadedWithoutNeeds()
+        {
+            var events = new List<string>();
+            var scenes = new Scenes();
+            SceneData mainScene = null, extraScene = null;
+            LightProbes main = null;
+            Action need = () => events.Add("needs");
+            Action done = () => events.Add("done");
+            Action updated = () => events.Add("updated");
+            UnityEngine.Events.UnityAction<Scene> unloaded = s => events.Add(
+                $"sceneUnloaded {s.name}: {State(mainScene, main)} | incoming {State(extraScene, null)}");
+            try
+            {
+                LightmapSettings.Reset();
+                mainScene = scenes.Loaded("Main");
+                main = Tetrahedralized(MainBox, 1f);
+                int mainCells = main.cellCountSelf;
+                LightProbes.SceneLoaded(mainScene.Handle.Value, main);
+                LightProbes.Tetrahedralize();
+                Assert.Equal($"global 8 8 {mainCells} {mainCells} | valid True loaded True shared own", State(mainScene, main));
+
+                // LoadScene("Extra", Single) has returned: the scene exists, not loaded, without probes.
+                extraScene = scenes.Loading("Extra");
+                Assert.Null(LightProbes.GetSharedLightProbesForScene(new Scene(extraScene.Handle)));
+
+                LightProbes.needsRetetrahedralization += need;
+                LightProbes.tetrahedralizationCompleted += done;
+                LightProbes.lightProbesUpdated += updated;
+                SceneManager.sceneUnloaded += unloaded;
+                SceneManagerInternal.UnloadForSingleLoad(extraScene, sceneManagerLoad: true);
+
+                Assert.Equal(new[]
+                {
+                    $"sceneUnloaded Main: global 0 8 0 {mainCells} | valid True loaded False shared own"
+                        + " | incoming global 0 8 0 " + mainCells + " | valid True loaded False shared null",
+                }, events);
+                Assert.False(new Scene(mainScene.Handle).IsValid());
+                Assert.Null(LightProbes.GetSharedLightProbesForScene(new Scene(mainScene.Handle)));
+
+                // The incoming scene's lighting data: a first scene's resets the set, its probes
+                // become the global ones.
+                var extra = Tetrahedralized(Box, 2f);
+                LightmapSettings.Reset();
+                LightProbes.SceneLoaded(extraScene.Handle.Value, extra);
+                Assert.Same(extra, LightmapSettings.lightProbes);
+                Assert.Equal($"global 8 8 {extra.cellCountSelf} {extra.cellCountSelf} | valid True loaded False shared own", State(extraScene, extra));
+                Assert.Single(events);
+
+                // An explicit Tetrahedralize keeps the incoming scene's own set.
+                LightProbes.Tetrahedralize();
+                Assert.Equal(new[] { "done" }, events.Skip(1));
+                Assert.Equal(8, extra.count);
+                Assert.Equal(extra.cellCountSelf, extra.cellCount);
+            }
+            finally
+            {
+                LightProbes.needsRetetrahedralization -= need;
+                LightProbes.tetrahedralizationCompleted -= done;
+                LightProbes.lightProbesUpdated -= updated;
+                SceneManager.sceneUnloaded -= unloaded;
+                LightmapSettings.Reset();
+                scenes.Dispose();
+            }
+        }
+
+        /// <summary>Single loads that are not SceneManager loads (the Editor's OpenScene, Play
+        /// mode entry, AssetBundle scenes) keep Unbound's per-scene unload: needsRetetrahedralization
+        /// and the set kept. Unity's behaviour there is not measured; this pins the boundary of
+        /// the measured change, it does not claim Unity's.</summary>
+        [Fact]
+        public void OtherSingleLoadsKeepThePerSceneUnload()
+        {
+            var events = new List<string>();
+            var scenes = new Scenes();
+            Action need = () => events.Add("needs");
+            UnityEngine.Events.UnityAction<Scene> unloaded = s => events.Add("sceneUnloaded " + s.name);
+            try
+            {
+                LightmapSettings.Reset();
+                var mainScene = scenes.Loaded("Main");
+                var main = Tetrahedralized(MainBox, 1f);
+                LightProbes.SceneLoaded(mainScene.Handle.Value, main);
+                var incoming = scenes.Loading("Extra");
+                LightProbes.needsRetetrahedralization += need;
+                SceneManager.sceneUnloaded += unloaded;
+                SceneManagerInternal.UnloadForSingleLoad(incoming, sceneManagerLoad: false);
+                Assert.Equal(new[] { "needs", "sceneUnloaded Main" }, events);
+                Assert.Equal(8, main.count);
+                Assert.Equal(main.cellCountSelf, main.cellCount);
+            }
+            finally
+            {
+                LightProbes.needsRetetrahedralization -= need;
+                SceneManager.sceneUnloaded -= unloaded;
+                LightmapSettings.Reset();
+                scenes.Dispose();
+            }
+        }
+
         [Fact]
         public void AQueryKeepsTheProbesItWasCreatedWith()
         {

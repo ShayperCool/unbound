@@ -408,7 +408,9 @@ namespace UnityEngine.SceneManagement
                 }
                 // As in Unity, an exception from a loaded object or a sceneLoaded handler is logged
                 // and the load still completes.
-                try { Perform(data, parameters); }
+                // Entries with a build index are SceneManager.LoadScene(Async) loads; AssetBundle
+                // scenes (index -1) keep the general path.
+                try { Perform(data, parameters, sceneManagerLoad: index >= 0); }
                 catch (Exception e) { Debug.LogException(e); }
                 finally { s_Requested.Remove(data); }
                 Unbound.Runtime.Trace.Scenes($"loaded scene '{data.Name}'");
@@ -420,12 +422,11 @@ namespace UnityEngine.SceneManagement
         /// tests/projects/editorcallbacks, 4: a value LoadSceneMode does not name).</summary>
         internal const LoadSceneMode PlayModeEntry = (LoadSceneMode)4;
 
-        static void Perform(SceneData data, LoadSceneParameters parameters, LoadSceneMode? reported = null)
+        static void Perform(SceneData data, LoadSceneParameters parameters, LoadSceneMode? reported = null, bool sceneManagerLoad = false)
         {
             if (parameters.loadSceneMode == LoadSceneMode.Single)
             {
-                foreach (var other in SceneRegistry.Loaded.ToArray())
-                    if (other != data) UnloadNow(other, keepDontSave: true);
+                UnloadForSingleLoad(data, sceneManagerLoad);
                 Resources.UnloadUnusedAssetsInternal();
             }
             SceneRegistry.Loaded.Add(data);
@@ -444,6 +445,21 @@ namespace UnityEngine.SceneManagement
             if (SceneRegistry.Active == data && previousActive != data)
                 SceneManager.Internal_ActiveSceneChanged(previousActive != null ? new Scene(previousActive.Handle) : default, new Scene(data.Handle));
             SceneManager.Internal_SceneLoaded(new Scene(data.Handle), reported ?? parameters.loadSceneMode);
+        }
+
+        /// <summary>
+        /// The scenes a Single load of <paramref name="incoming"/> replaces are unloaded. A
+        /// SceneManager load (<paramref name="sceneManagerLoad"/>) first resets the light probe
+        /// scene set once, before the outgoing scenes' sceneUnloaded and without
+        /// needsRetetrahedralization (measured for one outgoing scene: tests/projects/lightprobes
+        /// Reference lifecycle.jsonl). The Editor's OpenScene, Play mode entry and AssetBundle
+        /// scenes are not measured and keep the per-scene unload.
+        /// </summary>
+        internal static void UnloadForSingleLoad(SceneData incoming, bool sceneManagerLoad)
+        {
+            if (sceneManagerLoad) LightProbes.SingleLoadReplacing();
+            foreach (var other in SceneRegistry.Loaded.ToArray())
+                if (other != incoming) UnloadNow(other, keepDontSave: true);
         }
 
         /// <summary>Loads a scene immediately: the first scene of a session.</summary>
@@ -535,9 +551,10 @@ namespace UnityEngine.SceneManagement
             if (SceneRegistry.Active == data) SceneRegistry.Active = null;
             // Its probes leave the loaded set, raising needsRetetrahedralization before sceneUnloaded
             // (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference lifecycle.jsonl,
-            // branch t3/light-probes-lifecycle-2, commit f8516528). Unity raises the group (needs,
-            // sceneUnloaded, the operation's completion) after UnloadSceneAsync returns; here it
-            // happens within the call (not fixed).
+            // branch t3/light-probes-lifecycle-2, commit f8516528). A SceneManager Single load has
+            // already taken its outgoing scenes' probes out of the set, so nothing is raised then.
+            // Unity raises the group (needs, sceneUnloaded, the operation's completion) after
+            // UnloadSceneAsync returns; here it happens within the call (not fixed).
             LightProbes.SceneUnloaded(data.Handle.Value);
             // sceneUnloaded sees the scene with its name (measured: tests/projects/editorcallbacks);
             // it is forgotten after.
