@@ -2438,3 +2438,14 @@ Callbacks retain 29 missing/29 extra, nine changed unmatched records and 25 orde
 InstantiateAsync retains 731/777, 46 missing/46 extra; CullingGroup 1149/1149 plus initial EndOfFrame extra; module compile 7/7, Play/transition 8/8 and five identity checks pass.
 All unions/tolerances retained; no runtime fixes or Native captures. Broader matching GPU replay remains pending, with resources and GPU CullingGroup completed here.
 Report/runtime/input/command manifests: `~/.cache/unbound/validation/runs/combined-root-validation-20261101-t3-42333086/`.
+
+### 2026-11-01 audio adoption on combined callback and rendering source
+
+Reviewed audio `0651b1d6` merged as `03e0be35` onto `ba3cfaba`, whose production sources equal `4dd529c6`.
+Production delta: mixer lifecycle/routes and four AudioSource callback-discovery lines; stubs/API/ABI unchanged.
+One release cycle; all eleven Rust workspace inputs and managed PDB sources verified; tested/package Core equal, 33 artifacts frozen.
+Boundaries 5943389/5943389, lifecycle 94422/94422, generators 720907/720907 exact; historical unions resolve 5166198 and 104448.
+All thirteen affected captures match reviewed PCM/metadata exactly; both-rate submission/Echo/filter and 48k startup/callback Native gates pass.
+Introduced/retained zero; Rust audio 48/48, managed audio 19/19; Root RMS/wake/sink/thread guards preserved byte-for-byte.
+44.1k dense startup/callback lack Native oracles; reset/snapshot 2061 per rate and historical matrix raw deltas remain unclaimed. No controlled 4dd audio A/B, graphics replay or new Native capture.
+Full unions, runtime/input/compiler manifests and limits: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/audio-matching-validation-20261101-t3-174cb588/`.
