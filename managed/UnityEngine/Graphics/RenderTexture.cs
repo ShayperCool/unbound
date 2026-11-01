@@ -35,7 +35,11 @@ namespace UnityEngine
         /// <summary>A `.renderTexture` asset: its size, formats, samples, mips, dimension and
         /// sampler as saved (measured: tests/projects/builtinrp rt.*). Older files name the formats
         /// by RenderTextureFormat and depth bits.</summary>
-        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver)
+        void ISerializedAsset.ReadSerialized(YNode body, IReferenceResolver resolver) => ReadRenderTexture(body);
+
+        /// <summary>The render texture fields of a serialized render texture (custom render
+        /// textures read theirs after these).</summary>
+        internal void ReadRenderTexture(YNode body)
         {
             int w = Math.Max(1, body.Int("m_Width", 256)), h = Math.Max(1, body.Int("m_Height", 256));
             bool sRGB = body.Bool("m_SRGB");
