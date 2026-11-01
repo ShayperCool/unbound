@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
@@ -31,7 +32,39 @@ namespace Unbound.Tests
             new Vector3(0.5489091f, 0.621158f, -0.5593402f), new Vector3(0.4970735f, 0.6014077f, 0.6254811f),
         };
 
+        /// <summary>The Editor's matrices of <see cref="BakedCells"/> (rows R0, R1, R2), as stored.</summary>
+        static readonly float[][] BakedMatrices =
+        {
+            new[] { 0.0275950357f, -0.483545572f, -0.0113257878f, -0.482453048f, 0.417927593f, -0.0371899717f, 0.042696014f, -0.00335335685f, 0.49208048f },
+            new[] { 0.598601282f, -9.74443626f, 0.263921142f, 0.129120052f, -10.2986183f, -0.288196981f, -0.658771276f, 11.5435953f, 0.27037847f },
+            new[] { 2.75841594f, 0.394373775f, 0.476477474f, 2.38046288f, -0.13789317f, -0.0794929713f, -2.40712094f, -0.35411188f, 0.0948144421f },
+            new[] { 0.00395475468f, -0.487501562f, 0.0141156539f, -0.564360082f, -0.0944402292f, 0.607358813f, 0.518932283f, 0.0763401985f, -0.0204403009f },
+            new[] { -0.0410078987f, -0.051351361f, -0.515430927f, 0.00492227497f, 0.492781848f, -0.0192345623f, -0.404701918f, -0.425677031f, 0.455310404f },
+            new[] { -0.216885313f, -0.190487444f, 2.81599021f, -0.259755701f, 0.161344081f, -3.34599018f, 0.260389239f, 0.326067269f, 3.27285028f },
+            new[] { -0.42650187f, 0.403091788f, 0.455912292f, 0.489261121f, -0.423825055f, 0.0377147645f, -0.466300875f, -0.0557056069f, -0.0493978299f },
+            new[] { -0.506246626f, -0.0179524086f, -0.00669748383f, 0.0728516504f, -0.0302716773f, 0.48283875f, 0.43111074f, -0.407447755f, -0.460839093f },
+            new[] { -0.67751056f, 0.05321192f, -7.80844927f, -1.12775397f, 0.46860975f, -7.47441626f, 0.750977635f, -0.540360332f, 8.32580948f },
+            new[] { 0.561079502f, 0.590159416f, -0.631243169f, -0.565398455f, -0.107097767f, 0.62240541f, 0.0473547615f, 0.0415910445f, -0.614843428f },
+        };
+
         static string Key(IEnumerable<int> cell) => string.Join(",", cell.OrderBy(i => i));
+
+        [Fact]
+        public void CellMatricesAreRoundedAsTheEditors()
+        {
+            // Each baked cell's matrix from its own vertex order, to the bit (a double-precision
+            // inverse rounded to single precision misses all ten).
+            for (int i = 0; i < BakedCells.Length; i++)
+            {
+                var v = BakedCells[i];
+                var p3 = Positions[v[3]];
+                ProbeTetrahedralization.Matrix(Positions[v[0]] - p3, Positions[v[1]] - p3, Positions[v[2]] - p3, out var r0, out var r1, out var r2);
+                var actual = new[] { r0.x, r0.y, r0.z, r1.x, r1.y, r1.z, r2.x, r2.y, r2.z };
+                for (int k = 0; k < 9; k++)
+                    Assert.True(BitConverter.SingleToInt32Bits(BakedMatrices[i][k]) == BitConverter.SingleToInt32Bits(actual[k]),
+                        $"cell {i} element {k}: {actual[k]:R} vs the Editor's {BakedMatrices[i][k]:R}");
+            }
+        }
 
         [Fact]
         public void CellsAndHullRaysAreTheEditors()
