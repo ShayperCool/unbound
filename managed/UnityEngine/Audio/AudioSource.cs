@@ -359,6 +359,10 @@ namespace UnityEngine
             }
             m_Paused = false;
             m_Clip?.EnsureLoaded();
+            // Play can start a clipless OnAudioFilterRead generator before the first
+            // audio update. Submit its callback identity with the Play command.
+            bool hasFilter = AudioFilters.Update(Handle, m_GameObject);
+            if (m_HasFilter != hasFilter) { m_HasFilter = hasFilter; m_Dirty = true; }
             Flush();
             Command(new AudioSourceCommand { Kind = AudioCommandKind.Play, Time = time });
             if (Trace.AudioOn) Trace.Audio($"{api} '{m_Clip?.m_Name}' ({m_Clip?.length:F2}s) on '{m_GameObject.m_Name}' at {time:F3}, loop {m_Loop}, volume {m_Volume}, group '{m_OutputGroup?.m_Name}'");
