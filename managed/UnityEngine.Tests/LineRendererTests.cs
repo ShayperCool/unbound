@@ -176,6 +176,7 @@ namespace UnityEngine.Tests
                 line.numCornerVertices = 2;
                 line.numCapVertices = 2;
                 line.generateLightingData = true;
+                line.positionCount = 3;
                 line.SetPositions(new[] { new Vector3(-2.3f, 0.325857f, 0f),
                     new Vector3(-2.3f, 0.325857f, 0f), new Vector3(-2.5f, 0.1f, 0f) });
                 line.BakeMesh(mesh, camera);
@@ -216,6 +217,7 @@ namespace UnityEngine.Tests
                 line.numCornerVertices = 2;
                 line.numCapVertices = 2;
                 line.generateLightingData = true;
+                line.positionCount = 4;
                 line.SetPositions(new[] { new Vector3(-1f, -0.5f, 0f), new Vector3(0f, 0.5f, 1f),
                     new Vector3(1f, -0.3f, -0.5f), new Vector3(1.5f, 0.8f, 0.5f) });
                 line.BakeMesh(mesh, camera);
