@@ -153,7 +153,15 @@ def compare(reference, candidate, report, exact=False, before=None, batch=False)
                         row = dict(key=key, samples=(indexes+start//4).tolist())
                         fields = ['reference', 'candidate'] if before is None else ['native', 'before', 'after']
                         for field, v, available in zip(fields, floats, present):
-                            row[field] = [safe(float(v[i])) if available[i] else MISSING for i in indexes]
+                            selected = v[indexes]
+                            available = available[indexes]
+                            if not np.any(available):
+                                row[field] = [MISSING]*len(indexes)
+                            elif np.all(available) and np.all(np.isfinite(selected)):
+                                row[field] = selected.astype('f8').tolist()
+                            else:
+                                row[field] = [safe(float(n)) if exists else MISSING
+                                              for n, exists in zip(selected, available)]
                         if before is not None:
                             statuses = np.where(wrong[0][indexes], np.where(wrong[1][indexes], 'retained', 'resolved'), 'introduced')
                             row['status'] = statuses.tolist()
