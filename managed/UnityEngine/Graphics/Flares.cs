@@ -49,8 +49,7 @@ namespace UnityEngine
         }
     }
 
-    /// <summary>Lets a camera show lens flares (the flares themselves are not drawn by Unbound:
-    /// they warn once).</summary>
+    /// <summary>Lets a camera show lens flares (halos draw without it).</summary>
     [ClassId(124)]
     public partial class FlareLayer : Behaviour
     {
@@ -62,19 +61,32 @@ namespace UnityEngine
     public sealed partial class LensFlare : Behaviour
     {
         Flare m_Flare;
-        Color m_Color = Color.white;
+        // A new LensFlare's color is white with zero alpha (measured: tests/projects/flares).
+        Color m_Color = new Color(1f, 1f, 1f, 0f);
         float m_Brightness = 1f;
         float m_FadeSpeed = 3f;
+        int m_IgnoreLayers;
         bool m_Directional;
 
         public LensFlare() { }
+
+        internal Flare Asset => m_Flare;
+        internal Color Tint => m_Color;
+        internal float Brightness => m_Brightness;
+        internal float FadeSpeed => m_FadeSpeed;
+        internal int IgnoreLayers => m_IgnoreLayers;
+        internal bool Directional => m_Directional;
 
         public Flare flare { get => m_Flare; set => m_Flare = value; }
         public Color color { get => m_Color; set => m_Color = value; }
         public float brightness { get => m_Brightness; set => m_Brightness = value; }
         public float fadeSpeed { get => m_FadeSpeed; set => m_FadeSpeed = value; }
 
-        internal override void OnEngineEnable() => Halos.WarnFlare();
+        internal override void OnEngineEnable() => Halos.Add(this);
+
+        internal override void OnEngineDisable() => Halos.Remove(this);
+
+        internal override void OnEngineDestroy() => Halos.Remove(this);
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
@@ -83,6 +95,7 @@ namespace UnityEngine
             m_Color = o.m_Color;
             m_Brightness = o.m_Brightness;
             m_FadeSpeed = o.m_FadeSpeed;
+            m_IgnoreLayers = o.m_IgnoreLayers;
             m_Directional = o.m_Directional;
         }
 
@@ -93,6 +106,8 @@ namespace UnityEngine
             m_Color = body.Color("m_Color", Color.white);
             m_Brightness = body.Float("m_Brightness", 1f);
             m_FadeSpeed = body.Float("m_FadeSpeed", 3f);
+            var ignore = body.Get("m_IgnoreLayers");
+            m_IgnoreLayers = ignore == null ? 0 : (int)ignore.Long("m_Bits");
             m_Directional = body.Bool("m_Directional");
         }
     }
@@ -102,12 +117,18 @@ namespace UnityEngine
     [ClassId(122)]
     internal sealed partial class Halo : Behaviour
     {
-        internal Color m_Color = new Color(0.5f, 0.5f, 0.5f, 0.5f);
-        internal float m_Size = 5f;
+        // A Halo added by script draws nothing (measured: tests/projects/flares ho.added); scenes
+        // carry their own size and color.
+        internal Color m_Color = new Color(0f, 0f, 0f, 0f);
+        internal float m_Size;
 
         public Halo() { }
 
-        internal override void OnEngineEnable() => Halos.WarnHalo();
+        internal override void OnEngineEnable() => Halos.Add(this);
+
+        internal override void OnEngineDisable() => Halos.Remove(this);
+
+        internal override void OnEngineDestroy() => Halos.Remove(this);
 
         internal override void CopyFrom(Component source, Func<Object, Object> remap)
         {
@@ -118,7 +139,14 @@ namespace UnityEngine
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
-            m_Color = body.Color("m_Color", m_Color);
+            // The color is stored packed, red in the lowest byte (ColorRGBA32).
+            var color = body.Get("m_Color");
+            if (color != null && color.Get("rgba") != null)
+            {
+                uint rgba = (uint)color.Long("rgba");
+                m_Color = new Color32((byte)rgba, (byte)(rgba >> 8), (byte)(rgba >> 16), (byte)(rgba >> 24));
+            }
+            else m_Color = body.Color("m_Color", m_Color);
             m_Size = body.Float("m_Size", 5f);
         }
     }
@@ -167,15 +195,3 @@ namespace UnityEngine
     }
 }
 
-namespace Unbound.Runtime
-{
-    /// <summary>Halos and lens flares: Unity draws them with textures and meshes its native code
-    /// builds (the halo falloff is not among its shipped resources), so Unbound does not draw them
-    /// yet; they warn once when one is enabled.</summary>
-    internal static class Halos
-    {
-        internal static void WarnHalo() => Stubs.Ignored("Halo", "halos are not drawn: Unity builds their falloff texture in native code");
-
-        internal static void WarnFlare() => Stubs.Ignored("LensFlare", "lens flares are not drawn yet");
-    }
-}

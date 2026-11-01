@@ -127,6 +127,14 @@ namespace UnityEngine.Rendering
 
         readonly List<Action<Context>> m_Commands = new List<Action<Context>>();
         string m_Name = "";
+        // What a camera's halos depend on (Unbound.Runtime.Halos): the color-only and other
+        // ClearRenderTarget commands and the SetGlobalFloat commands recorded.
+        int m_ColorClears, m_OtherClears, m_GlobalFloats;
+
+        internal int CommandCount => m_Commands.Count;
+        internal int ColorClears => m_ColorClears;
+        internal int OtherClears => m_OtherClears;
+        internal int GlobalFloats => m_GlobalFloats;
         static bool s_WarnedPluginEvent;
 
         public CommandBuffer() { }
@@ -138,6 +146,7 @@ namespace UnityEngine.Rendering
         public void Clear()
         {
             m_Commands.Clear();
+            m_ColorClears = m_OtherClears = m_GlobalFloats = 0;
             ReleaseOwnedArrays();
         }
 
@@ -256,13 +265,18 @@ namespace UnityEngine.Rendering
         public void ClearRenderTarget(bool clearDepth, bool clearColor, Color backgroundColor, [Internal.DefaultValue("1.0f")] float depth, [Internal.DefaultValue("0")] uint stencil) =>
             ClearRenderTarget((clearColor ? RTClearFlags.Color : 0) | (clearDepth ? RTClearFlags.DepthStencil : 0), backgroundColor, depth, stencil);
 
-        public void ClearRenderTarget(RTClearFlags clearFlags, Color backgroundColor, [Internal.DefaultValue("1.0f")] float depth, [Internal.DefaultValue("0")] uint stencil) => Add(c =>
+        public void ClearRenderTarget(RTClearFlags clearFlags, Color backgroundColor, [Internal.DefaultValue("1.0f")] float depth, [Internal.DefaultValue("0")] uint stencil)
         {
-            byte flags = (byte)(((clearFlags & RTClearFlags.Color) != 0 ? GfxStream.ClearColor : 0)
-                | ((clearFlags & RTClearFlags.Depth) != 0 ? GfxStream.ClearDepth : 0)
-                | ((clearFlags & RTClearFlags.Stencil) != 0 ? GfxStream.ClearStencil : 0));
-            if (flags != 0) GfxStream.Clear(flags, backgroundColor, depth, stencil);
-        });
+            if (clearFlags == RTClearFlags.Color) m_ColorClears++;
+            else if (clearFlags != 0) m_OtherClears++;
+            Add(c =>
+            {
+                byte flags = (byte)(((clearFlags & RTClearFlags.Color) != 0 ? GfxStream.ClearColor : 0)
+                    | ((clearFlags & RTClearFlags.Depth) != 0 ? GfxStream.ClearDepth : 0)
+                    | ((clearFlags & RTClearFlags.Stencil) != 0 ? GfxStream.ClearStencil : 0));
+                if (flags != 0) GfxStream.Clear(flags, backgroundColor, depth, stencil);
+            });
+        }
 
         public void ClearRenderTarget(RTClearFlags clearFlags, Color[] backgroundColors, [Internal.DefaultValue("1.0f")] float depth, [Internal.DefaultValue("0")] uint stencil)
         {
@@ -270,6 +284,7 @@ namespace UnityEngine.Rendering
             if (backgroundColors.Length < 1 || backgroundColors.Length > 8)
                 throw new ArgumentException("The number of background colors must be between 1 and 8.", nameof(backgroundColors));
             var colors = (Color[])backgroundColors.Clone();
+            m_OtherClears++;
             Add(c =>
             {
                 if (colors.Length < (GfxStream.Current.Colors?.Length ?? 1))
@@ -658,7 +673,11 @@ namespace UnityEngine.Rendering
 
         // ------------------------------------------------------------ global state
 
-        public void SetGlobalFloat(int nameID, float value) => Add(c => Shader.SetGlobalFloat(nameID, value));
+        public void SetGlobalFloat(int nameID, float value)
+        {
+            m_GlobalFloats++;
+            Add(c => Shader.SetGlobalFloat(nameID, value));
+        }
         public void SetGlobalFloat(string name, float value) => SetGlobalFloat(Shader.PropertyToID(name), value);
         public void SetGlobalInt(int nameID, int value) => Add(c => Shader.SetGlobalInt(nameID, value));
         public void SetGlobalInt(string name, int value) => SetGlobalInt(Shader.PropertyToID(name), value);

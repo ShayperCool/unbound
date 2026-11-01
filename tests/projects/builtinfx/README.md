@@ -105,8 +105,11 @@ expected images. The comparator exits nonzero for unexpected values, missing or
 wrong-size images, pixel errors and an empty reference. Seven failure-case tests
 in `test_compare.py` check those outcomes and preserve existing expected values.
 
-* Halos and lens flares are not drawn (they warn): Unity builds the halo falloff texture and the
-  flare meshes in native code, not in its shipped resources (`flare_Halo*`, `flare_LensFlareObject`).
+* Halos and lens flares draw as tests/projects/flares measured them (`flare_*` within a mean of
+  0.05) except `flare_HaloLight_strength1`, where the light is enabled and haloStrength raised
+  right before `Camera.Render` in the same frame (the Editor's halo is larger but about half as
+  bright as Unbound's; not measured in isolation), and `flare_LensFlareObject`, a flare's first
+  render after it is enabled, which fades in by the frame's unfixed delta time.
 * `mip_limit_1`: textures are sampled from their first mip whatever the limit (Unbound uploads one
   level of imported textures; it warns).
 * `target_buffers_mrt1`: Unbound leaves a second color buffer alone where a shader writes one output;
