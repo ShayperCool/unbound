@@ -62,7 +62,8 @@ arguments for `check` and `publish`. The profile has its own directory at
 `state.copy` calls `CaptureScreenshotIntoRenderTexture` before the caller's draw. Both attachments
 and the copied image are read after the draw. The marker shader's second pass writes distinct
 colors to both attachments. These rendered outputs observe the caller state without reading
-internal flags. `state.source` records the screen before either case.
+internal flags. The copy destination starts at zero so an unwritten destination is detectable.
+`state.source` records the screen before either case.
 
 `post.buffer` adds one empty `AfterEverything` camera command buffer. A single `OnPostRender`
 callback draws the screen marker, calls `CaptureScreenshotAsTexture(1)` and
@@ -70,7 +71,10 @@ callback draws the screen marker, calls `CaptureScreenshotAsTexture(1)` and
 screen is read at the end of that frame. No supersized capture runs inside a camera callback.
 
 Publishing requires successful exits, complete captures, exact control key and image coverage,
-and byte-identical independent repeats. Source hashes, commands, raw captures, artifact hashes
+rendered caller draws inside the requested scissor, and byte-identical independent repeats.
+The setup gate also checks that both attachments receive wireframe pixels, the copy writes its
+destination, the caller draws match across the pair, and the immediate screen captures agree.
+Source hashes, commands, raw captures, artifact hashes
 and the full repeat comparison remain in the validation cache. The existing comparator and its
 2e-4 absolute and relative tolerance apply to replay comparisons.
 

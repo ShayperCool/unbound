@@ -200,6 +200,11 @@ def check(work):
     failed = False
     for repeat in (work/'native1', work/'native2'):
         reason = incomplete(repeat)
+        if reason is None and PROFILE == 'internal-state':
+            from internal_state import rendered_setup
+            failures = rendered_setup(repeat, work/(repeat.name+'-setup.json'))
+            if failures:
+                reason = f'caller state was not established: {failures}'
         print(repeat.name, reason or 'complete')
         failed |= reason is not None
     return int(failed)
@@ -212,6 +217,11 @@ def publish(work):
         reason = incomplete(repeat)
         if reason:
             sys.exit(f'{repeat.name}: {reason}; not publishing')
+    if PROFILE == 'internal-state':
+        from internal_state import rendered_setup
+        failures = {repeat.name: rendered_setup(repeat, work/(repeat.name+'-setup.json')) for repeat in (a, b)}
+        if any(failures.values()):
+            sys.exit(f'caller state was not established: {failures}; not publishing')
     with (work/'repeat-comparison.log').open('w') as log:
         subprocess.run([sys.executable, str(PROBE/'compare.py'), str(a), str(b),
                         '--report', str(work/'repeat-comparison.json')],

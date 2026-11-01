@@ -20,6 +20,8 @@ public partial class ScreenCaptureProbe
         bool srgbWrite = GL.sRGBWrite, wireframe = GL.wireframe;
         try
         {
+            RenderTexture.active = destination;
+            GL.Clear(false, true, Color.clear);
             Graphics.SetRenderTarget(new[] { a.colorBuffer, b.colorBuffer }, a.depthBuffer);
             GL.Viewport(new Rect(8, 4, 48, 24));
             scissor.EnableScissorRect(new Rect(20, 8, 24, 16));
