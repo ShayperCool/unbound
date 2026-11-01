@@ -128,11 +128,24 @@ namespace UnityEngine
         }
 
         public Color GetPixelBilinear(float u, float v) => GetPixelBilinear(u, v, 0);
+        /// <summary>The four GetPixel values around (u w, v h) (no half-texel offset: a texel
+        /// centre mixes its right and upper neighbours in), each lerp a (1 - t) + b t in single
+        /// precision, along x first (tests/projects/texturepixels).</summary>
         public Color GetPixelBilinear(float u, float v, int mipLevel)
         {
             RequireReadable();
             if (!ValidMip(mipLevel)) { Debug.LogError("Texture mip level is out of range."); return Color.white; }
-            return Bilinear(u, v, mipLevel);
+            int w = MipWidth(mipLevel), h = MipHeight(mipLevel);
+            float x = u * w, y = v * h;
+            int x0 = (int)Math.Floor(x), y0 = (int)Math.Floor(y);
+            float fx = x - x0, fy = y - y0;
+            int r0 = Wrap(y0, h, wrapModeV) * w, r1 = Wrap(y0 + 1, h, wrapModeV) * w;
+            int c0 = Wrap(x0, w, wrapModeU), c1 = Wrap(x0 + 1, w, wrapModeU);
+            Color a = Read(mipLevel, r0 + c0), b = Read(mipLevel, r0 + c1), c = Read(mipLevel, r1 + c0), d = Read(mipLevel, r1 + c1);
+            static float Lerp(float p, float q, float t) => p * (1f - t) + q * t;
+            var result = new Color();
+            for (int k = 0; k < 4; k++) result[k] = Lerp(Lerp(a[k], b[k], fx), Lerp(c[k], d[k], fx), fy);
+            return result;
         }
 
         public void SetPixel(int x, int y, Color color) => SetPixel(x, y, color, 0);
