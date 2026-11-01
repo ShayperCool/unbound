@@ -21,7 +21,7 @@ EXPECTED = [
     r"^static_batching\.mesh$",
 ]
 EXPECTED_IMAGES = [
-    r"^flare_Halo",
+    r"^flare_HaloLight_strength1$",
     r"^flare_LensFlareObject$",
     r"^mip_limit_1$",
     r"^target_buffers_mrt1$",
