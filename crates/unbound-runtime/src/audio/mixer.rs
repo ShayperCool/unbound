@@ -810,7 +810,7 @@ impl Mixer {
             one_shots: (source.one_shots.len() + source.completed_shots.len()) as i32,
             is_virtual: (source.is_virtual || (source.main.is_none() && source.one_shots.is_empty()
                 && source.completed_shots.is_empty() && source.completed_main.is_none()
-                && source.played)) as i32,
+                && (source.params.clip != 0 || source.played))) as i32,
             _pad: 0,
             position: source.pending_position,
         };
@@ -2103,6 +2103,9 @@ mod tests {
             source_with(&mut m, 7, if backed { 1 } else { 0 }, |p| {
                 p.group = 4; if key != "shotPlain" { p.flags = source_flags::FILTER; }
             });
+            assert_eq!(m.source_state(7).is_virtual != 0,
+                metadata[format!("{key}.events")][0]["virtual"].as_bool().unwrap(),
+                "initial virtual state {key}");
             if key.ends_with("Inside") {
                 let (start, end) = if key.starts_with("start") { (8265.25, 12288.75) }
                     else if key.starts_with("end") { (8192.25, 10425.75) } else { (8265.25, 8377.75) };
