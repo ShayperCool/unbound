@@ -35,6 +35,8 @@ package and hold all other source, runtime dependencies and probe inputs fixed.
 File ownership or an already-failing record is not proof. Preserve the complete
 original union and record unresolved values with their owner. Never remove fields
 or loosen tolerances to make a package pass.
+An already-failing row can hide a new significant leaf or behavior regression;
+inspect counts, ownership, event order and other functional state separately.
 
 ### Known insignificant residuals
 
