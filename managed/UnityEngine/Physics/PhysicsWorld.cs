@@ -219,9 +219,10 @@ namespace Unbound.Runtime
 
         internal static void ForgetIgnoredPairs(Collider c) => s_IgnoredPairs.RemoveWhere(p => p.Contains(c));
 
-        internal static void MarkShapeDirty(Collider c)
+        internal static void MarkShapeDirty(Collider c, bool geometryChanged)
         {
             if (!c.m_Registered) return;
+            c.m_GeometryDirty |= geometryChanged;
             if (c is BoxCollider box && c.m_Shape != 0 && ReferenceEquals(FindRigidbody(c), c.m_AttachedBody))
             {
                 var matrix = c.m_ShapeMatrix;
@@ -231,6 +232,7 @@ namespace Unbound.Runtime
                 half = Vector3.Max(half, new Vector3(1e-4f, 1e-4f, 1e-4f));
                 B3.ua3_shape_update_box(c.m_Shape, ShapeDefOf(c, c.m_AttachedBody), matrix.MultiplyPoint3x4(box.m_Center), Collider.AxisRotation(matrix), half);
                 if (c.m_AttachedBody != null) c.m_AttachedBody.m_MassDirty = true;
+                c.m_GeometryDirty = false;
                 return;
             }
             c.m_ShapeDirty = true;
@@ -479,14 +481,21 @@ namespace Unbound.Runtime
         }
 
         /// <summary>Recreates a collider's shape on the body it attaches to now.</summary>
-        static void Rebuild(Collider c)
+        static void Rebuild(Collider c, bool syncTransform = false)
         {
+            var rb = FindRigidbody(c);
+            // Contact properties keep the actor pose and collider-to-body frame. Geometry edits
+            // use the Transform frame, as do explicit syncs. Keep the version when retaining the
+            // frame, so a later sync still sees pending Transform edits.
+            bool keepPose = !syncTransform && !c.m_GeometryDirty && !c.m_UseAddedPose && !(c is CharacterController)
+                && ReferenceEquals(rb, c.m_AttachedBody)
+                && (rb != null ? rb.m_Body != 0 : c.m_StaticBody != 0);
             c.m_ShapeDirty = false;
+            c.m_GeometryDirty = false;
             DestroyShape(c);
             var transform = c.m_GameObject.m_Transform;
-            c.m_TransformVersion = transform.m_Version;
+            if (!keepPose) c.m_TransformVersion = transform.m_Version;
             c.m_Layer = c.m_GameObject.m_Layer;
-            var rb = FindRigidbody(c);
             c.m_AttachedBody = rb;
             bool addedPose = c.m_UseAddedPose;
             c.m_UseAddedPose = false;
@@ -542,14 +551,14 @@ namespace Unbound.Runtime
                     };
                     c.m_StaticBody = B3.ua3_body_create(s_World, def);
                 }
-                else
+                else if (!keepPose)
                 {
                     B3.ua3_body_set_transform(c.m_StaticBody, framePosition, frameRotation);
                 }
                 body = c.m_StaticBody;
             }
 
-            var matrix = PoseMatrix(framePosition, frameRotation).inverse * world;
+            var matrix = keepPose ? c.m_ShapeMatrix : PoseMatrix(framePosition, frameRotation).inverse * world;
             c.m_ShapeMatrix = matrix;
             var shapeDef = ShapeDefOf(c, rb);
             try
@@ -687,21 +696,21 @@ namespace Unbound.Runtime
                 var rb = FindRigidbody(c);
                 if (!ReferenceEquals(rb, c.m_AttachedBody))
                 {
-                    Rebuild(c);
+                    Rebuild(c, syncTransform: true);
                     continue;
                 }
                 if (rb == null)
                 {
                     if (c.m_StaticBody == 0)
                     {
-                        Rebuild(c);
+                        Rebuild(c, syncTransform: true);
                         continue;
                     }
                     var position = t.position;
                     var rotation = t.rotation;
                     if (!SameShapeMatrix(ToBodyMatrix(t, position, rotation), c.m_ShapeMatrix))
                     {
-                        Rebuild(c);
+                        Rebuild(c, syncTransform: true);
                         continue;
                     }
                     B3.ua3_body_set_transform(c.m_StaticBody, position, rotation);
@@ -709,7 +718,7 @@ namespace Unbound.Runtime
                 else if (rb.m_Body != 0)
                 {
                     var bodyTransform = rb.m_GameObject.m_Transform;
-                    if (!SameShapeMatrix(ToBodyMatrix(t, bodyTransform.position, bodyTransform.rotation), c.m_ShapeMatrix)) Rebuild(c);
+                    if (!SameShapeMatrix(ToBodyMatrix(t, bodyTransform.position, bodyTransform.rotation), c.m_ShapeMatrix)) Rebuild(c, syncTransform: true);
                 }
             }
             for (int i = 0; i < s_Rigidbodies.Count; i++)

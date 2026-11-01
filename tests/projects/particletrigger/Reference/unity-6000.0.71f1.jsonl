@@ -2,6 +2,14 @@
 {"scenario":"query_only_move query","step":"afterSync","value":{"autoSync":false,"transform":[0,0,2.5],"boundsCenter":[0,0,2.5],"atOrigin":false,"atMoved":true}}
 {"scenario":"query_only_trigger query","step":"beforeSync","value":{"autoSync":false,"transform":[0,0,2.5],"boundsCenter":[0,0,0],"atOrigin":true,"atMoved":false}}
 {"scenario":"query_only_trigger query","step":"afterSync","value":{"autoSync":false,"transform":[0,0,2.5],"boundsCenter":[0,0,2.5],"atOrigin":false,"atMoved":true}}
+{"scenario":"shape_rebuild_static","step":"initial","value":{"boundsCenter":[1,0,0],"boundsSize":[1,1,1]}}
+{"scenario":"shape_rebuild_static","step":"propertyBeforeSync","value":{"boundsCenter":[1,0,0],"boundsSize":[1,1,1]}}
+{"scenario":"shape_rebuild_static","step":"beforeSync","value":{"boundsCenter":[2.5,0,2.5],"boundsSize":[3,3,3]}}
+{"scenario":"shape_rebuild_static","step":"afterSync","value":{"boundsCenter":[2.5,0,2.5],"boundsSize":[3,3,3]}}
+{"scenario":"shape_rebuild_attached","step":"initial","value":{"boundsCenter":[1,0,0],"boundsSize":[1,1,1]}}
+{"scenario":"shape_rebuild_attached","step":"propertyBeforeSync","value":{"boundsCenter":[1,0,0],"boundsSize":[1,1,1]}}
+{"scenario":"shape_rebuild_attached","step":"beforeSync","value":{"boundsCenter":[2.5,0,0],"boundsSize":[3,3,3]}}
+{"scenario":"shape_rebuild_attached","step":"afterSync","value":{"boundsCenter":[2.5,0,2.5],"boundsSize":[3,3,3]}}
 {"scenario":"trigger_kill_inside","step":"0","count":0,"time":0.05,"playing":false,"emitting":false,"stopped":false,"paused":true,"alive":true,"particles":[]}
 {"scenario":"trigger_kill_inside","step":"1","count":0,"time":0.1,"playing":false,"emitting":false,"stopped":false,"paused":true,"alive":true,"particles":[]}
 {"scenario":"trigger_kill_inside","step":"2","count":0,"time":0.15,"playing":false,"emitting":false,"stopped":false,"paused":true,"alive":true,"particles":[]}

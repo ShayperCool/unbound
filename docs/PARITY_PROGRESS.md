@@ -2471,3 +2471,12 @@ Independent migration audit uses 1122 changed OLD IDs, excluding the map header;
 Full-public target.flags stays red (Native166/engine130), as on the frozen parent; opaque Trails storage remains unclaimed.
 Final combined managed/API disposition is pending the platform integration; no duplicate GPU/seed/stream batch or new Native capture.
 Review, complete recursive manifest, receipt corrections and gate limits: `~/.cache/unbound/validation/runs/particle-root-integration-20261101b/root-adjudication.json`.
+
+### Dependency-fixed sphere trigger validation, 2026-11-01
+Root29df + ordinary merge41b3981e + ordered-discriminant fix/test a71f6fba; reviewed RNG/trails and protected sources retained.
+Literal Core-only attribution control has31 identical payload files and2 changed Core DLL/PDB files; no naturally built baseline claim.
+565 strict union144 resolved/551 retained/48 INTRODUCED stays red; all48 trace unchanged input/before/IgnoreOutside bits, owned by Root input-construction/CoreCLR-math.
+402 retains21 zero-life failures unchanged, introduces0; original55/150, focused9 and non-sphere96 pass. No prior28 substitution.
+Under Root's explicit package-causality policy, affected3D103, queries895+20, geometry59/capsule554/sweeps5610 and loading4656 per order pass.
+One matching-input broad1560/17-image capture resolves286/retains305/introduces0; all17 RGBA arrays equal Root baseline; original559 disposition286 resolved/273 unchanged.
+One managed build cycle, no Rust/new Native; full managed/API remains separately pending. Full unions/manifests/limits: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/sphere-dependency-fixed-20261101-t3-a9beda03/`.
