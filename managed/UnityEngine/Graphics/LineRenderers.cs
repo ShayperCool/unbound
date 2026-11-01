@@ -128,10 +128,11 @@ namespace UnityEngine
     /// The mesh of a line or trail, as Unity generates it (measured, tests/projects/lines):
     /// a pair of vertices per point (v = 0.5 + scale/2 on the minus side, 0.5 - scale/2 on the
     /// plus side), joined by quads. Each segment has an effective direction: its own unless it is
-    /// short compared with the width (2 width / length - 1 > 0, clamped to 1) or has zero length
-    /// (squared length below 1e-5), in which case it blends with the previous segment's effective
-    /// direction and looks ahead to the next one. A point's pair is the miter between its
-    /// neighbouring effective directions (length half width / cos, at most three half widths);
+    /// short compared with the line's widest width (2 width / length - 1 > 0, clamped to 1) or has
+    /// zero length (squared length below 1e-5), in which case it blends with the directions before
+    /// it and looks ahead to the next one (see EffectiveDirections). A point's pair is the miter
+    /// between its neighbouring effective directions (length half width / cos, at most three half
+    /// widths), a joint turning by less than about 8 degrees easing its outgoing direction back;
     /// with corner vertices the outer side becomes an arc of that many steps around the inner miter
     /// vertex at the full width. Caps are half discs of extra vertices before and after the strip.
     /// The side of a segment is cross(direction, camera position - point) projected onto the view
@@ -243,6 +244,14 @@ namespace UnityEngine
                     if (at < n) m_NoMiter[at] = true;
                     if (loop && at == 0) m_NoMiter[n - 1] = true;
                 }
+            // So does the first point after leading zero-length segments (measured, a trail's
+            // repeated newest point: tests/projects/lines trail.*.asline).
+            if (!loop)
+            {
+                int lead = 0;
+                while (lead < segments && m_Zero[lead]) lead++;
+                if (lead > 0) m_NoMiter[lead] = true;
+            }
             if (loop) LoopDirections(segments);
             else EffectiveDirections(segments);
 
@@ -258,6 +267,7 @@ namespace UnityEngine
                 bool hasIn = i > 0 || loop, hasOut = i < segments || loop;
                 var din = hasIn ? m_Effective[i > 0 ? i - 1 : segments - 1] : Vector3.zero;
                 var dout = hasOut ? m_Effective[i < segments ? i : 0] : Vector3.zero;
+                if (hasIn && hasOut && !loop) dout = EaseSmallTurn(din, dout);
                 if (!hasIn || !hasOut)
                 {
                     var d = hasOut ? dout : din;
@@ -356,46 +366,46 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>How much a segment blends with its neighbours: none while it is at least twice
-        /// the width long, fully at the width or below, and fully for zero length. A short segment
-        /// between two long ones stays itself.</summary>
-        float Shortness(int j, int segments)
-        {
-            if (j < 0 || j >= segments) return 0f;
-            if (m_Zero[j]) return 1f;
-            float r = RawShortness(j, segments);
-            if (r > 0f && RawShortness(j - 1, segments) <= 0f && RawShortness(j + 1, segments) <= 0f) return 0f;
-            return r;
-        }
+        /// <summary>The cosine above which a joint eases its outgoing direction (about 8 degrees).</summary>
+        const float SmallTurnCos = 0.99f;
 
-        float RawShortness(int j, int segments)
+        /// <summary>How much a segment blends: none while it is at least twice the line's widest
+        /// width long, fully at that width or below, and fully for zero length (2 width / length - 1,
+        /// clamped; measured, tests/projects/lines blend.* with line.tex.*.zigzag.curve for the
+        /// widest width).</summary>
+        float Shortness(int j, int segments, float width)
         {
             if (j < 0 || j >= segments) return 0f;
             if (m_Zero[j]) return 1f;
-            float width = 2f * Mathf.Max(Mathf.Abs(m_Half[j]), Mathf.Abs(m_Half[j + 1]));
             return Mathf.Clamp01(2f * width / m_Length[j] - 1f);
         }
 
-        /// <summary>A segment's direction ahead of a blend: its own, or a zero-length segment's next.</summary>
+        /// <summary>A segment's direction as its neighbours see it: its own, or for a zero-length
+        /// segment the next segment's, the last segment the previous one's (measured, line.dup.* and
+        /// a trail's repeated oldest point).</summary>
         Vector3 Ahead(int j, int segments)
         {
             if (j >= segments) return Vector3.zero;
             if (!m_Zero[j]) return m_Dir[j];
-            return j + 1 < segments ? m_Dir[j + 1] : Vector3.zero;
+            if (j + 1 < segments) return m_Dir[j + 1];
+            return j > 0 ? m_Dir[j - 1] : Vector3.zero;
         }
 
+        /// <summary>The effective directions (measured, tests/projects/lines blend.* and line.sweep.*):
+        /// a chain carried along the line, each segment's own direction plus its shortness times the
+        /// chain so far (a zero-length segment carries the previous effective direction), then plus
+        /// the next segment's shortness times that segment's direction.</summary>
         void EffectiveDirections(int segments)
         {
+            float width = 0f;
+            for (int i = 0; i <= segments; i++) width = Mathf.Max(width, 2f * Mathf.Abs(m_Half[i]));
+            var chain = Vector3.zero;
             for (int j = 0; j < segments; j++)
             {
-                Vector3 own;
-                if (j == 0) own = m_Dir[0];
-                else
-                {
-                    float s = Shortness(j, segments);
-                    own = m_Dir[j] * (1f - s) + m_Effective[j - 1] * s;
-                }
-                var e = own + Ahead(j + 1, segments) * Shortness(j + 1, segments);
+                if (m_Zero[j]) chain = j > 0 ? m_Effective[j - 1] : Vector3.zero;
+                else if (j == 0) chain = m_Dir[0];
+                else chain = (m_Dir[j] + chain * Shortness(j, segments, width)).normalized;
+                var e = chain + Ahead(j + 1, segments) * Shortness(j + 1, segments, width);
                 if (e.sqrMagnitude > 0f) e.Normalize();
                 else e = j > 0 ? m_Effective[j - 1] : Ahead(j + 1, segments);
                 m_Effective[j] = e;
@@ -403,6 +413,19 @@ namespace UnityEngine
             // Leading zero-length segments with nothing ahead take the first direction found.
             for (int j = segments - 1; j >= 0; j--)
                 if (m_Effective[j].sqrMagnitude == 0f && j + 1 < segments) m_Effective[j] = m_Effective[j + 1];
+        }
+
+        /// <summary>A joint whose effective directions turn by less than about 8 degrees (cosine c
+        /// above 0.99) takes as its outgoing direction the incoming one blended toward the outgoing
+        /// one by (1 - c) / 0.01, so the miter fades out continuously (measured, tests/projects/lines
+        /// blend.asym.30.*, blend.rev.Z.run.* and line.sweep.obtuse.w0.8).</summary>
+        static Vector3 EaseSmallTurn(Vector3 din, Vector3 dout)
+        {
+            float c = Vector3.Dot(din, dout);
+            if (c <= SmallTurnCos) return dout;
+            float w = (1f - c) / (1f - SmallTurnCos);
+            var e = din * (1f - w) + dout * w;
+            return e.sqrMagnitude > 0f ? e.normalized : dout;
         }
 
         /// <summary>A vertex color: the gradient's color at 8 bits (rounded half up), its color
