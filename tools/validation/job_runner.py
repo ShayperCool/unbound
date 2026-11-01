@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Bounded Editor/engine pools; builds retain exclusive heavy-job access."""
+"""Bounded Editor/engine/build pools; unknown heavy commands keep exclusive access.
+
+Builds (cargo, dotnet build/test/...) no longer stop every Editor and engine run:
+they share the heavy lock, take build_slots (one build at a time) and
+build_slot_weight Editor tokens, and run in a memory-bounded scope inside the
+same unbound.slice budget. Other commands classified 'heavy' keep the exclusive
+lock, because they may start Editors without going through the pool.
+Every job appends its wait and run time to job-timings.jsonl."""
 import contextlib
 import fcntl
 import hashlib
@@ -15,6 +22,9 @@ import uuid
 
 CACHE = Path.home()/'.cache/compat'
 CONFIG = CACHE/'job-limits.json'
+TIMINGS = CACHE/'job-timings.jsonl'
+BUILD_TOOLS = {'cargo': None, 'rustc': None,
+               'dotnet': {'build', 'test', 'publish', 'restore', 'msbuild', 'pack', 'format'}}
 
 
 def policy():
@@ -25,7 +35,31 @@ def policy():
     assert value['memory_max_bytes'] == 16*2**30
     assert value['engine_memory_max_bytes'] == 8*2**30
     assert value['engine_job_memory_max_bytes'] == 4*2**30
+    value.setdefault('build_slots', 1)
+    value.setdefault('build_slot_weight', 4)
+    value.setdefault('build_slice', 'unbound-builds.slice')
+    value.setdefault('build_memory_high_bytes', 7*2**30)
+    value.setdefault('build_memory_max_bytes', 9*2**30)
+    assert 1 <= value['build_slots'] <= 2
+    assert 1 <= value['build_slot_weight'] <= value['editor_slots']
     return value
+
+
+def record(entry):
+    try:
+        with TIMINGS.open('a') as handle:
+            handle.write(json.dumps(entry)+'\n')
+    except OSError:
+        pass
+
+
+def own_memory_peak():
+    try:
+        line = Path('/proc/self/cgroup').read_text().strip().split('\n')[-1]
+        path = Path('/sys/fs/cgroup')/line.split('::',1)[1].lstrip('/')/'memory.peak'
+        return int(path.read_text())
+    except (OSError, ValueError, IndexError):
+        return None
 
 
 def group_path(slice_name):
@@ -124,7 +158,9 @@ def clean_idle_compilers(config):
 def execute(command, kind, config):
     editor = kind.startswith('editor-')
     engine = kind.startswith('engine-')
-    pooled = editor or engine
+    build = kind=='build'
+    pooled = editor or engine or build
+    queued = time.time()
     with contextlib.ExitStack() as held:
         project = engine_project(command) if engine else None
         if project is not None:
@@ -136,14 +172,24 @@ def execute(command, kind, config):
         # readers from joining the current Editor batch ahead of that writer.
         with lock('parity-heavy-entry.lock'):
             held.enter_context(lock('parity-heavy-job.lock',fcntl.LOCK_SH if pooled else fcntl.LOCK_EX))
+            if build:
+                # One build at a time; it waits for its build token before
+                # taking Editor tokens, so a queued build never pins them.
+                held.enter_context(slot(config['build_slots'],prefix='parity-build-slot-'))
             if pooled:
                 held.enter_context(slot(config['editor_slots'],
-                    weight=config['engine_slot_weight'] if engine else 1))
+                    weight=config['engine_slot_weight'] if engine else
+                    config['build_slot_weight'] if build else 1))
             if engine:
                 held.enter_context(slot(config['engine_slots'],prefix='parity-engine-slot-'))
         if kind.endswith('-gpu'):
             held.enter_context(lock('parity-editor-gpu.lock'))
+        started = time.time()
         result = run(command)
+        finished = time.time()
+    record({'kind': kind, 'start': round(queued, 1), 'wait_s': round(started-queued, 1),
+            'run_s': round(finished-started, 1), 'exit': result, 'cwd': os.getcwd(),
+            'cmd': ' '.join(command)[:300], 'memory_peak': own_memory_peak() if pooled else None})
     if editor:
         clean_idle_compilers(config)
     return result
@@ -198,6 +244,10 @@ def classify(command):
     # Keep support for Editor debugging through gdb --args.
     if any(Path(arg).name=='Unity' and Path(arg).parent.name=='Editor' for arg in command):
         return 'editor-cpu' if '-nographics' in command else 'editor-gpu'
+    if args and Path(args[0]).name in BUILD_TOOLS:
+        verbs = BUILD_TOOLS[Path(args[0]).name]
+        if verbs is None or (len(args)>1 and args[1] in verbs):
+            return 'build'
     return 'heavy'
 
 
@@ -230,19 +280,28 @@ def main(args):
     if args and args[0]=='--':
         args = args[1:]
     if not args:
-        raise SystemExit('usage: with-heavy-job [--kind editor-cpu|editor-gpu|engine-cpu|engine-gpu|heavy] COMMAND...')
+        raise SystemExit('usage: with-heavy-job [--kind editor-cpu|editor-gpu|engine-cpu|engine-gpu|build|heavy] COMMAND...')
     if kind is None:
         kind = classify(args)
-    assert kind in ['editor-cpu','editor-gpu','engine-cpu','engine-gpu','heavy'], 'invalid job kind'
+    assert kind in ['editor-cpu','editor-gpu','engine-cpu','engine-gpu','build','heavy'], 'invalid job kind'
     if kind!='heavy' and not worker:
         editor = kind.startswith('editor-')
-        unit = ('unbound-editor-' if editor else 'unbound-engine-')+scope_id+'.scope'
-        limits = [] if editor else [
+        build = kind=='build'
+        unit = ('unbound-editor-' if editor else 'unbound-build-' if build else
+                'unbound-engine-')+scope_id+'.scope'
+        if editor:
+            limits = []
+        elif build:
+            limits = ['--property=MemoryHigh='+str(config['build_memory_high_bytes']),
+                      '--property=MemoryMax='+str(config['build_memory_max_bytes']),
+                      '--property=MemorySwapMax=0']
+        else:
+            limits = [
             '--property=MemoryHigh='+str(config['engine_job_memory_max_bytes']*3//4),
             '--property=MemoryMax='+str(config['engine_job_memory_max_bytes']),
             '--property=MemorySwapMax=0']
         return run(['systemd-run','--user','--scope','--quiet',
-                    '--slice='+config['slice' if editor else 'engine_slice'],
+                    '--slice='+config['build_slice' if build else 'slice' if editor else 'engine_slice'],
                     '--unit='+unit,*limits,sys.executable,str(Path(__file__).resolve()),
                     '--pool-worker',kind,'--',*args])
     return execute(args,kind,config)

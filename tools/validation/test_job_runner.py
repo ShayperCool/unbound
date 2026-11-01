@@ -23,8 +23,14 @@ if len(sys.argv)>1 and sys.argv[1]=='worker':
         relative=Path('/proc/self/cgroup').read_text().split('::',1)[1].strip()
         group=Path('/sys/fs/cgroup')/relative.lstrip('/')
         pool=group.parent
-        assert pool.name==('unbound-editors.slice' if kind.startswith('editor-') else 'unbound-engines.slice')
-        assert int((pool/'memory.max').read_text())==(16 if kind.startswith('editor-') else 8)*2**30
+        if kind=='build':
+            assert pool.name=='unbound-builds.slice',pool
+            assert int((group/'memory.max').read_text())==9*2**30
+            assert int((group/'memory.high').read_text())==7*2**30
+            assert int((group/'memory.swap.max').read_text())==0
+        else:
+            assert pool.name==('unbound-editors.slice' if kind.startswith('editor-') else 'unbound-engines.slice')
+            assert int((pool/'memory.max').read_text())==(16 if kind.startswith('editor-') else 8)*2**30
         if kind.startswith('engine-'):
             assert int((group/'memory.max').read_text())==4*2**30
             assert int((group/'memory.swap.max').read_text())==0
@@ -54,8 +60,13 @@ for command,expected in [
     (['env','KEY=value','timeout','600','/tmp/unbound','run','--headless','1'],'engine-cpu'),
     (['/tmp/unbound','run','--headless=1'],'engine-cpu'),
     (['python3','driver.py','/tmp/unbound','run','--headless','1'],'heavy'),
-    (['cargo','build','--release'],'heavy'),
-    (['dotnet','build','project.csproj'],'heavy'),
+    (['cargo','build','--release'],'build'),
+    (['timeout','1200','cargo','test','-p','unbound-app'],'build'),
+    (['env','A=1','dotnet','test','Tests.csproj'],'build'),
+    (['dotnet','build','project.csproj'],'build'),
+    (['dotnet','exec','tool.dll'],'heavy'),
+    (['./build.sh'],'heavy'),
+    (['bash','-c','cargo build'],'heavy'),
     (['gdb','--args','/opt/Editor/Unity','-batchmode','-nographics'],'editor-cpu'),
 ]:
     assert runner.classify(command)==expected,(command,expected)
@@ -98,6 +109,11 @@ jobs.append(spawn('heavy','writer',.3))
 jobs.append(spawn('editor-cpu','late-reader',.2))
 jobs.append(spawn('engine-cpu','late-engine',.2))
 join(jobs)
+# Builds overlap Editors and engines, never each other or the exclusive writer.
+jobs=[spawn('build','build-'+str(i),.6) for i in range(2)]
+jobs += [spawn('editor-cpu','build-editor-'+str(i),.6) for i in range(5)]
+jobs.append(spawn('engine-cpu','build-engine',.6))
+join(jobs)
 join([spawn('editor-gpu','gpu-editor-'+str(i),.3) for i in range(2)]+
      [spawn('engine-gpu','gpu-engine-'+str(i),.3) for i in range(2)])
 rows=[json.loads(line) for line in events.read_text().splitlines()]
@@ -105,6 +121,7 @@ active=set()
 peak=0
 engine_peak=0
 mixed_overlap=False
+build_overlap=False
 active_kinds={}
 active_projects={}
 for row in sorted(rows,key=lambda r:r['time']):
@@ -123,8 +140,11 @@ for row in sorted(rows,key=lambda r:r['time']):
         active_kinds[name]=row['kind']
         engine_count=sum(k.startswith('engine-') for k in active_kinds.values())
         editor_count=sum(k.startswith('editor-') for k in active_kinds.values())
+        build_count=sum(k=='build' for k in active_kinds.values())
         assert engine_count<=2,('engine cap',active_kinds)
-        assert editor_count+engine_count*2<=8,('shared memory tokens',active_kinds)
+        assert build_count<=1,('build cap',active_kinds)
+        assert editor_count+engine_count*2+build_count*4<=8,('shared memory tokens',active_kinds)
+        build_overlap |= build_count>0 and editor_count+engine_count>0
         engine_peak=max(engine_peak,engine_count)
         mixed_overlap |= engine_count>0 and editor_count>0
         if name.startswith('cpu-'):
@@ -139,6 +159,7 @@ assert not active
 assert peak>=2,'Editor jobs were still serialized'
 assert engine_peak==2,'engine jobs were still serialized'
 assert mixed_overlap,'Editor and engine never overlapped'
+assert build_overlap,'builds still stop the Editor and engine pools'
 
 for kind in ['editor-cpu','engine-cpu']:
     name='cancel-'+kind
@@ -167,6 +188,6 @@ for kind in ['editor-cpu','engine-cpu']:
     engine_peak=engine_peak,engine_slot_limit=2,mixed_overlap=mixed_overlap,
     combined_memory_tokens=8,combined_memory_max_bytes=16*2**30,
     engine_memory_max_bytes=8*2**30,engine_job_memory_max_bytes=4*2**30,swap_max_bytes=0,
-    exclusive_builds=True,gpu_serial=True,project_serial=True,cancellation=True),indent=2)+'\n')
-print('Editor/engine slots, combined memory budget, exclusive writer, GPU mutex and cancellation verified;',
+    exclusive_builds=False,build_slots=1,build_tokens=4,build_overlap=build_overlap,gpu_serial=True,project_serial=True,cancellation=True),indent=2)+'\n')
+print('Editor/engine/build slots, combined memory budget, exclusive writer, GPU mutex and cancellation verified;',
       'Editor peak',peak,'engine peak',engine_peak)

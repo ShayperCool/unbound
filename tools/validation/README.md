@@ -12,7 +12,15 @@ one GPU mutex. Direct `unbound run` commands use the engine pool: at most two
 jobs, with `--headless` selecting CPU mode and other runs sharing the Editor GPU
 mutex. Known `time`, `timeout` and `env` wrappers are recognized. An executable
 passed as an argument to a Python driver does not pool that whole driver.
-Builds and other jobs acquire the exclusive lock.
+Builds (`cargo`, `rustc`, and `dotnet build/test/publish/restore/msbuild/pack/format`,
+also behind time, timeout and env) share the heavy-job lock with the pools: one build at a
+time, holding four of the eight memory tokens, in `unbound-builds.slice` (MemoryHigh 7 GiB,
+MemoryMax 9 GiB, no swap) inside the same 16 GiB `unbound.slice` budget. A build therefore
+runs beside up to four Editors (or two engines) instead of stopping every pool. Build scripts
+are not recognized: pass `--kind build` for a script that only builds. Other jobs keep the
+exclusive lock, because they may start Editors without going through the pool.
+Every job appends its kind, queue wait, run time, exit code and the scope's memory peak to
+`~/.cache/compat/job-timings.jsonl`; use it to tune the build token weight and limits.
 Direct engine runs on the same resolved project directory are serialized before
 taking pool tokens; different spellings and symlinks share the same project lock.
 The entry lock prevents new readers from continuously bypassing a waiting writer.
