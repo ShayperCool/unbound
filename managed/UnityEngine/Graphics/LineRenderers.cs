@@ -821,7 +821,7 @@ namespace UnityEngine
     /// first records the previous position if it has no points, then the new position once it is
     /// at least minVertexDistance from the newest point; points are stamped with Time.time and
     /// remember whether the trail was emitting (non-emitting points are drawn at zero width).
-    /// Once a frame the oldest point is dropped while the next one is older than <see cref="time"/>,
+    /// On movement or camera collection the oldest point is dropped while the next one is older than <see cref="time"/>,
     /// and a last point when it is. The strip runs from the object's position through the points,
     /// newest first; the oldest point is drawn moved towards the next one by the fraction of their
     /// time difference it has outlived.
@@ -894,7 +894,7 @@ namespace UnityEngine
 
         /// <summary>Records the object's movement since the trail last looked; a move also drops
         /// the points that have outlived the trail's time (measured: a moving trail ages when
-        /// it is read, a still one once a frame).</summary>
+        /// it is read; stationary expiry is handled by camera collection).</summary>
         void TrackMovement()
         {
             if (m_GameObject == null) return;
@@ -922,20 +922,12 @@ namespace UnityEngine
             while (m_Points.Count - expired >= 2 && now - m_Points[expired + 1].Time > m_Time) expired++;
             if (expired > 0) m_Points.RemoveRange(0, expired);
             if (m_Points.Count == 1 && now - m_Points[0].Time > m_Time) m_Points.Clear();
+            if (m_Points.Count > 0) m_HadPoints = true;
         }
 
-        /// <summary>Once a frame, before rendering: movement, ageing and autodestruction.</summary>
-        internal void UpdateTrail()
-        {
-            TrackMovement();
-            Age(Now);
-            if (m_Points.Count > 0) m_HadPoints = true;
-            else if (m_HadPoints && m_Autodestruct && Application.isPlaying)
-            {
-                m_HadPoints = false;
-                Destroy(m_GameObject);
-            }
-        }
+        /// <summary>Once a frame, before rendering: record movement. Stationary expiry belongs
+        /// to camera collection, not this unconditional update.</summary>
+        internal void UpdateTrail() => TrackMovement();
 
         /// <summary>The strip's points from the object (head) to the oldest point.</summary>
         List<Vector3> DrawPoints()
@@ -1106,6 +1098,13 @@ namespace UnityEngine
 
         internal override void CollectDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into)
         {
+            // Native's culling callback allows automatic destruction in RemoveOldPoints, before
+            // checking for an empty strip. Movement/bounds and BakeMesh cannot make this request.
+            // Source proof: tests/projects/lines/TRAIL_AUTODESTRUCT_NATIVE.md, Unity 6000.0.71f1.
+            TrackMovement();
+            Age(Now);
+            if (m_Points.Count == 0 && m_HadPoints && m_Autodestruct && Application.isPlaying)
+                TrailSystem.RequestDestroy(m_GameObject);
             if (!m_Strip.Build(DrawPoints(), m_DrawHidden, false, m_Parameters, LineDrawing.Facing(m_Parameters, camera.Position, camera.Forward))) return;
             var mesh = LineDrawing.MeshFor(m_Meshes, camera.Camera, "TrailRenderer");
             m_Strip.WriteTo(mesh, Matrix4x4.identity);
@@ -1164,7 +1163,10 @@ namespace UnityEngine
         {
             static readonly List<TrailRenderer> s_Trails = new List<TrailRenderer>();
             static readonly List<TrailRenderer> s_Snapshot = new List<TrailRenderer>();
+            static readonly Queue<GameObject> s_DestroyRequests = new Queue<GameObject>();
+            static readonly HashSet<GameObject> s_DestroyTargets = new HashSet<GameObject>();
             static bool s_Registered;
+            static bool s_Draining;
 
             internal static void Add(TrailRenderer trail)
             {
@@ -1172,11 +1174,47 @@ namespace UnityEngine
                 {
                     s_Registered = true;
                     PlayerLoopDriver.Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), UpdateAll);
+                    // Native automatic requests use mode 0x43: fixed mask 1 and dynamic mask 2
+                    // consume them; startup mask 4 and EOF mask 0x20 do not. Prepend so existing
+                    // Invokes/coroutines at these same nodes observe the completed destruction.
+                    PlayerLoopDriver.RegisterFirst(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), DrainDestroyRequests);
+                    PlayerLoopDriver.RegisterFirst(typeof(PL.Update.ScriptRunDelayedDynamicFrameRate), DrainDestroyRequests);
+                    PlayerLoopDriver.RegisterFirst(typeof(PL.PostLateUpdate.ScriptRunDelayedDynamicFrameRate), DrainDestroyRequests);
                 }
                 if (!s_Trails.Contains(trail)) s_Trails.Add(trail);
             }
 
             internal static void Remove(TrailRenderer trail) => s_Trails.Remove(trail);
+
+            internal static void RequestDestroy(GameObject target)
+            {
+                // Capture the target, not a component whose later state could cancel the request.
+                // Deduplication bounds repeated camera collections to one pending entry per target.
+                if (target != null && s_DestroyTargets.Add(target)) s_DestroyRequests.Enqueue(target);
+            }
+
+            static void DrainDestroyRequests()
+            {
+                if (s_Draining || s_DestroyRequests.Count == 0) return;
+                s_Draining = true;
+                try
+                {
+                    int count = s_DestroyRequests.Count;
+                    // A fixed snapshot: callbacks can enqueue more, but cannot consume those new
+                    // requests in this pass, even by reentering a matching node.
+                    for (int i = 0; i < count; i++)
+                    {
+                        var target = s_DestroyRequests.Dequeue();
+                        s_DestroyTargets.Remove(target);
+                        // Scene unload and leaving Play mode already destroy their GameObjects.
+                        // Retaining the reference until this pass cannot target a replacement object.
+                        if (target == null) continue;
+                        try { Destruction.DestroyImmediate(target); }
+                        catch (Exception e) { Debug.LogException(e); }
+                    }
+                }
+                finally { s_Draining = false; }
+            }
 
             static void UpdateAll()
             {

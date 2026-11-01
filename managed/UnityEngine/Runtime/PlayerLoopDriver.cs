@@ -132,6 +132,15 @@ namespace Unbound.Runtime
             list.Add(action);
         }
 
+        /// <summary>Runs an engine action before the existing actions at this same system node.</summary>
+        internal static void RegisterFirst(Type system, Action action)
+        {
+            // Keep any node invocation already enumerating its old list unchanged.
+            var next = new List<Action> { action };
+            if (s_Engine.TryGetValue(system, out var list)) next.AddRange(list);
+            s_Engine[system] = next;
+        }
+
         internal static PlayerLoopSystem DefaultLoop()
         {
             var phases = new[]

@@ -121,10 +121,13 @@ namespace UnityEngine.Tests
             Frame(0.1f);
             Assert.Equal(5, trail.positionCount);
             Assert.Equal(new Vector3(0f, 0f, 0f), trail.GetPosition(0));
-            // Points age in the per-frame update: after the trail's time they are all gone.
+            // Still points age during camera collection, before its empty-strip return.
             Frame(2f);
             Assert.Equal(5, trail.positionCount);
             trail.UpdateTrail();
+            Assert.Equal(5, trail.positionCount);
+            trail.CollectDraws(new Unbound.Runtime.FrameBuilder.CameraContext { Forward = Vector3.forward },
+                new System.Collections.Generic.List<Unbound.Runtime.FrameBuilder.DrawItem>());
             Assert.Equal(0, trail.positionCount);
             go.transform.position = new Vector3(6f, 0f, 0f);
             Assert.Equal(2, trail.positionCount);
@@ -161,7 +164,9 @@ namespace UnityEngine.Tests
             foreach (float step in new[] { 1.13f, 0.41f, 5f })
             {
                 Frame(step);
-                trail.UpdateTrail();
+                // Exercise the prefix algorithm directly, independently of its render request site.
+                typeof(TrailRenderer).GetMethod("Age", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance)
+                    .Invoke(trail, new object[] { Time.time });
                 float now = Time.time;
                 while (positions.Count >= 2 && now - times[1] > 1f)
                 {
