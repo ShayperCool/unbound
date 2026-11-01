@@ -202,6 +202,15 @@ namespace UnityEngine
 
         public void Release()
         {
+            if (s_Active == this && this != ScreenStandIn)
+                Debug.LogWarning("Releasing render texture that is set to be RenderTexture.active!");
+            ReleaseQuietly();
+        }
+
+        /// <summary>Frees the GPU texture (destruction, internal buffers) without the warning about
+        /// the active target.</summary>
+        internal void ReleaseQuietly()
+        {
             if (s_Active == this) active = null;
             if (m_NativeHandle != 0) Native.ReleaseTexture(m_NativeHandle);
             m_NativeHandle = 0;
@@ -421,7 +430,7 @@ namespace UnityEngine
         public static GraphicsFormat GetCompatibleFormat(RenderTextureFormat renderTextureFormat, RenderTextureReadWrite readWrite) =>
             GraphicsFormatUtility.GetGraphicsFormat(renderTextureFormat, readWrite);
 
-        internal override void OnEngineDestroy() => Release();
+        internal override void OnEngineDestroy() => ReleaseQuietly();
     }
 
     public partial struct RenderTextureDescriptor
