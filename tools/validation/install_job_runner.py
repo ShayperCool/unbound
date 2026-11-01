@@ -26,7 +26,7 @@ old = CACHE/'with-heavy-job'
 backup = CACHE/'with-heavy-job.serial-20261031'
 if old.exists() and not backup.exists():
     shutil.copy2(old,backup)
-for name in ['unbound.slice','unbound-editors.slice','unbound-engines.slice']:
+for name in ['unbound.slice','unbound-editors.slice','unbound-engines.slice','unbound-builds.slice']:
     replace(UNITS/name,(ROOT/name).read_bytes())
 subprocess.run(['systemctl','--user','daemon-reload'],check=True)
 # The old runner accepts the additional policy keys. Install limits and policy

@@ -10,5 +10,11 @@
   "gpu_editor_slots": 1,
   "slice": "unbound-editors.slice",
   "engine_slice": "unbound-engines.slice",
-  "basis": "Unity 6000.0.71f1: eight fresh 3.36M-observation Editor processes peaked at 14.108 GiB with identical captures and no swap."
+  "basis": "Unity 6000.0.71f1: eight fresh 3.36M-observation Editor processes peaked at 14.108 GiB with identical captures and no swap.",
+  "build_slots": 1,
+  "build_slot_weight": 4,
+  "build_slice": "unbound-builds.slice",
+  "build_memory_high_bytes": 7516192768,
+  "build_memory_max_bytes": 9663676416,
+  "build_basis": "Builds take four of the eight tokens, so a build plus four Editors stays inside the 16 GiB unbound.slice budget; tune from memory_peak in job-timings.jsonl."
 }
