@@ -171,14 +171,25 @@ namespace Unbound.Runtime
 
         /// <summary>A SceneManager Single load closing the scenes it replaces: its incoming scene,
         /// created but not loaded yet, and the load it is nested in (an Editor load a callback
-        /// started), if any.</summary>
+        /// started), if any. The public scene queries read the rest (SceneManagerInternal.Listed):
+        /// the scenes loaded when it began, the scene it is closing and the scenes it has closed.
+        /// The loaded list itself (what loading, lighting and Find use) is not changed by it.</summary>
         internal sealed class SingleLoadTeardown
         {
             internal SceneData Incoming;
             internal SingleLoadTeardown Outer;
+            /// <summary>The scenes loaded when the teardown began, in load order.</summary>
+            internal SceneData[] Outgoing;
+            /// <summary>The scene whose objects are being destroyed or whose sceneUnloaded runs.</summary>
+            internal SceneData Closing;
+            /// <summary>The scenes it closed, in that order: no longer loaded, still valid until it ends.</summary>
+            internal readonly List<SceneData> Closed = new List<SceneData>();
         }
 
         static SingleLoadTeardown s_Teardown;
+
+        /// <summary>The innermost Single load teardown in effect, or null.</summary>
+        internal static SingleLoadTeardown Teardown => s_Teardown;
 
         /// <summary>
         /// Where objects made without a scene of their own go while a SceneManager Single load
@@ -195,11 +206,24 @@ namespace Unbound.Runtime
         internal static SingleLoadTeardown BeginSingleLoadTeardown(SceneData incoming)
         {
             var outer = s_Teardown;
-            s_Teardown = new SingleLoadTeardown { Incoming = incoming, Outer = outer };
+            s_Teardown = new SingleLoadTeardown
+            {
+                Incoming = incoming,
+                Outer = outer,
+                Outgoing = Loaded.FindAll(s => s != incoming).ToArray(),
+            };
             return outer;
         }
 
-        internal static void EndSingleLoadTeardown(SingleLoadTeardown outer) => s_Teardown = outer;
+        /// <summary>Ends the innermost teardown (also when it threw): the scenes it closed become
+        /// invalid now, before the incoming scene is activated.</summary>
+        internal static void EndSingleLoadTeardown(SingleLoadTeardown outer)
+        {
+            var ended = s_Teardown;
+            s_Teardown = outer;
+            if (ended == null) return;
+            foreach (var scene in ended.Closed) s_Scenes.Remove(scene.Handle.Value);
+        }
 
         /// <summary>The incoming scene of a Single load that is closing its outgoing scenes: not
         /// loaded yet, but its objects can be found and its roots listed.</summary>
@@ -208,6 +232,36 @@ namespace Unbound.Runtime
             for (var t = s_Teardown; t != null; t = t.Outer)
                 if (t.Incoming == scene) return true;
             return false;
+        }
+
+        /// <summary>The scene a Single load is closing: no longer loaded for the public queries
+        /// while its objects are destroyed (measured, Unity 6000.0.71f1: tests/projects/lightprobes
+        /// Reference creation-ownership.jsonl, the outgoing scene in its objects' OnDisable and
+        /// OnDestroy). Its internal state, and with it loading, Find and SetActiveScene, is unchanged.</summary>
+        internal static bool IsTeardownClosing(SceneData scene)
+        {
+            for (var t = s_Teardown; t != null; t = t.Outer)
+                if (t.Closing == scene) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// A scene a SceneManager Single load has closed, after its sceneUnloaded: it leaves the
+        /// loaded list and its light probe lookup is released as by <see cref="Forget"/>, but it
+        /// stays valid, not loaded and listed until the load's teardown ends: a scene a handler
+        /// made and the same load closes later still sees it (measured, Unity 6000.0.71f1:
+        /// tests/projects/lightprobes Reference creation-ownership.jsonl, sceneUnloaded of Made).
+        /// </summary>
+        internal static void CloseForSingleLoad(SceneData scene)
+        {
+            if (s_Teardown == null)
+            {
+                Forget(scene);
+                return;
+            }
+            Loaded.Remove(scene);
+            LightProbes.SceneForgotten(scene.Handle.Value);
+            s_Teardown.Closed.Add(scene);
         }
 
         /// <summary>The scene an object made without a parent or scene of its own goes to: the
