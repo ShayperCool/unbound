@@ -64,3 +64,12 @@ and the discriminating cases use one marker class. No candidate explains Main's
 prefab-instance wake order. Do not infer an activation sort from the root-order
 API contract. The source/evidence audit and full sequences are saved under
 `validation/runs/claude-fresh-20261101b/activation-audit/`.
+
+Two subsequent scene-activation witness attempts each stopped after their first
+Editor launch crashed during shutdown. Both completed files have identical bytes,
+but neither passed the strict exit gate, so they do not form a valid Native pair
+and no new reference was published. Deferring the shutdown operations passed
+mock controls but did not prevent the second crash. The activation rule and the
+coupled root-order correction remain held. Receipts are under
+`validation/runs/sceneactivation-witness-20261102/` and
+`validation/runs/sceneactivation-witness2-20261102/`; their outputs are diagnostic.

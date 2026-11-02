@@ -2673,3 +2673,11 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - Next evidence: a proposed two-phase, 15-marker discriminator separates 28 declared candidates; the audit did not run it. Instance-id rank is an observation, not proof of allocation chronology.
 - Runtime/results: unchanged rfc-validation/candidate, manifest 530c114b; prior 1583/1594 managed and API 0/2318 remain reused, with no new parity claim.
 - Evidence: `validation/runs/claude-fresh-20261101b/activation-audit/RECEIPT.md`, `projection.json` and `discriminator-predictions.json`; gaps are explicit, raw comparisons unchanged.
+
+### Scene-activation witness attempts refused, 2026-11-02
+- Outcome: each of two bounded attempts stopped after native1 failed the strict exit gate with SIGSEGV during shutdown; neither admitted native2 or published a canonical. No further Native launch is authorized.
+- Data: both 120-line completed raw files hash to bb12acb2, but two failed-gate launches are not an accepted repeat. All raw records, errors and rejected attempts remain preserved.
+- Mitigation: Root's queued mode-exit/quit patch passed both compiled mock controls but did not prevent the repeated crash. Its causal effectiveness is unproved; no shared supervisor or acceptance gate was relaxed.
+- Source: prepared branches d682a582 and 38bd0d81 remain unmerged. No activation sort or root-order fix is admitted; the existing root-order evidence and significant gaps remain open.
+- Runtime/results: production still equals tested 60a1cd68, runtime rfc-validation/candidate manifest 530c114b; managed 1583/1594 and API 0/2318 are prior reused results, with no new engine validation.
+- Evidence: `validation/runs/sceneactivation-witness-20261102/RECEIPT.md`, `validation/runs/sceneactivation-witness2-20261102/RECEIPT.md`, and `validation/runs/activation-shutdown-prep-20261102/controls.json`.
