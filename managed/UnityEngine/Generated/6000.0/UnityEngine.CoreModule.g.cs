@@ -5864,16 +5864,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] public static int DecodeIdFromColor(global::UnityEngine.Color color) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ObjectIdResult.DecodeIdFromColor"); return default; }
         public global::UnityEngine.Object[] idToObjectMapping { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ObjectIdResult.idToObjectMapping"); return global::System.Array.Empty<global::UnityEngine.Object>(); } }
     }
-    [global::Unbound.Stub]
-    public unsafe partial class OnDemandRendering
-    {
-        [global::Unbound.Stub] internal static void GetRenderFrameInterval(out int frameInterval) { frameInterval = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.OnDemandRendering.GetRenderFrameInterval"); }
-        [global::Unbound.Stub] internal static float GetEffectiveRenderFrameRate() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.OnDemandRendering.GetEffectiveRenderFrameRate"); return default; }
-        [global::Unbound.Stub] public OnDemandRendering() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.OnDemandRendering.ctor"); }
-        public static bool willCurrentFrameRender { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.OnDemandRendering.willCurrentFrameRender"); return default; } }
-        public static int renderFrameInterval { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.OnDemandRendering.renderFrameInterval"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.OnDemandRendering.renderFrameInterval"); } }
-        public static int effectiveRenderFrameRate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.OnDemandRendering.effectiveRenderFrameRate"); return default; } }
-    }
     public enum OpenGLESVersion
     {
         None = 0,
