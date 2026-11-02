@@ -1,0 +1,543 @@
+{
+ "format": 1,
+ "inputs": {
+  "Assets/Editor/WakeRunner.cs": "593aff986402f9f19fa63541f7334d36b3c46c01cc2a5c7e56230240b03b6639",
+  "Assets/Editor/WakeRunner.cs.meta": "672e9cadd9c142e8a931bf4eafd107335e976b6c43fadc0bd16188e63344c275",
+  "Assets/Editor.meta": "5878f21742cbb1f88d856e77acbbb8cb5ada95afad39e4b03c41c6a35cb943ff",
+  "Assets/Prefabs/X.prefab": "4b7dc10d812edc623da652b80a67571c0aa740e0c58c8c0420c3cd5c89437d66",
+  "Assets/Prefabs/X.prefab.meta": "4b9209d4fb45e67417a98259212333fda9f07e74f7ea9d598818181cc5c41dea",
+  "Assets/Prefabs/Y.prefab": "16e700ea858f0dda1acebeff212561b7f6a2e7aa79415a85cf8bc5b6cb68b432",
+  "Assets/Prefabs/Y.prefab.meta": "97c0c95629a4ee3e188be2275b6a173b2ba866258a8069849f822c71beef2c86",
+  "Assets/Prefabs.meta": "6382085c2bf6b19e5d0689b724f458897d7ad53f851b18bfd45d89b0005a96c9",
+  "Assets/Scenes/Wake.unity": "13a56e575eb71e78b07d3f1061a2e36a6a43bdebd17287441585332e1d4251ad",
+  "Assets/Scenes/Wake.unity.meta": "e08cddf1255433167c4cf890b73884896b8e9d49e5a506b1b7d65e0e43f92c09",
+  "Assets/Scenes/WakeCopy.unity": "13a56e575eb71e78b07d3f1061a2e36a6a43bdebd17287441585332e1d4251ad",
+  "Assets/Scenes/WakeCopy.unity.meta": "328f4b511bcb9042b5202fbc67c509ae5d22f8557ecbe9690cd581cee2ff16da",
+  "Assets/Scenes.meta": "110af8879a07cb8d99fddc603e5d3567d6df9ef07a4403d0f5dcce6573d3327c",
+  "Assets/Scripts/W.cs": "f33af5d5cbe53b5db55069c77e499aab5400b61d936db05bd9646cd414171097",
+  "Assets/Scripts/W.cs.meta": "20da9fd3ec6416baef84c01444ed5f6b9e0743308f9cb135f6bac0614083b2c4",
+  "Assets/Scripts/W2.cs": "7c71193f1838562cd84a85568ec856de91cb38340d4be343ab45a09eb55c869f",
+  "Assets/Scripts/W2.cs.meta": "678ece49874bbf0c7b7fadf88021dda4e1a7b4198f2cffb1f5b2962b9cbe18b8",
+  "Assets/Scripts/WE.cs": "740dc16ae268ee8f5e6d0a5e2f4ba56d75980ed8ad0431014c3cba96fd394fa7",
+  "Assets/Scripts/WE.cs.meta": "5317323689df17532ee497d47340de881fb4369557ad3005e8fc46fa3a6ef8d0",
+  "Assets/Scripts/WakeDriver.cs": "c2258c62ef0bae1f189749a46baa825bd83616c1a83fb4efa59efac9a09286fb",
+  "Assets/Scripts/WakeDriver.cs.meta": "7913a1f4e74632a6075a376973fc5a8cb218a3575af335d2a0b4b43acf0ec4f3",
+  "Assets/Scripts/WakeLog.cs": "bb9237693564b88e5ef9a644e25112bc37ea466366c610043e1946439b364943",
+  "Assets/Scripts/WakeLog.cs.meta": "b4440d3dfc60f41e6826c786279cfd74387d61aee59b9f9311a49843f1fb075e",
+  "Assets/Scripts.meta": "6a91fe27396ef6a3c42d77316951580ae43b10d1dd86558696eb71914bfdb395",
+  "Packages/manifest.json": "08f60c59240e89d87c38b802c17e059529f0487fe8acc49bcc79a8ab7eae5dfb",
+  "Packages/packages-lock.json": "4a262ed0c8cac5c98596ff787bd94f42db5758a3b5c65f098f423e7aaf1e1dd8",
+  "ProjectSettings/AudioManager.asset": "9a554916fe138ebcad8443ee9b079363ecc72795c39d0e80f5f7ca99e2c6f5e7",
+  "ProjectSettings/ClusterInputManager.asset": "40e65dd214bf254955d2c8829ca8ce2130fd3510485560ce012e9a1ddd93e623",
+  "ProjectSettings/DynamicsManager.asset": "f27512e38f80c091df2dd163ece09f86f8fe67395659af0a0ca873a88fd1c6a7",
+  "ProjectSettings/EditorBuildSettings.asset": "9ebe883fc8207dc7abf1bd2b820c5f84422315f72c3ff63d326c161314b4ee72",
+  "ProjectSettings/EditorSettings.asset": "06753c21648950aee0013b70f79a9035ac52aec6204d44cc2ac55a84034ad9ca",
+  "ProjectSettings/GraphicsSettings.asset": "fbf0856b7693639a5388ae693a455baaad354c1d8dc548601de3dc61c4ab12c3",
+  "ProjectSettings/InputManager.asset": "d0f454ddb880912abcae92e3e12957a7446786ba89e24937e019ff3bbc0d4300",
+  "ProjectSettings/MemorySettings.asset": "1e8379a461b10ae09f3f696911088c16875d63e87ed5f2d95df9e1892703f9fd",
+  "ProjectSettings/MultiplayerManager.asset": "aba89fd1a1ddad182727ad82727e536d27372e90328a8196da2a4560398983dd",
+  "ProjectSettings/NavMeshAreas.asset": "7ebbf8f53b8033104e1878b95ca07a28d0954092d81c220f14196a42f651e658",
+  "ProjectSettings/Physics2DSettings.asset": "9b78fdd0bac0f486c052ca65ddc0e5022d322b12874931a49456d407c5bbfc00",
+  "ProjectSettings/PresetManager.asset": "29c125923fe6e29f90190d4fce1c82d660e7051546e2c9d02908d18c9cf2436c",
+  "ProjectSettings/ProjectSettings.asset": "0ab75722cc5eb163a66bfdc2aab6813d14f366e8b6f86c55bafba959c65b851f",
+  "ProjectSettings/ProjectVersion.txt": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a",
+  "ProjectSettings/QualitySettings.asset": "bbc1846ac2fa9fdaa62fb1d1425c30ae0a30a98972eb158e8f0bcd9f862f70c4",
+  "ProjectSettings/SceneTemplateSettings.json": "bb9098b3bfcde78d93e264b96f7b77b5430e64e8c57a7aad7f5a5d9c3945e16a",
+  "ProjectSettings/TagManager.asset": "da4b5eefc927f8b91bcf9e56a186d2b852f49d9cbe91d466638d26c79d6a83ce",
+  "ProjectSettings/TimeManager.asset": "3396f52fdc16d445024e01d7a2d99db6f0a37569d1d73c0302e9ffb857d90287",
+  "ProjectSettings/UnityConnectSettings.asset": "11251dae0356b6f43dd2c67bb511f6b7ecda4e5de425186bba3297e6f3dc1c6f",
+  "ProjectSettings/VFXManager.asset": "9378043da38a17f2198d52a10c17789161d30e3285a387ca3687a71551c32448",
+  "ProjectSettings/VersionControlSettings.asset": "e199cdfa6a8f2bf33cfd47e549198f13e3eb2a5099e908fdb4e0f14d939ccc6b"
+ },
+ "scene": "Assets/Scenes/Wake.unity",
+ "scene_guid": "9ec2d1b5dd933b7e6d1fcfbd5ea50bb3",
+ "copy_guid": "d4ac3be03f4375f58749e6ec92d3aa5d",
+ "roots": [
+  "A",
+  "D",
+  "B",
+  "C",
+  "E",
+  "P1",
+  "Q",
+  "P2",
+  "P3"
+ ],
+ "tree": [
+  "A",
+  "D",
+  "B",
+  "B/B1",
+  "C",
+  "E",
+  "P1",
+  "P1/Xc",
+  "P1/Added",
+  "Q",
+  "P2",
+  "P2/X",
+  "P2/X/Xc",
+  "P3",
+  "P3/Xc"
+ ],
+ "objects": [
+  {
+   "n": "A",
+   "k": "plain",
+   "c": "W",
+   "x": 0,
+   "fid": 5000,
+   "doc": 3,
+   "pre": 0,
+   "ids": {
+    "go": 5000,
+    "t": 5001,
+    "mb": 5002
+   },
+   "documents": {
+    "go": 13,
+    "t": 14,
+    "mb": 15
+   },
+   "script": "Assets/Scripts/W.cs",
+   "script_guid": "94c2a88734938d4780acdd498114848f",
+   "globalobjectid": {
+    "go": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-5000-0",
+    "tr": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-5001-0",
+    "mb": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-5002-0"
+   },
+   "gate_globalobjectid": [
+    "go",
+    "tr",
+    "mb"
+   ]
+  },
+  {
+   "n": "D",
+   "k": "plain",
+   "c": "W2",
+   "x": 0,
+   "fid": 2000,
+   "doc": 1,
+   "pre": 1,
+   "ids": {
+    "go": 2000,
+    "t": 2001,
+    "mb": 2002
+   },
+   "documents": {
+    "go": 7,
+    "t": 8,
+    "mb": 9
+   },
+   "script": "Assets/Scripts/W2.cs",
+   "script_guid": "49c5fe2c775c294cc2372663d1cd9abd",
+   "globalobjectid": {
+    "go": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-2000-0",
+    "tr": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-2001-0",
+    "mb": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-2002-0"
+   },
+   "gate_globalobjectid": [
+    "go",
+    "tr",
+    "mb"
+   ]
+  },
+  {
+   "n": "B",
+   "k": "plain",
+   "c": "W",
+   "x": 0,
+   "fid": 1000,
+   "doc": 4,
+   "pre": 2,
+   "ids": {
+    "go": 1000,
+    "t": 1001,
+    "mb": 1002
+   },
+   "documents": {
+    "go": 16,
+    "t": 17,
+    "mb": 18
+   },
+   "script": "Assets/Scripts/W.cs",
+   "script_guid": "94c2a88734938d4780acdd498114848f",
+   "globalobjectid": {
+    "go": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-1000-0",
+    "tr": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-1001-0",
+    "mb": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-1002-0"
+   },
+   "gate_globalobjectid": [
+    "go",
+    "tr",
+    "mb"
+   ]
+  },
+  {
+   "n": "B/B1",
+   "k": "plain",
+   "c": "W",
+   "x": 0,
+   "fid": 500,
+   "doc": 2,
+   "pre": 3,
+   "ids": {
+    "go": 500,
+    "t": 501,
+    "mb": 502
+   },
+   "documents": {
+    "go": 10,
+    "t": 11,
+    "mb": 12
+   },
+   "script": "Assets/Scripts/W.cs",
+   "script_guid": "94c2a88734938d4780acdd498114848f",
+   "globalobjectid": {
+    "go": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-500-0",
+    "tr": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-501-0",
+    "mb": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-502-0"
+   },
+   "gate_globalobjectid": [
+    "go",
+    "tr",
+    "mb"
+   ]
+  },
+  {
+   "n": "C",
+   "k": "plain",
+   "c": "W",
+   "x": 0,
+   "fid": 3000,
+   "doc": 0,
+   "pre": 4,
+   "ids": {
+    "go": 3000,
+    "t": 3001,
+    "mb": 3002
+   },
+   "documents": {
+    "go": 4,
+    "t": 5,
+    "mb": 6
+   },
+   "script": "Assets/Scripts/W.cs",
+   "script_guid": "94c2a88734938d4780acdd498114848f",
+   "globalobjectid": {
+    "go": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-3000-0",
+    "tr": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-3001-0",
+    "mb": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-3002-0"
+   },
+   "gate_globalobjectid": [
+    "go",
+    "tr",
+    "mb"
+   ]
+  },
+  {
+   "n": "E",
+   "k": "plain",
+   "c": "WE",
+   "x": -10,
+   "fid": 4000,
+   "doc": 5,
+   "pre": 5,
+   "ids": {
+    "go": 4000,
+    "t": 4001,
+    "mb": 4002
+   },
+   "documents": {
+    "go": 19,
+    "t": 20,
+    "mb": 21
+   },
+   "script": "Assets/Scripts/WE.cs",
+   "script_guid": "0d6f0ddbec46e46fc4e2b8eba90ba119",
+   "globalobjectid": {
+    "go": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-4000-0",
+    "tr": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-4001-0",
+    "mb": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-4002-0"
+   },
+   "gate_globalobjectid": [
+    "go",
+    "tr",
+    "mb"
+   ]
+  },
+  {
+   "n": "P1",
+   "k": "inst",
+   "c": "W",
+   "x": 0,
+   "fid": 9000,
+   "doc": 7,
+   "pre": 6,
+   "r": 0,
+   "nested": false,
+   "ids": {
+    "pi": 9000,
+    "source": "Assets/Prefabs/X.prefab",
+    "source_guid": "859913358b87aaba68fe36a511d40f4c",
+    "source_go": 1460000000000000101,
+    "source_t": 1460000000000000102,
+    "source_mb": 1460000000000000103
+   },
+   "documents": {
+    "pi": 23
+   },
+   "script": "Assets/Scripts/W.cs",
+   "script_guid": "94c2a88734938d4780acdd498114848f",
+   "globalobjectid": {
+    "go": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-1460000000000000101-9000",
+    "tr": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-1460000000000000102-9000",
+    "mb": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-1460000000000000103-9000"
+   },
+   "gate_globalobjectid": []
+  },
+  {
+   "n": "P1/Xc",
+   "k": "inst",
+   "c": "W",
+   "x": 0,
+   "fid": 9000,
+   "doc": 7,
+   "pre": 7,
+   "r": 1,
+   "nested": false,
+   "ids": {
+    "pi": 9000,
+    "source": "Assets/Prefabs/X.prefab",
+    "source_guid": "859913358b87aaba68fe36a511d40f4c",
+    "source_go": 2730000000000000201,
+    "source_t": 2730000000000000202,
+    "source_mb": 2730000000000000203
+   },
+   "documents": {
+    "pi": 23
+   },
+   "script": "Assets/Scripts/W.cs",
+   "script_guid": "94c2a88734938d4780acdd498114848f",
+   "globalobjectid": {
+    "go": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-2730000000000000201-9000",
+    "tr": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-2730000000000000202-9000",
+    "mb": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-2730000000000000203-9000"
+   },
+   "gate_globalobjectid": []
+  },
+  {
+   "n": "P1/Added",
+   "k": "plain",
+   "c": "W",
+   "x": 0,
+   "fid": 800,
+   "doc": 10,
+   "pre": 8,
+   "ids": {
+    "go": 800,
+    "t": 801,
+    "mb": 802
+   },
+   "documents": {
+    "go": 29,
+    "t": 30,
+    "mb": 31
+   },
+   "script": "Assets/Scripts/W.cs",
+   "script_guid": "94c2a88734938d4780acdd498114848f",
+   "globalobjectid": {
+    "go": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-800-0",
+    "tr": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-801-0",
+    "mb": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-802-0"
+   },
+   "gate_globalobjectid": [
+    "go",
+    "tr",
+    "mb"
+   ]
+  },
+  {
+   "n": "Q",
+   "k": "plain",
+   "c": "W",
+   "x": 0,
+   "fid": 1500,
+   "doc": 9,
+   "pre": 9,
+   "ids": {
+    "go": 1500,
+    "t": 1501,
+    "mb": 1502
+   },
+   "documents": {
+    "go": 26,
+    "t": 27,
+    "mb": 28
+   },
+   "script": "Assets/Scripts/W.cs",
+   "script_guid": "94c2a88734938d4780acdd498114848f",
+   "globalobjectid": {
+    "go": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-1500-0",
+    "tr": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-1501-0",
+    "mb": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-1502-0"
+   },
+   "gate_globalobjectid": [
+    "go",
+    "tr",
+    "mb"
+   ]
+  },
+  {
+   "n": "P2",
+   "k": "inst",
+   "c": "W",
+   "x": 0,
+   "fid": 7000,
+   "doc": 8,
+   "pre": 10,
+   "r": 0,
+   "nested": false,
+   "ids": {
+    "pi": 7000,
+    "source": "Assets/Prefabs/Y.prefab",
+    "source_guid": "659b6c4e5c3c501978235630c3ea374d",
+    "source_go": 3810000000000000301,
+    "source_t": 3810000000000000302,
+    "source_mb": 3810000000000000303
+   },
+   "documents": {
+    "pi": 25
+   },
+   "script": "Assets/Scripts/W.cs",
+   "script_guid": "94c2a88734938d4780acdd498114848f",
+   "globalobjectid": {
+    "go": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-3810000000000000301-7000",
+    "tr": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-3810000000000000302-7000",
+    "mb": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-3810000000000000303-7000"
+   },
+   "gate_globalobjectid": []
+  },
+  {
+   "n": "P2/X",
+   "k": "inst",
+   "c": "W",
+   "x": 0,
+   "fid": 7000,
+   "doc": 8,
+   "pre": 11,
+   "r": 1,
+   "nested": true,
+   "ids": {
+    "pi": 7000,
+    "source": "Assets/Prefabs/Y.prefab",
+    "source_guid": "659b6c4e5c3c501978235630c3ea374d",
+    "source_go": 5074121787755856372,
+    "source_t": 5074121787755856375,
+    "source_mb": 5074121787755856374
+   },
+   "documents": {
+    "pi": 25
+   },
+   "script": "Assets/Scripts/W.cs",
+   "script_guid": "94c2a88734938d4780acdd498114848f",
+   "globalobjectid": {
+    "go": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-5074121787755856372-7000",
+    "tr": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-5074121787755856375-7000",
+    "mb": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-5074121787755856374-7000"
+   },
+   "gate_globalobjectid": []
+  },
+  {
+   "n": "P2/X/Xc",
+   "k": "inst",
+   "c": "W",
+   "x": 0,
+   "fid": 7000,
+   "doc": 8,
+   "pre": 12,
+   "r": 2,
+   "nested": true,
+   "ids": {
+    "pi": 7000,
+    "source": "Assets/Prefabs/Y.prefab",
+    "source_guid": "659b6c4e5c3c501978235630c3ea374d",
+    "source_go": 8631984500492009816,
+    "source_t": 8631984500492009819,
+    "source_mb": 8631984500492009818
+   },
+   "documents": {
+    "pi": 25
+   },
+   "script": "Assets/Scripts/W.cs",
+   "script_guid": "94c2a88734938d4780acdd498114848f",
+   "globalobjectid": {
+    "go": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-8631984500492009816-7000",
+    "tr": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-8631984500492009819-7000",
+    "mb": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-8631984500492009818-7000"
+   },
+   "gate_globalobjectid": []
+  },
+  {
+   "n": "P3",
+   "k": "inst",
+   "c": "W",
+   "x": 0,
+   "fid": 6000,
+   "doc": 6,
+   "pre": 13,
+   "r": 0,
+   "nested": false,
+   "ids": {
+    "pi": 6000,
+    "source": "Assets/Prefabs/X.prefab",
+    "source_guid": "859913358b87aaba68fe36a511d40f4c",
+    "source_go": 1460000000000000101,
+    "source_t": 1460000000000000102,
+    "source_mb": 1460000000000000103
+   },
+   "documents": {
+    "pi": 22
+   },
+   "script": "Assets/Scripts/W.cs",
+   "script_guid": "94c2a88734938d4780acdd498114848f",
+   "globalobjectid": {
+    "go": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-1460000000000000101-6000",
+    "tr": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-1460000000000000102-6000",
+    "mb": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-1460000000000000103-6000"
+   },
+   "gate_globalobjectid": []
+  },
+  {
+   "n": "P3/Xc",
+   "k": "inst",
+   "c": "W",
+   "x": 0,
+   "fid": 6000,
+   "doc": 6,
+   "pre": 14,
+   "r": 1,
+   "nested": false,
+   "ids": {
+    "pi": 6000,
+    "source": "Assets/Prefabs/X.prefab",
+    "source_guid": "859913358b87aaba68fe36a511d40f4c",
+    "source_go": 2730000000000000201,
+    "source_t": 2730000000000000202,
+    "source_mb": 2730000000000000203
+   },
+   "documents": {
+    "pi": 22
+   },
+   "script": "Assets/Scripts/W.cs",
+   "script_guid": "94c2a88734938d4780acdd498114848f",
+   "globalobjectid": {
+    "go": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-2730000000000000201-6000",
+    "tr": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-2730000000000000202-6000",
+    "mb": "GlobalObjectId_V1-2-9ec2d1b5dd933b7e6d1fcfbd5ea50bb3-2730000000000000203-6000"
+   },
+   "gate_globalobjectid": []
+  }
+ ]
+}
