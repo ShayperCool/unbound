@@ -2645,4 +2645,4 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - API: fresh nine-module check 0/2318; all 108 generated files equal. Only the ten-line OnDemand stub block is removed; ABI unchanged.
 - Runtime: all 33 payloads and 1095 PDB-source documents rehashed; TestCore equals package Core cbf30c19; 265 compiled CLI inputs unchanged. Executed before-inputs match; the coreapis README-only change is explicit.
 - Open: significant renderedFrameCount phase and OnRenderObject handler order; no-RT visibility, SRP/custom dispatch, motion, panels, skipped readback and async EOF remain unmeasured. Earlier Core/LP/line gaps stay open.
-- Evidence: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/claude-fresh-20261101b/ondemand-validation/RECEIPT.md`; Root receipt `validation/runs/ondemand-root-integration-20261101b/root-validation.json`.
+- Evidence: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/claude-fresh-20261101b/ondemand-validation/RECEIPT.md`; Root receipt `validation/runs/ondemand-root-integration-20261102/root-validation.json`.
