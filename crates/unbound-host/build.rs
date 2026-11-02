@@ -7,6 +7,9 @@ use std::{
     time::Instant,
 };
 
+#[path = "build/native_cache.rs"]
+mod native_cache;
+
 fn main() {
     let manifest = PathBuf::from(std::env::var("CARGO_MANIFEST_DIR").unwrap());
     let root = manifest.parent().unwrap().parent().unwrap();
@@ -16,9 +19,14 @@ fn main() {
         .map(PathBuf::from)
         .unwrap_or_else(|| root.join("target"));
     println!("cargo:rerun-if-env-changed=UNBOUND_BUILD_TIMINGS");
+    println!("cargo:rerun-if-env-changed=UNBOUND_NATIVE_CACHE");
     let started = Instant::now();
-    build_physx(root, &target.join("managed"));
-    phase("native-total", started, "built");
+    let reused = build_physx(root, &target.join("managed"));
+    phase(
+        "native-total",
+        started,
+        if reused { "hit" } else { "built" },
+    );
     println!("cargo:rerun-if-env-changed=UNBOUND_SKIP_MANAGED_BUILD");
     if std::env::var_os("UNBOUND_SKIP_MANAGED_BUILD").is_some() {
         return;
@@ -62,14 +70,24 @@ fn build(dotnet: &PathBuf, target: &Path, managed: &Path, no_stubs: bool) -> boo
         .status()
         .unwrap_or_else(|e| panic!("running {}: {e}", dotnet.display()))
         .success();
-    phase(if no_stubs { "managed-no-stubs" } else { "managed" }, started,
-          if success { "ok" } else { "failed" });
+    phase(
+        if no_stubs {
+            "managed-no-stubs"
+        } else {
+            "managed"
+        },
+        started,
+        if success { "ok" } else { "failed" },
+    );
     success
 }
 
 fn phase(name: &str, started: Instant, result: &str) {
     if std::env::var_os("UNBOUND_BUILD_TIMINGS").is_some() {
-        eprintln!("unbound-build: phase={name} seconds={:.6} result={result}", started.elapsed().as_secs_f64());
+        eprintln!(
+            "unbound-build: phase={name} seconds={:.6} result={result}",
+            started.elapsed().as_secs_f64()
+        );
     }
 }
 
@@ -105,7 +123,7 @@ fn sources(dir: &Path, extension: &str, into: &mut Vec<PathBuf>) {
 /// Compiles PhysX 4.1 and NvCloth 1.1 (`native/physx`, `native/nvcloth`: the releases Unity runs)
 /// into static archives and links them with the flat C shims (`native/unbound_physx.cpp`,
 /// `native/unbound_cloth.cpp`) into the `unbound_physx` library next to the managed engine.
-fn build_physx(root: &Path, out_dir: &Path) {
+fn build_physx(root: &Path, out_dir: &Path) -> bool {
     let native = root.join("native");
     let physx = native.join("physx");
     let nvcloth = native.join("nvcloth");
@@ -131,7 +149,15 @@ fn build_physx(root: &Path, out_dir: &Path) {
     for dir in ["source", "include", "pxshared"] {
         sources(&physx.join(dir), "h", &mut physx_headers);
     }
-    let physx_archive = archive(&out, "physx", &physx_sources, &physx_headers, &physx_includes, physx_defines, &[]);
+    let physx_archive = archive(
+        &out,
+        "physx",
+        &physx_sources,
+        &physx_headers,
+        &physx_includes,
+        physx_defines,
+        &[],
+    );
 
     // NvCloth: the CPU solver (SSE2 on x86, scalar elsewhere; no CUDA or DirectX) and the cooking
     // extensions, on PhysX's PxShared. Its NEON solver is Android's (cpu-features), so on ARM the
@@ -143,11 +169,16 @@ fn build_physx(root: &Path, out_dir: &Path) {
         nvcloth.join("extensions/src"),
         physx.join("pxshared/include"),
     ];
-    let nvcloth_defines: &[(&str, Option<&str>)] =
-        &[("NDEBUG", None), ("NV_CLOTH_ENABLE_CUDA", Some("0")), ("NV_CLOTH_ENABLE_DX11", Some("0"))];
+    let nvcloth_defines: &[(&str, Option<&str>)] = &[
+        ("NDEBUG", None),
+        ("NV_CLOTH_ENABLE_CUDA", Some("0")),
+        ("NV_CLOTH_ENABLE_DX11", Some("0")),
+    ];
     let mut nvcloth_sources = Vec::new();
     for dir in ["src", "extensions/src"] {
-        for entry in std::fs::read_dir(nvcloth.join(dir)).unwrap_or_else(|e| panic!("reading {dir}: {e}")) {
+        for entry in
+            std::fs::read_dir(nvcloth.join(dir)).unwrap_or_else(|e| panic!("reading {dir}: {e}"))
+        {
             let path = entry.unwrap().path();
             if path.extension().is_some_and(|e| e == "cpp") {
                 nvcloth_sources.push(path);
@@ -169,27 +200,87 @@ fn build_physx(root: &Path, out_dir: &Path) {
     } else {
         &[]
     };
-    let nvcloth_archive =
-        archive(&out, "nvcloth", &nvcloth_sources, &nvcloth_headers, &nvcloth_includes, nvcloth_defines, nvcloth_flags);
+    let nvcloth_archive = archive(
+        &out,
+        "nvcloth",
+        &nvcloth_sources,
+        &nvcloth_headers,
+        &nvcloth_includes,
+        nvcloth_defines,
+        nvcloth_flags,
+    );
 
     println!("cargo:rerun-if-changed={}", native.display());
-    let started = Instant::now();
     let mut build = cc::Build::new();
     configure(&mut build, &physx_includes, physx_defines, &[]);
     let compiler = build.get_compiler();
-    let mut objects = build.file(native.join("unbound_physx.cpp")).compile_intermediates();
-    let mut build = cc::Build::new();
-    configure(&mut build, &nvcloth_includes, nvcloth_defines, nvcloth_flags);
-    objects.extend(build.file(native.join("unbound_cloth.cpp")).compile_intermediates());
-    phase("shim-compile", started, "built");
-
-    std::fs::create_dir_all(out_dir).unwrap_or_else(|e| panic!("creating {}: {e}", out_dir.display()));
+    let mut cloth_build = cc::Build::new();
+    configure(
+        &mut cloth_build,
+        &nvcloth_includes,
+        nvcloth_defines,
+        nvcloth_flags,
+    );
+    let cloth_compiler = cloth_build.get_compiler();
     let name = match target_os.as_str() {
         "windows" => "unbound_physx.dll",
         "macos" | "ios" => "libunbound_physx.dylib",
         _ => "libunbound_physx.so",
     };
     let library = out_dir.join(name);
+    // Cargo also reruns the script when this output is removed or modified.
+    println!("cargo:rerun-if-changed={}", library.display());
+    let receipt = out.join("native-link-v1.receipt");
+    let started = Instant::now();
+    let key = if std::env::var("UNBOUND_NATIVE_CACHE").as_deref() == Ok("0") {
+        None
+    } else {
+        native_cache::key(
+            &[
+                (&compiler, &native.join("unbound_physx.cpp")),
+                (&cloth_compiler, &native.join("unbound_cloth.cpp")),
+            ],
+            &[&physx_archive, &nvcloth_archive],
+            &library,
+        )
+        .unwrap_or_else(|error| panic!("fingerprinting native link inputs: {error}"))
+    };
+    let reused = key
+        .as_ref()
+        .is_some_and(|key| native_cache::valid(&receipt, key, &library));
+    phase(
+        "native-key",
+        started,
+        if reused {
+            "hit"
+        } else if key.is_some() {
+            "miss"
+        } else {
+            "disabled"
+        },
+    );
+    if reused {
+        return true;
+    }
+    // A failed forced rebuild must not leave an old success receipt usable.
+    match std::fs::remove_file(&receipt) {
+        Ok(()) => (),
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => (),
+        Err(error) => panic!("removing {}: {error}", receipt.display()),
+    }
+    let started = Instant::now();
+    let mut objects = build
+        .file(native.join("unbound_physx.cpp"))
+        .compile_intermediates();
+    objects.extend(
+        cloth_build
+            .file(native.join("unbound_cloth.cpp"))
+            .compile_intermediates(),
+    );
+    phase("shim-compile", started, "built");
+
+    std::fs::create_dir_all(out_dir)
+        .unwrap_or_else(|e| panic!("creating {}: {e}", out_dir.display()));
     let mut link = compiler.to_command();
     if compiler.is_like_msvc() {
         link.arg("/LD")
@@ -198,12 +289,16 @@ fn build_physx(root: &Path, out_dir: &Path) {
             .arg(&nvcloth_archive)
             .arg(format!("/Fe{}", library.display()));
     } else {
-        link.arg(if target_os == "macos" { "-dynamiclib" } else { "-shared" })
-            .arg("-o")
-            .arg(&library)
-            .args(&objects)
-            .arg(&physx_archive)
-            .arg(&nvcloth_archive);
+        link.arg(if target_os == "macos" {
+            "-dynamiclib"
+        } else {
+            "-shared"
+        })
+        .arg("-o")
+        .arg(&library)
+        .args(&objects)
+        .arg(&physx_archive)
+        .arg(&nvcloth_archive);
         if target_os != "macos" {
             link.args(["-lpthread", "-ldl", "-lm"]);
         }
@@ -214,12 +309,45 @@ fn build_physx(root: &Path, out_dir: &Path) {
         .unwrap_or_else(|e| panic!("linking {}: {e}", library.display()));
     assert!(status.success(), "linking {} failed", library.display());
     phase("native-link", started, "built");
+    if let Some(key) = key {
+        let after = native_cache::key(
+            &[
+                (&compiler, &native.join("unbound_physx.cpp")),
+                (&cloth_compiler, &native.join("unbound_cloth.cpp")),
+            ],
+            &[&physx_archive, &nvcloth_archive],
+            &library,
+        )
+        .unwrap_or_else(|error| panic!("rechecking native link inputs: {error}"));
+        assert_eq!(
+            Some(key),
+            after,
+            "native inputs changed during the build; rebuild before using this runtime"
+        );
+        native_cache::record(&receipt, &key, &library)
+            .unwrap_or_else(|error| panic!("recording native link result: {error}"));
+    }
+    false
 }
 
 /// The C++ settings of the native code: as PhysX's CMake for Linux, plus no fused multiply-add
 /// (determinism) and only the shims' functions exported.
-fn configure(build: &mut cc::Build, includes: &[PathBuf], defines: &[(&str, Option<&str>)], flags: &[&str]) {
-    build.cpp(true).includes(includes).opt_level(2).debug(false).pic(true).warnings(false).cargo_metadata(false);
+fn configure(
+    build: &mut cc::Build,
+    includes: &[PathBuf],
+    defines: &[(&str, Option<&str>)],
+    flags: &[&str],
+) {
+    build
+        .cpp(true)
+        .includes(includes)
+        .opt_level(2)
+        .debug(false)
+        .pic(true)
+        .warnings(false)
+        // get_compiler below emits cc-rs' complete compiler-environment watches.
+        // Only link metadata must stay off: we link the SDKs into a separate .so.
+        .cargo_metadata(true);
     for (name, value) in defines {
         build.define(name, *value);
     }
@@ -237,6 +365,7 @@ fn configure(build: &mut cc::Build, includes: &[PathBuf], defines: &[(&str, Opti
     for flag in flags {
         build.flag(flag);
     }
+    build.cargo_metadata(false);
 }
 
 /// A static archive keyed by source/header contents, compiler inputs and a format version.
