@@ -119,7 +119,6 @@ namespace Unbound.Runtime
             });
             Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), NativeInput.BeforeRenderUpdate);
             Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), Application.Internal_BeforeRender);
-            Register(typeof(PL.PostLateUpdate.FinishFrameRendering), () => Time.s_RenderedFrameCount++);
             // A coroutine's WaitForEndOfFrame resumes only on a frame that renders the screen, as
             // the interval latched when the frame began decides (measured: tests/projects/coreapis).
             Register(typeof(PL.PostLateUpdate.TriggerEndOfFrameCallbacks), () =>
@@ -128,7 +127,14 @@ namespace Unbound.Runtime
             });
             Register(typeof(PL.PostLateUpdate.PlayerSendFrameComplete), Destruction.FlushEndOfFrame);
             Register(typeof(PL.PostLateUpdate.InputEndFrame), Input.EndFrame);
+            // Camera callbacks, OnGUI and WaitForEndOfFrame read the count of the frames before
+            // this one, and the next Update reads it advanced; it advances on skipped frames too
+            // (measured: tests/projects/coreapis). GUIClearEvents is the first node after the
+            // end-of-frame callbacks; the exact point between them and the next Update is not measured.
+            Register(typeof(PL.PostLateUpdate.GUIClearEvents), AdvanceRenderedFrameCount);
         }
+
+        static void AdvanceRenderedFrameCount() => Time.s_RenderedFrameCount++;
 
         /// <summary>Engine code that runs where Unity runs the system of the given type.</summary>
         internal static void Register(Type system, Action action)
