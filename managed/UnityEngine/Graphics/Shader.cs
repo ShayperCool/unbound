@@ -214,17 +214,65 @@ namespace UnityEngine
             lock (s_TagIds) return id > 0 && id < s_TagNames.Count ? s_TagNames[id] : "";
         }
 
-        static readonly Dictionary<string, uint> s_KeywordIndices = new Dictionary<string, uint>();
+        static readonly Dictionary<string, uint> s_KeywordIndices = new Dictionary<string, uint>(StringComparer.Ordinal);
+        static readonly List<string> s_KeywordNames = new List<string>();
+        static bool s_KeywordsSeeded;
 
-        /// <summary>A keyword name's index in the global keyword space.</summary>
-        internal static uint KeywordIndex(string name)
+        /// <summary>The global keyword registry starts with the engine's built-in keywords, for a
+        /// release whose registry is measured (<see cref="Compat.BuiltinGlobalKeywords"/>).</summary>
+        static void SeedGlobalKeywords()
+        {
+            if (s_KeywordsSeeded) return;
+            s_KeywordsSeeded = true;
+            if (Compat.BuiltinGlobalKeywords is string[] builtin)
+                foreach (var k in builtin) AddGlobalKeyword(k);
+        }
+
+        static uint AddGlobalKeyword(string name)
+        {
+            var index = (uint)s_KeywordNames.Count;
+            s_KeywordIndices[name] = index;
+            s_KeywordNames.Add(name);
+            return index;
+        }
+
+        /// <summary>A global keyword's index (uint.MaxValue: there is none by the name). Shader
+        /// declarations make no global keywords (canonical global.all.contains[GLOBAL_A] false);
+        /// the built-in ones exist from the start, <see cref="GlobalKeyword.Create"/> and
+        /// <see cref="EnableKeyword(string)"/> make others. For a release whose registry is not
+        /// measured every non-empty name exists (the behaviour before the registry was kept).</summary>
+        internal static uint GlobalKeywordIndex(string name)
+        {
+            if (name == null) return uint.MaxValue;
+            lock (s_KeywordIndices)
+            {
+                SeedGlobalKeywords();
+                if (s_KeywordIndices.TryGetValue(name, out var index)) return index;
+                if (Compat.BuiltinGlobalKeywords != null || name.Length == 0) return uint.MaxValue;
+                Unbound.Runtime.Stubs.Ignored("GlobalKeyword", "exists for every name: this release's global keyword registry is not measured");
+                return AddGlobalKeyword(name);
+            }
+        }
+
+        /// <summary>The global keyword's index, made when there is none by the name.</summary>
+        internal static uint RegisterGlobalKeyword(string name)
         {
             if (string.IsNullOrEmpty(name)) return uint.MaxValue;
             lock (s_KeywordIndices)
             {
-                if (!s_KeywordIndices.TryGetValue(name, out var index))
-                    s_KeywordIndices[name] = index = (uint)s_KeywordIndices.Count;
-                return index;
+                SeedGlobalKeywords();
+                return s_KeywordIndices.TryGetValue(name, out var index) ? index : AddGlobalKeyword(name);
+            }
+        }
+
+        /// <summary>Every global keyword, in the order they came to exist (Unity's own registry
+        /// order is not measured: the canonical records global sets sorted).</summary>
+        internal static List<string> GlobalKeywordNames()
+        {
+            lock (s_KeywordIndices)
+            {
+                SeedGlobalKeywords();
+                return new List<string>(s_KeywordNames);
             }
         }
 
@@ -356,8 +404,11 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ globals
 
+        /// <summary>Enables a global keyword by name, making it when there is none (canonical
+        /// global.after.contains[STRING_ENABLED_KW]).</summary>
         public static void EnableKeyword(string keyword)
         {
+            if (Compat.BuiltinGlobalKeywords != null) RegisterGlobalKeyword(keyword);
             if (s_GlobalKeywords.Add(keyword)) GfxStream.Keyword(keyword, true);
         }
 

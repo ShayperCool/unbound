@@ -443,37 +443,122 @@ namespace UnityEngine.Rendering
         public static bool operator !=(ShadowSplitData left, ShadowSplitData right) => !left.Equals(right);
     }
 
-    /// <summary>A global shader keyword by name.</summary>
+    /// <summary>A global shader keyword: one of the engine's built-in keywords, or one made by
+    /// <see cref="Create"/> or by enabling a keyword by name. Shaders' declarations make no global
+    /// keywords (canonical tests/projects/shaderkeywords global.*). For a release whose registry is
+    /// not measured every name is one (see <see cref="Shader.GlobalKeywordIndex"/>).</summary>
     public readonly partial struct GlobalKeyword
     {
         internal readonly string m_Name;
         internal readonly uint m_Index;
 
+        /// <summary>An existing global keyword; for another name an error is logged and the keyword
+        /// stands for nothing (canonical global.ctor.log).</summary>
         public GlobalKeyword(string name)
         {
             m_Name = name;
-            m_Index = Shader.KeywordIndex(name);
+            m_Index = Shader.GlobalKeywordIndex(name);
+            if (m_Index == uint.MaxValue && Unbound.Runtime.Compat.BuiltinGlobalKeywords != null)
+                UnityEngine.Debug.LogError("Global keyword " + name + " doesn't exist.");
         }
+
+        GlobalKeyword(string name, uint index)
+        {
+            m_Name = name;
+            m_Index = index;
+        }
+
+        /// <summary>A keyword of the registry (no error).</summary>
+        internal static GlobalKeyword Existing(string name) => new GlobalKeyword(name, Shader.GlobalKeywordIndex(name));
 
         public string name => m_Name;
 
-        public static GlobalKeyword Create(string name) => new GlobalKeyword(name);
+        /// <summary>The global keyword by the name, made when there is none (canonical
+        /// global.create.*).</summary>
+        public static GlobalKeyword Create(string name) => new GlobalKeyword(name, Shader.RegisterGlobalKeyword(name));
 
         public override string ToString() => m_Name;
     }
 
-    /// <summary>A shader's (or compute shader's) keyword space: its declared keywords.</summary>
+    /// <summary>A shader's (or compute shader's) keyword space: the keywords it declares, in the
+    /// order Unity lists them (see <see cref="Unbound.Runtime.ShaderDeclarations"/>). When the host
+    /// does not know them, the space answers by name as before declarations were read: every
+    /// non-empty name is in it, and it lists nothing.</summary>
     public readonly partial struct LocalKeywordSpace : IEquatable<LocalKeywordSpace>
     {
         readonly IntPtr m_KeywordSpace;
 
         internal LocalKeywordSpace(int id) => m_KeywordSpace = (IntPtr)id;
 
-        public LocalKeyword[] keywords { get { Unbound.Runtime.Stubs.Ignored("LocalKeywordSpace.keywords", "is not known yet: shaders' declared keywords are not listed"); return Array.Empty<LocalKeyword>(); } }
-        public string[] keywordNames { get { Unbound.Runtime.Stubs.Ignored("LocalKeywordSpace.keywordNames", "is not known yet: shaders' declared keywords are not listed"); return Array.Empty<string>(); } }
-        public uint keywordCount { get { Unbound.Runtime.Stubs.Ignored("LocalKeywordSpace.keywordCount", "is not known yet: shaders' declared keywords are not listed"); return 0; } }
+        internal bool IsInitialized => m_KeywordSpace != IntPtr.Zero;
 
-        public LocalKeyword FindKeyword(string name) => new LocalKeyword(this, name);
+        /// <summary>The declarations of the shader or compute shader the space is, when its keywords
+        /// are known (they may be known and none); null when they are not.</summary>
+        internal Unbound.Runtime.ShaderDeclarations Declarations
+        {
+            get
+            {
+                if (!IsInitialized) return null;
+                var d = Unbound.Runtime.ObjectRegistry.FindById((int)m_KeywordSpace) switch
+                {
+                    Shader shader => Unbound.Runtime.ShaderDeclarations.Of(shader),
+                    ComputeShader compute => Unbound.Runtime.ShaderDeclarations.OfCompute(compute),
+                    _ => null,
+                };
+                return d != null && d.KeywordsKnown ? d : null;
+            }
+        }
+
+        internal int IndexOf(string name) => Declarations?.IndexOf(name) ?? -1;
+
+        /// <summary>Whether the space has the keyword (unknown declarations: every non-empty name).</summary>
+        internal bool Has(string name) => Declarations is Unbound.Runtime.ShaderDeclarations d ? d.IndexOf(name) >= 0 : !string.IsNullOrEmpty(name);
+
+        public LocalKeyword[] keywords
+        {
+            get
+            {
+                var d = Declarations;
+                if (d == null)
+                {
+                    Unbound.Runtime.Stubs.Ignored("LocalKeywordSpace.keywords", "is empty: the shader's keyword declarations are not known");
+                    return Array.Empty<LocalKeyword>();
+                }
+                var list = new LocalKeyword[d.Keywords.Count];
+                for (int i = 0; i < list.Length; i++) list[i] = new LocalKeyword(this, d.Keywords[i].Name, i);
+                return list;
+            }
+        }
+
+        public string[] keywordNames
+        {
+            get
+            {
+                var d = Declarations;
+                if (d == null)
+                {
+                    Unbound.Runtime.Stubs.Ignored("LocalKeywordSpace.keywordNames", "is empty: the shader's keyword declarations are not known");
+                    return Array.Empty<string>();
+                }
+                var names = new string[d.Keywords.Count];
+                for (int i = 0; i < names.Length; i++) names[i] = d.Keywords[i].Name;
+                return names;
+            }
+        }
+
+        public uint keywordCount
+        {
+            get
+            {
+                var d = Declarations;
+                if (d != null) return (uint)d.Keywords.Count;
+                Unbound.Runtime.Stubs.Ignored("LocalKeywordSpace.keywordCount", "is 0: the shader's keyword declarations are not known");
+                return 0;
+            }
+        }
+
+        /// <summary>The keyword by name; not valid when the space does not declare it.</summary>
+        public LocalKeyword FindKeyword(string name) => new LocalKeyword(this, name, IndexOf(name));
 
         public override bool Equals(object o) => o is LocalKeywordSpace other && Equals(other);
         public bool Equals(LocalKeywordSpace rhs) => m_KeywordSpace == rhs.m_KeywordSpace;
@@ -482,29 +567,104 @@ namespace UnityEngine.Rendering
         public override int GetHashCode() => m_KeywordSpace.GetHashCode();
     }
 
-    /// <summary>A keyword of a shader or compute shader, by name.</summary>
+    /// <summary>A keyword of a shader's or compute shader's keyword space.</summary>
     public readonly partial struct LocalKeyword : IEquatable<LocalKeyword>
     {
         internal readonly LocalKeywordSpace m_SpaceInfo;
         internal readonly string m_Name;
         internal readonly uint m_Index;
 
-        internal LocalKeyword(LocalKeywordSpace space, string name)
+        internal LocalKeyword(LocalKeywordSpace space, string name, int index)
         {
             m_SpaceInfo = space;
             m_Name = name;
-            m_Index = Shader.KeywordIndex(name);
+            m_Index = index < 0 ? uint.MaxValue : (uint)index;
         }
 
-        public LocalKeyword(Shader shader, string name) : this(new LocalKeywordSpace(shader != null ? shader.GetInstanceID() : 0), name) { }
+        /// <summary>The shader's keyword by name (canonical local.construct: an error for a null
+        /// shader, which then throws, and for a name a known space does not declare).</summary>
+        public LocalKeyword(Shader shader, string name)
+        {
+            if (shader == null) UnityEngine.Debug.LogError("Cannot initialize a LocalKeyword with a null Shader.");
+            m_SpaceInfo = shader.keywordSpace;
+            m_Name = name;
+            int index = m_SpaceInfo.IndexOf(name);
+            m_Index = index < 0 ? uint.MaxValue : (uint)index;
+            if (index < 0 && m_SpaceInfo.Declarations != null) UnityEngine.Debug.LogError("Local keyword " + name + " doesn't exist in the shader.");
+        }
 
-        public LocalKeyword(ComputeShader shader, string name) : this(new LocalKeywordSpace(shader != null ? shader.GetInstanceID() : 0), name) { }
+        public LocalKeyword(ComputeShader shader, string name)
+        {
+            if (shader == null) UnityEngine.Debug.LogError("Cannot initialize a LocalKeyword with a null ComputeShader.");
+            m_SpaceInfo = shader.keywordSpace;
+            m_Name = name;
+            int index = m_SpaceInfo.IndexOf(name);
+            m_Index = index < 0 ? uint.MaxValue : (uint)index;
+            if (index < 0 && m_SpaceInfo.Declarations != null) UnityEngine.Debug.LogError("Local keyword " + name + " doesn't exist in the compute shader.");
+        }
+
+        /// <summary>Its declaration in a known space (null: not declared, or not known).</summary>
+        Unbound.Runtime.DeclaredKeyword? Declared
+        {
+            get
+            {
+                var d = m_SpaceInfo.Declarations;
+                return d != null && m_Index < (uint)d.Keywords.Count && d.Keywords[(int)m_Index].Name == m_Name
+                    ? d.Keywords[(int)m_Index] : (Unbound.Runtime.DeclaredKeyword?)null;
+            }
+        }
 
         public string name => m_Name;
-        public bool isDynamic { get { Unbound.Runtime.Stubs.Ignored("LocalKeyword.isDynamic", "is not known yet: keyword declarations are not read"); return false; } }
-        public bool isOverridable { get { Unbound.Runtime.Stubs.Ignored("LocalKeyword.isOverridable", "is not known yet: keyword declarations are not read"); return false; } }
-        public bool isValid => !string.IsNullOrEmpty(m_Name);
-        public ShaderKeywordType type => ShaderKeywordType.UserDefined;
+
+        /// <summary>Whether it is a <c>dynamic_branch</c> keyword.</summary>
+        public bool isDynamic
+        {
+            get
+            {
+                if (m_SpaceInfo.Declarations == null)
+                {
+                    Unbound.Runtime.Stubs.Ignored("LocalKeyword.isDynamic", "is false: the shader's keyword declarations are not known");
+                    return false;
+                }
+                return Declared?.Dynamic ?? false;
+            }
+        }
+
+        /// <summary>Whether global keyword state overrides it: declared global (not <c>_local</c>).</summary>
+        public bool isOverridable
+        {
+            get
+            {
+                if (m_SpaceInfo.Declarations == null)
+                {
+                    Unbound.Runtime.Stubs.Ignored("LocalKeyword.isOverridable", "is false: the shader's keyword declarations are not known");
+                    return false;
+                }
+                return Declared is Unbound.Runtime.DeclaredKeyword k && !k.Local;
+            }
+        }
+
+        /// <summary>Whether its space declares it (canonical local.default: a keyword of no space
+        /// logs "LocalKeyword not initialized."). Unknown declarations: every non-empty name.</summary>
+        public bool isValid
+        {
+            get
+            {
+                if (!m_SpaceInfo.IsInitialized)
+                {
+                    UnityEngine.Debug.LogError("LocalKeyword not initialized.");
+                    return false;
+                }
+                return m_SpaceInfo.Declarations == null ? !string.IsNullOrEmpty(m_Name) : Declared.HasValue;
+            }
+        }
+
+        /// <summary>Built-in for the stereo keywords every shader's space starts with, user-defined
+        /// for the declared ones, built-in sets such as the light pass keywords included (canonical
+        /// *.space.keywords, for the measured release; otherwise user-defined).</summary>
+        public ShaderKeywordType type =>
+            Declared.HasValue && Unbound.Runtime.Compat.ImplicitShaderKeywords is string[] implicitKeywords && Array.IndexOf(implicitKeywords, m_Name) >= 0
+                ? ShaderKeywordType.BuiltinDefault : ShaderKeywordType.UserDefined;
 
         public override string ToString() => m_Name;
         public override bool Equals(object o) => o is LocalKeyword other && Equals(other);

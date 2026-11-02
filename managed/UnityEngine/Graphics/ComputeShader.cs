@@ -119,18 +119,58 @@ namespace UnityEngine
 
         // ------------------------------------------------------------ keywords
 
-        public void EnableKeyword(string keyword) => m_Keywords.Add(keyword);
+        /// <summary>The file's keyword space when it is known (it may be known and empty); null
+        /// while it is not: every name then counts as declared, as before declarations were read.</summary>
+        ShaderDeclarations KnownDeclarations
+        {
+            get
+            {
+                var d = ShaderDeclarations.OfCompute(this);
+                return d.KeywordsKnown ? d : null;
+            }
+        }
+
+        /// <summary>Enables a keyword the file declares (canonical compute.IsKeywordEnabled
+        /// (NOT_DECLARED): a name it does not declare is ignored). The keywords dispatches compile
+        /// with are the enabled ones, so an undeclared name no longer reaches a kernel variant.</summary>
+        public void EnableKeyword(string keyword)
+        {
+            if (KnownDeclarations is ShaderDeclarations d && d.IndexOf(keyword) < 0) return;
+            m_Keywords.Add(keyword);
+        }
+
         public void DisableKeyword(string keyword) => m_Keywords.Remove(keyword);
         public bool IsKeywordEnabled(string keyword) => m_Keywords.Contains(keyword);
 
+        /// <summary>The enabled keywords, sorted (canonical compute.shaderKeywords).</summary>
         public string[] shaderKeywords
         {
-            get => new List<string>(m_Keywords).ToArray();
+            get
+            {
+                var list = new List<string>(m_Keywords);
+                if (KnownDeclarations != null) list.Sort(StringComparer.Ordinal);
+                return list.ToArray();
+            }
             set
             {
                 m_Keywords.Clear();
-                if (value != null) foreach (var k in value) m_Keywords.Add(k);
+                if (value != null) foreach (var k in value) EnableKeyword(k);
             }
+        }
+
+        /// <summary>The enabled keywords with their index in the space, in the space's order (the
+        /// enabled names when the space is not known, index -1).</summary>
+        internal List<(string Name, int Index)> KeywordsInSpaceOrder()
+        {
+            var list = new List<(string, int)>();
+            if (KnownDeclarations is ShaderDeclarations d)
+            {
+                for (int i = 0; i < d.Keywords.Count; i++)
+                    if (m_Keywords.Contains(d.Keywords[i].Name)) list.Add((d.Keywords[i].Name, i));
+                return list;
+            }
+            foreach (var k in m_Keywords) list.Add((k, -1));
+            return list;
         }
 
         // ------------------------------------------------------------ dispatch

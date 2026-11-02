@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine.Rendering;
 
@@ -7,55 +8,134 @@ namespace UnityEngine
     {
         public LocalKeywordSpace keywordSpace => new LocalKeywordSpace(GetInstanceID());
 
-        public static void EnableKeyword(in GlobalKeyword keyword) => EnableKeyword(keyword.name);
-        public static void DisableKeyword(in GlobalKeyword keyword) => DisableKeyword(keyword.name);
+        // A GlobalKeyword that names no global keyword stands for nothing (canonical
+        // global.IsKeywordEnabled(GLOBAL_A): enabling it leaves the name disabled).
+        public static void EnableKeyword(in GlobalKeyword keyword)
+        {
+            if (keyword.m_Index != uint.MaxValue) EnableKeyword(keyword.name);
+        }
+
+        public static void DisableKeyword(in GlobalKeyword keyword)
+        {
+            if (keyword.m_Index != uint.MaxValue) DisableKeyword(keyword.name);
+        }
 
         public static void SetKeyword(in GlobalKeyword keyword, bool value)
         {
-            if (value) EnableKeyword(keyword.name);
-            else DisableKeyword(keyword.name);
+            if (value) EnableKeyword(keyword);
+            else DisableKeyword(keyword);
         }
 
-        public static bool IsKeywordEnabled(in GlobalKeyword keyword) => IsKeywordEnabled(keyword.name);
+        public static bool IsKeywordEnabled(in GlobalKeyword keyword) => keyword.m_Index != uint.MaxValue && IsKeywordEnabled(keyword.name);
 
+        /// <summary>The enabled global keywords, in the order the keywords came to exist (the
+        /// canonical records them sorted: Unity's registry order is not measured). None is enabled
+        /// by this side at startup: which ones the engine enables depends on quality, pipeline and
+        /// context.</summary>
         public static GlobalKeyword[] enabledGlobalKeywords
         {
             get
             {
                 var list = new List<GlobalKeyword>();
-                foreach (var k in s_GlobalKeywords) list.Add(new GlobalKeyword(k));
+                if (Unbound.Runtime.Compat.BuiltinGlobalKeywords == null)
+                {
+                    // Not measured: the name-based answer.
+                    foreach (var k in s_GlobalKeywords) list.Add(new GlobalKeyword(k));
+                    return list.ToArray();
+                }
+                var names = GlobalKeywordNames();
+                foreach (var k in names) if (s_GlobalKeywords.Contains(k)) list.Add(GlobalKeyword.Existing(k));
+                foreach (var k in s_GlobalKeywords) if (!names.Contains(k)) list.Add(GlobalKeyword.Existing(k));
                 return list.ToArray();
             }
         }
 
-        public static GlobalKeyword[] globalKeywords => enabledGlobalKeywords;
+        /// <summary>Every global keyword: the engine's built-in ones, then those made by
+        /// <see cref="GlobalKeyword.Create"/> or by enabling a name (canonical global.all.*,
+        /// global.create.*). Not measured for the release: the enabled ones, as before.</summary>
+        public static GlobalKeyword[] globalKeywords
+        {
+            get
+            {
+                if (Unbound.Runtime.Compat.BuiltinGlobalKeywords == null) return enabledGlobalKeywords;
+                var names = GlobalKeywordNames();
+                var list = new GlobalKeyword[names.Count];
+                for (int i = 0; i < list.Length; i++) list[i] = GlobalKeyword.Existing(names[i]);
+                return list;
+            }
+        }
     }
 
     public partial class Material
     {
-        public void EnableKeyword(in LocalKeyword keyword) => EnableKeyword(keyword.name);
-        public void DisableKeyword(in LocalKeyword keyword) => DisableKeyword(keyword.name);
+        public void EnableKeyword(in LocalKeyword keyword) => SetKeyword(keyword, true);
+        public void DisableKeyword(in LocalKeyword keyword) => SetKeyword(keyword, false);
 
+        /// <summary>Sets a keyword of the shader's space (canonical mat.otherSpace: one of another
+        /// shader's space logs an error and changes nothing; one the space lacks changes nothing).
+        /// While the shader's keywords are not known: by name, as before.</summary>
         public void SetKeyword(in LocalKeyword keyword, bool value)
         {
+            if (KeywordDeclarations != null)
+            {
+                if (keyword.m_SpaceInfo != shader.keywordSpace)
+                {
+                    Debug.LogError("Local keyword " + keyword.name + " comes from a different shader.");
+                    return;
+                }
+                if (keyword.m_SpaceInfo.IndexOf(keyword.name) < 0) return;
+            }
             if (value) EnableKeyword(keyword.name);
             else DisableKeyword(keyword.name);
         }
 
-        public bool IsKeywordEnabled(in LocalKeyword keyword) => IsKeywordEnabled(keyword.name);
+        public bool IsKeywordEnabled(in LocalKeyword keyword)
+        {
+            if (KeywordDeclarations == null) return IsKeywordEnabled(keyword.name);
+            return keyword.m_SpaceInfo == shader.keywordSpace && keyword.m_SpaceInfo.IndexOf(keyword.name) >= 0 && IsKeywordEnabled(keyword.name);
+        }
 
+        /// <summary>The keywords of the shader's space that are on, in the space's order (canonical
+        /// mat.*.enabledKeywords); while the space is not known, every name that is on, sorted.</summary>
         public LocalKeyword[] enabledKeywords
         {
             get
             {
+                Inherit();
                 var list = new List<LocalKeyword>();
-                foreach (var k in m_Keywords) list.Add(new LocalKeyword(shader, k));
+                if (shader == null) return list.ToArray();
+                var space = shader.keywordSpace;
+                var declarations = KeywordDeclarations;
+                if (declarations == null)
+                {
+                    var names = new List<string>(m_Keywords);
+                    names.Sort(StringComparer.Ordinal);
+                    foreach (var k in names) list.Add(new LocalKeyword(space, k, -1));
+                    return list.ToArray();
+                }
+                for (int i = 0; i < declarations.Keywords.Count; i++)
+                    if (m_Keywords.Contains(declarations.Keywords[i].Name)) list.Add(new LocalKeyword(space, declarations.Keywords[i].Name, i));
                 return list.ToArray();
             }
             set
             {
-                m_Keywords.Clear();
-                if (value != null) foreach (var k in value) if (k.isValid) m_Keywords.Add(k.name);
+                OwnKeywords();
+                var declarations = KeywordDeclarations;
+                if (declarations == null)
+                {
+                    m_Keywords.Clear();
+                    m_KeywordExtras.Clear();
+                    if (value != null) foreach (var k in value) if (!string.IsNullOrEmpty(k.name)) m_Keywords.Add(k.name);
+                }
+                else
+                {
+                    // Replaces the declared keywords that are on; names the shader does not declare
+                    // stay (canonical mat.setEnabled.shaderKeywords).
+                    m_Keywords.RemoveWhere(k => declarations.IndexOf(k) >= 0);
+                    if (value != null)
+                        foreach (var k in value)
+                            if (k.m_SpaceInfo == shader.keywordSpace && k.m_SpaceInfo.IndexOf(k.name) >= 0) m_Keywords.Add(k.name);
+                }
                 MarkDirty();
             }
         }
@@ -76,18 +156,23 @@ namespace UnityEngine
 
         public bool IsKeywordEnabled(in LocalKeyword keyword) => IsKeywordEnabled(keyword.name);
 
+        /// <summary>The enabled keywords, in the keyword space's order (canonical
+        /// compute.enabledKeywords).</summary>
         public LocalKeyword[] enabledKeywords
         {
             get
             {
+                var space = keywordSpace;
                 var list = new List<LocalKeyword>();
-                foreach (var k in shaderKeywords) list.Add(new LocalKeyword(this, k));
+                foreach (var (name, index) in KeywordsInSpaceOrder()) list.Add(new LocalKeyword(space, name, index));
                 return list.ToArray();
             }
             set
             {
                 var names = new List<string>();
-                if (value != null) foreach (var k in value) if (k.isValid) names.Add(k.name);
+                if (value != null)
+                    foreach (var k in value)
+                        if (k.m_SpaceInfo == keywordSpace ? k.m_SpaceInfo.Has(k.name) : !string.IsNullOrEmpty(k.name)) names.Add(k.name);
                 shaderKeywords = names.ToArray();
             }
         }

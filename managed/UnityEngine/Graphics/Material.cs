@@ -38,6 +38,10 @@ namespace UnityEngine
         /// <summary>Array properties: float[], Vector4[] (colors too) or Matrix4x4[].</summary>
         internal readonly Dictionary<int, object> m_Arrays = new Dictionary<int, object>();
         internal readonly HashSet<string> m_Keywords = new HashSet<string>();
+        /// <summary>Keyword names given again, and empty ones: the material keeps them as given
+        /// (canonical mat.set.shaderKeywords lists an undeclared name as often as it was set). They
+        /// are not drawn with: the renderer gets <see cref="m_Keywords"/> as before.</summary>
+        internal readonly List<string> m_KeywordExtras = new List<string>();
         /// <summary>Names set from script: the material has them whatever its shader declares.</summary>
         internal readonly HashSet<int> m_ScriptSet = new HashSet<int>();
         /// <summary>Texture names the material has a slot for: those of the shaders it had, those
@@ -128,6 +132,7 @@ namespace UnityEngine
             foreach (var p in source.m_Buffers) m_Buffers[p.Key] = p.Value;
             foreach (var p in source.m_Arrays) m_Arrays[p.Key] = ((Array)p.Value).Clone();
             foreach (var k in source.m_Keywords) m_Keywords.Add(k);
+            m_KeywordExtras.AddRange(source.m_KeywordExtras);
             m_DisabledPasses = source.m_DisabledPasses != null ? new HashSet<string>(source.m_DisabledPasses, StringComparer.OrdinalIgnoreCase) : null;
             m_ScriptSet.UnionWith(source.m_ScriptSet);
             m_RawBindings.UnionWith(source.m_RawBindings);
@@ -228,21 +233,57 @@ namespace UnityEngine
 
         public int rawRenderQueue => m_CustomRenderQueue;
 
+        /// <summary>The keywords its shader declares that are on (sorted), then the names it does
+        /// not declare (sorted, as often and as empty as given; canonical mat.*.shaderKeywords and
+        /// saved.*). Changing the shader sorts them out again by the new shader's space. While the
+        /// space is not known: every name once, sorted, as before.</summary>
         public string[] shaderKeywords
         {
             get
             {
                 Inherit();
-                var list = new List<string>(m_Keywords);
-                list.Sort(StringComparer.Ordinal);
-                return list.ToArray();
+                var declarations = KeywordDeclarations;
+                var valid = new List<string>();
+                var invalid = new List<string>();
+                foreach (var k in m_Keywords)
+                    if (k.Length > 0) (declarations == null || declarations.IndexOf(k) >= 0 ? valid : invalid).Add(k);
+                if (declarations != null)
+                    foreach (var k in m_KeywordExtras) if (declarations.IndexOf(k) < 0) invalid.Add(k);
+                valid.Sort(StringComparer.Ordinal);
+                invalid.Sort(StringComparer.Ordinal);
+                valid.AddRange(invalid);
+                return valid.ToArray();
             }
             set
             {
+                OwnKeywords();
                 m_Keywords.Clear();
-                if (value != null) foreach (var k in value) if (!string.IsNullOrEmpty(k)) m_Keywords.Add(k);
+                m_KeywordExtras.Clear();
+                if (value != null)
+                    foreach (var k in value)
+                        if (k != null && (k.Length == 0 || !m_Keywords.Add(k))) m_KeywordExtras.Add(k);
                 MarkDirty();
             }
+        }
+
+        /// <summary>The shader's keyword space when it is known (null: not known, every name then
+        /// counts as declared, as before declarations were read).</summary>
+        internal Unbound.Runtime.ShaderDeclarations KeywordDeclarations
+        {
+            get
+            {
+                var d = m_Shader != null ? Unbound.Runtime.ShaderDeclarations.Of(m_Shader) : null;
+                return d != null && d.KeywordsKnown ? d : null;
+            }
+        }
+
+        /// <summary>A keyword set from script: a variant then has its own keywords (it took its
+        /// parent's until now) instead of taking the parent's again later.</summary>
+        void OwnKeywords()
+        {
+            if (m_Parent == null) return;
+            Inherit();
+            m_InheritKeywords = false;
         }
 
         public MaterialGlobalIlluminationFlags globalIlluminationFlags
@@ -316,6 +357,8 @@ namespace UnityEngine
                 {
                     m_Keywords.Clear();
                     m_Keywords.UnionWith(parent.m_Keywords);
+                    m_KeywordExtras.Clear();
+                    m_KeywordExtras.AddRange(parent.m_KeywordExtras);
                 }
                 if (m_InheritQueue) m_CustomRenderQueue = parent.m_CustomRenderQueue;
                 if (m_InheritFlags)
@@ -333,15 +376,25 @@ namespace UnityEngine
 
         public void EnableKeyword(string keyword)
         {
+            OwnKeywords();
             if (m_Keywords.Add(keyword)) MarkDirty();
         }
 
         public void DisableKeyword(string keyword)
         {
+            OwnKeywords();
             if (m_Keywords.Remove(keyword)) MarkDirty();
         }
 
-        public bool IsKeywordEnabled(string keyword) => Inherited().m_Keywords.Contains(keyword);
+        /// <summary>Whether a keyword its shader declares is on: a name a known space does not
+        /// declare is not, even when set (canonical mat.IsKeywordEnabled(NOT_DECLARED),
+        /// saved.IsKeywordEnabled(STALE_KW)).</summary>
+        public bool IsKeywordEnabled(string keyword)
+        {
+            if (!Inherited().m_Keywords.Contains(keyword)) return false;
+            var declarations = KeywordDeclarations;
+            return declarations == null || declarations.IndexOf(keyword) >= 0;
+        }
 
         Material Inherited()
         {
@@ -791,7 +844,7 @@ namespace UnityEngine
         {
             if (mat == null) throw new ArgumentNullException(nameof(mat));
             var shaderBefore = m_Shader;
-            m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Textures.Clear(); m_Keywords.Clear();
+            m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Textures.Clear(); m_Keywords.Clear(); m_KeywordExtras.Clear();
             m_ScriptSet.Clear(); m_TextureNames.Clear(); m_RawBindings.Clear();
             m_Buffers.Clear(); m_Arrays.Clear();
             CopyFrom(mat);
@@ -914,10 +967,16 @@ namespace UnityEngine
             m_CustomRenderQueue = body.Int("m_CustomRenderQueue", -1);
             var keywords = body.Str("m_ShaderKeywords");
             foreach (var k in keywords.Split(' ', StringSplitOptions.RemoveEmptyEntries)) m_Keywords.Add(k);
-            // Keywords the shader does not declare are kept too (shaderKeywords lists them).
+            // Keywords the shader does not declare are kept too (shaderKeywords lists them), as
+            // often and as empty as the lists have them.
+            var listed = new HashSet<string>(StringComparer.Ordinal);
             foreach (var list in new[] { "m_ValidKeywords", "m_InvalidKeywords" })
                 foreach (var k in body.Get(list)?.Seq() ?? Array.Empty<YNode>())
-                    if (k.Kind == YKind.Scalar && k.Scalar.Length > 0) m_Keywords.Add(k.Scalar);
+                {
+                    if (k.Kind != YKind.Scalar) continue;
+                    if (k.Scalar.Length == 0 || !listed.Add(k.Scalar)) m_KeywordExtras.Add(k.Scalar);
+                    else m_Keywords.Add(k.Scalar);
+                }
             foreach (var pass in body.Get("disabledShaderPasses")?.Seq() ?? Array.Empty<YNode>())
                 if (pass.Kind == YKind.Scalar && pass.Scalar.Length > 0)
                     (m_DisabledPasses ??= new HashSet<string>(StringComparer.OrdinalIgnoreCase)).Add(pass.Scalar);
