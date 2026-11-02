@@ -1,5 +1,5 @@
 """Isolation and required side effects of the compiler-cache build environment."""
-import os
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 import sys
 import tempfile
@@ -33,6 +33,16 @@ class BuildEnvironmentTests(unittest.TestCase):
     def test_relative_target_is_relative_to_the_checkout(self):
         env, _ = build.environment(self.root, self.cache, 'none', {'CARGO_TARGET_DIR': 'own'})
         self.assertEqual(env['CARGO_TARGET_DIR'], str(self.root/'own'))
+
+    def test_target_ownership_rejects_another_checkout(self):
+        build.claim_target(self.cache, self.root)
+        with self.assertRaisesRegex(ValueError, 'another checkout'):
+            build.claim_target(self.cache, self.root/'other')
+
+    def test_concurrent_claims_from_the_same_checkout_succeed(self):
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            list(pool.map(lambda _: build.claim_target(self.cache, self.root), range(32)))
+        self.assertEqual((self.cache/'.unbound-source-root').read_text(), str(self.root)+'\n')
 
     @patch.object(build.shutil, 'which', return_value='/installed/kache')
     def test_kache_never_replays_or_shares_build_script_side_effects(self, _):

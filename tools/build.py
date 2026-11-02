@@ -6,6 +6,7 @@ The installed heavy-job launcher is used once. --direct is for an existing lease
 No global Cargo/shell settings are changed and no target is copied or seeded.
 """
 import argparse
+import fcntl
 import hashlib
 import json
 import os
@@ -64,6 +65,19 @@ def environment(root, cache, backend, env):
     return env, backend
 
 
+def claim_target(target, root):
+    target.mkdir(parents=True, exist_ok=True)
+    # Readers cannot see the empty interval between creating and writing a marker.
+    with (target/'.unbound-source-root').open('a+') as handle:
+        fcntl.flock(handle, fcntl.LOCK_EX)
+        handle.seek(0)
+        owner = handle.read().strip()
+        if owner and owner != str(root):
+            raise ValueError(f'target belongs to another checkout: {owner}')
+        if not owner:
+            handle.write(str(root)+'\n')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--cache', choices=['auto', 'kache', 'sccache', 'none'], default='auto')
@@ -90,15 +104,10 @@ def main():
         parser.error('supply a Cargo command after --')
     if any(arg == '--target-dir' or arg.startswith('--target-dir=') for arg in cargo_args):
         parser.error('set CARGO_TARGET_DIR in the environment so native/managed outputs use the same target')
-    target = Path(env['CARGO_TARGET_DIR'])
-    target.mkdir(parents=True, exist_ok=True)
-    owner = target/'.unbound-source-root'
     try:
-        with owner.open('x') as handle:
-            handle.write(str(root)+'\n')
-    except FileExistsError:
-        if owner.read_text().strip() != str(root):
-            parser.error(f'target belongs to another checkout: {owner.read_text().strip()}')
+        claim_target(Path(env['CARGO_TARGET_DIR']), root)
+    except ValueError as error:
+        parser.error(str(error))
     launcher = Path.home()/'.cache/compat/with-heavy-job'
     command = ['cargo', *cargo_args]
     if not args.direct and launcher.is_file():
