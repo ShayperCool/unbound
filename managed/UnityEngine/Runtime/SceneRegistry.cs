@@ -182,7 +182,8 @@ namespace Unbound.Runtime
             internal SceneData[] Outgoing;
             /// <summary>The scene whose objects are being destroyed or whose sceneUnloaded runs.</summary>
             internal SceneData Closing;
-            /// <summary>The scenes it closed, in that order: no longer loaded, still valid until it ends.</summary>
+            /// <summary>The scenes it closed, in that order: released from the registry, but still
+            /// valid (not loaded) for the public scene queries until it ends.</summary>
             internal readonly List<SceneData> Closed = new List<SceneData>();
         }
 
@@ -215,15 +216,9 @@ namespace Unbound.Runtime
             return outer;
         }
 
-        /// <summary>Ends the innermost teardown (also when it threw): the scenes it closed become
-        /// invalid now, before the incoming scene is activated.</summary>
-        internal static void EndSingleLoadTeardown(SingleLoadTeardown outer)
-        {
-            var ended = s_Teardown;
-            s_Teardown = outer;
-            if (ended == null) return;
-            foreach (var scene in ended.Closed) s_Scenes.Remove(scene.Handle.Value);
-        }
+        /// <summary>Ends the innermost teardown (also when it threw): the scenes it closed are
+        /// invalid for the public queries too from now on, before the incoming scene is activated.</summary>
+        internal static void EndSingleLoadTeardown(SingleLoadTeardown outer) => s_Teardown = outer;
 
         /// <summary>The incoming scene of a Single load that is closing its outgoing scenes: not
         /// loaded yet, but its objects can be found and its roots listed.</summary>
@@ -246,22 +241,31 @@ namespace Unbound.Runtime
         }
 
         /// <summary>
-        /// A scene a SceneManager Single load has closed, after its sceneUnloaded: it leaves the
-        /// loaded list and its light probe lookup is released as by <see cref="Forget"/>, but it
-        /// stays valid, not loaded and listed until the load's teardown ends: a scene a handler
-        /// made and the same load closes later still sees it (measured, Unity 6000.0.71f1:
-        /// tests/projects/lightprobes Reference creation-ownership.jsonl, sceneUnloaded of Made).
+        /// A scene a SceneManager Single load has closed, after its sceneUnloaded: it is forgotten
+        /// as before (<see cref="Forget"/>: the registry, loaded list and light probe lookup let it
+        /// go, so engine code and explicit-scene creation treat it as gone), but the public scene
+        /// queries still answer it as a valid, not loaded, listed scene until the load's teardown
+        /// ends (<see cref="PublicScene"/>): a scene a handler made and the same load closes later
+        /// still sees it (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference
+        /// creation-ownership.jsonl, sceneUnloaded of Made).
         /// </summary>
         internal static void CloseForSingleLoad(SceneData scene)
         {
-            if (s_Teardown == null)
-            {
-                Forget(scene);
-                return;
-            }
-            Loaded.Remove(scene);
-            LightProbes.SceneForgotten(scene.Handle.Value);
-            s_Teardown.Closed.Add(scene);
+            Forget(scene);
+            s_Teardown?.Closed.Add(scene);
+        }
+
+        /// <summary>The scene the public Scene queries (IsValid, name, path, buildIndex, rootCount,
+        /// GetRootGameObjects) answer for a handle: a registered scene, else one a Single load in
+        /// progress has closed. Engine code uses <see cref="Get"/>, which does not see the latter.</summary>
+        internal static SceneData PublicScene(SceneHandle handle)
+        {
+            var scene = Get(handle);
+            if (scene != null) return scene;
+            for (var t = s_Teardown; t != null; t = t.Outer)
+                foreach (var closed in t.Closed)
+                    if (closed.Handle == handle) return closed;
+            return null;
         }
 
         /// <summary>The scene an object made without a parent or scene of its own goes to: the
