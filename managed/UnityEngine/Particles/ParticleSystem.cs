@@ -635,6 +635,7 @@ namespace UnityEngine
         {
             var list = Systems(withChildren, includeSubEmitters: true);
             hierarchyCount = list.Count;
+            var seen = new HashSet<ParticleSystem>(list);
             for (int i = 0; i < list.Count; i++)
             {
                 var data = list[i].m_SubEmitters;
@@ -642,7 +643,7 @@ namespace UnityEngine
                 foreach (var e in data.emitters)
                 {
                     var sub = e.system;
-                    if (sub != null && !sub.m_Destroyed && sub.m_GameObject != null && !list.Contains(sub)) list.Add(sub);
+                    if (sub != null && !sub.m_Destroyed && sub.m_GameObject != null && seen.Add(sub)) list.Add(sub);
                 }
             }
             return list;

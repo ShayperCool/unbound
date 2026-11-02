@@ -276,9 +276,10 @@ namespace UnityEngine
         /// is its share of the step: the step's whole gain (rate × time over all its segments, also
         /// across a loop's end) is accumulated before the step's births are subtracted once, and a
         /// birth that is followed by j others in the step has lived
-        /// dt × max((remainder + j) / gain, 1e-6) (measured bit for bit against independent rate,
-        /// fractional-rate, big-step, fixed-step, delay, loop-wrap, one-shot, simulation-speed and
-        /// maximum-particle controls; newborns born exactly at a step's end have lived 1e-6 of it).</summary>
+        /// dt × max((remainder + j) / gain, 1e-6). A float32 model of this rule matches the saved
+        /// Native rate, fractional-rate, big-step, fixed-step, delay, loop-wrap, one-shot,
+        /// simulation-speed and maximum-particle controls bit for bit; newborns born exactly at
+        /// a step's end have lived 1e-6 of it.</summary>
         bool PlanConstantRate(float t0, float dt, float duration)
         {
             var curve = m_Emission.rateOverTime;
