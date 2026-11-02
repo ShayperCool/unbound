@@ -198,6 +198,48 @@ Synthetic cache gains do not establish full-engine, managed-build or Editor gain
 The recorded measurements and workload limits are in
 [COMPILER_CACHE_RESULTS.md](COMPILER_CACHE_RESULTS.md).
 
+### Native host link reuse
+
+The host build script now keeps a private `OUT_DIR/native-link-v1.receipt`.
+It checks preprocessed shim inputs, compiler commands/toolchain files, actual
+SDK archive bytes, the build recipe and the resulting library's content hash.
+An unchanged native library is left in place, including its modification time.
+Managed compilation still runs normally. A miss compiles/links as before; inputs
+are rechecked before publishing the receipt. Failed builds never publish success.
+The existing SDK archive cache remains separate.
+
+`UNBOUND_BUILD_TIMINGS=1 python3 tools/build.py -- build --release --locked -vv`
+prints `unbound-build:` records for PhysX, NvCloth, shim compilation, native key
+verification, linking, total native work and managed builds. To measure the old
+compile/link path with warm SDK archives, set `UNBOUND_NATIVE_CACHE=0`. This also
+invalidates the receipt, so a subsequent enabled build must fill it again.
+
+The build script registers Cargo watches for the output library, toolchain files,
+compiler environment and transitive headers, including headers outside `native/`.
+Watching generated outputs may cause one extra script run after a rebuild;
+that run verifies/reuses the library without rewriting it. As with ordinary
+Cargo freshness checks, preserving an input's mtime can suppress a script run;
+once invoked, the receipt uses content hashes rather than mtimes.
+
+Reproduce the synthetic parallel runs and Cargo invalidation controls:
+
+```sh
+python3 tools/validation/native_link_benchmark.py \
+  --out "$HOME/.cache/unbound/validation/runs/native-link-NEW" \
+  --sessions 4 --workers 2 --repeats 3
+```
+
+Add `--real --compiler-cache --repeats 5` to measure the real PhysX/NvCloth/shims
+with kache already in the pipeline. Without `--real`, the synthetic SDKs verify
+invalidation and failure recovery cheaply; tiny libraries can cost more to
+fingerprint than to rebuild. Both modes compile the actual host build script,
+use private outputs and the installed build pool, and check every library in a
+fresh process. Preparation and cold cache fill are excluded from warm medians.
+`--seed-native-out PATH` optionally copies only SDK archives from a read-only
+preparation directory into private outputs; no Cargo freshness state is copied.
+It is not required for a clean run. Do not overlap benchmark drivers.
+See [NATIVE_LINK_RESULTS.md](NATIVE_LINK_RESULTS.md) for measured gains and limits.
+
 Every child build keeps both its intermediates and its final outputs private. Give each
 build its own `CARGO_TARGET_DIR` on the SSD cache and do not set a shared
 `CARGO_BUILD_BUILD_DIR`. A private target directory is not enough if the build
