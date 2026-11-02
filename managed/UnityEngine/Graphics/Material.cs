@@ -109,11 +109,22 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>A copy; of a variant, a variant of the same parent with the same overrides and
+        /// locks (canonical variant.instance and variant.newFrom).</summary>
         public Material(Material source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
+            source.Inherit();
             CopyFrom(source);
             m_Name = source.m_Name;
+            m_Parent = source.m_Parent;
+            m_Own = source.m_Own != null ? new HashSet<int>(source.m_Own) : null;
+            m_Locked = source.m_Locked != null ? new HashSet<int>(source.m_Locked) : null;
+            m_InheritQueue = source.m_InheritQueue;
+            m_InheritFlags = source.m_InheritFlags;
+            m_InheritKeywords = source.m_InheritKeywords;
+            // The copy already has what the source inherited.
+            m_InheritedVersion = source.m_InheritedVersion;
         }
 
         [Obsolete("Creating materials from shader source string is no longer supported. Use Shader assets instead.", false)]
@@ -310,29 +321,139 @@ namespace UnityEngine
         /// <summary>Whether the material is a variant of another (it has a parent).</summary>
         public bool isVariant => m_Parent != null;
 
-        /// <summary>The material this one is a variant of. A variant loaded from its asset has the
-        /// parent's value for every property it does not override, also when the parent changes
-        /// later (measured: tests/projects/builtinfx material.variant.*); one made a variant from
-        /// script keeps all its own values.</summary>
+        /// <summary>The material this one is a variant of. A variant has the parent's value for
+        /// every property it does not override, also when the parent changes later (measured:
+        /// tests/projects/builtinfx material.variant.*). A variant loaded from its asset overrides
+        /// the properties it saves; one made a variant from script those whose values differ from
+        /// the parent's then (canonical tests/projects/shaderkeywords variant.script); either
+        /// overrides the properties set from script afterwards. A script-made variant keeps its own
+        /// queue, keywords and flags (builtinfx material.made.*).</summary>
         public Material parent
         {
             get => m_Parent;
             set
             {
                 m_Parent = value == this ? null : value;
-                m_Own = null;
+                m_Own = m_Parent != null ? Differences(m_Parent) : null;
                 m_InheritQueue = m_InheritFlags = m_InheritKeywords = false;
                 m_InheritedVersion = -1;
             }
         }
 
+        /// <summary>The properties whose values differ from another material's (a value a material
+        /// does not hold is its shader's default).</summary>
+        HashSet<int> Differences(Material other)
+        {
+            other.Inherit();
+            var differ = new HashSet<int>();
+            void Compare<T>(Dictionary<int, T> mine, Dictionary<int, T> theirs, Func<Material, int, T> fallback)
+            {
+                var ids = new HashSet<int>(mine.Keys);
+                ids.UnionWith(theirs.Keys);
+                foreach (var id in ids)
+                {
+                    var a = mine.TryGetValue(id, out var x) ? x : fallback(this, id);
+                    var b = theirs.TryGetValue(id, out var y) ? y : fallback(other, id);
+                    if (!EqualityComparer<T>.Default.Equals(a, b)) differ.Add(id);
+                }
+            }
+            Vector4 Default(Material m, int id) => m.m_Shader?.PropertyById(id)?.DefaultValue ?? Vector4.zero;
+            Compare(m_Floats, other.m_Floats, (m, id) => Default(m, id).x);
+            Compare(m_Ints, other.m_Ints, (m, id) => (int)Default(m, id).x);
+            Compare(m_Vectors, other.m_Vectors, Default);
+            Compare(m_Matrices, other.m_Matrices, (m, id) => Matrix4x4.zero);
+            var textures = new HashSet<int>(m_Textures.Keys);
+            textures.UnionWith(other.m_Textures.Keys);
+            foreach (var id in textures)
+            {
+                m_Textures.TryGetValue(id, out var a);
+                other.m_Textures.TryGetValue(id, out var b);
+                if ((a?.Texture) != (b?.Texture) || (a?.Scale ?? Vector2.one) != (b?.Scale ?? Vector2.one)
+                    || (a?.Offset ?? Vector2.zero) != (b?.Offset ?? Vector2.zero))
+                    differ.Add(id);
+            }
+            return differ;
+        }
+
         Material m_Parent;
-        /// <summary>The properties a variant overrides (null: all of them, a variant made from
-        /// script); the ones set from script count too.</summary>
+        /// <summary>The properties a variant overrides (null when it is not one).</summary>
         HashSet<int> m_Own;
+        /// <summary>The properties it locks for its variants (m_LockedProperties).</summary>
+        HashSet<int> m_Locked;
         bool m_InheritQueue, m_InheritFlags, m_InheritKeywords;
         int m_InheritedVersion = -1;
         bool m_Inheriting;
+
+        /// <summary>A property set from script; a variant then overrides it.</summary>
+        void ScriptSet(int nameID)
+        {
+            m_ScriptSet.Add(nameID);
+            if (m_Parent != null) m_Own?.Add(nameID);
+        }
+
+        public bool IsChildOf(Material ancestor)
+        {
+            if (ancestor == null) return false;
+            for (var p = m_Parent; p != null; p = p.m_Parent)
+                if (p == ancestor) return true;
+            return false;
+        }
+
+        /// <summary>Whether the variant overrides the property; not when an ancestor locks it
+        /// (canonical variant.grand.IsPropertyOverriden(_Color), saved but locked by its parent).</summary>
+        public bool IsPropertyOverriden(int nameID) =>
+            m_Parent != null && m_Own != null && m_Own.Contains(nameID) && !IsPropertyLockedByAncestor(nameID);
+
+        public bool IsPropertyOverriden(string name) => IsPropertyOverriden(Shader.PropertyToID(name));
+
+        public bool IsPropertyLocked(int nameID) => m_Locked != null && m_Locked.Contains(nameID);
+
+        public bool IsPropertyLocked(string name) => IsPropertyLocked(Shader.PropertyToID(name));
+
+        /// <summary>Whether a parent, or its parent, locks the property.</summary>
+        public bool IsPropertyLockedByAncestor(int nameID)
+        {
+            for (var p = m_Parent; p != null; p = p.m_Parent)
+                if (p.IsPropertyLocked(nameID)) return true;
+            return false;
+        }
+
+        public bool IsPropertyLockedByAncestor(string name) => IsPropertyLockedByAncestor(Shader.PropertyToID(name));
+
+        /// <summary>Locks or unlocks a property for its variants. A lock does not undo a value a
+        /// variant has (canonical variant.revert.set: a set of a property an ancestor locks takes
+        /// effect on the variant).</summary>
+        public void SetPropertyLock(int nameID, bool value)
+        {
+            if (value) (m_Locked ??= new HashSet<int>()).Add(nameID);
+            else m_Locked?.Remove(nameID);
+        }
+
+        public void SetPropertyLock(string name, bool value) => SetPropertyLock(Shader.PropertyToID(name), value);
+
+        /// <summary>Takes the parent's value for the property again (canonical variant.revert.value:
+        /// the render queue stays).</summary>
+        public void RevertPropertyOverride(int nameID)
+        {
+            if (m_Parent == null || m_Own == null || !m_Own.Remove(nameID)) return;
+            m_ScriptSet.Remove(nameID);
+            m_InheritedVersion = -1;
+            Inherit();
+        }
+
+        public void RevertPropertyOverride(string name) => RevertPropertyOverride(Shader.PropertyToID(name));
+
+        /// <summary>Takes the parent's values, render queue, keywords and flags again (canonical
+        /// variant.revert.all: the queue too).</summary>
+        public void RevertAllPropertyOverrides()
+        {
+            if (m_Parent == null || m_Own == null) return;
+            foreach (var id in m_Own) m_ScriptSet.Remove(id);
+            m_Own.Clear();
+            m_InheritQueue = m_InheritFlags = m_InheritKeywords = true;
+            m_InheritedVersion = -1;
+            Inherit();
+        }
 
         /// <summary>A variant takes its parent's values for what it does not override.</summary>
         internal void Inherit()
@@ -345,7 +466,7 @@ namespace UnityEngine
                 parent.Inherit();
                 if (m_InheritedVersion == parent.m_Version) return;
                 m_InheritedVersion = parent.m_Version;
-                bool Own(int id) => m_Own.Contains(id) || m_ScriptSet.Contains(id);
+                bool Own(int id) => m_Own.Contains(id);
                 foreach (var p in parent.m_Floats) if (!Own(p.Key)) m_Floats[p.Key] = p.Value;
                 foreach (var p in parent.m_Ints) if (!Own(p.Key)) m_Ints[p.Key] = p.Value;
                 foreach (var p in parent.m_Vectors) if (!Own(p.Key)) m_Vectors[p.Key] = p.Value;
@@ -573,7 +694,7 @@ namespace UnityEngine
         {
             m_RawBindings.Remove(nameID);
             m_Floats[nameID] = value;
-            m_ScriptSet.Add(nameID);
+            ScriptSet(nameID);
             MarkDirty();
         }
 
@@ -598,7 +719,7 @@ namespace UnityEngine
         public void SetInteger(int nameID, int value)
         {
             m_Ints[nameID] = value;
-            m_ScriptSet.Add(nameID);
+            ScriptSet(nameID);
             MarkDirty();
         }
 
@@ -630,7 +751,7 @@ namespace UnityEngine
             }
             m_RawBindings.Remove(nameID);
             m_Vectors[nameID] = value;
-            m_ScriptSet.Add(nameID);
+            ScriptSet(nameID);
             MarkDirty();
         }
 
@@ -657,7 +778,7 @@ namespace UnityEngine
         public void SetMatrix(int nameID, Matrix4x4 value)
         {
             m_Matrices[nameID] = value;
-            m_ScriptSet.Add(nameID);
+            ScriptSet(nameID);
             MarkDirty();
         }
 
@@ -684,7 +805,7 @@ namespace UnityEngine
             slot.Texture = value;
             slot.Element = element;
             slot.ElementBinding = elementBinding;
-            m_ScriptSet.Add(nameID);
+            ScriptSet(nameID);
             MarkDirty();
         }
 
@@ -1005,6 +1126,9 @@ namespace UnityEngine
             m_EnableInstancing = body.Bool("m_EnableInstancingVariants");
             m_DoubleSidedGI = body.Bool("m_DoubleSidedGI");
             m_GIFlags = (MaterialGlobalIlluminationFlags)body.Int("m_LightmapFlags", (int)MaterialGlobalIlluminationFlags.EmissiveIsBlack);
+            // Properties locked for variants: names separated by spaces.
+            foreach (var name in body.Str("m_LockedProperties").Split(' ', StringSplitOptions.RemoveEmptyEntries))
+                SetPropertyLock(name, true);
             var parentRef = body.Ref("m_Parent");
             if (!parentRef.IsNull && resolver.Resolve(parentRef, typeof(Material)) is Material parentMaterial && parentMaterial != this)
             {

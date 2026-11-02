@@ -1830,21 +1830,9 @@ namespace UnityEngine
         [global::Unbound.Stub] public bool HasBuffer(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.HasBuffer"); return default; }
         [global::Unbound.Stub] public bool HasConstantBuffer(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.HasConstantBuffer"); return default; }
         [global::Unbound.Stub] public bool HasConstantBuffer(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.HasConstantBuffer"); return default; }
-        [global::Unbound.Stub] public bool IsChildOf(global::UnityEngine.Material ancestor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.IsChildOf"); return default; }
-        [global::Unbound.Stub] public void RevertAllPropertyOverrides() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.RevertAllPropertyOverrides"); }
-        [global::Unbound.Stub] public bool IsPropertyOverriden(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.IsPropertyOverriden"); return default; }
-        [global::Unbound.Stub] public bool IsPropertyLocked(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.IsPropertyLocked"); return default; }
-        [global::Unbound.Stub] public bool IsPropertyLockedByAncestor(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.IsPropertyLockedByAncestor"); return default; }
-        [global::Unbound.Stub] public bool IsPropertyOverriden(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.IsPropertyOverriden"); return default; }
-        [global::Unbound.Stub] public bool IsPropertyLocked(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.IsPropertyLocked"); return default; }
-        [global::Unbound.Stub] public bool IsPropertyLockedByAncestor(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.IsPropertyLockedByAncestor"); return default; }
-        [global::Unbound.Stub] public void SetPropertyLock(int nameID, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.SetPropertyLock"); }
         [global::Unbound.Stub] public void ApplyPropertyOverride(global::UnityEngine.Material destination, int nameID, bool recordUndo = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.ApplyPropertyOverride"); }
-        [global::Unbound.Stub] public void RevertPropertyOverride(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.RevertPropertyOverride"); }
         [global::Unbound.Stub] internal void GetPropertyState(int nameID, out bool isOverriden, out bool isLockedInChildren, out bool isLockedByAncestor) { isOverriden = default; isLockedInChildren = default; isLockedByAncestor = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.GetPropertyState"); }
-        [global::Unbound.Stub] public void SetPropertyLock(string name, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.SetPropertyLock"); }
         [global::Unbound.Stub] public void ApplyPropertyOverride(global::UnityEngine.Material destination, string name, bool recordUndo = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.ApplyPropertyOverride"); }
-        [global::Unbound.Stub] public void RevertPropertyOverride(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.RevertPropertyOverride"); }
         [global::Unbound.Stub] internal void SetPropertyLock(global::UnityEngine.MaterialSerializedProperty property, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.SetPropertyLock"); }
         [global::Unbound.Stub] internal void ApplyPropertyOverride(global::UnityEngine.Material destination, global::UnityEngine.MaterialSerializedProperty property, bool recordUndo = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.ApplyPropertyOverride"); }
         [global::Unbound.Stub] internal void RevertPropertyOverride(global::UnityEngine.MaterialSerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.RevertPropertyOverride"); }
