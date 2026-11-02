@@ -35,7 +35,10 @@ public class CoreProbe : MonoBehaviour
     public static void Record(string who, string message) =>
         s_Log.Append($"{{\"f\":{Frame},\"s\":\"{s_Scenario}\",\"who\":\"{P.Esc(who)}\",\"e\":\"{P.Esc(Names(message))}\"}}\n");
 
-    static bool InWindow => s_Window >= 0 && Time.frameCount - s_Window <= WindowFrames;
+    /// <summary>The OnRenderObject order window follows the OnDemandRendering window: frames
+    /// WindowFrames+1 .. WindowFrames+OroFrames of the same window counter (see OroStep).</summary>
+    const int OroFrames = 17;
+    static bool InWindow => s_Window >= 0 && Time.frameCount - s_Window <= WindowFrames + OroFrames;
 
     /// <summary>A render-window event: the frame inside the window, frameCount modulo 6 (so the
     /// render pattern is visible for intervals 1, 2 and 3) and willCurrentFrameRender.</summary>
@@ -165,12 +168,17 @@ public class CoreProbe : MonoBehaviour
             int w = Time.frameCount - s_Window;
             if (w == 7) OnDemandRendering.renderFrameInterval = 2;
             if (w == 12) OnDemandRendering.renderFrameInterval = 1;
-            if (w > WindowFrames + 1) Finish();
+            if (w > WindowFrames + OroFrames) Finish();
+            else if (w > WindowFrames) OroStep(w - WindowFrames - 1);
         }
         RenderEvent("probe", "Update");
     }
 
-    void LateUpdate() => RenderEvent("probe", "LateUpdate");
+    void LateUpdate()
+    {
+        RenderEvent("probe", "LateUpdate");
+        if (s_Window >= 0 && Time.frameCount - s_Window > WindowFrames) OroState();
+    }
 
     void OnGUI()
     {
@@ -624,12 +632,123 @@ public class CoreProbe : MonoBehaviour
         OnDemandRendering.renderFrameInterval = 1;
     }
 
+    // ---------------------------------------------------------------- OnRenderObject order
+
+    // Frame o of the order window (o = w - WindowFrames - 1). Each phase's mutations run in
+    // Update of its first frame, before that frame renders; each phase lasts two frames. The
+    // camera render sequence, the handler calls and the state are what the record shows; the
+    // phases only set them up. No object here implements OnRenderObject.
+    RenderTexture m_OroTexture;
+
+    RenderWatch Watch(string name) => GameObject.Find(name).GetComponent<RenderWatch>();
+
+    static void Mutation(string text) => RenderEvent("mutation", text);
+
+    void OroStep(int o)
+    {
+        RenderEvent("oro", "frame o=" + o + " phase=" + OroPhase(o));
+        switch (o)
+        {
+            case 0:
+                OnDemandRendering.renderFrameInterval = 1;
+                Mutation("renderFrameInterval=1 -> " + OnDemandRendering.renderFrameInterval);
+                OroIds();
+                break;
+            case 4:
+                m_ScreenCam.depth = -10;
+                Mutation("ScreenCam.depth=-10 -> " + m_ScreenCam.depth);
+                break;
+            case 6:
+                if (m_OroTexture == null) m_OroTexture = new RenderTexture(64, 64, 24);
+                m_ScreenCam.targetTexture = m_OroTexture;
+                Mutation("ScreenCam.targetTexture=texture -> " + P.B(m_ScreenCam.targetTexture != null));
+                break;
+            case 8:
+                m_ScreenCam.depth = 0;
+                Mutation("ScreenCam.depth=0 -> " + m_ScreenCam.depth);
+                break;
+            case 10:
+                m_ScreenCam.targetTexture = null;
+                Mutation("ScreenCam.targetTexture=null -> " + P.B(m_ScreenCam.targetTexture != null));
+                break;
+            case 12:
+                var watch = Watch("RtCam");
+                watch.enabled = false;
+                Mutation("RtCam.RenderWatch.enabled=false -> " + P.B(watch.enabled) + " isActiveAndEnabled=" + P.B(watch.isActiveAndEnabled));
+                watch.enabled = true;
+                Mutation("RtCam.RenderWatch.enabled=true -> " + P.B(watch.enabled) + " isActiveAndEnabled=" + P.B(watch.isActiveAndEnabled));
+                break;
+            case 14:
+                m_ScreenCam.targetTexture = m_OroTexture;
+                Mutation("ScreenCam.targetTexture=texture -> " + P.B(m_ScreenCam.targetTexture != null));
+                m_ScreenCam.depth = -10;
+                Mutation("ScreenCam.depth=-10 -> " + m_ScreenCam.depth);
+                break;
+        }
+    }
+
+    static string OroPhase(int o) => o < 2 ? "settle" : o < 4 ? "P0-baseline" : o < 6 ? "P1-mixed-depth" :
+        o < 8 ? "P2-offscreen-depth" : o < 10 ? "P2b-offscreen-restore" : o < 12 ? "P3-restore" :
+        o < 14 ? "P4-reenable" : "P5-combined";
+
+    /// <summary>The state each frame renders with (recorded in LateUpdate, before rendering).</summary>
+    void OroState()
+    {
+        var b = new StringBuilder("state");
+        foreach (var name in new[] { "RtCam", "ScreenCam", "Cube" })
+        {
+            var watch = Watch(name);
+            b.Append(' ').Append(name).Append(".RenderWatch enabled=").Append(P.B(watch.enabled))
+             .Append(" active=").Append(P.B(watch.isActiveAndEnabled));
+        }
+        foreach (var cam in new[] { m_RtCam, m_ScreenCam })
+            b.Append(' ').Append(cam.name).Append(" enabled=").Append(P.B(cam.enabled)).Append(" depth=").Append(cam.depth)
+             .Append(" target=").Append(cam.targetTexture != null ? "texture" : "screen");
+        RenderEvent("oro", b.ToString());
+    }
+
+    /// <summary>The instance-id order of the handlers, their objects and cameras (ranks and signs;
+    /// raw ids go to a side file, which is not compared).</summary>
+    void OroIds()
+    {
+        var objects = new List<(string, Object)>();
+        foreach (var name in new[] { "RtCam", "ScreenCam", "Cube" })
+        {
+            var watch = Watch(name);
+            objects.Add((name + ".RenderWatch", watch));
+            objects.Add((name, watch.gameObject));
+        }
+        objects.Add(("RtCam.Camera", m_RtCam));
+        objects.Add(("ScreenCam.Camera", m_ScreenCam));
+        var raw = new StringBuilder();
+        foreach (var group in new[] { ".RenderWatch", "GameObject", ".Camera" })
+        {
+            var list = objects.FindAll(x => group == "GameObject" ? x.Item2 is GameObject : x.Item1.EndsWith(group));
+            list.Sort((x, y) => x.Item2.GetInstanceID().CompareTo(y.Item2.GetInstanceID()));
+            var b = new StringBuilder("instance id order " + group + ":");
+            foreach (var (n, o) in list)
+            {
+                b.Append(' ').Append(n).Append(o.GetInstanceID() < 0 ? "(-)" : "(+)");
+                raw.Append(n).Append(' ').Append(o.GetInstanceID()).Append('\n');
+            }
+            RenderEvent("oro", b.ToString());
+        }
+        var output = Environment.GetEnvironmentVariable("CORE_APIS_OUT");
+        if (!string.IsNullOrEmpty(output))
+        {
+            Directory.CreateDirectory(Path.GetDirectoryName(output));
+            File.WriteAllText(output + ".ids.txt", raw.ToString());
+        }
+    }
+
     void Finish()
     {
         if (Finished) return;
         Finished = true;
         OnDemandRendering.renderFrameInterval = 1;
         Record("probe", "finish");
+        // The completion marker is the last line; nothing is appended to the file after it.
+        s_Log.Append("{\"k\":\"complete\",\"v\":true}\n");
         var output = Environment.GetEnvironmentVariable("CORE_APIS_OUT");
         if (!string.IsNullOrEmpty(output))
         {
