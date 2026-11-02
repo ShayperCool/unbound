@@ -863,7 +863,9 @@ namespace UnityEngine
             for (int i = 0; i < m_Count;)
             {
                 if ((m_Particles[i].m_Flags & Particle.FlagOrphanTrail) != 0) { i++; continue; }
-                if (Integrate(ref m_Particles[i], dt, ref m_Context))
+                // A particle a trigger killed in the previous update dies now, before it ages or
+                // moves, like one whose life ran out exactly at the end of that update.
+                if ((m_Particles[i].m_Flags & Particle.FlagTriggerKilled) == 0 && Integrate(ref m_Particles[i], dt, ref m_Context, true))
                 {
                     i++;
                     continue;
@@ -877,8 +879,9 @@ namespace UnityEngine
 
         /// <summary>Advances one particle by <paramref name="dt"/>; false when it dies. The lifetime
         /// curves are evaluated at the particle's age before the step (measured: velocity over
-        /// lifetime moves a newborn not at all in its first step).</summary>
-        bool Integrate(ref Particle p, float dt, ref StepContext c)
+        /// lifetime moves a newborn not at all in its first step). <paramref name="existing"/>: the
+        /// particle was alive before this update (false for a newborn being emitted).</summary>
+        bool Integrate(ref Particle p, float dt, ref StepContext c, bool existing = false)
         {
             if ((p.m_Flags & Particle.FlagAgeInitialized) == 0) p.InitializeAge();
             float age = p.Age01;
@@ -966,7 +969,20 @@ namespace UnityEngine
             var before = p.m_Position;
             p.m_Position += (v + animated) * (speedModifier * dt);
             if (m_Collision.enabled && !Collide(ref p, before, age, dt, speedModifier)) return false;
-            if (m_Trigger.enabled && !Trigger(ref p)) return false;
+            if (m_Trigger.enabled && !Trigger(ref p))
+            {
+                // A newborn killed while it is emitted is never added (measured: none is
+                // reported, even in a call's last step). An existing particle's life ends
+                // here: it keeps its moved state with zero remaining lifetime, and the next
+                // update removes it (measured: killed in a call's last internal step it is
+                // reported at lifetime 0, killed in an earlier one it is gone). The rest of
+                // this update still skips it, as before.
+                if (!existing) return false;
+                p.m_AgePercent = 100f;
+                p.m_Lifetime = 0f;
+                p.m_Flags |= Particle.FlagTriggerKilled;
+                return true;
+            }
 
             var RO = m_Rotation;
             var RS = m_RotationBySpeed;
