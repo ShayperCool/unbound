@@ -2681,3 +2681,13 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - Source: prepared branches d682a582 and 38bd0d81 remain unmerged. No activation sort or root-order fix is admitted; the existing root-order evidence and significant gaps remain open.
 - Runtime/results: production still equals tested 60a1cd68, runtime rfc-validation/candidate manifest 530c114b; managed 1583/1594 and API 0/2318 are prior reused results, with no new engine validation.
 - Evidence: `validation/runs/sceneactivation-witness-20261102/RECEIPT.md`, `validation/runs/sceneactivation-witness2-20261102/RECEIPT.md`, and `validation/runs/activation-shutdown-prep-20261102/controls.json`.
+
+### Shader keyword Native contract, 2026-11-02
+- What: integrated the probe and one 1510-row canonical from two independent, byte-identical GPU batchmode captures. Both exit 0 without a forced stop, with NVIDIA and shutdown verified. No production code changed.
+- Binding: source/input hashes and the actual batch rsp graphs match the preflight; only private project paths are rebound. Root independently reran every strict capture guard and checked both raw repeats against the committed canonical.
+- Scope: Unity 6000.0.71f1, LinuxEditor/OpenGLCore SM50, Ultra5/All shadows, Linear, built-in, asynchronous shader compilation disabled through the runner. All five probe and 32 built-in shaders are found; expected per-case errors remain data.
+- Authored copies: at shutdown the Editor saves only its async shader compilation setting in both private copies; initial settings match the fixture and Assets are unchanged. The source fixture is untouched.
+- Controls: Root's external 300 s progress deadline and 1200 s hard deadline are committed. All 110 offline controls pass; they validate emission/schema/control flow, not Unity behavior. Exactly two Native launches, no retries.
+- Open: recovered implementation assumptions need comparison with the new canonical; provider fallback, metadata cache invalidation, compat gates and headless initialization remain unimplemented here. Other releases/backends/contexts and CommandBuffer/default-invalid keyword paths remain unmeasured.
+- Runtime: production still equals tested 60a1cd68 and the accepted runtime remains rfc-validation/candidate, manifest530c114b/Coreeaa489ea. Managed1583/1594 and API0/2318 are prior reused results; no build or engine validation in this probe integration.
+- Evidence: `validation/runs/shaderkw-native-20261102a-owner/receipt.json`; Root receipt `validation/runs/shaderkw-native-root-adjudication-20261102/root-adjudication.json`. All raw captures and rejected older attempts remain outside Git.

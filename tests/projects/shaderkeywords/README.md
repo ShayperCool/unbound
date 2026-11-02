@@ -1,8 +1,9 @@
 # Shader keyword declarations and shader metadata
 
-Unity 6000.0.71f1, built-in pipeline (`Assets/Scripts/ShaderKeywordsProbe.cs`). There is no
-reference yet: every statement about Unity below is a hypothesis pending the canonical
-`Reference/unity-6000.0.71f1.jsonl`.
+Unity 6000.0.71f1, built-in pipeline (`Assets/Scripts/ShaderKeywordsProbe.cs`). The canonical
+`Reference/unity-6000.0.71f1.jsonl` contains 1510 rows from two independent, byte-identical
+batchmode GPU captures. Both exited 0 without a forced stop on NVIDIA RTX 4060. This is a
+measured API contract for that capture context; Unbound's implementation remains unvalidated.
 
 ## Fixture
 
@@ -35,8 +36,9 @@ Groups:
 
 * `context.*`: Unity version, batchmode, platform, graphics device type and shader level,
   active quality level/name/shadows, color space, render pipeline. The enabled global keywords
-  and platform-conditional declarations hold for this context only (the planned capture:
-  batchmode Linux Editor, OpenGL Core on the NVIDIA GPU, built-in pipeline).
+  and platform-conditional declarations hold for the recorded context only: batchmode
+  LinuxEditor, OpenGLCore shader level 50, NVIDIA RTX 4060, Ultra quality level 5, All shadows,
+  Linear color space and the built-in pipeline.
 * `probe.<shader>.*` (five probe shaders) and `builtin.<shader>.*` (32 built-in shaders):
   `found`; `meta`: `subshaderCount`, `passCount`, `GetPropertyCount` and each property's name,
   type and flags, `GetPassCountInSubshader` per SubShader, `FindSubshaderTagValue` (RenderType,
@@ -67,10 +69,28 @@ LocalKeyword (only valid keywords have them read; a default keyword's `isValid` 
 read), `Material.SetKeyword` with a default LocalKeyword (an Editor of the draft crashed right
 after these two reads), CommandBuffer keyword calls, and the order of the global registry.
 
-## Hypotheses (pending the reference)
+## Measured capture and limits
 
-These are what the implementation draft assumed; none is measured until the reference exists,
-and none is a guard.
+All five probe shaders, 32 built-in shaders, the compute shader and the saved material family
+were found. The record retains 11 expected per-case exceptions and five non-empty block logs;
+the unscoped log list is empty. Both invalid `FindSubshaderTagValue` indices throw
+`ArgumentOutOfRangeException`. `D3D_ONLY` is invalid in all five probe shaders on OpenGLCore.
+The compute space contains `CS_LOCAL`, `CS_GLOBAL_A`, `CS_GLOBAL_B`, `CS_DYN` and `LIGHTMAP_ON`
+in that order. The exact keyword, material and variant answers are in the canonical.
+
+The runner disables asynchronous shader compilation through `EditorSettings`. At shutdown,
+both private Editor copies saved that change to `ProjectSettings/EditorSettings.asset`.
+Prelaunch settings were byte-identical to the fixture, and Assets were unchanged. Both actual
+batch compiler rsp graphs match the preflight: references, sources, defines, analyzers and
+compiler bytes are equal; only the private project path is rebound. The Editor uses its
+compiler server, which the offline preflight omits. Other releases, backends, quality settings,
+color spaces and windowed captures remain unmeasured.
+
+## Draft implementation assumptions
+
+These assumptions describe the recovered implementation draft. Check each against the new
+canonical before adopting it, and keep rules beyond this fixture explicitly unmeasured.
+They never gate capture publication.
 
 * A shader's keyword space starts with the four stereo keywords (`BuiltinDefault`); other
   keywords are `UserDefined`, built-in sets included. Each pass adds its new keywords stage by
