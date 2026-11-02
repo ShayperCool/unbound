@@ -113,8 +113,8 @@ def identity(copy, launch, release, written, proof):
         problems.append('the launch is not a strict exit-0 NVIDIA batchmode GPU Editor run of this copy')
     launched = {}
     for key, entry in receipt.get('files', {}).items():
-        label, rel = key.split('/', 1)
-        if label in ('packages', 'settings'):
+        label, _, rel = key.partition('/')    # runner/tool inputs have plain names
+        if label in ('packages', 'settings') and rel:
             launched[label+'/'+rel] = entry.get('sha256')
             if Path(entry.get('path', '')).resolve() != (copy/{'packages': 'Packages', 'settings': 'ProjectSettings'}[label]/rel).resolve():
                 problems.append(f'the receipt names {entry.get("path")} for {key}, not this copy')

@@ -667,6 +667,7 @@ def preflight_identity_controls(out):
             for rel, digest in preflight.files(copy_dir/part).items():
                 files[f'{label}/{rel}'] = {'path': str(copy_dir/part/rel), 'sha256': digest}
         files['assets/Scripts/ShaderKeywordsProbe.cs'] = {'path': str(copy_dir/'Assets/Scripts/ShaderKeywordsProbe.cs'), 'sha256': '0'*64}
+        files['runner'] = {'path': '/x/run.py', 'sha256': '2'*64}    # tool inputs have plain names
         (launch/'prelaunch-inputs.json').write_text(json.dumps({'selected_release': RELEASE, 'files': files}))
         (launch/'editor-run.json').write_text(json.dumps({
             'exit_code': 0, 'forced_exit': None, 'kind': 'editor-gpu', 'renderer': 'NVIDIA GeForce RTX 4060/PCIe/SSE2',
