@@ -145,3 +145,44 @@ comparison against the Reference body, each leaf labelled with the family that c
 or none (strict); per declared point and alias, ownership, lifetime and Find fields as separate
 groups, with the scene listing, light probes, lifecycle sequences and error name sets; and, with
 `--native`, the full raw union against each raw Native repeat. Exit 0 only for a canonical match.
+
+### Measured scope admitted on 2026-11-02
+
+Validated source `d7ff35ca` is admitted for the measured light-probe API, baked indirect
+specular fallback and Single-load creation ownership. This is partial Unity parity. The
+comparators retain their strict failures and original tolerances.
+
+The main probe matches 367/625 values and its image matches all 57600 pixels exactly.
+The lifecycle reference remains 10/31 rows. Creation ownership satisfies all three
+predeclared contract rules; its full canonical comparison remains 30/84 rows. The
+four created objects belong to the incoming scene from Awake, survive its load,
+are discoverable during teardown and are destroyed when that scene next unloads.
+Explicit parents and loaded requested scenes remain authoritative.
+
+The creation raw union retains 82 newly differing leaves alongside 3096 resolved
+and 502 retained leaves. These expose the existing pending-scene listing and
+outgoing root-query gaps, including scene-label shifts; they are not precision
+waivers. The separate ownership/lifetime/Find assessment has zero introduced
+groups, 128 resolved and 94 retained. The full reports remain in
+`validation/runs/claude-fresh-20261101b/creation-validation/` under the validation cache.
+
+Significant gaps remain open:
+
+* The combined hull has 120 cells versus 121; query indices differ. No hull-fill
+  patch or weight normalization was admitted.
+* Unload callbacks still run inside `UnloadSceneAsync`, pending incoming scenes
+  and the outgoing scene in its callback are not listed, and outgoing
+  `GetRootGameObjects` throws where the Editor returns an empty array.
+* During an outgoing object's destruction, its scene still reports loaded and
+  the dying object remains active and findable. Light-probe state at that phase
+  also differs.
+* Activating a handler-created empty scene keeps a non-null global probe object
+  where the Editor returns null. Probe-object identity across scene reloads differs.
+* The DontDestroyOnLoad scene path, invalid-scene path and two component-deletion
+  log lines retain their earlier differences.
+
+The two occlusion keys, eight SH values and four Gamma float-centre values remain
+in `docs/COMPATIBILITY_GAPS.md`'s insignificant-residual ledger with all raw values
+preserved. The earlier 56 introduced pixels were fixed and are now exact.
+Unmeasured cases recorded above remain unmeasured. The 1024 handler-created-scene
+limit is an explicit Unbound resource limit, not a measured Unity limit.

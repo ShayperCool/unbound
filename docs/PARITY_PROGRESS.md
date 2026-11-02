@@ -2616,3 +2616,13 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - API: reused proper nine-module 0/2314 result with identical public metadata; stub/API/ABI/cache changes [].
 - Open: 18 manual-Destroy timing rows, 15 line time rows, 88 Static-U pixels, 8 zero-area indices and cap-two inference; LightProbes remains held.
 - Evidence: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/trail-recording-runtime-20261101-t3-fcf65aff/REPORT.md`; runtime `candidate/`, Core 5c7b03ce; Root receipt `line-root-integration-20261101b/root-adjudication.json`.
+
+### Root light-probe and scene-creation integration, 2026-11-02
+- What: admitted the measured LP, indirect-specular and Single-load creation-ownership scope; production equals tested d7ff35ca, including the reviewed three-line test compilation fix.
+- Probe: LP 367/625 and PNG 57600/57600 exact; lifecycle 10/31; creation contract 3/3, strict canonical 30/84. Other affected scene captures retain their earlier results.
+- Introduced: creation raw union preserves 82 newly differing leaves from existing listing/root-query gaps and scene-label shifts; semantic ownership/lifetime/Find groups introduce 0, resolve 128 and retain 94. No precision waiver covers a functional gap.
+- Managed: 1571/1582 with identical 11 inherited failures; all seven new/changed scene tests pass. One compile-error correction used; no extra Native or Rust build.
+- API: reused proper nine-module 0/2315 report with public metadata equality; generated removals are LightProbesQuery plus eight MPB copy methods. ABI unchanged; baked-lighting importer local version 5->6.
+- Runtime: Root rehashed all 33 files and 1089 PDB-source documents, verified TestCore equals package Core 5c2bf5cc, and checked 265 unchanged CLI inputs plus the separate managed build trigger. Frozen prior runtimes are unchanged.
+- Open: hull/query indices, unload order/state, pending listing/root queries, LP reload identity and empty-active-scene probes; precision ledger values stay raw. All 56 earlier pixel introductions are fixed, not waived.
+- Evidence: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/claude-fresh-20261101b/creation-validation/RECEIPT.md`; Root receipt `validation/runs/lp-ownership-root-integration-20261102/root-validation.json`.
