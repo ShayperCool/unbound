@@ -6295,8 +6295,7 @@ namespace UnityEngine.Rendering
         Tier2 = 1,
         Tier3 = 2,
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct ShaderKeyword
+    unsafe partial struct ShaderKeyword
     {
         [global::Unbound.Stub] internal static uint GetGlobalKeywordCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.GetGlobalKeywordCount"); return default; }
         [global::Unbound.Stub] internal static uint GetGlobalKeywordIndex(string keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.GetGlobalKeywordIndex"); return default; }
