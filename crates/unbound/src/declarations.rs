@@ -310,16 +310,21 @@ impl State {
             return Ok(map.clone());
         }
         if let Some((seen, when, why)) = &self.builtin_failed
-            && seen == &now && when.elapsed() < SOURCE_RETRY_DELAY
+            && seen == &now
+            && when.elapsed() < SOURCE_RETRY_DELAY
         {
             return Err(why.clone());
         }
         self.builtin = None;
         self.builtin_failed = None;
-        let map = match unbound_assets::builtin_shaders::declarations(&inputs.unity_data, &inputs.cache_root) {
+        let map = match unbound_assets::builtin_shaders::declarations(
+            &inputs.unity_data,
+            &inputs.cache_root,
+        ) {
             Ok(map) => map,
             Err(e) => {
-                let why = Unknown::transient(format!("Unity's built-in shaders cannot be read: {e:#}"));
+                let why =
+                    Unknown::transient(format!("Unity's built-in shaders cannot be read: {e:#}"));
                 self.builtin_failed = Some((now, Instant::now(), why.clone()));
                 return Err(why);
             }
@@ -336,7 +341,11 @@ impl State {
         self.sources_at(inputs, Instant::now())
     }
 
-    fn sources_at(&mut self, inputs: &Inputs, now: Instant) -> Result<&mut (PathBuf, ShaderIndex), Unknown> {
+    fn sources_at(
+        &mut self,
+        inputs: &Inputs,
+        now: Instant,
+    ) -> Result<&mut (PathBuf, ShaderIndex), Unknown> {
         if self.sources.is_none() {
             if let Some((when, why)) = &self.sources_failed
                 && now.duration_since(*when) < SOURCE_RETRY_DELAY
@@ -346,7 +355,9 @@ impl State {
             let found = match (inputs.builtin_sources)() {
                 Ok(found) => found,
                 Err(e) => {
-                    let why = Unknown::transient(format!("Unity's built-in shader sources are not available: {e:#}"));
+                    let why = Unknown::transient(format!(
+                        "Unity's built-in shader sources are not available: {e:#}"
+                    ));
                     self.sources_failed = Some((now, why.clone()));
                     return Err(why);
                 }
