@@ -573,6 +573,51 @@ namespace Unbound.Tests
             }
         }
 
+        /// <summary>The public closing-scene query must not change the existing unmeasured
+        /// global-probe fallback for an internally loaded scene with no bake. A closed scene
+        /// that remains publicly listed has still lost its internal ownership, as before.</summary>
+        [Fact]
+        public void PublicClosingStatePreservesTheExistingUnbakedProbeFallback()
+        {
+            var scenes = new LightProbesTests.Scenes();
+            LightProbes probes = null;
+            try
+            {
+                LightmapSettings.Reset();
+                var main = scenes.Loaded("Main");
+                var incoming = scenes.Loading("Extra");
+                var scene = new Scene(main.Handle);
+                using var json = System.Text.Json.JsonDocument.Parse("{\"positions\":[],\"coefficients\":[]}");
+                probes = LightProbes.FromJson(json.RootElement);
+                LightmapSettings.SetLightProbes(probes);
+                Assert.Same(probes, LightProbes.GetSharedLightProbesForScene(scene));
+
+                var outer = SceneRegistry.BeginSingleLoadTeardown(incoming);
+                try
+                {
+                    SceneRegistry.Teardown.Closing = main;
+                    Assert.False(scene.isLoaded);
+                    Assert.Same(probes, LightProbes.GetSharedLightProbesForScene(scene));
+                    // A scene whose data is still loading keeps the previous null fallback.
+                    main.LoadingState = Scene.LoadingState.Loading;
+                    Assert.Null(LightProbes.GetSharedLightProbesForScene(scene));
+                    main.LoadingState = Scene.LoadingState.Loaded;
+                    SceneRegistry.CloseForSingleLoad(main);
+                    SceneRegistry.Teardown.Closing = null;
+                    Assert.True(scene.IsValid());
+                    Assert.Null(LightProbes.GetSharedLightProbesForScene(scene));
+                }
+                finally { SceneRegistry.EndSingleLoadTeardown(outer); }
+                Assert.False(scene.IsValid());
+            }
+            finally
+            {
+                if (probes != null) UObject.DestroyImmediate(probes);
+                LightmapSettings.Reset();
+                scenes.Dispose();
+            }
+        }
+
         /// <summary>Single loads that are not SceneManager loads keep the active scene as the
         /// default creation scene, close only the scenes loaded when they start and do not list the
         /// scene they close in its sceneUnloaded (not measured; this pins the boundary of the
