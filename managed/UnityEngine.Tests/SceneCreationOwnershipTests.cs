@@ -216,7 +216,9 @@ namespace Unbound.Tests
                     Errors(log));
                 // The same load unloaded the handler's scene with the objects placed in it.
                 Assert.False(other.IsValid());
-                Assert.All(made.Take(4), go => Assert.True(go == null));
+                Assert.All(made.Take(3), go => Assert.True(go != null)); // DontDestroyOnLoad objects.
+                Assert.All(made.Skip(3).Take(4), go => Assert.True(go == null)); // Objects in Other.
+                Assert.True(made[7] != null); // The root made in the incoming scene.
                 Assert.Null(SceneRegistry.CreationTarget);
             }
             finally
