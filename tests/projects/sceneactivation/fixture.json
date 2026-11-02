@@ -1,7 +1,7 @@
 {
  "format": 1,
  "inputs": {
-  "Assets/Editor/WakeRunner.cs": "593aff986402f9f19fa63541f7334d36b3c46c01cc2a5c7e56230240b03b6639",
+  "Assets/Editor/WakeRunner.cs": "546b288519e7516d525d66416ca64cc9e0ba07e535f6f2c3b06873b4bae735e7",
   "Assets/Editor/WakeRunner.cs.meta": "672e9cadd9c142e8a931bf4eafd107335e976b6c43fadc0bd16188e63344c275",
   "Assets/Editor.meta": "5878f21742cbb1f88d856e77acbbb8cb5ada95afad39e4b03c41c6a35cb943ff",
   "Assets/Prefabs/X.prefab": "4b7dc10d812edc623da652b80a67571c0aa740e0c58c8c0420c3cd5c89437d66",

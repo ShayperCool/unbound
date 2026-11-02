@@ -90,3 +90,20 @@ python3 tests/projects/sceneactivation/run.py publish --release 6000.0.71f1 --la
 ```
 
 There is no Unbound mode. The probe is Native evidence only.
+
+## Shutdown protocol (`Assets/Editor/WakeRunner.cs`)
+
+When the driver reports completion, the runner sets `SceneActivation.finished` in SessionState
+and returns from the runtime callback. A later `delayCall` requests `ExitPlaymode`. The Editor
+quits with 0 only from an Editor update, after two consecutive ticks outside Play mode and outside
+a pending mode change. It never quits from inside `EnteredEditMode`. After a domain reload, the
+finished branch registers the same update quit again. The watchdog (exit 4), the open/enter
+failure (exit 6) and every strict exit gate are unchanged.
+
+This protocol replaced an earlier one that called `ExitPlaymode` inside the driver callback and
+quit from `EnteredEditMode`. A capture with that earlier runner completed its raw output but
+crashed with SIGSEGV after the completion marker, on the way out of Play mode. The first fault
+stack was in the Editor's audio output path. That capture is refused and is not a reference. The
+change is a mitigation experiment: it does not establish the cause of that crash. Only the
+WakeRunner.cs manifest hash in `fixture.json` changed. Scenes, prefabs, markers, the driver,
+the logger, predictions, the contract and the canonical form are byte-unchanged.
