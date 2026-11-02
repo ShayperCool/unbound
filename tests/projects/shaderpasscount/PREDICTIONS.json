@@ -1,0 +1,1713 @@
+{
+ "scope": "precommitted from the committed fixture bytes and case table; no captured answer was used",
+ "initial": {
+  "maximumLOD": -1,
+  "globalMaximumLOD": 2147483647
+ },
+ "initial_source": "tests/projects/builtinrp/Reference/values.jsonl lod.maximumLOD, lod.globalMaximumLOD",
+ "hypotheses": [
+  "FIRST",
+  "SELECTED",
+  "RENDERER",
+  "FALLBACK_OWN"
+ ],
+ "readouts": [
+  "passCount",
+  "passCount.after",
+  "mat.passCount",
+  "mat.passCount.after",
+  "newMat.passCount"
+ ],
+ "shaders": {
+  "Probe/PassFallback": {
+   "name": "Probe/PassFallback",
+   "fallback": null,
+   "subs": [
+    {
+     "id": "F0",
+     "lod": 150,
+     "tags": {
+      "SubId": "F0"
+     },
+     "surface": false,
+     "passes": 4,
+     "code": [
+      128,
+      0
+     ]
+    },
+    {
+     "id": "F1",
+     "lod": 50,
+     "tags": {
+      "SubId": "F1"
+     },
+     "surface": false,
+     "passes": 5,
+     "code": [
+      159,
+      0
+     ]
+    }
+   ],
+   "file": "Assets/Shaders/PassFallback.shader",
+   "sha256": "d8648a5d0f454492b83a94682d45b0e92ef3bfa0365d13b646ac8cfc26b38ba9"
+  },
+  "Probe/PassLod": {
+   "name": "Probe/PassLod",
+   "fallback": "Probe/PassFallback",
+   "subs": [
+    {
+     "id": "L0",
+     "lod": 400,
+     "tags": {
+      "SubId": "L0"
+     },
+     "surface": false,
+     "passes": 3,
+     "code": [
+      32,
+      0
+     ]
+    },
+    {
+     "id": "L1",
+     "lod": 300,
+     "tags": {
+      "SubId": "L1"
+     },
+     "surface": false,
+     "passes": 1,
+     "code": [
+      64,
+      0
+     ]
+    },
+    {
+     "id": "L2",
+     "lod": 200,
+     "tags": {
+      "SubId": "L2"
+     },
+     "surface": false,
+     "passes": 2,
+     "code": [
+      96,
+      0
+     ]
+    }
+   ],
+   "file": "Assets/Shaders/PassLod.shader",
+   "sha256": "941d55356a60253afb281b6a269805fa320aaf16feed67402c70d864f3fa247e"
+  },
+  "Probe/PassSurface": {
+   "name": "Probe/PassSurface",
+   "fallback": null,
+   "subs": [
+    {
+     "id": "S0",
+     "lod": 300,
+     "tags": {
+      "SubId": "S0",
+      "RenderType": "Opaque"
+     },
+     "surface": true,
+     "passes": null,
+     "code": [
+      32,
+      128
+     ]
+    },
+    {
+     "id": "S1",
+     "lod": 200,
+     "tags": {
+      "SubId": "S1"
+     },
+     "surface": false,
+     "passes": 3,
+     "code": [
+      64,
+      128
+     ]
+    }
+   ],
+   "file": "Assets/Shaders/PassSurface.shader",
+   "sha256": "8359a18cc859faa541d4d49d81580e5903c6e54344c4df2c72e0aa3f8dc6136e"
+  },
+  "Probe/PassTagged": {
+   "name": "Probe/PassTagged",
+   "fallback": null,
+   "subs": [
+    {
+     "id": "T0",
+     "lod": 0,
+     "tags": {
+      "SubId": "T0",
+      "RenderPipeline": "UniversalPipeline"
+     },
+     "surface": false,
+     "passes": 3,
+     "code": [
+      191,
+      0
+     ]
+    },
+    {
+     "id": "T1",
+     "lod": 0,
+     "tags": {
+      "SubId": "T1"
+     },
+     "surface": false,
+     "passes": 2,
+     "code": [
+      223,
+      0
+     ]
+    }
+   ],
+   "file": "Assets/Shaders/PassTagged.shader",
+   "sha256": "098f82912efbee1b16277e0486ffadee036a3900ba16c07556a9358666474c1d"
+  }
+ },
+ "cases": [
+  {
+   "case": "default",
+   "limits": {
+    "lod": -1,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": -1,
+    "global": 2147483647
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "RENDERER": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 3,
+      "drawn": "L0"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "RENDERER": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 4,
+      "drawn": "F0"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "S0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     }
+    }
+   }
+  },
+  {
+   "case": "shader350",
+   "limits": {
+    "lod": 350,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": -1,
+    "global": 2147483647
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 1,
+      "drawn": "L1"
+     },
+     "RENDERER": {
+      "passCount": 1,
+      "drawn": "L1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 1,
+      "drawn": "L1"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "RENDERER": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 4,
+      "drawn": "F0"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "S0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     }
+    }
+   }
+  },
+  {
+   "case": "shader250",
+   "limits": {
+    "lod": 250,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": -1,
+    "global": 2147483647
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "L2"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "L2"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "L2"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "RENDERER": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 4,
+      "drawn": "F0"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "S0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     }
+    }
+   }
+  },
+  {
+   "case": "shader175",
+   "limits": {
+    "lod": 175,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": -1,
+    "global": 2147483647
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "RENDERER": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 4,
+      "drawn": "F0"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "RENDERER": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 4,
+      "drawn": "F0"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "S0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     }
+    }
+   }
+  },
+  {
+   "case": "shader100",
+   "limits": {
+    "lod": 100,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": -1,
+    "global": 2147483647
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 5,
+      "drawn": "F1"
+     },
+     "RENDERER": {
+      "passCount": 5,
+      "drawn": "F1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 4,
+      "drawn": "F0"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "RENDERER": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 4,
+      "drawn": "F0"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "S0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     }
+    }
+   }
+  },
+  {
+   "case": "shader25",
+   "limits": {
+    "lod": 25,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": -1,
+    "global": 2147483647
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "RENDERER": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 4,
+      "drawn": "F0"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "RENDERER": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 4,
+      "drawn": "F0"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "S0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     }
+    }
+   }
+  },
+  {
+   "case": "shaderRestored",
+   "limits": {
+    "lod": -1,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": -1,
+    "global": 2147483647
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "RENDERER": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 3,
+      "drawn": "L0"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "RENDERER": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 4,
+      "drawn": "F0"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "S0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     }
+    }
+   }
+  },
+  {
+   "case": "global250",
+   "limits": {
+    "lod": -1,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": -1,
+    "global": 250
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "L2"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "L2"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "L2"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "RENDERER": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 4,
+      "drawn": "F0"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": 3,
+      "drawn": "S1"
+     },
+     "RENDERER": {
+      "passCount": 3,
+      "drawn": "S1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 3,
+      "drawn": "S1"
+     }
+    }
+   }
+  },
+  {
+   "case": "global100",
+   "limits": {
+    "lod": -1,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": -1,
+    "global": 100
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 5,
+      "drawn": "F1"
+     },
+     "RENDERER": {
+      "passCount": 5,
+      "drawn": "F1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 5,
+      "drawn": "F1"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 5,
+      "drawn": "F1"
+     },
+     "RENDERER": {
+      "passCount": 5,
+      "drawn": "F1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 5,
+      "drawn": "F1"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "RENDERER": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 0,
+      "drawn": "none"
+     }
+    }
+   }
+  },
+  {
+   "case": "global25",
+   "limits": {
+    "lod": -1,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": -1,
+    "global": 25
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "RENDERER": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 0,
+      "drawn": "none"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "RENDERER": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 0,
+      "drawn": "none"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "RENDERER": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 0,
+      "drawn": "none"
+     }
+    }
+   }
+  },
+  {
+   "case": "global25shader350",
+   "limits": {
+    "lod": 350,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": -1,
+    "global": 25
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 1,
+      "drawn": "L1"
+     },
+     "RENDERER": {
+      "passCount": 1,
+      "drawn": "L1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 1,
+      "drawn": "L1"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "RENDERER": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 0,
+      "drawn": "none"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "RENDERER": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 0,
+      "drawn": "none"
+     }
+    }
+   }
+  },
+  {
+   "case": "global25shader100",
+   "limits": {
+    "lod": 100,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": -1,
+    "global": 25
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 5,
+      "drawn": "F1"
+     },
+     "RENDERER": {
+      "passCount": 5,
+      "drawn": "F1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 0,
+      "drawn": "none"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "RENDERER": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 0,
+      "drawn": "none"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "RENDERER": {
+      "passCount": 0,
+      "drawn": "none"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 0,
+      "drawn": "none"
+     }
+    }
+   }
+  },
+  {
+   "case": "globalRestored",
+   "limits": {
+    "lod": -1,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": -1,
+    "global": 2147483647
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "RENDERER": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 3,
+      "drawn": "L0"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "RENDERER": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 4,
+      "drawn": "F0"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "S0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     }
+    }
+   }
+  },
+  {
+   "case": "surface250",
+   "limits": {
+    "lod": -1,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": 250,
+    "global": 2147483647
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "RENDERER": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 3,
+      "drawn": "L0"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "RENDERER": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 4,
+      "drawn": "F0"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": 3,
+      "drawn": "S1"
+     },
+     "RENDERER": {
+      "passCount": 3,
+      "drawn": "S1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 3,
+      "drawn": "S1"
+     }
+    }
+   }
+  },
+  {
+   "case": "surfaceRestored",
+   "limits": {
+    "lod": -1,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": -1,
+    "global": 2147483647
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "RENDERER": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 3,
+      "drawn": "L0"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "RENDERER": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 4,
+      "drawn": "F0"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "S0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     }
+    }
+   }
+  },
+  {
+   "case": "fallback100shader175",
+   "limits": {
+    "lod": 175,
+    "fallback": 100,
+    "tagged": -1,
+    "surface": -1,
+    "global": 2147483647
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "RENDERER": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 5,
+      "drawn": "F1"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 5,
+      "drawn": "F1"
+     },
+     "RENDERER": {
+      "passCount": 5,
+      "drawn": "F1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 5,
+      "drawn": "F1"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "S0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     }
+    }
+   }
+  },
+  {
+   "case": "fallbackRestored",
+   "limits": {
+    "lod": -1,
+    "fallback": -1,
+    "tagged": -1,
+    "surface": -1,
+    "global": 2147483647
+   },
+   "cells": {
+    "lod": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "SELECTED": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "RENDERER": {
+      "passCount": 3,
+      "drawn": "L0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 3,
+      "drawn": "L0"
+     }
+    },
+    "fallback": {
+     "FIRST": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "SELECTED": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "RENDERER": {
+      "passCount": 4,
+      "drawn": "F0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 4,
+      "drawn": "F0"
+     }
+    },
+    "tagged": {
+     "FIRST": {
+      "passCount": 3,
+      "drawn": "T0"
+     },
+     "SELECTED": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "T1"
+     },
+     "FALLBACK_OWN": {
+      "passCount": 2,
+      "drawn": "T1"
+     }
+    },
+    "surface": {
+     "FIRST": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "SELECTED": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     },
+     "RENDERER": {
+      "passCount": 2,
+      "drawn": "S0"
+     },
+     "FALLBACK_OWN": {
+      "passCount": {
+       "psc": 0
+      },
+      "drawn": "S0"
+     }
+    }
+   }
+  }
+ ],
+ "distinguishing": {
+  "FIRST/SELECTED": {
+   "cells_that_differ": 33,
+   "differ_unless_generated_count_matches": 6
+  },
+  "FIRST/RENDERER": {
+   "cells_that_differ": 33,
+   "differ_unless_generated_count_matches": 17
+  },
+  "RENDERER/SELECTED": {
+   "cells_that_differ": 0,
+   "differ_unless_generated_count_matches": 11
+  },
+  "FALLBACK_OWN/FIRST": {
+   "cells_that_differ": 33,
+   "differ_unless_generated_count_matches": 6
+  },
+  "FALLBACK_OWN/SELECTED": {
+   "cells_that_differ": 4,
+   "differ_unless_generated_count_matches": 0
+  },
+  "FALLBACK_OWN/RENDERER": {
+   "cells_that_differ": 4,
+   "differ_unless_generated_count_matches": 11
+  }
+ },
+ "colour": {
+  "step": 32,
+  "code_tolerance": 8,
+  "rule": "red/blue = drawn SubShader code; green/32 = vertex/fragment passes drawn; background = nothing drawn"
+ }
+}
