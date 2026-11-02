@@ -178,6 +178,27 @@
   ]
  ],
  "class_count": 22,
+ "indistinguishable_with_continuation": [
+  [
+   "PERSTEP(startup.deltaTime)",
+   "PERSTEP(startup.unscaledDeltaTime)",
+   "PERSTEP(startup.fixedDeltaTime)"
+  ],
+  [
+   "R1(frame.captureDeltaTime)",
+   "R2(frame.captureDeltaTime)"
+  ],
+  [
+   "R1(startup.deltaTime)",
+   "R1(startup.unscaledDeltaTime)",
+   "R1(startup.fixedDeltaTime)"
+  ],
+  [
+   "R2(startup.deltaTime)",
+   "R2(startup.unscaledDeltaTime)",
+   "R2(startup.fixedDeltaTime)"
+  ]
+ ],
  "predictions": {
   "case.baseline": {
    "R1(frame.deltaTime)": {

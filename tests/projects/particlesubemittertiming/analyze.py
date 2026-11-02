@@ -40,10 +40,15 @@ Clocks C, read by the probe in the case's own frame (case.*.clock.before) or at 
   A clock <= 0 leaves the candidate UNDEFINED in that case (it cannot fit there).
 
 Fit criterion (Death cases): the Death child's one particle (same seed after both calls) must
-equal the prediction bit for bit in life and pos.z after call 1 (FIRST) and after call 2 (FIT).
-Birth control: the first child's life bits at its first record and at the next record (same seed);
-its position is reported, not modelled. Classes: candidates whose predictions are identical in
-every case are one indistinguishable class. Outcome: NONE, ONE class, or MULTIPLE classes.
+equal the prediction bit for bit in life and pos.z after call 1: this is the first-age stage and
+the PRIMARY verdict (FIRST). Equality after call 2 as well (FIT) is the model's continuation, a
+secondary check: the model's later per-step ageing is proven for .025 steps, not for .0175 steps.
+Birth control: the first child's life bits at its first record (primary) and at the next record
+(continuation; same seed); its position is reported, not modelled. Precommitted: on the broad
+history the model's R2 continuation is one float step from the canonical (3eaf9db2 vs 3eaf9db1),
+so Birth R2 is expected FIRST, not FIT. Classes: candidates whose after-call-1 predictions are
+identical in every case are one indistinguishable class. Outcome (primary and continuation
+separately): NONE, ONE class, or MULTIPLE classes.
 """
 import argparse
 import json
@@ -216,11 +221,15 @@ def nominal():
     return startup, {'case.baseline': startup, 'case.d1': startup, 'case.d2': startup, 'case.d3': d3, 'case.fixed': fixed}
 
 
-def classes(table):
-    """Candidates with identical predictions in every case form one indistinguishable class."""
+PRIMARY = ('after1', 'first')
+CONTINUATION = ('after1', 'after2', 'first', 'next')
+
+
+def classes(table, fields=PRIMARY):
+    """Candidates with identical predictions (of `fields`) in every case form one indistinguishable class."""
     signature = {}
     for name, _, _ in candidates():
-        sig = json.dumps([None if table[c][name] is None else [table[c][name][k] for k in sorted(table[c][name]) if k in ('after1', 'after2', 'first', 'next')]
+        sig = json.dumps([None if table[c][name] is None else [table[c][name][k] for k in sorted(table[c][name]) if k in fields]
                           for c in sorted(table)], sort_keys=True)
         signature.setdefault(sig, []).append(name)
     return sorted(signature.values())
@@ -248,7 +257,9 @@ def predict(out):
                                       'fixed: d3 with fixedDeltaTime .0075 (fixedUnscaled = .0075 / .5)'],
               'cases': cases, 'first_age_seconds': summary, 'contradicted_before_capture': CONTRADICTED,
               'indistinguishable_classes_at_nominal_clocks': [c for c in classes(table) if len(c) > 1],
-              'class_count': len(classes(table)), 'predictions': table}
+              'class_count': len(classes(table)),
+              'indistinguishable_with_continuation': [c for c in classes(table, CONTINUATION) if len(c) > 1],
+              'predictions': table}
     text = json.dumps(report, indent=1, sort_keys=False)+'\n'
     if out:
         Path(out).write_text(text)
@@ -329,10 +340,10 @@ def fit_birth(values, startup):
             'verdicts': verdicts, 'fits': sorted(k for k, v in verdicts.items() if v == 'FIT')}, table
 
 
-def outcome(names, table_by_case):
+def outcome(names, table_by_case, fields=PRIMARY):
     if not names:
         return 'NONE', []
-    groups = [c for c in classes({k: {n: table_by_case[k].get(n) for n, _, _ in candidates()} for k in table_by_case})
+    groups = [c for c in classes({k: {n: table_by_case[k].get(n) for n, _, _ in candidates()} for k in table_by_case}, fields)
               if any(n in names for n in c)]
     groups = [[n for n in c if n in names] for c in groups]
     return ('ONE' if len(groups) == 1 else 'MULTIPLE'), groups
@@ -346,18 +357,24 @@ def fit(path, report):
         cases[key], tables[key] = fit_death(values, key, startup)
     birth, birth_table = fit_birth(values, startup)
     evaluable = all(cases[k]['evaluable'] for k in cases)
-    death_fits = sorted(set.intersection(*(set(cases[k]['fits']) for k in cases))) if evaluable else []
+    first = {k: {n for n, v in cases[k].get('verdicts', {}).items() if v in ('FIRST', 'FIT')} for k in cases}
+    death_fits = sorted(set.intersection(*first.values())) if evaluable else []
+    death_full = sorted(set.intersection(*(set(cases[k]['fits']) for k in cases))) if evaluable else []
     verdict, groups = outcome(death_fits, tables) if evaluable else ('NOT_EVALUABLE', [])
+    full_verdict, full_groups = outcome(death_full, tables, CONTINUATION) if evaluable else ('NOT_EVALUABLE', [])
     shared = {name: birth['verdicts'].get(name) if birth['evaluable'] else 'NOT_EVALUABLE' for name in death_fits}
     result = {'format': 1, 'capture': str(path), 'scope': 'evaluation only; never a publication gate',
               'death_outcome': verdict, 'death_fit_classes': groups, 'death_fits': death_fits,
-              'birth_under_death_fits': shared, 'birth_fits': birth.get('fits', []),
+              'death_outcome_with_continuation': full_verdict, 'death_fit_classes_with_continuation': full_groups,
+              'birth_under_death_fits': shared, 'birth_first_fits': sorted(n for n, v in birth.get('verdicts', {}).items() if v in ('FIRST', 'FIT')),
+              'birth_fits': birth.get('fits', []),
               'startup_clocks': startup, 'cases': cases, 'birth': birth,
               'ordinary_children': {k: [values.get(f'{k}.ordinary.after{i}') for i in (1, 2)] for k in guards.DEATH_CASES},
               'parents': {k: [values.get(f'{k}.parent.after{i}') for i in (1, 2)] for k in guards.DEATH_CASES}}
     if report:
         Path(report).write_text(json.dumps(result, indent=1)+'\n')
-    print('death outcome:', verdict, groups)
+    print('death outcome (first age):', verdict, groups)
+    print('death outcome with continuation:', full_verdict, full_groups)
     for key, c in cases.items():
         print(' ', key, 'fits' if c['evaluable'] else 'NOT EVALUABLE', c.get('fits', c.get('why')))
     print('  birth fits:', birth.get('fits', birth.get('why')))
@@ -382,13 +399,17 @@ def history(run, report):
                  'deltaTime': first.get('deltaTime')}
         _, table = predict_death(call, 0.013, frame, startup)
         verdicts = {k: judge(v, n1, n2) for k, v in table.items()}
-        rows[name] = {'fits': sorted(k for k, v in verdicts.items() if v == 'FIT'), 'verdicts': verdicts,
+        rows[name] = {'first_fits': sorted(k for k, v in verdicts.items() if v in ('FIRST', 'FIT')),
+                      'fits': sorted(k for k, v in verdicts.items() if v == 'FIT'), 'verdicts': verdicts,
                       'native': {'after1': [bits(n1['life']), bits(n1['pos'][2])], 'after2': [bits(n2['life']), bits(n2['pos'][2])]}}
         print(name, rows[name]['fits'])
     common = sorted(set.intersection(*(set(r['fits']) for r in rows.values())))
-    print('fit by all three cached histories:', common)
+    first = sorted(set.intersection(*(set(r['first_fits']) for r in rows.values())))
+    print('first age fit by all three cached histories:', first)
+    print('with continuation:', common)
     if report:
-        Path(report).write_text(json.dumps({'run': str(run), 'histories': rows, 'common_fits': common}, indent=1)+'\n')
+        Path(report).write_text(json.dumps({'run': str(run), 'histories': rows, 'common_first_fits': first,
+                                            'common_fits': common}, indent=1)+'\n')
     return 0
 
 

@@ -697,6 +697,13 @@ def analyzer_controls(normal, out):
     control('analyzer: data mixing R1 and R2 give NONE (a valid negative)', 'NONE', mixed['death_outcome'], mixed['death_outcome'] == 'NONE')
     none = synthetic('unpredicted', lambda key: None)
     control('analyzer: unpredicted data give NONE', 'NONE', none['death_outcome'], none['death_outcome'] == 'NONE')
+    broad = {(r['scenario'], r['step']): r for r in map(json.loads, (REPO/'tests/projects/particles/Reference/unity-6000.0.71f1.jsonl').read_text().splitlines())}
+    first, later = (broad[('sub_emitters_birth_child', s)]['particles'][0]['life'] for s in ('5', '6'))
+    shape, table = analyze.predict_birth(0.05, startup, startup)
+    r2b = table['R2(startup.fixedDeltaTime)']
+    got = [analyze.bits(first) == r2b['first']['life'], analyze.bits(later), r2b['next']['life']]
+    control('analyzer: broad canonical Birth child: R2 first age equal, model continuation one float step off (precommitted FIRST)',
+            [True, '3eaf9db1', '3eaf9db2'], got, got == [True, '3eaf9db1', '3eaf9db2'])
     fake = work/'fake.report.json'
     with contextlib.redirect_stdout(io.StringIO()):
         analyze.fit(normal, fake)
@@ -710,7 +717,8 @@ def analyzer_controls(normal, out):
         want = ['R1(frame.fixedDeltaTime)', 'R1(startup.deltaTime)', 'R1(startup.fixedDeltaTime)', 'R1(startup.unscaledDeltaTime)',
                 'R2(startup.deltaTime)', 'R2(startup.fixedDeltaTime)', 'R2(startup.unscaledDeltaTime)']
         control('analyzer: cached Native histories fit R1/R2 with Td (and R1 at the .01 current fixed delta, which '
-                'collides with Td), nothing continuous', want, h['common_fits'], h['common_fits'] == want)
+                'collides with Td), nothing continuous', want, [h['common_first_fits'], h['common_fits']],
+                h['common_first_fits'] == want and h['common_fits'] == want)
     else:
         control('analyzer: cached Native histories present', str(DEATHTIMING), 'missing', False)
 
