@@ -2626,3 +2626,13 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - Runtime: Root rehashed all 33 files and 1089 PDB-source documents, verified TestCore equals package Core 5c2bf5cc, and checked 265 unchanged CLI inputs plus the separate managed build trigger. Frozen prior runtimes are unchanged.
 - Open: hull/query indices, unload order/state, pending listing/root queries, LP reload identity and empty-active-scene probes; precision ledger values stay raw. All 56 earlier pixel introductions are fixed, not waived.
 - Evidence: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/claude-fresh-20261101b/creation-validation/RECEIPT.md`; Root receipt `validation/runs/lp-ownership-root-integration-20261102/root-validation.json`.
+
+### Root three-API integration, 2026-11-02
+- What: admitted measured Pose, LazyLoadReference/Object helpers and batch GameObject scope; production equals tested 0d49b10d, including the clone-test cleanup and explicit unresolved-Lazy YAML-save guard.
+- Probe: coreapis 289 matched / 393 missing / 523 extra of 682 reference lines, resolving 280; held OnDemand remains open. Lifecycle/graphics/assetclones byte-identical; messages 316/316 with unchanged timing invariants.
+- Introduced: 0 previously matching reference lines lost; 80 newly unmatched actual lines and 114 removed extras remain in the full union. Probe defects and significant API/text/order gaps are explicit, not precision waivers.
+- Managed: 1576/1587 with the identical 11 inherited failures; all five new tests pass. One normal build and one suite; corrective cycle unused, no Native or Rust builds.
+- API: fresh nine-module check 0/2317, all 108 generated files equal; 41 generated lines removed for the three implemented areas. OnDemand stubs remain; ABI unchanged.
+- Runtime: all 33 payloads and 1093 PDB-source documents rehashed; TestCore equals package Core abe89e5b. Four activation traces agree after metadata-only normalization; Native plain SetActive remains unmeasured.
+- Open: 11 significant child-first batch-order pairs, instance-id signs, JSON/format/exception text, lossless unresolved-Lazy YAML saves and per-copy scene resolution. Twenty-one Pose rotation keys are ledgered by absolute error, maximum 2.384185791015625e-7.
+- Evidence: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/claude-fresh-20261101b/core6-validation/RECEIPT.md`; Root receipt `validation/runs/core6-root-integration-20261102/root-validation.json`.

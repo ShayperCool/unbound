@@ -70,3 +70,46 @@ missing and extra line, with no tolerance.
   callbacks (OnPreCull, OnWillRenderObject, OnPreRender, OnPostRender, OnRenderObject,
   `Camera.onPre*`/`onPost*`); the screen camera, OnGUI (Layout and Repaint) and
   WaitForEndOfFrame do not run, and `Time.renderedFrameCount` still advances.
+
+## Measured scope admitted on 2026-11-02
+
+Validated source `0d49b10d` implements Pose, LazyLoadReference and the batch GameObject
+APIs. OnDemandRendering and the shared EOF changes remain held and unimplemented.
+The committed w4 reference and probe are unchanged.
+
+The strict reference comparison improves from 9 matching / 673 missing / 557 extra
+to 289 matching / 393 missing / 523 extra lines. No previously matching reference
+line is lost: 280 resolve. The raw union also preserves 80 newly unmatched actual
+lines and 114 removed extras. These are classified below, not filtered out or
+converted into passes. The held OnDemand area accounts for 329 missing and 459
+extra lines, including 16 settings lines newly reaching its stubs; its 443 window
+lines are unchanged. The remaining 64 missing / 64 extra lines comprise:
+
+* **Probe defects:** lines 158, 166, 172, 177, 182, 187, 195, 199, 204, 209, 214,
+  219, 225, 237, 243, 248, 256, 261, 263, 278, 279, 280 and 349. The probe's Names
+  function replaces ordinary numeric text `10` with `#LazyData` after an instance-id
+  collision. These 23 pairs provide no API-parity evidence and are not waived.
+* **Significant activation order:** lines 155, 162, 170, 175, 180, 185, 212, 217,
+  235, 254 and 259. Native batch activation notifies the child first for an
+  already-awake hierarchy. Unbound notifies its parent first. A separate four-run
+  control proves frozen plain SetActive = candidate plain SetActive = candidate
+  batch span = candidate batch NativeArray for the recorded cases. This attributes
+  the limitation to the unchanged shared path; Native plain SetActive is unmeasured.
+* **Other open API/text gaps:** instance-id sign at 139/143; JSON double digits at
+  152/107; large-float formatting at 72; exception text at 249/262/313/96.
+* **Precision ledger:** the 21 GetTransformedBy rotation keys listed in
+  `docs/COMPATIBILITY_GAPS.md`. Positions are exact; maximum absolute rotation
+  error is `2.384185791015625e-7`. Raw hex remains in the strict failing records.
+
+YAML save of a broken nonzero LazyLoadReference is explicitly unsupported. It throws
+NotSupportedException before writing instead of discarding the reference. Retaining
+the original GUID/fileID remains open; no Native rejection is claimed. Batch
+instantiation resolves its destination scene once for all copies; per-copy behavior
+in Unity is unmeasured.
+
+The matching runtime passes 1576/1587 managed tests with the same 11 inherited
+failures, API 0 errors / 2317 types, and all 108 generated files equal. Lifecycle,
+graphics and assetclones outputs are byte-identical to the frozen baseline;
+messages pass 316/316, preserving their timing invariants. Detailed receipts,
+full unions and the activation control remain under the validation cache at
+`validation/runs/claude-fresh-20261101b/core6-validation/`.
