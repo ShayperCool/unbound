@@ -6298,11 +6298,6 @@ namespace UnityEngine.Rendering
     [global::Unbound.Stub]
     public unsafe partial struct ShaderKeyword
     {
-        [global::Unbound.Stub] internal string m_Name;
-        [global::Unbound.Stub] internal uint m_Index;
-        [global::Unbound.Stub] internal bool m_IsLocal;
-        [global::Unbound.Stub] internal bool m_IsCompute;
-        [global::Unbound.Stub] internal bool m_IsValid;
         [global::Unbound.Stub] internal static uint GetGlobalKeywordCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.GetGlobalKeywordCount"); return default; }
         [global::Unbound.Stub] internal static uint GetGlobalKeywordIndex(string keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.GetGlobalKeywordIndex"); return default; }
         [global::Unbound.Stub] internal static uint GetKeywordCount(global::UnityEngine.Shader shader) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.GetKeywordCount"); return default; }
@@ -6311,8 +6306,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] internal static uint GetComputeShaderKeywordIndex(global::UnityEngine.ComputeShader shader, string keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.GetComputeShaderKeywordIndex"); return default; }
         [global::Unbound.Stub] internal static void CreateGlobalKeyword(string keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.CreateGlobalKeyword"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Rendering.ShaderKeywordType GetGlobalShaderKeywordType(uint keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.GetGlobalShaderKeywordType"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Rendering.ShaderKeywordType GetGlobalKeywordType(global::UnityEngine.Rendering.ShaderKeyword index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.GetGlobalKeywordType"); return default; }
-        [global::Unbound.Stub] public ShaderKeyword(string keywordName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.ctor"); }
         [global::Unbound.Stub] public ShaderKeyword(global::UnityEngine.Shader shader, string keywordName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.ctor"); }
         [global::Unbound.Stub] public ShaderKeyword(global::UnityEngine.ComputeShader shader, string keywordName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.ctor"); }
         [global::Unbound.Stub] public static bool IsKeywordLocal(global::UnityEngine.Rendering.ShaderKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.IsKeywordLocal"); return default; }

@@ -702,5 +702,22 @@ namespace UnityEngine.Tests
             Assert.Throws<InvalidOperationException>(() => a.IsPropertyLockedByAncestor("_Value"));
             Assert.Throws<InvalidOperationException>(() => a.IsPropertyOverriden("_Value"));
         }
+
+        /// <summary>global.builtin.types/log, without expanding the unsupported legacy API.</summary>
+        [Fact]
+        public void LegacyGlobalKeywordTypesMatchTheMeasuredBuiltins()
+        {
+            var logs = Errors(() =>
+            {
+                foreach (var name in Compat.BuiltinGlobalKeywords)
+                {
+                    var keyword = new ShaderKeyword(name);
+                    Assert.Equal(name, keyword.m_Name);
+                    Assert.True(keyword.m_IsValid);
+                    Assert.Equal(ShaderKeywordType.BuiltinDefault, ShaderKeyword.GetGlobalKeywordType(keyword));
+                }
+            });
+            Assert.Empty(logs);
+        }
     }
 }
