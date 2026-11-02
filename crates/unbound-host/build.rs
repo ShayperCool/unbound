@@ -4,6 +4,7 @@
 use std::{
     path::{Path, PathBuf},
     process::Command,
+    time::Instant,
 };
 
 fn main() {
@@ -14,7 +15,10 @@ fn main() {
     let target = std::env::var_os("CARGO_TARGET_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|| root.join("target"));
+    println!("cargo:rerun-if-env-changed=UNBOUND_BUILD_TIMINGS");
+    let started = Instant::now();
     build_physx(root, &target.join("managed"));
+    phase("native-total", started, "built");
     println!("cargo:rerun-if-env-changed=UNBOUND_SKIP_MANAGED_BUILD");
     if std::env::var_os("UNBOUND_SKIP_MANAGED_BUILD").is_some() {
         return;
@@ -37,6 +41,7 @@ fn main() {
 }
 
 fn build(dotnet: &PathBuf, target: &Path, managed: &Path, no_stubs: bool) -> bool {
+    let started = Instant::now();
     let mut command = Command::new(dotnet);
     command.args([
         "build",
@@ -52,11 +57,20 @@ fn build(dotnet: &PathBuf, target: &Path, managed: &Path, no_stubs: bool) -> boo
     if no_stubs {
         command.arg("-p:UnboundNoStubs=true");
     }
-    command
+    let success = command
         .arg(managed.join("Unbound.Host/Unbound.Host.csproj"))
         .status()
         .unwrap_or_else(|e| panic!("running {}: {e}", dotnet.display()))
-        .success()
+        .success();
+    phase(if no_stubs { "managed-no-stubs" } else { "managed" }, started,
+          if success { "ok" } else { "failed" });
+    success
+}
+
+fn phase(name: &str, started: Instant, result: &str) {
+    if std::env::var_os("UNBOUND_BUILD_TIMINGS").is_some() {
+        eprintln!("unbound-build: phase={name} seconds={:.6} result={result}", started.elapsed().as_secs_f64());
+    }
 }
 
 /// Every directory under `dir` (itself included), for PhysX's flat include paths.
@@ -159,6 +173,7 @@ fn build_physx(root: &Path, out_dir: &Path) {
         archive(&out, "nvcloth", &nvcloth_sources, &nvcloth_headers, &nvcloth_includes, nvcloth_defines, nvcloth_flags);
 
     println!("cargo:rerun-if-changed={}", native.display());
+    let started = Instant::now();
     let mut build = cc::Build::new();
     configure(&mut build, &physx_includes, physx_defines, &[]);
     let compiler = build.get_compiler();
@@ -166,6 +181,7 @@ fn build_physx(root: &Path, out_dir: &Path) {
     let mut build = cc::Build::new();
     configure(&mut build, &nvcloth_includes, nvcloth_defines, nvcloth_flags);
     objects.extend(build.file(native.join("unbound_cloth.cpp")).compile_intermediates());
+    phase("shim-compile", started, "built");
 
     std::fs::create_dir_all(out_dir).unwrap_or_else(|e| panic!("creating {}: {e}", out_dir.display()));
     let name = match target_os.as_str() {
@@ -192,10 +208,12 @@ fn build_physx(root: &Path, out_dir: &Path) {
             link.args(["-lpthread", "-ldl", "-lm"]);
         }
     }
+    let started = Instant::now();
     let status = link
         .status()
         .unwrap_or_else(|e| panic!("linking {}: {e}", library.display()));
     assert!(status.success(), "linking {} failed", library.display());
+    phase("native-link", started, "built");
 }
 
 /// The C++ settings of the native code: as PhysX's CMake for Linux, plus no fused multiply-add
@@ -231,6 +249,7 @@ fn archive(
     defines: &[(&str, Option<&str>)],
     flags: &[&str],
 ) -> PathBuf {
+    let started = Instant::now();
     let mut build = cc::Build::new();
     configure(&mut build, includes, defines, flags);
     let compiler = build.get_compiler();
@@ -263,9 +282,11 @@ fn archive(
     let archive_dir = out.join(format!("{name}-{}", fingerprint.finalize().to_hex()));
     let lib = format!("unbound_{name}_sdk");
     let archive = archive_dir.join(format!("lib{lib}.a"));
-    if !archive.exists() {
+    let reused = archive.exists();
+    if !reused {
         build.files(files).out_dir(&archive_dir).compile(&lib);
     }
+    phase(name, started, if reused { "hit" } else { "built" });
     archive
 }
 
