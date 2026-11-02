@@ -664,5 +664,27 @@ namespace UnityEngine.Tests
             Assert.Equal(0.125f, copy.GetFloat("_Value"));
             Assert.Equal(1.25f, copy.GetFloat("_Other"));
         }
+
+        [Fact]
+        public void CanvasCopiesFollowTheSourceOverridesAfterAParentChange()
+        {
+            var (parent, child, _) = Family();
+            var go = new GameObject("variant clip", typeof(RectTransform), typeof(CanvasRenderer));
+            try
+            {
+                var canvas = go.GetComponent<CanvasRenderer>();
+                canvas.EnableRectClipping(new Rect(0, 0, 10, 10));
+                var copy = canvas.CanvasMaterial(child);
+                Assert.Null(copy.parent);
+                child.SetFloat("_Value", 0.9f);
+                Assert.Equal(0.9f, canvas.CanvasMaterial(child).GetFloat("_Value"));
+                parent.SetFloat("_Value", 0.2f);
+                Assert.Equal(0.9f, child.GetFloat("_Value"));
+                Assert.Equal(0.9f, canvas.CanvasMaterial(child).GetFloat("_Value"));
+                Assert.Contains("UNITY_UI_CLIP_RECT", copy.m_Keywords);
+                Assert.DoesNotContain("UNITY_UI_CLIP_RECT", child.m_Keywords);
+            }
+            finally { Object.DestroyImmediate(go); }
+        }
     }
 }
