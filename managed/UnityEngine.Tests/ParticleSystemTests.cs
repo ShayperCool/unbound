@@ -139,6 +139,343 @@ namespace UnityEngine.Tests
             }
         }
 
+        // Trigger Kill lifetime, from the 6000.0.71f1 particletriggerlifetime recordings: a
+        // synchronized radius-.5 sphere trigger at z 1.5 and a size-1 particle entering it.
+        static GameObject KillSphere()
+        {
+            var go = new GameObject("kill sphere");
+            go.transform.position = new Vector3(0f, 0f, 1.5f);
+            go.AddComponent<SphereCollider>().isTrigger = true;
+            Physics.SyncTransforms();
+            return go;
+        }
+
+        static ParticleSystem KillInside(GameObject sphere, Action<ParticleSystem> configure = null)
+        {
+            return Make(system =>
+            {
+                var main = system.main; main.startLifetime = 2.013f; main.startSpeed = 2f; main.startSize = 1f;
+                var shape = system.shape; shape.enabled = false;
+                var trigger = system.trigger; trigger.enabled = true; trigger.AddCollider(sphere.GetComponent<Collider>());
+                trigger.inside = ParticleSystemOverlapAction.Kill;
+                trigger.outside = trigger.enter = trigger.exit = ParticleSystemOverlapAction.Ignore;
+                configure?.Invoke(system);
+            });
+        }
+
+        static void SetCrossingParticle(ParticleSystem ps)
+        {
+            ps.Simulate(0f, true, true, false);
+            ps.SetParticles(new[] { new ParticleSystem.Particle {
+                position = new Vector3(0f, 0f, .46f), velocity = new Vector3(0f, 0f, 2f),
+                startLifetime = 2.013f, remainingLifetime = 2.013f, startSize = 1f,
+                startColor = new Color32(255, 255, 255, 255), randomSeed = 12345
+            } }, 1);
+        }
+
+        [Fact]
+        public void TriggerKillKeepsAnExistingParticleAtZeroLifetimeUntilTheNextStep()
+        {
+            var sphere = KillSphere();
+            var ps = KillInside(sphere);
+            try
+            {
+                SetCrossingParticle(ps);
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(1, ps.particleCount);
+                var particles = new ParticleSystem.Particle[2];
+                Assert.Equal(1, ps.GetParticles(particles));
+                Assert.Equal(0f, particles[0].remainingLifetime);
+                Assert.Equal(.51f, particles[0].position.z, 5);
+                Assert.Equal(new Vector3(0f, 0f, 2f), particles[0].velocity);
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(0, ps.particleCount);
+            }
+            finally { Done(ps); Object.DestroyImmediate(sphere); }
+        }
+
+        [Fact]
+        public void TriggerKillInAnEarlierInternalStepRemovesTheParticleWithinTheCall()
+        {
+            // .05 s runs as two .025 s steps at the default maximumParticleDeltaTime.
+            var sphere = KillSphere();
+            var ps = KillInside(sphere);
+            try
+            {
+                SetCrossingParticle(ps);
+                ps.Simulate(.05f, false, false, false);
+                Assert.Equal(0, ps.particleCount);
+            }
+            finally { Done(ps); Object.DestroyImmediate(sphere); }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void TriggerKillDiscardsANewbornInsideTheTrigger(bool kill)
+        {
+            var sphere = KillSphere();
+            var ps = KillInside(sphere, system =>
+            {
+                var main = system.main; main.playOnAwake = false;
+                var trigger = system.trigger; trigger.enabled = kill;
+                var emission = system.emission; emission.rateOverTime = 0f;
+                emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+            });
+            try
+            {
+                ps.transform.position = new Vector3(0f, 0f, .51f);
+                ps.Play(false);
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(kill ? 0 : 1, ps.particleCount);
+            }
+            finally { Done(ps); Object.DestroyImmediate(sphere); }
+        }
+
+        [Fact]
+        public void TriggerKillTriggersDeathSubEmittersWhenTheParticleIsRemoved()
+        {
+            var sphere = KillSphere();
+            var child = Make(system =>
+            {
+                var main = system.main; main.startSpeed = 0f;
+                var shape = system.shape; shape.enabled = false;
+                system.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+            });
+            var ps = KillInside(sphere, system =>
+            {
+                var subs = system.subEmitters; subs.enabled = true;
+                subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            });
+            child.transform.SetParent(ps.transform, false);
+            try
+            {
+                SetCrossingParticle(ps);
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(1, ps.particleCount);
+                Assert.Equal(0, child.particleCount);
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(0, ps.particleCount);
+                Assert.Equal(1, child.particleCount);
+            }
+            finally { Done(ps); Object.DestroyImmediate(sphere); }
+        }
+
+        [Fact]
+        public void AssigningARemainingLifetimeRevivesATriggerKilledParticle()
+        {
+            var sphere = KillSphere();
+            var ps = KillInside(sphere);
+            try
+            {
+                SetCrossingParticle(ps);
+                ps.Simulate(.025f, false, false, false);
+                var particles = new ParticleSystem.Particle[1];
+                Assert.Equal(1, ps.GetParticles(particles));
+                particles[0].position = new Vector3(0f, 0f, -5f);
+                particles[0].velocity = Vector3.zero;
+                particles[0].remainingLifetime = 1f;
+                ps.SetParticles(particles, 1);
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(1, ps.particleCount);
+                Assert.Equal(1, ps.GetParticles(particles));
+                Assert.InRange(particles[0].remainingLifetime, .97f, .98f);
+            }
+            finally { Done(ps); Object.DestroyImmediate(sphere); }
+        }
+
+        /// <summary>A shape-less constant-rate system emitting along +z at speed 2 (the broad
+        /// particle probe's emission fixture).</summary>
+        static ParticleSystem RateFixture(float rate, float lifetime, Action<ParticleSystem> configure = null)
+        {
+            return Make(system =>
+            {
+                var main = system.main; main.startLifetime = lifetime; main.startSpeed = 2f; main.startSize = 1f;
+                var shape = system.shape; shape.enabled = false;
+                var emission = system.emission; emission.rateOverTime = rate;
+                configure?.Invoke(system);
+            });
+        }
+
+        /// <summary>Every particle's z and remaining lifetime as float bits, sorted.</summary>
+        static string[] PositionLifeBits(ParticleSystem ps)
+        {
+            var particles = new ParticleSystem.Particle[ps.particleCount];
+            int n = ps.GetParticles(particles);
+            var bits = new string[n];
+            for (int i = 0; i < n; i++)
+                bits[i] = BitConverter.SingleToInt32Bits(particles[i].position.z).ToString("x8") + "/"
+                    + BitConverter.SingleToInt32Bits(particles[i].remainingLifetime).ToString("x8");
+            Array.Sort(bits, StringComparer.Ordinal);
+            return bits;
+        }
+
+        // Expected bits: broad 6000.0.71f1 reference, scenarios rate, loop_wrap and max_particles
+        // (Simulate(dt, true, first call restarts, false)). Newborns are aged by their share of
+        // the step's accumulated gain, with a one-millionth floor for a birth at the step's end.
+        [Fact]
+        public void ConstantRateNewbornsAreAgedByTheirShareOfTheStep()
+        {
+            var ps = RateFixture(10f, 1.013f);
+            try
+            {
+                var expected = new Dictionary<int, string[]>
+                {
+                    [1] = new[] { "3356bf95/3f81a9fc" },
+                    [12] = new[] { "3dccccc6/3f76872c", "3e99999f/3f5ced90", "3f000003/3f4353f8", "3f333336/3f29ba5d", "3f66666a/3f1020c5", "3f8cccce/3eed0e52" },
+                };
+                for (int i = 0; i <= 12; i++)
+                {
+                    ps.Simulate(.05f, true, i == 0, false);
+                    if (expected.TryGetValue(i, out var bits)) Assert.Equal(bits, PositionLifeBits(ps));
+                }
+            }
+            finally { Done(ps); }
+        }
+
+        [Fact]
+        public void LoopEndNewbornsAreAgedByTheWholeStep()
+        {
+            var ps = RateFixture(10f, 1.013f, system => { var main = system.main; main.duration = .3f; main.loop = true; });
+            try
+            {
+                var expected = new Dictionary<int, string[]>
+                {
+                    [2] = new[] { "33ccccca/3f81a9fb", "3e4cccd0/3f69ba5e", "3eccccd0/3f5020c5" },
+                    [3] = new[] { "33cccccf/3f81a9fb", "3e4cccd3/3f69ba5d", "3eccccd0/3f5020c5", "3f19999c/3f36872d" },
+                    [8] = new[] { "34999997/3f81a9fb", "3e4cccdd/3f69ba5c", "3eccccd4/3f5020c4", "3f19999e/3f36872a", "3f4cccd1/3f1ced90",
+                        "3f800002/3f0353f5", "3f99999a/3ed374b8", "3fb33332/3ea04185", "3fccccca/3e5a1ca0" },
+                };
+                for (int i = 0; i <= 8; i++)
+                {
+                    ps.Simulate(.1f, true, i == 0, false);
+                    if (expected.TryGetValue(i, out var bits)) Assert.Equal(bits, PositionLifeBits(ps));
+                }
+            }
+            finally { Done(ps); }
+        }
+
+        [Fact]
+        public void SeveralNewbornsOfOneStepShareItsGain()
+        {
+            var ps = RateFixture(50f, 1.013f, system => { var main = system.main; main.maxParticles = 5; });
+            try
+            {
+                ps.Simulate(.05f, true, true, false);
+                ps.Simulate(.05f, true, false, false);
+                Assert.Equal(new[] { "3356bf95/3f81a9fc", "3d23d70b/3f7e3540", "3da3d70b/3f791688", "3df5c290/3f73f7cf", "3e23d70a/3f6ed917" },
+                    PositionLifeBits(ps));
+            }
+            finally { Done(ps); }
+        }
+
+        // Child records of the trigger lifetime 6000.0.71f1 reference (trigger_death_child and
+        // natural_death_child): the parent's Simulate without children still advances the system
+        // it references as a Death sub-emitter, which ends each call paused and alive.
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void SimulateWithoutChildrenAdvancesReferencedSubEmitters(bool triggerKill)
+        {
+            var sphere = KillSphere();
+            var ps = KillInside(sphere, system =>
+            {
+                var main = system.main; main.playOnAwake = false;
+                var trigger = system.trigger; trigger.enabled = triggerKill;
+                var emission = system.emission; emission.enabled = false;
+            });
+            var child = Make(system =>
+            {
+                var main = system.main; main.playOnAwake = false; main.startLifetime = 2.013f; main.startSpeed = 0f;
+                var shape = system.shape; shape.enabled = false;
+                system.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+            });
+            child.transform.SetParent(ps.transform, false);
+            var subs = ps.subEmitters; subs.enabled = true;
+            subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            try
+            {
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                float life = triggerKill ? 2.013f : .013f;
+                ps.SetParticles(new[] { new ParticleSystem.Particle {
+                    position = new Vector3(0f, 0f, .46f), velocity = new Vector3(0f, 0f, 2f),
+                    startLifetime = life, remainingLifetime = life, startSize = 1f,
+                    startColor = new Color32(255, 255, 255, 255), randomSeed = 12345
+                } }, 1);
+                Assert.True(child.isStopped);
+                Assert.False(child.IsAlive(true));
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(triggerKill ? 0 : 1, child.particleCount);
+                Assert.Equal(.025f, child.time);
+                Assert.True(child.isPaused);
+                Assert.False(child.isStopped);
+                Assert.True(child.IsAlive(true));
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(1, child.particleCount);
+                Assert.Equal(.05f, child.time);
+                Assert.True(child.isPaused);
+                Assert.False(child.isStopped);
+            }
+            finally { Done(ps); Object.DestroyImmediate(sphere); }
+        }
+
+        // Broad 6000.0.71f1 reference, sub_emitters_child: started by a restarting call with
+        // children, a sub-emitter keeps its time until the next call.
+        [Fact]
+        public void RestartingSimulateStartsASubEmitterClockOnTheNextCall()
+        {
+            ParticleSystem child = null;
+            var ps = RateFixture(4f, .513f, system =>
+            {
+                var main = system.main; main.playOnAwake = false;
+                child = Make(c =>
+                {
+                    var cm = c.main; cm.playOnAwake = false; cm.startSpeed = 1f; cm.startLifetime = .313f;
+                    var shape = c.shape; shape.enabled = false;
+                    c.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)2) });
+                });
+                child.transform.SetParent(system.transform, false);
+                var subs = system.subEmitters; subs.enabled = true;
+                subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            });
+            try
+            {
+                ps.Simulate(.05f, true, true, false);
+                Assert.Equal(0f, child.time);
+                Assert.True(child.isPaused);
+                ps.Simulate(.05f, true, false, false);
+                Assert.Equal(.05f, child.time);
+                Assert.True(child.isPaused);
+            }
+            finally { Done(ps); }
+        }
+
+        [Fact]
+        public void SimulateAdvancesSharedAndCyclicSubEmittersOnce()
+        {
+            ParticleSystem Quiet() => Make(system =>
+            {
+                var main = system.main; main.playOnAwake = false;
+                var shape = system.shape; shape.enabled = false;
+            });
+            var shared = Quiet();
+            var a = Quiet();
+            var b = Quiet();
+            var subsA = a.subEmitters; subsA.enabled = true;
+            subsA.AddSubEmitter(shared, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            subsA.AddSubEmitter(b, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            var subsB = b.subEmitters; subsB.enabled = true;
+            subsB.AddSubEmitter(shared, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            subsB.AddSubEmitter(a, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            try
+            {
+                a.Simulate(.025f, false, false, false);
+                Assert.Equal(.025f, b.time);
+                Assert.Equal(.025f, shared.time);
+            }
+            finally { Done(a); Done(b); Done(shared); }
+        }
+
         [Fact]
         public void AddingASystemAddsItsRendererAndPlaysOnAwake()
         {
