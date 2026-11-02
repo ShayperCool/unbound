@@ -266,8 +266,11 @@ namespace UnityEngine
         /// over to the next call (measured); otherwise in the frame's steps (see Advance).</summary>
         public void Simulate(float t, [Internal.DefaultValue("true")] bool withChildren, [Internal.DefaultValue("true")] bool restart, [Internal.DefaultValue("true")] bool fixedTimeStep)
         {
-            foreach (var ps in Systems(withChildren, includeSubEmitters: true))
+            var systems = SimulatedSystems(withChildren, out int hierarchyCount);
+            for (int index = 0; index < systems.Count; index++)
             {
+                var ps = systems[index];
+                bool referenced = index >= hierarchyCount;
                 if (restart)
                 {
                     ps.m_Count = 0;
@@ -290,9 +293,11 @@ namespace UnityEngine
                 ps.m_IsPaused = false;
                 ps.m_CollisionEvents.Clear();
                 ps.TrackEmitter(t);
-                // A sub-emitter starts with its parent but its time only runs from the next call
-                // (measured).
-                if (started && ps.m_SubEmitterParent != null)
+                // A sub-emitter that a restarting call starts with its parent keeps its time
+                // until the next call (measured with children). One that only its parent's
+                // reference brings in runs from the call that starts it (measured without children:
+                // a stopped Death sub-emitter's time advances by each call and it ends paused).
+                if (started && (referenced ? restart : ps.m_SubEmitterParent != null))
                 {
                     ps.m_IsPaused = true;
                     continue;
@@ -620,6 +625,28 @@ namespace UnityEngine
         public void SetTrails(Trails trailData) => Unbound.Runtime.Stubs.Ignored("ParticleSystem.SetTrails", "is not honoured yet: trail data is not written back");
 
         // ------------------------------------------------------------------ internals
+
+        /// <summary>The systems a Simulate call advances: <see cref="Systems"/> (the first
+        /// <paramref name="hierarchyCount"/>), then the systems they use as sub-emitters, theirs in
+        /// turn, each once. A parent simulates its sub-emitters even without children (measured:
+        /// a referenced Death sub-emitter's time advances with each call and it ends paused, also
+        /// when it emits nothing).</summary>
+        List<ParticleSystem> SimulatedSystems(bool withChildren, out int hierarchyCount)
+        {
+            var list = Systems(withChildren, includeSubEmitters: true);
+            hierarchyCount = list.Count;
+            for (int i = 0; i < list.Count; i++)
+            {
+                var data = list[i].m_SubEmitters;
+                if (!data.enabled) continue;
+                foreach (var e in data.emitters)
+                {
+                    var sub = e.system;
+                    if (sub != null && !sub.m_Destroyed && sub.m_GameObject != null && !list.Contains(sub)) list.Add(sub);
+                }
+            }
+            return list;
+        }
 
         /// <summary>This system, then (with children) the systems below it, depth first.</summary>
         List<ParticleSystem> Systems(bool withChildren, bool includeSubEmitters)

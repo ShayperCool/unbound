@@ -228,6 +228,7 @@ namespace UnityEngine
             float t0 = m_Time;
             float t1 = t0 + dt;
             m_TotalTime += dt;
+            bool planned = emit && PlanConstantRate(t0, dt, duration);
             int guard = 0;
             while (t1 >= duration && guard++ < 10000)
             {
@@ -238,6 +239,7 @@ namespace UnityEngine
                         EmitRate(t0, duration, false, 0f, duration);
                         EmitOver(t0, duration, 0f, step, distance * ((duration - t0) / step));
                     }
+                    if (planned) m_RateAccumulator = m_StepRateRemainder;
                     m_Time = duration;
                     m_StopEmitting = true;
                     return;
@@ -259,7 +261,102 @@ namespace UnityEngine
                 EmitRate(t0, t1, true, 0f, duration);
                 EmitOver(t0, t1, 0f, step, distance * ((t1 - t0) / step));
             }
+            if (planned) m_RateAccumulator = m_StepRateRemainder;
             m_Time = t1;
+        }
+
+        /// <summary>The constant-rate births of the current step: how many are still to be emitted,
+        /// the accumulator they leave, the reciprocal of the step's gain and the step's length.</summary>
+        int m_StepRateBirths;
+        float m_StepRateRemainder, m_StepRateInvGain, m_StepRateDt;
+
+        /// <summary>Counts the constant-rate births of the step that starts at playback time
+        /// <paramref name="t0"/> and lasts <paramref name="dt"/>, over the same segments, counts and
+        /// loop phases as <see cref="AdvanceEmission"/>, before any of them is emitted. A birth's age
+        /// is its share of the step: the step's whole gain (rate × time over all its segments, also
+        /// across a loop's end) is accumulated before the step's births are subtracted once, and a
+        /// birth that is followed by j others in the step has lived
+        /// dt × max((remainder + j) / gain, 1e-6) (measured bit for bit against independent rate,
+        /// fractional-rate, big-step, fixed-step, delay, loop-wrap, one-shot, simulation-speed and
+        /// maximum-particle controls; newborns born exactly at a step's end have lived 1e-6 of it).</summary>
+        bool PlanConstantRate(float t0, float dt, float duration)
+        {
+            var curve = m_Emission.rateOverTime;
+            m_StepRateBirths = 0;
+            if (curve.mode != ParticleSystemCurveMode.Constant || !(curve.constant > 0f)) return false;
+            float rate = curve.constant;
+            float counted = m_RateAccumulator, whole = m_RateAccumulator, gain = 0f, phase = m_EmitPhase;
+            int births = 0;
+            float t1 = t0 + dt;
+            bool ended = false;
+            int guard = 0;
+            while (t1 >= duration && guard++ < 10000)
+            {
+                births += PlanRateSegment(rate, t0, duration, false, phase, ref counted, ref whole, ref gain);
+                if (!m_Main.loop)
+                {
+                    ended = true;
+                    break;
+                }
+                float rest = t1 - duration;
+                float due = rate * duration + phase;
+                phase = due - ((float)Math.Ceiling(due) - 1f);
+                t0 = 0f;
+                t1 = rest;
+            }
+            if (!ended) births += PlanRateSegment(rate, t0, t1, true, phase, ref counted, ref whole, ref gain);
+            m_StepRateBirths = births;
+            m_StepRateRemainder = whole - births;
+            m_StepRateInvGain = gain > 0f ? 1f / gain : 0f;
+            m_StepRateDt = dt;
+            return true;
+        }
+
+        static int PlanRateSegment(float rate, float a, float b, bool endIncluded, float phase, ref float counted, ref float whole, ref float gain)
+        {
+            if (!(b > a)) return 0;
+            float segment = rate * (b - a);
+            whole += segment;
+            gain += segment;
+            return ConstantRateBirths(rate, a, b, endIncluded, phase, ref counted, out _, out _);
+        }
+
+        /// <summary>The age of the next constant-rate birth of the current step (see
+        /// <see cref="PlanConstantRate"/>); births are emitted oldest first.</summary>
+        float NextStepRateAge()
+        {
+            System.Diagnostics.Debug.Assert(m_StepRateBirths > 0, "a constant-rate birth the step did not plan");
+            int later = Math.Max(0, --m_StepRateBirths);
+            return m_StepRateDt * Mathf.Max((m_StepRateRemainder + later) * m_StepRateInvGain, 1e-6f);
+        }
+
+        /// <summary>The constant-rate births due in the playback time (a, b] (b excluded at a loop's
+        /// end), counted from the accumulated rounded rate × span: the established count arithmetic,
+        /// shared by planning and emission. <paramref name="last"/> is the birth index of the last
+        /// one in the loop's rate × time + phase coordinate.</summary>
+        static int ConstantRateBirths(float rate, float a, float b, bool endIncluded, float phase, ref float accumulator, out int last, out float due)
+        {
+            // Native accumulates the rounded rate * clock span for each subdivision.
+            // Whole-clock multiplication loses the carried fraction at exact boundaries.
+            accumulator += rate * (b - a);
+            int count = endIncluded ? (int)accumulator
+                : Math.Max(0, (int)Math.Ceiling(accumulator) - 1);
+            accumulator -= count;
+            due = rate * b + phase;
+            // Keep the established float spawn-age and speed coordinates. Removing the
+            // carried fraction identifies the last integral birth in those coordinates.
+            last = (int)Math.Round(due - accumulator);
+            if (!endIncluded)
+            {
+                // A birth at the duration belongs to the next loop's start values.
+                double interval = 1f / rate;
+                int end = (int)Math.Ceiling(b / interval + phase) - 1;
+                int pending = Math.Min(count, Math.Max(0, last - end));
+                count -= pending;
+                last -= pending;
+                accumulator += pending;
+            }
+            return count;
         }
 
         /// <summary>The loop's float birth-age coordinate: rate × time + phase identifies its
@@ -297,9 +394,10 @@ namespace UnityEngine
         }
 
         /// <summary>Rate emission for the playback time (a, b] (b excluded at a loop's end). A
-        /// particle is due when rate × time + phase reaches a whole number and has lived from then
-        /// to b, plus <paramref name="extraAge"/> (the step's time after b); its start speed is taken
-        /// at its birth, the other start values at b (measured).</summary>
+        /// particle is due when rate × time + phase reaches a whole number; its start speed is taken
+        /// at its birth, the other start values at b (measured). A constant rate's births are aged by
+        /// their share of the whole step (see <see cref="PlanConstantRate"/>); a curve's from its
+        /// due time to b, plus <paramref name="extraAge"/> (the step's time after b).</summary>
         void EmitRate(float a, float b, bool endIncluded, float extraAge, float duration)
         {
             var rateCurve = m_Emission.rateOverTime;
@@ -309,32 +407,13 @@ namespace UnityEngine
             {
                 float rate = rateCurve.constant;
                 if (!(rate > 0f)) return;
-                // Native accumulates the rounded rate * clock span for each subdivision.
-                // Whole-clock multiplication loses the carried fraction at exact boundaries.
-                m_RateAccumulator += rate * (b - a);
-                int count = endIncluded ? (int)m_RateAccumulator
-                    : Math.Max(0, (int)Math.Ceiling(m_RateAccumulator) - 1);
-                m_RateAccumulator -= count;
                 float phase = m_EmitPhase;
-                float due = rate * b + phase;
-                // Keep the established float spawn-age and speed coordinates. Removing the
-                // carried fraction identifies the last integral birth in those coordinates.
-                int last = (int)Math.Round(due - m_RateAccumulator);
-                if (!endIncluded)
-                {
-                    // A birth at the duration belongs to the next loop's start values.
-                    double interval = 1f / rate;
-                    int end = (int)Math.Ceiling(b / interval + phase) - 1;
-                    int pending = Math.Min(count, Math.Max(0, last - end));
-                    count -= pending;
-                    last -= pending;
-                    m_RateAccumulator += pending;
-                }
+                int count = ConstantRateBirths(rate, a, b, endIncluded, phase, ref m_RateAccumulator, out int last, out _);
                 int first = last - count + 1;
                 for (int m = first; m <= last; m++)
                 {
                     m_SpeedNt = Mathf.Clamp01((m - phase) / rate / duration);
-                    EmitParticles(1, (due - m) / rate + extraAge, b, default, false, m - first, count);
+                    EmitParticles(1, NextStepRateAge(), b, default, false, m - first, count);
                 }
             }
             else
@@ -863,7 +942,9 @@ namespace UnityEngine
             for (int i = 0; i < m_Count;)
             {
                 if ((m_Particles[i].m_Flags & Particle.FlagOrphanTrail) != 0) { i++; continue; }
-                if (Integrate(ref m_Particles[i], dt, ref m_Context))
+                // A particle a trigger killed in the previous update dies now, before it ages or
+                // moves, like one whose life ran out exactly at the end of that update.
+                if ((m_Particles[i].m_Flags & Particle.FlagTriggerKilled) == 0 && Integrate(ref m_Particles[i], dt, ref m_Context, true))
                 {
                     i++;
                     continue;
@@ -877,8 +958,9 @@ namespace UnityEngine
 
         /// <summary>Advances one particle by <paramref name="dt"/>; false when it dies. The lifetime
         /// curves are evaluated at the particle's age before the step (measured: velocity over
-        /// lifetime moves a newborn not at all in its first step).</summary>
-        bool Integrate(ref Particle p, float dt, ref StepContext c)
+        /// lifetime moves a newborn not at all in its first step). <paramref name="existing"/>: the
+        /// particle was alive before this update (false for a newborn being emitted).</summary>
+        bool Integrate(ref Particle p, float dt, ref StepContext c, bool existing = false)
         {
             if ((p.m_Flags & Particle.FlagAgeInitialized) == 0) p.InitializeAge();
             float age = p.Age01;
@@ -966,7 +1048,20 @@ namespace UnityEngine
             var before = p.m_Position;
             p.m_Position += (v + animated) * (speedModifier * dt);
             if (m_Collision.enabled && !Collide(ref p, before, age, dt, speedModifier)) return false;
-            if (m_Trigger.enabled && !Trigger(ref p)) return false;
+            if (m_Trigger.enabled && !Trigger(ref p))
+            {
+                // A newborn killed while it is emitted is never added (measured: none is
+                // reported, even in a call's last step). An existing particle's life ends
+                // here: it keeps its moved state with zero remaining lifetime, and the next
+                // update removes it (measured: killed in a call's last internal step it is
+                // reported at lifetime 0, killed in an earlier one it is gone). The rest of
+                // this update still skips it, as before.
+                if (!existing) return false;
+                p.m_AgePercent = 100f;
+                p.m_Lifetime = 0f;
+                p.m_Flags |= Particle.FlagTriggerKilled;
+                return true;
+            }
 
             var RO = m_Rotation;
             var RS = m_RotationBySpeed;
