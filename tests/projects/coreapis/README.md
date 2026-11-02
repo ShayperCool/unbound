@@ -144,8 +144,12 @@ probe defects, precision ledger and significant Core API gaps.
 
 Only the significant OnRenderObject handler-order gap remains in the window:
 ScreenCam/RtCam/Cube here instead of Native's RtCam/ScreenCam/Cube, leaving 24
-missing and 24 extra lines. The cause is unproved; scene-load wake order is one
-hypothesis. This observation supplies no rule to sort handlers. Diagnostic
+missing and 24 extra lines. The separate [oroorder witness](../oroorder/README.md)
+now establishes stable removal and append on re-enable within the tested handler
+class, independently of camera render/depth and instance-id order. Unbound's
+List.Add/List.Remove dispatch already follows that contract. The differing
+initial registration belongs to scene activation; file-order activation and
+cross-type ordering remain unproved. This supplies no rule to sort handlers. Diagnostic
 attribution can undo that swap to explain all 17 frames, but the comparator
 does not transform anything. Strict failures, raw values and event order stay.
 

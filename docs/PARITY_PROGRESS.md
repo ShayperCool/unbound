@@ -2656,3 +2656,12 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - Runtime: Root rehashed all 33 payloads, verified TestCore equals package Core eaa489ea, PDB source checksums and 265 unchanged compiled CLI inputs; the old runtime stays frozen.
 - Open: significant ORO order, exact Unity counter node, custom/paused/Edit loops, intervening readers and startup boundaries; earlier Core/LP/line gaps remain. No comparator normalization or tolerance change.
 - Evidence: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/claude-fresh-20261101b/rfc-validation/RECEIPT.md`; Root receipt `validation/runs/rfc-root-integration-20261102/root-validation.json`.
+
+### OnRenderObject registration witness, 2026-11-02
+- What: integrated the isolated oroorder probe and its canonical; no production changes. A strict two-launch pair gives 1171 byte-identical lines, exit 0 on NVIDIA, with precommitted controls and 56 launch-bound inputs checked per repeat.
+- Measured: for one handler class, disable preserves remaining order and enable appends; changing camera render/depth order does not reorder handlers. Type grouping and the scene-load activation rule remain unresolved.
+- Source: Unbound already uses ordered List.Add/List.Remove and list-order dispatch; no FrameBuilder sort. The initial-registration gap belongs to scene activation and stays significant.
+- Gates: Root strengthened structural completeness after capture; both original captures pass and eight unit controls pass. Handler order never gates publication; canonical and raw repeats stay unchanged.
+- Managed/API: prior matching runtime results reused, 1583/1594 with the same 11 and API 0/2318; no engine, managed, Rust or extra Native run by Root. Coreapis remains 594/88/88 with all raw failures.
+- Open: initial wake order, cross-type ordering, runtime AddComponent, prefabs, execution order, multi-scene, hot reload and SRP; camera controls establish observations, not a general sorting rule.
+- Evidence: `validation/runs/claude-fresh-20261101b/oro-witness/RECEIPT.md`; Root verification `validation/runs/oro-root-integration-20261102/root-validation.json`. Runtime remains rfc-validation/candidate, manifest 530c114b.

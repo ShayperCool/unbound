@@ -93,6 +93,8 @@ A capture backs the reference only if all of these hold:
 * `{"k":"complete","v":true}` is the single last line, right after the finish record;
 * every order-window frame has its frame and state lines, and exactly the mutations above with
   their expected read-backs;
+* each frame has one frame/state header, both camera renders and all three distinct handlers
+  once per render; the handler groups follow the recorded camera renders;
 * the three instance-id order lines are present;
 * no exception, error or `step threw` line follows the OnDemandRendering window.
 
@@ -115,7 +117,7 @@ python3 tests/projects/oroorder/analyze.py tests/projects/oroorder/Reference/uni
 windowed GPU captures, both exit 0 on the NVIDIA renderer with no forced stop. Its first 681
 lines equal the core API w4 reference up to the end of its OnDemandRendering window.
 
-* Every camera render in a frame calls every enabled handler in one list. That list is the
+* For the tested handler class, every camera render calls every enabled handler in one list. That list is the
   same for both cameras and independent of the camera order (P2: cameras S, R; handlers R, S, C).
 * Disabling and re-enabling RtCam's handler moves it to the end, and the others keep their
   order: S, C, R from the next render on (P4). The order holds when the cameras are then
@@ -131,3 +133,9 @@ lines equal the core API w4 reference up to the end of its OnDemandRendering win
 Not shown: the scene-load wake (OnEnable) order of these handlers itself, so this does not
 prove file-order scene activation; type-grouped registration (one handler class); runtime
 AddComponent, prefab instances, execution-order attributes, multi-scene and SRP.
+
+Root's post-capture completeness check also requires the camera renders and handler groups
+above. Both original captures pass it without any output change. Eight unit controls reject
+incomplete/duplicate groups while accepting a different handler order; order is evidence,
+never a publication condition. Run them with
+`python3 -m unittest tests/projects/oroorder/test_analyze.py`.
