@@ -139,6 +139,151 @@ namespace UnityEngine.Tests
             }
         }
 
+        // Trigger Kill lifetime, from the 6000.0.71f1 particletriggerlifetime recordings: a
+        // synchronized radius-.5 sphere trigger at z 1.5 and a size-1 particle entering it.
+        static GameObject KillSphere()
+        {
+            var go = new GameObject("kill sphere");
+            go.transform.position = new Vector3(0f, 0f, 1.5f);
+            go.AddComponent<SphereCollider>().isTrigger = true;
+            Physics.SyncTransforms();
+            return go;
+        }
+
+        static ParticleSystem KillInside(GameObject sphere, Action<ParticleSystem> configure = null)
+        {
+            return Make(system =>
+            {
+                var main = system.main; main.startLifetime = 2.013f; main.startSpeed = 2f; main.startSize = 1f;
+                var shape = system.shape; shape.enabled = false;
+                var trigger = system.trigger; trigger.enabled = true; trigger.AddCollider(sphere.GetComponent<Collider>());
+                trigger.inside = ParticleSystemOverlapAction.Kill;
+                trigger.outside = trigger.enter = trigger.exit = ParticleSystemOverlapAction.Ignore;
+                configure?.Invoke(system);
+            });
+        }
+
+        static void SetCrossingParticle(ParticleSystem ps)
+        {
+            ps.Simulate(0f, true, true, false);
+            ps.SetParticles(new[] { new ParticleSystem.Particle {
+                position = new Vector3(0f, 0f, .46f), velocity = new Vector3(0f, 0f, 2f),
+                startLifetime = 2.013f, remainingLifetime = 2.013f, startSize = 1f,
+                startColor = new Color32(255, 255, 255, 255), randomSeed = 12345
+            } }, 1);
+        }
+
+        [Fact]
+        public void TriggerKillKeepsAnExistingParticleAtZeroLifetimeUntilTheNextStep()
+        {
+            var sphere = KillSphere();
+            var ps = KillInside(sphere);
+            try
+            {
+                SetCrossingParticle(ps);
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(1, ps.particleCount);
+                var particles = new ParticleSystem.Particle[2];
+                Assert.Equal(1, ps.GetParticles(particles));
+                Assert.Equal(0f, particles[0].remainingLifetime);
+                Assert.Equal(.51f, particles[0].position.z, 5);
+                Assert.Equal(new Vector3(0f, 0f, 2f), particles[0].velocity);
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(0, ps.particleCount);
+            }
+            finally { Done(ps); Object.DestroyImmediate(sphere); }
+        }
+
+        [Fact]
+        public void TriggerKillInAnEarlierInternalStepRemovesTheParticleWithinTheCall()
+        {
+            // .05 s runs as two .025 s steps at the default maximumParticleDeltaTime.
+            var sphere = KillSphere();
+            var ps = KillInside(sphere);
+            try
+            {
+                SetCrossingParticle(ps);
+                ps.Simulate(.05f, false, false, false);
+                Assert.Equal(0, ps.particleCount);
+            }
+            finally { Done(ps); Object.DestroyImmediate(sphere); }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void TriggerKillDiscardsANewbornInsideTheTrigger(bool kill)
+        {
+            var sphere = KillSphere();
+            var ps = KillInside(sphere, system =>
+            {
+                var main = system.main; main.playOnAwake = false;
+                var trigger = system.trigger; trigger.enabled = kill;
+                var emission = system.emission; emission.rateOverTime = 0f;
+                emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+            });
+            try
+            {
+                ps.transform.position = new Vector3(0f, 0f, .51f);
+                ps.Play(false);
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(kill ? 0 : 1, ps.particleCount);
+            }
+            finally { Done(ps); Object.DestroyImmediate(sphere); }
+        }
+
+        [Fact]
+        public void TriggerKillTriggersDeathSubEmittersWhenTheParticleIsRemoved()
+        {
+            var sphere = KillSphere();
+            var child = Make(system =>
+            {
+                var main = system.main; main.startSpeed = 0f;
+                var shape = system.shape; shape.enabled = false;
+                system.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+            });
+            var ps = KillInside(sphere, system =>
+            {
+                var subs = system.subEmitters; subs.enabled = true;
+                subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            });
+            child.transform.SetParent(ps.transform, false);
+            try
+            {
+                SetCrossingParticle(ps);
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(1, ps.particleCount);
+                Assert.Equal(0, child.particleCount);
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(0, ps.particleCount);
+                Assert.Equal(1, child.particleCount);
+            }
+            finally { Done(ps); Object.DestroyImmediate(sphere); }
+        }
+
+        [Fact]
+        public void AssigningARemainingLifetimeRevivesATriggerKilledParticle()
+        {
+            var sphere = KillSphere();
+            var ps = KillInside(sphere);
+            try
+            {
+                SetCrossingParticle(ps);
+                ps.Simulate(.025f, false, false, false);
+                var particles = new ParticleSystem.Particle[1];
+                Assert.Equal(1, ps.GetParticles(particles));
+                particles[0].position = new Vector3(0f, 0f, -5f);
+                particles[0].velocity = Vector3.zero;
+                particles[0].remainingLifetime = 1f;
+                ps.SetParticles(particles, 1);
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(1, ps.particleCount);
+                Assert.Equal(1, ps.GetParticles(particles));
+                Assert.InRange(particles[0].remainingLifetime, .97f, .98f);
+            }
+            finally { Done(ps); Object.DestroyImmediate(sphere); }
+        }
+
         [Fact]
         public void AddingASystemAddsItsRendererAndPlaysOnAwake()
         {
