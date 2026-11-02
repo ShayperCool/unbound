@@ -561,6 +561,25 @@ fn probe_shaders_match_the_canonical_reference() {
             .map(|s| s["passes"].as_array().unwrap().len().to_string())
             .collect();
         assert_eq!(json!(counts), *key("passCountInSubshader"), "{shader}");
+        // LODs from the probe sources (the Fallback Unlit/Color's as serialized); only
+        // KwForms's first SubShader may limit its devices (its `#include_with_pragmas`).
+        let (lods, restricted): (&[u64], &[bool]) = match shader {
+            "Probe/KwForms" => (&[300, 0, 100][..], &[true, false, false][..]),
+            "Probe/KwFixed" => (&[400, 200, 100][..], &[false; 3][..]),
+            _ => (&[0][..], &[false][..]),
+        };
+        assert_eq!(
+            subs.iter().map(|s| s["lod"].as_u64().unwrap()).collect::<Vec<_>>(),
+            lods,
+            "{shader}"
+        );
+        assert_eq!(
+            subs.iter()
+                .map(|s| s["restricted"].as_bool().unwrap())
+                .collect::<Vec<_>>(),
+            restricted,
+            "{shader}"
+        );
         let tag = |tags: &Value, name: &str| {
             tags.as_array()
                 .unwrap()
@@ -912,4 +931,89 @@ fn unresolved_builtin_use_passes_are_unknown_not_tagless() {
             .contains("Hidden/Nowhere/PASS"),
         "{falls_back}"
     );
+}
+
+/// Pragmas that may limit the devices a program runs on; other pragmas and words do not.
+#[test]
+fn renderer_limits_are_read_from_pragmas() {
+    for limited in [
+        "#pragma only_renderers d3d11",
+        "  #pragma exclude_renderers gles",
+        "# pragma\texclude_renderers nomrt",
+        "#include_with_pragmas \"Pragmas.cginc\"",
+    ] {
+        assert!(limits_renderers(&format!("a\n{limited}\nb")), "{limited}");
+    }
+    for plain in [
+        "#pragma vertex vert",
+        "#pragmaonly_renderers d3d11",
+        "// only_renderers d3d11",
+        "#pragma multi_compile _ ONLY_RENDERERS",
+        "#include \"UnityCG.cginc\"",
+        "",
+    ] {
+        assert!(!limits_renderers(plain), "{plain}");
+    }
+}
+
+/// Every SubShader carries its `LOD` (0 without one) and whether a pass may limit its devices
+/// (a limiting pragma, GLSL, a `UsePass` of such a project pass), in the merged order: own,
+/// then the Fallback chain's, a built-in Fallback's LOD from its serialized form and never
+/// restricted. Shader.passCount picks by them (managed ShaderPassCountTests).
+#[test]
+fn subshaders_carry_their_lod_and_device_limits() {
+    use unbound_assets::builtin_shaders::{DeclaredPass, DeclaredSubShader};
+    let scratch = Scratch::new("decl-lod");
+    let data = scratch.0.join("install");
+    scratch.write("install/Resources/unity_builtin_extra", "stand-in");
+    scratch.write("install/Resources/unity default resources", "stand-in");
+    scratch.write("CGIncludes/UnityCG.cginc", "// stand-in\n");
+    scratch.write(
+        "Assets/Lods.shader",
+        "Shader \"Tests/Lods\" {\n\
+         SubShader { Tags { \"RenderPipeline\"=\"UniversalPipeline\" } LOD 400 Pass { } }\n\
+         SubShader { LOD 200 Pass { Name \"LIMITED\" CGPROGRAM\n#pragma only_renderers d3d11\n#pragma vertex vert\nENDCG } }\n\
+         SubShader { Pass { } }\n\
+         SubShader { LOD 100 Pass { GLSLPROGRAM\nvoid main() {}\nENDGLSL } }\n\
+         SubShader { LOD 50 UsePass \"Tests/Lods/LIMITED\" }\n\
+         Fallback \"Tests/Builtin\" }",
+    );
+    let provider = Provider::new(inputs(
+        &scratch,
+        scratch.0.join("CGIncludes"),
+        data.clone(),
+        MEASURED,
+        Arc::new(AtomicUsize::new(0)),
+        Arc::new(AtomicBool::new(false)),
+    ));
+    let mut map = DeclarationMap::new();
+    map.insert(
+        "Tests/Builtin".into(),
+        Builtin {
+            subshaders: vec![DeclaredSubShader {
+                tags: Vec::new(),
+                passes: vec![DeclaredPass {
+                    name: "FORWARD".into(),
+                    tags: vec![("LIGHTMODE".into(), "FORWARDBASE".into())],
+                    use_pass: String::new(),
+                }],
+                lod: 150,
+            }],
+            ..Default::default()
+        },
+    );
+    let seen = stamp(&unbound_assets::builtin_shaders::declaration_sources(&data)).unwrap();
+    provider.state.lock().unwrap().builtin = Some((Arc::new(map), seen));
+
+    let answer = ask(&provider, "Tests/Lods");
+    assert_eq!(answer["subshaders_known"], true, "{answer}");
+    let subs = answer["subshaders"].as_array().unwrap();
+    let field = |name: &str| subs.iter().map(|s| s[name].clone()).collect::<Vec<_>>();
+    assert_eq!(field("lod"), [400, 200, 0, 100, 50, 150].map(|l| json!(l)));
+    assert_eq!(
+        field("restricted"),
+        [false, true, false, true, true, false].map(|r| json!(r))
+    );
+    // The passes are unchanged: one each.
+    assert!(subs.iter().all(|s| s["passes"].as_array().unwrap().len() == 1));
 }

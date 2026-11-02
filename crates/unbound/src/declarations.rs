@@ -246,9 +246,39 @@ fn builtin_subshaders(builtin: &Builtin) -> Result<Vec<Value>, Unknown> {
             json!({
                 "tags": tags_json(&sub.tags),
                 "passes": sub.passes.iter().map(|p| json!({ "name": p.name, "tags": tags_json(&p.tags) })).collect::<Vec<_>>(),
+                "lod": sub.lod,
+                // The serialized form does not say which devices a SubShader runs on; a built-in
+                // SubShader is taken as one the device runs, as the renderer does.
+                "restricted": false,
             })
         })
         .collect())
+}
+
+/// Whether a program may limit the graphics devices it runs on: `#pragma only_renderers` or
+/// `exclude_renderers`, or an `#include_with_pragmas` whose pragmas are not read here. Whether
+/// the device then skips its SubShader is not measured.
+fn limits_renderers(code: &str) -> bool {
+    code.lines().any(|line| {
+        let Some(rest) = line.trim_start().strip_prefix('#') else {
+            return false;
+        };
+        let rest = rest.trim_start();
+        if rest
+            .strip_prefix("include_with_pragmas")
+            .is_some_and(|r| r.starts_with(char::is_whitespace))
+        {
+            return true;
+        }
+        let Some(rest) = rest.strip_prefix("pragma") else {
+            return false;
+        };
+        rest.starts_with(char::is_whitespace)
+            && matches!(
+                rest.split_whitespace().next(),
+                Some("only_renderers" | "exclude_renderers")
+            )
+    })
 }
 
 /// An answer for a shader, its parts known or not.
@@ -704,14 +734,47 @@ impl State {
         }
     }
 
+    /// Whether a pass's program may not run on every device (see [`limits_renderers`]): a
+    /// `GLSLPROGRAM`, a limiting pragma, or a `UsePass` of a project shader's pass that is one.
+    /// A `UsePass` of a built-in shader's pass is taken as its SubShader is (`restricted` false).
+    fn pass_limits_renderers(&mut self, inputs: &Inputs, pass: &PassInfo, depth: u32) -> bool {
+        if pass.glsl {
+            return true;
+        }
+        if let Some(program) = &pass.program {
+            return limits_renderers(&program.code);
+        }
+        let Some(target) = &pass.use_pass else {
+            return false;
+        };
+        let Some((shader, name)) = target.rsplit_once('/') else {
+            return true;
+        };
+        let found = self.project(inputs).get(shader).and_then(|lab| {
+            lab.subshaders
+                .iter()
+                .flat_map(|s| s.passes.iter())
+                .find(|p| p.name.eq_ignore_ascii_case(name))
+                .cloned()
+        });
+        match found {
+            Some(found) if depth < 4 => self.pass_limits_renderers(inputs, &found, depth + 1),
+            Some(_) => true,
+            None => false,
+        }
+    }
+
     /// A project shader's own SubShaders: tags and passes (names and own tags as Unity stores
-    /// them; a surface program stands for the passes Unity generates for it).
+    /// them; a surface program stands for the passes Unity generates for it), their `LOD` and
+    /// whether a pass limits the devices it runs on.
     fn subshaders(&mut self, inputs: &Inputs, lab: &ShaderLab) -> Result<Vec<Value>, Unknown> {
         let mut out = Vec::new();
         for sub in &lab.subshaders {
             let mut passes = Vec::new();
             let mut surface_done = false;
+            let mut restricted = false;
             for pass in &sub.passes {
+                restricted |= self.pass_limits_renderers(inputs, pass, 0);
                 if let Some(program) = pass.program.as_ref().filter(|p| p.surface) {
                     if let Some(option) = surface_options(&program.code).first() {
                         return Err(Unknown::fixed(format!(
@@ -739,9 +802,12 @@ impl State {
                 };
                 passes.push(json!({ "name": name, "tags": tags_json(&tags) }));
             }
-            out.push(
-                json!({ "tags": tags_json(&canonical_tags(sub.tags.iter())), "passes": passes }),
-            );
+            out.push(json!({
+                "tags": tags_json(&canonical_tags(sub.tags.iter())),
+                "passes": passes,
+                "lod": sub.lod,
+                "restricted": restricted,
+            }));
         }
         Ok(out)
     }
