@@ -265,6 +265,17 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>Forgets the global keyword registry (tests switch the project's release).</summary>
+        internal static void ResetGlobalKeywordsForTests()
+        {
+            lock (s_KeywordIndices)
+            {
+                s_KeywordIndices.Clear();
+                s_KeywordNames.Clear();
+                s_KeywordsSeeded = false;
+            }
+        }
+
         /// <summary>Every global keyword, in the order they came to exist (Unity's own registry
         /// order is not measured: the canonical records global sets sorted).</summary>
         internal static List<string> GlobalKeywordNames()
