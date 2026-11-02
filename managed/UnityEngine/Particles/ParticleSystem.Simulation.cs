@@ -943,14 +943,39 @@ namespace UnityEngine
             for (int i = 0; i < m_Count;)
             {
                 if ((m_Particles[i].m_Flags & Particle.FlagOrphanTrail) != 0) { i++; continue; }
-                // A particle a trigger killed in the previous update dies now, before it ages or
-                // moves, like one whose life ran out exactly at the end of that update.
-                if ((m_Particles[i].m_Flags & Particle.FlagTriggerKilled) == 0 && Integrate(ref m_Particles[i], dt, ref m_Context, true))
+                // A particle a trigger killed in the previous update dies now, without ageing again,
+                // like one whose life ran out exactly at the end of that update.
+                bool killed = (m_Particles[i].m_Flags & Particle.FlagTriggerKilled) != 0;
+                float ageBefore = 0f;
+                if (deathSubs)
+                {
+                    // Integrate's first action; its lifetime curves use the age before the step.
+                    if (!killed && (m_Particles[i].m_Flags & Particle.FlagAgeInitialized) == 0) m_Particles[i].InitializeAge();
+                    ageBefore = m_Particles[i].Age01;
+                }
+                bool agedOut = false;
+                if (!killed && Integrate(ref m_Particles[i], dt, ref m_Context, true, out agedOut))
                 {
                     i++;
                     continue;
                 }
-                if (deathSubs) TriggerSubEmitters(ParticleSystemSubEmitterType.Death, ref m_Particles[i]);
+                if (deathSubs)
+                {
+                    // Its Death sub-emitters fire where the whole step's movement takes it, not where
+                    // its life ran out (6000.0.71f1 trigger lifetime natural/trigger_death_child and
+                    // broad sub_emitters_child: .46 at 2/s with .013 s left of a .025 s step emits at
+                    // .51; killed at .51, it emits at .56 in the next step; the broad parent dying in
+                    // the first of two steps emits at 1.05). Only the event's position moves: the
+                    // particle itself, its trail and what children inherit from it stay as they were.
+                    var dying = m_Particles[i];
+                    if (killed || agedOut)
+                    {
+                        var end = dying;
+                        Move(ref end, dt, ref m_Context, ageBefore, out _);
+                        dying.m_Position = end.m_Position;
+                    }
+                    TriggerSubEmitters(ParticleSystemSubEmitterType.Death, ref dying);
+                }
                 if (KeepOrphanTrail(ref m_Particles[i])) { i++; continue; }
                 EndTrail(ref m_Particles[i]);
                 RemoveAt(i);
@@ -961,8 +986,13 @@ namespace UnityEngine
         /// curves are evaluated at the particle's age before the step (measured: velocity over
         /// lifetime moves a newborn not at all in its first step). <paramref name="existing"/>: the
         /// particle was alive before this update (false for a newborn being emitted).</summary>
-        bool Integrate(ref Particle p, float dt, ref StepContext c, bool existing = false)
+        bool Integrate(ref Particle p, float dt, ref StepContext c, bool existing = false) => Integrate(ref p, dt, ref c, existing, out _);
+
+        /// <summary>As above; <paramref name="agedOut"/>: it died because its life ran out in this
+        /// step, before it moved (not in a collision).</summary>
+        bool Integrate(ref Particle p, float dt, ref StepContext c, bool existing, out bool agedOut)
         {
+            agedOut = false;
             if ((p.m_Flags & Particle.FlagAgeInitialized) == 0) p.InitializeAge();
             float age = p.Age01;
             float ageBefore = p.m_StartLifetime - p.m_Lifetime;
@@ -984,7 +1014,11 @@ namespace UnityEngine
             }
             if (p.m_AgePercent > 100f)
             {
-                if (ring != ParticleSystemRingBufferMode.PauseUntilReplaced) return false;
+                if (ring != ParticleSystemRingBufferMode.PauseUntilReplaced)
+                {
+                    agedOut = true;
+                    return false;
+                }
                 p.m_AgePercent = 100f;
                 p.m_Lifetime = 0f;
                 return true;
