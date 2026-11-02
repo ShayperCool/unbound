@@ -89,11 +89,14 @@ color spaces and windowed captures remain unmeasured.
 
 ## Measured implementation and limits
 
-The matching-runtime comparison at source `b43816e9` passes 1485/1510 canonical keys, up
-from 622 matching keys. It resolves 863 reference keys and removes all 11 former extras,
-with zero lost matches, missing keys or extra keys. All material, compute, local/global and
-variant groups pass. The remaining 25 keys are eight pass counts, four property/count answers,
-two terrain pass-tag lists, ten exception-message strings and `context.isBatchMode`.
+The matching-runtime comparison at source `ebb1ee50` passes 1491/1510 canonical keys, up
+from 1485 before the query correction. It resolves six more reference keys with zero lost
+matches, missing keys or extra keys. Built-ins with no Properties block now report zero
+properties; serialized UsePass entries resolve their target LightMode tags, including the
+terrain Picking and SceneSelectionPass passes. The separate declarations cache format is
+version 2; the shader compilation cache and ABI are unchanged. All material, compute,
+local/global and variant groups pass. The remaining 19 keys are eight pass counts,
+ten exception-message strings and `context.isBatchMode`.
 These are retained failures, with raw answers and exact comparison unchanged.
 
 The implementation uses the following measured rules in this fixture. Source-derived keyword
