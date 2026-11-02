@@ -53,8 +53,9 @@ namespace UnityEngine.Tests
         string Call(string method, string request)
         {
             m_Calls++;
-            if (m_Throw) throw new InvalidOperationException($"native `{method}` failed: unknown method");
-            var root = JsonDocument.Parse(request).RootElement;
+            if (m_Throw) throw new InvalidOperationException($"native `{method}` failed: unknown native method");
+            using var document = JsonDocument.Parse(request);
+            var root = document.RootElement;
             if (method == "shader-declarations")
                 return m_Shaders.TryGetValue(root.GetProperty("name").GetString(), out var s) ? s : NotFound;
             return m_Computes.TryGetValue(root.GetProperty("file").GetString(), out var c) ? c : NotFound;

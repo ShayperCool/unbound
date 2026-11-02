@@ -61,9 +61,9 @@ namespace Unbound.Runtime
 
         static readonly object s_Lock = new object();
         /// <summary>Answers whose every part is known, or unknown for a reason that does not pass
-        /// (an unmeasured release, a GLSL pass): kept for the session, as the renderer keeps its
-        /// reading of each shader (the host reads shader sources once a session; it picks up
-        /// generated shaders when they appear, which are never answered from here before).</summary>
+        /// (an unmeasured release, a GLSL pass): kept for the session. Authored shader, compute and
+        /// include edits require a restart; content hot reload is not implemented. Generated files
+        /// use content-hashed paths, and previously missing shaders are asked for again.</summary>
         static readonly Dictionary<(string, string), ShaderDeclarations> s_Kept = new Dictionary<(string, string), ShaderDeclarations>();
         /// <summary>Answers that may change (transient, or no such shader yet), with the frame they
         /// were asked in: asked again at most once a frame.</summary>
@@ -142,7 +142,8 @@ namespace Unbound.Runtime
         /// <summary>An answer; a known flag that is missing counts as unknown.</summary>
         static ShaderDeclarations Parse(string json)
         {
-            var root = JsonDocument.Parse(json).RootElement;
+            using var document = JsonDocument.Parse(json);
+            var root = document.RootElement;
             bool Flag(string name) => root.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.True;
             string text = "";
             if (root.TryGetProperty("reason", out var reason) && reason.ValueKind == JsonValueKind.String) text = reason.GetString() ?? "";

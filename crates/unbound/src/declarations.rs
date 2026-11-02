@@ -15,10 +15,10 @@
 //! the built-in resources are read when a built-in shader (or a fallback to one) is asked about,
 //! Unity's built-in shader sources only when a program needs their includes or a `UsePass` names
 //! one of their passes. A failure to get an input is reported as a transient unknown (asked again
-//! later), never as an empty or partial answer. Answers are not kept here: shader sources are the
-//! session's snapshot the renderer draws with too ([`ShaderIndex`] parses each shader once,
-//! generated shaders are picked up when they appear), so the same question gets the same answer
-//! as long as the renderer's view is the same.
+//! later), never as an empty or partial answer. Managed known answers are kept for the session.
+//! Authored shader, compute and include edits require a process restart, since content hot reload
+//! is not implemented. Generated files use content-hashed paths; missing shaders can appear later.
+//! Resource and source-discovery failures back off for 30s; resource changes allow an earlier retry.
 use serde_json::{Value, json};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
