@@ -135,3 +135,13 @@ before the second started) satisfied the contract in both repeats. Its 12 raw le
 were all inside the declared families: 5 or 4 outgoing roots destroyed before the destroyer, the
 error's name order, and the t2 cleanup order. The canonical forms were byte-identical, and that
 form is the 6000.0.71f1 `creation-ownership.jsonl` Reference.
+
+An engine capture (`run.py creation-ownership-unbound`, UNBOUND_CLI / UNBOUND_MANAGED_DIR as above)
+writes the same three outputs. `compare_creation.py REFERENCE CAPTURE_DIR [--native DIR ...]
+--report R` reports each section independently: the witness gate; each family's predicates
+against the capture's own trace; the canonical comparison with the Reference (only when every
+predicate holds; the contract is never relaxed); the raw positional and event-aligned leaf
+comparison against the Reference body, each leaf labelled with the family that could explain it
+or none (strict); per declared point and alias, ownership, lifetime and Find fields as separate
+groups, with the scene listing, light probes, lifecycle sequences and error name sets; and, with
+`--native`, the full raw union against each raw Native repeat. Exit 0 only for a canonical match.

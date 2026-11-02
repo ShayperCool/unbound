@@ -22,6 +22,10 @@
                                                              have identical canonical forms; writes
                                                              that canonical form to
                                                              Reference/.../creation-ownership.jsonl
+    run.py creation-ownership-unbound --release R --label L  one Unbound capture of the same witness
+                                                             (UNBOUND_CLI: the binary), with its raw
+                                                             and teardown outputs; compare it with
+                                                             compare_creation.py
 
 Every capture runs on a fresh copy of this project in the validation cache. Editors run through
 the shared heavy-job launcher on the GPU (a private Xvfb and VirtualGL); do not wrap this driver.
@@ -393,6 +397,39 @@ def creation_publish(directories, target, report=None):
     return 0
 
 
+CREATION_FRAMES = 2400   # bounds the run; the witness quits by itself after its completion marker
+
+
+def creation_ownership_unbound(work):
+    """The witness on a fresh creation-ownership copy in Unbound, writing the same three outputs
+    as an Editor repeat. The gate and contract results are printed; compare_creation.py keeps
+    the raw comparison even when they fail."""
+    schema = creation_schema()
+    if os.environ['UNBOUND_PROBE_UNITY_VERSION'] != schema['release']:
+        sys.exit(f"the creation-ownership schema declares {schema['release']}")
+    cli = os.environ.get('UNBOUND_CLI', str(REPO/'target/release/unbound'))
+    out = work/'unbound'
+    if out.exists():
+        sys.exit(f'refusing to overwrite capture: {out}')
+    project = creation_project(work/'projects'/'unbound')
+    out.mkdir(parents=True)
+    env = dict(os.environ, LIGHT_PROBES_CREATION_OUT=str(out/schema['output']),
+               LIGHT_PROBES_CREATION_RAW_OUT=str(out/schema['raw_output']),
+               LIGHT_PROBES_CREATION_TEARDOWN_OUT=str(out/schema['teardown_output']))
+    with (out/'unbound.log').open('w') as log:
+        result = subprocess.run([str(LAUNCHER), 'timeout', '600', cli, 'run', '-p', str(project),
+                                 '--target', 'Standalone', '--no-watch', '--frames', str(CREATION_FRAMES),
+                                 '--size', '320x180'], env=env, stdout=log, stderr=subprocess.STDOUT)
+    print('unbound exit', result.returncode, out/schema['output'])
+    if (out/schema['output']).exists():
+        print('gate:', creation_rows_problem(out, schema) or 'passed')
+        try:
+            print('contract:', creation_contract.problem(out, schema) or 'satisfied')
+        except Exception as error:  # an incomplete capture; the comparator reports it in full
+            print('contract: not evaluable:', repr(error))
+    return result.returncode
+
+
 def creation_ownership_publish(work):
     schema = creation_schema()
     return creation_publish([work/'native1', work/'native2'], reference_root(PROBE)/schema['output'],
@@ -402,7 +439,8 @@ def creation_ownership_publish(work):
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('mode', choices=('create', 'editor', 'publish', 'unbound', 'lifecycle', 'lifecycle-publish',
-                                         'lifecycle-unbound', 'creation-ownership', 'creation-ownership-publish'))
+                                         'lifecycle-unbound', 'creation-ownership', 'creation-ownership-publish',
+                                         'creation-ownership-unbound'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
     args = parser.parse_args()
@@ -420,6 +458,8 @@ def main():
         return creation_ownership(work, args.release)
     if args.mode == 'creation-ownership-publish':
         return creation_ownership_publish(work)
+    if args.mode == 'creation-ownership-unbound':
+        return creation_ownership_unbound(work)
     return {'create': create, 'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
 
 
