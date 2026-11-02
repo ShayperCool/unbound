@@ -144,13 +144,15 @@ namespace Unbound.Runtime
         {
             var root = JsonDocument.Parse(json).RootElement;
             bool Flag(string name) => root.TryGetProperty(name, out var v) && v.ValueKind == JsonValueKind.True;
+            string text = "";
+            if (root.TryGetProperty("reason", out var reason) && reason.ValueKind == JsonValueKind.String) text = reason.GetString() ?? "";
             var d = new ShaderDeclarations
             {
                 Found = Flag("found"),
                 SubShadersKnown = Flag("subshaders_known"),
                 KeywordsKnown = Flag("keywords_known"),
                 Transient = Flag("transient"),
-                Reason = root.TryGetProperty("reason", out var reason) && reason.ValueKind == JsonValueKind.String ? reason.GetString() : "",
+                Reason = text,
             };
             if (d.SubShadersKnown && root.TryGetProperty("subshaders", out var subs))
                 foreach (var sub in subs.EnumerateArray())
