@@ -284,6 +284,91 @@ namespace UnityEngine.Tests
             finally { Done(ps); Object.DestroyImmediate(sphere); }
         }
 
+        /// <summary>A shape-less constant-rate system emitting along +z at speed 2 (the broad
+        /// particle probe's emission fixture).</summary>
+        static ParticleSystem RateFixture(float rate, float lifetime, Action<ParticleSystem> configure = null)
+        {
+            return Make(system =>
+            {
+                var main = system.main; main.startLifetime = lifetime; main.startSpeed = 2f; main.startSize = 1f;
+                var shape = system.shape; shape.enabled = false;
+                var emission = system.emission; emission.rateOverTime = rate;
+                configure?.Invoke(system);
+            });
+        }
+
+        /// <summary>Every particle's z and remaining lifetime as float bits, sorted.</summary>
+        static string[] PositionLifeBits(ParticleSystem ps)
+        {
+            var particles = new ParticleSystem.Particle[ps.particleCount];
+            int n = ps.GetParticles(particles);
+            var bits = new string[n];
+            for (int i = 0; i < n; i++)
+                bits[i] = BitConverter.SingleToInt32Bits(particles[i].position.z).ToString("x8") + "/"
+                    + BitConverter.SingleToInt32Bits(particles[i].remainingLifetime).ToString("x8");
+            Array.Sort(bits, StringComparer.Ordinal);
+            return bits;
+        }
+
+        // Expected bits: broad 6000.0.71f1 reference, scenarios rate, loop_wrap and max_particles
+        // (Simulate(dt, true, first call restarts, false)). Newborns are aged by their share of
+        // the step's accumulated gain, with a one-millionth floor for a birth at the step's end.
+        [Fact]
+        public void ConstantRateNewbornsAreAgedByTheirShareOfTheStep()
+        {
+            var ps = RateFixture(10f, 1.013f);
+            try
+            {
+                var expected = new Dictionary<int, string[]>
+                {
+                    [1] = new[] { "3356bf95/3f81a9fc" },
+                    [12] = new[] { "3dccccc6/3f76872c", "3e99999f/3f5ced90", "3f000003/3f4353f8", "3f333336/3f29ba5d", "3f66666a/3f1020c5", "3f8cccce/3eed0e52" },
+                };
+                for (int i = 0; i <= 12; i++)
+                {
+                    ps.Simulate(.05f, true, i == 0, false);
+                    if (expected.TryGetValue(i, out var bits)) Assert.Equal(bits, PositionLifeBits(ps));
+                }
+            }
+            finally { Done(ps); }
+        }
+
+        [Fact]
+        public void LoopEndNewbornsAreAgedByTheWholeStep()
+        {
+            var ps = RateFixture(10f, 1.013f, system => { var main = system.main; main.duration = .3f; main.loop = true; });
+            try
+            {
+                var expected = new Dictionary<int, string[]>
+                {
+                    [2] = new[] { "33ccccca/3f81a9fb", "3e4cccd0/3f69ba5e", "3eccccd0/3f5020c5" },
+                    [3] = new[] { "33cccccf/3f81a9fb", "3e4cccd3/3f69ba5d", "3eccccd0/3f5020c5", "3f19999c/3f36872d" },
+                    [8] = new[] { "34999997/3f81a9fb", "3e4cccdd/3f69ba5c", "3eccccd4/3f5020c4", "3f19999e/3f36872a", "3f4cccd1/3f1ced90",
+                        "3f800002/3f0353f5", "3f99999a/3ed374b8", "3fb33332/3ea04185", "3fccccca/3e5a1ca0" },
+                };
+                for (int i = 0; i <= 8; i++)
+                {
+                    ps.Simulate(.1f, true, i == 0, false);
+                    if (expected.TryGetValue(i, out var bits)) Assert.Equal(bits, PositionLifeBits(ps));
+                }
+            }
+            finally { Done(ps); }
+        }
+
+        [Fact]
+        public void SeveralNewbornsOfOneStepShareItsGain()
+        {
+            var ps = RateFixture(50f, 1.013f, system => { var main = system.main; main.maxParticles = 5; });
+            try
+            {
+                ps.Simulate(.05f, true, true, false);
+                ps.Simulate(.05f, true, false, false);
+                Assert.Equal(new[] { "3356bf95/3f81a9fc", "3d23d70b/3f7e3540", "3da3d70b/3f791688", "3df5c290/3f73f7cf", "3e23d70a/3f6ed917" },
+                    PositionLifeBits(ps));
+            }
+            finally { Done(ps); }
+        }
+
         [Fact]
         public void AddingASystemAddsItsRendererAndPlaysOnAwake()
         {
