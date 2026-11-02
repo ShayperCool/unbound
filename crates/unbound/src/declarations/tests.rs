@@ -857,6 +857,7 @@ fn unresolved_builtin_use_passes_are_unknown_not_tagless() {
         subshaders: vec![DeclaredSubShader {
             tags: Vec::new(),
             passes,
+            lod: 0,
         }],
         ..Default::default()
     };
