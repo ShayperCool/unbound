@@ -91,6 +91,9 @@ MonoBehaviour:
             Assert.Null(sample.other.asset);
             Assert.Equal("{\"mat\":{\"instanceID\":" + material.GetInstanceID() + "},\"none\":{\"instanceID\":0},\"other\":{\"instanceID\":" + sample.other.instanceID + "}}",
                 JsonUtility.ToJson(sample));
+            // The broken reference is still set. Saving must not turn it into {fileID: 0}.
+            var saveError = Assert.Throws<NotSupportedException>(() => UnityYamlWriter.Write(new Object[] { sample }));
+            Assert.Contains("unresolved LazyLoadReference", saveError.Message);
             Object.DestroyImmediate(sample);
             Object.DestroyImmediate(material);
         }
