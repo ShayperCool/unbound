@@ -107,7 +107,7 @@ namespace Unbound.Tests
                 // The template a handler copies lives outside the scenes the load closes.
                 var template = Tracked("CreationTiny");
                 made.Add(template);
-                SceneManagerInternal.MoveToDontDestroyOnLoad(template);
+                SceneManager.MoveToDontDestroyOnLoad(template);
                 var destroyer = Tracked("Destroyer");
                 destroyer.GetComponent<TeardownMade>().onDestroy = () =>
                 {
@@ -200,8 +200,8 @@ namespace Unbound.Tests
                 keptChild = new GameObject("KeptChild");
                 keptChild.transform.SetParent(keptParent.transform);
                 made.AddRange(new[] { template, keptParent, keptChild });
-                SceneManagerInternal.MoveToDontDestroyOnLoad(template);
-                SceneManagerInternal.MoveToDontDestroyOnLoad(keptParent);
+                SceneManager.MoveToDontDestroyOnLoad(template);
+                SceneManager.MoveToDontDestroyOnLoad(keptParent);
                 Application.logMessageReceived += capture;
                 SceneManager.sceneUnloaded += unloaded;
                 SceneManagerInternal.UnloadForSingleLoad(incoming, sceneManagerLoad: true);
