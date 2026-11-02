@@ -522,7 +522,8 @@ namespace UnityEngine.SceneManagement
         /// Unity's name order varies between runs (measured); this lists them in the incoming
         /// scene's root order. One Error per closed scene that made roots is an inference: the
         /// measurement closes one outgoing scene. A handler of this log message runs with the
-        /// teardown still in effect; the roots it makes are reported with the next closed scene.
+        /// teardown still in effect; roots it makes after this snapshot are not included in this
+        /// diagnostic. Unity's behaviour for objects made by the diagnostic's handlers is unmeasured.
         /// </summary>
         static void ReportNotCleanedUp(SceneData incoming, HashSet<GameObject> before)
         {
