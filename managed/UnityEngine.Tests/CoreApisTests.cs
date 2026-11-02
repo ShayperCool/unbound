@@ -132,6 +132,7 @@ MonoBehaviour:
             GameObject.InstantiateGameObjects(source.GetInstanceID(), 2, ids, transforms);
             Assert.Equal(new[] { "Awake batch-src(Clone)", "OnEnable batch-src(Clone)", "Awake batch-child", "OnEnable batch-child",
                                  "Awake batch-src(Clone)", "OnEnable batch-src(Clone)", "Awake batch-child", "OnEnable batch-child" }, RecordsActivation.Log);
+            var firstCopy = (GameObject)Resources.InstanceIDToObject(ids[0]);
             var copy = (GameObject)Resources.InstanceIDToObject(ids[1]);
             Assert.Same(copy.transform, Resources.InstanceIDToObject(transforms[1]));
             Assert.Null(copy.transform.parent);
@@ -142,6 +143,7 @@ MonoBehaviour:
             Assert.Equal(0, transforms[1]);
             ids.Dispose();
             transforms.Dispose();
+            Object.DestroyImmediate(firstCopy);
             Object.DestroyImmediate(copy);
             Object.DestroyImmediate(parent);
         }
