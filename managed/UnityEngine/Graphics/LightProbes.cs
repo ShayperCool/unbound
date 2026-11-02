@@ -462,8 +462,10 @@ namespace UnityEngine
         /// their probes leave the loaded set without needsRetetrahedralization, and the current
         /// probes, when they are one of those scenes' own, lose their combined set (count and
         /// cellCount 0) but keep their own (countSelf, cellCountSelf). In the outgoing objects'
-        /// OnDisable and OnDestroy they are still whole; at the outgoing sceneUnloaded they are
-        /// cleared. The incoming scene's probes then become the current ones as its lighting data
+        /// recorded OnDestroy snapshot they are still whole; at the outgoing sceneUnloaded they are
+        /// cleared. Only the OnDestroy snapshot is recorded; keeping the set through OnDisable
+        /// and every outgoing root's destruction is Unbound's placement within that window.
+        /// The incoming scene's probes then become the current ones as its lighting data
         /// is read, before activeSceneChanged, again without an event (measured, Unity
         /// 6000.0.71f1: tests/projects/lightprobes Reference lifecycle.jsonl, branch
         /// t3/light-probes-lifecycle-2, commit f8516528, and creation-ownership.jsonl t1.a.iv; one

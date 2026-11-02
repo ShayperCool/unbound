@@ -393,8 +393,8 @@ namespace Unbound.Tests
         }
 
         /// <summary>
-        /// A SceneManager Single load keeps the global probes whole while the outgoing scene's
-        /// objects are destroyed: their OnDisable and OnDestroy, and a root made in OnDestroy, see
+        /// Unbound keeps the global probes whole while the outgoing scene's objects are
+        /// destroyed: their OnDisable and OnDestroy, and a root made in OnDestroy, see
         /// the combined set; the reset (count and cellCount 0, own counts kept, no
         /// needsRetetrahedralization) comes after, by the outgoing sceneUnloaded (measured, Unity
         /// 6000.0.71f1: tests/projects/lightprobes Reference creation-ownership.jsonl t1.a.iv,

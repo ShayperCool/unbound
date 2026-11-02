@@ -532,8 +532,8 @@ namespace UnityEngine.SceneManagement
         /// SceneManager load (<paramref name="sceneManagerLoad"/>) resets the light probe scene set
         /// once (LightProbes.SingleLoadReplacing), without needsRetetrahedralization, after the
         /// first outgoing scene's objects are destroyed and before its sceneUnloaded: during the
-        /// outgoing objects' OnDisable and OnDestroy, and for objects made there, the current
-        /// probes keep their combined set; at sceneUnloaded it is cleared (measured for one
+        /// recorded OnDestroy snapshot and for the object made there, the current probes keep
+        /// their combined set; at sceneUnloaded it is cleared (measured for one
         /// outgoing scene, Unity 6000.0.71f1: tests/projects/lightprobes Reference
         /// creation-ownership.jsonl t1.a.iv and lifecycle.jsonl row 22). Native destroys the
         /// outgoing roots in a varying order, so where the reset falls among the roots destroyed
