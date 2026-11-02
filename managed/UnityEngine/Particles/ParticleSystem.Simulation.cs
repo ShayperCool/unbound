@@ -989,6 +989,56 @@ namespace UnityEngine
                 p.m_Lifetime = 0f;
                 return true;
             }
+            var before = p.m_Position;
+            float speedModifier = Move(ref p, dt, ref c, age, out var moving);
+            if (m_Collision.enabled && !Collide(ref p, before, age, dt, speedModifier)) return false;
+            if (m_Trigger.enabled && !Trigger(ref p))
+            {
+                // A newborn killed while it is emitted is never added (measured: none is
+                // reported, even in a call's last step). An existing particle's life ends
+                // here: it keeps its moved state with zero remaining lifetime, and the next
+                // update removes it (measured: killed in a call's last internal step it is
+                // reported at lifetime 0, killed in an earlier one it is gone). The rest of
+                // this update still skips it, as before.
+                if (!existing) return false;
+                p.m_AgePercent = 100f;
+                p.m_Lifetime = 0f;
+                p.m_Flags |= Particle.FlagTriggerKilled;
+                return true;
+            }
+
+            uint seed = p.m_RandomSeed;
+            var RO = m_Rotation;
+            var RS = m_RotationBySpeed;
+            if (RO.enabled || RS.enabled)
+            {
+                // The rotation modules set the angular velocity (GetParticles reports it).
+                var w = Vector3.zero;
+                if (RO.enabled)
+                {
+                    float r = R.Value(seed, R.RotLife);
+                    w += RO.separateAxes ? new Vector3(RO.x.Evaluate(age, r), RO.y.Evaluate(age, r), RO.z.Evaluate(age, r)) : new Vector3(0f, 0f, RO.z.Evaluate(age, r));
+                }
+                if (RS.enabled)
+                {
+                    float s = Mathf.InverseLerp(RS.range.x, RS.range.y, moving.magnitude);
+                    float r = R.Value(seed, R.RotSpeed);
+                    w += RS.separateAxes ? new Vector3(RS.x.Evaluate(s, r), RS.y.Evaluate(s, r), RS.z.Evaluate(s, r)) : new Vector3(0f, 0f, RS.z.Evaluate(s, r));
+                }
+                if ((p.m_Flags & Particle.FlagFlipRotation) != 0) w = -w;
+                p.m_AngularVelocity = w;
+            }
+            p.m_Rotation += p.m_AngularVelocity * dt;
+
+            if (c.BirthSubs) BirthSubEmitters(ref p, ageBefore, p.m_StartLifetime - p.m_Lifetime, dt);
+            return true;
+        }
+
+        /// <summary>The velocity modules and one step's movement: sets the particle's velocity,
+        /// animated velocity and position, with the lifetime curves at <paramref name="age"/>. Returns
+        /// the speed modifier; <paramref name="moving"/> is the whole velocity it moved with.</summary>
+        float Move(ref Particle p, float dt, ref StepContext c, float age, out Vector3 moving)
+        {
             uint seed = p.m_RandomSeed;
             var v = p.m_Velocity;
             var V = m_Velocity;
@@ -1046,48 +1096,9 @@ namespace UnityEngine
             p.m_Velocity = v;
 
             p.m_AnimatedVelocity = animated;
-            var before = p.m_Position;
-            p.m_Position += (v + animated) * (speedModifier * dt);
-            if (m_Collision.enabled && !Collide(ref p, before, age, dt, speedModifier)) return false;
-            if (m_Trigger.enabled && !Trigger(ref p))
-            {
-                // A newborn killed while it is emitted is never added (measured: none is
-                // reported, even in a call's last step). An existing particle's life ends
-                // here: it keeps its moved state with zero remaining lifetime, and the next
-                // update removes it (measured: killed in a call's last internal step it is
-                // reported at lifetime 0, killed in an earlier one it is gone). The rest of
-                // this update still skips it, as before.
-                if (!existing) return false;
-                p.m_AgePercent = 100f;
-                p.m_Lifetime = 0f;
-                p.m_Flags |= Particle.FlagTriggerKilled;
-                return true;
-            }
-
-            var RO = m_Rotation;
-            var RS = m_RotationBySpeed;
-            if (RO.enabled || RS.enabled)
-            {
-                // The rotation modules set the angular velocity (GetParticles reports it).
-                var w = Vector3.zero;
-                if (RO.enabled)
-                {
-                    float r = R.Value(seed, R.RotLife);
-                    w += RO.separateAxes ? new Vector3(RO.x.Evaluate(age, r), RO.y.Evaluate(age, r), RO.z.Evaluate(age, r)) : new Vector3(0f, 0f, RO.z.Evaluate(age, r));
-                }
-                if (RS.enabled)
-                {
-                    float s = Mathf.InverseLerp(RS.range.x, RS.range.y, (v + animated).magnitude);
-                    float r = R.Value(seed, R.RotSpeed);
-                    w += RS.separateAxes ? new Vector3(RS.x.Evaluate(s, r), RS.y.Evaluate(s, r), RS.z.Evaluate(s, r)) : new Vector3(0f, 0f, RS.z.Evaluate(s, r));
-                }
-                if ((p.m_Flags & Particle.FlagFlipRotation) != 0) w = -w;
-                p.m_AngularVelocity = w;
-            }
-            p.m_Rotation += p.m_AngularVelocity * dt;
-
-            if (c.BirthSubs) BirthSubEmitters(ref p, ageBefore, p.m_StartLifetime - p.m_Lifetime, dt);
-            return true;
+            moving = v + animated;
+            p.m_Position += moving * (speedModifier * dt);
+            return speedModifier;
         }
 
         static MinMaxCurve InMode(MinMaxCurve curve, ParticleSystemCurveMode mode)
