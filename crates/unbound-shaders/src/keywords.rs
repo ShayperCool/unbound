@@ -155,7 +155,6 @@ fn declared(pragmas: &[Pragma]) -> Result<Vec<Declaration>> {
         let Some((first, rest)) = pragma.words.split_first() else {
             continue;
         };
-        let options = |w: &str| rest.iter().any(|r| r == w);
         let light = |words: &[&str]| set(words, Group::LightPass);
         match first.as_str() {
             "multi_compile_fog" => out.push(set(&FOG, Group::Builtin)),
@@ -168,14 +167,10 @@ fn declared(pragmas: &[Pragma]) -> Result<Vec<Declaration>> {
             }
             "multi_compile_particles" => out.push(set(&["SOFTPARTICLES_ON"], Group::Builtin)),
             "multi_compile_fwdbase" | "multi_compile_fwdbasealpha" => {
-                let mut d = light(&FWDBASE);
-                if options("novertexlight") {
-                    d.keywords.retain(|k| k != "VERTEXLIGHT_ON");
+                if let Some(option) = rest.first() {
+                    bail!("multi_compile_fwdbase option `{option}` is not measured");
                 }
-                if options("noshadow") {
-                    d.keywords.retain(|k| k != "SHADOWS_SCREEN");
-                }
-                out.push(d);
+                out.push(light(&FWDBASE));
             }
             "multi_compile_fwdadd" => out.push(light(&FWDADD)),
             "multi_compile_fwdadd_fullshadows" => {
@@ -283,7 +278,8 @@ impl Space {
         Ok(())
     }
 
-    /// A fixed-function pass (its program has the fog set).
+    /// An unlit fixed-function pass without an explicit Fog Mode. The provider rejects
+    /// unmeasured lit/Fog variants before adding their keywords.
     pub fn add_fixed_function(&mut self) {
         self.add_declarations(&[set(&FOG, Group::Builtin)]);
     }
@@ -671,5 +667,31 @@ mod tests {
             assert!(space.add_surface(&[], &[option.to_string()]).is_err());
         }
         assert_eq!(space.keywords.len(), STEREO.len());
+    }
+
+    #[test]
+    fn unmeasured_fwdbase_options_never_publish_a_partial_set() {
+        for option in [
+            "nolightmap",
+            "nodynlightmap",
+            "noshadow",
+            "novertexlight",
+            "other",
+        ] {
+            let mut space = Space::shader();
+            assert!(
+                space
+                    .add_program(&pragmas(&format!("#pragma multi_compile_fwdbase {option}")))
+                    .is_err()
+            );
+            assert_eq!(space.keywords.len(), STEREO.len());
+        }
+        let mut plain = Space::shader();
+        assert!(
+            plain
+                .add_program(&pragmas("#pragma multi_compile_fwdbase"))
+                .is_ok()
+        );
+        assert!(plain.keywords.iter().any(|k| k.name == "LIGHTMAP_ON"));
     }
 }

@@ -475,11 +475,17 @@ impl State {
         {
             subshaders = Err(u);
         }
+        // An unreadable Fallback invalidates the index for the NEXT question. A second walk
+        // here would rescan immediately, forget that source, and publish/cache a partial answer.
+        let keywords = match &subshaders {
+            Err(u) if u.transient => Err(u.clone()),
+            _ => self.project_keywords(inputs, lab),
+        };
         Description {
             found: true,
             builtin: false,
             subshaders,
-            keywords: self.project_keywords(inputs, lab),
+            keywords,
         }
     }
 
@@ -746,6 +752,11 @@ impl State {
                     if pass.states.fog_mode.is_some() {
                         return Err(Unknown::fixed(
                             "a fixed-function pass with explicit Fog Mode is not measured",
+                        ));
+                    }
+                    if pass.states.fixed.lighting == Some(true) {
+                        return Err(Unknown::fixed(
+                            "a fixed-function pass with Lighting On is not measured",
                         ));
                     }
                     space.add_fixed_function();

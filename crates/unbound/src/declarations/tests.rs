@@ -718,6 +718,8 @@ fn an_unreadable_project_fallback_never_becomes_a_partial_known_answer() {
     let answer = ask(&provider, "Tests/A");
     assert_eq!(answer["subshaders_known"], false);
     assert_eq!(answer["subshaders"], json!([]));
+    assert_eq!(answer["keywords_known"], false);
+    assert_eq!(answer["keywords"], json!([]));
     assert_eq!(answer["transient"], true);
     scratch.write(
         "Assets/B.shader",
@@ -787,4 +789,37 @@ fn fallback_extensions_surface_options_and_fog_are_not_partial_known_spaces() {
         false
     );
     assert_eq!(ask(&provider, "Tests/A")["subshaders_known"], true);
+}
+
+#[test]
+fn lit_fixed_function_spaces_and_their_fallbacks_are_unknown() {
+    let scratch = Scratch::new("decl-fixed-lighting");
+    scratch.write("CGIncludes/UnityCG.cginc", "// stand-in\n");
+    scratch.write(
+        "Assets/Lit.shader",
+        r#"Shader "Tests/Lit" { SubShader { Lighting On Pass { Color (1,1,1,1) } } }"#,
+    );
+    scratch.write("Assets/Fallback.shader", r#"Shader "Tests/LitFallback" { SubShader { Pass { Color (1,1,1,1) } } Fallback "Tests/Lit" }"#);
+    scratch.write(
+        "Assets/Unlit.shader",
+        r#"Shader "Tests/Unlit" { SubShader { Lighting Off Pass { Color (1,1,1,1) } } }"#,
+    );
+    scratch.write("Assets/Program.shader", "Shader \"Tests/LitProgram\" { SubShader { Lighting On Pass { HLSLPROGRAM\n#pragma vertex vert\n#pragma fragment frag\nENDHLSL } } }");
+    let provider = Provider::new(inputs(
+        &scratch,
+        scratch.0.join("CGIncludes"),
+        scratch.0.join("no-install"),
+        MEASURED,
+        Arc::new(AtomicUsize::new(0)),
+        Arc::new(AtomicBool::new(false)),
+    ));
+    for name in ["Tests/Lit", "Tests/LitFallback"] {
+        let answer = ask(&provider, name);
+        assert_eq!(answer["keywords_known"], false, "{name}: {answer}");
+        assert_eq!(answer["keywords"], json!([]));
+        assert!(answer["reason"].as_str().unwrap().contains("Lighting On"));
+    }
+    for name in ["Tests/Unlit", "Tests/LitProgram"] {
+        assert_eq!(ask(&provider, name)["keywords_known"], true, "{name}");
+    }
 }
