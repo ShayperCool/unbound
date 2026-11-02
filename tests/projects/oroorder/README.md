@@ -108,3 +108,26 @@ python3 tests/projects/oroorder/run.py publish --release 6000.0.71f1 --label <ne
 python3 tests/projects/oroorder/analyze.py tests/projects/oroorder/Reference/unity-6000.0.71f1.jsonl \
     --context tests/projects/coreapis/Reference/unity-6000.0.71f1.jsonl
 ```
+
+## Measured behavior in 6000.0.71f1
+
+`Reference/unity-6000.0.71f1.jsonl` (1171 lines) comes from two byte-identical, sequential
+windowed GPU captures, both exit 0 on the NVIDIA renderer with no forced stop. Its first 681
+lines equal the core API w4 reference up to the end of its OnDemandRendering window.
+
+* Every camera render in a frame calls every enabled handler in one list. That list is the
+  same for both cameras and independent of the camera order (P2: cameras S, R; handlers R, S, C).
+* Disabling and re-enabling RtCam's handler moves it to the end, and the others keep their
+  order: S, C, R from the next render on (P4). The order holds when the cameras are then
+  reordered (P5: cameras S, R; handlers S, C, R). This matches H1 (registration in OnEnable
+  order, order-preserving removal). It rejects H1s, H2/H2f, H3a/H3b and H0.
+* A depth change alone (ScreenCam -10 on screen, RtCam -5 into a texture) leaves the
+  texture camera first (P1). Within one target class, depth reorders the cameras (P2).
+  These observations come from test mutations; they are not a sorting rule.
+* The handlers' instance-id order is R, S, C, the same as the baseline list and the fileID
+  order. The baseline therefore does not separate scene-load registration order from
+  load order. Only the re-enable does that.
+
+Not shown: the scene-load wake (OnEnable) order of these handlers itself, so this does not
+prove file-order scene activation; type-grouped registration (one handler class); runtime
+AddComponent, prefab instances, execution-order attributes, multi-scene and SRP.
