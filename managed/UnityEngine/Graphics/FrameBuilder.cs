@@ -762,7 +762,7 @@ namespace Unbound.Runtime
             {
                 var lighting = item.Lighting;
                 if (probes && lighting.Probes == LightProbeUsage.BlendProbes)
-                    properties = BakedLighting.ApplyProbes(lighting.Anchor != null ? lighting.Anchor.position : item.Bounds.center, properties);
+                    properties = BakedLighting.ApplyProbes(lighting.Anchor != null ? lighting.Anchor.position : lighting.ProbePosition ?? item.Bounds.center, properties);
                 properties = ReflectionProbe.Apply(item.Bounds, lighting.Reflections, properties);
             }
             if (extra != null)

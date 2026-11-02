@@ -981,6 +981,113 @@ namespace UnityEngine
         public Matrix4x4 GetMatrix(int nameID) => m_Values.TryGetValue(nameID, out var v) && v is Matrix4x4 m ? m : Matrix4x4.identity;
         public Texture GetTexture(string name) => GetTexture(Shader.PropertyToID(name));
         public Texture GetTexture(int nameID) => m_Values.TryGetValue(nameID, out var v) ? v as Texture : null;
+
+        static readonly int[] s_ShArrayIds =
+        {
+            Shader.PropertyToID("unity_SHAr"), Shader.PropertyToID("unity_SHAg"), Shader.PropertyToID("unity_SHAb"),
+            Shader.PropertyToID("unity_SHBr"), Shader.PropertyToID("unity_SHBg"), Shader.PropertyToID("unity_SHBb"),
+            Shader.PropertyToID("unity_SHC"),
+        };
+        static readonly int s_ProbesOcclusionId = Shader.PropertyToID("unity_ProbesOcclusion");
+
+        /// <summary>The checks of the probe array copies, with the Editor's messages (measured:
+        /// tests/projects/lightprobes mpb errors).</summary>
+        static void CheckProbeCopy(int length, int sourceStart, int destStart, int count)
+        {
+            if (sourceStart < 0) throw new ArgumentOutOfRangeException(nameof(sourceStart), "Argument sourceStart must not be negative.");
+            if (destStart < 0) throw new ArgumentOutOfRangeException(nameof(sourceStart), "Argument destStart must not be negative.");
+            if (count < 0) throw new ArgumentOutOfRangeException(nameof(count), "Argument count must not be negative.");
+            if (length < sourceStart + count) throw new ArgumentOutOfRangeException("The specified source start index or count is out of the range.");
+        }
+
+        /// <summary>The Vector4 array property <paramref name="nameID"/>, made of
+        /// <paramref name="count"/> zeros when the block has none; one it has keeps its length.</summary>
+        Vector4[] ProbeArray(int nameID, int count)
+        {
+            if (m_Values.TryGetValue(nameID, out var v) && v is Vector4[] existing) return existing;
+            var array = new Vector4[count];
+            m_Values[nameID] = array;
+            return array;
+        }
+
+        /// <summary>
+        /// Writes probes as the seven ShadeSH9 constant arrays (unity_SHAr .. unity_SHC) instanced
+        /// draws and renderers with LightProbeUsage.CustomProvided take theirs from. A block without
+        /// them gets arrays of <paramref name="count"/> elements; arrays it has keep their length,
+        /// and elements past it are not written.
+        /// </summary>
+        void CopySH(IReadOnlyList<SphericalHarmonicsL2> lightProbes, int sourceStart, int destStart, int count)
+        {
+            if (count == 0) return;
+            var arrays = new Vector4[7][];
+            for (int k = 0; k < 7; k++) arrays[k] = ProbeArray(s_ShArrayIds[k], count);
+            for (int i = 0; i < count; i++)
+            {
+                lightProbes[sourceStart + i].ShaderConstants(out var ar, out var ag, out var ab, out var br, out var bg, out var bb, out var c);
+                Span<Vector4> values = stackalloc Vector4[] { ar, ag, ab, br, bg, bb, c };
+                for (int k = 0; k < 7; k++)
+                    if (destStart + i < arrays[k].Length) arrays[k][destStart + i] = values[k];
+            }
+        }
+
+        void CopyOcclusion(IReadOnlyList<Vector4> occlusionProbes, int sourceStart, int destStart, int count)
+        {
+            if (count == 0) return;
+            var array = ProbeArray(s_ProbesOcclusionId, count);
+            for (int i = 0; i < count && destStart + i < array.Length; i++) array[destStart + i] = occlusionProbes[sourceStart + i];
+        }
+
+        public void CopySHCoefficientArraysFrom(List<SphericalHarmonicsL2> lightProbes)
+        {
+            if (lightProbes == null) throw new ArgumentNullException(nameof(lightProbes));
+            CopySHCoefficientArraysFrom(lightProbes, 0, 0, lightProbes.Count);
+        }
+
+        public void CopySHCoefficientArraysFrom(SphericalHarmonicsL2[] lightProbes)
+        {
+            if (lightProbes == null) throw new ArgumentNullException(nameof(lightProbes));
+            CopySHCoefficientArraysFrom(lightProbes, 0, 0, lightProbes.Length);
+        }
+
+        public void CopySHCoefficientArraysFrom(List<SphericalHarmonicsL2> lightProbes, int sourceStart, int destStart, int count)
+        {
+            if (lightProbes == null) throw new ArgumentNullException(nameof(lightProbes));
+            CheckProbeCopy(lightProbes.Count, sourceStart, destStart, count);
+            CopySH(lightProbes, sourceStart, destStart, count);
+        }
+
+        public void CopySHCoefficientArraysFrom(SphericalHarmonicsL2[] lightProbes, int sourceStart, int destStart, int count)
+        {
+            if (lightProbes == null) throw new ArgumentNullException(nameof(lightProbes));
+            CheckProbeCopy(lightProbes.Length, sourceStart, destStart, count);
+            CopySH(lightProbes, sourceStart, destStart, count);
+        }
+
+        public void CopyProbeOcclusionArrayFrom(List<Vector4> occlusionProbes)
+        {
+            if (occlusionProbes == null) throw new ArgumentNullException(nameof(occlusionProbes));
+            CopyProbeOcclusionArrayFrom(occlusionProbes, 0, 0, occlusionProbes.Count);
+        }
+
+        public void CopyProbeOcclusionArrayFrom(Vector4[] occlusionProbes)
+        {
+            if (occlusionProbes == null) throw new ArgumentNullException(nameof(occlusionProbes));
+            CopyProbeOcclusionArrayFrom(occlusionProbes, 0, 0, occlusionProbes.Length);
+        }
+
+        public void CopyProbeOcclusionArrayFrom(List<Vector4> occlusionProbes, int sourceStart, int destStart, int count)
+        {
+            if (occlusionProbes == null) throw new ArgumentNullException(nameof(occlusionProbes));
+            CheckProbeCopy(occlusionProbes.Count, sourceStart, destStart, count);
+            CopyOcclusion(occlusionProbes, sourceStart, destStart, count);
+        }
+
+        public void CopyProbeOcclusionArrayFrom(Vector4[] occlusionProbes, int sourceStart, int destStart, int count)
+        {
+            if (occlusionProbes == null) throw new ArgumentNullException(nameof(occlusionProbes));
+            CheckProbeCopy(occlusionProbes.Length, sourceStart, destStart, count);
+            CopyOcclusion(occlusionProbes, sourceStart, destStart, count);
+        }
     }
 
     /// <summary>The project's sorting layers (ProjectSettings/TagManager.asset `m_SortingLayers`).</summary>
