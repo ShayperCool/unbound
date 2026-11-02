@@ -174,6 +174,9 @@ namespace Unbound.Runtime
         {
             SpriteMasking.NewFrame();
             SetColorSpace(colorSpace);
+            // Keep the normal frame's raster-state defaults without advancing the screen ring.
+            DepthBias(0f, 0f);
+            StateOverride(null);
         }
 
         /// <summary>The project's color space for what follows, before the first frame begins (a
