@@ -61,7 +61,24 @@ fn shader_setup(
             Vec::new()
         }
     };
-    let settings = unbound_shaders::Settings {
+    let settings = shader_settings(
+        project,
+        target,
+        Some(cg_includes),
+        Some(unbound_project::cache_root().join("shaders")),
+    );
+    (settings, project_roots, builtin_roots)
+}
+
+/// How the project's shader programs are preprocessed and compiled (reads nothing).
+fn shader_settings(
+    project: &Project,
+    target: &str,
+    cg_includes: Option<PathBuf>,
+    cache_dir: Option<PathBuf>,
+) -> unbound_shaders::Settings {
+    let v = project.version;
+    unbound_shaders::Settings {
         includes: unbound_shaders::Includes {
             project: project.root.clone(),
             packages: project
@@ -69,21 +86,53 @@ fn shader_setup(
                 .iter()
                 .map(|p| (p.name.clone(), p.root.clone()))
                 .collect(),
-            cg_includes: Some(cg_includes),
+            cg_includes,
         },
         // `UNITY_VERSION`: the release's numbers written one after another (6000.0.71: 6000071).
         unity_version: format!("{}{}{}", v.major, v.minor, v.patch)
             .parse()
             .unwrap_or(0),
-        cache_dir: Some(unbound_project::cache_root().join("shaders")),
+        cache_dir,
         platform_defines: project
             .settings
             .shader_defines(target)
             .into_iter()
             .map(String::from)
             .collect(),
+    }
+}
+
+/// Installs the provider of what shaders declare (`Shader.subshaderCount`, keyword spaces), with
+/// or without a renderer. Nothing is read, downloaded or created here: the provider reads only
+/// what a question needs, when it is asked (see [`crate::declarations`]).
+fn install_shader_declarations(project: &Project, target: &str) {
+    let mut project_roots = vec![project.assets.clone()];
+    project_roots.extend(project.packages.iter().map(|p| p.root.clone()));
+    // Scanned only; the renderer's setup creates it.
+    project_roots.push(project.root.join(unbound_app::shaderlab::GENERATED_SHADERS));
+    let install = project.install.clone();
+    let version_txt = project.root.join("ProjectSettings/ProjectVersion.txt");
+    let inputs = crate::declarations::Inputs {
+        project_roots,
+        settings: shader_settings(project, target, None, None),
+        install_cg_includes: project.install.data.join("CGIncludes"),
+        unity_data: project.install.data.clone(),
+        cache_root: unbound_project::cache_root(),
+        rules: project.profile.shader_keyword_rules(),
+        release: project.version.to_string(),
+        builtin_sources: std::sync::Arc::new(move || {
+            let txt = std::fs::read_to_string(&version_txt).ok();
+            let builtin =
+                unbound_project::builtin_shaders::BuiltinShaders::find(&install, txt.as_deref())?;
+            Ok(crate::declarations::BuiltinSources {
+                cg_includes: builtin.cg_includes(),
+                shader_roots: builtin.shader_roots(),
+            })
+        }),
     };
-    (settings, project_roots, builtin_roots)
+    unbound_runtime::shader_declarations::set_provider(Some(std::sync::Arc::new(
+        crate::declarations::Provider::new(inputs),
+    )));
 }
 
 pub fn shaders(args: &ProjectArgs, builtin: bool) -> Result<()> {
@@ -1140,6 +1189,7 @@ pub fn test(args: &ProjectArgs, test: TestArgs) -> Result<()> {
         persistent_data_path: None,
     };
     let (width, height) = project.settings.default_screen_for(&args.target);
+    install_shader_declarations(&project, &args.target);
     let mut game = unbound_runtime::Game::start(&project, &options)?;
     game.run_headless(u32::MAX, width, height);
     let code = game.exit_code().unwrap_or(3);
@@ -1204,6 +1254,7 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
         player_prefs: run.player_prefs.clone(),
         persistent_data_path: run.persistent_data_path.clone(),
     };
+    install_shader_declarations(&project, &args.target);
     if let Some(frames) = run.headless {
         if !run.snapshots.is_empty() {
             anyhow::bail!("--snapshot needs a window; it cannot be used with --headless");

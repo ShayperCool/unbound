@@ -1,5 +1,6 @@
 //! `unbound`: run a Unity project from its sources.
 mod commands;
+mod declarations;
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
