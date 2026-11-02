@@ -2636,3 +2636,13 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - Runtime: all 33 payloads and 1093 PDB-source documents rehashed; TestCore equals package Core abe89e5b. Four activation traces agree after metadata-only normalization; Native plain SetActive remains unmeasured.
 - Open: 11 significant child-first batch-order pairs, instance-id signs, JSON/format/exception text, lossless unresolved-Lazy YAML saves and per-copy scene resolution. Twenty-one Pose rotation keys are ledgered by absolute error, maximum 2.384185791015625e-7.
 - Evidence: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/claude-fresh-20261101b/core6-validation/RECEIPT.md`; Root receipt `validation/runs/core6-root-integration-20261102/root-validation.json`.
+
+### Root OnDemand integration, 2026-11-02
+- What: admitted measured built-in OnDemandRendering, offscreen preparation and coroutine EOF gating; production equals tested d0378bce. Awaitable, Time counter placement and handler dispatch are unchanged.
+- Probe: coreapis 356 matched / 326 missing / 326 extra of 682 reference lines; screen/GUI/EOF schedule matches all 17 window frames and RT callbacks run each frame. Screencapture Linear/graphics/lifecycle identical; messages 316/316.
+- Introduced: 0 lost reference matches, 67 resolved and 262 newly unmatched actual lines, all preserved. Their counter phase and OnRenderObject order also occur on the frozen baseline; no diagnostic normalization enters the comparator.
+- Managed: 1580/1591 with the identical 11 inherited failures; four new tests pass, including isolated mask/raster preparation. One build/suite, corrective unused, no Native or Rust builds.
+- API: fresh nine-module check 0/2318; all 108 generated files equal. Only the ten-line OnDemand stub block is removed; ABI unchanged.
+- Runtime: all 33 payloads and 1095 PDB-source documents rehashed; TestCore equals package Core cbf30c19; 265 compiled CLI inputs unchanged. Executed before-inputs match; the coreapis README-only change is explicit.
+- Open: significant renderedFrameCount phase and OnRenderObject handler order; no-RT visibility, SRP/custom dispatch, motion, panels, skipped readback and async EOF remain unmeasured. Earlier Core/LP/line gaps stay open.
+- Evidence: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/claude-fresh-20261101b/ondemand-validation/RECEIPT.md`; Root receipt `validation/runs/ondemand-root-integration-20261101b/root-validation.json`.

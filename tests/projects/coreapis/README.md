@@ -74,8 +74,8 @@ missing and extra line, with no tolerance.
 ## Measured scope admitted on 2026-11-02
 
 Validated source `0d49b10d` implements Pose, LazyLoadReference and the batch GameObject
-APIs. OnDemandRendering and the shared EOF changes remain held and unimplemented.
-The committed w4 reference and probe are unchanged.
+APIs. At that checkpoint OnDemandRendering was not included; its later measured
+admission is recorded below. The committed w4 reference and probe are unchanged.
 
 The strict reference comparison improves from 9 matching / 673 missing / 557 extra
 to 289 matching / 393 missing / 523 extra lines. No previously matching reference
@@ -113,3 +113,49 @@ graphics and assetclones outputs are byte-identical to the frozen baseline;
 messages pass 316/316, preserving their timing invariants. Detailed receipts,
 full unions and the activation control remain under the validation cache at
 `validation/runs/claude-fresh-20261101b/core6-validation/`.
+
+## OnDemand measured scope admitted on 2026-11-02
+
+Validated source `d0378bce` adds OnDemandRendering and coroutine EOF gating. The
+interval latched at frame start controls automatic screen cameras, overlay/GUI,
+presentation and WaitForEndOfFrame. The immediate willCurrentFrameRender property
+remains distinct when the interval changes during a frame. RT cameras retain the
+existing per-camera path on every frame. Skipped frames use the existing
+offscreen command path and Flush, without advancing the screen ring; frame mask
+bookkeeping and raster defaults are still prepared. Awaitable is unchanged.
+
+All 17 window frames match the Native screen-camera, GUI and EOF schedule, with
+screen/EOF at w0, 2, 5, 9, 11, 13 and 15. RT callbacks occur every frame. The
+interval, modulo and immediate-will fields match, including the transition
+frames w0, w7 and w12.
+
+The strict comparison is now 356 matching / 326 missing / 326 extra lines. It
+resolves 67 reference lines with zero lost previous matches. All 262 newly
+unmatched actual window lines remain in the raw union; they replace 459 old
+window/settings extras. The 64 non-window discrepancy pairs are unchanged,
+including the probe defects, precision ledger and significant Core API gaps.
+
+Two significant window gaps remain, both also observed on the frozen baseline:
+
+* `Time.renderedFrameCount` is one high during camera rendering, GUI and EOF.
+  Unbound increments before rendering, while Native increments after EOF. Both
+  advance once on every frame, whether or not it renders the screen.
+* OnRenderObject handlers run ScreenCam/RtCam/Cube in this witness instead of
+  Native's RtCam/ScreenCam/Cube. This is an observed difference, not a rule to
+  sort by object names.
+
+The diagnostic attribution can undo those two differences to explain the
+remaining frames. The comparator does not perform either transformation;
+strict failures, raw values and event order stay unchanged.
+
+The matching suite is 1580/1591 with the identical 11 inherited failures; all
+four new tests pass. API is 0 errors / 2318 types, and all 108 generated files
+match. Screencapture Linear, graphics and lifecycle are byte-identical to the
+baseline; messages retain their 316 passing invariants.
+
+Unmeasured cases remain explicit: skipped-frame visibility without an RT camera,
+SRP/custom dispatch, motion history, UI panels, skipped screen readback and async
+EOF. Interval-1 controls do not establish those paths. A skipped frame with a
+configured scriptable pipeline logs one warning. Full receipts, raw unions and
+the attribution remain under the validation cache at
+`validation/runs/claude-fresh-20261101b/ondemand-validation/`.
