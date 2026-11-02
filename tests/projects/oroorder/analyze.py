@@ -152,6 +152,16 @@ def guard_problem(path, context=None):
     if missing:
         return f'order-window frames without their frame/state lines: {missing}'
     for o in range(ORO_LAST + 1):
+        frame = fr[o]
+        headers = [r for r in records if r.get('w') == ORO_FIRST + o and r.get('who') == 'oro']
+        if sum(r['e'].startswith('frame ') for r in headers) != 1 or sum(r['e'].startswith('state ') for r in headers) != 1:
+            return f'frame o{o}: frame/state lines are not unique'
+        if len(frame['cameras']) != len(CAMERAS) or set(frame['cameras']) != set(CAMERAS):
+            return f'frame o{o}: incomplete camera renders: {frame["cameras"]}'
+        if frame['oro_cams'] != frame['cameras']:
+            return f'frame o{o}: handler groups do not match the recorded camera renders'
+        if any(len(h) != len(HANDLERS) or set(h) != set(HANDLERS) for h in frame['renders']):
+            return f'frame o{o}: incomplete or duplicate handlers'
         if fr[o]['mutations'] != MUTATIONS.get(o, []):
             return f'frame o{o}: mutations {fr[o]["mutations"]} instead of {MUTATIONS.get(o, [])}'
     ids = id_orders(records)
