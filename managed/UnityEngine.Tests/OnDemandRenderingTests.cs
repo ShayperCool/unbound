@@ -3,28 +3,12 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using Unbound.Runtime;
-using UnityEngine.LowLevel;
 using UnityEngine.Rendering;
 using Xunit;
 using PL = UnityEngine.PlayerLoop;
 
 namespace UnityEngine.Tests
 {
-    public class EndOfFrameRecorder : MonoBehaviour
-    {
-        internal readonly List<int> Resumed = new List<int>();
-
-        internal IEnumerator EndOfFrames()
-        {
-            var wait = new WaitForEndOfFrame();
-            while (true)
-            {
-                yield return wait;
-                Resumed.Add(Time.frameCount);
-            }
-        }
-    }
-
     /// <summary>OnDemandRendering as tests/projects/coreapis measured it (Reference w4). The interval,
     /// its frame-start latch, the frame clock, the drawing-frame flag and the target frame rate are
     /// global: every test restores them. The tests add no player-loop registrations; they only
@@ -34,13 +18,10 @@ namespace UnityEngine.Tests
     {
         const BindingFlags StaticPrivate = BindingFlags.Static | BindingFlags.NonPublic;
         // GfxStream's frame-start commands.
-        const byte BeginFrameOp = 1, ColorSpaceOp = 19;
+        const byte DepthBiasOp = 17, StateOverrideOp = 18, ColorSpaceOp = 19;
 
         static Dictionary<Type, List<Action>> Engine =>
             (Dictionary<Type, List<Action>>)typeof(PlayerLoopDriver).GetField("s_Engine", StaticPrivate).GetValue(null);
-
-        static void Run(Type node) => typeof(PlayerLoopDriver).GetMethod("RunSystem", StaticPrivate)
-            .Invoke(null, new object[] { new PlayerLoopSystem { type = node } });
 
         /// <summary>The frame starts: the clock advances and the interval is latched.</summary>
         static void BeginFrame(int frame)
@@ -132,128 +113,55 @@ namespace UnityEngine.Tests
             foreach (int w in new[] { 0, 7, 12 }) Assert.NotEqual(screen[w], will[w]);
         }
 
+        /// <summary>Preparing a skipped frame resets the same mask/raster defaults without a
+        /// BeginFrame command, which would advance the screen ring. No renderer, player-loop
+        /// callback or unrelated pending coroutine is run by this control.</summary>
         [Fact]
-        public void WaitForEndOfFrameResumesOnlyOnFramesThatRender()
+        public void AnOffscreenFrameResetsMaskAndRasterStateWithoutStartingAScreenFrame()
         {
-            using var scope = new Scope();
-            var go = new GameObject("end of frame recorder");
-            try
-            {
-                var recorder = go.AddComponent<EndOfFrameRecorder>();
-                recorder.StartCoroutine(recorder.EndOfFrames());
-                OnDemandRendering.renderFrameInterval = 3;
-                foreach (int frame in new[] { 40, 41, 42 })
-                {
-                    BeginFrame(frame);
-                    Run(typeof(PL.PostLateUpdate.TriggerEndOfFrameCallbacks));
-                }
-                Assert.Equal(new[] { 42 }, recorder.Resumed);
-                // Interval 1 from this frame's Update: willCurrentFrameRender turns true at once,
-                // but the frame began with 3 and does not render; the next one does.
-                BeginFrame(43);
-                OnDemandRendering.renderFrameInterval = 1;
-                Assert.True(OnDemandRendering.willCurrentFrameRender);
-                Run(typeof(PL.PostLateUpdate.TriggerEndOfFrameCallbacks));
-                Assert.Equal(new[] { 42 }, recorder.Resumed);
-                BeginFrame(44);
-                Run(typeof(PL.PostLateUpdate.TriggerEndOfFrameCallbacks));
-                Assert.Equal(new[] { 42, 44 }, recorder.Resumed);
-                recorder.StopAllCoroutines();
-            }
-            finally
-            {
-                Object.DestroyImmediate(go);
-            }
-        }
-
-        sealed class OverlaySource : FrameBuilder.IDrawSource
-        {
-            internal int Overlays;
-            internal readonly List<Camera> Cameras = new List<Camera>();
-            public void CollectCameraDraws(FrameBuilder.CameraContext camera, List<FrameBuilder.DrawItem> into) => Cameras.Add(camera.Camera);
-            public void CollectOverlayDraws(List<FrameBuilder.DrawItem> into) => Overlays++;
-        }
-
-        /// <summary>A frame that does not render still renders the camera that renders into a
-        /// texture, through the same camera path (draw collection, callbacks), after the frame's
-        /// preparation (sprite mask bookkeeping, color space); it starts no screen frame and draws
-        /// no screen camera or overlay. Time.renderedFrameCount and InDrawingFrame keep their
-        /// current behaviour.</summary>
-        [Fact]
-        public void ASkippedFrameRendersOnlyTheCamerasThatRenderIntoTextures()
-        {
-            using var scope = new Scope();
-            var rtGo = new GameObject("on-demand texture camera");
-            var screenGo = new GameObject("on-demand screen camera");
-            var target = new RenderTexture(16, 16, 24);
-            var source = new OverlaySource();
-            var events = new List<string>();
+            var bufferField = typeof(GfxStream).GetField("s_Buffer", StaticPrivate);
+            var lengthField = typeof(GfxStream).GetField("s_Length", StaticPrivate);
+            var overrideField = typeof(GfxStream).GetField("<CurrentOverride>k__BackingField", StaticPrivate);
+            var masksField = typeof(SpriteMasking).GetField("s_Masks", StaticPrivate);
             var stencil = (IDictionary)typeof(SpriteMasking).GetField("s_Stencil", StaticPrivate).GetValue(null);
-            var stale = (ulong.MaxValue - 1, ulong.MaxValue - 2);
-            Camera rt = null, screen = null;
-            byte firstCommand = 0;
-            Camera.CameraCallback preCull = c =>
-            {
-                if (c != rt && c != screen) return;
-                events.Add(c.name + " OnPreCull");
-                if (c == rt && GfxStream.Recorded.Length > 0) firstCommand = GfxStream.Recorded[0];
-            };
-            Camera.CameraCallback postRender = c => { if (c == rt || c == screen) events.Add(c.name + " OnPostRender"); };
-            Camera.onPreCull += preCull;
-            Camera.onPostRender += postRender;
-            FrameBuilder.Sources.Add(source);
+            var buffer = (byte[])bufferField.GetValue(null);
+            var length = (int)lengthField.GetValue(null);
+            var pending = GfxStream.Recorded.ToArray();
+            var stateOverride = GfxStream.CurrentOverride;
+            var masks = masksField.GetValue(null);
+            var entries = new List<DictionaryEntry>();
+            foreach (DictionaryEntry entry in stencil) entries.Add(entry);
             try
             {
-                rt = rtGo.AddComponent<Camera>();
-                rt.targetTexture = target;
-                screen = screenGo.AddComponent<Camera>();
-                OnDemandRendering.renderFrameInterval = 3;
+                GfxStream.DepthBias(3f, 4f);
+                GfxStream.StateOverride(new RenderStateBlock(RenderStateMask.Raster));
+                Assert.True(GfxStream.CurrentOverride.HasValue);
+                lengthField.SetValue(null, 0);
+                stencil[(ulong.MaxValue - 1, ulong.MaxValue - 2)] = new List<SpriteMask>();
 
-                // frameCount 41 with interval 3 latched: not rendered.
-                BeginFrame(41);
-                stencil[stale] = new List<SpriteMask>();
-                GfxStream.Flush();
-                int rendered = Time.s_RenderedFrameCount;
-                Run(typeof(PL.PostLateUpdate.FinishFrameRendering));
-                Assert.False(OnDemandRendering.RendersThisFrame);
-                Assert.Equal(new[] { rt.name + " OnPreCull", rt.name + " OnPostRender" }, events);
-                Assert.Contains(rt, source.Cameras);
-                Assert.DoesNotContain(screen, source.Cameras);
-                Assert.Equal(0, source.Overlays);
-                Assert.Equal(ColorSpaceOp, firstCommand);
-                Assert.False(stencil.Contains(stale));
-                Assert.Equal(rendered + 1, Time.s_RenderedFrameCount);
-                Assert.True(FrameBuilder.InDrawingFrame);
-                Run(typeof(PL.PostLateUpdate.GUIClearEvents));
-                Assert.False(FrameBuilder.InDrawingFrame);
+                GfxStream.BeginOffscreenFrame(ColorSpace.Linear);
 
-                // frameCount 42: rendered, the texture camera first, then the screen camera and the overlay.
-                events.Clear();
-                source.Cameras.Clear();
-                BeginFrame(42);
-                stencil[stale] = new List<SpriteMask>();
-                GfxStream.Flush();
-                rendered = Time.s_RenderedFrameCount;
-                Run(typeof(PL.PostLateUpdate.FinishFrameRendering));
-                Assert.True(OnDemandRendering.RendersThisFrame);
-                Assert.Equal(new[] { rt.name + " OnPreCull", rt.name + " OnPostRender", screen.name + " OnPreCull", screen.name + " OnPostRender" }, events);
-                Assert.Contains(screen, source.Cameras);
-                Assert.True(source.Cameras.IndexOf(rt) >= 0 && source.Cameras.IndexOf(rt) < source.Cameras.IndexOf(screen));
-                Assert.Equal(1, source.Overlays);
-                Assert.Equal(BeginFrameOp, firstCommand);
-                Assert.False(stencil.Contains(stale));
-                Assert.Equal(rendered + 1, Time.s_RenderedFrameCount);
-                Assert.True(FrameBuilder.InDrawingFrame);
+                Assert.Empty(stencil);
+                Assert.Null(GfxStream.CurrentOverride);
+                var commands = GfxStream.Recorded.ToArray();
+                Assert.Equal(16, commands.Length);
+                Assert.Equal(ColorSpaceOp, commands[0]);
+                Assert.Equal(1, BitConverter.ToInt32(commands, 1));
+                Assert.Equal(DepthBiasOp, commands[5]);
+                Assert.Equal(0f, BitConverter.ToSingle(commands, 6));
+                Assert.Equal(0f, BitConverter.ToSingle(commands, 10));
+                Assert.Equal(StateOverrideOp, commands[14]);
+                Assert.Equal((byte)0, commands[15]);
             }
             finally
             {
-                stencil.Remove(stale);
-                FrameBuilder.Sources.Remove(source);
-                Camera.onPreCull -= preCull;
-                Camera.onPostRender -= postRender;
-                Object.DestroyImmediate(rtGo);
-                Object.DestroyImmediate(screenGo);
-                Object.DestroyImmediate(target);
+                pending.CopyTo(buffer, 0);
+                bufferField.SetValue(null, buffer);
+                lengthField.SetValue(null, length);
+                overrideField.SetValue(null, stateOverride);
+                masksField.SetValue(null, masks);
+                stencil.Clear();
+                foreach (var entry in entries) stencil.Add(entry.Key, entry.Value);
             }
         }
     }
