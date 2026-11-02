@@ -155,7 +155,8 @@ parity. The comparators retain their strict failures and original tolerances.
 
 The main probe matches 367/625 values and its image matches all 57600 pixels exactly.
 The lifecycle comparison now matches 14/31 rows. Creation ownership satisfies all three
-predeclared contract rules; its full canonical comparison matches 57/84 rows. The
+predeclared contract rules; its full canonical comparison matches 65/84 rows. The
+unrelaxed main comparison against each raw Native repeat matches 57/83. The
 four created objects belong to the incoming scene from Awake, survive its load,
 are discoverable during teardown and are destroyed when that scene next unloads.
 Explicit parents and loaded requested scenes remain authoritative.
