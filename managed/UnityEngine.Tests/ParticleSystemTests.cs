@@ -1044,7 +1044,10 @@ namespace UnityEngine.Tests
             limit.dampen = 1f;
             Run(ps, 0.1f, 0.01f);
             ps.GetParticles(particles);
-            Assert.True(particles[0].velocity.magnitude <= 2.001f);
+            // The Native limit_separate_axes history caps totalVel, subtracting the
+            // animated contribution from vel. The particle's own speed can exceed the cap.
+            Assert.True(particles[0].totalVelocity.magnitude <= 2.001f);
+            Assert.Equal(new Vector3(1, 0, 0), particles[0].animatedVelocity);
             Done(ps);
         }
 
@@ -1363,16 +1366,17 @@ namespace UnityEngine.Tests
             Assert.True(geometry.Build(renderer, ps, view));
             Assert.Equal(4, geometry.VertexCount);
             Assert.Equal(6, geometry.IndexCount);
-            Assert.Equal(new Vector3(-1, -1, 5), geometry.Positions[0]);
-            Assert.Equal(new Vector3(1, 1, 5), geometry.Positions[2]);
+            // Native particlestreams normal.0 starts at the top left, clockwise.
+            Assert.Equal(new Vector3(-1, 1, 5), geometry.Positions[0]);
+            Assert.Equal(new Vector3(1, -1, 5), geometry.Positions[2]);
             Assert.Equal(new Color32(255, 0, 0, 255), geometry.Colors[0]);
-            Assert.Equal(new Vector4(0f, 0.5f, 0f, 0f), geometry.Uvs[0]);
-            Assert.Equal(new Vector4(0.5f, 1f, 0f, 0f), geometry.Uvs[2]);
+            Assert.Equal(new Vector4(0f, 1f, 0f, 0f), geometry.Uvs[0]);
+            Assert.Equal(new Vector4(0.5f, 0.5f, 0f, 0f), geometry.Uvs[2]);
 
             var mesh = new Mesh();
             geometry.WriteTo(mesh, Matrix4x4.identity);
             Assert.Equal(4, mesh.vertexCount);
-            Assert.Equal(new[] { 0, 1, 2, 2, 3, 0 }, mesh.triangles);
+            Assert.Equal(new[] { 0, 1, 2, 0, 2, 3 }, mesh.triangles);
             Object.DestroyImmediate(mesh);
             Done(ps);
         }
