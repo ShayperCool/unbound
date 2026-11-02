@@ -459,7 +459,9 @@ namespace Unbound.Tests
         /// an empty array in its sceneUnloaded instead of throwing. It stays valid and listed in
         /// the sceneUnloaded of the handler's scene, which the same load closes, and both become
         /// invalid when the teardown ends. The internal loaded list (loading, lighting, Find) does
-        /// not change: the incoming scene is not in it.
+        /// not change: the incoming scene is not in it. Engine code sees the closed scene gone as
+        /// before: a copy explicitly asked for in it goes to the incoming scene, not into a scene
+        /// that no longer exists (Unity is not measured for that request).
         /// </summary>
         [Fact]
         public void SingleLoadTeardownListsOutgoingIncomingAndHandlerMadeScenes()
@@ -468,10 +470,17 @@ namespace Unbound.Tests
             var made = new List<GameObject>();
             var seen = new List<string>();
             Requested requested = null;
-            Scene handlerScene = default;
+            Scene handlerScene = default, closedMain = default;
+            GameObject template = null;
             UnityEngine.Events.UnityAction<Scene> unloaded = s =>
             {
                 seen.Add($"sceneUnloaded {s.name}: {Listing()} | {Internal()}");
+                if (s.name == "Made")
+                {
+                    var copy = UObject.Instantiate(template, new InstantiateParameters { scene = closedMain });
+                    made.Add(copy);
+                    seen.Add($"closed Main registered {SceneRegistry.Get(new SceneHandle(closedMain.handle)) != null}, copy in {copy.scene.name}");
+                }
                 if (s.name != "Main") return;
                 handlerScene = SceneManager.CreateScene("Made");
                 SceneManager.SetActiveScene(handlerScene);
@@ -481,8 +490,12 @@ namespace Unbound.Tests
             {
                 LightmapSettings.Reset();
                 var main = scenes.Loaded("Main");
+                closedMain = new Scene(main.Handle);
                 var incoming = scenes.Loading("Extra");
                 requested = new Requested(incoming);
+                template = new GameObject("Template");
+                made.Add(template);
+                SceneManager.MoveToDontDestroyOnLoad(template);
                 var destroyer = Tracked("Destroyer");
                 made.Add(destroyer);
                 destroyer.GetComponent<TeardownMade>().onDestroy = () => seen.Add($"OnDestroy: {Listing()} | {Internal()}");
@@ -497,13 +510,14 @@ namespace Unbound.Tests
                     "sceneUnloaded Main: Main valid True loaded False roots 0, Extra valid True loaded False roots 0 | loadedSceneCount 0 | internal []",
                     "made: Main valid True loaded False roots 0, Extra valid True loaded False roots 0, Made valid True loaded True roots 0 | loadedSceneCount 1 | internal [Made]",
                     "sceneUnloaded Made: Main valid True loaded False roots 0, Extra valid True loaded False roots 0, Made valid True loaded False roots 0 | loadedSceneCount 0 | internal []",
+                    "closed Main registered False, copy in Extra",
                 }, seen);
                 // The teardown is over: the scenes it closed are invalid; the incoming scene, still
                 // requested in this test, is listed alone.
                 Assert.Null(SceneRegistry.Teardown);
                 Assert.False(new Scene(main.Handle).IsValid());
                 Assert.False(handlerScene.IsValid());
-                Assert.Equal("Extra valid True loaded False roots 0 | loadedSceneCount 0", Listing());
+                Assert.Equal("Extra valid True loaded False roots 1 | loadedSceneCount 0", Listing());
                 Assert.Empty(SceneRegistry.Loaded);
             }
             finally
