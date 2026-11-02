@@ -430,9 +430,14 @@ fn an_unavailable_input_recovers() {
     assert_eq!(calls.load(Ordering::Relaxed), 1);
     let again = ask(&provider, "Tests/Hlsl");
     assert_eq!(again["transient"], true);
-    assert_eq!(calls.load(Ordering::Relaxed), 2, "a failure is not kept");
+    assert_eq!(calls.load(Ordering::Relaxed), 1, "a failure backs off across questions");
 
     available.store(true, Ordering::Relaxed);
+    {
+        let mut state = provider.state.lock().unwrap();
+        let retry_at = state.sources_failed.as_ref().unwrap().0 + SOURCE_RETRY_DELAY;
+        assert!(state.sources_at(&provider.inputs, retry_at).is_ok());
+    }
     let answer = ask(&provider, "Tests/Hlsl");
     assert_eq!(answer["keywords_known"], true);
     assert_eq!(answer["transient"], false);
@@ -441,7 +446,7 @@ fn an_unavailable_input_recovers() {
     assert_eq!(answer["keywords"][4]["local"], false);
     assert_eq!(answer["keywords"][5]["local"], true);
     let _ = ask(&provider, "Tests/Hlsl");
-    assert_eq!(calls.load(Ordering::Relaxed), 3, "found once, then kept");
+    assert_eq!(calls.load(Ordering::Relaxed), 2, "found once, then kept");
 }
 
 /// Questions from many threads at once get the same complete answers.

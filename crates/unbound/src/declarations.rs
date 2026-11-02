@@ -23,6 +23,7 @@ use serde_json::{Value, json};
 use std::collections::HashSet;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 use unbound_app::shaderlab::{PassInfo, ShaderIndex, ShaderLab};
 use unbound_assets::builtin_shaders::{DeclarationMap, Declarations as Builtin};
 use unbound_compat::ShaderKeywordRules;
@@ -95,11 +96,16 @@ fn stamp(files: &[PathBuf]) -> Option<Stamp> {
         .collect()
 }
 
+const SOURCE_RETRY_DELAY: Duration = Duration::from_secs(30);
+
 #[derive(Default)]
 struct State {
     project: Option<ShaderIndex>,
     builtin: Option<(Arc<DeclarationMap>, Stamp)>,
     sources: Option<(PathBuf, ShaderIndex)>,
+    // Input failures are transient, but repeated metadata reads must not repeat large reads or downloads.
+    builtin_failed: Option<(Option<Stamp>, Instant, Unknown)>,
+    sources_failed: Option<(Instant, Unknown)>,
     compiler: Option<unbound_shaders::ShaderCompiler>,
     /// Conditions already warned about.
     warned: HashSet<String>,
@@ -303,12 +309,21 @@ impl State {
         {
             return Ok(map.clone());
         }
+        if let Some((seen, when, why)) = &self.builtin_failed
+            && seen == &now && when.elapsed() < SOURCE_RETRY_DELAY
+        {
+            return Err(why.clone());
+        }
         self.builtin = None;
-        let map =
-            unbound_assets::builtin_shaders::declarations(&inputs.unity_data, &inputs.cache_root)
-                .map_err(|e| {
-                Unknown::transient(format!("Unity's built-in shaders cannot be read: {e:#}"))
-            })?;
+        self.builtin_failed = None;
+        let map = match unbound_assets::builtin_shaders::declarations(&inputs.unity_data, &inputs.cache_root) {
+            Ok(map) => map,
+            Err(e) => {
+                let why = Unknown::transient(format!("Unity's built-in shaders cannot be read: {e:#}"));
+                self.builtin_failed = Some((now, Instant::now(), why.clone()));
+                return Err(why);
+            }
+        };
         let map = Arc::new(map);
         if let Some(now) = now {
             self.builtin = Some((map.clone(), now));
@@ -316,14 +331,27 @@ impl State {
         Ok(map)
     }
 
-    /// Unity's built-in shader sources, found when first needed (not kept when that fails).
+    /// Failed source discovery retries at most once in 30 seconds across all shader questions.
     fn sources(&mut self, inputs: &Inputs) -> Result<&mut (PathBuf, ShaderIndex), Unknown> {
+        self.sources_at(inputs, Instant::now())
+    }
+
+    fn sources_at(&mut self, inputs: &Inputs, now: Instant) -> Result<&mut (PathBuf, ShaderIndex), Unknown> {
         if self.sources.is_none() {
-            let found = (inputs.builtin_sources)().map_err(|e| {
-                Unknown::transient(format!(
-                    "Unity's built-in shader sources are not available: {e:#}"
-                ))
-            })?;
+            if let Some((when, why)) = &self.sources_failed
+                && now.duration_since(*when) < SOURCE_RETRY_DELAY
+            {
+                return Err(why.clone());
+            }
+            let found = match (inputs.builtin_sources)() {
+                Ok(found) => found,
+                Err(e) => {
+                    let why = Unknown::transient(format!("Unity's built-in shader sources are not available: {e:#}"));
+                    self.sources_failed = Some((now, why.clone()));
+                    return Err(why);
+                }
+            };
+            self.sources_failed = None;
             self.sources = Some((found.cg_includes, ShaderIndex::scan(&found.shader_roots)));
         }
         Ok(self.sources.as_mut().unwrap())
