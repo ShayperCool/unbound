@@ -147,11 +147,16 @@ namespace UnityEngine
         int m_QueueTried = -1;
 
 
+        /// <summary>Its SubShaders, then those of its Fallback chain (canonical
+        /// tests/projects/shaderkeywords: Standard counts its two and VertexLit's one). 1 while the
+        /// host cannot say (the behaviour before SubShaders were read).</summary>
         public int subshaderCount
         {
             get
             {
-                Unbound.Runtime.Stubs.Ignored("Shader.subshaderCount", "is always 1: SubShaders are not counted yet");
+                var d = Unbound.Runtime.ShaderDeclarations.Of(this);
+                if (d.SubShadersKnown) return d.SubShaders.Count;
+                Unbound.Runtime.Stubs.Ignored("Shader.subshaderCount", "is 1 for a shader whose SubShaders the host does not know");
                 return 1;
             }
         }
