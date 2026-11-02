@@ -61,6 +61,12 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
 
 ## Toolchains
 
+- For new Rust/native builds use `python3 tools/build.py -- build --release --locked -p unbound`.
+  It takes one installed build lease, gives each checkout private targets/intermediates, and
+  shares compiler results through kache when installed, otherwise sccache. Inside an existing
+  build lease add `--direct`; never nest leases. An explicit `CARGO_TARGET_DIR` is preserved.
+  See `tools/validation/README.md` for setup and the parallel cache benchmark. Do not enable
+  kache build-script-run caching or target seeding: our host build has outputs outside `OUT_DIR`.
 - Rust: `~/.cargo/bin` (add to `PATH`), version pinned in `rust-toolchain.toml`.
 - .NET: `~/.dotnet/dotnet` (SDK 10; else `DOTNET_ROOT` or the system install, e.g.
   `/usr/local/share/dotnet` on macOS) builds the managed engine; the game code runs on the CoreCLR

@@ -130,6 +130,70 @@ does not establish the best Cargo parallelism or performance under Editor load.
 
 ## Build isolation
 
+For new builds, run `python3 tools/build.py -- build --release --locked -p unbound`
+from the checkout being built. The wrapper uses the installed build lease once.
+Use `--direct` when a surrounding script already owns that lease. Do not wrap
+the default command in `with-heavy-job` again. Cargo arguments follow `--`.
+
+The default target is `$XDG_CACHE_HOME/unbound/builds/targets/<checkout-path-hash>`
+or `~/.cache/unbound/builds/targets/<checkout-path-hash>`. Intermediates go to
+that target's `build/`, regardless of an inherited `CARGO_BUILD_BUILD_DIR`.
+An explicit `CARGO_TARGET_DIR` wins; an ownership marker rejects sharing it
+between checkouts. Use that environment variable rather than `--target-dir`,
+because `unbound-host` reads the variable for managed/native output placement.
+`--print-env` inspects the selection without starting a build. `UNBOUND_BUILD_ROOT`
+can select a different cache volume. Put `builds/` on an SSD with enough space;
+cache and targets on the same CoW filesystem allow kache to reflink outputs.
+Existing targets and global Cargo/shell configuration are not migrated.
+
+`--cache auto` selects kache when installed, otherwise sccache. `--cache none`
+disables the Rust wrapper for an uncached control. Explicit CC/CXX selections
+are preserved; otherwise C and C++ use the same cache as Rust. Worktree roots
+are normalized through `KACHE_BASE_DIR` or `SCCACHE_BASEDIRS`. The kache store
+defaults to `builds/kache`, is local-only, and has a 30 GiB budget. The wrapper
+disables build-script-run caching, shared hermetic `OUT_DIR`s, target/incremental
+seeding and automatic target deletion. `unbound-host` writes required files
+outside `OUT_DIR`, which cached script execution would not replay. Real compiler
+children stay in the build scope; trusted daemon execution is disabled.
+
+The measured version is kache **2.0.0**, upstream tag at
+`e465eff90d87669d7b0a9ee1010f1ee1e44090ed`. Install the official release's paired
+`kache` and `kache-engine` binaries together in
+`~/.cache/unbound/tools/kache-2.0.0/`, or install kache on PATH. For Linux x86_64,
+the release asset `kache-x86_64-unknown-linux-musl.tar.gz` has SHA-256
+`6c59665faf1b14d0944391e6f2a1b510195e6be92c63060a9d1770ed00676824`.
+Release assets: <https://github.com/kunobi-ninja/kache/releases/tag/v2.0.0>.
+There is no need to run `kache init`, change global wrappers or stop an existing
+sccache server. Keep both binaries when upgrading a standalone installation.
+
+### Reproducing compiler-cache measurements
+
+Run the driver directly, since its workers take their own build leases:
+
+```sh
+python3 tools/validation/compiler_cache_benchmark.py \
+  --out "$HOME/.cache/unbound/validation/runs/compiler-cache-NEW" \
+  --sessions 4 --workers 2 --units 3 --repeats 3
+```
+
+This compiles actual Rust libraries/executables and C++ template units using
+cc-rs, with a cold batch followed by three warm batches per backend. Each case
+uses new independent source, target and build directories. Only the compiler
+cache survives. Backend order reverses on alternate warm repeats. It then
+checks a Rust edit, a header edit with unchanged mtime, divergent simultaneous
+session inputs, behavior-changing Rust/C++ flags and a deliberate compiler error.
+Every successful binary must return its expected value. Every target must have
+private dep-info/OUT_DIRs and the required build-script side effect. An embedded
+`env!("CARGO_MANIFEST_DIR")` must name the current checkout, as in our asset build.
+
+The report retains per-job logs, commands, wall/CPU time, admission wait, output
+hashes and cache statistics. CPU accounting from the process tree excludes a
+separate sccache server; compare batch wall time. The sccache server uses a
+private port/store and is stopped afterwards, as is a benchmark kache daemon
+if one was started. A busy port is rejected; select another with `--sccache-port`.
+Do not overlap benchmark drivers or other heavy jobs when comparing throughput.
+Synthetic cache gains do not establish full-engine, managed-build or Editor gains.
+
 Every child build keeps both its intermediates and its final outputs private. Give each
 build its own `CARGO_TARGET_DIR` on the SSD cache and do not set a shared
 `CARGO_BUILD_BUILD_DIR`. A private target directory is not enough if the build
