@@ -108,6 +108,20 @@ namespace UnityEngine.Tests
             return logs;
         }
 
+        sealed class DiagnosticCapture : ILogHandler
+        {
+            readonly ILogHandler inner;
+            internal int ShaderWarnings;
+            internal DiagnosticCapture(ILogHandler inner) { this.inner = inner; }
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                string message = string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args);
+                if (type == LogType.Warning && message.Contains("Unbound: ShaderDeclarations")) ShaderWarnings++;
+                inner.LogFormat(type, context, format, args);
+            }
+            public void LogException(Exception exception, Object context) => inner.LogException(exception, context);
+        }
+
         static string[] Names(IEnumerable<LocalKeyword> keywords) => keywords.Select(k => k.name).ToArray();
 
         // ------------------------------------------------------------------ keyword spaces
@@ -270,25 +284,45 @@ namespace UnityEngine.Tests
         [Fact]
         public void AnOlderHostKeepsNameBasedKeywords()
         {
-            m_Throw = true;
-            var forms = Forms();
-            Material m = null;
-            LocalKeyword k = default;
-            var logs = Errors(() =>
+            int hitsBefore = Stubs.HitReport().FirstOrDefault(x => x.Key == "ShaderDeclarations").Value;
+            var logger = Debug.unityLogger;
+            var handler = logger.logHandler;
+            bool enabled = logger.logEnabled;
+            var filter = logger.filterLogType;
+            var capture = new DiagnosticCapture(handler);
+            logger.logHandler = capture;
+            logger.logEnabled = true;
+            logger.filterLogType = LogType.Log;
+            try
             {
-                k = new LocalKeyword(forms, "ANYTHING");
-                m = new Material(forms);
-                m.SetKeyword(k, true);
-                m.EnableKeyword("B_NAME");
-            });
-            Assert.DoesNotContain(logs, l => l.StartsWith("Error"));
-            Assert.Single(logs, l => l.Contains("ShaderDeclarations"));
-            Assert.True(k.isValid);
-            Assert.True(m.IsKeywordEnabled("ANYTHING") && m.IsKeywordEnabled(k));
-            Assert.Equal(new[] { "ANYTHING", "B_NAME" }, m.shaderKeywords);
-            Assert.Equal(new[] { "ANYTHING", "B_NAME" }, Names(m.enabledKeywords));
-            Assert.Equal(1, forms.subshaderCount);
-            Assert.Equal(1, m_Calls);
+                m_Throw = true;
+                var forms = Forms();
+                Material m = null;
+                LocalKeyword k = default;
+                var gameLogs = Errors(() =>
+                {
+                    k = new LocalKeyword(forms, "ANYTHING");
+                    m = new Material(forms);
+                    m.SetKeyword(k, true);
+                    m.EnableKeyword("B_NAME");
+                });
+                // Unbound diagnostics go to its console, not to the game's callbacks.
+                Assert.Empty(gameLogs);
+                Assert.Equal(hitsBefore == 0 ? 1 : 0, capture.ShaderWarnings);
+                Assert.Equal(hitsBefore + 1, Stubs.HitReport().First(x => x.Key == "ShaderDeclarations").Value);
+                Assert.True(k.isValid);
+                Assert.True(m.IsKeywordEnabled("ANYTHING") && m.IsKeywordEnabled(k));
+                Assert.Equal(new[] { "ANYTHING", "B_NAME" }, m.shaderKeywords);
+                Assert.Equal(new[] { "ANYTHING", "B_NAME" }, Names(m.enabledKeywords));
+                Assert.Equal(1, forms.subshaderCount);
+                Assert.Equal(1, m_Calls);
+            }
+            finally
+            {
+                logger.logHandler = handler;
+                logger.logEnabled = enabled;
+                logger.filterLogType = filter;
+            }
         }
 
         /// <summary>A space reported unknown for a reason that does not pass (an unmeasured release,

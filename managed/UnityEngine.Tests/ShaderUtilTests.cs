@@ -41,5 +41,27 @@ namespace UnityEngine.Tests
             Assert.Equal(Vector4.zero, m.GetVector("_Nope_ST"));
             Assert.False(m.HasProperty("_Color_ST"));
         }
+
+        [Fact]
+        public void InlinePropertiesRetainDefaultsAndIgnoreCommentDeclarations()
+        {
+            var shader = ShaderUtil.CreateShaderAsset(@"Shader ""Tests/Inline Properties"" {
+                // Properties { _Fake (""Ignored"", Float) = 9 }
+                Properties { _Color (""Color } // label"", Color) = (1,0,0,1) _Value (""Value"", Float) = 0.5
+                    /* _Hidden (""Ignored"", Float) = 7 */
+                    _Other (""Other"", Range(0,2)) = 1 _MainTex (""Texture"", 2D) = ""white"" {} [Toggle] _Toggle (""Toggle"", Float) = 0
+                } SubShader { Pass { } }
+            }");
+            Assert.Equal(5, shader.GetPropertyCount());
+            var material = new Material(shader);
+            Assert.True(material.HasFloat("_Value"));
+            Assert.True(material.HasFloat("_Other"));
+            Assert.True(material.HasTexture("_MainTex"));
+            Assert.False(material.HasProperty("_Fake"));
+            Assert.False(material.HasProperty("_Hidden"));
+            Assert.Equal(new Color(1,0,0,1), material.GetColor("_Color"));
+            Assert.Equal(0.5f, material.GetFloat("_Value"));
+            Assert.Equal(1f, material.GetFloat("_Other"));
+        }
     }
 }
