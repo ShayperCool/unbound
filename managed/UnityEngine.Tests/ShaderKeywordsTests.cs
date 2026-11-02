@@ -152,8 +152,10 @@ namespace UnityEngine.Tests
             logs = Errors(() => Assert.False(default(LocalKeyword).isValid));
             Assert.Equal(new[] { "Error: LocalKeyword not initialized." }, logs);
             Assert.Null(default(LocalKeyword).ToString());
-            logs = Errors(() => Assert.Throws<NullReferenceException>(() => new LocalKeyword((Shader)null, "LOCAL_A")));
+            NullReferenceException nre = null;
+            logs = Errors(() => nre = Assert.Throws<NullReferenceException>(() => new LocalKeyword((Shader)null, "LOCAL_A")));
             Assert.Equal(new[] { "Error: Cannot initialize a LocalKeyword with a null Shader." }, logs);
+            Assert.Equal("Object reference not set to an instance of an object", nre.Message);
         }
 
         // ------------------------------------------------------------------ materials
@@ -451,10 +453,11 @@ namespace UnityEngine.Tests
             Assert.Equal("FORWARDBASE", shader.FindPassTagValue(0, 0, new ShaderTagId("LightMode")).name);
             Assert.Equal("UniversalForward", shader.FindPassTagValue(1, 0, new ShaderTagId("LightMode")).name);
             Assert.Equal(ShaderTagId.none, shader.FindPassTagValue(1, 1, new ShaderTagId("LightMode")));
+            // The canonical records type and message: the Editor's (Mono's) wording.
             var e = Assert.Throws<ArgumentOutOfRangeException>(() => shader.FindSubshaderTagValue(3, new ShaderTagId("RenderType")));
-            Assert.Equal("Invalid subshaderIndex 3. Value must be in the range [0, 3)", e.ParamName);
+            Assert.Equal("Specified argument was out of the range of valid values.\nParameter name: Invalid subshaderIndex 3. Value must be in the range [0, 3)", e.Message);
             e = Assert.Throws<ArgumentOutOfRangeException>(() => shader.FindSubshaderTagValue(-1, new ShaderTagId("RenderType")));
-            Assert.Equal("Invalid subshaderIndex -1. Value must be in the range [0, 3)", e.ParamName);
+            Assert.Equal("Specified argument was out of the range of valid values.\nParameter name: Invalid subshaderIndex -1. Value must be in the range [0, 3)", e.Message);
         }
 
         // ------------------------------------------------------------------ variants

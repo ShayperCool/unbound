@@ -585,7 +585,12 @@ namespace UnityEngine.Rendering
         /// shader, which then throws, and for a name a known space does not declare).</summary>
         public LocalKeyword(Shader shader, string name)
         {
-            if (shader == null) UnityEngine.Debug.LogError("Cannot initialize a LocalKeyword with a null Shader.");
+            if (shader == null)
+            {
+                // Then the native side's null reference (canonical local.ctor(null shader).exception).
+                UnityEngine.Debug.LogError("Cannot initialize a LocalKeyword with a null Shader.");
+                throw new NullReferenceException("Object reference not set to an instance of an object");
+            }
             m_SpaceInfo = shader.keywordSpace;
             m_Name = name;
             int index = m_SpaceInfo.IndexOf(name);
@@ -595,7 +600,12 @@ namespace UnityEngine.Rendering
 
         public LocalKeyword(ComputeShader shader, string name)
         {
-            if (shader == null) UnityEngine.Debug.LogError("Cannot initialize a LocalKeyword with a null ComputeShader.");
+            if (shader == null)
+            {
+                // Then the native side's null reference (canonical local.ctor(null shader).exception).
+                UnityEngine.Debug.LogError("Cannot initialize a LocalKeyword with a null ComputeShader.");
+                throw new NullReferenceException("Object reference not set to an instance of an object");
+            }
             m_SpaceInfo = shader.keywordSpace;
             m_Name = name;
             int index = m_SpaceInfo.IndexOf(name);
