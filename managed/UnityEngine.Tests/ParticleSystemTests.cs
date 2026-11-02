@@ -369,6 +369,113 @@ namespace UnityEngine.Tests
             finally { Done(ps); }
         }
 
+        // Child records of the trigger lifetime 6000.0.71f1 reference (trigger_death_child and
+        // natural_death_child): the parent's Simulate without children still advances the system
+        // it references as a Death sub-emitter, which ends each call paused and alive.
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void SimulateWithoutChildrenAdvancesReferencedSubEmitters(bool triggerKill)
+        {
+            var sphere = KillSphere();
+            var ps = KillInside(sphere, system =>
+            {
+                var main = system.main; main.playOnAwake = false;
+                var trigger = system.trigger; trigger.enabled = triggerKill;
+                var emission = system.emission; emission.enabled = false;
+            });
+            var child = Make(system =>
+            {
+                var main = system.main; main.playOnAwake = false; main.startLifetime = 2.013f; main.startSpeed = 0f;
+                var shape = system.shape; shape.enabled = false;
+                system.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+            });
+            child.transform.SetParent(ps.transform, false);
+            var subs = ps.subEmitters; subs.enabled = true;
+            subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            try
+            {
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                float life = triggerKill ? 2.013f : .013f;
+                ps.SetParticles(new[] { new ParticleSystem.Particle {
+                    position = new Vector3(0f, 0f, .46f), velocity = new Vector3(0f, 0f, 2f),
+                    startLifetime = life, remainingLifetime = life, startSize = 1f,
+                    startColor = new Color32(255, 255, 255, 255), randomSeed = 12345
+                } }, 1);
+                Assert.True(child.isStopped);
+                Assert.False(child.IsAlive(true));
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(triggerKill ? 0 : 1, child.particleCount);
+                Assert.Equal(.025f, child.time);
+                Assert.True(child.isPaused);
+                Assert.False(child.isStopped);
+                Assert.True(child.IsAlive(true));
+                ps.Simulate(.025f, false, false, false);
+                Assert.Equal(1, child.particleCount);
+                Assert.Equal(.05f, child.time);
+                Assert.True(child.isPaused);
+                Assert.False(child.isStopped);
+            }
+            finally { Done(ps); Object.DestroyImmediate(sphere); }
+        }
+
+        // Broad 6000.0.71f1 reference, sub_emitters_child: started by a restarting call with
+        // children, a sub-emitter keeps its time until the next call.
+        [Fact]
+        public void RestartingSimulateStartsASubEmitterClockOnTheNextCall()
+        {
+            ParticleSystem child = null;
+            var ps = RateFixture(4f, .513f, system =>
+            {
+                var main = system.main; main.playOnAwake = false;
+                child = Make(c =>
+                {
+                    var cm = c.main; cm.playOnAwake = false; cm.startSpeed = 1f; cm.startLifetime = .313f;
+                    var shape = c.shape; shape.enabled = false;
+                    c.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)2) });
+                });
+                child.transform.SetParent(system.transform, false);
+                var subs = system.subEmitters; subs.enabled = true;
+                subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            });
+            try
+            {
+                ps.Simulate(.05f, true, true, false);
+                Assert.Equal(0f, child.time);
+                Assert.True(child.isPaused);
+                ps.Simulate(.05f, true, false, false);
+                Assert.Equal(.05f, child.time);
+                Assert.True(child.isPaused);
+            }
+            finally { Done(ps); }
+        }
+
+        [Fact]
+        public void SimulateAdvancesSharedAndCyclicSubEmittersOnce()
+        {
+            ParticleSystem Quiet() => Make(system =>
+            {
+                var main = system.main; main.playOnAwake = false;
+                var shape = system.shape; shape.enabled = false;
+            });
+            var shared = Quiet();
+            var a = Quiet();
+            var b = Quiet();
+            var subsA = a.subEmitters; subsA.enabled = true;
+            subsA.AddSubEmitter(shared, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            subsA.AddSubEmitter(b, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            var subsB = b.subEmitters; subsB.enabled = true;
+            subsB.AddSubEmitter(shared, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            subsB.AddSubEmitter(a, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            try
+            {
+                a.Simulate(.025f, false, false, false);
+                Assert.Equal(.025f, b.time);
+                Assert.Equal(.025f, shared.time);
+            }
+            finally { Done(a); Done(b); Done(shared); }
+        }
+
         [Fact]
         public void AddingASystemAddsItsRendererAndPlaysOnAwake()
         {
