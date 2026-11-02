@@ -3,7 +3,8 @@
 Unity 6000.0.71f1, built-in pipeline (`Assets/Scripts/ShaderKeywordsProbe.cs`). The canonical
 `Reference/unity-6000.0.71f1.jsonl` contains 1510 rows from two independent, byte-identical
 batchmode GPU captures. Both exited 0 without a forced stop on NVIDIA RTX 4060. This is a
-measured API contract for that capture context; Unbound's implementation remains unvalidated.
+measured API contract for that capture context. The matching Unbound package is admitted for
+the measured declarations, keyword and material-variant behavior, with the gaps below retained.
 
 ## Fixture
 
@@ -86,10 +87,17 @@ compiler bytes are equal; only the private project path is rebound. The Editor u
 compiler server, which the offline preflight omits. Other releases, backends, quality settings,
 color spaces and windowed captures remain unmeasured.
 
-## Draft implementation assumptions
+## Measured implementation and limits
 
-These assumptions describe the recovered implementation draft. Check each against the new
-canonical before adopting it, and keep rules beyond this fixture explicitly unmeasured.
+The matching-runtime comparison at source `b43816e9` passes 1485/1510 canonical keys, up
+from 622 matching keys. It resolves 863 reference keys and removes all 11 former extras,
+with zero lost matches, missing keys or extra keys. All material, compute, local/global and
+variant groups pass. The remaining 25 keys are eight pass counts, four property/count answers,
+two terrain pass-tag lists, ten exception-message strings and `context.isBatchMode`.
+These are retained failures, with raw answers and exact comparison unchanged.
+
+The implementation uses the following measured rules in this fixture. Source-derived keyword
+ordering and built-in global defaults are enabled only for exactly Unity `6000.0.71f1`.
 They never gate capture publication.
 
 * A shader's keyword space starts with the four stereo keywords (`BuiltinDefault`); other
@@ -117,6 +125,33 @@ They never gate capture publication.
 * A variant overrides the properties it saves except those an ancestor locks; instances and
   copies keep parent, overrides and locks; reverting takes the parent's value, reverting all
   also the render queue.
+
+The source-reader cross-check covers 196 built-in shader sources: 103 keyword spaces are
+known and exact against Unity's serialized declarations, 93 are explicitly unknown, and none
+is known-but-wrong. Unknown includes surface options, fixed-function `Lighting On`, Fallbacks
+that add keywords, forward-base options, GLSL, light-pass order and fixed-function fog modes.
+Eleven forms that matched in an earlier unaccepted reader are now unknown, including eight
+terrain shaders and the source Fallback paths of Standard, Standard Specular and Autodesk
+Interactive. Unknown, unreadable or unmeasured spaces retain name-based behavior with a
+warning. An empty known space is distinct from unknown. Direct serialized built-in answers
+and source-derived answers are checked separately. Mid-session shader/compute/include edits,
+other contexts, headless pass/property answers and variant `Resources.UnloadAsset` remain
+unmeasured; CommandBuffer keyword calls retain their previous behavior.
+
+Validation used 49 Rust test results, a fresh API check with 0 errors over 2319 types,
+108 byte-equal generated files, and the full managed suite at 1620/1631 with the historical
+11 failures unchanged. A red control on the previous Core fails exactly the four variant
+assertions and the new inline-property-reader test that the current Core passes. The logger
+test passes on both Cores after observing the console diagnostic rather than game callbacks.
+
+All 11 gate groups completed, with 46 comparisons per side. Control captures are byte-equal
+except `builtinfx/flare_LensFlareObject.png`, an existing expected fade-in control using frame
+time: 13264 pixels differ between runs, maximum channel delta 9/255. Its mean maximum-channel
+error against Native improves from 11.59 to 9.62/255. Frame-time variation is consistent with
+this difference but was not isolated by a repeat. No tolerance or expected-image list changed.
+The full comparison, remaining keys and controls are in the cache receipts
+`validation/runs/shaderkw-matching-validation-5-20261102/` and
+`validation/runs/shaderkw-root-admission-20261102/`.
 
 Values of the draft's failed Editor runs are diagnostics only, never expected values. They
 also showed that the draft wrote `global.all.contains[STRING_ENABLED_KW]` twice (now
