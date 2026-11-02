@@ -623,7 +623,7 @@ namespace Unbound.Tests
                 var main = scenes.Loaded("Main");
                 var incoming = scenes.Loading("Extra");
                 var scene = new Scene(main.Handle);
-                using var json = System.Text.Json.JsonDocument.Parse("{\"positions\":[],\"coefficients\":[]}");
+                using var json = System.Text.Json.JsonDocument.Parse("{\"positions\":[],\"coefficients\":[],\"hullRays\":[],\"tetrahedra\":[]}");
                 probes = LightProbes.FromJson(json.RootElement);
                 LightmapSettings.SetLightProbes(probes);
                 Assert.Same(probes, LightProbes.GetSharedLightProbesForScene(scene));
