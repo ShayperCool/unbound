@@ -391,10 +391,21 @@ namespace UnityEngine
             if (m_Parent != null) m_Own?.Add(nameID);
         }
 
+        // Cyclic variant chains are unsupported. Fail explicitly instead of hanging an API call.
+        IEnumerable<Material> Ancestors()
+        {
+            var seen = new HashSet<Material> { this };
+            for (var p = m_Parent; p != null; p = p.m_Parent)
+            {
+                if (!seen.Add(p)) throw new InvalidOperationException("Material parent chain contains a cycle.");
+                yield return p;
+            }
+        }
+
         public bool IsChildOf(Material ancestor)
         {
             if (ancestor == null) return false;
-            for (var p = m_Parent; p != null; p = p.m_Parent)
+            foreach (var p in Ancestors())
                 if (p == ancestor) return true;
             return false;
         }
@@ -413,7 +424,7 @@ namespace UnityEngine
         /// <summary>Whether a parent, or its parent, locks the property.</summary>
         public bool IsPropertyLockedByAncestor(int nameID)
         {
-            for (var p = m_Parent; p != null; p = p.m_Parent)
+            foreach (var p in Ancestors())
                 if (p.IsPropertyLocked(nameID)) return true;
             return false;
         }

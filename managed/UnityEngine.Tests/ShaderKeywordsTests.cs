@@ -686,5 +686,20 @@ namespace UnityEngine.Tests
             }
             finally { Object.DestroyImmediate(go); }
         }
+
+        [Fact]
+        public void CyclicVariantQueriesFailExplicitly()
+        {
+            var shader = Forms();
+            var a = new Material(shader);
+            var b = new Material(shader);
+            var unrelated = new Material(shader);
+            a.parent = b;
+            b.parent = a;
+            a.SetFloat("_Value", 0.75f);
+            Assert.Throws<InvalidOperationException>(() => a.IsChildOf(unrelated));
+            Assert.Throws<InvalidOperationException>(() => a.IsPropertyLockedByAncestor("_Value"));
+            Assert.Throws<InvalidOperationException>(() => a.IsPropertyOverriden("_Value"));
+        }
     }
 }
