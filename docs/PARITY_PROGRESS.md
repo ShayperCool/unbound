@@ -2646,3 +2646,13 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - Runtime: all 33 payloads and 1095 PDB-source documents rehashed; TestCore equals package Core cbf30c19; 265 compiled CLI inputs unchanged. Executed before-inputs match; the coreapis README-only change is explicit.
 - Open: significant renderedFrameCount phase and OnRenderObject handler order; no-RT visibility, SRP/custom dispatch, motion, panels, skipped readback and async EOF remain unmeasured. Earlier Core/LP/line gaps stay open.
 - Evidence: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/claude-fresh-20261101b/ondemand-validation/RECEIPT.md`; Root receipt `validation/runs/ondemand-root-integration-20261102/root-validation.json`.
+
+### Root rendered-frame counter integration, 2026-11-02
+- What: admitted the measured counter-phase correction; production equals tested 60a1cd68. The counter advances at GUIClearEvents after coroutine EOF, once per rendered or skipped frame; handler dispatch is unchanged.
+- Probe: coreapis 594 matched / 88 missing / 88 extra of 682; all 313 window counter reads match. Messages 316/316, lifecycle and all 50 screencapture files retain their prior results.
+- Introduced: 0 lost reference matches, 238 resolved, 24 newly unmatched actual ORO lines and 262 removed extras, all preserved. The 64 non-window pairs and ORO order are unchanged.
+- Managed: 1583/1594 with identical 11 inherited failures; three new tests pass. One build/suite and four engine runs; corrective cycle unused, no Native or Rust build.
+- API: reused nine-module 0/2318 result through 65228 equal public/protected metadata lines and unchanged generated files/tools/projects; no API, stub or ABI change.
+- Runtime: Root rehashed all 33 payloads, verified TestCore equals package Core eaa489ea, PDB source checksums and 265 unchanged compiled CLI inputs; the old runtime stays frozen.
+- Open: significant ORO order, exact Unity counter node, custom/paused/Edit loops, intervening readers and startup boundaries; earlier Core/LP/line gaps remain. No comparator normalization or tolerance change.
+- Evidence: `/mnt/data/unbound-cache-20261031/unbound-validation/runs/claude-fresh-20261101b/rfc-validation/RECEIPT.md`; Root receipt `validation/runs/rfc-root-integration-20261102/root-validation.json`.

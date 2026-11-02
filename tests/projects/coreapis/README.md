@@ -129,33 +129,42 @@ screen/EOF at w0, 2, 5, 9, 11, 13 and 15. RT callbacks occur every frame. The
 interval, modulo and immediate-will fields match, including the transition
 frames w0, w7 and w12.
 
-The strict comparison is now 356 matching / 326 missing / 326 extra lines. It
-resolves 67 reference lines with zero lost previous matches. All 262 newly
-unmatched actual window lines remain in the raw union; they replace 459 old
-window/settings extras. The 64 non-window discrepancy pairs are unchanged,
-including the probe defects, precision ledger and significant Core API gaps.
+The initial OnDemand batch matched 356 lines, with 326 missing and 326 extra.
+The follow-up counter-phase correction, validated at `60a1cd68`, moves the
+`Time.renderedFrameCount` increment to GUIClearEvents after EOF. All 313 window
+reads now match the counter value, including the 262 camera/GUI/EOF reads that
+were one high. It still advances once on rendered and skipped frames.
 
-Two significant window gaps remain, both also observed on the frozen baseline:
+The strict comparison is now 594 matching / 88 missing / 88 extra lines. The
+counter correction resolves 238 reference lines with zero lost matches. It
+removes 262 previous window extras and preserves 24 newly unmatched actual
+lines whose counter field changed. Those 24 lines retain the existing ORO-order
+failure. The 64 non-window discrepancy pairs are byte-identical, including the
+probe defects, precision ledger and significant Core API gaps.
 
-* `Time.renderedFrameCount` is one high during camera rendering, GUI and EOF.
-  Unbound increments before rendering, while Native increments after EOF. Both
-  advance once on every frame, whether or not it renders the screen.
-* OnRenderObject handlers run ScreenCam/RtCam/Cube in this witness instead of
-  Native's RtCam/ScreenCam/Cube. This is an observed difference, not a rule to
-  sort by object names.
+Only the significant OnRenderObject handler-order gap remains in the window:
+ScreenCam/RtCam/Cube here instead of Native's RtCam/ScreenCam/Cube, leaving 24
+missing and 24 extra lines. The cause is unproved; scene-load wake order is one
+hypothesis. This observation supplies no rule to sort handlers. Diagnostic
+attribution can undo that swap to explain all 17 frames, but the comparator
+does not transform anything. Strict failures, raw values and event order stay.
 
-The diagnostic attribution can undo those two differences to explain the
-remaining frames. The comparator does not perform either transformation;
-strict failures, raw values and event order stay unchanged.
+The matching suite is 1583/1594 with the identical 11 inherited failures; all
+three counter-phase tests and the four OnDemand tests pass. The nine-module
+API result, 0 errors / 2318 types, is reused through equality of all 65228
+public/protected metadata lines and unchanged generated files and tool inputs.
+Screencapture Linear and lifecycle remain byte-identical to the previous
+runtime; messages retain their 316 passing invariants. Graphics was unchanged
+in the earlier OnDemand batch and was not rerun for the counter correction.
 
-The matching suite is 1580/1591 with the identical 11 inherited failures; all
-four new tests pass. API is 0 errors / 2318 types, and all 108 generated files
-match. Screencapture Linear, graphics and lifecycle are byte-identical to the
-baseline; messages retain their 316 passing invariants.
+Unity's exact counter node is not measured. Neither are custom loops without
+GUIClearEvents, paused/stepped/Edit frames, other readers between render and
+that node, FixedUpdate/startup reads or the absolute startup value.
 
 Unmeasured cases remain explicit: skipped-frame visibility without an RT camera,
 SRP/custom dispatch, motion history, UI panels, skipped screen readback and async
 EOF. Interval-1 controls do not establish those paths. A skipped frame with a
 configured scriptable pipeline logs one warning. Full receipts, raw unions and
 the attribution remain under the validation cache at
-`validation/runs/claude-fresh-20261101b/ondemand-validation/`.
+`validation/runs/claude-fresh-20261101b/ondemand-validation/` and
+`validation/runs/claude-fresh-20261101b/rfc-validation/`.
