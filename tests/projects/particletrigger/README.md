@@ -20,10 +20,14 @@ Manual simulation includes referenced sub-emitter systems; the child's paused/al
 state and clock now match the recorded controls. Other restart/reference combinations
 remain unmeasured. These rules are general, without fixture names, seeds or snapping.
 
-The separate lifetime probe retains three child positions and three child lifetimes.
-The child originates 0.05 units behind Native; its first age differs by 0.005 seconds.
-These are functional gaps. Boundary565 remains byte-identical, including all 599 failing
-components and the inherited 48 public-input bit paths. The wider-intermediate model
+The later origin correction, tested at `2cc4eef0` / Core `dfb08538`, resolves all
+three target child positions. Natural death and trigger-killed carry emit at the
+end of the parent's whole last step. Only a copy's event position moves; the stored
+particle, trails, collision deaths and inherited fields keep their previous behavior.
+The three first-age lifetimes remain unchanged, differing by 0.005 seconds. Broad
+child position/life errors remain functional too. Boundary 565 stays byte-identical,
+including all 599 failing components and the inherited 48 public-input bit paths.
+The wider-intermediate model
 for those inputs is a compiler-policy hypothesis, not an adopted policy.
 
 Broad 305 and emission 847 failing components remain explicit. Small numerical changes
@@ -36,3 +40,14 @@ Evidence: `validation/runs/claude-fresh-20261101b/causal-validation/RECEIPT.md` 
 `validation/runs/particle-causal-root-admission-20261102/root-validation.json` under
 the global Unbound cache. Full raw unions, precision keys and rejected earlier
 attempts remain there. No new Native capture was used for this correction.
+
+Origin validation used one build, one unfiltered suite (1599/1610, the same 11),
+three failing red controls on the older Core, and four AFTER probes. Trigger and
+boundary are byte-identical; the only non-real-time raw deltas are three lifetime
+child positions and ten broad child positions, all predicted. All 17 images are
+byte-identical. No emission or cross-kind recapture was performed on this Core.
+Death-copy movement with forces, noise, world space or inherited properties remains
+unmeasured. The negative first-age result is preserved; no quantum rule is implemented.
+
+Evidence: `validation/runs/claude-fresh-20261101b/origin-validation/RECEIPT.md` and
+`validation/runs/death-origin-root-admission-20261102/root-validation.json`.

@@ -76,3 +76,13 @@ Native-differing image pixels. Emission retains 847 failures, including 366 life
 and 455 seed components; its model's predicted full bit equality did not materialize.
 The separate lifetime probe's three child positions and three child ages remain
 functional gaps. No Native witness or further precision-only research is requested.
+
+## Death-event origin correction, 2026-11-02
+
+The tested `2cc4eef0` origin correction changes only `sub_emitters_child` calls
+15-19, particles 0/1, position z. Their error falls from about 0.04 to 0.01 and
+remains above tolerance; all ten lives are unchanged. Every other broad module
+and all 17 images are byte-identical, apart from the existing ignored wall-clock
+fields. The broad comparator still retains 305 failures. First child age stays
+functional and open. The earlier precision ledger and all its raw records remain
+unchanged; no tolerance or ignore rule was added.
