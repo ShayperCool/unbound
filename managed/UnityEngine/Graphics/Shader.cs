@@ -586,18 +586,26 @@ namespace Unbound.Runtime
                 return null;
             shader = UnityEngine.Shader.Create(name, DefaultQueue(name));
             shader.m_QueueFromSource = true;
-            // The properties its source in the release's built-in shaders declares.
-            var source = Source(name);
-            var properties = string.IsNullOrEmpty(source) ? null : ShaderLab.Properties(source);
-            if (properties != null && properties.Count > 0)
-            {
-                ShaderLab.Editors(source, shader);
-                shader.m_Properties.Clear();
-                shader.m_Properties.AddRange(properties);
-                shader.PropertiesChanged();
-            }
+            ApplySource(shader, Source(name));
             s_Shaders[name] = shader;
             return shader;
+        }
+
+        /// <summary>The properties a built-in shader's source in the release's built-in shaders
+        /// declares, none when it has no `Properties` block (Unity's serialized built-in shaders
+        /// of 6000.0.71f1 have no property exactly when their source has no such block, as
+        /// Hidden/InternalErrorShader and Hidden/Internal-StencilWrite: canonical shaderkeywords
+        /// builtin.*.propertyCount 0). Without a source, or with a block none of whose
+        /// declarations is read, the shader keeps the defaults materials rely on.</summary>
+        internal static void ApplySource(UnityEngine.Shader shader, string source)
+        {
+            if (string.IsNullOrEmpty(source)) return;
+            var properties = ShaderLab.Properties(source);
+            if (properties.Count == 0 && !string.IsNullOrWhiteSpace(ShaderLab.PropertiesBlock(source))) return;
+            ShaderLab.Editors(source, shader);
+            shader.m_Properties.Clear();
+            shader.m_Properties.AddRange(properties);
+            shader.PropertiesChanged();
         }
 
         static string Source(string name)

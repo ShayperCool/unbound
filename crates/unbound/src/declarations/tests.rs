@@ -823,3 +823,92 @@ fn lit_fixed_function_spaces_and_their_fallbacks_are_unknown() {
         assert_eq!(ask(&provider, name)["keywords_known"], true, "{name}");
     }
 }
+
+/// A built-in shader's `UsePass` passes the reader resolved are ordinary passes with the named
+/// pass's name and tags (canonical builtin.Nature/Terrain/*.passLightModes `Picking`). One it
+/// could not resolve makes the SubShaders unknown, also through another shader's Fallback, never
+/// a pass without tags; the keyword space stays known.
+#[test]
+fn unresolved_builtin_use_passes_are_unknown_not_tagless() {
+    use unbound_assets::builtin_shaders::{DeclaredPass, DeclaredSubShader};
+    let scratch = Scratch::new("decl-builtin-use-pass");
+    let data = scratch.0.join("install");
+    scratch.write("install/Resources/unity_builtin_extra", "stand-in");
+    scratch.write("install/Resources/unity default resources", "stand-in");
+    scratch.write("CGIncludes/UnityCG.cginc", "// stand-in\n");
+    scratch.write(
+        "Assets/FallsBack.shader",
+        r#"Shader "Tests/FallsBack" { SubShader { Pass { } } Fallback "Tests/Unresolved" }"#,
+    );
+    let provider = Provider::new(inputs(
+        &scratch,
+        scratch.0.join("CGIncludes"),
+        data.clone(),
+        MEASURED,
+        Arc::new(AtomicUsize::new(0)),
+        Arc::new(AtomicBool::new(false)),
+    ));
+    let pass = |name: &str, light_mode: &str, use_pass: &str| DeclaredPass {
+        name: name.into(),
+        tags: vec![("LIGHTMODE".into(), light_mode.into())],
+        use_pass: use_pass.into(),
+    };
+    let shader = |passes: Vec<DeclaredPass>| Builtin {
+        subshaders: vec![DeclaredSubShader {
+            tags: Vec::new(),
+            passes,
+        }],
+        ..Default::default()
+    };
+    let mut map = DeclarationMap::new();
+    map.insert(
+        "Tests/Resolved".into(),
+        shader(vec![
+            pass("FORWARD", "FORWARDBASE", ""),
+            pass("Picking", "Picking", ""),
+        ]),
+    );
+    map.insert(
+        "Tests/Unresolved".into(),
+        shader(vec![
+            pass("FORWARD", "FORWARDBASE", ""),
+            DeclaredPass {
+                use_pass: "Hidden/Nowhere/PASS".into(),
+                ..Default::default()
+            },
+        ]),
+    );
+    let seen = stamp(&unbound_assets::builtin_shaders::declaration_sources(&data)).unwrap();
+    provider.state.lock().unwrap().builtin = Some((Arc::new(map), seen));
+
+    let resolved = ask(&provider, "Tests/Resolved");
+    assert_eq!(resolved["subshaders_known"], true, "{resolved}");
+    assert_eq!(
+        resolved["subshaders"][0]["passes"][1],
+        json!({ "name": "Picking", "tags": [["LIGHTMODE", "Picking"]] })
+    );
+
+    let unresolved = ask(&provider, "Tests/Unresolved");
+    assert_eq!(unresolved["found"], true);
+    assert_eq!(unresolved["subshaders_known"], false, "{unresolved}");
+    assert_eq!(unresolved["subshaders"], json!([]));
+    assert_eq!(unresolved["keywords_known"], true);
+    assert_eq!(unresolved["transient"], false);
+    assert!(
+        unresolved["reason"]
+            .as_str()
+            .unwrap()
+            .contains("UsePass \"Hidden/Nowhere/PASS\" names no pass"),
+        "{unresolved}"
+    );
+
+    let falls_back = ask(&provider, "Tests/FallsBack");
+    assert_eq!(falls_back["subshaders_known"], false, "{falls_back}");
+    assert!(
+        falls_back["reason"]
+            .as_str()
+            .unwrap()
+            .contains("Hidden/Nowhere/PASS"),
+        "{falls_back}"
+    );
+}
