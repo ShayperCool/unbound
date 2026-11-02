@@ -114,8 +114,10 @@ probe writes its record and then sets `ShaderKeywordsProbe.finishedCode`. Only a
 updates and quits with the code. The probe's coroutine and the play mode state callback only
 record. The handler also clears Error Pause (expected errors are kept as data, not suppressed)
 and quits with 4 600 s after Record (watchdog). Every transition goes to
-`capture/runner-events.jsonl`. The supervisor's hard deadline is 1200 s; output-progress
-monitoring is off because the record is written once.
+`capture/runner-events.jsonl`. The supervisor's hard deadline is 1200 s. Its external
+no-progress deadline is 300 s, including cold import. Only the runner event file and the
+completed values file reset it. Editor log activity does not. A forced stop still rejects
+the capture, even when the probe wrote its completion marker.
 
 ```
 python3 tests/projects/shaderkeywords/preflight.py --rsp-dir <copy>/Library/Bee/artifacts/<hash>.dag --out <cache>/preflight

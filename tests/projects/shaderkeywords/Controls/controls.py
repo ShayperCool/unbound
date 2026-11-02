@@ -264,6 +264,13 @@ def run_controls(normal_dir, out):
     project = PROBE
     positive = work/'positive'
     j = synthetic_capture(positive, normal_dir, project)
+    watched = [str((positive/'capture'/name).resolve())
+               for name in ('runner-events.jsonl', 'values.jsonl')]
+    control('launch: only runner transitions and the completed record count as progress',
+            watched, j.progress_files, j.progress_files == watched)
+    control('launch: external progress deadline is 300 s inside the 1200 s hard deadline',
+            [300, 1200], [j.progress_timeout, j.timeout],
+            j.progress_timeout == 300 and j.timeout == 1200)
     problems = guards.capture_problems(positive, project, RELEASE, DEVICE)
     control('capture: the synthetic complete capture passes every run guard (positive)', [], problems, not problems)
 
@@ -285,6 +292,7 @@ def run_controls(normal_dir, out):
         return edit_json('editor-run.json', lambda d, _: d.__setitem__('command', change(list(d['command']))))
     case('forced shutdown-guard exit', edit_json('editor-run.json', lambda d, _: d.update(exit_code=None, forced_exit='shutdown-guard', forced_detail='still alive')), 'forced exit shutdown-guard')
     case('watchdog forced exit', edit_json('editor-run.json', lambda d, _: d.update(exit_code=137, forced_exit='watchdog')), 'forced exit watchdog')
+    case('no-progress forced exit after completion', edit_json('editor-run.json', lambda d, _: d.update(exit_code=137, forced_exit='no-progress')), 'forced exit no-progress')
     case('Editor exit 255', edit_json('editor-run.json', lambda d, _: d.update(exit_code=255)), 'Editor exit 255')
     case('software renderer', edit_json('editor-run.json', lambda d, _: d.update(renderer='llvmpipe (LLVM 19.1.1, 256 bits)', renderer_ok=False)), 'not the NVIDIA GPU')
     case('no shutdown line', edit_json('editor-run.json', lambda d, _: d.update(shutdown_logged=False)), 'no shutdown line')

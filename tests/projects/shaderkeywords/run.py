@@ -44,10 +44,11 @@ REPEATS = ('native1', 'native2')
 # The graphics device of the Linux GPU Editor (OpenGL Core). Platform-conditional declarations
 # (the SHADER_API_D3D11 block) are measured for this device only.
 DEVICE = 'OpenGLCore'
-# Hard deadline of the whole admitted run (cold import included). ProbeRunner's own watchdog
-# quits after 600 s from Record. The record is written once at the end, so output-progress
-# monitoring stays off.
+# The external progress deadline also covers cold import and an unresponsive Editor.
+# Only probe transitions and the completed record count as progress, never Editor log noise.
+# ProbeRunner's 600 s watchdog is an additional check when Editor updates still run.
 HARD_TIMEOUT = 1200
+PROGRESS_TIMEOUT = 300
 SHUTDOWN_GRACE = 30
 KILL_GRACE = 10
 VARIABLE = 'UNBOUND_PROBE_SHADERKEYWORDS_OUT'
@@ -93,7 +94,8 @@ def job(work, repeat, release):
                      env={VARIABLE: str(capture.resolve() if capture.exists() else capture),
                           'UNBOUND_PROBE_UNITY_VERSION': release},
                      timeout=HARD_TIMEOUT, shutdown_grace=SHUTDOWN_GRACE, kill_grace=KILL_GRACE,
-                     label='shaderkeywords-'+repeat,
+                     progress_files=(capture/'runner-events.jsonl', capture/'values.jsonl'),
+                     progress_timeout=PROGRESS_TIMEOUT, label='shaderkeywords-'+repeat,
                      launch_inputs={'release': release,
                                     'paths': {'assets': str(project/'Assets'),
                                               'packages': str(project/'Packages'),
