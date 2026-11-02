@@ -336,6 +336,8 @@ pub struct States {
     pub alpha_to_mask: Option<Value>,
     /// `ZClip True|False` (or a property).
     pub zclip: Option<Value>,
+    /// `Fog { Mode ... }`, retained for declaration metadata; rendering is unchanged.
+    pub fog_mode: Option<Value>,
     pub tags: HashMap<String, String>,
     /// Fixed-function setup (used by passes without a program).
     pub fixed: FixedStates,
@@ -376,6 +378,7 @@ impl States {
                 .clone()
                 .or_else(|| self.alpha_to_mask.clone()),
             zclip: other.zclip.clone().or_else(|| self.zclip.clone()),
+            fog_mode: other.fog_mode.clone().or_else(|| self.fog_mode.clone()),
             tags,
             fixed: FixedStates {
                 lighting: b.lighting.or(a.lighting),
@@ -1496,7 +1499,20 @@ impl Parser<'_> {
                 }
                 states.fixed.stages.push(stage);
             }
-            "Fog" => self.skip_block(),
+            "Fog" => {
+                if self.next() != Some(Token::Open) {
+                    return;
+                }
+                while let Some(t) = self.next() {
+                    match t {
+                        Token::Close => break,
+                        Token::Word(w) if w.eq_ignore_ascii_case("Mode") => {
+                            states.fog_mode = self.value()
+                        }
+                        _ => {}
+                    }
+                }
+            }
             _ => {}
         }
     }
@@ -2013,5 +2029,27 @@ Fallback "Other"
                 .unwrap_or_else(|| panic!("{name} does not parse"));
             eprintln!("{name}: passes {:?}", lab.forward_passes());
         }
+    }
+
+    #[test]
+    fn fog_mode_metadata_inherits_and_pass_modes_override_it() {
+        let s = ShaderLab::parse(
+            r#"Shader "Tests/FogMetadata" {
+            Category { Fog { Mode Off } SubShader {
+                Pass { Color (1,1,1,1) }
+                Pass { Fog { Mode Global } Color (1,1,1,1) }
+            } }
+        }"#,
+        )
+        .unwrap();
+        assert_eq!(s.passes[0].states.fog_mode, Some(Value::Word("Off".into())));
+        assert_eq!(
+            s.passes[1].states.fog_mode,
+            Some(Value::Word("Global".into()))
+        );
+        assert_eq!(
+            s.passes[0].states.fixed_function(),
+            s.passes[1].states.fixed_function()
+        );
     }
 }

@@ -638,7 +638,7 @@ fn builtin_sources_declare_the_keywords_unity_lists() {
         .collect();
     let provider = Provider::new(i);
     let all = ShaderIndex::scan(&provider.inputs.project_roots).names();
-    let (mut same, mut differ) = (0, Vec::new());
+    let (mut same, mut differ, mut unknown) = (0, Vec::new(), Vec::new());
     for name in all {
         let Some(want) = builtin.get(&name) else {
             continue;
@@ -661,7 +661,17 @@ fn builtin_sources_declare_the_keywords_unity_lists() {
             .iter()
             .map(|k| (k.name.clone(), k.local, k.dynamic))
             .collect();
-        if answer["keywords_known"] == true && got == want {
+        if answer["keywords_known"] != true {
+            assert!(
+                got.is_empty(),
+                "{name}: unknown space must not expose a partial list"
+            );
+            assert!(
+                !answer["reason"].as_str().unwrap().is_empty(),
+                "{name}: unknown requires a reason"
+            );
+            unknown.push(format!("{name}: {}", answer["reason"]));
+        } else if got == want {
             same += 1;
         } else {
             differ.push(format!(
@@ -671,8 +681,10 @@ fn builtin_sources_declare_the_keywords_unity_lists() {
         }
     }
     eprintln!(
-        "{same} same, {} differ\n{}",
+        "{same} known exact, {} unknown, {} KNOWN WRONG\nunknown:\n{}\nknown wrong:\n{}",
+        unknown.len(),
         differ.len(),
+        unknown.join("\n"),
         differ.join("\n")
     );
     assert!(same > 100, "{same} same");
@@ -737,4 +749,39 @@ fn serialized_builtins_do_not_enable_unmeasured_release_rules() {
     assert_eq!(answer["subshaders_known"], false);
     assert_eq!(answer["transient"], false);
     assert!(answer["reason"].as_str().unwrap().contains("not measured"));
+}
+
+#[test]
+fn fallback_extensions_surface_options_and_fog_are_not_partial_known_spaces() {
+    let scratch = Scratch::new("decl-unsupported-space");
+    scratch.write("CGIncludes/UnityCG.cginc", "// stand-in\n");
+    scratch.write(
+        "Assets/A.shader",
+        r#"Shader "Tests/A" { SubShader { Pass { } } Fallback "Tests/B" }"#,
+    );
+    scratch.write("Assets/B.shader", "Shader \"Tests/B\" { SubShader { Pass { HLSLPROGRAM\n#pragma multi_compile _ FALLBACK_ONLY\nENDHLSL } } }");
+    scratch.write("Assets/Surface.shader", "Shader \"Tests/SurfaceOptions\" { SubShader { CGPROGRAM\n#pragma surface surf Lambert nolightmap\nENDCG } }");
+    scratch.write(
+        "Assets/Fog.shader",
+        r#"Shader "Tests/Fog" { SubShader { Fog { Mode Off } Pass { Color (1,1,1,1) } } }"#,
+    );
+    let provider = Provider::new(inputs(
+        &scratch,
+        scratch.0.join("CGIncludes"),
+        scratch.0.join("no-install"),
+        MEASURED,
+        Arc::new(AtomicUsize::new(0)),
+        Arc::new(AtomicBool::new(false)),
+    ));
+    for name in ["Tests/A", "Tests/SurfaceOptions", "Tests/Fog"] {
+        let answer = ask(&provider, name);
+        assert_eq!(answer["keywords_known"], false, "{name}: {answer}");
+        assert_eq!(answer["keywords"], json!([]), "{name}");
+        assert!(!answer["reason"].as_str().unwrap().is_empty(), "{name}");
+    }
+    assert_eq!(
+        ask(&provider, "Tests/SurfaceOptions")["subshaders_known"],
+        false
+    );
+    assert_eq!(ask(&provider, "Tests/A")["subshaders_known"], true);
 }

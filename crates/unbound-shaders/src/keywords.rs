@@ -10,7 +10,7 @@
 //! built-in shaders of that release:
 //!
 //! A shader's space starts with the four stereo keywords. Each pass of each of its own SubShaders
-//! (not its Fallback's) then adds its new keywords stage by stage (vertex first, then fragment,
+//! then adds its new keywords stage by stage (vertex first, then fragment,
 //! hull, domain, geometry, ray tracing; declarations for all stages count as the vertex stage's,
 //! after its own). Within a stage: global declarations (`multi_compile`, `shader_feature`,
 //! `dynamic_branch`) in source order, then the fog, instancing and particle sets, then local
@@ -20,7 +20,9 @@
 //! local declarations before its global ones, without stereo keywords.
 //!
 //! A declaration form these rules do not know makes the whole space unknown (an error), never a
-//! partial list.
+//! partial list. The provider also checks the Fallback chain; an extension/flag merge it cannot
+//! establish remains unknown. Surface options, explicit fixed-function Fog Mode, and lightpass
+//! ordering are unsupported metadata cases, not guessed complete spaces.
 use crate::preprocess::Pragma;
 use anyhow::{Result, bail};
 
@@ -124,19 +126,7 @@ const PREPASSFINAL: [&str; 7] = [
     "DIRLIGHTMAP_COMBINED",
     "UNITY_HDR_ON",
 ];
-const LIGHTPASS: [&str; 11] = [
-    "POINT",
-    "DIRECTIONAL",
-    "SPOT",
-    "POINT_COOKIE",
-    "DIRECTIONAL_COOKIE",
-    "SHADOWS_DEPTH",
-    "SHADOWS_SCREEN",
-    "SHADOWS_SOFT",
-    "SHADOWS_CUBE",
-    "SHADOWS_SHADOWMASK",
-    "LIGHTMAP_SHADOW_MIXING",
-];
+
 const SHADOWCOLLECTOR: [&str; 2] = ["SHADOWS_SPLIT_SPHERES", "SHADOWS_SINGLE_CASCADE"];
 
 /// A program's keyword declarations, in source order, without the keywords its `skip_variants`
@@ -193,7 +183,9 @@ fn declared(pragmas: &[Pragma]) -> Result<Vec<Declaration>> {
                 d.keywords.extend(FULLSHADOWS.iter().map(|k| k.to_string()));
                 out.push(d);
             }
-            "multi_compile_lightpass" => out.push(light(&LIGHTPASS)),
+            "multi_compile_lightpass" => {
+                bail!("multi_compile_lightpass keyword order is not measured")
+            }
             "multi_compile_shadowcaster" => out.push(light(&SHADOWCASTER)),
             "multi_compile_shadowcollector" => out.push(light(&SHADOWCOLLECTOR)),
             "multi_compile_prepassfinal" => out.push(light(&PREPASSFINAL)),
@@ -299,6 +291,9 @@ impl Space {
     /// The passes Unity generates for a surface shader ([`surface_passes`]): each has the
     /// program's own declarations and those of its kind of pass.
     pub fn add_surface(&mut self, pragmas: &[Pragma], options: &[String]) -> Result<()> {
+        if let Some(option) = options.first() {
+            bail!("surface shader option `{option}` is not measured");
+        }
         let own = declarations(pragmas)?;
         let has = |w: &str| options.iter().any(|o| o == w);
         let builtins = |instancing: bool, fog: bool| {
@@ -662,5 +657,19 @@ mod tests {
             ))
             .unwrap();
         assert_eq!(other.keywords.len(), STEREO.len());
+    }
+
+    #[test]
+    fn unmeasured_surface_options_and_lightpass_order_are_rejected() {
+        let mut space = Space::shader();
+        assert!(
+            space
+                .add_program(&pragmas("#pragma multi_compile_lightpass"))
+                .is_err()
+        );
+        for option in ["nolightmap", "noshadow", "nofog", "alpha:fade"] {
+            assert!(space.add_surface(&[], &[option.to_string()]).is_err());
+        }
+        assert_eq!(space.keywords.len(), STEREO.len());
     }
 }

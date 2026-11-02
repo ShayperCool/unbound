@@ -479,8 +479,76 @@ impl State {
             found: true,
             builtin: false,
             subshaders,
-            keywords: self.keywords(inputs, lab),
+            keywords: self.project_keywords(inputs, lab),
         }
+    }
+
+    /// A project shader must not publish a partial space when its Fallback adds declarations.
+    /// The ordering/flag merge for such spaces is not measured for arbitrary project shaders.
+    fn project_keywords(
+        &mut self,
+        inputs: &Inputs,
+        lab: &ShaderLab,
+    ) -> Result<Vec<Declared>, Unknown> {
+        let own = self.keywords(inputs, lab)?;
+        let mut chain = Vec::new();
+        self.fallback_keywords(inputs, lab.fallback.as_deref().unwrap_or(""), &mut chain, 0)?;
+        if let Some(k) = chain.iter().find(|k| !own.contains(k)) {
+            return Err(Unknown::fixed(format!(
+                "its Fallback chain adds or changes `{}`; this keyword space is not measured",
+                k.name
+            )));
+        }
+        Ok(own)
+    }
+
+    fn fallback_keywords(
+        &mut self,
+        inputs: &Inputs,
+        name: &str,
+        out: &mut Vec<Declared>,
+        depth: u32,
+    ) -> Result<(), Unknown> {
+        if name.is_empty() {
+            return Ok(());
+        }
+        if depth > 8 {
+            return Err(Unknown::fixed(format!(
+                "its Fallback chain does not end ({name})"
+            )));
+        }
+        let legacy = format!("Legacy Shaders/{name}");
+        for candidate in [name, legacy.as_str()] {
+            if let Some(lab) = self.project(inputs).get(candidate).cloned() {
+                out.extend(self.keywords(inputs, &lab)?);
+                return match &lab.fallback {
+                    Some(next) => self.fallback_keywords(inputs, next, out, depth + 1),
+                    None => Ok(()),
+                };
+            }
+        }
+        for candidate in [name, legacy.as_str()] {
+            if self.project(inputs).names().iter().any(|n| n == candidate) {
+                self.project = None;
+                return Err(Unknown::transient(format!(
+                    "its Fallback `{candidate}` cannot be read or parsed"
+                )));
+            }
+        }
+        let map = self.builtin(inputs).map_err(|u| {
+            Unknown::transient(format!("its Fallback `{name}` is not known: {}", u.reason))
+        })?;
+        for candidate in [name, legacy.as_str()] {
+            if let Some(b) = map.get(candidate) {
+                out.extend(b.keywords.iter().map(|k| Declared {
+                    name: k.name.clone(),
+                    local: k.local,
+                    dynamic: k.dynamic,
+                }));
+                return self.fallback_keywords(inputs, &b.fallback, out, depth + 1);
+            }
+        }
+        Ok(())
     }
 
     /// A fallback's SubShaders (and its fallback's), by Unity's resolution of the name (the
@@ -625,6 +693,11 @@ impl State {
             let mut surface_done = false;
             for pass in &sub.passes {
                 if let Some(program) = pass.program.as_ref().filter(|p| p.surface) {
+                    if let Some(option) = surface_options(&program.code).first() {
+                        return Err(Unknown::fixed(format!(
+                            "surface shader option `{option}` is not measured"
+                        )));
+                    }
                     if !surface_done {
                         surface_done = true;
                         for generated in unbound_shaders::keywords::surface_passes(
@@ -670,6 +743,11 @@ impl State {
                     return Err(Unknown::fixed("a GLSLPROGRAM pass's keywords are not read"));
                 }
                 let Some(program) = &pass.program else {
+                    if pass.states.fog_mode.is_some() {
+                        return Err(Unknown::fixed(
+                            "a fixed-function pass with explicit Fog Mode is not measured",
+                        ));
+                    }
                     space.add_fixed_function();
                     continue;
                 };
