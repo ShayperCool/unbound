@@ -61,7 +61,7 @@ namespace Unbound.Tests
 
         /// <summary>Only the scenes a test makes are loaded while it runs; the registry's loaded
         /// list and active scene are restored after, and the test's scenes forgotten.</summary>
-        sealed class Scenes : IDisposable
+        internal sealed class Scenes : IDisposable
         {
             readonly SceneData[] m_Loaded = SceneRegistry.Loaded.ToArray();
             readonly SceneData m_Active = SceneRegistry.Active;
@@ -453,20 +453,30 @@ LightmapSettings:
         }
 
         /// <summary>The outgoing scene stays active only while no handler chose another: a scene a
-        /// sceneUnloaded handler made active is kept. (Unity is not measured for this; it pins that
-        /// the cleanup does not override a handler's choice.)</summary>
+        /// sceneUnloaded handler made active is kept through that handler and through its own
+        /// sceneUnloaded, and the same Single load then unloads it, before the incoming scene is
+        /// activated (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference
+        /// creation-ownership.jsonl, t2: activeSceneChanged Extra -> Made, then sceneUnloaded(Made)
+        /// with Made still active). The handler makes its scene once: a handler that makes one on
+        /// every sceneUnloaded is SingleLoadTeardownStopsLoudlyAtItsSceneLimit.</summary>
         [Fact]
         public void SingleLoadKeepsAnActiveSceneAHandlerChose()
         {
             var events = new List<string>();
             var scenes = new Scenes();
             Scene made = default;
+            bool madeOnce = false;
             UnityEngine.Events.UnityAction<Scene, Scene> changed = (a, b) => events.Add($"activeSceneChanged {a.name} {b.name}");
             UnityEngine.Events.UnityAction<Scene> unloaded = s =>
             {
-                made = SceneManager.CreateScene("Made");
-                SceneManager.SetActiveScene(made);
-                events.Add($"sceneUnloaded {s.name}: active {SceneManager.GetActiveScene().name}");
+                if (!madeOnce)
+                {
+                    madeOnce = true;
+                    made = SceneManager.CreateScene("Made");
+                    SceneManager.SetActiveScene(made);
+                }
+                var active = SceneManager.GetActiveScene();
+                events.Add($"sceneUnloaded {s.name}: active {active.name} loaded {active.isLoaded}");
             };
             try
             {
@@ -476,10 +486,19 @@ LightmapSettings:
                 SceneManager.activeSceneChanged += changed;
                 SceneManager.sceneUnloaded += unloaded;
                 SceneManagerInternal.UnloadForSingleLoad(incoming, sceneManagerLoad: true);
-                Assert.Equal(new[] { "activeSceneChanged Main Made", "sceneUnloaded Main: active Made" }, events);
-                Assert.Same(made.Data, SceneRegistry.Active);
-                Assert.Equal(new[] { made.Data }, SceneRegistry.Loaded);
+                Assert.Equal(new[]
+                {
+                    "activeSceneChanged Main Made",
+                    "sceneUnloaded Main: active Made loaded True",
+                    "sceneUnloaded Made: active Made loaded False",
+                }, events);
+                // The same load unloaded the handler's scene; nothing is active until the incoming
+                // scene is (SceneManagerInternal.Perform).
+                Assert.Null(SceneRegistry.Active);
+                Assert.Empty(SceneRegistry.Loaded);
+                Assert.False(made.IsValid());
                 Assert.False(new Scene(mainScene.Handle).IsValid());
+                Assert.Null(SceneRegistry.CreationTarget);
             }
             finally
             {
