@@ -224,8 +224,22 @@ fn keywords_json(keywords: &[Declared]) -> Value {
     serde_json::to_value(keywords).unwrap_or(Value::Array(Vec::new()))
 }
 
-fn builtin_subshaders(builtin: &Builtin) -> Vec<Value> {
-    builtin
+/// A built-in shader's SubShaders as Unity serialized them, its `UsePass` passes resolved by the
+/// reader. One that names no pass in the resources makes them unknown, as an unresolved
+/// `UsePass` of a project shader does (not a pass without tags).
+fn builtin_subshaders(builtin: &Builtin) -> Result<Vec<Value>, Unknown> {
+    if let Some(p) = builtin
+        .subshaders
+        .iter()
+        .flat_map(|s| s.passes.iter())
+        .find(|p| !p.use_pass.is_empty())
+    {
+        return Err(Unknown::fixed(format!(
+            "its UsePass \"{}\" names no pass",
+            p.use_pass
+        )));
+    }
+    Ok(builtin
         .subshaders
         .iter()
         .map(|sub| {
@@ -234,7 +248,7 @@ fn builtin_subshaders(builtin: &Builtin) -> Vec<Value> {
                 "passes": sub.passes.iter().map(|p| json!({ "name": p.name, "tags": tags_json(&p.tags) })).collect::<Vec<_>>(),
             })
         })
-        .collect()
+        .collect())
 }
 
 /// An answer for a shader, its parts known or not.
@@ -433,7 +447,7 @@ impl State {
                 keywords: Err(why),
             };
         }
-        let mut subshaders = Ok(builtin_subshaders(builtin));
+        let mut subshaders = builtin_subshaders(builtin);
         if let Ok(list) = &mut subshaders
             && let Err(u) = self.fallbacks(inputs, &builtin.fallback, list, 0)
         {
@@ -604,7 +618,7 @@ impl State {
         })?;
         for candidate in [name, legacy.as_str()] {
             if let Some(builtin) = map.get(candidate) {
-                out.extend(builtin_subshaders(builtin));
+                out.extend(builtin_subshaders(builtin)?);
                 let next = builtin.fallback.clone();
                 return self.fallbacks(inputs, &next, out, depth + 1);
             }

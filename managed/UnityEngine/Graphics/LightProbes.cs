@@ -518,7 +518,12 @@ namespace UnityEngine
         {
             if (!scene.IsValid()) return null;
             if (s_Own.TryGetValue(scene.handle, out var own)) return own;
-            return scene.isLoaded ? LightmapSettings.lightProbes : null;
+            // Preserve the existing fallback for a registered scene without its own bake.
+            // Single-load public isLoaded now becomes false before the internal loaded state
+            // changes. That new query answer does not measure a different probe fallback.
+            var data = scene.Data;
+            return data != null && data.IsLoaded && data.LoadingState != SceneManagement.Scene.LoadingState.Loading
+                ? LightmapSettings.lightProbes : null;
         }
 
         public static LightProbes GetInstantiatedLightProbesForScene(SceneManagement.Scene scene) => GetSharedLightProbesForScene(scene);

@@ -15,22 +15,40 @@ namespace UnityEngine.SceneManagement
 
         internal SceneData Data => SceneRegistry.Get(new SceneHandle(m_Handle));
 
+        /// <summary>What the public queries answer: <see cref="Data"/>, or a scene a Single load in
+        /// progress has closed (SceneRegistry.PublicScene). Engine code keeps using Data.</summary>
+        SceneData PublicData => SceneRegistry.PublicScene(new SceneHandle(m_Handle));
+
         public int handle => m_Handle;
-        public bool IsValid() => Data != null;
-        public string path => Data?.Path ?? "";
+        public bool IsValid() => PublicData != null;
+        public string path
+        {
+            get
+            {
+                var data = PublicData;
+                if (data == null) return null;
+                // Unity's persistent scene has a virtual path; an ordinary runtime-created
+                // scene keeps its empty path, even if its name happens to be the same.
+                return SceneRegistry.IsDontDestroyOnLoad(data) ? "DontDestroyOnLoad" : data.Path;
+            }
+        }
         public string name
         {
             // An invalid scene has no name (measured: tests/projects/messages, null).
-            get => Data?.Name;
+            get => PublicData?.Name;
             set { if (Data != null) Data.Name = value; }
         }
         /// <summary>Not yet while the scene's objects wake up and the scene is processed
-        /// (measured: tests/projects/editorcallbacks).</summary>
-        public bool isLoaded => Data != null && Data.IsLoaded && Data.LoadingState != LoadingState.Loading;
-        public int buildIndex => Data?.BuildIndex ?? -1;
+        /// (measured: tests/projects/editorcallbacks), and no longer while a SceneManager Single
+        /// load destroys its objects (SceneRegistry.IsTeardownClosing).</summary>
+        public bool isLoaded => IsLoadedData(Data);
+
+        internal static bool IsLoadedData(SceneData data) =>
+            data != null && data.IsLoaded && data.LoadingState != LoadingState.Loading && !SceneRegistry.IsTeardownClosing(data);
+        public int buildIndex => PublicData?.BuildIndex ?? -1;
         public bool isDirty => Data?.IsDirty ?? false;
         public int dirtyID => 0;
-        public int rootCount => Data?.Roots.Count ?? 0;
+        public int rootCount => PublicData?.Roots.Count ?? 0;
         public bool isSubScene { get; set; }
 
         public LoadingState loadingState => Data?.LoadingState ?? LoadingState.NotLoaded;
@@ -45,13 +63,18 @@ namespace UnityEngine.SceneManagement
         public void GetRootGameObjects(List<GameObject> rootGameObjects)
         {
             if (rootGameObjects == null) throw new ArgumentNullException(nameof(rootGameObjects));
-            if (!IsValid()) throw new ArgumentException("The scene is invalid.");
+            var data = PublicData;
+            if (data == null) throw new ArgumentException("The scene is invalid.");
             // A loading scene lists its roots to the scene processors (measured: tests/projects/editorcallbacks).
-            // So does the incoming scene of a Single load while the outgoing scenes close, with
-            // the objects made there meanwhile (measured: SceneRegistry.CreationTarget).
-            if (!Data.IsLoaded && !SceneRegistry.IsTeardownIncoming(Data)) throw new ArgumentException("The scene is not loaded.");
+            // So does every listed scene that is not loaded (SceneManagerInternal.Listed): a
+            // requested scene (none yet), the incoming scene of a Single load while the outgoing
+            // scenes close, with the objects made there meanwhile (SceneRegistry.CreationTarget),
+            // and the scenes that load closes, in and after their sceneUnloaded (none left)
+            // (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference creation-ownership.jsonl).
+            // A valid scene that is neither loaded nor listed still throws (not measured).
+            if (!data.IsLoaded && !SceneManagerInternal.IsListed(data)) throw new ArgumentException("The scene is not loaded.");
             rootGameObjects.Clear();
-            foreach (var go in Data.Roots)
+            foreach (var go in data.Roots)
                 if (!go.m_Destroyed) rootGameObjects.Add(go);
         }
 
@@ -113,13 +136,18 @@ namespace UnityEngine.SceneManagement
         internal static void Internal_SceneUnloaded(Scene scene) => sceneUnloaded?.Invoke(scene);
         internal static void Internal_ActiveSceneChanged(Scene previous, Scene next) => activeSceneChanged?.Invoke(previous, next);
 
-        public static int sceneCount => SceneRegistry.Loaded.Count;
+        /// <summary>The listed scenes (SceneManagerInternal.Listed), requested and closing ones too.</summary>
+        public static int sceneCount => SceneManagerInternal.Listed().Count;
+
+        /// <summary>The listed scenes whose isLoaded is true: not a scene still loading or being
+        /// closed (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference
+        /// lifecycle.jsonl and creation-ownership.jsonl).</summary>
         public static int loadedSceneCount
         {
             get
             {
                 int n = 0;
-                foreach (var s in SceneRegistry.Loaded) if (s.IsLoaded) n++;
+                foreach (var s in SceneManagerInternal.Listed()) if (Scene.IsLoadedData(s)) n++;
                 return n;
             }
         }
@@ -151,9 +179,10 @@ namespace UnityEngine.SceneManagement
 
         public static Scene GetSceneAt(int index)
         {
-            if (index < 0 || index >= SceneRegistry.Loaded.Count)
+            var listed = SceneManagerInternal.Listed();
+            if (index < 0 || index >= listed.Count)
                 throw new ArgumentException("The scene index is out of range.");
-            return new Scene(SceneRegistry.Loaded[index].Handle);
+            return new Scene(listed[index].Handle);
         }
 
         public static Scene GetSceneByName(string name)
@@ -329,8 +358,57 @@ namespace UnityEngine.SceneManagement
         static readonly List<(AsyncOperation Op, int Index, LoadSceneParameters Parameters, SceneData Scene)> s_Pending =
             new List<(AsyncOperation, int, LoadSceneParameters, SceneData)>();
         /// <summary>Scenes requested by LoadScene/LoadSceneAsync (from an AssetBundle too) and not
-        /// integrated yet: pending, held at 0.9 for allowSceneActivation, or being loaded.</summary>
-        static readonly HashSet<SceneData> s_Requested = new HashSet<SceneData>();
+        /// integrated yet: pending, held at 0.9 for allowSceneActivation, or being loaded; in
+        /// request order.</summary>
+        static readonly List<SceneData> s_Requested = new List<SceneData>();
+
+        /// <summary>
+        /// The scenes SceneManager lists (sceneCount, GetSceneAt, loadedSceneCount), in order. This
+        /// is a view: SceneRegistry.Loaded, which loading, lighting and Find use, is not changed.
+        /// Outside a Single load's teardown: the loaded scenes, then the requested ones not loaded
+        /// yet, valid and not loaded (measured, Unity 6000.0.71f1: tests/projects/lightprobes
+        /// Reference lifecycle.jsonl and creation-ownership.jsonl, LoadScene Single and Additive
+        /// returned; a held allowSceneActivation load is not measured and is listed the same way).
+        /// While a SceneManager Single load closes the scenes it replaces: the scenes loaded when
+        /// it began (closed ones stay listed, valid and not loaded, until it ends), then the
+        /// requested ones with its incoming scene, then the scenes made during it, closed or not
+        /// (measured: creation-ownership.jsonl, in the outgoing objects' OnDestroy, in sceneUnloaded,
+        /// and for a scene a sceneUnloaded handler created, also in its own sceneUnloaded). Other
+        /// orders within the requested and made scenes are not measured. A scene still loading is in
+        /// the loaded list and listed there once (measured: tests/projects/editorcallbacks).
+        /// </summary>
+        internal static IReadOnlyList<SceneData> Listed()
+        {
+            var teardown = SceneRegistry.Teardown;
+            if (teardown == null && s_Requested.Count == 0) return SceneRegistry.Loaded;
+            var list = new List<SceneData>();
+            void Add(SceneData scene)
+            {
+                if (scene != null && !list.Contains(scene) && SceneRegistry.PublicScene(scene.Handle) != null) list.Add(scene);
+            }
+            if (teardown == null)
+            {
+                foreach (var scene in SceneRegistry.Loaded) Add(scene);
+                foreach (var scene in s_Requested) Add(scene);
+                return list;
+            }
+            foreach (var scene in teardown.Outgoing) Add(scene);
+            foreach (var scene in s_Requested)
+                if (!SceneRegistry.Loaded.Contains(scene)) Add(scene);
+            Add(teardown.Incoming);
+            foreach (var scene in teardown.Closed) Add(scene);
+            Add(teardown.Closing);
+            foreach (var scene in SceneRegistry.Loaded) Add(scene);
+            return list;
+        }
+
+        internal static bool IsListed(SceneData scene)
+        {
+            var listed = Listed();
+            for (int i = 0; i < listed.Count; i++)
+                if (listed[i] == scene) return true;
+            return false;
+        }
 
         /// <summary>Application.isLoadingLevel: a requested scene is still in
         /// <see cref="Scene.LoadingState.Loading"/>, held loads included. A scene is Loaded before
@@ -467,6 +545,9 @@ namespace UnityEngine.SceneManagement
         /// handler made it (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference
         /// creation-ownership.jsonl). The other Single loads keep closing only the scenes loaded
         /// when they start (not measured).
+        /// During a SceneManager load's teardown the public scene queries list the outgoing,
+        /// incoming and handler-made scenes (Listed); the scene being closed is no longer loaded
+        /// for them, and a closed scene stays valid until the teardown ends (also when it throws).
         /// </summary>
         internal static void UnloadForSingleLoad(SceneData incoming, bool sceneManagerLoad)
         {
@@ -478,6 +559,7 @@ namespace UnityEngine.SceneManagement
             }
             LightProbes.SingleLoadReplacing();
             var outer = SceneRegistry.BeginSingleLoadTeardown(incoming);
+            var teardown = SceneRegistry.Teardown;
             try
             {
                 int limit = SceneRegistry.Loaded.Count + TeardownCreatedSceneLimit;
@@ -488,7 +570,9 @@ namespace UnityEngine.SceneManagement
                     if (closed == limit) throw TeardownLimitReached(incoming, closed);
                     closed++;
                     var before = new HashSet<GameObject>(incoming.Roots);
-                    UnloadNow(other, keepDontSave: true, activeThroughUnloaded: true);
+                    teardown.Closing = other;
+                    try { UnloadNow(other, keepDontSave: true, activeThroughUnloaded: true); }
+                    finally { teardown.Closing = null; }
                     ReportNotCleanedUp(incoming, before);
                 }
             }
@@ -612,7 +696,8 @@ namespace UnityEngine.SceneManagement
         static bool KeptBySingleLoad(GameObject root) => (root.hideFlags & HideFlags.DontSaveInEditor) != 0;
 
         /// <param name="activeThroughUnloaded">A SceneManager Single load: the scene, when active,
-        /// stays the active one until its sceneUnloaded handlers have run (UnloadForSingleLoad).</param>
+        /// stays the active one until its sceneUnloaded handlers have run, and it stays valid and
+        /// listed until the load's teardown ends (UnloadForSingleLoad).</param>
         static void UnloadNow(SceneData data, bool keepDontSave = false, bool activeThroughUnloaded = false)
         {
             data.LoadingState = Scene.LoadingState.Unloading;
@@ -646,7 +731,10 @@ namespace UnityEngine.SceneManagement
                 // threw), unless a handler made another scene active.
                 if (keepActive && SceneRegistry.Active == data) SceneRegistry.Active = null;
             }
-            SceneRegistry.Forget(data);
+            // A SceneManager Single load's public queries keep the scene valid and listed until its
+            // teardown ends; engine code sees it forgotten now, as before.
+            if (activeThroughUnloaded) SceneRegistry.CloseForSingleLoad(data);
+            else SceneRegistry.Forget(data);
         }
     }
 }

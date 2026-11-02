@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using Unbound.Runtime;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -29,8 +30,10 @@ namespace Unbound.Tests
     /// callbacks, while GetActiveScene still answers the outgoing scene. They live on with the
     /// incoming scene, and Unity logs one Error naming them. Explicit parents and scenes and an
     /// object's own scene stay authoritative. A scene a handler creates is unloaded by the same
-    /// load. Unit tests have no native side: SceneManagerInternal.UnloadForSingleLoad is the
-    /// production teardown, and the incoming scene is left as LoadScene leaves it.
+    /// load. SceneManager lists the requested, outgoing, incoming and handler-made scenes during
+    /// such a load without changing the internal loaded list. Unit tests have no native side:
+    /// SceneManagerInternal.UnloadForSingleLoad is the production teardown, and the incoming scene
+    /// is left as LoadScene leaves it.
     /// </summary>
     public class SceneCreationOwnershipTests
     {
@@ -54,6 +57,44 @@ namespace Unbound.Tests
 
         static List<string> Errors(List<(LogType Type, string Message)> log) =>
             log.Where(e => e.Type == LogType.Error).Select(e => e.Message).ToList();
+
+        /// <summary>What SceneManager lists, as the creation-ownership witness reads it: each
+        /// GetSceneAt scene's name, validity, isLoaded and GetRootGameObjects (count or the
+        /// exception), then loadedSceneCount. It never asks for the active scene (which would
+        /// make an untitled one when there is none).</summary>
+        static string Listing()
+        {
+            var parts = new List<string>();
+            for (int i = 0; i < SceneManager.sceneCount; i++)
+            {
+                var scene = SceneManager.GetSceneAt(i);
+                string roots;
+                try { roots = scene.GetRootGameObjects().Length.ToString(); }
+                catch (ArgumentException e) { roots = "!" + e.Message; }
+                parts.Add($"{scene.name} valid {scene.IsValid()} loaded {scene.isLoaded} roots {roots}");
+            }
+            return string.Join(", ", parts) + $" | loadedSceneCount {SceneManager.loadedSceneCount}";
+        }
+
+        static string Internal() => "internal [" + string.Join(",", SceneRegistry.Loaded.Select(s => s.Name)) + "]";
+
+        /// <summary>A scene LoadScene has requested and not integrated yet (in
+        /// SceneManagerInternal's requests until disposed). Unit tests run no PlayerLoop, so the
+        /// request is never processed.</summary>
+        sealed class Requested : IDisposable
+        {
+            static readonly List<SceneData> s_Requests = (List<SceneData>)typeof(SceneManagerInternal)
+                .GetField("s_Requested", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+            readonly SceneData m_Scene;
+
+            internal Requested(SceneData scene)
+            {
+                m_Scene = scene;
+                s_Requests.Add(scene);
+            }
+
+            public void Dispose() => s_Requests.Remove(m_Scene);
+        }
 
         /// <summary>Destroys what a test made outside its scenes, then restores the registry.</summary>
         static void Cleanup(LightProbesTests.Scenes scenes, IEnumerable<GameObject> made)
@@ -262,6 +303,11 @@ namespace Unbound.Tests
                 // The scene the last handler made is still loaded and listed, not dropped.
                 Assert.Equal(new[] { last.Data }, SceneRegistry.Loaded);
                 Assert.True(last.isLoaded);
+                // The teardown's listing ended with it: the scenes it closed are invalid and only
+                // the scene still loaded is listed.
+                Assert.Null(SceneRegistry.Teardown);
+                Assert.Equal(1, SceneManager.sceneCount);
+                Assert.Equal(last, SceneManager.GetSceneAt(0));
                 Assert.Null(SceneRegistry.CreationTarget);
                 Assert.False(SceneRegistry.IsTeardownIncoming(incoming));
             }
@@ -362,9 +408,256 @@ namespace Unbound.Tests
             }
         }
 
+        /// <summary>
+        /// SceneManager lists a scene LoadScene requested after the loaded scenes, valid, not loaded
+        /// and without roots (GetRootGameObjects answers an empty array), and loadedSceneCount
+        /// leaves it out (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference
+        /// lifecycle.jsonl rows 3 and 21, creation-ownership.jsonl "LoadScene returned"). While its
+        /// objects wake up it is in the loaded list, listed once and still not counted as loaded
+        /// (lifecycle.jsonl row 4); once loaded it counts.
+        /// </summary>
+        [Fact]
+        public void RequestedScenesAreListedAfterTheLoadedOnes()
+        {
+            var scenes = new LightProbesTests.Scenes();
+            Requested requested = null;
+            try
+            {
+                scenes.Loaded("Main");
+                var extra = scenes.Loading("Extra");
+                Assert.Equal("Main valid True loaded True roots 0 | loadedSceneCount 1", Listing());
+
+                requested = new Requested(extra);
+                Assert.Equal("Main valid True loaded True roots 0, Extra valid True loaded False roots 0 | loadedSceneCount 1", Listing());
+                Assert.Equal(new Scene(extra.Handle), SceneManager.GetSceneAt(1));
+                Assert.Throws<ArgumentException>(() => SceneManager.GetSceneAt(2));
+                // The internal loaded list is not changed by the listing.
+                Assert.Equal("internal [Main]", Internal());
+
+                // Perform: the scene joins the loaded list while its objects wake up.
+                SceneRegistry.Loaded.Add(extra);
+                extra.IsLoaded = true;
+                Assert.Equal("Main valid True loaded True roots 0, Extra valid True loaded False roots 0 | loadedSceneCount 1", Listing());
+                extra.LoadingState = Scene.LoadingState.Loaded;
+                requested.Dispose();
+                requested = null;
+                Assert.Equal("Main valid True loaded True roots 0, Extra valid True loaded True roots 0 | loadedSceneCount 2", Listing());
+            }
+            finally
+            {
+                requested?.Dispose();
+                scenes.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// While a SceneManager Single load closes the scene it replaces, SceneManager lists the
+        /// outgoing scene, then the incoming one, then a scene a sceneUnloaded handler made
+        /// (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference
+        /// creation-ownership.jsonl). The outgoing scene is no longer loaded from its objects'
+        /// OnDestroy on, and its GetRootGameObjects answers the roots not destroyed yet there and
+        /// an empty array in its sceneUnloaded instead of throwing. It stays valid and listed in
+        /// the sceneUnloaded of the handler's scene, which the same load closes, and both become
+        /// invalid when the teardown ends. The internal loaded list (loading, lighting, Find) does
+        /// not change: the incoming scene is not in it. Engine code sees the closed scene gone as
+        /// before: a copy explicitly asked for in it goes to the incoming scene, not into a scene
+        /// that no longer exists (Unity is not measured for that request).
+        /// </summary>
+        [Fact]
+        public void SingleLoadTeardownListsOutgoingIncomingAndHandlerMadeScenes()
+        {
+            var scenes = new LightProbesTests.Scenes();
+            var made = new List<GameObject>();
+            var seen = new List<string>();
+            Requested requested = null;
+            Scene handlerScene = default, closedMain = default;
+            GameObject template = null;
+            UnityEngine.Events.UnityAction<Scene> unloaded = s =>
+            {
+                seen.Add($"sceneUnloaded {s.name}: {Listing()} | {Internal()}");
+                if (s.name == "Made")
+                {
+                    var copy = UObject.Instantiate(template, new InstantiateParameters { scene = closedMain });
+                    made.Add(copy);
+                    seen.Add($"closed Main registered {SceneRegistry.Get(new SceneHandle(closedMain.handle)) != null}, copy in {copy.scene.name}");
+                }
+                if (s.name != "Main") return;
+                handlerScene = SceneManager.CreateScene("Made");
+                SceneManager.SetActiveScene(handlerScene);
+                seen.Add($"made: {Listing()} | {Internal()}");
+            };
+            try
+            {
+                LightmapSettings.Reset();
+                var main = scenes.Loaded("Main");
+                closedMain = new Scene(main.Handle);
+                var incoming = scenes.Loading("Extra");
+                requested = new Requested(incoming);
+                template = new GameObject("Template");
+                made.Add(template);
+                SceneManager.MoveToDontDestroyOnLoad(template);
+                var destroyer = Tracked("Destroyer");
+                made.Add(destroyer);
+                destroyer.GetComponent<TeardownMade>().onDestroy = () => seen.Add($"OnDestroy: {Listing()} | {Internal()}");
+                Assert.Equal("Main valid True loaded True roots 1, Extra valid True loaded False roots 0 | loadedSceneCount 1", Listing());
+
+                SceneManager.sceneUnloaded += unloaded;
+                SceneManagerInternal.UnloadForSingleLoad(incoming, sceneManagerLoad: true);
+
+                Assert.Equal(new[]
+                {
+                    "OnDestroy: Main valid True loaded False roots 1, Extra valid True loaded False roots 0 | loadedSceneCount 0 | internal [Main]",
+                    "sceneUnloaded Main: Main valid True loaded False roots 0, Extra valid True loaded False roots 0 | loadedSceneCount 0 | internal []",
+                    "made: Main valid True loaded False roots 0, Extra valid True loaded False roots 0, Made valid True loaded True roots 0 | loadedSceneCount 1 | internal [Made]",
+                    "sceneUnloaded Made: Main valid True loaded False roots 0, Extra valid True loaded False roots 0, Made valid True loaded False roots 0 | loadedSceneCount 0 | internal []",
+                    "closed Main registered False, copy in Extra",
+                }, seen);
+                // The teardown is over: the scenes it closed are invalid; the incoming scene, still
+                // requested in this test, is listed alone.
+                Assert.Null(SceneRegistry.Teardown);
+                Assert.False(new Scene(main.Handle).IsValid());
+                Assert.False(handlerScene.IsValid());
+                Assert.Equal("Extra valid True loaded False roots 1 | loadedSceneCount 0", Listing());
+                Assert.Empty(SceneRegistry.Loaded);
+            }
+            finally
+            {
+                SceneManager.sceneUnloaded -= unloaded;
+                requested?.Dispose();
+                if (handlerScene.Data != null) SceneRegistry.Forget(handlerScene.Data);
+                Cleanup(scenes, made);
+            }
+        }
+
+        /// <summary>A throwing sceneUnloaded handler ends the teardown's listing and closing state
+        /// with it: a scene it already closed becomes invalid, and the scene whose handler threw is
+        /// left as before (not closed, valid, no longer loaded or listed). Two outgoing scenes are
+        /// not measured; their order here (load order) is Unbound's rule.</summary>
+        [Fact]
+        public void SingleLoadTeardownEndsItsListingWhenAHandlerThrows()
+        {
+            var scenes = new LightProbesTests.Scenes();
+            var seen = new List<string>();
+            UnityEngine.Events.UnityAction<Scene> unloaded = s =>
+            {
+                seen.Add($"sceneUnloaded {s.name}: {Listing()}");
+                if (s.name == "Second") throw new InvalidOperationException("handler");
+            };
+            try
+            {
+                LightmapSettings.Reset();
+                var first = scenes.Loaded("First");
+                var second = scenes.Loaded("Second");
+                var incoming = scenes.Loading("Extra");
+                SceneManager.sceneUnloaded += unloaded;
+                Assert.Throws<InvalidOperationException>(() => SceneManagerInternal.UnloadForSingleLoad(incoming, sceneManagerLoad: true));
+                SceneManager.sceneUnloaded -= unloaded;
+
+                Assert.Equal(new[]
+                {
+                    "sceneUnloaded First: First valid True loaded False roots 0, Second valid True loaded True roots 0, Extra valid True loaded False roots 0 | loadedSceneCount 1",
+                    "sceneUnloaded Second: First valid True loaded False roots 0, Second valid True loaded False roots 0, Extra valid True loaded False roots 0 | loadedSceneCount 0",
+                }, seen);
+                Assert.Null(SceneRegistry.Teardown);
+                Assert.False(SceneRegistry.IsTeardownClosing(second));
+                Assert.False(new Scene(first.Handle).IsValid());
+                Assert.True(new Scene(second.Handle).IsValid());
+                Assert.Equal(" | loadedSceneCount 0", Listing());
+                Assert.Throws<ArgumentException>(() => new Scene(second.Handle).GetRootGameObjects());
+            }
+            finally
+            {
+                SceneManager.sceneUnloaded -= unloaded;
+                scenes.Dispose();
+                LightmapSettings.Reset();
+            }
+        }
+
+        /// <summary>The creation-ownership Native reference records null for invalid paths,
+        /// the asset path for loaded/pending/closing file scenes, an empty path for Made, and
+        /// the virtual DontDestroyOnLoad path. Internal SceneData.Path stays unchanged.</summary>
+        [Fact]
+        public void ScenePathsDistinguishInvalidRuntimeAndPersistentScenes()
+        {
+            using var scenes = new LightProbesTests.Scenes();
+            Assert.Null(default(Scene).path);
+            var main = scenes.Loaded("Main");
+            main.Path = "Assets/Scenes/Main.unity";
+            var mainScene = new Scene(main.Handle);
+            Assert.Equal("Assets/Scenes/Main.unity", mainScene.path);
+            var made = scenes.Loaded("Made");
+            Assert.Equal("", new Scene(made.Handle).path);
+            var sameName = scenes.Loaded("DontDestroyOnLoad");
+            Assert.Equal("", new Scene(sameName.Handle).path);
+            var persistent = SceneRegistry.DontDestroyOnLoad;
+            string storedPath = persistent.Path;
+            Assert.Equal("DontDestroyOnLoad", new Scene(persistent.Handle).path);
+            Assert.Equal(storedPath, persistent.Path);
+
+            var incoming = scenes.Loading("Extra");
+            incoming.Path = "Assets/Scenes/Extra.unity";
+            Assert.Equal("Assets/Scenes/Extra.unity", new Scene(incoming.Handle).path);
+            var outer = SceneRegistry.BeginSingleLoadTeardown(incoming);
+            try
+            {
+                SceneRegistry.CloseForSingleLoad(main);
+                Assert.True(mainScene.IsValid());
+                Assert.Equal("Assets/Scenes/Main.unity", mainScene.path);
+            }
+            finally { SceneRegistry.EndSingleLoadTeardown(outer); }
+            Assert.False(mainScene.IsValid());
+            Assert.Null(mainScene.path);
+        }
+
+        /// <summary>The public closing-scene query must not change the existing unmeasured
+        /// global-probe fallback for an internally loaded scene with no bake. A closed scene
+        /// that remains publicly listed has still lost its internal ownership, as before.</summary>
+        [Fact]
+        public void PublicClosingStatePreservesTheExistingUnbakedProbeFallback()
+        {
+            var scenes = new LightProbesTests.Scenes();
+            LightProbes probes = null;
+            try
+            {
+                LightmapSettings.Reset();
+                var main = scenes.Loaded("Main");
+                var incoming = scenes.Loading("Extra");
+                var scene = new Scene(main.Handle);
+                using var json = System.Text.Json.JsonDocument.Parse("{\"positions\":[],\"coefficients\":[],\"hullRays\":[],\"tetrahedra\":[]}");
+                probes = LightProbes.FromJson(json.RootElement);
+                LightmapSettings.SetLightProbes(probes);
+                Assert.Same(probes, LightProbes.GetSharedLightProbesForScene(scene));
+
+                var outer = SceneRegistry.BeginSingleLoadTeardown(incoming);
+                try
+                {
+                    SceneRegistry.Teardown.Closing = main;
+                    Assert.False(scene.isLoaded);
+                    Assert.Same(probes, LightProbes.GetSharedLightProbesForScene(scene));
+                    // A scene whose data is still loading keeps the previous null fallback.
+                    main.LoadingState = Scene.LoadingState.Loading;
+                    Assert.Null(LightProbes.GetSharedLightProbesForScene(scene));
+                    main.LoadingState = Scene.LoadingState.Loaded;
+                    SceneRegistry.CloseForSingleLoad(main);
+                    SceneRegistry.Teardown.Closing = null;
+                    Assert.True(scene.IsValid());
+                    Assert.Null(LightProbes.GetSharedLightProbesForScene(scene));
+                }
+                finally { SceneRegistry.EndSingleLoadTeardown(outer); }
+                Assert.False(scene.IsValid());
+            }
+            finally
+            {
+                if (probes != null) UObject.DestroyImmediate(probes);
+                LightmapSettings.Reset();
+                scenes.Dispose();
+            }
+        }
+
         /// <summary>Single loads that are not SceneManager loads keep the active scene as the
-        /// default creation scene and close only the scenes loaded when they start (not measured;
-        /// this pins the boundary of the measured change).</summary>
+        /// default creation scene, close only the scenes loaded when they start and do not list the
+        /// scene they close in its sceneUnloaded (not measured; this pins the boundary of the
+        /// measured change).</summary>
         [Fact]
         public void OtherSingleLoadsKeepTheActiveSceneForCreation()
         {
@@ -373,16 +666,17 @@ namespace Unbound.Tests
             string seen = null;
             UnityEngine.Events.UnityAction<Scene> unloaded = s =>
             {
-                seen = $"target {SceneRegistry.CreationTarget?.Name ?? "none"}";
+                seen = $"target {SceneRegistry.CreationTarget?.Name ?? "none"} listed {SceneManager.sceneCount} {s.IsValid()}";
             };
             try
             {
                 LightmapSettings.Reset();
-                scenes.Loaded("Main");
+                var main = scenes.Loaded("Main");
                 var incoming = scenes.Loading("Extra");
                 SceneManager.sceneUnloaded += unloaded;
                 SceneManagerInternal.UnloadForSingleLoad(incoming, sceneManagerLoad: false);
-                Assert.Equal("target none", seen);
+                Assert.Equal("target none listed 0 True", seen);
+                Assert.False(new Scene(main.Handle).IsValid());
                 Assert.Empty(incoming.Roots);
             }
             finally
