@@ -943,14 +943,39 @@ namespace UnityEngine
             for (int i = 0; i < m_Count;)
             {
                 if ((m_Particles[i].m_Flags & Particle.FlagOrphanTrail) != 0) { i++; continue; }
-                // A particle a trigger killed in the previous update dies now, before it ages or
-                // moves, like one whose life ran out exactly at the end of that update.
-                if ((m_Particles[i].m_Flags & Particle.FlagTriggerKilled) == 0 && Integrate(ref m_Particles[i], dt, ref m_Context, true))
+                // A particle a trigger killed in the previous update dies now, without ageing again,
+                // like one whose life ran out exactly at the end of that update.
+                bool killed = (m_Particles[i].m_Flags & Particle.FlagTriggerKilled) != 0;
+                float ageBefore = 0f;
+                if (deathSubs)
+                {
+                    // Integrate's first action; its lifetime curves use the age before the step.
+                    if (!killed && (m_Particles[i].m_Flags & Particle.FlagAgeInitialized) == 0) m_Particles[i].InitializeAge();
+                    ageBefore = m_Particles[i].Age01;
+                }
+                bool agedOut = false;
+                if (!killed && Integrate(ref m_Particles[i], dt, ref m_Context, true, out agedOut))
                 {
                     i++;
                     continue;
                 }
-                if (deathSubs) TriggerSubEmitters(ParticleSystemSubEmitterType.Death, ref m_Particles[i]);
+                if (deathSubs)
+                {
+                    // Its Death sub-emitters fire where the whole step's movement takes it, not where
+                    // its life ran out (6000.0.71f1 trigger lifetime natural/trigger_death_child and
+                    // broad sub_emitters_child: .46 at 2/s with .013 s left of a .025 s step emits at
+                    // .51; killed at .51, it emits at .56 in the next step; the broad parent dying in
+                    // the first of two steps emits at 1.05). Only the event's position moves: the
+                    // particle itself, its trail and what children inherit from it stay as they were.
+                    var dying = m_Particles[i];
+                    if (killed || agedOut)
+                    {
+                        var end = dying;
+                        Move(ref end, dt, ref m_Context, ageBefore, out _);
+                        dying.m_Position = end.m_Position;
+                    }
+                    TriggerSubEmitters(ParticleSystemSubEmitterType.Death, ref dying);
+                }
                 if (KeepOrphanTrail(ref m_Particles[i])) { i++; continue; }
                 EndTrail(ref m_Particles[i]);
                 RemoveAt(i);
@@ -961,8 +986,13 @@ namespace UnityEngine
         /// curves are evaluated at the particle's age before the step (measured: velocity over
         /// lifetime moves a newborn not at all in its first step). <paramref name="existing"/>: the
         /// particle was alive before this update (false for a newborn being emitted).</summary>
-        bool Integrate(ref Particle p, float dt, ref StepContext c, bool existing = false)
+        bool Integrate(ref Particle p, float dt, ref StepContext c, bool existing = false) => Integrate(ref p, dt, ref c, existing, out _);
+
+        /// <summary>As above; <paramref name="agedOut"/>: it died because its life ran out in this
+        /// step, before it moved (not in a collision).</summary>
+        bool Integrate(ref Particle p, float dt, ref StepContext c, bool existing, out bool agedOut)
         {
+            agedOut = false;
             if ((p.m_Flags & Particle.FlagAgeInitialized) == 0) p.InitializeAge();
             float age = p.Age01;
             float ageBefore = p.m_StartLifetime - p.m_Lifetime;
@@ -984,11 +1014,65 @@ namespace UnityEngine
             }
             if (p.m_AgePercent > 100f)
             {
-                if (ring != ParticleSystemRingBufferMode.PauseUntilReplaced) return false;
+                if (ring != ParticleSystemRingBufferMode.PauseUntilReplaced)
+                {
+                    agedOut = true;
+                    return false;
+                }
                 p.m_AgePercent = 100f;
                 p.m_Lifetime = 0f;
                 return true;
             }
+            var before = p.m_Position;
+            float speedModifier = Move(ref p, dt, ref c, age, out var moving);
+            if (m_Collision.enabled && !Collide(ref p, before, age, dt, speedModifier)) return false;
+            if (m_Trigger.enabled && !Trigger(ref p))
+            {
+                // A newborn killed while it is emitted is never added (measured: none is
+                // reported, even in a call's last step). An existing particle's life ends
+                // here: it keeps its moved state with zero remaining lifetime, and the next
+                // update removes it (measured: killed in a call's last internal step it is
+                // reported at lifetime 0, killed in an earlier one it is gone). The rest of
+                // this update still skips it, as before.
+                if (!existing) return false;
+                p.m_AgePercent = 100f;
+                p.m_Lifetime = 0f;
+                p.m_Flags |= Particle.FlagTriggerKilled;
+                return true;
+            }
+
+            uint seed = p.m_RandomSeed;
+            var RO = m_Rotation;
+            var RS = m_RotationBySpeed;
+            if (RO.enabled || RS.enabled)
+            {
+                // The rotation modules set the angular velocity (GetParticles reports it).
+                var w = Vector3.zero;
+                if (RO.enabled)
+                {
+                    float r = R.Value(seed, R.RotLife);
+                    w += RO.separateAxes ? new Vector3(RO.x.Evaluate(age, r), RO.y.Evaluate(age, r), RO.z.Evaluate(age, r)) : new Vector3(0f, 0f, RO.z.Evaluate(age, r));
+                }
+                if (RS.enabled)
+                {
+                    float s = Mathf.InverseLerp(RS.range.x, RS.range.y, moving.magnitude);
+                    float r = R.Value(seed, R.RotSpeed);
+                    w += RS.separateAxes ? new Vector3(RS.x.Evaluate(s, r), RS.y.Evaluate(s, r), RS.z.Evaluate(s, r)) : new Vector3(0f, 0f, RS.z.Evaluate(s, r));
+                }
+                if ((p.m_Flags & Particle.FlagFlipRotation) != 0) w = -w;
+                p.m_AngularVelocity = w;
+            }
+            p.m_Rotation += p.m_AngularVelocity * dt;
+
+            if (c.BirthSubs) BirthSubEmitters(ref p, ageBefore, p.m_StartLifetime - p.m_Lifetime, dt);
+            return true;
+        }
+
+        /// <summary>The velocity modules and one step's movement: sets the particle's velocity,
+        /// animated velocity and position, with the lifetime curves at <paramref name="age"/>. Returns
+        /// the speed modifier; <paramref name="moving"/> is the whole velocity it moved with.</summary>
+        float Move(ref Particle p, float dt, ref StepContext c, float age, out Vector3 moving)
+        {
             uint seed = p.m_RandomSeed;
             var v = p.m_Velocity;
             var V = m_Velocity;
@@ -1046,48 +1130,9 @@ namespace UnityEngine
             p.m_Velocity = v;
 
             p.m_AnimatedVelocity = animated;
-            var before = p.m_Position;
-            p.m_Position += (v + animated) * (speedModifier * dt);
-            if (m_Collision.enabled && !Collide(ref p, before, age, dt, speedModifier)) return false;
-            if (m_Trigger.enabled && !Trigger(ref p))
-            {
-                // A newborn killed while it is emitted is never added (measured: none is
-                // reported, even in a call's last step). An existing particle's life ends
-                // here: it keeps its moved state with zero remaining lifetime, and the next
-                // update removes it (measured: killed in a call's last internal step it is
-                // reported at lifetime 0, killed in an earlier one it is gone). The rest of
-                // this update still skips it, as before.
-                if (!existing) return false;
-                p.m_AgePercent = 100f;
-                p.m_Lifetime = 0f;
-                p.m_Flags |= Particle.FlagTriggerKilled;
-                return true;
-            }
-
-            var RO = m_Rotation;
-            var RS = m_RotationBySpeed;
-            if (RO.enabled || RS.enabled)
-            {
-                // The rotation modules set the angular velocity (GetParticles reports it).
-                var w = Vector3.zero;
-                if (RO.enabled)
-                {
-                    float r = R.Value(seed, R.RotLife);
-                    w += RO.separateAxes ? new Vector3(RO.x.Evaluate(age, r), RO.y.Evaluate(age, r), RO.z.Evaluate(age, r)) : new Vector3(0f, 0f, RO.z.Evaluate(age, r));
-                }
-                if (RS.enabled)
-                {
-                    float s = Mathf.InverseLerp(RS.range.x, RS.range.y, (v + animated).magnitude);
-                    float r = R.Value(seed, R.RotSpeed);
-                    w += RS.separateAxes ? new Vector3(RS.x.Evaluate(s, r), RS.y.Evaluate(s, r), RS.z.Evaluate(s, r)) : new Vector3(0f, 0f, RS.z.Evaluate(s, r));
-                }
-                if ((p.m_Flags & Particle.FlagFlipRotation) != 0) w = -w;
-                p.m_AngularVelocity = w;
-            }
-            p.m_Rotation += p.m_AngularVelocity * dt;
-
-            if (c.BirthSubs) BirthSubEmitters(ref p, ageBefore, p.m_StartLifetime - p.m_Lifetime, dt);
-            return true;
+            moving = v + animated;
+            p.m_Position += moving * (speedModifier * dt);
+            return speedModifier;
         }
 
         static MinMaxCurve InMode(MinMaxCurve curve, ParticleSystemCurveMode mode)
