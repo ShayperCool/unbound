@@ -169,9 +169,11 @@ sccache server. Keep both binaries when upgrading a standalone installation.
 ### Reproducing compiler-cache measurements
 
 Run the driver directly, since its workers take their own build leases:
+Populate the ordinary Cargo registry first with `cargo fetch --locked` if needed.
+Select the repository's Rust toolchain for the external fixture directories.
 
 ```sh
-python3 tools/validation/compiler_cache_benchmark.py \
+RUSTUP_TOOLCHAIN=1.99.0 python3 tools/validation/compiler_cache_benchmark.py \
   --out "$HOME/.cache/unbound/validation/runs/compiler-cache-NEW" \
   --sessions 4 --workers 2 --units 3 --repeats 3
 ```
@@ -193,6 +195,8 @@ private port/store and is stopped afterwards, as is a benchmark kache daemon
 if one was started. A busy port is rejected; select another with `--sccache-port`.
 Do not overlap benchmark drivers or other heavy jobs when comparing throughput.
 Synthetic cache gains do not establish full-engine, managed-build or Editor gains.
+The recorded measurements and workload limits are in
+[COMPILER_CACHE_RESULTS.md](COMPILER_CACHE_RESULTS.md).
 
 Every child build keeps both its intermediates and its final outputs private. Give each
 build its own `CARGO_TARGET_DIR` on the SSD cache and do not set a shared
