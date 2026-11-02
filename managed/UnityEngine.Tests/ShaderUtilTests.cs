@@ -63,5 +63,42 @@ namespace UnityEngine.Tests
             Assert.Equal(0.5f, material.GetFloat("_Value"));
             Assert.Equal(1f, material.GetFloat("_Other"));
         }
+
+        [Fact]
+        public void BuiltinShadersDeclareNoPropertiesWithoutAPropertiesBlock()
+        {
+            // Canonical shaderkeywords builtin.Hidden/InternalErrorShader and
+            // builtin.Hidden/Internal-StencilWrite: propertyCount 0, properties [].
+            static Shader Builtin(string source)
+            {
+                var shader = Shader.Create("Tests/Builtin Source", 2000);
+                global::Unbound.Runtime.BuiltinShaders.ApplySource(shader, source);
+                return shader;
+            }
+            int defaults = Shader.Create("Tests/Builtin Source", 2000).GetPropertyCount();
+            Assert.True(defaults > 0);
+
+            var bare = Builtin("Shader \"Hidden/Tests/Bare\" {\n    // Properties { _Color (\"Color\", Color) = (1,1,1,1) }\n"
+                + "    SubShader { Pass { ColorMask 0 ZWrite Off } }\n}");
+            Assert.Equal(0, bare.GetPropertyCount());
+            var material = new Material(bare);
+            Assert.False(material.HasProperty("_Color"));
+            Assert.False(material.HasProperty("_MainTex"));
+            Assert.Empty(material.GetPropertyNames(MaterialPropertyType.Vector));
+
+            // An empty block declares none too.
+            Assert.Equal(0, Builtin("Shader \"Hidden/Tests/Empty\" { Properties { /* none */ } SubShader { Pass { } } }").GetPropertyCount());
+
+            // A block's declarations replace the defaults, as before.
+            var declared = Builtin("Shader \"Hidden/Tests/Declared\" { Properties { _Tint (\"Tint\", Color) = (1,0,0,1) } SubShader { Pass { } } }");
+            Assert.Equal(1, declared.GetPropertyCount());
+            Assert.Equal("_Tint", declared.GetPropertyName(0));
+
+            // No source, or a block none of whose declarations is read: not known to be empty, the
+            // defaults stay.
+            Assert.Equal(defaults, Builtin(null).GetPropertyCount());
+            Assert.Equal(defaults, Builtin("").GetPropertyCount());
+            Assert.Equal(defaults, Builtin("Shader \"Hidden/Tests/Unread\" { Properties { ??? } SubShader { Pass { } } }").GetPropertyCount());
+        }
     }
 }
