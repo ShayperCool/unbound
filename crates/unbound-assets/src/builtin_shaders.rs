@@ -328,6 +328,267 @@ fn write_state(s: &mut String, state: &Value, indent: &str) {
     }
 }
 
+/// What a built-in shader declares, as Unity's serialized shader in the Editor's resources has
+/// it: its SubShaders (tags and passes with their tags, names and values as Unity stores them),
+/// its keywords (names in its keyword space's order, local, dynamic) and its `Fallback`. This is
+/// Unity's own data for the install's release, not a rule of Unbound's.
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct Declarations {
+    pub subshaders: Vec<DeclaredSubShader>,
+    pub keywords: Vec<DeclaredKeyword>,
+    /// `Fallback` (empty: none).
+    pub fallback: String,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct DeclaredSubShader {
+    pub tags: Vec<(String, String)>,
+    pub passes: Vec<DeclaredPass>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct DeclaredPass {
+    pub name: String,
+    pub tags: Vec<(String, String)>,
+}
+
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
+pub struct DeclaredKeyword {
+    pub name: String,
+    pub local: bool,
+    pub dynamic: bool,
+}
+
+/// Every built-in shader's declarations, by name.
+pub type DeclarationMap = std::collections::BTreeMap<String, Declarations>;
+
+/// Bumped when [`Declarations`], how it is read ([`read_declarations`]), the entry layout or the
+/// serialized-file reader's handling of shaders' parsed forms changes. The cache is ours (not
+/// the import cache, not the texture cache): an entry is keyed by this version and the resource
+/// files' bytes, and carries both, so a stale or foreign entry is never used.
+const DECLARATIONS_VERSION: u32 = 1;
+
+/// Magic of a declarations cache entry: then the version (u32 LE), the 32-byte input key and the
+/// postcard payload.
+const DECLARATIONS_MAGIC: &[u8; 4] = b"UBSD";
+
+/// The resource files the built-in shaders' serialized forms are read from (`unity_data` is the
+/// install's `Editor/Data`).
+pub fn declaration_sources(unity_data: &Path) -> [PathBuf; 2] {
+    [
+        unity_data.join("Resources/unity_builtin_extra"),
+        unity_data.join("Resources/unity default resources"),
+    ]
+}
+
+/// The cache key of the files' exact bytes under [`DECLARATIONS_VERSION`] (streamed: the files
+/// are large and a cache hit does not need them in memory).
+pub fn declarations_key(files: &[PathBuf]) -> Result<[u8; 32]> {
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(DECLARATIONS_MAGIC);
+    hasher.update(&DECLARATIONS_VERSION.to_le_bytes());
+    for path in files {
+        let mut file =
+            std::fs::File::open(path).with_context(|| format!("reading {}", path.display()))?;
+        let len = file
+            .metadata()
+            .with_context(|| format!("reading {}", path.display()))?
+            .len();
+        hasher.update(&len.to_le_bytes());
+        let copied = std::io::copy(&mut file, &mut hasher)
+            .with_context(|| format!("reading {}", path.display()))?;
+        if copied != len {
+            anyhow::bail!("{} changed while it was read", path.display());
+        }
+    }
+    Ok(*hasher.finalize().as_bytes())
+}
+
+/// Every built-in shader's [`Declarations`] by name, from the install's resource files. Read
+/// once per content of those files and kept in `<cache>/builtin-shaders/declarations-v<N>/`.
+/// An error (a file missing or unreadable) is not cached: the next call tries again.
+pub fn declarations(unity_data: &Path, cache_root: &Path) -> Result<DeclarationMap> {
+    let files = declaration_sources(unity_data);
+    let key = declarations_key(&files)?;
+    let cached = declarations_entry_path(cache_root, &key);
+    if let Some(map) = read_declarations_entry(&cached, &key) {
+        return Ok(map);
+    }
+    let mut map = DeclarationMap::new();
+    for path in &files {
+        let data = std::fs::read(path).with_context(|| format!("reading {}", path.display()))?;
+        let file =
+            SerializedFile::parse(&data).with_context(|| format!("reading {}", path.display()))?;
+        for object in file.objects.iter().filter(|o| o.class_id == 48) {
+            let Ok(shader) = file.read(object.path_id) else {
+                continue;
+            };
+            let Some(parsed) = shader.get("m_ParsedForm") else {
+                continue;
+            };
+            let name = str_of(parsed, "m_Name").to_string();
+            if !name.is_empty() {
+                map.entry(name).or_insert_with(|| read_declarations(parsed));
+            }
+        }
+    }
+    // The inputs must not have changed while they were read (else the entry would be keyed by
+    // bytes it was not read from).
+    if declarations_key(&files)? != key {
+        anyhow::bail!("Unity's built-in resources changed while they were read");
+    }
+    match encode_declarations_entry(&key, &map) {
+        Ok(bytes) => {
+            if let Err(e) = publish(&cached, &bytes) {
+                tracing::debug!("not caching built-in shader declarations: {e}");
+            }
+        }
+        Err(e) => tracing::debug!("not caching built-in shader declarations: {e:#}"),
+    }
+    Ok(map)
+}
+
+fn declarations_entry_path(cache_root: &Path, key: &[u8; 32]) -> PathBuf {
+    let hex: String = key.iter().map(|b| format!("{b:02x}")).collect();
+    cache_root
+        .join("builtin-shaders")
+        .join(format!("declarations-v{DECLARATIONS_VERSION}"))
+        .join(format!("{hex}.bin"))
+}
+
+fn encode_declarations_entry(key: &[u8; 32], map: &DeclarationMap) -> Result<Vec<u8>> {
+    let payload = postcard::to_allocvec(map)?;
+    let mut bytes = Vec::with_capacity(payload.len() + 40);
+    bytes.extend_from_slice(DECLARATIONS_MAGIC);
+    bytes.extend_from_slice(&DECLARATIONS_VERSION.to_le_bytes());
+    bytes.extend_from_slice(key);
+    bytes.extend_from_slice(&payload);
+    Ok(bytes)
+}
+
+/// The entry at `path` when it is complete and was written for exactly `key` (None: missing,
+/// corrupt, truncated, another version's or another input's; it is then read again and
+/// replaced).
+fn read_declarations_entry(path: &Path, key: &[u8; 32]) -> Option<DeclarationMap> {
+    let bytes = std::fs::read(path).ok()?;
+    let rest = bytes.strip_prefix(DECLARATIONS_MAGIC)?;
+    let (version, rest) = rest.split_first_chunk::<4>()?;
+    if u32::from_le_bytes(*version) != DECLARATIONS_VERSION {
+        return None;
+    }
+    let (stored, payload) = rest.split_first_chunk::<32>()?;
+    if stored != key {
+        return None;
+    }
+    // A complete payload decodes to the whole map with no bytes left over.
+    match postcard::take_from_bytes::<DeclarationMap>(payload) {
+        Ok((map, [])) => Some(map),
+        _ => None,
+    }
+}
+
+/// Distinguishes the temporary files of concurrent writers in one process (with the process id,
+/// across processes).
+static TEMP_COUNTER: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+
+/// Writes `bytes` to `path` atomically: into a temporary file this writer creates exclusively
+/// (process id and a per-process counter; `create_new` refuses a file that exists, whoever made
+/// it), then renamed over `path`. A reader sees the old entry or the whole new one, never a
+/// partial one. On failure only the writer's own temporary file is removed.
+fn publish(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
+    use std::io::Write as _;
+    let dir = path
+        .parent()
+        .ok_or_else(|| std::io::Error::other("cache entry without a directory"))?;
+    std::fs::create_dir_all(dir)?;
+    let name = path
+        .file_name()
+        .map(|n| n.to_string_lossy().into_owned())
+        .unwrap_or_default();
+    let temp = dir.join(format!(
+        ".{name}.{}.{}.tmp",
+        std::process::id(),
+        TEMP_COUNTER.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+    ));
+    let mut file = std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&temp)?;
+    let written = file.write_all(bytes).and_then(|()| file.flush());
+    drop(file);
+    let written = written.and_then(|()| std::fs::rename(&temp, path));
+    if written.is_err() {
+        let _ = std::fs::remove_file(&temp);
+    }
+    written
+}
+
+fn tag_pairs(tags: Option<&Value>) -> Vec<(String, String)> {
+    seq(tags.and_then(|t| t.get("tags")))
+        .iter()
+        .map(|t| {
+            (
+                str_of(t, "first").to_string(),
+                str_of(t, "second").to_string(),
+            )
+        })
+        .collect()
+}
+
+/// A serialized shader's declarations (`m_ParsedForm`).
+fn read_declarations(parsed: &Value) -> Declarations {
+    let names = seq(parsed.get("m_KeywordNames"));
+    // One byte per keyword: bit 0 local, bit 1 dynamic (hexadecimal in the serialized form).
+    let flags = parsed
+        .get("m_KeywordFlags")
+        .and_then(Value::as_str)
+        .unwrap_or("");
+    let flag = |i: usize| {
+        flags
+            .get(i * 2..i * 2 + 2)
+            .and_then(|h| u8::from_str_radix(h, 16).ok())
+            .unwrap_or(0)
+    };
+    let keywords = names
+        .iter()
+        .enumerate()
+        .filter_map(|(i, n)| {
+            Some(DeclaredKeyword {
+                name: n.as_str()?.to_string(),
+                local: flag(i) & 1 != 0,
+                dynamic: flag(i) & 2 != 0,
+            })
+        })
+        .collect();
+    let subshaders = seq(parsed.get("m_SubShaders"))
+        .iter()
+        .map(|sub| DeclaredSubShader {
+            tags: tag_pairs(sub.get("m_Tags")),
+            passes: seq(sub.get("m_Passes"))
+                .iter()
+                .map(|pass| {
+                    let state = pass.get("m_State");
+                    let mut tags = tag_pairs(state.and_then(|s| s.get("m_Tags")));
+                    for (k, v) in tag_pairs(pass.get("m_Tags")) {
+                        if !tags.iter().any(|(t, _)| *t == k) {
+                            tags.push((k, v));
+                        }
+                    }
+                    DeclaredPass {
+                        name: state.map(|s| str_of(s, "m_Name")).unwrap_or("").to_string(),
+                        tags,
+                    }
+                })
+                .collect(),
+        })
+        .collect();
+    Declarations {
+        subshaders,
+        keywords,
+        fallback: str_of(parsed, "m_FallbackName").to_string(),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -372,5 +633,340 @@ mod tests {
             "{source}"
         );
         assert!(!source.contains("Stencil"), "{source}");
+    }
+    /// A private directory in our cache (never /tmp, never a project's authored files), removed
+    /// with everything in it when the test ends.
+    struct Scratch(PathBuf);
+
+    impl Scratch {
+        fn new(label: &str) -> Scratch {
+            static N: std::sync::atomic::AtomicU64 = std::sync::atomic::AtomicU64::new(0);
+            let dir = unbound_project::cache_root().join("tests").join(format!(
+                "{label}-{}-{}",
+                std::process::id(),
+                N.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
+            ));
+            let _ = std::fs::remove_dir_all(&dir);
+            std::fs::create_dir_all(&dir).unwrap();
+            Scratch(dir)
+        }
+    }
+
+    impl Drop for Scratch {
+        fn drop(&mut self) {
+            let _ = std::fs::remove_dir_all(&self.0);
+        }
+    }
+
+    fn temporaries(dir: &Path) -> Vec<String> {
+        std::fs::read_dir(dir)
+            .map(|entries| {
+                entries
+                    .flatten()
+                    .map(|e| e.file_name().to_string_lossy().into_owned())
+                    .filter(|n| n.ends_with(".tmp"))
+                    .collect()
+            })
+            .unwrap_or_default()
+    }
+
+    fn sample() -> DeclarationMap {
+        let mut map = DeclarationMap::new();
+        map.insert(
+            "Unlit/Example".into(),
+            Declarations {
+                subshaders: vec![DeclaredSubShader {
+                    tags: vec![("RenderType".into(), "Opaque".into())],
+                    passes: vec![DeclaredPass {
+                        name: "MAIN".into(),
+                        tags: vec![("LIGHTMODE".into(), "FORWARDBASE".into())],
+                    }],
+                }],
+                keywords: vec![DeclaredKeyword {
+                    name: "_LOCAL_A".into(),
+                    local: true,
+                    dynamic: false,
+                }],
+                fallback: "VertexLit".into(),
+            },
+        );
+        map
+    }
+
+    /// Writers in several threads (each its own temporary file) publish whole entries; a reader
+    /// running beside them only ever sees a complete payload; no temporary file is left.
+    #[test]
+    fn concurrent_writers_publish_whole_entries() {
+        let scratch = Scratch::new("declarations-writers");
+        let path = scratch.0.join("entry.bin");
+        let payload = |writer: u8, round: usize| vec![writer; 4096 + 977 * (round % 7)];
+        let done = std::sync::atomic::AtomicBool::new(false);
+        std::thread::scope(|scope| {
+            let reader = scope.spawn(|| {
+                let mut seen = 0;
+                while !done.load(std::sync::atomic::Ordering::Relaxed) {
+                    if let Ok(bytes) = std::fs::read(&path) {
+                        let first = bytes[0];
+                        assert!(bytes.iter().all(|b| *b == first), "a mixed entry");
+                        assert!(
+                            (0..7).any(|r| bytes.len() == 4096 + 977 * r),
+                            "a partial entry"
+                        );
+                        seen += 1;
+                    }
+                }
+                seen
+            });
+            let writers: Vec<_> = (1..=8u8)
+                .map(|writer| {
+                    let path = &path;
+                    scope.spawn(move || {
+                        for round in 0..25 {
+                            publish(path, &payload(writer, round)).unwrap();
+                        }
+                    })
+                })
+                .collect();
+            for w in writers {
+                w.join().unwrap();
+            }
+            done.store(true, std::sync::atomic::Ordering::Relaxed);
+            reader.join().unwrap();
+        });
+        let last = std::fs::read(&path).unwrap();
+        assert!(last.iter().all(|b| *b == last[0]));
+        assert!(
+            temporaries(&scratch.0).is_empty(),
+            "{:?}",
+            temporaries(&scratch.0)
+        );
+    }
+
+    /// A temporary name another writer already holds is refused, not truncated or removed.
+    #[test]
+    fn a_writer_never_takes_over_another_writers_temporary_file() {
+        let scratch = Scratch::new("declarations-exclusive");
+        let path = scratch.0.join("entry.bin");
+        let next = TEMP_COUNTER.load(std::sync::atomic::Ordering::Relaxed);
+        // Occupy the next few names this process could pick.
+        let foreign: Vec<PathBuf> = (next..next + 64)
+            .map(|n| {
+                scratch
+                    .0
+                    .join(format!(".entry.bin.{}.{n}.tmp", std::process::id()))
+            })
+            .collect();
+        for f in &foreign {
+            std::fs::write(f, b"another writer's bytes").unwrap();
+        }
+        let mut published = false;
+        for _ in 0..128 {
+            if publish(&path, b"mine").is_ok() {
+                published = true;
+                break;
+            }
+        }
+        assert!(published, "a free name is found after the taken ones");
+        assert_eq!(std::fs::read(&path).unwrap(), b"mine");
+        for f in &foreign {
+            assert_eq!(std::fs::read(f).unwrap(), b"another writer's bytes");
+        }
+    }
+
+    /// An entry is used only for exactly the inputs and version it was written for, and only
+    /// when it is complete.
+    #[test]
+    fn entries_are_used_only_for_their_exact_inputs() {
+        let scratch = Scratch::new("declarations-entries");
+        let a = scratch.0.join("extra");
+        let b = scratch.0.join("default");
+        std::fs::write(&a, b"first resource file").unwrap();
+        std::fs::write(&b, b"second resource file").unwrap();
+        let files = [a.clone(), b.clone()];
+        let key = declarations_key(&files).unwrap();
+        let path = declarations_entry_path(&scratch.0, &key);
+        let bytes = encode_declarations_entry(&key, &sample()).unwrap();
+        publish(&path, &bytes).unwrap();
+        assert_eq!(read_declarations_entry(&path, &key), Some(sample()));
+
+        // Changed input bytes (same length too) are another key and another entry.
+        std::fs::write(&a, b"first resource fil3").unwrap();
+        let changed = declarations_key(&files).unwrap();
+        assert_ne!(changed, key);
+        assert_ne!(declarations_entry_path(&scratch.0, &changed), path);
+        assert_eq!(read_declarations_entry(&path, &changed), None);
+        // Order and boundaries of the files count.
+        std::fs::write(&a, b"first resource file").unwrap();
+        assert_eq!(declarations_key(&files).unwrap(), key);
+        assert_ne!(declarations_key(&[b.clone(), a.clone()]).unwrap(), key);
+
+        // Truncated, extended, another version's or garbage: not used.
+        for bad in [
+            bytes[..bytes.len() - 1].to_vec(),
+            [bytes.as_slice(), &[0]].concat(),
+            {
+                let mut v = bytes.clone();
+                v[4] ^= 1;
+                v
+            },
+            b"UBSD".to_vec(),
+            b"not an entry at all".to_vec(),
+            Vec::new(),
+        ] {
+            std::fs::write(&path, &bad).unwrap();
+            assert_eq!(read_declarations_entry(&path, &key), None, "{bad:?}");
+        }
+        assert_eq!(
+            read_declarations_entry(&scratch.0.join("missing.bin"), &key),
+            None
+        );
+    }
+
+    /// Missing resource files are an error (the caller reports unknown declarations and asks
+    /// again later), never an empty map, and nothing is cached for them.
+    #[test]
+    fn missing_resources_are_an_error_and_are_not_cached() {
+        let scratch = Scratch::new("declarations-missing");
+        let data = scratch.0.join("Editor/Data");
+        let cache = scratch.0.join("cache");
+        assert!(declarations(&data, &cache).is_err());
+        assert!(!cache.join("builtin-shaders").exists());
+    }
+
+    /// The installed 6000.0.71f1's built-in shaders against the canonical answers of
+    /// tests/projects/shaderkeywords (builtin.*): their own SubShaders, keyword spaces with
+    /// local flags, fallbacks and pass light modes (skipped without the install).
+    #[test]
+    fn builtin_declarations_match_the_canonical_reference() {
+        let Some(data) = unbound_project::install::installed_data("6000.0.71f1") else {
+            eprintln!("no 6000.0.71f1 install: skipped");
+            return;
+        };
+        if !declaration_sources(&data).iter().all(|f| f.is_file()) {
+            eprintln!("no 6000.0.71f1 resources: skipped");
+            return;
+        }
+        let scratch = Scratch::new("declarations-builtin");
+        let map = declarations(&data, &scratch.0).unwrap();
+        let names = |d: &Declarations| {
+            d.keywords
+                .iter()
+                .map(|k| k.name.clone())
+                .collect::<Vec<_>>()
+        };
+        let local =
+            |d: &Declarations, n: &str| d.keywords.iter().find(|k| k.name == n).unwrap().local;
+        let light_modes = |d: &Declarations, sub: usize| {
+            d.subshaders[sub]
+                .passes
+                .iter()
+                .map(|p| {
+                    p.tags
+                        .iter()
+                        .find(|(k, _)| k.eq_ignore_ascii_case("LightMode"))
+                        .map_or("-".to_string(), |(_, v)| v.clone())
+                })
+                .collect::<Vec<_>>()
+        };
+        let stereo = [
+            "STEREO_INSTANCING_ON",
+            "UNITY_SINGLE_PASS_STEREO",
+            "STEREO_MULTIVIEW_ON",
+            "STEREO_CUBEMAP_RENDER_ON",
+        ];
+
+        let standard = &map["Standard"];
+        // Two own SubShaders; subshaderCount's third is the VertexLit fallback's.
+        assert_eq!(standard.subshaders.len(), 2);
+        assert_eq!(standard.fallback, "VertexLit");
+        assert_eq!(
+            standard
+                .subshaders
+                .iter()
+                .map(|s| s.passes.len())
+                .collect::<Vec<_>>(),
+            [5, 4]
+        );
+        assert_eq!(
+            light_modes(standard, 0),
+            [
+                "FORWARDBASE",
+                "FORWARDADD",
+                "SHADOWCASTER",
+                "DEFERRED",
+                "META"
+            ]
+        );
+        let mut want: Vec<&str> = stereo.to_vec();
+        want.extend([
+            "FOG_LINEAR",
+            "FOG_EXP",
+            "FOG_EXP2",
+            "INSTANCING_ON",
+            "_NORMALMAP",
+            "_ALPHATEST_ON",
+            "_ALPHABLEND_ON",
+            "_ALPHAPREMULTIPLY_ON",
+            "_METALLICGLOSSMAP",
+            "_PARALLAXMAP",
+            "DIRECTIONAL",
+            "LIGHTPROBE_SH",
+            "SHADOWS_SHADOWMASK",
+            "DYNAMICLIGHTMAP_ON",
+            "LIGHTMAP_ON",
+            "LIGHTMAP_SHADOW_MIXING",
+            "DIRLIGHTMAP_COMBINED",
+            "SHADOWS_SCREEN",
+            "VERTEXLIGHT_ON",
+            "_EMISSION",
+            "_DETAIL_MULX2",
+            "_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A",
+            "_SPECULARHIGHLIGHTS_OFF",
+            "_GLOSSYREFLECTIONS_OFF",
+            "POINT",
+            "SPOT",
+            "POINT_COOKIE",
+            "DIRECTIONAL_COOKIE",
+            "SHADOWS_DEPTH",
+            "SHADOWS_SOFT",
+            "SHADOWS_CUBE",
+            "UNITY_HDR_ON",
+            "EDITOR_VISUALIZATION",
+        ]);
+        assert_eq!(names(standard), want);
+        assert!(local(standard, "_NORMALMAP") && !local(standard, "DIRECTIONAL"));
+        assert!(!local(standard, "STEREO_INSTANCING_ON"));
+
+        let ui = &map["UI/Default"];
+        let mut want: Vec<&str> = stereo.to_vec();
+        want.extend(["UNITY_UI_CLIP_RECT", "UNITY_UI_ALPHACLIP"]);
+        assert_eq!(names(ui), want);
+        assert!(local(ui, "UNITY_UI_CLIP_RECT") && local(ui, "UNITY_UI_ALPHACLIP"));
+        assert_eq!(light_modes(ui, 0), ["-"]);
+
+        let vertex_lit = &map["Legacy Shaders/VertexLit"];
+        assert_eq!(vertex_lit.subshaders.len(), 1);
+        assert_eq!(
+            light_modes(vertex_lit, 0),
+            ["Vertex", "VertexLM", "SHADOWCASTER"]
+        );
+        let mut want: Vec<&str> = stereo.to_vec();
+        want.extend([
+            "FOG_LINEAR",
+            "FOG_EXP",
+            "FOG_EXP2",
+            "INSTANCING_ON",
+            "SHADOWS_DEPTH",
+            "SHADOWS_CUBE",
+            "POINT",
+            "SPOT",
+        ]);
+        assert_eq!(names(vertex_lit), want);
+        assert!(vertex_lit.keywords.iter().all(|k| !k.local && !k.dynamic));
+
+        // The second read is the cache entry, equal to the first.
+        let key = declarations_key(&declaration_sources(&data)).unwrap();
+        assert!(declarations_entry_path(&scratch.0, &key).is_file());
+        assert_eq!(declarations(&data, &scratch.0).unwrap(), map);
     }
 }

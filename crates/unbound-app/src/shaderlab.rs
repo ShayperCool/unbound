@@ -423,6 +423,8 @@ pub struct PassInfo {
     pub name: String,
     /// The SubShader's states with the pass's on top.
     pub states: States,
+    /// The pass's own tags (`Shader.FindPassTagValue`), without the SubShader's.
+    pub own_tags: HashMap<String, String>,
     /// `UsePass "Shader/PASS"`: the pass is that one (resolved by [`ShaderIndex`]).
     pub use_pass: Option<String>,
     /// The pass's program (with the include blocks before it), when it has a CG or HLSL one;
@@ -1220,6 +1222,7 @@ impl Parser<'_> {
             .into_iter()
             .map(|mut pass| {
                 if pass.use_pass.is_none() {
+                    pass.own_tags = pass.states.tags.clone();
                     pass.states = states.overlay(&pass.states);
                 }
                 pass

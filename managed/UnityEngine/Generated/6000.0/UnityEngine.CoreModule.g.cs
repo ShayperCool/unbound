@@ -1830,21 +1830,9 @@ namespace UnityEngine
         [global::Unbound.Stub] public bool HasBuffer(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.HasBuffer"); return default; }
         [global::Unbound.Stub] public bool HasConstantBuffer(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.HasConstantBuffer"); return default; }
         [global::Unbound.Stub] public bool HasConstantBuffer(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.HasConstantBuffer"); return default; }
-        [global::Unbound.Stub] public bool IsChildOf(global::UnityEngine.Material ancestor) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.IsChildOf"); return default; }
-        [global::Unbound.Stub] public void RevertAllPropertyOverrides() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.RevertAllPropertyOverrides"); }
-        [global::Unbound.Stub] public bool IsPropertyOverriden(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.IsPropertyOverriden"); return default; }
-        [global::Unbound.Stub] public bool IsPropertyLocked(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.IsPropertyLocked"); return default; }
-        [global::Unbound.Stub] public bool IsPropertyLockedByAncestor(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.IsPropertyLockedByAncestor"); return default; }
-        [global::Unbound.Stub] public bool IsPropertyOverriden(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.IsPropertyOverriden"); return default; }
-        [global::Unbound.Stub] public bool IsPropertyLocked(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.IsPropertyLocked"); return default; }
-        [global::Unbound.Stub] public bool IsPropertyLockedByAncestor(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.IsPropertyLockedByAncestor"); return default; }
-        [global::Unbound.Stub] public void SetPropertyLock(int nameID, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.SetPropertyLock"); }
         [global::Unbound.Stub] public void ApplyPropertyOverride(global::UnityEngine.Material destination, int nameID, bool recordUndo = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.ApplyPropertyOverride"); }
-        [global::Unbound.Stub] public void RevertPropertyOverride(int nameID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.RevertPropertyOverride"); }
         [global::Unbound.Stub] internal void GetPropertyState(int nameID, out bool isOverriden, out bool isLockedInChildren, out bool isLockedByAncestor) { isOverriden = default; isLockedInChildren = default; isLockedByAncestor = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.GetPropertyState"); }
-        [global::Unbound.Stub] public void SetPropertyLock(string name, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.SetPropertyLock"); }
         [global::Unbound.Stub] public void ApplyPropertyOverride(global::UnityEngine.Material destination, string name, bool recordUndo = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.ApplyPropertyOverride"); }
-        [global::Unbound.Stub] public void RevertPropertyOverride(string name) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.RevertPropertyOverride"); }
         [global::Unbound.Stub] internal void SetPropertyLock(global::UnityEngine.MaterialSerializedProperty property, bool value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.SetPropertyLock"); }
         [global::Unbound.Stub] internal void ApplyPropertyOverride(global::UnityEngine.Material destination, global::UnityEngine.MaterialSerializedProperty property, bool recordUndo = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.ApplyPropertyOverride"); }
         [global::Unbound.Stub] internal void RevertPropertyOverride(global::UnityEngine.MaterialSerializedProperty property) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Material.RevertPropertyOverride"); }
@@ -6310,11 +6298,6 @@ namespace UnityEngine.Rendering
     [global::Unbound.Stub]
     public unsafe partial struct ShaderKeyword
     {
-        [global::Unbound.Stub] internal string m_Name;
-        [global::Unbound.Stub] internal uint m_Index;
-        [global::Unbound.Stub] internal bool m_IsLocal;
-        [global::Unbound.Stub] internal bool m_IsCompute;
-        [global::Unbound.Stub] internal bool m_IsValid;
         [global::Unbound.Stub] internal static uint GetGlobalKeywordCount() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.GetGlobalKeywordCount"); return default; }
         [global::Unbound.Stub] internal static uint GetGlobalKeywordIndex(string keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.GetGlobalKeywordIndex"); return default; }
         [global::Unbound.Stub] internal static uint GetKeywordCount(global::UnityEngine.Shader shader) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.GetKeywordCount"); return default; }
@@ -6323,8 +6306,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] internal static uint GetComputeShaderKeywordIndex(global::UnityEngine.ComputeShader shader, string keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.GetComputeShaderKeywordIndex"); return default; }
         [global::Unbound.Stub] internal static void CreateGlobalKeyword(string keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.CreateGlobalKeyword"); }
         [global::Unbound.Stub] internal static global::UnityEngine.Rendering.ShaderKeywordType GetGlobalShaderKeywordType(uint keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.GetGlobalShaderKeywordType"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.Rendering.ShaderKeywordType GetGlobalKeywordType(global::UnityEngine.Rendering.ShaderKeyword index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.GetGlobalKeywordType"); return default; }
-        [global::Unbound.Stub] public ShaderKeyword(string keywordName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.ctor"); }
         [global::Unbound.Stub] public ShaderKeyword(global::UnityEngine.Shader shader, string keywordName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.ctor"); }
         [global::Unbound.Stub] public ShaderKeyword(global::UnityEngine.ComputeShader shader, string keywordName) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.ctor"); }
         [global::Unbound.Stub] public static bool IsKeywordLocal(global::UnityEngine.Rendering.ShaderKeyword keyword) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.ShaderKeyword.IsKeywordLocal"); return default; }

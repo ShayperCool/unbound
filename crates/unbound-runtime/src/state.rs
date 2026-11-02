@@ -372,6 +372,9 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             crate::bundles::close(r.id);
             Ok("{}".into())
         }
+        // What shaders declare, from the host's provider (with or without a renderer).
+        "shader-declarations" => crate::shader_declarations::shader_request(request),
+        "compute-declarations" => crate::shader_declarations::compute_request(request),
         "shader-passes" => backend()
             .shader_passes(request)
             .map_err(|e| anyhow::anyhow!("{e}")),

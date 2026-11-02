@@ -138,7 +138,15 @@ namespace UnityEngine
             return info != null && info.Dependencies.TryGetValue(name, out var shader) ? Find(shader) : null;
         }
 
-        public int GetPassCountInSubshader(int subshaderIndex) => subshaderIndex == 0 ? passCount : 0;
+        /// <summary>A SubShader's pass count (canonical: -1 for an index out of range). The
+        /// renderer's SubShader alone while the host cannot say (the behaviour before SubShaders
+        /// were read).</summary>
+        public int GetPassCountInSubshader(int subshaderIndex)
+        {
+            var d = Unbound.Runtime.ShaderDeclarations.Of(this);
+            if (!d.SubShadersKnown) return subshaderIndex == 0 ? passCount : 0;
+            return subshaderIndex >= 0 && subshaderIndex < d.SubShaders.Count ? d.SubShaders[subshaderIndex].Passes.Count : -1;
+        }
 
         public ShaderTagId FindPassTagValue(int passIndex, ShaderTagId tagName)
         {
@@ -147,14 +155,36 @@ namespace UnityEngine
             return info.Passes[passIndex].Tags.TryGetValue(tagName.name, out var value) ? new ShaderTagId(value) : ShaderTagId.none;
         }
 
-        public ShaderTagId FindPassTagValue(int subshaderIndex, int passIndex, ShaderTagId tagName) =>
-            subshaderIndex == 0 ? FindPassTagValue(passIndex, tagName) : ShaderTagId.none;
+        /// <summary>A pass's own tag (without its SubShader's) as Unity stores it: built-in light
+        /// modes upper-cased (canonical *.passLightModes).</summary>
+        public ShaderTagId FindPassTagValue(int subshaderIndex, int passIndex, ShaderTagId tagName)
+        {
+            var d = Unbound.Runtime.ShaderDeclarations.Of(this);
+            if (!d.SubShadersKnown) return subshaderIndex == 0 ? FindPassTagValue(passIndex, tagName) : ShaderTagId.none;
+            if (subshaderIndex < 0 || subshaderIndex >= d.SubShaders.Count) return ShaderTagId.none;
+            var passes = d.SubShaders[subshaderIndex].Passes;
+            if (passIndex < 0 || passIndex >= passes.Count) return ShaderTagId.none;
+            var value = Unbound.Runtime.ShaderDeclarations.Tag(passes[passIndex], tagName.name);
+            return value != null ? new ShaderTagId(value) : ShaderTagId.none;
+        }
 
+        /// <summary>A SubShader's tag as Unity stores it. An index out of range throws (canonical
+        /// *.subshaderTag[count] and [-1]; Unity's C# checks the index before the native call and
+        /// passes its text as the parameter name). Preserve ParamName; the runtime's standard
+        /// exception-message formatting may differ between .NET and Mono.</summary>
         public ShaderTagId FindSubshaderTagValue(int subshaderIndex, ShaderTagId tagName)
         {
-            var info = Unbound.Runtime.ShaderPassInfo.Of(this);
-            if (info == null || subshaderIndex != 0) return ShaderTagId.none;
-            return info.Tags.TryGetValue(tagName.name, out var value) ? new ShaderTagId(value) : ShaderTagId.none;
+            var d = Unbound.Runtime.ShaderDeclarations.Of(this);
+            if (!d.SubShadersKnown)
+            {
+                var info = Unbound.Runtime.ShaderPassInfo.Of(this);
+                if (info == null || subshaderIndex != 0) return ShaderTagId.none;
+                return info.Tags.TryGetValue(tagName.name, out var tag) ? new ShaderTagId(tag) : ShaderTagId.none;
+            }
+            if (subshaderIndex < 0 || subshaderIndex >= d.SubShaders.Count)
+                throw new ArgumentOutOfRangeException($"Invalid subshaderIndex {subshaderIndex}. Value must be in the range [0, {d.SubShaders.Count})");
+            var value = Unbound.Runtime.ShaderDeclarations.Tag(d.SubShaders[subshaderIndex].Tags, tagName.name);
+            return value != null ? new ShaderTagId(value) : ShaderTagId.none;
         }
     }
 }

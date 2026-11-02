@@ -243,6 +243,12 @@ impl Profile {
         self.version >= feature.since()
     }
 
+    /// The shader keyword metadata rules measured on exactly this project's release (None:
+    /// keyword spaces of project shaders are unknown, see [`crate::ShaderKeywordRules`]).
+    pub fn shader_keyword_rules(&self) -> Option<crate::ShaderKeywordRules> {
+        crate::ShaderKeywordRules::for_release(self.version)
+    }
+
     /// `UNITY_6000_0_71`, `UNITY_6000_0`, `UNITY_6000` and every `UNITY_X_Y_OR_NEWER` up to this
     /// release, in the Editor's order.
     pub fn version_defines(&self) -> Vec<String> {
@@ -376,6 +382,13 @@ mod tests {
     fn a_family_uses_its_tables_for_every_patch() {
         let profile = Profile::for_version("6000.0.23f1".parse().unwrap()).unwrap();
         assert!(!profile.approximate);
+        // Measured behaviour is not a family table: 6000.0.23 has no keyword rules.
+        assert_eq!(profile.shader_keyword_rules(), None);
+        let measured = Profile::for_version("6000.0.71f1".parse().unwrap()).unwrap();
+        assert_eq!(
+            measured.shader_keyword_rules(),
+            Some(crate::ShaderKeywordRules::Unity6000_0_71f1)
+        );
         assert_eq!(profile.release().to_string(), "6000.0.71f1");
         assert_eq!(profile.version_defines()[0], "UNITY_6000_0_23");
     }

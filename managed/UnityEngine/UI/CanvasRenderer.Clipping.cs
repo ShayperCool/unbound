@@ -39,7 +39,7 @@ namespace UnityEngine
             if (!m_ClipMaterials.TryGetValue(source, out var prepared))
             {
                 using (ObjectRegistry.AsAssets())
-                    prepared = new ClipMaterial { Material = new Material(source) { hideFlags = HideFlags.HideAndDontSave } };
+                    prepared = new ClipMaterial { Material = new Material(source) { hideFlags = HideFlags.HideAndDontSave, parent = null } };
                 m_ClipMaterials.Add(source, prepared);
             }
             if (prepared.Version != source.m_Version)
