@@ -13,12 +13,22 @@
     run.py lifecycle-unbound --release R --label L  one Unbound capture of the same witness
                                                     (UNBOUND_CLI: the binary); compare it with
                                                     compare_lifecycle.py
+    run.py creation-ownership --release R --label L          two SEQUENTIAL Editor captures of the
+                                                             creation-ownership witness
+                                                             (CreationOwnership/); the second starts
+                                                             only if the first passes every gate
+    run.py creation-ownership-publish --release R --label L  checks both are complete, strict exit 0,
+                                                             gated, satisfy the schema's contract and
+                                                             have identical canonical forms; writes
+                                                             that canonical form to
+                                                             Reference/.../creation-ownership.jsonl
 
 Every capture runs on a fresh copy of this project in the validation cache. Editors run through
 the shared heavy-job launcher on the GPU (a private Xvfb and VirtualGL); do not wrap this driver.
 """
 import argparse
 import filecmp
+import json
 import os
 from pathlib import Path
 import shutil
@@ -220,10 +230,179 @@ def lifecycle_publish(work):
         complete=[editor_runner.jsonl_complete(LIFECYCLE)], gpu=True)
 
 
+CREATION = PROBE/'CreationOwnership'
+CREATION_SCRIPTS = ('SceneCreationOwnership.cs', 'CreationOwnershipTracker.cs', 'CreationTeardownWitness.cs')
+sys.path.insert(0, str(CREATION))
+import contract as creation_contract  # noqa: E402
+
+
+def creation_schema():
+    return json.loads((CREATION/'schema.json').read_text())
+
+
+def creation_project(dest):
+    """A fresh fixture copy in which the creation-ownership witness replaces the main probe's
+    recorder, with its tiny prefab under Assets/Resources."""
+    project = copy_project(dest)
+    for name in ('LightProbesProbe.cs', 'LightProbesProbe.cs.meta'):
+        (project/'Assets/Scripts'/name).unlink()
+    for name in CREATION_SCRIPTS:
+        for file in (name, name+'.meta'):
+            shutil.copyfile(CREATION/file, project/'Assets/Scripts'/file)
+    shutil.copytree(CREATION/'Resources', project/'Assets/Resources')
+    shutil.copyfile(CREATION/'Resources.meta', project/'Assets/Resources.meta')
+    return project
+
+
+def creation_rows_problem(directory, schema=None):
+    """The witness output's own gate: complete with the marker last and unique, the declared
+    source first, sequence numbers 0..n-1 without duplicates, no error row, every declared point
+    exactly once with every alias and its ownership fields, and a raw row for each snapshot."""
+    schema = schema or creation_schema()
+    name = schema['output']
+    problem = editor_runner.jsonl_complete(name)(directory)
+    if problem:
+        return problem
+    rows = [json.loads(line) for line in (Path(directory)/name).read_text().splitlines() if line.strip()]
+    source = rows[0]
+    want = {'k': 'source', 'suite': schema['suite'], 'schema': schema['schema'],
+            'release': schema['release'], 'aliases': schema['aliases']}
+    if source != want:
+        return f'wrong source row {json.dumps(source)}'
+    body = rows[1:-1]
+    seqs = [row.get('seq') for row in body]
+    if len(set(seqs)) != len(seqs):
+        return 'duplicate sequence numbers'
+    if seqs != list(range(len(body))):
+        return 'sequence numbers are not 0..n-1 in order'
+    kinds = set(schema['row_kinds'])
+    for row in body:
+        if row.get('kind') in schema['rejected_row_kinds']:
+            return f"error row {row['seq']}: {row.get('at')}: {row.get('exception')}"
+        if row.get('kind') not in kinds:
+            return f"row {row['seq']} has an undeclared kind {row.get('kind')!r}"
+    points = {}
+    for row in body:
+        if row['kind'] == 'snapshot' and row.get('point') is not None:
+            points.setdefault(row['point'], []).append(row)
+    extra = sorted(set(points)-set(schema['points']))
+    if extra:
+        return f'undeclared points {extra}'
+    for point in schema['points']:
+        found = points.get(point, [])
+        if len(found) != 1:
+            return f'point {point} appears {len(found)} times'
+        state = found[0].get('state') or {}
+        missing = [f for f in schema['state_fields'] if f not in state]
+        if missing:
+            return f'point {point} lacks state fields {missing}'
+        objects = state['objects']
+        if list(objects) != schema['aliases']:
+            return f'point {point} has object rows {list(objects)}, not {schema["aliases"]}'
+        for alias, value in objects.items():
+            if 'created' not in value:
+                return f'point {point}: {alias} has no ownership row'
+            if value['created'] and value.get('alive') is None:
+                return f'point {point}: {alias} has no existence'
+            if value['created'] and value['alive']:
+                lacking = [f for f in schema['ownership_fields'] if f not in value]
+                if lacking:
+                    return f'point {point}: {alias} lacks ownership fields {lacking}'
+    raw_path = Path(directory)/schema['raw_output']
+    if not raw_path.exists():
+        return f"{schema['raw_output']} is missing"
+    raw = [json.loads(line) for line in raw_path.read_text().splitlines() if line.strip()]
+    snapshot_seqs = [row['seq'] for row in body if row['kind'] == 'snapshot']
+    if [row.get('seq') for row in raw] != snapshot_seqs:
+        return 'the raw FindObjectsByType rows do not match the snapshots'
+    return None
+
+
+def creation_problem(directory):
+    """Strict: exit 0 without any forced stop, the NVIDIA renderer, the witness gate and the
+    schema contract's predicates against this repeat's own trace."""
+    result = editor_runner.load_result(directory)
+    if result is None:
+        return 'no Editor result'
+    if result.get('forced_exit'):
+        return f"forced exit ({result['forced_exit']}: {result.get('forced_detail')})"
+    return (editor_runner.result_problem(directory, gpu=True) or creation_rows_problem(directory)
+            or creation_contract.problem(directory))
+
+
+def creation_ownership(work, release):
+    schema = creation_schema()
+    if release != schema['release']:
+        sys.exit(f"the creation-ownership schema declares {schema['release']}, not {release}")
+    for repeat in ('native1', 'native2'):
+        out = work/repeat
+        if (out/schema['output']).exists() or (out/editor_runner.RESULT).exists():
+            sys.exit(f'refusing to overwrite capture: {out}')
+        project = creation_project(work/'projects'/repeat)
+        out.mkdir(parents=True, exist_ok=True)
+        inputs = {'release': release, 'paths': {
+            'project/Assets': str(project/'Assets'), 'project/Packages': str(project/'Packages'),
+            'project/ProjectSettings': str(project/'ProjectSettings'),
+            'probe/CreationOwnership': str(CREATION), 'probe/run.py': str(PROBE/'run.py'),
+            'tests/editor_runner.py': str(REPO/'tests/editor_runner.py'),
+            'tests/probe_paths.py': str(REPO/'tests/probe_paths.py'),
+            'profile': str(REPO/'data/profiles'/('unity-'+'.'.join(release.split('.')[:2])+'.json'))}}
+        result = editor_runner.run(editor_runner.EditorJob(
+            project, out/'editor.log', out, ['-buildTarget', 'Standalone', '-executeMethod', 'ProbeRunner.Record'],
+            batch=True, env={'LIGHT_PROBES_CREATION_OUT': str(out/schema['output']),
+                             'LIGHT_PROBES_CREATION_RAW_OUT': str(out/schema['raw_output']),
+                             'LIGHT_PROBES_CREATION_TEARDOWN_OUT': str(out/schema['teardown_output'])},
+            timeout=LIFECYCLE_TIMEOUT, progress_files=[out/schema['output']], progress_timeout=LIFECYCLE_PROGRESS,
+            label='creation-ownership-'+repeat, launch_inputs=inputs))
+        print(editor_runner.summary(result))
+        problem = creation_problem(out)
+        print(repeat, problem or 'complete, exit 0, no forced exit, gate passed')
+        if problem:
+            print('stopping: no further launch')
+            return 1
+    return 0
+
+
+def creation_publish(directories, target, report=None):
+    """Both repeats pass every gate and the contract; their canonical forms are byte-identical
+    (every raw difference is in a declared family); `target` is new. Writes the canonical form."""
+    directories = [Path(d) for d in directories]
+    if len(directories) != 2:
+        sys.exit('publishing needs exactly two independent repeats')
+    for directory in directories:
+        problem = creation_problem(directory)
+        if problem:
+            sys.exit(f'{directory.name}: {problem}; not publishing')
+    texts = [creation_contract.dumps(creation_contract.canonical(d)) for d in directories]
+    raw = creation_contract.differences(*directories)
+    strict = [d for d in raw if d['family'] is None]
+    if report is not None:
+        Path(report).write_text(json.dumps({
+            'repeats': [str(d) for d in directories], 'canonical_identical': texts[0] == texts[1],
+            'raw_differences': raw, 'strict_differences': strict,
+            'canonical_differences': creation_contract.canonical_differences(*directories)},
+            indent=1, default=str)+'\n')
+    if texts[0] != texts[1] or strict:
+        sys.exit(f'the canonical forms differ ({len(strict)} strict raw differences of {len(raw)}); not publishing')
+    target = Path(target)
+    if target.exists():
+        sys.exit(f'refusing to overwrite reference: {target}')
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(texts[0])
+    print('published', target)
+    return 0
+
+
+def creation_ownership_publish(work):
+    schema = creation_schema()
+    return creation_publish([work/'native1', work/'native2'], reference_root(PROBE)/schema['output'],
+                            report=work/'publication.json')
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('mode', choices=('create', 'editor', 'publish', 'unbound', 'lifecycle', 'lifecycle-publish',
-                                         'lifecycle-unbound'))
+                                         'lifecycle-unbound', 'creation-ownership', 'creation-ownership-publish'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
     args = parser.parse_args()
@@ -237,6 +416,10 @@ def main():
         return lifecycle_publish(work)
     if args.mode == 'lifecycle-unbound':
         return lifecycle_unbound(work)
+    if args.mode == 'creation-ownership':
+        return creation_ownership(work, args.release)
+    if args.mode == 'creation-ownership-publish':
+        return creation_ownership_publish(work)
     return {'create': create, 'editor': editor, 'publish': publish, 'unbound': unbound}[args.mode](work)
 
 

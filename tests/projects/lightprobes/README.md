@@ -97,3 +97,41 @@ Reference. Still open:
   Editor's `OpenScene`, Play mode entry and AssetBundle scenes (they keep the per-scene unload),
   `LoadSceneAsync` Single (it shares `LoadScene`'s path in Unbound), and `TetrahedralizeAsync`'s
   completion frame. The witness records no frame numbers.
+
+### Objects made while a Single load unloads the outgoing scene (`creation-ownership.jsonl`)
+
+`CreationOwnership/` (`run.py creation-ownership`, `run.py creation-ownership-publish`; suite and
+points declared in `schema.json`) records which scene owns objects made during a SceneManager
+Single load's unload, and what becomes of them: (i) a `new GameObject`, (ii) an `Instantiate` of a
+tiny Resources prefab, (iii) a child of (ii) moved to the root with `SetParent(null)`, all inside
+the first `sceneUnloaded` handler, and (iv) a root made in `OnDestroy` of an outgoing-scene object.
+A second Single load's handler calls `CreateScene("Made")` and `SetActiveScene`; a third Single load
+follows it. Each point records existence, owning scene, parent/root, scene-root, `Find` and
+`FindObjectsByType` membership, the message order and the global light probe counts.
+The two Editor repeats run one after the other; the second starts only if the first passes
+every gate. `CreationOwnership/offline_compile.py` compiles the witness with an Editor-compiled
+fixture copy's own compiler arguments, and `CreationOwnership/guards.py` checks the gate against
+damaged synthetic captures.
+
+The first pair (schema 1; both repeats exit 0, gated) was not published: it differed in 11
+order-only leaves, namely which outgoing roots were already destroyed when the destroyer's
+`OnDestroy` ran, the name order in Unity's "Some objects were not cleaned up when closing the scene"
+error, and the destruction order of the four leftover objects at the next Single load. Every
+existence, scene, parent/root, `Find`/`FindObjectsByType` and light probe value agreed.
+
+Schema 2 predeclares a contract for exactly those three families (`schema.json` "contract",
+implemented only by `CreationOwnership/contract.py`). A `CreationTeardownWitness` on every authored
+Main root writes its `OnDestroy` to `creation-ownership-teardown.jsonl`. The outgoing roots at
+`t1.a.iv` must then equal the setup roots minus those already destroyed in that repeat's own
+trace. The error's names are an unordered set, with the text otherwise exact. At t2 every made
+object still gets `OnDisable` before its own `OnDestroy`, all before its scene's `sceneUnloaded`, but
+the objects may come in any order. Each repeat must satisfy these predicates (part of its gate).
+The pair publishes the canonical form, `Reference/unity-<release>/creation-ownership.jsonl`, only if
+the two canonical forms are byte-identical; everything outside the families stays strict.
+`creation-ownership-publish` writes `publication.json` with every raw difference and its family.
+
+The schema-2 pair (two sequential repeats, each exit 0 on the NVIDIA renderer and gated, the first
+before the second started) satisfied the contract in both repeats. Its 12 raw leaf differences
+were all inside the declared families: 5 or 4 outgoing roots destroyed before the destroyer, the
+error's name order, and the t2 cleanup order. The canonical forms were byte-identical, and that
+form is the 6000.0.71f1 `creation-ownership.jsonl` Reference.
