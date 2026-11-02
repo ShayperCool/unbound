@@ -16,6 +16,7 @@ public static class WakeRunner
 {
     const double WatchdogSeconds = 600;
     const string ScenePath = "Assets/Scenes/Wake.unity";
+    static bool s_QuitScheduled;
 
     static WakeRunner()
     {
@@ -23,8 +24,7 @@ public static class WakeRunner
         if (!WakeLog.Enabled || Application.isBatchMode || unbound) return;
         if (SessionState.GetBool("SceneActivation.finished", false))
         {
-            if (!EditorApplication.isPlayingOrWillChangePlaymode)
-                EditorApplication.delayCall += () => EditorApplication.Exit(0);
+            ScheduleQuitFromEditMode();
             return;
         }
         if (EditorApplication.isPlaying)
@@ -39,18 +39,40 @@ public static class WakeRunner
             };
             WakeDriver.finished = () =>
             {
-                // Quit from Edit mode: the Editor does not always quit from inside Play mode.
+                // Finish the runtime callback before requesting the mode transition.
                 SessionState.SetBool("SceneActivation.finished", true);
-                EditorApplication.playModeStateChanged += state =>
+                EditorApplication.delayCall += () =>
                 {
-                    if (state == PlayModeStateChange.EnteredEditMode) EditorApplication.Exit(0);
+                    // A domain reload rebuilds this registration through the finished branch.
+                    ScheduleQuitFromEditMode();
+                    if (EditorApplication.isPlaying) EditorApplication.ExitPlaymode();
                 };
-                EditorApplication.ExitPlaymode();
             };
             return;
         }
         if (!SessionState.GetBool("SceneActivation.started", false))
             EditorApplication.delayCall += Begin;
+    }
+
+    static void ScheduleQuitFromEditMode()
+    {
+        if (s_QuitScheduled) return;
+        s_QuitScheduled = true;
+        int stableTicks = 0;
+        EditorApplication.CallbackFunction quit = null;
+        quit = () =>
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode)
+            {
+                stableTicks = 0;
+                return;
+            }
+            // Do not quit reentrantly from EnteredEditMode or a domain-reload callback.
+            if (++stableTicks < 2) return;
+            EditorApplication.update -= quit;
+            EditorApplication.Exit(0);
+        };
+        EditorApplication.update += quit;
     }
 
     static void Begin()
