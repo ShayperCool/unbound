@@ -164,6 +164,19 @@ impl ShaderCompiler {
         Ok(ComputePragmas::read(&out.pragmas))
     }
 
+    /// A compute file's declared keywords (`ComputeShader.keywordSpace`) under the given rules
+    /// ([`crate::keywords`]): an error when the file cannot be preprocessed or declares a form the
+    /// rules do not know (the space is then unknown, not empty). Nothing is compiled or cached.
+    pub fn compute_keywords(
+        &self,
+        program: &ComputeProgram,
+    ) -> Result<Vec<crate::keywords::Declared>> {
+        let p = program.as_program();
+        let defines = self.defines(&p, &[], 50, true, "SHADER_STAGE_COMPUTE");
+        let out = self.preprocess(&p, &defines)?;
+        crate::keywords::compute_space(&out.pragmas)
+    }
+
     /// A kernel's variant for the enabled keywords, its RW textures in the given formats (naga
     /// names: `Rgba8Unorm`, `Rgba16Float`, ...; others take the format glslang inferred).
     pub fn compile_kernel(
