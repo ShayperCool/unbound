@@ -573,6 +573,42 @@ namespace Unbound.Tests
             }
         }
 
+        /// <summary>The creation-ownership Native reference records null for invalid paths,
+        /// the asset path for loaded/pending/closing file scenes, an empty path for Made, and
+        /// the virtual DontDestroyOnLoad path. Internal SceneData.Path stays unchanged.</summary>
+        [Fact]
+        public void ScenePathsDistinguishInvalidRuntimeAndPersistentScenes()
+        {
+            using var scenes = new LightProbesTests.Scenes();
+            Assert.Null(default(Scene).path);
+            var main = scenes.Loaded("Main");
+            main.Path = "Assets/Scenes/Main.unity";
+            var mainScene = new Scene(main.Handle);
+            Assert.Equal("Assets/Scenes/Main.unity", mainScene.path);
+            var made = scenes.Loaded("Made");
+            Assert.Equal("", new Scene(made.Handle).path);
+            var sameName = scenes.Loaded("DontDestroyOnLoad");
+            Assert.Equal("", new Scene(sameName.Handle).path);
+            var persistent = SceneRegistry.DontDestroyOnLoad;
+            string storedPath = persistent.Path;
+            Assert.Equal("DontDestroyOnLoad", new Scene(persistent.Handle).path);
+            Assert.Equal(storedPath, persistent.Path);
+
+            var incoming = scenes.Loading("Extra");
+            incoming.Path = "Assets/Scenes/Extra.unity";
+            Assert.Equal("Assets/Scenes/Extra.unity", new Scene(incoming.Handle).path);
+            var outer = SceneRegistry.BeginSingleLoadTeardown(incoming);
+            try
+            {
+                SceneRegistry.CloseForSingleLoad(main);
+                Assert.True(mainScene.IsValid());
+                Assert.Equal("Assets/Scenes/Main.unity", mainScene.path);
+            }
+            finally { SceneRegistry.EndSingleLoadTeardown(outer); }
+            Assert.False(mainScene.IsValid());
+            Assert.Null(mainScene.path);
+        }
+
         /// <summary>The public closing-scene query must not change the existing unmeasured
         /// global-probe fallback for an internally loaded scene with no bake. A closed scene
         /// that remains publicly listed has still lost its internal ownership, as before.</summary>

@@ -21,7 +21,17 @@ namespace UnityEngine.SceneManagement
 
         public int handle => m_Handle;
         public bool IsValid() => PublicData != null;
-        public string path => PublicData?.Path ?? "";
+        public string path
+        {
+            get
+            {
+                var data = PublicData;
+                if (data == null) return null;
+                // Unity's persistent scene has a virtual path; an ordinary runtime-created
+                // scene keeps its empty path, even if its name happens to be the same.
+                return SceneRegistry.IsDontDestroyOnLoad(data) ? "DontDestroyOnLoad" : data.Path;
+            }
+        }
         public string name
         {
             // An invalid scene has no name (measured: tests/projects/messages, null).
