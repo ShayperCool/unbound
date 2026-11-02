@@ -254,8 +254,9 @@ namespace Unbound.Tests
             Assert.Equal(10, gen.fontSizeUsedForBestFit);
             Assert.Equal(new Vector3(-21, 50, 0), gen.verts[4].position);
 
-            // Wrapped: the height decides.
+            // Wrapped with a bounded height: neither axis can overflow.
             s.horizontalOverflow = HorizontalWrapMode.Wrap;
+            s.verticalOverflow = VerticalWrapMode.Truncate;
             s.generationExtents = new Vector2(100, 30);
             gen.Populate("AAAA AAAA AAAA AAAA", s);
             Assert.True(gen.fontSizeUsedForBestFit <= 15);
