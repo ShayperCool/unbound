@@ -1330,9 +1330,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public static void FindGameObjectsWithTag(string tag, global::System.Collections.Generic.List<global::UnityEngine.GameObject> results) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GameObject.FindGameObjectsWithTag"); }
         [global::Unbound.Stub] internal global::UnityEngine.Component AddComponentInternal(string className) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GameObject.AddComponentInternal"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Component QueryComponentAtIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GameObject.QueryComponentAtIndex"); return default; }
-        [global::Unbound.Stub] public static void SetGameObjectsActive(global::Unity.Collections.NativeArray<int> instanceIDs, bool active) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GameObject.SetGameObjectsActive"); }
-        [global::Unbound.Stub] public static void SetGameObjectsActive(global::System.ReadOnlySpan<int> instanceIDs, bool active) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GameObject.SetGameObjectsActive"); }
-        [global::Unbound.Stub] public static void InstantiateGameObjects(int sourceInstanceID, int count, global::Unity.Collections.NativeArray<int> newInstanceIDs, global::Unity.Collections.NativeArray<int> newTransformInstanceIDs, global::UnityEngine.SceneManagement.Scene destinationScene = default) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GameObject.InstantiateGameObjects"); }
         [global::Unbound.Stub] public static global::UnityEngine.SceneManagement.Scene GetScene(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GameObject.GetScene"); return default; }
         [global::Unbound.Stub] internal global::UnityEngine.Bounds CalculateBounds() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GameObject.CalculateBounds"); return default; }
         [global::Unbound.Stub] internal int IsMarkedVisible() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GameObject.IsMarkedVisible"); return default; }
@@ -1625,19 +1622,6 @@ namespace UnityEngine
         [global::Unbound.Stub] public int pass;
         [global::Unbound.Stub] public global::UnityEngine.Texture texture;
         [global::Unbound.Stub] public global::UnityEngine.Material mat;
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct LazyLoadReference<T> where T : global::UnityEngine.Object
-    {
-        [global::Unbound.Stub] public LazyLoadReference(T asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.ctor"); }
-        [global::Unbound.Stub] public LazyLoadReference(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.ctor"); }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.LazyLoadReference<T>(T asset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.op_Implicit"); return default; }
-        [global::Unbound.Stub] public static implicit operator global::UnityEngine.LazyLoadReference<T>(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.op_Implicit"); return default; }
-        public bool isSet { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.isSet"); return default; } }
-        public bool isBroken { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.isBroken"); return default; } }
-        public T asset { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.asset"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.asset"); } }
-        public int instanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.instanceID"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LazyLoadReference<T>.instanceID"); } }
     }
     unsafe partial class Light
     {
@@ -2058,10 +2042,6 @@ namespace UnityEngine
     unsafe partial class Object
     {
         [global::System.Obsolete("Object.FindSceneObjectsOfType has been deprecated, Use Object.FindObjectsByType instead which lets you decide whether you need the results sorted or not.  FindSceneObjectsOfType sorts the results by InstanceID but if you do not need this using FindObjectSortMode.None is considerably faster.")] [global::Unbound.Stub] public static global::UnityEngine.Object[] FindSceneObjectsOfType(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.FindSceneObjectsOfType"); return global::System.Array.Empty<global::UnityEngine.Object>(); }
-        [global::Unbound.Stub] internal static bool IsPersistent(global::UnityEngine.Object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.IsPersistent"); return default; }
-        [global::Unbound.Stub] internal static bool DoesObjectWithInstanceIDExist(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.DoesObjectWithInstanceIDExist"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Object FindObjectFromInstanceID(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.FindObjectFromInstanceID"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Object ForceLoadFromInstanceID(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.ForceLoadFromInstanceID"); return default; }
         [global::Unbound.Stub] internal static global::UnityEngine.Object CreateMissingReferenceObject(int instanceID) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.CreateMissingReferenceObject"); return default; }
         [global::Unbound.Stub] internal void MarkDirty() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Object.MarkDirty"); }
         [global::Unbound.Stub]
@@ -2165,27 +2145,6 @@ namespace UnityEngine
     {
         [global::Unbound.Stub] internal static void EditorPrefsSetInt(string key, int value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlayerPrefs.EditorPrefsSetInt"); }
         [global::Unbound.Stub] internal static int EditorPrefsGetInt(string key, int defaultValue) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.PlayerPrefs.EditorPrefsGetInt"); return default; }
-    }
-    [global::System.Serializable]
-    [global::Unbound.Stub]
-    public unsafe partial struct Pose : global::System.IEquatable<global::UnityEngine.Pose>
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 position;
-        [global::Unbound.Stub] public global::UnityEngine.Quaternion rotation;
-        [global::Unbound.Stub] public Pose(global::UnityEngine.Vector3 position, global::UnityEngine.Quaternion rotation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.ctor"); }
-        [global::Unbound.Stub] public override string ToString() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.ToString"); return default; }
-        [global::Unbound.Stub] public string ToString(string format) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.ToString"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Pose GetTransformedBy(global::UnityEngine.Pose lhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.GetTransformedBy"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Pose GetTransformedBy(global::UnityEngine.Transform lhs) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.GetTransformedBy"); return default; }
-        [global::Unbound.Stub] public override bool Equals(object obj) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.Equals"); return default; }
-        [global::Unbound.Stub] public bool Equals(global::UnityEngine.Pose other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.Equals"); return default; }
-        [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.GetHashCode"); return default; }
-        [global::Unbound.Stub] public static bool operator ==(global::UnityEngine.Pose a, global::UnityEngine.Pose b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.op_Equality"); return default; }
-        [global::Unbound.Stub] public static bool operator !=(global::UnityEngine.Pose a, global::UnityEngine.Pose b) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.op_Inequality"); return default; }
-        public global::UnityEngine.Vector3 forward { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.forward"); return default; } }
-        public global::UnityEngine.Vector3 right { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.right"); return default; } }
-        public global::UnityEngine.Vector3 up { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.up"); return default; } }
-        public static global::UnityEngine.Pose identity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Pose.identity"); return default; } }
     }
     [global::System.@AttributeUsageAttribute((global::System.AttributeTargets)4)]
     [global::Unbound.Stub]

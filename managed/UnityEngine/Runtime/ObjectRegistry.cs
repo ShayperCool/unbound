@@ -50,6 +50,22 @@ namespace Unbound.Runtime
             public void Dispose() => t_RegisterAsAsset = previous;
         }
 
+        static readonly Dictionary<string, int> s_Missing = new Dictionary<string, int>();
+
+        /// <summary>An asset id no object will ever have, the same for every reference to one
+        /// missing target (a LazyLoadReference to a deleted asset is set but broken).</summary>
+        internal static int MissingId(string target)
+        {
+            lock (s_Objects)
+            {
+                if (s_Missing.TryGetValue(target, out var id)) return id;
+                id = s_NextAssetId;
+                s_NextAssetId += 2;
+                s_Missing[target] = id;
+                return id;
+            }
+        }
+
         internal static void Unregister(Object obj)
         {
             lock (s_Objects) s_Objects.Remove(obj.m_InstanceID);

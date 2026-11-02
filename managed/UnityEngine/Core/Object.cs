@@ -212,6 +212,16 @@ namespace UnityEngine
         /// <summary>Loaded from an asset file (not a scene or runtime object).</summary>
         internal bool IsPersistentAsset;
 
+        internal static bool IsPersistent(Object obj) => obj != null && obj.IsPersistentAsset;
+
+        /// <summary>A live object has the id (a destroyed one does not).</summary>
+        internal static bool DoesObjectWithInstanceIDExist(int instanceID) => ObjectRegistry.FindById(instanceID) != null;
+
+        internal static Object FindObjectFromInstanceID(int instanceID) => ObjectRegistry.FindById(instanceID);
+
+        /// <summary>Every asset is loaded with its scene or file, so the id's object is already there.</summary>
+        internal static Object ForceLoadFromInstanceID(int instanceID) => ObjectRegistry.FindById(instanceID);
+
         // ------------------------------------------------------------------ Find
 
         public static Object[] FindObjectsOfType(Type type) => FindObjectsOfType(type, false);

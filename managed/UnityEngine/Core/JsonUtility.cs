@@ -286,6 +286,20 @@ namespace UnityEngine
                 m_Out.Append(']');
             }
 
+            void WriteReference(Object o, int id)
+            {
+                if (m_Editor && o != null && o.IsPersistentAsset && AssetDatabaseRuntime.TryGetLocation(o, out var guid, out var fileId))
+                {
+                    Fields(("fileID", fileId), ("guid", guid), ("type", AssetReferenceType(guid)));
+                    return;
+                }
+                m_Out.Append(m_Pretty ? "{\n" : "{");
+                if (m_Pretty) m_Out.Append(' ', (m_Indent + 1) * 4);
+                m_Out.Append(m_Pretty ? "\"instanceID\": " : "\"instanceID\":");
+                m_Out.Append(id);
+                if (m_Pretty) { m_Out.Append('\n'); m_Out.Append(' ', m_Indent * 4); }
+                m_Out.Append('}');
+            }
             void WriteValue(object value, Type type, Shape shape, int depth)
             {
                 switch (shape)
@@ -307,17 +321,14 @@ namespace UnityEngine
                     case Shape.UnityObject:
                     {
                         var o = value as Object;
-                        if (m_Editor && o != null && o.IsPersistentAsset && AssetDatabaseRuntime.TryGetLocation(o, out var guid, out var fileId))
-                        {
-                            Fields(("fileID", fileId), ("guid", guid), ("type", AssetReferenceType(guid)));
-                            break;
-                        }
-                        m_Out.Append(m_Pretty ? "{\n" : "{");
-                        if (m_Pretty) m_Out.Append(' ', (m_Indent + 1) * 4);
-                        m_Out.Append(m_Pretty ? "\"instanceID\": " : "\"instanceID\":");
-                        m_Out.Append(o != null ? o.GetInstanceID() : 0);
-                        if (m_Pretty) { m_Out.Append('\n'); m_Out.Append(' ', m_Indent * 4); }
-                        m_Out.Append('}');
+                        WriteReference(o, o != null ? o.GetInstanceID() : 0);
+                        break;
+                    }
+                    case Shape.LazyReference:
+                    {
+                        // Written as an object reference (measured): {"instanceID": id}.
+                        int id = LazyReferences.Id(value);
+                        WriteReference(id == 0 ? null : ObjectRegistry.FindById(id), id);
                         break;
                     }
                     case Shape.Vector2: { var v = (Vector2)value; Fields(("x", v.x), ("y", v.y)); break; }
@@ -555,6 +566,16 @@ namespace UnityEngine
                     case Shape.Double: return node.Number;
                     case Shape.String: return node.Kind == JsonKind.String ? node.Text : node.Kind == JsonKind.Null ? "" : node.Text;
                     case Shape.Enum: return Enum.ToObject(type, node.Integer);
+                    case Shape.LazyReference:
+                    {
+                        var guidNode = node.Get("guid");
+                        if (Editor && guidNode != null && guidNode.Kind == JsonKind.String && guidNode.Text.Length > 0)
+                        {
+                            var asset = AssetDatabaseRuntime.Load(guidNode.Text, node.Get("fileID")?.Integer ?? 0, typeof(Object));
+                            return LazyReferences.Make(type, asset != null ? asset.GetInstanceID() : 0);
+                        }
+                        return LazyReferences.Make(type, (int)(node.Get("instanceID")?.Number ?? 0));
+                    }
                     case Shape.UnityObject:
                     {
                         var guidNode = node.Get("guid");
