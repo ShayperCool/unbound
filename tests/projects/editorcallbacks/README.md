@@ -43,3 +43,24 @@ VirtualGL; `--batchmode` for batch-mode ones) on fresh cache copies through `tes
 reach their `done` record and be byte-identical, and no existing reference. `compare.py` compares the
 event sequence in order and every prefab record field by field, exactly, and lists every
 difference (see its docstring for the one normalization: the Editor's Edit mode domain).
+
+## Root order and activation remain open
+
+`QueryScene` enumerates `GetRootGameObjects()` before walking each root's children,
+so the raw prefab records retain root order. The prefab comparator keys those
+records by phase and object and does not check their ordering. The Unity reference
+returns Main's roots as PlainA, Plain, OuterA, VariantA, ModelA, Holder, Unpacked,
+Lone; Second as PlainB, OuterB; and Additive as VariantC, AdditiveLone. Those are
+the scenes' SceneRoots lists. The saved Root capture differs in all three scenes.
+
+`BuildHierarchy` currently resolves SceneRoots entries only as Transforms. Prefab
+roots listed by PrefabInstance id are appended later. This measured root-order
+defect is significant and remains open. Fixing roots alone would worsen Second's
+Awake/OnEnable order, which currently matches some positions by accident.
+
+Existing scenes cannot establish a general activation rule: document order equals
+numeric fileID order in every fixture, all woken markers have execution order 0,
+and the discriminating cases use one marker class. No candidate explains Main's
+prefab-instance wake order. Do not infer an activation sort from the root-order
+API contract. The source/evidence audit and full sequences are saved under
+`validation/runs/claude-fresh-20261101b/activation-audit/`.

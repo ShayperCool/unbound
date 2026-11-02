@@ -2665,3 +2665,11 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - Managed/API: prior matching runtime results reused, 1583/1594 with the same 11 and API 0/2318; no engine, managed, Rust or extra Native run by Root. Coreapis remains 594/88/88 with all raw failures.
 - Open: initial wake order, cross-type ordering, runtime AddComponent, prefabs, execution order, multi-scene, hot reload and SRP; camera controls establish observations, not a general sorting rule.
 - Evidence: `validation/runs/claude-fresh-20261101b/oro-witness/RECEIPT.md`; Root verification `validation/runs/oro-root-integration-20261102/root-validation.json`. Runtime remains rfc-validation/candidate, manifest 530c114b.
+
+### Initial scene activation audit, 2026-11-02
+- Verdict: no general wake rule established from existing references; no production change, build or capture. Document/fileID order, execution order and type grouping remain confounded.
+- New measured gap: editorcallbacks root enumeration differs in Main, Second and Additive. BuildHierarchy resolves Transform ids but misses PrefabInstance ids in SceneRoots; raw records preserve the order, while the prefab-fields comparator does not check it.
+- Held: the root-order hunk must be composed with a supported activation rule; applying it alone projects a worse Second wake sequence. No fileID or hierarchy sort is admitted.
+- Next evidence: a proposed two-phase, 15-marker discriminator separates 28 declared candidates; the audit did not run it. Instance-id rank is an observation, not proof of allocation chronology.
+- Runtime/results: unchanged rfc-validation/candidate, manifest 530c114b; prior 1583/1594 managed and API 0/2318 remain reused, with no new parity claim.
+- Evidence: `validation/runs/claude-fresh-20261101b/activation-audit/RECEIPT.md`, `projection.json` and `discriminator-predictions.json`; gaps are explicit, raw comparisons unchanged.
