@@ -120,7 +120,12 @@ namespace Unbound.Runtime
             Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), NativeInput.BeforeRenderUpdate);
             Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), Application.Internal_BeforeRender);
             Register(typeof(PL.PostLateUpdate.FinishFrameRendering), () => Time.s_RenderedFrameCount++);
-            Register(typeof(PL.PostLateUpdate.TriggerEndOfFrameCallbacks), () => Coroutines.Run(Coroutines.Phase.EndOfFrame));
+            // A coroutine's WaitForEndOfFrame resumes only on a frame that renders the screen, as
+            // the interval latched when the frame began decides (measured: tests/projects/coreapis).
+            Register(typeof(PL.PostLateUpdate.TriggerEndOfFrameCallbacks), () =>
+            {
+                if (UnityEngine.Rendering.OnDemandRendering.RendersThisFrame) Coroutines.Run(Coroutines.Phase.EndOfFrame);
+            });
             Register(typeof(PL.PostLateUpdate.PlayerSendFrameComplete), Destruction.FlushEndOfFrame);
             Register(typeof(PL.PostLateUpdate.InputEndFrame), Input.EndFrame);
         }

@@ -167,6 +167,7 @@ namespace Unbound.Runtime
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.FinishFrameRendering), Render);
             // The frame's drawing ends after its end-of-frame callbacks.
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.GUIClearEvents), () => InDrawingFrame = false);
+            UnityEngine.Rendering.OnDemandRendering.EnsureRegistered();
         }
 
         internal static void EnsureRegistered() { }
@@ -343,7 +344,13 @@ namespace Unbound.Runtime
             Camera.current = null;
             s_DrawDescriptions.Clear();
             s_CameraCount = s_DrawCount = 0;
-            GfxStream.BeginFrame(Screen.width, Screen.height, QualitySettings.activeColorSpace);
+            // A frame OnDemandRendering does not render (the interval latched when the frame
+            // began) draws nothing on the screen and presents nothing: no screen camera, overlay
+            // canvas or OnGUI. The cameras that render into textures still render, with their
+            // callbacks (measured: tests/projects/coreapis).
+            bool screen = UnityEngine.Rendering.OnDemandRendering.RendersThisFrame;
+            if (screen) GfxStream.BeginFrame(Screen.width, Screen.height, QualitySettings.activeColorSpace);
+            else GfxStream.BeginOffscreenFrame(QualitySettings.activeColorSpace);
             EmitLightingGlobals();
             EmitFrameGlobals();
             if (GraphicsSettings.currentRenderPipeline == null) ReflectionProbe.UpdateRealtime();
@@ -352,6 +359,11 @@ namespace Unbound.Runtime
             // The Editor's Game view shows Display 1: screen cameras of other displays do not
             // render at all (measured: tests/projects/display, no OnPreRender either).
             cameras.RemoveAll(c => !c.RendersOffscreen && c.targetDisplay != 0);
+            if (!screen)
+            {
+                cameras.RemoveAll(c => !c.RendersOffscreen);
+                if (GraphicsSettings.currentRenderPipeline != null) WarnOnDemandPipelineOnce();
+            }
             cameras.Sort((a, b) =>
             {
                 int rt = b.RendersOffscreen.CompareTo(a.RendersOffscreen);
@@ -378,14 +390,26 @@ namespace Unbound.Runtime
 
             // Overlay canvases: a pixel-space camera over the whole screen, drawn last (unless the
             // pipeline draws them).
-            if (!srp || !SupportedRenderingFeatures.active.rendersUIOverlay || s_CameraCount == 0)
+            if (screen && (!srp || !SupportedRenderingFeatures.active.rendersUIOverlay || s_CameraCount == 0))
                 DrawOverlayCanvases(null);
             TraceFrame();
             EndFrameMotion();
-            GfxStream.EndFrame();
+            if (screen) GfxStream.EndFrame();
+            else GfxStream.Flush();
             Immediate.Queued.Clear();
             Culling.EndFrame();
             RenderTexture.CollectTemporaries();
+        }
+
+        static bool s_WarnedOnDemandPipeline;
+
+        /// <summary>The measurement covers the built-in pipeline only.</summary>
+        static void WarnOnDemandPipelineOnce()
+        {
+            if (s_WarnedOnDemandPipeline) return;
+            s_WarnedOnDemandPipeline = true;
+            Debug.LogWarning("Unbound: OnDemandRendering with a scriptable render pipeline is not measured; on frames that do not render, " +
+                             "only the cameras that render into textures go to the pipeline.");
         }
 
         /// <summary>What the frame sets once for its cameras (measured: tests/projects/builtinfx
