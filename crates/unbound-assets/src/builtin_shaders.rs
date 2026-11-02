@@ -350,6 +350,9 @@ pub struct DeclaredSubShader {
 pub struct DeclaredPass {
     pub name: String,
     pub tags: Vec<(String, String)>,
+    /// The `UsePass` target (`"Shader/PASS"`) of a pass no shader in the resources resolves
+    /// (empty for every other pass: a resolved `UsePass` is the named pass, its name and tags).
+    pub use_pass: String,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -366,7 +369,7 @@ pub type DeclarationMap = std::collections::BTreeMap<String, Declarations>;
 /// serialized-file reader's handling of shaders' parsed forms changes. The cache is ours (not
 /// the import cache, not the texture cache): an entry is keyed by this version and the resource
 /// files' bytes, and carries both, so a stale or foreign entry is never used.
-const DECLARATIONS_VERSION: u32 = 1;
+const DECLARATIONS_VERSION: u32 = 2;
 
 /// Magic of a declarations cache entry: then the version (u32 LE), the 32-byte input key and the
 /// postcard payload.
@@ -432,6 +435,7 @@ pub fn declarations(unity_data: &Path, cache_root: &Path) -> Result<DeclarationM
             }
         }
     }
+    resolve_use_passes(&mut map);
     // The inputs must not have changed while they were read (else the entry would be keyed by
     // bytes it was not read from).
     if declarations_key(&files)? != key {
@@ -535,6 +539,62 @@ fn tag_pairs(tags: Option<&Value>) -> Vec<(String, String)> {
         .collect()
 }
 
+/// A serialized pass's `m_Type` for a `UsePass` (0: a pass of its own, 2: a `GrabPass`). Its
+/// `m_UseName` names the pass (`"Shader/PASS"`); its own state and tags are empty.
+const PASS_TYPE_USE: i64 = 1;
+
+/// Replaces every `UsePass` pass by the pass it names, its name and tags, as Unity does when it
+/// loads the shader (canonical shaderkeywords builtin.Nature/Terrain/*.passLightModes: the
+/// terrain shaders' `UsePass "Hidden/Nature/Terrain/Utilities/PICKING"` and `SELECTION` passes
+/// report `Picking` and `SceneSelectionPass`). Names resolve as the renderer's
+/// `ShaderIndex::resolve_use_passes` does: the shader by its name, else by its legacy name
+/// (`Legacy Shaders/...`), the pass by name in any case, the first in SubShader order, through
+/// up to four `UsePass` steps. A pass nothing resolves keeps its target in
+/// [`DeclaredPass::use_pass`], so readers can report it unknown instead of tagless.
+fn resolve_use_passes(map: &mut DeclarationMap) {
+    let read = map.clone();
+    for (shader, declarations) in map.iter_mut() {
+        for pass in declarations
+            .subshaders
+            .iter_mut()
+            .flat_map(|s| s.passes.iter_mut())
+        {
+            if pass.use_pass.is_empty() {
+                continue;
+            }
+            match use_pass_target(&read, &pass.use_pass, 0) {
+                Some(found) => *pass = found,
+                None => tracing::warn!(
+                    "built-in shader `{shader}`: UsePass \"{}\" names no pass in Unity's resources",
+                    pass.use_pass
+                ),
+            }
+        }
+    }
+}
+
+/// The pass a `UsePass` target names, itself resolved (None: no shader or pass by that name).
+fn use_pass_target(map: &DeclarationMap, target: &str, depth: u32) -> Option<DeclaredPass> {
+    let (shader, name) = target.rsplit_once('/')?;
+    let declarations = map
+        .get(shader)
+        .or_else(|| map.get(&format!("Legacy Shaders/{shader}")))?;
+    declarations
+        .subshaders
+        .iter()
+        .flat_map(|s| s.passes.iter())
+        .find_map(|pass| {
+            let pass = if pass.use_pass.is_empty() {
+                pass.clone()
+            } else if depth < 4 {
+                use_pass_target(map, &pass.use_pass, depth + 1)?
+            } else {
+                return None;
+            };
+            pass.name.eq_ignore_ascii_case(name).then_some(pass)
+        })
+}
+
 /// A serialized shader's declarations (`m_ParsedForm`).
 fn read_declarations(parsed: &Value) -> Declarations {
     let names = seq(parsed.get("m_KeywordNames"));
@@ -577,6 +637,11 @@ fn read_declarations(parsed: &Value) -> Declarations {
                     DeclaredPass {
                         name: state.map(|s| str_of(s, "m_Name")).unwrap_or("").to_string(),
                         tags,
+                        use_pass: if int(pass, "m_Type") == PASS_TYPE_USE {
+                            str_of(pass, "m_UseName").to_string()
+                        } else {
+                            String::new()
+                        },
                     }
                 })
                 .collect(),
@@ -680,6 +745,7 @@ mod tests {
                     passes: vec![DeclaredPass {
                         name: "MAIN".into(),
                         tags: vec![("LIGHTMODE".into(), "FORWARDBASE".into())],
+                        use_pass: String::new(),
                     }],
                 }],
                 keywords: vec![DeclaredKeyword {
@@ -691,6 +757,113 @@ mod tests {
             },
         );
         map
+    }
+
+    fn pass(name: &str, light_mode: &str) -> DeclaredPass {
+        DeclaredPass {
+            name: name.into(),
+            tags: vec![("LIGHTMODE".into(), light_mode.into())],
+            use_pass: String::new(),
+        }
+    }
+
+    fn use_pass(target: &str) -> DeclaredPass {
+        DeclaredPass {
+            use_pass: target.into(),
+            ..Default::default()
+        }
+    }
+
+    fn one_subshader(passes: Vec<DeclaredPass>) -> Declarations {
+        Declarations {
+            subshaders: vec![DeclaredSubShader {
+                tags: Vec::new(),
+                passes,
+            }],
+            ..Default::default()
+        }
+    }
+
+    /// A `UsePass` pass becomes the pass it names: pass names in any case, the first match in
+    /// SubShader order, a legacy shader by its old name, chains resolved. One that names nothing
+    /// keeps its target (unknown, not a tagless pass).
+    #[test]
+    fn use_passes_become_the_passes_they_name() {
+        let mut map = DeclarationMap::new();
+        map.insert(
+            "Hidden/Utilities".into(),
+            Declarations {
+                subshaders: vec![
+                    DeclaredSubShader {
+                        tags: Vec::new(),
+                        passes: vec![
+                            pass("Picking", "Picking"),
+                            pass("Selection", "SceneSelectionPass"),
+                        ],
+                    },
+                    DeclaredSubShader {
+                        tags: Vec::new(),
+                        passes: vec![pass("PICKING", "Later")],
+                    },
+                ],
+                ..Default::default()
+            },
+        );
+        map.insert(
+            "Legacy Shaders/Old".into(),
+            one_subshader(vec![pass("BASE", "ALWAYS")]),
+        );
+        map.insert(
+            "Hidden/Chain".into(),
+            one_subshader(vec![use_pass("Hidden/Utilities/SELECTION")]),
+        );
+        map.insert(
+            "User".into(),
+            one_subshader(vec![
+                pass("FORWARD", "FORWARDBASE"),
+                use_pass("Hidden/Utilities/PICKING"),
+                use_pass("Hidden/Utilities/selection"),
+                use_pass("Old/BASE"),
+                use_pass("Hidden/Chain/SELECTION"),
+                use_pass("Hidden/Utilities/MISSING"),
+                use_pass("Hidden/Nowhere/PICKING"),
+                use_pass("NoSlash"),
+            ]),
+        );
+        resolve_use_passes(&mut map);
+        let passes = &map["User"].subshaders[0].passes;
+        assert_eq!(passes[0], pass("FORWARD", "FORWARDBASE"));
+        assert_eq!(passes[1], pass("Picking", "Picking"));
+        assert_eq!(passes[2], pass("Selection", "SceneSelectionPass"));
+        assert_eq!(passes[3], pass("BASE", "ALWAYS"));
+        assert_eq!(passes[4], pass("Selection", "SceneSelectionPass"));
+        for (i, target) in [
+            (5, "Hidden/Utilities/MISSING"),
+            (6, "Hidden/Nowhere/PICKING"),
+            (7, "NoSlash"),
+        ] {
+            assert_eq!(passes[i], use_pass(target), "pass {i}");
+        }
+        // The target shaders' own passes are unchanged; the chain's link resolved too.
+        assert_eq!(
+            map["Hidden/Utilities"].subshaders[1].passes[0],
+            pass("PICKING", "Later")
+        );
+        assert_eq!(
+            map["Hidden/Chain"].subshaders[0].passes[0],
+            pass("Selection", "SceneSelectionPass")
+        );
+    }
+
+    /// A `UsePass` cycle ends unresolved instead of looping.
+    #[test]
+    fn use_pass_cycles_end_unresolved() {
+        let mut map = DeclarationMap::new();
+        map.insert("A".into(), one_subshader(vec![use_pass("B/P")]));
+        map.insert("B".into(), one_subshader(vec![use_pass("A/P")]));
+        resolve_use_passes(&mut map);
+        assert_eq!(map["A"].subshaders[0].passes[0], use_pass("B/P"));
+        assert_eq!(map["B"].subshaders[0].passes[0], use_pass("A/P"));
     }
 
     /// Writers in several threads (each its own temporary file) publish whole entries; a reader
@@ -963,6 +1136,41 @@ mod tests {
         ]);
         assert_eq!(names(vertex_lit), want);
         assert!(vertex_lit.keywords.iter().all(|k| !k.local && !k.dynamic));
+
+        // The terrain shaders' UsePass passes are the utility shader's (canonical
+        // builtin.Nature/Terrain/{Standard,Diffuse}.passLightModes 0.5 and 0.6).
+        for terrain in ["Nature/Terrain/Standard", "Nature/Terrain/Diffuse"] {
+            assert_eq!(
+                light_modes(&map[terrain], 0),
+                [
+                    "FORWARDBASE",
+                    "FORWARDADD",
+                    "DEFERRED",
+                    "SHADOWCASTER",
+                    "META",
+                    "Picking",
+                    "SceneSelectionPass"
+                ],
+                "{terrain}"
+            );
+        }
+        // Every UsePass in the release's resources resolves (the legacy shaders' by their old
+        // names, `Reflective/Bumped Unlit/BASE`).
+        let unresolved: Vec<_> = map
+            .iter()
+            .flat_map(|(n, d)| {
+                d.subshaders
+                    .iter()
+                    .flat_map(|s| s.passes.iter())
+                    .filter(|p| !p.use_pass.is_empty())
+                    .map(move |p| format!("{n}: {}", p.use_pass))
+            })
+            .collect();
+        assert!(unresolved.is_empty(), "{unresolved:?}");
+        assert_eq!(
+            light_modes(&map["Legacy Shaders/Reflective/Bumped VertexLit"], 0),
+            ["ALWAYS", "Vertex"]
+        );
 
         // The second read is the cache entry, equal to the first.
         let key = declarations_key(&declaration_sources(&data)).unwrap();
