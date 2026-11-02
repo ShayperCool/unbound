@@ -8,6 +8,26 @@ Audit of 2026-10-29: read-only, every subsystem; nothing was measured against th
 row still needs a probe before and after it is fixed. Paths are relative to `managed/UnityEngine/`
 unless they start with `crates/` or `native/`.
 
+## Known insignificant residuals
+
+By the user's decision of 2026-11-01, small differences with no visible effect or
+game-logic change do not block package admission. Raw values and comparator
+tolerances stay unchanged; strict verifiers still report these failures.
+Roughly 1-3/255 in isolated pixels is an example, not a blanket tolerance.
+Systematic biases, wrong functional answers, order/lifetime changes and actual
+bugs remain actionable. No Native captures or deep research are spent solely
+to eliminate a listed insignificant residual.
+
+| Probe / release | Keys or region | Raw difference | Suspected cause and disposition |
+|---|---|---|---|
+| lightprobes / 6000.0.71f1 | `additive tetrahedralized occlusion 3`; `unloaded occlusion 3` | Candidate `0.99999994` versus Native `1`, one float step below 1, absolute difference `5.960464477539063e-8` per differing component | Cell vertex order and float32 weight accumulation. User-classified nonblocking precision residual; no observed visible or logic effect in the measured controls. Preserve the original two failing keys and raw components in the coherent package receipt. Evidence: `validation/runs/lightprobes-occlusion/RECEIPT.md`. This classification does not accept the rest of the unvalidated package. |
+| lightprobes / 6000.0.71f1 | `main calculated 3`; `main retetrahedralized calculated 3`; `{additive tetrahedralized, unloaded} {interpolated, calculated, renderer interpolated} 8` (8 retained keys) | Recorded maximum error `7.450580596923828e-9`, previously `3.725290298461914e-9`; one float step | Cell vertex order and float32 accumulation. Nonblocking numeric residuals; the three changed integer query-index tokens are excluded. Raw table: `validation/runs/claude-fresh-20261101b/lp-integration/comparisons/lightprobes-raw.json`. The separate Single-load count/ownership regression still blocks the package. |
+| indirectspec / 6000.0.71f1, Gamma | `ambient {1, 0.5} reflection 1 {immediate, settled} standard floats centre` (4 retained keys) | Candidate G/B `0.08150483` / `0.0938346`, Native `0.08150482` / `0.0938345939`; one float32 step `7.450580596923828e-9`, raw text-token error up to `1e-8` | Shader float arithmetic/encoding. Nonblocking: the 8-bit centres match and no visible or logic difference is observed. Raw table: `validation/runs/claude-fresh-20261101b/lp-integration/comparisons/indirectspec-gamma-union.json`. |
+
+The light-probe pixels are not classified here in advance. Fix the measured zero
+`unity_IndirectSpecColor` bug, then record the actual remaining regions, magnitudes
+and whether they are isolated or systematic in the matching runtime report.
+
 ## How gaps hide
 
 Game runs keep hitting features that are missing *without a warning* (physical cameras,

@@ -12,12 +12,21 @@ Fill this brief for a NEW child. Do not attach a retired conversation.
 - Maximum new builds/captures and affected gates; no unrelated broad replay:
 - Private target/output/project paths and their resource owner:
 - Integration dependency, exact stub changes and any ABI reservation:
+- Known insignificant residuals: keys/regions, size, suspected cause and receipt;
+  separate strict verifier failures from package admission:
 
 Read AGENTS.md, PARITY_WORKFLOW.md and the CURRENT validation README. Reuse saved
 measurements and tested bytes. New Native observations require two independent
 complete matching captures before publishing one canonical reference. Preserve
 all missing/extra/failing values and original tolerances. Unsupported behavior
 fails clearly; no fitted caller rules or silent approximations.
+
+Apply the user's insignificant-residual rule in PARITY_WORKFLOW.md. Small
+invisible float/pixel differences that do not change game logic may be recorded
+as nonblocking; never mask them or loosen a comparator. Systematic shifts, wrong
+functional answers, order/lifetime changes and real bugs still need fixing.
+Record each accepted residual in the receipt and docs ledger. Do not launch
+Native captures or deep research just to eliminate it.
 
 Use the installed launcher exactly once per heavy child command. Pure build
 scripts use --kind build, CPU tools --kind tool. Do not nest leases. Never write
