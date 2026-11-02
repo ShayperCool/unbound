@@ -529,11 +529,20 @@ namespace UnityEngine.SceneManagement
 
         /// <summary>
         /// The scenes a Single load of <paramref name="incoming"/> replaces are unloaded. A
-        /// SceneManager load (<paramref name="sceneManagerLoad"/>) first resets the light probe
-        /// scene set once, before the outgoing scenes' sceneUnloaded and without
-        /// needsRetetrahedralization (measured for one outgoing scene: tests/projects/lightprobes
-        /// Reference lifecycle.jsonl). The Editor's OpenScene, Play mode entry and AssetBundle
-        /// scenes are not measured and keep the per-scene unload.
+        /// SceneManager load (<paramref name="sceneManagerLoad"/>) resets the light probe scene set
+        /// once (LightProbes.SingleLoadReplacing), without needsRetetrahedralization, after the
+        /// first outgoing scene's objects are destroyed and before its sceneUnloaded: during the
+        /// recorded OnDestroy snapshot and for the object made there, the current probes keep
+        /// their combined set; at sceneUnloaded it is cleared (measured for one
+        /// outgoing scene, Unity 6000.0.71f1: tests/projects/lightprobes Reference
+        /// creation-ownership.jsonl t1.a.iv and lifecycle.jsonl row 22). Native destroys the
+        /// outgoing roots in a varying order, so where the reset falls among the roots destroyed
+        /// after the measured OnDestroy is not observed; Unbound resets after all of them. With no
+        /// outgoing scene, or when the teardown ends before reaching that point (an exception), the
+        /// reset is made when the teardown ends. Several outgoing scenes are not measured: the
+        /// reset is made once, at the first one closed, and the later ones' objects are destroyed
+        /// after it. The Editor's OpenScene, Play mode entry and AssetBundle scenes are not
+        /// measured and keep the per-scene unload.
         /// A SceneManager load also keeps the outgoing active scene active through its
         /// sceneUnloaded: GetActiveScene there answers that scene, valid and no longer loaded
         /// (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference lifecycle.jsonl,
@@ -557,7 +566,15 @@ namespace UnityEngine.SceneManagement
                     if (other != incoming) UnloadNow(other, keepDontSave: true);
                 return;
             }
-            LightProbes.SingleLoadReplacing();
+            // One light probe reset per Single load, also for a load nested in this one's
+            // callbacks (each has its own).
+            bool probesReplaced = false;
+            void ReplaceProbesOnce()
+            {
+                if (probesReplaced) return;
+                probesReplaced = true;
+                LightProbes.SingleLoadReplacing();
+            }
             var outer = SceneRegistry.BeginSingleLoadTeardown(incoming);
             var teardown = SceneRegistry.Teardown;
             try
@@ -571,14 +588,15 @@ namespace UnityEngine.SceneManagement
                     closed++;
                     var before = new HashSet<GameObject>(incoming.Roots);
                     teardown.Closing = other;
-                    try { UnloadNow(other, keepDontSave: true, activeThroughUnloaded: true); }
+                    try { UnloadNow(other, keepDontSave: true, activeThroughUnloaded: true, objectsDestroyed: ReplaceProbesOnce); }
                     finally { teardown.Closing = null; }
                     ReportNotCleanedUp(incoming, before);
                 }
             }
             finally
             {
-                SceneRegistry.EndSingleLoadTeardown(outer);
+                try { ReplaceProbesOnce(); }
+                finally { SceneRegistry.EndSingleLoadTeardown(outer); }
             }
         }
 
@@ -698,7 +716,10 @@ namespace UnityEngine.SceneManagement
         /// <param name="activeThroughUnloaded">A SceneManager Single load: the scene, when active,
         /// stays the active one until its sceneUnloaded handlers have run, and it stays valid and
         /// listed until the load's teardown ends (UnloadForSingleLoad).</param>
-        static void UnloadNow(SceneData data, bool keepDontSave = false, bool activeThroughUnloaded = false)
+        /// <param name="objectsDestroyed">Called once the scene's objects are destroyed, before its
+        /// probes leave the loaded set and its sceneUnloaded: a SceneManager Single load's light
+        /// probe reset (UnloadForSingleLoad).</param>
+        static void UnloadNow(SceneData data, bool keepDontSave = false, bool activeThroughUnloaded = false, Action objectsDestroyed = null)
         {
             data.LoadingState = Scene.LoadingState.Unloading;
             foreach (var root in data.Roots.ToArray())
@@ -714,12 +735,14 @@ namespace UnityEngine.SceneManagement
             if (SceneRegistry.Active == data && !keepActive) SceneRegistry.Active = null;
             // Its probes leave the loaded set, raising needsRetetrahedralization before sceneUnloaded
             // (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference lifecycle.jsonl,
-            // branch t3/light-probes-lifecycle-2, commit f8516528). A SceneManager Single load has
-            // already taken its outgoing scenes' probes out of the set, so nothing is raised then.
+            // branch t3/light-probes-lifecycle-2, commit f8516528). A SceneManager Single load
+            // takes its outgoing scenes' probes out of the set here (objectsDestroyed), once, so
+            // nothing is raised then.
             // Unity raises the group (needs, sceneUnloaded, the operation's completion) after
             // UnloadSceneAsync returns; here it happens within the call (not fixed).
             try
             {
+                objectsDestroyed?.Invoke();
                 LightProbes.SceneUnloaded(data.Handle.Value);
                 // sceneUnloaded sees the scene with its name (measured: tests/projects/editorcallbacks);
                 // it is forgotten after.

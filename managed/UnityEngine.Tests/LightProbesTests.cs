@@ -11,6 +11,15 @@ using Xunit;
 
 namespace Unbound.Tests
 {
+    /// <summary>Reports its OnDisable and OnDestroy (an outgoing scene's object in a Single load).</summary>
+    public class ProbeTeardownWitness : MonoBehaviour
+    {
+        internal Action onDisable, onDestroy;
+
+        void OnDisable() => onDisable?.Invoke();
+        void OnDestroy() => onDestroy?.Invoke();
+    }
+
     /// <summary>The light probe API's own state: scene probe sets joining and leaving the current
     /// probes, occlusion by shadow mask channel, queries keeping their probes and the property
     /// block probe arrays (the behaviours tests/projects/lightprobes records in the Editor).</summary>
@@ -344,6 +353,257 @@ namespace Unbound.Tests
                 LightProbes.needsRetetrahedralization -= need;
                 LightProbes.tetrahedralizationCompleted -= done;
                 LightProbes.lightProbesUpdated -= updated;
+                SceneManager.sceneUnloaded -= unloaded;
+                LightmapSettings.Reset();
+                scenes.Dispose();
+            }
+        }
+
+        /// <summary>Outgoing roots whose OnDisable and OnDestroy report the probe state, and whose
+        /// OnDestroy makes a root (it goes to the incoming scene) and reports again.</summary>
+        static void AddTeardownWitnesses(List<GameObject> made, List<string> events, Func<string> state, params string[] names)
+        {
+            foreach (var name in names)
+            {
+                var go = new GameObject(name);
+                made.Add(go);
+                var witness = go.AddComponent<ProbeTeardownWitness>();
+                witness.onDisable = () => events.Add($"OnDisable {name}: {state()}");
+                witness.onDestroy = () =>
+                {
+                    events.Add($"OnDestroy {name}: {state()}");
+                    var created = new GameObject("MadeIn" + name);
+                    made.Add(created);
+                    events.Add($"made in OnDestroy {name} ({created.scene.name}): {state()}");
+                };
+            }
+        }
+
+        /// <summary>Destroys what a test made; witnesses that are still alive (a test that failed
+        /// before the load) report nothing more.</summary>
+        static void DestroyAll(List<GameObject> made)
+        {
+            foreach (var go in made.ToArray())
+            {
+                if (go == null) continue;
+                var witness = go.GetComponent<ProbeTeardownWitness>();
+                if (witness != null) witness.onDisable = witness.onDestroy = null;
+                UnityEngine.Object.DestroyImmediate(go);
+            }
+        }
+
+        /// <summary>
+        /// Unbound keeps the global probes whole while the outgoing scene's objects are
+        /// destroyed: their OnDisable and OnDestroy, and a root made in OnDestroy, see
+        /// the combined set; the reset (count and cellCount 0, own counts kept, no
+        /// needsRetetrahedralization) comes after, by the outgoing sceneUnloaded (measured, Unity
+        /// 6000.0.71f1: tests/projects/lightprobes Reference creation-ownership.jsonl t1.a.iv,
+        /// global "18 18 73 73" with the scene already not loaded, and sceneUnloaded "0 18 0 73";
+        /// lifecycle.jsonl row 22). Native destroys the roots in a varying order and observed one
+        /// of them; that the reset follows the last is Unbound's placement within that window.
+        /// </summary>
+        [Fact]
+        public void SingleLoadKeepsTheSetWhileTheOutgoingObjectsAreDestroyed()
+        {
+            var events = new List<string>();
+            var made = new List<GameObject>();
+            var scenes = new Scenes();
+            SceneData mainScene = null;
+            LightProbes main = null;
+            Action need = () => events.Add("needs");
+            UnityEngine.Events.UnityAction<Scene> unloaded = s => events.Add($"sceneUnloaded {s.name}: {State(mainScene, main)}");
+            try
+            {
+                LightmapSettings.Reset();
+                mainScene = scenes.Loaded("Main");
+                main = Tetrahedralized(MainBox, 1f);
+                int cells = main.cellCountSelf;
+                LightProbes.SceneLoaded(mainScene.Handle.Value, main);
+                LightProbes.Tetrahedralize();
+                var incoming = scenes.Loading("Extra");
+                AddTeardownWitnesses(made, events, () => State(mainScene, main), "First", "Last");
+
+                LightProbes.needsRetetrahedralization += need;
+                SceneManager.sceneUnloaded += unloaded;
+                SceneManagerInternal.UnloadForSingleLoad(incoming, sceneManagerLoad: true);
+
+                string whole = $"global 8 8 {cells} {cells} | valid True loaded False shared own";
+                string cleared = $"global 0 8 0 {cells} | valid True loaded False shared own";
+                Assert.Equal(new[]
+                {
+                    "OnDisable First: " + whole,
+                    "OnDestroy First: " + whole,
+                    "made in OnDestroy First (Extra): " + whole,
+                    "OnDisable Last: " + whole,
+                    "OnDestroy Last: " + whole,
+                    "made in OnDestroy Last (Extra): " + whole,
+                    "sceneUnloaded Main: " + cleared,
+                }, events);
+                Assert.Same(main, LightmapSettings.lightProbes);
+                Assert.Equal((0, 8, 0, cells), (main.count, main.countSelf, main.cellCount, main.cellCountSelf));
+                Assert.Null(SceneRegistry.Teardown);
+            }
+            finally
+            {
+                LightProbes.needsRetetrahedralization -= need;
+                SceneManager.sceneUnloaded -= unloaded;
+                try { DestroyAll(made); }
+                finally
+                {
+                    LightmapSettings.Reset();
+                    scenes.Dispose();
+                }
+            }
+        }
+
+        /// <summary>
+        /// Several outgoing scenes and a scene a sceneUnloaded handler makes: Unity's order is not
+        /// measured. This pins Unbound's choice, not Unity's: one reset for the whole load, after
+        /// the first closed scene's objects are destroyed; the later scenes' objects then see the
+        /// cleared set, and no closed scene raises needsRetetrahedralization.
+        /// </summary>
+        [Fact]
+        public void SingleLoadResetsOnceForSeveralOutgoingAndHandlerMadeScenes()
+        {
+            var events = new List<string>();
+            var made = new List<GameObject>();
+            var scenes = new Scenes();
+            SceneData mainScene = null;
+            LightProbes main = null;
+            Scene handlerMade = default;
+            Action need = () => events.Add("needs");
+            Func<string> current = () =>
+            {
+                var g = LightmapSettings.lightProbes;
+                return g == null ? "null" : $"{(g == main ? "main" : "other")} {g.count} {g.countSelf} {g.cellCount} {g.cellCountSelf}";
+            };
+            UnityEngine.Events.UnityAction<Scene> unloaded = s =>
+            {
+                events.Add($"sceneUnloaded {s.name}: {current()}");
+                if (!handlerMade.IsValid() && s.name == "Main") handlerMade = SceneManager.CreateScene("Made");
+            };
+            try
+            {
+                LightmapSettings.Reset();
+                mainScene = scenes.Loaded("Main");
+                var secondScene = scenes.Loaded("Second");
+                main = Tetrahedralized(MainBox, 1f);
+                var second = Tetrahedralized(Box, 2f);
+                int mainCells = main.cellCountSelf;
+                LightProbes.SceneLoaded(mainScene.Handle.Value, main);
+                LightProbes.SceneLoaded(secondScene.Handle.Value, second);
+                LightProbes.Tetrahedralize();
+                int combinedCells = main.cellCount;
+                Assert.Equal(16, main.count);
+                var incoming = scenes.Loading("Extra");
+                AddTeardownWitnesses(made, events, current, "InMain", "InSecond");
+                SceneManager.MoveGameObjectToScene(made[1], new Scene(secondScene.Handle));
+
+                LightProbes.needsRetetrahedralization += need;
+                SceneManager.sceneUnloaded += unloaded;
+                SceneManagerInternal.UnloadForSingleLoad(incoming, sceneManagerLoad: true);
+
+                string whole = $"main 16 8 {combinedCells} {mainCells}";
+                string cleared = $"main 0 8 0 {mainCells}";
+                Assert.Equal(new[]
+                {
+                    "OnDisable InMain: " + whole,
+                    "OnDestroy InMain: " + whole,
+                    "made in OnDestroy InMain (Extra): " + whole,
+                    "sceneUnloaded Main: " + cleared,
+                    "OnDisable InSecond: " + cleared,
+                    "OnDestroy InSecond: " + cleared,
+                    "made in OnDestroy InSecond (Extra): " + cleared,
+                    "sceneUnloaded Second: " + cleared,
+                    "sceneUnloaded Made: " + cleared,
+                }, events);
+                Assert.Equal((8, 8), (second.count, second.countSelf));
+                Assert.False(handlerMade.IsValid());
+                Assert.Empty(SceneRegistry.Loaded);
+                Assert.Null(SceneRegistry.Teardown);
+            }
+            finally
+            {
+                LightProbes.needsRetetrahedralization -= need;
+                SceneManager.sceneUnloaded -= unloaded;
+                try { DestroyAll(made); }
+                finally
+                {
+                    if (handlerMade.Data != null) SceneRegistry.Forget(handlerMade.Data);
+                    LightmapSettings.Reset();
+                    scenes.Dispose();
+                }
+            }
+        }
+
+        /// <summary>A Single load that closes no scene still makes its one reset, when its teardown
+        /// ends, as it did before the reset waited for the outgoing objects: probes registered for
+        /// a scene that is not loaded leave the set without needsRetetrahedralization. Not
+        /// measured; it keeps the reset once per load.</summary>
+        [Fact]
+        public void SingleLoadWithoutOutgoingScenesStillResetsOnce()
+        {
+            var events = new List<string>();
+            var scenes = new Scenes();
+            Action need = () => events.Add("needs");
+            try
+            {
+                LightmapSettings.Reset();
+                var stale = scenes.Loading("Stale");
+                var probes = Tetrahedralized(MainBox, 1f);
+                LightProbes.SceneLoaded(stale.Handle.Value, probes);
+                LightProbes.Tetrahedralize();
+                Assert.Equal(8, probes.count);
+                var incoming = scenes.Loading("Extra");
+                Assert.Empty(SceneRegistry.Loaded);
+
+                LightProbes.needsRetetrahedralization += need;
+                SceneManagerInternal.UnloadForSingleLoad(incoming, sceneManagerLoad: true);
+
+                Assert.Empty(events);
+                Assert.Equal((0, 8, 0), (probes.count, probes.countSelf, probes.cellCount));
+                Assert.True(probes.cellCountSelf > 0);
+                Assert.Null(SceneRegistry.Teardown);
+            }
+            finally
+            {
+                LightProbes.needsRetetrahedralization -= need;
+                LightmapSettings.Reset();
+                scenes.Dispose();
+            }
+        }
+
+        /// <summary>A sceneUnloaded handler that throws runs after the reset; the exception leaves
+        /// the reset made once and the teardown ended (its creation target and listing restored).</summary>
+        [Fact]
+        public void SingleLoadResetPrecedesAThrowingSceneUnloadedHandler()
+        {
+            var events = new List<string>();
+            var scenes = new Scenes();
+            LightProbes main = null;
+            UnityEngine.Events.UnityAction<Scene> unloaded = s =>
+            {
+                events.Add($"sceneUnloaded {s.name}: {main.count} {main.countSelf}");
+                throw new InvalidOperationException("handler");
+            };
+            try
+            {
+                LightmapSettings.Reset();
+                var mainScene = scenes.Loaded("Main");
+                main = Tetrahedralized(MainBox, 1f);
+                LightProbes.SceneLoaded(mainScene.Handle.Value, main);
+                LightProbes.Tetrahedralize();
+                var incoming = scenes.Loading("Extra");
+                SceneManager.sceneUnloaded += unloaded;
+                Assert.Throws<InvalidOperationException>(() => SceneManagerInternal.UnloadForSingleLoad(incoming, sceneManagerLoad: true));
+
+                Assert.Equal(new[] { "sceneUnloaded Main: 0 8" }, events);
+                Assert.Equal((0, 8, 0), (main.count, main.countSelf, main.cellCount));
+                Assert.Null(SceneRegistry.Teardown);
+                Assert.Null(SceneRegistry.CreationTarget);
+            }
+            finally
+            {
                 SceneManager.sceneUnloaded -= unloaded;
                 LightmapSettings.Reset();
                 scenes.Dispose();
