@@ -9,7 +9,8 @@ namespace Unbound.Tests
     /// <summary>
     /// A box font: units per em 1000, ascender 800, descender -200, no line gap, so at size S a line is
     /// S pixels high with the baseline 0.8 S below its top. Every glyph advances S / 2 and is a solid
-    /// (S / 2) x (0.7 S) box on the baseline; 'I' has a left bearing of 2; spaces have no pixels.
+    /// (S / 2) x (0.7 S) ink box on the baseline; 'I' has a left bearing of 2; spaces have no pixels.
+    /// Generated dynamic-font quads also include the atlas' one-pixel character padding on each side.
     /// </summary>
     internal sealed class BoxGlyphSource : GlyphSource
     {
@@ -100,11 +101,12 @@ namespace Unbound.Tests
             // Upper left of a 100x50 rect around the pivot: x from -50, top at 25, baseline at 17.
             var v = gen.verts;
             Assert.Equal(8, v.Count);
-            Assert.Equal(new Vector3(-50, 24, 0), v[0].position); // top left
-            Assert.Equal(new Vector3(-45, 24, 0), v[1].position); // top right
-            Assert.Equal(new Vector3(-45, 17, 0), v[2].position); // bottom right
-            Assert.Equal(new Vector3(-50, 17, 0), v[3].position); // bottom left
-            Assert.Equal(new Vector3(-45, 24, 0), v[4].position);
+            // Ink is x=-50..-45, y=17..24; the quad includes one pixel of atlas padding.
+            Assert.Equal(new Vector3(-51, 25, 0), v[0].position); // top left
+            Assert.Equal(new Vector3(-44, 25, 0), v[1].position); // top right
+            Assert.Equal(new Vector3(-44, 16, 0), v[2].position); // bottom right
+            Assert.Equal(new Vector3(-51, 16, 0), v[3].position); // bottom left
+            Assert.Equal(new Vector3(-46, 25, 0), v[4].position);
             Assert.True(v[0].uv0.y > v[3].uv0.y && v[1].uv0.x > v[0].uv0.x);
             Assert.Equal(new Color32(255, 255, 255, 255), v[0].color);
             Assert.Equal(3, gen.characterCount);
@@ -125,7 +127,7 @@ namespace Unbound.Tests
             gen.Populate("A B", Settings(BoxFont(), new Vector2(100, 50)));
             Assert.Equal(8, gen.vertexCount);
             Assert.Equal(4, gen.characterCount);
-            Assert.Equal(-40f, gen.verts[4].position.x);
+            Assert.Equal(-41f, gen.verts[4].position.x);
         }
 
         [Fact]
@@ -138,7 +140,7 @@ namespace Unbound.Tests
             Assert.Equal(gen.lines[0].topY - 10, gen.lines[1].topY);
             // The second line starts at the left again.
             int firstOfLine2 = 4 * 8;
-            Assert.Equal(-25f, gen.verts[firstOfLine2].position.x);
+            Assert.Equal(-26f, gen.verts[firstOfLine2].position.x);
         }
 
         [Fact]
@@ -166,12 +168,12 @@ namespace Unbound.Tests
             var gen = new TextGenerator();
             gen.Populate("AB", Settings(BoxFont(), new Vector2(100, 50), TextAnchor.MiddleCenter));
             // Block of 10x10 centered: x from -5, top at 5.
-            Assert.Equal(new Vector3(-5, 4, 0), gen.verts[0].position);
+            Assert.Equal(new Vector3(-6, 5, 0), gen.verts[0].position);
             Assert.Equal(5f, gen.lines[0].topY);
 
             gen.Populate("AB", Settings(BoxFont(), new Vector2(100, 50), TextAnchor.LowerRight));
-            Assert.Equal(new Vector3(40, -16, 0), gen.verts[0].position);
-            Assert.Equal(new Vector3(50, -23, 0), gen.verts[6].position);
+            Assert.Equal(new Vector3(39, -15, 0), gen.verts[0].position);
+            Assert.Equal(new Vector3(51, -24, 0), gen.verts[6].position);
         }
 
         [Fact]
@@ -181,10 +183,10 @@ namespace Unbound.Tests
             var gen = new TextGenerator();
             var s = Settings(font, new Vector2(100, 50));
             gen.Populate("IA", s);
-            Assert.Equal(-48f, gen.verts[0].position.x);
+            Assert.Equal(-49f, gen.verts[0].position.x);
             s.alignByGeometry = true;
             gen.Populate("IA", s);
-            Assert.Equal(-50f, gen.verts[0].position.x);
+            Assert.Equal(-51f, gen.verts[0].position.x);
         }
 
         [Fact]
@@ -219,8 +221,9 @@ namespace Unbound.Tests
             Assert.Equal(30f, gen.GetPreferredHeight("A\nB", s));
             gen.Populate("A\nB", s);
             Assert.Equal(gen.lines[0].topY - 20, gen.lines[1].topY);
-            Assert.Equal(20, gen.lines[0].height);
-            Assert.Equal(10f, gen.lines[0].leading);
+            // Settings change the distance between lines, not the face's line metrics.
+            Assert.Equal(10, gen.lines[0].height);
+            Assert.Equal(0f, gen.lines[0].leading);
         }
 
         [Fact]
@@ -249,7 +252,7 @@ namespace Unbound.Tests
             s.horizontalOverflow = HorizontalWrapMode.Overflow;
             gen.Populate("AAAAAAAAAA", s);
             Assert.Equal(10, gen.fontSizeUsedForBestFit);
-            Assert.Equal(new Vector3(-20, 50 - 1, 0), gen.verts[4].position);
+            Assert.Equal(new Vector3(-21, 50, 0), gen.verts[4].position);
 
             // Wrapped: the height decides.
             s.horizontalOverflow = HorizontalWrapMode.Wrap;
@@ -291,8 +294,8 @@ namespace Unbound.Tests
             gen.Populate("<size=20>A</size>B", s);
             // Both sit on one baseline, 16 below the top (the larger ascent).
             Assert.Equal(gen.verts[3].position.y, gen.verts[7].position.y);
-            Assert.Equal(gen.lines[0].topY - 16, gen.verts[3].position.y);
-            Assert.Equal(14f, gen.verts[0].position.y - gen.verts[3].position.y);
+            Assert.Equal(gen.lines[0].topY - 16 - 1, gen.verts[3].position.y);
+            Assert.Equal(16f, gen.verts[0].position.y - gen.verts[3].position.y); // 14 ink + 2 padding
         }
 
         [Fact]
@@ -389,7 +392,7 @@ namespace Unbound.Tests
             var gen = new TextGenerator();
             gen.Populate("A☃B", Settings(BoxFont(), new Vector2(100, 50)));
             Assert.Equal(8, gen.vertexCount);
-            Assert.Equal(-45f, gen.verts[4].position.x);
+            Assert.Equal(-46f, gen.verts[4].position.x);
         }
 
         [Fact]
