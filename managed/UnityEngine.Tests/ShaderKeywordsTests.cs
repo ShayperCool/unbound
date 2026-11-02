@@ -454,11 +454,12 @@ namespace UnityEngine.Tests
             Assert.Equal("FORWARDBASE", shader.FindPassTagValue(0, 0, new ShaderTagId("LightMode")).name);
             Assert.Equal("UniversalForward", shader.FindPassTagValue(1, 0, new ShaderTagId("LightMode")).name);
             Assert.Equal(ShaderTagId.none, shader.FindPassTagValue(1, 1, new ShaderTagId("LightMode")));
-            // The canonical records type and message: the Editor's (Mono's) wording.
+            // Unity supplies this text as ParamName. Preserve the functional contract even
+            // though standard .NET message formatting differs from the canonical's Mono text.
             var e = Assert.Throws<ArgumentOutOfRangeException>(() => shader.FindSubshaderTagValue(3, new ShaderTagId("RenderType")));
-            Assert.Equal("Specified argument was out of the range of valid values.\nParameter name: Invalid subshaderIndex 3. Value must be in the range [0, 3)", e.Message);
+            Assert.Equal("Invalid subshaderIndex 3. Value must be in the range [0, 3)", e.ParamName);
             e = Assert.Throws<ArgumentOutOfRangeException>(() => shader.FindSubshaderTagValue(-1, new ShaderTagId("RenderType")));
-            Assert.Equal("Specified argument was out of the range of valid values.\nParameter name: Invalid subshaderIndex -1. Value must be in the range [0, 3)", e.Message);
+            Assert.Equal("Invalid subshaderIndex -1. Value must be in the range [0, 3)", e.ParamName);
         }
 
         // ------------------------------------------------------------------ variants

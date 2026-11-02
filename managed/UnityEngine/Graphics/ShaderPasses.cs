@@ -170,8 +170,8 @@ namespace UnityEngine
 
         /// <summary>A SubShader's tag as Unity stores it. An index out of range throws (canonical
         /// *.subshaderTag[count] and [-1]; Unity's C# checks the index before the native call and
-        /// passes its text as the parameter name). The exception's message is the Editor's (Mono's
-        /// wording); its ParamName is not set.</summary>
+        /// passes its text as the parameter name). Preserve ParamName; the runtime's standard
+        /// exception-message formatting may differ between .NET and Mono.</summary>
         public ShaderTagId FindSubshaderTagValue(int subshaderIndex, ShaderTagId tagName)
         {
             var d = Unbound.Runtime.ShaderDeclarations.Of(this);
@@ -182,8 +182,7 @@ namespace UnityEngine
                 return info.Tags.TryGetValue(tagName.name, out var tag) ? new ShaderTagId(tag) : ShaderTagId.none;
             }
             if (subshaderIndex < 0 || subshaderIndex >= d.SubShaders.Count)
-                throw new ArgumentOutOfRangeException("Specified argument was out of the range of valid values.\nParameter name: "
-                    + $"Invalid subshaderIndex {subshaderIndex}. Value must be in the range [0, {d.SubShaders.Count})", (Exception)null);
+                throw new ArgumentOutOfRangeException($"Invalid subshaderIndex {subshaderIndex}. Value must be in the range [0, {d.SubShaders.Count})");
             var value = Unbound.Runtime.ShaderDeclarations.Tag(d.SubShaders[subshaderIndex].Tags, tagName.name);
             return value != null ? new ShaderTagId(value) : ShaderTagId.none;
         }
