@@ -417,8 +417,8 @@ pub fn declarations(unity_data: &Path, cache_root: &Path) -> Result<DeclarationM
     let mut map = DeclarationMap::new();
     for path in &files {
         let data = std::fs::read(path).with_context(|| format!("reading {}", path.display()))?;
-        let file = SerializedFile::parse(&data)
-            .with_context(|| format!("reading {}", path.display()))?;
+        let file =
+            SerializedFile::parse(&data).with_context(|| format!("reading {}", path.display()))?;
         for object in file.objects.iter().filter(|o| o.class_id == 48) {
             let Ok(shader) = file.read(object.path_id) else {
                 continue;
@@ -526,7 +526,12 @@ fn publish(path: &Path, bytes: &[u8]) -> std::io::Result<()> {
 fn tag_pairs(tags: Option<&Value>) -> Vec<(String, String)> {
     seq(tags.and_then(|t| t.get("tags")))
         .iter()
-        .map(|t| (str_of(t, "first").to_string(), str_of(t, "second").to_string()))
+        .map(|t| {
+            (
+                str_of(t, "first").to_string(),
+                str_of(t, "second").to_string(),
+            )
+        })
         .collect()
 }
 
@@ -703,7 +708,10 @@ mod tests {
                     if let Ok(bytes) = std::fs::read(&path) {
                         let first = bytes[0];
                         assert!(bytes.iter().all(|b| *b == first), "a mixed entry");
-                        assert!((0..7).any(|r| bytes.len() == 4096 + 977 * r), "a partial entry");
+                        assert!(
+                            (0..7).any(|r| bytes.len() == 4096 + 977 * r),
+                            "a partial entry"
+                        );
                         seen += 1;
                     }
                 }
@@ -727,7 +735,11 @@ mod tests {
         });
         let last = std::fs::read(&path).unwrap();
         assert!(last.iter().all(|b| *b == last[0]));
-        assert!(temporaries(&scratch.0).is_empty(), "{:?}", temporaries(&scratch.0));
+        assert!(
+            temporaries(&scratch.0).is_empty(),
+            "{:?}",
+            temporaries(&scratch.0)
+        );
     }
 
     /// A temporary name another writer already holds is refused, not truncated or removed.
@@ -738,7 +750,11 @@ mod tests {
         let next = TEMP_COUNTER.load(std::sync::atomic::Ordering::Relaxed);
         // Occupy the next few names this process could pick.
         let foreign: Vec<PathBuf> = (next..next + 64)
-            .map(|n| scratch.0.join(format!(".entry.bin.{}.{n}.tmp", std::process::id())))
+            .map(|n| {
+                scratch
+                    .0
+                    .join(format!(".entry.bin.{}.{n}.tmp", std::process::id()))
+            })
             .collect();
         for f in &foreign {
             std::fs::write(f, b"another writer's bytes").unwrap();
@@ -800,7 +816,10 @@ mod tests {
             std::fs::write(&path, &bad).unwrap();
             assert_eq!(read_declarations_entry(&path, &key), None, "{bad:?}");
         }
-        assert_eq!(read_declarations_entry(&scratch.0.join("missing.bin"), &key), None);
+        assert_eq!(
+            read_declarations_entry(&scratch.0.join("missing.bin"), &key),
+            None
+        );
     }
 
     /// Missing resource files are an error (the caller reports unknown declarations and asks
@@ -829,8 +848,14 @@ mod tests {
         }
         let scratch = Scratch::new("declarations-builtin");
         let map = declarations(&data, &scratch.0).unwrap();
-        let names = |d: &Declarations| d.keywords.iter().map(|k| k.name.clone()).collect::<Vec<_>>();
-        let local = |d: &Declarations, n: &str| d.keywords.iter().find(|k| k.name == n).unwrap().local;
+        let names = |d: &Declarations| {
+            d.keywords
+                .iter()
+                .map(|k| k.name.clone())
+                .collect::<Vec<_>>()
+        };
+        let local =
+            |d: &Declarations, n: &str| d.keywords.iter().find(|k| k.name == n).unwrap().local;
         let light_modes = |d: &Declarations, sub: usize| {
             d.subshaders[sub]
                 .passes
@@ -855,22 +880,57 @@ mod tests {
         assert_eq!(standard.subshaders.len(), 2);
         assert_eq!(standard.fallback, "VertexLit");
         assert_eq!(
-            standard.subshaders.iter().map(|s| s.passes.len()).collect::<Vec<_>>(),
+            standard
+                .subshaders
+                .iter()
+                .map(|s| s.passes.len())
+                .collect::<Vec<_>>(),
             [5, 4]
         );
         assert_eq!(
             light_modes(standard, 0),
-            ["FORWARDBASE", "FORWARDADD", "SHADOWCASTER", "DEFERRED", "META"]
+            [
+                "FORWARDBASE",
+                "FORWARDADD",
+                "SHADOWCASTER",
+                "DEFERRED",
+                "META"
+            ]
         );
         let mut want: Vec<&str> = stereo.to_vec();
         want.extend([
-            "FOG_LINEAR", "FOG_EXP", "FOG_EXP2", "INSTANCING_ON", "_NORMALMAP", "_ALPHATEST_ON",
-            "_ALPHABLEND_ON", "_ALPHAPREMULTIPLY_ON", "_METALLICGLOSSMAP", "_PARALLAXMAP",
-            "DIRECTIONAL", "LIGHTPROBE_SH", "SHADOWS_SHADOWMASK", "DYNAMICLIGHTMAP_ON",
-            "LIGHTMAP_ON", "LIGHTMAP_SHADOW_MIXING", "DIRLIGHTMAP_COMBINED", "SHADOWS_SCREEN",
-            "VERTEXLIGHT_ON", "_EMISSION", "_DETAIL_MULX2", "_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A",
-            "_SPECULARHIGHLIGHTS_OFF", "_GLOSSYREFLECTIONS_OFF", "POINT", "SPOT", "POINT_COOKIE",
-            "DIRECTIONAL_COOKIE", "SHADOWS_DEPTH", "SHADOWS_SOFT", "SHADOWS_CUBE", "UNITY_HDR_ON",
+            "FOG_LINEAR",
+            "FOG_EXP",
+            "FOG_EXP2",
+            "INSTANCING_ON",
+            "_NORMALMAP",
+            "_ALPHATEST_ON",
+            "_ALPHABLEND_ON",
+            "_ALPHAPREMULTIPLY_ON",
+            "_METALLICGLOSSMAP",
+            "_PARALLAXMAP",
+            "DIRECTIONAL",
+            "LIGHTPROBE_SH",
+            "SHADOWS_SHADOWMASK",
+            "DYNAMICLIGHTMAP_ON",
+            "LIGHTMAP_ON",
+            "LIGHTMAP_SHADOW_MIXING",
+            "DIRLIGHTMAP_COMBINED",
+            "SHADOWS_SCREEN",
+            "VERTEXLIGHT_ON",
+            "_EMISSION",
+            "_DETAIL_MULX2",
+            "_SMOOTHNESS_TEXTURE_ALBEDO_CHANNEL_A",
+            "_SPECULARHIGHLIGHTS_OFF",
+            "_GLOSSYREFLECTIONS_OFF",
+            "POINT",
+            "SPOT",
+            "POINT_COOKIE",
+            "DIRECTIONAL_COOKIE",
+            "SHADOWS_DEPTH",
+            "SHADOWS_SOFT",
+            "SHADOWS_CUBE",
+            "UNITY_HDR_ON",
             "EDITOR_VISUALIZATION",
         ]);
         assert_eq!(names(standard), want);
@@ -886,11 +946,20 @@ mod tests {
 
         let vertex_lit = &map["Legacy Shaders/VertexLit"];
         assert_eq!(vertex_lit.subshaders.len(), 1);
-        assert_eq!(light_modes(vertex_lit, 0), ["Vertex", "VertexLM", "SHADOWCASTER"]);
+        assert_eq!(
+            light_modes(vertex_lit, 0),
+            ["Vertex", "VertexLM", "SHADOWCASTER"]
+        );
         let mut want: Vec<&str> = stereo.to_vec();
         want.extend([
-            "FOG_LINEAR", "FOG_EXP", "FOG_EXP2", "INSTANCING_ON", "SHADOWS_DEPTH", "SHADOWS_CUBE",
-            "POINT", "SPOT",
+            "FOG_LINEAR",
+            "FOG_EXP",
+            "FOG_EXP2",
+            "INSTANCING_ON",
+            "SHADOWS_DEPTH",
+            "SHADOWS_CUBE",
+            "POINT",
+            "SPOT",
         ]);
         assert_eq!(names(vertex_lit), want);
         assert!(vertex_lit.keywords.iter().all(|k| !k.local && !k.dynamic));

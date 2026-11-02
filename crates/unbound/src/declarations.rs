@@ -304,8 +304,11 @@ impl State {
             return Ok(map.clone());
         }
         self.builtin = None;
-        let map = unbound_assets::builtin_shaders::declarations(&inputs.unity_data, &inputs.cache_root)
-            .map_err(|e| Unknown::transient(format!("Unity's built-in shaders cannot be read: {e:#}")))?;
+        let map =
+            unbound_assets::builtin_shaders::declarations(&inputs.unity_data, &inputs.cache_root)
+                .map_err(|e| {
+                Unknown::transient(format!("Unity's built-in shaders cannot be read: {e:#}"))
+            })?;
         let map = Arc::new(map);
         if let Some(now) = now {
             self.builtin = Some((map.clone(), now));
@@ -317,7 +320,9 @@ impl State {
     fn sources(&mut self, inputs: &Inputs) -> Result<&mut (PathBuf, ShaderIndex), Unknown> {
         if self.sources.is_none() {
             let found = (inputs.builtin_sources)().map_err(|e| {
-                Unknown::transient(format!("Unity's built-in shader sources are not available: {e:#}"))
+                Unknown::transient(format!(
+                    "Unity's built-in shader sources are not available: {e:#}"
+                ))
             })?;
             self.sources = Some((found.cg_includes, ShaderIndex::scan(&found.shader_roots)));
         }
@@ -331,7 +336,12 @@ impl State {
                 inputs.install_cg_includes.clone()
             } else {
                 self.sources(inputs)
-                    .map_err(|u| Unknown::transient(format!("its programs' includes are not available ({})", u.reason)))?
+                    .map_err(|u| {
+                        Unknown::transient(format!(
+                            "its programs' includes are not available ({})",
+                            u.reason
+                        ))
+                    })?
                     .0
                     .clone()
             };
@@ -436,7 +446,9 @@ impl State {
             return Ok(());
         }
         if depth > 8 {
-            return Err(Unknown::fixed(format!("its Fallback chain does not end ({name})")));
+            return Err(Unknown::fixed(format!(
+                "its Fallback chain does not end ({name})"
+            )));
         }
         let legacy = format!("Legacy Shaders/{name}");
         for candidate in [name, legacy.as_str()] {
@@ -454,9 +466,9 @@ impl State {
                 };
             }
         }
-        let map = self
-            .builtin(inputs)
-            .map_err(|u| Unknown::transient(format!("its Fallback `{name}` is not known: {}", u.reason)))?;
+        let map = self.builtin(inputs).map_err(|u| {
+            Unknown::transient(format!("its Fallback `{name}` is not known: {}", u.reason))
+        })?;
         for candidate in [name, legacy.as_str()] {
             if let Some(builtin) = map.get(candidate) {
                 out.extend(builtin_subshaders(builtin));
@@ -492,7 +504,10 @@ impl State {
             };
         }
         let map = self.builtin(inputs).map_err(|u| {
-            Unknown::transient(format!("its UsePass \"{target}\" is not known: {}", u.reason))
+            Unknown::transient(format!(
+                "its UsePass \"{target}\" is not known: {}",
+                u.reason
+            ))
         })?;
         map.get(shader)
             .and_then(|b| {
@@ -526,7 +541,10 @@ impl State {
             Some(found) => found,
             None => {
                 let (_, index) = self.sources(inputs).map_err(|u| {
-                    Unknown::transient(format!("its UsePass \"{target}\" is not known: {}", u.reason))
+                    Unknown::transient(format!(
+                        "its UsePass \"{target}\" is not known: {}",
+                        u.reason
+                    ))
                 })?;
                 index.get(shader).and_then(find)
             }
@@ -550,11 +568,12 @@ impl State {
                 if let Some(program) = pass.program.as_ref().filter(|p| p.surface) {
                     if !surface_done {
                         surface_done = true;
-                        for generated in
-                            unbound_shaders::keywords::surface_passes(&surface_options(&program.code))
-                        {
+                        for generated in unbound_shaders::keywords::surface_passes(
+                            &surface_options(&program.code),
+                        ) {
                             let tags = one_tag("LightMode", generated.light_mode);
-                            passes.push(json!({ "name": generated.name, "tags": tags_json(&tags) }));
+                            passes
+                                .push(json!({ "name": generated.name, "tags": tags_json(&tags) }));
                         }
                     }
                     continue;
@@ -568,7 +587,9 @@ impl State {
                 };
                 passes.push(json!({ "name": name, "tags": tags_json(&tags) }));
             }
-            out.push(json!({ "tags": tags_json(&canonical_tags(sub.tags.iter())), "passes": passes }));
+            out.push(
+                json!({ "tags": tags_json(&canonical_tags(sub.tags.iter())), "passes": passes }),
+            );
         }
         Ok(out)
     }
@@ -604,7 +625,9 @@ impl State {
                 };
                 let compiler = self.compiler(inputs)?;
                 let pragmas = compiler.pragma_lines(&p).map_err(|e| {
-                    Unknown::fixed(format!("a pass's keyword declarations cannot be read: {e:#}"))
+                    Unknown::fixed(format!(
+                        "a pass's keyword declarations cannot be read: {e:#}"
+                    ))
                 })?;
                 let added = if program.surface {
                     surface_done = true;

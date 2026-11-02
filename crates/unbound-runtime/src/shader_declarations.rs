@@ -90,11 +90,9 @@ mod tests {
     fn requests_reach_the_installed_provider_or_fail_without_one() {
         let _turn = SERIAL.lock().unwrap_or_else(|e| e.into_inner());
         set_provider(None);
-        let err = shader_request(r#"{"name":"Standard"}"#)
-            .unwrap_err();
+        let err = shader_request(r#"{"name":"Standard"}"#).unwrap_err();
         assert!(format!("{err:#}").contains(UNAVAILABLE));
-        let err = compute_request(r#"{"file":"a.compute"}"#)
-            .unwrap_err();
+        let err = compute_request(r#"{"file":"a.compute"}"#).unwrap_err();
         assert!(format!("{err:#}").contains(UNAVAILABLE));
 
         set_provider(Some(Arc::new(Fixed)));

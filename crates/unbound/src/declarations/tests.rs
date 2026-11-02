@@ -64,7 +64,10 @@ fn inputs(
 ) -> Inputs {
     let sources_cg = scratch.0.join("sources/CGIncludes");
     Inputs {
-        project_roots: vec![scratch.0.join("Assets"), scratch.0.join("Library/Unbound/GeneratedShaders")],
+        project_roots: vec![
+            scratch.0.join("Assets"),
+            scratch.0.join("Library/Unbound/GeneratedShaders"),
+        ],
         settings: unbound_shaders::Settings {
             includes: unbound_shaders::Includes {
                 project: scratch.0.clone(),
@@ -150,7 +153,10 @@ fn tags_are_stored_as_unity_stores_them() {
     // The canonical probe.Probe/KwFixed.passLightModes `ALWAYS`; a pipeline's and the vertex
     // lit modes as written (`UniversalForward`, `Vertex`).
     assert_eq!(one_tag("LightMode", "Always")[0].1, "ALWAYS");
-    assert_eq!(one_tag("LightMode", "UniversalForward")[0].1, "UniversalForward");
+    assert_eq!(
+        one_tag("LightMode", "UniversalForward")[0].1,
+        "UniversalForward"
+    );
     assert_eq!(one_tag("LightMode", "Vertex")[0].1, "Vertex");
 }
 
@@ -179,7 +185,11 @@ fn own_pass_tags_leave_out_the_subshaders() {
     .unwrap();
     let passes = &lab.subshaders[0].passes;
     let own = |i: usize| {
-        let mut t: Vec<_> = passes[i].own_tags.iter().map(|(k, v)| (k.as_str(), v.as_str())).collect();
+        let mut t: Vec<_> = passes[i]
+            .own_tags
+            .iter()
+            .map(|(k, v)| (k.as_str(), v.as_str()))
+            .collect();
         t.sort();
         t
     };
@@ -218,12 +228,31 @@ fn installing_reads_nothing_and_questions_read_only_what_they_need() {
     assert_eq!(answer["subshaders_known"], true);
     assert_eq!(answer["keywords_known"], true);
     assert_eq!(answer["transient"], false);
-    assert_eq!(names(&answer), stereo_and(&["FOG_LINEAR", "FOG_EXP", "FOG_EXP2"]));
-    assert_eq!(answer["subshaders"][0]["tags"], json!([["IGNOREPROJECTOR", "true"]]));
-    assert_eq!(answer["subshaders"][0]["passes"][0]["tags"], json!([["LIGHTMODE", "ALWAYS"]]));
-    assert_eq!(calls.load(Ordering::Relaxed), 0, "no built-in sources were needed");
-    assert!(!scratch.0.join("cache").exists(), "no built-in resources were read or cached");
-    assert!(!scratch.0.join("Library").exists(), "nothing was created in the project");
+    assert_eq!(
+        names(&answer),
+        stereo_and(&["FOG_LINEAR", "FOG_EXP", "FOG_EXP2"])
+    );
+    assert_eq!(
+        answer["subshaders"][0]["tags"],
+        json!([["IGNOREPROJECTOR", "true"]])
+    );
+    assert_eq!(
+        answer["subshaders"][0]["passes"][0]["tags"],
+        json!([["LIGHTMODE", "ALWAYS"]])
+    );
+    assert_eq!(
+        calls.load(Ordering::Relaxed),
+        0,
+        "no built-in sources were needed"
+    );
+    assert!(
+        !scratch.0.join("cache").exists(),
+        "no built-in resources were read or cached"
+    );
+    assert!(
+        !scratch.0.join("Library").exists(),
+        "nothing was created in the project"
+    );
 }
 
 /// An unmeasured release: project shaders and compute files are unknown (not empty), and not
@@ -231,7 +260,10 @@ fn installing_reads_nothing_and_questions_read_only_what_they_need() {
 #[test]
 fn an_unmeasured_release_reports_project_spaces_unknown() {
     let scratch = Scratch::new("decl-unmeasured");
-    scratch.write("Assets/Fixed.shader", r#"Shader "Tests/Fixed" { SubShader { Pass { } } }"#);
+    scratch.write(
+        "Assets/Fixed.shader",
+        r#"Shader "Tests/Fixed" { SubShader { Pass { } } }"#,
+    );
     let compute = scratch.write("Assets/Empty.compute", "#pragma kernel CSMain\n");
     let mut i = inputs(
         &scratch,
@@ -348,11 +380,23 @@ fn compute_answers_follow_the_file() {
     let answer = ask_compute(&provider, &file);
     assert_eq!(answer["keywords_known"], true);
     // The canonical compute.space.keywordNames.
-    assert_eq!(names(&answer), ["CS_LOCAL", "CS_GLOBAL_A", "CS_GLOBAL_B", "CS_DYN", "LIGHTMAP_ON"]);
+    assert_eq!(
+        names(&answer),
+        [
+            "CS_LOCAL",
+            "CS_GLOBAL_A",
+            "CS_GLOBAL_B",
+            "CS_DYN",
+            "LIGHTMAP_ON"
+        ]
+    );
     assert_eq!(answer["keywords"][0]["local"], true);
     assert_eq!(answer["keywords"][3]["dynamic"], true);
 
-    scratch.write("Assets/Kw.compute", "#pragma kernel CSMain\n#include \"Missing.hlsl\"\n");
+    scratch.write(
+        "Assets/Kw.compute",
+        "#pragma kernel CSMain\n#include \"Missing.hlsl\"\n",
+    );
     let answer = ask_compute(&provider, &file);
     assert_eq!(answer["keywords_known"], false);
     assert_eq!(answer["transient"], false);
@@ -419,7 +463,9 @@ fn concurrent_questions_get_whole_answers() {
     ));
     let first = provider.shader("Tests/Hlsl");
     std::thread::scope(|scope| {
-        let handles: Vec<_> = (0..8).map(|_| scope.spawn(|| provider.shader("Tests/Hlsl"))).collect();
+        let handles: Vec<_> = (0..8)
+            .map(|_| scope.spawn(|| provider.shader("Tests/Hlsl")))
+            .collect();
         for h in handles {
             assert_eq!(h.join().unwrap(), first);
         }
@@ -452,51 +498,99 @@ fn probe_shaders_match_the_canonical_reference() {
     i.project_roots = vec![probe.join("Assets")];
     i.settings.includes.project = probe.clone();
     let provider = Provider::new(i);
-    let reference: std::collections::HashMap<String, Value> = std::fs::read_to_string(
-        probe.join("Reference/unity-6000.0.71f1.jsonl"),
-    )
-    .unwrap()
-    .lines()
-    .map(|l| {
-        let v: Value = serde_json::from_str(l).unwrap();
-        (v["k"].as_str().unwrap().to_string(), v["v"].clone())
-    })
-    .collect();
-    for shader in ["Probe/KwForms", "Probe/KwPlain", "Probe/KwHlsl", "Probe/KwSurface", "Probe/KwFixed"] {
+    let reference: std::collections::HashMap<String, Value> =
+        std::fs::read_to_string(probe.join("Reference/unity-6000.0.71f1.jsonl"))
+            .unwrap()
+            .lines()
+            .map(|l| {
+                let v: Value = serde_json::from_str(l).unwrap();
+                (v["k"].as_str().unwrap().to_string(), v["v"].clone())
+            })
+            .collect();
+    for shader in [
+        "Probe/KwForms",
+        "Probe/KwPlain",
+        "Probe/KwHlsl",
+        "Probe/KwSurface",
+        "Probe/KwFixed",
+    ] {
         let answer = ask(&provider, shader);
         let key = |k: &str| &reference[&format!("probe.{shader}.{k}")];
         assert_eq!(answer["found"], true, "{shader}");
-        assert_eq!(answer["keywords_known"], true, "{shader}: {}", answer["reason"]);
-        assert_eq!(answer["subshaders_known"], true, "{shader}: {}", answer["reason"]);
-        assert_eq!(json!(names(&answer)), *key("space.keywordNames"), "{shader}");
-        for (k, want) in answer["keywords"].as_array().unwrap().iter().zip(key("space.keywords").as_array().unwrap()) {
-            assert_eq!(k["local"].as_bool().unwrap(), !want["isOverridable"].as_bool().unwrap(), "{shader} {k}");
+        assert_eq!(
+            answer["keywords_known"], true,
+            "{shader}: {}",
+            answer["reason"]
+        );
+        assert_eq!(
+            answer["subshaders_known"], true,
+            "{shader}: {}",
+            answer["reason"]
+        );
+        assert_eq!(
+            json!(names(&answer)),
+            *key("space.keywordNames"),
+            "{shader}"
+        );
+        for (k, want) in answer["keywords"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .zip(key("space.keywords").as_array().unwrap())
+        {
+            assert_eq!(
+                k["local"].as_bool().unwrap(),
+                !want["isOverridable"].as_bool().unwrap(),
+                "{shader} {k}"
+            );
             assert_eq!(k["dynamic"], want["isDynamic"], "{shader} {k}");
         }
         let subs = answer["subshaders"].as_array().unwrap();
         assert_eq!(json!(subs.len()), *key("subshaderCount"), "{shader}");
-        let counts: Vec<String> = subs.iter().map(|s| s["passes"].as_array().unwrap().len().to_string()).collect();
+        let counts: Vec<String> = subs
+            .iter()
+            .map(|s| s["passes"].as_array().unwrap().len().to_string())
+            .collect();
         assert_eq!(json!(counts), *key("passCountInSubshader"), "{shader}");
         let tag = |tags: &Value, name: &str| {
-            tags.as_array().unwrap().iter().find(|t| t[0].as_str().unwrap().eq_ignore_ascii_case(name)).map(|t| t[1].as_str().unwrap().to_string())
+            tags.as_array()
+                .unwrap()
+                .iter()
+                .find(|t| t[0].as_str().unwrap().eq_ignore_ascii_case(name))
+                .map(|t| t[1].as_str().unwrap().to_string())
         };
         let mut modes = Vec::new();
         let mut sub_tags = Vec::new();
         for (s, sub) in subs.iter().enumerate() {
-            for t in ["RenderType", "Queue", "RenderPipeline", "ProbeTag", "IgnoreProjector", "PreviewType", "DisableBatching", "LightMode"] {
+            for t in [
+                "RenderType",
+                "Queue",
+                "RenderPipeline",
+                "ProbeTag",
+                "IgnoreProjector",
+                "PreviewType",
+                "DisableBatching",
+                "LightMode",
+            ] {
                 if let Some(v) = tag(&sub["tags"], t) {
                     sub_tags.push(format!("{s}:{t}={v}"));
                 }
             }
             for (p, pass) in sub["passes"].as_array().unwrap().iter().enumerate() {
-                modes.push(format!("{s}.{p}:{}", tag(&pass["tags"], "LightMode").unwrap_or("-".into())));
+                modes.push(format!(
+                    "{s}.{p}:{}",
+                    tag(&pass["tags"], "LightMode").unwrap_or("-".into())
+                ));
             }
         }
         assert_eq!(json!(sub_tags), *key("subshaderTags"), "{shader}");
         assert_eq!(json!(modes), *key("passLightModes"), "{shader}");
     }
     let compute = ask_compute(&provider, &probe.join("Assets/Resources/KwCompute.compute"));
-    assert_eq!(json!(names(&compute)), reference["compute.space.keywordNames"]);
+    assert_eq!(
+        json!(names(&compute)),
+        reference["compute.space.keywordNames"]
+    );
     // The canonical's undeclared names are not in the spaces.
     let forms = names(&ask(&provider, "Probe/KwForms"));
     for absent in ["D3D_ONLY", "PLAIN_INCLUDE_KW", "GLOBAL_B"] {
@@ -529,27 +623,49 @@ fn builtin_sources_declare_the_keywords_unity_lists() {
         Arc::new(AtomicUsize::new(0)),
         Arc::new(AtomicBool::new(false)),
     );
-    i.project_roots = ["DefaultResourcesExtra", "DefaultResources"].iter().map(|d| sources.join(d)).collect();
+    i.project_roots = ["DefaultResourcesExtra", "DefaultResources"]
+        .iter()
+        .map(|d| sources.join(d))
+        .collect();
     let provider = Provider::new(i);
     let all = ShaderIndex::scan(&provider.inputs.project_roots).names();
     let (mut same, mut differ) = (0, Vec::new());
     for name in all {
-        let Some(want) = builtin.get(&name) else { continue };
+        let Some(want) = builtin.get(&name) else {
+            continue;
+        };
         let answer = ask(&provider, &name);
         let got: Vec<(String, bool, bool)> = answer["keywords"]
             .as_array()
             .unwrap()
             .iter()
-            .map(|k| (k["name"].as_str().unwrap().to_string(), k["local"].as_bool().unwrap(), k["dynamic"].as_bool().unwrap()))
+            .map(|k| {
+                (
+                    k["name"].as_str().unwrap().to_string(),
+                    k["local"].as_bool().unwrap(),
+                    k["dynamic"].as_bool().unwrap(),
+                )
+            })
             .collect();
-        let want: Vec<(String, bool, bool)> = want.keywords.iter().map(|k| (k.name.clone(), k.local, k.dynamic)).collect();
+        let want: Vec<(String, bool, bool)> = want
+            .keywords
+            .iter()
+            .map(|k| (k.name.clone(), k.local, k.dynamic))
+            .collect();
         if answer["keywords_known"] == true && got == want {
             same += 1;
         } else {
-            differ.push(format!("{name} ({})\n  unity   {want:?}\n  unbound {got:?}", answer["reason"]));
+            differ.push(format!(
+                "{name} ({})\n  unity   {want:?}\n  unbound {got:?}",
+                answer["reason"]
+            ));
         }
     }
-    eprintln!("{same} same, {} differ\n{}", differ.len(), differ.join("\n"));
+    eprintln!(
+        "{same} same, {} differ\n{}",
+        differ.len(),
+        differ.join("\n")
+    );
     assert!(same > 100, "{same} same");
     assert!(differ.is_empty(), "{} differ", differ.len());
 }

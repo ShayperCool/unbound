@@ -408,7 +408,10 @@ pub fn compute_space(pragmas: &[Pragma]) -> Result<Vec<Declared>> {
     }
     let mut space = Space::default();
     for local in [true, false] {
-        for d in declared.iter().filter(|d| (d.group == Group::Local) == local) {
+        for d in declared
+            .iter()
+            .filter(|d| (d.group == Group::Local) == local)
+        {
             for k in &d.keywords {
                 space.add(k, local, d.dynamic);
             }
@@ -575,7 +578,13 @@ mod tests {
         .unwrap();
         assert_eq!(
             names(&space),
-            ["CS_LOCAL", "CS_GLOBAL_A", "CS_GLOBAL_B", "CS_DYN", "LIGHTMAP_ON"]
+            [
+                "CS_LOCAL",
+                "CS_GLOBAL_A",
+                "CS_GLOBAL_B",
+                "CS_DYN",
+                "LIGHTMAP_ON"
+            ]
         );
         assert!(space[0].local && !space[3].local && space[3].dynamic);
     }
