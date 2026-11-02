@@ -339,6 +339,9 @@ namespace Unbound.Runtime
         internal bool Receive = true;
         internal LightProbeUsage Probes = LightProbeUsage.BlendProbes;
         internal UnityEngine.Transform Anchor;
+        /// <summary>Where blended probes are taken when not at the draw's own bounds: an instanced
+        /// batch's bounds centre.</summary>
+        internal UnityEngine.Vector3? ProbePosition;
         internal ReflectionProbeUsage Reflections = ReflectionProbeUsage.BlendProbes;
 
         /// <summary>Graphics.DrawMesh's defaults: casts and receives shadows, light probes.</summary>

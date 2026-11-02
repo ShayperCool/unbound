@@ -1,0 +1,318 @@
+{"k":"format","v":"indirectspec 1"}
+{"k":"activeColorSpace","v":"Linear"}
+{"k":"graphicsDeviceType","v":"OpenGLCore"}
+{"k":"graphics activeTier","v":"Tier3"}
+{"k":"activeBuildTarget","v":"StandaloneLinux64 Standalone"}
+{"k":"tier standardShaderQuality","v":"High"}
+{"k":"lightingDataAsset","v":"LightingData"}
+{"k":"lightingData properties","v":"m_ObjectHideFlags m_CorrespondingSourceObject m_PrefabInstance m_PrefabAsset m_Name m_Scene"}
+{"k":"defaultTexture","v":"ReflectionProbe-0 Cubemap Cube 128x128 mips 8 RGB_BC6H_UFloat"}
+{"k":"skybox","v":"Default-Skybox shader Skybox/Procedural"}
+{"k":"customReflectionTexture","v":"null"}
+{"k":"sun","v":"Sun"}
+{"k":"standard material","v":"Standard keywords _GLOSSYREFLECTIONS_OFF _SPECULARHIGHLIGHTS_OFF color 1 1 1 1 metallic 0 glossiness 0"}
+{"k":"custom SH","v":"0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0"}
+{"k":"lights enabled RenderSettings","v":"ambientMode Trilight ambientIntensity 1 reflectionIntensity 1 defaultReflectionMode Skybox reflectionBounces 1 defaultReflectionResolution 128 ambientSkyColor 0.25 0.3 0.4 1 ambientEquatorColor 0.2 0.2 0.2 1 ambientGroundColor 0.1 0.08 0.06 1 ambientLight 0.25 0.3 0.4 1 fog False"}
+{"k":"lights enabled ambientProbe","v":"0.0322196633 0.0111188488 0 0 0 0 0.000138296047 0 0.000414891227 0.0354754031 0.017975051 0 0 0 0 -0.00037041388 0 -0.00111123826 0.0450306162 0.03482957 0 0 0 0 -0.0018634157 0 -0.005590244"}
+{"k":"lights enabled defaultTextureHDRDecodeValues","v":"1 1 0 0"}
+{"k":"lights enabled activeColorSpace","v":"Linear"}
+{"k":"lights enabled dump unity_IndirectSpecColor","v":"0.18028377 0.225714117 0.306922853 1"}
+{"k":"lights enabled dump unity_SpecCube0_HDR","v":"1 1 0 0"}
+{"k":"lights enabled dump specCube0 lastMip decoded +X","v":"0.1784668 0.224853516 0.311767578 1"}
+{"k":"lights enabled dump specCube0 lastMip decoded -X","v":"0.16784668 0.208129883 0.2824707 1"}
+{"k":"lights enabled dump specCube0 lastMip decoded +Y","v":"0.163208008 0.239257813 0.382324219 1"}
+{"k":"lights enabled dump specCube0 lastMip decoded -Y","v":"0.159790039 0.160888672 0.172119141 1"}
+{"k":"lights enabled dump specCube0 lastMip decoded +Z","v":"0.165405273 0.204101563 0.275390625 1"}
+{"k":"lights enabled dump specCube0 lastMip decoded -Z","v":"0.183959961 0.2331543 0.326171875 1"}
+{"k":"lights enabled dump unity_SHAr","v":"0 0.0111188488 0 0.0320813656"}
+{"k":"lights enabled dump unity_SHAg","v":"0 0.017975051 0 0.0358458161"}
+{"k":"lights enabled dump unity_SHAb","v":"0 0.03482957 0 0.0468940325"}
+{"k":"lights enabled dump unity_SHBr","v":"0 0 0.000414888142 0"}
+{"k":"lights enabled dump unity_SHBg","v":"0 0 -0.00111124164 0"}
+{"k":"lights enabled dump unity_SHBb","v":"0 0 -0.005590247 0"}
+{"k":"lights enabled dump unity_SHC","v":"0.000414891227 -0.00111123826 -0.005590244 1"}
+{"k":"lights enabled dump unity_AmbientSky","v":"0.05087609 0.07323897 0.132868335 1"}
+{"k":"lights enabled dump unity_AmbientEquator","v":"0.0331047624 0.0331047624 0.0331047624 1"}
+{"k":"lights enabled dump unity_AmbientGround","v":"0.0100228256 0.00719440775 0.00489630876 1"}
+{"k":"lights enabled dump glstate_lightmodel_ambient","v":"0.0254380442 0.0366194844 0.06643417 0.5"}
+{"k":"lights enabled dump unity_ColorSpaceDielectricSpec","v":"0.04 0.04 0.04 0.96"}
+{"k":"lights enabled dump specCube0 lastMip raw +X","v":"0.1784668 0.224853516 0.311767578 1"}
+{"k":"lights enabled dump specCube0 lastMip raw -X","v":"0.16784668 0.208129883 0.2824707 1"}
+{"k":"lights enabled dump specCube0 lastMip raw +Y","v":"0.163208008 0.239257813 0.382324219 1"}
+{"k":"lights enabled dump specCube0 lastMip raw -Y","v":"0.159790039 0.160888672 0.172119141 1"}
+{"k":"lights enabled dump specCube0 lastMip raw +Z","v":"0.165405273 0.204101563 0.275390625 1"}
+{"k":"lights enabled dump specCube0 lastMip raw -Z","v":"0.183959961 0.2331543 0.326171875 1"}
+{"k":"ambient 1 reflection 1 immediate RenderSettings","v":"ambientMode Trilight ambientIntensity 1 reflectionIntensity 1 defaultReflectionMode Skybox reflectionBounces 1 defaultReflectionResolution 128 ambientSkyColor 0.25 0.3 0.4 1 ambientEquatorColor 0.2 0.2 0.2 1 ambientGroundColor 0.1 0.08 0.06 1 ambientLight 0.25 0.3 0.4 1 fog False"}
+{"k":"ambient 1 reflection 1 immediate ambientProbe","v":"0.0322196633 0.0111188488 0 0 0 0 0.000138296047 0 0.000414891227 0.0354754031 0.017975051 0 0 0 0 -0.00037041388 0 -0.00111123826 0.0450306162 0.03482957 0 0 0 0 -0.0018634157 0 -0.005590244"}
+{"k":"ambient 1 reflection 1 immediate defaultTextureHDRDecodeValues","v":"1 1 0 0"}
+{"k":"ambient 1 reflection 1 immediate activeColorSpace","v":"Linear"}
+{"k":"ambient 1 reflection 1 immediate dump unity_IndirectSpecColor","v":"0.18028377 0.225714117 0.306922853 1"}
+{"k":"ambient 1 reflection 1 immediate dump unity_SpecCube0_HDR","v":"1 1 0 0"}
+{"k":"ambient 1 reflection 1 immediate dump specCube0 lastMip decoded +X","v":"0.1784668 0.224853516 0.311767578 1"}
+{"k":"ambient 1 reflection 1 immediate dump specCube0 lastMip decoded -X","v":"0.16784668 0.208129883 0.2824707 1"}
+{"k":"ambient 1 reflection 1 immediate dump specCube0 lastMip decoded +Y","v":"0.163208008 0.239257813 0.382324219 1"}
+{"k":"ambient 1 reflection 1 immediate dump specCube0 lastMip decoded -Y","v":"0.159790039 0.160888672 0.172119141 1"}
+{"k":"ambient 1 reflection 1 immediate dump specCube0 lastMip decoded +Z","v":"0.165405273 0.204101563 0.275390625 1"}
+{"k":"ambient 1 reflection 1 immediate dump specCube0 lastMip decoded -Z","v":"0.183959961 0.2331543 0.326171875 1"}
+{"k":"ambient 1 reflection 1 immediate dump unity_SHAr","v":"0 0.0111188488 0 0.0320813656"}
+{"k":"ambient 1 reflection 1 immediate dump unity_SHAg","v":"0 0.017975051 0 0.0358458161"}
+{"k":"ambient 1 reflection 1 immediate dump unity_SHAb","v":"0 0.03482957 0 0.0468940325"}
+{"k":"ambient 1 reflection 1 immediate dump unity_SHBr","v":"0 0 0.000414888142 0"}
+{"k":"ambient 1 reflection 1 immediate dump unity_SHBg","v":"0 0 -0.00111124164 0"}
+{"k":"ambient 1 reflection 1 immediate dump unity_SHBb","v":"0 0 -0.005590247 0"}
+{"k":"ambient 1 reflection 1 immediate dump unity_SHC","v":"0.000414891227 -0.00111123826 -0.005590244 1"}
+{"k":"ambient 1 reflection 1 immediate dump unity_AmbientSky","v":"0.05087609 0.07323897 0.132868335 1"}
+{"k":"ambient 1 reflection 1 immediate dump unity_AmbientEquator","v":"0.0331047624 0.0331047624 0.0331047624 1"}
+{"k":"ambient 1 reflection 1 immediate dump unity_AmbientGround","v":"0.0100228256 0.00719440775 0.00489630876 1"}
+{"k":"ambient 1 reflection 1 immediate dump glstate_lightmodel_ambient","v":"0.0254380442 0.0366194844 0.06643417 0.5"}
+{"k":"ambient 1 reflection 1 immediate dump unity_ColorSpaceDielectricSpec","v":"0.04 0.04 0.04 0.96"}
+{"k":"ambient 1 reflection 1 immediate dump specCube0 lastMip raw +X","v":"0.1784668 0.224853516 0.311767578 1"}
+{"k":"ambient 1 reflection 1 immediate dump specCube0 lastMip raw -X","v":"0.16784668 0.208129883 0.2824707 1"}
+{"k":"ambient 1 reflection 1 immediate dump specCube0 lastMip raw +Y","v":"0.163208008 0.239257813 0.382324219 1"}
+{"k":"ambient 1 reflection 1 immediate dump specCube0 lastMip raw -Y","v":"0.159790039 0.160888672 0.172119141 1"}
+{"k":"ambient 1 reflection 1 immediate dump specCube0 lastMip raw +Z","v":"0.165405273 0.204101563 0.275390625 1"}
+{"k":"ambient 1 reflection 1 immediate dump specCube0 lastMip raw -Z","v":"0.183959961 0.2331543 0.326171875 1"}
+{"k":"ambient 1 reflection 1 immediate standard bytes centre","v":"12 14 18 255"}
+{"k":"ambient 1 reflection 1 immediate standard bytes histogram","v":"2060x 0 0 0 0; 2036x 12 14 18 255"}
+{"k":"ambient 1 reflection 1 immediate standard floats centre","v":"0.00360567542 0.004514282 0.006138457 1"}
+{"k":"ambient 1 reflection 1 immediate standard floats histogram","v":"2060x 0 0 0 0; 1280x 0.00360567542 0.004514282 0.006138457 1; 277x 0.00360567565 0.00451428257 0.00613845745 1; 163x 0.003605676 0.004514283 0.006138458 1; 104x 0.00360567635 0.0045142835 0.006138459 1; 89x 0.00360567658 0.004514284 0.00613845931 1; 76x 0.003605677 0.00451428443 0.00613846 1; 47x 0.00360567728 0.004514285 0.00613846024 1"}
+{"k":"ambient 1 reflection 1 settled RenderSettings","v":"ambientMode Trilight ambientIntensity 1 reflectionIntensity 1 defaultReflectionMode Skybox reflectionBounces 1 defaultReflectionResolution 128 ambientSkyColor 0.25 0.3 0.4 1 ambientEquatorColor 0.2 0.2 0.2 1 ambientGroundColor 0.1 0.08 0.06 1 ambientLight 0.25 0.3 0.4 1 fog False"}
+{"k":"ambient 1 reflection 1 settled ambientProbe","v":"0.0322196633 0.0111188488 0 0 0 0 0.000138296047 0 0.000414891227 0.0354754031 0.017975051 0 0 0 0 -0.00037041388 0 -0.00111123826 0.0450306162 0.03482957 0 0 0 0 -0.0018634157 0 -0.005590244"}
+{"k":"ambient 1 reflection 1 settled defaultTextureHDRDecodeValues","v":"1 1 0 0"}
+{"k":"ambient 1 reflection 1 settled activeColorSpace","v":"Linear"}
+{"k":"ambient 1 reflection 1 settled dump unity_IndirectSpecColor","v":"0.18028377 0.225714117 0.306922853 1"}
+{"k":"ambient 1 reflection 1 settled dump unity_SpecCube0_HDR","v":"1 1 0 0"}
+{"k":"ambient 1 reflection 1 settled dump specCube0 lastMip decoded +X","v":"0.1784668 0.224853516 0.311767578 1"}
+{"k":"ambient 1 reflection 1 settled dump specCube0 lastMip decoded -X","v":"0.16784668 0.208129883 0.2824707 1"}
+{"k":"ambient 1 reflection 1 settled dump specCube0 lastMip decoded +Y","v":"0.163208008 0.239257813 0.382324219 1"}
+{"k":"ambient 1 reflection 1 settled dump specCube0 lastMip decoded -Y","v":"0.159790039 0.160888672 0.172119141 1"}
+{"k":"ambient 1 reflection 1 settled dump specCube0 lastMip decoded +Z","v":"0.165405273 0.204101563 0.275390625 1"}
+{"k":"ambient 1 reflection 1 settled dump specCube0 lastMip decoded -Z","v":"0.183959961 0.2331543 0.326171875 1"}
+{"k":"ambient 1 reflection 1 settled dump unity_SHAr","v":"0 0.0111188488 0 0.0320813656"}
+{"k":"ambient 1 reflection 1 settled dump unity_SHAg","v":"0 0.017975051 0 0.0358458161"}
+{"k":"ambient 1 reflection 1 settled dump unity_SHAb","v":"0 0.03482957 0 0.0468940325"}
+{"k":"ambient 1 reflection 1 settled dump unity_SHBr","v":"0 0 0.000414888142 0"}
+{"k":"ambient 1 reflection 1 settled dump unity_SHBg","v":"0 0 -0.00111124164 0"}
+{"k":"ambient 1 reflection 1 settled dump unity_SHBb","v":"0 0 -0.005590247 0"}
+{"k":"ambient 1 reflection 1 settled dump unity_SHC","v":"0.000414891227 -0.00111123826 -0.005590244 1"}
+{"k":"ambient 1 reflection 1 settled dump unity_AmbientSky","v":"0.05087609 0.07323897 0.132868335 1"}
+{"k":"ambient 1 reflection 1 settled dump unity_AmbientEquator","v":"0.0331047624 0.0331047624 0.0331047624 1"}
+{"k":"ambient 1 reflection 1 settled dump unity_AmbientGround","v":"0.0100228256 0.00719440775 0.00489630876 1"}
+{"k":"ambient 1 reflection 1 settled dump glstate_lightmodel_ambient","v":"0.0254380442 0.0366194844 0.06643417 0.5"}
+{"k":"ambient 1 reflection 1 settled dump unity_ColorSpaceDielectricSpec","v":"0.04 0.04 0.04 0.96"}
+{"k":"ambient 1 reflection 1 settled dump specCube0 lastMip raw +X","v":"0.1784668 0.224853516 0.311767578 1"}
+{"k":"ambient 1 reflection 1 settled dump specCube0 lastMip raw -X","v":"0.16784668 0.208129883 0.2824707 1"}
+{"k":"ambient 1 reflection 1 settled dump specCube0 lastMip raw +Y","v":"0.163208008 0.239257813 0.382324219 1"}
+{"k":"ambient 1 reflection 1 settled dump specCube0 lastMip raw -Y","v":"0.159790039 0.160888672 0.172119141 1"}
+{"k":"ambient 1 reflection 1 settled dump specCube0 lastMip raw +Z","v":"0.165405273 0.204101563 0.275390625 1"}
+{"k":"ambient 1 reflection 1 settled dump specCube0 lastMip raw -Z","v":"0.183959961 0.2331543 0.326171875 1"}
+{"k":"ambient 1 reflection 1 settled standard bytes centre","v":"12 14 18 255"}
+{"k":"ambient 1 reflection 1 settled standard bytes histogram","v":"2060x 0 0 0 0; 2036x 12 14 18 255"}
+{"k":"ambient 1 reflection 1 settled standard floats centre","v":"0.00360567542 0.004514282 0.006138457 1"}
+{"k":"ambient 1 reflection 1 settled standard floats histogram","v":"2060x 0 0 0 0; 1280x 0.00360567542 0.004514282 0.006138457 1; 277x 0.00360567565 0.00451428257 0.00613845745 1; 163x 0.003605676 0.004514283 0.006138458 1; 104x 0.00360567635 0.0045142835 0.006138459 1; 89x 0.00360567658 0.004514284 0.00613845931 1; 76x 0.003605677 0.00451428443 0.00613846 1; 47x 0.00360567728 0.004514285 0.00613846024 1"}
+{"k":"ambient 1 reflection 0.25 immediate RenderSettings","v":"ambientMode Trilight ambientIntensity 1 reflectionIntensity 0.25 defaultReflectionMode Skybox reflectionBounces 1 defaultReflectionResolution 128 ambientSkyColor 0.25 0.3 0.4 1 ambientEquatorColor 0.2 0.2 0.2 1 ambientGroundColor 0.1 0.08 0.06 1 ambientLight 0.25 0.3 0.4 1 fog False"}
+{"k":"ambient 1 reflection 0.25 immediate ambientProbe","v":"0.0322196633 0.0111188488 0 0 0 0 0.000138296047 0 0.000414891227 0.0354754031 0.017975051 0 0 0 0 -0.00037041388 0 -0.00111123826 0.0450306162 0.03482957 0 0 0 0 -0.0018634157 0 -0.005590244"}
+{"k":"ambient 1 reflection 0.25 immediate defaultTextureHDRDecodeValues","v":"0.05087609 1 0 0"}
+{"k":"ambient 1 reflection 0.25 immediate activeColorSpace","v":"Linear"}
+{"k":"ambient 1 reflection 0.25 immediate dump unity_IndirectSpecColor","v":"0.0450709425 0.05642853 0.07673071 0.25"}
+{"k":"ambient 1 reflection 0.25 immediate dump unity_SpecCube0_HDR","v":"0.05087609 1 0 0"}
+{"k":"ambient 1 reflection 0.25 immediate dump specCube0 lastMip decoded +X","v":"0.009079693 0.0114396671 0.015861515 1"}
+{"k":"ambient 1 reflection 0.25 immediate dump specCube0 lastMip decoded -X","v":"0.008539382 0.0105888341 0.0143710049 1"}
+{"k":"ambient 1 reflection 0.25 immediate dump specCube0 lastMip decoded +Y","v":"0.008303385 0.0121725015 0.01945116 1"}
+{"k":"ambient 1 reflection 0.25 immediate dump specCube0 lastMip decoded -Y","v":"0.008129492 0.008185387 0.008756748 1"}
+{"k":"ambient 1 reflection 0.25 immediate dump specCube0 lastMip decoded +Z","v":"0.008415174 0.0103838891 0.0140107982 1"}
+{"k":"ambient 1 reflection 0.25 immediate dump specCube0 lastMip decoded -Z","v":"0.009359163 0.011861979 0.0165943485 1"}
+{"k":"ambient 1 reflection 0.25 immediate dump unity_SHAr","v":"0 0.0111188488 0 0.0320813656"}
+{"k":"ambient 1 reflection 0.25 immediate dump unity_SHAg","v":"0 0.017975051 0 0.0358458161"}
+{"k":"ambient 1 reflection 0.25 immediate dump unity_SHAb","v":"0 0.03482957 0 0.0468940325"}
+{"k":"ambient 1 reflection 0.25 immediate dump unity_SHBr","v":"0 0 0.000414888142 0"}
+{"k":"ambient 1 reflection 0.25 immediate dump unity_SHBg","v":"0 0 -0.00111124164 0"}
+{"k":"ambient 1 reflection 0.25 immediate dump unity_SHBb","v":"0 0 -0.005590247 0"}
+{"k":"ambient 1 reflection 0.25 immediate dump unity_SHC","v":"0.000414891227 -0.00111123826 -0.005590244 1"}
+{"k":"ambient 1 reflection 0.25 immediate dump unity_AmbientSky","v":"0.05087609 0.07323897 0.132868335 1"}
+{"k":"ambient 1 reflection 0.25 immediate dump unity_AmbientEquator","v":"0.0331047624 0.0331047624 0.0331047624 1"}
+{"k":"ambient 1 reflection 0.25 immediate dump unity_AmbientGround","v":"0.0100228256 0.00719440775 0.00489630876 1"}
+{"k":"ambient 1 reflection 0.25 immediate dump glstate_lightmodel_ambient","v":"0.0254380442 0.0366194844 0.06643417 0.5"}
+{"k":"ambient 1 reflection 0.25 immediate dump unity_ColorSpaceDielectricSpec","v":"0.04 0.04 0.04 0.96"}
+{"k":"ambient 1 reflection 0.25 immediate dump specCube0 lastMip raw +X","v":"0.1784668 0.224853516 0.311767578 1"}
+{"k":"ambient 1 reflection 0.25 immediate dump specCube0 lastMip raw -X","v":"0.16784668 0.208129883 0.2824707 1"}
+{"k":"ambient 1 reflection 0.25 immediate dump specCube0 lastMip raw +Y","v":"0.163208008 0.239257813 0.382324219 1"}
+{"k":"ambient 1 reflection 0.25 immediate dump specCube0 lastMip raw -Y","v":"0.159790039 0.160888672 0.172119141 1"}
+{"k":"ambient 1 reflection 0.25 immediate dump specCube0 lastMip raw +Z","v":"0.165405273 0.204101563 0.275390625 1"}
+{"k":"ambient 1 reflection 0.25 immediate dump specCube0 lastMip raw -Z","v":"0.183959961 0.2331543 0.326171875 1"}
+{"k":"ambient 1 reflection 0.25 immediate standard bytes centre","v":"3 4 5 255"}
+{"k":"ambient 1 reflection 0.25 immediate standard bytes histogram","v":"2060x 0 0 0 0; 2036x 3 4 5 255"}
+{"k":"ambient 1 reflection 0.25 immediate standard floats centre","v":"0.000901418854 0.00112857053 0.00153461425 1"}
+{"k":"ambient 1 reflection 0.25 immediate standard floats histogram","v":"2060x 0 0 0 0; 1280x 0.000901418854 0.00112857053 0.00153461425 1; 277x 0.0009014189 0.00112857064 0.00153461436 1; 163x 0.000901419 0.00112857076 0.00153461448 1; 104x 0.0009014191 0.00112857088 0.00153461471 1; 89x 0.000901419146 0.001128571 0.00153461483 1; 76x 0.000901419262 0.00112857111 0.001534615 1; 47x 0.0009014193 0.00112857122 0.00153461506 1"}
+{"k":"ambient 1 reflection 0.25 settled RenderSettings","v":"ambientMode Trilight ambientIntensity 1 reflectionIntensity 0.25 defaultReflectionMode Skybox reflectionBounces 1 defaultReflectionResolution 128 ambientSkyColor 0.25 0.3 0.4 1 ambientEquatorColor 0.2 0.2 0.2 1 ambientGroundColor 0.1 0.08 0.06 1 ambientLight 0.25 0.3 0.4 1 fog False"}
+{"k":"ambient 1 reflection 0.25 settled ambientProbe","v":"0.0322196633 0.0111188488 0 0 0 0 0.000138296047 0 0.000414891227 0.0354754031 0.017975051 0 0 0 0 -0.00037041388 0 -0.00111123826 0.0450306162 0.03482957 0 0 0 0 -0.0018634157 0 -0.005590244"}
+{"k":"ambient 1 reflection 0.25 settled defaultTextureHDRDecodeValues","v":"0.05087609 1 0 0"}
+{"k":"ambient 1 reflection 0.25 settled activeColorSpace","v":"Linear"}
+{"k":"ambient 1 reflection 0.25 settled dump unity_IndirectSpecColor","v":"0.0450709425 0.05642853 0.07673071 0.25"}
+{"k":"ambient 1 reflection 0.25 settled dump unity_SpecCube0_HDR","v":"0.05087609 1 0 0"}
+{"k":"ambient 1 reflection 0.25 settled dump specCube0 lastMip decoded +X","v":"0.009079693 0.0114396671 0.015861515 1"}
+{"k":"ambient 1 reflection 0.25 settled dump specCube0 lastMip decoded -X","v":"0.008539382 0.0105888341 0.0143710049 1"}
+{"k":"ambient 1 reflection 0.25 settled dump specCube0 lastMip decoded +Y","v":"0.008303385 0.0121725015 0.01945116 1"}
+{"k":"ambient 1 reflection 0.25 settled dump specCube0 lastMip decoded -Y","v":"0.008129492 0.008185387 0.008756748 1"}
+{"k":"ambient 1 reflection 0.25 settled dump specCube0 lastMip decoded +Z","v":"0.008415174 0.0103838891 0.0140107982 1"}
+{"k":"ambient 1 reflection 0.25 settled dump specCube0 lastMip decoded -Z","v":"0.009359163 0.011861979 0.0165943485 1"}
+{"k":"ambient 1 reflection 0.25 settled dump unity_SHAr","v":"0 0.0111188488 0 0.0320813656"}
+{"k":"ambient 1 reflection 0.25 settled dump unity_SHAg","v":"0 0.017975051 0 0.0358458161"}
+{"k":"ambient 1 reflection 0.25 settled dump unity_SHAb","v":"0 0.03482957 0 0.0468940325"}
+{"k":"ambient 1 reflection 0.25 settled dump unity_SHBr","v":"0 0 0.000414888142 0"}
+{"k":"ambient 1 reflection 0.25 settled dump unity_SHBg","v":"0 0 -0.00111124164 0"}
+{"k":"ambient 1 reflection 0.25 settled dump unity_SHBb","v":"0 0 -0.005590247 0"}
+{"k":"ambient 1 reflection 0.25 settled dump unity_SHC","v":"0.000414891227 -0.00111123826 -0.005590244 1"}
+{"k":"ambient 1 reflection 0.25 settled dump unity_AmbientSky","v":"0.05087609 0.07323897 0.132868335 1"}
+{"k":"ambient 1 reflection 0.25 settled dump unity_AmbientEquator","v":"0.0331047624 0.0331047624 0.0331047624 1"}
+{"k":"ambient 1 reflection 0.25 settled dump unity_AmbientGround","v":"0.0100228256 0.00719440775 0.00489630876 1"}
+{"k":"ambient 1 reflection 0.25 settled dump glstate_lightmodel_ambient","v":"0.0254380442 0.0366194844 0.06643417 0.5"}
+{"k":"ambient 1 reflection 0.25 settled dump unity_ColorSpaceDielectricSpec","v":"0.04 0.04 0.04 0.96"}
+{"k":"ambient 1 reflection 0.25 settled dump specCube0 lastMip raw +X","v":"0.1784668 0.224853516 0.311767578 1"}
+{"k":"ambient 1 reflection 0.25 settled dump specCube0 lastMip raw -X","v":"0.16784668 0.208129883 0.2824707 1"}
+{"k":"ambient 1 reflection 0.25 settled dump specCube0 lastMip raw +Y","v":"0.163208008 0.239257813 0.382324219 1"}
+{"k":"ambient 1 reflection 0.25 settled dump specCube0 lastMip raw -Y","v":"0.159790039 0.160888672 0.172119141 1"}
+{"k":"ambient 1 reflection 0.25 settled dump specCube0 lastMip raw +Z","v":"0.165405273 0.204101563 0.275390625 1"}
+{"k":"ambient 1 reflection 0.25 settled dump specCube0 lastMip raw -Z","v":"0.183959961 0.2331543 0.326171875 1"}
+{"k":"ambient 1 reflection 0.25 settled standard bytes centre","v":"3 4 5 255"}
+{"k":"ambient 1 reflection 0.25 settled standard bytes histogram","v":"2060x 0 0 0 0; 2036x 3 4 5 255"}
+{"k":"ambient 1 reflection 0.25 settled standard floats centre","v":"0.000901418854 0.00112857053 0.00153461425 1"}
+{"k":"ambient 1 reflection 0.25 settled standard floats histogram","v":"2060x 0 0 0 0; 1280x 0.000901418854 0.00112857053 0.00153461425 1; 277x 0.0009014189 0.00112857064 0.00153461436 1; 163x 0.000901419 0.00112857076 0.00153461448 1; 104x 0.0009014191 0.00112857088 0.00153461471 1; 89x 0.000901419146 0.001128571 0.00153461483 1; 76x 0.000901419262 0.00112857111 0.001534615 1; 47x 0.0009014193 0.00112857122 0.00153461506 1"}
+{"k":"ambient 0.5 reflection 1 immediate RenderSettings","v":"ambientMode Trilight ambientIntensity 0.5 reflectionIntensity 1 defaultReflectionMode Skybox reflectionBounces 1 defaultReflectionResolution 128 ambientSkyColor 0.25 0.3 0.4 1 ambientEquatorColor 0.2 0.2 0.2 1 ambientGroundColor 0.1 0.08 0.06 1 ambientLight 0.25 0.3 0.4 1 fog False"}
+{"k":"ambient 0.5 reflection 1 immediate ambientProbe","v":"0.0322196633 0.0111188488 0 0 0 0 0.000138296047 0 0.000414891227 0.0354754031 0.017975051 0 0 0 0 -0.00037041388 0 -0.00111123826 0.0450306162 0.03482957 0 0 0 0 -0.0018634157 0 -0.005590244"}
+{"k":"ambient 0.5 reflection 1 immediate defaultTextureHDRDecodeValues","v":"1 1 0 0"}
+{"k":"ambient 0.5 reflection 1 immediate activeColorSpace","v":"Linear"}
+{"k":"ambient 0.5 reflection 1 immediate dump unity_IndirectSpecColor","v":"0.18028377 0.225714117 0.306922853 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump unity_SpecCube0_HDR","v":"1 1 0 0"}
+{"k":"ambient 0.5 reflection 1 immediate dump specCube0 lastMip decoded +X","v":"0.1784668 0.224853516 0.311767578 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump specCube0 lastMip decoded -X","v":"0.16784668 0.208129883 0.2824707 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump specCube0 lastMip decoded +Y","v":"0.163208008 0.239257813 0.382324219 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump specCube0 lastMip decoded -Y","v":"0.159790039 0.160888672 0.172119141 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump specCube0 lastMip decoded +Z","v":"0.165405273 0.204101563 0.275390625 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump specCube0 lastMip decoded -Z","v":"0.183959961 0.2331543 0.326171875 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump unity_SHAr","v":"0 0.0111188488 0 0.0320813656"}
+{"k":"ambient 0.5 reflection 1 immediate dump unity_SHAg","v":"0 0.017975051 0 0.0358458161"}
+{"k":"ambient 0.5 reflection 1 immediate dump unity_SHAb","v":"0 0.03482957 0 0.0468940325"}
+{"k":"ambient 0.5 reflection 1 immediate dump unity_SHBr","v":"0 0 0.000414888142 0"}
+{"k":"ambient 0.5 reflection 1 immediate dump unity_SHBg","v":"0 0 -0.00111124164 0"}
+{"k":"ambient 0.5 reflection 1 immediate dump unity_SHBb","v":"0 0 -0.005590247 0"}
+{"k":"ambient 0.5 reflection 1 immediate dump unity_SHC","v":"0.000414891227 -0.00111123826 -0.005590244 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump unity_AmbientSky","v":"0.05087609 0.07323897 0.132868335 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump unity_AmbientEquator","v":"0.0331047624 0.0331047624 0.0331047624 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump unity_AmbientGround","v":"0.0100228256 0.00719440775 0.00489630876 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump glstate_lightmodel_ambient","v":"0.0254380442 0.0366194844 0.06643417 0.5"}
+{"k":"ambient 0.5 reflection 1 immediate dump unity_ColorSpaceDielectricSpec","v":"0.04 0.04 0.04 0.96"}
+{"k":"ambient 0.5 reflection 1 immediate dump specCube0 lastMip raw +X","v":"0.1784668 0.224853516 0.311767578 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump specCube0 lastMip raw -X","v":"0.16784668 0.208129883 0.2824707 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump specCube0 lastMip raw +Y","v":"0.163208008 0.239257813 0.382324219 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump specCube0 lastMip raw -Y","v":"0.159790039 0.160888672 0.172119141 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump specCube0 lastMip raw +Z","v":"0.165405273 0.204101563 0.275390625 1"}
+{"k":"ambient 0.5 reflection 1 immediate dump specCube0 lastMip raw -Z","v":"0.183959961 0.2331543 0.326171875 1"}
+{"k":"ambient 0.5 reflection 1 immediate standard bytes centre","v":"12 14 18 255"}
+{"k":"ambient 0.5 reflection 1 immediate standard bytes histogram","v":"2060x 0 0 0 0; 2036x 12 14 18 255"}
+{"k":"ambient 0.5 reflection 1 immediate standard floats centre","v":"0.00360567542 0.004514282 0.006138457 1"}
+{"k":"ambient 0.5 reflection 1 immediate standard floats histogram","v":"2060x 0 0 0 0; 1280x 0.00360567542 0.004514282 0.006138457 1; 277x 0.00360567565 0.00451428257 0.00613845745 1; 163x 0.003605676 0.004514283 0.006138458 1; 104x 0.00360567635 0.0045142835 0.006138459 1; 89x 0.00360567658 0.004514284 0.00613845931 1; 76x 0.003605677 0.00451428443 0.00613846 1; 47x 0.00360567728 0.004514285 0.00613846024 1"}
+{"k":"ambient 0.5 reflection 1 settled RenderSettings","v":"ambientMode Trilight ambientIntensity 0.5 reflectionIntensity 1 defaultReflectionMode Skybox reflectionBounces 1 defaultReflectionResolution 128 ambientSkyColor 0.25 0.3 0.4 1 ambientEquatorColor 0.2 0.2 0.2 1 ambientGroundColor 0.1 0.08 0.06 1 ambientLight 0.25 0.3 0.4 1 fog False"}
+{"k":"ambient 0.5 reflection 1 settled ambientProbe","v":"0.0322196633 0.0111188488 0 0 0 0 0.000138296047 0 0.000414891227 0.0354754031 0.017975051 0 0 0 0 -0.00037041388 0 -0.00111123826 0.0450306162 0.03482957 0 0 0 0 -0.0018634157 0 -0.005590244"}
+{"k":"ambient 0.5 reflection 1 settled defaultTextureHDRDecodeValues","v":"1 1 0 0"}
+{"k":"ambient 0.5 reflection 1 settled activeColorSpace","v":"Linear"}
+{"k":"ambient 0.5 reflection 1 settled dump unity_IndirectSpecColor","v":"0.18028377 0.225714117 0.306922853 1"}
+{"k":"ambient 0.5 reflection 1 settled dump unity_SpecCube0_HDR","v":"1 1 0 0"}
+{"k":"ambient 0.5 reflection 1 settled dump specCube0 lastMip decoded +X","v":"0.1784668 0.224853516 0.311767578 1"}
+{"k":"ambient 0.5 reflection 1 settled dump specCube0 lastMip decoded -X","v":"0.16784668 0.208129883 0.2824707 1"}
+{"k":"ambient 0.5 reflection 1 settled dump specCube0 lastMip decoded +Y","v":"0.163208008 0.239257813 0.382324219 1"}
+{"k":"ambient 0.5 reflection 1 settled dump specCube0 lastMip decoded -Y","v":"0.159790039 0.160888672 0.172119141 1"}
+{"k":"ambient 0.5 reflection 1 settled dump specCube0 lastMip decoded +Z","v":"0.165405273 0.204101563 0.275390625 1"}
+{"k":"ambient 0.5 reflection 1 settled dump specCube0 lastMip decoded -Z","v":"0.183959961 0.2331543 0.326171875 1"}
+{"k":"ambient 0.5 reflection 1 settled dump unity_SHAr","v":"0 0.0111188488 0 0.0320813656"}
+{"k":"ambient 0.5 reflection 1 settled dump unity_SHAg","v":"0 0.017975051 0 0.0358458161"}
+{"k":"ambient 0.5 reflection 1 settled dump unity_SHAb","v":"0 0.03482957 0 0.0468940325"}
+{"k":"ambient 0.5 reflection 1 settled dump unity_SHBr","v":"0 0 0.000414888142 0"}
+{"k":"ambient 0.5 reflection 1 settled dump unity_SHBg","v":"0 0 -0.00111124164 0"}
+{"k":"ambient 0.5 reflection 1 settled dump unity_SHBb","v":"0 0 -0.005590247 0"}
+{"k":"ambient 0.5 reflection 1 settled dump unity_SHC","v":"0.000414891227 -0.00111123826 -0.005590244 1"}
+{"k":"ambient 0.5 reflection 1 settled dump unity_AmbientSky","v":"0.05087609 0.07323897 0.132868335 1"}
+{"k":"ambient 0.5 reflection 1 settled dump unity_AmbientEquator","v":"0.0331047624 0.0331047624 0.0331047624 1"}
+{"k":"ambient 0.5 reflection 1 settled dump unity_AmbientGround","v":"0.0100228256 0.00719440775 0.00489630876 1"}
+{"k":"ambient 0.5 reflection 1 settled dump glstate_lightmodel_ambient","v":"0.0254380442 0.0366194844 0.06643417 0.5"}
+{"k":"ambient 0.5 reflection 1 settled dump unity_ColorSpaceDielectricSpec","v":"0.04 0.04 0.04 0.96"}
+{"k":"ambient 0.5 reflection 1 settled dump specCube0 lastMip raw +X","v":"0.1784668 0.224853516 0.311767578 1"}
+{"k":"ambient 0.5 reflection 1 settled dump specCube0 lastMip raw -X","v":"0.16784668 0.208129883 0.2824707 1"}
+{"k":"ambient 0.5 reflection 1 settled dump specCube0 lastMip raw +Y","v":"0.163208008 0.239257813 0.382324219 1"}
+{"k":"ambient 0.5 reflection 1 settled dump specCube0 lastMip raw -Y","v":"0.159790039 0.160888672 0.172119141 1"}
+{"k":"ambient 0.5 reflection 1 settled dump specCube0 lastMip raw +Z","v":"0.165405273 0.204101563 0.275390625 1"}
+{"k":"ambient 0.5 reflection 1 settled dump specCube0 lastMip raw -Z","v":"0.183959961 0.2331543 0.326171875 1"}
+{"k":"ambient 0.5 reflection 1 settled standard bytes centre","v":"12 14 18 255"}
+{"k":"ambient 0.5 reflection 1 settled standard bytes histogram","v":"2060x 0 0 0 0; 2036x 12 14 18 255"}
+{"k":"ambient 0.5 reflection 1 settled standard floats centre","v":"0.00360567542 0.004514282 0.006138457 1"}
+{"k":"ambient 0.5 reflection 1 settled standard floats histogram","v":"2060x 0 0 0 0; 1280x 0.00360567542 0.004514282 0.006138457 1; 277x 0.00360567565 0.00451428257 0.00613845745 1; 163x 0.003605676 0.004514283 0.006138458 1; 104x 0.00360567635 0.0045142835 0.006138459 1; 89x 0.00360567658 0.004514284 0.00613845931 1; 76x 0.003605677 0.00451428443 0.00613846 1; 47x 0.00360567728 0.004514285 0.00613846024 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate RenderSettings","v":"ambientMode Trilight ambientIntensity 0.5 reflectionIntensity 0.25 defaultReflectionMode Skybox reflectionBounces 1 defaultReflectionResolution 128 ambientSkyColor 0.25 0.3 0.4 1 ambientEquatorColor 0.2 0.2 0.2 1 ambientGroundColor 0.1 0.08 0.06 1 ambientLight 0.25 0.3 0.4 1 fog False"}
+{"k":"ambient 0.5 reflection 0.25 immediate ambientProbe","v":"0.0322196633 0.0111188488 0 0 0 0 0.000138296047 0 0.000414891227 0.0354754031 0.017975051 0 0 0 0 -0.00037041388 0 -0.00111123826 0.0450306162 0.03482957 0 0 0 0 -0.0018634157 0 -0.005590244"}
+{"k":"ambient 0.5 reflection 0.25 immediate defaultTextureHDRDecodeValues","v":"0.05087609 1 0 0"}
+{"k":"ambient 0.5 reflection 0.25 immediate activeColorSpace","v":"Linear"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump unity_IndirectSpecColor","v":"0.0450709425 0.05642853 0.07673071 0.25"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump unity_SpecCube0_HDR","v":"0.05087609 1 0 0"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump specCube0 lastMip decoded +X","v":"0.009079693 0.0114396671 0.015861515 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump specCube0 lastMip decoded -X","v":"0.008539382 0.0105888341 0.0143710049 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump specCube0 lastMip decoded +Y","v":"0.008303385 0.0121725015 0.01945116 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump specCube0 lastMip decoded -Y","v":"0.008129492 0.008185387 0.008756748 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump specCube0 lastMip decoded +Z","v":"0.008415174 0.0103838891 0.0140107982 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump specCube0 lastMip decoded -Z","v":"0.009359163 0.011861979 0.0165943485 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump unity_SHAr","v":"0 0.0111188488 0 0.0320813656"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump unity_SHAg","v":"0 0.017975051 0 0.0358458161"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump unity_SHAb","v":"0 0.03482957 0 0.0468940325"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump unity_SHBr","v":"0 0 0.000414888142 0"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump unity_SHBg","v":"0 0 -0.00111124164 0"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump unity_SHBb","v":"0 0 -0.005590247 0"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump unity_SHC","v":"0.000414891227 -0.00111123826 -0.005590244 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump unity_AmbientSky","v":"0.05087609 0.07323897 0.132868335 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump unity_AmbientEquator","v":"0.0331047624 0.0331047624 0.0331047624 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump unity_AmbientGround","v":"0.0100228256 0.00719440775 0.00489630876 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump glstate_lightmodel_ambient","v":"0.0254380442 0.0366194844 0.06643417 0.5"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump unity_ColorSpaceDielectricSpec","v":"0.04 0.04 0.04 0.96"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump specCube0 lastMip raw +X","v":"0.1784668 0.224853516 0.311767578 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump specCube0 lastMip raw -X","v":"0.16784668 0.208129883 0.2824707 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump specCube0 lastMip raw +Y","v":"0.163208008 0.239257813 0.382324219 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump specCube0 lastMip raw -Y","v":"0.159790039 0.160888672 0.172119141 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump specCube0 lastMip raw +Z","v":"0.165405273 0.204101563 0.275390625 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate dump specCube0 lastMip raw -Z","v":"0.183959961 0.2331543 0.326171875 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate standard bytes centre","v":"3 4 5 255"}
+{"k":"ambient 0.5 reflection 0.25 immediate standard bytes histogram","v":"2060x 0 0 0 0; 2036x 3 4 5 255"}
+{"k":"ambient 0.5 reflection 0.25 immediate standard floats centre","v":"0.000901418854 0.00112857053 0.00153461425 1"}
+{"k":"ambient 0.5 reflection 0.25 immediate standard floats histogram","v":"2060x 0 0 0 0; 1280x 0.000901418854 0.00112857053 0.00153461425 1; 277x 0.0009014189 0.00112857064 0.00153461436 1; 163x 0.000901419 0.00112857076 0.00153461448 1; 104x 0.0009014191 0.00112857088 0.00153461471 1; 89x 0.000901419146 0.001128571 0.00153461483 1; 76x 0.000901419262 0.00112857111 0.001534615 1; 47x 0.0009014193 0.00112857122 0.00153461506 1"}
+{"k":"ambient 0.5 reflection 0.25 settled RenderSettings","v":"ambientMode Trilight ambientIntensity 0.5 reflectionIntensity 0.25 defaultReflectionMode Skybox reflectionBounces 1 defaultReflectionResolution 128 ambientSkyColor 0.25 0.3 0.4 1 ambientEquatorColor 0.2 0.2 0.2 1 ambientGroundColor 0.1 0.08 0.06 1 ambientLight 0.25 0.3 0.4 1 fog False"}
+{"k":"ambient 0.5 reflection 0.25 settled ambientProbe","v":"0.0322196633 0.0111188488 0 0 0 0 0.000138296047 0 0.000414891227 0.0354754031 0.017975051 0 0 0 0 -0.00037041388 0 -0.00111123826 0.0450306162 0.03482957 0 0 0 0 -0.0018634157 0 -0.005590244"}
+{"k":"ambient 0.5 reflection 0.25 settled defaultTextureHDRDecodeValues","v":"0.05087609 1 0 0"}
+{"k":"ambient 0.5 reflection 0.25 settled activeColorSpace","v":"Linear"}
+{"k":"ambient 0.5 reflection 0.25 settled dump unity_IndirectSpecColor","v":"0.0450709425 0.05642853 0.07673071 0.25"}
+{"k":"ambient 0.5 reflection 0.25 settled dump unity_SpecCube0_HDR","v":"0.05087609 1 0 0"}
+{"k":"ambient 0.5 reflection 0.25 settled dump specCube0 lastMip decoded +X","v":"0.009079693 0.0114396671 0.015861515 1"}
+{"k":"ambient 0.5 reflection 0.25 settled dump specCube0 lastMip decoded -X","v":"0.008539382 0.0105888341 0.0143710049 1"}
+{"k":"ambient 0.5 reflection 0.25 settled dump specCube0 lastMip decoded +Y","v":"0.008303385 0.0121725015 0.01945116 1"}
+{"k":"ambient 0.5 reflection 0.25 settled dump specCube0 lastMip decoded -Y","v":"0.008129492 0.008185387 0.008756748 1"}
+{"k":"ambient 0.5 reflection 0.25 settled dump specCube0 lastMip decoded +Z","v":"0.008415174 0.0103838891 0.0140107982 1"}
+{"k":"ambient 0.5 reflection 0.25 settled dump specCube0 lastMip decoded -Z","v":"0.009359163 0.011861979 0.0165943485 1"}
+{"k":"ambient 0.5 reflection 0.25 settled dump unity_SHAr","v":"0 0.0111188488 0 0.0320813656"}
+{"k":"ambient 0.5 reflection 0.25 settled dump unity_SHAg","v":"0 0.017975051 0 0.0358458161"}
+{"k":"ambient 0.5 reflection 0.25 settled dump unity_SHAb","v":"0 0.03482957 0 0.0468940325"}
+{"k":"ambient 0.5 reflection 0.25 settled dump unity_SHBr","v":"0 0 0.000414888142 0"}
+{"k":"ambient 0.5 reflection 0.25 settled dump unity_SHBg","v":"0 0 -0.00111124164 0"}
+{"k":"ambient 0.5 reflection 0.25 settled dump unity_SHBb","v":"0 0 -0.005590247 0"}
+{"k":"ambient 0.5 reflection 0.25 settled dump unity_SHC","v":"0.000414891227 -0.00111123826 -0.005590244 1"}
+{"k":"ambient 0.5 reflection 0.25 settled dump unity_AmbientSky","v":"0.05087609 0.07323897 0.132868335 1"}
+{"k":"ambient 0.5 reflection 0.25 settled dump unity_AmbientEquator","v":"0.0331047624 0.0331047624 0.0331047624 1"}
+{"k":"ambient 0.5 reflection 0.25 settled dump unity_AmbientGround","v":"0.0100228256 0.00719440775 0.00489630876 1"}
+{"k":"ambient 0.5 reflection 0.25 settled dump glstate_lightmodel_ambient","v":"0.0254380442 0.0366194844 0.06643417 0.5"}
+{"k":"ambient 0.5 reflection 0.25 settled dump unity_ColorSpaceDielectricSpec","v":"0.04 0.04 0.04 0.96"}
+{"k":"ambient 0.5 reflection 0.25 settled dump specCube0 lastMip raw +X","v":"0.1784668 0.224853516 0.311767578 1"}
+{"k":"ambient 0.5 reflection 0.25 settled dump specCube0 lastMip raw -X","v":"0.16784668 0.208129883 0.2824707 1"}
+{"k":"ambient 0.5 reflection 0.25 settled dump specCube0 lastMip raw +Y","v":"0.163208008 0.239257813 0.382324219 1"}
+{"k":"ambient 0.5 reflection 0.25 settled dump specCube0 lastMip raw -Y","v":"0.159790039 0.160888672 0.172119141 1"}
+{"k":"ambient 0.5 reflection 0.25 settled dump specCube0 lastMip raw +Z","v":"0.165405273 0.204101563 0.275390625 1"}
+{"k":"ambient 0.5 reflection 0.25 settled dump specCube0 lastMip raw -Z","v":"0.183959961 0.2331543 0.326171875 1"}
+{"k":"ambient 0.5 reflection 0.25 settled standard bytes centre","v":"3 4 5 255"}
+{"k":"ambient 0.5 reflection 0.25 settled standard bytes histogram","v":"2060x 0 0 0 0; 2036x 3 4 5 255"}
+{"k":"ambient 0.5 reflection 0.25 settled standard floats centre","v":"0.000901418854 0.00112857053 0.00153461425 1"}
+{"k":"ambient 0.5 reflection 0.25 settled standard floats histogram","v":"2060x 0 0 0 0; 1280x 0.000901418854 0.00112857053 0.00153461425 1; 277x 0.0009014189 0.00112857064 0.00153461436 1; 163x 0.000901419 0.00112857076 0.00153461448 1; 104x 0.0009014191 0.00112857088 0.00153461471 1; 89x 0.000901419146 0.001128571 0.00153461483 1; 76x 0.000901419262 0.00112857111 0.001534615 1; 47x 0.0009014193 0.00112857122 0.00153461506 1"}
+{"k":"lights disabled","v":"Lamp=False Sun=False"}
+{"k":"complete","v":true}

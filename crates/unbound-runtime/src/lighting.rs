@@ -42,7 +42,7 @@ fn meta_of(file: &Path) -> PathBuf {
 /// index, st: [4], indexDynamic, stDynamic: [4] }], lights: [{ object, prefab,
 /// probeOcclusionLightIndex, occlusionMaskChannel, lightmapBakeType, mixedLightingMode, isBaked }],
 /// probes: { positions: [3n], coefficients: [27n], tetrahedra: [{ indices, neighbors, matrix }],
-/// hullRays: [3n] } | null }`, references as `{guid, fileId}` or null.
+/// hullRays: [3n], occlusion: [{ lights: [4], values: [4], channels: [4] }] } | null }`, references as `{guid, fileId}` or null.
 pub fn lighting_data(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) -> Result<Json> {
     let file = serialized_file(db, unity_data, guid)?;
     let cache = AssetCache::new(unbound_project::cache_root().join("builtin"));
@@ -67,6 +67,11 @@ pub fn lighting_data(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) 
                 "matrix": t.matrix,
             })).collect::<Vec<_>>(),
             "hullRays": p.hull_rays.iter().flatten().collect::<Vec<_>>(),
+            "occlusion": p.occlusion.iter().map(|o| json!({
+                "lights": o.light_index,
+                "values": o.occlusion,
+                "channels": o.mask_channel,
+            })).collect::<Vec<_>>(),
         })
     });
     Ok(json!({

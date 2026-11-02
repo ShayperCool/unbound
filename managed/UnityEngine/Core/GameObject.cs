@@ -40,7 +40,9 @@ namespace UnityEngine
 
         static void Internal_Create(GameObject go, Type[] components)
         {
-            go.m_Scene = SceneManager.GetActiveSceneHandle();
+            // During a Single load's teardown this is the incoming scene, not the active one, and
+            // it is set before any component wakes up.
+            go.m_Scene = SceneRegistry.DefaultCreationScene().Handle;
             go.AddTransform(typeof(Transform));
             SceneRegistry.AddRoot(go);
             if (components != null)
