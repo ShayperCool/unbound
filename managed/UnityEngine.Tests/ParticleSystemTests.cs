@@ -419,6 +419,116 @@ namespace UnityEngine.Tests
             finally { Done(ps); Object.DestroyImmediate(sphere); }
         }
 
+        static string ZBits(ParticleSystem.Particle p) => BitConverter.SingleToInt32Bits(p.position.z).ToString("x8");
+
+        // Child positions of the trigger lifetime 6000.0.71f1 reference: natural_death_child (the
+        // parent at .46, 2/s, .013 s left, dies in a .025 s step) has its child at .51 (3f028f5c)
+        // after both calls; trigger_death_child (killed at .51, reported there at lifetime 0, removed
+        // in the next call) has it at .56 (3f0f5c29). The dying particle moves through its whole last
+        // step and the Death sub-emitter fires where that step ends. The child's clock and state stay
+        // as measured; its first age is a separate, still open question and is not asserted.
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void DeathSubEmittersFireWhereTheDyingParticlesLastStepEnds(bool triggerKill)
+        {
+            var sphere = KillSphere();
+            var ps = KillInside(sphere, system =>
+            {
+                var main = system.main; main.playOnAwake = false;
+                var trigger = system.trigger; trigger.enabled = triggerKill;
+                var emission = system.emission; emission.enabled = false;
+            });
+            var child = Make(system =>
+            {
+                var main = system.main; main.playOnAwake = false; main.startLifetime = 2.013f; main.startSpeed = 0f;
+                var shape = system.shape; shape.enabled = false;
+                system.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+            });
+            child.transform.SetParent(ps.transform, false);
+            var subs = ps.subEmitters; subs.enabled = true;
+            subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            try
+            {
+                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                float life = triggerKill ? 2.013f : .013f;
+                ps.SetParticles(new[] { new ParticleSystem.Particle {
+                    position = new Vector3(0f, 0f, .46f), velocity = new Vector3(0f, 0f, 2f),
+                    startLifetime = life, remainingLifetime = life, startSize = 1f,
+                    startColor = new Color32(255, 255, 255, 255), randomSeed = 12345
+                } }, 1);
+                var particles = new ParticleSystem.Particle[2];
+                ps.Simulate(.025f, false, false, false);
+                if (triggerKill)
+                {
+                    // The zero-life carry stays: the killed parent is reported where its step ended.
+                    Assert.Equal(1, ps.GetParticles(particles));
+                    Assert.Equal("3f028f5c", ZBits(particles[0]));
+                    Assert.Equal(0f, particles[0].remainingLifetime);
+                    Assert.Equal(0, child.particleCount);
+                    ps.Simulate(.025f, false, false, false);
+                }
+                Assert.Equal(0, ps.particleCount);
+                Assert.Equal(1, child.GetParticles(particles));
+                Assert.Equal(triggerKill ? "3f0f5c29" : "3f028f5c", ZBits(particles[0]));
+                Assert.Equal(Vector3.zero, particles[0].velocity);
+                Assert.Equal(triggerKill ? .05f : .025f, child.time);
+                Assert.True(child.isPaused);
+                Assert.False(child.isStopped);
+                Assert.True(child.IsAlive(true));
+                if (!triggerKill)
+                {
+                    ps.Simulate(.025f, false, false, false);
+                    Assert.Equal(1, child.GetParticles(particles));
+                    Assert.Equal("3f028f5c", ZBits(particles[0]));
+                    Assert.Equal(.05f, child.time);
+                }
+            }
+            finally { Done(ps); Object.DestroyImmediate(sphere); }
+        }
+
+        // Broad 6000.0.71f1 reference, sub_emitters / sub_emitters_child: the oldest parent, at
+        // 1.00000024 with .013 s left after call 14, dies in the first .025 s step of call 15. Native's
+        // two children (speed 1) are at 1.09000015 with .273 of .313 s left: they started at 1.05,
+        // where that step's movement took the parent, not at 1.0 where its life ran out nor at the
+        // call's end. Only that origin (position less age times speed) is asserted, not the age.
+        [Fact]
+        public void DeathSubEmitterOriginIsWhereTheParentsLastStepEnds()
+        {
+            ParticleSystem child = null;
+            var ps = RateFixture(4f, .513f, system =>
+            {
+                var main = system.main; main.playOnAwake = false;
+                child = Make(c =>
+                {
+                    var cm = c.main; cm.playOnAwake = false; cm.startSpeed = 1f; cm.startLifetime = .313f;
+                    var shape = c.shape; shape.enabled = false;
+                    c.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)2) });
+                });
+                child.transform.SetParent(system.transform, false);
+                var subs = system.subEmitters; subs.enabled = true;
+                subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            });
+            try
+            {
+                for (int i = 0; i < 15; i++) ps.Simulate(.05f, true, i == 0, false);
+                Assert.Equal(2, ps.particleCount);
+                Assert.Equal(0, child.particleCount);
+                ps.Simulate(.05f, true, false, false);
+                Assert.Equal(2, ps.particleCount);
+                Assert.True(child.isPaused);
+                var particles = new ParticleSystem.Particle[4];
+                Assert.Equal(2, child.GetParticles(particles));
+                for (int k = 0; k < 2; k++)
+                {
+                    Assert.Equal(new Vector3(0f, 0f, 1f), particles[k].velocity);
+                    float age = particles[k].startLifetime - particles[k].remainingLifetime;
+                    Assert.Equal(1.05f, particles[k].position.z - age, 4);
+                }
+            }
+            finally { Done(ps); }
+        }
+
         // Broad 6000.0.71f1 reference, sub_emitters_child: started by a restarting call with
         // children, a sub-emitter keeps its time until the next call.
         [Fact]
