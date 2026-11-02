@@ -40,7 +40,7 @@ namespace Unbound.Runtime
             if (cached.Copy) UnityEngine.Object.DestroyImmediate(cached.Copy);
             Material copy;
             using (ObjectRegistry.AsAssets())
-                copy = new Material(material) { hideFlags = HideFlags.HideAndDontSave };
+                copy = new Material(material) { hideFlags = HideFlags.HideAndDontSave, parent = null };
             copy.shader = replacement;
             s_ReplacementMaterials[key] = (copy, material.m_Version);
             if (s_ReplacementMaterials.Count > 4096) PurgeReplacementMaterials();

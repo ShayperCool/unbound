@@ -239,7 +239,7 @@ namespace UnityEngine
             if (cached.Drawn != null) DestroyImmediate(cached.Drawn);
             Material drawn;
             using (ObjectRegistry.AsAssets())
-                drawn = new Material(source) { hideFlags = HideFlags.HideAndDontSave };
+                drawn = new Material(source) { hideFlags = HideFlags.HideAndDontSave, parent = null };
             foreach (var p in block.m_Values)
             {
                 switch (p.Value)

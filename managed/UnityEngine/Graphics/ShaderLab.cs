@@ -13,8 +13,11 @@ namespace Unbound.Runtime
         static readonly Regex s_Name = new Regex("^\\s*Shader\\s+\"([^\"]+)\"", RegexOptions.Multiline);
         static readonly Regex s_Queue = new Regex("\"Queue\"\\s*=\\s*\"(\\w+)([+-]\\d+)?\"");
         static readonly Regex s_Property = new Regex(
-            "^\\s*(?<attributes>(?:\\[[^\\]]*\\]\\s*)*)(\\w+)\\s*\\(\\s*\"([^\"]*)\"\\s*,\\s*(\\w+)[^)]*?(?:\\(([^)]*)\\))?\\s*\\)\\s*=\\s*(.+?)\\s*$",
+            @"(?<attributes>(?:\[[^\]]*\]\s*)*)(\w+)\s*\(\s*""([^""]*)""\s*,\s*(\w+)[^)]*?(?:\(([^)]*)\))?\s*\)\s*=\s*(""[^""]*""(?:\s*\{[^{}]*\})?|\([^()]*\)|[^\s{}()""]+)",
             RegexOptions.Multiline);
+        // Strings are consumed first, so comment-like text inside a label/texture stays intact.
+        static readonly Regex s_SourceTrivia = new Regex(@"""(?:\\.|[^""\\])*""|/\*[\s\S]*?\*/|//[^\r\n]*");
+        static readonly Regex s_PropertiesBlock = new Regex(@"""(?:\\.|[^""\\])*""|\bProperties\s*\{");
 
         internal static string Name(string source)
         {
@@ -102,14 +105,22 @@ namespace Unbound.Runtime
         internal static List<ShaderPropertyInfo> Properties(string source)
         {
             var list = new List<ShaderPropertyInfo>();
-            int start = source.IndexOf("Properties", StringComparison.Ordinal);
-            if (start < 0) return list;
-            int open = source.IndexOf('{', start);
+            source = s_SourceTrivia.Replace(source, m => m.Value[0] == '"'
+                ? m.Value : Regex.Replace(m.Value, @"[^\r\n]", " "));
+            int open = -1;
+            foreach (Match m in s_PropertiesBlock.Matches(source))
+                if (m.Value[0] != '"') { open = m.Index + m.Length - 1; break; }
             if (open < 0) return list;
-            int depth = 0, end = open;
+            int depth = 1, end = open + 1;
             for (; end < source.Length; end++)
             {
-                if (source[end] == '{') depth++;
+                if (source[end] == '"')
+                {
+                    for (end++; end < source.Length; end++)
+                        if (source[end] == '\\') end++;
+                        else if (source[end] == '"') break;
+                }
+                else if (source[end] == '{') depth++;
                 else if (source[end] == '}' && --depth == 0) break;
             }
             var block = source.Substring(open + 1, Math.Max(0, end - open - 1));

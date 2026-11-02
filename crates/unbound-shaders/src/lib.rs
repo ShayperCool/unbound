@@ -10,6 +10,7 @@
 //! commands stand for (see [`fixed`]).
 pub mod compute;
 pub mod fixed;
+pub mod keywords;
 pub mod preprocess;
 
 mod fit;
@@ -458,6 +459,14 @@ impl ShaderCompiler {
         }
         self.pragmas.insert(key, pragmas.clone());
         Ok(pragmas)
+    }
+
+    /// A program's `#pragma` lines after preprocessing (active branches, `#include_with_pragmas`
+    /// files), for its keyword declarations ([`keywords`]). Nothing is compiled or cached: a
+    /// missing include or a preprocessing error is an error (the space is then unknown).
+    pub fn pragma_lines(&self, program: &Program) -> Result<Vec<preprocess::Pragma>> {
+        let defines = self.defines(program, &[], 25, true, "SHADER_STAGE_VERTEX");
+        Ok(self.preprocess(program, &defines)?.pragmas)
     }
 
     /// The variant of `program` a material with `keywords` enabled draws with.

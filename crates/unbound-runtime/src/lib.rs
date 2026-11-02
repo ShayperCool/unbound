@@ -14,6 +14,7 @@ pub mod native_api;
 pub mod render_commands;
 pub mod render_protocol;
 pub mod scripted;
+pub mod shader_declarations;
 pub mod state;
 pub mod video;
 pub mod view;
