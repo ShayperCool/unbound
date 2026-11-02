@@ -1,10 +1,11 @@
 # Shader and material pass counts against the drawn SubShader
 
-Unity 6000.0.71f1, built-in pipeline (`Assets/Scripts/ShaderPassCountProbe.cs`). PREPARED, NOT
-CAPTURED: there is no `Reference/` yet and no Unity answer is claimed here.
+Unity 6000.0.71f1, built-in pipeline (`Assets/Scripts/ShaderPassCountProbe.cs`). The canonical
+`Reference/unity-6000.0.71f1.jsonl` contains 923 rows from two independent byte-identical
+batchmode GPU captures, both exit 0 without a forced stop on NVIDIA RTX 4060.
 
 The shader keyword canonical has `Shader.passCount` equal to SubShader 0's declared count for all
-of its 37 shaders, but there the drawn SubShader is SubShader 0 too, and the builtinrp LOD
+of its 37 shaders; that equality did not establish which SubShader was drawn. The builtinrp LOD
 controls draw other SubShaders whose pass counts are all 1. This fixture makes the competing
 rules give different answers: its SubShaders and Fallback declare different pass counts, and a
 rendered colour identifies the SubShader actually drawn.
@@ -40,7 +41,7 @@ reach), restored; `globalMaximumLOD` 250, 100, 25 (nothing for PassLod/PassFallb
 T1 still in reach), then PassLod 350 and 100 under global 25 (a per-shader limit over the global
 one, a Fallback reached under the referring shader's limit while its own global limit excludes
 it), both restored; `PassSurface.maximumLOD` 250 (S1) and restored; PassLod 175 with
-`PassFallback.maximumLOD` 100 (whose limit picks the Fallback's SubShader) and restored. A restore
+`PassFallback.maximumLOD` 100 (testing whether its own limit affects the referring shader) and restored. A restore
 sets the value read before the first case.
 
 ## Record
@@ -91,7 +92,33 @@ readout, ONE, MULTIPLE or NONE (a valid negative), the drawn SubShader's fit, an
 passCount == passCountInSubshader[drawn] and passes drawn == passCount. Nothing in `run.py` or
 `guards.py` reads the analyzer.
 
-## Capture (not run yet)
+## Measured result
+
+Every Shader, existing Material and new Material pass count agrees, before and after the
+render. None of the four precommitted count hypotheses fits all 68 cells; the analyzer records
+NONE for every count readout. Its SELECTED and RENDERER hypotheses both fit the drawn
+SubShader. Predictions and analysis are unchanged after capture.
+
+Within this fixture, the count equals the drawn SubShader's declared count whenever one is
+drawn. In nine cells nothing is drawn, yet the count equals the first SubShader's declared
+count. This combined description is an observation made after capture, not a predeclared fit
+or an accepted production rule. The option-less surface SubShader exposes four passes:
+forward base, forward add, deferred and meta.
+
+The referring shader's maximum LOD selects its own SubShaders before its Fallback's, under
+the same limit; the Fallback shader's separate maximum does not change that selection. A
+per-shader maximum overrides the global maximum. The pipeline-tagged first SubShader of
+PassTagged is skipped in this built-in context. Other pipeline and backend exclusions are
+outside this fixture.
+
+Both actual compiler-input graphs match the real preflight; only private paths and the
+compiler-server flag differ. Both private copies save the runner's async shader compilation
+setting on exit; Assets and the authored fixture remain unchanged. Root independently
+rehashes both repeats and reruns their strict capture/compiler-graph guards. Evidence:
+`validation/runs/shader-pass-count-native-20261102a/receipt.json` and Root
+`validation/runs/shader-pass-count-root-20261102/native-adjudication.json`.
+
+## Capture
 
 ```
 python3 tests/projects/shaderpasscount/preflight.py --rsp-dir <copy>/Library/Bee/artifacts/<hash>.dag --launch <launch dir> --out <cache>/preflight
