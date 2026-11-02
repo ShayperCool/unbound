@@ -99,16 +99,16 @@ namespace Unbound.Runtime
         }
 
         /// <summary>The scene a clone goes to: its parent's, else the requested one if it is loaded,
-        /// else the active scene. A scene still loading (its objects waking up or being processed,
-        /// when the public isLoaded is false) keeps its copies, as SetActiveScene and
-        /// MoveGameObjectToScene accept it; Unity's answer for that window is unmeasured.</summary>
+        /// else the default one (the active scene, or the incoming scene while a Single load closes
+        /// the scenes it replaces: SceneRegistry.CreationTarget). A scene still loading (its
+        /// objects waking up or being processed, when the public isLoaded is false) keeps its
+        /// copies, as SetActiveScene and MoveGameObjectToScene accept it; Unity's answer for that
+        /// window is unmeasured.</summary>
         internal static SceneHandle TargetScene(Transform parent, Scene scene)
         {
             if (parent != null) return parent.m_GameObject.m_Scene;
             if (scene.Data is SceneData data && data.IsLoaded) return data.Handle;
-            var target = SceneRegistry.EnsureActive().Handle;
-            if (SceneManagerInternal.ActiveScene != null) target = SceneManagerInternal.ActiveScene.Handle;
-            return target;
+            return SceneRegistry.DefaultCreationScene().Handle;
         }
 
         /// <summary>Copies the hierarchy of <paramref name="sourceGo"/> and the serialized state of its

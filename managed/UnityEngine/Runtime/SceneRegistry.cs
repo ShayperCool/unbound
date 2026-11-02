@@ -169,9 +169,56 @@ namespace Unbound.Runtime
             return Active;
         }
 
+        /// <summary>A SceneManager Single load closing the scenes it replaces: its incoming scene,
+        /// created but not loaded yet, and the load it is nested in (an Editor load a callback
+        /// started), if any.</summary>
+        internal sealed class SingleLoadTeardown
+        {
+            internal SceneData Incoming;
+            internal SingleLoadTeardown Outer;
+        }
+
+        static SingleLoadTeardown s_Teardown;
+
+        /// <summary>
+        /// Where objects made without a scene of their own go while a SceneManager Single load
+        /// closes the scenes it replaces: the incoming scene, although GetActiveScene still answers
+        /// the outgoing one. Roots made in an outgoing object's OnDestroy and in sceneUnloaded go
+        /// there before they wake up, are found there during those callbacks and live with it
+        /// (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference
+        /// creation-ownership.jsonl). Null at every other time.
+        /// </summary>
+        internal static SceneData CreationTarget => s_Teardown?.Incoming;
+
+        /// <summary>Starts a Single load's teardown; pass the result to <see cref="EndSingleLoadTeardown"/>
+        /// in a finally block.</summary>
+        internal static SingleLoadTeardown BeginSingleLoadTeardown(SceneData incoming)
+        {
+            var outer = s_Teardown;
+            s_Teardown = new SingleLoadTeardown { Incoming = incoming, Outer = outer };
+            return outer;
+        }
+
+        internal static void EndSingleLoadTeardown(SingleLoadTeardown outer) => s_Teardown = outer;
+
+        /// <summary>The incoming scene of a Single load that is closing its outgoing scenes: not
+        /// loaded yet, but its objects can be found and its roots listed.</summary>
+        internal static bool IsTeardownIncoming(SceneData scene)
+        {
+            for (var t = s_Teardown; t != null; t = t.Outer)
+                if (t.Incoming == scene) return true;
+            return false;
+        }
+
+        /// <summary>The scene an object made without a parent or scene of its own goes to: the
+        /// incoming scene during a Single load's teardown, else the active scene (an untitled
+        /// one before any scene is loaded).</summary>
+        internal static SceneData DefaultCreationScene() => CreationTarget ?? EnsureActive();
+
         internal static void AddRoot(GameObject go)
         {
-            var scene = Holder(go.m_Scene) ?? EnsureActive();
+            // An object's own scene stays authoritative; only one without a scene gets the default.
+            var scene = Holder(go.m_Scene) ?? DefaultCreationScene();
             go.m_Scene = scene.Handle;
             if (!scene.Roots.Contains(go)) scene.Roots.Add(go);
         }
@@ -198,6 +245,10 @@ namespace Unbound.Runtime
         internal static IEnumerable<GameObject> AllGameObjects(bool includeInactive)
         {
             var scenes = new List<SceneData>(Loaded);
+            // The incoming scene of a Single load closing its outgoing scenes is not listed yet,
+            // but the objects made there meanwhile are found (measured: CreationTarget).
+            for (var t = s_Teardown; t != null; t = t.Outer)
+                if (!scenes.Contains(t.Incoming)) scenes.Add(t.Incoming);
             if (s_DontDestroyOnLoad != null) scenes.Add(s_DontDestroyOnLoad);
             if (s_Detached != null) scenes.Add(s_Detached);
             var stack = new Stack<Transform>();

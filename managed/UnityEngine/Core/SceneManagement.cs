@@ -47,7 +47,9 @@ namespace UnityEngine.SceneManagement
             if (rootGameObjects == null) throw new ArgumentNullException(nameof(rootGameObjects));
             if (!IsValid()) throw new ArgumentException("The scene is invalid.");
             // A loading scene lists its roots to the scene processors (measured: tests/projects/editorcallbacks).
-            if (!Data.IsLoaded) throw new ArgumentException("The scene is not loaded.");
+            // So does the incoming scene of a Single load while the outgoing scenes close, with
+            // the objects made there meanwhile (measured: SceneRegistry.CreationTarget).
+            if (!Data.IsLoaded && !SceneRegistry.IsTeardownIncoming(Data)) throw new ArgumentException("The scene is not loaded.");
             rootGameObjects.Clear();
             foreach (var go in Data.Roots)
                 if (!go.m_Destroyed) rootGameObjects.Add(go);
@@ -459,13 +461,80 @@ namespace UnityEngine.SceneManagement
         /// (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference lifecycle.jsonl,
         /// branch t3/light-probes-lifecycle-2, commit f8516528, row 22), and no untitled scene is
         /// created. The other Single loads are not measured and clear it before, as before.
+        /// While a SceneManager load closes its outgoing scenes, objects made without a scene of
+        /// their own go to the incoming scene (SceneRegistry.CreationTarget). A scene a
+        /// sceneUnloaded handler creates is unloaded by the same load, after the scene whose
+        /// handler made it (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference
+        /// creation-ownership.jsonl). The other Single loads keep closing only the scenes loaded
+        /// when they start (not measured).
         /// </summary>
         internal static void UnloadForSingleLoad(SceneData incoming, bool sceneManagerLoad)
         {
-            if (sceneManagerLoad) LightProbes.SingleLoadReplacing();
-            foreach (var other in SceneRegistry.Loaded.ToArray())
-                if (other != incoming) UnloadNow(other, keepDontSave: true, activeThroughUnloaded: sceneManagerLoad);
+            if (!sceneManagerLoad)
+            {
+                foreach (var other in SceneRegistry.Loaded.ToArray())
+                    if (other != incoming) UnloadNow(other, keepDontSave: true);
+                return;
+            }
+            LightProbes.SingleLoadReplacing();
+            var outer = SceneRegistry.BeginSingleLoadTeardown(incoming);
+            try
+            {
+                int limit = SceneRegistry.Loaded.Count + TeardownCreatedSceneLimit;
+                int closed = 0;
+                SceneData other;
+                while ((other = SceneRegistry.Loaded.Find(s => s != incoming)) != null)
+                {
+                    if (closed == limit) throw TeardownLimitReached(incoming, closed);
+                    closed++;
+                    var before = new HashSet<GameObject>(incoming.Roots);
+                    UnloadNow(other, keepDontSave: true, activeThroughUnloaded: true);
+                    ReportNotCleanedUp(incoming, before);
+                }
+            }
+            finally
+            {
+                SceneRegistry.EndSingleLoadTeardown(outer);
+            }
         }
+
+        /// <summary>How many scenes the callbacks of one Single load's teardown may create beyond
+        /// the scenes loaded when it starts. This is Unbound's resource bound against handlers
+        /// that keep creating scenes; it is not Unity behaviour (Unity's is not measured).</summary>
+        internal const int TeardownCreatedSceneLimit = 1024;
+
+        static InvalidOperationException TeardownLimitReached(SceneData incoming, int closed)
+        {
+            var left = new System.Text.StringBuilder();
+            foreach (var scene in SceneRegistry.Loaded)
+                if (scene != incoming) left.Append(left.Length == 0 ? "" : ", ").Append('\'').Append(scene.Name).Append('\'');
+            return new InvalidOperationException(
+                $"The Single load of '{incoming.Name}' stopped after closing {closed} scenes: its sceneUnloaded handlers keep "
+                + $"creating scenes. Unbound closes at most {TeardownCreatedSceneLimit} scenes created during one load's teardown "
+                + $"(an implementation limit, not Unity's behaviour). Still loaded, not closed: {left}. The {incoming.Roots.Count} "
+                + $"objects made during the teardown stay in '{incoming.Name}', which is not loaded.");
+        }
+
+        /// <summary>
+        /// The Error Unity logs after a closed scene's sceneUnloaded handlers when roots were made
+        /// while it closed (measured text, Unity 6000.0.71f1: tests/projects/lightprobes Reference
+        /// creation-ownership.jsonl). They are not destroyed: they live on in the incoming scene.
+        /// Unity's name order varies between runs (measured); this lists them in the incoming
+        /// scene's root order. One Error per closed scene that made roots is an inference: the
+        /// measurement closes one outgoing scene. A handler of this log message runs with the
+        /// teardown still in effect; the roots it makes are reported with the next closed scene.
+        /// </summary>
+        static void ReportNotCleanedUp(SceneData incoming, HashSet<GameObject> before)
+        {
+            var names = new System.Text.StringBuilder();
+            foreach (var root in incoming.Roots)
+                if (!before.Contains(root) && !root.m_Destroyed) names.Append(root.m_Name).Append('\n');
+            if (names.Length == 0) return;
+            Debug.LogError(NotCleanedUpHeader + names);
+        }
+
+        internal const string NotCleanedUpHeader = "Some objects were not cleaned up when closing the scene. "
+            + "(Did you spawn new GameObjects from OnDestroy?)\nThe following scene GameObjects were found:\n";
 
         /// <summary>Loads a scene immediately: the first scene of a session.</summary>
         internal static Scene LoadFirst(int buildIndex)
