@@ -166,6 +166,16 @@ namespace Unbound.Runtime
             I32(colorSpace == ColorSpace.Linear ? 1 : 0);
         }
 
+        /// <summary>A frame that does not draw on the screen (OnDemandRendering): the frame's sprite
+        /// mask bookkeeping and color space without starting a screen frame, so the screen keeps
+        /// showing the last one. Its commands are handed over with <see cref="Flush"/>, as those of
+        /// a camera rendered between frames.</summary>
+        internal static void BeginOffscreenFrame(ColorSpace colorSpace)
+        {
+            SpriteMasking.NewFrame();
+            SetColorSpace(colorSpace);
+        }
+
         /// <summary>The project's color space for what follows, before the first frame begins (a
         /// camera rendered from Start).</summary>
         internal static void SetColorSpace(UnityEngine.ColorSpace colorSpace)
