@@ -669,3 +669,40 @@ fn builtin_sources_declare_the_keywords_unity_lists() {
     assert!(same > 100, "{same} same");
     assert!(differ.is_empty(), "{} differ", differ.len());
 }
+
+#[test]
+fn an_unreadable_project_fallback_never_becomes_a_partial_known_answer() {
+    let scratch = Scratch::new("decl-fallback-unreadable");
+    scratch.write("Assets/A.shader", r#"Shader "Tests/A" { SubShader { Pass { } } Fallback "Tests/B" }"#);
+    let b = scratch.write("Assets/B.shader", r#"Shader "Tests/B" { SubShader { Pass { } } }"#);
+    let provider = Provider::new(inputs(&scratch, scratch.0.join("no-includes"), scratch.0.join("no-install"), MEASURED, Arc::new(AtomicUsize::new(0)), Arc::new(AtomicBool::new(false))));
+    provider.state.lock().unwrap().project(&provider.inputs);
+    std::fs::remove_file(&b).unwrap();
+    let answer = ask(&provider, "Tests/A");
+    assert_eq!(answer["subshaders_known"], false);
+    assert_eq!(answer["subshaders"], json!([]));
+    assert_eq!(answer["transient"], true);
+    scratch.write("Assets/B.shader", r#"Shader "Tests/B" { SubShader { Pass { } } }"#);
+    let answer = ask(&provider, "Tests/A");
+    assert_eq!(answer["subshaders_known"], true);
+    assert_eq!(answer["subshaders"].as_array().unwrap().len(), 2);
+}
+
+#[test]
+fn serialized_builtins_do_not_enable_unmeasured_release_rules() {
+    let scratch = Scratch::new("decl-unmeasured-builtin");
+    let data = scratch.0.join("install");
+    scratch.write("install/Resources/unity_builtin_extra", "stand-in");
+    scratch.write("install/Resources/unity default resources", "stand-in");
+    let provider = Provider::new(inputs(&scratch, scratch.0.join("no-includes"), data.clone(), None, Arc::new(AtomicUsize::new(0)), Arc::new(AtomicBool::new(false))));
+    let mut map = DeclarationMap::new();
+    map.insert("Standard".into(), Builtin::default());
+    let seen = stamp(&unbound_assets::builtin_shaders::declaration_sources(&data)).unwrap();
+    provider.state.lock().unwrap().builtin = Some((Arc::new(map), seen));
+    let answer = ask(&provider, "Standard");
+    assert_eq!(answer["found"], true);
+    assert_eq!(answer["keywords_known"], false);
+    assert_eq!(answer["subshaders_known"], false);
+    assert_eq!(answer["transient"], false);
+    assert!(answer["reason"].as_str().unwrap().contains("not measured"));
+}

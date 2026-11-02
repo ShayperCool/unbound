@@ -382,6 +382,18 @@ impl State {
         let Some(builtin) = map.get(name) else {
             return Description::not_found(None);
         };
+        if inputs.rules.is_none() {
+            let why = Unknown::fixed(format!(
+                "SubShaders and keyword spaces of built-in shaders are not measured for Unity {}",
+                inputs.release
+            ));
+            return Description {
+                found: true,
+                builtin: true,
+                subshaders: Err(why.clone()),
+                keywords: Err(why),
+            };
+        }
         let mut subshaders = Ok(builtin_subshaders(builtin));
         if let Ok(list) = &mut subshaders
             && let Err(u) = self.fallbacks(inputs, &builtin.fallback, list, 0)
@@ -464,6 +476,14 @@ impl State {
                     Some(f) => self.fallbacks(inputs, f, out, depth + 1),
                     None => Ok(()),
                 };
+            }
+        }
+        for candidate in [name, legacy.as_str()] {
+            if self.project(inputs).names().iter().any(|n| n == candidate) {
+                self.project = None;
+                return Err(Unknown::transient(format!(
+                    "its Fallback `{candidate}` cannot be read or parsed"
+                )));
             }
         }
         let map = self.builtin(inputs).map_err(|u| {
