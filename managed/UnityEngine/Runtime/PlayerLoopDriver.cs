@@ -105,6 +105,9 @@ namespace Unbound.Runtime
             Register(typeof(PL.FixedUpdate.ScriptRunBehaviourFixedUpdate), Lifecycle.RunFixedUpdate);
             Register(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), () => Coroutines.Run(Coroutines.Phase.FixedUpdate));
             Register(typeof(PL.Update.ScriptRunBehaviourUpdate), Lifecycle.RunUpdate);
+            // Objects enabled or created during Update start at this node, before coroutines
+            // (measured: tests/projects/instantiateasync phase markers and lifecycle records).
+            Register(typeof(PL.Update.ScriptRunDelayedDynamicFrameRate), Lifecycle.RunPendingStarts);
             Register(typeof(PL.Update.ScriptRunDelayedDynamicFrameRate), () =>
             {
                 Invokes.Run();
