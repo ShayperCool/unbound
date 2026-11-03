@@ -319,11 +319,16 @@ public class DestroyContractProbe : MonoBehaviour
         });
     }
 
+    /// <summary>The end-of-frame point. A fault in its reads or requests is recorded and leaves
+    /// its keys missing; the bracket check and the final write still run.</summary>
     void EndOfFrame()
     {
         if (closed || step < 0) return;
-        Snapshot("eof");
-        Requests("eof");
+        Guard("eof", () =>
+        {
+            Snapshot("eof");
+            Requests("eof");
+        });
         CheckLoop();
         if (step == FinalStep) Finish();
     }
@@ -419,12 +424,6 @@ public class DestroyContractProbe : MonoBehaviour
         trace.Add("{\"e\":" + Q(what) + ",\"s\":" + I(instance.step) + ",\"f\":" + I(Time.frameCount - instance.frame0)
                   + ",\"p\":" + Q(Position()) + "}");
         instance.order.Add(Q(label + ":" + what));
-    }
-
-    public static void Fault(string where, Exception e)
-    {
-        if (closed || instance == null) return;
-        instance.faults.Add(Q(where + ": " + e.GetType().Name + ": " + e.Message));
     }
 
     void OnLog(string condition, string stackTrace, LogType type)
@@ -584,11 +583,12 @@ public class DestroyContractObserver : MonoBehaviour
         disableCount++;
         DestroyContractProbe.Event(label, "OnDisable");
         if (!reenter || reentered) return;
-        // The reentrant case: a second Destroy of the same object from its own OnDisable.
+        // The reentrant case: a second Destroy of the same object from its own OnDisable. An
+        // exception is an answer (an event naming its type), never a probe fault.
         reentered = true;
         DestroyContractProbe.Event(label, "request2");
         try { Destroy(gameObject); }
-        catch (Exception e) { DestroyContractProbe.Fault("reenter", e); }
+        catch (Exception e) { DestroyContractProbe.Event(label, "threw2." + e.GetType().Name); }
         DestroyContractProbe.Event(label, "returned2");
     }
 
