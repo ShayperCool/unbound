@@ -150,7 +150,9 @@ groups, with the scene listing, light probes, lifecycle sequences and error name
 
 Validated source `d7ff35ca` established the admitted light-probe API, baked indirect
 specular fallback and Single-load creation ownership. Source `ebb1ee50` additionally
-corrects public scene listing, loaded state, root queries and paths. This is partial Unity
+corrects public scene listing, loaded state, root queries and paths. Source `9bce9c82`
+keeps the global probe set at the recorded outgoing OnDestroy snapshot, with the Single-load
+reset after outgoing object destruction and before sceneUnloaded. This is partial Unity
 parity. The comparators retain their strict failures and original tolerances.
 
 The main probe matches 367/625 values and its image matches all 57600 pixels exactly.
@@ -178,8 +180,7 @@ Significant gaps remain open:
 * The combined hull has 120 cells versus 121; query indices differ. No hull-fill
   patch or weight normalization was admitted.
 * Unload callbacks still run inside `UnloadSceneAsync`. The dying object remains
-  active and findable. The global probe set is cleared too early during outgoing
-  object destruction.
+  active and findable.
 * Activating a handler-created empty scene keeps a non-null global probe object
   where the Editor returns null. Probe-object identity across scene reloads differs.
 * Two component-deletion log lines retain their earlier ordering difference.
@@ -191,3 +192,13 @@ in `docs/COMPATIBILITY_GAPS.md`'s insignificant-residual ledger with all raw val
 preserved. The earlier 56 introduced pixels were fixed and are now exact.
 Unmeasured cases recorded above remain unmeasured. The 1024 handler-created-scene
 limit is an explicit Unbound resource limit, not a measured Unity limit.
+
+The reset-phase validation passes 1641/1641 managed tests and changes only creation
+`seq20 /state/lightProbes`: `probes0 0 18 0 73` becomes Native's `probes0 18 18 73 73`.
+Canonical remains 65/84 because that snapshot retains other gaps; strict failing leaves
+drop from 22 to 21. Raw/teardown files, lifecycle, main probe and PNG are byte-identical.
+The whole set is directly measured in one OnDestroy snapshot; keeping it throughout every
+OnDisable and outgoing root's destruction is Unbound's chosen position in that window.
+The multiple-outgoing, no-outgoing and exception controls pin implementation behavior,
+not measured Unity rules. Reports: `validation/runs/lp-reset-phase-validation-20261102c/`;
+Root admission: `validation/runs/lp-reset-phase-root-admission-20261103/root-validation.json`.
