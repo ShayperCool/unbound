@@ -11,8 +11,9 @@
 // during Play), watchdog (the probe never boots), nooutput (no output variable), fault
 // (FindObjectsByType throws from frame 12: a probe fault), loopbroken (the read-back loop lost a
 // leaf), skipleaf (the PreUpdate group, markers included, skipped once), fixedtwice (two FixedUpdate iterations on odd
-// frames), reenterthrows (the reentrant Destroy throws), and rule-drains / rule-immediate /
-// rule-nullnext (other toy Destroy rules, see FakeUnity.cs).
+// frames), reenterthrows (the reentrant Destroy throws), nowfeof (WaitForEndOfFrame coroutines
+// never resume), and rule-drains / rule-immediate / rule-nullnext (other toy Destroy rules, see
+// FakeUnity.cs).
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -59,6 +60,7 @@ static class Driver
         if (scenario == "skipleaf") Fake.SkipLeafAtFrame = 9;
         if (scenario == "fixedtwice") Fake.FixedOnOddFrames = 2;
         if (scenario == "reenterthrows") Fake.ReentrantThrows = true;
+        if (scenario == "nowfeof") Fake.EndOfFrameDelivered = false;
         bool reloadOnExit = scenario != "noreload";
         Domain();
         Fake.Context = "executeMethod";

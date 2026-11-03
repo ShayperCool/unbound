@@ -58,9 +58,17 @@ step NOT_DELIVERED_BY_FINAL_STEP (data, not a fit). The bracket says which leaf'
 call happened between, not which internal node made it. The reentrant case (DESCRIPTIVE_CASES) is
 reported per case only and never enters an intersection.
 
+Two end-of-frame phases are never merged. "teofc" is the probe's PlayerLoop marker after
+PostLateUpdate.TriggerEndOfFrameCallbacks (the trail fixture's third request phase); it is not a
+coroutine. "wfeof" is an actual resume of the probe's WaitForEndOfFrame coroutine. A wfeof case
+(COROUTINE_CASES) is fitted per case and in its own per-point delivery entry, never in the
+mechanism or delivery intersections; when the coroutine did not resume in its step it is
+NOT_ISSUED (an answer). The coroutine delivery itself is classified, not fitted, with the
+precommitted outcomes of END_OF_FRAME_OUTCOMES; a batchmode Editor may never deliver it.
+
 Descriptive (no hypothesis): per case the subject's callback counters at every snapshot point
-from the request until its OnDestroy (subsequent Update/LateUpdate/end-of-frame delivery), and the
-reentrant subject's raw event sequence.
+from the request until its OnDestroy (subsequent Update/LateUpdate/WaitForEndOfFrame delivery), and
+the reentrant subject's raw event sequence.
 """
 import argparse
 import hashlib
@@ -71,7 +79,8 @@ import sys
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 sys.path.insert(0, str(PROBE))
-from guards import CASES, FINAL_STEP, LABELS, POINTS, POINT_POSITION, SUBJECTS, case_reads, parse  # noqa: E402
+from guards import (CASES, COROUTINE_CASES, COROUTINE_POINT, FINAL_STEP, LABELS, POINTS, POINT_POSITION,  # noqa: E402
+                    REQUEST_POINTS, SUBJECTS, case_reads, parse)
 
 # The default loop as recorded by a Unity 6000.0.71f1 Editor capture (the input probe's
 # canonical); used only to tabulate predictions before capture. The fit uses the captured loop.
@@ -88,6 +97,41 @@ EXCEPTION = '!exception'    # any exception type name
 # Cases fitted and reported per case but kept out of the mechanism/delivery intersections: the
 # reentrant case changes the callback itself, so it is descriptive only.
 DESCRIPTIVE_CASES = ('reenter',)
+# Cases requested from an actual WaitForEndOfFrame resume: their own phase, never merged with the
+# PlayerLoop marker phases in an intersection.
+SEPARATE_CASES = tuple(c[0] for c in COROUTINE_CASES)
+TEOFC_LEAF = 'PostLateUpdate.TriggerEndOfFrameCallbacks'
+# Where the probe's WaitForEndOfFrame coroutine resumed, per resume and overall (classified, not fitted).
+END_OF_FRAME_OUTCOMES = {
+    'NOT_DELIVERED': 'no resume of the coroutine through the final step (wfeof cases NOT_ISSUED)',
+    'IN_TEOFC_LEAF': 'every resume between the two markers of ' + TEOFC_LEAF + ', i.e. before the teofc point of '
+                     'the same step',
+    'AFTER_TEOFC_POINT': 'every resume after the teofc point of its step and before the next leaf (same position '
+                         'string as the teofc point; separated by the raw point order)',
+    'OTHER_POSITION': 'every resume at one or more other bracket positions (listed)',
+    'MIXED': 'resumes of more than one of the classes above',
+}
+# Prior statements in this repository about end-of-frame coroutines in batchmode Editors. Context
+# only: they are not assumed, never gate a capture and never replace the classification.
+EOF_PRIORS = ({'path': 'tests/projects/coreapis/README.md',
+               'quote': 'in batch mode the Game view does not render, so the screen camera, OnGUI and '
+                        'WaitForEndOfFrame never run'},)
+LIMITS = [
+    'teofc is a PlayerLoop marker position after ' + TEOFC_LEAF + ', never a WaitForEndOfFrame coroutine; its cases '
+    'measure a Destroy requested at that loop position only.',
+    'Whether a batchmode GPU Editor resumes WaitForEndOfFrame coroutines at all is a precommitted unknown '
+    '(END_OF_FRAME_OUTCOMES). If NOT_DELIVERED, the coroutine-phase Destroy (go.wfeof) is NOT_ISSUED and both it and '
+    'per-subject WaitForEndOfFrame delivery after a Destroy stay unmeasured by this fixture; no windowed or other '
+    'fallback capture is implied.',
+    'Brackets name the marker pair a callback ran between, never a private Unity node; a last-label position is not '
+    'a node claim.',
+    'Reentrancy: one isolated, deterministic case only (subject reenter, its own step 19 and frames): a second '
+    'Destroy of the same GameObject from its own OnDisable. Descriptive, never fitted or intersected; reentrancy '
+    'from other callbacks, objects or phases is unmeasured.',
+    'Positive delays (Destroy(obj, t > 0)) and DestroyImmediate are unmeasured; no timing policy is fitted.',
+    'The relative order of per-frame callbacks (Update, LateUpdate, wfeof) between subjects is not recorded (counts '
+    'only).',
+]
 
 
 def sha(path):
@@ -223,8 +267,13 @@ def predictions():
     cases = []
     for name, step, point, subject, target in CASES:
         reads = case_reads(subject)
+        coroutine = point == COROUTINE_POINT
+        # A wfeof request runs where the coroutine resumed (an answer); the brackets are tabulated for
+        # the two end-of-frame positions and refitted against the captured resume position.
+        positions = ['in:'+TEOFC_LEAF, 'after:'+TEOFC_LEAF] if coroutine else [POINT_POSITION[point]]
         entry = {'case': name, 'step': step, 'point': point, 'subject': subject, 'target': target, 'reads': reads,
-                 'request_position': POINT_POSITION[point],
+                 'request_position': None if coroutine else POINT_POSITION[point],
+                 'separate_phase': coroutine, 'in_intersection': name not in DESCRIPTIVE_CASES+SEPARATE_CASES,
                  'before': {r: {k: before[r][k] for k in (COMPONENT_FIELDS if target == 'component' else FIELDS)}
                             for r in reads}}
         if target == 'component':
@@ -233,16 +282,28 @@ def predictions():
         else:
             entry['mechanisms'] = {m: {r: dict(zip(('after', 'during'), go_prediction(m, before[r], 'target' if r == subject else 'child')))
                                        for r in reads} for m in GO_MECHANISMS}
-        entry['brackets'] = {h: bracket(h, POINT_POSITION[point], leaves) for h in BRACKETS}
+        if coroutine:
+            entry['not_issued_outcome'] = 'NOT_ISSUED'
+            entry['brackets_by_request_position'] = {pos: {h: bracket(h, pos, leaves) for h in BRACKETS}
+                                                     for pos in positions}
+        else:
+            entry['brackets'] = {h: bracket(h, POINT_POSITION[point], leaves) for h in BRACKETS}
         cases.append(entry)
     return {'note': 'precommitted from the committed case/subject tables and authored set-up; brackets tabulated '
                     'with the reference loop listing below, refitted only against the CAPTURED loop listing',
-            'final_step': FINAL_STEP, 'points': list(POINTS),
+            'final_step': FINAL_STEP, 'points': list(POINTS), 'coroutine_point': COROUTINE_POINT,
+            'phases': {'teofc': 'the probe\'s PlayerLoop after-marker of ' + TEOFC_LEAF + ' (not a coroutine)',
+                       'wfeof': 'an actual resume of the probe\'s WaitForEndOfFrame coroutine'},
             'reference_loop': {'path': str(REFERENCE_LOOP.relative_to(REPO)), 'sha256': sha(REFERENCE_LOOP),
                                'leaves': leaves},
             'go_mechanisms': list(GO_MECHANISMS), 'component_mechanisms': list(COMPONENT_MECHANISMS),
             'brackets': list(BRACKETS), 'cases': cases,
-            'outcomes': ['ONE', 'MULTIPLE', 'NONE', 'NOT_EVALUABLE']}
+            'outcomes': ['ONE', 'MULTIPLE', 'NONE', 'NOT_EVALUABLE', 'NOT_ISSUED'],
+            'end_of_frame': {'question': 'does the batchmode GPU Editor resume a WaitForEndOfFrame coroutine, and '
+                                         'where relative to the teofc point', 'outcomes': END_OF_FRAME_OUTCOMES,
+                             'precommitted': 'unknown; every outcome is admissible and none gates a capture',
+                             'priors': [dict(prior, sha256=sha(REPO/prior['path'])) for prior in EOF_PRIORS]},
+            'limits': LIMITS}
 
 
 def predict(path):
@@ -305,13 +366,21 @@ def fit(path, report):
     go_fits, comp_fits = set(GO_MECHANISMS), set(COMPONENT_MECHANISMS)
     go_evaluated = comp_evaluated = 0
     delivery = {kind: {'all': {h: True for h in BRACKETS}, 'count': 0,
-                       'points': {p: {'fits': {h: True for h in BRACKETS}, 'count': 0} for p in POINTS}}
+                       'points': {p: {'fits': {h: True for h in BRACKETS}, 'count': 0} for p in REQUEST_POINTS}}
                 for kind in ('OnDisable', 'OnDestroy')}
     authored = authored_before()
     for name, step, point, subject, target in CASES:
         reads = case_reads(subject)
         fields = COMPONENT_FIELDS if target == 'component' else FIELDS
-        case = {'reads': {}, 'mechanisms': {}, 'delivery': {}, 'in_intersection': name not in DESCRIPTIVE_CASES}
+        case = {'reads': {}, 'mechanisms': {}, 'delivery': {},
+                'in_intersection': name not in DESCRIPTIVE_CASES+SEPARATE_CASES}
+        if name in SEPARATE_CASES:
+            case['issued'] = values.get(f'case.{name}.issued')
+            if case['issued'] is not True:
+                case.update(mechanism_outcome='NOT_ISSUED', delivery_outcome='NOT_ISSUED')
+                case['after_request'] = []
+                result['cases'][name] = case
+                continue
         evaluable = indexed is not None
         for r in reads:
             b = values.get(f'case.{name}.before.{r}')
@@ -370,12 +439,14 @@ def fit(path, report):
                     fits[h] = want is not None and hit['p'] == want[0] and (want[1] is None or want[1] == d)
                 case['delivery'][key] = {'outcome': 'DEFERRED', 'actual': {'p': hit['p'], 'd': d, 's': hit['s']},
                                          'fits': fits, 'fitting': sorted(h for h, ok in fits.items() if ok)}
+                entry = delivery[kind]
                 if case['in_intersection']:
-                    entry = delivery[kind]
                     entry['count'] += 1
-                    entry['points'][point]['count'] += 1
                     for h in BRACKETS:
                         entry['all'][h] = entry['all'][h] and fits[h]
+                if name not in DESCRIPTIVE_CASES:
+                    entry['points'][point]['count'] += 1
+                    for h in BRACKETS:
                         entry['points'][point]['fits'][h] = entry['points'][point]['fits'][h] and fits[h]
         case['after_request'] = subsequent(values, name, subject, step, point, values.get('trace.'+subject) or [])
         result['cases'][name] = case
@@ -394,6 +465,7 @@ def fit(path, report):
                            'outcome': outcome(sorted(h for h, ok in v['fits'].items() if ok)) if v['count'] else 'NOT_EVALUABLE'}
                        for p, v in entry['points'].items()}}
     result['reenter'] = {'trace': values.get('trace.reenter'), 'note': 'descriptive only; never fitted'}
+    result['end_of_frame'] = end_of_frame(values)
     Path(report).write_text(json.dumps(result, indent=1)+'\n')
     print(json.dumps({k: result[k] for k in ('order_consistent', 'go_mechanisms', 'component_mechanisms', 'delivery')}, indent=1))
     return result
@@ -406,17 +478,57 @@ def subsequent(values, name, subject, step, point, trace):
     base = before.get('cb', {})
     destroyed = next((e['s'] for e in trace if e.get('e') == 'OnDestroy'), FINAL_STEP)
     rows = []
+    if point == COROUTINE_POINT:
+        # The snapshot points of its step that ran after the resume that requested it (raw point order).
+        order = [p['pt'] for p in values.get('points') or [] if p.get('s') == step]
+        first = order.index(COROUTINE_POINT) if COROUTINE_POINT in order else len(order)
+        later = set(order[first+1:])
     for s in range(step, min(destroyed+1, FINAL_STEP)+1):
         for p in POINTS:
-            if s == step and POINTS.index(p) <= POINTS.index(point):
+            if s == step and (p not in later if point == COROUTINE_POINT else POINTS.index(p) <= POINTS.index(point)):
                 continue
             snap = values.get(f'snap.{s}.{p}.{subject}')
             if snap is None:
                 continue
             cb = snap.get('cb', {})
             rows.append({'s': s, 'point': p, 'alive': snap.get('alive'),
-                         'delta': {k: cb.get(k, 0)-base.get(k, 0) for k in ('update', 'late', 'eof', 'disable', 'destroy')}})
+                         'delta': {k: cb.get(k, 0)-base.get(k, 0) for k in ('update', 'late', 'wfeof', 'disable', 'destroy')}})
     return rows
+
+
+def end_of_frame(values):
+    """Where the probe's WaitForEndOfFrame coroutine resumed (classified against END_OF_FRAME_OUTCOMES)."""
+    points = values.get('points')
+    if not isinstance(points, list):
+        return {'outcome': 'NOT_EVALUABLE'}
+    resumes, classes = [], []
+    for i, p in enumerate(points):
+        if p.get('pt') != COROUTINE_POINT:
+            continue
+        teofc = next((j for j, q in enumerate(points) if q.get('pt') == 'teofc' and q.get('s') == p.get('s')), None)
+        if p.get('p') == 'in:'+TEOFC_LEAF:
+            kind = 'IN_TEOFC_LEAF'
+        elif p.get('p') == 'after:'+TEOFC_LEAF and teofc is not None and teofc < i:
+            kind = 'AFTER_TEOFC_POINT'
+        else:
+            kind = 'OTHER_POSITION'
+        relation = None if teofc is None else 'before_teofc_point' if i < teofc else 'after_teofc_point'
+        resumes.append({'s': p.get('s'), 'f': p.get('f'), 'p': p.get('p'), 'class': kind, 'relative_to_teofc': relation})
+        classes.append(kind)
+    per_step = {s: sum(1 for r in resumes if r['s'] == s) for s in range(-1, FINAL_STEP+1)}
+    kinds = sorted(set(classes))
+    outcome = 'NOT_DELIVERED' if not resumes else kinds[0] if len(kinds) == 1 else 'MIXED'
+    observers = {label: (values.get(f'snap.{FINAL_STEP}.teofc.{label}') or {}).get('cb', {}).get('wfeof')
+                 for label in LABELS}
+    return {'outcome': outcome, 'resumes': len(resumes), 'classes': kinds,
+            # The final step's resume after its teofc point would come after the record closed.
+            'once_per_step_before_final': bool(resumes) and all(per_step[s] == 1 for s in range(FINAL_STEP))
+            and per_step[-1] == 0,
+            'per_step': {str(s): n for s, n in per_step.items() if n}, 'first': resumes[0] if resumes else None,
+            'other_positions': sorted({r['p'] for r in resumes if r['class'] == 'OTHER_POSITION'}),
+            'observer_resumes_at_final_teofc': observers,
+            'coroutine_cases': {name: values.get(f'case.{name}.issued') for name in SEPARATE_CASES},
+            'resume_list': resumes}
 
 
 def main():

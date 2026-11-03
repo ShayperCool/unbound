@@ -1,11 +1,16 @@
 {
  "note": "precommitted from the committed case/subject tables and authored set-up; brackets tabulated with the reference loop listing below, refitted only against the CAPTURED loop listing",
- "final_step": 22,
+ "final_step": 24,
  "points": [
   "update",
   "late",
-  "eof"
+  "teofc"
  ],
+ "coroutine_point": "wfeof",
+ "phases": {
+  "teofc": "the probe's PlayerLoop after-marker of PostLateUpdate.TriggerEndOfFrameCallbacks (not a coroutine)",
+  "wfeof": "an actual resume of the probe's WaitForEndOfFrame coroutine"
+ },
  "reference_loop": {
   "path": "tests/projects/input/Reference/unity-6000.0.71f1.jsonl",
   "sha256": "57237cd0b62768cc73f60c41fb51b6adda65b39e2c88b4253cc98bd9f69682c3",
@@ -178,6 +183,8 @@
     "go.update"
    ],
    "request_position": "in:Update.ScriptRunBehaviourUpdate",
+   "separate_phase": false,
+   "in_intersection": true,
    "before": {
     "go.update": {
      "alive": true,
@@ -342,6 +349,8 @@
     "go.late"
    ],
    "request_position": "in:PreLateUpdate.ScriptRunBehaviourLateUpdate",
+   "separate_phase": false,
+   "in_intersection": true,
    "before": {
     "go.late": {
      "alive": true,
@@ -497,17 +506,19 @@
    }
   },
   {
-   "case": "go.eof",
+   "case": "go.teofc",
    "step": 6,
-   "point": "eof",
-   "subject": "go.eof",
+   "point": "teofc",
+   "subject": "go.teofc",
    "target": "gameObject",
    "reads": [
-    "go.eof"
+    "go.teofc"
    ],
    "request_position": "after:PostLateUpdate.TriggerEndOfFrameCallbacks",
+   "separate_phase": false,
+   "in_intersection": true,
    "before": {
-    "go.eof": {
+    "go.teofc": {
      "alive": true,
      "activeSelf": true,
      "activeInHierarchy": true,
@@ -518,7 +529,7 @@
    },
    "mechanisms": {
     "FLAG_ONLY": {
-     "go.eof": {
+     "go.teofc": {
       "after": {
        "alive": true,
        "activeSelf": true,
@@ -531,7 +542,7 @@
      }
     },
     "CALLBACK_ONLY": {
-     "go.eof": {
+     "go.teofc": {
       "after": {
        "alive": true,
        "activeSelf": true,
@@ -546,7 +557,7 @@
      }
     },
     "CALLBACK_INACTIVE": {
-     "go.eof": {
+     "go.teofc": {
       "after": {
        "alive": true,
        "activeSelf": true,
@@ -561,7 +572,7 @@
      }
     },
     "DEACTIVATE": {
-     "go.eof": {
+     "go.teofc": {
       "after": {
        "alive": true,
        "activeSelf": false,
@@ -576,7 +587,7 @@
      }
     },
     "LEAVE_HIERARCHY": {
-     "go.eof": {
+     "go.teofc": {
       "after": {
        "alive": true,
        "activeSelf": true,
@@ -591,7 +602,7 @@
      }
     },
     "DISABLE_BEHAVIOURS": {
-     "go.eof": {
+     "go.teofc": {
       "after": {
        "alive": true,
        "activeSelf": true,
@@ -606,7 +617,7 @@
      }
     },
     "NULL_PENDING": {
-     "go.eof": {
+     "go.teofc": {
       "after": {
        "alive": false,
        "activeSelf": "!exception",
@@ -621,7 +632,7 @@
      }
     },
     "IMMEDIATE": {
-     "go.eof": {
+     "go.teofc": {
       "after": {
        "alive": false,
        "activeSelf": "!exception",
@@ -670,6 +681,8 @@
     "comp.update"
    ],
    "request_position": "in:Update.ScriptRunBehaviourUpdate",
+   "separate_phase": false,
+   "in_intersection": true,
    "before": {
     "comp.update": {
      "alive": true,
@@ -835,6 +848,8 @@
     "comp.disabled"
    ],
    "request_position": "in:Update.ScriptRunBehaviourUpdate",
+   "separate_phase": false,
+   "in_intersection": true,
    "before": {
     "comp.disabled": {
      "alive": true,
@@ -986,6 +1001,8 @@
     "go.inactive"
    ],
    "request_position": "in:Update.ScriptRunBehaviourUpdate",
+   "separate_phase": false,
+   "in_intersection": true,
    "before": {
     "go.inactive": {
      "alive": true,
@@ -1138,6 +1155,8 @@
     "tree.child"
    ],
    "request_position": "in:Update.ScriptRunBehaviourUpdate",
+   "separate_phase": false,
+   "in_intersection": true,
    "before": {
     "tree.parent": {
      "alive": true,
@@ -1413,6 +1432,8 @@
     "same.update"
    ],
    "request_position": "in:Update.ScriptRunBehaviourUpdate",
+   "separate_phase": false,
+   "in_intersection": true,
    "before": {
     "same.update": {
      "alive": true,
@@ -1577,6 +1598,8 @@
     "same.late"
    ],
    "request_position": "in:PreLateUpdate.ScriptRunBehaviourLateUpdate",
+   "separate_phase": false,
+   "in_intersection": true,
    "before": {
     "same.late": {
      "alive": true,
@@ -1732,17 +1755,19 @@
    }
   },
   {
-   "case": "same.eof",
+   "case": "same.teofc",
    "step": 16,
-   "point": "eof",
-   "subject": "same.eof",
+   "point": "teofc",
+   "subject": "same.teofc",
    "target": "gameObject",
    "reads": [
-    "same.eof"
+    "same.teofc"
    ],
    "request_position": "after:PostLateUpdate.TriggerEndOfFrameCallbacks",
+   "separate_phase": false,
+   "in_intersection": true,
    "before": {
-    "same.eof": {
+    "same.teofc": {
      "alive": true,
      "activeSelf": true,
      "activeInHierarchy": true,
@@ -1753,7 +1778,7 @@
    },
    "mechanisms": {
     "FLAG_ONLY": {
-     "same.eof": {
+     "same.teofc": {
       "after": {
        "alive": true,
        "activeSelf": true,
@@ -1766,7 +1791,7 @@
      }
     },
     "CALLBACK_ONLY": {
-     "same.eof": {
+     "same.teofc": {
       "after": {
        "alive": true,
        "activeSelf": true,
@@ -1781,7 +1806,7 @@
      }
     },
     "CALLBACK_INACTIVE": {
-     "same.eof": {
+     "same.teofc": {
       "after": {
        "alive": true,
        "activeSelf": true,
@@ -1796,7 +1821,7 @@
      }
     },
     "DEACTIVATE": {
-     "same.eof": {
+     "same.teofc": {
       "after": {
        "alive": true,
        "activeSelf": false,
@@ -1811,7 +1836,7 @@
      }
     },
     "LEAVE_HIERARCHY": {
-     "same.eof": {
+     "same.teofc": {
       "after": {
        "alive": true,
        "activeSelf": true,
@@ -1826,7 +1851,7 @@
      }
     },
     "DISABLE_BEHAVIOURS": {
-     "same.eof": {
+     "same.teofc": {
       "after": {
        "alive": true,
        "activeSelf": true,
@@ -1841,7 +1866,7 @@
      }
     },
     "NULL_PENDING": {
-     "same.eof": {
+     "same.teofc": {
       "after": {
        "alive": false,
        "activeSelf": "!exception",
@@ -1856,7 +1881,7 @@
      }
     },
     "IMMEDIATE": {
-     "same.eof": {
+     "same.teofc": {
       "after": {
        "alive": false,
        "activeSelf": "!exception",
@@ -1905,6 +1930,8 @@
     "reenter"
    ],
    "request_position": "in:Update.ScriptRunBehaviourUpdate",
+   "separate_phase": false,
+   "in_intersection": false,
    "before": {
     "reenter": {
      "alive": true,
@@ -2058,12 +2085,230 @@
      null
     ]
    }
+  },
+  {
+   "case": "go.wfeof",
+   "step": 21,
+   "point": "wfeof",
+   "subject": "go.wfeof",
+   "target": "gameObject",
+   "reads": [
+    "go.wfeof"
+   ],
+   "request_position": null,
+   "separate_phase": true,
+   "in_intersection": false,
+   "before": {
+    "go.wfeof": {
+     "alive": true,
+     "activeSelf": true,
+     "activeInHierarchy": true,
+     "enabled": true,
+     "isActiveAndEnabled": true,
+     "find": "same"
+    }
+   },
+   "mechanisms": {
+    "FLAG_ONLY": {
+     "go.wfeof": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": []
+     }
+    },
+    "CALLBACK_ONLY": {
+     "go.wfeof": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "CALLBACK_INACTIVE": {
+     "go.wfeof": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DEACTIVATE": {
+     "go.wfeof": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "LEAVE_HIERARCHY": {
+     "go.wfeof": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DISABLE_BEHAVIOURS": {
+     "go.wfeof": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "NULL_PENDING": {
+     "go.wfeof": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "IMMEDIATE": {
+     "go.wfeof": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable",
+       "OnDestroy"
+      ]
+     }
+    }
+   },
+   "not_issued_outcome": "NOT_ISSUED",
+   "brackets_by_request_position": {
+    "in:PostLateUpdate.TriggerEndOfFrameCallbacks": {
+     "SAME_LEAF": [
+      "in:PostLateUpdate.TriggerEndOfFrameCallbacks",
+      0
+     ],
+     "NEXT_DELAYED": [
+      "in:EarlyUpdate.ScriptRunDelayedStartupFrame",
+      1
+     ],
+     "FRAME_DRAINS": [
+      "in:PostLateUpdate.PlayerSendFrameStarted",
+      1
+     ],
+     "NEXT_FRAME_START": [
+      "in:TimeUpdate.WaitForLastPresentationAndUpdateTime",
+      null
+     ],
+     "OUTSIDE_LOOP": [
+      "after:PostLateUpdate.ObjectDispatcherPostLateUpdate",
+      null
+     ]
+    },
+    "after:PostLateUpdate.TriggerEndOfFrameCallbacks": {
+     "SAME_LEAF": [
+      "in:PostLateUpdate.GUIClearEvents",
+      0
+     ],
+     "NEXT_DELAYED": [
+      "in:EarlyUpdate.ScriptRunDelayedStartupFrame",
+      1
+     ],
+     "FRAME_DRAINS": [
+      "in:PostLateUpdate.PlayerSendFrameStarted",
+      1
+     ],
+     "NEXT_FRAME_START": [
+      "in:TimeUpdate.WaitForLastPresentationAndUpdateTime",
+      null
+     ],
+     "OUTSIDE_LOOP": [
+      "after:PostLateUpdate.ObjectDispatcherPostLateUpdate",
+      null
+     ]
+    }
+   }
   }
  ],
  "outcomes": [
   "ONE",
   "MULTIPLE",
   "NONE",
-  "NOT_EVALUABLE"
+  "NOT_EVALUABLE",
+  "NOT_ISSUED"
+ ],
+ "end_of_frame": {
+  "question": "does the batchmode GPU Editor resume a WaitForEndOfFrame coroutine, and where relative to the teofc point",
+  "outcomes": {
+   "NOT_DELIVERED": "no resume of the coroutine through the final step (wfeof cases NOT_ISSUED)",
+   "IN_TEOFC_LEAF": "every resume between the two markers of PostLateUpdate.TriggerEndOfFrameCallbacks, i.e. before the teofc point of the same step",
+   "AFTER_TEOFC_POINT": "every resume after the teofc point of its step and before the next leaf (same position string as the teofc point; separated by the raw point order)",
+   "OTHER_POSITION": "every resume at one or more other bracket positions (listed)",
+   "MIXED": "resumes of more than one of the classes above"
+  },
+  "precommitted": "unknown; every outcome is admissible and none gates a capture",
+  "priors": [
+   {
+    "path": "tests/projects/coreapis/README.md",
+    "quote": "in batch mode the Game view does not render, so the screen camera, OnGUI and WaitForEndOfFrame never run",
+    "sha256": "faf9e425e21784f5b22d1daa1a25b5eb715c6a7c2b1dd287a7e293f475f8a4e5"
+   }
+  ]
+ },
+ "limits": [
+  "teofc is a PlayerLoop marker position after PostLateUpdate.TriggerEndOfFrameCallbacks, never a WaitForEndOfFrame coroutine; its cases measure a Destroy requested at that loop position only.",
+  "Whether a batchmode GPU Editor resumes WaitForEndOfFrame coroutines at all is a precommitted unknown (END_OF_FRAME_OUTCOMES). If NOT_DELIVERED, the coroutine-phase Destroy (go.wfeof) is NOT_ISSUED and both it and per-subject WaitForEndOfFrame delivery after a Destroy stay unmeasured by this fixture; no windowed or other fallback capture is implied.",
+  "Brackets name the marker pair a callback ran between, never a private Unity node; a last-label position is not a node claim.",
+  "Reentrancy: one isolated, deterministic case only (subject reenter, its own step 19 and frames): a second Destroy of the same GameObject from its own OnDisable. Descriptive, never fitted or intersected; reentrancy from other callbacks, objects or phases is unmeasured.",
+  "Positive delays (Destroy(obj, t > 0)) and DestroyImmediate are unmeasured; no timing policy is fitted.",
+  "The relative order of per-frame callbacks (Update, LateUpdate, wfeof) between subjects is not recorded (counts only)."
  ]
 }

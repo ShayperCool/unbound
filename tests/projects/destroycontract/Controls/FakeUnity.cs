@@ -10,6 +10,9 @@
 //   immediate  OnDisable and OnDestroy before returning, Unity-null at once (IMMEDIATE / C_IMMEDIATE)
 //   nullnext   OnDisable before returning, Unity-null at once, OnDestroy in the first leaf of the
 //              next frame (NULL_PENDING / C_NULL_PENDING, NEXT_FRAME_START)
+// WaitForEndOfFrame coroutines resume inside the PostLateUpdate.TriggerEndOfFrameCallbacks leaf, or
+// never (Fake.EndOfFrameDelivered false, the shape a batchmode Editor without a rendered Game view
+// may have); neither is a claim about Unity.
 // Editor transitions are recorded with the callback they were made from; calls the protocol
 // forbids go to Fake.Forbidden.
 using System;
@@ -40,6 +43,8 @@ public static class Fake
     public static int SkipLeafAtFrame;
     /// <summary>FixedUpdate iterations on odd frames (even frames: 1).</summary>
     public static int FixedOnOddFrames = 1;
+    /// <summary>Whether WaitForEndOfFrame coroutines are resumed at all (in TriggerEndOfFrameCallbacks).</summary>
+    public static bool EndOfFrameDelivered = true;
     public static int NextId = 41000;
     public static void Forbid(string what) { Forbidden.Add(what + " in " + Context); throw new Exception("forbidden call: " + what); }
 
@@ -218,6 +223,7 @@ public static class Fake
 
     static void EndOfFrame()
     {
+        if (!EndOfFrameDelivered) return;
         foreach (var r in Coroutines.ToList())
             if (r.EndOfFrame && !r.Owner.destroyed && !r.Owner.pending && r.Owner.Owner.InHierarchy) Step(r);
     }

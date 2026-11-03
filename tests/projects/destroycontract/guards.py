@@ -6,16 +6,25 @@
 
 The schema mirrors Assets/Scripts/DestroyContractProbe.cs record by record, in emission order (see
 `expected`): context, the authored subject/case tables, the PlayerLoop listing and its verified
-installation, then for every probe step the three snapshot points (update, late, eof), each
+installation, then for every probe step the three snapshot points (update, late, teofc), each
 followed by the before/after reads of the cases requested there, then the bracket integrity
-checks, the per-step frames, every subject's raw lifecycle trace, the global order, the logs, the
-probe faults and the single completion marker, which must be the last line.
+checks, the per-step frames, the raw point order, the fixed slot of every case requested from a
+WaitForEndOfFrame resume (issued flag and its before/after reads, null when not issued), every
+subject's raw lifecycle trace, the global order, the logs, the probe faults and the single
+completion marker, which must be the last line.
+
+"teofc" is the probe's PlayerLoop marker after PostLateUpdate.TriggerEndOfFrameCallbacks; it is
+never a WaitForEndOfFrame coroutine. "wfeof" is an actual resume of the probe's own
+WaitForEndOfFrame coroutine. Whether, where and how often that coroutine resumes is an answer
+(a batchmode Editor may never deliver it): zero or any number of wfeof points pass, and a
+wfeof case is either issued exactly once at the first wfeof point of its step or not issued.
 
 Gates are instrumentation and protocol only: the authored tables, the context (release,
 batchmode, Editor, OpenGLCore, scene, capture frame rate), a verified marker installation, balanced
-markers, every non-fixed leaf once per frame, request/returned events exactly where the case table
-puts them, positions naming recorded leaves, a global order consistent with the per-subject traces,
-no probe fault and no Exception/Assert log. No state read, callback, count, position of any other
+markers, every non-fixed leaf once per frame, the fixed points once per step at their positions,
+request/returned events exactly where the case table puts them (for a wfeof case: where its
+recorded resume was, or nowhere when not issued), positions naming recorded leaves, a global
+order consistent with the per-subject traces, no probe fault and no Exception/Assert log. No state read, callback, count, position of any other
 callback, or Error/Warning log is a gate: the answers to the precommitted hypotheses are data.
 
 Every function returns ALL problems it finds (a list); none stops at the first.
@@ -29,16 +38,21 @@ import sys
 
 MARKER = {'k': 'complete', 'v': True}
 OUTPUT_VARIABLE = 'UNBOUND_PROBE_DESTROYCONTRACT_OUT'
-FINAL_STEP = 22
+FINAL_STEP = 24
 CAPTURE_FRAMERATE = 50
-POINTS = ('update', 'late', 'eof')
+# The probe's fixed snapshot/request points, once per step in this order. 'teofc' is the PlayerLoop
+# marker after PostLateUpdate.TriggerEndOfFrameCallbacks, not a coroutine.
+POINTS = ('update', 'late', 'teofc')
+# The request point of an actual WaitForEndOfFrame coroutine resume (no snapshot, no fixed position).
+COROUTINE_POINT = 'wfeof'
+REQUEST_POINTS = POINTS+(COROUTINE_POINT,)
 
 # The probe's tables (DestroyContractProbe.cs); Controls/controls.py checks they are equal.
 SUBJECTS = (
     ('keep', None, 'active'),
     ('go.update', None, 'active'),
     ('go.late', None, 'active'),
-    ('go.eof', None, 'active'),
+    ('go.teofc', None, 'active'),
     ('comp.update', None, 'active'),
     ('comp.disabled', None, 'disabled'),
     ('go.inactive', None, 'inactive'),
@@ -46,33 +60,37 @@ SUBJECTS = (
     ('tree.child', 'tree.parent', 'active'),
     ('same.update', None, 'active'),
     ('same.late', None, 'active'),
-    ('same.eof', None, 'active'),
+    ('same.teofc', None, 'active'),
     ('reenter', None, 'reenter'),
+    ('go.wfeof', None, 'active'),
 )
 LABELS = tuple(s[0] for s in SUBJECTS)
 CASES = (
     ('go.update', 2, 'update', 'go.update', 'gameObject'),
     ('go.late', 4, 'late', 'go.late', 'gameObject'),
-    ('go.eof', 6, 'eof', 'go.eof', 'gameObject'),
+    ('go.teofc', 6, 'teofc', 'go.teofc', 'gameObject'),
     ('comp.update', 8, 'update', 'comp.update', 'component'),
     ('comp.disabled', 10, 'update', 'comp.disabled', 'gameObject'),
     ('go.inactive', 12, 'update', 'go.inactive', 'gameObject'),
     ('tree.parent', 14, 'update', 'tree.parent', 'gameObject'),
     ('same.update', 16, 'update', 'same.update', 'gameObject'),
     ('same.late', 16, 'late', 'same.late', 'gameObject'),
-    ('same.eof', 16, 'eof', 'same.eof', 'gameObject'),
+    ('same.teofc', 16, 'teofc', 'same.teofc', 'gameObject'),
     ('reenter', 19, 'update', 'reenter', 'gameObject'),
+    ('go.wfeof', 21, 'wfeof', 'go.wfeof', 'gameObject'),
 )
-# Where the driver's request points run (instrumentation, not an answer).
+COROUTINE_CASES = tuple(c for c in CASES if c[2] == COROUTINE_POINT)
+# Where the driver's fixed points run (instrumentation, not an answer). A wfeof resume has no
+# fixed position: where it runs is an answer.
 POINT_POSITION = {'update': 'in:Update.ScriptRunBehaviourUpdate',
                   'late': 'in:PreLateUpdate.ScriptRunBehaviourLateUpdate',
-                  'eof': 'after:PostLateUpdate.TriggerEndOfFrameCallbacks'}
+                  'teofc': 'after:PostLateUpdate.TriggerEndOfFrameCallbacks'}
 REQUIRED_LEAVES = ('Update.ScriptRunBehaviourUpdate', 'PreLateUpdate.ScriptRunBehaviourLateUpdate',
                    'PostLateUpdate.TriggerEndOfFrameCallbacks')
 EVENTS = ('Awake', 'OnEnable', 'OnDisable', 'OnDestroy', 'request', 'returned', 'request2', 'returned2')
 STATE_FIELDS = ('alive', 'activeSelf', 'activeInHierarchy', 'find', 'comp', 'enabled', 'isActiveAndEnabled',
                 'getComponent', 'listed', 'parent', 'childCount', 'cb')
-CB_FIELDS = ('awake', 'enable', 'start', 'update', 'late', 'eof', 'disable', 'destroy')
+CB_FIELDS = ('awake', 'enable', 'start', 'update', 'late', 'wfeof', 'disable', 'destroy')
 LOG_TYPES = ('Error', 'Assert', 'Warning', 'Log', 'Exception')
 FAULT_LOG_TYPES = ('Exception', 'Assert')
 
@@ -132,6 +150,15 @@ def is_event(v):
             and -1 <= v['s'] <= FINAL_STEP and is_int(v['f']) and is_position(v['p']))
 
 
+def is_point(v):
+    return (isinstance(v, dict) and tuple(v) == ('pt', 's', 'f', 'p') and v['pt'] in REQUEST_POINTS
+            and is_int(v['s']) and -1 <= v['s'] <= FINAL_STEP and is_int(v['f']) and is_position(v['p']))
+
+
+def state_or_null(v):
+    return v is None or is_state(v)
+
+
 def is_log(v):
     return (isinstance(v, dict) and tuple(v) == ('t', 'm', 's', 'f', 'p') and v['t'] in LOG_TYPES and is_str(v['m'])
             and is_int(v['s']) and is_int(v['f']) and is_position(v['p']))
@@ -182,7 +209,7 @@ def expected():
             for label in LABELS:
                 read(f'snap.{step}.{point}.{label}', is_state)
             for name, s, p, subject, _ in CASES:
-                if s == step and p == point:
+                if s == step and p == point:    # wfeof cases have their own slot below
                     for when in ('before', 'after'):
                         for label in case_reads(subject):
                             read(f'case.{name}.{when}.{label}', is_state)
@@ -190,6 +217,12 @@ def expected():
     value('loop.everyLeafOncePerFrame', True)
     value('loop.frameChecks', FINAL_STEP)
     read('steps.frame', lambda v: isinstance(v, list) and len(v) == FINAL_STEP+1 and all(is_int(i) for i in v))
+    read('points', list_of(is_point))
+    for name, _, _, subject, _ in COROUTINE_CASES:
+        read(f'case.{name}.issued', is_bool)
+        for when in ('before', 'after'):
+            for label in case_reads(subject):
+                read(f'case.{name}.{when}.{label}', state_or_null)
     for label in LABELS:
         read('trace.'+label, list_of(is_event))
     read('order', is_strings)
@@ -301,7 +334,57 @@ def protocol_problems(values):
             bad = [e['p'] for e in trace if e['p'] not in positions]
             if bad:
                 problems.append(f'trace.{label}: positions outside the recorded loop {bad[:3]}')
+    points = values.get('points')
+    points_ok = isinstance(points, list) and all(is_point(p) for p in points)
+    if points_ok:
+        fixed = [(p['pt'], p['s'], p['p']) for p in points if p['pt'] != COROUTINE_POINT]
+        want = [(pt, s, POINT_POSITION[pt]) for s in range(FINAL_STEP+1) for pt in POINTS]
+        if fixed != want:
+            first = next((i for i, (a, b) in enumerate(zip(fixed, want)) if a != b), min(len(fixed), len(want)))
+            problems.append(f'points: the fixed points are not update/late/teofc once per step at their positions '
+                            f'(first difference at {first}: {fixed[first:first+1]} vs {want[first:first+1]})')
+        frames = values.get('steps.frame')
+        if isinstance(frames, list):
+            updates = [p['f'] for p in points if p['pt'] == 'update']
+            if updates != frames:
+                problems.append('points: update frames differ from steps.frame')
+        if positions is not None:
+            bad = [p['p'] for p in points if p['p'] not in positions]
+            if bad:
+                problems.append(f'points: positions outside the recorded loop {bad[:3]}')
+    for name, step, point, subject, _ in COROUTINE_CASES:
+        issued = values.get(f'case.{name}.issued')
+        trace = traces.get(subject)
+        if not is_bool(issued) or not isinstance(trace, list) or not all(is_event(e) for e in trace):
+            continue
+        hits = {what: [e for e in trace if e['e'] == what] for what in ('request', 'returned')}
+        reads = [values.get(f'case.{name}.{when}.{label}') for when in ('before', 'after') for label in case_reads(subject)]
+        resumes = [p for p in points if p['pt'] == COROUTINE_POINT and p['s'] == step] if points_ok else None
+        if issued:
+            for what, found in hits.items():
+                if len(found) != 1:
+                    problems.append(f'case {name}: issued but {len(found)} {what} events, not one')
+                elif found[0]['s'] != step:
+                    problems.append(f'case {name}: {what} at step {found[0]["s"]}, not step {step}')
+                elif resumes is not None and (not resumes or found[0]['p'] != resumes[0]['p']):
+                    problems.append(f'case {name}: {what} at {found[0]["p"]}, not at the first wfeof resume of step {step}')
+            if any(r is None for r in reads):
+                problems.append(f'case {name}: issued but its reads are null')
+            if resumes is not None and not resumes:
+                problems.append(f'case {name}: issued without a wfeof resume in step {step}')
+        else:
+            for what, found in hits.items():
+                if found:
+                    problems.append(f'case {name}: not issued but {len(found)} {what} events')
+            if any(r is not None for r in reads):
+                problems.append(f'case {name}: not issued but its reads are recorded')
+            if resumes:
+                problems.append(f'case {name}: not issued although the coroutine resumed in step {step}')
+        if hits['request'] and hits['returned'] and trace.index(hits['returned'][0]) < trace.index(hits['request'][0]):
+            problems.append(f'case {name}: returned before request')
     for name, step, point, subject, _ in CASES:
+        if point == COROUTINE_POINT:
+            continue
         trace = traces.get(subject)
         if not isinstance(trace, list) or not all(is_event(e) for e in trace):
             continue

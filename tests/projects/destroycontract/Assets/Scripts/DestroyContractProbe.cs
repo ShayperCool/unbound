@@ -10,22 +10,37 @@ using UnityEngine.SceneManagement;
 
 /// <summary>
 /// Manual <c>Object.Destroy</c> contract witness: public state, lookups and lifecycle callbacks
-/// around Destroy requests made from Update, LateUpdate and after TriggerEndOfFrameCallbacks.
+/// around Destroy requests made from Update, LateUpdate, the PlayerLoop marker after
+/// TriggerEndOfFrameCallbacks, and an actual WaitForEndOfFrame coroutine resume.
 ///
-/// Thirteen subjects with predeclared labels are created at boot, each with one
+/// Fourteen subjects with predeclared labels are created at boot, each with one
 /// <see cref="DestroyContractObserver"/>. The case table requests one Destroy per case at a fixed
 /// probe step (cases are staggered so a case's deferred work never shares a frame with another
 /// case, except the three <c>same.*</c> cases that repeat the existing trail fixture's same-step
 /// layout). Every case reads its subject (and its child) just before the request and just after
 /// it returns; every subject is also read at three fixed points per step (start of this driver's
-/// Update and LateUpdate, and after TriggerEndOfFrameCallbacks).
+/// Update and LateUpdate, and the "teofc" point).
+///
+/// Two end-of-frame phases are kept apart and never share a name:
+/// * "teofc" is a PlayerLoop position, not a coroutine: the probe's after-marker of the
+///   PostLateUpdate.TriggerEndOfFrameCallbacks leaf. It runs every frame whether or not any
+///   end-of-frame coroutine is delivered, and it is where the existing trail fixture made its
+///   third request.
+/// * "wfeof" is an actual resume of this driver's own <c>yield return new WaitForEndOfFrame()</c>
+///   coroutine. Each resume is recorded in "points" with its step, relative frame, bracket position
+///   and raw order against the three fixed points. The go.wfeof case is requested from the first
+///   resume in its step; if no resume happens in that step (for example when a batchmode Editor
+///   never delivers end-of-frame coroutines), the case is recorded as not issued (an answer, not a
+///   fault). Its reads are written in a fixed slot after the steps, so the record's key order does
+///   not depend on whether or where the coroutine resumed.
 ///
 /// Bracket markers surround every leaf of the default PlayerLoop that is current at boot: one
 /// marker before and one after each leaf, nothing else changed (no leaf is removed, duplicated or
 /// reordered; the read-back loop is verified). A marker only records which leaf is running, so a
 /// callback's position is "in:Group.Leaf" (between that leaf's two markers), "after:Group.Leaf"
-/// (between that leaf's after marker and the next leaf's before marker) or "boot". The after
-/// marker of PostLateUpdate.TriggerEndOfFrameCallbacks also runs the probe's end-of-frame point.
+/// (between that leaf's after marker and the next leaf's before marker) or "boot". A coroutine
+/// resume after the teofc point but before the next leaf has the same position string as the
+/// teofc point; their raw order in "points" separates them.
 ///
 /// The compared record (values.jsonl) holds only deterministic values: probe step, frame relative
 /// to boot, authored labels, booleans, counts and exception type names. Real times, raw frame
@@ -36,7 +51,7 @@ using UnityEngine.SceneManagement;
 public class DestroyContractProbe : MonoBehaviour
 {
     public const string OutputVariable = "UNBOUND_PROBE_DESTROYCONTRACT_OUT";
-    public const int FinalStep = 22;
+    public const int FinalStep = 24;
     public const int CaptureFramerate = 50;
 
     /// <summary>Subjects in creation order: label, parent label (null: scene root), authored set-up.</summary>
@@ -45,7 +60,7 @@ public class DestroyContractProbe : MonoBehaviour
         ("keep", null, "active"),
         ("go.update", null, "active"),
         ("go.late", null, "active"),
-        ("go.eof", null, "active"),
+        ("go.teofc", null, "active"),
         ("comp.update", null, "active"),
         ("comp.disabled", null, "disabled"),
         ("go.inactive", null, "inactive"),
@@ -53,8 +68,9 @@ public class DestroyContractProbe : MonoBehaviour
         ("tree.child", "tree.parent", "active"),
         ("same.update", null, "active"),
         ("same.late", null, "active"),
-        ("same.eof", null, "active"),
+        ("same.teofc", null, "active"),
         ("reenter", null, "reenter"),
+        ("go.wfeof", null, "active"),
     };
 
     /// <summary>Cases: name, probe step, request point, subject, what is destroyed.</summary>
@@ -62,15 +78,16 @@ public class DestroyContractProbe : MonoBehaviour
     {
         ("go.update", 2, "update", "go.update", "gameObject"),
         ("go.late", 4, "late", "go.late", "gameObject"),
-        ("go.eof", 6, "eof", "go.eof", "gameObject"),
+        ("go.teofc", 6, "teofc", "go.teofc", "gameObject"),
         ("comp.update", 8, "update", "comp.update", "component"),
         ("comp.disabled", 10, "update", "comp.disabled", "gameObject"),
         ("go.inactive", 12, "update", "go.inactive", "gameObject"),
         ("tree.parent", 14, "update", "tree.parent", "gameObject"),
         ("same.update", 16, "update", "same.update", "gameObject"),
         ("same.late", 16, "late", "same.late", "gameObject"),
-        ("same.eof", 16, "eof", "same.eof", "gameObject"),
+        ("same.teofc", 16, "teofc", "same.teofc", "gameObject"),
         ("reenter", 19, "update", "reenter", "gameObject"),
+        ("go.wfeof", 21, "wfeof", "go.wfeof", "gameObject"),
     };
 
     /// <summary>The runner reads this after the record is written (0 complete, 3 probe fault).</summary>
@@ -84,7 +101,7 @@ public class DestroyContractProbe : MonoBehaviour
     static bool inside;
     static string[] leaves = new string[0];
     static bool[] fixedLeaf = new bool[0];
-    static int eofLeaf = -1;
+    static int teofcLeaf = -1;
     static int[] beforeVisits = new int[0], afterVisits = new int[0];
 
     string output;
@@ -100,6 +117,12 @@ public class DestroyContractProbe : MonoBehaviour
     readonly List<string> faults = new List<string>();
     readonly List<string> stepFrames = new List<string>();
     readonly List<string> fixedPerFrame = new List<string>();
+    /// <summary>The probe's points in raw order: update, late, teofc and every actual wfeof resume.</summary>
+    readonly List<string> points = new List<string>();
+    /// <summary>Cases requested from a WaitForEndOfFrame resume: their reads, in emission order
+    /// (null until the request returned).</summary>
+    readonly Dictionary<string, List<KeyValuePair<string, string>>> coroutineCases =
+        new Dictionary<string, List<KeyValuePair<string, string>>>();
     GameObject[] objects;
     DestroyContractObserver[] observers;
 
@@ -181,7 +204,7 @@ public class DestroyContractProbe : MonoBehaviour
         for (int i = 0; i < leaves.Length; i++)
         {
             fixedLeaf[i] = leaves[i].StartsWith("FixedUpdate.", StringComparison.Ordinal);
-            if (leaves[i] == "PostLateUpdate.TriggerEndOfFrameCallbacks") eofLeaf = i;
+            if (leaves[i] == "PostLateUpdate.TriggerEndOfFrameCallbacks") teofcLeaf = i;
         }
         Value("loop.groups", List(groups));
         Value("loop.leaves", List(names));
@@ -192,7 +215,7 @@ public class DestroyContractProbe : MonoBehaviour
         installed = true;
         var problems = new List<string>();
         Verify(original, PlayerLoop.GetCurrentPlayerLoop(), "", problems);
-        if (eofLeaf < 0) problems.Add("no PostLateUpdate.TriggerEndOfFrameCallbacks leaf");
+        if (teofcLeaf < 0) problems.Add("no PostLateUpdate.TriggerEndOfFrameCallbacks leaf");
         Value("loop.installed", B(problems.Count == 0));
         Value("loop.installProblems", List(problems));
     }
@@ -290,7 +313,7 @@ public class DestroyContractProbe : MonoBehaviour
         else afterVisits[leaf]++;
         position = leaf;
         inside = enter;
-        if (!enter && leaf == eofLeaf && instance != null) instance.Guard("eof", instance.EndOfFrame);
+        if (!enter && leaf == teofcLeaf && instance != null) instance.Guard("teofc", instance.AfterEndOfFrameLeaf);
     }
 
     static string Position() => position < 0 ? "boot" : (inside ? "in:" : "after:") + leaves[position];
@@ -304,6 +327,7 @@ public class DestroyContractProbe : MonoBehaviour
         {
             step++;
             stepFrames.Add(I(Time.frameCount - frame0));
+            Point("update");
             Snapshot("update");
             Requests("update");
         });
@@ -314,23 +338,59 @@ public class DestroyContractProbe : MonoBehaviour
         if (closed || step < 0) return;
         Guard("late", () =>
         {
+            Point("late");
             Snapshot("late");
             Requests("late");
         });
     }
 
-    /// <summary>The end-of-frame point. A fault in its reads or requests is recorded and leaves
-    /// its keys missing; the bracket check and the final write still run.</summary>
-    void EndOfFrame()
+    /// <summary>The teofc point: the probe's after-marker of PostLateUpdate.TriggerEndOfFrameCallbacks
+    /// (a PlayerLoop position, not a WaitForEndOfFrame coroutine). A fault in its reads or requests
+    /// is recorded and leaves its keys missing; the bracket check and the final write still run.</summary>
+    void AfterEndOfFrameLeaf()
     {
         if (closed || step < 0) return;
-        Guard("eof", () =>
+        Guard("teofc", () =>
         {
-            Snapshot("eof");
-            Requests("eof");
+            Point("teofc");
+            Snapshot("teofc");
+            Requests("teofc");
         });
         CheckLoop();
         if (step == FinalStep) Finish();
+    }
+
+    void Start()
+    {
+        if (!closed && objects != null) StartCoroutine(EndOfFrames());
+    }
+
+    /// <summary>The wfeof point: every actual resume of this WaitForEndOfFrame coroutine, recorded
+    /// in raw order with the fixed points. The first resume in a wfeof case's step requests it.</summary>
+    IEnumerator EndOfFrames()
+    {
+        var wait = new WaitForEndOfFrame();
+        while (!closed)
+        {
+            yield return wait;
+            if (closed) yield break;
+            Guard("wfeof", () =>
+            {
+                Point("wfeof");
+                foreach (var c in Cases)
+                {
+                    if (c.Point != "wfeof" || c.Step != step || coroutineCases.ContainsKey(c.Name)) continue;
+                    coroutineCases[c.Name] = null;
+                    coroutineCases[c.Name] = Request(c.Name, c.Subject, c.Target);
+                }
+            });
+        }
+    }
+
+    void Point(string what)
+    {
+        points.Add("{\"pt\":" + Q(what) + ",\"s\":" + I(step) + ",\"f\":" + I(Time.frameCount - frame0)
+                   + ",\"p\":" + Q(Position()) + "}");
     }
 
     /// <summary>Bracket integrity: every marker pair is balanced at the end-of-frame point, and
@@ -361,23 +421,36 @@ public class DestroyContractProbe : MonoBehaviour
     void Requests(string point)
     {
         foreach (var c in Cases)
-            if (c.Step == step && c.Point == point) Request(c.Name, c.Subject, c.Target);
+            if (c.Step == step && c.Point == point)
+                foreach (var read in Request(c.Name, c.Subject, c.Target)) Value(read.Key, read.Value);
     }
 
-    void Request(string name, string subject, string target)
+    /// <summary>The subjects a case reads: its subject and the subject's children.</summary>
+    static List<int> Reads(string subject)
     {
-        int index = Index(subject);
         var reads = new List<int>();
         for (int i = 0; i < Subjects.Length; i++)
             if (Subjects[i].Label == subject || Subjects[i].Parent == subject) reads.Add(i);
+        return reads;
+    }
+
+    /// <summary>One Destroy request with its before/after reads (returned in emission order).</summary>
+    List<KeyValuePair<string, string>> Request(string name, string subject, string target)
+    {
+        int index = Index(subject);
+        var reads = Reads(subject);
+        var result = new List<KeyValuePair<string, string>>();
         var listed = FindObjectsByType<DestroyContractObserver>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        foreach (int i in reads) Value("case." + name + ".before." + Subjects[i].Label, State(i, listed));
+        foreach (int i in reads)
+            result.Add(new KeyValuePair<string, string>("case." + name + ".before." + Subjects[i].Label, State(i, listed)));
         Event(subject, "request");
         if (target == "component") Destroy(observers[index]);
         else Destroy(objects[index]);
         Event(subject, "returned");
         listed = FindObjectsByType<DestroyContractObserver>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-        foreach (int i in reads) Value("case." + name + ".after." + Subjects[i].Label, State(i, listed));
+        foreach (int i in reads)
+            result.Add(new KeyValuePair<string, string>("case." + name + ".after." + Subjects[i].Label, State(i, listed)));
+        return result;
     }
 
     /// <summary>Public state of one subject, then its observer's own callback counts ("cb").</summary>
@@ -401,7 +474,7 @@ public class DestroyContractProbe : MonoBehaviour
         b.Append(",\"childCount\":").Append(Read(() => I(go.transform.childCount)));
         b.Append(",\"cb\":{\"awake\":").Append(I(c.awakeCount)).Append(",\"enable\":").Append(I(c.enableCount))
             .Append(",\"start\":").Append(I(c.startCount)).Append(",\"update\":").Append(I(c.updateCount))
-            .Append(",\"late\":").Append(I(c.lateCount)).Append(",\"eof\":").Append(I(c.eofCount))
+            .Append(",\"late\":").Append(I(c.lateCount)).Append(",\"wfeof\":").Append(I(c.wfeofCount))
             .Append(",\"disable\":").Append(I(c.disableCount)).Append(",\"destroy\":").Append(I(c.destroyCount)).Append("}}");
         return b.ToString();
     }
@@ -440,6 +513,18 @@ public class DestroyContractProbe : MonoBehaviour
         Value("loop.everyLeafOncePerFrame", B(everyLeafOnce));
         Value("loop.frameChecks", I(frameChecks));
         Value("steps.frame", "[" + string.Join(",", stepFrames) + "]");
+        Value("points", "[" + string.Join(",", points) + "]");
+        foreach (var c in Cases)
+        {
+            if (c.Point != "wfeof") continue;
+            coroutineCases.TryGetValue(c.Name, out var reads);
+            Value("case." + c.Name + ".issued", B(coroutineCases.ContainsKey(c.Name)));
+            if (reads != null)
+                foreach (var read in reads) Value(read.Key, read.Value);
+            else
+                foreach (string when in new[] { "before", "after" })
+                    foreach (int i in Reads(c.Subject)) Value("case." + c.Name + "." + when + "." + Subjects[i].Label, "null");
+        }
         foreach (var s in Subjects) Value("trace." + s.Label, "[" + string.Join(",", traces[s.Label]) + "]");
         Value("order", "[" + string.Join(",", order) + "]");
         Value("logs", "[" + string.Join(",", logs) + "]");
@@ -536,14 +621,14 @@ public struct DestroyContractMarker
 }
 
 /// <summary>One per subject. Lifecycle callbacks are recorded as events in raw order; per-frame
-/// callbacks (Update, LateUpdate, end-of-frame coroutine) only count, so their relative order
-/// between subjects never enters the record.</summary>
+/// callbacks (Update, LateUpdate and actual resumes of its own WaitForEndOfFrame coroutine, "wfeof")
+/// only count, so their relative order between subjects never enters the record.</summary>
 public class DestroyContractObserver : MonoBehaviour
 {
     public string label;
     public bool reenter;
     bool reentered;
-    public int awakeCount, enableCount, startCount, updateCount, lateCount, eofCount, disableCount, destroyCount;
+    public int awakeCount, enableCount, startCount, updateCount, lateCount, wfeofCount, disableCount, destroyCount;
 
     void Awake()
     {
@@ -574,7 +659,7 @@ public class DestroyContractObserver : MonoBehaviour
         while (true)
         {
             yield return wait;
-            eofCount++;
+            wfeofCount++;
         }
     }
 
