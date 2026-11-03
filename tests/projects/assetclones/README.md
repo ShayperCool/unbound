@@ -58,31 +58,38 @@ replacement over the entire original byte array, including its BOM. The malforme
 and valid BOM controls intentionally have different text results. The existing valid-BOM unit
 expectation remains unchanged.
 
-## Strict residuals
+## Latest matching validation, 2026-11-03
 
-The matching CLI/Core comparison preserves all 6,281 previously passing main values and resolves
-8,006, with no introduced differences. It passes 14,287/14,340, with no missing or extra values.
-All 53 differences remain in the full union: 45 sampler-bias GPU values, two imported **source**
-hide flags (Native 8, engine 0; clone flags match zero), and six unapplied **source** CPU-edit GPU
-samples. The sampler follow-up belongs to shared rendering work. These are not tolerance waivers.
+The bound comparison passes 14,338/14,340 main values, up from 14,332 on the frozen
+pass-count runtime, with no lost matches or missing/extra values. Exactly six dirty-source GPU
+samples now match: `texture.dirty.{source,source_after_write,source_after_destroy}.gpu.m0.{0,1}`.
+The two remaining differences are imported **source** hide flags (Native 8, engine 0); clone
+flags still match zero. All failures and original tolerances remain in the full union.
 
-Each color profile passes 105/109, with four retained Alpha8 graphics-format differences:
-Native reports unnamed enum value 54 while the existing engine format utility reports R8_UNorm.
-Both original and clone values remain in each union. This does not establish a general utility or
-readback conversion for the unnamed format.
+Once a Texture2D has GPU storage, CPU writes leave those GPU texels intact until Apply or a GPU
+copy. A clone independently uploads the retained CPU snapshot, including unapplied edits.
+SetPixel here and SetPixels in samplerbias provide independent Native evidence. The same upload
+rule covers SetPixels32, SetPixelData, LoadRawTextureData and ReadPixels, whose GPU visibility is
+not independently measured. Five writer forms and cloning have managed regressions; first-use
+and Reinitialize upload behavior is preserved, without a new Native claim for those paths.
+
+Both color profiles pass 109/109 in captures bound to the complete runtime, including the earlier
+Alpha8 metadata correction (unnamed enum value 54). This is not a new general utility or readback
+conversion claim. The samplerbias cache control remains 171/171; textureraw remains 205/207
+(the two old unreadable-storage lifetime answers); screencapture keeps 187 values and all 39
+before/after image files byte-identical, with six existing image differences from Native.
 
 AudioClip, Font and Cubemap instantiation remain unsupported by the unchanged dispatch. Sprite
 cloning already has its own implementation and is outside this task. Material, ScriptableObject
 and GameObject controls remain passing. Initial RenderTexture pixels, unmeasured texture formats,
 other Unity releases and full engine or full clone parity are not certified here.
 
-Validation also retains the same 12 inherited managed failures in the 1,151-test differential;
-all 16 new clone/encoding cases resolve and no old passing test is lost. Private API validation
-reports 0 errors in 2,279 types; the regenerated Core, Physics and Editor core modules match.
-Two unrelated Android/friend-assembly generated files retain the parent's existing differences.
-Graphics has 80/80 passing cases, render resources 539/539 values and 62/62 images, and each
-focused camera profile 481/481 values and 54/54 float images. The unmasked built-in pipeline
-union retains 124 values and four motion images, with no introduced failures. Texture-import
-captures are identical before/after across Gamma, Linear and Android, retaining 65 differing
-mip records per profile at the unchanged strict byte tolerance of zero. Full unions and raw
-captures are cache artifacts, never alternative references.
+The matching suite passes 1661/1661, including eight new texture cases and four Start-phase
+cases. An owned old-Core red control fails six texture cases and passes the two preservation
+controls. Public/protected metadata is unchanged (65,228 rows), so API 0/2319 is reused; all 108
+generated files are unchanged. Candidate manifest `d4078b07`, Core `fb2a7180`, reused CLI
+`ce742394` and PhysX `487d450b` are recorded in
+`validation/runs/start-texture-matching-validation-20261103-5/`; Root admission is in
+`validation/runs/start-texture-root-admission-20261103/`. This batch adds no claim about earlier
+graphics, resource or texture-import controls that it did not rerun. Raw captures and full unions
+stay outside Git; canonical references are unchanged.

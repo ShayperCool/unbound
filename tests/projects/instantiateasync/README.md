@@ -31,7 +31,7 @@ aligns the two event sequences and keeps every missing and extra line, with no t
 
 ## Measured behavior in 6000.0.71f1
 
-`Reference/unity-6000.0.71f1.jsonl` has 770 events from two byte-identical GPU captures.
+`Reference/unity-6000.0.71f1.jsonl` has 777 ordered events from the admitted GPU reference.
 
 * **When.** The call returns an unfinished operation: `Result` null, nothing in any scene, no
   Awake. The copies are taken at the call: renaming, moving, deactivating or destroying the
@@ -72,3 +72,29 @@ aligns the two event sequences and keeps every missing and extra line, with no t
   "Cannot instantiate multiple objects that are not connected to GameObject, ..." and throws
   NullReferenceException; `Instantiate` with parameters clones it. A parent with a pending
   Destroy is accepted.
+
+## Matching Start-phase replay, 2026-11-03
+
+The latest bound runtime matches 769/777 ordered events, up from 731/777, with zero lost
+matches. Exactly 38 Update-created/enabled Starts now run at
+`Update.ScriptRunDelayedDynamicFrameRate`, before Invokes and coroutine continuations:
+sync 27, modified 1, held 4, wait 4 and errors 2. The held/wait groups also move behind their
+Update Poll marker. Early pending Starts and Starts enabled by a coroutine retain their prior
+startup/LateUpdate paths.
+
+Eight events remain unmatched: the scene Template's startup frame, two exception messages,
+four deferred-Destroy callbacks and one pending-Destroy OnDisable position in the ordered
+sequence. No event is discarded or reordered by the comparator. The 38 transformed Start
+entries preserve their own order and all other entries preserve theirs; the complete raw
+BEFORE/AFTER sequence is not equal merely by removing the phase field, because of the two Poll
+crossings. It differs at 40 row positions. The saved validator receipt's equality wording is
+corrected by Root's raw audit, without changing either capture.
+
+The matching suite is 1661/1661; both new Update-created Start cases fail on the old Core and
+pass on the new Core. Lifecycle stays byte-identical to Native; messages retains 316 compared
+records and its time invariants; coreapis keeps the same 594/682 ordered matches and camera,
+GUI, EOF and rendered-counter schedule. API 0/2319 is reused through identical compiled public
+metadata. Custom loops without the delayed node, inserted callbacks and reentrancy remain
+unmeasured. Evidence: `validation/runs/start-texture-matching-validation-20261103-5/` and
+`validation/runs/start-texture-root-admission-20261103/`; runtime manifest `d4078b07`, Core
+`fb2a7180`. No new Native capture or change to async integration is claimed by this replay.
