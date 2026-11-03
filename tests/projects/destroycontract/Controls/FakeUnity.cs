@@ -10,9 +10,11 @@
 //   immediate  OnDisable and OnDestroy before returning, Unity-null at once (IMMEDIATE / C_IMMEDIATE)
 //   nullnext   OnDisable before returning, Unity-null at once, OnDestroy in the first leaf of the
 //              next frame (NULL_PENDING / C_NULL_PENDING, NEXT_FRAME_START)
-// WaitForEndOfFrame coroutines resume inside the PostLateUpdate.TriggerEndOfFrameCallbacks leaf, or
-// never (Fake.EndOfFrameDelivered false, the shape a batchmode Editor without a rendered Game view
-// may have); neither is a claim about Unity.
+// WaitForEndOfFrame coroutines resume (Fake.EndOfFrameAt) inside the
+// PostLateUpdate.TriggerEndOfFrameCallbacks leaf ("leaf", default), right after that leaf's
+// after-marker and before the next leaf ("afterMarker", i.e. after the probe's teofc point), or
+// never ("never", the shape a batchmode Editor without a rendered Game view may have); none of
+// them is a claim about Unity.
 // Editor transitions are recorded with the callback they were made from; calls the protocol
 // forbids go to Fake.Forbidden.
 using System;
@@ -43,8 +45,9 @@ public static class Fake
     public static int SkipLeafAtFrame;
     /// <summary>FixedUpdate iterations on odd frames (even frames: 1).</summary>
     public static int FixedOnOddFrames = 1;
-    /// <summary>Whether WaitForEndOfFrame coroutines are resumed at all (in TriggerEndOfFrameCallbacks).</summary>
-    public static bool EndOfFrameDelivered = true;
+    /// <summary>Where WaitForEndOfFrame coroutines resume: "leaf", "afterMarker" or "never".</summary>
+    public static string EndOfFrameAt = "leaf";
+    const string EndOfFrameLeaf = "PostLateUpdate.TriggerEndOfFrameCallbacks";
     public static int NextId = 41000;
     public static void Forbid(string what) { Forbidden.Add(what + " in " + Context); throw new Exception("forbidden call: " + what); }
 
@@ -223,7 +226,6 @@ public static class Fake
 
     static void EndOfFrame()
     {
-        if (!EndOfFrameDelivered) return;
         foreach (var r in Coroutines.ToList())
             if (r.EndOfFrame && !r.Owner.destroyed && !r.Owner.pending && r.Owner.Owner.InHierarchy) Step(r);
     }
@@ -258,8 +260,8 @@ public static class Fake
             case "PostLateUpdate.PlayerSendFrameComplete":
                 if (Rule == "drains") Flush();
                 break;
-            case "PostLateUpdate.TriggerEndOfFrameCallbacks":
-                EndOfFrame();
+            case EndOfFrameLeaf:
+                if (EndOfFrameAt == "leaf") EndOfFrame();
                 break;
         }
     }
@@ -304,15 +306,25 @@ public static class Fake
             int times = name == "FixedUpdate" ? (Frame % 2 == 1 ? FixedOnOddFrames : 1) : 1;
             if (SkipLeafAtFrame != 0 && Frame == SkipLeafAtFrame && name == "PreUpdate") times = 0;
             for (int i = 0; i < times; i++)
+            {
+                string previous = null;
                 foreach (var leaf in group.subSystemList ?? new PlayerLoopSystem[0])
                 {
                     if (leaf.updateDelegate != null)
                     {
                         try { leaf.updateDelegate(); }
                         catch (Exception e) { UnityEngine.Application.Log(LogType.Exception, e.GetType().Name + ": " + e.Message); }
+                        // The managed system right after the end-of-frame leaf is the probe's after-marker.
+                        if (previous == EndOfFrameLeaf && EndOfFrameAt == "afterMarker") EndOfFrame();
+                        previous = null;
                     }
-                    else if (leaf.type != null) Native(name, leaf.type.Name);
+                    else if (leaf.type != null)
+                    {
+                        Native(name, leaf.type.Name);
+                        previous = name + "." + leaf.type.Name;
+                    }
                 }
+            }
         }
     }
 

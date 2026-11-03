@@ -26,8 +26,11 @@ comparator, preflight judgement and publish gate. No Editor, engine, Host or Uni
 6. End-of-frame phases: the PlayerLoop marker point after TriggerEndOfFrameCallbacks ("teofc") and
    actual WaitForEndOfFrame resumes ("wfeof") are distinct in the source, the record and the
    analysis. A fake that never resumes WaitForEndOfFrame (nowfeof) passes every gate with the
-   coroutine case NOT_ISSUED; the default fake (resumes inside the leaf) is classified
-   IN_TEOFC_LEAF. Inconsistent coroutine-case records are refused.
+   coroutine case NOT_ISSUED and the same record keys in the same order; the default fake (resumes
+   inside the leaf) is classified IN_TEOFC_LEAF and a fake resuming after the teofc point
+   (wfeofafter, same position string) AFTER_TEOFC_POINT by the raw point order. In both the
+   coroutine case is requested at its step's first resume and fitted on its own. Inconsistent
+   coroutine-case records are refused.
 
 Writes NEW_CACHE_DIR/controls.json with every control's expected and actual result; exit 0 only
 when all hold.
@@ -64,10 +67,12 @@ RELEASE = '6000.0.71f1'
 DEVICE = 'OpenGLCore'
 SCRIPTS = [PROBE/'Assets/Scripts/DestroyContractProbe.cs', PROBE/'Assets/Editor/ProbeRunner.cs']
 SCENARIOS = ('normal', 'normal-repeat', 'noreload', 'pause', 'watchdog', 'nooutput', 'fault', 'loopbroken',
-             'skipleaf', 'fixedtwice', 'reenterthrows', 'nowfeof', 'rule-drains', 'rule-immediate', 'rule-nullnext')
+             'skipleaf', 'fixedtwice', 'reenterthrows', 'nowfeof', 'wfeofafter', 'rule-drains', 'rule-immediate',
+             'rule-nullnext')
 # Scenarios whose record must pass the schema/protocol guard (answers differ, instrumentation holds).
-PASSING = ('normal', 'noreload', 'pause', 'fixedtwice', 'reenterthrows', 'nowfeof', 'rule-drains', 'rule-immediate',
-           'rule-nullnext')
+PASSING = ('normal', 'noreload', 'pause', 'fixedtwice', 'reenterthrows', 'nowfeof', 'wfeofafter', 'rule-drains',
+           'rule-immediate', 'rule-nullnext')
+TEOFC_LEAF = 'PostLateUpdate.TriggerEndOfFrameCallbacks'
 results = []
 
 
@@ -288,15 +293,38 @@ def scenario_controls(runs):
     names = [e['e'] for e in rt.get('trace.reenter', [])]
     control('reenterthrows: a throwing reentrant Destroy is recorded as an answer and passes', 'threw2.InvalidOperationException',
             names, 'threw2.InvalidOperationException' in names and rt.get('faults') == [])
-    nv = values_of(normal_values := runs['normal']['dir']/'values.jsonl')
-    resumes = [p for p in nv.get('points', []) if p['pt'] == 'wfeof']
-    teofc_index = {p['s']: i for i, p in enumerate(nv.get('points', [])) if p['pt'] == 'teofc'}
-    before_marker = all(nv['points'].index(p) < teofc_index.get(p['s'], -1) for p in resumes)
+    def resumes_of(name):
+        """(resumes, every resume before/after its step's teofc point in the raw point order, the
+        go.wfeof request event)."""
+        v = values_of(runs[name]['dir']/'values.jsonl')
+        points = v.get('points', [])
+        teofc = {p['s']: i for i, p in enumerate(points) if p['pt'] == 'teofc'}
+        resumes = [(i, p) for i, p in enumerate(points) if p['pt'] == 'wfeof']
+        before = all(i < teofc.get(p['s'], -1) for i, p in resumes)
+        after = all(teofc.get(p['s'], len(points)) < i for i, p in resumes)
+        request = next((e for e in v.get('trace.go.wfeof', []) if e['e'] == 'request'), None)
+        return v, [p for _, p in resumes], before, after, request
+    nv, resumes, before, _, request = resumes_of('normal')
+    first = next((p for p in resumes if p['s'] == 21), None)
+    got = [len(resumes), before, sorted({p['p'] for p in resumes}), nv.get('case.go.wfeof.issued'),
+           request and [request['s'], request['f'], request['p']] == [first['s'], first['f'], first['p']]]
+    want = [guards.FINAL_STEP+1, True, ['in:'+TEOFC_LEAF], True, True]
     control('normal: the fake\'s WaitForEndOfFrame resumes are recorded once per step inside the leaf, before the '
-            'teofc point, and the coroutine case is issued there', [guards.FINAL_STEP+1, True, True],
-            [len(resumes), before_marker, nv.get('case.go.wfeof.issued')],
-            len(resumes) == guards.FINAL_STEP+1 and before_marker and nv.get('case.go.wfeof.issued') is True
-            and all(p['p'] == 'in:PostLateUpdate.TriggerEndOfFrameCallbacks' for p in resumes))
+            'teofc point, and the coroutine case is requested at its step\'s resume', want, got, got == want)
+    wa, resumes, _, after, request = resumes_of('wfeofafter')
+    first = next((p for p in resumes if p['s'] == 21), None)
+    # The final step's resume would come after its teofc point closed the record.
+    got = [len(resumes), after, sorted({p['p'] for p in resumes}), wa.get('case.go.wfeof.issued'),
+           request and [request['s'], request['f'], request['p']] == [first['s'], first['f'], first['p']]]
+    want = [guards.FINAL_STEP, True, ['after:'+TEOFC_LEAF], True, True]
+    control('wfeofafter: resumes after the teofc point have the teofc point\'s position string and are separated by '
+            'the raw point order; the coroutine case is requested there and the record passes', want, got,
+            got == want and not guards.record_problems(runs['wfeofafter']['dir']/'values.jsonl', RELEASE, DEVICE))
+    keys = {name: [r['k'] for r in guards.parse(runs[name]['dir']/'values.jsonl')[0]]
+            for name in ('normal', 'nowfeof', 'wfeofafter')}
+    control('end of frame: whether and where WaitForEndOfFrame resumes never changes the record\'s keys or their order',
+            True, [keys['nowfeof'] == keys['normal'], keys['wfeofafter'] == keys['normal']],
+            keys['nowfeof'] == keys['normal'] == keys['wfeofafter'] == guards.schema_keys())
     nw = values_of(runs['nowfeof']['dir']/'values.jsonl')
     observers = {k: v['cb']['wfeof'] for k, v in nw.items() if k.startswith(f'snap.{guards.FINAL_STEP}.teofc.')}
     trace = [e['e'] for e in nw.get('trace.go.wfeof', [])]
@@ -399,6 +427,8 @@ def record_controls(normal, out):
     mutated('update point frames differ from the step frames', lambda rows: next(p for p in rows[index('points')]['v'] if p['pt'] == 'update' and p['s'] == 5).update(f=99), 'update frames differ')
     mutated('coroutine case issued without its request', trace_edit('go.wfeof', lambda t: t.__setitem__(slice(None), [e for e in t if e['e'] != 'request'])), 'case go.wfeof: issued but 0 request events')
     mutated('coroutine case requested elsewhere than its resume', trace_edit('go.wfeof', lambda t: [e.update(p='after:PostLateUpdate.TriggerEndOfFrameCallbacks') for e in t if e['e'] in ('request', 'returned')]), 'not at the first wfeof resume')
+    mutated('coroutine case requested in another frame than its resume', trace_edit('go.wfeof', lambda t: [e.update(f=e['f']+1) for e in t if e['e'] == 'request']), 'not at the first wfeof resume')
+    mutated('coroutine case not issued with recorded reads', lambda rows: [rows[index('case.go.wfeof.issued')].update(v=False), rows[index('trace.go.wfeof')].update(v=[e for e in rows[index('trace.go.wfeof')]['v'] if e['e'] not in ('request', 'returned')]), rows[index('order')].update(v=[t for t in rows[index('order')]['v'] if t not in ('go.wfeof:request', 'go.wfeof:returned')])], 'not issued but its reads are recorded')
     mutated('coroutine case issued with null reads', setv('case.go.wfeof.after.go.wfeof', None), 'issued but its reads are null')
     mutated('coroutine case marked not issued although requested', setv('case.go.wfeof.issued', False), 'case go.wfeof: not issued but 1 request events')
     mutated('coroutine case issued without a resume in its step', lambda rows: rows[index('points')]['v'].__setitem__(slice(None), [p for p in rows[index('points')]['v'] if not (p['pt'] == 'wfeof' and p['s'] == 21)]), 'issued without a wfeof resume')
@@ -929,12 +959,12 @@ def analyzer_controls(runs, out):
             and rep['delivery']['OnDestroy']['deferred_callbacks'] == sum(
                 len(guards.case_reads(c[3])) for c in guards.CASES if c[0] not in ('reenter', 'go.wfeof')))
     wf = rep['cases']['go.wfeof']
-    control('analyzer: the issued coroutine case is fitted on its own (request at its resume, toy rule recovered)',
-            [['CALLBACK_INACTIVE'], 'in:PostLateUpdate.TriggerEndOfFrameCallbacks'],
-            [wf.get('mechanism_fits'), (rep['cases']['go.wfeof']['reads']['go.wfeof']['after'] or {}).get('alive') and
-             next(e['p'] for e in guards.parse(runs['normal']['dir']/'values.jsonl')[0][0:0] or
-                  values_of(runs['normal']['dir']/'values.jsonl')['trace.go.wfeof'] if e['e'] == 'request')],
-            wf.get('mechanism_fits') == ['CALLBACK_INACTIVE'])
+    got = [wf.get('issued'), wf.get('mechanism_fits'), wf.get('request'),
+           wf['delivery'].get('go.wfeof.OnDisable', {}).get('outcome'), wf['delivery'].get('go.wfeof.OnDestroy', {}).get('fitting')]
+    want = [True, ['CALLBACK_INACTIVE'], {'s': 21, 'f': got[2] and got[2]['f'], 'p': 'in:'+TEOFC_LEAF}, 'BEFORE_RETURN',
+            ['NEXT_DELAYED']]
+    control('analyzer: the issued coroutine case is fitted on its own (requested at its resume, toy rule recovered)',
+            want, got, got == want and isinstance(got[2], dict) and isinstance(got[2]['f'], int))
     eof = rep['end_of_frame']
     control('analyzer: the default fake\'s WaitForEndOfFrame delivery is classified IN_TEOFC_LEAF, once per step',
             ['IN_TEOFC_LEAF', True], [eof['outcome'], eof['once_per_step_before_final']],
@@ -946,27 +976,17 @@ def analyzer_controls(runs, out):
     want = ['NOT_DELIVERED', 'NOT_ISSUED', 'NOT_ISSUED', 'NOT_EVALUABLE', ['CALLBACK_INACTIVE']]
     control('analyzer: without WaitForEndOfFrame delivery the coroutine case is NOT_ISSUED and the marker-phase '
             'intersection is unchanged', want, got, got == want)
-    moved = guards.parse(runs['normal']['dir']/'values.jsonl')[0]
-    for r in moved:
-        if r['k'] == 'points':
-            teofc = {p['s']: i for i, p in enumerate(r['v']) if p['pt'] == 'teofc'}
-            for p in r['v']:
-                if p['pt'] == 'wfeof':
-                    p['p'] = 'after:PostLateUpdate.TriggerEndOfFrameCallbacks'
-            # move every resume after its step's teofc point
-            items = [p for p in r['v'] if p['pt'] != 'wfeof']
-            out = []
-            for p in items:
-                out.append(p)
-                if p['pt'] == 'teofc':
-                    out += [q for q in r['v'] if q['pt'] == 'wfeof' and q['s'] == p['s']]
-            r['v'] = out
-    path = work/'after-teofc.jsonl'
-    write_rows(path, moved)
-    rep = fit(path, 'after-teofc')
-    control('analyzer: resumes after the teofc point (same position string) are classified AFTER_TEOFC_POINT by raw '
-            'order, never as the marker', 'AFTER_TEOFC_POINT', rep['end_of_frame']['outcome'],
-            rep['end_of_frame']['outcome'] == 'AFTER_TEOFC_POINT')
+    rep = fit(runs['wfeofafter']['dir']/'values.jsonl', 'wfeofafter')
+    wf = rep['cases']['go.wfeof']
+    got = [rep['end_of_frame']['outcome'], rep['end_of_frame']['once_per_step_before_final'],
+           {r['relative_to_teofc'] for r in rep['end_of_frame']['resume_list']}, (wf.get('request') or {}).get('p'),
+           wf.get('mechanism_fits'), rep['delivery']['OnDestroy']['points']['wfeof']['fits'],
+           rep['delivery']['OnDestroy']['points']['teofc']['fits'], rep['go_mechanisms']['fits']]
+    want = ['AFTER_TEOFC_POINT', True, {'after_teofc_point'}, 'after:'+TEOFC_LEAF, ['CALLBACK_INACTIVE'], ['NEXT_DELAYED'],
+            ['NEXT_DELAYED'], ['CALLBACK_INACTIVE']]
+    control('analyzer: resumes after the teofc point (same position string) are classified AFTER_TEOFC_POINT by the raw '
+            'point order, never as the marker; the coroutine case is fitted from its own request position',
+            [str(w) for w in want], [str(g) for g in got], got == want)
     rows = guards.parse(runs['normal']['dir']/'values.jsonl')[0]
     other = copy.deepcopy(rows)
     for r in other:
