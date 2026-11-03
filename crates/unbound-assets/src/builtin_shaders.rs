@@ -1071,7 +1071,11 @@ mod tests {
         );
         // Their LODs as serialized (`m_LOD`): Shader.passCount picks by them.
         assert_eq!(
-            standard.subshaders.iter().map(|s| s.lod).collect::<Vec<_>>(),
+            standard
+                .subshaders
+                .iter()
+                .map(|s| s.lod)
+                .collect::<Vec<_>>(),
             [300, 150]
         );
         assert_eq!(

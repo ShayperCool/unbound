@@ -569,7 +569,9 @@ fn probe_shaders_match_the_canonical_reference() {
             _ => (&[0][..], &[false][..]),
         };
         assert_eq!(
-            subs.iter().map(|s| s["lod"].as_u64().unwrap()).collect::<Vec<_>>(),
+            subs.iter()
+                .map(|s| s["lod"].as_u64().unwrap())
+                .collect::<Vec<_>>(),
             lods,
             "{shader}"
         );
@@ -1015,5 +1017,8 @@ fn subshaders_carry_their_lod_and_device_limits() {
         [false, true, false, true, true, false].map(|r| json!(r))
     );
     // The passes are unchanged: one each.
-    assert!(subs.iter().all(|s| s["passes"].as_array().unwrap().len() == 1));
+    assert!(
+        subs.iter()
+            .all(|s| s["passes"].as_array().unwrap().len() == 1)
+    );
 }
