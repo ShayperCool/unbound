@@ -1,0 +1,2069 @@
+{
+ "note": "precommitted from the committed case/subject tables and authored set-up; brackets tabulated with the reference loop listing below, refitted only against the CAPTURED loop listing",
+ "final_step": 22,
+ "points": [
+  "update",
+  "late",
+  "eof"
+ ],
+ "reference_loop": {
+  "path": "tests/projects/input/Reference/unity-6000.0.71f1.jsonl",
+  "sha256": "57237cd0b62768cc73f60c41fb51b6adda65b39e2c88b4253cc98bd9f69682c3",
+  "leaves": [
+   "TimeUpdate.WaitForLastPresentationAndUpdateTime",
+   "Initialization.ProfilerStartFrame",
+   "Initialization.UpdateCameraMotionVectors",
+   "Initialization.DirectorSampleTime",
+   "Initialization.AsyncUploadTimeSlicedUpdate",
+   "Initialization.SynchronizeInputs",
+   "Initialization.SynchronizeState",
+   "Initialization.XREarlyUpdate",
+   "EarlyUpdate.PollPlayerConnection",
+   "EarlyUpdate.GpuTimestamp",
+   "EarlyUpdate.AnalyticsCoreStatsUpdate",
+   "EarlyUpdate.InsightsUpdate",
+   "EarlyUpdate.UnityWebRequestUpdate",
+   "EarlyUpdate.ExecuteMainThreadJobs",
+   "EarlyUpdate.ProcessMouseInWindow",
+   "EarlyUpdate.ClearIntermediateRenderers",
+   "EarlyUpdate.ClearLines",
+   "EarlyUpdate.PresentBeforeUpdate",
+   "EarlyUpdate.ResetFrameStatsAfterPresent",
+   "EarlyUpdate.UpdateAsyncInstantiate",
+   "EarlyUpdate.UpdateAsyncReadbackManager",
+   "EarlyUpdate.UpdateStreamingManager",
+   "EarlyUpdate.UpdateTextureStreamingManager",
+   "EarlyUpdate.UpdatePreloading",
+   "EarlyUpdate.UpdateContentLoading",
+   "EarlyUpdate.RendererNotifyInvisible",
+   "EarlyUpdate.PlayerCleanupCachedData",
+   "EarlyUpdate.UpdateMainGameViewRect",
+   "EarlyUpdate.UpdateCanvasRectTransform",
+   "EarlyUpdate.XRUpdate",
+   "EarlyUpdate.UpdateInputManager",
+   "EarlyUpdate.ProcessRemoteInput",
+   "EarlyUpdate.ScriptRunDelayedStartupFrame",
+   "EarlyUpdate.UpdateKinect",
+   "EarlyUpdate.DeliverIosPlatformEvents",
+   "EarlyUpdate.ARCoreUpdate",
+   "EarlyUpdate.DispatchEventQueueEvents",
+   "EarlyUpdate.Physics2DEarlyUpdate",
+   "EarlyUpdate.PhysicsResetInterpolatedTransformPosition",
+   "EarlyUpdate.SpriteAtlasManagerUpdate",
+   "EarlyUpdate.PerformanceAnalyticsUpdate",
+   "EarlyUpdate.TilemapRendererEarlyUpdate",
+   "FixedUpdate.ClearLines",
+   "FixedUpdate.NewInputFixedUpdate",
+   "FixedUpdate.DirectorFixedSampleTime",
+   "FixedUpdate.AudioFixedUpdate",
+   "FixedUpdate.ScriptRunBehaviourFixedUpdate",
+   "FixedUpdate.DirectorFixedUpdate",
+   "FixedUpdate.LegacyFixedAnimationUpdate",
+   "FixedUpdate.XRFixedUpdate",
+   "FixedUpdate.PhysicsFixedUpdate",
+   "FixedUpdate.Physics2DFixedUpdate",
+   "FixedUpdate.PhysicsClothFixedUpdate",
+   "FixedUpdate.DirectorFixedUpdatePostPhysics",
+   "FixedUpdate.ScriptRunDelayedFixedFrameRate",
+   "PreUpdate.PhysicsUpdate",
+   "PreUpdate.Physics2DUpdate",
+   "PreUpdate.PhysicsClothUpdate",
+   "PreUpdate.CheckTexFieldInput",
+   "PreUpdate.IMGUISendQueuedEvents",
+   "PreUpdate.NewInputUpdate",
+   "PreUpdate.InputForUIUpdate",
+   "PreUpdate.SendMouseEvents",
+   "PreUpdate.AIUpdate",
+   "PreUpdate.WindUpdate",
+   "PreUpdate.UpdateVideo",
+   "Update.ScriptRunBehaviourUpdate",
+   "Update.ScriptRunDelayedDynamicFrameRate",
+   "Update.ScriptRunDelayedTasks",
+   "Update.DirectorUpdate",
+   "PreLateUpdate.AIUpdatePostScript",
+   "PreLateUpdate.DirectorUpdateAnimationBegin",
+   "PreLateUpdate.LegacyAnimationUpdate",
+   "PreLateUpdate.DirectorUpdateAnimationEnd",
+   "PreLateUpdate.DirectorDeferredEvaluate",
+   "PreLateUpdate.AccessibilityUpdate",
+   "PreLateUpdate.UIElementsUpdatePanels",
+   "PreLateUpdate.EndGraphicsJobsAfterScriptUpdate",
+   "PreLateUpdate.ConstraintManagerUpdate",
+   "PreLateUpdate.ParticleSystemBeginUpdateAll",
+   "PreLateUpdate.Physics2DLateUpdate",
+   "PreLateUpdate.PhysicsLateUpdate",
+   "PreLateUpdate.ScriptRunBehaviourLateUpdate",
+   "PostLateUpdate.PlayerSendFrameStarted",
+   "PostLateUpdate.DirectorLateUpdate",
+   "PostLateUpdate.ScriptRunDelayedDynamicFrameRate",
+   "PostLateUpdate.PhysicsSkinnedClothBeginUpdate",
+   "PostLateUpdate.UpdateRectTransform",
+   "PostLateUpdate.PlayerUpdateCanvases",
+   "PostLateUpdate.UIElementsRepaintPanels",
+   "PostLateUpdate.UpdateAudio",
+   "PostLateUpdate.VFXUpdate",
+   "PostLateUpdate.ParticleSystemEndUpdateAll",
+   "PostLateUpdate.EndGraphicsJobsAfterScriptLateUpdate",
+   "PostLateUpdate.UpdateCustomRenderTextures",
+   "PostLateUpdate.XRPostLateUpdate",
+   "PostLateUpdate.UpdateAllRenderers",
+   "PostLateUpdate.UpdateLightProbeProxyVolumes",
+   "PostLateUpdate.EnlightenRuntimeUpdate",
+   "PostLateUpdate.UpdateAllSkinnedMeshes",
+   "PostLateUpdate.ProcessWebSendMessages",
+   "PostLateUpdate.SortingGroupsUpdate",
+   "PostLateUpdate.UpdateVideoTextures",
+   "PostLateUpdate.UpdateVideo",
+   "PostLateUpdate.DirectorRenderImage",
+   "PostLateUpdate.PlayerEmitCanvasGeometry",
+   "PostLateUpdate.UIElementsRenderBatchModeOffscreen",
+   "PostLateUpdate.PhysicsSkinnedClothFinishUpdate",
+   "PostLateUpdate.FinishFrameRendering",
+   "PostLateUpdate.BatchModeUpdate",
+   "PostLateUpdate.PlayerSendFrameComplete",
+   "PostLateUpdate.UpdateCaptureScreenshot",
+   "PostLateUpdate.PresentAfterDraw",
+   "PostLateUpdate.ClearImmediateRenderers",
+   "PostLateUpdate.PlayerSendFramePostPresent",
+   "PostLateUpdate.UpdateResolution",
+   "PostLateUpdate.InputEndFrame",
+   "PostLateUpdate.TriggerEndOfFrameCallbacks",
+   "PostLateUpdate.GUIClearEvents",
+   "PostLateUpdate.ShaderHandleErrors",
+   "PostLateUpdate.ResetInputAxis",
+   "PostLateUpdate.ThreadedLoadingDebug",
+   "PostLateUpdate.ProfilerSynchronizeStats",
+   "PostLateUpdate.MemoryFrameMaintenance",
+   "PostLateUpdate.ExecuteGameCenterCallbacks",
+   "PostLateUpdate.XRPreEndFrame",
+   "PostLateUpdate.ProfilerEndFrame",
+   "PostLateUpdate.GraphicsWarmupPreloadedShaders",
+   "PostLateUpdate.ObjectDispatcherPostLateUpdate"
+  ]
+ },
+ "go_mechanisms": [
+  "FLAG_ONLY",
+  "CALLBACK_ONLY",
+  "CALLBACK_INACTIVE",
+  "DEACTIVATE",
+  "LEAVE_HIERARCHY",
+  "DISABLE_BEHAVIOURS",
+  "NULL_PENDING",
+  "IMMEDIATE"
+ ],
+ "component_mechanisms": [
+  "C_FLAG_ONLY",
+  "C_CALLBACK_ONLY",
+  "C_DISABLE",
+  "C_INACTIVE_FLAG",
+  "C_DETACH_PENDING",
+  "C_NULL_PENDING",
+  "C_IMMEDIATE"
+ ],
+ "brackets": [
+  "SAME_LEAF",
+  "NEXT_DELAYED",
+  "FRAME_DRAINS",
+  "NEXT_FRAME_START",
+  "OUTSIDE_LOOP"
+ ],
+ "cases": [
+  {
+   "case": "go.update",
+   "step": 2,
+   "point": "update",
+   "subject": "go.update",
+   "target": "gameObject",
+   "reads": [
+    "go.update"
+   ],
+   "request_position": "in:Update.ScriptRunBehaviourUpdate",
+   "before": {
+    "go.update": {
+     "alive": true,
+     "activeSelf": true,
+     "activeInHierarchy": true,
+     "enabled": true,
+     "isActiveAndEnabled": true,
+     "find": "same"
+    }
+   },
+   "mechanisms": {
+    "FLAG_ONLY": {
+     "go.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": []
+     }
+    },
+    "CALLBACK_ONLY": {
+     "go.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "CALLBACK_INACTIVE": {
+     "go.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DEACTIVATE": {
+     "go.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "LEAVE_HIERARCHY": {
+     "go.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DISABLE_BEHAVIOURS": {
+     "go.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "NULL_PENDING": {
+     "go.update": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "IMMEDIATE": {
+     "go.update": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable",
+       "OnDestroy"
+      ]
+     }
+    }
+   },
+   "brackets": {
+    "SAME_LEAF": [
+     "in:Update.ScriptRunBehaviourUpdate",
+     0
+    ],
+    "NEXT_DELAYED": [
+     "in:Update.ScriptRunDelayedDynamicFrameRate",
+     0
+    ],
+    "FRAME_DRAINS": [
+     "in:PostLateUpdate.PlayerSendFrameStarted",
+     0
+    ],
+    "NEXT_FRAME_START": [
+     "in:TimeUpdate.WaitForLastPresentationAndUpdateTime",
+     null
+    ],
+    "OUTSIDE_LOOP": [
+     "after:PostLateUpdate.ObjectDispatcherPostLateUpdate",
+     null
+    ]
+   }
+  },
+  {
+   "case": "go.late",
+   "step": 4,
+   "point": "late",
+   "subject": "go.late",
+   "target": "gameObject",
+   "reads": [
+    "go.late"
+   ],
+   "request_position": "in:PreLateUpdate.ScriptRunBehaviourLateUpdate",
+   "before": {
+    "go.late": {
+     "alive": true,
+     "activeSelf": true,
+     "activeInHierarchy": true,
+     "enabled": true,
+     "isActiveAndEnabled": true,
+     "find": "same"
+    }
+   },
+   "mechanisms": {
+    "FLAG_ONLY": {
+     "go.late": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": []
+     }
+    },
+    "CALLBACK_ONLY": {
+     "go.late": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "CALLBACK_INACTIVE": {
+     "go.late": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DEACTIVATE": {
+     "go.late": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "LEAVE_HIERARCHY": {
+     "go.late": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DISABLE_BEHAVIOURS": {
+     "go.late": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "NULL_PENDING": {
+     "go.late": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "IMMEDIATE": {
+     "go.late": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable",
+       "OnDestroy"
+      ]
+     }
+    }
+   },
+   "brackets": {
+    "SAME_LEAF": [
+     "in:PreLateUpdate.ScriptRunBehaviourLateUpdate",
+     0
+    ],
+    "NEXT_DELAYED": [
+     "in:PostLateUpdate.ScriptRunDelayedDynamicFrameRate",
+     0
+    ],
+    "FRAME_DRAINS": [
+     "in:PostLateUpdate.PlayerSendFrameStarted",
+     0
+    ],
+    "NEXT_FRAME_START": [
+     "in:TimeUpdate.WaitForLastPresentationAndUpdateTime",
+     null
+    ],
+    "OUTSIDE_LOOP": [
+     "after:PostLateUpdate.ObjectDispatcherPostLateUpdate",
+     null
+    ]
+   }
+  },
+  {
+   "case": "go.eof",
+   "step": 6,
+   "point": "eof",
+   "subject": "go.eof",
+   "target": "gameObject",
+   "reads": [
+    "go.eof"
+   ],
+   "request_position": "after:PostLateUpdate.TriggerEndOfFrameCallbacks",
+   "before": {
+    "go.eof": {
+     "alive": true,
+     "activeSelf": true,
+     "activeInHierarchy": true,
+     "enabled": true,
+     "isActiveAndEnabled": true,
+     "find": "same"
+    }
+   },
+   "mechanisms": {
+    "FLAG_ONLY": {
+     "go.eof": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": []
+     }
+    },
+    "CALLBACK_ONLY": {
+     "go.eof": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "CALLBACK_INACTIVE": {
+     "go.eof": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DEACTIVATE": {
+     "go.eof": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "LEAVE_HIERARCHY": {
+     "go.eof": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DISABLE_BEHAVIOURS": {
+     "go.eof": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "NULL_PENDING": {
+     "go.eof": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "IMMEDIATE": {
+     "go.eof": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable",
+       "OnDestroy"
+      ]
+     }
+    }
+   },
+   "brackets": {
+    "SAME_LEAF": [
+     "in:PostLateUpdate.GUIClearEvents",
+     0
+    ],
+    "NEXT_DELAYED": [
+     "in:EarlyUpdate.ScriptRunDelayedStartupFrame",
+     1
+    ],
+    "FRAME_DRAINS": [
+     "in:PostLateUpdate.PlayerSendFrameStarted",
+     1
+    ],
+    "NEXT_FRAME_START": [
+     "in:TimeUpdate.WaitForLastPresentationAndUpdateTime",
+     null
+    ],
+    "OUTSIDE_LOOP": [
+     "after:PostLateUpdate.ObjectDispatcherPostLateUpdate",
+     null
+    ]
+   }
+  },
+  {
+   "case": "comp.update",
+   "step": 8,
+   "point": "update",
+   "subject": "comp.update",
+   "target": "component",
+   "reads": [
+    "comp.update"
+   ],
+   "request_position": "in:Update.ScriptRunBehaviourUpdate",
+   "before": {
+    "comp.update": {
+     "alive": true,
+     "activeSelf": true,
+     "activeInHierarchy": true,
+     "find": "same",
+     "comp": true,
+     "enabled": true,
+     "isActiveAndEnabled": true,
+     "getComponent": "same"
+    }
+   },
+   "mechanisms": {
+    "C_FLAG_ONLY": {
+     "comp.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "find": "same",
+       "comp": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "getComponent": "same"
+      },
+      "during": []
+     }
+    },
+    "C_CALLBACK_ONLY": {
+     "comp.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "find": "same",
+       "comp": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "getComponent": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "C_DISABLE": {
+     "comp.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "find": "same",
+       "comp": true,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "getComponent": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "C_INACTIVE_FLAG": {
+     "comp.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "find": "same",
+       "comp": true,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "getComponent": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "C_DETACH_PENDING": {
+     "comp.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "find": "same",
+       "comp": true,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "getComponent": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "C_NULL_PENDING": {
+     "comp.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "find": "same",
+       "comp": false,
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "getComponent": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "C_IMMEDIATE": {
+     "comp.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "find": "same",
+       "comp": false,
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "getComponent": "none"
+      },
+      "during": [
+       "OnDisable",
+       "OnDestroy"
+      ]
+     }
+    }
+   },
+   "brackets": {
+    "SAME_LEAF": [
+     "in:Update.ScriptRunBehaviourUpdate",
+     0
+    ],
+    "NEXT_DELAYED": [
+     "in:Update.ScriptRunDelayedDynamicFrameRate",
+     0
+    ],
+    "FRAME_DRAINS": [
+     "in:PostLateUpdate.PlayerSendFrameStarted",
+     0
+    ],
+    "NEXT_FRAME_START": [
+     "in:TimeUpdate.WaitForLastPresentationAndUpdateTime",
+     null
+    ],
+    "OUTSIDE_LOOP": [
+     "after:PostLateUpdate.ObjectDispatcherPostLateUpdate",
+     null
+    ]
+   }
+  },
+  {
+   "case": "comp.disabled",
+   "step": 10,
+   "point": "update",
+   "subject": "comp.disabled",
+   "target": "gameObject",
+   "reads": [
+    "comp.disabled"
+   ],
+   "request_position": "in:Update.ScriptRunBehaviourUpdate",
+   "before": {
+    "comp.disabled": {
+     "alive": true,
+     "activeSelf": true,
+     "activeInHierarchy": true,
+     "enabled": false,
+     "isActiveAndEnabled": false,
+     "find": "same"
+    }
+   },
+   "mechanisms": {
+    "FLAG_ONLY": {
+     "comp.disabled": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": []
+     }
+    },
+    "CALLBACK_ONLY": {
+     "comp.disabled": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": []
+     }
+    },
+    "CALLBACK_INACTIVE": {
+     "comp.disabled": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": []
+     }
+    },
+    "DEACTIVATE": {
+     "comp.disabled": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": []
+     }
+    },
+    "LEAVE_HIERARCHY": {
+     "comp.disabled": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": false,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": []
+     }
+    },
+    "DISABLE_BEHAVIOURS": {
+     "comp.disabled": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": []
+     }
+    },
+    "NULL_PENDING": {
+     "comp.disabled": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": []
+     }
+    },
+    "IMMEDIATE": {
+     "comp.disabled": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDestroy"
+      ]
+     }
+    }
+   },
+   "brackets": {
+    "SAME_LEAF": [
+     "in:Update.ScriptRunBehaviourUpdate",
+     0
+    ],
+    "NEXT_DELAYED": [
+     "in:Update.ScriptRunDelayedDynamicFrameRate",
+     0
+    ],
+    "FRAME_DRAINS": [
+     "in:PostLateUpdate.PlayerSendFrameStarted",
+     0
+    ],
+    "NEXT_FRAME_START": [
+     "in:TimeUpdate.WaitForLastPresentationAndUpdateTime",
+     null
+    ],
+    "OUTSIDE_LOOP": [
+     "after:PostLateUpdate.ObjectDispatcherPostLateUpdate",
+     null
+    ]
+   }
+  },
+  {
+   "case": "go.inactive",
+   "step": 12,
+   "point": "update",
+   "subject": "go.inactive",
+   "target": "gameObject",
+   "reads": [
+    "go.inactive"
+   ],
+   "request_position": "in:Update.ScriptRunBehaviourUpdate",
+   "before": {
+    "go.inactive": {
+     "alive": true,
+     "activeSelf": false,
+     "activeInHierarchy": false,
+     "enabled": true,
+     "isActiveAndEnabled": false,
+     "find": "none"
+    }
+   },
+   "mechanisms": {
+    "FLAG_ONLY": {
+     "go.inactive": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": []
+     }
+    },
+    "CALLBACK_ONLY": {
+     "go.inactive": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": []
+     }
+    },
+    "CALLBACK_INACTIVE": {
+     "go.inactive": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": []
+     }
+    },
+    "DEACTIVATE": {
+     "go.inactive": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": []
+     }
+    },
+    "LEAVE_HIERARCHY": {
+     "go.inactive": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": []
+     }
+    },
+    "DISABLE_BEHAVIOURS": {
+     "go.inactive": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": []
+     }
+    },
+    "NULL_PENDING": {
+     "go.inactive": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": []
+     }
+    },
+    "IMMEDIATE": {
+     "go.inactive": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDestroy"
+      ]
+     }
+    }
+   },
+   "brackets": {
+    "SAME_LEAF": [
+     "in:Update.ScriptRunBehaviourUpdate",
+     0
+    ],
+    "NEXT_DELAYED": [
+     "in:Update.ScriptRunDelayedDynamicFrameRate",
+     0
+    ],
+    "FRAME_DRAINS": [
+     "in:PostLateUpdate.PlayerSendFrameStarted",
+     0
+    ],
+    "NEXT_FRAME_START": [
+     "in:TimeUpdate.WaitForLastPresentationAndUpdateTime",
+     null
+    ],
+    "OUTSIDE_LOOP": [
+     "after:PostLateUpdate.ObjectDispatcherPostLateUpdate",
+     null
+    ]
+   }
+  },
+  {
+   "case": "tree.parent",
+   "step": 14,
+   "point": "update",
+   "subject": "tree.parent",
+   "target": "gameObject",
+   "reads": [
+    "tree.parent",
+    "tree.child"
+   ],
+   "request_position": "in:Update.ScriptRunBehaviourUpdate",
+   "before": {
+    "tree.parent": {
+     "alive": true,
+     "activeSelf": true,
+     "activeInHierarchy": true,
+     "enabled": true,
+     "isActiveAndEnabled": true,
+     "find": "same"
+    },
+    "tree.child": {
+     "alive": true,
+     "activeSelf": true,
+     "activeInHierarchy": true,
+     "enabled": true,
+     "isActiveAndEnabled": true,
+     "find": "same"
+    }
+   },
+   "mechanisms": {
+    "FLAG_ONLY": {
+     "tree.parent": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": []
+     },
+     "tree.child": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": []
+     }
+    },
+    "CALLBACK_ONLY": {
+     "tree.parent": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     },
+     "tree.child": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "CALLBACK_INACTIVE": {
+     "tree.parent": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     },
+     "tree.child": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DEACTIVATE": {
+     "tree.parent": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     },
+     "tree.child": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "LEAVE_HIERARCHY": {
+     "tree.parent": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     },
+     "tree.child": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DISABLE_BEHAVIOURS": {
+     "tree.parent": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     },
+     "tree.child": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "NULL_PENDING": {
+     "tree.parent": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     },
+     "tree.child": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "IMMEDIATE": {
+     "tree.parent": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable",
+       "OnDestroy"
+      ]
+     },
+     "tree.child": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable",
+       "OnDestroy"
+      ]
+     }
+    }
+   },
+   "brackets": {
+    "SAME_LEAF": [
+     "in:Update.ScriptRunBehaviourUpdate",
+     0
+    ],
+    "NEXT_DELAYED": [
+     "in:Update.ScriptRunDelayedDynamicFrameRate",
+     0
+    ],
+    "FRAME_DRAINS": [
+     "in:PostLateUpdate.PlayerSendFrameStarted",
+     0
+    ],
+    "NEXT_FRAME_START": [
+     "in:TimeUpdate.WaitForLastPresentationAndUpdateTime",
+     null
+    ],
+    "OUTSIDE_LOOP": [
+     "after:PostLateUpdate.ObjectDispatcherPostLateUpdate",
+     null
+    ]
+   }
+  },
+  {
+   "case": "same.update",
+   "step": 16,
+   "point": "update",
+   "subject": "same.update",
+   "target": "gameObject",
+   "reads": [
+    "same.update"
+   ],
+   "request_position": "in:Update.ScriptRunBehaviourUpdate",
+   "before": {
+    "same.update": {
+     "alive": true,
+     "activeSelf": true,
+     "activeInHierarchy": true,
+     "enabled": true,
+     "isActiveAndEnabled": true,
+     "find": "same"
+    }
+   },
+   "mechanisms": {
+    "FLAG_ONLY": {
+     "same.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": []
+     }
+    },
+    "CALLBACK_ONLY": {
+     "same.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "CALLBACK_INACTIVE": {
+     "same.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DEACTIVATE": {
+     "same.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "LEAVE_HIERARCHY": {
+     "same.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DISABLE_BEHAVIOURS": {
+     "same.update": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "NULL_PENDING": {
+     "same.update": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "IMMEDIATE": {
+     "same.update": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable",
+       "OnDestroy"
+      ]
+     }
+    }
+   },
+   "brackets": {
+    "SAME_LEAF": [
+     "in:Update.ScriptRunBehaviourUpdate",
+     0
+    ],
+    "NEXT_DELAYED": [
+     "in:Update.ScriptRunDelayedDynamicFrameRate",
+     0
+    ],
+    "FRAME_DRAINS": [
+     "in:PostLateUpdate.PlayerSendFrameStarted",
+     0
+    ],
+    "NEXT_FRAME_START": [
+     "in:TimeUpdate.WaitForLastPresentationAndUpdateTime",
+     null
+    ],
+    "OUTSIDE_LOOP": [
+     "after:PostLateUpdate.ObjectDispatcherPostLateUpdate",
+     null
+    ]
+   }
+  },
+  {
+   "case": "same.late",
+   "step": 16,
+   "point": "late",
+   "subject": "same.late",
+   "target": "gameObject",
+   "reads": [
+    "same.late"
+   ],
+   "request_position": "in:PreLateUpdate.ScriptRunBehaviourLateUpdate",
+   "before": {
+    "same.late": {
+     "alive": true,
+     "activeSelf": true,
+     "activeInHierarchy": true,
+     "enabled": true,
+     "isActiveAndEnabled": true,
+     "find": "same"
+    }
+   },
+   "mechanisms": {
+    "FLAG_ONLY": {
+     "same.late": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": []
+     }
+    },
+    "CALLBACK_ONLY": {
+     "same.late": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "CALLBACK_INACTIVE": {
+     "same.late": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DEACTIVATE": {
+     "same.late": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "LEAVE_HIERARCHY": {
+     "same.late": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DISABLE_BEHAVIOURS": {
+     "same.late": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "NULL_PENDING": {
+     "same.late": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "IMMEDIATE": {
+     "same.late": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable",
+       "OnDestroy"
+      ]
+     }
+    }
+   },
+   "brackets": {
+    "SAME_LEAF": [
+     "in:PreLateUpdate.ScriptRunBehaviourLateUpdate",
+     0
+    ],
+    "NEXT_DELAYED": [
+     "in:PostLateUpdate.ScriptRunDelayedDynamicFrameRate",
+     0
+    ],
+    "FRAME_DRAINS": [
+     "in:PostLateUpdate.PlayerSendFrameStarted",
+     0
+    ],
+    "NEXT_FRAME_START": [
+     "in:TimeUpdate.WaitForLastPresentationAndUpdateTime",
+     null
+    ],
+    "OUTSIDE_LOOP": [
+     "after:PostLateUpdate.ObjectDispatcherPostLateUpdate",
+     null
+    ]
+   }
+  },
+  {
+   "case": "same.eof",
+   "step": 16,
+   "point": "eof",
+   "subject": "same.eof",
+   "target": "gameObject",
+   "reads": [
+    "same.eof"
+   ],
+   "request_position": "after:PostLateUpdate.TriggerEndOfFrameCallbacks",
+   "before": {
+    "same.eof": {
+     "alive": true,
+     "activeSelf": true,
+     "activeInHierarchy": true,
+     "enabled": true,
+     "isActiveAndEnabled": true,
+     "find": "same"
+    }
+   },
+   "mechanisms": {
+    "FLAG_ONLY": {
+     "same.eof": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": []
+     }
+    },
+    "CALLBACK_ONLY": {
+     "same.eof": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "CALLBACK_INACTIVE": {
+     "same.eof": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DEACTIVATE": {
+     "same.eof": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "LEAVE_HIERARCHY": {
+     "same.eof": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DISABLE_BEHAVIOURS": {
+     "same.eof": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "NULL_PENDING": {
+     "same.eof": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "IMMEDIATE": {
+     "same.eof": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable",
+       "OnDestroy"
+      ]
+     }
+    }
+   },
+   "brackets": {
+    "SAME_LEAF": [
+     "in:PostLateUpdate.GUIClearEvents",
+     0
+    ],
+    "NEXT_DELAYED": [
+     "in:EarlyUpdate.ScriptRunDelayedStartupFrame",
+     1
+    ],
+    "FRAME_DRAINS": [
+     "in:PostLateUpdate.PlayerSendFrameStarted",
+     1
+    ],
+    "NEXT_FRAME_START": [
+     "in:TimeUpdate.WaitForLastPresentationAndUpdateTime",
+     null
+    ],
+    "OUTSIDE_LOOP": [
+     "after:PostLateUpdate.ObjectDispatcherPostLateUpdate",
+     null
+    ]
+   }
+  },
+  {
+   "case": "reenter",
+   "step": 19,
+   "point": "update",
+   "subject": "reenter",
+   "target": "gameObject",
+   "reads": [
+    "reenter"
+   ],
+   "request_position": "in:Update.ScriptRunBehaviourUpdate",
+   "before": {
+    "reenter": {
+     "alive": true,
+     "activeSelf": true,
+     "activeInHierarchy": true,
+     "enabled": true,
+     "isActiveAndEnabled": true,
+     "find": "same"
+    }
+   },
+   "mechanisms": {
+    "FLAG_ONLY": {
+     "reenter": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": []
+     }
+    },
+    "CALLBACK_ONLY": {
+     "reenter": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": true,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "CALLBACK_INACTIVE": {
+     "reenter": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DEACTIVATE": {
+     "reenter": {
+      "after": {
+       "alive": true,
+       "activeSelf": false,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "LEAVE_HIERARCHY": {
+     "reenter": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": false,
+       "enabled": true,
+       "isActiveAndEnabled": false,
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "DISABLE_BEHAVIOURS": {
+     "reenter": {
+      "after": {
+       "alive": true,
+       "activeSelf": true,
+       "activeInHierarchy": true,
+       "enabled": false,
+       "isActiveAndEnabled": false,
+       "find": "same"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "NULL_PENDING": {
+     "reenter": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable"
+      ]
+     }
+    },
+    "IMMEDIATE": {
+     "reenter": {
+      "after": {
+       "alive": false,
+       "activeSelf": "!exception",
+       "activeInHierarchy": "!exception",
+       "enabled": "!exception",
+       "isActiveAndEnabled": "!exception",
+       "find": "none"
+      },
+      "during": [
+       "OnDisable",
+       "OnDestroy"
+      ]
+     }
+    }
+   },
+   "brackets": {
+    "SAME_LEAF": [
+     "in:Update.ScriptRunBehaviourUpdate",
+     0
+    ],
+    "NEXT_DELAYED": [
+     "in:Update.ScriptRunDelayedDynamicFrameRate",
+     0
+    ],
+    "FRAME_DRAINS": [
+     "in:PostLateUpdate.PlayerSendFrameStarted",
+     0
+    ],
+    "NEXT_FRAME_START": [
+     "in:TimeUpdate.WaitForLastPresentationAndUpdateTime",
+     null
+    ],
+    "OUTSIDE_LOOP": [
+     "after:PostLateUpdate.ObjectDispatcherPostLateUpdate",
+     null
+    ]
+   }
+  }
+ ],
+ "outcomes": [
+  "ONE",
+  "MULTIPLE",
+  "NONE",
+  "NOT_EVALUABLE"
+ ]
+}

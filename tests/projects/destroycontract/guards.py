@@ -122,8 +122,13 @@ def is_position(v):
     return isinstance(v, str) and (v == 'boot' or v.startswith(('in:', 'after:')))
 
 
+def is_event_name(e):
+    """A recorded event name; a reentrant Destroy that throws records `threw2.<exception type>`."""
+    return isinstance(e, str) and (e in EVENTS or re.fullmatch(r'threw2\.[A-Za-z_][A-Za-z0-9_`]*', e) is not None)
+
+
 def is_event(v):
-    return (isinstance(v, dict) and tuple(v) == ('e', 's', 'f', 'p') and v['e'] in EVENTS and is_int(v['s'])
+    return (isinstance(v, dict) and tuple(v) == ('e', 's', 'f', 'p') and is_event_name(v['e']) and is_int(v['s'])
             and -1 <= v['s'] <= FINAL_STEP and is_int(v['f']) and is_position(v['p']))
 
 

@@ -15,6 +15,8 @@ not the authored set-up state is NOT_EVALUABLE for that case, never refitted.
     FLAG_ONLY          public state unchanged, no callback before returning
     CALLBACK_ONLY      public state unchanged, OnDisable before returning if the behaviour was
                        active and enabled
+    CALLBACK_INACTIVE  as CALLBACK_ONLY, but isActiveAndEnabled false (active/enabled flags and
+                       Find unchanged)
     DEACTIVATE         as SetActive(false) on the target: target activeSelf false, every read
                        subject activeInHierarchy/isActiveAndEnabled false, enabled unchanged, Find
                        none, still alive; OnDisable before returning if it was active and enabled
@@ -49,9 +51,12 @@ CAPTURED loop listing (loop.leaves):
                        Unbound queue drains)
     NEXT_FRAME_START   in the first leaf of the next frame (d not constrained)
     OUTSIDE_LOOP       after the last leaf (between frames; d not constrained)
-A hypothesis fits a callback kind if it predicts every evaluable case of it. Outcomes: ONE,
-MULTIPLE (cannot distinguish within this fixture) or NONE (a valid negative). The bracket says
-which leaf the call happened in, not which internal node made it.
+A hypothesis fits a callback kind if it predicts every deferred callback of it (overall and per
+request point). Outcomes: ONE, MULTIPLE (cannot distinguish within this fixture) or NONE (a valid
+negative); a callback before the request returned is BEFORE_RETURN and one never seen by the final
+step NOT_DELIVERED_BY_FINAL_STEP (data, not a fit). The bracket says which leaf's marker pair the
+call happened between, not which internal node made it. The reentrant case (DESCRIPTIVE_CASES) is
+reported per case only and never enters an intersection.
 
 Descriptive (no hypothesis): per case the subject's callback counters at every snapshot point
 from the request until its OnDestroy (subsequent Update/LateUpdate/end-of-frame delivery), and the
@@ -66,12 +71,12 @@ import sys
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 sys.path.insert(0, str(PROBE))
-from guards import CASES, FINAL_STEP, POINTS, POINT_POSITION, SUBJECTS, case_reads, parse  # noqa: E402
+from guards import CASES, FINAL_STEP, LABELS, POINTS, POINT_POSITION, SUBJECTS, case_reads, parse  # noqa: E402
 
 # The default loop as recorded by a Unity 6000.0.71f1 Editor capture (the input probe's
 # canonical); used only to tabulate predictions before capture. The fit uses the captured loop.
 REFERENCE_LOOP = REPO/'tests/projects/input/Reference/unity-6000.0.71f1.jsonl'
-GO_MECHANISMS = ('FLAG_ONLY', 'CALLBACK_ONLY', 'DEACTIVATE', 'LEAVE_HIERARCHY', 'DISABLE_BEHAVIOURS',
+GO_MECHANISMS = ('FLAG_ONLY', 'CALLBACK_ONLY', 'CALLBACK_INACTIVE', 'DEACTIVATE', 'LEAVE_HIERARCHY', 'DISABLE_BEHAVIOURS',
                  'NULL_PENDING', 'IMMEDIATE')
 COMPONENT_MECHANISMS = ('C_FLAG_ONLY', 'C_CALLBACK_ONLY', 'C_DISABLE', 'C_INACTIVE_FLAG', 'C_DETACH_PENDING',
                         'C_NULL_PENDING', 'C_IMMEDIATE')
@@ -80,6 +85,9 @@ FIELDS = ('alive', 'activeSelf', 'activeInHierarchy', 'enabled', 'isActiveAndEna
 COMPONENT_FIELDS = ('alive', 'activeSelf', 'activeInHierarchy', 'find', 'comp', 'enabled', 'isActiveAndEnabled',
                     'getComponent')
 EXCEPTION = '!exception'    # any exception type name
+# Cases fitted and reported per case but kept out of the mechanism/delivery intersections: the
+# reentrant case changes the callback itself, so it is descriptive only.
+DESCRIPTIVE_CASES = ('reenter',)
 
 
 def sha(path):
@@ -108,7 +116,9 @@ def authored_before():
         states[label] = {'alive': True, 'activeSelf': self_active, 'activeInHierarchy': in_hierarchy,
                          'enabled': enabled, 'isActiveAndEnabled': in_hierarchy and enabled,
                          'find': 'same' if in_hierarchy else 'none', 'comp': True, 'getComponent': 'same',
-                         'awake': self_active and (parent is None or setup[parent][1] != 'inactive')}
+                         # Every subject is created active and gets its observer while active (the
+                         # probe deactivates or disables only afterwards), so Awake ran for all.
+                         'awake': True}
     return states
 
 
@@ -121,6 +131,8 @@ def go_prediction(mechanism, before, role):
         return same, []
     if mechanism == 'CALLBACK_ONLY':
         return same, disable
+    if mechanism == 'CALLBACK_INACTIVE':
+        return dict(same, isActiveAndEnabled=False), disable
     if mechanism == 'DEACTIVATE':
         return dict(same, activeSelf=False if role == 'target' else b['activeSelf'], activeInHierarchy=False,
                     isActiveAndEnabled=False, find='none'), disable
@@ -190,7 +202,7 @@ def bracket(hypothesis, request_position, leaves):
         d, i = first_after(leaves, index, False, lambda leaf: True)
         return 'in:'+leaves[i], d
     if hypothesis == 'NEXT_DELAYED':
-        found = first_after(leaves, index, kind == 'in' and False, lambda leaf: leaf.split('.')[-1].startswith('ScriptRunDelayed'))
+        found = first_after(leaves, index, False, lambda leaf: leaf.split('.')[-1].startswith('ScriptRunDelayed'))
         return ('in:'+leaves[found[1]], found[0]) if found else None
     if hypothesis == 'FRAME_DRAINS':
         found = first_after(leaves, index, False, lambda leaf: leaf in ('PostLateUpdate.PlayerSendFrameStarted',
@@ -261,29 +273,53 @@ def outcome(fits):
     return 'NONE' if not fits else 'ONE' if len(fits) == 1 else 'MULTIPLE'
 
 
+def indexed_traces(values):
+    """Per subject, its trace events with their index in the global raw order (None when the
+    order and the traces disagree; the guards refuse such a record)."""
+    order = values.get('order')
+    traces = {label: values.get('trace.'+label) for label in LABELS}
+    if not isinstance(order, list) or not all(isinstance(t, list) for t in traces.values()):
+        return None
+    cursor = {label: 0 for label in LABELS}
+    indexed = {label: [] for label in LABELS}
+    for g, token in enumerate(order):
+        label, _, what = str(token).rpartition(':')
+        if label not in cursor or cursor[label] >= len(traces[label]) or traces[label][cursor[label]].get('e') != what:
+            return None
+        indexed[label].append((g, traces[label][cursor[label]]))
+        cursor[label] += 1
+    if any(cursor[label] != len(traces[label]) for label in LABELS):
+        return None
+    return indexed
+
+
 def fit(path, report):
     records, problems = parse(path)
     values = {r['k']: r['v'] for r in records}
     leaves = values.get('loop.leaves') or []
     order = values.get('order') or []
+    indexed = indexed_traces(values)
     result = {'capture': str(path), 'capture_sha256': sha(path), 'parse_problems': problems,
+              'order_consistent': indexed is not None,
               'loop_equals_reference': leaves == reference_leaves(), 'cases': {}}
     go_fits, comp_fits = set(GO_MECHANISMS), set(COMPONENT_MECHANISMS)
     go_evaluated = comp_evaluated = 0
-    delivery = {'OnDestroy': {h: True for h in BRACKETS}, 'OnDisable': {h: True for h in BRACKETS}}
-    delivered = {'OnDestroy': 0, 'OnDisable': 0}
+    delivery = {kind: {'all': {h: True for h in BRACKETS}, 'count': 0,
+                       'points': {p: {'fits': {h: True for h in BRACKETS}, 'count': 0} for p in POINTS}}
+                for kind in ('OnDisable', 'OnDestroy')}
     authored = authored_before()
     for name, step, point, subject, target in CASES:
         reads = case_reads(subject)
         fields = COMPONENT_FIELDS if target == 'component' else FIELDS
-        case = {'reads': {}, 'mechanisms': {}, 'delivery': {}}
-        evaluable = True
+        case = {'reads': {}, 'mechanisms': {}, 'delivery': {}, 'in_intersection': name not in DESCRIPTIVE_CASES}
+        evaluable = indexed is not None
         for r in reads:
             b = values.get(f'case.{name}.before.{r}')
             a = values.get(f'case.{name}.after.{r}')
             during = window(order, subject, r)
             case['reads'][r] = {'before': b, 'after': a, 'during': during}
-            if b is None or a is None or during is None or any(b.get(k) != authored[r][k] for k in fields):
+            if not isinstance(b, dict) or not isinstance(a, dict) or during is None \
+                    or any(b.get(k) != authored[r][k] for k in fields):
                 evaluable = False
         mechanisms = COMPONENT_MECHANISMS if target == 'component' else GO_MECHANISMS
         if evaluable:
@@ -298,61 +334,68 @@ def fit(path, report):
                     if not all(matches(after[k], got['after'].get(k)) for k in after) or got['during'] != during:
                         ok = False
                 case['mechanisms'][m] = ok
-            fitting = {m for m, ok in case['mechanisms'].items() if ok}
-            case['mechanism_outcome'] = outcome(sorted(fitting))
-            if target == 'component':
-                comp_fits &= fitting
-                comp_evaluated += 1
-            else:
-                go_fits &= fitting
-                go_evaluated += 1
+            fitting = sorted(m for m, ok in case['mechanisms'].items() if ok)
+            case['mechanism_fits'] = fitting
+            case['mechanism_outcome'] = outcome(fitting)
+            if case['in_intersection']:
+                if target == 'component':
+                    comp_fits &= set(fitting)
+                    comp_evaluated += 1
+                else:
+                    go_fits &= set(fitting)
+                    go_evaluated += 1
         else:
             case['mechanism_outcome'] = 'NOT_EVALUABLE'
-        trace = values.get('trace.'+subject) or []
-        request = next((e for e in trace if e.get('e') == 'request'), None)
+        request = None
+        if indexed is not None:
+            request = next(((g, e) for g, e in indexed[subject] if e.get('e') == 'request'), None)
         for r in reads:
-            events = values.get('trace.'+r) or []
             during = case['reads'][r]['during'] or []
-            after_return = False
-            for e in events:
-                if request is not None and e is request:
-                    pass
-                if e.get('e') == 'returned' or (r != subject and request is not None and e.get('s', -2) >= step
-                                                and e.get('p') and e is not request and after_return is False
-                                                and False):
-                    after_return = True
-            for kind in ('OnDestroy', 'OnDisable'):
-                if kind in during or request is None:
+            for kind in ('OnDisable', 'OnDestroy'):
+                key = f'{r}.{kind}'
+                if request is None:
+                    case['delivery'][key] = {'outcome': 'NOT_EVALUABLE'}
                     continue
-                hits = [e for e in events if e.get('e') == kind and (e.get('s', -2), ) >= (step, )
-                        and events.index(e) > events.index(request) if r == subject] if r == subject else \
-                    [e for e in events if e.get('e') == kind and e.get('s', -2) >= step]
-                if not hits:
-                    case['delivery'][f'{r}.{kind}'] = {'actual': None}
+                if kind in during:
+                    case['delivery'][key] = {'outcome': 'BEFORE_RETURN'}
                     continue
-                e = hits[0]
-                d = e['f']-request['f']
+                hit = next((e for g, e in indexed[r] if g > request[0] and e.get('e') == kind), None)
+                if hit is None:
+                    case['delivery'][key] = {'outcome': 'NOT_DELIVERED_BY_FINAL_STEP'}
+                    continue
+                d = hit['f']-request[1]['f']
                 fits = {}
                 for h in BRACKETS:
-                    want = bracket(h, request['p'], leaves) if leaves else None
-                    fits[h] = want is not None and e['p'] == want[0] and (want[1] is None or want[1] == d)
-                    delivery[kind][h] = delivery[kind][h] and fits[h]
-                delivered[kind] += 1
-                case['delivery'][f'{r}.{kind}'] = {'actual': {'p': e['p'], 'd': d, 's': e['s']}, 'fits': fits}
-        case['after_request'] = subsequent(values, name, subject, step, point, trace)
+                    want = bracket(h, request[1]['p'], leaves) if leaves else None
+                    fits[h] = want is not None and hit['p'] == want[0] and (want[1] is None or want[1] == d)
+                case['delivery'][key] = {'outcome': 'DEFERRED', 'actual': {'p': hit['p'], 'd': d, 's': hit['s']},
+                                         'fits': fits, 'fitting': sorted(h for h, ok in fits.items() if ok)}
+                if case['in_intersection']:
+                    entry = delivery[kind]
+                    entry['count'] += 1
+                    entry['points'][point]['count'] += 1
+                    for h in BRACKETS:
+                        entry['all'][h] = entry['all'][h] and fits[h]
+                        entry['points'][point]['fits'][h] = entry['points'][point]['fits'][h] and fits[h]
+        case['after_request'] = subsequent(values, name, subject, step, point, values.get('trace.'+subject) or [])
         result['cases'][name] = case
     result['go_mechanisms'] = {'evaluated_cases': go_evaluated, 'fits': sorted(go_fits) if go_evaluated else [],
                                'outcome': outcome(sorted(go_fits)) if go_evaluated else 'NOT_EVALUABLE'}
     result['component_mechanisms'] = {'evaluated_cases': comp_evaluated, 'fits': sorted(comp_fits) if comp_evaluated else [],
                                       'outcome': outcome(sorted(comp_fits)) if comp_evaluated else 'NOT_EVALUABLE'}
     result['delivery'] = {}
-    for kind in ('OnDestroy', 'OnDisable'):
-        fits = sorted(h for h, ok in delivery[kind].items() if ok) if delivered[kind] else []
-        result['delivery'][kind] = {'deferred_callbacks': delivered[kind], 'fits': fits,
-                                    'outcome': outcome(fits) if delivered[kind] else 'NOT_EVALUABLE'}
-    result['reenter'] = values.get('trace.reenter')
+    for kind, entry in delivery.items():
+        fits = sorted(h for h, ok in entry['all'].items() if ok) if entry['count'] else []
+        result['delivery'][kind] = {
+            'deferred_callbacks': entry['count'], 'fits': fits,
+            'outcome': outcome(fits) if entry['count'] else 'NOT_EVALUABLE',
+            'points': {p: {'deferred_callbacks': v['count'],
+                           'fits': sorted(h for h, ok in v['fits'].items() if ok) if v['count'] else [],
+                           'outcome': outcome(sorted(h for h, ok in v['fits'].items() if ok)) if v['count'] else 'NOT_EVALUABLE'}
+                       for p, v in entry['points'].items()}}
+    result['reenter'] = {'trace': values.get('trace.reenter'), 'note': 'descriptive only; never fitted'}
     Path(report).write_text(json.dumps(result, indent=1)+'\n')
-    print(json.dumps({k: result[k] for k in ('go_mechanisms', 'component_mechanisms', 'delivery')}, indent=1))
+    print(json.dumps({k: result[k] for k in ('order_consistent', 'go_mechanisms', 'component_mechanisms', 'delivery')}, indent=1))
     return result
 
 
