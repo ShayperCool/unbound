@@ -393,8 +393,8 @@ public class DestroyContractProbe : MonoBehaviour
                    + ",\"p\":" + Q(Position()) + "}");
     }
 
-    /// <summary>Bracket integrity: every marker pair is balanced at the end-of-frame point, and
-    /// between two end-of-frame points every leaf outside FixedUpdate ran exactly once.</summary>
+    /// <summary>Bracket integrity: every marker pair is balanced at the teofc point, and between two
+    /// teofc points every leaf outside FixedUpdate ran exactly once.</summary>
     void CheckLoop()
     {
         for (int i = 0; i < leaves.Length; i++) if (beforeVisits[i] != afterVisits[i]) balanced = false;

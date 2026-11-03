@@ -9,7 +9,8 @@ missing, extra and differing key is listed with both values, and the report keep
 a differing state read (a dict) the differing fields are also listed; for a differing trace or
 order (a list) the first differing index is listed. Lists are compared in their recorded order;
 nothing is sorted. Groups summarize the differences by data group (context, setup, loop,
-snap.<subject>, case.<case>, trace.<subject>, order, logs, faults, steps).
+snap.<subject>, case.<case> (a wfeof case's issued flag included), points, trace.<subject>,
+order, logs, faults, steps).
 """
 import argparse
 import json

@@ -418,6 +418,8 @@ def fit(path, report):
         request = None
         if indexed is not None:
             request = next(((g, e) for g, e in indexed[subject] if e.get('e') == 'request'), None)
+        # The recorded request (its position is fixed for the marker points, an answer for wfeof).
+        case['request'] = None if request is None else {k: request[1][k] for k in ('s', 'f', 'p')}
         for r in reads:
             during = case['reads'][r]['during'] or []
             for kind in ('OnDisable', 'OnDestroy'):

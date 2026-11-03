@@ -22,8 +22,8 @@ wfeof case is either issued exactly once at the first wfeof point of its step or
 Gates are instrumentation and protocol only: the authored tables, the context (release,
 batchmode, Editor, OpenGLCore, scene, capture frame rate), a verified marker installation, balanced
 markers, every non-fixed leaf once per frame, the fixed points once per step at their positions,
-request/returned events exactly where the case table puts them (for a wfeof case: where its
-recorded resume was, or nowhere when not issued), positions naming recorded leaves, a global
+request/returned events exactly where the case table puts them (for a wfeof case: at the step,
+position and frame of its step's first recorded resume, or nowhere when not issued), positions naming recorded leaves, a global
 order consistent with the per-subject traces, no probe fault and no Exception/Assert log. No state read, callback, count, position of any other
 callback, or Error/Warning log is a gate: the answers to the precommitted hypotheses are data.
 
@@ -366,8 +366,9 @@ def protocol_problems(values):
                     problems.append(f'case {name}: issued but {len(found)} {what} events, not one')
                 elif found[0]['s'] != step:
                     problems.append(f'case {name}: {what} at step {found[0]["s"]}, not step {step}')
-                elif resumes is not None and (not resumes or found[0]['p'] != resumes[0]['p']):
-                    problems.append(f'case {name}: {what} at {found[0]["p"]}, not at the first wfeof resume of step {step}')
+                elif resumes is not None and (not resumes or (found[0]['p'], found[0]['f']) != (resumes[0]['p'], resumes[0]['f'])):
+                    problems.append(f'case {name}: {what} at {found[0]["p"]} frame {found[0]["f"]}, not at the first wfeof '
+                                    f'resume of step {step}')
             if any(r is None for r in reads):
                 problems.append(f'case {name}: issued but its reads are null')
             if resumes is not None and not resumes:
