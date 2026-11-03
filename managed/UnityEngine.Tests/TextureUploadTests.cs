@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unbound.Runtime;
 using UnityEngine;
 using Xunit;
@@ -27,9 +28,24 @@ namespace UnityEngine.Tests
             }
         }
 
-        static Texture2D Applied()
+        sealed class Scope : IDisposable
         {
-            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false, true) { name = "dirty" };
+            readonly List<Texture2D> m_Textures = new List<Texture2D>();
+            internal Texture2D Keep(Texture2D texture)
+            {
+                m_Textures.Add(texture);
+                return texture;
+            }
+            public void Dispose()
+            {
+                foreach (var texture in m_Textures)
+                    if (texture != null) Object.DestroyImmediate(texture);
+            }
+        }
+
+        static Texture2D Applied(Scope scope)
+        {
+            var texture = scope.Keep(new Texture2D(2, 2, TextureFormat.RGBA32, false, true) { name = "dirty" });
             texture.SetPixels(new[] { Color.red, Color.red, Color.red, Color.red });
             texture.Apply();
             return texture;
@@ -39,7 +55,8 @@ namespace UnityEngine.Tests
         [MemberData(nameof(Writers))]
         public void CpuWriteAfterApplyIsNotUploadedByUse(string writer)
         {
-            var texture = Applied();
+            using var scope = new Scope();
+            var texture = Applied(scope);
             uint applied = texture.updateCount;
             ulong handle = TextureHandles.Of(texture);
             Write(texture, writer);
@@ -49,16 +66,16 @@ namespace UnityEngine.Tests
             Assert.False(texture.m_PixelsDirty);
             texture.Apply(false);
             Assert.Equal(applied + 1, texture.updateCount);
-            Object.DestroyImmediate(texture);
         }
 
         [Fact]
         public void CloneUploadsUnappliedEditWithoutUploadingSource()
         {
-            var source = Applied();
+            using var scope = new Scope();
+            var source = Applied(scope);
             source.SetPixel(0, 0, Color.green);
             uint applied = source.updateCount;
-            var copy = Object.Instantiate(source);
+            var copy = scope.Keep(Object.Instantiate(source));
             Assert.NotEqual(0UL, copy.m_NativeHandle);
             Assert.NotEqual(source.m_NativeHandle, copy.m_NativeHandle);
             Assert.False(copy.m_PixelsDirty);
@@ -69,31 +86,30 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(copy);
             TextureHandles.Of(source);
             Assert.Equal(applied, source.updateCount);
-            Object.DestroyImmediate(source);
         }
 
         [Fact]
         public void TextureWithoutGpuStorageUploadsCurrentPixelsAtFirstUse()
         {
-            var texture = new Texture2D(2, 2, TextureFormat.RGBA32, false, true);
+            using var scope = new Scope();
+            var texture = scope.Keep(new Texture2D(2, 2, TextureFormat.RGBA32, false, true));
             texture.SetPixel(0, 0, Color.green);
             Assert.Equal(0u, texture.updateCount);
             Assert.NotEqual(0UL, TextureHandles.Of(texture));
             Assert.Equal(1u, texture.updateCount);
             Assert.False(texture.m_PixelsDirty);
-            Object.DestroyImmediate(texture);
         }
 
         [Fact]
         public void ReinitializedTextureUploadsItsNewShapeAtNextUse()
         {
-            var texture = Applied();
+            using var scope = new Scope();
+            var texture = Applied(scope);
             uint applied = texture.updateCount;
             texture.Reinitialize(1, 1);
             texture.SetPixel(0, 0, Color.green);
             TextureHandles.Of(texture);
             Assert.Equal(applied + 1, texture.updateCount);
-            Object.DestroyImmediate(texture);
         }
     }
 }
