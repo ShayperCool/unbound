@@ -2771,3 +2771,12 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - The EOF audit is negative: pre-loop wait delay and first-frame EOF suppression both fit; neither hunk is applied. No new Native or runtime run.
 - Corrected the InstantiateAsync inventory to the existing 731/777 replay; its 46 retained events remain open.
 - This is historical evidence plus current source review, not a replay on the new LP runtime. Reports: `~/.cache/unbound/validation/runs/cullinggroup-audit-20261103-3/` and `cullinggroup-root-adjudication-20261103/adjudication.json`.
+
+### 2026-11-03: public shader and material pass counts
+
+- Admitted matching sourcefd64c55d: public counts follow measured LOD/Fallback declarations; private declarations cache2->3, renderer/ABI unchanged.
+- Shaderkeywords1499/1510, eight resolved/zero lost/eleven retained; shaderpasscount849/923, all68cells and340count readouts exact,74 non-count gaps unchanged. Precommitted fit remains NONE.
+- Builtinrp830/954 with its124 expected differences;37images unchanged. Customrt349/352 and100/140images; all140 images unchanged before/after.
+- Suite1649/1649; eight old-Core red failures. Rust18+8 tests pass,103exact/93unknown/0known-wrong. API0/2319 reused by65228 equal metadata rows; Generated108 unchanged.
+- Frozen candidatec9d3ff90/Core9e873cc2/CLIce742394/PhysX487d. One native compile/link; second host-script invocation reused the same output.
+- Open: device/SRP/backend/negative-limit selections, CRT new indices, renderer/public index split and93 unknown source forms. Reports: `~/.cache/unbound/validation/runs/shader-pass-count-matching-validation-20261103-4/` and `shader-pass-count-root-admission-20261103/`.

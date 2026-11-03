@@ -89,15 +89,25 @@ color spaces and windowed captures remain unmeasured.
 
 ## Measured implementation and limits
 
-The matching-runtime comparison at source `ebb1ee50` passes 1491/1510 canonical keys, up
-from 1485 before the query correction. It resolves six more reference keys with zero lost
-matches, missing keys or extra keys. Built-ins with no Properties block now report zero
-properties; serialized UsePass entries resolve their target LightMode tags, including the
-terrain Picking and SceneSelectionPass passes. The separate declarations cache format is
-version 2; the shader compilation cache and ABI are unchanged. All material, compute,
-local/global and variant groups pass. The remaining 19 keys are eight pass counts,
-ten exception-message strings and `context.isBatchMode`.
-These are retained failures, with raw answers and exact comparison unchanged.
+The matching-runtime comparison at source `fd64c55d` passes 1499/1510 canonical keys.
+The public passCount correction resolves exactly eight more keys from the previous1491,
+with no lost match, missing key, extra key or changed retained value. The eleven retained
+keys are ten exception-message strings and `context.isBatchMode`; exact comparison stays red.
+Built-ins with no Properties block expose zero properties, and serialized UsePass entries
+resolve their target LightMode tags, including terrain Picking and SceneSelectionPass.
+The separate declarations cache is version3; the old v2 entry is unchanged and unused by
+the candidate. Shader compilation, its cache and the ABI are unchanged. All material,
+compute, local/global and variant groups retain their passes.
+
+Public Shader and Material pass counts also match all68 LOD/Fallback cells across five
+readouts in `../shaderpasscount`, including the option-less surface's four declared passes.
+The precommitted count hypotheses still fit NONE. The nine undrawn-cell answers are scoped
+post-capture observations. Built-in device restrictions, other backends/SRP/negative limits,
+new CRT indices and the public-count/renderer-index split remain unmeasured or open.
+The matching suite passes1649/1649, with eight old-Core red failures. API0/2319 is reused
+through65228 equal public/protected metadata rows; Generated108 is unchanged. Reports are
+in `validation/runs/shader-pass-count-matching-validation-20261103-4/` and
+`validation/runs/shader-pass-count-root-admission-20261103/`.
 
 The implementation uses the following measured rules in this fixture. Source-derived keyword
 ordering and built-in global defaults are enabled only for exactly Unity `6000.0.71f1`.
@@ -141,7 +151,7 @@ and source-derived answers are checked separately. Mid-session shader/compute/in
 other contexts, headless pass/property answers and variant `Resources.UnloadAsset` remain
 unmeasured; CommandBuffer keyword calls retain their previous behavior.
 
-Validation used 49 Rust test results, a fresh API check with 0 errors over 2319 types,
+The earlier shader-keyword implementation validation used 49 Rust test results, a fresh API check with 0 errors over 2319 types,
 108 byte-equal generated files, and the full managed suite at 1620/1631 with the historical
 11 failures unchanged. A red control on the previous Core fails exactly the four variant
 assertions and the new inline-property-reader test that the current Core passes. The logger

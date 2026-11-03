@@ -102,7 +102,7 @@ SubShader. Predictions and analysis are unchanged after capture.
 Within this fixture, the count equals the drawn SubShader's declared count whenever one is
 drawn. In nine cells nothing is drawn, yet the count equals the first SubShader's declared
 count. This combined description is an observation made after capture, not a predeclared fit
-or an accepted production rule. The option-less surface SubShader exposes four passes:
+or a rule established for every backend or pipeline. The option-less surface SubShader exposes four passes:
 forward base, forward add, deferred and meta.
 
 The referring shader's maximum LOD selects its own SubShaders before its Fallback's, under
@@ -117,6 +117,21 @@ setting on exit; Assets and the authored fixture remain unchanged. Root independ
 rehashes both repeats and reruns their strict capture/compiler-graph guards. Evidence:
 `validation/runs/shader-pass-count-native-20261102a/receipt.json` and Root
 `validation/runs/shader-pass-count-root-20261102/native-adjudication.json`.
+
+## Matching engine validation
+
+The measured public-query implementation at `fd64c55d` matches all68 cells and340 count
+readouts. The complete fixture matches849/923 keys, with zero lost matches or non-count
+changes. The74 retained keys are39 fallback-tag,20 FindPass,14 tag and one batch-context
+answer; all keep their previous values. Every rendered colour is unchanged. The precommitted
+count fit remains NONE. This changes public counts, without implementing deferred/meta
+rendering or establishing the renderer's pass-index APIs and new CRT indices.
+
+The matching suite passes1649/1649, with all eight new cases red on the previous Core.
+The builtinrp and customrt controls keep their values and37/140 image bytes respectively.
+Serialized built-in device limits, SRP/backend exclusions and negative-limit selection stay
+unmeasured. Full raw unions and limits: `validation/runs/shader-pass-count-matching-validation-20261103-4/`
+and Root `validation/runs/shader-pass-count-root-admission-20261103/`.
 
 ## Capture
 
