@@ -166,7 +166,7 @@ namespace UnityEngine
             int w = MipWidth(mipLevel), h = MipHeight(mipLevel);
             if (x < 0 || y < 0 || x >= w || y >= h) return;
             Write(mipLevel, y * w + x, color);
-            m_PixelsDirty = true;
+            CpuTexelsChanged();
         }
 
         void CheckBlock(int x, int y, int w, int h, int mip)
@@ -240,7 +240,7 @@ namespace UnityEngine
             int width = MipWidth(miplevel);
             for (int j = 0; j < blockHeight; j++)
                 for (int i = 0; i < blockWidth; i++) Write(miplevel, (y + j) * width + x + i, colors[j * blockWidth + i]);
-            m_PixelsDirty = true;
+            CpuTexelsChanged();
         }
 
         public void SetPixels32(Color32[] colors) => SetPixels32(colors, 0);
@@ -260,7 +260,7 @@ namespace UnityEngine
             int width = MipWidth(miplevel);
             for (int j = 0; j < blockHeight; j++)
                 for (int i = 0; i < blockWidth; i++) Write(miplevel, (y + j) * width + x + i, colors[j * blockWidth + i]);
-            m_PixelsDirty = true;
+            CpuTexelsChanged();
         }
 
         int RawMipSize(int mip) => Texture2DTexels.Size(m_Format, MipWidth(mip), MipHeight(mip));
@@ -346,7 +346,7 @@ namespace UnityEngine
             if (data == null) throw new ArgumentNullException(nameof(data));
             if (data.Length < RawChainSize()) throw new UnityException("LoadRawTextureData: not enough data provided.");
             DecodeMipChain(data);
-            m_PixelsDirty = true;
+            CpuTexelsChanged();
         }
         public void LoadRawTextureData(IntPtr data, int size)
         {
@@ -364,7 +364,7 @@ namespace UnityEngine
             int size = RawMipSize(mipLevel);
             if (bytes.Length < size) throw new ArgumentException("SetPixelData: not enough data provided.");
             DecodeLevel(bytes.Slice(0, size), mipLevel);
-            m_PixelsDirty = true;
+            CpuTexelsChanged();
         }
         public byte[] GetRawTextureData()
         {
