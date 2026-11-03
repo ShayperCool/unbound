@@ -352,13 +352,9 @@ namespace Unbound.Runtime
 
         internal static void RunFixedUpdate() => s_FixedUpdate.Run("FixedUpdate", ConstantForces.Update);
 
-        /// <summary>Update, then Start for the behaviours enabled during it (measured: they start
-        /// right after the pass, before the coroutines resume).</summary>
-        internal static void RunUpdate()
-        {
-            s_Update.Run("Update");
-            RunPendingStarts();
-        }
+        /// <summary>Update for the behaviours present when the pass begins. Behaviours enabled
+        /// during it start at the following delayed-update node, before coroutines resume.</summary>
+        internal static void RunUpdate() => s_Update.Run("Update");
 
         /// <summary>LateUpdate, then Start for the behaviours enabled during it (measured: they
         /// start at the end of the frame, without a LateUpdate).</summary>
