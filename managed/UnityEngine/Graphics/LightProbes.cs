@@ -457,15 +457,20 @@ namespace UnityEngine
         internal static void SceneForgotten(int scene) => s_Own.Remove(scene);
 
         /// <summary>
-        /// A SceneManager Single load replaces the loaded scenes, before the first of them is
-        /// unloaded: their probes leave the loaded set without needsRetetrahedralization, and the
-        /// current probes, when they are one of those scenes' own, lose their combined set
-        /// (count and cellCount 0) but keep their own (countSelf, cellCountSelf), already during
-        /// the outgoing sceneUnloaded. The incoming scene's probes then become the current ones
-        /// as its lighting data is read, before activeSceneChanged, again without an event
-        /// (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference lifecycle.jsonl,
-        /// branch t3/light-probes-lifecycle-2, commit f8516528; one outgoing scene). With several
-        /// outgoing scenes the same reset is applied once for all of them: inferred, not measured.
+        /// A SceneManager Single load replaces the loaded scenes, once the first of them has
+        /// destroyed its objects and before its sceneUnloaded (SceneManagerInternal.UnloadForSingleLoad):
+        /// their probes leave the loaded set without needsRetetrahedralization, and the current
+        /// probes, when they are one of those scenes' own, lose their combined set (count and
+        /// cellCount 0) but keep their own (countSelf, cellCountSelf). In the outgoing objects'
+        /// recorded OnDestroy snapshot they are still whole; at the outgoing sceneUnloaded they are
+        /// cleared. Only the OnDestroy snapshot is recorded; keeping the set through OnDisable
+        /// and every outgoing root's destruction is Unbound's placement within that window.
+        /// The incoming scene's probes then become the current ones as its lighting data
+        /// is read, before activeSceneChanged, again without an event (measured, Unity
+        /// 6000.0.71f1: tests/projects/lightprobes Reference lifecycle.jsonl, branch
+        /// t3/light-probes-lifecycle-2, commit f8516528, and creation-ownership.jsonl t1.a.iv; one
+        /// outgoing scene). With several outgoing scenes the same reset is applied once for all of
+        /// them: inferred, not measured.
         /// </summary>
         internal static void SingleLoadReplacing()
         {
