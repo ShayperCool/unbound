@@ -374,7 +374,7 @@ namespace UnityEngine
                 }
             }
             if (recalculateMipMaps) GenerateMipChain();
-            m_PixelsDirty = true;
+            CpuTexelsChanged();
         }
 
         public void ReadPixels(Rect source, int destX, int destY) => ReadPixels(source, destX, destY, true);
@@ -392,6 +392,18 @@ namespace UnityEngine
         public void UpdateExternalTexture(IntPtr nativeTex) => Stubs.Ignored("Texture2D.UpdateExternalTexture", "is not supported: native textures are not shared with the renderer");
 
         internal override void OnSamplerChanged() => EmitSamplingProperties();
+
+        /// <summary>Records a CPU texel write (SetPixel(s), SetPixels32, SetPixelData,
+        /// LoadRawTextureData, ReadPixels). It changes only the retained CPU storage: once the
+        /// texture has GPU storage its texels change through Apply or GPU copies, not at a later
+        /// use. Measured on Unity 6000.0.71f1 for SetPixel (tests/projects/assetclones
+        /// texture.dirty.source.gpu, sampled through Blit) and SetPixels (tests/projects/samplerbias
+        /// cache/pixels/unapplied, sampled through a material). A texture without GPU storage
+        /// still uploads its current CPU texels at first use (<see cref="EnsureUploaded"/>).</summary>
+        void CpuTexelsChanged()
+        {
+            if (m_NativeHandle == 0) m_PixelsDirty = true;
+        }
 
         /// <summary>The renderer handle, uploading pending pixels first.</summary>
         internal ulong EnsureUploaded()
