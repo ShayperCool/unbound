@@ -13,9 +13,17 @@
 //!   "transient": bool,         // something unknown may become known (an unreadable file):
 //!                              // ask again later instead of keeping this answer
 //!   "reason": string,          // why something is unknown (empty when everything is known)
-//!   "subshaders": [{ "tags": [[name, value]], "passes": [{ "name", "tags": [[name, value]] }] }],
+//!   "subshaders": [{ "tags": [[name, value]], "passes": [{ "name", "tags": [[name, value]] }],
+//!                    "lod": u32,          // its `LOD` (0: none)
+//!                    "restricted": bool   // a pass may limit the devices it runs on
+//!                  }],                    //   (`only_renderers`/`exclude_renderers`, GLSL,
+//!                                         //   `#include_with_pragmas` not read)
 //!   "keywords": [{ "name", "local", "dynamic" }] }
 //! ```
+//!
+//! `lod` and `restricted` are optional: an older host omits them, and the managed side then
+//! keeps the renderer's pass list for `Shader.passCount` (the behaviour before they were sent).
+//! A built-in shader's SubShaders are never `restricted` (their serialized form does not say).
 //!
 //! A compute shader file (`{"file": ...}`): `{ found, keywords_known, transient, reason,
 //! keywords }`. A known keyword list may be empty (a file that declares nothing); an unknown one

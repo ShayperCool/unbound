@@ -344,6 +344,8 @@ pub struct Declarations {
 pub struct DeclaredSubShader {
     pub tags: Vec<(String, String)>,
     pub passes: Vec<DeclaredPass>,
+    /// Its `LOD` as Unity serialized it (`m_LOD`; 0 when it declares none).
+    pub lod: u32,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize, serde::Deserialize)]
@@ -368,8 +370,9 @@ pub type DeclarationMap = std::collections::BTreeMap<String, Declarations>;
 /// Bumped when [`Declarations`], how it is read ([`read_declarations`]), the entry layout or the
 /// serialized-file reader's handling of shaders' parsed forms changes. The cache is ours (not
 /// the import cache, not the texture cache): an entry is keyed by this version and the resource
-/// files' bytes, and carries both, so a stale or foreign entry is never used.
-const DECLARATIONS_VERSION: u32 = 2;
+/// files' bytes, and carries both, so a stale or foreign entry is never used. 3: SubShaders
+/// carry their LOD ([`DeclaredSubShader::lod`]).
+const DECLARATIONS_VERSION: u32 = 3;
 
 /// Magic of a declarations cache entry: then the version (u32 LE), the 32-byte input key and the
 /// postcard payload.
@@ -624,6 +627,7 @@ fn read_declarations(parsed: &Value) -> Declarations {
         .iter()
         .map(|sub| DeclaredSubShader {
             tags: tag_pairs(sub.get("m_Tags")),
+            lod: int(sub, "m_LOD").clamp(0, u32::MAX as i64) as u32,
             passes: seq(sub.get("m_Passes"))
                 .iter()
                 .map(|pass| {
@@ -742,6 +746,8 @@ mod tests {
             Declarations {
                 subshaders: vec![DeclaredSubShader {
                     tags: vec![("RenderType".into(), "Opaque".into())],
+                    // A LOD of its own round-trips through the entry (version 3).
+                    lod: 150,
                     passes: vec![DeclaredPass {
                         name: "MAIN".into(),
                         tags: vec![("LIGHTMODE".into(), "FORWARDBASE".into())],
@@ -779,6 +785,7 @@ mod tests {
             subshaders: vec![DeclaredSubShader {
                 tags: Vec::new(),
                 passes,
+                lod: 0,
             }],
             ..Default::default()
         }
@@ -800,10 +807,12 @@ mod tests {
                             pass("Picking", "Picking"),
                             pass("Selection", "SceneSelectionPass"),
                         ],
+                        lod: 0,
                     },
                     DeclaredSubShader {
                         tags: Vec::new(),
                         passes: vec![pass("PICKING", "Later")],
+                        lod: 0,
                     },
                 ],
                 ..Default::default()
@@ -1060,6 +1069,15 @@ mod tests {
                 .collect::<Vec<_>>(),
             [5, 4]
         );
+        // Their LODs as serialized (`m_LOD`): Shader.passCount picks by them.
+        assert_eq!(
+            standard
+                .subshaders
+                .iter()
+                .map(|s| s.lod)
+                .collect::<Vec<_>>(),
+            [300, 150]
+        );
         assert_eq!(
             light_modes(standard, 0),
             [
@@ -1119,6 +1137,17 @@ mod tests {
 
         let vertex_lit = &map["Legacy Shaders/VertexLit"];
         assert_eq!(vertex_lit.subshaders.len(), 1);
+        assert_eq!(vertex_lit.subshaders[0].lod, 100);
+        // A SubShader without `LOD` is 0 (Internal-ScreenSpaceShadows' four, one pass each).
+        let shadows = &map["Hidden/Internal-ScreenSpaceShadows"];
+        assert_eq!(
+            shadows
+                .subshaders
+                .iter()
+                .map(|s| (s.lod, s.passes.len()))
+                .collect::<Vec<_>>(),
+            [(0, 1); 4]
+        );
         assert_eq!(
             light_modes(vertex_lit, 0),
             ["Vertex", "VertexLM", "SHADOWCASTER"]
