@@ -337,6 +337,8 @@ def publish(work, release, dry_run=False, target=None):
                 stream.write((first/'values.jsonl').read_bytes())
             print('published', path)
         return editor_runner.publish([work/r for r in REPEATS], target, lambda d: ['values.jsonl'], write, gpu=True)
+    if report.exists():
+        sys.exit(f'the comparison with the existing reference is already recorded ({report}); it is not repeated')
     before = sha(target)
     rows = compare.compare(compare.load(target), compare.load(values))
     summary = {s: sum(r['status'] == s for r in rows) for s in ('pass', 'missing', 'extra')}
