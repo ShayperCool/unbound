@@ -96,7 +96,8 @@ namespace UnityEngine
 
         /// <summary>Throws on a destroyed GameObject (measured in the Editor after the destruction
         /// is delivered: tests/projects/destroycontract), like <see cref="activeInHierarchy"/> and
-        /// GetComponent. A pending Destroy request and OnDestroy still read it.</summary>
+        /// GetComponent. Pending request reads are measured. OnDestroy-time reads retain the
+        /// previous flag timing; their accessibility is not measured.</summary>
         public bool activeSelf
         {
             get
@@ -172,8 +173,9 @@ namespace UnityEngine
         public Component AddComponent(string className) => throw new NotSupportedException("AddComponent(string) is not supported.");
 
         /// <summary>Throws on a destroyed GameObject (measured for the generic overload in the
-        /// Editor after the destruction is delivered: tests/projects/destroycontract; the other
-        /// overloads are the same query). A live GameObject without the component gives null.</summary>
+        /// Editor after the destruction is delivered: tests/projects/destroycontract). Type and
+        /// string overloads use the same guard by implementation choice and are unmeasured.
+        /// A live GameObject without the component gives null.</summary>
         public Component GetComponent(Type type)
         {
             ThrowIfDestroyed();

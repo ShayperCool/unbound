@@ -163,9 +163,9 @@ namespace UnityEngine
         internal bool m_Enabled = true;
 
         /// <summary>Reading it on a destroyed behaviour throws, as writing it does (measured in the
-        /// Editor after the destruction is delivered: tests/projects/destroycontract). A pending
-        /// Destroy request and OnDestroy itself still read it: the object is destroyed after its
-        /// OnDestroy.</summary>
+        /// Editor after the destruction is delivered: tests/projects/destroycontract). Pending
+        /// request reads are measured. Reads during OnDestroy keep the previous implementation's
+        /// flag timing; accessibility there is not measured.</summary>
         public bool enabled
         {
             get

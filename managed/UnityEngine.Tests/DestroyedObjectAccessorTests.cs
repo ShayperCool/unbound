@@ -1,5 +1,8 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Reflection;
+using Unbound.Runtime;
 using Xunit;
 
 namespace UnityEngine.Tests
@@ -47,6 +50,30 @@ namespace UnityEngine.Tests
         sealed class Owned : IDisposable
         {
             readonly List<GameObject> m_Objects = new List<GameObject>();
+            readonly List<(IList Collection, object[] Items)> m_Collections = new();
+            readonly bool m_Playing = EditorSession.IsPlaying;
+            readonly FieldInfo m_Sequence = typeof(Lifecycle).GetField("s_Sequence", BindingFlags.Static | BindingFlags.NonPublic);
+            readonly object m_OldSequence;
+
+            internal Owned()
+            {
+                m_OldSequence = m_Sequence.GetValue(null);
+                Save(typeof(Destruction), "s_Requested");
+                Save(typeof(Destruction), "s_EndOfFrame");
+                Save(typeof(Lifecycle), "s_PendingStart");
+                Save(typeof(Coroutines), "s_Running");
+                Save(typeof(Invokes), "s_Entries");
+                EditorSession.IsPlaying = true;
+            }
+
+            void Save(Type owner, string field)
+            {
+                var collection = (IList)owner.GetField(field, BindingFlags.Static | BindingFlags.NonPublic).GetValue(null);
+                var items = new object[collection.Count];
+                collection.CopyTo(items, 0);
+                m_Collections.Add((collection, items));
+                collection.Clear();
+            }
 
             internal GameObject Make(string name, Transform parent = null)
             {
@@ -58,8 +85,21 @@ namespace UnityEngine.Tests
 
             public void Dispose()
             {
-                foreach (var go in m_Objects)
-                    if (go != null) Object.DestroyImmediate(go);
+                try
+                {
+                    foreach (var go in m_Objects)
+                        if (go != null) Object.DestroyImmediate(go);
+                }
+                finally
+                {
+                    foreach (var (collection, items) in m_Collections)
+                    {
+                        collection.Clear();
+                        foreach (var item in items) collection.Add(item);
+                    }
+                    m_Sequence.SetValue(null, m_OldSequence);
+                    EditorSession.IsPlaying = m_Playing;
+                }
             }
         }
 
@@ -67,10 +107,24 @@ namespace UnityEngine.Tests
 
         // -------------------------------------------------- destroyed wrappers (fail on the old Core)
 
+        // Each getter gets its own red result on the old Core. Type/string are unmeasured
+        // overload-consistency checks, not independent Native observations.
         [Theory]
-        [InlineData(true)]
-        [InlineData(false)]
-        public void DestroyedGameObjectStateAndLookupsThrow(bool active)
+        [InlineData(true, "activeSelf")]
+        [InlineData(true, "activeInHierarchy")]
+        [InlineData(true, "generic")]
+        [InlineData(true, "type")]
+        [InlineData(true, "string")]
+        [InlineData(true, "enabled")]
+        [InlineData(true, "isActiveAndEnabled")]
+        [InlineData(false, "activeSelf")]
+        [InlineData(false, "activeInHierarchy")]
+        [InlineData(false, "generic")]
+        [InlineData(false, "type")]
+        [InlineData(false, "string")]
+        [InlineData(false, "enabled")]
+        [InlineData(false, "isActiveAndEnabled")]
+        public void DestroyedGameObjectStateAndLookupsThrow(bool active, string member)
         {
             using var owned = new Owned();
             var go = owned.Make("destroyed.go");
@@ -80,17 +134,23 @@ namespace UnityEngine.Tests
 
             Assert.True(go == null);
             Assert.False(go is null);
-            Missing(() => go.activeSelf);
-            Missing(() => go.activeInHierarchy);
-            Missing(() => go.GetComponent<Probe>());
-            Missing(() => go.GetComponent(typeof(Probe)));
-            Missing(() => go.GetComponent(nameof(Probe)));
-            Missing(() => probe.enabled);
-            Missing(() => probe.isActiveAndEnabled);
+            Missing(() => member switch
+            {
+                "activeSelf" => go.activeSelf,
+                "activeInHierarchy" => go.activeInHierarchy,
+                "generic" => go.GetComponent<Probe>(),
+                "type" => go.GetComponent(typeof(Probe)),
+                "string" => go.GetComponent(nameof(Probe)),
+                "enabled" => probe.enabled,
+                "isActiveAndEnabled" => probe.isActiveAndEnabled,
+                _ => throw new ArgumentOutOfRangeException(nameof(member))
+            });
         }
 
-        [Fact]
-        public void DestroyedScriptOnALiveObjectThrowsWhileTheObjectAnswers()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void DestroyedScriptOnALiveObjectThrowsWhileTheObjectAnswers(bool activeAndEnabled)
         {
             using var owned = new Owned();
             var go = owned.Make("destroyed.component");
@@ -98,8 +158,7 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(probe);
 
             Assert.True(probe == null);
-            Missing(() => probe.enabled);
-            Missing(() => probe.isActiveAndEnabled);
+            Missing(() => activeAndEnabled ? probe.isActiveAndEnabled : probe.enabled);
             Assert.True(go != null);
             Assert.True(go.activeSelf);
             Assert.True(go.activeInHierarchy);
@@ -166,11 +225,13 @@ namespace UnityEngine.Tests
             Assert.Null(go.GetComponent<Absent>());
             Assert.Null(go.GetComponent(typeof(Absent)));
             Assert.Null(go.GetComponent(nameof(Absent)));
+            // Unmeasured preservation control: retain the current null-Type answer.
             Assert.Null(go.GetComponent((Type)null));
             Assert.False(go.TryGetComponent<Absent>(out var found));
             Assert.Null(found);
         }
 
+        // Unmeasured preservation control; this does not assert a Unity contract.
         [Fact]
         public void TryGetComponentOnADestroyedObjectStillAnswersFalse()
         {
@@ -218,10 +279,90 @@ namespace UnityEngine.Tests
 
             Object.DestroyImmediate(go);
 
-            // Read without an exception: the object is destroyed after its OnDestroy. The values
-            // inside OnDestroy are not measured.
+            // Unmeasured preservation control: the previous implementation marks after OnDestroy.
+            // Neither accessibility nor the values inside OnDestroy are a Native claim.
             Assert.Single(seen);
             Assert.StartsWith("OnDestroy activeSelf=", seen[0]);
+        }
+        public class RemovesReceiver : MonoBehaviour
+        {
+            // Intentionally not an iterator method: DestroyImmediate happens before the
+            // returned IEnumerator is inspected by the message/invoke pump.
+            public IEnumerator RemoveAndReturn()
+            {
+                Object.DestroyImmediate(gameObject);
+                return Empty();
+            }
+
+            public void RemoveNow() => Object.DestroyImmediate(gameObject);
+
+            static IEnumerator Empty()
+            {
+                yield break;
+            }
+        }
+
+        public class RemovesOnParentChange : MonoBehaviour
+        {
+            void OnTransformParentChanged() => Object.DestroyImmediate(gameObject);
+        }
+
+        // Internal preservation controls, not claims about Unity permitting destruction
+        // in every callback. They protect the caller paths from newly throwing public getters.
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AReturnedEnumeratorCanRemoveItsMessageOrInvokeReceiver(bool invoke)
+        {
+            using var owned = new Owned();
+            var go = owned.Make("message.remove");
+            var receiver = go.AddComponent<RemovesReceiver>();
+
+            var exception = Record.Exception(() =>
+            {
+                if (invoke)
+                {
+                    receiver.Invoke(nameof(RemovesReceiver.RemoveAndReturn), 0f);
+                    Invokes.Run();
+                }
+                else
+                    go.SendMessage(nameof(RemovesReceiver.RemoveAndReturn), SendMessageOptions.RequireReceiver);
+            });
+
+            Assert.Null(exception);
+            Assert.True(go == null);
+        }
+
+        [Fact]
+        public void BroadcastCanContinueItsSnapshotAfterTheRootIsRemoved()
+        {
+            using var owned = new Owned();
+            var root = owned.Make("broadcast.root");
+            var child = owned.Make("broadcast.child", root.transform);
+            root.AddComponent<RemovesReceiver>();
+
+            var exception = Record.Exception(() =>
+                root.BroadcastMessage(nameof(RemovesReceiver.RemoveNow), SendMessageOptions.RequireReceiver));
+
+            Assert.Null(exception);
+            Assert.True(root == null);
+            Assert.True(child == null);
+        }
+
+        [Fact]
+        public void SetParentCanFinishAfterTheParentChangedCallbackRemovesTheObject()
+        {
+            using var owned = new Owned();
+            var parent = owned.Make("reparent.parent");
+            var moved = owned.Make("reparent.moved");
+            moved.AddComponent<RemovesOnParentChange>();
+            var transform = moved.transform;
+
+            var exception = Record.Exception(() => transform.SetParent(parent.transform, false));
+
+            Assert.Null(exception);
+            Assert.True(moved == null);
+            Assert.True(parent != null);
         }
     }
 }
