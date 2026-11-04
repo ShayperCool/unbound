@@ -196,6 +196,19 @@ def artifact_manifest(out):
             for p in sorted(Path(out).rglob('*')) if p.is_file() and p.name not in ('artifact-manifest.json', 'admission.json')}
 
 
+# The one deliberate change of the private copy (copy_project, as for the existing reference's
+# captures): ProjectVersion.txt names only the selected release. The Editor writes the release's
+# full version file back on open (both copies of the previous Native pair held the fixture's bytes
+# afterwards); guards.authored_problems accepts exactly that.
+DELIBERATE = 'settings/ProjectVersion.txt'
+
+
+def deliberate(manifest, project):
+    return {DELIBERATE: {'fixture_sha256': manifest['fixture'][DELIBERATE],
+                         'prepared_sha256': prepared_files(project)[DELIBERATE],
+                         'prepared_text': (Path(project)/'ProjectSettings/ProjectVersion.txt').read_text()}}
+
+
 def write_once(path, value):
     with Path(path).open('x') as stream:
         stream.write(json.dumps(value, indent=1)+'\n')
@@ -236,6 +249,7 @@ def editor(work, repeat, release, preflight, dry_run=False):
     out.mkdir(parents=True)
     j = job(work, repeat, release)
     write_once(out/'inputs.json', {'release': release, 'repeat': repeat, 'files': prepared_files(project),
+                                   'deliberate': deliberate(manifest, project),
                                    'label_manifest_sha256': sha(label), 'plan': describe(j)})
     result = editor_runner.run(j)
     (out/'authored-after.json').write_text(json.dumps(prepared_files(project), indent=1)+'\n')
@@ -266,8 +280,11 @@ def check_problems(work, repeat, release):
             problems.append('the capture was launched for another release')
         if manifest['tools'] != {t: sha(PROBE/t) for t in TOOLS} or manifest['sources'] != {s: sha(PROBE/s) for s in SOURCES}:
             problems.append('this checkout\'s probe scripts or runner differ from the launched ones')
-        if prepared['files'] != {k: v for k, v in manifest['fixture'].items()}:
-            problems.append('the project copy was not prepared with the fixture\'s bytes')
+        intended = dict(manifest['fixture'])
+        intended[DELIBERATE] = hashlib.sha256(('m_EditorVersion: '+release+'\n').encode()).hexdigest()
+        if prepared['files'] != intended or prepared.get('deliberate', {}).get(DELIBERATE, {}).get('fixture_sha256') \
+                != manifest['fixture'][DELIBERATE]:
+            problems.append('the project copy was not prepared with the fixture\'s bytes and the one deliberate setting')
         if (manifest['reference']['sha256'] or None) != (sha(manifest['reference']['path'])
                                                         if Path(manifest['reference']['path']).exists() else None):
             problems.append('the existing reference changed after the label was made')

@@ -441,7 +441,12 @@ def authored_problems(directory, project):
         delta = authored_delta(directory, project)
     except (OSError, KeyError, json.JSONDecodeError) as error:
         return [f'no prepared input list: {error}']
-    problems = [f'the Editor changed {k}' for k in delta['changed']]
+    deliberate = json.loads((Path(directory)/'inputs.json').read_text()).get('deliberate', {})
+    now = {label+'/'+k: v for label, part in (('assets', 'Assets'), ('packages', 'Packages'), ('settings', 'ProjectSettings'))
+           for k, v in tree(Path(project)/part).items()}
+    # A deliberately prepared file may only be written back to the fixture's own bytes.
+    problems = [f'the Editor changed {k}' for k in delta['changed']
+                if not (k in deliberate and now.get(k) == deliberate[k]['fixture_sha256'])]
     problems += [f'the Editor removed {k}' for k in delta['removed']]
     problems += [f'the Editor added {k}' for k in delta['added'] if k not in EDITOR_WRITTEN]
     return problems

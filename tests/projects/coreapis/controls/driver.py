@@ -123,6 +123,8 @@ def fake_editor(behaviour, preflight):
             log = log.replace(old, new)
         job.log.write_text(log)
         (Path(job.project)/'ProjectSettings/PackageManagerSettings.asset').write_text('fake Editor-written settings\n')
+        if not behaviour.get('keep_version'):    # the Editor writes the release's full version file back
+            shutil.copyfile(PROBE/'ProjectSettings/ProjectVersion.txt', Path(job.project)/'ProjectSettings/ProjectVersion.txt')
         if behaviour.get('mutate'):
             behaviour['mutate'](Path(job.project))
         exit_s = behaviour.get('exit_s', 60.0)
@@ -239,6 +241,10 @@ def cases(release):
         bad('raw-json-instance-id', {'values': edit_rows(values, lambda r: replace_first(r, '\\"instanceID\\":\\"#LazyMat\\"', '\\"instanceID\\":12345'))}),
         bad('authored-change', {'mutate': lambda p: (p/'Assets/Scripts/Msg.cs.meta').write_text('changed\n')}),
         bad('authored-add', {'mutate': lambda p: (p/'Assets/New.asset').write_text('new\n')}),
+        {'name': 'version-file-left-as-prepared', 'native1': {'keep_version': True},
+         'steps': [('editor', 'native1', 'passes'), ('check', 'native1', 'passes')]},
+        bad('version-file-rewritten-otherwise', {'mutate': lambda p: (p/'ProjectSettings/ProjectVersion.txt').write_text(
+            'm_EditorVersion: 6000.0.99f1\n')}),
         bad('graph-other-define', {'rsp': lambda a, t: t.replace('-define:UNITY_64\n', '-define:UNITY_64\n-define:EXTRA\n')}),
         bad('graph-additional-file', {'additional': '/elsewhere'}),
         bad('graph-missing', {'no_graph': True}),
@@ -309,9 +315,10 @@ def run_case(case, root, release, preflight_path, preflight):
             if kind == 'publish' and case.get('target') == 'absent' and expected == 'passes':
                 ok = ok and after == (work/'native1/values.jsonl').read_bytes()
             if kind == 'publish' and expected == 'stop':
-                report = json.loads((work/'publish-comparison.json').read_text())
+                path = work/'publish-comparison.json'
+                report = json.loads(path.read_text()) if path.exists() else {'identical': None, 'summary': {}}
                 entry['report_summary'] = report['summary']
-                ok = ok and report['identical'] is False and report['summary']['missing'] == report['summary']['extra'] == 1
+                ok = ok and report['identical'] is False and report['summary'].get('missing') == report['summary'].get('extra') == 1
             entry['pass'] = ok
             steps.append(entry)
             if kind == 'check' and repeat == 'native1' and case.get('tamper_native1_after_check'):
