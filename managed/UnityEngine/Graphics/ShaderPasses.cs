@@ -134,49 +134,56 @@ namespace UnityEngine
         public int passCount => DeclaredPassCount() ?? Unbound.Runtime.ShaderPassInfo.Of(this)?.Passes.Count ?? 1;
 
         /// <summary>
-        /// The pass count of the SubShader the built-in pipeline picks from the declarations: the
+        /// The pass count of the SubShader the shader's queries answer from
+        /// (<see cref="ActiveSubShader"/>), counting every declared pass (a surface program's
+        /// generated ones too). Null (unknown) when that SubShader is unknown.
+        /// </summary>
+        int? DeclaredPassCount() =>
+            ActiveSubShader("Shader.passCount", "follows the renderer's pass list")?.Passes.Count;
+
+        /// <summary>
+        /// The SubShader Shader.passCount and Material.GetTag without fallbacks answer from: the one the built-in pipeline picks from the declarations, the
         /// first of its own then its Fallback chain's SubShaders without a <c>RenderPipeline</c>
         /// tag whose LOD is at most this shader's limit (<see cref="maximumLOD"/>, else
-        /// <see cref="globalMaximumLOD"/>; the Fallback's own limit does not apply), counting
-        /// every declared pass (a surface program's generated ones too). When none is in reach,
-        /// the first SubShader's count (canonical tests/projects/shaderpasscount: Shader and
-        /// Material counts, before and after drawing, in the nine cells where nothing is drawn;
-        /// an observation of that fixture, not a rule measured for every shader). Null (unknown)
-        /// under a render pipeline, for a negative limit, a SubShader that may be limited to
-        /// some devices, an unread or older-host answer, or a first SubShader the description
-        /// does not cover.
+        /// <see cref="globalMaximumLOD"/>; the Fallback's own limit does not apply). When none
+        /// is in reach, the first SubShader (canonical tests/projects/shaderpasscount: Shader and
+        /// Material counts, before and after drawing, and SubId tags of the first SubShader in the nine cells where nothing is drawn; a Fallback's SubShader when
+        /// it is the one picked; an observation of that fixture, not a rule measured for every
+        /// shader). Null (unknown, warned once per <paramref name="api"/> and condition) under a
+        /// render pipeline, for a negative limit, a SubShader that may be limited to some
+        /// devices, an unread or older-host answer, or a first SubShader the description does
+        /// not cover; the caller then keeps its renderer-based answer.
         /// </summary>
-        int? DeclaredPassCount()
+        internal Unbound.Runtime.ShaderDeclarations.SubShader ActiveSubShader(string api, string keeps)
         {
             var d = Unbound.Runtime.ShaderDeclarations.Of(this);
             if (!d.SubShadersKnown || d.SubShaders.Count == 0) return null;
             if (globalRenderPipeline.Length != 0)
-                return PassCountUnknown("under a render pipeline", "its SubShader selection is not measured");
+                return SelectionUnknown(api, keeps, "under a render pipeline", "its SubShader selection is not measured");
             int limit = EffectiveLOD;
-            if (limit < 0) return PassCountUnknown("under a negative maximum LOD", "it is not measured");
+            if (limit < 0) return SelectionUnknown(api, keeps, "under a negative maximum LOD", "it is not measured");
             foreach (var sub in d.SubShaders)
             {
-                if (sub.Lod is not int lod) return PassCountUnknown("without SubShader LODs", "this host does not send them");
+                if (sub.Lod is not int lod) return SelectionUnknown(api, keeps, "without SubShader LODs", "this host does not send them");
                 var pipeline = Unbound.Runtime.ShaderDeclarations.Tag(sub.Tags, "RenderPipeline");
                 if (pipeline != null && pipeline.Trim().Length == 0)
-                    return PassCountUnknown("with an empty RenderPipeline tag", "its selection is not measured");
+                    return SelectionUnknown(api, keeps, "with an empty RenderPipeline tag", "its selection is not measured");
                 if (pipeline != null || lod > limit) continue;
                 if (sub.Restricted)
-                    return PassCountUnknown("with SubShaders limited to some devices", "their selection is not measured");
-                return sub.Passes.Count;
+                    return SelectionUnknown(api, keeps, "with SubShaders limited to some devices", "their selection is not measured");
+                return sub;
             }
             var first = d.SubShaders[0];
             if (first.Restricted || Unbound.Runtime.ShaderDeclarations.Tag(first.Tags, "RenderPipeline") != null)
-                return PassCountUnknown("with no SubShader in reach", "a first SubShader for another pipeline or device is not measured");
-            return first.Passes.Count;
+                return SelectionUnknown(api, keeps, "with no SubShader in reach", "a first SubShader for another pipeline or device is not measured");
+            return first;
         }
 
-        /// <summary>Warns once per condition and gives no answer (the caller keeps the renderer's
-        /// pass list).</summary>
-        static int? PassCountUnknown(string condition, string why)
+        /// <summary>Warns once per query and condition and gives no answer (the caller keeps its
+        /// renderer-based answer).</summary>
+        static Unbound.Runtime.ShaderDeclarations.SubShader SelectionUnknown(string api, string keeps, string condition, string why)
         {
-            Unbound.Runtime.Stubs.Ignored("Shader.passCount " + condition,
-                "follows the renderer's pass list: " + why);
+            Unbound.Runtime.Stubs.Ignored(api + " " + condition, keeps + ": " + why);
             return null;
         }
 
