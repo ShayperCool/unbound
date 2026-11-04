@@ -287,6 +287,29 @@ namespace UnityEngine.Experimental.Rendering
             _ => GetGraphicsFormat(format, isSRGB),
         };
 
+        /// <summary>
+        /// The texture format and data colour space a Texture2D made or reinitialized with a graphics
+        /// format holds: the texture format whose Texture2D reports that graphics format
+        /// (<see cref="Texture2DGraphicsFormat"/>), with sRGB data when it is that format's sRGB report
+        /// and not also its linear one. So a texture's own <c>graphicsFormat</c> makes the same kind of
+        /// texture: R8_UNorm and R8_SRGB give R8 and 54 gives Alpha8 (the reports measured on Unity
+        /// 6000.0.71f1, tests/projects/texturepixels), the unnamed 87 and 88 give ARGB32. This inverse
+        /// is Unbound's identity, not a measured Unity conversion; it is not
+        /// <see cref="GetTextureFormat"/>, whose table maps R8_UNorm to Alpha8. Null when no texture
+        /// format Unbound stores reports the graphics format.
+        /// </summary>
+        internal static (TextureFormat Format, bool Linear)? Texture2DStorage(GraphicsFormat format)
+        {
+            foreach (var (t, _, _) in s_TextureFormats)
+            {
+                var linear = Texture2DGraphicsFormat(t, false);
+                var srgb = Texture2DGraphicsFormat(t, true);
+                if (format == linear) return (t, true);
+                if (format == srgb) return (t, false);
+            }
+            return null;
+        }
+
         public static TextureFormat GetTextureFormat(GraphicsFormat format)
         {
             if (format == GraphicsFormat.B8G8R8A8_UNorm || format == GraphicsFormat.B8G8R8A8_SRGB)
