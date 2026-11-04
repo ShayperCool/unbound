@@ -1,5 +1,6 @@
 using System;
 using System.Globalization;
+using System.Numerics;
 using System.Text;
 
 namespace Unbound
@@ -72,7 +73,34 @@ namespace Unbound
             var exact = single ? ((float)value).ToString("E" + (precision - 1), CultureInfo.InvariantCulture)
                                : value.ToString("E" + (precision - 1), CultureInfo.InvariantCulture);
             if (TryDigitsAsDecimal(exact, out var number)) return number.ToString(format, provider);
+            // Beyond decimal's range a fixed-point format still prints those digits, then zeros
+            // (-3.4e37f "F2" is "-34000000000000000000000000000000000000.00", not the float's exact
+            // value): every kept digit is then before the point, so nothing rounds, and an integer
+            // holding them goes through the same .NET formatting as the decimal above.
+            if (IsFixedPoint(format) && TryDigitsAsInteger(exact, out var integer)) return integer.ToString(format, provider);
             return single ? ((float)value).ToString(format, provider) : value.ToString(format, provider);
+        }
+
+        /// <summary>"F", "N", "C" or "P", with at most two precision digits.</summary>
+        static bool IsFixedPoint(string format) =>
+            !string.IsNullOrEmpty(format) && IsStandard(format, out char kind, out _) &&
+            char.ToUpperInvariant(kind) is 'F' or 'N' or 'C' or 'P';
+
+        /// <summary>"d.dddE+xxx" as the integer holding exactly those digits; false when a digit
+        /// falls after the point.</summary>
+        static bool TryDigitsAsInteger(string exponential, out BigInteger number)
+        {
+            number = BigInteger.Zero;
+            int e = exponential.IndexOf('E');
+            int exponent = int.Parse(exponential.AsSpan(e + 1), NumberStyles.AllowLeadingSign, CultureInfo.InvariantCulture);
+            var mantissa = new StringBuilder();
+            foreach (char c in exponential.AsSpan(0, e))
+                if (char.IsAsciiDigit(c)) mantissa.Append(c);
+            int zeros = exponent - (mantissa.Length - 1);
+            if (zeros < 0) return false;
+            number = BigInteger.Parse(mantissa.ToString(), NumberStyles.None, CultureInfo.InvariantCulture) * BigInteger.Pow(10, zeros);
+            if (exponential[0] == '-') number = -number;
+            return true;
         }
 
         /// <summary>A standard format: one letter and at most two digits (empty means "G").</summary>
