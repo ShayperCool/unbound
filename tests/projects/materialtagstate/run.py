@@ -6,6 +6,9 @@
     run.py editor    --release R --label L   writes the two-repeat Editor plan; launches only with --execute
                                              and MATERIAL_TAG_STATE_GRANT naming an existing Root release file
     run.py check     --release R --label L   compare.py validate/classify each repeat, pair them, report saved maps
+    run.py mutations --release R --label L --project P
+                                             the run's authored delta against inputs.json must equal
+                                             authored_mutations.json exactly (every difference listed, exit 1)
 
 The project is exactly the model import probe's URP composition (modelimport/run.py
 copy_project, so the same importer settings, URP asset and package lock) plus the fixture
@@ -33,6 +36,8 @@ MODELIMPORT = REPO/'tests/projects/modelimport'
 URP = REPO/'tests/projects/urp'
 FIXTURE_FILES = ['Assets/Editor/MaterialTagStateDiscriminator.cs', 'Assets/Editor/MaterialTagStateDiscriminator.cs.meta']
 INPUTS = PROBE/'inputs.json'
+MUTATIONS = PROBE/'authored_mutations.json'
+AUTHORED_ROOTS = ('Assets', 'Packages', 'ProjectSettings')
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 SAVED_MAPS = 'root-receipt-triage-20261104/m1/saved-native-materials.json'
 # Child environments are built from an empty mapping: these key names are copied when present, then the
@@ -100,6 +105,50 @@ def check_inputs(project):
     if problems:
         sys.exit('composed project does not match inputs.json:\n  ' + '\n  '.join(problems))
     return len(got)
+
+
+def authored_delta(project):
+    """Changed, added and removed files under the authored roots against inputs.json."""
+    pre = {r['path']: r['sha256'] for r in json.loads(INPUTS.read_text())['files']}
+    post = {}
+    for part in AUTHORED_ROOTS:
+        for p in sorted((project/part).rglob('*')):
+            if p.is_file():
+                post[str(p.relative_to(project))] = sha(p.read_bytes())
+    outside = sorted(p for p in pre if p.split('/')[0] not in AUTHORED_ROOTS)
+    if outside:
+        sys.exit('inputs.json lists files outside the authored roots: ' + ', '.join(outside))
+    return {'changed': [{'path': p, 'prelaunch': pre[p], 'post': post[p]} for p in sorted(set(pre) & set(post)) if pre[p] != post[p]],
+            'added': [{'path': p, 'sha256': post[p]} for p in sorted(set(post) - set(pre))],
+            'removed': sorted(set(pre) - set(post))}
+
+
+def check_authored_mutations(project):
+    """Every difference between the actual delta and authored_mutations.json; empty means exactly equal."""
+    policy = json.loads(MUTATIONS.read_text())
+    pre = {r['path']: r['sha256'] for r in json.loads(INPUTS.read_text())['files']}
+    delta = authored_delta(project)
+    problems = []
+    for c in policy['changed']:
+        if pre.get(c['path']) != c['prelaunch']:
+            problems.append(f"policy prelaunch hash of {c['path']} is not the inputs.json hash")
+    want = {'changed': {c['path']: (c['prelaunch'], c['post']) for c in policy['changed']},
+            'added': {a['path']: a['sha256'] for a in policy['added']}, 'removed': set(policy['removed'])}
+    got = {'changed': {c['path']: (c['prelaunch'], c['post']) for c in delta['changed']},
+           'added': {a['path']: a['sha256'] for a in delta['added']}, 'removed': set(delta['removed'])}
+    for kind in ('changed', 'added'):
+        for path in sorted(set(got[kind]) - set(want[kind])):
+            problems.append(f'unlisted {kind} {path} {got[kind][path]}')
+        for path in sorted(set(want[kind]) - set(got[kind])):
+            problems.append(f'expected {kind} {path} {want[kind][path]} did not occur')
+        for path in sorted(set(want[kind]) & set(got[kind])):
+            if want[kind][path] != got[kind][path]:
+                problems.append(f'{kind} {path} is {got[kind][path]}, expected {want[kind][path]}')
+    for path in sorted(got['removed'] - want['removed']):
+        problems.append(f'unlisted removed {path}')
+    for path in sorted(want['removed'] - got['removed']):
+        problems.append(f'expected removed {path} did not occur')
+    return delta, problems
 
 
 def display():
@@ -203,25 +252,39 @@ def cmd_check(work, _args):
             code = 1
             print(f'{repeat}: INVALID not a hardware NVIDIA GPU Editor session')
         code |= subprocess.run(compare + ['classify', str(work/repeat/'capture.jsonl')], env=env).returncode
+        delta, problems = check_authored_mutations(work/'projects'/repeat)
+        for p in problems:
+            print(f'{repeat}: AUTHORED MUTATION {p}')
+        code |= 1 if problems else 0
     code |= subprocess.run(compare + ['pair', str(work/'native1/capture.jsonl'), str(work/'native2/capture.jsonl')], env=env).returncode
     saved = validation_cache()/'runs'/SAVED_MAPS
     subprocess.run(compare + ['saved', str(work/'native1/capture.jsonl'), str(saved)], env=env)
     return code
 
 
+def cmd_mutations(_work, args):
+    if not args.project:
+        sys.exit('mutations needs --project')
+    delta, problems = check_authored_mutations(args.project)
+    print(json.dumps({'project': str(args.project), 'delta': delta, 'problems': problems}, indent=1))
+    return 1 if problems else 0
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument('mode', choices=('compose', 'inventory', 'editor', 'check'))
+    ap.add_argument('mode', choices=('compose', 'inventory', 'editor', 'check', 'mutations'))
     ap.add_argument('--label', required=True)
     ap.add_argument('--release', required=True)
     ap.add_argument('--execute', action='store_true', help='editor: launch (needs MATERIAL_TAG_STATE_GRANT)')
     ap.add_argument('--work', type=Path, help='run folder (default: the validation cache run root for --label)')
+    ap.add_argument('--project', type=Path, help='mutations: the run project to check')
     args = ap.parse_args()
     if Path(args.label).name != args.label or args.label in ('.', '..'):
         ap.error('label must be a single directory name')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = cache_artifact_path(args.work) if args.work else run_root(PROBE, args.label)
-    return {'compose': cmd_compose, 'inventory': cmd_inventory, 'editor': cmd_editor, 'check': cmd_check}[args.mode](work, args)
+    return {'compose': cmd_compose, 'inventory': cmd_inventory, 'editor': cmd_editor, 'check': cmd_check,
+            'mutations': cmd_mutations}[args.mode](work, args)
 
 
 if __name__ == '__main__':

@@ -1,0 +1,61 @@
+{
+ "description": "Exact authored-file mutations an Editor run of this probe is expected to make, measured on Native1 materialtagstate-native-20261104a (Unity 6000.0.71f1, URP 17.0.4) against inputs.json. run.py mutations requires the delta over Assets/, Packages/ and ProjectSettings/ to equal this list exactly: every unlisted, missing or different change fails. Each entry is OBSERVED in one run; the writer evidence is source reading, not a captured stack. Nothing here is a wildcard or a waiver.",
+ "release": "6000.0.71f1",
+ "urp": "17.0.4",
+ "roots": [
+  "Assets",
+  "Packages",
+  "ProjectSettings"
+ ],
+ "changed": [
+  {
+   "path": "Packages/packages-lock.json",
+   "prelaunch": "edec6391a8799e5d95d63d87c31a8655dd7ed9e717f8d569f9210a96248f5988",
+   "post": "476b5381e515d925a1f6bc50d8f62b26808ce598ffb65f405285196089efc908",
+   "change": "adds only the builtin com.unity.modules.animation 1.0.0 entry (depth 0, no dependencies)",
+   "writer_evidence": "package resolution of the composed manifest, which declares com.unity.modules.animation 1.0.0 while the copied URP lock omits it",
+   "status": "OBSERVED"
+  },
+  {
+   "path": "ProjectSettings/InputManager.asset",
+   "prelaunch": "d0f454ddb880912abcae92e3e12957a7446786ba89e24937e019ff3bbc0d4300",
+   "post": "60c83ae48e29a782141f99032eb38e803d18475124ff5224fbd1fd81b233f051",
+   "change": "appends the twelve SRP debug input entries; existing axes and m_UsePhysicalKeys unchanged",
+   "writer_evidence": "Core RP DebugManager.RegisterInputs (called from the DebugManager constructor) lists the same entries and values",
+   "status": "OBSERVED"
+  },
+  {
+   "path": "ProjectSettings/ProjectVersion.txt",
+   "prelaunch": "61e4fb53b6a6f2f01d8d94ea96d272d5fdce1a1d82f078797d92bb08a596eaec",
+   "post": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a",
+   "change": "adds only the m_EditorVersionWithRevision line 6000.0.71f1 (907bc2d768b5)",
+   "writer_evidence": "the Editor records its release and revision; matches the session and Bee backend release",
+   "status": "OBSERVED"
+  },
+  {
+   "path": "ProjectSettings/QualitySettings.asset",
+   "prelaunch": "4c648e92a70d28edb5f975f63415e1a8c63b51814fde4aead512a4695ede2607",
+   "post": "2ecb19e783da011d395cbd7c0284d6cc0f1a2ef52ddfc0ffed2a364aeaa8c6cc",
+   "change": "quality level 5 (current) antiAliasing 2 -> 0; every other line equal",
+   "writer_evidence": "URP pipeline construction synchronizes QualitySettings anti-aliasing to the asset (ProbeURP m_MSAA 1 -> disabled 0); persisted when the Editor saves settings at exit",
+   "status": "OBSERVED"
+  }
+ ],
+ "added": [
+  {
+   "path": "ProjectSettings/ShaderGraphSettings.asset",
+   "sha256": "83556175c6dccd540f2cac05e5c0f9fbb36c3c8d7a56bed2c7cf4d29e4c2ee2e",
+   "change": "added with package defaults",
+   "writer_evidence": "Shader Graph project settings declare this path and defaults and save on disable",
+   "status": "OBSERVED"
+  },
+  {
+   "path": "ProjectSettings/URPProjectSettings.asset",
+   "sha256": "596d5c8bf4f957b03684c949bebc252ae1918f25415a1147a00684c4b086efda",
+   "change": "added, m_LastMaterialVersion 10",
+   "writer_evidence": "URP MaterialReimporter update callback: material version mismatch -> reimport of every Material asset (including model sub-assets and package Lit.mat), then saves version 10",
+   "status": "OBSERVED"
+  }
+ ],
+ "removed": []
+}
