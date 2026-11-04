@@ -1,0 +1,170 @@
+{
+ "description": "The 23 saved recorder corruption witnesses: reference lines (0-based index in Reference/unity-6000.0.71f1.jsonl) whose capture line had ordinary numeric tokens rewritten by the former whole-message id scan. corrupt_sha256 is the SHA-256 of the saved corrupted capture line (without newline); the corrupting map is one named id.",
+ "name_map": {
+  "10": "LazyData"
+ },
+ "rows": [
+  {
+   "reference_index": 157,
+   "native_sha256": "5e14b0fe1225c83870910d7aadca017b68433ba2e737d0a9c8976a7cc3225c92",
+   "corrupt_sha256": "10c67bc463b6403fbdc146400609afe84be4db8d1d9a80f349b0d142122f36bb",
+   "corrupt_actual_index": 157,
+   "substitutions": 2
+  },
+  {
+   "reference_index": 165,
+   "native_sha256": "0569ebab82956fa9549a706f5c072fa01f358ec0b174ea57484cec6b3ba38cc9",
+   "corrupt_sha256": "3ae7bd619410661e0432214137b8b9f1ef60c9ce6d7a48b52bd6f188338849ce",
+   "corrupt_actual_index": 165,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 171,
+   "native_sha256": "440f139f61fa31b950523509aedd67487c67fa50665368aa6f42362290280c37",
+   "corrupt_sha256": "f519604979a8c69644bbb754eb06d157d174120c0a9669625aab0eb7e35872d4",
+   "corrupt_actual_index": 171,
+   "substitutions": 2
+  },
+  {
+   "reference_index": 176,
+   "native_sha256": "53ccb28741ed4a0c46dffc11233840987c725b38b71de0fd11e3db5253e5657d",
+   "corrupt_sha256": "b2f387cfcdd697878758ec2c05cd8d4d3b314b8dcb6fa712418cc8886447cc44",
+   "corrupt_actual_index": 176,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 181,
+   "native_sha256": "6f5ecca26b0f0a69d49631a604d5ae272c9f59290a5c56405d100e414aebbcf1",
+   "corrupt_sha256": "17585efd6f7260e35f1b242480122e3c110ad2240ea93c81a7c10d9b6cd83619",
+   "corrupt_actual_index": 181,
+   "substitutions": 2
+  },
+  {
+   "reference_index": 186,
+   "native_sha256": "136c7b8dbdfa844b7846761df5f255dbcaa7409d963430310708264c961800d7",
+   "corrupt_sha256": "19832a09f63da8c1ea01fb04c0c4fb8045b86ba31aeec958197c11e7c37b8fd3",
+   "corrupt_actual_index": 186,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 194,
+   "native_sha256": "94491f13ae0a1ab7e50c3370236c88b6c37f6dc00cc7e1f3118cb384fb16df62",
+   "corrupt_sha256": "337689fc240ee4d2dbd9ba43dd6a21f154c81594703ea5883c5c7dd824f99997",
+   "corrupt_actual_index": 194,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 198,
+   "native_sha256": "136c7b8dbdfa844b7846761df5f255dbcaa7409d963430310708264c961800d7",
+   "corrupt_sha256": "19832a09f63da8c1ea01fb04c0c4fb8045b86ba31aeec958197c11e7c37b8fd3",
+   "corrupt_actual_index": 198,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 203,
+   "native_sha256": "9e54edc8d736c4ecaa71510c47a18facdc44ad1a5fee5db246d79961553aaa84",
+   "corrupt_sha256": "0c435d4f2e2626da77b8ab05fd1c6f939c3277c25bf947583a3153c49745bed1",
+   "corrupt_actual_index": 203,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 208,
+   "native_sha256": "376c9b61415c2c9fa2245c6b6c70445d6d7a8c58b90b76400933ecbc51520a69",
+   "corrupt_sha256": "0b65c90f92e2a67127bd103144ed99e7c7ad5e2df9f4cf4c98167c29d45b3cbd",
+   "corrupt_actual_index": 208,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 213,
+   "native_sha256": "9e54edc8d736c4ecaa71510c47a18facdc44ad1a5fee5db246d79961553aaa84",
+   "corrupt_sha256": "0c435d4f2e2626da77b8ab05fd1c6f939c3277c25bf947583a3153c49745bed1",
+   "corrupt_actual_index": 213,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 218,
+   "native_sha256": "376c9b61415c2c9fa2245c6b6c70445d6d7a8c58b90b76400933ecbc51520a69",
+   "corrupt_sha256": "0b65c90f92e2a67127bd103144ed99e7c7ad5e2df9f4cf4c98167c29d45b3cbd",
+   "corrupt_actual_index": 218,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 224,
+   "native_sha256": "376c9b61415c2c9fa2245c6b6c70445d6d7a8c58b90b76400933ecbc51520a69",
+   "corrupt_sha256": "0b65c90f92e2a67127bd103144ed99e7c7ad5e2df9f4cf4c98167c29d45b3cbd",
+   "corrupt_actual_index": 224,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 236,
+   "native_sha256": "376c9b61415c2c9fa2245c6b6c70445d6d7a8c58b90b76400933ecbc51520a69",
+   "corrupt_sha256": "0b65c90f92e2a67127bd103144ed99e7c7ad5e2df9f4cf4c98167c29d45b3cbd",
+   "corrupt_actual_index": 236,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 242,
+   "native_sha256": "b9d8b12da37cd669c2b1023c1494650483ceaf1c3ddf31e3a2755041c4c74700",
+   "corrupt_sha256": "2def23153d07b75716f5d2df3565ae91b56a93d22414399eb32694225151353b",
+   "corrupt_actual_index": 242,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 247,
+   "native_sha256": "2bc10e99a58744598ca3f64e10746d9f3387257573160595f23c450ccd104841",
+   "corrupt_sha256": "3b2c6c1dc0ef1bf2ca2753e13494191c749cc15d66a38ae0fbd97a9cd25f7ce7",
+   "corrupt_actual_index": 247,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 255,
+   "native_sha256": "c1ea626ef13d68d290b81ce7fa6a18f4505050622c9cda55820b0b91a244b544",
+   "corrupt_sha256": "b1929cd83c148e7de94cc8448ffbf87bd11bce8b074fb5218218bb71361403e6",
+   "corrupt_actual_index": 255,
+   "substitutions": 2
+  },
+  {
+   "reference_index": 260,
+   "native_sha256": "2dfa5b064e1a30beff376874653001036da1fcb80f2cf6614502129435592be6",
+   "corrupt_sha256": "e93a022261ab6cd695f4ed80c4ed15c8f92476233b3eb1c79521c6805bea6896",
+   "corrupt_actual_index": 260,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 262,
+   "native_sha256": "2dfa5b064e1a30beff376874653001036da1fcb80f2cf6614502129435592be6",
+   "corrupt_sha256": "e93a022261ab6cd695f4ed80c4ed15c8f92476233b3eb1c79521c6805bea6896",
+   "corrupt_actual_index": 262,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 277,
+   "native_sha256": "44ad49384c0d397333475245a4d588bf225dfcba4e1c68b42c81aff76f307d7e",
+   "corrupt_sha256": "03453866eaaf3c74f0fa35a492d4c3b87dd44e06e44de31c43fd2f324d442735",
+   "corrupt_actual_index": 277,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 278,
+   "native_sha256": "9d3b3df0d5dcded6a473d425417e37665de6b613d28e40ebd9b02dc7f2222077",
+   "corrupt_sha256": "43c7201f1c15884c7b7c14b0e3896147eba78ce29a55eafb63af5d70f229f195",
+   "corrupt_actual_index": 278,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 279,
+   "native_sha256": "dfa443a46efdb45f4d91b72cecd337e4247711d1d52fbfcb342b70b0f13ef7f0",
+   "corrupt_sha256": "3fa876822b6e30bf7fd90ee528e308d540f13e614c0b5a10352064d3d599321d",
+   "corrupt_actual_index": 279,
+   "substitutions": 1
+  },
+  {
+   "reference_index": 348,
+   "native_sha256": "a64330f1724bfdb14f8f52a08a969151511edaa3dc10e9f06b886f760f8bd599",
+   "corrupt_sha256": "c31abb910ce05fc7f1b206251cd2f935efa1b261b9c22c2b73b542ea1b425d56",
+   "corrupt_actual_index": 348,
+   "substitutions": 1
+  }
+ ],
+ "total_substitutions": 27
+}
