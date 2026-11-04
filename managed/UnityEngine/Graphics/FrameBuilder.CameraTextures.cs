@@ -41,7 +41,11 @@ namespace Unbound.Runtime
             Material copy;
             using (ObjectRegistry.AsAssets())
                 copy = new Material(material) { hideFlags = HideFlags.HideAndDontSave, parent = null };
+            // Preserve existing replacement sorting across the public shader queue reset.
+            // Custom-queue replacement ordering has not been measured.
+            int queue = copy.rawRenderQueue;
             copy.shader = replacement;
+            copy.renderQueue = queue;
             s_ReplacementMaterials[key] = (copy, material.m_Version);
             if (s_ReplacementMaterials.Count > 4096) PurgeReplacementMaterials();
             return copy;
@@ -62,8 +66,8 @@ namespace Unbound.Runtime
         /// <summary>A camera's replacement shader (SetReplacementShader, RenderWithShader): each
         /// draw takes the replacement's SubShader whose tag has the value the draw's shader has
         /// (draws without one are dropped), or with no tag the replacement's own; its material's
-        /// properties stay and it sorts at the replacement's queue (measured:
-        /// tests/projects/builtinfx replace_*).</summary>
+        /// properties stay. With no custom queue it sorts at the replacement's queue (measured:
+        /// tests/projects/builtinfx replace_*); custom-queue ordering is unmeasured and preserved.</summary>
         static void ReplaceShaders(Camera camera, List<DrawItem> items)
         {
             var shader = camera.m_ReplacementShader;
