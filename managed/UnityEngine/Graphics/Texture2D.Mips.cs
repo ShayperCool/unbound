@@ -164,7 +164,11 @@ namespace UnityEngine
             RequireReadable();
             if (!ValidMip(mipLevel)) { Debug.LogError("Texture mip level is out of range."); return; }
             int w = MipWidth(mipLevel), h = MipHeight(mipLevel);
-            if (x < 0 || y < 0 || x >= w || y >= h) return;
+            // Outside the level, Unity clamps or repeats the coordinate by the texture's wrap
+            // mode (SetPixel, 6000.0 Scripting API): U for x, V for y. Mirror and MirrorOnce
+            // follow GetPixel's mapping; their SetPixel edges are not measured.
+            x = Wrap(x, w, wrapModeU);
+            y = Wrap(y, h, wrapModeV);
             Write(mipLevel, y * w + x, color);
             CpuTexelsChanged();
         }
