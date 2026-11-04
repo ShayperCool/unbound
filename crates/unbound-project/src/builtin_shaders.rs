@@ -35,7 +35,8 @@ impl BuiltinShaders {
 
     /// `UNBOUND_BUILTIN_SHADERS` (an unpacked archive), else the cached copy for the install's
     /// release, downloaded when missing (its URL needs the release's build revision: from the
-    /// installation, the project, else Unity's release index).
+    /// installation, the project, else Unity's release index). `UNBOUND_OFFLINE` forbids
+    /// downloading: a missing copy is then an error, raised before any request.
     pub fn find(install: &UnityInstall, project_version_txt: Option<&str>) -> Result<Self> {
         if let Some(dir) = std::env::var_os("UNBOUND_BUILTIN_SHADERS") {
             let root = PathBuf::from(dir);
@@ -55,6 +56,12 @@ impl BuiltinShaders {
         if root.join(".complete").is_file() {
             return Ok(Self { root });
         }
+        // Both the release index and the archive are on the network.
+        check_download_allowed(
+            std::env::var_os("UNBOUND_OFFLINE").is_some(),
+            version,
+            &root,
+        )?;
         let revision = match revision(install, project_version_txt) {
             Some(revision) => revision,
             None => crate::releases::lookup(version)
@@ -69,6 +76,23 @@ impl BuiltinShaders {
         unpack(&archive, &root).with_context(|| format!("unpacking {url}"))?;
         Ok(Self { root })
     }
+}
+
+/// Fails when `offline` (`UNBOUND_OFFLINE`) forbids downloading the release's missing sources
+/// into `root`, naming them and how to provide them.
+fn check_download_allowed(offline: bool, version: UnityVersion, root: &Path) -> Result<()> {
+    if offline {
+        bail!(
+            "Unity {version}'s built-in shader sources are not cached ({} has no .complete marker) \
+             and UNBOUND_OFFLINE forbids downloading builtin_shaders-{version}.zip; set \
+             UNBOUND_BUILTIN_SHADERS to a directory of the unpacked sources (with \
+             DefaultResourcesExtra), or unset UNBOUND_OFFLINE \
+             to download it once (an installed Unity Editor or UNBOUND_UNITY does not provide \
+             these sources)",
+            root.display()
+        );
+    }
+    Ok(())
 }
 
 /// The install's build revision (`907bc2d768b5`): from the Hub's `modules.json` next to the
@@ -156,5 +180,25 @@ mod tests {
         );
         let other = "m_EditorVersionWithRevision: 6000.0.70f1 (0123456789ab)\n";
         assert_eq!(revision(&install, Some(other)), None);
+    }
+
+    #[test]
+    fn offline_forbids_downloading_missing_sources() {
+        let version: UnityVersion = "6000.0.71f1".parse().unwrap();
+        let root = Path::new("/nonexistent/builtin-shaders/v1/6000.0.71f1");
+        assert!(check_download_allowed(false, version, root).is_ok());
+        let message = format!(
+            "{:#}",
+            check_download_allowed(true, version, root).unwrap_err()
+        );
+        for part in [
+            "Unity 6000.0.71f1's built-in shader sources are not cached",
+            "/nonexistent/builtin-shaders/v1/6000.0.71f1",
+            "UNBOUND_OFFLINE forbids downloading builtin_shaders-6000.0.71f1.zip",
+            "UNBOUND_BUILTIN_SHADERS",
+            "unset UNBOUND_OFFLINE",
+        ] {
+            assert!(message.contains(part), "{part:?} missing from {message:?}");
+        }
     }
 }
