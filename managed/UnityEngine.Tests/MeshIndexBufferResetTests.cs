@@ -10,6 +10,8 @@ namespace UnityEngine.Tests
     // https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.SetIndexBufferParams.html
     //   "When you change the index buffer size or format, the Mesh.subMeshCount reverts to one, and
     //   the index buffer data is uninitialized."
+    // Inferred, not stated: after an indexFormat change sub-mesh 0 has no indices
+    // (GetIndexCount(0) == 0), because a cleared buffer leaves nothing for it to reference.
     // Not claimed: index values after SetIndexBufferParams, sub-mesh 0's descriptor after that
     // reset, and Unity's handling of an unchanged value or a negative count. Tests marked "guard"
     // pin Unbound's own choice there and are not Native claims. No test uploads a mesh.
