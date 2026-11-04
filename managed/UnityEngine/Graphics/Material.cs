@@ -172,11 +172,44 @@ namespace UnityEngine
             get => m_Shader;
             set
             {
-                if (value != m_Shader) KeepDefaultsOf(m_Shader);
+                if (value != m_Shader)
+                {
+                    KeepDefaultsOf(m_Shader);
+                    ResetRenderQueue(value);
+                }
                 m_Shader = value;
                 AddTextureNames();
                 MarkDirty();
             }
+        }
+
+        /// <summary>
+        /// Documented (Material.renderQueue, 6000.0): "if a shader on the material is changed, the
+        /// render queue resets to that of the shader itself": the override goes, the queue is then
+        /// the new shader's (rawRenderQueue -1). The same page's limitation: in batch mode an SRP
+        /// loads only when something first renders, which can change the selected SubShader and so
+        /// the shader's queue read afterwards (Shader.renderQueue answers that; not decided here).
+        /// Assigning the shader it has is no change and keeps it. Not documented, so the override
+        /// stays, with a warning: a change to or from no shader, and a variant that takes its
+        /// parent's queue (the parent's state, taken again later).
+        /// </summary>
+        void ResetRenderQueue(Shader next)
+        {
+            if (m_Parent != null && m_InheritQueue)
+            {
+                if (Inherited().m_CustomRenderQueue >= 0)
+                    Unbound.Runtime.Stubs.Ignored("Material.shader of a variant that takes its parent's render queue",
+                        "keeps the parent's queue: a shader change is not measured on variants");
+                return;
+            }
+            if (m_CustomRenderQueue < 0) return;
+            if (m_Shader == null || next == null)
+            {
+                Unbound.Runtime.Stubs.Ignored("Material.shader set to or from no shader",
+                    "keeps the material's render queue: the documented reset is to the shader's queue");
+                return;
+            }
+            m_CustomRenderQueue = -1;
         }
 
         /// <summary>A material holds a value for every property of its shader from the start, so
