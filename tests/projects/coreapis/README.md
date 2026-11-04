@@ -13,7 +13,11 @@ IEEE-754 bits. In the OnDemandRendering window each line has the frame in the wi
 
 ```
 python3 tests/projects/coreapis/run.py create --release 6000.0.71f1 --label <new-label>   # once, writes Assets
-python3 tests/projects/coreapis/run.py editor --release 6000.0.71f1 --label <new-label>
+python3 tests/projects/coreapis/preflight.py --copy <capture>/projects/native1 --launch <capture>/native1 --out <cache>/preflight
+python3 tests/projects/coreapis/run.py editor --release 6000.0.71f1 --label <new-label> --repeat native1 --preflight <cache>/preflight/preflight.json
+python3 tests/projects/coreapis/run.py check  --release 6000.0.71f1 --label <new-label> --repeat native1
+python3 tests/projects/coreapis/run.py editor --release 6000.0.71f1 --label <new-label> --repeat native2 --preflight <cache>/preflight/preflight.json
+python3 tests/projects/coreapis/run.py check  --release 6000.0.71f1 --label <new-label> --repeat native2
 python3 tests/projects/coreapis/run.py publish --release 6000.0.71f1 --label <new-label>
 UNBOUND_CLI=/path/to/unbound python3 tests/projects/coreapis/run.py unbound --release 6000.0.71f1 --label <new-label>
 python3 tests/projects/coreapis/compare.py tests/projects/coreapis/Reference/unity-6000.0.71f1.jsonl \
@@ -22,9 +26,58 @@ python3 tests/projects/coreapis/compare.py tests/projects/coreapis/Reference/uni
 
 The Editor captures run in windowed Editors (a private Xvfb, the GPU through VirtualGL): in batch
 mode the Game view does not render, so the screen camera, OnGUI and WaitForEndOfFrame never run
-and rendering is never skipped. Publishing requires two byte-identical captures on the NVIDIA
-renderer that exited with 0. The comparator aligns the two event sequences and keeps every
-missing and extra line, with no tolerance.
+and rendering is never skipped. The runner therefore has no batch capture. The comparator aligns
+the two event sequences and keeps every missing and extra line, with no tolerance.
+
+## Native capture path
+
+`run.py editor` starts one repeat through `tests/editor_runner.py`: its own GPU lease (do not wrap
+the driver in `with-heavy-job`), a private Xvfb inside the lease, `vglrun -d egl` and a windowed
+Editor without `-batchmode`, `-nographics`, `-quit` or `-executeMethod`. Deadlines: 1200 s hard,
+and 300 s without record progress. The probe writes its record once, at the end, so the progress
+budget is the time from admission to that write, cold import included. The previous Native pair
+wrote it after 53 s and 90 s (an earlier pair: 76 s and 86 s), two concurrent cold Editors; 300 s is
+more than three times the slowest. Editor log output never counts as progress. ProbeRunner's 600 s
+Play mode watchdog remains inside the Editor. The repeats run one after the other:
+
+* native1 writes the label's manifest once (checkout and a clean probe/runner tree, fixture,
+  scripts, runner and shared helpers, profile, existing reference, preflight record, deadlines);
+* `check --repeat native1` runs every guard and admits a passing capture (`admission.json`, written
+  once over all its output hashes); native2 starts only after that admission, with an identical
+  manifest;
+* a label and each repeat directory are write-once; a launch is never retried in a label.
+
+`guards.py` checks validity and completeness only, never an answer: both line kinds in the probe's
+own writer format with exact keys and types, every scheduled scenario at its frame, all 17 window
+frames with one probe Update and LateUpdate each, the fixed window members (ScreenCam, RtCam, Cube,
+Canvas, the probe's OnGUI and WaitForEndOfFrame rows, cameras only the probe's), one completion line
+that is the last line, the `... threw T: message` rows as expected data but a step that threw or an
+error/exception/assert log as a failure, no absolute path, device name or raw instance id in a
+compared line. Callback order, which frames render, counter values, API results and exception texts
+stay raw. The run guards require a strict exit 0 without any forced stop (not even after the
+shutdown line), the logged shutdown, a windowed NVIDIA OpenGL Core Editor of the release, the launch
+receipt's bytes, no ProbeRunner watchdog, a record closed before the Editor exit, the compile graph
+the Editor used being the preflight's, and no change to the copy's Assets/Packages/ProjectSettings.
+The Editor writes `ProjectSettings/PackageManagerSettings.asset` on first open; the copy's one
+deliberate setting (ProjectVersion.txt naming only the release, as for the existing reference's
+captures) may only be written back to the fixture's bytes, which the Editor does.
+
+`publish` needs two admitted, byte-identical repeats. A new release's reference is written once.
+The existing reference is never rewritten: the pair is compared with it in full
+(`publish-comparison.json`, once per label). Equal bytes leave it as it is; any difference prints
+every missing and extra line and stops (exit 3) for adjudication.
+
+`preflight.py` compiles both assemblies once, offline, with the build graph that a previous windowed
+Native capture's Editor wrote for this fixture. That copy's Packages, settings and assets must be
+the fixture's bytes except the declared CoreProbe.cs base. Its launch must have recorded the
+existing reference's bytes. Every graph input must be unchanged since that compile. The response
+files are used byte for byte; only the location and the generators' additional file are rebound.
+No compiler server is used. `controls/formatter.py` runs the recorder and its id helpers, cut
+verbatim from the probe and from the base blob, in a fake-API harness. The 23 saved corruption
+witnesses (`controls/witnesses.json`), ordinary numeric and escaped payloads with colliding ids,
+the Id/JsonIds forms and every reference event line are checked there. `controls/driver.py`
+replaces the supervised run with a fake Editor, one defect per case, and runs the real
+editor/check/publish steps. Neither control is Native evidence.
 
 ## Measured behavior in 6000.0.71f1
 
@@ -179,13 +232,15 @@ executed probe and engine query source. Its 88 missing/extra pairs consist of:
 | Large-float fixed-format text | 1 |
 | Runtime exception text | 4 |
 
-`Record` currently applies `Names` to the whole message. An ordinary `10` is
-therefore rewritten as `#LazyData` when that asset's id is 10. The 23 affected
+`Record` applied `Names` to the whole message. An ordinary `10` was
+therefore rewritten as `#LazyData` when that asset's id was 10. The probe now writes the message
+as it is; ids reach the text only through `Id`/`JsonIds`. The 23 affected
 records contain 27 such substitutions in activation flag pairs and clone rotation
 text; their underlying state/name/transform fields match Native. Earlier labels
-calling them activation-state or clone-name defects were wrong. The proposed
-recorder repair is not yet admitted or replayed. Its 617/65/65 result is an offline
-projection, not a new engine result or a comparator normalization.
+calling them activation-state or clone-name defects were wrong. The recorder
+repair has no new Native capture yet; the existing reference stays canonical until a strict pair
+is compared with it. Its 617/65/65 result is an offline projection, not a new engine result or a
+comparator normalization.
 
 Both JSON payloads decode identically, including all three differing decimal
 spellings' binary64 bits. Their two strict failures remain and are separately
@@ -217,3 +272,13 @@ configured scriptable pipeline logs one warning. Full receipts, raw unions and
 the attribution remain under the validation cache at
 `validation/runs/claude-fresh-20261101b/ondemand-validation/` and
 `validation/runs/claude-fresh-20261101b/rfc-validation/`.
+
+## Admission and bounded cleanup diagnostics
+
+The Editor's values, logs, sources and inputs remain immutable after admission. The shared
+runner can append hub-sweeps.jsonl after Editor exit. This registered diagnostic alone is
+excluded from the immutable artifact set; its completed prefix is sealed and every complete
+appended row must match the recorded cleanup schedule/schema. Prefix rewrite/removal, invalid
+rows and any other changed artifact refuse the next repeat/publication. An in-progress final
+write is not read as a capture value. Final receipts still retain/hash the entire journal after
+all bounded owned sweepers finish. Repeated check verifies the original seal, never reseals it.

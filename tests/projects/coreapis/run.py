@@ -1,31 +1,90 @@
 #!/usr/bin/env python3
 """Records the core API probe in the Unity Editor or runs it in Unbound.
 
-    run.py create --release R --label L    runs ProbeRunner.Create on a copy, copies its assets back here
-    run.py editor --release R --label L    two independent Editor captures (native1, native2) in
-                                           windowed Editors (the Game view renders)
-    run.py publish --release R --label L   checks that both agree, copies one to Reference/
-    run.py unbound --release R --label L   an Unbound capture (UNBOUND_CLI: the binary)
+    run.py create  --release R --label L    runs ProbeRunner.Create on a copy, copies its assets back here
+    run.py editor  --release R --label L --repeat native1 --preflight P
+                                            one windowed GPU Editor capture (the Game view renders)
+    run.py check   --release R --label L --repeat native1
+                                            every guard problem of that capture; a passing capture is
+                                            admitted (admission.json, written once)
+    run.py editor  --release R --label L --repeat native2 --preflight P
+                                            the independent repeat; only after native1's admission,
+                                            with the same sources, inputs and preflight
+    run.py check   --release R --label L --repeat native2
+    run.py publish --release R --label L    both admitted repeats agree byte for byte. A new release's
+                                            reference is written once (never overwritten). An existing
+                                            reference is only compared: equal bytes leave it as it is;
+                                            any difference prints the full delta and stops (exit 3)
+    run.py unbound --release R --label L    an Unbound capture (UNBOUND_CLI: the binary)
+    run.py editor|publish ... --dry-run     prints the exact plan; starts and writes nothing
 
 Every capture runs on a fresh copy of the probe's Assets/Packages/ProjectSettings under
-$XDG_CACHE_HOME/unbound/validation/runs/coreapis/<label>; nothing is written here.
-Editors run through the shared heavy-job launcher, on the GPU (a private Xvfb and VirtualGL).
+$XDG_CACHE_HOME/unbound/validation/runs/coreapis/<label>; nothing is written here (except by
+create and by publishing a new release's reference). Editors run through tests/editor_runner.py:
+each repeat takes its own GPU lease (do not wrap this driver in with-heavy-job), a private Xvfb
+inside the lease and `vglrun -d egl`, windowed: no -batchmode, -nographics, -quit or
+-executeMethod (ProbeRunner enters Play mode from InitializeOnLoad and quits from Edit mode).
+Batch mode does not render the Game view, so the 17-frame OnDemandRendering window (screen camera,
+OnGUI, WaitForEndOfFrame) is never measured there; this runner has no batch capture.
+The repeats run one after the other; a label and each repeat directory are write-once.
+
+`--preflight` names the preflight.json of a passing preflight.py run whose compiled sources are
+byte-identical to this checkout's probe scripts; without it no Editor starts.
 """
 import argparse
-import filecmp
+import hashlib
+import json
+import math
 import os
 from pathlib import Path
+import re
 import shutil
-import signal
 import subprocess
 import sys
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
-from probe_paths import editor_path, reference_file, run_root
-
 PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
+sys.path.insert(0, str(REPO/'tests'))
+from probe_paths import editor_path, reference_file, run_root  # noqa: E402
+import editor_runner  # noqa: E402
+
+sys.path.insert(0, str(PROBE))
+import compare  # noqa: E402
+import guards  # noqa: E402
+
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
+REPEATS = ('native1', 'native2')
+# Hard deadline of one admitted Editor run, cold import and shutdown included.
+HARD_TIMEOUT = 1200
+# The probe writes its record once, at the end (CoreProbe.Finish), so the progress deadline is the
+# longest time from admission to the record, cold import included. The previous Native pair
+# (two concurrent cold-import windowed GPU Editors) wrote it 53 s and 90 s after their copies were
+# made (an earlier pair: 76 s and 86 s); 300 s is more than three times the slowest. Only the
+# record counts as progress, never Editor log output. ProbeRunner's own 600 s Play mode watchdog
+# stays as a further check inside the Editor.
+PROGRESS_TIMEOUT = 300
+SHUTDOWN_GRACE = 30
+KILL_GRACE = 10
+VARIABLE = guards.OUTPUT_VARIABLE
+SOURCES = tuple(sorted(str(p.relative_to(PROBE)) for p in (PROBE/'Assets').rglob('*.cs')))
+TOOLS = ('run.py', 'guards.py', 'compare.py', 'preflight.py')
+SHARED = ('tests/editor_runner.py', 'tests/probe_paths.py')
+EXIT_STOP = 3
+
+
+def sha(path):
+    return hashlib.sha256(Path(path).read_bytes()).hexdigest()
+
+
+def profile_path(release):
+    return REPO/'data/profiles'/('unity-'+'.'.join(release.split('.')[:2])+'.json')
+
+
+def prepared_files(project):
+    files = {}
+    for label, part in (('assets', 'Assets'), ('packages', 'Packages'), ('settings', 'ProjectSettings')):
+        files.update({label+'/'+k: v for k, v in guards.tree(Path(project)/part).items()})
+    return files
 
 
 def copy_project(dest):
@@ -38,66 +97,349 @@ def copy_project(dest):
     return dest
 
 
-def display():
-    """A private X server for one Editor, which draws with the GPU through VirtualGL."""
-    for number in range(120, 200):
-        if not Path(f'/tmp/.X{number}-lock').exists() and not Path(f'/tmp/.X11-unix/X{number}').exists():
-            server = subprocess.Popen(['Xvfb', f':{number}', '-screen', '0', '1280x720x24', '-nolisten', 'tcp'],
-                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            return f':{number}', server
-    sys.exit('no free X display')
+def git_state():
+    def git(*args):
+        return subprocess.run(['git', '-C', str(REPO), *args], capture_output=True, text=True).stdout
+    paths = [str(PROBE)]+[str(REPO/s) for s in SHARED]
+    status = git('status', '--porcelain', '--untracked-files=all', '--', *paths)
+    return {'commit': git('rev-parse', 'HEAD').strip(), 'tree': git('rev-parse', 'HEAD^{tree}').strip(),
+            'status': status.splitlines(), 'clean': status == ''}
 
 
-def stop_helpers(project):
-    """Stops only the Hub and the Unity Roslyn servers a windowed Editor started for this project
-    copy (the Hub's command line names the project)."""
-    for process in Path('/proc').glob('[0-9]*'):
-        try:
-            command = (process/'cmdline').read_bytes()
-            if b'unityhub-bin' in command and str(project).encode()+b'\0' in command:
-                os.kill(int(process.name), signal.SIGTERM)
-                continue
-            if b'VBCSCompiler' not in command:
-                continue
-            env = dict(i.split(b'=', 1) for i in (process/'environ').read_bytes().split(b'\0') if b'=' in i)
-            if env.get(b'PWD') == str(project).encode():
-                os.kill(int(process.name), signal.SIGTERM)
-        except (FileNotFoundError, ProcessLookupError, PermissionError):
-            pass
+def source_manifest(release, preflight):
+    """What a label's repeats must share: checkout, fixture, scripts, runner, shared helpers,
+    profile, the existing reference and the preflight record."""
+    target = reference_file(PROBE, 'jsonl')
+    return {'release': release, 'git': git_state(), 'fixture': prepared_files(PROBE),
+            'sources': {s: sha(PROBE/s) for s in SOURCES}, 'tools': {t: sha(PROBE/t) for t in TOOLS},
+            'shared': {s: sha(REPO/s) for s in SHARED}, 'profile': {str(profile_path(release)): sha(profile_path(release))},
+            'reference': {'path': str(target), 'sha256': sha(target) if target.exists() else None},
+            'preflight': {'path': str(Path(preflight).resolve()), 'sha256': sha(preflight)} if preflight else None,
+            'deadlines': {'hard_s': HARD_TIMEOUT, 'progress_s': PROGRESS_TIMEOUT,
+                          'shutdown_grace_s': SHUTDOWN_GRACE, 'kill_grace_s': KILL_GRACE}}
 
 
-def editor(work, windowed=True, repeats=('native1', 'native2')):
-    """Windowed Editors start Play mode from ProbeRunner's InitializeOnLoad; batch mode (where the
-    Game view does not render) through -executeMethod ProbeRunner.Record."""
-    started = []
-    codes = []
+def paths(work, repeat):
+    return work/'projects'/repeat, work/repeat
+
+
+def job(work, repeat, release):
+    project, out = paths(work, repeat)
+    project, out = project.resolve(), out.resolve()
+    inputs = {'assets': str(project/'Assets'), 'packages': str(project/'Packages'),
+              'settings': str(project/'ProjectSettings'), 'profile': str(profile_path(release))}
+    inputs.update({t.split('.')[0]: str(PROBE/t) for t in TOOLS})
+    inputs.update({Path(s).stem: str(REPO/s) for s in SHARED})
+    return editor_runner.EditorJob(
+        project, out/'editor.log', out, env={VARIABLE: str(out/'values.jsonl'), 'UNBOUND_PROBE_UNITY_VERSION': release},
+        batch=False, graphics=True, timeout=HARD_TIMEOUT, shutdown_grace=SHUTDOWN_GRACE, kill_grace=KILL_GRACE,
+        progress_files=(out/'values.jsonl',), progress_timeout=PROGRESS_TIMEOUT, label='coreapis-'+repeat,
+        launch_inputs={'release': release, 'paths': inputs})
+
+
+def describe(j):
+    return {'label': j.label, 'kind': j.kind, 'command': j.command(), 'batch': j.batch, 'graphics': j.graphics,
+            'env': j.env, 'timeout': j.timeout, 'shutdown_grace': j.shutdown_grace, 'kill_grace': j.kill_grace,
+            'progress_files': j.progress_files, 'progress_timeout': j.progress_timeout, 'project': str(j.project),
+            'out': str(j.out), 'cwd': str(j.cwd), 'screen': j.screen, 'launch_inputs': j.launch_inputs}
+
+
+def preflight_problems(path, release):
     try:
-        for repeat in repeats:
-            project = copy_project(work/'projects'/repeat)
-            out = work/repeat/'values.jsonl'
-            out.parent.mkdir(parents=True, exist_ok=True)
-            if out.exists():
-                sys.exit(f'refusing to overwrite capture: {out}')
-            name, server = display()
-            env = dict(os.environ, DISPLAY=name, CORE_APIS_OUT=str(out), PWD=str(project))
-            env.pop('XAUTHORITY', None)
-            mode = [] if windowed else ['-batchmode', '-executeMethod', 'ProbeRunner.Record']
-            job = subprocess.Popen(
-                [str(LAUNCHER), 'timeout', '-s', 'KILL', '900', 'vglrun', '-d', 'egl', str(editor_path()),
-                 *mode, '-projectPath', str(project), '-logFile', str(work/repeat/'editor.log')], cwd=project, env=env)
-            started.append((repeat, project, server, job))
-        codes = [job.wait() for _, _, _, job in started]
-        for (repeat, _, _, _), code in zip(started, codes):
-            (work/repeat/'exit.txt').write_text(f'{code}\n')
-    finally:
-        for _, project, server, job in started:
-            if job.poll() is None:
-                job.kill()
-            server.terminate()
-            server.wait()
-            stop_helpers(project)
-    print('editor exits', codes)
-    return int(any(codes) or not codes)
+        record = json.loads(Path(path).read_text())
+    except (OSError, TypeError, json.JSONDecodeError) as error:
+        return [f'no preflight record: {error}']
+    problems = []
+    if record.get('passed') is not True:
+        problems.append('the preflight did not pass')
+    if record.get('release') != release:
+        problems.append(f"the preflight compiled for {record.get('release')}")
+    compiled = record.get('sources', {})
+    for source in SOURCES:
+        if compiled.get(source) != sha(PROBE/source):
+            problems.append(f'{source} differs from the preflight-compiled bytes')
+    if set(compiled) != set(SOURCES):
+        problems.append(f'the preflight compiled {sorted(compiled)}, not {list(SOURCES)}')
+    if set(record.get('results', {})) != {'Assembly-CSharp', 'Assembly-CSharp-Editor'}:
+        problems.append('the preflight did not compile both assemblies')
+    return problems
+
+
+DAG = re.compile(r'Library/Bee/artifacts/[^/"]+\.dag/')
+
+
+def graph_problems(project, preflight):
+    """The launched Editor's own response files must be the ones the preflight compiled: the same
+    sources, references, defines, analyzers and options (only the graph directory name is neutral),
+    and its source generators' additional file must name the launched copy."""
+    dags = sorted(Path(project).glob('Library/Bee/artifacts/*.dag'))
+    dags = [d for d in dags if (d/'Assembly-CSharp.rsp').is_file()]
+    if len(dags) != 1:
+        return [f'the launched copy has {len(dags)} compile graphs with Assembly-CSharp.rsp, not one']
+    problems = []
+    for assembly, result in preflight.get('results', {}).items():
+        for suffix in ('rsp', 'rsp2'):
+            path = dags[0]/f'{assembly}.{suffix}'
+            want = result.get(suffix, {}).get('compiled_text')
+            if not path.is_file():
+                problems.append(f'the launched copy has no {assembly}.{suffix}')
+            elif want is None or DAG.sub('DAG/', path.read_text()) != DAG.sub('DAG/', want):
+                problems.append(f'{assembly}.{suffix} differs from the preflight-compiled graph')
+        extra = dags[0]/f'{assembly}.UnityAdditionalFile.txt'
+        if not extra.is_file() or Path(extra.read_text().strip()).resolve() != Path(project).resolve():
+            problems.append(f'{assembly}.UnityAdditionalFile.txt does not name the launched copy')
+    return problems
+
+
+def artifact_manifest(out):
+    """SHA-256 and size of every file the launch wrote under its output directory."""
+    return {str(p.relative_to(out)): {'sha256': sha(p), 'bytes': p.stat().st_size}
+            for p in sorted(Path(out).rglob('*')) if p.is_file() and p.name not in ('artifact-manifest.json', 'admission.json')}
+
+
+# editor_runner owns this append-only diagnostic after Editor exit. It never contributes
+# capture values or progress. Seal all other artifacts and the completed journal prefix;
+# final receipts still hash the complete journal after the bounded sweepers finish.
+CLEANUP_LOG = 'hub-sweeps.jsonl'
+
+
+def sealed_artifacts(out):
+    return {k: v for k, v in artifact_manifest(out).items() if k != CLEANUP_LOG}
+
+
+def cleanup_prefix(out):
+    path = Path(out)/CLEANUP_LOG
+    raw = path.read_bytes() if path.is_file() else b''
+    complete = raw[:raw.rfind(b'\n')+1]
+    return {'present': path.is_file(), 'bytes': len(complete),
+            'sha256': hashlib.sha256(complete).hexdigest()}
+
+
+def cleanup_problems(out, prefix=None):
+    """Only registered, well-typed cleanup rows may append; an admitted prefix cannot change.
+    One unfinished trailing write is left to the owned writer and final receipt, never read as
+    a capture value. This avoids treating an append in progress as a changed Native record."""
+    out = Path(out)
+    path = out/CLEANUP_LOG
+    try:
+        result = json.loads((out/'editor-run.json').read_text())
+        schedule = result.get('late_sweeps')
+        raw = path.read_bytes() if path.is_file() else b''
+        if schedule is None:
+            if path.exists(): return ['an unregistered cleanup journal appeared']
+            delays = []
+        else:
+            if Path(schedule['log']).resolve() != path.resolve():
+                return ['the cleanup journal belongs to another output directory']
+            delays = schedule['delays']
+            if not isinstance(delays, list) or any(type(d) not in (int, float) or not math.isfinite(d) or d < 0 for d in delays):
+                return ['invalid cleanup schedule']
+        if prefix is not None:
+            n = prefix['bytes']
+            if type(n) is not int or n < 0 or n > len(raw) or \
+                    hashlib.sha256(raw[:n]).hexdigest() != prefix['sha256'] or \
+                    prefix['present'] and not path.is_file():
+                return ['the admitted cleanup journal prefix changed or was removed']
+        complete = raw[:raw.rfind(b'\n')+1]
+        previous = -1
+        for line in complete.splitlines():
+            row = json.loads(line)
+            if set(row) != {'after_s', 'time', 'swept'} or type(row['after_s']) not in (int, float) or \
+                    row['after_s'] not in delays or type(row['time']) not in (int, float) or \
+                    not math.isfinite(row['time']) or not isinstance(row['swept'], list):
+                return ['invalid cleanup journal row']
+            at = delays.index(row['after_s'])
+            if at <= previous: return ['cleanup journal schedule was reordered or repeated']
+            previous = at
+        return []
+    except (OSError, KeyError, TypeError, ValueError) as error:
+        return [f'no valid cleanup journal: {error}']
+
+
+# The one deliberate change of the private copy (copy_project, as for the existing reference's
+# captures): ProjectVersion.txt names only the selected release. The Editor writes the release's
+# full version file back on open (both copies of the previous Native pair held the fixture's bytes
+# afterwards); guards.authored_problems accepts exactly that.
+DELIBERATE = 'settings/ProjectVersion.txt'
+
+
+def deliberate(manifest, project):
+    return {DELIBERATE: {'fixture_sha256': manifest['fixture'][DELIBERATE],
+                         'prepared_sha256': prepared_files(project)[DELIBERATE],
+                         'prepared_text': (Path(project)/'ProjectSettings/ProjectVersion.txt').read_text()}}
+
+
+def write_once(path, value):
+    with Path(path).open('x') as stream:
+        stream.write(json.dumps(value, indent=1)+'\n')
+
+
+def editor(work, repeat, release, preflight, dry_run=False):
+    j = job(work, repeat, release)
+    project, out = paths(work, repeat)
+    if dry_run:
+        print(json.dumps({'plan': describe(j), 'fresh': not out.exists() and not project.exists(),
+                          'label_manifest_exists': (work/'label-manifest.json').exists(),
+                          'native1_admitted': (work/'native1/admission.json').exists(),
+                          'manifest': source_manifest(release, preflight if preflight and Path(preflight).exists() else None)},
+                         indent=1))
+        return 0
+    problems = preflight_problems(preflight, release)
+    if problems:
+        sys.exit('no launch: '+'; '.join(problems))
+    manifest = source_manifest(release, preflight)
+    if not manifest['git']['clean']:
+        sys.exit(f"no launch: the probe or the shared runner has uncommitted changes: {manifest['git']['status'][:5]}")
+    label = work/'label-manifest.json'
+    if repeat == 'native1':
+        if label.exists() or (work/'native2').exists():
+            sys.exit(f'refusing to reuse label {work.name}: a label is write-once')
+    else:
+        first = admission_problems(work, 'native1', release)
+        if first:
+            sys.exit(f'native1 is not admitted ({len(first)} problems, first: {first[0]}); the repeat does not start')
+        if json.loads(label.read_text()) != manifest:
+            sys.exit('the checkout, fixture, runner, reference or preflight differ from native1\'s; the repeat does not start')
+    if out.exists() or project.exists():
+        sys.exit(f'refusing to reuse {out}: a launch is never repeated in a label')
+    if repeat == 'native1':
+        work.mkdir(parents=True, exist_ok=True)
+        write_once(label, manifest)
+    copy_project(project)
+    out.mkdir(parents=True)
+    j = job(work, repeat, release)
+    write_once(out/'inputs.json', {'release': release, 'repeat': repeat, 'files': prepared_files(project),
+                                   'deliberate': deliberate(manifest, project),
+                                   'label_manifest_sha256': sha(label), 'plan': describe(j)})
+    result = editor_runner.run(j)
+    (out/'authored-after.json').write_text(json.dumps(prepared_files(project), indent=1)+'\n')
+    (out/'authored-delta.json').write_text(json.dumps(guards.authored_delta(out, project), indent=1)+'\n')
+    (out/'artifact-manifest.json').write_text(json.dumps(artifact_manifest(out), indent=1)+'\n')
+    print(editor_runner.summary(result))
+    problems = check_problems(work, repeat, release)
+    for p in problems:
+        print(' ', p)
+    print(f'{repeat}:', 'passes the guards (admit it with check)' if not problems else f'{len(problems)} problems')
+    return int(bool(problems))
+
+
+def check_problems(work, repeat, release):
+    """Every guard problem of one capture, plus its launch identity: the label's manifest, the
+    checkout's current runner and the compile graph the Editor actually used."""
+    project, out = paths(work, repeat)
+    if not out.exists():
+        return [f'{repeat} was not captured']
+    problems = guards.capture_problems(out, project, release, HARD_TIMEOUT, PROGRESS_TIMEOUT)
+    try:
+        label = work/'label-manifest.json'
+        manifest = json.loads(label.read_text())
+        prepared = json.loads((out/'inputs.json').read_text())
+        if prepared.get('label_manifest_sha256') != sha(label):
+            problems.append('the capture was not launched under this label\'s manifest')
+        if prepared.get('release') != release or manifest.get('release') != release:
+            problems.append('the capture was launched for another release')
+        if manifest['tools'] != {t: sha(PROBE/t) for t in TOOLS} or manifest['sources'] != {s: sha(PROBE/s) for s in SOURCES}:
+            problems.append('this checkout\'s probe scripts or runner differ from the launched ones')
+        intended = dict(manifest['fixture'])
+        intended[DELIBERATE] = hashlib.sha256(('m_EditorVersion: '+release+'\n').encode()).hexdigest()
+        if prepared['files'] != intended or prepared.get('deliberate', {}).get(DELIBERATE, {}).get('fixture_sha256') \
+                != manifest['fixture'][DELIBERATE]:
+            problems.append('the project copy was not prepared with the fixture\'s bytes and the one deliberate setting')
+        if (manifest['reference']['sha256'] or None) != (sha(manifest['reference']['path'])
+                                                        if Path(manifest['reference']['path']).exists() else None):
+            problems.append('the existing reference changed after the label was made')
+        preflight = manifest['preflight']
+        if sha(preflight['path']) != preflight['sha256']:
+            problems.append('the preflight record changed after the launch')
+        problems += [f'graph: {p}' for p in graph_problems(project, json.loads(Path(preflight['path']).read_text()))]
+    except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
+        problems.append(f'no launch record for the identity checks: {error}')
+    return problems+cleanup_problems(out)
+
+
+def admission_problems(work, repeat, release):
+    out = work/repeat
+    try:
+        admission = json.loads((out/'admission.json').read_text())
+    except (OSError, json.JSONDecodeError) as error:
+        return [f'{repeat} has no admission: {error}']
+    problems = []
+    if admission.get('artifacts') != sealed_artifacts(out):
+        problems.append(f'{repeat} changed after its admission')
+    prefix = admission.get('cleanup_prefix')
+    if not isinstance(prefix, dict):
+        problems.append(f'{repeat} has no cleanup prefix seal')
+    else:
+        problems += cleanup_problems(out, prefix)
+    return problems+check_problems(work, repeat, release)
+
+
+def check(work, repeat, release):
+    problems = check_problems(work, repeat, release)
+    for p in problems:
+        print(p)
+    if problems:
+        print(f'{repeat}: {len(problems)} problems; not admitted')
+        return 1
+    out = work/repeat
+    _, notes = guards.values_problems(out/'values.jsonl')
+    if (out/'admission.json').exists():
+        changed = admission_problems(work, repeat, release)
+        if changed:
+            sys.exit(f'{repeat}: an earlier admission names other bytes: {changed}')
+        print(f'{repeat}: passes; already admitted')
+        return 0
+    admission = {'repeat': repeat, 'release': release, 'values_sha256': sha(out/'values.jsonl'),
+                 'artifacts': sealed_artifacts(out), 'cleanup_prefix': cleanup_prefix(out), 'notes': notes}
+    write_once(out/'admission.json', admission)
+    print(f'{repeat}: passes; admitted ({len(notes)} notes)')
+    return 0
+
+
+def publish(work, release, dry_run=False, target=None):
+    """Two admitted, byte-identical repeats. A new release's reference is written once. An existing
+    reference is never rewritten: the pair is compared with it in full, and any difference stops
+    for adjudication with every missing and extra line."""
+    target = Path(target) if target else reference_file(PROBE, 'jsonl')
+    report = work/'publish-comparison.json'
+    problems = [p for r in REPEATS for p in admission_problems(work, r, release)]
+    if not problems:
+        problems = editor_runner.differences([work/r for r in REPEATS], lambda d: ['values.jsonl'])
+    if dry_run:
+        print(json.dumps({'repeats': [str(work/r) for r in REPEATS], 'problems': problems, 'target': str(target),
+                          'target_exists': target.exists(), 'target_sha256': sha(target) if target.exists() else None,
+                          'report': str(report), 'report_exists': report.exists()}, indent=1))
+        return 0
+    if problems:
+        sys.exit(f'{len(problems)} problems (first: {problems[0]}); not publishing')
+    values = work/'native1/values.jsonl'
+    if not target.exists():
+        def write(path, first):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            with path.open('xb') as stream:
+                stream.write((first/'values.jsonl').read_bytes())
+            print('published', path)
+        return editor_runner.publish([work/r for r in REPEATS], target, lambda d: ['values.jsonl'], write, gpu=True)
+    if report.exists():
+        sys.exit(f'the comparison with the existing reference is already recorded ({report}); it is not repeated')
+    before = sha(target)
+    rows = compare.compare(compare.load(target), compare.load(values))
+    summary = {s: sum(r['status'] == s for r in rows) for s in ('pass', 'missing', 'extra')}
+    identical = values.read_bytes() == target.read_bytes()
+    write_once(report, {'reference': str(target), 'reference_sha256': before, 'pair_sha256': sha(values),
+                        'identical': identical, 'summary': summary, 'sequence': rows})
+    if sha(target) != before:
+        sys.exit('the reference changed during the comparison')
+    if identical:
+        print(f'the pair equals the existing reference byte for byte ({before}); it stays as it is')
+        return 0
+    for r in rows:
+        if r['status'] != 'pass':
+            print(('-' if r['status'] == 'missing' else '+'), r['line'])
+    print(json.dumps(summary, sort_keys=True))
+    print(f'STOP: the admitted pair differs from the existing reference {target}; it is not replaced. '
+          f'Full comparison: {report}')
+    return EXIT_STOP
 
 
 def create(work):
@@ -119,23 +461,6 @@ def create(work):
     return 0
 
 
-def publish(work):
-    a, b = work/'native1'/'values.jsonl', work/'native2'/'values.jsonl'
-    if not filecmp.cmp(a, b, shallow=False):
-        sys.exit('the two Editor captures differ; not publishing')
-    for repeat in ('native1', 'native2'):
-        if (work/repeat/'exit.txt').read_text().strip() != '0' or (work/repeat/'values.jsonl.watchdog').exists():
-            sys.exit(f'{repeat}: the Editor did not finish Play mode and exit with 0')
-        log = (work/repeat/'editor.log').read_text(errors='replace')
-        if 'NVIDIA' not in next((line for line in log.splitlines() if 'Renderer:' in line), ''):
-            sys.exit(f'{repeat}: NVIDIA GPU renderer was not verified')
-    target = reference_file(PROBE, 'jsonl')
-    target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(a, target)
-    print('published', target)
-    return 0
-
-
 def unbound(work):
     cli = os.environ.get('UNBOUND_CLI', str(REPO/'target/release/unbound'))
     project = copy_project(work/'projects'/'unbound')
@@ -154,17 +479,31 @@ def unbound(work):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=('create', 'editor', 'batch', 'publish', 'unbound'))
+    parser.add_argument('mode', choices=('create', 'editor', 'check', 'batch', 'publish', 'unbound'))
     parser.add_argument('--label', required=True)
     parser.add_argument('--release', required=True)
+    parser.add_argument('--repeat', choices=REPEATS)
+    parser.add_argument('--preflight', type=Path)
+    parser.add_argument('--dry-run', action='store_true')
     args = parser.parse_args()
     if Path(args.label).name != args.label or args.label in ('.', '..'):
         parser.error('label must be a single directory name')
+    if args.mode == 'batch':
+        parser.error('no batch capture: batch mode does not render the Game view, so the OnDemandRendering '
+                     'window is not measured (use editor)')
+    if args.mode in ('editor', 'check') and not args.repeat:
+        parser.error(f'{args.mode} needs --repeat')
+    if args.mode == 'editor' and not args.dry_run and not args.preflight:
+        parser.error('editor needs --preflight (a passing preflight.json)')
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
     work = run_root(PROBE, args.label)
-    modes = {'create': create, 'editor': editor, 'publish': publish, 'unbound': unbound,
-             'batch': lambda w: editor(w, windowed=False, repeats=('batch',))}
-    return modes[args.mode](work)
+    if args.mode == 'editor':
+        return editor(work, args.repeat, args.release, args.preflight, args.dry_run)
+    if args.mode == 'check':
+        return check(work, args.repeat, args.release)
+    if args.mode == 'publish':
+        return publish(work, args.release, args.dry_run)
+    return {'create': create, 'unbound': unbound}[args.mode](work)
 
 
 if __name__ == '__main__':
