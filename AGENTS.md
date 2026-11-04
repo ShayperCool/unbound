@@ -67,6 +67,20 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
   sequences stay visible; do not change an oracle, comparator, tolerance or ordering to make
   an unspecified difference disappear. Review observable game effects before changing code.
 
+## Parallel parity delivery
+
+- Keep several independent feature implementations moving when explicitly authorized, unowned
+  work is ready. Audits and reviews are separate from implementation. A finished package waiting
+  for Root must not stop unrelated ready work; never create filler tasks or duplicate a writer.
+- The coordinator advances the authorized queue and starts a new independent review for each
+  prepared source head without requiring a separate acknowledgement of every checkpoint.
+  Validation still needs an applicable explicit release; integration and runtime admission
+  remain Root's decisions.
+- Consolidate routine receipts into review-ready packages with exact source/artifact links,
+  findings, proposed commands and spending. Report material blockers promptly. Preserve the
+  full raw evidence outside Git, and keep pins, ownership and spent budgets in compact state.
+  Do not poll running agents or revive retired owners.
+
 ## Code search
 
 - The repo has a semantic index (`ccc`, see the `ccc` skill). Use `ccc search <what it does>` to find
