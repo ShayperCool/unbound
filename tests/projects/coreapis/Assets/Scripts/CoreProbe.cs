@@ -32,8 +32,11 @@ public class CoreProbe : MonoBehaviour
 
     public static int Frame => s_Frame0 < 0 ? -1 : Time.frameCount - s_Frame0;
 
+    /// <summary>One event. Instance ids reach the text only through <see cref="Id"/> and
+    /// <see cref="JsonIds"/>; other numbers are written as they are (a whole-text id search would
+    /// turn an ordinary number that equals some object's id into that object's name).</summary>
     public static void Record(string who, string message) =>
-        s_Log.Append($"{{\"f\":{Frame},\"s\":\"{s_Scenario}\",\"who\":\"{P.Esc(who)}\",\"e\":\"{P.Esc(Names(message))}\"}}\n");
+        s_Log.Append($"{{\"f\":{Frame},\"s\":\"{s_Scenario}\",\"who\":\"{P.Esc(who)}\",\"e\":\"{P.Esc(message)}\"}}\n");
 
     static bool InWindow => s_Window >= 0 && Time.frameCount - s_Window <= WindowFrames;
 
@@ -57,35 +60,6 @@ public class CoreProbe : MonoBehaviour
         m => m.Groups[1].Value + "\"" + Id(int.Parse(m.Groups[2].Value)) + "\"");
 
     static string Id(int id) => id == 0 ? "0" : s_Names.TryGetValue(id, out var n) ? "#" + n : (id > 0 ? "#unknown+" : "#unknown-");
-
-    /// <summary>Replaces every known instance id in a text by its object's name.</summary>
-    static string Names(string text)
-    {
-        if (s_Names.Count == 0 || text.IndexOfAny("0123456789".ToCharArray()) < 0) return text;
-        var b = new StringBuilder();
-        for (int i = 0; i < text.Length;)
-        {
-            int j = i;
-            if (text[j] == '-' && j + 1 < text.Length && char.IsDigit(text[j + 1])) j++;
-            if (j < text.Length && char.IsDigit(text[j]) && (i == 0 || !char.IsLetterOrDigit(text[i - 1])))
-            {
-                int k = j;
-                while (k < text.Length && char.IsDigit(text[k])) k++;
-                if (int.TryParse(text.Substring(i, k - i), out var id) && s_Names.TryGetValue(id, out var name))
-                {
-                    b.Append('#').Append(name);
-                    i = k;
-                    continue;
-                }
-                b.Append(text, i, k - i);
-                i = k;
-                continue;
-            }
-            b.Append(text[i]);
-            i++;
-        }
-        return b.ToString();
-    }
 
     readonly Dictionary<int, Action> m_Steps = new Dictionary<int, Action>();
     GameObject m_A, m_A1, m_B, m_C, m_D, m_D1, m_E, m_F, m_Src, m_SrcOff;
