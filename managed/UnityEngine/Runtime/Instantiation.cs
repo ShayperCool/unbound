@@ -302,6 +302,15 @@ namespace Unbound.Runtime
             Lifecycle.DisableForDestroyRequest(obj);
         }
 
+        /// <summary>Preserves the existing automatic particle stop-action delivery at the end
+        /// of the frame, without applying the manual request's script-disable contract.</summary>
+        internal static void DestroyAtEndOfFrame(Object obj)
+        {
+            if (obj == null || obj.m_PendingDestroy) return;
+            obj.m_PendingDestroy = true;
+            s_EndOfFrame.Add(obj);
+        }
+
         /// <summary>A zero-delay request whose scripts Destroy disables before it returns (measured
         /// in Play mode for awakened MonoBehaviours, GameObject and component targets:
         /// tests/projects/destroycontract). Edit mode, assets, prefab assets, built-in components

@@ -790,7 +790,7 @@ namespace UnityEngine
                     m_GameObject.SetActive(false);
                     break;
                 case ParticleSystemStopAction.Destroy:
-                    Destroy(m_GameObject);
+                    Destruction.DestroyAtEndOfFrame(m_GameObject);
                     break;
                 case ParticleSystemStopAction.Callback:
                     Messaging.SendFast(m_GameObject, "OnParticleSystemStopped");
