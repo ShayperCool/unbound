@@ -101,7 +101,7 @@ public static class MechanismTrace
     public static Func<string> Peer;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    static void Reset()
+    static void ResetTrace()
     {
         Labels.Clear();
         Trace.Clear();
