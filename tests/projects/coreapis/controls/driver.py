@@ -260,7 +260,7 @@ def cases(release):
         {'name': 'pair-differs-from-existing-reference', 'native1': {'values': pose_changed}, 'native2': {'values': pose_changed},
          'steps': full+[('publish', None, 'stop'), ('publish-again', None, 'refused')]},
         {'name': 'new-release-reference-written-once', 'target': 'absent',
-         'steps': full+[('publish', None, 'passes'), ('publish-again', None, 'refused')]},
+         'steps': full+[('publish', None, 'passes'), ('publish-again', None, 'passes')]},
         {'name': 'dry-runs-write-nothing', 'steps': [('editor-dry', 'native1', 'passes'), ('publish-dry', None, 'passes')]},
     ]
     return result
@@ -314,6 +314,8 @@ def run_case(case, root, release, preflight_path, preflight):
                 ok = ok and before == after == REFERENCE_BYTES
             if kind == 'publish' and case.get('target') == 'absent' and expected == 'passes':
                 ok = ok and after == (work/'native1/values.jsonl').read_bytes()
+            if kind == 'publish-again':    # never a rewrite: the target keeps its bytes
+                ok = ok and before == after
             if kind == 'publish' and expected == 'stop':
                 path = work/'publish-comparison.json'
                 report = json.loads(path.read_text()) if path.exists() else {'identical': None, 'summary': {}}
