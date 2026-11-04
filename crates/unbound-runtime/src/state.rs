@@ -1279,7 +1279,9 @@ mod tests {
             crc_mismatch(open_bundle(&json!({ "data": memory, "crc": wrong }).to_string()));
         }
         // The archive starts at the offset; truncated bytes fail with or without a check.
-        assert!(open_bundle(&json!({ "path": path, "offset": 0, "crc": crc }).to_string()).is_err());
+        assert!(
+            open_bundle(&json!({ "path": path, "offset": 0, "crc": crc }).to_string()).is_err()
+        );
         let truncated = base64(&data[..data.len() - 1]);
         assert!(open_bundle(&json!({ "data": truncated, "crc": crc }).to_string()).is_err());
         assert!(open_bundle(&json!({ "data": truncated }).to_string()).is_err());
