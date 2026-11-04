@@ -275,8 +275,10 @@ namespace Unbound.Runtime
     internal static class Destruction
     {
         static readonly List<(Object Target, double Time)> s_Delayed = new List<(Object, double)>();
-        /// <summary>Destructions finished at the end of the frame: due delayed requests and the
-        /// zero-delay requests outside the measured script contract (assets, built-in components).</summary>
+        /// <summary>All deferred requests, in enqueue order. The scripting points remove manual
+        /// requests early; end-of-frame delivery skips those while the complete scripting pump
+        /// is present. Keeping one queue preserves the old interleaving with assets and due
+        /// delayed requests if a custom loop requires the end-of-frame fallback.</summary>
         static readonly List<Object> s_EndOfFrame = new List<Object>();
         /// <summary>Zero-delay requests of scene GameObjects and scripts, in request order: their
         /// scripts were disabled by the request; <see cref="DeliverRequested"/> destroys them.</summary>
@@ -291,11 +293,8 @@ namespace Unbound.Runtime
             }
             if (obj.m_PendingDestroy) return;
             obj.m_PendingDestroy = true;
-            if (!IsScriptRequest(obj))
-            {
-                s_EndOfFrame.Add(obj);
-                return;
-            }
+            s_EndOfFrame.Add(obj);
+            if (!IsScriptRequest(obj)) return;
             // Accounted before any callback: Destroy of the same object from its OnDisable returns
             // above, and destructions requested by the callbacks queue after this one.
             s_Requested.Add(obj);
@@ -340,8 +339,11 @@ namespace Unbound.Runtime
         {
             while (s_Requested.Count > 0)
             {
+                if (!PlayerLoopDriver.HasDestroyDeliveryPoints) return;
                 var batch = s_Requested.ToArray();
                 s_Requested.Clear();
+                var targets = new HashSet<Object>(batch, ReferenceEqualityComparer.Instance);
+                s_EndOfFrame.RemoveAll(targets.Contains);
                 foreach (var obj in batch)
                 {
                     if (obj.m_Destroyed) continue;
@@ -373,12 +375,20 @@ namespace Unbound.Runtime
         {
             while (s_EndOfFrame.Count > 0)
             {
+                var held = s_Requested.Count > 0 && PlayerLoopDriver.HasDestroyDeliveryPoints
+                    ? new HashSet<Object>(s_Requested, ReferenceEqualityComparer.Instance) : null;
                 var batch = s_EndOfFrame.ToArray();
                 s_EndOfFrame.Clear();
+                var due = new List<Object>();
+                // Partition before callbacks: new requests must follow every retained request,
+                // even if a legacy request's OnDestroy enqueues them during this flush.
                 foreach (var obj in batch)
-                {
+                    if (held != null && held.Contains(obj)) s_EndOfFrame.Add(obj);
+                    else due.Add(obj);
+                if (due.Count == 0) return;
+                if (held == null) s_Requested.Clear();
+                foreach (var obj in due)
                     if (!obj.m_Destroyed) DestroyImmediate(obj);
-                }
             }
         }
 

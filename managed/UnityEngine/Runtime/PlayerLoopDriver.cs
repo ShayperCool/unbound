@@ -88,6 +88,38 @@ namespace Unbound.Runtime
             set => s_Current = value;
         }
 
+        /// <summary>The measured manual Destroy delivery uses these three scripting points.
+        /// Custom loops omitting one retain the prior end-of-frame drain instead of stranding
+        /// requests. This fallback preserves our previous behavior; it is not a measured Unity
+        /// contract for arbitrary custom loops. Inspect the current loop so a later replacement
+        /// cannot leave an earlier request waiting on a node that no longer runs.</summary>
+        internal static bool HasDestroyDeliveryPoints
+        {
+            get
+            {
+                var phases = CurrentLoop.subSystemList;
+                return HasPointInPhase(phases, typeof(PL.FixedUpdate), typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate))
+                    && HasPointInPhase(phases, typeof(PL.Update), typeof(PL.Update.ScriptRunDelayedDynamicFrameRate))
+                    && HasPointInPhase(phases, typeof(PL.PostLateUpdate), typeof(PL.PostLateUpdate.ScriptRunDelayedDynamicFrameRate));
+            }
+        }
+
+        static bool HasPointInPhase(PlayerLoopSystem[] phases, Type phase, Type point)
+        {
+            if (phases != null)
+                foreach (var system in phases)
+                    if (system.type == phase && HasPoint(system.subSystemList, point)) return true;
+            return false;
+        }
+
+        static bool HasPoint(PlayerLoopSystem[] systems, Type point)
+        {
+            if (systems != null)
+                foreach (var system in systems)
+                    if (system.type == point || HasPoint(system.subSystemList, point)) return true;
+            return false;
+        }
+
         static PlayerLoopDriver()
         {
             Register(typeof(PL.TimeUpdate.WaitForLastPresentationAndUpdateTime), UpdateTime);
