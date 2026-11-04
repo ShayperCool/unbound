@@ -419,6 +419,22 @@ namespace UnityEngine
         /// its sceneUnloaded (measured: tests/projects/lightprobes lifecycle.jsonl).</summary>
         static readonly Dictionary<int, LightProbes> s_Own = new Dictionary<int, LightProbes>();
 
+        /// <summary>
+        /// The probes object last given to a project scene file's baked probes, by scene path, held
+        /// only weakly. Unity documents the shared LightProbes object as its Lighting Data asset's
+        /// own, shared by every loaded version of the scene (GetSharedLightProbesForScene), and an
+        /// asset reached from a script's static variable is not unloaded (UnloadUnusedAssets). In
+        /// the Editor a reload of a scene whose earlier probes object a script still holds gives
+        /// that same object back, with the scene's whole set again (measured, Unity 6000.0.71f1:
+        /// tests/projects/lightprobes Reference lifecycle.jsonl and creation-ownership.jsonl, Single
+        /// reloads). One scene file names one Lighting Data asset, so its path stands for that
+        /// asset here; scenes of different files sharing one asset, AssetBundle scenes and the
+        /// instance id of an object nothing references any more stay as before (not measured).
+        /// It outlives ResetScenes, which every Single load's first lighting data runs.
+        /// </summary>
+        static readonly Dictionary<string, WeakReference<LightProbes>> s_BySource =
+            new Dictionary<string, WeakReference<LightProbes>>(StringComparer.OrdinalIgnoreCase);
+
         internal static void ResetScenes()
         {
             s_Scenes.Clear();
@@ -429,6 +445,7 @@ namespace UnityEngine
         /// a scene loaded beside them wait for the next tetrahedralization.</summary>
         internal static void SceneLoaded(int scene, LightProbes probes)
         {
+            probes = Kept(scene, probes);
             s_Scenes.RemoveAll(s => s.Scene == scene);
             s_Scenes.Add((scene, probes));
             s_Own[scene] = probes;
@@ -438,6 +455,44 @@ namespace UnityEngine
                 return;
             }
             needsRetetrahedralization?.Invoke();
+        }
+
+        /// <summary>
+        /// The probes object a scene's just-read probes belong to: the one its scene file's probes
+        /// already have while that object is still referenced and not destroyed, else
+        /// <paramref name="read"/>. A kept object no loaded scene, scene lookup or the current
+        /// probes use takes the read data, as a new object would have it: its own set, which is
+        /// also its whole set. One still in use keeps its data, so an additive load changes no
+        /// current set before the next tetrahedralization. The unused <paramref name="read"/>
+        /// object was never handed out and leaves the object registry.
+        /// </summary>
+        static LightProbes Kept(int scene, LightProbes read)
+        {
+            var data = Unbound.Runtime.SceneRegistry.Get(new Unbound.Runtime.SceneHandle(scene));
+            if (data == null || data.LoadKey != null || string.IsNullOrEmpty(data.Path)) return read;
+            if (s_BySource.TryGetValue(data.Path, out var weak) && weak.TryGetTarget(out var kept)
+                && !kept.m_Destroyed && !ReferenceEquals(kept, read))
+            {
+                if (!InUse(kept))
+                {
+                    kept.m_Self = read.m_Self;
+                    kept.m_Set = read.m_Set;
+                }
+                Unbound.Runtime.ObjectRegistry.Unregister(read);
+                return kept;
+            }
+            s_BySource[data.Path] = new WeakReference<LightProbes>(read);
+            return read;
+        }
+
+        static bool InUse(LightProbes probes)
+        {
+            if (ReferenceEquals(LightmapSettings.lightProbes, probes)) return true;
+            foreach (var (_, loaded) in s_Scenes)
+                if (ReferenceEquals(loaded, probes)) return true;
+            foreach (var own in s_Own.Values)
+                if (ReferenceEquals(own, probes)) return true;
+            return false;
         }
 
         /// <summary>A scene unloaded on its own (UnloadScene, UnloadSceneAsync): its probes leave
