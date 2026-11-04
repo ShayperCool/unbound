@@ -110,12 +110,14 @@ namespace UnityEngine
         }
 
         /// <summary>A copy; of a variant, a variant of the same parent with the same overrides and
-        /// locks (canonical variant.instance and variant.newFrom).</summary>
+        /// locks (canonical variant.instance and variant.newFrom). It has every setting of the source,
+        /// its GI flags and double-sided GI too ("copying all properties", 6000.0).</summary>
         public Material(Material source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             source.Inherit();
             CopyFrom(source);
+            m_DoubleSidedGI = source.m_DoubleSidedGI;
             m_Name = source.m_Name;
             m_Parent = source.m_Parent;
             m_Own = source.m_Own != null ? new HashSet<int>(source.m_Own) : null;
@@ -150,6 +152,7 @@ namespace UnityEngine
             m_TextureNames.UnionWith(source.m_TextureNames);
             foreach (var t in source.m_Tags) m_Tags[t.Key] = t.Value;
             m_EnableInstancing = source.m_EnableInstancing;
+            m_GIFlags = source.m_GIFlags;
             MarkDirty();
         }
 
@@ -169,11 +172,44 @@ namespace UnityEngine
             get => m_Shader;
             set
             {
-                if (value != m_Shader) KeepDefaultsOf(m_Shader);
+                if (value != m_Shader)
+                {
+                    KeepDefaultsOf(m_Shader);
+                    ResetRenderQueue(value);
+                }
                 m_Shader = value;
                 AddTextureNames();
                 MarkDirty();
             }
+        }
+
+        /// <summary>
+        /// Documented (Material.renderQueue, 6000.0): "if a shader on the material is changed, the
+        /// render queue resets to that of the shader itself": the override goes, the queue is then
+        /// the new shader's (rawRenderQueue -1). The same page's limitation: in batch mode an SRP
+        /// loads only when something first renders, which can change the selected SubShader and so
+        /// the shader's queue read afterwards (Shader.renderQueue answers that; not decided here).
+        /// Assigning the shader it has is no change and keeps it. Not documented, so the override
+        /// stays, with a warning: a change to or from no shader, and a variant that takes its
+        /// parent's queue (the parent's state, taken again later).
+        /// </summary>
+        void ResetRenderQueue(Shader next)
+        {
+            if (m_Parent != null && m_InheritQueue)
+            {
+                if (Inherited().m_CustomRenderQueue >= 0)
+                    Unbound.Runtime.Stubs.Ignored("Material.shader of a variant that takes its parent's render queue",
+                        "keeps the parent's queue: a shader change is not measured on variants");
+                return;
+            }
+            if (m_CustomRenderQueue < 0) return;
+            if (m_Shader == null || next == null)
+            {
+                Unbound.Runtime.Stubs.Ignored("Material.shader set to or from no shader",
+                    "keeps the material's render queue: the documented reset is to the shader's queue");
+                return;
+            }
+            m_CustomRenderQueue = -1;
         }
 
         /// <summary>A material holds a value for every property of its shader from the start, so
@@ -297,23 +333,40 @@ namespace UnityEngine
             m_InheritKeywords = false;
         }
 
+        // A changed flag is a change of the material: its variants and the copies made from it
+        // (canvas clipping, property blocks, replacement shaders) take it again.
         public MaterialGlobalIlluminationFlags globalIlluminationFlags
         {
             get { Inherit(); return m_GIFlags; }
-            set => m_GIFlags = value;
+            set
+            {
+                if (m_GIFlags == value) return;
+                m_GIFlags = value;
+                MarkDirty();
+            }
         }
 
         public bool doubleSidedGI
         {
             get { Inherit(); return m_DoubleSidedGI; }
-            set => m_DoubleSidedGI = value;
+            set
+            {
+                if (m_DoubleSidedGI == value) return;
+                m_DoubleSidedGI = value;
+                MarkDirty();
+            }
         }
         bool m_DoubleSidedGI;
 
         public bool enableInstancing
         {
             get { Inherit(); return m_EnableInstancing; }
-            set => m_EnableInstancing = value;
+            set
+            {
+                if (m_EnableInstancing == value) return;
+                m_EnableInstancing = value;
+                MarkDirty();
+            }
         }
 
         public int passCount => m_Shader != null ? m_Shader.passCount : 0;
@@ -998,14 +1051,35 @@ namespace UnityEngine
         internal void RevertTo(Material saved)
         {
             m_Tags.Clear();
-            CopyPropertiesFromMaterial(saved);
+            CopyProperties(saved);
             m_Shader = saved.m_Shader;
+            m_DoubleSidedGI = saved.m_DoubleSidedGI;
             DestroyImmediate(saved, true);
         }
 
+        /// <summary>
+        /// Documented (6000.0): copies the property values, keywords, render queue and global
+        /// illumination flags of <paramref name="mat"/>; the shader stays. A variant's values are
+        /// read as its getters answer them. The queue is the override as stored (-1: none); whether
+        /// Unity copies the source's effective queue instead is not measured. Double-sided GI is
+        /// not named and is not copied. Into a variant the values are not made overrides (not
+        /// measured): a later change of the parent can replace them, with a warning. A material
+        /// copied onto itself is the documented result unchanged.
+        /// </summary>
         public void CopyPropertiesFromMaterial(Material mat)
         {
             if (mat == null) throw new ArgumentNullException(nameof(mat));
+            if (m_Parent != null && !ReferenceEquals(mat, this))
+                Unbound.Runtime.Stubs.Ignored("Material.CopyPropertiesFromMaterial into a material variant",
+                    "copies the values without making them overrides: a later change of the parent can replace them");
+            CopyProperties(mat);
+        }
+
+        void CopyProperties(Material mat)
+        {
+            mat.Inherit();
+            Inherit();
+            if (ReferenceEquals(mat, this)) return;
             var shaderBefore = m_Shader;
             m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Textures.Clear(); m_Keywords.Clear(); m_KeywordExtras.Clear();
             m_ScriptSet.Clear(); m_TextureNames.Clear(); m_RawBindings.Clear();
@@ -1015,12 +1089,20 @@ namespace UnityEngine
         }
 
         /// <summary>Copies the properties this material's shader declares (measured: a shader
-        /// without _MainTex gets no texture slot).</summary>
+        /// without _MainTex gets no texture slot), the states of the keywords both shaders declare,
+        /// and the settings every material has: double-sided GI, instancing, render queue (the
+        /// override as stored, as <see cref="CopyPropertiesFromMaterial"/>) and GI flags
+        /// (documented, 6000.0). Keyword states are not copied while either keyword space is
+        /// unknown (warns). Into a variant, as <see cref="CopyPropertiesFromMaterial"/>.</summary>
         public void CopyMatchingPropertiesFromMaterial(Material mat)
         {
             if (mat == null) throw new ArgumentNullException(nameof(mat));
             mat.Inherit();
             Inherit();
+            if (ReferenceEquals(mat, this)) return;
+            if (m_Parent != null)
+                Unbound.Runtime.Stubs.Ignored("Material.CopyMatchingPropertiesFromMaterial into a material variant",
+                    "copies the values without making them overrides: a later change of the parent can replace them");
             bool Declares(int id) => Declared(id) != null;
             foreach (var p in mat.m_Floats) if (Declares(p.Key)) m_Floats[p.Key] = p.Value;
             foreach (var p in mat.m_Ints) if (Declares(p.Key)) m_Ints[p.Key] = p.Value;
@@ -1028,7 +1110,36 @@ namespace UnityEngine
             foreach (var p in mat.m_Matrices) if (Declares(p.Key)) m_Matrices[p.Key] = p.Value;
             foreach (var p in mat.m_Textures)
                 if (Declares(p.Key)) m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Element = p.Value.Element, ElementBinding = p.Value.ElementBinding, Scale = p.Value.Scale, Offset = p.Value.Offset };
+            CopyMatchingKeywords(mat);
+            m_DoubleSidedGI = mat.m_DoubleSidedGI;
+            m_EnableInstancing = mat.m_EnableInstancing;
+            m_CustomRenderQueue = mat.m_CustomRenderQueue;
+            m_GIFlags = mat.m_GIFlags;
             MarkDirty();
+        }
+
+        /// <summary>A keyword both keyword spaces declare is on here when it is on there. Names
+        /// either space does not declare, and given again or empty, stay as they are.</summary>
+        void CopyMatchingKeywords(Material mat)
+        {
+            if (m_Keywords.Count == 0 && mat.m_Keywords.Count == 0) return;
+            var mine = KeywordDeclarations;
+            var theirs = mat.KeywordDeclarations;
+            if (mine == null || theirs == null)
+            {
+                Unbound.Runtime.Stubs.Ignored("Material.CopyMatchingPropertiesFromMaterial keyword states",
+                    "are not copied: whether both shaders declare a keyword is not known");
+                return;
+            }
+            bool Both(string k) => mine.IndexOf(k) >= 0 && theirs.IndexOf(k) >= 0;
+            var on = new List<string>();
+            var off = new List<string>();
+            foreach (var k in mat.m_Keywords) if (!m_Keywords.Contains(k) && Both(k)) on.Add(k);
+            foreach (var k in m_Keywords) if (!mat.m_Keywords.Contains(k) && Both(k)) off.Add(k);
+            if (on.Count == 0 && off.Count == 0) return;
+            OwnKeywords();
+            foreach (var k in on) m_Keywords.Add(k);
+            foreach (var k in off) m_Keywords.Remove(k);
         }
 
         /// <summary>Interpolates the colors, floats, vectors and texture scales and offsets both
