@@ -5,10 +5,70 @@ AGENTS.md and the current validation README. Assign one owner to each shared pat
 Keep a bounded control and a clear stopping condition in each task.
 
 Use [CHILD_BRIEF.md](CHILD_BRIEF.md) for a new task. Keep a queue of delivered
-packages with their source, evidence and next action. Once three packages await
-review/integration, assign free workers to review, conflict resolution or matching
-validation instead of opening more feature branches. Drain an existing larger
-backlog first. A worker finishing a task does not by itself justify a new feature.
+packages with their source, evidence and next action. Keep independent review and
+authorized implementation moving together. Allocate free workers to the actual
+bottleneck without imposing a three-package stop on explicitly authorized, unowned
+feature work. A worker finishing a task does not by itself authorize a new feature.
+
+## Short readiness check
+
+Complete this check before spending the next build, suite or capture, using saved
+evidence and read-only checks first. Record one compact readiness result in the
+package's existing plan/index, with exact input hashes and links; do not introduce
+another report hierarchy or repeat unchanged preparation. This check is not a new
+build, test or capture allowance.
+
+- Bind the source head, reviewed delta, baseline/runtime manifests, release,
+  fixtures, comparator, commands and remaining budget to the applicable grant.
+  Confirm patch/input equality mechanically and run applicable cheap formatting
+  checks before a costly build, limited to owned paths and recorded base failures.
+- Check physical paths, declared project references, required output dependencies,
+  ABI expectations, display/auth files when needed, output-label availability and
+  lease ownership. In particular, `BuildProjectReferences=false` requires all
+  referenced outputs to be supplied by the plan. A completed restore is not proof
+  that the required project-reference graph or outputs are available.
+- Check each new diagnostic assertion against its actual producer and capture
+  route. Engine `Unbound:` diagnostics can bypass `logMessageReceived`; use the
+  appropriate existing `logHandler` control or an exact-bound saved observation.
+  Do not change production logging merely to make a test observe it.
+- Mechanically inventory discovered/declared tests and expected old-Core failures
+  versus guards from available evidence. Label unexecuted expectations as such.
+  Reuse discovery when its inputs match; any new discovery execution or targeted
+  smoke run must be explicitly allocated, recorded and charged to the budget.
+- If readiness fails, stop before the costly gate and report the precise fix plus
+  actual spending. A failed build/suite/capture stays spent. Test-only corrections
+  and environment rebinding need an applicable continuation; readiness never resets
+  a budget or permits a retry of a real defect.
+
+## Review and handoff
+
+Each newly prepared behavioral source head receives a new independent review.
+For a correction, give the new reviewer the previous verdict, exact old/new pins,
+finding IDs, delta, affected consumers and changed artifact/input hashes. Review
+the fix and its implications; carry forward unchanged exact-bound checks instead
+of reconstructing the entire investigation. Expand the review when the delta or
+new evidence changes the mechanism, dependencies or assumptions. Reviewers remain
+read-only and do not spend a validator's budget.
+
+The coordinator fixes cosmetic nits such as spelling, formatting or a report's
+incorrect count directly, recording the correction without another full review.
+A change to executable behavior, assertions, fixtures, diagnostic observation or
+composition is not cosmetic. Start a new scoped review when required; never use
+an old conversation as a new review or waive an unresolved blocker by relabeling it.
+
+Prefer a Root release that already specifies the exact candidate, allowed
+preparation, commands, budgets, prerequisites and stop conditions. When that
+release explicitly allows automatic progression, a clean independent review and
+readiness check start the validation without another acknowledgement. Changes
+outside the allowance and real stop conditions return to Root. Integration and
+runtime admission remain separate Root decisions.
+
+Use one authoritative package index for current source/baseline pins, owner,
+review verdict, readiness, next action, consumed budgets and decision links.
+Update superseded requests as decisions arrive; retain their text, failure
+witnesses and unresolved findings in history. Another worker's copied queue is
+a snapshot, not a second source of truth. Send one consolidated actionable digest
+and genuinely new material blockers, not launch notices or stale requests.
 
 ## Reuse and acceptance
 

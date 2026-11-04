@@ -12,6 +12,12 @@ Fill this brief for a NEW child. Do not attach a retired conversation.
 - Maximum new builds/captures and affected gates; no unrelated broad replay:
 - Private target/output/project paths and their resource owner:
 - Integration dependency, exact stub changes and any ABI reservation:
+- Previous review verdict, finding IDs, exact reviewed-to-candidate delta and
+  affected consumers; checks that remain reusable by exact input binding:
+- Short readiness result/link: paths/reference outputs/ABI/display, patch hashes,
+  diagnostic producer/capture route, test inventory and remaining finite budget:
+- Conditional progression authority, prerequisites and stop conditions; otherwise
+  the exact Root decision still needed before validation:
 - Known insignificant residuals: keys/regions, size, suspected cause and receipt;
   separate strict verifier failures from package admission:
 
@@ -38,10 +44,14 @@ CARGO_TARGET_DIR in the environment and no shared CARGO_BUILD_BUILD_DIR (see REA
 Build isolation). Unchanged native source does not mean identical bytes; reuse
 follows the actual artifact hashes.
 
-Do not open another feature when three deliveries already await integration.
-Free workers help review or prepare the existing batch. Do not delegate again
-unless this task explicitly grants it. Report a genuine blocker once with the
-smallest needed evidence. Do not send repeated waiting/no-change updates.
+Keep authorized independent implementation and review moving; a fixed count of
+waiting packages alone does not stop the queue. Do not open ungranted work or
+delegate again unless this task explicitly grants it. Complete the workflow's
+short readiness check before costly validation; it grants no extra execution or
+retry. Cosmetic nits do not need another full review; changed behavior, assertions,
+fixtures or composition require the applicable new scoped review. Report a genuine
+blocker once with the smallest needed evidence. Update the authoritative package
+index; do not send repeated waiting/no-change updates or superseded requests.
 
 Before final: finish/cancel searches and index clients, terminate only your own
 leftover jobs, commit each logical step and ordinary-push when authorized.

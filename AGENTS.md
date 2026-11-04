@@ -89,6 +89,20 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
   superseded notices only after archiving their complete text and routing unresolved work; never
   discard human instructions or failure witnesses. Do not repeat stale requests after Root has
   already supplied the applicable decision or grant.
+- Before spending a validation build, suite or capture, complete the short readiness check in
+  `tools/validation/PARITY_WORKFLOW.md`. Reuse exact-bound preparation evidence; extra compilation,
+  smoke tests or captures require an explicit allowance and count toward the finite budget.
+- Fix cosmetic review nits directly without another full review. Behavioral, assertion, fixture,
+  dependency or composition changes get a new independent review focused on the delta and its
+  affected consumers, carrying forward exact-bound prior findings and evidence. No retired owner
+  is resumed and no spent gate is silently repeated.
+- Root may release an exact candidate's finite validation conditionally on a clean independent
+  review and readiness check, so the coordinator can advance it without another acknowledgement.
+  Any unallowed source/input change or stop condition returns to Root; final admission stays Root's.
+- Maintain one authoritative package index with current source/baseline pins, owner, next action,
+  consumed budget and decision links. Close superseded requests when the applicable decision is
+  recorded, keeping their full history and unresolved findings. Refill only authorized, unowned
+  implementation work; a fixed count of waiting packages alone does not stop independent work.
 
 ## Code search
 
