@@ -110,12 +110,14 @@ namespace UnityEngine
         }
 
         /// <summary>A copy; of a variant, a variant of the same parent with the same overrides and
-        /// locks (canonical variant.instance and variant.newFrom).</summary>
+        /// locks (canonical variant.instance and variant.newFrom). It has every setting of the source,
+        /// its GI flags and double-sided GI too ("copying all properties", 6000.0).</summary>
         public Material(Material source)
         {
             if (source == null) throw new ArgumentNullException(nameof(source));
             source.Inherit();
             CopyFrom(source);
+            m_DoubleSidedGI = source.m_DoubleSidedGI;
             m_Name = source.m_Name;
             m_Parent = source.m_Parent;
             m_Own = source.m_Own != null ? new HashSet<int>(source.m_Own) : null;
@@ -150,6 +152,7 @@ namespace UnityEngine
             m_TextureNames.UnionWith(source.m_TextureNames);
             foreach (var t in source.m_Tags) m_Tags[t.Key] = t.Value;
             m_EnableInstancing = source.m_EnableInstancing;
+            m_GIFlags = source.m_GIFlags;
             MarkDirty();
         }
 
@@ -297,23 +300,40 @@ namespace UnityEngine
             m_InheritKeywords = false;
         }
 
+        // A changed flag is a change of the material: its variants and the copies made from it
+        // (canvas clipping, property blocks, replacement shaders) take it again.
         public MaterialGlobalIlluminationFlags globalIlluminationFlags
         {
             get { Inherit(); return m_GIFlags; }
-            set => m_GIFlags = value;
+            set
+            {
+                if (m_GIFlags == value) return;
+                m_GIFlags = value;
+                MarkDirty();
+            }
         }
 
         public bool doubleSidedGI
         {
             get { Inherit(); return m_DoubleSidedGI; }
-            set => m_DoubleSidedGI = value;
+            set
+            {
+                if (m_DoubleSidedGI == value) return;
+                m_DoubleSidedGI = value;
+                MarkDirty();
+            }
         }
         bool m_DoubleSidedGI;
 
         public bool enableInstancing
         {
             get { Inherit(); return m_EnableInstancing; }
-            set => m_EnableInstancing = value;
+            set
+            {
+                if (m_EnableInstancing == value) return;
+                m_EnableInstancing = value;
+                MarkDirty();
+            }
         }
 
         public int passCount => m_Shader != null ? m_Shader.passCount : 0;
@@ -998,14 +1018,35 @@ namespace UnityEngine
         internal void RevertTo(Material saved)
         {
             m_Tags.Clear();
-            CopyPropertiesFromMaterial(saved);
+            CopyProperties(saved);
             m_Shader = saved.m_Shader;
+            m_DoubleSidedGI = saved.m_DoubleSidedGI;
             DestroyImmediate(saved, true);
         }
 
+        /// <summary>
+        /// Documented (6000.0): copies the property values, keywords, render queue and global
+        /// illumination flags of <paramref name="mat"/>; the shader stays. A variant's values are
+        /// read as its getters answer them. The queue is the override as stored (-1: none); whether
+        /// Unity copies the source's effective queue instead is not measured. Double-sided GI is
+        /// not named and is not copied. Into a variant the values are not made overrides (not
+        /// measured): a later change of the parent can replace them, with a warning. A material
+        /// copied onto itself is the documented result unchanged.
+        /// </summary>
         public void CopyPropertiesFromMaterial(Material mat)
         {
             if (mat == null) throw new ArgumentNullException(nameof(mat));
+            if (m_Parent != null && !ReferenceEquals(mat, this))
+                Unbound.Runtime.Stubs.Ignored("Material.CopyPropertiesFromMaterial into a material variant",
+                    "copies the values without making them overrides: a later change of the parent can replace them");
+            CopyProperties(mat);
+        }
+
+        void CopyProperties(Material mat)
+        {
+            mat.Inherit();
+            Inherit();
+            if (ReferenceEquals(mat, this)) return;
             var shaderBefore = m_Shader;
             m_Floats.Clear(); m_Ints.Clear(); m_Vectors.Clear(); m_Matrices.Clear(); m_Textures.Clear(); m_Keywords.Clear(); m_KeywordExtras.Clear();
             m_ScriptSet.Clear(); m_TextureNames.Clear(); m_RawBindings.Clear();
