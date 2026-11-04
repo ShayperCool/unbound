@@ -46,7 +46,7 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 9
+#define UA3_VERSION 10
 
 struct ua3_scene_def
 {
@@ -172,14 +172,20 @@ struct ShapeInfo
 	bool contactEvents;
 	bool sensorEvents;
 	int ignores; // how many ignored pairs it is in
+	int32_t priority; // its collider's layerOverridePriority (compared only when both sides override)
+	bool noCollisions; // its body (or controller) does not detect collisions
 };
 
-// Simulation filter data: word0 the category (the layer's bit), word1 the mask, word2 flags.
+// Simulation filter data: word0 the category (the layer's bit), word1 the layers its collider
+// decides to contact (its layer's matrix row with its own and its body's include layers added,
+// then their exclude layers removed), word2 flags, word3 the layers its collider overrides the
+// matrix for (its own and its body's include and exclude layers).
 enum : PxU32
 {
 	FlagContactEvents = 1,
 	FlagSensorEvents = 2,
 	FlagIgnores = 4,
+	FlagNoCollisions = 8,
 };
 
 std::unordered_set<PxRigidActor*> s_bodies;
@@ -491,31 +497,84 @@ void Events::onTrigger( PxTriggerPair* pairs, PxU32 count )
 	}
 }
 
-PxFilterFlags Filter::pairFound( PxU32, PxFilterObjectAttributes, PxFilterData, const PxActor*, const PxShape* shape0,
-								 PxFilterObjectAttributes, PxFilterData, const PxActor*, const PxShape* shape1, PxPairFlags& )
+// Whether two colliders' shapes may touch as their layers decide (Collider.layerOverridePriority,
+// Unity 6000.0): the same decision on both sides stands; else the one side whose include/exclude
+// layers name the other's layer decides; when both name it, the higher layerOverridePriority
+// decides (Priority: compared by the filter callback, which has the shapes); when neither does
+// (only an asymmetric matrix), no contact, as without overrides.
+enum class LayerDecision
+{
+	Reject,
+	Contact,
+	Priority,
+};
+
+LayerDecision layer_decision( const PxFilterData& data0, const PxFilterData& data1 )
+{
+	bool contact0 = ( data0.word1 & data1.word0 ) != 0, contact1 = ( data1.word1 & data0.word0 ) != 0;
+	if ( contact0 == contact1 )
+	{
+		return contact0 ? LayerDecision::Contact : LayerDecision::Reject;
+	}
+	bool override0 = ( data0.word3 & data1.word0 ) != 0, override1 = ( data1.word3 & data0.word0 ) != 0;
+	if ( override0 != override1 )
+	{
+		return ( override0 ? contact0 : contact1 ) ? LayerDecision::Contact : LayerDecision::Reject;
+	}
+	return override0 ? LayerDecision::Priority : LayerDecision::Reject;
+}
+
+// Both colliders override with conflicting decisions: the higher priority's decision; equal
+// priorities create no contact.
+bool priority_contact( const PxFilterData& data0, const PxShape* shape0, const PxFilterData& data1, const PxShape* shape1 )
+{
+	const ShapeInfo* i0 = info( shape0 );
+	const ShapeInfo* i1 = info( shape1 );
+	int32_t priority0 = i0 != nullptr ? i0->priority : 0, priority1 = i1 != nullptr ? i1->priority : 0;
+	if ( priority0 == priority1 )
+	{
+		return false;
+	}
+	return priority0 > priority1 ? ( data0.word1 & data1.word0 ) != 0 : ( data1.word1 & data0.word0 ) != 0;
+}
+
+PxFilterFlags Filter::pairFound( PxU32, PxFilterObjectAttributes, PxFilterData data0, const PxActor*, const PxShape* shape0,
+								 PxFilterObjectAttributes, PxFilterData data1, const PxActor*, const PxShape* shape1, PxPairFlags& )
 {
 	if ( world->ignores.count( ordered( const_cast<PxShape*>( shape0 ), const_cast<PxShape*>( shape1 ) ) ) )
+	{
+		return PxFilterFlag::eSUPPRESS;
+	}
+	if ( layer_decision( data0, data1 ) == LayerDecision::Priority && !priority_contact( data0, shape0, data1, shape1 ) )
 	{
 		return PxFilterFlag::eSUPPRESS;
 	}
 	return PxFilterFlag::eDEFAULT;
 }
 
-// Layers collide when each one's category is in the other's mask. Trigger pairs include
-// trigger/trigger overlaps. The scene's kinematic pair filtering modes decide which non-dynamic
-// pairs reach this shader. Those pairs generate contacts and reports, without solver response.
+// Layers collide as layer_decision says; a body that does not detect collisions collides with
+// nothing. Trigger pairs include trigger/trigger overlaps. The scene's kinematic pair filtering
+// modes decide which non-dynamic pairs reach this shader. Those pairs generate contacts and
+// reports, without solver response.
 PxFilterFlags shader( PxFilterObjectAttributes attributes0, PxFilterData data0, PxFilterObjectAttributes attributes1,
 					  PxFilterData data1, PxPairFlags& pairFlags, const void*, PxU32 )
 {
-	if ( ( data0.word0 & data1.word1 ) == 0 || ( data1.word0 & data0.word1 ) == 0 )
+	if ( ( data0.word2 | data1.word2 ) & FlagNoCollisions )
 	{
 		return PxFilterFlag::eSUPPRESS;
 	}
+	LayerDecision decision = layer_decision( data0, data1 );
+	if ( decision == LayerDecision::Reject )
+	{
+		return PxFilterFlag::eSUPPRESS;
+	}
+	// Ignored pairs and priority arbitration need the shapes: the filter callback decides them.
+	bool callback = ( ( data0.word2 | data1.word2 ) & FlagIgnores ) != 0 || decision == LayerDecision::Priority;
 	bool trigger0 = PxFilterObjectIsTrigger( attributes0 ), trigger1 = PxFilterObjectIsTrigger( attributes1 );
 	if ( trigger0 || trigger1 )
 	{
 		pairFlags = PxPairFlag::eTRIGGER_DEFAULT;
-		return ( data0.word2 | data1.word2 ) & FlagIgnores ? PxFilterFlag::eCALLBACK : PxFilterFlag::eDEFAULT;
+		return callback ? PxFilterFlag::eCALLBACK : PxFilterFlag::eDEFAULT;
 	}
 	bool moving0 = PxGetFilterObjectType( attributes0 ) == PxFilterObjectType::eRIGID_DYNAMIC && !PxFilterObjectIsKinematic( attributes0 );
 	bool moving1 = PxGetFilterObjectType( attributes1 ) == PxFilterObjectType::eRIGID_DYNAMIC && !PxFilterObjectIsKinematic( attributes1 );
@@ -525,7 +584,7 @@ PxFilterFlags shader( PxFilterObjectAttributes attributes0, PxFilterData data0, 
 	{
 		pairFlags |= PxPairFlag::eSOLVE_CONTACT | PxPairFlag::eDETECT_CCD_CONTACT;
 	}
-	return ( data0.word2 | data1.word2 ) & FlagIgnores ? PxFilterFlag::eCALLBACK : PxFilterFlag::eDEFAULT;
+	return callback ? PxFilterFlag::eCALLBACK : PxFilterFlag::eDEFAULT;
 }
 
 void forget_shape( World* world, PxShape* shape )
@@ -573,7 +632,8 @@ void set_filter_flags( PxShape* shape )
 {
 	ShapeInfo* i = info( shape );
 	PxFilterData data = shape->getSimulationFilterData();
-	data.word2 = ( i->contactEvents ? FlagContactEvents : 0u ) | ( i->sensorEvents ? FlagSensorEvents : 0u ) | ( i->ignores > 0 ? FlagIgnores : 0u );
+	data.word2 = ( i->contactEvents ? FlagContactEvents : 0u ) | ( i->sensorEvents ? FlagSensorEvents : 0u ) | ( i->ignores > 0 ? FlagIgnores : 0u ) |
+				 ( i->noCollisions ? FlagNoCollisions : 0u );
 	shape->setSimulationFilterData( data );
 }
 
@@ -820,7 +880,7 @@ struct Character : public PxUserControllerHitReport, public PxQueryFilterCallbac
 		return PxQueryHitType::eBLOCK;
 	}
 
-	// Two controllers collide as their layers do.
+	// Two controllers collide as their layers decide (as two colliders' shapes do in the shader).
 	bool filter( const PxController& a, const PxController& b ) override
 	{
 		const Character* ca = static_cast<const Character*>( a.getUserData() );
@@ -830,7 +890,16 @@ struct Character : public PxUserControllerHitReport, public PxQueryFilterCallbac
 			return true;
 		}
 		PxFilterData da = ca->shape->getSimulationFilterData(), db = cb->shape->getSimulationFilterData();
-		return ( da.word0 & db.word1 ) != 0 && ( db.word0 & da.word1 ) != 0 && !ca->ignores( cb->shape );
+		if ( ( da.word2 | db.word2 ) & FlagNoCollisions )
+		{
+			return false;
+		}
+		LayerDecision decision = layer_decision( da, db );
+		if ( decision == LayerDecision::Priority )
+		{
+			decision = priority_contact( da, ca->shape, db, cb->shape ) ? LayerDecision::Contact : LayerDecision::Reject;
+		}
+		return decision == LayerDecision::Contact && !ca->ignores( cb->shape );
 	}
 };
 
@@ -1900,6 +1969,32 @@ UA3_API void ua3_shape_set_filter( uint64_t id, uint64_t categoryBits, uint64_t 
 	refilter( shape );
 }
 
+// A collider's layer overrides on its shape: the layers its own and its body's include and
+// exclude layers name (word3; the decided mask is ua3_shape_set_filter's), its layerOverridePriority
+// and whether its body detects collisions. New shapes start without overrides, at priority 0,
+// detecting collisions. Scene query filter data is left alone.
+UA3_API void ua3_shape_set_layer_overrides( uint64_t id, uint32_t overrideBits, int32_t priority, int detectCollisions )
+{
+	PxShape* shape = shape_of( id );
+	ShapeInfo* i = shape != nullptr ? info( shape ) : nullptr;
+	if ( i == nullptr )
+	{
+		return;
+	}
+	PxFilterData data = shape->getSimulationFilterData();
+	bool noCollisions = detectCollisions == 0;
+	if ( data.word3 == overrideBits && i->priority == priority && i->noCollisions == noCollisions )
+	{
+		return;
+	}
+	data.word3 = overrideBits;
+	i->priority = priority;
+	i->noCollisions = noCollisions;
+	shape->setSimulationFilterData( data );
+	set_filter_flags( shape );
+	refilter( shape );
+}
+
 UA3_API void ua3_shape_set_density( uint64_t id, float density )
 {
 	if ( PxShape* shape = shape_of( id ) )
@@ -2798,6 +2893,7 @@ UA3_API uint64_t ua3_cct_create( uint32_t id, const ua3_cct_def* def )
 	PxRigidDynamic* actor = controller->getActor();
 	actor->getShapes( &c->shape, 1 );
 	ShapeInfo* i = new ShapeInfo{ 1.0f, true, true, 0 };
+	i->noCollisions = def->detectCollisions == 0;
 	c->shape->userData = i;
 	c->shape->setSimulationFilterData( PxFilterData( static_cast<PxU32>( def->categoryBits ), def->detectCollisions ? c->mask : 0u, 0, 0 ) );
 	set_filter_flags( c->shape );
@@ -2835,6 +2931,8 @@ UA3_API void ua3_cct_set_filter( uint64_t id, uint64_t categoryBits, uint64_t ma
 	data.word0 = static_cast<PxU32>( categoryBits );
 	data.word1 = detectCollisions ? c->mask : 0u;
 	c->shape->setSimulationFilterData( data );
+	info( c->shape )->noCollisions = detectCollisions == 0;
+	set_filter_flags( c->shape );
 	c->shape->setQueryFilterData( query_data( static_cast<PxU32>( categoryBits ), c->controller->getActor(), false ) );
 	refilter( c->shape );
 }
