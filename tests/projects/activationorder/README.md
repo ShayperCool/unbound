@@ -1,12 +1,13 @@
 # Activation callback order of an already-awake hierarchy
 
-Unity 6000.0.71f1, built-in pipeline (`Assets/Scripts/ActivationOrderProbe.cs`). PREPARED, NOT
-MEASURED: there is no `Reference/` yet. No Editor has run this probe.
+Unity 6000.0.71f1, built-in pipeline (`Assets/Scripts/ActivationOrderProbe.cs`). The208-record
+reference is admitted from two byte-identical strict batch-GPU captures. No production
+activation correction or Unbound parity is established by that admission.
 
-Existing Native batch references show child-first OnDisable/OnEnable for an already-awake parent
-with a single child and level. They cannot choose between hierarchy post-order and reverse
-pre-order, or between plain `SetActive` and the batch calls. This fixture separates those answers
-for each operation.
+Earlier Native batch references show child-first OnDisable/OnEnable for an already-awake parent
+with a single child and level. Those records could not choose between hierarchy post-order and
+reverse pre-order, or between plain `SetActive` and the batch calls. This fixture separates
+the seven predeclared orders for each operation, within its limits.
 
 ## Fixture
 
@@ -96,7 +97,32 @@ operation:
 or the before-state is not what an operation assumes, that operation is NOT_EVALUABLE and is
 never refitted. Nothing in `run.py` or `guards.py` reads the analyzer.
 
-## Capture (not run; Native budget not granted)
+## Admitted observations
+
+Both strict captures exit0 on NVIDIA/OpenGLCore, log shutdown, keep all authored files
+unchanged and match the real preflight graph. The reference hash is19084f9c. Root independently
+checks50 owner artifacts,2848 preparation artifacts,476 references/analyzers per repeat and
+both script assemblies' normalized IL/field data. Only debug identity and relocation labels
+are normalized in that read-only disassembly comparison; no compiler or analyzer fit is rerun.
+
+- `plainOff`, `spanOff` and `nativeOff`: G,C1,C2,P. The stored fit is uniquely POST among
+  the seven predeclared orders in this tree.
+- `plainOn`, `spanOn` and `nativeOn`: C2,C1,P,G. The stored fit is uniquely ADD among those
+  candidates. It is not a hierarchy traversal; component-add order remains confounded with
+  other registration histories, so no general add-order activation mechanism is adopted.
+- First-wake plain/span controls: child Awake/OnEnable, then parent Awake/OnEnable. This is
+  CHILD_INTERLEAVED in the stored fit, confounded with creation/recorder order and preservation
+  only. Earlier parent-first controls remain separate; no universal first-wake direction follows.
+- The stored SAME_PATH relations describe equal callback/state lists for one valid ID in
+  this sequential matrix. They do not prove identical native implementations, cold-start
+  paths, multi-ID ordering or atomicity.
+
+Both Native launches, publication and the one precommitted fit are spent. Root admits the
+fixture/reference only. Lifecycle, SetActive, scene-load/wake, registration and Destroy paths
+are unchanged. Evidence: `validation/runs/activationorder-native-20261104/` and
+`validation/runs/activationorder-root-admission-20261104/`.
+
+## Capture protocol, requiring a separate new grant
 
 ```
 python3 tests/projects/activationorder/preflight.py --rsp-dir <shaderpasscount native1 copy>/Library/Bee/artifacts/<hash>.dag --launch <its launch dir> --out <cache>/preflight [--identity-only]
