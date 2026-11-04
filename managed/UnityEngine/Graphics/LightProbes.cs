@@ -419,16 +419,71 @@ namespace UnityEngine
         /// its sceneUnloaded (measured: tests/projects/lightprobes lifecycle.jsonl).</summary>
         static readonly Dictionary<int, LightProbes> s_Own = new Dictionary<int, LightProbes>();
 
+        /// <summary>
+        /// The probes object last given to a project Lighting Data asset's baked probes, keyed by
+        /// the scene's m_LightingDataAsset reference (guid and fileID), held only weakly.
+        /// <para>Documented (Scripting API 6000.0, LightProbes.GetSharedLightProbesForScene): modifying
+        /// the returned object "may affect all currently loaded versions of the scene, or change
+        /// the light probe data stored in Lighting Data assets". That remark is a hazard, not an
+        /// identity guarantee. Keying the object by its Lighting Data asset, and so giving every
+        /// loaded version of a scene and every scene naming that asset one object, is an Unbound
+        /// mechanism inferred from it (not measured). The reply carries no fileID of the probes
+        /// sub-object, so the Lighting Data reference stands for it one to one.</para>
+        /// <para>Measured (Unity 6000.0.71f1 only, tests/projects/lightprobes Reference
+        /// lifecycle.jsonl rows 23-29 and creation-ownership.jsonl seq 69-80, Single loads whose
+        /// witnesses still hold the earlier object): the load gives that same object back with the
+        /// scene's whole set.</para>
+        /// <para>Not measured, Unbound's behaviour: an object nothing references any more is reused
+        /// only until the CLR collects it, so whether its instance id comes back depends on GC
+        /// timing (Unity's unused-asset unloading follows reachability instead, Scripting API
+        /// 6000.0 Resources.UnloadUnusedAssets); no test asserts it.
+        /// References outside the project (null, local, built-in resources, AssetBundle files),
+        /// AssetBundle scenes, scenes without a registered handle or project path (run-time
+        /// scenes, handle 0) are not keyed: they get the object their read gives, as before.</para>
+        /// <para>It outlives ResetScenes (LightmapSettings.Reset), which every Single load's first
+        /// lighting data runs before its probes arrive; tests isolate it with
+        /// <see cref="SaveSources"/> and <see cref="RestoreSources"/>.</para>
+        /// </summary>
+        static readonly Dictionary<(string Guid, long FileId), WeakReference<LightProbes>> s_BySource =
+            new Dictionary<(string, long), WeakReference<LightProbes>>();
+
+        /// <summary>Test isolation: the identity map as it is, for <see cref="RestoreSources"/>.</summary>
+        internal static KeyValuePair<(string Guid, long FileId), WeakReference<LightProbes>>[] SaveSources() =>
+            new List<KeyValuePair<(string, long), WeakReference<LightProbes>>>(s_BySource).ToArray();
+
+        /// <summary>Test isolation: puts back a map <see cref="SaveSources"/> returned (an empty
+        /// array clears it).</summary>
+        internal static void RestoreSources(KeyValuePair<(string Guid, long FileId), WeakReference<LightProbes>>[] saved)
+        {
+            s_BySource.Clear();
+            foreach (var entry in saved) s_BySource[entry.Key] = entry.Value;
+        }
+
         internal static void ResetScenes()
         {
             s_Scenes.Clear();
             s_Own.Clear();
         }
 
+        /// <summary>A scene's baked probes as its lighting data (<paramref name="lightingData"/>,
+        /// the scene's m_LightingDataAsset) gives them: the object is made here, so the one
+        /// <see cref="Kept"/> may drop has never been handed out (the production entry,
+        /// BakedLighting.Read).</summary>
+        internal static void SceneLoaded(int scene, Unbound.Runtime.ObjectRef lightingData, JsonElement probes) =>
+            SceneLoaded(scene, lightingData, FromJson(probes));
+
+        /// <summary>A scene's baked probes without a Lighting Data identity: the object is the
+        /// scene's as given (no reuse).</summary>
+        internal static void SceneLoaded(int scene, LightProbes probes) => SceneLoaded(scene, default, probes);
+
         /// <summary>A scene's baked probes, loaded: the first become the current probes; those of
-        /// a scene loaded beside them wait for the next tetrahedralization.</summary>
-        internal static void SceneLoaded(int scene, LightProbes probes)
+        /// a scene loaded beside them wait for the next tetrahedralization.
+        /// <paramref name="fresh"/> must be an object made for this call and not handed out yet
+        /// (as FromJson's in the overload above); <see cref="Kept"/> unregisters it when the
+        /// identity already has an object, and never unregisters one this API has handed out.</summary>
+        internal static void SceneLoaded(int scene, Unbound.Runtime.ObjectRef lightingData, LightProbes fresh)
         {
+            var probes = Kept(scene, lightingData, fresh);
             s_Scenes.RemoveAll(s => s.Scene == scene);
             s_Scenes.Add((scene, probes));
             s_Own[scene] = probes;
@@ -438,6 +493,75 @@ namespace UnityEngine
                 return;
             }
             needsRetetrahedralization?.Invoke();
+        }
+
+        /// <summary>The key a scene's Lighting Data reference gives its probes object, or null when
+        /// it is not keyed (see <see cref="s_BySource"/>). Only project assets are keyed: a project
+        /// GUID names one asset of the project's AssetDb, the resolver of every keyed read, so
+        /// guid and fileID cannot collide with built-in resources or AssetBundle files.</summary>
+        static (string Guid, long FileId)? IdentityOf(int scene, Unbound.Runtime.ObjectRef lightingData)
+        {
+            string guid = lightingData.Guid;
+            if (lightingData.IsNull || guid == null) return null;
+            if (guid.StartsWith("0000000000000000", StringComparison.Ordinal) || guid.IndexOf(':') >= 0) return null;
+            var data = Unbound.Runtime.SceneRegistry.Get(new Unbound.Runtime.SceneHandle(scene));
+            if (data == null || data.LoadKey != null || string.IsNullOrEmpty(data.Path)) return null;
+            return (guid.ToLowerInvariant(), lightingData.FileId);
+        }
+
+        /// <summary>
+        /// The probes object a scene's just-read probes belong to: the one its Lighting Data
+        /// identity already has while that object is still referenced, neither destroyed nor
+        /// pending destruction, else <paramref name="read"/>. One still in use (the current
+        /// probes, a loaded scene's set or a scene lookup) keeps its data, so an additive load
+        /// changes no current set before the next tetrahedralization. A loaded asset's object in
+        /// s_Scenes twice is combined twice (its positions repeat), as two equal objects were
+        /// before keying.
+        /// <para>Data adoption, an open decision (not measured; both variants give every captured
+        /// row): a kept object nothing uses takes the read data, its own set, which is also its
+        /// whole set. Edits a script made through bakedProbes or coefficients are replaced by the
+        /// read data; the alternative would keep them (asset-resident data). Neither edit
+        /// persistence nor reimport is claimed.</para>
+        /// <para>The unused <paramref name="read"/> object leaves the object registry: an internal
+        /// cleanup of a never handed-out duplicate (its instance id stays consumed), not an object
+        /// enumeration rule. It stays registered if this API has handed it out.</para>
+        /// </summary>
+        static LightProbes Kept(int scene, Unbound.Runtime.ObjectRef lightingData, LightProbes read)
+        {
+            if (!(IdentityOf(scene, lightingData) is { } key)) return read;
+            if (s_BySource.TryGetValue(key, out var weak) && weak.TryGetTarget(out var kept)
+                && !kept.m_Destroyed && !kept.m_PendingDestroy && !ReferenceEquals(kept, read))
+            {
+                if (!InUse(kept))
+                {
+                    kept.m_Self = read.m_Self;
+                    kept.m_Set = read.m_Set;
+                }
+                if (!HandedOut(read)) Unbound.Runtime.ObjectRegistry.Unregister(read);
+                return kept;
+            }
+            s_BySource[key] = new WeakReference<LightProbes>(read);
+            return read;
+        }
+
+        static bool InUse(LightProbes probes)
+        {
+            if (ReferenceEquals(LightmapSettings.lightProbes, probes)) return true;
+            foreach (var (_, loaded) in s_Scenes)
+                if (ReferenceEquals(loaded, probes)) return true;
+            foreach (var own in s_Own.Values)
+                if (ReferenceEquals(own, probes)) return true;
+            return false;
+        }
+
+        /// <summary>Whether this API has given <paramref name="probes"/> out: in use, or kept for a
+        /// Lighting Data identity.</summary>
+        static bool HandedOut(LightProbes probes)
+        {
+            if (InUse(probes)) return true;
+            foreach (var weak in s_BySource.Values)
+                if (weak.TryGetTarget(out var kept) && ReferenceEquals(kept, probes)) return true;
+            return false;
         }
 
         /// <summary>A scene unloaded on its own (UnloadScene, UnloadSceneAsync): its probes leave

@@ -23,7 +23,7 @@ namespace Unbound.Tests
     /// <summary>The light probe API's own state: scene probe sets joining and leaving the current
     /// probes, occlusion by shadow mask channel, queries keeping their probes and the property
     /// block probe arrays (the behaviours tests/projects/lightprobes records in the Editor).</summary>
-    public class LightProbesTests
+    public partial class LightProbesTests
     {
         /// <summary>The 8 probes of tests/projects/lightprobes' Extra bake.</summary>
         static readonly Vector3[] Box =
@@ -69,22 +69,26 @@ namespace Unbound.Tests
         static Vector3[] MainBox => Box.Select(p => p - new Vector3(4f, 0f, 0f)).ToArray();
 
         /// <summary>Only the scenes a test makes are loaded while it runs; the registry's loaded
-        /// list and active scene are restored after, and the test's scenes forgotten.</summary>
+        /// list and active scene are restored after, and the test's scenes forgotten. The probes
+        /// objects kept by Lighting Data identity (which LightmapSettings.Reset leaves) start empty
+        /// and are restored too.</summary>
         internal sealed class Scenes : IDisposable
         {
             readonly SceneData[] m_Loaded = SceneRegistry.Loaded.ToArray();
             readonly SceneData m_Active = SceneRegistry.Active;
             readonly List<SceneData> m_Made = new List<SceneData>();
+            readonly KeyValuePair<(string Guid, long FileId), WeakReference<LightProbes>>[] m_Sources = LightProbes.SaveSources();
 
             internal Scenes()
             {
                 SceneRegistry.Loaded.Clear();
                 SceneRegistry.Active = null;
+                LightProbes.RestoreSources(Array.Empty<KeyValuePair<(string Guid, long FileId), WeakReference<LightProbes>>>());
             }
 
-            internal SceneData Loaded(string name)
+            internal SceneData Loaded(string name, string path = "")
             {
-                var data = SceneRegistry.Create(name, "", -1);
+                var data = SceneRegistry.Create(name, path, -1);
                 data.IsLoaded = true;
                 data.LoadingState = Scene.LoadingState.Loaded;
                 SceneRegistry.Loaded.Add(data);
@@ -94,9 +98,9 @@ namespace Unbound.Tests
             }
 
             /// <summary>A scene a load has created, not loaded yet (as LoadScene leaves it).</summary>
-            internal SceneData Loading(string name)
+            internal SceneData Loading(string name, string path = "")
             {
-                var data = SceneRegistry.Create(name, "", -1);
+                var data = SceneRegistry.Create(name, path, -1);
                 data.LoadingState = Scene.LoadingState.Loading;
                 m_Made.Add(data);
                 return data;
@@ -109,6 +113,7 @@ namespace Unbound.Tests
                 SceneRegistry.Loaded.Clear();
                 SceneRegistry.Loaded.AddRange(m_Loaded);
                 SceneRegistry.Active = m_Active;
+                LightProbes.RestoreSources(m_Sources);
             }
         }
 

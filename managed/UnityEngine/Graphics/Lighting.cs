@@ -463,7 +463,7 @@ namespace UnityEngine
                 s_BakedProbe = sh;
                 BindBakedSkybox(file, reference, sh);
                 var root = System.Text.Json.JsonDocument.Parse(json).RootElement;
-                BakedLighting.Read(root, file, scene);
+                BakedLighting.Read(root, file, scene, reference);
                 if (root.TryGetProperty("defaultReflection", out var reflection) && reflection.ValueKind == System.Text.Json.JsonValueKind.Object)
                     s_BakedReflection = BakedReflection(reflection.GetProperty("guid").GetString(), reflection.GetProperty("fileId").GetInt64());
             }
