@@ -563,9 +563,21 @@ namespace UnityEngine
             return info != null && pass >= 0 && pass < info.Passes.Count ? info.Passes[pass].Name : "";
         }
 
-        /// <summary>A pass by name, compared case-insensitively as Unity does.</summary>
+        /// <summary>A pass by name, compared case-insensitively as Unity does: the index of the
+        /// first pass with that name in the SubShader the shader's queries answer from
+        /// (<see cref="Shader.ActiveSubShader"/>: also a Fallback's, a surface program's
+        /// generated passes, the first SubShader when none is in reach; canonical
+        /// tests/projects/shaderpasscount case.*.mat.findPass), -1 when it has none. The
+        /// renderer's pass list while that SubShader or its pass names are unknown.</summary>
         public int FindPass(string passName)
         {
+            if (m_Shader != null && !string.IsNullOrEmpty(passName)
+                && m_Shader.ActiveSubShader("Material.FindPass", "follows the renderer's pass list") is { PassNames: { } names })
+            {
+                for (int i = 0; i < names.Count; i++)
+                    if (string.Equals(names[i], passName, StringComparison.OrdinalIgnoreCase)) return i;
+                return -1;
+            }
             var info = Unbound.Runtime.ShaderPassInfo.Of(m_Shader);
             if (info == null || string.IsNullOrEmpty(passName)) return -1;
             for (int i = 0; i < info.Passes.Count; i++)
@@ -579,10 +591,41 @@ namespace UnityEngine
             else m_Tags[tag] = val;
         }
 
-        /// <summary>A tag: the material's override, else its shader's SubShader's.</summary>
+        /// <summary>
+        /// A tag: the material's override, else its shader's. Without fallbacks, the tag of the
+        /// SubShader the shader's queries answer from (<see cref="Shader.ActiveSubShader"/>: also
+        /// a Fallback's, the first SubShader when none is in reach). With them, the first
+        /// SubShader carrying the tag among the shader's own then its Fallback chain's, in
+        /// order and whatever its LOD or RenderPipeline tag (canonical
+        /// tests/projects/shaderpasscount case.*.mat.subTag / mat.subTagFallbacks: SubShader 0's
+        /// tag under every limit, a pipeline-tagged one included). The renderer's drawn SubShader
+        /// while the declarations or, without fallbacks, the selection are unknown, and with
+        /// fallbacks under a render pipeline (not measured there).
+        /// </summary>
         public string GetTag(string tag, bool searchFallbacks, string defaultValue)
         {
             if (m_Tags.TryGetValue(tag, out var value)) return value;
+            if (m_Shader != null && tag != null)
+            {
+                if (!searchFallbacks)
+                {
+                    if (m_Shader.ActiveSubShader("Material.GetTag", "follows the renderer's SubShader") is { } active)
+                        return Unbound.Runtime.ShaderDeclarations.Tag(active.Tags, tag) ?? defaultValue;
+                }
+                else if (Shader.globalRenderPipeline.Length == 0)
+                {
+                    var d = Unbound.Runtime.ShaderDeclarations.Of(m_Shader);
+                    if (d.SubShadersKnown && d.SubShaders.Count > 0)
+                    {
+                        foreach (var sub in d.SubShaders)
+                            if (Unbound.Runtime.ShaderDeclarations.Tag(sub.Tags, tag) is { } found) return found;
+                        return defaultValue;
+                    }
+                }
+                else
+                    Unbound.Runtime.Stubs.Ignored("Material.GetTag with fallbacks under a render pipeline",
+                        "follows the renderer's SubShader: the search order is not measured there");
+            }
             var info = Unbound.Runtime.ShaderPassInfo.Of(m_Shader);
             if (info != null)
             {
