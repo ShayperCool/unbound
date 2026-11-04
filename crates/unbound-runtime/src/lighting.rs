@@ -7,11 +7,12 @@ use std::path::{Path, PathBuf};
 use unbound_assets::{
     AssetCache,
     lighting::{BuiltinLightingImporter, ObjectPtr},
+    serialized::SerializedFile,
     serialized_mesh::SerializedMeshImporter,
     serialized_texture::SerializedTextureImporter,
 };
 use unbound_project::assetdb::AssetDb;
-use unbound_yaml::Guid;
+use unbound_yaml::{Guid, Value};
 
 /// Unity's built-in resources (`unity_builtin_extra`, `unity default resources`).
 const BUILTIN_EXTRA: &str = "0000000000000000f000000000000000";
@@ -210,3 +211,73 @@ pub fn mesh_object(db: &AssetDb, unity_data: &Path, guid: &str, file_id: i64) ->
         "submeshes": m.submeshes,
     }))
 }
+
+/// Unity's Material class.
+const MATERIAL_CLASS: i32 = 21;
+
+/// The render queue a built-in Material of the install stores: `{ classId: 21, name,
+/// customRenderQueue }`, `m_CustomRenderQueue` as serialized (-1: no override, the shader's queue;
+/// Material.rawRenderQueue, 6000.0). Only the built-in resource files (`unity_builtin_extra`,
+/// `unity default resources`) are read. A missing object, another class or a missing or
+/// non-integer field is an error naming the object: no queue is assumed for it.
+pub fn builtin_material_queue(
+    db: &AssetDb,
+    unity_data: &Path,
+    guid: &str,
+    file_id: i64,
+) -> Result<Json> {
+    anyhow::ensure!(
+        guid.eq_ignore_ascii_case(BUILTIN_EXTRA)
+            || guid.eq_ignore_ascii_case(crate::editor_resources::DEFAULT_GUID),
+        "`{guid}` is not a built-in resource file (unity_builtin_extra or unity default resources)"
+    );
+    let file = serialized_file(db, unity_data, guid)?;
+    let (name, queue) = material_queue_in(&file, file_id)?;
+    Ok(json!({ "classId": MATERIAL_CLASS, "name": name, "customRenderQueue": queue }))
+}
+
+/// A Material's name and stored `m_CustomRenderQueue` in a serialized file, by its type tree.
+fn material_queue_in(file: &Path, path_id: i64) -> Result<(String, i32)> {
+    let handle =
+        std::fs::File::open(file).with_context(|| format!("opening {}", file.display()))?;
+    // Mapped for this read only: the file is large and one object is read.
+    let map = unsafe { memmap2::Mmap::map(&handle) }
+        .with_context(|| format!("mapping {}", file.display()))?;
+    let serialized =
+        SerializedFile::parse(&map).with_context(|| format!("reading {}", file.display()))?;
+    material_queue(&serialized, path_id)
+        .with_context(|| format!("built-in Material {path_id} of {}", file.display()))
+}
+
+fn material_queue(file: &SerializedFile, path_id: i64) -> Result<(String, i32)> {
+    let info = file.info(path_id)?;
+    anyhow::ensure!(
+        info.class_id == MATERIAL_CLASS,
+        "object {path_id} is class {}, not a Material ({MATERIAL_CLASS})",
+        info.class_id
+    );
+    let material = file.read(path_id)?;
+    let name = material
+        .get("m_Name")
+        .and_then(Value::as_str)
+        .unwrap_or_default()
+        .to_string();
+    Ok((name, stored_custom_render_queue(&material)?))
+}
+
+/// `m_CustomRenderQueue` exactly as stored (any 32-bit value, as a project Material's reader
+/// takes it).
+fn stored_custom_render_queue(material: &Value) -> Result<i32> {
+    let field = material
+        .get("m_CustomRenderQueue")
+        .context("the Material has no m_CustomRenderQueue")?;
+    let text = field
+        .as_str()
+        .with_context(|| format!("m_CustomRenderQueue is not a number: {field:?}"))?;
+    text.parse::<i32>()
+        .with_context(|| format!("m_CustomRenderQueue `{text}` is not a 32-bit integer"))
+}
+
+#[cfg(test)]
+#[path = "lighting_material_queue_tests.rs"]
+mod material_queue_tests;
