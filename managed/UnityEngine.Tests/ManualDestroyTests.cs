@@ -246,6 +246,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void HierarchyRequestVisitsParentBeforeChildForBothCallbacks()
         {
+            // Scoped to the measured single-child request (destroycontract), not a general
+            // hierarchy rule. Other instantiateasync paths have child-first OnDisable.
             using var scope = new Scope();
             var parent = scope.Subject("destroy.parent");
             var child = scope.Subject("destroy.child", parent.transform);
@@ -331,6 +333,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void PendingStartsAtTheUpdatePointRunBeforeTheDelivery()
         {
+            // Measured within the Update delayed phase: instantiateasync reference lines 745-750
+            // place the pending Start before destruction. This is not a claim about every leaf.
             using var scope = new Scope();
             var doomed = scope.Subject("destroy.doomed");
             RunNode(typeof(PL.EarlyUpdate.ScriptRunDelayedStartupFrame));
@@ -351,6 +355,9 @@ namespace UnityEngine.Tests
         [Fact]
         public void CoroutinesKeepRunningUntilTheDelivery()
         {
+            // Preservation control for the unmeasured Destroy-request window. The Coroutines
+            // manual guarantees that enabled=false alone does not stop a coroutine, but does
+            // not specify whether Destroy stops it at request time or actual destruction.
             using var scope = new Scope();
             var subject = scope.Subject("destroy.coroutine");
             RunNode(typeof(PL.EarlyUpdate.ScriptRunDelayedStartupFrame));
@@ -408,6 +415,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void AutomaticParticleDestructionKeepsItsEndOfFrameTiming()
         {
+            // Preservation control, not a Native claim about the stop-action's exact timing.
             using var scope = new Scope();
             var subject = scope.Subject("destroy.automatic");
             var ps = subject.gameObject.AddComponent<ParticleSystem>();
@@ -430,6 +438,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void PositiveDelaysAssetsAndRequiredScriptsKeepTheEndOfFramePath()
         {
+            // Preservation control, not a Native claim: these paths are outside destroycontract.
             using var scope = new Scope();
             var delayed = scope.Subject("destroy.delayed");
             var needing = scope.Own(new GameObject("destroy.needing")).AddComponent<Needing>();
@@ -451,7 +460,8 @@ namespace UnityEngine.Tests
             Assert.True(mesh != null && needed != null && delayed != null);
 
             // PlayerSendFrameStarted flushes the end-of-frame list: the asset goes, the required
-            // script is refused (with Unity's error) and stays enabled; the delay is not due.
+            // script is refused (Unity's message text; timing unmeasured) and stays enabled;
+            // the delay is not due.
             RunNode(typeof(PL.PostLateUpdate.PlayerSendFrameStarted));
             Assert.True(mesh == null);
             Assert.True(needed != null && needed.enabled);

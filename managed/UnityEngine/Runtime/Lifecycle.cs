@@ -51,8 +51,9 @@ namespace Unbound.Runtime
                 for (int i = 0; i < count && i < m_Items.Count; i++)
                 {
                     var item = m_Items[i];
-                    // Native default-order updates follow negative-order scripts and precede
-                    // scripts with order zero, including when their list is otherwise empty.
+                    // This hook sits between negative and nonnegative script orders. The forces
+                    // reference measures orders -1000, 0 and 1000; the boundary for intermediate
+                    // values is this implementation's choice, not a separate Native measurement.
                     if (!ranDefaultOrder && item.Order >= 0)
                     {
                         atDefaultOrder?.Invoke();
@@ -281,12 +282,16 @@ namespace Unbound.Runtime
 
         // ------------------------------------------------------------------ destruction
 
-        /// <summary>Object.Destroy's request of a GameObject or a script (measured for awakened
-        /// MonoBehaviours: tests/projects/destroycontract). Before Destroy returns, every script it
-        /// will destroy becomes disabled, parents before children and each object's in component
-        /// order; one that was enabled and active gets OnDisable now, an inactive or already
-        /// disabled one gets none. The objects stay alive, listed, active and findable, and their
-        /// coroutines and built-in components wait for the delivery (Destruction.DeliverRequested).</summary>
+        /// <summary>Object.Destroy's request of a GameObject or a script. Measured in 6000.0.71f1
+        /// (tests/projects/destroycontract: awakened scripts, one per object, a single-child tree):
+        /// before Destroy returns the scripts report enabled=false; enabled active scripts get
+        /// OnDisable now, parent before child, while inactive or already disabled scripts get none.
+        /// Objects stay alive, listed, active and findable. Sibling/deeper-tree traversal and
+        /// component order are implementation choices, not measured here. This path leaves
+        /// coroutines and built-ins until Destruction.DeliverRequested; that coroutine timing is
+        /// unmeasured. The Coroutines manual says enabled=false alone does not stop coroutines,
+        /// but does not specify their timing between a Destroy request and actual destruction.
+        /// Scripts added after the request are not disabled here.</summary>
         internal static void DisableForDestroyRequest(UnityEngine.Object target)
         {
             var scripts = new List<MonoBehaviour>();
@@ -430,11 +435,11 @@ namespace Unbound.Runtime
             s_OnRenderObject.Clear();
         }
 
-        /// <summary>A message every live script gets (OnApplicationPause, OnApplicationFocus, OnApplicationQuit).</summary>
         /// <summary>A message to every behaviour of the active objects, disabled ones too, in the
-        /// Editor's object order (OnApplicationFocus/Pause, measured: tests/projects/messages):
-        /// objects made at run time first, newest first, then those loaded from scene files in
-        /// load order (as Unity's instance ids sort: run-time ones negative, loaded ones positive).</summary>
+        /// order measured for OnApplicationFocus/Pause in 6000.0.71f1 (tests/projects/messages):
+        /// runtime objects first, newest first, then scene-loaded objects in load order. Unity
+        /// documents no cross-object order here. The loaded-object marker and instance-id keys
+        /// reproduce that observation; they do not establish Unity's id-allocation mechanism.</summary>
         internal static void BroadcastByObject(Func<ScriptMessages, Delegate> pick, object argument)
         {
             var objects = new List<(bool Loaded, int Key, GameObject Go)>();
