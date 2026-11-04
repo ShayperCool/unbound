@@ -103,7 +103,9 @@ namespace UnityEngine
                 affinity = m_Affinity;
             }
             m_Cancellation.Dispose();
-            AwaitableScheduler.Forget(this);
+            // Only frame waits enter the scheduler lists; builder awaitables have an affinity.
+            if (affinity == AwaiterCompletionThreadAffinity.None)
+                AwaitableScheduler.Forget(this);
             if (continuation == null) return;
             RunOrScheduleContinuation(affinity, continuation);
         }
