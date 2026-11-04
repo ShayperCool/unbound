@@ -588,9 +588,9 @@ mod crc_tests {
     /// Three blocks (LZ4, none, LZ4) holding two files with ten unowned bytes between them.
     fn three_blocks() -> (Vec<u8>, Vec<usize>, Vec<u8>) {
         let (a, b, c) = (pattern(1, 40), pattern(60, 24), pattern(120, 50));
-        let content = [a.as_slice(), &b, &c].concat();
+        let content = [a.as_slice(), b.as_slice(), c.as_slice()].concat();
         let (data, starts) = archive(
-            &[(&a, 2), (&b, 0), (&c, 2)],
+            &[(a.as_slice(), 2), (b.as_slice(), 0), (c.as_slice(), 2)],
             &[(0, 30, "CAB-a"), (40, 74, "CAB-a.resS")],
         );
         (data, starts, content)
@@ -664,7 +664,7 @@ mod crc_tests {
 
     #[test]
     fn the_checksum_covers_every_block_and_the_bytes_between_files() {
-        let (data, _, content) = three_blocks();
+        let (data, starts, content) = three_blocks();
         let crc = crc32fast::hash(&content);
         let checked = Bundle::parse_with_crc(&data, crc).unwrap();
         same_files(&checked, &Bundle::parse(&data).unwrap());
@@ -675,7 +675,7 @@ mod crc_tests {
         for wrong in [
             crc32fast::hash(&files),
             crc32fast::hash(&content[64..]),
-            crc32fast::hash(&data[data.len() - content.len()..]),
+            crc32fast::hash(&data[starts[0]..]),
             crc32fast::hash(&data),
         ] {
             assert_ne!(wrong, crc);
