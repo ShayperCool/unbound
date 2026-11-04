@@ -586,14 +586,21 @@ namespace UnityEngine.Rendering
         public void SetComputeTextureParam(ComputeShader computeShader, int kernelIndex, int nameID, RenderTargetIdentifier rt, int mipLevel) =>
             Add(c => computeShader.SetTexture(kernelIndex, nameID, Resolve(rt, c), mipLevel));
         public void SetComputeTextureParam(ComputeShader computeShader, int kernelIndex, int nameID, RenderTargetIdentifier rt) => SetComputeTextureParam(computeShader, kernelIndex, nameID, rt, 0);
+        // The identifier names a render texture (whose element applies) only when the command runs,
+        // so the element reaches ComputeShader.SetTexture then; another texture is bound as itself.
         public void SetComputeTextureParam(ComputeShader computeShader, int kernelIndex, int nameID, RenderTargetIdentifier rt, int mipLevel, RenderTextureSubElement element) =>
-            SetComputeTextureParam(computeShader, kernelIndex, nameID, rt, mipLevel);
+            Add(c =>
+            {
+                var texture = Resolve(rt, c);
+                if (texture is RenderTexture target) computeShader.SetTexture(kernelIndex, nameID, target, mipLevel, element);
+                else computeShader.SetTexture(kernelIndex, nameID, texture, mipLevel);
+            });
         public void SetComputeTextureParam(ComputeShader computeShader, int kernelIndex, string name, RenderTargetIdentifier rt) =>
             SetComputeTextureParam(computeShader, kernelIndex, Shader.PropertyToID(name), rt, 0);
         public void SetComputeTextureParam(ComputeShader computeShader, int kernelIndex, string name, RenderTargetIdentifier rt, int mipLevel) =>
             SetComputeTextureParam(computeShader, kernelIndex, Shader.PropertyToID(name), rt, mipLevel);
         public void SetComputeTextureParam(ComputeShader computeShader, int kernelIndex, string name, RenderTargetIdentifier rt, int mipLevel, RenderTextureSubElement element) =>
-            SetComputeTextureParam(computeShader, kernelIndex, Shader.PropertyToID(name), rt, mipLevel);
+            SetComputeTextureParam(computeShader, kernelIndex, Shader.PropertyToID(name), rt, mipLevel, element);
 
         public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, int nameID, ComputeBuffer buffer) => Add(c => computeShader.SetBuffer(kernelIndex, nameID, buffer));
         public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, string name, ComputeBuffer buffer) => SetComputeBufferParam(computeShader, kernelIndex, Shader.PropertyToID(name), buffer);
