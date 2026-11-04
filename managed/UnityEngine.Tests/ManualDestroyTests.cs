@@ -44,6 +44,11 @@ namespace UnityEngine.Tests
             void OnDestroy() => Calls.Add(name + ".OnDestroy");
         }
 
+        public class AssetRecorder : ScriptableObject
+        {
+            void OnDestroy() => Calls.Add(name + ".OnDestroy");
+        }
+
         public class Needed : MonoBehaviour
         {
             void OnDisable() => Calls.Add(name + ".Needed.OnDisable");
@@ -106,6 +111,8 @@ namespace UnityEngine.Tests
             readonly List<(object List, FieldInfo Field, object Value)> m_Removed = new List<(object, FieldInfo, object)>();
             readonly FieldInfo m_Sequence = typeof(Lifecycle).GetField("s_Sequence", PrivateStatic);
             readonly object m_OldSequence;
+            readonly FieldInfo m_Loop = typeof(PlayerLoopDriver).GetField("s_Current", PrivateStatic);
+            readonly object m_OldLoop;
             readonly bool m_Playing = EditorSession.IsPlaying;
             readonly string[] m_Calls = Calls.ToArray();
 
@@ -113,6 +120,8 @@ namespace UnityEngine.Tests
             {
                 _ = Engine; // Complete the driver's registrations before isolating its queues.
                 m_OldSequence = m_Sequence.GetValue(null);
+                m_OldLoop = m_Loop.GetValue(null);
+                PlayerLoopDriver.CurrentLoop = PlayerLoopDriver.DefaultLoop();
                 foreach (string name in new[] { "s_Update", "s_LateUpdate", "s_FixedUpdate" })
                 {
                     var list = typeof(Lifecycle).GetField(name, PrivateStatic).GetValue(null);
@@ -161,6 +170,7 @@ namespace UnityEngine.Tests
                     foreach (var saved in m_Saved) saved.Restore();
                     foreach (var r in m_Removed) r.Field.SetValue(r.List, r.Value);
                     m_Sequence.SetValue(null, m_OldSequence);
+                    m_Loop.SetValue(null, m_OldLoop);
                     EditorSession.IsPlaying = m_Playing;
                     Calls.Clear();
                     Calls.AddRange(m_Calls);
@@ -225,6 +235,7 @@ namespace UnityEngine.Tests
             Calls.Clear();
             RunNode(typeof(PL.EarlyUpdate.ScriptRunDelayedStartupFrame));
             RunNode(typeof(PL.PostLateUpdate.PlayerSendFrameStarted));
+            RunNode(typeof(PL.PostLateUpdate.PlayerSendFrameComplete));
             Assert.Empty(Calls);
             AssertAliveAndListed(subject, active: true);
             Assert.True(subject.gameObject.m_PendingDestroy);
@@ -349,6 +360,71 @@ namespace UnityEngine.Tests
             Assert.False(routine.Done);
             RunNode(UpdateDelayed);
             Assert.True(routine.Done);
+        }
+
+        static UnityEngine.LowLevel.PlayerLoopSystem WithoutDelayedPoints(
+            UnityEngine.LowLevel.PlayerLoopSystem system, bool all)
+        {
+            if (system.subSystemList != null)
+                system.subSystemList = system.subSystemList
+                    .Where(s => s.type != UpdateDelayed && (!all || s.type != FixedDelayed && s.type != PostLateDelayed))
+                    .Select(s => WithoutDelayedPoints(s, all)).ToArray();
+            return system;
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ReplacingTheLoopKeepsAnOrderedEndOfFrameDrain(bool removeAll)
+        {
+            // Preservation control, not a Native claim about custom loops. Queue under the
+            // default loop, then remove one or all delivery points. A FixedUpdate-only pump
+            // must not be required to run when the game is paused or has no fixed step due.
+            using var scope = new Scope();
+            var first = scope.Subject("destroy.custom.first");
+            var asset = scope.Own(ScriptableObject.CreateInstance<AssetRecorder>());
+            asset.name = "destroy.custom.asset";
+            var last = scope.Subject("destroy.custom.last");
+            RunNode(typeof(PL.EarlyUpdate.ScriptRunDelayedStartupFrame));
+            Object.Destroy(first.gameObject);
+            Object.Destroy(asset);
+            Object.Destroy(last.gameObject);
+            Calls.Clear();
+
+            PlayerLoopDriver.CurrentLoop = WithoutDelayedPoints(PlayerLoopDriver.CurrentLoop, removeAll);
+            // Simulate any remaining delayed point. Partial pumps keep the same fallback.
+            if (!removeAll) RunNode(PostLateDelayed);
+            Assert.True(first != null && asset != null && last != null);
+            Assert.Empty(Calls);
+            RunNode(typeof(PL.PostLateUpdate.PlayerSendFrameStarted));
+            Assert.Equal(new[] { "destroy.custom.first.OnDestroy", "destroy.custom.asset.OnDestroy",
+                "destroy.custom.last.OnDestroy" }, Calls.Where(c => c.EndsWith(".OnDestroy")));
+            Assert.True(first == null && asset == null && last == null);
+            Calls.Clear();
+            RunNode(typeof(PL.PostLateUpdate.PlayerSendFrameComplete));
+            Assert.Empty(Calls);
+        }
+
+        [Fact]
+        public void AutomaticParticleDestructionKeepsItsEndOfFrameTiming()
+        {
+            using var scope = new Scope();
+            var subject = scope.Subject("destroy.automatic");
+            var ps = subject.gameObject.AddComponent<ParticleSystem>();
+            var main = ps.main;
+            main.stopAction = ParticleSystemStopAction.Destroy;
+            RunNode(typeof(PL.EarlyUpdate.ScriptRunDelayedStartupFrame));
+            Calls.Clear();
+
+            ps.RunStopAction();
+            Assert.True(subject.enabled && subject.gameObject.m_PendingDestroy);
+            Assert.Empty(Calls);
+            foreach (var node in new[] { FixedDelayed, UpdateDelayed, PostLateDelayed }) RunNode(node);
+            Assert.True(subject != null && subject.enabled);
+            Assert.Empty(Calls);
+            RunNode(typeof(PL.PostLateUpdate.PlayerSendFrameStarted));
+            Assert.Equal(new[] { "destroy.automatic.OnDisable", "destroy.automatic.OnDestroy" }, Calls);
+            Assert.True(subject == null && ps == null);
         }
 
         [Fact]
