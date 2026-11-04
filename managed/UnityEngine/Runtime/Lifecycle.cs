@@ -281,6 +281,36 @@ namespace Unbound.Runtime
 
         // ------------------------------------------------------------------ destruction
 
+        /// <summary>Object.Destroy's request of a GameObject or a script (measured for awakened
+        /// MonoBehaviours: tests/projects/destroycontract). Before Destroy returns, every script it
+        /// will destroy becomes disabled, parents before children and each object's in component
+        /// order; one that was enabled and active gets OnDisable now, an inactive or already
+        /// disabled one gets none. The objects stay alive, listed, active and findable, and their
+        /// coroutines and built-in components wait for the delivery (Destruction.DeliverRequested).</summary>
+        internal static void DisableForDestroyRequest(UnityEngine.Object target)
+        {
+            var scripts = new List<MonoBehaviour>();
+            if (target is GameObject go) CollectScripts(go.m_Transform, scripts);
+            else if (target is MonoBehaviour single) scripts.Add(single);
+            foreach (var mb in scripts)
+            {
+                // An earlier OnDisable may have disabled or destroyed a later script already.
+                if (mb.m_Destroyed || !mb.m_Enabled) continue;
+                mb.m_Enabled = false;
+                OnBehaviourEnabledChanged(mb, false);
+            }
+        }
+
+        static void CollectScripts(Transform t, List<MonoBehaviour> into)
+        {
+            var go = t.m_GameObject;
+            if (go.m_Destroyed) return;
+            foreach (var c in go.m_Components)
+                if (c is MonoBehaviour mb && !mb.m_Destroyed) into.Add(mb);
+            foreach (var child in t.m_Children)
+                CollectScripts(child, into);
+        }
+
         /// <summary>OnDisable (when active and enabled) then OnDestroy (when awake) for one component.</summary>
         internal static void OnComponentDestroyed(Component c)
         {
