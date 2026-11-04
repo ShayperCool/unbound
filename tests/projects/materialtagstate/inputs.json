@@ -13,7 +13,7 @@
   },
   {
    "path": "Assets/Editor/MaterialTagStateDiscriminator.cs",
-   "sha256": "6aa667ea4de38cfeb2c0fa5035233e3bba0076eb5c37aa3066f3009ab5b08546",
+   "sha256": "c06e9d41efae8a30c7cbefe40999548f96a99798199b67dc985cc88187375c64",
    "source": "fixture: tests/projects/materialtagstate/Assets/Editor/MaterialTagStateDiscriminator.cs"
   },
   {
