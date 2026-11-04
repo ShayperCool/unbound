@@ -329,11 +329,14 @@ namespace UnityEngine
             return true;
         }
 
-        /// <summary>The format resolves as the constructor's does; a format no texture format Unbound
-        /// stores reports returns false with Unbound's error and leaves the texture as it was (Unity's
-        /// native answer is not measured).</summary>
+        /// <summary>The texture must be readable (Unity 6000.0.71f1's C# reference source throws this
+        /// exception first; the Reinitialize page states the requirement). The format resolves as the
+        /// constructor's does; a format no texture format Unbound stores reports returns false with
+        /// Unbound's error and leaves the texture as it was (Unity's native answer is not measured).</summary>
         public bool Reinitialize(int width, int height, GraphicsFormat format, bool hasMipMap)
         {
+            if (!m_IsReadable)
+                throw new UnityException($"Texture '{name}' is not readable, the texture memory can not be accessed from scripts. You can make the texture readable in the Texture Import Settings.");
             var storage = GraphicsFormatUtility.Texture2DStorage(format);
             if (storage == null)
             {
