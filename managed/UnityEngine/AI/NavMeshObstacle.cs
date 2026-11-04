@@ -37,7 +37,7 @@ namespace UnityEngine.AI
         /// <summary>Fits the obstacle to the GameObject's mesh, as Unity does when it is added.</summary>
         internal void FitExtents()
         {
-            var filter = m_GameObject.GetComponent<MeshFilter>();
+            var filter = m_GameObject.FindComponent<MeshFilter>();
             if (filter != null && filter.sharedMesh != null)
             {
                 var b = filter.sharedMesh.bounds;

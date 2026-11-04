@@ -280,7 +280,7 @@ namespace Unbound.Runtime
             if (root == null || !root.m_GameObject.activeInHierarchy) return;
             foreach (var go in Descendants(root))
             {
-                if (!go.activeInHierarchy) continue;
+                if (!go.ActiveInHierarchyNoThrow) continue;
                 foreach (var c in go.m_Components.ToArray())
                     if (c is MonoBehaviour mb && !mb.m_DidAwake) goto skip;
                 SendFast(go, "OnCanvasHierarchyChanged");
