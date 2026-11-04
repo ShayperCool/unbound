@@ -35,6 +35,9 @@ namespace Unbound.Runtime
         {
             internal readonly Dictionary<string, string> Tags = new Dictionary<string, string>(StringComparer.Ordinal);
             internal readonly List<Dictionary<string, string>> Passes = new List<Dictionary<string, string>>();
+            /// <summary>Each pass's <c>Name</c> as the host sends it, by pass index (empty: an
+            /// unnamed pass); null when a pass's name is missing (the names are then unknown).</summary>
+            internal List<string> PassNames = new List<string>();
             /// <summary>Its <c>LOD</c> (0: none); null when the host does not send it (an older
             /// host): Shader.passCount then keeps the renderer's pass list.</summary>
             internal int? Lod;
@@ -176,6 +179,10 @@ namespace Unbound.Runtime
                         var tags = new Dictionary<string, string>(StringComparer.Ordinal);
                         Tags(pass.GetProperty("tags"), tags);
                         s.Passes.Add(tags);
+                        if (s.PassNames != null && pass.TryGetProperty("name", out var passName) && passName.ValueKind == JsonValueKind.String)
+                            s.PassNames.Add(passName.GetString() ?? "");
+                        else
+                            s.PassNames = null;
                     }
                     d.SubShaders.Add(s);
                 }
