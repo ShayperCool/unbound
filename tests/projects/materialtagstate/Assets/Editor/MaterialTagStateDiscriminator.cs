@@ -55,7 +55,7 @@ public static class MaterialTagStateDiscriminator
     static string outPath, diagPath;
     static int ticks, endCameraForFixture, endContextForFixture, pipelinesCreated;
     static string pipelineAtEndCamera;
-    static bool submitted, supportedAtSubmit, finished;
+    static bool submitted, supportedAtSubmit, finished, renderRowsWritten;
     static string renderPath = "none";
 
     public static void Run()
@@ -81,6 +81,9 @@ public static class MaterialTagStateDiscriminator
             diag["graphicsDeviceVersion"] = SystemInfo.graphicsDeviceVersion;
             diag["frameCountAtRun"] = Time.frameCount;
 
+            // Reset scenes before creating transient subjects. The baseline still precedes
+            // construction of the fixture camera and renderers.
+            EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
             subjects = LoadSubjects();
             Row("fixture/subjects", subjects.Select(s => (object)s.Label).ToList());
             Row("fixture/stages", new List<object> { "before-render", "after-render" });
@@ -144,7 +147,6 @@ public static class MaterialTagStateDiscriminator
 
     static void BuildScene()
     {
-        EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         target = new RenderTexture(16, 16, 24) { name = "MaterialTagStateTarget" };
         target.Create();
         var cameraObject = new GameObject("MaterialTagStateCamera");
@@ -238,6 +240,10 @@ public static class MaterialTagStateDiscriminator
 
     static void RenderRows(bool completed)
     {
+        // A later sampling failure preserves the observed render rows and all partial samples.
+        // fixture/status records failure independently of camera-render completion.
+        if (renderRowsWritten) return;
+        renderRowsWritten = true;
         Row("render/supportsSingleCameraRequestAtSubmit", supportedAtSubmit);
         Row("render/path", renderPath);
         Row("render/endCameraRendering.fixtureCamera", endCameraForFixture > 0);
