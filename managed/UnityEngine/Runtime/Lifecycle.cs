@@ -234,7 +234,13 @@ namespace Unbound.Runtime
             if (call == null) return;
             Trace.Lifecycle("Awake", mb);
             try { call(mb); }
-            catch (Exception e) { Debug.LogException(e, mb); }
+            catch (Exception e)
+            {
+                Debug.LogException(e, mb);
+                // Unity 6000.0 MonoBehaviour.Awake: an exception disables the component.
+                // Use the normal setter to remove any registrations from reentrant enabling.
+                if (!mb.m_Destroyed) mb.enabled = false;
+            }
         }
 
         /// <summary>The behaviour is enabled and active: OnEnable, and it joins the update lists.</summary>
