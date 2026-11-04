@@ -126,8 +126,11 @@ namespace UnityEngine.Tests
                     Save(typeof(Lifecycle), name);
                 Save(typeof(Coroutines), "s_Running");
                 Save(typeof(Invokes), "s_Entries");
-                foreach (string name in new[] { "s_Delayed", "s_EndOfFrame", "s_Requested" })
-                    Save(typeof(Destruction), name);
+                Save(typeof(Destruction), "s_Delayed");
+                Save(typeof(Destruction), "s_EndOfFrame");
+                // Absent from a Core without the request list: a red run then fails on behaviour.
+                var requested = typeof(Destruction).GetField("s_Requested", PrivateStatic);
+                if (requested != null) m_Saved.Add(new Saved(requested.GetValue(null)));
                 EditorSession.IsPlaying = true;
                 Calls.Clear();
             }
