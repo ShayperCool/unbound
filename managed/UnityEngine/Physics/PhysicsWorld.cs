@@ -1121,10 +1121,14 @@ namespace Unbound.Runtime
         /// the shapes are destroyed again before the next step.
         /// Touch counts change only when a step's events are collected, right after its simulation
         /// and before any script of that step runs, so a destruction at any later point (before a
-        /// step, in OnJointBreak, in the messages) is ended by the next step's events.
+        /// step, in OnJointBreak, in the messages) is ended by the next step's events. A collider
+        /// without shapes has nothing to mark (a first build, a shape that failed to build): if its
+        /// last shapes went after the last events, their touches are marked already and the counts
+        /// have not changed since; otherwise those events ended them and no shape of it began one.
         /// </summary>
         static void LoseTouches(Collider c)
         {
+            if (s_PairOrder.Count == 0 || (c.m_Shape == 0 && c.m_ExtraShapes.Count == 0)) return;
             foreach (var p in s_PairOrder)
             {
                 if (p.Touching == 0 || (!ReferenceEquals(p.A, c) && !ReferenceEquals(p.B, c))) continue;
