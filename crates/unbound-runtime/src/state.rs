@@ -1227,14 +1227,18 @@ mod tests {
         unbound_assets::model::import_model(source, TRIANGLE_OBJ.as_bytes(), &meta).unwrap()
     }
 
-    /// The Read/Write Enabled setting where 6000.0 metas write it (under `animations:`), on and
-    /// off, and the importer's default for a model with no setting.
+    /// The Read/Write Enabled setting where the committed 6000.0.71f1 probe metas write it (under
+    /// `animations:`) and under `meshes:`, on and off. A meta without the setting, or no meta, takes
+    /// the importer's fallback, off: the 6000.0 Manual's FBX Importer Model tab says "By default,
+    /// this option is disabled". That an omitted key reads as that default is not measured.
     #[test]
     fn model_mesh_answers_carry_the_read_write_setting() {
         let on = "ModelImporter:\n  serializedVersion: 22200\n  animations:\n    isReadable: 1\n  meshes:\n    globalScale: 1\n";
         let off = "ModelImporter:\n  serializedVersion: 22200\n  animations:\n    isReadable: 0\n  meshes:\n    globalScale: 1\n";
+        let meshes_on = "ModelImporter:\n  meshes:\n    globalScale: 1\n    isReadable: 1\n";
         let unset = "ModelImporter:\n  serializedVersion: 22200\n  meshes:\n    globalScale: 1\n";
-        for (meta, readable) in [(on, true), (off, false), (unset, false), ("", false)] {
+        let cases = [(on, true), (off, false), (meshes_on, true), (unset, false), ("", false)];
+        for (meta, readable) in cases {
             let model = imported_triangle(meta);
             assert_eq!(model.settings.is_readable, readable, "{meta:?}");
             let answer = model_mesh_json(&model, 0).unwrap();
