@@ -121,7 +121,10 @@ namespace UnityEngine
     /// </summary>
     internal static class BakedLighting
     {
-        internal static void Read(JsonElement root, LoadedFile file, int scene = 0)
+        /// <summary>Reads lighting data reply <paramref name="root"/> of the scene with handle
+        /// <paramref name="scene"/>; <paramref name="lightingData"/> is the scene's m_LightingDataAsset
+        /// reference the reply was read for, the identity of its probes object (none: no reuse).</summary>
+        internal static void Read(JsonElement root, LoadedFile file, int scene = 0, ObjectRef lightingData = default)
         {
             int offset = LightmapSettings.Count;
             if (root.TryGetProperty("lightmapsMode", out var mode)) LightmapSettings.lightmapsMode = (LightmapsMode)mode.GetInt32();
@@ -183,7 +186,7 @@ namespace UnityEngine
                 }
             }
             if (root.TryGetProperty("probes", out var probes) && probes.ValueKind == JsonValueKind.Object)
-                LightProbes.SceneLoaded(scene, LightProbes.FromJson(probes));
+                LightProbes.SceneLoaded(scene, lightingData, probes);
         }
 
         /// <summary>The scene object an entry is of: by its file id, or (in a prefab instance) by
