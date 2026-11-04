@@ -23,7 +23,7 @@ namespace Unbound.Tests
     /// <summary>The light probe API's own state: scene probe sets joining and leaving the current
     /// probes, occlusion by shadow mask channel, queries keeping their probes and the property
     /// block probe arrays (the behaviours tests/projects/lightprobes records in the Editor).</summary>
-    public class LightProbesTests
+    public partial class LightProbesTests
     {
         /// <summary>The 8 probes of tests/projects/lightprobes' Extra bake.</summary>
         static readonly Vector3[] Box =
@@ -82,9 +82,9 @@ namespace Unbound.Tests
                 SceneRegistry.Active = null;
             }
 
-            internal SceneData Loaded(string name)
+            internal SceneData Loaded(string name, string path = "")
             {
-                var data = SceneRegistry.Create(name, "", -1);
+                var data = SceneRegistry.Create(name, path, -1);
                 data.IsLoaded = true;
                 data.LoadingState = Scene.LoadingState.Loaded;
                 SceneRegistry.Loaded.Add(data);
@@ -94,9 +94,9 @@ namespace Unbound.Tests
             }
 
             /// <summary>A scene a load has created, not loaded yet (as LoadScene leaves it).</summary>
-            internal SceneData Loading(string name)
+            internal SceneData Loading(string name, string path = "")
             {
-                var data = SceneRegistry.Create(name, "", -1);
+                var data = SceneRegistry.Create(name, path, -1);
                 data.LoadingState = Scene.LoadingState.Loading;
                 m_Made.Add(data);
                 return data;
