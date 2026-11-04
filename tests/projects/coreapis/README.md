@@ -282,3 +282,16 @@ appended row must match the recorded cleanup schedule/schema. Prefix rewrite/rem
 rows and any other changed artifact refuse the next repeat/publication. An in-progress final
 write is not read as a capture value. Final receipts still retain/hash the entire journal after
 all bounded owned sweepers finish. Repeated check verifies the original seal, never reseals it.
+
+## Recorder preservation admitted on 2026-11-04
+
+The whole-message `Names` scan is removed; numeric payloads stay literal and ids use the
+existing explicit `Id`/`JsonIds` paths. Two fresh strict windowed GPU captures of this source
+both equal the existing `bbc831a7` canonical,682 lines, byte-for-byte. The reference was not
+rewritten. Root verified compile graphs, full IL/data identity and final cleanup seals.
+
+This admits a measurement repair, not an engine API fix. The combined `a8d46d11` runtime
+was measured at595/682 with the previous recorder. Its corrected-writer capture is pending;
+618/64/64 is only the projection. Old raw captures and every remaining discrepancy are kept.
+Evidence: `validation/runs/coreapis-recorder-root-admission-20261104/` and
+`validation/runs/destroy-format-combined-root-admission-20261104/`.
