@@ -94,9 +94,29 @@ namespace UnityEngine
             }
         }
 
-        public bool activeSelf => m_IsActive;
+        /// <summary>Throws on a destroyed GameObject (measured in the Editor after the destruction
+        /// is delivered: tests/projects/destroycontract), like <see cref="activeInHierarchy"/> and
+        /// GetComponent. A pending Destroy request and OnDestroy still read it.</summary>
+        public bool activeSelf
+        {
+            get
+            {
+                ThrowIfDestroyed();
+                return m_IsActive;
+            }
+        }
 
         public bool activeInHierarchy
+        {
+            get
+            {
+                ThrowIfDestroyed();
+                return ActiveInHierarchyNoThrow;
+            }
+        }
+
+        /// <summary>The engine's own check: false for a destroyed GameObject instead of throwing.</summary>
+        internal bool ActiveInHierarchyNoThrow
         {
             get
             {
@@ -124,9 +144,9 @@ namespace UnityEngine
         {
             ThrowIfDestroyed();
             if (m_IsActive == value) return;
-            bool wasActive = activeInHierarchy;
+            bool wasActive = ActiveInHierarchyNoThrow;
             m_IsActive = value;
-            bool isActive = activeInHierarchy;
+            bool isActive = ActiveInHierarchyNoThrow;
             if (wasActive != isActive)
                 Lifecycle.OnHierarchyActiveChanged(this, isActive);
         }
@@ -151,7 +171,24 @@ namespace UnityEngine
         [Obsolete("GameObject.AddComponent with string argument has been deprecated. Use GameObject.AddComponent<T>() instead.", true)]
         public Component AddComponent(string className) => throw new NotSupportedException("AddComponent(string) is not supported.");
 
+        /// <summary>Throws on a destroyed GameObject (measured for the generic overload in the
+        /// Editor after the destruction is delivered: tests/projects/destroycontract; the other
+        /// overloads are the same query). A live GameObject without the component gives null.</summary>
         public Component GetComponent(Type type)
+        {
+            ThrowIfDestroyed();
+            return FindComponent(type);
+        }
+
+        public T GetComponent<T>()
+        {
+            ThrowIfDestroyed();
+            return FindComponent<T>();
+        }
+
+        /// <summary>The engine's own lookup: the first live component of the type, without the
+        /// destroyed-object check of GetComponent.</summary>
+        internal Component FindComponent(Type type)
         {
             if (type == null) return null;
             foreach (var c in m_Components)
@@ -160,7 +197,7 @@ namespace UnityEngine
             return null;
         }
 
-        public T GetComponent<T>()
+        internal T FindComponent<T>()
         {
             foreach (var c in m_Components)
                 if (!c.m_Destroyed && c is T t)
@@ -172,6 +209,7 @@ namespace UnityEngine
         /// with the namespace (as data binding libraries store them).</summary>
         public Component GetComponent(string type)
         {
+            ThrowIfDestroyed();
             foreach (var c in m_Components)
             {
                 if (c.m_Destroyed) continue;
@@ -182,15 +220,16 @@ namespace UnityEngine
             return null;
         }
 
+        // TryGetComponent on a destroyed GameObject is not measured: it keeps answering false.
         public bool TryGetComponent(Type type, out Component component)
         {
-            component = GetComponent(type);
+            component = FindComponent(type);
             return component != null;
         }
 
         public bool TryGetComponent<T>(out T component)
         {
-            component = GetComponent<T>();
+            component = FindComponent<T>();
             return component != null && !(component is Object o && o.m_Destroyed);
         }
 
