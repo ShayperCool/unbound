@@ -90,8 +90,24 @@ namespace UnityEngine
         public void SetTexture(int kernelIndex, int nameID, Texture texture) => SetTexture(kernelIndex, nameID, texture, 0);
         public void SetTexture(int kernelIndex, string name, Texture texture) => SetTexture(kernelIndex, Shader.PropertyToID(name), texture, 0);
         public void SetTexture(int kernelIndex, string name, Texture texture, int mipLevel) => SetTexture(kernelIndex, Shader.PropertyToID(name), texture, mipLevel);
-        public void SetTexture(int kernelIndex, int nameID, RenderTexture texture, int mipLevel, RenderTextureSubElement element) => SetTexture(kernelIndex, nameID, texture, mipLevel);
-        public void SetTexture(int kernelIndex, string name, RenderTexture texture, int mipLevel, RenderTextureSubElement element) => SetTexture(kernelIndex, Shader.PropertyToID(name), texture, mipLevel);
+
+        /// <summary>A render texture and the element of it the kernel reads. Default and Color bind
+        /// the texture as the plain overload does. Selecting its Depth or Stencil for a kernel is not
+        /// implemented: the texture is bound as with Default and each such binding is reported
+        /// (CommandBuffer.SetComputeTextureParam's when its command runs).</summary>
+        public void SetTexture(int kernelIndex, int nameID, RenderTexture texture, int mipLevel, RenderTextureSubElement element)
+        {
+            SetTexture(kernelIndex, nameID, texture, mipLevel);
+            if (texture == null) return;
+            if (element == RenderTextureSubElement.Depth)
+                Stubs.Ignored("ComputeShader.SetTexture(RenderTextureSubElement.Depth)", UnselectedElement);
+            else if (element == RenderTextureSubElement.Stencil)
+                Stubs.Ignored("ComputeShader.SetTexture(RenderTextureSubElement.Stencil)", UnselectedElement);
+        }
+
+        public void SetTexture(int kernelIndex, string name, RenderTexture texture, int mipLevel, RenderTextureSubElement element) => SetTexture(kernelIndex, Shader.PropertyToID(name), texture, mipLevel, element);
+
+        const string UnselectedElement = "is not honoured yet: the render texture is bound to the kernel as with RenderTextureSubElement.Default";
 
         public void SetTextureFromGlobal(int kernelIndex, int nameID, int globalTextureNameID)
         {
