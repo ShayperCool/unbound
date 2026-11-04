@@ -148,7 +148,7 @@ public static class MaterialTagStateDiscriminator
         target = new RenderTexture(16, 16, 24) { name = "MaterialTagStateTarget" };
         target.Create();
         var cameraObject = new GameObject("MaterialTagStateCamera");
-        cameraObject.transform.position = new Vector3(0f, 0f, -4f);
+        cameraObject.transform.position = new Vector3(0f, 0f, -8f);
         fixtureCamera = cameraObject.AddComponent<Camera>();
         cameraObject.AddComponent<UniversalAdditionalCameraData>();
         fixtureCamera.clearFlags = CameraClearFlags.SolidColor;

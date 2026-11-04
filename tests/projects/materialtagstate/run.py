@@ -125,6 +125,13 @@ def cmd_inventory(work, _args):
 
 def cmd_editor(work, args):
     steps = plan(work)
+    # Refuse used outputs before writing a plan, composing a project or starting Xvfb.
+    if args.execute:
+        for step in steps:
+            project = Path(step['project'])
+            output = Path(step['env']['MATERIAL_TAG_STATE_OUT']).parent
+            if project.exists() or project.is_symlink() or output.exists() or output.is_symlink():
+                sys.exit(f"{step['repeat']}: run folder already used; choose a new --label")
     work.mkdir(parents=True, exist_ok=True)
     (work/'editor-plan.json').write_text(json.dumps(steps, indent=2) + '\n')
     print(json.dumps(steps, indent=2))
@@ -158,6 +165,23 @@ def cmd_check(work, _args):
     compare = [sys.executable, '-B', str(PROBE/'compare.py')]
     code = 0
     for repeat in ('native1', 'native2'):
+        log_path = work/repeat/'editor.log'
+        diag_path = work/repeat/'diagnostics.json'
+        log = log_path.read_text(errors='replace') if log_path.is_file() else ''
+        renderers = [line.strip() for line in log.splitlines() if line.strip().startswith('Renderer:')]
+        try:
+            diag = json.loads(diag_path.read_text())
+        except (OSError, ValueError):
+            diag = {}
+        evidence = (log + '\n' + str(diag.get('graphicsDeviceName', ''))).casefold()
+        software = any(name in evidence for name in
+                       ('null device', 'llvmpipe', 'lavapipe', 'softpipe', 'swiftshader', 'forcing gfxdevice: null'))
+        hardware = any('nvidia' in line.casefold() for line in renderers)
+        backend = diag.get('graphicsDeviceType') in ('OpenGLCore', 'Vulkan')
+        print(repeat, renderers, diag.get('graphicsDeviceType'), diag.get('graphicsDeviceName'))
+        if not hardware or not backend or software:
+            code = 1
+            print(f'{repeat}: INVALID not a hardware NVIDIA GPU Editor session')
         code |= subprocess.run(compare + ['classify', str(work/repeat/'capture.jsonl')]).returncode
     code |= subprocess.run(compare + ['pair', str(work/'native1/capture.jsonl'), str(work/'native2/capture.jsonl')]).returncode
     saved = validation_cache()/'runs'/SAVED_MAPS
