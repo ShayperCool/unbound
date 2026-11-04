@@ -91,10 +91,11 @@ namespace UnityEngine
         /// Update.ScriptRunDelayedTasks and in paused/edit-mode frames), the same context
         /// MainThreadAsync posts to. BackgroundThread needs a thread pool thread ("it resumes on a .NET
         /// ThreadPool thread"): completion already on a pool thread runs inline; on the main thread or
-        /// on a thread the game started it is queued to the pool, as BackgroundThreadAsync queues its
-        /// own continuation. Unity's public 6000.0 reference source (identical at 6000.0.71f1) also
-        /// runs it inline on such a game-started thread; the Manual's ThreadPool wording is followed
-        /// here, and that context is unmeasured.
+        /// on a thread the game started it is queued to the pool as a task, so an exception thrown by
+        /// the continuation stays in that task instead of ending the process. Unity's public 6000.0 C#
+        /// reference source (identical at 6000.0.71f1) queues with Task.Run too, but runs the
+        /// continuation inline on any thread other than the main one, a thread the game started
+        /// included. Here the Manual's ThreadPool wording is followed for that case; it is unmeasured.
         /// </summary>
         static void RunOrScheduleContinuation(AwaiterCompletionThreadAffinity affinity, Action continuation)
         {
@@ -104,7 +105,7 @@ namespace UnityEngine
                     PlayerLoopDriver.RunOnMainThread(continuation);
                     break;
                 case AwaiterCompletionThreadAffinity.BackgroundThread when !OnThreadPoolThread():
-                    ThreadPool.UnsafeQueueUserWorkItem(_ => continuation(), null);
+                    System.Threading.Tasks.Task.Run(continuation);
                     break;
                 default:
                     continuation();
@@ -119,10 +120,15 @@ namespace UnityEngine
         /// <summary>
         /// Awaiting an awaitable that has already completed resumes at once on the awaiting thread,
         /// whatever its affinity (IsCompleted is true, or completion raced this registration). Held
-        /// limitation: Unity's reference source also checks the affinity there (its IsCompleted is
-        /// false and its registration schedules the continuation when the awaiting thread does not
-        /// match). It shows only when a method's awaiter runs on a different kind of thread than the
-        /// method's caller, for example a pool thread awaiting a completed main-thread-called method.
+        /// limitation, not implemented: Unity's public 6000.0 C# reference source also checks the
+        /// affinity on both paths. Its public IsCompleted (and so the awaiter's) is false while the
+        /// awaiting thread does not match, and its registration on a completed awaitable schedules
+        /// the continuation as RunOrScheduleContinuation does. That shows only when a method's
+        /// awaitable is awaited on a different kind of thread than the one that called the method:
+        /// a pool thread awaiting a completed main-thread-called method continues there instead of on
+        /// the main thread, and the main thread awaiting a completed method called off it continues on
+        /// the main thread instead of on the pool. The Manual states its rule for the method's caller
+        /// and does not cover an await from another thread.
         /// </summary>
         internal void SetContinuation(Action continuation)
         {
