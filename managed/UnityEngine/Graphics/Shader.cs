@@ -103,7 +103,7 @@ namespace UnityEngine
             var key = (shader.m_Name, "|vertexlit", "");
             if (s_Replacements.TryGetValue(key, out var variant) && variant) return variant;
             using (ObjectRegistry.AsAssets())
-                variant = new Shader { m_Name = shader.m_Name + "|vertexlit", m_RenderQueue = shader.m_RenderQueue, hideFlags = HideFlags.HideAndDontSave };
+                variant = new Shader { m_Name = shader.m_Name + "|vertexlit", m_RenderQueue = shader.m_RenderQueue, m_Variant = true, hideFlags = HideFlags.HideAndDontSave };
             variant.m_Properties.AddRange(shader.m_Properties);
             s_Replacements[key] = variant;
             return variant;
@@ -114,18 +114,27 @@ namespace UnityEngine
             var key = (shader.m_Name, tag, value);
             if (s_Replacements.TryGetValue(key, out var replacement) && replacement) return replacement;
             using (ObjectRegistry.AsAssets())
-                replacement = new Shader { m_Name = shader.m_Name + "|tag=" + tag + "=" + value, m_RenderQueue = shader.m_RenderQueue, hideFlags = HideFlags.HideAndDontSave };
+                replacement = new Shader { m_Name = shader.m_Name + "|tag=" + tag + "=" + value, m_RenderQueue = shader.m_RenderQueue, m_Variant = true, hideFlags = HideFlags.HideAndDontSave };
             replacement.m_Properties.AddRange(shader.m_Properties);
             s_Replacements[key] = replacement;
             return replacement;
         }
 
-        /// <summary>The render queue its SubShader's `Queue` tag gives (a built-in shader's is read
-        /// from its source when the renderer has it; until then a guess from its name).</summary>
+        /// <summary>
+        /// The render queue the `Queue` tag of the SubShader the shader runs gives (Unity 6000.0
+        /// Shader.renderQueue: it depends on the active pipeline and the selected SubShader; a
+        /// SubShader without the tag is Geometry, 2000, the Manual's default queue). The SubShader
+        /// is the declared one queries answer from (<see cref="ActiveSubShader"/>), so a LOD
+        /// limit or pipeline change changes the answer. While that selection is unknown the
+        /// earlier answers stay: a project shader's first `Queue` text in its source
+        /// (<see cref="Unbound.Runtime.ShaderLab.Queue"/>), a built-in shader's tag from the
+        /// renderer's SubShader when it has one, until then a guess from its name.
+        /// </summary>
         public int renderQueue
         {
             get
             {
+                if (SelectedQueue() is int selected) return selected;
                 if (m_QueueFromSource && m_QueueTried != Time.frameCount)
                 {
                     // At most once a frame while the renderer cannot answer yet.
@@ -145,7 +154,52 @@ namespace UnityEngine
         /// <summary>The queue still comes from the renderer's reading of the source.</summary>
         internal bool m_QueueFromSource;
         int m_QueueTried = -1;
+        /// <summary>An engine variant of another shader (see <see cref="VertexLit"/>,
+        /// <see cref="Replacement"/>): no declared shader, it keeps the queue it was made with.</summary>
+        bool m_Variant;
 
+        // The selected SubShader's queue (null: unknown), for the inputs it was found under. A
+        // declarations answer that is not transient does not change in the session (edits need a
+        // restart), so only the name, the LOD limits and the pipeline invalidate it.
+        int? m_SelectedQueue;
+        bool m_SelectedQueueKept;
+        string m_SelectedQueueName;
+        string m_SelectedQueuePipeline;
+        int m_SelectedQueueEpoch;
+
+        /// <summary>The queue of the declared selected SubShader, null when that selection is
+        /// unknown (the getter then keeps its earlier answers).</summary>
+        int? SelectedQueue()
+        {
+            var name = m_Name;
+            if (m_Variant || string.IsNullOrEmpty(name)) return null;
+            var pipeline = s_GlobalRenderPipeline;
+            if (m_SelectedQueueKept && m_SelectedQueueEpoch == s_LodEpoch
+                && string.Equals(m_SelectedQueueName, name, StringComparison.Ordinal)
+                && string.Equals(m_SelectedQueuePipeline, pipeline, StringComparison.Ordinal))
+                return m_SelectedQueue;
+            // Before the host can be asked every part is unknown without a reason: nothing is
+            // reported or kept.
+            bool asked = Unbound.Runtime.ShaderDeclarations.s_CallForTests != null || Unbound.Runtime.Native.IsReady;
+            var d = Unbound.Runtime.ShaderDeclarations.Of(this);
+            int? queue = null;
+            if (!d.SubShadersKnown || d.SubShaders.Count == 0)
+            {
+                if (asked)
+                    Unbound.Runtime.Stubs.Ignored("Shader.renderQueue for a shader whose SubShaders the host does not know",
+                        "keeps the source's first Queue text (a built-in shader: the renderer's SubShader, else a guess from its name)");
+            }
+            else if (ActiveSubShader("Shader.renderQueue", "keeps the source's first Queue text (a built-in shader: the renderer's SubShader)") is { } sub)
+            {
+                queue = Unbound.Runtime.ShaderDeclarations.Tag(sub.Tags, "Queue") is string tag ? Unbound.Runtime.ShaderLab.QueueTag(tag) : 2000;
+            }
+            m_SelectedQueue = queue;
+            m_SelectedQueueKept = asked && !d.Transient;
+            m_SelectedQueueName = name;
+            m_SelectedQueuePipeline = pipeline;
+            m_SelectedQueueEpoch = s_LodEpoch;
+            return queue;
+        }
 
         /// <summary>Its SubShaders, then those of its Fallback chain (canonical
         /// tests/projects/shaderkeywords: Standard counts its two and VertexLit's one). 1 while the
