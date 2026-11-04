@@ -2864,3 +2864,12 @@ Merged delivery4641d721 from Root870; applied reviewed patch01a926f5 plus exact4
 - coreapis594->595/682 with only record72/four large fixed-format tokens changed; all other681 records equal. This result uses the old recorder; corrected-recorder618/64/64 remains projected until its separate matching capture.
 - No new Native/Rust/native/API compiler/stub work. No coroutine-EOF/getter/DestroyImmediate/activation-order claim beyond the stated limits. Old candidate/frozen artifacts remain unchanged.
 - Evidence: `validation/runs/destroy-format-combined-root-admission-20261104/` and its pinned matching validation; all build/test/engine budgets are terminal/spent.
+
+### Repaired-recorder engine measurement, 2026-11-04
+
+- Root admits the one-engine result on accepted a8d46d11/Core49c8e7e1, compiled revision989bf676. The owned copy and frozen source both remain33/33 byte-equal and read-only; CLIce742394 and PhysX487d are unchanged. Suite1685/1685 and API0/2319 remain the accepted results, with no rebuild or rerun.
+- coreapis measures595 matched/87 missing/87 extra ->618/64/64 on all682 ordered records. Exactly23 recorder-corrupted rows and27 tokens are restored to the existing canonical. Zero lost/new pairs; all595 prior pass mappings and the other659 raw rows are preserved. Record72 remains byte-equal to Native.
+- The64 strict pairs remain raw, with duplicate/order alignment unchanged: ORO24, Pose21, batch11, exception4, sign2 and JSON2. This repairs measurement only; no engine implementation change or new reference is counted. One capture does not establish determinism.
+- Root independently verifies all646 owner artifacts, source/fixture/compiler-input binding,33 runtime files and the full stored alignment without another comparator process. The full source graph has2247 ancestors with zero retired IDs; the receipt's2212 count is corrected by its own saved binding and Root's graph check.
+- The validator nested the comparator's CPU tool lease inside its analysis lease. The violation remains recorded; it affected no engine/build budget and is not repeated. Two Root audit-script assumptions and one inspection schema error were corrected on the same immutable artifacts, with all attempts retained.
+- Engine1/1 and comparator1/1 are spent. No build, suite, red control, Editor, Native, API, stub or publication run. Evidence: `validation/runs/coreapis-recorder-engine-root-admission-20261104/` and `validation/runs/coreapis-recorder-engine-20261104/`.

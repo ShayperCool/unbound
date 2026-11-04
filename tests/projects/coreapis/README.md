@@ -218,8 +218,8 @@ cross-type ordering remain unproved. This supplies no rule to sort handlers. Dia
 attribution can undo that swap to explain all 17 frames, but the comparator
 does not transform anything. Strict failures, raw values and event order stay.
 
-The retained-union audit binds the latest Start/texture capture to unchanged
-executed probe and engine query source. Its 88 missing/extra pairs consist of:
+The original retained-union audit bound the Start/texture capture to unchanged
+executed probe and engine query source. Its historical 88 missing/extra pairs consisted of:
 
 | Cause | Pairs |
 |---|---|
@@ -238,9 +238,10 @@ as it is; ids reach the text only through `Id`/`JsonIds`. The 23 affected
 records contain 27 such substitutions in activation flag pairs and clone rotation
 text; their underlying state/name/transform fields match Native. Earlier labels
 calling them activation-state or clone-name defects were wrong. The recorder
-repair has no new Native capture yet; the existing reference stays canonical until a strict pair
-is compared with it. Its 617/65/65 result is an offline projection, not a new engine result or a
-comparator normalization.
+repair was subsequently checked by two strict Native repeats, both byte-identical to the
+existing canonical. The original 617/65/65 projection is superseded by the measured result
+below, which also includes the independently validated large-float correction. The comparator
+does not normalize either capture.
 
 Both JSON payloads decode identically, including all three differing decimal
 spellings' binary64 bits. Their two strict failures remain and are separately
@@ -290,8 +291,18 @@ existing explicit `Id`/`JsonIds` paths. Two fresh strict windowed GPU captures o
 both equal the existing `bbc831a7` canonical,682 lines, byte-for-byte. The reference was not
 rewritten. Root verified compile graphs, full IL/data identity and final cleanup seals.
 
-This admits a measurement repair, not an engine API fix. The combined `a8d46d11` runtime
-was measured at595/682 with the previous recorder. Its corrected-writer capture is pending;
-618/64/64 is only the projection. Old raw captures and every remaining discrepancy are kept.
+The repaired writer is also measured on the accepted `a8d46d11` runtime, Core `49c8e7e1`.
+One fresh engine capture improves the ordered comparison from 595 matched / 87 missing /
+87 extra to **618 matched / 64 missing / 64 extra**. Exactly the 23 corrupted records and
+27 substitutions are corrected. Every former pass mapping is preserved, and the other
+659 raw lines are byte-identical. Record 72's fixed-format text stays equal to Native.
+
+The 64 retained pairs remain raw and in order: initial OnRenderObject order 24, Pose rounding
+21, batch activation order 11, exception text 4, scene-id sign 2 and JSON spelling 2. This is
+a measurement repair, with no engine API change or new runtime build. A single capture does
+not establish run-to-run determinism. The validator's nested CPU tool lease is recorded as a
+rules deviation; no capture or comparator process was repeated to review it.
+
 Evidence: `validation/runs/coreapis-recorder-root-admission-20261104/` and
-`validation/runs/destroy-format-combined-root-admission-20261104/`.
+`validation/runs/coreapis-recorder-engine-root-admission-20261104/`. Old raw captures and the
+canonical remain unchanged.
