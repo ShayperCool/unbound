@@ -103,8 +103,10 @@ lines are unchanged. The remaining 64 missing / 64 extra lines comprise:
   parent/child toggle was found in the existing Native references. Each measured
   hierarchy has one child/one level, so post-order and reverse pre-order still fit.
   The eleven pairs remain significant; no ID reversal or shared lifecycle sort is
-  applied. A plain-versus-single-id-batch fixture with two siblings and a grandchild
-  is preparation only, not a new Native measurement or launch authorization.
+  applied. The isolated activationorder fixture now has two siblings and a
+  grandchild, both one-id batch overloads and seven distinct predicted orders.
+  Root verified its preparation and released one strict Native pair. No new
+  measurement, reference or shared lifecycle implementation is admitted yet.
 * **Other open API/text gaps:** instance-id sign at 139/143; JSON double digits at
   152/107; large-float formatting at 72; exception text at 249/262/313/96.
 * **Precision ledger:** the 21 GetTransformedBy rotation keys listed in
