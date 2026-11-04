@@ -1089,12 +1089,20 @@ namespace UnityEngine
         }
 
         /// <summary>Copies the properties this material's shader declares (measured: a shader
-        /// without _MainTex gets no texture slot).</summary>
+        /// without _MainTex gets no texture slot), the states of the keywords both shaders declare,
+        /// and the settings every material has: double-sided GI, instancing, render queue (the
+        /// override as stored, as <see cref="CopyPropertiesFromMaterial"/>) and GI flags
+        /// (documented, 6000.0). Keyword states are not copied while either keyword space is
+        /// unknown (warns). Into a variant, as <see cref="CopyPropertiesFromMaterial"/>.</summary>
         public void CopyMatchingPropertiesFromMaterial(Material mat)
         {
             if (mat == null) throw new ArgumentNullException(nameof(mat));
             mat.Inherit();
             Inherit();
+            if (ReferenceEquals(mat, this)) return;
+            if (m_Parent != null)
+                Unbound.Runtime.Stubs.Ignored("Material.CopyMatchingPropertiesFromMaterial into a material variant",
+                    "copies the values without making them overrides: a later change of the parent can replace them");
             bool Declares(int id) => Declared(id) != null;
             foreach (var p in mat.m_Floats) if (Declares(p.Key)) m_Floats[p.Key] = p.Value;
             foreach (var p in mat.m_Ints) if (Declares(p.Key)) m_Ints[p.Key] = p.Value;
@@ -1102,7 +1110,36 @@ namespace UnityEngine
             foreach (var p in mat.m_Matrices) if (Declares(p.Key)) m_Matrices[p.Key] = p.Value;
             foreach (var p in mat.m_Textures)
                 if (Declares(p.Key)) m_Textures[p.Key] = new TextureSlot { Texture = p.Value.Texture, Element = p.Value.Element, ElementBinding = p.Value.ElementBinding, Scale = p.Value.Scale, Offset = p.Value.Offset };
+            CopyMatchingKeywords(mat);
+            m_DoubleSidedGI = mat.m_DoubleSidedGI;
+            m_EnableInstancing = mat.m_EnableInstancing;
+            m_CustomRenderQueue = mat.m_CustomRenderQueue;
+            m_GIFlags = mat.m_GIFlags;
             MarkDirty();
+        }
+
+        /// <summary>A keyword both keyword spaces declare is on here when it is on there. Names
+        /// either space does not declare, and given again or empty, stay as they are.</summary>
+        void CopyMatchingKeywords(Material mat)
+        {
+            if (m_Keywords.Count == 0 && mat.m_Keywords.Count == 0) return;
+            var mine = KeywordDeclarations;
+            var theirs = mat.KeywordDeclarations;
+            if (mine == null || theirs == null)
+            {
+                Unbound.Runtime.Stubs.Ignored("Material.CopyMatchingPropertiesFromMaterial keyword states",
+                    "are not copied: whether both shaders declare a keyword is not known");
+                return;
+            }
+            bool Both(string k) => mine.IndexOf(k) >= 0 && theirs.IndexOf(k) >= 0;
+            var on = new List<string>();
+            var off = new List<string>();
+            foreach (var k in mat.m_Keywords) if (!m_Keywords.Contains(k) && Both(k)) on.Add(k);
+            foreach (var k in m_Keywords) if (!mat.m_Keywords.Contains(k) && Both(k)) off.Add(k);
+            if (on.Count == 0 && off.Count == 0) return;
+            OwnKeywords();
+            foreach (var k in on) m_Keywords.Add(k);
+            foreach (var k in off) m_Keywords.Remove(k);
         }
 
         /// <summary>Interpolates the colors, floats, vectors and texture scales and offsets both
