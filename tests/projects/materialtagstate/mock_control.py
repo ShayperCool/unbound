@@ -11,6 +11,7 @@ under --out; exit 0 when every scenario gets its expected verdict.
 import argparse
 import copy
 import json
+import os
 from pathlib import Path
 import re
 import subprocess
@@ -231,8 +232,14 @@ def fixture_row_names():
     return literals
 
 
+# The comparator child gets an environment built from an empty mapping with these key names only.
+CHILD_ENV_KEYS = ('PATH', 'HOME', 'LANG', 'LC_ALL', 'TZ')
+
+
 def run(argv):
-    return subprocess.run([sys.executable, '-B', str(PROBE/'compare.py')] + argv, capture_output=True, text=True)
+    env = {k: os.environ[k] for k in CHILD_ENV_KEYS if k in os.environ}
+    env['PYTHONDONTWRITEBYTECODE'] = '1'
+    return subprocess.run([sys.executable, '-B', str(PROBE/'compare.py')] + argv, capture_output=True, text=True, env=env)
 
 
 def main():
