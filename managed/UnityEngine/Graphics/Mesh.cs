@@ -143,9 +143,23 @@ namespace UnityEngine
             set
             {
                 m_Vertices = value != null ? (Vector3[])value.Clone() : Array.Empty<Vector3>();
+                // Unity 6000.0 Mesh.vertices documents that existing vertex attributes resize
+                // with the positions. Null channels stay absent; UV dimensions stay unchanged.
+                int count = m_Vertices.Length;
+                ResizeVertexChannel(ref m_Normals, count);
+                ResizeVertexChannel(ref m_Tangents, count);
+                ResizeVertexChannel(ref m_Colors, count);
+                ResizeVertexChannel(ref m_BoneWeights, count);
+                for (int channel = 0; channel < m_UVs.Length; channel++)
+                    ResizeVertexChannel(ref m_UVs[channel], count);
                 RecalculateBounds();
                 Changed();
             }
+        }
+
+        static void ResizeVertexChannel<T>(ref T[] channel, int count)
+        {
+            if (channel != null && channel.Length != count) Array.Resize(ref channel, count);
         }
 
         public Vector3[] normals
@@ -751,11 +765,22 @@ namespace UnityEngine
         /// <summary>Sends the mesh to the renderer when it changed; returns its handle.</summary>
         internal unsafe ulong Sync()
         {
+            int count = m_Vertices.Length;
+            if (m_Dirty)
+            {
+                // MeshPacket supplies one count for every non-null attribute pointer. Check
+                // internal writers too, before consuming dirty state or passing pointers to Rust.
+                CheckVertexChannelLength(m_Normals, count, "normals");
+                CheckVertexChannelLength(m_Tangents, count, "tangents");
+                CheckVertexChannelLength(m_Colors, count, "colors");
+                CheckVertexChannelLength(m_BoneWeights, count, "boneWeights");
+                for (int channel = 0; channel < m_UVs.Length; channel++)
+                    CheckVertexChannelLength(m_UVs[channel], count, "uv", channel);
+            }
             if (m_Handle == 0) m_Handle = RenderHandles.Next();
             if (!m_Dirty) return m_Handle;
             m_Dirty = false;
             m_SyncVersion++;
-            int count = m_Vertices.Length;
             var indices = new List<uint>();
             var subs = new SubMeshPacket[m_SubMeshes.Count];
             for (int i = 0; i < m_SubMeshes.Count; i++)
@@ -803,6 +828,14 @@ namespace UnityEngine
                 Native.UploadMesh(m_Handle, &packet);
             }
             return m_Handle;
+        }
+
+        static void CheckVertexChannelLength(Array values, int count, string channel, int uvChannel = -1)
+        {
+            // Pinning an empty array yields a null pointer, the protocol's absent channel.
+            if (values == null || values.Length == 0 || values.Length == count) return;
+            if (uvChannel >= 0) channel += uvChannel;
+            throw new InvalidOperationException($"Cannot upload Mesh: {channel} has {values.Length} values for {count} vertices.");
         }
 
         internal override void OnEngineDestroy()
