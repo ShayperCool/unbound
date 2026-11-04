@@ -164,6 +164,10 @@ namespace UnityEngine
         public void AddClip(AnimationClip clip, string newName, int firstFrame, int lastFrame) =>
             AddClip(clip, newName, firstFrame, lastFrame, false);
 
+        /// <summary>Adds the frames <paramref name="firstFrame"/>..<paramref name="lastFrame"/> of
+        /// <paramref name="clip"/> as a new clip named <paramref name="newName"/>. With
+        /// <paramref name="addLoopFrame"/> an extra frame matching the first frame is inserted at
+        /// the end (Unity 6000.0 Animation.AddClip); see <see cref="AddLoopFrame"/>.</summary>
         public void AddClip(AnimationClip clip, string newName, int firstFrame, int lastFrame, [Internal.DefaultValue("false")] bool addLoopFrame)
         {
             if (clip == null) throw new NullReferenceException("clip");
@@ -173,11 +177,328 @@ namespace UnityEngine
                 float rate = clip.frameRate > 0f ? clip.frameRate : 60f;
                 used = clip.SubClip(firstFrame / rate, lastFrame / rate);
                 used.m_Name = newName;
+                if (addLoopFrame) AddLoopFrame(used, 1f / rate, newName, firstFrame, lastFrame, this);
+            }
+            else if (addLoopFrame)
+            {
+                Debug.LogWarning($"Unbound: Animation.AddClip(\"{newName}\", addLoopFrame): no extra loop frame is inserted when firstFrame is int.MinValue and lastFrame is int.MaxValue (the whole source clip is added as it is).", this);
             }
             var existing = GetState(newName);
             if (existing != null) RemoveState(existing);
             m_States.Add(CreateState(used, newName));
             if (!m_Animations.Contains(used)) m_Animations.Add(used);
+        }
+
+        /// <summary>
+        /// Appends the loop frame to a sub-clip made by AddClip: one frame (<paramref name="frame"/>
+        /// seconds) after the window's end, every curve takes the value it has at the window's
+        /// start, and the clip grows by that frame. The sub-clip gets its own curves; the source
+        /// clip and its curves stay as they are.
+        /// <para>Documented (6000.0 Animation.AddClip, addLoopFrame): an extra frame is inserted at
+        /// the end that matches the first frame. Unbound's reading, not documented: the extra frame
+        /// sits one frame after lastFrame. The window's own values, tangents and steps are kept
+        /// exactly (up to float rounding): a keyed segment cut by the window's end is split at
+        /// it.</para>
+        /// <para>Not documented and not measured, Unbound's choice: the values from the last frame
+        /// to the extra frame. A float curve goes in a straight line, or steps when the window's
+        /// last segment is stepped; an object reference curve keeps its last value until the extra
+        /// frame. That line is taken on the raw curve values: Euler angle curves go back through
+        /// the degrees in between (348 to 0 sweeps back over 347..1, not forward over 360), and
+        /// curves of int, bool or enum properties pass through fractional values. A quaternion
+        /// rotation (its x, y, z, w curves together) instead takes the shorter way: when the last
+        /// frame's and the first frame's quaternions are in opposite hemispheres, the extra frame
+        /// holds the first frame's quaternion negated (the same rotation), as
+        /// AnimationClip.EnsureQuaternionContinuity aligns keys for the shortest path. Its four
+        /// curves step or go in a line together, stepping when any of them ends the window on a
+        /// stepped segment.</para>
+        /// <para>A curve whose window values cannot be kept that way (a weighted segment cut by the
+        /// window's end, a looping pre/post wrap mode the window reaches, a player clip's compiled
+        /// curve), or a window too far from time 0 to place the extra frame within half a frame,
+        /// leaves the whole sub-clip without the loop frame, with a warning on every such call
+        /// naming every reason.</para>
+        /// </summary>
+        static void AddLoopFrame(AnimationClip sub, float frame, string newName, int firstFrame, int lastFrame, Object context)
+        {
+            float start = sub.m_StartTime, end = sub.m_StopTime, loop = end + frame;
+            // A state at its end samples start + length: that time is the extra frame itself, so a
+            // step to it is not missed by a rounding of the length.
+            for (int i = 0; i < 4 && start + (loop - start) != loop; i++) loop = start + (loop - start);
+            var unsupported = new List<string>();
+            var windows = new LoopWindow[sub.m_Curves.Count];
+            double wanted = (double)end + frame;
+            // Far from time 0 (a firstFrame like int.MinValue), times are too coarse for the
+            // extra frame: the snap above can move it by seconds, or to the window's end.
+            if (!(loop > end) || !(Math.Abs(loop - wanted) <= frame * 0.5))
+                unsupported.Add($"no time within half a frame of {wanted:R}s is representable on a window starting at {start:R}s (nearest {loop:R}s)");
+            else
+            {
+                // Every curve is checked, so that the warning names all those not supported.
+                for (int i = 0; i < windows.Length; i++)
+                {
+                    var c = sub.m_Curves[i];
+                    var reason = LoopWindowOf(c, start, end, out windows[i]);
+                    if (reason != null) unsupported.Add($"{c.Binding} ({reason})");
+                }
+            }
+            if (unsupported.Count > 0)
+            {
+                Debug.LogWarning($"Unbound: Animation.AddClip(\"{newName}\", {firstFrame}, {lastFrame}, addLoopFrame): the extra loop frame is not inserted, the clip has only frames {firstFrame}..{lastFrame}: {string.Join("; ", unsupported)}.", context);
+                return;
+            }
+
+            foreach (var rotation in QuaternionGroups(sub.m_Curves))
+                AlignQuaternion(windows, rotation);
+            for (int i = 0; i < windows.Length; i++)
+                if (windows[i] != null) sub.m_Curves[i] = windows[i].Close(start, end, loop);
+            for (int i = 0; i < sub.m_ObjectCurves.Count; i++)
+                sub.m_ObjectCurves[i] = LoopFrameObjectCurve(sub.m_ObjectCurves[i], start, end, loop);
+            sub.m_StopTime = loop;
+            sub.m_Version++;
+        }
+
+        /// <summary>A float curve's window up to the window's end, before the loop frame closes it
+        /// (see <see cref="AddLoopFrame"/>).</summary>
+        sealed class LoopWindow
+        {
+            internal ClipCurve Source;
+            /// <summary>The keys before the window's end; null for a curve with one value at every
+            /// time (kept as it is unless its quaternion is negated).</summary>
+            internal List<Keyframe> Keys;
+            /// <summary>The key at the window's end (its out tangent is set when closed).</summary>
+            internal Keyframe Split;
+            internal float Start, Last;
+            /// <summary>The value at the extra frame: the value at the window's start, or its
+            /// negation for a quaternion closing the shorter way.</summary>
+            internal float Target;
+            /// <summary>Whether the curve steps to the extra frame.</summary>
+            internal bool Stepped;
+            internal bool HasKeys => Keys != null;
+
+            internal ClipCurve Close(float start, float end, float loop)
+            {
+                var c = Source;
+                List<Keyframe> list;
+                Keyframe split;
+                WrapMode pre, post;
+                if (Keys != null)
+                {
+                    list = new List<Keyframe>(Keys.Count + 2);
+                    list.AddRange(Keys);
+                    split = Split;
+                    pre = c.Curve.preWrapMode;
+                    post = c.Curve.postWrapMode;
+                }
+                else if (Target == Start)
+                    return c; // one value at every time, the extra frame's too
+                else
+                {
+                    // A constant component of a quaternion negated at the extra frame.
+                    list = new List<Keyframe>(3);
+                    if (start < end) list.Add(new Keyframe(start, Start, 0f, 0f));
+                    split = new Keyframe(end, Last, 0f, 0f);
+                    pre = post = WrapMode.ClampForever;
+                }
+                float slope = Stepped ? float.PositiveInfinity : (Target - split.value) / (loop - end);
+                split.outTangent = slope;
+                list.Add(split);
+                list.Add(new Keyframe(loop, Target, slope, 0f));
+                return new ClipCurve
+                {
+                    Binding = c.Binding,
+                    Curve = new AnimationCurve(list.ToArray()) { preWrapMode = pre, postWrapMode = post },
+                    QuaternionStart = c.QuaternionStart,
+                    EulerStart = c.EulerStart,
+                };
+            }
+        }
+
+        /// <summary>A float curve's window (see <see cref="LoopWindow"/>), or the reason it cannot
+        /// have the loop frame.</summary>
+        static string LoopWindowOf(ClipCurve c, float start, float end, out LoopWindow window)
+        {
+            window = null;
+            if (c.Sampled != null)
+            {
+                if (c.Sampled.Times != null || c.Sampled.Samples != null)
+                    return "a player clip's compiled curve: its segments are not split yet";
+                float constant = c.Sampled.Constant;
+                window = new LoopWindow { Source = c, Start = constant, Last = constant, Target = constant };
+                return null;
+            }
+            var curve = c.Curve;
+            if (curve == null) return null; // nothing to sample, kept as it is
+            if (curve.length < 2)
+            {
+                float constant = curve.Evaluate(start); // one value at every time
+                window = new LoopWindow { Source = c, Start = constant, Last = constant, Target = constant };
+                return null;
+            }
+
+            var keys = curve.keys;
+            int n = keys.Length;
+            float first = keys[0].time, last = keys[n - 1].time;
+            if (start < first && last > first && LoopingWrap(curve.preWrapMode))
+                return $"its pre-wrap mode {curve.preWrapMode} repeats it before the first key, in the window";
+            if (end > last && last > first && LoopingWrap(curve.postWrapMode))
+                return $"its post-wrap mode {curve.postWrapMode} repeats it after the last key, in the window";
+
+            float v0 = c.Evaluate(start);
+            int below = 0;
+            while (below < n && keys[below].time < end) below++;
+            var list = new List<Keyframe>(below + 1);
+            for (int i = 0; i < below; i++) list.Add(keys[i]);
+
+            Keyframe split;
+            bool stepped = false; // whether the window's last segment is stepped
+            if (below < n && keys[below].time == end)
+            {
+                // A key at the window's end (the last of several at that time) ends the window as it is.
+                int at = below;
+                while (at + 1 < n && keys[at + 1].time == end) at++;
+                for (int i = below; i < at; i++) list.Add(keys[i]);
+                split = keys[at];
+                split.weightedMode &= ~WeightedMode.Out;
+                stepped = below > 0 && (float.IsInfinity(keys[below - 1].outTangent) || float.IsInfinity(keys[below].inTangent));
+            }
+            else if (below == 0)
+            {
+                // The window ends before the first key, where the curve holds that key's value.
+                split = new Keyframe(end, keys[0].value, 0f, 0f);
+            }
+            else if (below == n)
+            {
+                // The window ends after the last key, which holds its value up to the split.
+                var k = list[n - 1];
+                k.outTangent = 0f;
+                k.weightedMode &= ~WeightedMode.Out;
+                list[n - 1] = k;
+                split = new Keyframe(end, k.value, 0f, 0f);
+            }
+            else
+            {
+                // The window's end cuts the segment from k0 to k1: split it there, keeping its shape.
+                var k0 = keys[below - 1];
+                var k1 = keys[below];
+                stepped = float.IsInfinity(k0.outTangent) || float.IsInfinity(k1.inTangent);
+                if (stepped)
+                    split = new Keyframe(end, k0.value, float.PositiveInfinity, 0f);
+                else if ((k0.weightedMode & WeightedMode.Out) != 0 || (k1.weightedMode & WeightedMode.In) != 0)
+                    return "the window's end cuts a weighted segment, which is not split yet";
+                else
+                    split = new Keyframe(end, AnimationCurve.EvaluateSegment(k0, k1, end), HermiteSlope(k0, k1, end), 0f);
+            }
+            window = new LoopWindow { Source = c, Keys = list, Split = split, Start = v0, Last = split.value, Target = v0, Stepped = stepped };
+            return null;
+        }
+
+        static bool LoopingWrap(WrapMode mode) => mode == WrapMode.Loop || mode == WrapMode.PingPong;
+
+        /// <summary>The quaternion rotations among a clip's curves, as four curve indices (x, y, z,
+        /// w): the groups the clip marks (four curves in a row from one marked
+        /// <see cref="ClipCurve.QuaternionStart"/>, as they are sampled), and the m_LocalRotation.x,
+        /// .y, .z, .w curves of one Transform (bound to its rotation together). A rotation with a
+        /// component missing or given twice is not a group: its curves close one by one.</summary>
+        static List<int[]> QuaternionGroups(List<ClipCurve> curves)
+        {
+            var groups = new List<int[]>();
+            var marked = new bool[curves.Count];
+            for (int i = 0; i + 3 < curves.Count; i++)
+            {
+                if (!curves[i].QuaternionStart) continue;
+                groups.Add(new[] { i, i + 1, i + 2, i + 3 });
+                for (int k = 0; k < 4; k++) marked[i + k] = true;
+                i += 3;
+            }
+            var byTarget = new Dictionary<(string, bool, uint), int[]>();
+            for (int i = 0; i < curves.Count; i++)
+            {
+                if (marked[i]) continue;
+                var b = curves[i].Binding;
+                int axis = RotationAxis(b);
+                if (axis < 0) continue;
+                // RotationAxis already restricts these to the object's one Transform.
+                // Lazy type resolution and ClassId/Type forms do not create different targets.
+                var key = (b.Path ?? "", b.Hashed, b.PathHash);
+                if (!byTarget.TryGetValue(key, out var g)) byTarget[key] = g = new[] { -1, -1, -1, -1, 0 };
+                if (g[axis] >= 0) g[4] = 1; // given twice
+                else g[axis] = i;
+            }
+            foreach (var g in byTarget.Values)
+                if (g[4] == 0 && g[0] >= 0 && g[1] >= 0 && g[2] >= 0 && g[3] >= 0) groups.Add(new[] { g[0], g[1], g[2], g[3] });
+            return groups;
+        }
+
+        /// <summary>The component (0..3 for x, y, z, w) of a Transform's m_LocalRotation a binding
+        /// animates, or -1.</summary>
+        static int RotationAxis(CurveBinding b)
+        {
+            const string head = "m_LocalRotation.";
+            var a = b.Attribute;
+            if (a == null || a.Length != head.Length + 1 || !a.StartsWith(head, StringComparison.Ordinal)) return -1;
+            bool transform = b.Type != null ? typeof(Transform).IsAssignableFrom(b.Type)
+                : b.ClassId == EngineTypes.TransformId || b.ClassId == EngineTypes.RectTransformId;
+            return transform ? "xyzw".IndexOf(a[head.Length]) : -1;
+        }
+
+        /// <summary>Closes a quaternion rotation the shorter way: when its last frame and its first
+        /// frame are in opposite hemispheres, the extra frame takes the negated first frame (the
+        /// same rotation). Its curves step together or go in a line together.</summary>
+        static void AlignQuaternion(LoopWindow[] windows, int[] group)
+        {
+            float dot = 0f;
+            bool stepped = false;
+            foreach (int i in group)
+            {
+                var w = windows[i];
+                if (w == null) return; // a curve without values: not sampled as a rotation
+                dot += w.Last * w.Start;
+                stepped |= w.HasKeys && w.Stepped;
+            }
+            foreach (int i in group)
+            {
+                var w = windows[i];
+                if (dot < 0f) w.Target = -w.Start;
+                w.Stepped = stepped;
+            }
+        }
+
+        /// <summary>The slope (value per second) at <paramref name="time"/> of an unweighted Hermite
+        /// segment, as AnimationCurve evaluates it.</summary>
+        static float HermiteSlope(Keyframe k0, Keyframe k1, float time)
+        {
+            float dx = k1.time - k0.time;
+            float s = (time - k0.time) / dx;
+            float m0 = k0.outTangent * dx, m1 = k1.inTangent * dx;
+            float d00 = 6f * s * s - 6f * s, d10 = 3f * s * s - 4f * s + 1f;
+            float d01 = -6f * s * s + 6f * s, d11 = 3f * s * s - 2f * s;
+            return (d00 * k0.value + d10 * m0 + d01 * k1.value + d11 * m1) / dx;
+        }
+
+        /// <summary>An object reference curve with the loop frame: its keys up to the window's end,
+        /// then the window's first value at the extra frame.</summary>
+        static ClipObjectCurve LoopFrameObjectCurve(ClipObjectCurve c, float start, float end, float loop)
+        {
+            if (c.Values == null || c.Values.Length == 0) return c;
+            var firstValue = c.Evaluate(start);
+            int count = Math.Min(c.Times.Length, c.Values.Length);
+            int keep = 0;
+            while (keep < count && c.Times[keep] <= end) keep++;
+            var times = new List<float>(keep + 2);
+            var values = new List<Object>(keep + 2);
+            if (keep == 0)
+            {
+                // Before its first key the curve has its first value.
+                times.Add(end);
+                values.Add(c.Values[0]);
+            }
+            for (int i = 0; i < keep; i++)
+            {
+                times.Add(c.Times[i]);
+                values.Add(c.Values[i]);
+            }
+            times.Add(loop);
+            values.Add(firstValue);
+            return new ClipObjectCurve { Binding = c.Binding, Times = times.ToArray(), Values = values.ToArray() };
         }
 
         public void RemoveClip(AnimationClip clip)

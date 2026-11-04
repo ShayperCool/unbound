@@ -59,7 +59,14 @@ namespace UnityEngine
             return tex.GetPixels32();
         }
 
-        public static byte[] EncodeToPNG(this Texture2D tex) => Native.EncodeImage<Color32>(0, 0, PixelsOf(tex), tex.width, tex.height);
+        /// <summary>Single-channel red textures (R8, R16, RHalf, RFloat) encode as 8-bit grayscale
+        /// (ImageConversion.Png.cs); the other formats as the native encoder's RGBA PNG.</summary>
+        public static byte[] EncodeToPNG(this Texture2D tex)
+        {
+            var pixels = PixelsOf(tex);
+            if (EncodesAsGrayscale(tex.format)) return GrayscalePng(pixels, tex.width, tex.height);
+            return Native.EncodeImage<Color32>(0, 0, pixels, tex.width, tex.height);
+        }
 
         public static byte[] EncodeToJPG(this Texture2D tex, int quality) => Native.EncodeImage<Color32>(1, Mathf.Clamp(quality, 1, 100), PixelsOf(tex), tex.width, tex.height);
 

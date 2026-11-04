@@ -20,9 +20,11 @@ fn next_id() -> u64 {
     NEXT.fetch_add(1, std::sync::atomic::Ordering::Relaxed)
 }
 
-/// Opens an archive from its bytes: its id and files (path, whether serialized).
-pub fn open(data: &[u8]) -> Result<String> {
-    let bundle = Bundle::parse(data)?;
+/// Opens an archive from its bytes: its id and files (path, whether serialized). A nonzero `crc` is
+/// checked against its uncompressed content first ([`Bundle::parse_with_crc`]): a mismatch fails
+/// before anything is registered.
+pub fn open(data: &[u8], crc: u32) -> Result<String> {
+    let bundle = Bundle::parse_with_crc(data, crc)?;
     let files: Vec<_> = bundle
         .files
         .iter()
@@ -34,13 +36,13 @@ pub fn open(data: &[u8]) -> Result<String> {
     Ok(json!({ "id": id, "files": files, "unityVersion": version }).to_string())
 }
 
-pub fn open_file(path: &str, offset: u64) -> Result<String> {
+pub fn open_file(path: &str, offset: u64, crc: u32) -> Result<String> {
     let data =
         std::fs::read(path).with_context(|| format!("Unable to open archive file: {path}"))?;
     let data = data
         .get(offset as usize..)
         .context("the offset lies past the file's end")?;
-    open(data)
+    open(data, crc)
 }
 
 pub fn close(id: u64) {
@@ -89,4 +91,48 @@ pub fn audio(key: &str) -> Result<unbound_assets::fsb5::Decoded> {
             format!("the bundle has no audio data at {stream}:{offset} ({size} bytes)")
         })?;
     unbound_assets::fsb5::decode(bytes, sound.parse()?)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A mismatching CRC leaves no archive of those files loaded; the matching one registers it.
+    #[test]
+    fn a_crc_mismatch_registers_nothing() {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/assetbundles/Reference/bundles/lz4/things");
+        let manifest = std::fs::read_to_string(path.with_extension("manifest")).unwrap();
+        let crc: u32 = manifest
+            .lines()
+            .find_map(|l| l.strip_prefix("CRC: "))
+            .expect("a CRC line")
+            .trim()
+            .parse()
+            .unwrap();
+        let data = std::fs::read(&path).unwrap();
+        let names: Vec<String> = Bundle::parse(&data)
+            .unwrap()
+            .files
+            .into_iter()
+            .map(|f| f.path)
+            .collect();
+        // Other tests open other archives concurrently: look for these files only.
+        let loaded = || {
+            bundles()
+                .lock()
+                .unwrap()
+                .values()
+                .filter(|b| b.files.iter().any(|f| names.contains(&f.path)))
+                .count()
+        };
+        assert_eq!(loaded(), 0);
+        let error = open(&data, crc ^ 1).unwrap_err();
+        assert!(format!("{error:#}").contains("CRC mismatch"));
+        assert_eq!(loaded(), 0);
+        let info: serde_json::Value = serde_json::from_str(&open(&data, crc).unwrap()).unwrap();
+        assert_eq!(loaded(), 1);
+        close(info["id"].as_u64().unwrap());
+        assert_eq!(loaded(), 0);
+    }
 }

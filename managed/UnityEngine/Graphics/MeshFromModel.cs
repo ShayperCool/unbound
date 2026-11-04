@@ -21,7 +21,7 @@ namespace UnityEngine
             try
             {
                 var json = Native.Call("model-mesh", JsonSerializer.Serialize(new { guid = model, index = body.Int("m_UnboundMesh") }));
-                Fill(JsonDocument.Parse(json).RootElement);
+                FillFromModel(JsonDocument.Parse(json).RootElement);
             }
             catch (Exception e)
             {
@@ -35,6 +35,25 @@ namespace UnityEngine
             var bytes = Convert.FromBase64String(value.GetString() ?? "");
             return MemoryMarshal.Cast<byte, T>(bytes).ToArray();
         }
+
+        /// <summary>Fills the geometry of a <c>model-mesh</c> answer, then adopts its readability.</summary>
+        internal void FillFromModel(JsonElement m)
+        {
+            Fill(m);
+            // Last, so that filling never runs against a mesh that is already unreadable.
+            if (ModelReadable(m) is bool readable) m_IsReadable = readable;
+        }
+
+        /// <summary>The model's Read/Write Enabled import setting, the <c>readable</c> field of a
+        /// <c>model-mesh</c> answer. Unity 6000.0 Mesh.isReadable: "You can set this value using the
+        /// Read/Write Enabled checkbox when importing a model to Unity." An answer without the field
+        /// (from a native side older than it) gives null: the mesh keeps the value it was created
+        /// with (true), which is how such meshes behaved before, rather than a guessed setting.</summary>
+        internal static bool? ModelReadable(JsonElement m) =>
+            m.ValueKind == JsonValueKind.Object && m.TryGetProperty("readable", out var value)
+                && value.ValueKind is JsonValueKind.True or JsonValueKind.False
+                ? value.GetBoolean()
+                : null;
 
         void Fill(JsonElement m)
         {

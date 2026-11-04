@@ -235,14 +235,40 @@ namespace UnityEngine
 
         public void Clear() => Clear(true);
 
+        /// <summary>Removes the particles of this system, of the systems it links as sub-emitters
+        /// (wherever they are in the hierarchy, with or without children), and with children of
+        /// the child systems too (6000.0 Scripting API, ParticleSystem.Clear remarks).</summary>
         public void Clear([Internal.DefaultValue("true")] bool withChildren)
         {
-            foreach (var ps in Systems(withChildren, includeSubEmitters: true))
+            foreach (var ps in ClearedSystems(withChildren))
             {
                 ps.m_Count = 0;
                 ps.ClearTrails();
                 if (ps.m_StopEmitting) ps.m_IsPlaying = false;
             }
+        }
+
+        /// <summary>The systems Clear empties: <see cref="Systems"/>, then every system linked by
+        /// an enabled sub-emitters module of one already in the list, each once. The docs do not
+        /// say whether nested links or a disabled module's list count; this follows nested links
+        /// (the set Simulate with restart empties) and treats a disabled module as unlinked, as
+        /// emission does. The visited set only guarantees termination for shared and cyclic links;
+        /// the order is not observable (clearing raises no callback).</summary>
+        List<ParticleSystem> ClearedSystems(bool withChildren)
+        {
+            var list = Systems(withChildren, includeSubEmitters: true);
+            var seen = new HashSet<ParticleSystem>(list);
+            for (int i = 0; i < list.Count; i++)
+            {
+                var data = list[i].m_SubEmitters;
+                if (!data.enabled) continue;
+                foreach (var e in data.emitters)
+                {
+                    var sub = e.system;
+                    if (sub != null && !sub.m_Destroyed && sub.m_GameObject != null && seen.Add(sub)) list.Add(sub);
+                }
+            }
+            return list;
         }
 
         public bool IsAlive() => IsAlive(true);

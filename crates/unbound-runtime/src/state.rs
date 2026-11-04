@@ -344,25 +344,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: Request = serde_json::from_str(request)?;
             Ok(crate::gamepads::poll(&r.family).to_string())
         }
-        "bundle-open" => {
-            #[derive(serde::Deserialize)]
-            struct Request {
-                #[serde(default)]
-                path: Option<String>,
-                #[serde(default)]
-                offset: u64,
-                #[serde(default)]
-                data: Option<String>,
-            }
-            let r: Request = serde_json::from_str(request)?;
-            match (r.path, r.data) {
-                (Some(path), _) => crate::bundles::open_file(&path, r.offset),
-                (None, Some(data)) => crate::bundles::open(
-                    &crate::fonts::decode_base64(&data).context("bundle data is not base64")?,
-                ),
-                _ => anyhow::bail!("bundle-open needs a path or data"),
-            }
-        }
+        "bundle-open" => open_bundle(request),
         "bundle-close" => {
             #[derive(serde::Deserialize)]
             struct Request {
@@ -497,8 +479,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             }
             let r: Request = serde_json::from_str(request)?;
             let model = imported_model(Guid::parse(&r.guid).context("bad guid")?)?;
-            let mesh = model.meshes.get(r.index).context("no such mesh")?;
-            Ok(crate::models::mesh_json(mesh).to_string())
+            Ok(model_mesh_json(&model, r.index)?.to_string())
         }
         "editor-resource" => {
             #[derive(Deserialize)]
@@ -800,6 +781,21 @@ fn imported_model(guid: Guid) -> Result<Arc<unbound_assets::ImportedModel>> {
     }
     s.models.write().unwrap().insert(guid, model.clone());
     Ok(model)
+}
+
+/// The `model-mesh` answer: a model mesh's geometry ([`crate::models::mesh_json`], unchanged) plus
+/// `readable`, the model's Read/Write Enabled import setting. Unity 6000.0 `Mesh.isReadable`: "You
+/// can set this value using the Read/Write Enabled checkbox when importing a model to Unity."
+/// The flag comes from the imported model's settings, which the import cache keys by the meta's
+/// content hash; the managed Mesh adopts it after it has filled the geometry.
+fn model_mesh_json(
+    model: &unbound_assets::ImportedModel,
+    index: usize,
+) -> Result<serde_json::Value> {
+    let mesh = model.meshes.get(index).context("no such mesh")?;
+    let mut answer = crate::models::mesh_json(mesh);
+    answer["readable"] = serde_json::Value::Bool(model.settings.is_readable);
+    Ok(answer)
 }
 
 /// The documents of a model's prefab.
@@ -1155,6 +1151,31 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     })
 }
 
+/// `bundle-open`: an AssetBundle from a file (at `offset`) or from base64 `data`; a nonzero `crc`
+/// is checked against its uncompressed content before it is registered (0, or none, skips it).
+fn open_bundle(request: &str) -> Result<String> {
+    #[derive(serde::Deserialize)]
+    struct Request {
+        #[serde(default)]
+        path: Option<String>,
+        #[serde(default)]
+        offset: u64,
+        #[serde(default)]
+        data: Option<String>,
+        #[serde(default)]
+        crc: u32,
+    }
+    let r: Request = serde_json::from_str(request)?;
+    match (r.path, r.data) {
+        (Some(path), _) => crate::bundles::open_file(&path, r.offset, r.crc),
+        (None, Some(data)) => crate::bundles::open(
+            &crate::fonts::decode_base64(&data).context("bundle data is not base64")?,
+            r.crc,
+        ),
+        _ => anyhow::bail!("bundle-open needs a path or data"),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1198,5 +1219,145 @@ mod tests {
             ["b/resources/c", "c"]
         );
         assert!(resources_keys("Assets/Textures/a.png").is_empty());
+    }
+
+    /// One triangle, as the importer gets it from a file.
+    const TRIANGLE_OBJ: &str = "o Tri\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n";
+
+    fn imported_triangle(meta: &str) -> unbound_assets::ImportedModel {
+        let meta = if meta.is_empty() {
+            unbound_yaml::Value::Null
+        } else {
+            unbound_yaml::parse_value(meta).unwrap()
+        };
+        let source = std::path::Path::new("Tri.obj");
+        unbound_assets::model::import_model(source, TRIANGLE_OBJ.as_bytes(), &meta).unwrap()
+    }
+
+    /// The Read/Write Enabled setting where the committed 6000.0.71f1 probe metas write it (under
+    /// `animations:`) and under `meshes:`, on and off. A meta without the setting, or no meta, takes
+    /// the importer's fallback, off: the 6000.0 Manual's FBX Importer Model tab says "By default,
+    /// this option is disabled". That an omitted key reads as that default is not measured.
+    #[test]
+    fn model_mesh_answers_carry_the_read_write_setting() {
+        let on = "ModelImporter:\n  serializedVersion: 22200\n  animations:\n    isReadable: 1\n  meshes:\n    globalScale: 1\n";
+        let off = "ModelImporter:\n  serializedVersion: 22200\n  animations:\n    isReadable: 0\n  meshes:\n    globalScale: 1\n";
+        let meshes_on = "ModelImporter:\n  meshes:\n    globalScale: 1\n    isReadable: 1\n";
+        let unset = "ModelImporter:\n  serializedVersion: 22200\n  meshes:\n    globalScale: 1\n";
+        let cases = [
+            (on, true),
+            (off, false),
+            (meshes_on, true),
+            (unset, false),
+            ("", false),
+        ];
+        for (meta, readable) in cases {
+            let model = imported_triangle(meta);
+            assert_eq!(model.settings.is_readable, readable, "{meta:?}");
+            let answer = model_mesh_json(&model, 0).unwrap();
+            assert_eq!(answer["readable"], json!(readable), "{meta:?}");
+        }
+    }
+
+    /// The flag is the only addition: the geometry is the same bytes whatever the setting.
+    #[test]
+    fn model_mesh_answers_keep_the_geometry_unchanged() {
+        let on = imported_triangle("ModelImporter:\n  animations:\n    isReadable: 1\n");
+        let off = imported_triangle("ModelImporter:\n  animations:\n    isReadable: 0\n");
+        let mut with_flag = model_mesh_json(&off, 0).unwrap();
+        let flag = with_flag.as_object_mut().unwrap().remove("readable");
+        assert_eq!(flag, Some(json!(false)));
+        assert_eq!(with_flag, crate::models::mesh_json(&off.meshes[0]));
+        let mut readable = model_mesh_json(&on, 0).unwrap();
+        readable.as_object_mut().unwrap().remove("readable");
+        assert_eq!(readable, with_flag);
+        assert!(model_mesh_json(&off, 1).is_err());
+    }
+
+    /// The Editor's LZ4 manifest bundle of `tests/projects/assetbundles` and its `.manifest` CRC.
+    fn editor_bundle() -> (Vec<u8>, u32) {
+        let path = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/assetbundles/Reference/bundles/lz4/lz4");
+        let manifest = std::fs::read_to_string(path.with_extension("manifest")).unwrap();
+        let crc = manifest
+            .lines()
+            .find_map(|l| l.strip_prefix("CRC: "))
+            .expect("a CRC line")
+            .trim()
+            .parse()
+            .unwrap();
+        (std::fs::read(path).unwrap(), crc)
+    }
+
+    fn base64(data: &[u8]) -> String {
+        const ALPHABET: &[u8; 64] =
+            b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        let mut out = String::new();
+        for chunk in data.chunks(3) {
+            let byte = |i: usize| u32::from(chunk.get(i).copied().unwrap_or(0));
+            let n = (byte(0) << 16) | (byte(1) << 8) | byte(2);
+            for i in 0..4 {
+                if i <= chunk.len() {
+                    out.push(ALPHABET[((n >> (18 - 6 * i)) & 63) as usize] as char);
+                } else {
+                    out.push('=');
+                }
+            }
+        }
+        out
+    }
+
+    /// Opened: the bundle closes again.
+    fn close_opened(response: Result<String>) {
+        let response = response.unwrap_or_else(|e| panic!("{e:#}"));
+        let info: serde_json::Value = serde_json::from_str(&response).unwrap();
+        crate::bundles::close(info["id"].as_u64().expect("an id"));
+    }
+
+    fn crc_mismatch(response: Result<String>) {
+        let error = format!("{:#}", response.expect_err("a CRC mismatch"));
+        assert!(error.contains("CRC mismatch"), "{error}");
+    }
+
+    /// The requests of LoadFromFile (with an offset) and LoadFromMemory / LoadFromStream (their
+    /// bytes): a missing or zero `crc` loads without a check, the right one loads, another fails.
+    #[test]
+    fn bundle_open_checks_a_nonzero_crc_on_the_file_and_memory_routes() {
+        let (data, crc) = editor_bundle();
+        let file = std::env::temp_dir().join(format!("unbound-bundle-crc-{}", std::process::id()));
+        let mut prefixed = vec![0xa5u8; 37];
+        prefixed.extend(&data);
+        std::fs::write(&file, &prefixed).unwrap();
+        let path = file.to_str().unwrap().to_string();
+        let memory = base64(&data);
+
+        close_opened(open_bundle(
+            &json!({ "path": path, "offset": 37 }).to_string(),
+        ));
+        close_opened(open_bundle(&json!({ "data": memory }).to_string()));
+        for good in [0, crc] {
+            close_opened(open_bundle(
+                &json!({ "path": path, "offset": 37, "crc": good }).to_string(),
+            ));
+            close_opened(open_bundle(
+                &json!({ "data": memory, "crc": good }).to_string(),
+            ));
+        }
+        for wrong in [crc ^ 1, u32::MAX] {
+            crc_mismatch(open_bundle(
+                &json!({ "path": path, "offset": 37, "crc": wrong }).to_string(),
+            ));
+            crc_mismatch(open_bundle(
+                &json!({ "data": memory, "crc": wrong }).to_string(),
+            ));
+        }
+        // The archive starts at the offset; truncated bytes fail with or without a check.
+        assert!(
+            open_bundle(&json!({ "path": path, "offset": 0, "crc": crc }).to_string()).is_err()
+        );
+        let truncated = base64(&data[..data.len() - 1]);
+        assert!(open_bundle(&json!({ "data": truncated, "crc": crc }).to_string()).is_err());
+        assert!(open_bundle(&json!({ "data": truncated }).to_string()).is_err());
+        std::fs::remove_file(&file).ok();
     }
 }
