@@ -18,8 +18,9 @@ MaterialTagStateDiscriminator.Run`) records seven subjects:
 
 Run first resets the scene (`NewScene(EmptyScene, Single)`), before any subject exists, and then
 waits for a startup settle predicate before it creates or loads a subject: one complete
-`EditorApplication.update` cycle (from the fixture's previous update callback to the current one, so
-every other update subscriber ran once inside it) with no `AssetPostprocessor.OnPostprocessAllAssets`
+`EditorApplication.update` cycle (from the fixture's previous update callback to the current one,
+assuming each update pass invokes every subscriber once: delegate semantics, not a documented Unity
+guarantee) with no `AssetPostprocessor.OnPostprocessAllAssets`
 batch reporting an imported, deleted or moved asset, `EditorApplication.isCompiling` false and
 `EditorApplication.isUpdating` false; without it within 600 callbacks the run fails before any
 subject exists. On the first GPU run, URP's deferred material upgrader reimported every Material
