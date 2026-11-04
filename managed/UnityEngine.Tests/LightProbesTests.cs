@@ -69,17 +69,21 @@ namespace Unbound.Tests
         static Vector3[] MainBox => Box.Select(p => p - new Vector3(4f, 0f, 0f)).ToArray();
 
         /// <summary>Only the scenes a test makes are loaded while it runs; the registry's loaded
-        /// list and active scene are restored after, and the test's scenes forgotten.</summary>
+        /// list and active scene are restored after, and the test's scenes forgotten. The probes
+        /// objects kept by Lighting Data identity (which LightmapSettings.Reset leaves) start empty
+        /// and are restored too.</summary>
         internal sealed class Scenes : IDisposable
         {
             readonly SceneData[] m_Loaded = SceneRegistry.Loaded.ToArray();
             readonly SceneData m_Active = SceneRegistry.Active;
             readonly List<SceneData> m_Made = new List<SceneData>();
+            readonly KeyValuePair<(string Guid, long FileId), WeakReference<LightProbes>>[] m_Sources = LightProbes.SaveSources();
 
             internal Scenes()
             {
                 SceneRegistry.Loaded.Clear();
                 SceneRegistry.Active = null;
+                LightProbes.RestoreSources(Array.Empty<KeyValuePair<(string Guid, long FileId), WeakReference<LightProbes>>>());
             }
 
             internal SceneData Loaded(string name, string path = "")
@@ -109,6 +113,7 @@ namespace Unbound.Tests
                 SceneRegistry.Loaded.Clear();
                 SceneRegistry.Loaded.AddRange(m_Loaded);
                 SceneRegistry.Active = m_Active;
+                LightProbes.RestoreSources(m_Sources);
             }
         }
 
