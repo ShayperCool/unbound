@@ -102,6 +102,7 @@ namespace Unbound.Runtime
             s_ByShape.Clear();
             s_Pairs.Clear();
             s_PairOrder.Clear();
+            s_LostPairs.Clear();
             s_IgnoredPairs.Clear();
             s_PublicContactPairs.Clear();
             s_StructureDirty = false;
@@ -449,6 +450,7 @@ namespace Unbound.Runtime
 
         static void DestroyShape(Collider c)
         {
+            LoseTouches(c);
             if (c is CharacterController controller)
             {
                 if (c.m_Shape != 0) s_ByShape.Remove(c.m_Shape);
@@ -1076,10 +1078,16 @@ namespace Unbound.Runtime
             internal bool ContactStayReported;
             /// <summary>B's velocity relative to A's before the step that made them touch.</summary>
             internal Vector3 EnterRelativeVelocity;
+            /// <summary>Touches counted in <see cref="Touching"/> whose shapes were destroyed while the
+            /// colliders stay in the simulation (a shape rebuild); they end at the next step's events.</summary>
+            internal int Lost;
+            /// <summary>The pair ended this step's events through <see cref="Lost"/> touches only.</summary>
+            internal bool LostEnded;
         }
 
         static readonly Dictionary<(PairKey Colliders, bool Trigger), Pair> s_Pairs = new Dictionary<(PairKey, bool), Pair>();
         static readonly List<Pair> s_PairOrder = new List<Pair>();
+        static readonly List<Pair> s_LostPairs = new List<Pair>();
         static B3.Pair[] s_EventBuffer = new B3.Pair[64];
 
         static (PairKey, bool) EventKey(Collider a, Collider b, bool trigger) => (new PairKey(a, b), trigger);
@@ -1094,6 +1102,45 @@ namespace Unbound.Runtime
                 if (!ReferenceEquals(p.A, c) && !ReferenceEquals(p.B, c)) continue;
                 s_Pairs.Remove(EventKey(p.A, p.B, p.IsTrigger));
                 s_PairOrder.RemoveAt(i);
+            }
+        }
+
+        /// <summary>
+        /// Every shape of <paramref name="c"/> is about to be destroyed, so every touch its pairs count
+        /// ends. The SDK reports those lost touches flagged as removed shapes: the native event lists
+        /// skip them, and the destroyed shapes no longer map to the collider, so no End reaches the
+        /// pair. They are recorded here instead.
+        /// A collider that stays in the simulation (a rebuilt shape, another body) then ends them at
+        /// the next step's events, before the new shapes' begins: a pair that still touches continues
+        /// without Enter or Exit, and one that no longer touches gets its Exit, as when an in-place
+        /// shape change ends a touch. A collider leaving the simulation forgets its pairs instead.
+        /// Every touch counted in a pair of c is between c's shapes, all of which go, so the lost
+        /// count is the pair's whole count; this holds for a collider with several shapes and when
+        /// the shapes are destroyed again before the next step.
+        /// </summary>
+        static void LoseTouches(Collider c)
+        {
+            foreach (var p in s_PairOrder)
+            {
+                if (p.Touching == 0 || (!ReferenceEquals(p.A, c) && !ReferenceEquals(p.B, c))) continue;
+                if (p.Lost == 0) s_LostPairs.Add(p);
+                p.Lost = p.Touching;
+            }
+        }
+
+        /// <summary>Ends the touches of destroyed shapes (<see cref="LoseTouches"/>) like lost touches.</summary>
+        static void EndLostTouches()
+        {
+            foreach (var p in s_LostPairs)
+            {
+                int lost = p.Lost;
+                p.Lost = 0;
+                // A pair forgotten since (its collider left the simulation) sends nothing.
+                if (!s_Pairs.TryGetValue(EventKey(p.A, p.B, p.IsTrigger), out var live) || !ReferenceEquals(live, p)) continue;
+                p.Touching = Math.Max(0, p.Touching - lost);
+                if (p.Touching > 0) continue;
+                p.ExitPending = true;
+                p.LostEnded = true;
             }
         }
 
@@ -1112,6 +1159,7 @@ namespace Unbound.Runtime
         static void CollectEvents()
         {
             foreach (var pair in s_PairOrder) pair.ContactStayReported = false;
+            EndLostTouches();
             Collect(B3.Events.ContactBegin, begin: true, trigger: false);
             Collect(B3.Events.SensorBegin, begin: true, trigger: true);
             Collect(B3.Events.ContactEnd, begin: false, trigger: false);
@@ -1124,6 +1172,8 @@ namespace Unbound.Runtime
                 if (a != null && b != null && s_Pairs.TryGetValue(EventKey(a, b, false), out var pair))
                     pair.ContactStayReported = true;
             }
+            foreach (var pair in s_LostPairs) pair.LostEnded = false;
+            s_LostPairs.Clear();
         }
 
         static void Collect(B3.Events kind, bool begin, bool trigger)
@@ -1167,6 +1217,8 @@ namespace Unbound.Runtime
             if (pair.ExitPending)
             {
                 pair.ExitPending = false; // left and came back before the callbacks: it stays
+                // A rebuilt shape that still touches: the contact persists through this step.
+                if (pair.LostEnded && !trigger) pair.ContactStayReported = true;
                 return;
             }
             pair.EnterPending = true;
