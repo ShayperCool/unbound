@@ -80,6 +80,15 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
   findings, proposed commands and spending. Report material blockers promptly. Preserve the
   full raw evidence outside Git, and keep pins, ownership and spent budgets in compact state.
   Do not poll running agents or revive retired owners.
+- Root dispatches independent completed packages to its own parallel reviewers for source,
+  artifact and validation checks. They return short decision-ready findings and concrete drafts;
+  Root handles corrections, finite releases, composition and admission instead of repeating each
+  audit serially. Reviewers do not mutate shared source or spend a validator's budget.
+- Routine launch notices go to the saved state/index, not a separate queued message per launch.
+  Keep one consolidated pending receipt digest plus genuinely new material blockers. Deduplicate
+  superseded notices only after archiving their complete text and routing unresolved work; never
+  discard human instructions or failure witnesses. Do not repeat stale requests after Root has
+  already supplied the applicable decision or grant.
 
 ## Code search
 
