@@ -12,8 +12,12 @@ namespace UnityEngine
     /// Unity 6's awaitable: a one-shot completion that game code awaits (or yields from a
     /// coroutine). The engine completes the frame-based ones at the player loop points Unity uses:
     /// NextFrame and WaitForSeconds after Update (with `yield return null`), FixedUpdate after the
-    /// fixed update scripts, EndOfFrame with WaitForEndOfFrame. Continuations of main-thread
-    /// awaitables run synchronously when they complete.
+    /// fixed update scripts, EndOfFrame with WaitForEndOfFrame. Continuations run synchronously on
+    /// the thread that completes the awaitable, except for the awaitable of an `async Awaitable`
+    /// method: its caller resumes on the main thread when the method was called there, and otherwise
+    /// off the main thread (see StartedOnCurrentThread and RunOrScheduleContinuation). Such an
+    /// awaitable also counts as completed, and so is awaited without suspending, only on a thread of
+    /// that kind (see IsCompleted and SetContinuation).
     /// </summary>
     [AsyncMethodBuilder(typeof(Awaitable.AwaitableAsyncMethodBuilder))]
     public partial class Awaitable : IEnumerator
@@ -23,6 +27,7 @@ namespace UnityEngine
         bool m_Completed;
         ExceptionDispatchInfo m_Exception;
         CancellationTokenRegistration m_Cancellation;
+        AwaiterCompletionThreadAffinity m_Affinity;
 
         internal Awaitable() { }
 
@@ -33,7 +38,49 @@ namespace UnityEngine
             BackgroundThread = 2,
         }
 
+        /// <summary>
+        /// Called by the builder before an `async Awaitable` method's body runs. Unity 6000.0 Manual,
+        /// "Awaitable completion and continuation": "If the method is called from the main thread, it
+        /// resumes on the main thread. Otherwise it resumes on a .NET ThreadPool thread."; the effect
+        /// of MainThreadAsync and BackgroundThreadAsync is "local to the current method only". So the
+        /// calling thread, not the thread the body ends on, decides where the method's awaiter
+        /// resumes: MainThread when called on the main thread, BackgroundThread otherwise (a pool
+        /// thread or a thread the game started). Only this builder path sets an affinity; frame waits,
+        /// completion sources and AsyncOperation awaitables keep None. Before the player loop boots
+        /// every thread counts as the main thread, so every method gets MainThread, every thread
+        /// matches it and nothing is ever moved then.
+        /// </summary>
+        internal void StartedOnCurrentThread()
+        {
+            var affinity = PlayerLoopDriver.IsMainThread
+                ? AwaiterCompletionThreadAffinity.MainThread
+                : AwaiterCompletionThreadAffinity.BackgroundThread;
+            lock (m_Lock) m_Affinity = affinity;
+        }
+
+        /// <summary>
+        /// Completed and ready to be continued synchronously on the calling thread: false on a thread
+        /// that does not suit the affinity even after the awaitable has completed (an `async
+        /// Awaitable` method called on the main thread, asked off it; one called off the main thread,
+        /// asked on it). The awaiter's IsCompleted is this one, so an await on such a thread does not
+        /// go on at once: it registers its continuation, which SetContinuation then moves to a
+        /// suitable thread. Unity's public 6000.0.71f1 C# reference source (UnityCsReference 78d4b97c,
+        /// Runtime/Export/Scripting/Awaitable.cs) returns IsCompletedNoLock here, "_managedAwaitableDone
+        /// && MatchCompletionThreadAffinity(_completionThreadAffinity)"; that is implementation
+        /// evidence for this release, not a documented guarantee. For None (frame waits, completion
+        /// sources, AsyncOperation awaitables) and on a thread that suits the affinity it equals
+        /// IsLogicallyCompleted.
+        /// </summary>
         public bool IsCompleted
+        {
+            get { lock (m_Lock) return m_Completed && MatchesCurrentThread(m_Affinity); }
+        }
+
+        /// <summary>Completed (with a result, an exception or a cancellation), whatever the calling
+        /// thread. Engine code that asks whether completion has happened, rather than whether to
+        /// continue synchronously here, uses this one (the reference source's IsLogicallyCompletedNoLock).
+        /// </summary>
+        internal bool IsLogicallyCompleted
         {
             get { lock (m_Lock) return m_Completed; }
         }
@@ -45,6 +92,7 @@ namespace UnityEngine
         internal void Complete(ExceptionDispatchInfo exception = null)
         {
             Action continuation;
+            AwaiterCompletionThreadAffinity affinity;
             lock (m_Lock)
             {
                 if (m_Completed) return;
@@ -52,21 +100,82 @@ namespace UnityEngine
                 m_Exception = exception;
                 continuation = m_Continuation;
                 m_Continuation = null;
+                affinity = m_Affinity;
             }
             m_Cancellation.Dispose();
-            AwaitableScheduler.Forget(this);
-            continuation?.Invoke();
+            // Only frame waits enter the scheduler lists; builder awaitables have an affinity.
+            if (affinity == AwaiterCompletionThreadAffinity.None)
+                AwaitableScheduler.Forget(this);
+            if (continuation == null) return;
+            RunOrScheduleContinuation(affinity, continuation);
         }
 
+        /// <summary>
+        /// Runs a continuation now when this thread suits the affinity ("runs synchronously when
+        /// completion is triggered", Manual "Introduction to Awaitable"), otherwise moves it there.
+        /// None suits every thread. MainThread suits the main thread; off it the continuation goes
+        /// through the main thread's SynchronizationContext (MainThreadContext, drained at
+        /// Update.ScriptRunDelayedTasks and in paused/edit-mode frames), the same context
+        /// MainThreadAsync posts to. BackgroundThread suits every thread but the main one, a pool
+        /// thread or a thread the game started alike, and runs inline there; only on the main thread
+        /// is the continuation queued to the pool, as a task, so that an exception thrown by it stays
+        /// in that task instead of ending the process.
+        ///
+        /// Two sources are distinguished here. The Manual ("Awaitable completion and continuation")
+        /// states the default dispatch: a method called off the main thread "resumes on a .NET
+        /// ThreadPool thread". Unity's public 6000.0.71f1 C# reference source (UnityCsReference
+        /// 78d4b97c, Awaitable.cs MatchCompletionThreadAffinity / RunOrScheduleContinuation) adds the
+        /// affinity optimization followed here: BackgroundThread matches "ManagedThreadId !=
+        /// _mainThreadId", so completion on any other thread continues inline without a hop, and
+        /// Task.Run is the fallback when completion happens on the main thread. That is
+        /// implementation evidence for this release, not a promise that every off-main completion
+        /// moves to a pool thread; it is unmeasured against the Editor. Used both by completion and
+        /// by a registration on an awaitable that has already completed (SetContinuation).
+        /// </summary>
+        static void RunOrScheduleContinuation(AwaiterCompletionThreadAffinity affinity, Action continuation)
+        {
+            if (MatchesCurrentThread(affinity))
+                continuation();
+            else if (affinity == AwaiterCompletionThreadAffinity.MainThread)
+                PlayerLoopDriver.RunOnMainThread(continuation); // off the main thread: posted to it
+            else
+                System.Threading.Tasks.Task.Run(continuation); // BackgroundThread on the main thread
+        }
+
+        /// <summary>Whether the calling thread suits an affinity (the reference source's
+        /// MatchCompletionThreadAffinity). Before the player loop boots every thread is the main
+        /// thread (PlayerLoopDriver.IsMainThread), so MainThread, the only affinity given then,
+        /// matches everywhere.</summary>
+        static bool MatchesCurrentThread(AwaiterCompletionThreadAffinity affinity) => affinity switch
+        {
+            AwaiterCompletionThreadAffinity.MainThread => PlayerLoopDriver.IsMainThread,
+            AwaiterCompletionThreadAffinity.BackgroundThread => !PlayerLoopDriver.IsMainThread,
+            _ => true,
+        };
+
+        /// <summary>
+        /// Registers the awaiter's continuation. While the awaitable has not completed it waits for
+        /// Complete, which dispatches it by the affinity. When the awaitable has already logically
+        /// completed (the awaiter's IsCompleted was false only because this thread does not suit the
+        /// affinity, or completion raced this registration) the continuation goes through the same
+        /// affinity-aware dispatch now: inline on a suitable thread, otherwise posted to the main
+        /// thread or queued to the pool. Unity's public 6000.0.71f1 C# reference source does the
+        /// same (SetContinuation: IsLogicallyCompletedNoLock, then RunOrScheduleContinuation with
+        /// the captured affinity). The Manual states its rule for the method's caller; an await of
+        /// a completed method's awaitable from another kind of thread follows this source evidence.
+        /// For None it runs inline on the registering thread, as before.
+        /// </summary>
         internal void SetContinuation(Action continuation)
         {
-            bool runNow;
+            bool done;
+            AwaiterCompletionThreadAffinity affinity;
             lock (m_Lock)
             {
-                runNow = m_Completed;
-                if (!runNow) m_Continuation += continuation;
+                done = m_Completed;
+                affinity = m_Affinity;
+                if (!done) m_Continuation += continuation;
             }
-            if (runNow) continuation();
+            if (done) RunOrScheduleContinuation(affinity, continuation);
         }
 
         internal void ThrowIfFailed() => m_Exception?.Throw();
@@ -129,7 +238,12 @@ namespace UnityEngine
         public static BackgroundThreadAwaitable BackgroundThreadAsync() =>
             new BackgroundThreadAwaitable(MainThreadContext.Instance, PlayerLoopDriver.MainThreadId);
 
-        bool IEnumerator.MoveNext() => !IsCompleted;
+        /// <summary>A coroutine yielding the awaitable waits until it has logically completed. Held,
+        /// not changed: the reference source's MoveNext asks the affinity-aware IsCompleted, which
+        /// on the main thread stays false for a completed method called off it; how Unity's
+        /// coroutine scheduler treats a yielded Awaitable is not visible there and is unmeasured.
+        /// </summary>
+        bool IEnumerator.MoveNext() => !IsLogicallyCompleted;
 
         void IEnumerator.Reset() => throw new NotSupportedException();
 
@@ -141,6 +255,7 @@ namespace UnityEngine
 
             internal Awaiter(Awaitable awaited) { m_Awaited = awaited; }
 
+            /// <summary>Awaitable.IsCompleted: completed and suiting the calling thread.</summary>
             public bool IsCompleted => m_Awaited.IsCompleted;
 
             public void OnCompleted(Action continuation) => m_Awaited.SetContinuation(continuation);
@@ -158,7 +273,14 @@ namespace UnityEngine
 
             public Awaitable Task => m_Task ??= new Awaitable();
 
-            public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine => stateMachine.MoveNext();
+            /// <summary>Runs the method's body up to its first pending await. The calling thread
+            /// decides where the method's own awaiter resumes (see Awaitable.StartedOnCurrentThread);
+            /// awaits inside the body keep their own behaviour.</summary>
+            public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine
+            {
+                Task.StartedOnCurrentThread();
+                stateMachine.MoveNext();
+            }
 
             public void SetStateMachine(IAsyncStateMachine stateMachine) => m_Machine = stateMachine;
 
@@ -202,7 +324,13 @@ namespace UnityEngine
 
             public Awaitable<T> Task => m_Task ??= new Awaitable<T>();
 
-            public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine => stateMachine.MoveNext();
+            /// <summary>As the non-generic builder's Start: the result's awaiter resumes on the main
+            /// thread when the method was called there, otherwise on a thread pool thread.</summary>
+            public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine
+            {
+                Task.Inner.StartedOnCurrentThread();
+                stateMachine.MoveNext();
+            }
 
             public void SetStateMachine(IAsyncStateMachine stateMachine) => m_Machine = stateMachine;
 
@@ -266,6 +394,7 @@ namespace UnityEngine
 
             public Awaiter(Awaitable<T> coroutine) { m_Awaited = coroutine; }
 
+            /// <summary>As Awaitable.IsCompleted: completed and suiting the calling thread.</summary>
             public bool IsCompleted => m_Awaited.m_Inner.IsCompleted;
 
             public void OnCompleted(Action continuation) => m_Awaited.m_Inner.SetContinuation(continuation);
@@ -310,21 +439,21 @@ namespace UnityEngine
 
         public bool TrySetResult()
         {
-            if (m_Awaitable.IsCompleted) return false;
+            if (m_Awaitable.IsLogicallyCompleted) return false;
             m_Awaitable.Complete();
             return true;
         }
 
         public bool TrySetCanceled()
         {
-            if (m_Awaitable.IsCompleted) return false;
+            if (m_Awaitable.IsLogicallyCompleted) return false;
             m_Awaitable.Cancel();
             return true;
         }
 
         public bool TrySetException(Exception exception)
         {
-            if (m_Awaitable.IsCompleted) return false;
+            if (m_Awaitable.IsLogicallyCompleted) return false;
             m_Awaitable.Complete(ExceptionDispatchInfo.Capture(exception));
             return true;
         }
@@ -357,21 +486,21 @@ namespace UnityEngine
 
         public bool TrySetResult(in T value)
         {
-            if (m_Awaitable.Inner.IsCompleted) return false;
+            if (m_Awaitable.Inner.IsLogicallyCompleted) return false;
             m_Awaitable.SetResult(value);
             return true;
         }
 
         public bool TrySetCanceled()
         {
-            if (m_Awaitable.Inner.IsCompleted) return false;
+            if (m_Awaitable.Inner.IsLogicallyCompleted) return false;
             m_Awaitable.Cancel();
             return true;
         }
 
         public bool TrySetException(Exception exception)
         {
-            if (m_Awaitable.Inner.IsCompleted) return false;
+            if (m_Awaitable.Inner.IsLogicallyCompleted) return false;
             m_Awaitable.SetException(exception);
             return true;
         }
