@@ -369,29 +369,37 @@ namespace Unbound.Runtime
             return false;
         }
 
+        /// <summary>The first live component of <paramref name="c"/>'s GameObject that requires
+        /// c's type when no other component satisfies the requirement, or null.</summary>
+        static Component RequiredBy(Component c)
+        {
+            var go = c.m_GameObject;
+            if (go == null) return null;
+            foreach (var other in go.m_Components)
+            {
+                if (other == c || other.m_Destroyed) continue;
+                foreach (var required in ComponentFactory.RequiredComponents(other.GetType()))
+                {
+                    if (!required.IsInstanceOfType(c)) continue;
+                    // Another component of the type could satisfy the requirement.
+                    bool replaced = false;
+                    foreach (var candidate in go.m_Components)
+                        if (candidate != c && !candidate.m_Destroyed && required.IsInstanceOfType(candidate)) replaced = true;
+                    if (!replaced) return other;
+                }
+            }
+            return null;
+        }
+
         static void DestroyComponent(Component c)
         {
             var go = c.m_GameObject;
-            if (go != null)
+            var other = RequiredBy(c);
+            if (other != null)
             {
-                foreach (var other in go.m_Components)
-                {
-                    if (other == c || other.m_Destroyed) continue;
-                    foreach (var required in ComponentFactory.RequiredComponents(other.GetType()))
-                    {
-                        if (!required.IsInstanceOfType(c)) continue;
-                        // Another component of the type could satisfy the requirement.
-                        bool replaced = false;
-                        foreach (var candidate in go.m_Components)
-                            if (candidate != c && !candidate.m_Destroyed && required.IsInstanceOfType(candidate)) replaced = true;
-                        if (!replaced)
-                        {
-                            Debug.LogError($"Can't remove {c.GetType().Name} because {other.GetType().Name} ({other.GetType().Name}) depends on it", c);
-                            c.m_PendingDestroy = false;
-                            return;
-                        }
-                    }
-                }
+                Debug.LogError($"Can't remove {c.GetType().Name} because {other.GetType().Name} ({other.GetType().Name}) depends on it", c);
+                c.m_PendingDestroy = false;
+                return;
             }
             // Removing only the body converts its surviving colliders to static without exits.
             if (c is Rigidbody2D body2D) Physics2DWorld.Remove(body2D, silent: true);
