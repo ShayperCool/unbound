@@ -19,6 +19,7 @@ import importlib.util
 import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import sys
@@ -34,6 +35,22 @@ FIXTURE_FILES = ['Assets/Editor/MaterialTagStateDiscriminator.cs', 'Assets/Edito
 INPUTS = PROBE/'inputs.json'
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 SAVED_MAPS = 'root-receipt-triage-20261104/m1/saved-native-materials.json'
+# Child environments are built from an empty mapping: these key names are copied when present, then the
+# command's own values are set. Nothing else is inherited and no value is printed.
+TOOL_ENV_KEYS = ('PATH', 'HOME', 'LANG', 'LC_ALL', 'TZ')
+EDITOR_ENV_KEYS = ('PATH', 'HOME', 'USER', 'LOGNAME', 'LANG', 'LC_ALL', 'TZ', 'TMPDIR', 'XDG_CACHE_HOME', 'XDG_RUNTIME_DIR')
+CREDENTIAL_NAME = re.compile(r'TOKEN|SECRET|PASSW|API_?KEY|CREDENTIAL|PRIVATE_?KEY|AUTHORIZATION|COOKIE|SESSION', re.I)
+CREDENTIAL_VALUE = re.compile(r'(?i)\bbearer\s|\bsk-[a-z0-9-]{8,}|\bghp_|\bgithub_pat_|\bxox[abp]-|\bAKIA[0-9A-Z]{16}')
+
+
+def explicit_env(keys, **values):
+    """A child environment from an empty mapping; raises (naming keys only) on a credential-like entry."""
+    env = {k: os.environ[k] for k in keys if k in os.environ}
+    env.update(values)
+    bad = sorted(k for k, v in env.items() if CREDENTIAL_NAME.search(k) or CREDENTIAL_VALUE.search(v))
+    if bad:
+        sys.exit('refusing a child environment with credential-like entries: ' + ', '.join(bad))
+    return env
 
 
 def sha(data):
@@ -99,6 +116,7 @@ def plan(work):
     for repeat in ('native1', 'native2'):
         out = work/repeat
         steps.append({
+            'env_key_names': sorted(set(EDITOR_ENV_KEYS) | {'DISPLAY', 'MATERIAL_TAG_STATE_OUT', 'MATERIAL_TAG_STATE_DIAG'}),
             'repeat': repeat, 'project': str(work/'projects'/repeat),
             'env': {'MATERIAL_TAG_STATE_OUT': str(out/'capture.jsonl'), 'MATERIAL_TAG_STATE_DIAG': str(out/'diagnostics.json'),
                     'DISPLAY': '<private Xvfb>'},
@@ -149,7 +167,8 @@ def cmd_editor(work, args):
             check_inputs(project)
             out = Path(step['env']['MATERIAL_TAG_STATE_OUT']).parent
             out.mkdir(parents=True, exist_ok=False)
-            env = dict(os.environ, DISPLAY=name, **{k: v for k, v in step['env'].items() if k != 'DISPLAY'})
+            env = explicit_env(EDITOR_ENV_KEYS, DISPLAY=name, **{k: v for k, v in step['env'].items() if k != 'DISPLAY'})
+            print(step['repeat'], 'child environment keys', sorted(env))
             code = subprocess.run(step['argv'], env=env).returncode
             diag = out/'diagnostics.json'
             if diag.exists():
@@ -163,6 +182,7 @@ def cmd_editor(work, args):
 
 def cmd_check(work, _args):
     compare = [sys.executable, '-B', str(PROBE/'compare.py')]
+    env = explicit_env(TOOL_ENV_KEYS, PYTHONDONTWRITEBYTECODE='1')
     code = 0
     for repeat in ('native1', 'native2'):
         log_path = work/repeat/'editor.log'
@@ -182,10 +202,10 @@ def cmd_check(work, _args):
         if not hardware or not backend or software:
             code = 1
             print(f'{repeat}: INVALID not a hardware NVIDIA GPU Editor session')
-        code |= subprocess.run(compare + ['classify', str(work/repeat/'capture.jsonl')]).returncode
-    code |= subprocess.run(compare + ['pair', str(work/'native1/capture.jsonl'), str(work/'native2/capture.jsonl')]).returncode
+        code |= subprocess.run(compare + ['classify', str(work/repeat/'capture.jsonl')], env=env).returncode
+    code |= subprocess.run(compare + ['pair', str(work/'native1/capture.jsonl'), str(work/'native2/capture.jsonl')], env=env).returncode
     saved = validation_cache()/'runs'/SAVED_MAPS
-    subprocess.run(compare + ['saved', str(work/'native1/capture.jsonl'), str(saved)])
+    subprocess.run(compare + ['saved', str(work/'native1/capture.jsonl'), str(saved)], env=env)
     return code
 
 
