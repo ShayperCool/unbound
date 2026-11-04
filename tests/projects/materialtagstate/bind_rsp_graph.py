@@ -316,6 +316,9 @@ def derive(rep, out_dir, preflight_dir):
         elif line.startswith('-r:') and not os.path.isabs(unquote(line[3:])):
             new = f'-r:"{project/unquote(line[3:])}"'
             reason = 'relative reference made absolute against the saved project'
+        elif line.startswith('-analyzer:') and not os.path.isabs(unquote(line[len('-analyzer:'):])):
+            new = f'-analyzer:"{project/unquote(line[len("-analyzer:"):])}"'
+            reason = 'relative analyzer made absolute against the saved project'
         elif line.startswith('/additionalfile:') and not os.path.isabs(unquote(line[len('/additionalfile:'):])):
             new = f'/additionalfile:"{project/unquote(line[len("/additionalfile:"):])}"'
             reason = 'relative additional file made absolute against the saved project'
@@ -334,9 +337,10 @@ def derive(rep, out_dir, preflight_dir):
     text = '\n'.join(derived) + '\n'
     dp = parse_rsp(text)
     resolved_orig = [str(project/r) if not os.path.isabs(r) else r for r in parsed['refs']]
+    resolved_analyzers = [str(project/a) if not os.path.isabs(a) else a for a in parsed['analyzers']]
     check = {
         'defines_identical_in_order': dp['defines'] == parsed['defines'],
-        'analyzers_identical_in_order': dp['analyzers'] == parsed['analyzers'],
+        'analyzers_identical_in_order_after_resolution': dp['analyzers'] == resolved_analyzers,
         'options_identical_except_out_refout_additionalfile': [o for o in dp['options'] if not o.startswith(('-out:', '-refout:', '/additionalfile:'))]
             == [o for o in parsed['options'] if not o.startswith(('-out:', '-refout:', '/additionalfile:'))],
         'references_identical_in_order_after_resolution': dp['refs'] == resolved_orig,
