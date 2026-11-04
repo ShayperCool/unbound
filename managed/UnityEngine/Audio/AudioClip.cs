@@ -154,22 +154,40 @@ namespace UnityEngine
             return WriteData(data, offsetSamples);
         }
 
+        /// <summary>Compressed data stays compressed in memory: only PCM reads back or takes new
+        /// samples (Unity reads and sets the data of compressed files on Decompress On Load only).</summary>
+        bool KeepsCompressedData => m_IsAsset && m_LoadType == AudioClipLoadType.CompressedInMemory && m_CompressionFormat != (int)AudioCompressionFormat.PCM;
+
+        /// <summary>When GetData can't read the clip, the buffer holds zeroes for every sample (as
+        /// documented), whatever a previous read left in it.</summary>
         bool ReadData(Span<float> data, int offsetSamples)
         {
             ThrowIfDestroyed();
             if (m_Stream || m_LoadType == AudioClipLoadType.Streaming)
             {
+                data.Clear();
                 Debug.LogError($"Can't get data from streamed samples for audio clip \"{m_Name}\". If you created the audio clip with AudioClip.Create, set the 'stream' argument to false, so you can access the data with 'AudioClip.GetData'. For a disk-based audio clip, change the load type to 'DecompressOnLoad', so you can access the data with 'AudioClip.GetData'.", this);
                 return false;
             }
-            // Compressed data stays compressed in memory: only PCM reads back.
-            if (m_IsAsset && m_LoadType == AudioClipLoadType.CompressedInMemory && m_CompressionFormat != (int)AudioCompressionFormat.PCM)
+            if (KeepsCompressedData)
             {
+                data.Clear();
                 Debug.LogError($"Cannot get data on compressed samples for audio clip \"{m_Name}\". Changing the load type to DecompressOnLoad on the audio clip will fix this.", this);
                 return false;
             }
+            if (m_Handle == 0)
+            {
+                data.Clear();
+                Debug.LogError($"Unbound: AudioClip.GetData failed: audio clip \"{m_Name}\" has no audio data Unbound can read.", this);
+                return false;
+            }
             if (offsetSamples < 0) offsetSamples = 0;
-            return AudioBackend.Current.ClipData(m_Handle, offsetSamples, data, write: false);
+            if (AudioBackend.Current.ClipData(m_Handle, offsetSamples, data, write: false)) return true;
+            // The backend leaves the buffer as it was when it reads nothing.
+            data.Clear();
+            if (data.Length > 0)
+                Debug.LogError($"Unbound: AudioClip.GetData failed: the samples of audio clip \"{m_Name}\" could not be read.", this);
+            return false;
         }
 
         bool WriteData(ReadOnlySpan<float> data, int offsetSamples)
