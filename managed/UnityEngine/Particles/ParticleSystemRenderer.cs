@@ -1104,6 +1104,9 @@ namespace UnityEngine
                 mesh.m_Normals = n > 0 && m_StreamNormals ? normals : null;
                 mesh.m_Colors = n > 0 && m_StreamColors ? colors : null;
                 WriteStreamAttributes(mesh, transform, identity);
+                // Before the indices: a format change resets the submeshes and clears the index
+                // buffer (Mesh.indexFormat, 6000.0).
+                mesh.indexFormat = n > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
                 if (mesh.m_SubMeshes.Count != 1)
                 {
                     mesh.m_SubMeshes.Clear();
@@ -1114,7 +1117,6 @@ namespace UnityEngine
                 Array.Copy(Indices, sub.Indices, IndexCount);
                 sub.Topology = MeshTopology.Triangles;
                 sub.BaseVertex = 0;
-                mesh.indexFormat = n > 65535 ? IndexFormat.UInt32 : IndexFormat.UInt16;
                 mesh.RecalculateBounds();
                 mesh.m_Dirty = true;
             }

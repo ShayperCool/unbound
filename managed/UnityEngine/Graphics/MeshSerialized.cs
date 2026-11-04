@@ -156,8 +156,10 @@ namespace UnityEngine
             bool wide = body.Int("m_IndexFormat") == 1;
             int indexSize = wide ? 4 : 2;
             var submeshes = new List<YNode>(body.Get("m_SubMeshes")?.Seq() ?? Array.Empty<YNode>());
-            subMeshCount = Math.Max(1, submeshes.Count);
+            // Changing indexFormat resets subMeshCount to one (Mesh.indexFormat, 6000.0), so the
+            // format goes first.
             if (wide) indexFormat = IndexFormat.UInt32;
+            subMeshCount = Math.Max(1, submeshes.Count);
             for (int s = 0; s < submeshes.Count; s++)
             {
                 var sm = submeshes[s];
