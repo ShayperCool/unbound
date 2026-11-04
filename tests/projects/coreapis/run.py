@@ -34,6 +34,7 @@ byte-identical to this checkout's probe scripts; without it no Editor starts.
 import argparse
 import hashlib
 import json
+import math
 import os
 from pathlib import Path
 import re
@@ -196,6 +197,65 @@ def artifact_manifest(out):
             for p in sorted(Path(out).rglob('*')) if p.is_file() and p.name not in ('artifact-manifest.json', 'admission.json')}
 
 
+# editor_runner owns this append-only diagnostic after Editor exit. It never contributes
+# capture values or progress. Seal all other artifacts and the completed journal prefix;
+# final receipts still hash the complete journal after the bounded sweepers finish.
+CLEANUP_LOG = 'hub-sweeps.jsonl'
+
+
+def sealed_artifacts(out):
+    return {k: v for k, v in artifact_manifest(out).items() if k != CLEANUP_LOG}
+
+
+def cleanup_prefix(out):
+    path = Path(out)/CLEANUP_LOG
+    raw = path.read_bytes() if path.is_file() else b''
+    complete = raw[:raw.rfind(b'\n')+1]
+    return {'present': path.is_file(), 'bytes': len(complete),
+            'sha256': hashlib.sha256(complete).hexdigest()}
+
+
+def cleanup_problems(out, prefix=None):
+    """Only registered, well-typed cleanup rows may append; an admitted prefix cannot change.
+    One unfinished trailing write is left to the owned writer and final receipt, never read as
+    a capture value. This avoids treating an append in progress as a changed Native record."""
+    out = Path(out)
+    path = out/CLEANUP_LOG
+    try:
+        result = json.loads((out/'editor-run.json').read_text())
+        schedule = result.get('late_sweeps')
+        raw = path.read_bytes() if path.is_file() else b''
+        if schedule is None:
+            if path.exists(): return ['an unregistered cleanup journal appeared']
+            delays = []
+        else:
+            if Path(schedule['log']).resolve() != path.resolve():
+                return ['the cleanup journal belongs to another output directory']
+            delays = schedule['delays']
+            if not isinstance(delays, list) or any(type(d) not in (int, float) or not math.isfinite(d) or d < 0 for d in delays):
+                return ['invalid cleanup schedule']
+        if prefix is not None:
+            n = prefix['bytes']
+            if type(n) is not int or n < 0 or n > len(raw) or \
+                    hashlib.sha256(raw[:n]).hexdigest() != prefix['sha256'] or \
+                    prefix['present'] and not path.is_file():
+                return ['the admitted cleanup journal prefix changed or was removed']
+        complete = raw[:raw.rfind(b'\n')+1]
+        previous = -1
+        for line in complete.splitlines():
+            row = json.loads(line)
+            if set(row) != {'after_s', 'time', 'swept'} or type(row['after_s']) not in (int, float) or \
+                    row['after_s'] not in delays or type(row['time']) not in (int, float) or \
+                    not math.isfinite(row['time']) or not isinstance(row['swept'], list):
+                return ['invalid cleanup journal row']
+            at = delays.index(row['after_s'])
+            if at <= previous: return ['cleanup journal schedule was reordered or repeated']
+            previous = at
+        return []
+    except (OSError, KeyError, TypeError, ValueError) as error:
+        return [f'no valid cleanup journal: {error}']
+
+
 # The one deliberate change of the private copy (copy_project, as for the existing reference's
 # captures): ProjectVersion.txt names only the selected release. The Editor writes the release's
 # full version file back on open (both copies of the previous Native pair held the fixture's bytes
@@ -294,7 +354,7 @@ def check_problems(work, repeat, release):
         problems += [f'graph: {p}' for p in graph_problems(project, json.loads(Path(preflight['path']).read_text()))]
     except (OSError, KeyError, TypeError, json.JSONDecodeError) as error:
         problems.append(f'no launch record for the identity checks: {error}')
-    return problems
+    return problems+cleanup_problems(out)
 
 
 def admission_problems(work, repeat, release):
@@ -304,8 +364,13 @@ def admission_problems(work, repeat, release):
     except (OSError, json.JSONDecodeError) as error:
         return [f'{repeat} has no admission: {error}']
     problems = []
-    if admission.get('artifacts') != artifact_manifest(out):
+    if admission.get('artifacts') != sealed_artifacts(out):
         problems.append(f'{repeat} changed after its admission')
+    prefix = admission.get('cleanup_prefix')
+    if not isinstance(prefix, dict):
+        problems.append(f'{repeat} has no cleanup prefix seal')
+    else:
+        problems += cleanup_problems(out, prefix)
     return problems+check_problems(work, repeat, release)
 
 
@@ -318,13 +383,14 @@ def check(work, repeat, release):
         return 1
     out = work/repeat
     _, notes = guards.values_problems(out/'values.jsonl')
-    admission = {'repeat': repeat, 'release': release, 'values_sha256': sha(out/'values.jsonl'),
-                 'artifacts': artifact_manifest(out), 'notes': notes}
     if (out/'admission.json').exists():
-        if json.loads((out/'admission.json').read_text()) != admission:
-            sys.exit(f'{repeat}: an earlier admission names other bytes')
+        changed = admission_problems(work, repeat, release)
+        if changed:
+            sys.exit(f'{repeat}: an earlier admission names other bytes: {changed}')
         print(f'{repeat}: passes; already admitted')
         return 0
+    admission = {'repeat': repeat, 'release': release, 'values_sha256': sha(out/'values.jsonl'),
+                 'artifacts': sealed_artifacts(out), 'cleanup_prefix': cleanup_prefix(out), 'notes': notes}
     write_once(out/'admission.json', admission)
     print(f'{repeat}: passes; admitted ({len(notes)} notes)')
     return 0

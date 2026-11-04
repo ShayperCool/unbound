@@ -270,3 +270,13 @@ configured scriptable pipeline logs one warning. Full receipts, raw unions and
 the attribution remain under the validation cache at
 `validation/runs/claude-fresh-20261101b/ondemand-validation/` and
 `validation/runs/claude-fresh-20261101b/rfc-validation/`.
+
+## Admission and bounded cleanup diagnostics
+
+The Editor's values, logs, sources and inputs remain immutable after admission. The shared
+runner can append hub-sweeps.jsonl after Editor exit. This registered diagnostic alone is
+excluded from the immutable artifact set; its completed prefix is sealed and every complete
+appended row must match the recorded cleanup schedule/schema. Prefix rewrite/removal, invalid
+rows and any other changed artifact refuse the next repeat/publication. An in-progress final
+write is not read as a capture value. Final receipts still retain/hash the entire journal after
+all bounded owned sweepers finish. Repeated check verifies the original seal, never reseals it.

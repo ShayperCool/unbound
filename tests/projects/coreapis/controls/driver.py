@@ -143,8 +143,11 @@ def fake_editor(behaviour, preflight):
                   'followed': behaviour.get('followed', []), 'stopped': [], 'leftovers': [], 'swept': [],
                   'times': {'admitted': round(admitted, 3), 'exit_s': exit_s, 'finished_s': exit_s+1},
                   'launcher': {'command': ['fake'], 'exit': behaviour.get('launcher_exit', 0), 'scope': 'fake'},
+                  'late_sweeps': {'log': str(job.out/'hub-sweeps.jsonl'), 'delays': list(job.late_sweeps)},
                   'fake': 'driver control; no Unity Editor ran'}
         editor_runner.write_json(job.out/editor_runner.RESULT, result)
+        if behaviour.get('initial_cleanup'):
+            (job.out/'hub-sweeps.jsonl').write_text(json.dumps({'after_s': 60, 'time': admitted+120, 'swept': []})+'\n')
         return result
     return run
 
@@ -196,7 +199,18 @@ def cases(release):
         return {'name': name, 'native1': behaviour, 'steps': one}
     values = REFERENCE_BYTES
     pose_changed = edit_rows(values, lambda r: replace_first(r, '(3fffffff,40800000,40c00000)', '(3fffffff,40800000,40c00001)'))
+    cleanup_bad = [('editor', 'native1', 'passes'), ('check', 'native1', 'passes'),
+                   ('editor', 'native2', 'refused'), ('publish', None, 'refused')]
+    cleanup_good = [('editor', 'native1', 'passes'), ('check', 'native1', 'passes'),
+                    ('check', 'native1', 'passes'), ('editor', 'native2', 'passes'),
+                    ('check', 'native2', 'passes'), ('publish', None, 'passes')]
     result = [
+        {'name': 'late-cleanup-created-after-admission', 'cleanup_action': 'append', 'steps': cleanup_good},
+        {'name': 'late-cleanup-prefix-then-append', 'native1': {'initial_cleanup': True}, 'cleanup_action': 'append', 'steps': cleanup_good},
+        {'name': 'late-cleanup-prefix-rewritten', 'native1': {'initial_cleanup': True}, 'cleanup_action': 'rewrite', 'steps': cleanup_bad},
+        {'name': 'late-cleanup-prefix-truncated', 'native1': {'initial_cleanup': True}, 'cleanup_action': 'truncate', 'steps': cleanup_bad},
+        {'name': 'late-cleanup-malformed-completed-row', 'cleanup_action': 'malformed', 'steps': cleanup_bad},
+        {'name': 'late-cleanup-write-in-progress', 'cleanup_action': 'partial', 'steps': cleanup_good},
         {'name': 'valid-pair-equals-reference', 'steps': full+[('publish', None, 'passes'), ('publish-again', None, 'refused')]},
         {'name': 'native2-before-admission', 'steps': [('editor', 'native1', 'passes'), ('editor', 'native2', 'refused')]},
         {'name': 'label-reuse', 'steps': [('editor', 'native1', 'passes'), ('editor', 'native1', 'refused')]},
@@ -287,6 +301,7 @@ def run_case(case, root, release, preflight_path, preflight):
     if case.get('dirty'):
         runner.git_state = lambda: dict(real_git(), clean=False, status=['?? fake-untracked-file'])
     steps = []
+    cleanup_applied = False
     try:
         for kind, repeat, expected in case['steps']:
             behaviour = case.get(repeat, {}) if repeat else {}
@@ -323,6 +338,23 @@ def run_case(case, root, release, preflight_path, preflight):
                 ok = ok and report['identical'] is False and report['summary'].get('missing') == report['summary'].get('extra') == 1
             entry['pass'] = ok
             steps.append(entry)
+            if kind == 'check' and repeat == 'native1' and case.get('cleanup_action') and not cleanup_applied:
+                journal = work/'native1/hub-sweeps.jsonl'
+                action = case['cleanup_action']
+                if action == 'append':
+                    delay = 150 if case.get('native1', {}).get('initial_cleanup') else 60
+                    with journal.open('a') as handle:
+                        handle.write(json.dumps({'after_s': delay, 'time': time.time()+1000, 'swept': []})+'\n')
+                elif action == 'rewrite':
+                    journal.write_text(journal.read_text().replace('120', '121'))
+                    # Time values include an epoch, so replace deterministically as well.
+                    row = json.loads(journal.read_text())
+                    row['time'] += 1
+                    journal.write_text(json.dumps(row)+'\n')
+                elif action == 'truncate': journal.write_bytes(b'')
+                elif action == 'malformed': journal.write_bytes(b'not JSON\n')
+                elif action == 'partial': journal.write_bytes(b'{"after_s":')
+                cleanup_applied = True
             if kind == 'check' and repeat == 'native1' and case.get('tamper_native1_after_check'):
                 with (work/'native1/editor.log').open('a') as log:
                     log.write('tampered after admission\n')
