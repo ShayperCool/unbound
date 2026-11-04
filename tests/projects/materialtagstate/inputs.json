@@ -1,0 +1,920 @@
+{
+ "composition": "modelimport copy_project URP + fixture",
+ "files": [
+  {
+   "path": "Assets/DefaultVolumeProfile.asset",
+   "sha256": "9f9fe204b4c67a6af17f939c204ddd5c90e6f627694ca0f6d7f7fccb661db1aa",
+   "source": "exact copy: tests/projects/urp/Assets/DefaultVolumeProfile.asset"
+  },
+  {
+   "path": "Assets/DefaultVolumeProfile.asset.meta",
+   "sha256": "6484db6cfece206054d1adc0481abbefe9713f942e0416f11f897e3a16e0cb35",
+   "source": "exact copy: tests/projects/urp/Assets/DefaultVolumeProfile.asset.meta"
+  },
+  {
+   "path": "Assets/Editor/MaterialTagStateDiscriminator.cs",
+   "sha256": "01bfd16bc47c0064908c5d325bd53f49bccd567dbdcb102396cf13eb10d8a5b5",
+   "source": "fixture: tests/projects/materialtagstate/Assets/Editor/MaterialTagStateDiscriminator.cs"
+  },
+  {
+   "path": "Assets/Editor/MaterialTagStateDiscriminator.cs.meta",
+   "sha256": "26e1e4924aabfdb6ff355e92a9afb36f8c3cd5acbb957e726064a1bede8d1466",
+   "source": "fixture: tests/projects/materialtagstate/Assets/Editor/MaterialTagStateDiscriminator.cs.meta"
+  },
+  {
+   "path": "Assets/Editor/ProbeRunner.cs",
+   "sha256": "40d174e06a39225207053b24ed4733f6654cd9f239f5b239d6403eb2f08089c4",
+   "source": "exact copy: tests/projects/modelimport/Assets/Editor/ProbeRunner.cs"
+  },
+  {
+   "path": "Assets/Editor/ProbeRunner.cs.meta",
+   "sha256": "8d42735941c07165a87e4db3fa306e71bbed718b6c27692b883ed394fc3ef99b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Editor/ProbeRunner.cs.meta"
+  },
+  {
+   "path": "Assets/Editor.meta",
+   "sha256": "f5adaea70cc84f2590d75111d76d2b346c490455cd02ccd1559c2d093309e2a9",
+   "source": "exact copy: tests/projects/modelimport/Assets/Editor.meta"
+  },
+  {
+   "path": "Assets/Elsewhere/Deep/Faraway.png",
+   "sha256": "b9bd9db06e4b1a17465aa74854c4de1a03d9f125f2663feca4c8acf75cbc32ed",
+   "source": "exact copy: tests/projects/modelimport/Assets/Elsewhere/Deep/Faraway.png"
+  },
+  {
+   "path": "Assets/Elsewhere/Deep/Faraway.png.meta",
+   "sha256": "9409797777773d9fc396bf8b65a47c7c38a98f5478e94151a4033d924c080b8e",
+   "source": "exact copy: tests/projects/modelimport/Assets/Elsewhere/Deep/Faraway.png.meta"
+  },
+  {
+   "path": "Assets/Elsewhere/Deep.meta",
+   "sha256": "dc814bbb119b183820e467250013ebf4f71ff96a7cb84f892f5fe32e0410a2a7",
+   "source": "exact copy: tests/projects/modelimport/Assets/Elsewhere/Deep.meta"
+  },
+  {
+   "path": "Assets/Elsewhere/Twin.png",
+   "sha256": "589d42c3eb6bab954ada1ab1201f86a2d47b25b264a8369905b16ce727f97400",
+   "source": "exact copy: tests/projects/modelimport/Assets/Elsewhere/Twin.png"
+  },
+  {
+   "path": "Assets/Elsewhere/Twin.png.meta",
+   "sha256": "b4bf70da313c9d399b0ecf5ccb045309c9bfb459a5a954d5b16f116b561f29bc",
+   "source": "exact copy: tests/projects/modelimport/Assets/Elsewhere/Twin.png.meta"
+  },
+  {
+   "path": "Assets/Elsewhere.meta",
+   "sha256": "5f4b2b3b11fcf43b4605c1346c0a528bd85097612ee9f6f3f5e1a8bf8d766a19",
+   "source": "exact copy: tests/projects/modelimport/Assets/Elsewhere.meta"
+  },
+  {
+   "path": "Assets/Models/Animated.fbx",
+   "sha256": "e1a6b2c3e58e8c11ad19f4c5a9eb71d54905692a6ac9f148ad473bf9a86107e8",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Animated.fbx"
+  },
+  {
+   "path": "Assets/Models/Animated.fbx.meta",
+   "sha256": "2a790e502eeeace18b171ebf2cb778ff646b418bb63e9e35c110a40446200573",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Animated.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/AnimatedAvatar.fbx",
+   "sha256": "e1a6b2c3e58e8c11ad19f4c5a9eb71d54905692a6ac9f148ad473bf9a86107e8",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/AnimatedAvatar.fbx"
+  },
+  {
+   "path": "Assets/Models/AnimatedAvatar.fbx.meta",
+   "sha256": "2fd82e58504003c0e12c1d9e8f5099e184f2cee2a0cd623a7736c1b9b5f76ac8",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/AnimatedAvatar.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/CrateAvatar.fbx",
+   "sha256": "f0c3cb6c4bd51e548f5013110fe89825901a856965edf2aeb9ff0cda0e76b19a",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/CrateAvatar.fbx"
+  },
+  {
+   "path": "Assets/Models/CrateAvatar.fbx.meta",
+   "sha256": "eb49af24547da4855658f89e660176dd1285a79b612da4ac0546c109b5818f6d",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/CrateAvatar.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/CrateLods.fbx",
+   "sha256": "f0c3cb6c4bd51e548f5013110fe89825901a856965edf2aeb9ff0cda0e76b19a",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/CrateLods.fbx"
+  },
+  {
+   "path": "Assets/Models/CrateLods.fbx.meta",
+   "sha256": "83b04249a04df83ec022f5de95f4672a17c39e65f9c4bf6336262fda34f821dc",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/CrateLods.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/Embedded.fbx",
+   "sha256": "11dce1f9159f6e69a5a6d8c5bdb52a6ce41dbb92a20821bbefeb5c811d04726b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Embedded.fbx"
+  },
+  {
+   "path": "Assets/Models/Embedded.fbx.meta",
+   "sha256": "26ff88953fd7aa5dd73c48f4c7178ae6b53445e645d3aa17474a26b041a468b6",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Embedded.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/Exotic.fbx",
+   "sha256": "6ea73a5714ce9f76f16ef6c62346c54f010c4dd092e699303049051e73ee8688",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Exotic.fbx"
+  },
+  {
+   "path": "Assets/Models/Exotic.fbx.meta",
+   "sha256": "01b539b179ccd35ef663981f056823a9b3e787b37b835cd68ca698b1d1fcf5fc",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Exotic.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/ExoticLegacy.fbx",
+   "sha256": "6ea73a5714ce9f76f16ef6c62346c54f010c4dd092e699303049051e73ee8688",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/ExoticLegacy.fbx"
+  },
+  {
+   "path": "Assets/Models/ExoticLegacy.fbx.meta",
+   "sha256": "976ae66d7943d87ae3738a747f6d9216373be9651ed7f200dc8a800a8b0c2cc4",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/ExoticLegacy.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Alpha.mat",
+   "sha256": "8d8ce4efddae152b555da6606d19f9f8df54ea36cec15605952784ed68754138",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Alpha.mat"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Alpha.mat.meta",
+   "sha256": "5a103374507d5e5753a46bbb6fb55792a05fd2e07fc0549228478ea5855786e4",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Alpha.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Emit.mat",
+   "sha256": "0db84b236fa7dbfcda11460b580b4a94533522bc93863c5d44cedac883d52ee4",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Emit.mat"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Emit.mat.meta",
+   "sha256": "79410f103770185596d53255074458288752b2bd3d8cf11c96893fe94694a784",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Emit.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/Materials/MaterialsByModel-M_EmitTex.mat",
+   "sha256": "831b8c7d4e478a7502a74bf3afe7e71b72590e7b5f7204a886a58083438bb37a",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/Materials/MaterialsByModel-M_EmitTex.mat"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/Materials/MaterialsByModel-M_EmitTex.mat.meta",
+   "sha256": "3b5c319ca6c9d0278b95cea941bce39dfcb69c7a7b20014b44ddc2f0fbf0c1f6",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/Materials/MaterialsByModel-M_EmitTex.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Metal.mat",
+   "sha256": "de4351b7d3cd4dad7327461158a85ee7e2b91d6ae9862933d7e684c117a64307",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Metal.mat"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Metal.mat.meta",
+   "sha256": "3c2e137a7c77b001074601f84ccd6dee09af277501b9471b3d655026f5ed7cbd",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Metal.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Red.mat",
+   "sha256": "0b405be2dcaa81819b826304ffadb5ab2d5d4f45aa0300b90fbf6bb58224c58b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Red.mat"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Red.mat.meta",
+   "sha256": "19d82a2c0c92d79ff4b61fee89eede7f21bb31b709e9285328d344a04f6c9ce3",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Red.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Tex.mat",
+   "sha256": "85ddd00c74057f8add3a62b512dd6a7ebc248028f7481b0c9a189efd8de7aab1",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Tex.mat"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Tex.mat.meta",
+   "sha256": "a2342e44817628163670b443814867504d52266c7de1cff0d5ef24a068171af8",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/Materials/MaterialsByModel-M_Tex.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/Materials/MaterialsByModel-No Name.mat",
+   "sha256": "cd8f076f11425191dc9bb8445e3367109f47eec0131f48cc0d26c9933cfdbeff",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/Materials/MaterialsByModel-No Name.mat"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/Materials/MaterialsByModel-No Name.mat.meta",
+   "sha256": "0c589d18362b085e7dc5db7167deb31f3b26230cc3d19d821d85a4966b1c0fd2",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/Materials/MaterialsByModel-No Name.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/Materials.meta",
+   "sha256": "97f084be5e5dfea25b1626ecf7b0974756e16ab47b754360765c49e7a3114aeb",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/Materials.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/MaterialsByModel.fbx",
+   "sha256": "e2b0fe87ceab7a6b4fb7da803f3cf33a8fdcc280bd330065b908258886a6364b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/MaterialsByModel.fbx"
+  },
+  {
+   "path": "Assets/Models/External/ByModel/MaterialsByModel.fbx.meta",
+   "sha256": "846bd8640f0d5a6036e0f1ad729d577e418454232a3a92903f4a1e2ea4f4b39c",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel/MaterialsByModel.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByModel.meta",
+   "sha256": "85e8f9bb5fa1cb2ead20be373e8c860407dff2d3ca3dd67d24ba636c9bd61f45",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByModel.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByTexture/Materials/Checker.mat",
+   "sha256": "328d428cfae01d357afefb3d7cb858fbb934271ca2137424445a9038f928c387",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTexture/Materials/Checker.mat"
+  },
+  {
+   "path": "Assets/Models/External/ByTexture/Materials/Checker.mat.meta",
+   "sha256": "899e6e9f82d77e8692a4851c07c319b84e77c2b3f3aefea449ba5487ac43d4dc",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTexture/Materials/Checker.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByTexture/Materials.meta",
+   "sha256": "8b1ae33e1e2cc0e4a59d345b8ad8d24be7096f1912d1f5e98a1a14b6ce23c6cb",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTexture/Materials.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByTexture/MaterialsByTexture.fbx",
+   "sha256": "e2b0fe87ceab7a6b4fb7da803f3cf33a8fdcc280bd330065b908258886a6364b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTexture/MaterialsByTexture.fbx"
+  },
+  {
+   "path": "Assets/Models/External/ByTexture/MaterialsByTexture.fbx.meta",
+   "sha256": "7fab16c8592b4e6c1f74e487844a48f7e9a7335f81e6a2c2981320c66763d28e",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTexture/MaterialsByTexture.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByTexture.meta",
+   "sha256": "0b74fd717dde925ccd407202cf37981c7e4346e016357eb5391b2e7a620314af",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTexture.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Alpha.mat",
+   "sha256": "694b30bfb3e0062282231727234b33828289f7124b6602617b74e2a94dc63038",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Alpha.mat"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Alpha.mat.meta",
+   "sha256": "2d05fc725a3c1638866408f8af857cce2497ec40cf16af0df0f97c2546688ed4",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Alpha.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Emit.mat",
+   "sha256": "2c9f9b9a3361b6ca07c155d8db06e3a405e677323544e61c4d25e6d61897a47d",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Emit.mat"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Emit.mat.meta",
+   "sha256": "cf3a33ccfa1e432ef59123986b337a156cbe83ffe3c4c93323c4988e9386bf65",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Emit.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_EmitTex.mat",
+   "sha256": "fea535c91da576e68c35bf83e1b3ea015a2eb7b7f62f968e02ebfc9e51d493ba",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_EmitTex.mat"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_EmitTex.mat.meta",
+   "sha256": "2cf9f7415db68d2d76b8927a0828bf953a013903d0b6324c27d6efb92a9747c9",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_EmitTex.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Metal.mat",
+   "sha256": "4c8dd5d2b2839f134b1c97e0c6c813b46026c4d1e20ae2f0f8f60357013dcf04",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Metal.mat"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Metal.mat.meta",
+   "sha256": "efa76b492859c6148e43bbfdf0a064a129b1ebb24169a6989d540ea1ca1823dc",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Metal.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Red.mat",
+   "sha256": "1851f151068eee29b8a76bd96ab21f15f95b77d69954dec6d1d4439785a5d5ce",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Red.mat"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Red.mat.meta",
+   "sha256": "93af62c850ffc088b83c0ebdd2d743627f469480b081e744de71bc07d974a7b0",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-M_Red.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-No Name.mat",
+   "sha256": "3c41da227f2ae294663af83655ef19deeb4fd9a98317cef7fe7c9efc06a7aef4",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-No Name.mat"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-No Name.mat.meta",
+   "sha256": "9bc51872498ee9fcb6af9dae7c224203ada3cea564cb50fca6738ed5f3dfeb0f",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel/Materials/MaterialsByTextureOrModel-No Name.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel/Materials.meta",
+   "sha256": "099e3458691a2a9445e778d3b9a4594e24a1664e5eb3f51e24e7bb5dd51abdd0",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel/Materials.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel/MaterialsByTextureOrModel.fbx",
+   "sha256": "e2b0fe87ceab7a6b4fb7da803f3cf33a8fdcc280bd330065b908258886a6364b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel/MaterialsByTextureOrModel.fbx"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel/MaterialsByTextureOrModel.fbx.meta",
+   "sha256": "863b280dd8d01e10efbe0cac6eb608b98bc85ded2ef430196db5d9391859d2a4",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel/MaterialsByTextureOrModel.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/External/ByTextureOrModel.meta",
+   "sha256": "b8abc0a6a5d9fcdea7e6d827a3c4d23df1694d907e761581abdfa465bbf0c9ef",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/ByTextureOrModel.meta"
+  },
+  {
+   "path": "Assets/Models/External/Deeper/MaterialsUp.fbx",
+   "sha256": "e2b0fe87ceab7a6b4fb7da803f3cf33a8fdcc280bd330065b908258886a6364b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Deeper/MaterialsUp.fbx"
+  },
+  {
+   "path": "Assets/Models/External/Deeper/MaterialsUp.fbx.meta",
+   "sha256": "3d45fa6ef56fbeb33a84f8711c482883d3e23279eec9ff323303c8870379f051",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Deeper/MaterialsUp.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/External/Deeper.meta",
+   "sha256": "1393a02c7e2f4afb589d2a616f9c4a83747800a9e9012f470468b7749cdbe0eb",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Deeper.meta"
+  },
+  {
+   "path": "Assets/Models/External/Materials/M_Alpha.mat",
+   "sha256": "40c5679ddde6c456ed75c8c39fefa47b7e783aa027c5f8a77d5656ada79d2ade",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Materials/M_Alpha.mat"
+  },
+  {
+   "path": "Assets/Models/External/Materials/M_Alpha.mat.meta",
+   "sha256": "2250238976a416d836122d736d4260c3d94f7055ba91731b0eb66f4d5a66437f",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Materials/M_Alpha.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/Materials/M_Emit.mat",
+   "sha256": "532c3cfef4bd7fba3dcb9999b717fd74c71182c3d92f6ba7166c5ef9a7a17ece",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Materials/M_Emit.mat"
+  },
+  {
+   "path": "Assets/Models/External/Materials/M_Emit.mat.meta",
+   "sha256": "a00bcfa5d19d2c42c0746eba8e7a59f7f900849e5526aa929ceb99660d36aa53",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Materials/M_Emit.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/Materials/M_EmitTex.mat",
+   "sha256": "c620a97e8c947298b5d29bed3a87e8bbbc08e2a23cf827d0fcb688dbe41d0816",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Materials/M_EmitTex.mat"
+  },
+  {
+   "path": "Assets/Models/External/Materials/M_EmitTex.mat.meta",
+   "sha256": "c788f9a136cf57043946079792df94f435463d5eeaecad8c2e80c0d6b77776be",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Materials/M_EmitTex.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/Materials/M_Metal.mat",
+   "sha256": "b351af277360deffd24f4e16006022b074c144c1615be1b4d95144bc48c8654d",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Materials/M_Metal.mat"
+  },
+  {
+   "path": "Assets/Models/External/Materials/M_Metal.mat.meta",
+   "sha256": "b7dff06a5ef325ec805e2a61498f9f8143857d456f4eaa8472574fee4bb7e23b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Materials/M_Metal.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/Materials/M_Red.mat",
+   "sha256": "77fd688e82ddf7d5d5737473c2ef64f2201ca8e613b51cade22a7e9a18ca23bf",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Materials/M_Red.mat"
+  },
+  {
+   "path": "Assets/Models/External/Materials/M_Red.mat.meta",
+   "sha256": "934285efaeae28e852c2278b271d33522947a20d715ebd6f91d2253088497a61",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Materials/M_Red.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/Materials/M_Tex.mat",
+   "sha256": "80a666e78f9698057154ff78b98d67acbc566207222320874fc6d1f6a029beea",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Materials/M_Tex.mat"
+  },
+  {
+   "path": "Assets/Models/External/Materials/M_Tex.mat.meta",
+   "sha256": "fe1a45f2db59ea2b33d6f57ebd4e011a9c77928bab642f987e3b103b6c48f1f3",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Materials/M_Tex.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/Materials/No Name.mat",
+   "sha256": "3527a64c75f809efe29f707dac23700270b147469436ba96787a11f33edb7408",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Materials/No Name.mat"
+  },
+  {
+   "path": "Assets/Models/External/Materials/No Name.mat.meta",
+   "sha256": "3d65c0b4b750fa21926228692c8415e9cced06837170530cb6b6012c7fc0f0db",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Materials/No Name.mat.meta"
+  },
+  {
+   "path": "Assets/Models/External/Materials.meta",
+   "sha256": "3d84bf828002f708d1917893cb1d2f42afd0f4951def679fb9d84e78ec66af32",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/Materials.meta"
+  },
+  {
+   "path": "Assets/Models/External/MaterialsExternal.fbx",
+   "sha256": "e2b0fe87ceab7a6b4fb7da803f3cf33a8fdcc280bd330065b908258886a6364b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/MaterialsExternal.fbx"
+  },
+  {
+   "path": "Assets/Models/External/MaterialsExternal.fbx.meta",
+   "sha256": "0021e5351a59f17fc3cf8829b83b37b8e2813fceaa40dac172118327c2f5aeeb",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External/MaterialsExternal.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/External.meta",
+   "sha256": "9ce10656dc5c18f0492e7d34728aae4f5378a25f93f5e3130f74a6552e3317a2",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/External.meta"
+  },
+  {
+   "path": "Assets/Models/Far/MaterialsEverywhere.fbx",
+   "sha256": "e2b0fe87ceab7a6b4fb7da803f3cf33a8fdcc280bd330065b908258886a6364b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Far/MaterialsEverywhere.fbx"
+  },
+  {
+   "path": "Assets/Models/Far/MaterialsEverywhere.fbx.meta",
+   "sha256": "8711d7045ffe23908c5a17a6d8f4fd69a42b335f26d11999556cbc6f40cdd115",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Far/MaterialsEverywhere.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/Far.meta",
+   "sha256": "9ecc8ad6c9b1e66045674eb2745702e87bf9117699c56caf49718f6cdae3f009",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Far.meta"
+  },
+  {
+   "path": "Assets/Models/GroupedLods.fbx",
+   "sha256": "5a6899af9d40f16e3ddc14d53eeececa112b7a4000c70fd91c1393eada95c64f",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/GroupedLods.fbx"
+  },
+  {
+   "path": "Assets/Models/GroupedLods.fbx.meta",
+   "sha256": "888465bf5a03155c41986bc287e68c0f227084855967af7f7fa5b1e372fc42b4",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/GroupedLods.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/Local/Materials/M_Alpha.mat",
+   "sha256": "40c5679ddde6c456ed75c8c39fefa47b7e783aa027c5f8a77d5656ada79d2ade",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/Materials/M_Alpha.mat"
+  },
+  {
+   "path": "Assets/Models/Local/Materials/M_Alpha.mat.meta",
+   "sha256": "44abc46497571d5441bb1919a6614b65d6f4b24e7f9861012b4c5d62ae27e8c7",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/Materials/M_Alpha.mat.meta"
+  },
+  {
+   "path": "Assets/Models/Local/Materials/M_Emit.mat",
+   "sha256": "532c3cfef4bd7fba3dcb9999b717fd74c71182c3d92f6ba7166c5ef9a7a17ece",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/Materials/M_Emit.mat"
+  },
+  {
+   "path": "Assets/Models/Local/Materials/M_Emit.mat.meta",
+   "sha256": "6776bde4987b41cc4900420613cae2b66c41045dc9a1ca6844055d1f677e0cf8",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/Materials/M_Emit.mat.meta"
+  },
+  {
+   "path": "Assets/Models/Local/Materials/M_EmitTex.mat",
+   "sha256": "c620a97e8c947298b5d29bed3a87e8bbbc08e2a23cf827d0fcb688dbe41d0816",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/Materials/M_EmitTex.mat"
+  },
+  {
+   "path": "Assets/Models/Local/Materials/M_EmitTex.mat.meta",
+   "sha256": "a3dcc4513983bf88733ad5a60b4220c56ea7c934cd6309504628df6b5dec7333",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/Materials/M_EmitTex.mat.meta"
+  },
+  {
+   "path": "Assets/Models/Local/Materials/M_Metal.mat",
+   "sha256": "b351af277360deffd24f4e16006022b074c144c1615be1b4d95144bc48c8654d",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/Materials/M_Metal.mat"
+  },
+  {
+   "path": "Assets/Models/Local/Materials/M_Metal.mat.meta",
+   "sha256": "08612dc03d26113febf735d0798e401cbc3941df0a6ce03061242d6e99c6cc52",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/Materials/M_Metal.mat.meta"
+  },
+  {
+   "path": "Assets/Models/Local/Materials/M_Red.mat",
+   "sha256": "77fd688e82ddf7d5d5737473c2ef64f2201ca8e613b51cade22a7e9a18ca23bf",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/Materials/M_Red.mat"
+  },
+  {
+   "path": "Assets/Models/Local/Materials/M_Red.mat.meta",
+   "sha256": "8df4d42b2dd21abd1481fb4973e34ea93d4df7eeb624c41afd1f1da2d4efe7a5",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/Materials/M_Red.mat.meta"
+  },
+  {
+   "path": "Assets/Models/Local/Materials/M_Tex.mat",
+   "sha256": "80a666e78f9698057154ff78b98d67acbc566207222320874fc6d1f6a029beea",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/Materials/M_Tex.mat"
+  },
+  {
+   "path": "Assets/Models/Local/Materials/M_Tex.mat.meta",
+   "sha256": "ac2128e7ce282c74e4d28223c59a5da74444453a69a40b7756cbf20b6d38dd6a",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/Materials/M_Tex.mat.meta"
+  },
+  {
+   "path": "Assets/Models/Local/Materials/No Name.mat",
+   "sha256": "3527a64c75f809efe29f707dac23700270b147469436ba96787a11f33edb7408",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/Materials/No Name.mat"
+  },
+  {
+   "path": "Assets/Models/Local/Materials/No Name.mat.meta",
+   "sha256": "a2b6b284e928bce72794a04f80f3a791fb755dabe4c2abc4ef6958875f48750a",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/Materials/No Name.mat.meta"
+  },
+  {
+   "path": "Assets/Models/Local/Materials.meta",
+   "sha256": "6133a858fea7405e5263e6afb0790f87ea796a2ef5d7aaf8799030bef25899d5",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/Materials.meta"
+  },
+  {
+   "path": "Assets/Models/Local/MaterialsLocal.fbx",
+   "sha256": "e2b0fe87ceab7a6b4fb7da803f3cf33a8fdcc280bd330065b908258886a6364b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/MaterialsLocal.fbx"
+  },
+  {
+   "path": "Assets/Models/Local/MaterialsLocal.fbx.meta",
+   "sha256": "2bffd07e53db2615530bd4cdea2e6f5993e6d21d3a4a22cc703689ca3f56dba6",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local/MaterialsLocal.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/Local.meta",
+   "sha256": "9430b29270cfb43913a8bf7bb8ae5644bdd983edb6d90e0c28c398b2c50be02e",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Local.meta"
+  },
+  {
+   "path": "Assets/Models/Lods.fbx",
+   "sha256": "b1d01eaf270724ad8a2ca933b4ec77e47931d4fb7dc5b14100044a947bf515b2",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Lods.fbx"
+  },
+  {
+   "path": "Assets/Models/Lods.fbx.meta",
+   "sha256": "18d84d9a38e8fa4d3b156f3542678edab0ec8fff5281f6020f8cf9a2fb823d8d",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Lods.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/ManyLods.fbx",
+   "sha256": "bd29bd3de79f63d74fd27c895f1e0478219156bf76a17713faa4c00bfd045d19",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/ManyLods.fbx"
+  },
+  {
+   "path": "Assets/Models/ManyLods.fbx.meta",
+   "sha256": "b86121ae7baf4f87890c93d907d914b735a789bea6eb7760f59148a37288a50e",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/ManyLods.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/Materials/Checker.mat",
+   "sha256": "328d428cfae01d357afefb3d7cb858fbb934271ca2137424445a9038f928c387",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Materials/Checker.mat"
+  },
+  {
+   "path": "Assets/Models/Materials/Checker.mat.meta",
+   "sha256": "f878c9f3a051331eb8f41ffe5aeb5f50b53c45b7fc7e39a0fec8fba7773393b6",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Materials/Checker.mat.meta"
+  },
+  {
+   "path": "Assets/Models/Materials.fbx",
+   "sha256": "e2b0fe87ceab7a6b4fb7da803f3cf33a8fdcc280bd330065b908258886a6364b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Materials.fbx"
+  },
+  {
+   "path": "Assets/Models/Materials.fbx.meta",
+   "sha256": "83f491031f539359e6bce583a24e65ed7129526ce0808c04b40501a3bb817cea",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Materials.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/Materials.meta",
+   "sha256": "398b036f715140f65a697e045a0ca6bca5f0838e823da65b5e95fb1ee0d67c15",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Materials.meta"
+  },
+  {
+   "path": "Assets/Models/MaterialsLegacy.fbx",
+   "sha256": "e2b0fe87ceab7a6b4fb7da803f3cf33a8fdcc280bd330065b908258886a6364b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/MaterialsLegacy.fbx"
+  },
+  {
+   "path": "Assets/Models/MaterialsLegacy.fbx.meta",
+   "sha256": "890cd7de3547328f62a2e9c347d925bb25e2607d771b16f45c7c788808cd38ae",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/MaterialsLegacy.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/MaterialsNone.fbx",
+   "sha256": "e2b0fe87ceab7a6b4fb7da803f3cf33a8fdcc280bd330065b908258886a6364b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/MaterialsNone.fbx"
+  },
+  {
+   "path": "Assets/Models/MaterialsNone.fbx.meta",
+   "sha256": "7b6730ff751291041696889a97b273fad9c5a020c50802221202e80527d360fb",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/MaterialsNone.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/Moved/MaterialsMoved.fbx",
+   "sha256": "e2b0fe87ceab7a6b4fb7da803f3cf33a8fdcc280bd330065b908258886a6364b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Moved/MaterialsMoved.fbx"
+  },
+  {
+   "path": "Assets/Models/Moved/MaterialsMoved.fbx.meta",
+   "sha256": "8fc99bbf7cda987349ab14f67c1e9880c41a0a3071097fef70bd9b1bb2c6acd1",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Moved/MaterialsMoved.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/Moved.meta",
+   "sha256": "bfd018404167a05b4284fe6841a4190ec5f37eb8483ca5ec4f496191f50fa541",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Moved.meta"
+  },
+  {
+   "path": "Assets/Models/Search/Local.png",
+   "sha256": "56db6a774484389ae5c0669d4e3b1b55f5470e5fc176c4e11310629fbdf3213b",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Search/Local.png"
+  },
+  {
+   "path": "Assets/Models/Search/Local.png.meta",
+   "sha256": "f2d08792bdc3256b108111c8070e3c6fb48d14ef1ba875c513e3e144a9b385ba",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Search/Local.png.meta"
+  },
+  {
+   "path": "Assets/Models/Search/Search.fbx",
+   "sha256": "0c1b3667a6845631ddddcec551c15a859334ef1de11027d44c93ca41c66a5596",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Search/Search.fbx"
+  },
+  {
+   "path": "Assets/Models/Search/Search.fbx.meta",
+   "sha256": "e1b5cbc37a0ea0033d06d29b6569b7640d5676053e5d81f4d9f792cb00930353",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Search/Search.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/Search/Textures/Twin.png",
+   "sha256": "589d42c3eb6bab954ada1ab1201f86a2d47b25b264a8369905b16ce727f97400",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Search/Textures/Twin.png"
+  },
+  {
+   "path": "Assets/Models/Search/Textures/Twin.png.meta",
+   "sha256": "f97a42dec24ae798eeb5113c360c05ff8702783203c05e8b65552862e8a95235",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Search/Textures/Twin.png.meta"
+  },
+  {
+   "path": "Assets/Models/Search/Textures.meta",
+   "sha256": "78031e8f0906c70e7d90268bed1a6fb2fb87e9778af09e8d07e96fe1e01dd6ce",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Search/Textures.meta"
+  },
+  {
+   "path": "Assets/Models/Search.meta",
+   "sha256": "8ef01d74ca9bb691d5c3a549c71fb44f4a852ff9abc4375387b0067aa7da3d8a",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Search.meta"
+  },
+  {
+   "path": "Assets/Models/Skinned.fbx",
+   "sha256": "a1ad1dfd526bf502e379a599f1454d4af64957e7f0bcb3268abec16aa3bc7f8a",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Skinned.fbx"
+  },
+  {
+   "path": "Assets/Models/Skinned.fbx.meta",
+   "sha256": "2dc7897c37edb0d3f5101e180a7aa156b9d2838fddf812ba60b73bc353800fd4",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Skinned.fbx.meta"
+  },
+  {
+   "path": "Assets/Models/Textures/Bumps.png",
+   "sha256": "6952b5ec4f49f111e2dba29901d0af80df5bd504aeee33aed35eeca4f0f87829",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Textures/Bumps.png"
+  },
+  {
+   "path": "Assets/Models/Textures/Bumps.png.meta",
+   "sha256": "722b18e66f5c81c80de2da8f0af31afa9baede6c8a795ae06b87c7f695ce4d46",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Textures/Bumps.png.meta"
+  },
+  {
+   "path": "Assets/Models/Textures/Checker.png",
+   "sha256": "6bab42c9bf896b2cb368c935157f431ba7956f726809bbad8a8c97f63c342bf9",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Textures/Checker.png"
+  },
+  {
+   "path": "Assets/Models/Textures/Checker.png.meta",
+   "sha256": "fd5450e834bfa3c92515e704fe6ea664527e47baee3aff02e321ca02ceabe752",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Textures/Checker.png.meta"
+  },
+  {
+   "path": "Assets/Models/Textures/Glow.png",
+   "sha256": "3032d647ff9eac0fadbe90ebd2cdd2a2626cdb028a44aba7a7a6d8f81669afaa",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Textures/Glow.png"
+  },
+  {
+   "path": "Assets/Models/Textures/Glow.png.meta",
+   "sha256": "bf660f0e9e5c0ff6691b475c6dd1f942a8cfbf6f61c1f11d877347915d9f5387",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Textures/Glow.png.meta"
+  },
+  {
+   "path": "Assets/Models/Textures/Up.png",
+   "sha256": "2da90da012c781b9e4eb762673adee06f313959d228b3c082d014fa522e8c63f",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Textures/Up.png"
+  },
+  {
+   "path": "Assets/Models/Textures/Up.png.meta",
+   "sha256": "ada255a9ea13226dfd823865d38f91e61df291f2cfdd28ceef354f808e2f4ad4",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Textures/Up.png.meta"
+  },
+  {
+   "path": "Assets/Models/Textures.meta",
+   "sha256": "b2c4c47df849ae9f2a2ec8e6462ea605728402e27a3b054f4132b1f838660bca",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models/Textures.meta"
+  },
+  {
+   "path": "Assets/Models.meta",
+   "sha256": "ef52c3cd5691cdf8d888f8b9c75a5c884ade548b7c08c065532bebee193dd0d4",
+   "source": "exact copy: tests/projects/modelimport/Assets/Models.meta"
+  },
+  {
+   "path": "Assets/Scenes/Probe.unity",
+   "sha256": "133c01022f785390ccbb6cfc388f365e6d6b39cd7a6539a9ef9f92289b2382d7",
+   "source": "exact copy: tests/projects/modelimport/Assets/Scenes/Probe.unity"
+  },
+  {
+   "path": "Assets/Scenes/Probe.unity.meta",
+   "sha256": "34df43eee5c09044a1cacda8768e501a016e183b1f7928552469524a1e8b6277",
+   "source": "exact copy: tests/projects/modelimport/Assets/Scenes/Probe.unity.meta"
+  },
+  {
+   "path": "Assets/Scenes.meta",
+   "sha256": "f3651f5802c596ecfd07ca4080d6afbf73c8687b5034866b33603d02da2d0b56",
+   "source": "exact copy: tests/projects/modelimport/Assets/Scenes.meta"
+  },
+  {
+   "path": "Assets/Scripts/ModelImportProbe.cs",
+   "sha256": "d06a47b348dbe2a8e66ecbc959365eb18d26ca3d70b5d9634603dc0ccb12393f",
+   "source": "exact copy: tests/projects/modelimport/Assets/Scripts/ModelImportProbe.cs"
+  },
+  {
+   "path": "Assets/Scripts/ModelImportProbe.cs.meta",
+   "sha256": "66ec19f3b7d53668ffc82e7834abbdd304f8fafe5533fb843cc903d7d9ee3aa1",
+   "source": "exact copy: tests/projects/modelimport/Assets/Scripts/ModelImportProbe.cs.meta"
+  },
+  {
+   "path": "Assets/Scripts.meta",
+   "sha256": "f8a8b38ba942a5d32b0fd5301f27c5f36fccf338b87df096b0be2a66053aa65c",
+   "source": "exact copy: tests/projects/modelimport/Assets/Scripts.meta"
+  },
+  {
+   "path": "Assets/Settings/ProbeRenderer.asset",
+   "sha256": "b888ca4ff589affc929a6a5424413a45c32e8b9288338c278f852e432d58fa58",
+   "source": "exact copy: tests/projects/urp/Assets/Settings/ProbeRenderer.asset"
+  },
+  {
+   "path": "Assets/Settings/ProbeRenderer.asset.meta",
+   "sha256": "768bcf81d2f630f41a77e49c48c7051aec532fd15ad869ad750fc532af0ddea0",
+   "source": "exact copy: tests/projects/urp/Assets/Settings/ProbeRenderer.asset.meta"
+  },
+  {
+   "path": "Assets/Settings/ProbeURP.asset",
+   "sha256": "64a8e762d9c956f82bde6a8e8105109aebd4edf3dd4d9624f11a4739af1e0436",
+   "source": "exact copy: tests/projects/urp/Assets/Settings/ProbeURP.asset"
+  },
+  {
+   "path": "Assets/Settings/ProbeURP.asset.meta",
+   "sha256": "c25096ff84e8da8e741e887ff52135b28b2de588fa9b80c4a66f2e91ec2c645d",
+   "source": "exact copy: tests/projects/urp/Assets/Settings/ProbeURP.asset.meta"
+  },
+  {
+   "path": "Assets/Settings.meta",
+   "sha256": "297a09cd60d4cd3bfa97fb5eeb1a36ee2d6132c137da6a408bd31beee48de335",
+   "source": "exact copy: tests/projects/urp/Assets/Settings.meta"
+  },
+  {
+   "path": "Assets/UniversalRenderPipelineGlobalSettings.asset",
+   "sha256": "4d8d9c1a51a1dd2c21b93fa2986286066f6ed7eeb3724e5b3c8a47526155456d",
+   "source": "exact copy: tests/projects/urp/Assets/UniversalRenderPipelineGlobalSettings.asset"
+  },
+  {
+   "path": "Assets/UniversalRenderPipelineGlobalSettings.asset.meta",
+   "sha256": "a9e05b91dd14186b3e7f19bf796329dbb8ab072ed5f471603a2ad9f2cdcfc944",
+   "source": "exact copy: tests/projects/urp/Assets/UniversalRenderPipelineGlobalSettings.asset.meta"
+  },
+  {
+   "path": "Packages/manifest.json",
+   "sha256": "9511e8c0b11c4a2845cb23c55e1d9ca86642a08592af99682bf5bf7df05a5305",
+   "source": "derived by modelimport/run.py copy_project (URP profile)"
+  },
+  {
+   "path": "Packages/packages-lock.json",
+   "sha256": "edec6391a8799e5d95d63d87c31a8655dd7ed9e717f8d569f9210a96248f5988",
+   "source": "exact copy: tests/projects/urp/Packages/packages-lock.json"
+  },
+  {
+   "path": "ProjectSettings/AudioManager.asset",
+   "sha256": "9a554916fe138ebcad8443ee9b079363ecc72795c39d0e80f5f7ca99e2c6f5e7",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/AudioManager.asset"
+  },
+  {
+   "path": "ProjectSettings/ClusterInputManager.asset",
+   "sha256": "40e65dd214bf254955d2c8829ca8ce2130fd3510485560ce012e9a1ddd93e623",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/ClusterInputManager.asset"
+  },
+  {
+   "path": "ProjectSettings/DynamicsManager.asset",
+   "sha256": "f27512e38f80c091df2dd163ece09f86f8fe67395659af0a0ca873a88fd1c6a7",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/DynamicsManager.asset"
+  },
+  {
+   "path": "ProjectSettings/EditorBuildSettings.asset",
+   "sha256": "7d11cc5d02f09f64a14e0a9640aa2d6d4b90ce683e8d7f4d66aec15d78c60dc0",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/EditorBuildSettings.asset"
+  },
+  {
+   "path": "ProjectSettings/EditorSettings.asset",
+   "sha256": "06753c21648950aee0013b70f79a9035ac52aec6204d44cc2ac55a84034ad9ca",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/EditorSettings.asset"
+  },
+  {
+   "path": "ProjectSettings/GraphicsSettings.asset",
+   "sha256": "02116d459918d0716389658404b30354cc931ac172d67bfb2c84949a4e0e09a5",
+   "source": "exact copy: tests/projects/urp/ProjectSettings/GraphicsSettings.asset"
+  },
+  {
+   "path": "ProjectSettings/InputManager.asset",
+   "sha256": "d0f454ddb880912abcae92e3e12957a7446786ba89e24937e019ff3bbc0d4300",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/InputManager.asset"
+  },
+  {
+   "path": "ProjectSettings/MemorySettings.asset",
+   "sha256": "1e8379a461b10ae09f3f696911088c16875d63e87ed5f2d95df9e1892703f9fd",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/MemorySettings.asset"
+  },
+  {
+   "path": "ProjectSettings/MultiplayerManager.asset",
+   "sha256": "aba89fd1a1ddad182727ad82727e536d27372e90328a8196da2a4560398983dd",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/MultiplayerManager.asset"
+  },
+  {
+   "path": "ProjectSettings/NavMeshAreas.asset",
+   "sha256": "7ebbf8f53b8033104e1878b95ca07a28d0954092d81c220f14196a42f651e658",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/NavMeshAreas.asset"
+  },
+  {
+   "path": "ProjectSettings/Physics2DSettings.asset",
+   "sha256": "9b78fdd0bac0f486c052ca65ddc0e5022d322b12874931a49456d407c5bbfc00",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/Physics2DSettings.asset"
+  },
+  {
+   "path": "ProjectSettings/PresetManager.asset",
+   "sha256": "29c125923fe6e29f90190d4fce1c82d660e7051546e2c9d02908d18c9cf2436c",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/PresetManager.asset"
+  },
+  {
+   "path": "ProjectSettings/ProjectSettings.asset",
+   "sha256": "e7ecfcf97070982f8ebfd29cd6546fae31eba43866e58b4979c5d809d24ff83a",
+   "source": "derived by modelimport/run.py copy_project (URP profile)"
+  },
+  {
+   "path": "ProjectSettings/ProjectVersion.txt",
+   "sha256": "61e4fb53b6a6f2f01d8d94ea96d272d5fdce1a1d82f078797d92bb08a596eaec",
+   "source": "derived by modelimport/run.py copy_project (URP profile)"
+  },
+  {
+   "path": "ProjectSettings/QualitySettings.asset",
+   "sha256": "4c648e92a70d28edb5f975f63415e1a8c63b51814fde4aead512a4695ede2607",
+   "source": "exact copy: tests/projects/urp/ProjectSettings/QualitySettings.asset"
+  },
+  {
+   "path": "ProjectSettings/SceneTemplateSettings.json",
+   "sha256": "bb9098b3bfcde78d93e264b96f7b77b5430e64e8c57a7aad7f5a5d9c3945e16a",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/SceneTemplateSettings.json"
+  },
+  {
+   "path": "ProjectSettings/TagManager.asset",
+   "sha256": "da4b5eefc927f8b91bcf9e56a186d2b852f49d9cbe91d466638d26c79d6a83ce",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/TagManager.asset"
+  },
+  {
+   "path": "ProjectSettings/TimeManager.asset",
+   "sha256": "3396f52fdc16d445024e01d7a2d99db6f0a37569d1d73c0302e9ffb857d90287",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/TimeManager.asset"
+  },
+  {
+   "path": "ProjectSettings/UnityConnectSettings.asset",
+   "sha256": "11251dae0356b6f43dd2c67bb511f6b7ecda4e5de425186bba3297e6f3dc1c6f",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/UnityConnectSettings.asset"
+  },
+  {
+   "path": "ProjectSettings/VFXManager.asset",
+   "sha256": "9378043da38a17f2198d52a10c17789161d30e3285a387ca3687a71551c32448",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/VFXManager.asset"
+  },
+  {
+   "path": "ProjectSettings/VersionControlSettings.asset",
+   "sha256": "e199cdfa6a8f2bf33cfd47e549198f13e3eb2a5099e908fdb4e0f14d939ccc6b",
+   "source": "exact copy: tests/projects/modelimport/ProjectSettings/VersionControlSettings.asset"
+  }
+ ]
+}
