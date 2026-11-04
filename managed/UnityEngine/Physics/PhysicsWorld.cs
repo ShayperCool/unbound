@@ -1085,8 +1085,6 @@ namespace Unbound.Runtime
             /// <summary>Touches counted in <see cref="Touching"/> whose shapes were destroyed while the
             /// colliders stay in the simulation (a shape rebuild); they end at the next step's events.</summary>
             internal int Lost;
-            /// <summary>The pair ended this step's events through <see cref="Lost"/> touches only.</summary>
-            internal bool LostEnded;
         }
 
         static readonly Dictionary<(PairKey Colliders, bool Trigger), Pair> s_Pairs = new Dictionary<(PairKey, bool), Pair>();
@@ -1147,7 +1145,6 @@ namespace Unbound.Runtime
                 p.Touching = Math.Max(0, p.Touching - lost);
                 if (p.Touching > 0) continue;
                 p.ExitPending = true;
-                p.LostEnded = true;
             }
         }
 
@@ -1179,7 +1176,6 @@ namespace Unbound.Runtime
                 if (a != null && b != null && s_Pairs.TryGetValue(EventKey(a, b, false), out var pair))
                     pair.ContactStayReported = true;
             }
-            foreach (var pair in s_LostPairs) pair.LostEnded = false;
             s_LostPairs.Clear();
         }
 
@@ -1223,9 +1219,9 @@ namespace Unbound.Runtime
             if (pair.Touching != 1) return;
             if (pair.ExitPending)
             {
-                pair.ExitPending = false; // left and came back before the callbacks: it stays
-                // A rebuilt shape that still touches: the contact persists through this step.
-                if (pair.LostEnded && !trigger) pair.ContactStayReported = true;
+                // Left and came back before the callbacks, or a rebuilt shape that still touches: it
+                // stays. Its Stay follows the usual rule; the SDK reported no persist for a new shape.
+                pair.ExitPending = false;
                 return;
             }
             pair.EnterPending = true;
