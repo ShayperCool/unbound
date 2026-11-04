@@ -12,8 +12,9 @@ namespace UnityEngine
     /// Unity 6's awaitable: a one-shot completion that game code awaits (or yields from a
     /// coroutine). The engine completes the frame-based ones at the player loop points Unity uses:
     /// NextFrame and WaitForSeconds after Update (with `yield return null`), FixedUpdate after the
-    /// fixed update scripts, EndOfFrame with WaitForEndOfFrame. Continuations of main-thread
-    /// awaitables run synchronously when they complete.
+    /// fixed update scripts, EndOfFrame with WaitForEndOfFrame. Continuations run synchronously on
+    /// the thread that completes the awaitable, except that the caller of an `async Awaitable`
+    /// method called from the main thread resumes on the main thread (see StartedOnCurrentThread).
     /// </summary>
     [AsyncMethodBuilder(typeof(Awaitable.AwaitableAsyncMethodBuilder))]
     public partial class Awaitable : IEnumerator
@@ -23,6 +24,7 @@ namespace UnityEngine
         bool m_Completed;
         ExceptionDispatchInfo m_Exception;
         CancellationTokenRegistration m_Cancellation;
+        AwaiterCompletionThreadAffinity m_Affinity;
 
         internal Awaitable() { }
 
@@ -31,6 +33,20 @@ namespace UnityEngine
             None = 0,
             MainThread = 1,
             BackgroundThread = 2,
+        }
+
+        /// <summary>
+        /// Called by the builder before an `async Awaitable` method's body runs. Unity 6000.0 Manual,
+        /// "Awaitable completion and continuation": "If the method is called from the main thread, it
+        /// resumes on the main thread"; MainThreadAsync and BackgroundThreadAsync are "local to the
+        /// current method only". So a method called from the main thread completes its awaiter on the
+        /// main thread even when its own body ended on another thread. A method called from another
+        /// thread keeps None: its awaiter continues on the completing thread.
+        /// </summary>
+        internal void StartedOnCurrentThread()
+        {
+            if (!PlayerLoopDriver.IsMainThread) return;
+            lock (m_Lock) m_Affinity = AwaiterCompletionThreadAffinity.MainThread;
         }
 
         public bool IsCompleted
@@ -45,6 +61,7 @@ namespace UnityEngine
         internal void Complete(ExceptionDispatchInfo exception = null)
         {
             Action continuation;
+            AwaiterCompletionThreadAffinity affinity;
             lock (m_Lock)
             {
                 if (m_Completed) return;
@@ -52,10 +69,16 @@ namespace UnityEngine
                 m_Exception = exception;
                 continuation = m_Continuation;
                 m_Continuation = null;
+                affinity = m_Affinity;
             }
             m_Cancellation.Dispose();
             AwaitableScheduler.Forget(this);
-            continuation?.Invoke();
+            if (continuation == null) return;
+            // Completed on the main thread, or no affinity: the awaiter resumes now, on this thread.
+            // Completed elsewhere for a main-thread caller: it resumes in the frame's
+            // Update.ScriptRunDelayedTasks ("can't resume until the next frame update", same page).
+            if (affinity == AwaiterCompletionThreadAffinity.MainThread) PlayerLoopDriver.RunOnMainThread(continuation);
+            else continuation();
         }
 
         internal void SetContinuation(Action continuation)
@@ -158,7 +181,14 @@ namespace UnityEngine
 
             public Awaitable Task => m_Task ??= new Awaitable();
 
-            public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine => stateMachine.MoveNext();
+            /// <summary>Runs the method's body up to its first pending await. The calling thread
+            /// decides where the method's own awaiter resumes (see Awaitable.StartedOnCurrentThread);
+            /// awaits inside the body keep their own behaviour.</summary>
+            public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine
+            {
+                Task.StartedOnCurrentThread();
+                stateMachine.MoveNext();
+            }
 
             public void SetStateMachine(IAsyncStateMachine stateMachine) => m_Machine = stateMachine;
 
@@ -202,7 +232,13 @@ namespace UnityEngine
 
             public Awaitable<T> Task => m_Task ??= new Awaitable<T>();
 
-            public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine => stateMachine.MoveNext();
+            /// <summary>As the non-generic builder's Start: the result's awaiter resumes on the main
+            /// thread when the method was called there.</summary>
+            public void Start<TStateMachine>(ref TStateMachine stateMachine) where TStateMachine : IAsyncStateMachine
+            {
+                Task.Inner.StartedOnCurrentThread();
+                stateMachine.MoveNext();
+            }
 
             public void SetStateMachine(IAsyncStateMachine stateMachine) => m_Machine = stateMachine;
 
