@@ -503,6 +503,8 @@ namespace UnityEngine
         {
             string guid = lightingData.Guid;
             if (lightingData.IsNull || guid == null) return null;
+            // The ':' check is defensive; no current project-reference producer emits it.
+            // Bundle scenes are excluded by LoadKey below, independently of this check.
             if (guid.StartsWith("0000000000000000", StringComparison.Ordinal) || guid.IndexOf(':') >= 0) return null;
             var data = Unbound.Runtime.SceneRegistry.Get(new Unbound.Runtime.SceneHandle(scene));
             if (data == null || data.LoadKey != null || string.IsNullOrEmpty(data.Path)) return null;
@@ -517,11 +519,10 @@ namespace UnityEngine
         /// changes no current set before the next tetrahedralization. A loaded asset's object in
         /// s_Scenes twice is combined twice (its positions repeat), as two equal objects were
         /// before keying.
-        /// <para>Data adoption, an open decision (not measured; both variants give every captured
-        /// row): a kept object nothing uses takes the read data, its own set, which is also its
-        /// whole set. Edits a script made through bakedProbes or coefficients are replaced by the
-        /// read data; the alternative would keep them (asset-resident data). Neither edit
-        /// persistence nor reimport is claimed.</para>
+        /// <para>Data adoption is Unbound's preservation policy, not measured: a kept object
+        /// nothing uses takes the freshly read own/whole set, as the previous new-object load did.
+        /// In-memory edits may be replaced. Native persistence of such edits and reimport are
+        /// unresolved; no test or API guarantee is inferred from the captured unmodified bakes.</para>
         /// <para>The unused <paramref name="read"/> object leaves the object registry: an internal
         /// cleanup of a never handed-out duplicate (its instance id stays consumed), not an object
         /// enumeration rule. It stays registered if this API has handed it out.</para>

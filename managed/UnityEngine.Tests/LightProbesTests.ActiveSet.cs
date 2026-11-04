@@ -37,14 +37,13 @@ namespace Unbound.Tests
             new ObjectRef(fileId, Guid.NewGuid().ToString("N"), 2);
 
         /// <summary>
-        /// A Single reload of the scene whose probes object a script still holds (the outgoing scene
-        /// itself). Guard: the admitted reset stays as it was, at the outgoing sceneUnloaded the object
-        /// has count and cellCount 0 and keeps its own counts, not null, and no event is raised
-        /// (measured: lifecycle.jsonl row 22, creation-ownership.jsonl seq 75). Measured: the incoming
-        /// lighting data then gives that same object back with the scene's whole set
-        /// (creation-ownership.jsonl seq 69-80, "probes0 18 18 73 73" after "probes0 0 18 0 73";
-        /// lifecycle.jsonl rows 23-29 for the other scene). Internal: the object read for it leaves
-        /// the registry and the kept object stays registered.
+        /// Applies the retained-object reload mechanism to a self-reload. That configuration is
+        /// not captured. The measured histories are Main -> Extra -> Main (creation seq21 then
+        /// seq69-73) and a later load of the earlier Extra (lifecycle row22 then23-29).
+        /// Guard: the admitted reset at sceneUnloaded keeps the own counts, but clears the combined
+        /// count and cells (lifecycle row22, creation seq75). Internal: the fresh duplicate leaves
+        /// the registry and the kept object stays registered. Neither this registry choice nor the
+        /// self-reload shape is a universal Unity identity guarantee.
         /// </summary>
         [Fact]
         public void SingleReloadGivesTheStillReferencedProbesObjectBackWhole()
@@ -415,7 +414,9 @@ namespace Unbound.Tests
                 pending = Baked(Box, _ => 4f);
                 LightProbes.SceneLoaded(pendingScene.Handle.Value, pendingData, pending);
                 SceneManagerInternal.Unload(pendingScene);
-                UnityEngine.Object.Destroy(pending);
+                // Internal guard: only the pending flag is needed. Do not enqueue a destruction
+                // that would leave the test's object in the global end-of-frame queue.
+                pending.m_PendingDestroy = true;
                 Assert.True(pending.m_PendingDestroy);
                 var pendingAgain = scenes.Loaded("Pending", UniqueScenePath());
                 var replacement = Baked(Box, _ => 4f);
@@ -429,7 +430,11 @@ namespace Unbound.Tests
             }
             finally
             {
-                if (pending != null && !pending.m_Destroyed) UnityEngine.Object.DestroyImmediate(pending);
+                if (pending != null && !pending.m_Destroyed)
+                {
+                    pending.m_PendingDestroy = false;
+                    UnityEngine.Object.DestroyImmediate(pending);
+                }
                 LightmapSettings.Reset();
                 scenes.Dispose();
             }
