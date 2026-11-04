@@ -28,7 +28,7 @@ namespace Unbound.Runtime
             using (ObjectRegistry.AsAssets())
             {
                 if (import.Str("importer") == "legacy")
-                    Legacy(description, material);
+                    Legacy(assetPath, description, material);
                 else
                     Preprocess(assetPath, description, material);
             }
@@ -209,31 +209,68 @@ namespace Unbound.Runtime
         /// transparency factor (or 1 minus the transparent colour when the factor is 1),
         /// transparent below 1 or with a transparent-colour texture, the diffuse, normal (Bump or
         /// NormalMap) and emissive textures, smoothness 0, and baked emission only from an emissive
-        /// texture. Autodesk Interactive materials keep their shader, colour, opacity, roughness
-        /// (as smoothness), metallic and emission.
+        /// texture. The colour and diffuse texture also go to the shader's main colour and texture
+        /// (<see cref="Material.color"/>, <see cref="Material.mainTexture"/>: the [MainColor] and
+        /// [MainTexture] properties, else the same _Color and _MainTex, as for Standard).
+        /// Under a render pipeline the material is one made with the pipeline's
+        /// <see cref="UnityEngine.Rendering.RenderPipelineAsset.defaultShader"/>, holding that
+        /// shader's own defaults before the same rule (observed in the 6000.0.71f1 URP capture of
+        /// tests/projects/modelimport: URP's Lit with Lit's defaults; other pipelines and releases
+        /// are not measured); a pipeline without one is an error and the material stays as it is.
+        /// Autodesk Interactive materials keep their shader, colour, opacity, roughness (as
+        /// smoothness), metallic and emission (under a render pipeline too: what the Editor sets
+        /// there on the pipeline's Autodesk Interactive shaders is not reproduced).
         /// </summary>
-        static void Legacy(MaterialDescription d, Material m)
+        static void Legacy(string assetPath, MaterialDescription d, Material m)
         {
             if (d.TryGetProperty("renderAPI", out string api) && api == "SFX_PBS_SHADER")
             {
                 LegacyAutodeskInteractive(d, m);
                 return;
             }
-            var shader = Shader.Find("Standard");
+            var pipeline = UnityEngine.Rendering.GraphicsSettings.currentRenderPipeline;
+            Shader shader;
+            if (pipeline == null)
+                shader = Shader.Find("Standard");
+            else
+            {
+                try
+                {
+                    shader = pipeline.defaultShader;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogException(e);
+                    return;
+                }
+                if (shader == null)
+                {
+                    Debug.LogError($"Unbound: the render pipeline asset '{pipeline.name}' ({pipeline.GetType().FullName}) has no default shader, " +
+                        $"so the legacy model importer cannot make material '{m.name}' of {assetPath}; the material is left as it was.", m);
+                    return;
+                }
+            }
             if (shader == null) return;
             m.shader = shader;
+            if (pipeline != null) MadeWith(m, shader);
             float opacity = 1f;
             if (d.TryGetProperty("TransparencyFactor", out float factor))
                 opacity = factor == 1f ? 1f : 1f - factor;
             if (opacity == 1f && d.TryGetProperty("TransparentColor", out Vector4 transparent))
                 opacity = transparent.x == 1f ? 1f : 1f - transparent.x;
             Transparency(m, opacity < 1f || d.TryGetProperty("TransparentColor", out TexturePropertyDescription _));
-            if (d.TryGetProperty("DiffuseColor", out Vector4 diffuse))
-                m.SetColor("_Color", new Color(diffuse.x, diffuse.y, diffuse.z, opacity));
-            else
-                m.SetColor("_Color", new Color(1f, 1f, 1f, opacity));
+            var color = d.TryGetProperty("DiffuseColor", out Vector4 diffuse)
+                ? new Color(diffuse.x, diffuse.y, diffuse.z, opacity)
+                : new Color(1f, 1f, 1f, opacity);
+            m.SetColor("_Color", color);
+            m.color = color;
             if (d.TryGetProperty("DiffuseColor", out TexturePropertyDescription texture))
+            {
                 SetTexture(m, "_MainTex", texture);
+                m.mainTexture = texture.texture;
+                m.mainTextureOffset = texture.offset;
+                m.mainTextureScale = texture.scale;
+            }
             if (d.TryGetProperty("Bump", out texture) || d.TryGetProperty("NormalMap", out texture))
             {
                 SetTexture(m, "_BumpMap", texture);
@@ -247,6 +284,27 @@ namespace Unbound.Runtime
                 m.globalIlluminationFlags = MaterialGlobalIlluminationFlags.BakedEmissive;
             }
             m.SetFloat("_Glossiness", 0f);
+        }
+
+        /// <summary>
+        /// Makes the model document's material (named, registered and referenced by the model, with
+        /// Standard until now) hold what a material made with <paramref name="shader"/> holds: every
+        /// property value, texture slot, keyword and render queue of a new material of that shader
+        /// (<see cref="Material.CopyPropertiesFromMaterial"/>, which leaves the shader as it is),
+        /// instead of the values <see cref="Material.shader"/> keeps from Standard for the names
+        /// both declare and Standard's texture slots. Its name, identity and references stay.
+        /// </summary>
+        static void MadeWith(Material m, Shader shader)
+        {
+            var made = new Material(shader);
+            try
+            {
+                m.CopyPropertiesFromMaterial(made);
+            }
+            finally
+            {
+                Object.DestroyImmediate(made);
+            }
         }
 
         static void LegacyAutodeskInteractive(MaterialDescription d, Material m)
