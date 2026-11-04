@@ -133,6 +133,19 @@ Serialized built-in device limits, SRP/backend exclusions and negative-limit sel
 unmeasured. Full raw unions and limits: `validation/runs/shader-pass-count-matching-validation-20261103-4/`
 and Root `validation/runs/shader-pass-count-root-admission-20261103/`.
 
+The subsequent tag-only implementation at `2c053e21` is admitted after matching validation.
+It resolves exactly53 more keys,39 fallback-tag and14 selected-tag answers, giving902/923
+with zero lost matches. All136 tag readouts match. All340 count readouts, colours and
+non-target values are unchanged. The remaining21 failures are20 FindPass answers and one
+batch-context answer; renderer indices and draw APIs remain untouched. The full suite is
+1668/1668, with six new cases failing on the old Core and the override-tag guard passing.
+Shaderkeywords and all three modelimport profiles keep their raw values. The expected
+SRP tag warning was absent; early unknown/override exits can preserve the renderer answer
+without that diagnostic, and the known-declaration warning is covered by a managed test.
+This does not measure SRP selection or first-missing-tag/later-tag search order. Evidence:
+`validation/runs/shader-tag-query-matching-validation-20261104/` and
+`validation/runs/shader-tag-query-root-admission-20261104/`.
+
 ## Capture
 
 ```
