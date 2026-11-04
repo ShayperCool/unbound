@@ -182,7 +182,8 @@ Significant gaps remain open:
 * Unload callbacks still run inside `UnloadSceneAsync`. The dying object remains
   active and findable.
 * Activating a handler-created empty scene keeps a non-null global probe object
-  where the Editor returns null. Probe-object identity across scene reloads differs.
+  where the Editor returns null. Identity beyond the retained-reference reload
+  cases validated below remains unmeasured.
 * Two component-deletion log lines retain their earlier ordering difference.
 * Name/path/build-index lookups of pending or closing scenes, multiple-outgoing
   and held-load listing order, and editor root-scene counts remain unmeasured.
@@ -202,3 +203,25 @@ OnDisable and outgoing root's destruction is Unbound's chosen position in that w
 The multiple-outgoing, no-outgoing and exception controls pin implementation behavior,
 not measured Unity rules. Reports: `validation/runs/lp-reset-phase-validation-20261102c/`;
 Root admission: `validation/runs/lp-reset-phase-root-admission-20261103/root-validation.json`.
+
+The retained-reference reload cases now return the earlier probe object with the
+same counts. Matching validation on source `850614a1` resolves all 25 identity
+readouts: creation canonical 65->76/84, strict failing leaves 21->10; lifecycle
+14->21/31. These are 25 alias replacements within 18 raw JSON value strings. Every
+other character, count and callback remains unchanged. Raw/teardown captures, the
+625-row main probe and its PNG are byte-identical before/after; no match is lost.
+The outgoing `seq20` reset snapshot stays fixed.
+
+The implementation retains project Lighting Data identities by GUID and fileID,
+with weak references to previously returned objects. Sharing one key across scene
+files is an implementation mechanism, not a separately measured Native identity
+guarantee. Replacing an unused object's data with freshly read data is an Unbound
+preservation policy. Unreferenced-object identity depends on collection; persistence
+of in-memory edits, duplicate-position combination, cross-scene shared-asset cases
+and `GetInstantiatedLightProbesForScene` clone semantics remain open or unmeasured.
+Empty-active-null, hull/query, additive async and dying-object gaps remain visible.
+
+Validation: `validation/runs/lp-identity-matching-validation-20261104/`, 1694/1694
+managed tests, source-only reuse-disabled red control 6 assertion failures/3 guards,
+and six engine captures. API 0/2319 is reused through 65228 equal external metadata
+rows. Root checks and admission: `validation/runs/lp-identity-root-admission-20261104/`.
