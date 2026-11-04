@@ -1234,7 +1234,7 @@ namespace Unbound.Runtime
             var effects = new List<(MonoBehaviour, ScriptMessages)>();
             foreach (var component in camera.m_GameObject.m_Components)
             {
-                if (component is MonoBehaviour script && script.isActiveAndEnabled)
+                if (component is MonoBehaviour script && script.IsActiveAndEnabledNoThrow)
                 {
                     var messages = ScriptMessages.For(script.GetType());
                     if (messages.OnRenderImage != null && messages.OpaqueImageEffect == opaque) effects.Add((script, messages));
@@ -1300,7 +1300,7 @@ namespace Unbound.Runtime
         {
             foreach (var component in camera.m_GameObject.m_Components)
             {
-                if (component is not MonoBehaviour script || !script.isActiveAndEnabled) continue;
+                if (component is not MonoBehaviour script || !script.IsActiveAndEnabledNoThrow) continue;
                 var action = message(ScriptMessages.For(script.GetType()));
                 if (action == null) continue;
                 try { action(script); }

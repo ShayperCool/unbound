@@ -162,9 +162,17 @@ namespace UnityEngine
     {
         internal bool m_Enabled = true;
 
+        /// <summary>Reading it on a destroyed behaviour throws, as writing it does (measured in the
+        /// Editor after the destruction is delivered: tests/projects/destroycontract). Pending
+        /// request reads are measured. Reads during OnDestroy keep the previous implementation's
+        /// flag timing; accessibility there is not measured.</summary>
         public bool enabled
         {
-            get => m_Enabled;
+            get
+            {
+                ThrowIfDestroyed();
+                return m_Enabled;
+            }
             set
             {
                 ThrowIfDestroyed();
@@ -174,6 +182,18 @@ namespace UnityEngine
             }
         }
 
-        public bool isActiveAndEnabled => !m_Destroyed && m_Enabled && m_GameObject != null && m_GameObject.activeInHierarchy;
+        /// <summary>Throws on a destroyed behaviour (measured, as <see cref="enabled"/>).</summary>
+        public bool isActiveAndEnabled
+        {
+            get
+            {
+                ThrowIfDestroyed();
+                return IsActiveAndEnabledNoThrow;
+            }
+        }
+
+        /// <summary>The engine's own check: false for a destroyed behaviour instead of throwing.</summary>
+        internal bool IsActiveAndEnabledNoThrow =>
+            !m_Destroyed && m_Enabled && m_GameObject != null && m_GameObject.ActiveInHierarchyNoThrow;
     }
 }

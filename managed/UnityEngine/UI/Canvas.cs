@@ -39,7 +39,7 @@ namespace UnityEngine
         bool m_HasEnabled;
         bool m_AddedActive;
 
-        internal override void OnAttached() => m_AddedActive = m_GameObject.activeInHierarchy;
+        internal override void OnAttached() => m_AddedActive = m_GameObject.ActiveInHierarchyNoThrow;
 
         public Canvas() { }
 

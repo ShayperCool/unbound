@@ -361,7 +361,7 @@ namespace UnityEngine
                 var components = go.m_Components;
                 for (int i = 0; i < components.Count; i++)
                 {
-                    if (!(components[i] is MonoBehaviour script) || !script.isActiveAndEnabled) continue;
+                    if (!(components[i] is MonoBehaviour script) || !script.IsActiveAndEnabledNoThrow) continue;
                     var call = ScriptMessages.For(script.GetType()).OnWillRenderObject;
                     if (call == null) continue;
                     try { call(script); }

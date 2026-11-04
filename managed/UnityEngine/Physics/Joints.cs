@@ -296,7 +296,7 @@ namespace UnityEngine
         internal override void OnAttached()
         {
             base.OnAttached();
-            var filter = GetComponent<MeshFilter>();
+            var filter = m_GameObject.FindComponent<MeshFilter>();
             var mesh = filter != null ? filter.sharedMesh : null;
             if (mesh != null) m_Anchor = new Vector3(0f, mesh.bounds.max.y, 0f);
         }

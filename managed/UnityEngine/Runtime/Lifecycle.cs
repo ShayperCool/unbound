@@ -117,7 +117,7 @@ namespace Unbound.Runtime
         internal static void OnComponentAdded(Component c)
         {
             var go = c.m_GameObject;
-            if (go.m_IsPrefabAsset || !go.activeInHierarchy) return;
+            if (go.m_IsPrefabAsset || !go.ActiveInHierarchyNoThrow) return;
             Activate(new List<Component> { c });
         }
 
