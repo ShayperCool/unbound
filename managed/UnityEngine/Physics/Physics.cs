@@ -461,7 +461,11 @@ namespace UnityEngine
 
         public static int RaycastNonAlloc(Ray ray, RaycastHit[] results) => RaycastNonAlloc(ray.origin, ray.direction, results, Mathf.Infinity, DefaultRaycastLayers, QueryTriggerInteraction.UseGlobal);
 
+        // Every Ray and origin/direction overload ends here. A null buffer returns no results and
+        // reports no error (6000.0 Scripting API), so the query, and the world preparation it
+        // starts, never runs for it.
         public static int RaycastNonAlloc(Vector3 origin, Vector3 direction, RaycastHit[] results, [Internal.DefaultValue("Mathf.Infinity")] float maxDistance, [Internal.DefaultValue("DefaultRaycastLayers")] int layerMask, [Internal.DefaultValue("QueryTriggerInteraction.UseGlobal")] QueryTriggerInteraction queryTriggerInteraction) =>
+            results == null ? 0 :
             Q.Fill(Q.Raycast(origin, direction, maxDistance, layerMask, queryTriggerInteraction, closest: false), results);
 
         public static int RaycastNonAlloc(Vector3 origin, Vector3 direction, RaycastHit[] results, float maxDistance, int layerMask) => RaycastNonAlloc(origin, direction, results, maxDistance, layerMask, QueryTriggerInteraction.UseGlobal);
