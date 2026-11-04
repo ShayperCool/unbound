@@ -1,0 +1,11842 @@
+{
+ "source": "Assets/Scripts/ActivationMechanismsProbe.cs",
+ "scene": "Assets/Scenes/Probe.unity",
+ "tables": {
+  "nodes": [
+   [
+    "base",
+    "P",
+    null,
+    true
+   ],
+   [
+    "base",
+    "C1",
+    "P",
+    true
+   ],
+   [
+    "base",
+    "G",
+    "C1",
+    true
+   ],
+   [
+    "base",
+    "C2",
+    "P",
+    true
+   ],
+   [
+    "base",
+    "U",
+    null,
+    true
+   ],
+   [
+    "offA",
+    "A",
+    null,
+    true
+   ],
+   [
+    "offA",
+    "A1",
+    "A",
+    true
+   ],
+   [
+    "offA",
+    "A11",
+    "A1",
+    true
+   ],
+   [
+    "offA",
+    "A2",
+    "A",
+    true
+   ],
+   [
+    "offA",
+    "A21",
+    "A2",
+    true
+   ],
+   [
+    "mirror",
+    "M",
+    null,
+    true
+   ],
+   [
+    "mirror",
+    "M1",
+    "M",
+    true
+   ],
+   [
+    "mirror",
+    "M11",
+    "M1",
+    true
+   ],
+   [
+    "mirror",
+    "M2",
+    "M",
+    true
+   ],
+   [
+    "mirror",
+    "M21",
+    "M2",
+    true
+   ],
+   [
+    "on1",
+    "R",
+    null,
+    true
+   ],
+   [
+    "on1",
+    "RY",
+    "R",
+    true
+   ],
+   [
+    "on1",
+    "RX",
+    "R",
+    false
+   ],
+   [
+    "on1",
+    "RZ",
+    "R",
+    true
+   ],
+   [
+    "on3",
+    "L",
+    null,
+    true
+   ],
+   [
+    "on3",
+    "LY",
+    "L",
+    true
+   ],
+   [
+    "on3",
+    "LX",
+    "L",
+    false
+   ],
+   [
+    "on3",
+    "LZ",
+    "L",
+    true
+   ]
+  ],
+  "create": [
+   "G",
+   "C2",
+   "P",
+   "C1",
+   "U",
+   "A21",
+   "A1",
+   "A",
+   "A11",
+   "A2",
+   "M11",
+   "M2",
+   "M",
+   "M21",
+   "M1",
+   "RZ",
+   "RX",
+   "R",
+   "RY",
+   "LZ",
+   "LX",
+   "L",
+   "LY"
+  ],
+  "add": [
+   "C2",
+   "C1",
+   "P",
+   "G",
+   "U",
+   "A1",
+   "A21",
+   "A",
+   "A11",
+   "A2",
+   "M2",
+   "M11",
+   "M",
+   "M21",
+   "M1",
+   "RX",
+   "R",
+   "RZ",
+   "RY",
+   "LX",
+   "L",
+   "LZ",
+   "LY"
+  ],
+  "wake": [
+   "RX",
+   "LX"
+  ],
+  "toggle": [
+   "L"
+  ],
+  "scene_adds": [
+   [
+    "S1",
+    "rt"
+   ]
+  ],
+  "scene_labels": [
+   "S",
+   "S1",
+   "S2",
+   "S21",
+   "S3"
+  ],
+  "ops": [
+   [
+    "baseOff",
+    "base",
+    "P",
+    false
+   ],
+   [
+    "baseOn",
+    "base",
+    "P",
+    true
+   ],
+   [
+    "offAOff",
+    "offA",
+    "A",
+    false
+   ],
+   [
+    "offAOn",
+    "offA",
+    "A",
+    true
+   ],
+   [
+    "mirrorOff",
+    "mirror",
+    "M",
+    false
+   ],
+   [
+    "mirrorOn",
+    "mirror",
+    "M",
+    true
+   ],
+   [
+    "on1Off",
+    "on1",
+    "R",
+    false
+   ],
+   [
+    "on1On",
+    "on1",
+    "R",
+    true
+   ],
+   [
+    "on3Off",
+    "on3",
+    "L",
+    false
+   ],
+   [
+    "on3On",
+    "on3",
+    "L",
+    true
+   ],
+   [
+    "on2Off",
+    "scene",
+    "S",
+    false
+   ],
+   [
+    "on2On",
+    "scene",
+    "S",
+    true
+   ]
+  ],
+  "contacts": [
+   [
+    "solidOnScripts",
+    false,
+    true,
+    true
+   ],
+   [
+    "solidOnBuiltins",
+    false,
+    true,
+    false
+   ],
+   [
+    "triggerOnScripts",
+    true,
+    true,
+    true
+   ],
+   [
+    "triggerOnBuiltins",
+    true,
+    true,
+    false
+   ],
+   [
+    "solidOffScripts",
+    false,
+    false,
+    true
+   ],
+   [
+    "solidOffBuiltins",
+    false,
+    false,
+    false
+   ],
+   [
+    "triggerOffScripts",
+    true,
+    false,
+    true
+   ],
+   [
+    "triggerOffBuiltins",
+    true,
+    false,
+    false
+   ]
+  ],
+  "particles": [
+   [
+    "psScripts",
+    true
+   ],
+   [
+    "psBuiltins",
+    false
+   ]
+  ],
+  "emitted": [
+   2,
+   3
+  ]
+ },
+ "scene_model": {
+  "documents": [
+   [
+    29,
+    1
+   ],
+   [
+    104,
+    2
+   ],
+   [
+    157,
+    3
+   ],
+   [
+    196,
+    4
+   ],
+   [
+    1,
+    1200
+   ],
+   [
+    114,
+    600
+   ],
+   [
+    4,
+    2200
+   ],
+   [
+    1,
+    1100
+   ],
+   [
+    114,
+    700
+   ],
+   [
+    4,
+    2000
+   ],
+   [
+    114,
+    200
+   ],
+   [
+    1,
+    1400
+   ],
+   [
+    4,
+    2400
+   ],
+   [
+    114,
+    500
+   ],
+   [
+    1,
+    1300
+   ],
+   [
+    114,
+    100
+   ],
+   [
+    4,
+    2300
+   ],
+   [
+    1,
+    1000
+   ],
+   [
+    4,
+    2100
+   ],
+   [
+    114,
+    300
+   ],
+   [
+    1660057539,
+    9223372036854775807
+   ]
+  ],
+  "roots": [
+   "S"
+  ],
+  "children": {
+   "S3": [],
+   "S21": [],
+   "S": [
+    "S1",
+    "S2",
+    "S3"
+   ],
+   "S2": [
+    "S21"
+   ],
+   "S1": []
+  },
+  "parents": {
+   "S3": "S",
+   "S21": "S2",
+   "S": null,
+   "S2": "S",
+   "S1": "S"
+  },
+  "components": {
+   "S3": [
+    "S3/r"
+   ],
+   "S21": [
+    "S21/r"
+   ],
+   "S": [
+    "S/r"
+   ],
+   "S2": [
+    "S2/b",
+    "S2/a"
+   ],
+   "S1": [
+    "S1/r"
+   ]
+  },
+  "active": {
+   "S3": true,
+   "S21": true,
+   "S": true,
+   "S2": true,
+   "S1": true
+  },
+  "doc_mb": [
+   "S21/r",
+   "S2/a",
+   "S3/r",
+   "S/r",
+   "S2/b",
+   "S1/r"
+  ],
+  "doc_go": [
+   "S3",
+   "S21",
+   "S",
+   "S2",
+   "S1"
+  ],
+  "fileid_mb": [
+   "S2/b",
+   "S3/r",
+   "S1/r",
+   "S/r",
+   "S21/r",
+   "S2/a"
+  ],
+  "fileid_go": [
+   "S1",
+   "S21",
+   "S3",
+   "S2",
+   "S"
+  ],
+  "transform_fileids": {
+   "S3": 2200,
+   "S21": 2000,
+   "S": 2400,
+   "S2": 2300,
+   "S1": 2100
+  },
+  "gameobject_fileids": {
+   "S3": 1200,
+   "S21": 1100,
+   "S": 1400,
+   "S2": 1300,
+   "S1": 1000
+  },
+  "recorder_fileids": {
+   "S21/r": 600,
+   "S2/a": 700,
+   "S3/r": 200,
+   "S/r": 500,
+   "S2/b": 100,
+   "S1/r": 300
+  }
+ },
+ "outcomes": [
+  "ONE",
+  "MULTIPLE",
+  "NONE",
+  "NOT_EVALUABLE"
+ ],
+ "capture_derived": {
+  "FIRSTAWAKE": "recorders in the order of their first recorded Awake (boot, setup, settle and earlier operation lists)",
+  "REVFIRSTAWAKE": "reverse of FIRSTAWAKE",
+  "LASTENABLE": "recorders in the order of their last recorded OnEnable before the operation",
+  "REVLASTENABLE": "reverse of LASTENABLE",
+  "IDDESC": "recorder components by actual instance id, descending (signed)",
+  "IDASC": "recorder components by actual instance id, ascending (signed)",
+  "GOIDDESC": "objects by actual GameObject instance id descending; component-list order inside an object",
+  "GOIDASC": "objects by actual GameObject instance id ascending; component-list order inside an object",
+  "TRIDDESC": "objects by actual Transform instance id descending; component-list order inside an object",
+  "TRIDASC": "objects by actual Transform instance id ascending; component-list order inside an object"
+ },
+ "order_models": [
+  "CUR",
+  "F",
+  "F_REVCOMP",
+  "S",
+  "S_POST",
+  "SCRIPTS_FIRST"
+ ],
+ "placements": [
+  "AT_REMOVAL",
+  "DEFERRED",
+  "NONE"
+ ],
+ "reads": [
+  "REMOVAL",
+  "FLAGS"
+ ],
+ "operations": {
+  "op.baseOff": {
+   "tree": "base",
+   "target": "P",
+   "value": false,
+   "callback": "OnDisable",
+   "objects": [
+    "P",
+    "C1",
+    "G",
+    "C2"
+   ],
+   "recorders": [
+    "P/r",
+    "C1/r",
+    "G/r",
+    "C2/r"
+   ],
+   "components": {
+    "P": [
+     "P/r"
+    ],
+    "C1": [
+     "C1/r"
+    ],
+    "G": [
+     "G/r"
+    ],
+    "C2": [
+     "C2/r"
+    ]
+   },
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "PRE_REVCOMP": [
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "POST_REVCOMP": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPRE_REVCOMP": [
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPOST": [
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPOST_REVCOMP": [
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "LEVEL": [
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "LEVEL_REVCOMP": [
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVLEVEL": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVLEVEL_REVCOMP": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVBFS": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVBFS_REVCOMP": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "AFIRSTAWAKE": [
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVAFIRSTAWAKE": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "ALASTENABLE": [
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVALASTENABLE": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ]
+   },
+   "cells": [
+    [
+     "PRE",
+     "PRE_REVCOMP"
+    ],
+    [
+     "POST",
+     "POST_REVCOMP",
+     "REVLEVEL",
+     "REVLEVEL_REVCOMP"
+    ],
+    [
+     "REVPRE",
+     "REVPRE_REVCOMP"
+    ],
+    [
+     "REVPOST",
+     "REVPOST_REVCOMP"
+    ],
+    [
+     "LEVEL",
+     "LEVEL_REVCOMP"
+    ],
+    [
+     "REVBFS",
+     "REVBFS_REVCOMP"
+    ],
+    [
+     "CREATE"
+    ],
+    [
+     "REVCREATE"
+    ],
+    [
+     "ADD",
+     "AFIRSTAWAKE",
+     "ALASTENABLE"
+    ],
+    [
+     "REVADD",
+     "REVAFIRSTAWAKE",
+     "REVALASTENABLE"
+    ]
+   ]
+  },
+  "op.baseOn": {
+   "tree": "base",
+   "target": "P",
+   "value": true,
+   "callback": "OnEnable",
+   "objects": [
+    "P",
+    "C1",
+    "G",
+    "C2"
+   ],
+   "recorders": [
+    "P/r",
+    "C1/r",
+    "G/r",
+    "C2/r"
+   ],
+   "components": {
+    "P": [
+     "P/r"
+    ],
+    "C1": [
+     "C1/r"
+    ],
+    "G": [
+     "G/r"
+    ],
+    "C2": [
+     "C2/r"
+    ]
+   },
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "PRE_REVCOMP": [
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "POST_REVCOMP": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPRE_REVCOMP": [
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPOST": [
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPOST_REVCOMP": [
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "LEVEL": [
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "LEVEL_REVCOMP": [
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVLEVEL": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVLEVEL_REVCOMP": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVBFS": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVBFS_REVCOMP": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "AFIRSTAWAKE": [
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVAFIRSTAWAKE": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "ALASTENABLE": [
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVALASTENABLE": [
+     {
+      "n": "G",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ]
+   },
+   "cells": [
+    [
+     "PRE",
+     "PRE_REVCOMP"
+    ],
+    [
+     "POST",
+     "POST_REVCOMP",
+     "REVLEVEL",
+     "REVLEVEL_REVCOMP"
+    ],
+    [
+     "REVPRE",
+     "REVPRE_REVCOMP"
+    ],
+    [
+     "REVPOST",
+     "REVPOST_REVCOMP"
+    ],
+    [
+     "LEVEL",
+     "LEVEL_REVCOMP"
+    ],
+    [
+     "REVBFS",
+     "REVBFS_REVCOMP"
+    ],
+    [
+     "CREATE"
+    ],
+    [
+     "REVCREATE"
+    ],
+    [
+     "ADD",
+     "AFIRSTAWAKE",
+     "ALASTENABLE"
+    ],
+    [
+     "REVADD",
+     "REVAFIRSTAWAKE",
+     "REVALASTENABLE"
+    ]
+   ]
+  },
+  "op.offAOff": {
+   "tree": "offA",
+   "target": "A",
+   "value": false,
+   "callback": "OnDisable",
+   "objects": [
+    "A",
+    "A1",
+    "A11",
+    "A2",
+    "A21"
+   ],
+   "recorders": [
+    "A/r",
+    "A1/r",
+    "A11/r",
+    "A2/r",
+    "A21/r"
+   ],
+   "components": {
+    "A": [
+     "A/r"
+    ],
+    "A1": [
+     "A1/r"
+    ],
+    "A11": [
+     "A11/r"
+    ],
+    "A2": [
+     "A2/r"
+    ],
+    "A21": [
+     "A21/r"
+    ]
+   },
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "PRE_REVCOMP": [
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "POST_REVCOMP": [
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPRE_REVCOMP": [
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPOST": [
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPOST_REVCOMP": [
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "LEVEL": [
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "LEVEL_REVCOMP": [
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVLEVEL": [
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVLEVEL_REVCOMP": [
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVBFS": [
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVBFS_REVCOMP": [
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "AFIRSTAWAKE": [
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVAFIRSTAWAKE": [
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "ALASTENABLE": [
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVALASTENABLE": [
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ]
+   },
+   "cells": [
+    [
+     "PRE",
+     "PRE_REVCOMP"
+    ],
+    [
+     "POST",
+     "POST_REVCOMP"
+    ],
+    [
+     "REVPRE",
+     "REVPRE_REVCOMP"
+    ],
+    [
+     "REVPOST",
+     "REVPOST_REVCOMP"
+    ],
+    [
+     "LEVEL",
+     "LEVEL_REVCOMP"
+    ],
+    [
+     "REVLEVEL",
+     "REVLEVEL_REVCOMP"
+    ],
+    [
+     "REVBFS",
+     "REVBFS_REVCOMP"
+    ],
+    [
+     "CREATE"
+    ],
+    [
+     "REVCREATE"
+    ],
+    [
+     "ADD",
+     "AFIRSTAWAKE",
+     "ALASTENABLE"
+    ],
+    [
+     "REVADD",
+     "REVAFIRSTAWAKE",
+     "REVALASTENABLE"
+    ]
+   ]
+  },
+  "op.offAOn": {
+   "tree": "offA",
+   "target": "A",
+   "value": true,
+   "callback": "OnEnable",
+   "objects": [
+    "A",
+    "A1",
+    "A11",
+    "A2",
+    "A21"
+   ],
+   "recorders": [
+    "A/r",
+    "A1/r",
+    "A11/r",
+    "A2/r",
+    "A21/r"
+   ],
+   "components": {
+    "A": [
+     "A/r"
+    ],
+    "A1": [
+     "A1/r"
+    ],
+    "A11": [
+     "A11/r"
+    ],
+    "A2": [
+     "A2/r"
+    ],
+    "A21": [
+     "A21/r"
+    ]
+   },
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "PRE_REVCOMP": [
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "POST_REVCOMP": [
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPRE_REVCOMP": [
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPOST": [
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPOST_REVCOMP": [
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "LEVEL": [
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "LEVEL_REVCOMP": [
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVLEVEL": [
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVLEVEL_REVCOMP": [
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVBFS": [
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVBFS_REVCOMP": [
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "AFIRSTAWAKE": [
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVAFIRSTAWAKE": [
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "ALASTENABLE": [
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVALASTENABLE": [
+     {
+      "n": "A2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "A1",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ]
+   },
+   "cells": [
+    [
+     "PRE",
+     "PRE_REVCOMP"
+    ],
+    [
+     "POST",
+     "POST_REVCOMP"
+    ],
+    [
+     "REVPRE",
+     "REVPRE_REVCOMP"
+    ],
+    [
+     "REVPOST",
+     "REVPOST_REVCOMP"
+    ],
+    [
+     "LEVEL",
+     "LEVEL_REVCOMP"
+    ],
+    [
+     "REVLEVEL",
+     "REVLEVEL_REVCOMP"
+    ],
+    [
+     "REVBFS",
+     "REVBFS_REVCOMP"
+    ],
+    [
+     "CREATE"
+    ],
+    [
+     "REVCREATE"
+    ],
+    [
+     "ADD",
+     "AFIRSTAWAKE",
+     "ALASTENABLE"
+    ],
+    [
+     "REVADD",
+     "REVAFIRSTAWAKE",
+     "REVALASTENABLE"
+    ]
+   ]
+  },
+  "op.mirrorOff": {
+   "tree": "mirror",
+   "target": "M",
+   "value": false,
+   "callback": "OnDisable",
+   "objects": [
+    "M",
+    "M1",
+    "M11",
+    "M2",
+    "M21"
+   ],
+   "recorders": [
+    "M/r",
+    "M1/r",
+    "M11/r",
+    "M2/r",
+    "M21/r"
+   ],
+   "components": {
+    "M": [
+     "M/r"
+    ],
+    "M1": [
+     "M1/r"
+    ],
+    "M11": [
+     "M11/r"
+    ],
+    "M2": [
+     "M2/r"
+    ],
+    "M21": [
+     "M21/r"
+    ]
+   },
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "PRE_REVCOMP": [
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "POST_REVCOMP": [
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPRE_REVCOMP": [
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPOST": [
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPOST_REVCOMP": [
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "LEVEL": [
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "LEVEL_REVCOMP": [
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVLEVEL": [
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVLEVEL_REVCOMP": [
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVBFS": [
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVBFS_REVCOMP": [
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "AFIRSTAWAKE": [
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVAFIRSTAWAKE": [
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "ALASTENABLE": [
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVALASTENABLE": [
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ]
+   },
+   "cells": [
+    [
+     "PRE",
+     "PRE_REVCOMP"
+    ],
+    [
+     "POST",
+     "POST_REVCOMP"
+    ],
+    [
+     "REVPRE",
+     "REVPRE_REVCOMP"
+    ],
+    [
+     "REVPOST",
+     "REVPOST_REVCOMP"
+    ],
+    [
+     "LEVEL",
+     "LEVEL_REVCOMP"
+    ],
+    [
+     "REVLEVEL",
+     "REVLEVEL_REVCOMP"
+    ],
+    [
+     "REVBFS",
+     "REVBFS_REVCOMP"
+    ],
+    [
+     "CREATE"
+    ],
+    [
+     "REVCREATE"
+    ],
+    [
+     "ADD",
+     "AFIRSTAWAKE",
+     "ALASTENABLE"
+    ],
+    [
+     "REVADD",
+     "REVAFIRSTAWAKE",
+     "REVALASTENABLE"
+    ]
+   ]
+  },
+  "op.mirrorOn": {
+   "tree": "mirror",
+   "target": "M",
+   "value": true,
+   "callback": "OnEnable",
+   "objects": [
+    "M",
+    "M1",
+    "M11",
+    "M2",
+    "M21"
+   ],
+   "recorders": [
+    "M/r",
+    "M1/r",
+    "M11/r",
+    "M2/r",
+    "M21/r"
+   ],
+   "components": {
+    "M": [
+     "M/r"
+    ],
+    "M1": [
+     "M1/r"
+    ],
+    "M11": [
+     "M11/r"
+    ],
+    "M2": [
+     "M2/r"
+    ],
+    "M21": [
+     "M21/r"
+    ]
+   },
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "PRE_REVCOMP": [
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "POST_REVCOMP": [
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPRE_REVCOMP": [
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPOST": [
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPOST_REVCOMP": [
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "LEVEL": [
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "LEVEL_REVCOMP": [
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVLEVEL": [
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVLEVEL_REVCOMP": [
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVBFS": [
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVBFS_REVCOMP": [
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "AFIRSTAWAKE": [
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVAFIRSTAWAKE": [
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "ALASTENABLE": [
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVALASTENABLE": [
+     {
+      "n": "M1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M11",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "M2",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ]
+   },
+   "cells": [
+    [
+     "PRE",
+     "PRE_REVCOMP"
+    ],
+    [
+     "POST",
+     "POST_REVCOMP"
+    ],
+    [
+     "REVPRE",
+     "REVPRE_REVCOMP"
+    ],
+    [
+     "REVPOST",
+     "REVPOST_REVCOMP"
+    ],
+    [
+     "LEVEL",
+     "LEVEL_REVCOMP"
+    ],
+    [
+     "REVLEVEL",
+     "REVLEVEL_REVCOMP"
+    ],
+    [
+     "REVBFS",
+     "REVBFS_REVCOMP"
+    ],
+    [
+     "CREATE"
+    ],
+    [
+     "REVCREATE"
+    ],
+    [
+     "ADD",
+     "AFIRSTAWAKE",
+     "ALASTENABLE"
+    ],
+    [
+     "REVADD",
+     "REVAFIRSTAWAKE",
+     "REVALASTENABLE"
+    ]
+   ]
+  },
+  "op.on1Off": {
+   "tree": "on1",
+   "target": "R",
+   "value": false,
+   "callback": "OnDisable",
+   "objects": [
+    "R",
+    "RY",
+    "RX",
+    "RZ"
+   ],
+   "recorders": [
+    "R/r",
+    "RY/r",
+    "RX/r",
+    "RZ/r"
+   ],
+   "components": {
+    "R": [
+     "R/r"
+    ],
+    "RY": [
+     "RY/r"
+    ],
+    "RX": [
+     "RX/r"
+    ],
+    "RZ": [
+     "RZ/r"
+    ]
+   },
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "PRE_REVCOMP": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "POST_REVCOMP": [
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPRE_REVCOMP": [
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPOST": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPOST_REVCOMP": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "LEVEL": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "LEVEL_REVCOMP": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVLEVEL": [
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVLEVEL_REVCOMP": [
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVBFS": [
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVBFS_REVCOMP": [
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "AFIRSTAWAKE": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVAFIRSTAWAKE": [
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "ALASTENABLE": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVALASTENABLE": [
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ]
+   },
+   "cells": [
+    [
+     "PRE",
+     "PRE_REVCOMP",
+     "LEVEL",
+     "LEVEL_REVCOMP"
+    ],
+    [
+     "POST",
+     "POST_REVCOMP",
+     "REVLEVEL",
+     "REVLEVEL_REVCOMP"
+    ],
+    [
+     "REVPRE",
+     "REVPRE_REVCOMP",
+     "REVBFS",
+     "REVBFS_REVCOMP"
+    ],
+    [
+     "REVPOST",
+     "REVPOST_REVCOMP"
+    ],
+    [
+     "CREATE"
+    ],
+    [
+     "REVCREATE"
+    ],
+    [
+     "ADD"
+    ],
+    [
+     "REVADD"
+    ],
+    [
+     "AFIRSTAWAKE",
+     "ALASTENABLE"
+    ],
+    [
+     "REVAFIRSTAWAKE",
+     "REVALASTENABLE"
+    ]
+   ]
+  },
+  "op.on1On": {
+   "tree": "on1",
+   "target": "R",
+   "value": true,
+   "callback": "OnEnable",
+   "objects": [
+    "R",
+    "RY",
+    "RX",
+    "RZ"
+   ],
+   "recorders": [
+    "R/r",
+    "RY/r",
+    "RX/r",
+    "RZ/r"
+   ],
+   "components": {
+    "R": [
+     "R/r"
+    ],
+    "RY": [
+     "RY/r"
+    ],
+    "RX": [
+     "RX/r"
+    ],
+    "RZ": [
+     "RZ/r"
+    ]
+   },
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "PRE_REVCOMP": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "POST_REVCOMP": [
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPRE_REVCOMP": [
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPOST": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPOST_REVCOMP": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "LEVEL": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "LEVEL_REVCOMP": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVLEVEL": [
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVLEVEL_REVCOMP": [
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVBFS": [
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVBFS_REVCOMP": [
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "AFIRSTAWAKE": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVAFIRSTAWAKE": [
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "ALASTENABLE": [
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVALASTENABLE": [
+     {
+      "n": "RX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "RZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "R",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ]
+   },
+   "cells": [
+    [
+     "PRE",
+     "PRE_REVCOMP",
+     "LEVEL",
+     "LEVEL_REVCOMP"
+    ],
+    [
+     "POST",
+     "POST_REVCOMP",
+     "REVLEVEL",
+     "REVLEVEL_REVCOMP"
+    ],
+    [
+     "REVPRE",
+     "REVPRE_REVCOMP",
+     "REVBFS",
+     "REVBFS_REVCOMP"
+    ],
+    [
+     "REVPOST",
+     "REVPOST_REVCOMP"
+    ],
+    [
+     "CREATE"
+    ],
+    [
+     "REVCREATE"
+    ],
+    [
+     "ADD"
+    ],
+    [
+     "REVADD"
+    ],
+    [
+     "AFIRSTAWAKE",
+     "ALASTENABLE"
+    ],
+    [
+     "REVAFIRSTAWAKE",
+     "REVALASTENABLE"
+    ]
+   ]
+  },
+  "op.on3Off": {
+   "tree": "on3",
+   "target": "L",
+   "value": false,
+   "callback": "OnDisable",
+   "objects": [
+    "L",
+    "LY",
+    "LX",
+    "LZ"
+   ],
+   "recorders": [
+    "L/r",
+    "LY/r",
+    "LX/r",
+    "LZ/r"
+   ],
+   "components": {
+    "L": [
+     "L/r"
+    ],
+    "LY": [
+     "LY/r"
+    ],
+    "LX": [
+     "LX/r"
+    ],
+    "LZ": [
+     "LZ/r"
+    ]
+   },
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "PRE_REVCOMP": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "POST_REVCOMP": [
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPRE_REVCOMP": [
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPOST": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPOST_REVCOMP": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "LEVEL": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "LEVEL_REVCOMP": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVLEVEL": [
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVLEVEL_REVCOMP": [
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVBFS": [
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVBFS_REVCOMP": [
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "AFIRSTAWAKE": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVAFIRSTAWAKE": [
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "ALASTENABLE": [
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVALASTENABLE": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ]
+   },
+   "cells": [
+    [
+     "PRE",
+     "PRE_REVCOMP",
+     "LEVEL",
+     "LEVEL_REVCOMP"
+    ],
+    [
+     "POST",
+     "POST_REVCOMP",
+     "REVLEVEL",
+     "REVLEVEL_REVCOMP"
+    ],
+    [
+     "REVPRE",
+     "REVPRE_REVCOMP",
+     "REVBFS",
+     "REVBFS_REVCOMP"
+    ],
+    [
+     "REVPOST",
+     "REVPOST_REVCOMP"
+    ],
+    [
+     "CREATE"
+    ],
+    [
+     "REVCREATE"
+    ],
+    [
+     "ADD"
+    ],
+    [
+     "REVADD"
+    ],
+    [
+     "AFIRSTAWAKE"
+    ],
+    [
+     "REVAFIRSTAWAKE"
+    ],
+    [
+     "ALASTENABLE"
+    ],
+    [
+     "REVALASTENABLE"
+    ]
+   ]
+  },
+  "op.on3On": {
+   "tree": "on3",
+   "target": "L",
+   "value": true,
+   "callback": "OnEnable",
+   "objects": [
+    "L",
+    "LY",
+    "LX",
+    "LZ"
+   ],
+   "recorders": [
+    "L/r",
+    "LY/r",
+    "LX/r",
+    "LZ/r"
+   ],
+   "components": {
+    "L": [
+     "L/r"
+    ],
+    "LY": [
+     "LY/r"
+    ],
+    "LX": [
+     "LX/r"
+    ],
+    "LZ": [
+     "LZ/r"
+    ]
+   },
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "PRE_REVCOMP": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "POST_REVCOMP": [
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPRE_REVCOMP": [
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPOST": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPOST_REVCOMP": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "LEVEL": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "LEVEL_REVCOMP": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVLEVEL": [
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVLEVEL_REVCOMP": [
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVBFS": [
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVBFS_REVCOMP": [
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "AFIRSTAWAKE": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVAFIRSTAWAKE": [
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "ALASTENABLE": [
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVALASTENABLE": [
+     {
+      "n": "L",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LX",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LY",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "LZ",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ]
+   },
+   "cells": [
+    [
+     "PRE",
+     "PRE_REVCOMP",
+     "LEVEL",
+     "LEVEL_REVCOMP"
+    ],
+    [
+     "POST",
+     "POST_REVCOMP",
+     "REVLEVEL",
+     "REVLEVEL_REVCOMP"
+    ],
+    [
+     "REVPRE",
+     "REVPRE_REVCOMP",
+     "REVBFS",
+     "REVBFS_REVCOMP"
+    ],
+    [
+     "REVPOST",
+     "REVPOST_REVCOMP"
+    ],
+    [
+     "CREATE"
+    ],
+    [
+     "REVCREATE"
+    ],
+    [
+     "ADD"
+    ],
+    [
+     "REVADD"
+    ],
+    [
+     "AFIRSTAWAKE"
+    ],
+    [
+     "REVAFIRSTAWAKE"
+    ],
+    [
+     "ALASTENABLE"
+    ],
+    [
+     "REVALASTENABLE"
+    ]
+   ]
+  },
+  "op.on2Off": {
+   "tree": "scene",
+   "target": "S",
+   "value": false,
+   "callback": "OnDisable",
+   "objects": [
+    "S",
+    "S1",
+    "S2",
+    "S21",
+    "S3"
+   ],
+   "recorders": [
+    "S/r",
+    "S1/r",
+    "S1/rt",
+    "S2/b",
+    "S2/a",
+    "S21/r",
+    "S3/r"
+   ],
+   "components": {
+    "S": [
+     "S/r"
+    ],
+    "S1": [
+     "S1/r",
+     "S1/rt"
+    ],
+    "S2": [
+     "S2/b",
+     "S2/a"
+    ],
+    "S21": [
+     "S21/r"
+    ],
+    "S3": [
+     "S3/r"
+    ]
+   },
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "PRE_REVCOMP": [
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "POST_REVCOMP": [
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPRE_REVCOMP": [
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPOST": [
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPOST_REVCOMP": [
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "LEVEL": [
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "LEVEL_REVCOMP": [
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVLEVEL": [
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVLEVEL_REVCOMP": [
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVBFS": [
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVBFS_REVCOMP": [
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "DOCMB": [
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVDOCMB": [
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "FILEIDMB": [
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVFILEIDMB": [
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     }
+    ],
+    "DOCGO": [
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVDOCGO": [
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "FILEIDGO": [
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVFILEIDGO": [
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnDisable"
+     }
+    ]
+   },
+   "cells": [
+    [
+     "PRE"
+    ],
+    [
+     "PRE_REVCOMP"
+    ],
+    [
+     "POST"
+    ],
+    [
+     "POST_REVCOMP"
+    ],
+    [
+     "REVPRE"
+    ],
+    [
+     "REVPRE_REVCOMP"
+    ],
+    [
+     "REVPOST"
+    ],
+    [
+     "REVPOST_REVCOMP"
+    ],
+    [
+     "LEVEL"
+    ],
+    [
+     "LEVEL_REVCOMP"
+    ],
+    [
+     "REVLEVEL"
+    ],
+    [
+     "REVLEVEL_REVCOMP"
+    ],
+    [
+     "REVBFS"
+    ],
+    [
+     "REVBFS_REVCOMP"
+    ],
+    [
+     "DOCMB"
+    ],
+    [
+     "REVDOCMB"
+    ],
+    [
+     "FILEIDMB"
+    ],
+    [
+     "REVFILEIDMB"
+    ],
+    [
+     "DOCGO"
+    ],
+    [
+     "REVDOCGO"
+    ],
+    [
+     "FILEIDGO"
+    ],
+    [
+     "REVFILEIDGO"
+    ]
+   ]
+  },
+  "op.on2On": {
+   "tree": "scene",
+   "target": "S",
+   "value": true,
+   "callback": "OnEnable",
+   "objects": [
+    "S",
+    "S1",
+    "S2",
+    "S21",
+    "S3"
+   ],
+   "recorders": [
+    "S/r",
+    "S1/r",
+    "S1/rt",
+    "S2/b",
+    "S2/a",
+    "S21/r",
+    "S3/r"
+   ],
+   "components": {
+    "S": [
+     "S/r"
+    ],
+    "S1": [
+     "S1/r",
+     "S1/rt"
+    ],
+    "S2": [
+     "S2/b",
+     "S2/a"
+    ],
+    "S21": [
+     "S21/r"
+    ],
+    "S3": [
+     "S3/r"
+    ]
+   },
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "PRE_REVCOMP": [
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "POST_REVCOMP": [
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPRE_REVCOMP": [
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPOST": [
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPOST_REVCOMP": [
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "LEVEL": [
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "LEVEL_REVCOMP": [
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVLEVEL": [
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVLEVEL_REVCOMP": [
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVBFS": [
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVBFS_REVCOMP": [
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "DOCMB": [
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVDOCMB": [
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "FILEIDMB": [
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVFILEIDMB": [
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     }
+    ],
+    "DOCGO": [
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVDOCGO": [
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "FILEIDGO": [
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVFILEIDGO": [
+     {
+      "n": "S",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "a",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S2",
+      "r": "b",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S3",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S21",
+      "r": "r",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "rt",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "S1",
+      "r": "r",
+      "cb": "OnEnable"
+     }
+    ]
+   },
+   "cells": [
+    [
+     "PRE"
+    ],
+    [
+     "PRE_REVCOMP"
+    ],
+    [
+     "POST"
+    ],
+    [
+     "POST_REVCOMP"
+    ],
+    [
+     "REVPRE"
+    ],
+    [
+     "REVPRE_REVCOMP"
+    ],
+    [
+     "REVPOST"
+    ],
+    [
+     "REVPOST_REVCOMP"
+    ],
+    [
+     "LEVEL"
+    ],
+    [
+     "LEVEL_REVCOMP"
+    ],
+    [
+     "REVLEVEL"
+    ],
+    [
+     "REVLEVEL_REVCOMP"
+    ],
+    [
+     "REVBFS"
+    ],
+    [
+     "REVBFS_REVCOMP"
+    ],
+    [
+     "DOCMB"
+    ],
+    [
+     "REVDOCMB"
+    ],
+    [
+     "FILEIDMB"
+    ],
+    [
+     "REVFILEIDMB"
+    ],
+    [
+     "DOCGO"
+    ],
+    [
+     "REVDOCGO"
+    ],
+    [
+     "FILEIDGO"
+    ],
+    [
+     "REVFILEIDGO"
+    ]
+   ]
+  }
+ },
+ "contacts": {
+  "solidOnScripts": {
+   "trigger": false,
+   "callbacksOnDisable": true,
+   "layout": "scriptsFirst",
+   "components": {
+    "P": [
+     "rec",
+     "obs",
+     "rb"
+    ],
+    "C": [
+     "rec",
+     "obs",
+     "col"
+    ],
+    "E": [
+     "rec",
+     "obs",
+     "box"
+    ]
+   },
+   "hypotheses": {
+    "CUR/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "P.OnDisable[live]",
+      "EXITS",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/AT_REMOVAL/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "EXITS",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/DEFERRED/REMOVAL": {
+     "call": [
+      "P.OnDisable[live]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/DEFERRED/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/NONE/REMOVAL": {
+     "call": [
+      "P.OnDisable[live]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/NONE/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    }
+   },
+   "cells": [
+    [
+     "CUR/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "CUR/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "CUR/DEFERRED/REMOVAL"
+    ],
+    [
+     "CUR/DEFERRED/FLAGS"
+    ],
+    [
+     "CUR/NONE/REMOVAL"
+    ],
+    [
+     "CUR/NONE/FLAGS"
+    ],
+    [
+     "F/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "F/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "F/DEFERRED/REMOVAL"
+    ],
+    [
+     "F/DEFERRED/FLAGS",
+     "F_REVCOMP/DEFERRED/REMOVAL",
+     "F_REVCOMP/DEFERRED/FLAGS",
+     "S/DEFERRED/REMOVAL",
+     "S/DEFERRED/FLAGS",
+     "S_POST/DEFERRED/REMOVAL",
+     "S_POST/DEFERRED/FLAGS",
+     "SCRIPTS_FIRST/DEFERRED/FLAGS"
+    ],
+    [
+     "F/NONE/REMOVAL"
+    ],
+    [
+     "F/NONE/FLAGS",
+     "F_REVCOMP/NONE/REMOVAL",
+     "F_REVCOMP/NONE/FLAGS",
+     "S/NONE/REMOVAL",
+     "S/NONE/FLAGS",
+     "S_POST/NONE/REMOVAL",
+     "S_POST/NONE/FLAGS",
+     "SCRIPTS_FIRST/NONE/FLAGS"
+    ],
+    [
+     "F_REVCOMP/AT_REMOVAL/REMOVAL",
+     "F_REVCOMP/AT_REMOVAL/FLAGS",
+     "S/AT_REMOVAL/REMOVAL",
+     "S/AT_REMOVAL/FLAGS",
+     "S_POST/AT_REMOVAL/REMOVAL",
+     "S_POST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "SCRIPTS_FIRST/DEFERRED/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/NONE/REMOVAL"
+    ]
+   ]
+  },
+  "solidOnBuiltins": {
+   "trigger": false,
+   "callbacksOnDisable": true,
+   "layout": "builtinsFirst",
+   "components": {
+    "P": [
+     "rb",
+     "rec",
+     "obs"
+    ],
+    "C": [
+     "col",
+     "rec",
+     "obs"
+    ],
+    "E": [
+     "box",
+     "rec",
+     "obs"
+    ]
+   },
+   "hypotheses": {
+    "CUR/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/DEFERRED/REMOVAL": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/DEFERRED/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/NONE/REMOVAL": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/NONE/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    }
+   },
+   "cells": [
+    [
+     "CUR/AT_REMOVAL/REMOVAL",
+     "CUR/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "CUR/DEFERRED/REMOVAL",
+     "CUR/DEFERRED/FLAGS"
+    ],
+    [
+     "CUR/NONE/REMOVAL",
+     "CUR/NONE/FLAGS"
+    ],
+    [
+     "F/AT_REMOVAL/REMOVAL",
+     "F/AT_REMOVAL/FLAGS",
+     "S/AT_REMOVAL/REMOVAL",
+     "S/AT_REMOVAL/FLAGS",
+     "S_POST/AT_REMOVAL/REMOVAL",
+     "S_POST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "F/DEFERRED/REMOVAL",
+     "F/DEFERRED/FLAGS",
+     "F_REVCOMP/DEFERRED/FLAGS",
+     "S/DEFERRED/REMOVAL",
+     "S/DEFERRED/FLAGS",
+     "S_POST/DEFERRED/REMOVAL",
+     "S_POST/DEFERRED/FLAGS",
+     "SCRIPTS_FIRST/DEFERRED/FLAGS"
+    ],
+    [
+     "F/NONE/REMOVAL",
+     "F/NONE/FLAGS",
+     "F_REVCOMP/NONE/FLAGS",
+     "S/NONE/REMOVAL",
+     "S/NONE/FLAGS",
+     "S_POST/NONE/REMOVAL",
+     "S_POST/NONE/FLAGS",
+     "SCRIPTS_FIRST/NONE/FLAGS"
+    ],
+    [
+     "F_REVCOMP/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "F_REVCOMP/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "F_REVCOMP/DEFERRED/REMOVAL"
+    ],
+    [
+     "F_REVCOMP/NONE/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "SCRIPTS_FIRST/DEFERRED/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/NONE/REMOVAL"
+    ]
+   ]
+  },
+  "triggerOnScripts": {
+   "trigger": true,
+   "callbacksOnDisable": true,
+   "layout": "scriptsFirst",
+   "components": {
+    "P": [
+     "rec",
+     "obs",
+     "rb"
+    ],
+    "C": [
+     "rec",
+     "obs",
+     "col"
+    ],
+    "E": [
+     "rec",
+     "obs",
+     "box"
+    ]
+   },
+   "hypotheses": {
+    "CUR/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "P.OnDisable[live]",
+      "EXITS",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/AT_REMOVAL/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "EXITS",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/DEFERRED/REMOVAL": {
+     "call": [
+      "P.OnDisable[live]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/DEFERRED/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/NONE/REMOVAL": {
+     "call": [
+      "P.OnDisable[live]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/NONE/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    }
+   },
+   "cells": [
+    [
+     "CUR/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "CUR/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "CUR/DEFERRED/REMOVAL"
+    ],
+    [
+     "CUR/DEFERRED/FLAGS"
+    ],
+    [
+     "CUR/NONE/REMOVAL"
+    ],
+    [
+     "CUR/NONE/FLAGS"
+    ],
+    [
+     "F/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "F/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "F/DEFERRED/REMOVAL"
+    ],
+    [
+     "F/DEFERRED/FLAGS",
+     "F_REVCOMP/DEFERRED/REMOVAL",
+     "F_REVCOMP/DEFERRED/FLAGS",
+     "S/DEFERRED/REMOVAL",
+     "S/DEFERRED/FLAGS",
+     "S_POST/DEFERRED/REMOVAL",
+     "S_POST/DEFERRED/FLAGS",
+     "SCRIPTS_FIRST/DEFERRED/FLAGS"
+    ],
+    [
+     "F/NONE/REMOVAL"
+    ],
+    [
+     "F/NONE/FLAGS",
+     "F_REVCOMP/NONE/REMOVAL",
+     "F_REVCOMP/NONE/FLAGS",
+     "S/NONE/REMOVAL",
+     "S/NONE/FLAGS",
+     "S_POST/NONE/REMOVAL",
+     "S_POST/NONE/FLAGS",
+     "SCRIPTS_FIRST/NONE/FLAGS"
+    ],
+    [
+     "F_REVCOMP/AT_REMOVAL/REMOVAL",
+     "F_REVCOMP/AT_REMOVAL/FLAGS",
+     "S/AT_REMOVAL/REMOVAL",
+     "S/AT_REMOVAL/FLAGS",
+     "S_POST/AT_REMOVAL/REMOVAL",
+     "S_POST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "SCRIPTS_FIRST/DEFERRED/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/NONE/REMOVAL"
+    ]
+   ]
+  },
+  "triggerOnBuiltins": {
+   "trigger": true,
+   "callbacksOnDisable": true,
+   "layout": "builtinsFirst",
+   "components": {
+    "P": [
+     "rb",
+     "rec",
+     "obs"
+    ],
+    "C": [
+     "col",
+     "rec",
+     "obs"
+    ],
+    "E": [
+     "box",
+     "rec",
+     "obs"
+    ]
+   },
+   "hypotheses": {
+    "CUR/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/DEFERRED/REMOVAL": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/DEFERRED/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/NONE/REMOVAL": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/NONE/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    }
+   },
+   "cells": [
+    [
+     "CUR/AT_REMOVAL/REMOVAL",
+     "CUR/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "CUR/DEFERRED/REMOVAL",
+     "CUR/DEFERRED/FLAGS"
+    ],
+    [
+     "CUR/NONE/REMOVAL",
+     "CUR/NONE/FLAGS"
+    ],
+    [
+     "F/AT_REMOVAL/REMOVAL",
+     "F/AT_REMOVAL/FLAGS",
+     "S/AT_REMOVAL/REMOVAL",
+     "S/AT_REMOVAL/FLAGS",
+     "S_POST/AT_REMOVAL/REMOVAL",
+     "S_POST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "F/DEFERRED/REMOVAL",
+     "F/DEFERRED/FLAGS",
+     "F_REVCOMP/DEFERRED/FLAGS",
+     "S/DEFERRED/REMOVAL",
+     "S/DEFERRED/FLAGS",
+     "S_POST/DEFERRED/REMOVAL",
+     "S_POST/DEFERRED/FLAGS",
+     "SCRIPTS_FIRST/DEFERRED/FLAGS"
+    ],
+    [
+     "F/NONE/REMOVAL",
+     "F/NONE/FLAGS",
+     "F_REVCOMP/NONE/FLAGS",
+     "S/NONE/REMOVAL",
+     "S/NONE/FLAGS",
+     "S_POST/NONE/REMOVAL",
+     "S_POST/NONE/FLAGS",
+     "SCRIPTS_FIRST/NONE/FLAGS"
+    ],
+    [
+     "F_REVCOMP/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "F_REVCOMP/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "F_REVCOMP/DEFERRED/REMOVAL"
+    ],
+    [
+     "F_REVCOMP/NONE/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "SCRIPTS_FIRST/DEFERRED/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/NONE/REMOVAL"
+    ]
+   ]
+  },
+  "solidOffScripts": {
+   "trigger": false,
+   "callbacksOnDisable": false,
+   "layout": "scriptsFirst",
+   "components": {
+    "P": [
+     "rec",
+     "obs",
+     "rb"
+    ],
+    "C": [
+     "rec",
+     "obs",
+     "col"
+    ],
+    "E": [
+     "rec",
+     "obs",
+     "box"
+    ]
+   },
+   "hypotheses": {
+    "CUR/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "P.OnDisable[live]",
+      "EXITS",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/AT_REMOVAL/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "EXITS",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/DEFERRED/REMOVAL": {
+     "call": [
+      "P.OnDisable[live]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/DEFERRED/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/NONE/REMOVAL": {
+     "call": [
+      "P.OnDisable[live]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/NONE/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    }
+   },
+   "cells": [
+    [
+     "CUR/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "CUR/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "CUR/DEFERRED/REMOVAL"
+    ],
+    [
+     "CUR/DEFERRED/FLAGS"
+    ],
+    [
+     "CUR/NONE/REMOVAL"
+    ],
+    [
+     "CUR/NONE/FLAGS"
+    ],
+    [
+     "F/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "F/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "F/DEFERRED/REMOVAL"
+    ],
+    [
+     "F/DEFERRED/FLAGS",
+     "F_REVCOMP/DEFERRED/REMOVAL",
+     "F_REVCOMP/DEFERRED/FLAGS",
+     "S/DEFERRED/REMOVAL",
+     "S/DEFERRED/FLAGS",
+     "S_POST/DEFERRED/REMOVAL",
+     "S_POST/DEFERRED/FLAGS",
+     "SCRIPTS_FIRST/DEFERRED/FLAGS"
+    ],
+    [
+     "F/NONE/REMOVAL"
+    ],
+    [
+     "F/NONE/FLAGS",
+     "F_REVCOMP/NONE/REMOVAL",
+     "F_REVCOMP/NONE/FLAGS",
+     "S/NONE/REMOVAL",
+     "S/NONE/FLAGS",
+     "S_POST/NONE/REMOVAL",
+     "S_POST/NONE/FLAGS",
+     "SCRIPTS_FIRST/NONE/FLAGS"
+    ],
+    [
+     "F_REVCOMP/AT_REMOVAL/REMOVAL",
+     "F_REVCOMP/AT_REMOVAL/FLAGS",
+     "S/AT_REMOVAL/REMOVAL",
+     "S/AT_REMOVAL/FLAGS",
+     "S_POST/AT_REMOVAL/REMOVAL",
+     "S_POST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "SCRIPTS_FIRST/DEFERRED/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/NONE/REMOVAL"
+    ]
+   ]
+  },
+  "solidOffBuiltins": {
+   "trigger": false,
+   "callbacksOnDisable": false,
+   "layout": "builtinsFirst",
+   "components": {
+    "P": [
+     "rb",
+     "rec",
+     "obs"
+    ],
+    "C": [
+     "col",
+     "rec",
+     "obs"
+    ],
+    "E": [
+     "box",
+     "rec",
+     "obs"
+    ]
+   },
+   "hypotheses": {
+    "CUR/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/DEFERRED/REMOVAL": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/DEFERRED/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/NONE/REMOVAL": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/NONE/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    }
+   },
+   "cells": [
+    [
+     "CUR/AT_REMOVAL/REMOVAL",
+     "CUR/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "CUR/DEFERRED/REMOVAL",
+     "CUR/DEFERRED/FLAGS"
+    ],
+    [
+     "CUR/NONE/REMOVAL",
+     "CUR/NONE/FLAGS"
+    ],
+    [
+     "F/AT_REMOVAL/REMOVAL",
+     "F/AT_REMOVAL/FLAGS",
+     "S/AT_REMOVAL/REMOVAL",
+     "S/AT_REMOVAL/FLAGS",
+     "S_POST/AT_REMOVAL/REMOVAL",
+     "S_POST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "F/DEFERRED/REMOVAL",
+     "F/DEFERRED/FLAGS",
+     "F_REVCOMP/DEFERRED/FLAGS",
+     "S/DEFERRED/REMOVAL",
+     "S/DEFERRED/FLAGS",
+     "S_POST/DEFERRED/REMOVAL",
+     "S_POST/DEFERRED/FLAGS",
+     "SCRIPTS_FIRST/DEFERRED/FLAGS"
+    ],
+    [
+     "F/NONE/REMOVAL",
+     "F/NONE/FLAGS",
+     "F_REVCOMP/NONE/FLAGS",
+     "S/NONE/REMOVAL",
+     "S/NONE/FLAGS",
+     "S_POST/NONE/REMOVAL",
+     "S_POST/NONE/FLAGS",
+     "SCRIPTS_FIRST/NONE/FLAGS"
+    ],
+    [
+     "F_REVCOMP/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "F_REVCOMP/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "F_REVCOMP/DEFERRED/REMOVAL"
+    ],
+    [
+     "F_REVCOMP/NONE/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "SCRIPTS_FIRST/DEFERRED/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/NONE/REMOVAL"
+    ]
+   ]
+  },
+  "triggerOffScripts": {
+   "trigger": true,
+   "callbacksOnDisable": false,
+   "layout": "scriptsFirst",
+   "components": {
+    "P": [
+     "rec",
+     "obs",
+     "rb"
+    ],
+    "C": [
+     "rec",
+     "obs",
+     "col"
+    ],
+    "E": [
+     "rec",
+     "obs",
+     "box"
+    ]
+   },
+   "hypotheses": {
+    "CUR/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "P.OnDisable[live]",
+      "EXITS",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/AT_REMOVAL/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "EXITS",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/DEFERRED/REMOVAL": {
+     "call": [
+      "P.OnDisable[live]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/DEFERRED/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/NONE/REMOVAL": {
+     "call": [
+      "P.OnDisable[live]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/NONE/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    }
+   },
+   "cells": [
+    [
+     "CUR/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "CUR/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "CUR/DEFERRED/REMOVAL"
+    ],
+    [
+     "CUR/DEFERRED/FLAGS"
+    ],
+    [
+     "CUR/NONE/REMOVAL"
+    ],
+    [
+     "CUR/NONE/FLAGS"
+    ],
+    [
+     "F/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "F/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "F/DEFERRED/REMOVAL"
+    ],
+    [
+     "F/DEFERRED/FLAGS",
+     "F_REVCOMP/DEFERRED/REMOVAL",
+     "F_REVCOMP/DEFERRED/FLAGS",
+     "S/DEFERRED/REMOVAL",
+     "S/DEFERRED/FLAGS",
+     "S_POST/DEFERRED/REMOVAL",
+     "S_POST/DEFERRED/FLAGS",
+     "SCRIPTS_FIRST/DEFERRED/FLAGS"
+    ],
+    [
+     "F/NONE/REMOVAL"
+    ],
+    [
+     "F/NONE/FLAGS",
+     "F_REVCOMP/NONE/REMOVAL",
+     "F_REVCOMP/NONE/FLAGS",
+     "S/NONE/REMOVAL",
+     "S/NONE/FLAGS",
+     "S_POST/NONE/REMOVAL",
+     "S_POST/NONE/FLAGS",
+     "SCRIPTS_FIRST/NONE/FLAGS"
+    ],
+    [
+     "F_REVCOMP/AT_REMOVAL/REMOVAL",
+     "F_REVCOMP/AT_REMOVAL/FLAGS",
+     "S/AT_REMOVAL/REMOVAL",
+     "S/AT_REMOVAL/FLAGS",
+     "S_POST/AT_REMOVAL/REMOVAL",
+     "S_POST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "SCRIPTS_FIRST/DEFERRED/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/NONE/REMOVAL"
+    ]
+   ]
+  },
+  "triggerOffBuiltins": {
+   "trigger": true,
+   "callbacksOnDisable": false,
+   "layout": "builtinsFirst",
+   "components": {
+    "P": [
+     "rb",
+     "rec",
+     "obs"
+    ],
+    "C": [
+     "col",
+     "rec",
+     "obs"
+    ],
+    "E": [
+     "box",
+     "rec",
+     "obs"
+    ]
+   },
+   "hypotheses": {
+    "CUR/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/DEFERRED/REMOVAL": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/DEFERRED/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "CUR/NONE/REMOVAL": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "CUR/NONE/FLAGS": {
+     "call": [
+      "P.OnDisable[removed]",
+      "C.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "EXITS",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "F_REVCOMP/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "F_REVCOMP/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "EXITS",
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "S_POST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "S_POST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/AT_REMOVAL/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]",
+      "EXITS"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/DEFERRED/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/DEFERRED/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": [
+      "EXITS"
+     ]
+    },
+    "SCRIPTS_FIRST/NONE/REMOVAL": {
+     "call": [
+      "C.OnDisable[live]",
+      "P.OnDisable[live]"
+     ],
+     "sim3": []
+    },
+    "SCRIPTS_FIRST/NONE/FLAGS": {
+     "call": [
+      "C.OnDisable[removed]",
+      "P.OnDisable[removed]"
+     ],
+     "sim3": []
+    }
+   },
+   "cells": [
+    [
+     "CUR/AT_REMOVAL/REMOVAL",
+     "CUR/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "CUR/DEFERRED/REMOVAL",
+     "CUR/DEFERRED/FLAGS"
+    ],
+    [
+     "CUR/NONE/REMOVAL",
+     "CUR/NONE/FLAGS"
+    ],
+    [
+     "F/AT_REMOVAL/REMOVAL",
+     "F/AT_REMOVAL/FLAGS",
+     "S/AT_REMOVAL/REMOVAL",
+     "S/AT_REMOVAL/FLAGS",
+     "S_POST/AT_REMOVAL/REMOVAL",
+     "S_POST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "F/DEFERRED/REMOVAL",
+     "F/DEFERRED/FLAGS",
+     "F_REVCOMP/DEFERRED/FLAGS",
+     "S/DEFERRED/REMOVAL",
+     "S/DEFERRED/FLAGS",
+     "S_POST/DEFERRED/REMOVAL",
+     "S_POST/DEFERRED/FLAGS",
+     "SCRIPTS_FIRST/DEFERRED/FLAGS"
+    ],
+    [
+     "F/NONE/REMOVAL",
+     "F/NONE/FLAGS",
+     "F_REVCOMP/NONE/FLAGS",
+     "S/NONE/REMOVAL",
+     "S/NONE/FLAGS",
+     "S_POST/NONE/REMOVAL",
+     "S_POST/NONE/FLAGS",
+     "SCRIPTS_FIRST/NONE/FLAGS"
+    ],
+    [
+     "F_REVCOMP/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "F_REVCOMP/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "F_REVCOMP/DEFERRED/REMOVAL"
+    ],
+    [
+     "F_REVCOMP/NONE/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/AT_REMOVAL/FLAGS"
+    ],
+    [
+     "SCRIPTS_FIRST/DEFERRED/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/NONE/REMOVAL"
+    ]
+   ]
+  }
+ },
+ "particles": {
+  "psScripts": {
+   "layout": "scriptsFirst",
+   "components": {
+    "P": [
+     "rec",
+     "ps"
+    ],
+    "C": [
+     "rec",
+     "ps"
+    ]
+   },
+   "hypotheses": {
+    "CUR/REMOVAL": {
+     "call": [
+      "P.OnDisable[P:live,C:live]",
+      "C.OnDisable[P:off,C:live]"
+     ]
+    },
+    "CUR/FLAGS": {
+     "call": [
+      "P.OnDisable[P:off,C:off]",
+      "C.OnDisable[P:off,C:off]"
+     ]
+    },
+    "F/REMOVAL": {
+     "call": [
+      "C.OnDisable[P:live,C:live]",
+      "P.OnDisable[P:live,C:off]"
+     ]
+    },
+    "F/FLAGS": {
+     "call": [
+      "C.OnDisable[P:off,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    },
+    "F_REVCOMP/REMOVAL": {
+     "call": [
+      "C.OnDisable[P:live,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    },
+    "F_REVCOMP/FLAGS": {
+     "call": [
+      "C.OnDisable[P:off,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    },
+    "S/REMOVAL": {
+     "call": [
+      "C.OnDisable[P:off,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    },
+    "S/FLAGS": {
+     "call": [
+      "C.OnDisable[P:off,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    },
+    "S_POST/REMOVAL": {
+     "call": [
+      "C.OnDisable[P:off,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    },
+    "S_POST/FLAGS": {
+     "call": [
+      "C.OnDisable[P:off,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    },
+    "SCRIPTS_FIRST/REMOVAL": {
+     "call": [
+      "C.OnDisable[P:live,C:live]",
+      "P.OnDisable[P:live,C:live]"
+     ]
+    },
+    "SCRIPTS_FIRST/FLAGS": {
+     "call": [
+      "C.OnDisable[P:off,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    }
+   },
+   "cells": [
+    [
+     "CUR/REMOVAL"
+    ],
+    [
+     "CUR/FLAGS"
+    ],
+    [
+     "F/REMOVAL"
+    ],
+    [
+     "F/FLAGS",
+     "F_REVCOMP/FLAGS",
+     "S/REMOVAL",
+     "S/FLAGS",
+     "S_POST/REMOVAL",
+     "S_POST/FLAGS",
+     "SCRIPTS_FIRST/FLAGS"
+    ],
+    [
+     "F_REVCOMP/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/REMOVAL"
+    ]
+   ]
+  },
+  "psBuiltins": {
+   "layout": "builtinsFirst",
+   "components": {
+    "P": [
+     "ps",
+     "rec"
+    ],
+    "C": [
+     "ps",
+     "rec"
+    ]
+   },
+   "hypotheses": {
+    "CUR/REMOVAL": {
+     "call": [
+      "P.OnDisable[P:off,C:live]",
+      "C.OnDisable[P:off,C:off]"
+     ]
+    },
+    "CUR/FLAGS": {
+     "call": [
+      "P.OnDisable[P:off,C:off]",
+      "C.OnDisable[P:off,C:off]"
+     ]
+    },
+    "F/REMOVAL": {
+     "call": [
+      "C.OnDisable[P:live,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    },
+    "F/FLAGS": {
+     "call": [
+      "C.OnDisable[P:off,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    },
+    "F_REVCOMP/REMOVAL": {
+     "call": [
+      "C.OnDisable[P:live,C:live]",
+      "P.OnDisable[P:live,C:off]"
+     ]
+    },
+    "F_REVCOMP/FLAGS": {
+     "call": [
+      "C.OnDisable[P:off,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    },
+    "S/REMOVAL": {
+     "call": [
+      "C.OnDisable[P:off,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    },
+    "S/FLAGS": {
+     "call": [
+      "C.OnDisable[P:off,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    },
+    "S_POST/REMOVAL": {
+     "call": [
+      "C.OnDisable[P:off,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    },
+    "S_POST/FLAGS": {
+     "call": [
+      "C.OnDisable[P:off,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    },
+    "SCRIPTS_FIRST/REMOVAL": {
+     "call": [
+      "C.OnDisable[P:live,C:live]",
+      "P.OnDisable[P:live,C:live]"
+     ]
+    },
+    "SCRIPTS_FIRST/FLAGS": {
+     "call": [
+      "C.OnDisable[P:off,C:off]",
+      "P.OnDisable[P:off,C:off]"
+     ]
+    }
+   },
+   "cells": [
+    [
+     "CUR/REMOVAL"
+    ],
+    [
+     "CUR/FLAGS"
+    ],
+    [
+     "F/REMOVAL"
+    ],
+    [
+     "F/FLAGS",
+     "F_REVCOMP/FLAGS",
+     "S/REMOVAL",
+     "S/FLAGS",
+     "S_POST/REMOVAL",
+     "S_POST/FLAGS",
+     "SCRIPTS_FIRST/FLAGS"
+    ],
+    [
+     "F_REVCOMP/REMOVAL"
+    ],
+    [
+     "SCRIPTS_FIRST/REMOVAL"
+    ]
+   ]
+  }
+ },
+ "separations": {
+  "separated": {
+   "offA POST vs REVLEVEL": true,
+   "mirror POST vs REVLEVEL": true,
+   "offA POST vs CREATE/ADD": true,
+   "baseline POST vs ADD (on)": true,
+   "on1 ADD vs AFIRSTAWAKE": true,
+   "on1 ADD vs PRE": true,
+   "on1 AFIRSTAWAKE vs REVPOST": true,
+   "on3 ALASTENABLE vs AFIRSTAWAKE": true,
+   "on3 ALASTENABLE vs ADD": true,
+   "on2 DOCMB vs PRE": true,
+   "on2 DOCMB vs FILEIDMB": true,
+   "on2 DOCGO vs DOCMB": true,
+   "on2 PRE vs PRE_REVCOMP": true,
+   "contact.solidOnScripts F vs S (order and touching reads)": true,
+   "contact.triggerOnScripts F vs S (order and touching reads)": true,
+   "contact.solidOffScripts F vs S (order and touching reads)": true,
+   "contact.triggerOffScripts F vs S (order and touching reads)": true,
+   "particles.psScripts F vs S (order and ParticleSystem reads)": true,
+   "particles.psBuiltins F vs S (order and ParticleSystem reads)": true
+  },
+  "retained_indistinguishable": {
+   "contact.solidOnBuiltins F vs S (order and touching reads)": true,
+   "contact.triggerOnBuiltins F vs S (order and touching reads)": true,
+   "contact.solidOffBuiltins F vs S (order and touching reads)": true,
+   "contact.triggerOffBuiltins F vs S (order and touching reads)": true,
+   "particles.psScripts S = every model under FLAGS reads": true,
+   "particles.psBuiltins S = every model under FLAGS reads": true,
+   "on1 ALASTENABLE = AFIRSTAWAKE (no toggle)": true,
+   "on1 LEVEL = PRE (flat tree)": true
+  }
+ },
+ "notes": {
+  "scope": "per case; the default-order recorder class only; no answer is extrapolated to other script types, execution orders, Destroy, re-parenting or other lifecycle paths",
+  "ids": "id hypotheses use the ids each capture records in diagnostics.jsonl; none are inferred from another probe or from document order",
+  "first_wake": "setup Awake order is recorded data; no child-first or parent-first rule is adopted",
+  "particles": "ParticleSystem reads observe one built-in; D-1 is not claimed for every OnEngineDisable override"
+ }
+}
