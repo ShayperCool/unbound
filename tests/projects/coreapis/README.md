@@ -163,6 +163,39 @@ cross-type ordering remain unproved. This supplies no rule to sort handlers. Dia
 attribution can undo that swap to explain all 17 frames, but the comparator
 does not transform anything. Strict failures, raw values and event order stay.
 
+The retained-union audit binds the latest Start/texture capture to unchanged
+executed probe and engine query source. Its 88 missing/extra pairs consist of:
+
+| Cause | Pairs |
+|---|---|
+| Initial OnRenderObject order | 24 |
+| Ledgered Pose rotation rounding | 21 |
+| Batch activation callback order | 11 |
+| Recorder numeric-token corruption | 23 |
+| Scene-object instance-id sign | 2 |
+| JSON numeric spelling | 2 |
+| Large-float fixed-format text | 1 |
+| Runtime exception text | 4 |
+
+`Record` currently applies `Names` to the whole message. An ordinary `10` is
+therefore rewritten as `#LazyData` when that asset's id is 10. The 23 affected
+records contain 27 such substitutions in activation flag pairs and clone rotation
+text; their underlying state/name/transform fields match Native. Earlier labels
+calling them activation-state or clone-name defects were wrong. The proposed
+recorder repair is not yet admitted or replayed. Its 617/65/65 result is an offline
+projection, not a new engine result or a comparator normalization.
+
+Both JSON payloads decode identically, including all three differing decimal
+spellings' binary64 bits. Their two strict failures remain and are separately
+ledgered as bounded nonblocking spelling differences. A general JSON algorithm
+and exact-text/arbitrary-precision consumers are unmeasured. The sign correction
+is held: positive scene-object IDs are observed, but a complete allocation and
+sorted-query rule across classes/load modes is not established. There are no
+Destroy rows in this union; that contract has its separate witness.
+
+Audit evidence: `validation/runs/coreapis-retained-audit-20261104/` and Root
+`validation/runs/coreapis-retained-root-review-20261104/root-validation.json`.
+
 The matching suite is 1583/1594 with the identical 11 inherited failures; all
 three counter-phase tests and the four OnDemand tests pass. The nine-module
 API result, 0 errors / 2318 types, is reused through equality of all 65228
