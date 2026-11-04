@@ -303,11 +303,12 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A zero-delay request whose scripts Destroy disables before it returns (measured
-        /// for awakened MonoBehaviours, GameObject and component targets: tests/projects/
-        /// destroycontract). Assets, prefab assets, built-in components and a script that another
-        /// component still requires keep the end-of-frame path.</summary>
+        /// in Play mode for awakened MonoBehaviours, GameObject and component targets:
+        /// tests/projects/destroycontract). Edit mode, assets, prefab assets, built-in components
+        /// and a script that another component still requires keep the end-of-frame path.</summary>
         static bool IsScriptRequest(Object obj)
         {
+            if (!EditorSession.IsPlaying) return false;
             switch (obj)
             {
                 case GameObject go:
