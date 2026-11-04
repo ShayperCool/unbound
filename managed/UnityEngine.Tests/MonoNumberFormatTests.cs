@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq;
 using System.Text;
 using Unbound;
 using Xunit;
@@ -53,6 +54,57 @@ namespace UnityEngine.Tests
             Assert.Equal("0.1", F(0.1f, "R"));
             Assert.Equal("0.30000000000000004", D(0.1 + 0.2, "R"));
             Assert.Equal("0.333333343", F(1f / 3f, "R"));
+        }
+
+        [Fact]
+        public void LargeFixedPointValuesPrintAsInTheEditor()
+        {
+            // Recorded by the Editor (6000.0.71f1): a Pose holding -3.4e37f, whose vector prints F2
+            // by default and for "" and null. The kept digits, then zeros; not the float's exact
+            // -33999999014383402399481480781255147520.
+            Assert.Equal("-34000000000000000000000000000000000000.00", F(-3.4e37f, "F2"));
+            Assert.Equal("-34000000000000000000000000000000000000.0", F(-3.4e37f, "F1"));
+            var pose = new Pose(new Vector3(1e-30f, -3.4e37f, 2.5f), new Quaternion(-0.0123f, 0.9876f, 0.1357f, -0.0789f));
+            const string Default = "((0.00, -34000000000000000000000000000000000000.00, 2.50), (-0.01230, 0.98760, 0.13570, -0.07890))";
+            Assert.Equal(Default, pose.ToString());
+            Assert.Equal("((0.0, -34000000000000000000000000000000000000.0, 2.5), (0.0, 1.0, 0.1, -0.1))", pose.ToString("F1"));
+            Assert.Equal("((1E-30, -3.3999999E+37, 2.5), (-0.0122999996, 0.987600029, 0.135700002, -0.0789000019))", pose.ToString("G9"));
+            Assert.Equal(Default, pose.ToString(""));
+            Assert.Equal(Default, pose.ToString(null));
+        }
+
+        [Fact]
+        public void LargeFixedPointValuesKeepTheirSignificantDigitsInEveryFixedFormat()
+        {
+            // The same rule for other values, both signs, doubles and the other fixed-point formats
+            // with their provider's separators, groups and patterns.
+            Assert.Equal("34000000000000000000000000000000000000.00", F(3.4e37f, "F2"));
+            Assert.Equal("-34000000000000000000000000000000000000.000", F(-3.4e37f, "f3"));
+            Assert.Equal("340282300000000000000000000000000000000", F(float.MaxValue, "F0"));
+            Assert.Equal("-340282300000000000000000000000000000000.00", F(float.MinValue, "F"));
+            Assert.Equal("20,000,000,000,000,000,000,000,000,000.00", F(2e28f, "N2"));
+            var custom = new NumberFormatInfo { NumberDecimalSeparator = ",", NumberGroupSeparator = ".", NumberNegativePattern = 0 };
+            Assert.Equal("(34.000.000.000.000.000.000.000.000.000.000.000.000,00)", MonoNumberFormat.Format(-3.4e37f, "N2", custom));
+            Assert.Equal("(¤34,000,000,000,000,000,000,000,000,000,000,000,000.00)", F(-3.4e37f, "C2"));
+            Assert.Equal("3,400,000,000,000,000,000,000,000,000,000,000,000,000 %", F(3.4e37f, "P0"));
+            Assert.Equal("1000000000000000000000000000000.00", D(1e30, "F2"));
+            Assert.Equal("-15" + new string('0', 299), D(-1.5e300, "F0"));
+            Assert.Equal("179,769,313,486,232" + string.Concat(Enumerable.Repeat(",000", 98)), D(double.MaxValue, "N0"));
+        }
+
+        [Fact]
+        public void LargeValuesInOtherFormatsAndValuesInDecimalRangeAreUnchanged()
+        {
+            Assert.Equal("1000000000000000000000000000.00", F(1e27f, "F2"));
+            Assert.Equal("9999999999999990000000000000.00", D(9.99999999999999e27, "F2"));
+            Assert.Equal("-3.4E+37", F(-3.4e37f));
+            Assert.Equal("-3.3999999E+37", F(-3.4e37f, "G9"));
+            Assert.Equal("-3.4E+37", F(-3.4e37f, "R"));
+            Assert.Equal("-3.400000E+037", F(-3.4e37f, "E6"));
+            Assert.Equal("0.00", F(1e-30f, "F2"));
+            Assert.Equal("Infinity", F(float.PositiveInfinity, "F2"));
+            Assert.Equal("-Infinity", D(double.NegativeInfinity, "N2"));
+            Assert.Equal("NaN", F(float.NaN, "F2"));
         }
 
         [Fact]
