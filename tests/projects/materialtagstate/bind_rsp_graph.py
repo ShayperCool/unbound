@@ -36,6 +36,14 @@ URP_FILES = ['Assets/Settings/ProbeURP.asset', 'Assets/Settings/ProbeRenderer.as
              'ProjectSettings/GraphicsSettings.asset', 'ProjectSettings/QualitySettings.asset']
 
 
+# Child processes get an environment built from an empty mapping with these key names only.
+CHILD_ENV_KEYS = ('PATH', 'HOME', 'LANG', 'LC_ALL', 'TZ')
+
+
+def child_env():
+    return {k: os.environ[k] for k in CHILD_ENV_KEYS if k in os.environ}
+
+
 def sha(p):
     return hashlib.sha256(Path(p).read_bytes()).hexdigest()
 
@@ -79,11 +87,12 @@ def expected_project_files(rev, release):
     """The files modelimport/run.py copy_project(dest, 'URP') writes, from git revision rev."""
     def tree(path):
         names = subprocess.run(['git', '-C', str(REPO), 'ls-tree', '-r', '--name-only', rev, '--', path],
-                               check=True, capture_output=True, text=True).stdout.split('\n')
+                               check=True, capture_output=True, text=True, env=child_env()).stdout.split('\n')
         return [n for n in names if n]
 
     def show(path):
-        return subprocess.run(['git', '-C', str(REPO), 'show', f'{rev}:{path}'], check=True, capture_output=True).stdout
+        return subprocess.run(['git', '-C', str(REPO), 'show', f'{rev}:{path}'], check=True, capture_output=True,
+                              env=child_env()).stdout
 
     files = {}
     base = 'tests/projects/modelimport/'
@@ -129,6 +138,8 @@ def compare_project(project, rev, release):
 
 
 def bind_repeat(project, log, release):
+    # The explicit project argument is the base for relative Bee/compiler inputs.
+    project = Path(project).absolute()
     bee = project/'Library/Bee'
     info = json.loads((bee/'bee_backend.info').read_text())
     dags = sorted(bee.glob('*.dag.json'))
@@ -166,6 +177,8 @@ def bind_repeat(project, log, release):
     rsp = parse_rsp(rsp_bytes.decode('utf-8'))
 
     def resolve(p):
+        # The Csc action runs in the project: relative compiler, rsp, reference, analyzer and source
+        # paths bind there, never at the caller's working directory.
         return str((project/p) if not os.path.isabs(p) else Path(p))
 
     inputs = csc['Inputs']
@@ -184,7 +197,7 @@ def bind_repeat(project, log, release):
         'rsp_refs_not_in_node_inputs': sorted(rsp_refs - input_dlls),
     }
     m = re.match(r'"([^"]+)" exec "([^"]+)"', csc['Action'])
-    compiler = {'dotnet': m.group(1), 'csc': m.group(2)} if m else None
+    compiler = {'dotnet': resolve(m.group(1)), 'csc': resolve(m.group(2))} if m else None
     if compiler:
         compiler['dotnet_sha256'] = sha(compiler['dotnet'])
         compiler['csc_sha256'] = sha(compiler['csc'])
@@ -204,7 +217,7 @@ def bind_repeat(project, log, release):
         # Bee input data names package files by their virtual Packages/<name>/ path.
         parts = Path(p).parts
         if len(parts) > 2 and parts[0] == 'Packages' and parts[1] in resolved_packages:
-            return str(Path(resolved_packages[parts[1]]).joinpath(*parts[2:]))
+            return resolve(str(Path(resolved_packages[parts[1]]).joinpath(*parts[2:])))
         return resolve(p)
 
     checks['inputdata'] = {
@@ -253,7 +266,8 @@ def bind_repeat(project, log, release):
         p = Path(resolve(r))
         refs.append({'rsp': r, 'resolved': str(p), 'exists': p.exists(), 'sha256': sha(p) if p.exists() else None,
                      'mtime_not_after_compile': p.exists() and p.stat().st_mtime <= compile_time})
-    analyzers = [{'path': a, 'sha256': sha(a), 'mtime_not_after_compile': Path(a).stat().st_mtime <= compile_time}
+    analyzers = [{'path': a, 'resolved': resolve(a), 'sha256': sha(resolve(a)),
+                  'mtime_not_after_compile': Path(resolve(a)).stat().st_mtime <= compile_time}
                  for a in rsp['analyzers']]
     checks['references'] = {
         'count': len(refs), 'unique': len({r['resolved'] for r in refs}),
