@@ -114,7 +114,22 @@ namespace UnityEngine
 
         public bool isReadable => m_IsReadable;
         public int vertexCount => m_Vertices.Length;
-        public IndexFormat indexFormat { get => m_IndexFormat; set => m_IndexFormat = value; }
+        /// <summary>Changing the format sets subMeshCount to one and clears the index buffer
+        /// (documented, 6000.0 Mesh.indexFormat). Assigning the current format is not a change and
+        /// keeps the indices (Unity's handling of it is unmeasured).</summary>
+        public IndexFormat indexFormat
+        {
+            get => m_IndexFormat;
+            set
+            {
+                if (value == m_IndexFormat) return;
+                m_IndexFormat = value;
+                m_SubMeshes.Clear();
+                m_SubMeshes.Add(new SubMesh());
+                m_IndexBuffer = null;
+                Changed();
+            }
+        }
         public MeshTopology GetTopology(int submesh) => m_SubMeshes[submesh].Topology;
 
         public int subMeshCount
