@@ -6,16 +6,11 @@ using Xunit;
 namespace UnityEngine.Tests
 {
     /// <summary>
-    /// Awaitables completed in one Update pass. Unity 6000.0 Manual, "Event function execution order"
-    /// (https://docs.unity.com/en-us/engine/6000.0/manual/scripting/managing-update-order/execution-order):
-    /// "The exact order of execution between resuming coroutines and asynchronous tasks is not
-    /// guaranteed. Awaitables are grouped together and executed in the order they were awaited."
-    ///
-    /// These guards pin the await order within each kind of wait, in both registration orders and
-    /// against due times. They do not pin the order between NextFrameAsync and WaitForSecondsAsync.
-    /// In Unity's public 6000.0 reference source the two are separate queues: NextFrameAsync is a
-    /// managed list completed by one Update callback, WaitForSecondsAsync a native awaitable. Their
-    /// relative order is therefore not established, and no Unity measurement covers it.
+    /// Awaitables completed in one Update pass: preservation controls of Unbound's current queues.
+    /// Unity6000.0 C# reference source shows NextFrame FIFO; timed waits use native scheduling,
+    /// so the timed due-order inversion asserted here is unmeasured, not a Unity guarantee.
+    /// The Manual describes await order within groups without defining every grouping boundary.
+    /// Cross-kind order remains unresolved; these tests assert none and authorize no global sort.
     /// </summary>
     [Collection("Frames")]
     public sealed class AwaitableUpdateOrderTests : IDisposable
@@ -40,7 +35,8 @@ namespace UnityEngine.Tests
             AssertBefore(log, "frame 1", "frame 2");
         }
 
-        // Green on old and new Core. "seconds 2" is due before "seconds 1" but was awaited later.
+        // Internal preservation, unmeasured for Unity: seconds 2 is due earlier but awaited later.
+        // The source-backed NextFrame FIFO check is independent of that timed-queue choice.
         [Fact]
         public void TimedWaitsAwaitedFirstKeepTheirAwaitOrderAmongTheirKind()
         {
