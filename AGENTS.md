@@ -47,6 +47,24 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
   it, and the confirming runnable probe or canonical reference. Distinguish measured
   behavior from internal-mechanism inference.
 
+## Unity contracts and parity decisions
+
+- Before changing Unity API behavior, lifecycle timing, callback order or other observable
+  semantics, check the official Manual and Scripting API for the project's Unity release.
+  Read the relevant limitations as well as the main description. Record the version, links
+  and applicable guarantee in the cause table or review.
+- Distinguish a documented guarantee, behavior observed in a specific reference capture,
+  and an unresolved implementation hypothesis. A repeatable observation does not establish
+  a universal Unity contract.
+- When Unity leaves an order or behavior unspecified, do not promise a stronger guarantee,
+  invent a global sort or phase rule, or add normative tests merely to reproduce one fixture.
+  Preserve documented guarantees, including configurable script execution order. A normal
+  deterministic implementation is not a defect just because Unity leaves its order unspecified.
+- Probe an undocumented detail only to resolve a concrete compatibility question. Keep the
+  measured release/context and unmeasured cases explicit. Existing raw failures and callback
+  sequences stay visible; do not change an oracle, comparator, tolerance or ordering to make
+  an unspecified difference disappear. Review observable game effects before changing code.
+
 ## Code search
 
 - The repo has a semantic index (`ccc`, see the `ccc` skill). Use `ccc search <what it does>` to find
