@@ -198,8 +198,20 @@ namespace UnityEngine
                 Debug.LogError($"AudioClip.SetData failed; AudioClip {m_Name} is streamed", this);
                 return false;
             }
+            if (KeepsCompressedData)
+            {
+                Debug.LogError($"Unbound: AudioClip.SetData failed: audio clip \"{m_Name}\" is compressed in memory; Unity sets the samples of compressed audio only with the Decompress On Load load type.", this);
+                return false;
+            }
+            if (m_Handle == 0)
+            {
+                Debug.LogError($"Unbound: AudioClip.SetData failed: audio clip \"{m_Name}\" has no audio data Unbound can write.", this);
+                return false;
+            }
             var copy = data.ToArray();
-            return AudioBackend.Current.ClipData(m_Handle, offsetSamples, copy, write: true);
+            if (AudioBackend.Current.ClipData(m_Handle, offsetSamples, copy, write: true)) return true;
+            Debug.LogError($"Unbound: AudioClip.SetData failed: the samples of audio clip \"{m_Name}\" could not be written.", this);
+            return false;
         }
 
         [Obsolete("The _3D argument of AudioClip is deprecated. Use the spatialBlend property of AudioSource instead to morph between 2D and 3D playback.")]
