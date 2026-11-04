@@ -97,12 +97,12 @@ namespace UnityEngine
         {
             if (width <= 0 || height <= 0)
                 throw new UnityException($"Failed to create texture because of invalid parameters. Width {width}, height {height}.");
+            int fullMips = LayeredPixels.FullMipCount(width, height, 1);
+            if (mipCount > fullMips) throw new UnityException("Failed to create texture because its mip count exceeds its dimensions.");
             ReleaseStore();
             m_Width = width;
             m_Height = height;
             m_Format = format;
-            int fullMips = LayeredPixels.FullMipCount(width, height, 1);
-            if (mipCount > fullMips) throw new UnityException("Failed to create texture because its mip count exceeds its dimensions.");
             m_MipCount = mipCount <= 0 ? fullMips : mipCount;
             m_Linear = linear;
             m_IsReadable = true;
