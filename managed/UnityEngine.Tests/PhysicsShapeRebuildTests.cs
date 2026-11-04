@@ -28,7 +28,9 @@ namespace UnityEngine.Tests
     /// touching is not a new touch, and one that ends the touch is an Exit, as BoxCollider's in-place
     /// changes already behave (the box rows and PhysicsTests' trigger conversion are those controls).
     /// What a Rigidbody attachment change sends while still touching is not measured: those tests
-    /// check only that the pair ends with its Exit and no further Stay once the colliders separate.
+    /// check that the pair ends with its Exit and no further Stay once the colliders separate, and
+    /// that its Enters and Exits are equal in number (derived from the documented Enter/Exit
+    /// pairing, not measured; it does not tell continuity from an Exit and a new Enter).
     /// </summary>
     public class PhysicsShapeRebuildTests : IDisposable
     {
@@ -195,11 +197,13 @@ namespace UnityEngine.Tests
             var visitor = Visitor(new Vector3(.8f, 0f, 0f));
             var recorder = visitor.AddComponent<RebuildRecorder3D>();
 
+            // The Enter step's Stay is engine-specific and stays unasserted. While they keep
+            // touching, the held body never sleeps, so Stay comes once per step (OnCollisionStay).
             Assert.Equal(new[] { "CE:target" }, WithoutStays(Step(recorder)));
             change();
-            Assert.Empty(WithoutStays(Step(recorder)));
+            Assert.Equal(new[] { "CS:target" }, Step(recorder));
             change();
-            Assert.Empty(WithoutStays(Step(recorder)));
+            Assert.Equal(new[] { "CS:target" }, Step(recorder));
             visitor.transform.position = new Vector3(5f, 0f, 0f);
             Assert.Equal(new[] { "CX:target" }, Step(recorder));
             Assert.Empty(Step(recorder));
@@ -224,7 +228,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void ARadiusGrownDuringTriggerEnterKeepsTheOverlap()
         {
-            // The SphereCollider.radius Scripting API example grows the radius in OnTriggerEnter.
+            // A radius change during OnTriggerEnter, as in the SphereCollider.radius Scripting API
+            // example (there the collider that enters a trigger grows; here the trigger itself grows).
             var zone = Make("zone", Vector3.zero).AddComponent<SphereCollider>();
             zone.isTrigger = true;
             var zoneRecorder = zone.gameObject.AddComponent<RebuildRecorder3D>();
@@ -290,6 +295,9 @@ namespace UnityEngine.Tests
             a.isTrigger = false; Expect("TS");
             b.transform.position = new Vector3(3f, 0f, 0f); Expect("TX");
             b.transform.position = new Vector3(.8f, 0f, 0f); Expect("TE", "TS");
+            // Extrapolated, not measured for this state: physicsscenesettings measures TX then CE
+            // for the same flag change on a carried-over pair (flags dd/ss-again) and for a
+            // re-entered trigger/trigger pair made solid (trigger-pairs dd/from-tt).
             b.isTrigger = false; Expect("TX", "CE");
             b.transform.position = new Vector3(3f, 0f, 0f); Expect("CX");
             Expect();
@@ -312,11 +320,12 @@ namespace UnityEngine.Tests
             wall.AddComponent<BoxCollider>();
             var recorder = wall.AddComponent<RebuildRecorder3D>();
 
+            // As above: the held body keeps the documented Stay while the part touches the wall.
             Assert.Equal(new[] { "CE:part" }, WithoutStays(Step(recorder)));
             part.transform.localPosition = new Vector3(.05f, 0f, 0f);
-            Assert.Empty(WithoutStays(Step(recorder)));
+            Assert.Equal(new[] { "CS:part" }, Step(recorder));
             part.transform.localPosition = Vector3.zero;
-            Assert.Empty(WithoutStays(Step(recorder)));
+            Assert.Equal(new[] { "CS:part" }, Step(recorder));
             wall.transform.position = new Vector3(5f, 0f, 0f);
             Assert.Equal(new[] { "CX:part" }, Step(recorder));
             Assert.Empty(Step(recorder));
