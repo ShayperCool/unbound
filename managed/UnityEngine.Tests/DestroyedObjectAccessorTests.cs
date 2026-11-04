@@ -63,6 +63,9 @@ namespace UnityEngine.Tests
                 Save(typeof(Lifecycle), "s_PendingStart");
                 Save(typeof(Coroutines), "s_Running");
                 Save(typeof(Invokes), "s_Entries");
+                // Resolve every reflected field before mutating global state. A missing field
+                // cannot leave earlier queues cleared when the constructor fails.
+                foreach (var (collection, _) in m_Collections) collection.Clear();
                 EditorSession.IsPlaying = true;
             }
 
@@ -72,7 +75,6 @@ namespace UnityEngine.Tests
                 var items = new object[collection.Count];
                 collection.CopyTo(items, 0);
                 m_Collections.Add((collection, items));
-                collection.Clear();
             }
 
             internal GameObject Make(string name, Transform parent = null)
@@ -302,6 +304,19 @@ namespace UnityEngine.Tests
             }
         }
 
+        public class RemovesLaterSibling : MonoBehaviour
+        {
+            internal GameObject Target;
+            internal bool OnCanvasChange;
+
+            public void RemoveLater() => Object.DestroyImmediate(Target);
+
+            void OnCanvasHierarchyChanged()
+            {
+                if (OnCanvasChange) Object.DestroyImmediate(Target);
+            }
+        }
+
         public class RemovesOnParentChange : MonoBehaviour
         {
             void OnTransformParentChanged() => Object.DestroyImmediate(gameObject);
@@ -334,19 +349,44 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void BroadcastCanContinueItsSnapshotAfterTheRootIsRemoved()
+        public void BroadcastCanContinueAfterAnEarlierChildRemovesALaterSibling()
         {
             using var owned = new Owned();
             var root = owned.Make("broadcast.root");
-            var child = owned.Make("broadcast.child", root.transform);
-            root.AddComponent<RemovesReceiver>();
+            var first = owned.Make("broadcast.first", root.transform);
+            var later = owned.Make("broadcast.later", root.transform);
+            var receiver = first.AddComponent<RemovesLaterSibling>();
+            receiver.Target = later;
 
             var exception = Record.Exception(() =>
-                root.BroadcastMessage(nameof(RemovesReceiver.RemoveNow), SendMessageOptions.RequireReceiver));
+                root.BroadcastMessage(nameof(RemovesLaterSibling.RemoveLater), SendMessageOptions.RequireReceiver));
 
             Assert.Null(exception);
-            Assert.True(root == null);
-            Assert.True(child == null);
+            Assert.True(root != null);
+            Assert.True(first != null);
+            Assert.True(later == null);
+        }
+
+        [Fact]
+        public void CanvasSortingCanContinueAfterAChildRemovesALaterSibling()
+        {
+            using var owned = new Owned();
+            var root = owned.Make("canvas.root");
+            var canvas = root.AddComponent<Canvas>();
+            var first = owned.Make("canvas.first", root.transform);
+            var later = owned.Make("canvas.later", root.transform);
+            var receiver = first.AddComponent<RemovesLaterSibling>();
+            receiver.Target = later;
+            receiver.OnCanvasChange = true;
+
+            // Unmeasured internal preservation control. The live Canvas setter must not acquire
+            // an exception merely because a previously visited callback removed a later object.
+            var exception = Record.Exception(() => canvas.overrideSorting = !canvas.overrideSorting);
+
+            Assert.Null(exception);
+            Assert.True(root != null);
+            Assert.True(first != null);
+            Assert.True(later == null);
         }
 
         [Fact]
