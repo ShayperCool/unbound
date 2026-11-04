@@ -497,8 +497,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             }
             let r: Request = serde_json::from_str(request)?;
             let model = imported_model(Guid::parse(&r.guid).context("bad guid")?)?;
-            let mesh = model.meshes.get(r.index).context("no such mesh")?;
-            Ok(crate::models::mesh_json(mesh).to_string())
+            Ok(model_mesh_json(&model, r.index)?.to_string())
         }
         "editor-resource" => {
             #[derive(Deserialize)]
@@ -800,6 +799,21 @@ fn imported_model(guid: Guid) -> Result<Arc<unbound_assets::ImportedModel>> {
     }
     s.models.write().unwrap().insert(guid, model.clone());
     Ok(model)
+}
+
+/// The `model-mesh` answer: a model mesh's geometry ([`crate::models::mesh_json`], unchanged) plus
+/// `readable`, the model's Read/Write Enabled import setting. Unity 6000.0 `Mesh.isReadable`: "You
+/// can set this value using the Read/Write Enabled checkbox when importing a model to Unity."
+/// The flag comes from the imported model's settings, which the import cache keys by the meta's
+/// content hash; the managed Mesh adopts it after it has filled the geometry.
+fn model_mesh_json(
+    model: &unbound_assets::ImportedModel,
+    index: usize,
+) -> Result<serde_json::Value> {
+    let mesh = model.meshes.get(index).context("no such mesh")?;
+    let mut answer = crate::models::mesh_json(mesh);
+    answer["readable"] = serde_json::Value::Bool(model.settings.is_readable);
+    Ok(answer)
 }
 
 /// The documents of a model's prefab.
@@ -1198,5 +1212,48 @@ mod tests {
             ["b/resources/c", "c"]
         );
         assert!(resources_keys("Assets/Textures/a.png").is_empty());
+    }
+
+    /// One triangle, as the importer gets it from a file.
+    const TRIANGLE_OBJ: &str = "o Tri\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\n";
+
+    fn imported_triangle(meta: &str) -> unbound_assets::ImportedModel {
+        let meta = if meta.is_empty() {
+            unbound_yaml::Value::Null
+        } else {
+            unbound_yaml::parse_value(meta).unwrap()
+        };
+        let source = std::path::Path::new("Tri.obj");
+        unbound_assets::model::import_model(source, TRIANGLE_OBJ.as_bytes(), &meta).unwrap()
+    }
+
+    /// The Read/Write Enabled setting where 6000.0 metas write it (under `animations:`), on and
+    /// off, and the importer's default for a model with no setting.
+    #[test]
+    fn model_mesh_answers_carry_the_read_write_setting() {
+        let on = "ModelImporter:\n  serializedVersion: 22200\n  animations:\n    isReadable: 1\n  meshes:\n    globalScale: 1\n";
+        let off = "ModelImporter:\n  serializedVersion: 22200\n  animations:\n    isReadable: 0\n  meshes:\n    globalScale: 1\n";
+        let unset = "ModelImporter:\n  serializedVersion: 22200\n  meshes:\n    globalScale: 1\n";
+        for (meta, readable) in [(on, true), (off, false), (unset, false), ("", false)] {
+            let model = imported_triangle(meta);
+            assert_eq!(model.settings.is_readable, readable, "{meta:?}");
+            let answer = model_mesh_json(&model, 0).unwrap();
+            assert_eq!(answer["readable"], json!(readable), "{meta:?}");
+        }
+    }
+
+    /// The flag is the only addition: the geometry is the same bytes whatever the setting.
+    #[test]
+    fn model_mesh_answers_keep_the_geometry_unchanged() {
+        let on = imported_triangle("ModelImporter:\n  animations:\n    isReadable: 1\n");
+        let off = imported_triangle("ModelImporter:\n  animations:\n    isReadable: 0\n");
+        let mut with_flag = model_mesh_json(&off, 0).unwrap();
+        let flag = with_flag.as_object_mut().unwrap().remove("readable");
+        assert_eq!(flag, Some(json!(false)));
+        assert_eq!(with_flag, crate::models::mesh_json(&off.meshes[0]));
+        let mut readable = model_mesh_json(&on, 0).unwrap();
+        readable.as_object_mut().unwrap().remove("readable");
+        assert_eq!(readable, with_flag);
+        assert!(model_mesh_json(&off, 1).is_err());
     }
 }
