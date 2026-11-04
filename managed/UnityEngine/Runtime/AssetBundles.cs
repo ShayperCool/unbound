@@ -52,7 +52,7 @@ namespace UnityEngine
                 Debug.LogError($"Unable to open archive file: {path}");
                 return null;
             }
-            return Open(JsonSerializer.Serialize(new { path = Path.GetFullPath(path), offset }), path);
+            return Open(JsonSerializer.Serialize(new { path = Path.GetFullPath(path), offset, crc }), path);
         }
 
         public static AssetBundle LoadFromMemory(byte[] binary) => LoadFromMemory(binary, 0);
@@ -61,7 +61,7 @@ namespace UnityEngine
         internal static AssetBundle LoadFromMemory_Internal(byte[] binary, uint crc)
         {
             if (binary == null) throw new NullReferenceException();
-            return Open(JsonSerializer.Serialize(new { data = Convert.ToBase64String(binary) }), "<memory>");
+            return Open(JsonSerializer.Serialize(new { data = Convert.ToBase64String(binary), crc }), "<memory>");
         }
 
         public static AssetBundle LoadFromStream(Stream stream) => LoadFromStream(stream, 0, 0);
@@ -113,7 +113,9 @@ namespace UnityEngine
         [Obsolete("Method CreateFromMemoryImmediate has been renamed to LoadFromMemory (UnityUpgradable) -> LoadFromMemory(*)")]
         public static AssetBundle CreateFromMemoryImmediate(byte[] binary) => LoadFromMemory(binary);
 
-        /// <summary>Opens an archive on the native side and reads its AssetBundle object.</summary>
+        /// <summary>Opens an archive on the native side and reads its AssetBundle object. A nonzero
+        /// `crc` in the request is checked there against the uncompressed content before the archive
+        /// is registered; a mismatch is reported and gives null, like any other failure to open.</summary>
         static AssetBundle Open(string request, string description)
         {
             JsonElement info;
