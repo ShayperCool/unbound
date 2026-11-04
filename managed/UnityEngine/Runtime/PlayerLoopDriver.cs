@@ -88,6 +88,38 @@ namespace Unbound.Runtime
             set => s_Current = value;
         }
 
+        /// <summary>The measured manual Destroy delivery uses these three scripting points.
+        /// Custom loops omitting one retain the prior end-of-frame drain instead of stranding
+        /// requests. This fallback preserves our previous behavior; it is not a measured Unity
+        /// contract for arbitrary custom loops. Inspect the current loop so a later replacement
+        /// cannot leave an earlier request waiting on a node that no longer runs.</summary>
+        internal static bool HasDestroyDeliveryPoints
+        {
+            get
+            {
+                var phases = CurrentLoop.subSystemList;
+                return HasPointInPhase(phases, typeof(PL.FixedUpdate), typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate))
+                    && HasPointInPhase(phases, typeof(PL.Update), typeof(PL.Update.ScriptRunDelayedDynamicFrameRate))
+                    && HasPointInPhase(phases, typeof(PL.PostLateUpdate), typeof(PL.PostLateUpdate.ScriptRunDelayedDynamicFrameRate));
+            }
+        }
+
+        static bool HasPointInPhase(PlayerLoopSystem[] phases, Type phase, Type point)
+        {
+            if (phases != null)
+                foreach (var system in phases)
+                    if (system.type == phase && HasPoint(system.subSystemList, point)) return true;
+            return false;
+        }
+
+        static bool HasPoint(PlayerLoopSystem[] systems, Type point)
+        {
+            if (systems != null)
+                foreach (var system in systems)
+                    if (system.type == point || HasPoint(system.subSystemList, point)) return true;
+            return false;
+        }
+
         static PlayerLoopDriver()
         {
             Register(typeof(PL.TimeUpdate.WaitForLastPresentationAndUpdateTime), UpdateTime);
@@ -103,11 +135,18 @@ namespace Unbound.Runtime
             // The Editor skips the cameras that render into textures.
             Register(typeof(PL.PreUpdate.SendMouseEvents), () => UnityEngine.SendMouseEvents.DoSendMouseEvents(1));
             Register(typeof(PL.FixedUpdate.ScriptRunBehaviourFixedUpdate), Lifecycle.RunFixedUpdate);
+            // Destroy's GameObject and script requests finish at the three delayed scripting points
+            // where Unity delivered their OnDestroy, never at EarlyUpdate's startup point (measured:
+            // tests/projects/destroycontract brackets). Their place before Invokes and coroutines at
+            // the same node is not measured; Update's pending Starts run first (measured:
+            // tests/projects/instantiateasync, Start before a pending Destroy's callbacks).
+            Register(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), Destruction.DeliverRequested);
             Register(typeof(PL.FixedUpdate.ScriptRunDelayedFixedFrameRate), () => Coroutines.Run(Coroutines.Phase.FixedUpdate));
             Register(typeof(PL.Update.ScriptRunBehaviourUpdate), Lifecycle.RunUpdate);
             // Objects enabled or created during Update start at this node, before coroutines
             // (measured: tests/projects/instantiateasync phase markers and lifecycle records).
             Register(typeof(PL.Update.ScriptRunDelayedDynamicFrameRate), Lifecycle.RunPendingStarts);
+            Register(typeof(PL.Update.ScriptRunDelayedDynamicFrameRate), Destruction.DeliverRequested);
             Register(typeof(PL.Update.ScriptRunDelayedDynamicFrameRate), () =>
             {
                 Invokes.Run();
@@ -115,11 +154,13 @@ namespace Unbound.Runtime
             });
             Register(typeof(PL.Update.ScriptRunDelayedTasks), MainThreadContext.Instance.RunPending);
             Register(typeof(PL.PreLateUpdate.ScriptRunBehaviourLateUpdate), Lifecycle.RunLateUpdate);
+            // Due delayed destructions, assets and built-in components keep the end-of-frame flushes.
             Register(typeof(PL.PostLateUpdate.PlayerSendFrameStarted), () =>
             {
                 Destruction.RunDelayed();
                 Destruction.FlushEndOfFrame();
             });
+            Register(typeof(PL.PostLateUpdate.ScriptRunDelayedDynamicFrameRate), Destruction.DeliverRequested);
             Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), NativeInput.BeforeRenderUpdate);
             Register(typeof(PL.PostLateUpdate.UpdateAllRenderers), Application.Internal_BeforeRender);
             // A coroutine's WaitForEndOfFrame resumes only on a frame that renders the screen, as

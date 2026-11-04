@@ -271,11 +271,18 @@ namespace Unbound.Runtime
         }
     }
 
-    /// <summary>Object.Destroy (at the end of the frame, or after a delay) and DestroyImmediate.</summary>
+    /// <summary>Object.Destroy (deferred, or after a delay) and DestroyImmediate.</summary>
     internal static class Destruction
     {
         static readonly List<(Object Target, double Time)> s_Delayed = new List<(Object, double)>();
+        /// <summary>All deferred requests, in enqueue order. The scripting points remove manual
+        /// requests early; end-of-frame delivery skips those while the complete scripting pump
+        /// is present. Keeping one queue preserves the old interleaving with assets and due
+        /// delayed requests if a custom loop requires the end-of-frame fallback.</summary>
         static readonly List<Object> s_EndOfFrame = new List<Object>();
+        /// <summary>Zero-delay requests of scene GameObjects and scripts, in request order: their
+        /// scripts were disabled by the request; <see cref="DeliverRequested"/> destroys them.</summary>
+        static readonly List<Object> s_Requested = new List<Object>();
 
         internal static void Destroy(Object obj, float delay)
         {
@@ -287,6 +294,63 @@ namespace Unbound.Runtime
             if (obj.m_PendingDestroy) return;
             obj.m_PendingDestroy = true;
             s_EndOfFrame.Add(obj);
+            if (!IsScriptRequest(obj)) return;
+            // Accounted before any callback: Destroy of the same object from its OnDisable returns
+            // above, and destructions requested by the callbacks queue after this one.
+            s_Requested.Add(obj);
+            Lifecycle.DisableForDestroyRequest(obj);
+        }
+
+        /// <summary>Preserves the existing automatic particle stop-action delivery at the end
+        /// of the frame, without applying the manual request's script-disable contract.</summary>
+        internal static void DestroyAtEndOfFrame(Object obj)
+        {
+            if (obj == null || obj.m_PendingDestroy) return;
+            obj.m_PendingDestroy = true;
+            s_EndOfFrame.Add(obj);
+        }
+
+        /// <summary>A zero-delay request whose scripts Destroy disables before it returns (measured
+        /// in Play mode for awakened MonoBehaviours, GameObject and component targets:
+        /// tests/projects/destroycontract). Edit mode, assets, prefab assets, built-in components
+        /// and a script that another component still requires keep the end-of-frame path.</summary>
+        static bool IsScriptRequest(Object obj)
+        {
+            if (!EditorSession.IsPlaying) return false;
+            switch (obj)
+            {
+                case GameObject go:
+                    return !go.m_IsPrefabAsset && !go.IsPersistentAsset;
+                case MonoBehaviour mb:
+                    var owner = mb.m_GameObject;
+                    return owner != null && !owner.m_IsPrefabAsset && !owner.IsPersistentAsset && RequiredBy(mb) == null;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>Destroys the pending GameObject and script requests. It runs at the delayed
+        /// scripting points where Unity delivered their OnDestroy: FixedUpdate's and Update's
+        /// after their behaviour updates, and PostLateUpdate's (measured: tests/projects/
+        /// destroycontract brackets; a request after TriggerEndOfFrameCallbacks reaches the next
+        /// frame's FixedUpdate point). The scripts are already disabled, so no second OnDisable.
+        /// Requests made by OnDestroy during the pass finish in the same pass.</summary>
+        internal static void DeliverRequested()
+        {
+            while (s_Requested.Count > 0)
+            {
+                if (!PlayerLoopDriver.HasDestroyDeliveryPoints) return;
+                var batch = s_Requested.ToArray();
+                s_Requested.Clear();
+                var targets = new HashSet<Object>(batch, ReferenceEqualityComparer.Instance);
+                s_EndOfFrame.RemoveAll(targets.Contains);
+                foreach (var obj in batch)
+                {
+                    if (obj.m_Destroyed) continue;
+                    try { DestroyImmediate(obj); }
+                    catch (Exception e) { Debug.LogException(e); }
+                }
+            }
         }
 
         /// <summary>Moves due delayed destructions to the end-of-frame list.</summary>
@@ -311,12 +375,20 @@ namespace Unbound.Runtime
         {
             while (s_EndOfFrame.Count > 0)
             {
+                var held = s_Requested.Count > 0 && PlayerLoopDriver.HasDestroyDeliveryPoints
+                    ? new HashSet<Object>(s_Requested, ReferenceEqualityComparer.Instance) : null;
                 var batch = s_EndOfFrame.ToArray();
                 s_EndOfFrame.Clear();
+                var due = new List<Object>();
+                // Partition before callbacks: new requests must follow every retained request,
+                // even if a legacy request's OnDestroy enqueues them during this flush.
                 foreach (var obj in batch)
-                {
+                    if (held != null && held.Contains(obj)) s_EndOfFrame.Add(obj);
+                    else due.Add(obj);
+                if (due.Count == 0) return;
+                if (held == null) s_Requested.Clear();
+                foreach (var obj in due)
                     if (!obj.m_Destroyed) DestroyImmediate(obj);
-                }
             }
         }
 
@@ -369,29 +441,37 @@ namespace Unbound.Runtime
             return false;
         }
 
+        /// <summary>The first live component of <paramref name="c"/>'s GameObject that requires
+        /// c's type when no other component satisfies the requirement, or null.</summary>
+        static Component RequiredBy(Component c)
+        {
+            var go = c.m_GameObject;
+            if (go == null) return null;
+            foreach (var other in go.m_Components)
+            {
+                if (other == c || other.m_Destroyed) continue;
+                foreach (var required in ComponentFactory.RequiredComponents(other.GetType()))
+                {
+                    if (!required.IsInstanceOfType(c)) continue;
+                    // Another component of the type could satisfy the requirement.
+                    bool replaced = false;
+                    foreach (var candidate in go.m_Components)
+                        if (candidate != c && !candidate.m_Destroyed && required.IsInstanceOfType(candidate)) replaced = true;
+                    if (!replaced) return other;
+                }
+            }
+            return null;
+        }
+
         static void DestroyComponent(Component c)
         {
             var go = c.m_GameObject;
-            if (go != null)
+            var other = RequiredBy(c);
+            if (other != null)
             {
-                foreach (var other in go.m_Components)
-                {
-                    if (other == c || other.m_Destroyed) continue;
-                    foreach (var required in ComponentFactory.RequiredComponents(other.GetType()))
-                    {
-                        if (!required.IsInstanceOfType(c)) continue;
-                        // Another component of the type could satisfy the requirement.
-                        bool replaced = false;
-                        foreach (var candidate in go.m_Components)
-                            if (candidate != c && !candidate.m_Destroyed && required.IsInstanceOfType(candidate)) replaced = true;
-                        if (!replaced)
-                        {
-                            Debug.LogError($"Can't remove {c.GetType().Name} because {other.GetType().Name} ({other.GetType().Name}) depends on it", c);
-                            c.m_PendingDestroy = false;
-                            return;
-                        }
-                    }
-                }
+                Debug.LogError($"Can't remove {c.GetType().Name} because {other.GetType().Name} ({other.GetType().Name}) depends on it", c);
+                c.m_PendingDestroy = false;
+                return;
             }
             // Removing only the body converts its surviving colliders to static without exits.
             if (c is Rigidbody2D body2D) Physics2DWorld.Remove(body2D, silent: true);
@@ -446,6 +526,7 @@ namespace Unbound.Runtime
         {
             s_Delayed.Clear();
             s_EndOfFrame.Clear();
+            s_Requested.Clear();
         }
     }
 }
