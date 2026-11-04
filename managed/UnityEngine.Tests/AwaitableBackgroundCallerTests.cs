@@ -12,7 +12,10 @@ namespace UnityEngine.Tests
     /// (https://docs.unity.com/en-us/engine/6000.0/manual/scripting/programming-distribute-work-threads/async-await-support/async-awaitable-continuations):
     /// "If the method is called from the main thread, it resumes on the main thread. Otherwise it
     /// resumes on a .NET ThreadPool thread." The effect of MainThreadAsync and BackgroundThreadAsync
-    /// is "local to the current method only". Completion sources are not async methods and keep
+    /// is "local to the current method only". That is the default dispatch; Unity's 6000.0.71f1 C#
+    /// reference source (UnityCsReference 78d4b97c, Awaitable.cs MatchCompletionThreadAffinity)
+    /// continues a background caller inline on any thread but the main one, so only completion on
+    /// the main thread queues it to the pool. Completion sources are not async methods and keep
     /// resuming their awaiter on the completing thread.
     ///
     /// Each test makes its own thread the main thread (or, for the unbooted case, no thread). Other
@@ -239,26 +242,33 @@ namespace UnityEngine.Tests
             Assert.Equal(42, probe.Result);
         }
 
-        // A thread the game started is a background thread but not a ThreadPool thread: completion
-        // there moves the background caller to the pool. Old Core: red at
-        // Assert.True(probe.CallerOnPool) (the caller resumed inline on the dedicated thread).
+        // A thread the game started is a background thread too: completion there suits the background
+        // caller, which goes on synchronously on that thread before SetResult returns, without a
+        // pool hop. Unity's 6000.0.71f1 C# reference source (MatchCompletionThreadAffinity:
+        // BackgroundThread matches any thread but the main one) is the evidence; the Manual's
+        // "resumes on a .NET ThreadPool thread" states the default dispatch, and Task.Run is only the
+        // fallback for completion on the main thread. Unmeasured against the Editor.
+        // Guard on c4130273 (no affinity off the main thread: inline too); red on 2c329443's Core at
+        // Assert.True(resumedInline) (that head queued the caller to the pool).
         [Fact]
-        public void ACompletionOnADedicatedThreadMovesABackgroundCallerToThePool()
+        public void ACompletionOnADedicatedThreadResumesABackgroundCallerThereSynchronously()
         {
             BecomeMainThread();
             var source = new AwaitableCompletionSource();
             var probe = new Probe();
             OnDedicatedThread(() => _ = CallsEndsAfter(source.Awaitable, probe));
             int completer = -1;
+            bool resumedInline = false;
             OnDedicatedThread(() =>
             {
                 completer = Environment.CurrentManagedThreadId;
                 source.SetResult();
+                resumedInline = probe.Resumed.IsSet && probe.CallerThread == completer;
             });
-            // Guard: the body (the source's own awaiter) ran inline on the dedicated thread.
+            Assert.True(resumedInline);
+            // Guard: the body (the source's own awaiter) ran inline on the dedicated thread too.
             Assert.Equal(completer, probe.BodyThread);
-            probe.WaitForCaller();
-            Assert.True(probe.CallerOnPool);
+            Assert.False(probe.CallerOnPool);
         }
 
         // Old Core: red at Assert.NotEqual(main, probe.CallerThread).

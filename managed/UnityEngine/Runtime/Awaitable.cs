@@ -15,7 +15,7 @@ namespace UnityEngine
     /// fixed update scripts, EndOfFrame with WaitForEndOfFrame. Continuations run synchronously on
     /// the thread that completes the awaitable, except for the awaitable of an `async Awaitable`
     /// method: its caller resumes on the main thread when the method was called there, and otherwise
-    /// on a thread pool thread (see StartedOnCurrentThread).
+    /// off the main thread (see StartedOnCurrentThread and RunOrScheduleContinuation).
     /// </summary>
     [AsyncMethodBuilder(typeof(Awaitable.AwaitableAsyncMethodBuilder))]
     public partial class Awaitable : IEnumerator
@@ -84,38 +84,46 @@ namespace UnityEngine
         }
 
         /// <summary>
-        /// Runs a registered continuation now when this thread suits the affinity ("runs
-        /// synchronously when completion is triggered", Manual "Introduction to Awaitable"), otherwise
-        /// moves it there. None runs on the completing thread. MainThread off the main thread goes
+        /// Runs a continuation now when this thread suits the affinity ("runs synchronously when
+        /// completion is triggered", Manual "Introduction to Awaitable"), otherwise moves it there.
+        /// None suits every thread. MainThread suits the main thread; off it the continuation goes
         /// through the main thread's SynchronizationContext (MainThreadContext, drained at
         /// Update.ScriptRunDelayedTasks and in paused/edit-mode frames), the same context
-        /// MainThreadAsync posts to. BackgroundThread needs a thread pool thread ("it resumes on a .NET
-        /// ThreadPool thread"): completion already on a pool thread runs inline; on the main thread or
-        /// on a thread the game started it is queued to the pool as a task, so an exception thrown by
-        /// the continuation stays in that task instead of ending the process. Unity's public 6000.0 C#
-        /// reference source (identical at 6000.0.71f1) queues with Task.Run too, but runs the
-        /// continuation inline on any thread other than the main one, a thread the game started
-        /// included. Here the Manual's ThreadPool wording is followed for that case; it is unmeasured.
+        /// MainThreadAsync posts to. BackgroundThread suits every thread but the main one, a pool
+        /// thread or a thread the game started alike, and runs inline there; only on the main thread
+        /// is the continuation queued to the pool, as a task, so that an exception thrown by it stays
+        /// in that task instead of ending the process.
+        ///
+        /// Two sources are distinguished here. The Manual ("Awaitable completion and continuation")
+        /// states the default dispatch: a method called off the main thread "resumes on a .NET
+        /// ThreadPool thread". Unity's public 6000.0.71f1 C# reference source (UnityCsReference
+        /// 78d4b97c, Awaitable.cs MatchCompletionThreadAffinity / RunOrScheduleContinuation) adds the
+        /// affinity optimization followed here: BackgroundThread matches "ManagedThreadId !=
+        /// _mainThreadId", so completion on any other thread continues inline without a hop, and
+        /// Task.Run is the fallback when completion happens on the main thread. That is
+        /// implementation evidence for this release, not a promise that every off-main completion
+        /// moves to a pool thread; it is unmeasured against the Editor. Used by completion.
         /// </summary>
         static void RunOrScheduleContinuation(AwaiterCompletionThreadAffinity affinity, Action continuation)
         {
-            switch (affinity)
-            {
-                case AwaiterCompletionThreadAffinity.MainThread:
-                    PlayerLoopDriver.RunOnMainThread(continuation);
-                    break;
-                case AwaiterCompletionThreadAffinity.BackgroundThread when !OnThreadPoolThread():
-                    System.Threading.Tasks.Task.Run(continuation);
-                    break;
-                default:
-                    continuation();
-                    break;
-            }
+            if (MatchesCurrentThread(affinity))
+                continuation();
+            else if (affinity == AwaiterCompletionThreadAffinity.MainThread)
+                PlayerLoopDriver.RunOnMainThread(continuation); // off the main thread: posted to it
+            else
+                System.Threading.Tasks.Task.Run(continuation); // BackgroundThread on the main thread
         }
 
-        /// <summary>A pool thread that is not the main thread (the test or host could make a pool
-        /// thread the main one; that one never counts as background).</summary>
-        static bool OnThreadPoolThread() => Thread.CurrentThread.IsThreadPoolThread && !PlayerLoopDriver.IsMainThread;
+        /// <summary>Whether the calling thread suits an affinity (the reference source's
+        /// MatchCompletionThreadAffinity). Before the player loop boots every thread is the main
+        /// thread (PlayerLoopDriver.IsMainThread), so MainThread, the only affinity given then,
+        /// matches everywhere.</summary>
+        static bool MatchesCurrentThread(AwaiterCompletionThreadAffinity affinity) => affinity switch
+        {
+            AwaiterCompletionThreadAffinity.MainThread => PlayerLoopDriver.IsMainThread,
+            AwaiterCompletionThreadAffinity.BackgroundThread => !PlayerLoopDriver.IsMainThread,
+            _ => true,
+        };
 
         /// <summary>
         /// Awaiting an awaitable that has already completed resumes at once on the awaiting thread,
