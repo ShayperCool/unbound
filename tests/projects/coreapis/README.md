@@ -45,8 +45,11 @@ missing and extra line, with no tolerance.
   object's or a runtime object's, can be set through `instanceID` and resolves. A destroyed
   object's id is broken. Instantiate remaps an id inside the copied hierarchy to the copy;
   JsonUtility writes `{"instanceID": id}` and reads it back.
-* **SetGameObjectsActive** (both overloads): `SetActive` on each id in order, each object's
-  messages before the next one's (a reentrant change from OnDisable takes effect at once). Ids
+* **SetGameObjectsActive** (both overloads): processes each id in order, each object's
+  messages before the next one's (a reentrant change from OnDisable takes effect at once).
+  Already-awake hierarchies notify the child first, even with one valid id; first wake is
+  parent-first with Awake/OnEnable interleaved. This does not establish the order of Native
+  plain `SetActive`, nor a general sibling/depth traversal. Ids
   of no live GameObject (0, unknown, destroyed, a Transform's or another component's) are
   skipped without an error. An uninitialized or disposed NativeArray throws ArgumentException
   ("NativeArray is uninitialized", `instanceIDs`); an empty one does nothing.
@@ -93,8 +96,15 @@ lines are unchanged. The remaining 64 missing / 64 extra lines comprise:
   235, 254 and 259. Native batch activation notifies the child first for an
   already-awake hierarchy. Unbound notifies its parent first. A separate four-run
   control proves frozen plain SetActive = candidate plain SetActive = candidate
-  batch span = candidate batch NativeArray for the recorded cases. This attributes
-  the limitation to the unchanged shared path; Native plain SetActive is unmeasured.
+  batch span = candidate batch NativeArray for the recorded cases. This identifies
+  Unbound's unchanged shared path, without proving Native plain SetActive order.
+  A source/evidence audit at `b7d69af5` confirms the activation path is unchanged;
+  the later RunUpdate correction is separate. No independently discriminating plain
+  parent/child toggle was found in the existing Native references. Each measured
+  hierarchy has one child/one level, so post-order and reverse pre-order still fit.
+  The eleven pairs remain significant; no ID reversal or shared lifecycle sort is
+  applied. A plain-versus-single-id-batch fixture with two siblings and a grandchild
+  is preparation only, not a new Native measurement or launch authorization.
 * **Other open API/text gaps:** instance-id sign at 139/143; JSON double digits at
   152/107; large-float formatting at 72; exception text at 249/262/313/96.
 * **Precision ledger:** the 21 GetTransformedBy rotation keys listed in
