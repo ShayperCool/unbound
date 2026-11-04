@@ -393,9 +393,19 @@ namespace UnityEngine
             if (indexCount < 0) throw new ArgumentException("Index count can not be negative", nameof(indexCount));
             var fresh = new int[indexCount];
             var old = IndexBuffer();
+            bool changed = indexCount != old.Length || format != m_IndexFormat;
             Array.Copy(old, fresh, Math.Min(old.Length, indexCount));
             m_IndexBuffer = fresh;
             m_IndexFormat = format;
+            // A new size or format reverts subMeshCount to one and leaves the index data
+            // uninitialized (documented, 6000.0 Mesh.SetIndexBufferParams); the caller sets ranges
+            // with SetSubMesh. Sub-mesh 0's own values after the reset are not specified: it starts
+            // empty here.
+            if (changed)
+            {
+                m_SubMeshes.Clear();
+                m_SubMeshes.Add(new SubMesh());
+            }
             Changed();
         }
 
