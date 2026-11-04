@@ -55,21 +55,43 @@ namespace UnityEngine
         public Texture2D(int width, int height, GraphicsFormat format, TextureCreationFlags flags)
             : this(width, height, format, (flags & TextureCreationFlags.MipChain) != 0 ? -1 : 1, flags) { }
 
+        /// <summary>As Unity 6000.0.71f1's constructor (its C# reference source, Texture.cs): the
+        /// format must support sampling on the device, with no fallback, else an error and no texture;
+        /// the data is sRGB for an sRGB format. Unbound then holds it in the texture format that
+        /// reports it (<see cref="GraphicsFormatUtility.Texture2DStorage"/>); a format no such texture
+        /// format reports fails the same way with Unbound's message instead of becoming RGBA32.</summary>
         public Texture2D(int width, int height, GraphicsFormat format, int mipCount, TextureCreationFlags flags)
         {
-            Init(width, height, TextureFormatOf(format), mipCount, !GraphicsFormatUtility.IsSRGBFormat(format));
+            var storage = GraphicsFormatUtility.Texture2DStorage(format);
+            if (!CanCreate(format, storage)) return;
+            Init(width, height, storage.Value.Format, mipCount, storage.Value.Linear);
         }
 
         public Texture2D(int width, int height, DefaultFormat format, TextureCreationFlags flags)
             : this(width, height, SystemInfo.GetGraphicsFormat(format), flags) { }
 
-        /// <summary>The texture format holding a graphics format's pixels (RGBA32 for formats with
-        /// no texture format).</summary>
-        static TextureFormat TextureFormatOf(GraphicsFormat format)
+        /// <summary>Whether a texture can be made with a graphics format; when it cannot, logs why and
+        /// leaves this object without an engine object (it compares equal to null), as Unity's
+        /// constructor does after a failed format check. Sampling support comes from the Editor's
+        /// measured format table, which holds the named formats only: unnamed values (the 54, 87 and
+        /// 88 Texture2D reports) are not checked there.</summary>
+        bool CanCreate(GraphicsFormat format, (TextureFormat Format, bool Linear)? storage)
         {
-            var t = GraphicsFormatUtility.GetTextureFormat(format);
-            return t == 0 ? TextureFormat.RGBA32 : t;
+            string error = null;
+            if (format != GraphicsFormat.None && Enum.IsDefined(typeof(GraphicsFormat), format)
+                && !SystemInfo.IsFormatSupported(format, GraphicsFormatUsage.Sample))
+                error = $"Texture creation failed. '{format}' is not supported for {GraphicsFormatUsage.Sample} usage on this platform. Use 'SystemInfo.IsFormatSupported' C# API to check format support.";
+            else if (storage == null)
+                error = UnsupportedGraphicsFormat("Texture2D", format);
+            if (error == null) return true;
+            Debug.LogError(error, this);
+            MarkDestroyed();
+            return false;
         }
+
+        /// <summary>Unbound's message for a graphics format no texture format it stores reports.</summary>
+        static string UnsupportedGraphicsFormat(string member, GraphicsFormat format) =>
+            $"Unbound: {member} with GraphicsFormat {GraphicsFormatUtility.GetFormatString(format)} ({(int)format}) is not supported: no texture format Unbound stores holds its texels.";
 
         void Init(int width, int height, TextureFormat format, int mipCount, bool linear)
         {
@@ -307,9 +329,18 @@ namespace UnityEngine
             return true;
         }
 
+        /// <summary>The format resolves as the constructor's does; a format no texture format Unbound
+        /// stores reports returns false with Unbound's error and leaves the texture as it was (Unity's
+        /// native answer is not measured).</summary>
         public bool Reinitialize(int width, int height, GraphicsFormat format, bool hasMipMap)
         {
-            Init(width, height, TextureFormatOf(format), hasMipMap ? -1 : 1, !GraphicsFormatUtility.IsSRGBFormat(format));
+            var storage = GraphicsFormatUtility.Texture2DStorage(format);
+            if (storage == null)
+            {
+                Debug.LogError(UnsupportedGraphicsFormat("Texture2D.Reinitialize", format), this);
+                return false;
+            }
+            Init(width, height, storage.Value.Format, hasMipMap ? -1 : 1, storage.Value.Linear);
             return true;
         }
 
