@@ -1,0 +1,1245 @@
+{
+ "source": "Assets/Scripts/ActivationOrderProbe.cs",
+ "tables": {
+  "nodes": [
+   [
+    "P",
+    null,
+    true
+   ],
+   [
+    "C1",
+    "P",
+    true
+   ],
+   [
+    "G",
+    "C1",
+    true
+   ],
+   [
+    "C2",
+    "P",
+    true
+   ],
+   [
+    "U",
+    null,
+    true
+   ],
+   [
+    "W",
+    null,
+    false
+   ],
+   [
+    "W1",
+    "W",
+    true
+   ],
+   [
+    "V",
+    null,
+    false
+   ],
+   [
+    "V1",
+    "V",
+    true
+   ]
+  ],
+  "create": [
+   "G",
+   "C2",
+   "P",
+   "C1",
+   "U",
+   "W1",
+   "W",
+   "V1",
+   "V"
+  ],
+  "add": [
+   "C2",
+   "C1",
+   "P",
+   "G",
+   "U",
+   "W1",
+   "W",
+   "V1",
+   "V"
+  ],
+  "ops": [
+   [
+    "op",
+    "plainOff",
+    "plain",
+    "P",
+    false
+   ],
+   [
+    "op",
+    "plainOn",
+    "plain",
+    "P",
+    true
+   ],
+   [
+    "op",
+    "spanOff",
+    "span",
+    "P",
+    false
+   ],
+   [
+    "op",
+    "spanOn",
+    "span",
+    "P",
+    true
+   ],
+   [
+    "op",
+    "nativeOff",
+    "nativeArray",
+    "P",
+    false
+   ],
+   [
+    "op",
+    "nativeOn",
+    "nativeArray",
+    "P",
+    true
+   ],
+   [
+    "wake",
+    "plainOn",
+    "plain",
+    "W",
+    true
+   ],
+   [
+    "wake",
+    "spanOn",
+    "span",
+    "V",
+    true
+   ]
+  ]
+ },
+ "tree": [
+  {
+   "n": "P",
+   "parent": null,
+   "sibling": null,
+   "depth": 0,
+   "children": 2
+  },
+  {
+   "n": "C1",
+   "parent": "P",
+   "sibling": 0,
+   "depth": 1,
+   "children": 1
+  },
+  {
+   "n": "G",
+   "parent": "C1",
+   "sibling": 0,
+   "depth": 2,
+   "children": 0
+  },
+  {
+   "n": "C2",
+   "parent": "P",
+   "sibling": 1,
+   "depth": 1,
+   "children": 0
+  },
+  {
+   "n": "U",
+   "parent": null,
+   "sibling": null,
+   "depth": 0,
+   "children": 0
+  },
+  {
+   "n": "W",
+   "parent": null,
+   "sibling": null,
+   "depth": 0,
+   "children": 1
+  },
+  {
+   "n": "W1",
+   "parent": "W",
+   "sibling": 0,
+   "depth": 1,
+   "children": 0
+  },
+  {
+   "n": "V",
+   "parent": null,
+   "sibling": null,
+   "depth": 0,
+   "children": 1
+  },
+  {
+   "n": "V1",
+   "parent": "V",
+   "sibling": 0,
+   "depth": 1,
+   "children": 0
+  }
+ ],
+ "operations": {
+  "op.plainOff": {
+   "call": "plain",
+   "target": "P",
+   "value": false,
+   "subtree": [
+    "P",
+    "C1",
+    "G",
+    "C2"
+   ],
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     }
+    ]
+   },
+   "identical_pairs": []
+  },
+  "op.plainOn": {
+   "call": "plain",
+   "target": "P",
+   "value": true,
+   "subtree": [
+    "P",
+    "C1",
+    "G",
+    "C2"
+   ],
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     }
+    ]
+   },
+   "identical_pairs": []
+  },
+  "op.spanOff": {
+   "call": "span",
+   "target": "P",
+   "value": false,
+   "subtree": [
+    "P",
+    "C1",
+    "G",
+    "C2"
+   ],
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     }
+    ]
+   },
+   "identical_pairs": []
+  },
+  "op.spanOn": {
+   "call": "span",
+   "target": "P",
+   "value": true,
+   "subtree": [
+    "P",
+    "C1",
+    "G",
+    "C2"
+   ],
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     }
+    ]
+   },
+   "identical_pairs": []
+  },
+  "op.nativeOff": {
+   "call": "nativeArray",
+   "target": "P",
+   "value": false,
+   "subtree": [
+    "P",
+    "C1",
+    "G",
+    "C2"
+   ],
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "G",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "P",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnDisable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnDisable"
+     }
+    ]
+   },
+   "identical_pairs": []
+  },
+  "op.nativeOn": {
+   "call": "nativeArray",
+   "target": "P",
+   "value": true,
+   "subtree": [
+    "P",
+    "C1",
+    "G",
+    "C2"
+   ],
+   "hypotheses": {
+    "PRE": [
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     }
+    ],
+    "POST": [
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVPRE": [
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     }
+    ],
+    "CREATE": [
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVCREATE": [
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     }
+    ],
+    "ADD": [
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     }
+    ],
+    "REVADD": [
+     {
+      "n": "G",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "P",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "C2",
+      "cb": "OnEnable"
+     }
+    ]
+   },
+   "identical_pairs": []
+  },
+  "wake.plainOn": {
+   "call": "plain",
+   "target": "W",
+   "value": true,
+   "subtree": [
+    "W",
+    "W1"
+   ],
+   "hypotheses": {
+    "PARENT_INTERLEAVED": [
+     {
+      "n": "W",
+      "cb": "Awake"
+     },
+     {
+      "n": "W",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "W1",
+      "cb": "Awake"
+     },
+     {
+      "n": "W1",
+      "cb": "OnEnable"
+     }
+    ],
+    "PARENT_PHASED": [
+     {
+      "n": "W",
+      "cb": "Awake"
+     },
+     {
+      "n": "W1",
+      "cb": "Awake"
+     },
+     {
+      "n": "W",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "W1",
+      "cb": "OnEnable"
+     }
+    ],
+    "CHILD_INTERLEAVED": [
+     {
+      "n": "W1",
+      "cb": "Awake"
+     },
+     {
+      "n": "W1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "W",
+      "cb": "Awake"
+     },
+     {
+      "n": "W",
+      "cb": "OnEnable"
+     }
+    ],
+    "CHILD_PHASED": [
+     {
+      "n": "W1",
+      "cb": "Awake"
+     },
+     {
+      "n": "W",
+      "cb": "Awake"
+     },
+     {
+      "n": "W1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "W",
+      "cb": "OnEnable"
+     }
+    ]
+   },
+   "identical_pairs": []
+  },
+  "wake.spanOn": {
+   "call": "span",
+   "target": "V",
+   "value": true,
+   "subtree": [
+    "V",
+    "V1"
+   ],
+   "hypotheses": {
+    "PARENT_INTERLEAVED": [
+     {
+      "n": "V",
+      "cb": "Awake"
+     },
+     {
+      "n": "V",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "V1",
+      "cb": "Awake"
+     },
+     {
+      "n": "V1",
+      "cb": "OnEnable"
+     }
+    ],
+    "PARENT_PHASED": [
+     {
+      "n": "V",
+      "cb": "Awake"
+     },
+     {
+      "n": "V1",
+      "cb": "Awake"
+     },
+     {
+      "n": "V",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "V1",
+      "cb": "OnEnable"
+     }
+    ],
+    "CHILD_INTERLEAVED": [
+     {
+      "n": "V1",
+      "cb": "Awake"
+     },
+     {
+      "n": "V1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "V",
+      "cb": "Awake"
+     },
+     {
+      "n": "V",
+      "cb": "OnEnable"
+     }
+    ],
+    "CHILD_PHASED": [
+     {
+      "n": "V1",
+      "cb": "Awake"
+     },
+     {
+      "n": "V",
+      "cb": "Awake"
+     },
+     {
+      "n": "V1",
+      "cb": "OnEnable"
+     },
+     {
+      "n": "V",
+      "cb": "OnEnable"
+     }
+    ]
+   },
+   "identical_pairs": []
+  }
+ },
+ "relations": {
+  "directions": {
+   "Off": [
+    "op.plainOff",
+    "op.spanOff",
+    "op.nativeOff"
+   ],
+   "On": [
+    "op.plainOn",
+    "op.spanOn",
+    "op.nativeOn"
+   ]
+  },
+  "hypotheses": {
+   "SAME_PATH": "plain, span and NativeArray lists are equal",
+   "SEPARATE_PATH": "at least one batch overload list differs from plain"
+  },
+  "wake": {
+   "pair": [
+    "wake.plainOn",
+    "wake.spanOn"
+   ],
+   "hypotheses": {
+    "SAME_PATH": "equal patterns under the label map target->X, child->X1",
+    "SEPARATE_PATH": "different patterns"
+   }
+  }
+ },
+ "notes": {
+  "name_order_is_not_a_hypothesis": [
+   "C1",
+   "C2",
+   "G",
+   "P"
+  ],
+  "wake_confound": "first-wake pairs are created and given recorders child first; child-first wake hypotheses coincide with creation/recorder order there",
+  "scope": "per operation; already-awake order and first-wake interleaving are separate scopes"
+ }
+}
