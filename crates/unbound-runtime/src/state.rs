@@ -115,10 +115,9 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         }),
         textures: RwLock::new(HashMap::new()),
         shaders: RwLock::new(None),
-        builtin_shader_roots: project
-            .builtin_shaders()
-            .map(|b| b.shader_roots())
-            .unwrap_or_default(),
+        builtin_shader_roots: builtin_shader_roots(
+            project.builtin_shaders().map(|b| b.shader_roots()),
+        ),
         builtin_shaders: RwLock::new(None),
         audio_importer: RwLock::new(AudioImporter::default()),
         models: RwLock::new(HashMap::new()),
@@ -131,6 +130,23 @@ pub fn initialize(project: &Project) -> Result<&'static RuntimeState> {
         bail!("the runtime state is already initialized");
     }
     Ok(self::state())
+}
+
+/// The folders of the release's built-in shader sources, none when they are not available: that
+/// is reported once, with its cause (an `UNBOUND_OFFLINE` cache miss names how to provide them),
+/// since built-in shaders found by name then keep default properties.
+fn builtin_shader_roots(found: Result<Vec<PathBuf>>) -> Vec<PathBuf> {
+    found.unwrap_or_else(|e| {
+        tracing::warn!("{}", builtin_shaders_unavailable(&e));
+        Vec::new()
+    })
+}
+
+fn builtin_shaders_unavailable(e: &anyhow::Error) -> String {
+    format!(
+        "Unity's built-in shader sources are not available, so built-in shaders found by name \
+         keep default properties: {e:#}"
+    )
 }
 
 /// `Assets/A/Resources/B/c.png` → `b/c`; every `Resources` folder on the path gives a key.
@@ -1198,5 +1214,19 @@ mod tests {
             ["b/resources/c", "c"]
         );
         assert!(resources_keys("Assets/Textures/a.png").is_empty());
+    }
+
+    #[test]
+    fn unavailable_builtin_shader_sources_are_reported_with_their_cause() {
+        let roots = vec![PathBuf::from("/cache/DefaultResources")];
+        assert_eq!(builtin_shader_roots(Ok(roots.clone())), roots);
+        let offline =
+            anyhow::anyhow!("UNBOUND_OFFLINE forbids downloading; set UNBOUND_BUILTIN_SHADERS")
+                .context("finding built-in shaders");
+        let message = builtin_shaders_unavailable(&offline);
+        assert!(message.contains("built-in shader sources are not available"));
+        assert!(message.contains("finding built-in shaders: UNBOUND_OFFLINE forbids downloading"));
+        assert!(message.contains("UNBOUND_BUILTIN_SHADERS"));
+        assert!(builtin_shader_roots(Err(offline)).is_empty());
     }
 }
