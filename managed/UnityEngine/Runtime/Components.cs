@@ -62,7 +62,7 @@ namespace Unbound.Runtime
             }
             foreach (var required in RequiredComponents(type))
             {
-                if (go.GetComponent(required) != null) continue;
+                if (go.FindComponent(required) != null) continue;
                 if (required.IsAbstract)
                 {
                     if (required == typeof(Collider)) Add(go, typeof(BoxCollider));
@@ -107,18 +107,18 @@ namespace Unbound.Runtime
             // ConstantForce's native limit is independent of DisallowMultipleComponent metadata.
             if (typeof(ConstantForce).IsAssignableFrom(type))
             {
-                existing = go.GetComponent<ConstantForce>();
+                existing = go.FindComponent<ConstantForce>();
                 return existing != null;
             }
             if (typeof(Effector2D).IsAssignableFrom(type))
             {
-                existing = go.GetComponent<Effector2D>();
+                existing = go.FindComponent<Effector2D>();
                 return existing != null;
             }
             for (var t = type; t != null && t != typeof(MonoBehaviour) && t != typeof(Component); t = t.BaseType)
             {
                 if (t.GetCustomAttribute<DisallowMultipleComponent>(inherit: false) == null) continue;
-                existing = go.GetComponent(t);
+                existing = go.FindComponent(t);
                 return existing != null;
             }
             return false;
@@ -142,7 +142,7 @@ namespace Unbound.Runtime
         /// chain, as they would be once instantiated.</summary>
         static bool Counts(GameObject go)
         {
-            if (!go.m_IsPrefabAsset) return go.activeInHierarchy;
+            if (!go.m_IsPrefabAsset) return go.ActiveInHierarchyNoThrow;
             if (go.m_Destroyed) return false;
             for (var t = go.m_Transform; t != null; t = t.m_Parent)
                 if (!t.m_GameObject.m_IsActive) return false;
@@ -254,7 +254,7 @@ namespace Unbound.Runtime
             if (parent != null) Messaging.SendFast(parent.m_GameObject, "OnTransformChildrenChanged");
             t.OnHierarchyChanged();
 
-            bool isActive = go.activeInHierarchy;
+            bool isActive = go.ActiveInHierarchyNoThrow;
             if (wasActive != isActive)
                 Lifecycle.OnHierarchyActiveChanged(go, isActive);
         }

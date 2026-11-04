@@ -739,7 +739,7 @@ namespace Unbound.Runtime
                 {
                     Debug.LogException(ex.InnerException ?? ex, mb);
                 }
-                if (result is IEnumerator routine && mb.isActiveAndEnabled)
+                if (result is IEnumerator routine && mb.IsActiveAndEnabledNoThrow)
                     Coroutines.Start(mb, routine, e.m_FunctionName);
             }
             if (!received && e.messageOptions == SendMessageOptions.RequireReceiver)

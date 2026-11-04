@@ -225,7 +225,7 @@ namespace Unbound.Runtime
             bool any = false;
             foreach (var target in Descendants(go.m_Transform))
             {
-                if (!target.activeInHierarchy) continue;
+                if (!target.ActiveInHierarchyNoThrow) continue;
                 Send(target, methodName, value, SendMessageOptions.DontRequireReceiver, out var received);
                 any |= received;
             }
@@ -325,7 +325,7 @@ namespace Unbound.Runtime
             {
                 Debug.LogException(e.InnerException ?? e, target);
             }
-            if (result is IEnumerator routine && target.isActiveAndEnabled)
+            if (result is IEnumerator routine && target.IsActiveAndEnabledNoThrow)
                 Coroutines.Start(target, routine, methodName);
             return true;
         }

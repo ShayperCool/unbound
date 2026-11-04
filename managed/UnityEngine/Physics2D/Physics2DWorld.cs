@@ -1242,7 +1242,7 @@ namespace Unbound.Runtime
                 try
                 {
                     var result = call(mb, argument);
-                    if (result is IEnumerator routine && mb.isActiveAndEnabled) Coroutines.Start(mb, routine, name);
+                    if (result is IEnumerator routine && mb.IsActiveAndEnabledNoThrow) Coroutines.Start(mb, routine, name);
                 }
                 catch (Exception e)
                 {
