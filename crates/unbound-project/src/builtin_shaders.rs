@@ -85,7 +85,8 @@ fn check_download_allowed(offline: bool, version: UnityVersion, root: &Path) -> 
         bail!(
             "Unity {version}'s built-in shader sources are not cached ({} has no .complete marker) \
              and UNBOUND_OFFLINE forbids downloading builtin_shaders-{version}.zip; set \
-             UNBOUND_BUILTIN_SHADERS to an unpacked copy of that archive, or unset UNBOUND_OFFLINE \
+             UNBOUND_BUILTIN_SHADERS to a directory of the unpacked sources (with \
+             DefaultResourcesExtra), or unset UNBOUND_OFFLINE \
              to download it once (an installed Unity Editor or UNBOUND_UNITY does not provide \
              these sources)",
             root.display()
