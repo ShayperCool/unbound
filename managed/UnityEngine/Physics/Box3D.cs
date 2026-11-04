@@ -15,7 +15,7 @@ namespace Unbound.Box3D
         const string Library = "unbound_physx";
 
         /// <summary>The shim version this binding was written for.</summary>
-        internal const int Version = 9;
+        internal const int Version = 10;
 
         // The per-body accessors called every step are constant time, never block and never call
         // back into managed code: they skip the GC transition ([SuppressGCTransition]).
@@ -286,6 +286,10 @@ namespace Unbound.Box3D
         [LibraryImport(Library)] internal static partial void ua3_shape_set_material(ulong shape, float friction, float restitution, ulong material, float staticFriction);
         [LibraryImport(Library)] internal static partial void ua3_shape_set_contact_offset(ulong shape, float contactOffset);
         [LibraryImport(Library)] internal static partial void ua3_shape_set_filter(ulong shape, ulong categoryBits, ulong maskBits);
+        /// <summary>The layers a collider's (and its body's) include/exclude layers name, its
+        /// layerOverridePriority and whether its body detects collisions; new shapes start with none,
+        /// 0 and detecting.</summary>
+        [LibraryImport(Library)] internal static partial void ua3_shape_set_layer_overrides(ulong shape, uint overrideBits, int priority, int detectCollisions);
         [LibraryImport(Library)] internal static partial void ua3_shape_set_density(ulong shape, float density);
         [LibraryImport(Library)] internal static partial void ua3_shape_aabb(ulong shape, out Bounds3 bounds);
         [LibraryImport(Library)] internal static partial Vector3 ua3_shape_closest_point(ulong shape, Vector3 target);

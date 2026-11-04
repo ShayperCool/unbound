@@ -507,6 +507,8 @@ namespace Unbound.Runtime
                 {
                     s_ByShape[c.m_Shape] = c;
                     ReapplyIgnores(c);
+                    ApplyLayerOverrides(c, null, newShapes: true);
+                    WarnControllerOverrides(controllerBuilt: true);
                 }
                 return;
             }
@@ -576,6 +578,7 @@ namespace Unbound.Runtime
                 ReapplyIgnores(c);
             }
             foreach (var extra in c.m_ExtraShapes) s_ByShape[extra] = c;
+            ApplyLayerOverrides(c, rb, newShapes: true);
             if (rb != null)
             {
                 rb.m_MassDirty = true;
@@ -608,9 +611,10 @@ namespace Unbound.Runtime
             };
         }
 
-        /// <summary>A collider's filter: its layer, and the layers its layer collides with as its
-        /// own and its rigidbody's include/exclude layers adjust them. A rigidbody that does not
-        /// detect collisions collides with nothing.</summary>
+        /// <summary>A collider's filter: its layer, and the layers it decides to contact: its layer's
+        /// collision matrix row with its own and its rigidbody's include layers added, then their
+        /// exclude layers removed (an excluded layer stays excluded). This is one side's decision
+        /// only: the native filter arbitrates a pair's two decisions (<see cref="ApplyLayerOverrides"/>).</summary>
         static void FilterOf(Collider c, Rigidbody rb, out ulong category, out ulong mask)
         {
             int layer = c.m_GameObject.m_Layer & 31;
@@ -619,21 +623,62 @@ namespace Unbound.Runtime
             int include = c.m_IncludeLayers | (rb != null ? rb.m_IncludeLayers : 0);
             int exclude = c.m_ExcludeLayers | (rb != null ? rb.m_ExcludeLayers : 0);
             bits = (bits | unchecked((uint)include)) & ~unchecked((uint)exclude);
-            if (rb != null && !rb.m_DetectCollisions) bits = 0;
             mask = bits;
         }
 
-        /// <summary>The filter of a collider changed (layer, include/exclude layers, detectCollisions).</summary>
+        static bool s_ControllerBuilt;
+        static bool s_LayerOverridesUsed;
+
+        /// <summary>Gives a collider's shapes what the native filter needs to arbitrate a pair whose two
+        /// sides decide differently (Collider.layerOverridePriority): the layers its own and its
+        /// rigidbody's include/exclude layers name, its priority, and whether its body detects
+        /// collisions (one that does not collides with nothing, whatever the other side decides).
+        /// New shapes start without overrides at priority 0, detecting: a collider with neither
+        /// overrides nor a veto makes no call.</summary>
+        static void ApplyLayerOverrides(Collider c, Rigidbody rb, bool newShapes)
+        {
+            if (newShapes) c.m_LayerOverridesApplied = false;
+            uint overrides = unchecked((uint)(c.m_IncludeLayers | c.m_ExcludeLayers
+                | (rb != null ? rb.m_IncludeLayers | rb.m_ExcludeLayers : 0)));
+            bool detect = c is CharacterController controller ? controller.detectCollisions : rb == null || rb.m_DetectCollisions;
+            bool applied = overrides != 0 || !detect;
+            if (!applied && !c.m_LayerOverridesApplied) return;
+            c.m_LayerOverridesApplied = applied;
+            int flag = detect ? 1 : 0;
+            if (c.m_Shape != 0) B3.ua3_shape_set_layer_overrides(c.m_Shape, overrides, c.m_LayerOverridePriority, flag);
+            foreach (var extra in c.m_ExtraShapes) B3.ua3_shape_set_layer_overrides(extra, overrides, c.m_LayerOverridePriority, flag);
+            if (overrides != 0) WarnControllerOverrides(controllerBuilt: false);
+        }
+
+        /// <summary>CharacterController.Move sweeps the controller's own decided layers only; the
+        /// other collider's overrides and priority do not enter them (unmeasured in Unity), so say
+        /// so once both are in use.</summary>
+        static void WarnControllerOverrides(bool controllerBuilt)
+        {
+            if (controllerBuilt) s_ControllerBuilt = true;
+            else s_LayerOverridesUsed = true;
+            if (s_ControllerBuilt && s_LayerOverridesUsed)
+                Stubs.Ignored("CharacterController.Move", "applies only the controller's own layers; other colliders' includeLayers/excludeLayers/layerOverridePriority decide simulation contacts and triggers but not its sweeps");
+        }
+
+        /// <summary>The filter of a collider changed (layer, include/exclude layers, layer override
+        /// priority, detectCollisions).</summary>
         internal static void Refilter(Collider c)
         {
             if (c.m_Shape == 0) return;
-            FilterOf(c, c.m_AttachedBody, out var category, out var mask);
+            // A controller's shape is built without a rigidbody's layers (Rebuild); refilter it alike.
+            var rb = c is CharacterController ? null : c.m_AttachedBody;
+            FilterOf(c, rb, out var category, out var mask);
             if (c is CharacterController controller)
             {
                 controller.SetFilter(category, mask);
-                return;
             }
-            B3.ua3_shape_set_filter(c.m_Shape, category, mask);
+            else
+            {
+                B3.ua3_shape_set_filter(c.m_Shape, category, mask);
+                foreach (var extra in c.m_ExtraShapes) B3.ua3_shape_set_filter(extra, category, mask);
+            }
+            ApplyLayerOverrides(c, rb, newShapes: false);
         }
 
         internal static void RefilterAll()

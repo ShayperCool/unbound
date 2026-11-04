@@ -43,6 +43,9 @@ namespace UnityEngine
         internal IntPtr m_HeightFieldData;
         /// <summary>More shapes of the collider on its body (a terrain's tree colliders).</summary>
         internal readonly System.Collections.Generic.List<ulong> m_ExtraShapes = new System.Collections.Generic.List<ulong>();
+        /// <summary>Its shapes carry layer overrides or a detectCollisions veto (new shapes carry
+        /// neither, so colliders without overrides never set them).</summary>
+        internal bool m_LayerOverridesApplied;
         internal int m_TransformVersion = -1;
         /// <summary>The pose the collider was added to the physics scene with: its shape is built
         /// there, and only a transform sync moves it to where its transform has gone since (Unity
@@ -225,7 +228,11 @@ namespace UnityEngine
         public int layerOverridePriority
         {
             get => m_LayerOverridePriority;
-            set => m_LayerOverridePriority = value;
+            set
+            {
+                m_LayerOverridePriority = value;
+                W.Refilter(this);
+            }
         }
 
         public LayerMask includeLayers
