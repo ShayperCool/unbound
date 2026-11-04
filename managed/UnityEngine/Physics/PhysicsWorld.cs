@@ -779,6 +779,11 @@ namespace Unbound.Runtime
             {
                 s_Stepping = false;
             }
+            // The step's touch events are taken before any script runs (OnJointBreak below, then the
+            // messages): a shape that script code destroys afterwards, in this step, ends its touches
+            // at the next step's events (LoseTouches), like one destroyed during the messages. The
+            // messages still follow OnJointBreak; collecting sends none.
+            CollectEvents();
             Vehicles.AfterStep();
             BreakJoints();
 
@@ -791,7 +796,6 @@ namespace Unbound.Runtime
                 WriteBack(rb, s_States[i].Position, s_States[i].Rotation);
             }
 
-            CollectEvents();
             s_Stepping = true;
             try { DispatchContactEvents(); }
             finally { s_Stepping = false; }
@@ -1117,6 +1121,9 @@ namespace Unbound.Runtime
         /// Every touch counted in a pair of c is between c's shapes, all of which go, so the lost
         /// count is the pair's whole count; this holds for a collider with several shapes and when
         /// the shapes are destroyed again before the next step.
+        /// Touch counts change only when a step's events are collected, right after its simulation
+        /// and before any script of that step runs, so a destruction at any later point (before a
+        /// step, in OnJointBreak, in the messages) is ended by the next step's events.
         /// </summary>
         static void LoseTouches(Collider c)
         {
