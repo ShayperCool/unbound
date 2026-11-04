@@ -271,11 +271,16 @@ namespace Unbound.Runtime
         }
     }
 
-    /// <summary>Object.Destroy (at the end of the frame, or after a delay) and DestroyImmediate.</summary>
+    /// <summary>Object.Destroy (deferred, or after a delay) and DestroyImmediate.</summary>
     internal static class Destruction
     {
         static readonly List<(Object Target, double Time)> s_Delayed = new List<(Object, double)>();
+        /// <summary>Destructions finished at the end of the frame: due delayed requests and the
+        /// zero-delay requests outside the measured script contract (assets, built-in components).</summary>
         static readonly List<Object> s_EndOfFrame = new List<Object>();
+        /// <summary>Zero-delay requests of scene GameObjects and scripts, in request order: their
+        /// scripts were disabled by the request; <see cref="DeliverRequested"/> destroys them.</summary>
+        static readonly List<Object> s_Requested = new List<Object>();
 
         internal static void Destroy(Object obj, float delay)
         {
@@ -286,7 +291,54 @@ namespace Unbound.Runtime
             }
             if (obj.m_PendingDestroy) return;
             obj.m_PendingDestroy = true;
-            s_EndOfFrame.Add(obj);
+            if (!IsScriptRequest(obj))
+            {
+                s_EndOfFrame.Add(obj);
+                return;
+            }
+            // Accounted before any callback: Destroy of the same object from its OnDisable returns
+            // above, and destructions requested by the callbacks queue after this one.
+            s_Requested.Add(obj);
+            Lifecycle.DisableForDestroyRequest(obj);
+        }
+
+        /// <summary>A zero-delay request whose scripts Destroy disables before it returns (measured
+        /// for awakened MonoBehaviours, GameObject and component targets: tests/projects/
+        /// destroycontract). Assets, prefab assets, built-in components and a script that another
+        /// component still requires keep the end-of-frame path.</summary>
+        static bool IsScriptRequest(Object obj)
+        {
+            switch (obj)
+            {
+                case GameObject go:
+                    return !go.m_IsPrefabAsset && !go.IsPersistentAsset;
+                case MonoBehaviour mb:
+                    var owner = mb.m_GameObject;
+                    return owner != null && !owner.m_IsPrefabAsset && !owner.IsPersistentAsset && RequiredBy(mb) == null;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>Destroys the pending GameObject and script requests. It runs at the delayed
+        /// scripting points where Unity delivered their OnDestroy: FixedUpdate's and Update's
+        /// after their behaviour updates, and PostLateUpdate's (measured: tests/projects/
+        /// destroycontract brackets; a request after TriggerEndOfFrameCallbacks reaches the next
+        /// frame's FixedUpdate point). The scripts are already disabled, so no second OnDisable.
+        /// Requests made by OnDestroy during the pass finish in the same pass.</summary>
+        internal static void DeliverRequested()
+        {
+            while (s_Requested.Count > 0)
+            {
+                var batch = s_Requested.ToArray();
+                s_Requested.Clear();
+                foreach (var obj in batch)
+                {
+                    if (obj.m_Destroyed) continue;
+                    try { DestroyImmediate(obj); }
+                    catch (Exception e) { Debug.LogException(e); }
+                }
+            }
         }
 
         /// <summary>Moves due delayed destructions to the end-of-frame list.</summary>
@@ -454,6 +506,7 @@ namespace Unbound.Runtime
         {
             s_Delayed.Clear();
             s_EndOfFrame.Clear();
+            s_Requested.Clear();
         }
     }
 }
