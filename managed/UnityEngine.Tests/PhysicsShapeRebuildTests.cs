@@ -19,6 +19,14 @@ namespace UnityEngine.Tests
         void OnTriggerExit(Collider other) { log.Add("TX:" + other.name); }
     }
 
+    /// <summary>Counts its GameObject's OnJointBreak calls and runs <see cref="broke"/> in each.</summary>
+    public class JointBreakHandler3D : MonoBehaviour
+    {
+        public int breaks;
+        public Action broke;
+        void OnJointBreak(float force) { breaks++; broke?.Invoke(); }
+    }
+
     /// <summary>
     /// A collider whose shapes are destroyed and recreated while it stays in the simulation (a
     /// geometry, trigger or frame change, another attached Rigidbody) keeps one contact/trigger pair
@@ -450,6 +458,50 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "CX:crate" }, parting);
             Assert.Empty(Step(recorder));
             Assert.Equal(all.Count(m => m == "CE:crate"), all.Count(m => m == "CX:crate"));
+        }
+
+        // ------------------------------------------------------------------ scripts within a step
+
+        /// <summary>OnJointBreak runs after a step's simulation and, here, before its messages
+        /// (MonoBehaviour.OnJointBreak documents no order against them). A touching shape rebuilt in
+        /// it is still not a new touch: no Exit and Enter while the colliders keep touching.</summary>
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void AShapeRebuiltInOnJointBreakKeepsItsPair(bool trigger)
+        {
+            var target = Make("target", Vector3.zero).AddComponent<SphereCollider>();
+            target.isTrigger = trigger;
+            var visitor = Visitor(new Vector3(.8f, 0f, 0f));
+            var recorder = visitor.AddComponent<RebuildRecorder3D>();
+            string stay = (trigger ? "TS:" : "CS:") + "target", exit = (trigger ? "TX:" : "CX:") + "target";
+
+            if (trigger) Assert.Equal(new[] { "TE:target", "TS:target" }, Step(recorder));
+            else Assert.Equal(new[] { "CE:target" }, WithoutStays(Step(recorder)));
+
+            // A fixed joint that its load breaks in its first step (joints probe "fixed break",
+            // step 0: a body hanging from a kinematic one), away from the pair.
+            var anchor = Make("anchor", new Vector3(-10f, 5f, 0f));
+            anchor.AddComponent<BoxCollider>();
+            var anchorBody = anchor.AddComponent<Rigidbody>();
+            anchorBody.isKinematic = true;
+            var arm = Make("arm", new Vector3(-10f, 3f, 0f));
+            arm.AddComponent<BoxCollider>();
+            arm.AddComponent<Rigidbody>();
+            var joint = arm.AddComponent<FixedJoint>();
+            joint.connectedBody = anchorBody;
+            joint.breakForce = 1f;
+            var handler = arm.AddComponent<JointBreakHandler3D>();
+            handler.broke = () => { target.radius = .6f; Physics.SyncTransforms(); };
+
+            Assert.Equal(new[] { stay }, Step(recorder));
+            Assert.Equal(1, handler.breaks);
+            Assert.True(target.radius > .55f);
+            Assert.Equal(new[] { stay }, Step(recorder));
+            visitor.transform.position = new Vector3(5f, 0f, 0f);
+            Assert.Equal(new[] { exit }, Step(recorder));
+            Assert.Empty(Step(recorder));
+            Assert.Equal(1, handler.breaks);
         }
 
         // ------------------------------------------------------------------ leaving the simulation
