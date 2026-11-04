@@ -92,6 +92,16 @@ fn decompress(data: &[u8], compression: u32, size: usize) -> Result<Vec<u8>> {
 
 impl Bundle {
     pub fn parse(data: &[u8]) -> Result<Bundle> {
+        Bundle::parse_with_crc(data, 0)
+    }
+
+    /// [`Bundle::parse`], checking the archive's uncompressed content against `crc` first when it
+    /// is not 0 (the `crc` of AssetBundle.LoadFromFile, LoadFromMemory and LoadFromStream). The
+    /// content is the data blocks decompressed, in order, without the header and the block and
+    /// directory information: its CRC-32 (IEEE, zlib's) is the `CRC:` the Editor writes to the
+    /// bundle's `.manifest`, the same for every compression. A mismatch fails before any file of
+    /// the archive is made.
+    pub fn parse_with_crc(data: &[u8], crc: u32) -> Result<Bundle> {
         let mut r = Reader { data, at: 0 };
         let signature = r.cstring()?;
         if signature != "UnityFS" {
@@ -146,9 +156,22 @@ impl Bundle {
         }
         let total: usize = blocks.iter().map(|b| b.0).sum();
         let mut stream = Vec::with_capacity(total);
+        // The checksum follows the blocks as they decompress: no second pass, no extra copy.
+        let mut content = (crc != 0).then(crc32fast::Hasher::new);
         for (size, compressed, block_flags) in blocks {
             let bytes = r.bytes(compressed)?;
+            let start = stream.len();
             stream.extend(decompress(bytes, block_flags & 0x3f, size)?);
+            if let Some(hasher) = &mut content {
+                hasher.update(&stream[start..]);
+            }
+        }
+        if let Some(hasher) = content {
+            let actual = hasher.finalize();
+            anyhow::ensure!(
+                actual == crc,
+                "CRC mismatch: the AssetBundle's uncompressed content has CRC {actual}, not the expected {crc}"
+            );
         }
         let files = nodes
             .into_iter()
@@ -503,5 +526,184 @@ mod texture_mip_tests {
         };
         assert_eq!(data.len(), 172 * 2);
         assert!(data.ends_with("ffffffff"));
+    }
+}
+
+#[cfg(test)]
+mod crc_tests {
+    use super::*;
+
+    /// A UnityFS format 8 archive: uncompressed block and directory information after the header
+    /// (flags 0x240, as the Editor's bundles here), then `blocks` (uncompressed bytes, compression
+    /// 0 none or 2 LZ4) whose content holds `nodes` (offset, size, path). Also each block's start.
+    fn archive(blocks: &[(&[u8], u32)], nodes: &[(usize, usize, &str)]) -> (Vec<u8>, Vec<usize>) {
+        let packed: Vec<Vec<u8>> = blocks
+            .iter()
+            .map(|(bytes, compression)| match compression {
+                0 => bytes.to_vec(),
+                2 => lz4_flex::block::compress(bytes),
+                other => panic!("compression {other}"),
+            })
+            .collect();
+        let mut info = vec![0u8; 16];
+        info.extend((blocks.len() as u32).to_be_bytes());
+        for ((bytes, compression), stored) in blocks.iter().zip(&packed) {
+            info.extend((bytes.len() as u32).to_be_bytes());
+            info.extend((stored.len() as u32).to_be_bytes());
+            info.extend((*compression as u16).to_be_bytes());
+        }
+        info.extend((nodes.len() as u32).to_be_bytes());
+        for (offset, size, path) in nodes {
+            info.extend((*offset as i64).to_be_bytes());
+            info.extend((*size as i64).to_be_bytes());
+            info.extend(NODE_SERIALIZED.to_be_bytes());
+            info.extend(path.as_bytes());
+            info.push(0);
+        }
+        let mut out = b"UnityFS\0".to_vec();
+        out.extend(8u32.to_be_bytes());
+        out.extend(b"5.x.x\06000.0.71f1\0");
+        let size_at = out.len();
+        out.extend(0i64.to_be_bytes());
+        out.extend((info.len() as u32).to_be_bytes());
+        out.extend((info.len() as u32).to_be_bytes());
+        out.extend(0x240u32.to_be_bytes());
+        out.resize(out.len().div_ceil(16) * 16, 0);
+        out.extend(&info);
+        out.resize(out.len().div_ceil(16) * 16, 0);
+        let mut starts = Vec::new();
+        for stored in &packed {
+            starts.push(out.len());
+            out.extend(stored);
+        }
+        let total = out.len() as i64;
+        out[size_at..size_at + 8].copy_from_slice(&total.to_be_bytes());
+        (out, starts)
+    }
+
+    fn pattern(seed: u8, len: usize) -> Vec<u8> {
+        (0..len).map(|i| seed.wrapping_add((i % 7) as u8)).collect()
+    }
+
+    /// Three blocks (LZ4, none, LZ4) holding two files with ten unowned bytes between them.
+    fn three_blocks() -> (Vec<u8>, Vec<usize>, Vec<u8>) {
+        let (a, b, c) = (pattern(1, 40), pattern(60, 24), pattern(120, 50));
+        let content = [a.as_slice(), &b, &c].concat();
+        let (data, starts) = archive(
+            &[(&a, 2), (&b, 0), (&c, 2)],
+            &[(0, 30, "CAB-a"), (40, 74, "CAB-a.resS")],
+        );
+        (data, starts, content)
+    }
+
+    fn same_files(a: &Bundle, b: &Bundle) {
+        let files = |x: &Bundle| -> Vec<(String, u32, Vec<u8>)> {
+            x.files
+                .iter()
+                .map(|f| (f.path.clone(), f.flags, f.data.clone()))
+                .collect()
+        };
+        assert_eq!(files(a), files(b));
+    }
+
+    fn mismatch(result: Result<Bundle>) -> String {
+        let error = format!("{:#}", result.err().expect("a CRC mismatch"));
+        assert!(error.contains("CRC mismatch"), "{error}");
+        error
+    }
+
+    #[test]
+    fn the_checksum_is_ieee_crc32_and_streams_across_blocks() {
+        // CRC-32/ISO-HDLC's published check values, independent of any bundle.
+        assert_eq!(crc32fast::hash(b"123456789"), 0xcbf4_3926);
+        assert_eq!(
+            crc32fast::hash(b"The quick brown fox jumps over the lazy dog"),
+            0x414f_a339
+        );
+        assert_eq!(crc32fast::hash(b""), 0);
+        let mut split = crc32fast::Hasher::new();
+        split.update(b"1234");
+        split.update(b"");
+        split.update(b"56789");
+        assert_eq!(split.finalize(), 0xcbf4_3926);
+    }
+
+    /// The Editor's bundles of `tests/projects/assetbundles` and the `CRC:` of their `.manifest`
+    /// files, uncompressed, LZ4 (the scene's in six blocks) and LZMA.
+    #[test]
+    fn editor_bundles_match_their_manifest_crc_in_every_compression() {
+        let root = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
+            .join("../../tests/projects/assetbundles/Reference/bundles");
+        let mut things = Vec::new();
+        for compression in ["none", "lz4", "lzma"] {
+            for name in ["things", "scene"] {
+                let path = root.join(compression).join(name);
+                let data = std::fs::read(&path).unwrap();
+                let manifest = std::fs::read_to_string(path.with_extension("manifest")).unwrap();
+                let crc: u32 = manifest
+                    .lines()
+                    .find_map(|l| l.strip_prefix("CRC: "))
+                    .expect("a CRC line")
+                    .trim()
+                    .parse()
+                    .unwrap();
+                assert_ne!(crc, 0);
+                let checked = Bundle::parse_with_crc(&data, crc)
+                    .unwrap_or_else(|e| panic!("{compression}/{name}: {e:#}"));
+                same_files(&checked, &Bundle::parse(&data).unwrap());
+                let error = mismatch(Bundle::parse_with_crc(&data, crc ^ 1));
+                assert!(error.contains(&crc.to_string()), "{error}");
+                if name == "things" {
+                    things.push(crc);
+                }
+            }
+        }
+        // The same content, whatever its compression.
+        assert_eq!(things, [things[0]; 3]);
+    }
+
+    #[test]
+    fn the_checksum_covers_every_block_and_the_bytes_between_files() {
+        let (data, _, content) = three_blocks();
+        let crc = crc32fast::hash(&content);
+        let checked = Bundle::parse_with_crc(&data, crc).unwrap();
+        same_files(&checked, &Bundle::parse(&data).unwrap());
+        assert_eq!(checked.files[0].data, content[..30]);
+        assert_eq!(checked.files[1].data, content[40..]);
+        // Not the files alone, one block, the stored (compressed) bytes or the whole archive.
+        let files = [&content[..30], &content[40..]].concat();
+        for wrong in [
+            crc32fast::hash(&files),
+            crc32fast::hash(&content[64..]),
+            crc32fast::hash(&data[data.len() - content.len()..]),
+            crc32fast::hash(&data),
+        ] {
+            assert_ne!(wrong, crc);
+            mismatch(Bundle::parse_with_crc(&data, wrong));
+        }
+    }
+
+    #[test]
+    fn a_zero_crc_skips_the_check_and_damaged_archives_fail() {
+        let (data, starts, content) = three_blocks();
+        let crc = crc32fast::hash(&content);
+        // A changed byte of the uncompressed block: only a check notices.
+        let mut changed = data.clone();
+        changed[starts[1] + 5] ^= 0x55;
+        let unchecked = Bundle::parse_with_crc(&changed, 0).unwrap();
+        assert_ne!(unchecked.files[1].data, content[40..]);
+        mismatch(Bundle::parse_with_crc(&changed, crc));
+        // A damaged LZ4 block either does not decompress or does not match.
+        let mut damaged = data.clone();
+        damaged[starts[2] + 1] ^= 0xff;
+        assert!(Bundle::parse_with_crc(&damaged, crc).is_err());
+        // Truncated archives fail with and without a check.
+        for end in [data.len() - 1, starts[1], 20] {
+            assert!(Bundle::parse_with_crc(&data[..end], crc).is_err(), "{end}");
+            assert!(Bundle::parse_with_crc(&data[..end], 0).is_err(), "{end}");
+        }
+        // Other archive kinds stay unsupported.
+        let error = Bundle::parse_with_crc(b"UnityWeb\0\0\0\0\x03", crc).unwrap_err();
+        assert!(format!("{error:#}").contains("not a UnityFS AssetBundle"));
     }
 }
