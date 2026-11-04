@@ -80,7 +80,9 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A project shader: its declared name, queue and properties (the renderer reads its
-        /// render states from the source itself).</summary>
+        /// render states from the source itself). The queue kept here is the source's first `Queue`
+        /// text, the fallback <see cref="Shader.renderQueue"/> answers while the selected
+        /// SubShader's declared tag is not known.</summary>
         static LoadedFile ImportShader(AssetDatabaseRuntime.AssetInfo info)
         {
             var source = System.IO.File.ReadAllText(info.File);
