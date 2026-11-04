@@ -49,6 +49,8 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
 
 ## Unity contracts and parity decisions
 
+- Apply these rules across all engine features, including rendering, assets, physics,
+  particles, animation, UI and audio, not only lifecycle callbacks.
 - Before changing Unity API behavior, lifecycle timing, callback order or other observable
   semantics, check the official Manual and Scripting API for the project's Unity release.
   Read the relevant limitations as well as the main description. Record the version, links
