@@ -121,6 +121,8 @@ struct Driver {
     /// in the window takes it again).
     cursor: Option<unbound_runtime::cursor::CursorState>,
     cursor_released: bool,
+    /// Whether a warp outside the window was reported (once).
+    warp_outside_warned: bool,
 }
 
 impl Driver {
@@ -206,6 +208,7 @@ pub fn run(
         cursor_seen: 0,
         cursor: None,
         cursor_released: false,
+        warp_outside_warned: false,
     });
     app.insert_resource(RunSettings {
         screenshot: options.screenshot.clone(),
@@ -376,6 +379,11 @@ fn drive(
             _ => {}
         }
     }
+    // Bevy knows the pointer only while it is over the window (it forgets it on leaving, and
+    // drops positions outside): the last position inside stays until it returns. Documented-
+    // contract gap, not a choice: Unity 6000.0 Input.mousePosition reports the pointer outside
+    // the game view (values below 0 or above the screen size) while the cursor is neither locked
+    // nor confined. Open in docs/COMPATIBILITY_GAPS.md.
     if let Some(position) = window.physical_cursor_position() {
         driver.mouse = position;
     }
@@ -446,10 +454,20 @@ fn drive(
     };
     let keep_going = driver.inner.frame(&input);
     if let Ok((entity, mut options)) = cursors.single_mut() {
-        if let Some(cursor) = unbound_runtime::cursor::changed(&mut driver.cursor_seen) {
-            apply_cursor(&cursor, entity, &mut options, &mut images, &mut commands);
+        if let Some(mut cursor) = unbound_runtime::cursor::changed(&mut driver.cursor_seen) {
+            let warp = cursor.warp.take();
+            // A warp alone leaves the applied lock, visibility and image (and a pointer Escape
+            // gave back) as they are.
+            if warp.is_none() || driver.cursor.as_ref() != Some(&cursor) {
+                apply_cursor(&cursor, entity, &mut options, &mut images, &mut commands);
+                driver.cursor_released = false;
+            }
             driver.cursor = Some(cursor);
-            driver.cursor_released = false;
+            if let Some(warp) = warp
+                && let Ok(mut window) = windows.single_mut()
+            {
+                warp_cursor(&mut window, warp, &mut driver.warp_outside_warned);
+            }
         } else if let Some(cursor) = &driver.cursor
             && (cursor.lock != 0 || !cursor.visible)
         {
@@ -531,6 +549,25 @@ fn apply_cursor(
         }
     };
     commands.entity(window).insert(icon);
+}
+
+/// `Mouse.WarpCursorPosition`: Unity's screen coordinates (window pixels from the bottom left)
+/// as the window's (from the top left). Bevy moves the system's cursor when the window's cursor
+/// position changes, only to a position inside the window; one outside is reported (once) and
+/// not applied. The next frame reads the new position as a pointer move.
+fn warp_cursor(window: &mut Window, [x, y]: [f64; 2], warned: &mut bool) {
+    let width = f64::from(window.physical_width());
+    let height = f64::from(window.physical_height());
+    let target = bevy::math::DVec2::new(x, height - y);
+    if target.x >= 0.0 && target.y >= 0.0 && target.x < width && target.y < height {
+        window.set_physical_cursor_position(Some(target));
+    } else if !*warned {
+        *warned = true;
+        tracing::warn!(
+            "Mouse.WarpCursorPosition({x}, {y}) lies outside the {width}x{height} window: \
+             Unbound moves the cursor only within the window, this warp and later ones outside it are ignored"
+        );
+    }
 }
 
 /// Unity's `CursorLockMode` as a grab mode.
