@@ -87,7 +87,7 @@ namespace UnityEngine.Tests
             {
                 Sprite = 10915, Texture = 10914, TextureWidth = 64, TextureHeight = 64, Mips = 7,
                 Rect = new Rect(12f, 12f, 40f, 40f), Border = 0f, PixelsPerUnit = 200f,
-                TextureRect = new Rect(20.07612f, 23.07612f, 23.84776f, 15.84776f),
+                TextureRect = new Rect(20.07612f, 23.07612f, 23.84776f, 15.847759f),
                 UvTransform = new Vector4(200f, 32f, 200f, 32f), SettingsRaw = 64, Vertices = 6, Indices = 12, PhysicsPoints = 6,
             },
         };
@@ -110,6 +110,8 @@ namespace UnityEngine.Tests
             {
                 Version = NativeApi.CurrentVersion, Call = &Call, FreeBuffer = &Free, SubmitCommands = &Submit,
                 ReleaseMaterial = &Release, ReleaseTexture = &Release, ReleaseMesh = &Release,
+                // The drawn textures of the other built-in sprites upload their pixels.
+                UploadTexture = &Upload,
             };
             Native.Initialize(&api);
             // The release profile's table rows of the built-in UI objects (data/profiles/builtin-6000.0.json).
@@ -199,6 +201,9 @@ namespace UnityEngine.Tests
 
         [UnmanagedCallersOnly]
         static void Release(ulong handle) { }
+
+        [UnmanagedCallersOnly]
+        static void Upload(ulong handle, TexturePacket* packet) { }
 
         static int Asked(string method, long fileId) => s_Calls.Count(c => c == method + " " + Extra + " " + fileId);
 
