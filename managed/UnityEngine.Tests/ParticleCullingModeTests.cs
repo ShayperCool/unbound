@@ -1,0 +1,259 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using Unbound.Runtime;
+using Xunit;
+
+namespace UnityEngine.Tests
+{
+    /// <summary>The frame's particle update (ParticleSystemManager.UpdateAll) steps every
+    /// registered system, and these tests set the global clock and renderer visibility, so they run
+    /// alone.</summary>
+    [CollectionDefinition("Particle culling frames", DisableParallelization = true)]
+    public sealed class ParticleCullingFramesCollection
+    {
+    }
+
+    /// <summary>
+    /// MainModule.cullingMode in the frame's particle update. Documented (6000.0 Scripting API
+    /// ParticleSystemCullingMode, Manual "Main module" Culling Mode): Pause "stops simulating while
+    /// offscreen"; PauseAndCatchup also stops, then "when re-entering the view, the simulation
+    /// performs a large step to reach the point where it would have been had it not paused";
+    /// AlwaysSimulate simulates "regardless of whether it is on screen or not"; Automatic: "Looping
+    /// systems use Pause, and all other system use Always Simulate". Assertions on the play state
+    /// while culled, on the looping Automatic case (kept simulating, reported) and on the
+    /// visibility read from the renderer are checks of Unbound's choices, which are unmeasured, not
+    /// Unity guarantees.
+    /// <para>Visibility is the system's ParticleSystemRenderer.isVisible: set directly here, or
+    /// through the engine's camera culling (FrameBuilder.CullCamera) in the bounds test. The systems
+    /// sit far from every other test's camera, on their own layer.</para>
+    /// </summary>
+    [Collection("Particle culling frames")]
+    public sealed class ParticleCullingModeTests : IDisposable
+    {
+        const float Dt = 0.02f;
+        const int kLayer = 30;
+        static readonly Vector3 kFar = new Vector3(-2000f, 0f, 0f);
+
+        readonly float m_DeltaTime = Time.s_DeltaTime;
+        readonly float m_UnscaledDeltaTime = Time.s_UnscaledDeltaTime;
+        readonly bool m_InFixedTimeStep = Time.s_InFixedTimeStep;
+        readonly float m_MaximumParticleDeltaTime = Time.s_MaximumParticleDeltaTime;
+        readonly int m_FrameCount = Time.s_FrameCount;
+        readonly List<Object> m_Objects = new List<Object>();
+
+        public ParticleCullingModeTests()
+        {
+            Time.s_DeltaTime = Dt;
+            Time.s_UnscaledDeltaTime = Dt;
+            Time.s_InFixedTimeStep = false;
+            Time.s_MaximumParticleDeltaTime = 0.03f;
+        }
+
+        public void Dispose()
+        {
+            foreach (var o in m_Objects) Object.DestroyImmediate(o);
+            Time.s_DeltaTime = m_DeltaTime;
+            Time.s_UnscaledDeltaTime = m_UnscaledDeltaTime;
+            Time.s_InFixedTimeStep = m_InFixedTimeStep;
+            Time.s_MaximumParticleDeltaTime = m_MaximumParticleDeltaTime;
+            Time.s_FrameCount = m_FrameCount;
+        }
+
+        /// <summary>A playing system 10 m in front of <see cref="kFar"/> emitting 10 particles a
+        /// second that live 5 s and stay where they are born, in a 10 s loop (or one shot).</summary>
+        ParticleSystem Make(ParticleSystemCullingMode mode, bool loop = true)
+        {
+            var go = new GameObject("culled");
+            m_Objects.Add(go);
+            go.SetActive(false);
+            go.layer = kLayer;
+            go.transform.position = kFar + new Vector3(0f, 0f, 10f);
+            var ps = go.AddComponent<ParticleSystem>();
+            var main = ps.main;
+            main.cullingMode = mode;
+            main.loop = loop;
+            main.duration = 10f;
+            main.startLifetime = 5f;
+            main.startSpeed = 0f;
+            main.startSize = 1f;
+            main.gravityModifier = 0f;
+            main.playOnAwake = true;
+            var emission = ps.emission;
+            emission.rateOverTime = 10f;
+            var shape = ps.shape;
+            shape.enabled = false;
+            go.SetActive(true);
+            Assert.True(ps.isPlaying);
+            return ps;
+        }
+
+        static ParticleSystemRenderer RendererOf(ParticleSystem ps) => ps.GetComponent<ParticleSystemRenderer>();
+
+        static void SetVisible(ParticleSystem ps, bool visible) => RendererOf(ps).SetVisible(visible);
+
+        static void Frames(int count)
+        {
+            for (int i = 0; i < count; i++) ParticleSystemManager.UpdateAll();
+        }
+
+        static ParticleSystem.Particle[] ParticlesOf(ParticleSystem ps)
+        {
+            var particles = new ParticleSystem.Particle[ps.particleCount];
+            ps.GetParticles(particles);
+            return particles;
+        }
+
+        static void Near(float expected, float actual, float tolerance = 1e-4f) =>
+            Assert.True(Math.Abs(expected - actual) <= tolerance, $"expected {expected:R}, got {actual:R}");
+
+        static int Hits(string member) => Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
+
+        [Fact]
+        public void PauseHoldsAnOffscreenLoopingSystemAndResumesFromTheSameParticles()
+        {
+            var ps = Make(ParticleSystemCullingMode.Pause);
+            SetVisible(ps, true);
+            Frames(15);
+            float time = ps.time;
+            var before = ParticlesOf(ps);
+            Assert.NotEmpty(before);
+
+            SetVisible(ps, false);
+            Frames(25);
+            Assert.Equal(time, ps.time);
+            var held = ParticlesOf(ps);
+            Assert.Equal(before.Length, held.Length);
+            for (int i = 0; i < before.Length; i++)
+            {
+                Assert.Equal(before[i].remainingLifetime, held[i].remainingLifetime);
+                Assert.Equal(before[i].position, held[i].position);
+            }
+            // Culling is not a script Pause (Unbound's choice, unmeasured).
+            Assert.True(ps.isPlaying);
+            Assert.False(ps.isPaused);
+
+            // Visible again: the next frame continues from the held state by its own time only.
+            SetVisible(ps, true);
+            Frames(1);
+            Near(time + Dt, ps.time);
+            var resumed = ParticlesOf(ps);
+            Assert.True(resumed.Length >= before.Length);
+            for (int i = 0; i < before.Length; i++)
+                Near(before[i].remainingLifetime - Dt, resumed[i].remainingLifetime);
+        }
+
+        [Fact]
+        public void PauseAndCatchupSimulatesTheMissedTimeWhenVisibleAgain()
+        {
+            var ps = Make(ParticleSystemCullingMode.PauseAndCatchup);
+            var always = Make(ParticleSystemCullingMode.AlwaysSimulate);
+            SetVisible(ps, true);
+            Frames(15);
+            float time = ps.time;
+            var before = ParticlesOf(ps);
+            Assert.NotEmpty(before);
+
+            SetVisible(ps, false);
+            Frames(25);
+            Assert.Equal(time, ps.time);
+            Assert.Equal(before.Length, ps.particleCount);
+
+            // The first visible frame reaches where it would have been: the 25 missed frames and
+            // its own, as an always simulated twin is.
+            SetVisible(ps, true);
+            Frames(1);
+            Near(time + 26 * Dt, ps.time);
+            Near(always.time, ps.time);
+            var caughtUp = ParticlesOf(ps);
+            for (int i = 0; i < before.Length; i++)
+                Near(before[i].remainingLifetime - 26 * Dt, caughtUp[i].remainingLifetime);
+            Assert.True(caughtUp.Length > before.Length);
+            Assert.InRange(caughtUp.Length, always.particleCount - 1, always.particleCount + 1);
+        }
+
+        [Fact]
+        public void AlwaysSimulateAdvancesOffscreen()
+        {
+            var ps = Make(ParticleSystemCullingMode.AlwaysSimulate);
+            SetVisible(ps, false);
+            Frames(10);
+            Near(10 * Dt, ps.time);
+            Assert.True(ps.particleCount > 0);
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AutomaticKeepsSimulatingOffscreen(bool loop)
+        {
+            const string automatic = "ParticleSystem.main.cullingMode Automatic";
+            var ps = Make(ParticleSystemCullingMode.Automatic, loop);
+            SetVisible(ps, false);
+            int reported = Hits(automatic);
+            Frames(10);
+            // One-shot: documented as Always Simulate. Looping: documented as Pause, but also
+            // documented to keep updating when not procedural, which Unbound does not decide, so it
+            // keeps simulating and is reported (Unbound's choice, unmeasured).
+            Near(10 * Dt, ps.time);
+            Assert.True(ps.particleCount > 0);
+            // (The count is process-wide, so the one-shot case asserts no absence of reports.)
+            if (loop) Assert.True(Hits(automatic) > reported);
+        }
+
+        [Fact]
+        public void VisibleSystemSimulatesAsAlwaysSimulate()
+        {
+            var ps = Make(ParticleSystemCullingMode.Pause);
+            var always = Make(ParticleSystemCullingMode.AlwaysSimulate);
+            SetVisible(ps, true);
+            Frames(20);
+            Assert.Equal(always.time, ps.time);
+            var particles = ParticlesOf(ps);
+            var reference = ParticlesOf(always);
+            Assert.Equal(reference.Length, particles.Length);
+            for (int i = 0; i < particles.Length; i++)
+                Assert.Equal(reference[i].remainingLifetime, particles[i].remainingLifetime);
+        }
+
+        [Fact]
+        public void PausedSystemBecomesVisibleAgainByItsHeldBounds()
+        {
+            var camera = new GameObject("CullingCamera").AddComponent<Camera>();
+            m_Objects.Add(camera.gameObject);
+            camera.transform.position = kFar;
+            camera.fieldOfView = 60;
+            camera.nearClipPlane = 0.3f;
+            camera.farClipPlane = 100;
+            camera.aspect = 16f / 9f;
+            camera.cullingMask = 1 << kLayer;
+            var ps = Make(ParticleSystemCullingMode.Pause);
+            var renderer = RendererOf(ps);
+
+            FrameBuilder.CullCamera(camera);
+            Assert.True(renderer.isVisible);
+            Frames(10);
+            Assert.True(ps.particleCount > 0);
+
+            // The camera turns away: no culling takes the renderer, which the next frame's
+            // EarlyUpdate makes invisible, and the system holds.
+            camera.transform.rotation = Quaternion.Euler(0f, 180f, 0f);
+            FrameBuilder.CullCamera(camera);
+            Time.s_FrameCount += 2;
+            Renderer.NotifyInvisible();
+            Assert.False(renderer.isVisible);
+            float time = ps.time;
+            int count = ps.particleCount;
+            Frames(10);
+            Assert.Equal(time, ps.time);
+            Assert.Equal(count, ps.particleCount);
+
+            // Turned back, the camera sees the held particles' bounds, and the system resumes.
+            camera.transform.rotation = Quaternion.identity;
+            FrameBuilder.CullCamera(camera);
+            Assert.True(renderer.isVisible);
+            Frames(1);
+            Near(time + Dt, ps.time);
+        }
+    }
+}
