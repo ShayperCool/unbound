@@ -238,23 +238,20 @@ mod tests {
                 eprintln!("the 6000.0.71f1 install has no {name}: skipped");
                 return None;
             };
-            let file = match builtin_file(&path) {
-                Ok(file) => file,
-                Err(e) => {
-                    eprintln!("the 6000.0.71f1 install's {name} cannot be read ({e:#}): skipped");
-                    return None;
-                }
-            };
-            if meta.len() != len || file.unity_version != version || file.objects.len() != objects {
+            if meta.len() != len {
                 eprintln!(
-                    "the 6000.0.71f1 install's {name} is not the bound file ({} bytes, {}, {} \
-                     objects; bound {len}, {version}, {objects}): skipped",
-                    meta.len(),
-                    file.unity_version,
-                    file.objects.len()
+                    "the 6000.0.71f1 install's {name} is not the bound file ({} bytes; bound \
+                     {len}): skipped",
+                    meta.len()
                 );
                 return None;
             }
+            // The bound file is present: reading it is what these tests check, so a read or
+            // parse failure, or a header that is not the bound one, fails instead of skipping.
+            let file = builtin_file(&path)
+                .unwrap_or_else(|e| panic!("the bound {name} cannot be read: {e:#}"));
+            assert_eq!(file.unity_version, version, "{name}");
+            assert_eq!(file.objects.len(), objects, "{name}");
         }
         Some(data)
     }
