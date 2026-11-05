@@ -12,9 +12,9 @@ namespace UnityEngine.Tests
     /// dispatch logs a callback's exception instead of passing it on).</summary>
     public class TriggerWriteBack : MonoBehaviour
     {
-        public Action<ParticleSystem> handler;
-        public Exception thrown;
-        public int calls;
+        [NonSerialized] public Action<ParticleSystem> handler;
+        [NonSerialized] public Exception thrown;
+        [NonSerialized] public int calls;
 
         void OnParticleTrigger()
         {
