@@ -44,6 +44,8 @@ namespace Unbound.Runtime
             internal DtNavMeshQuery Query;
             /// <summary>Off-mesh connection polygons by link id.</summary>
             internal readonly Dictionary<long, int> LinkOfPoly = new Dictionary<long, int>();
+            /// <summary>The data instance each tile came from, by tile index.</summary>
+            internal readonly Dictionary<int, int> DataOfTile = new Dictionary<int, int>();
         }
 
         static readonly List<DataInstance> s_Data = new List<DataInstance>();
@@ -53,6 +55,15 @@ namespace Unbound.Runtime
         static bool s_Dirty;
         /// <summary>Bumped on every rebuild (agents re-find their polygons).</summary>
         internal static int Version;
+        /// <summary>Bumped by the NavMesh changes that make every agent's path stale
+        /// (NavMeshAgent.isPathStale): area costs changed, links enabled, disabled or activated.</summary>
+        internal static int PathStaleVersion;
+
+        internal static void MarkPathsStale() => PathStaleVersion++;
+
+        /// <summary>The id of the data instance a polygon of the surface came from; 0 for none.</summary>
+        internal static int DataOfPoly(Surface surface, long polyRef) =>
+            surface != null && polyRef != 0 && surface.DataOfTile.TryGetValue(DtDetour.DecodePolyIdTile(polyRef), out int id) ? id : 0;
 
         internal static IReadOnlyList<DataInstance> Data => s_Data;
         internal static IReadOnlyList<LinkInstance> Links => s_Links;
@@ -154,7 +165,8 @@ namespace Unbound.Runtime
                     int layer = 0;
                     while (surface.Mesh.GetTileRefAt(tx, ty, layer) != 0) layer++;
                     placed.header.layer = layer;
-                    surface.Mesh.AddTile(placed, 0, 0, out _);
+                    surface.Mesh.AddTile(placed, 0, 0, out long tileRef);
+                    if (tileRef != 0) surface.DataOfTile[DtDetour.DecodePolyIdTile(tileRef)] = instance.Id;
                 }
             }
             foreach (var surface in s_Surfaces.Values)
