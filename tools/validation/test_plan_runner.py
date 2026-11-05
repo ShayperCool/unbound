@@ -158,6 +158,33 @@ class PlanRunnerTests(unittest.TestCase):
             self.execute()
         self.assertFalse(self.run.exists())
 
+    def test_stock_launcher_home_dependency_is_checked_before_cost(self):
+        stock = self.root/'with-heavy-job'
+        stock.write_bytes(self.launcher.read_bytes())
+        stock.chmod(0o700)
+        self.plan['launcher'] = str(stock)
+        self.plan['inputs'][str(stock)] = runner.digest(stock)
+        self.write()
+        with self.assertRaisesRegex(runner.Refused, 'launcher dependency'):
+            self.execute()
+        self.assertFalse(self.run.exists())
+
+    def test_stock_launcher_explicit_dependencies_pass_readiness(self):
+        stock = self.root/'with-heavy-job'
+        stock.write_bytes(self.launcher.read_bytes())
+        stock.chmod(0o700)
+        self.plan['launcher'] = str(stock)
+        self.plan['inputs'][str(stock)] = runner.digest(stock)
+        cache = self.root/'.cache/compat'
+        cache.mkdir(parents=True)
+        for name in ['job_runner.py', 'job-limits.json']:
+            dependency = cache/name
+            dependency.write_text('pinned test stand-in')
+            self.plan['inputs'][str(dependency)] = runner.digest(dependency)
+        self.write()
+        runner.check(self.plan_path, self.approval_path)
+        self.assertFalse(self.run.exists())
+
     def test_drifted_input_refuses_before_output_claim(self):
         self.write()
         self.input.write_text('changed')

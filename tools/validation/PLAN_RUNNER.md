@@ -38,6 +38,7 @@ payload output paths belong to the reviewed plan.
   "inputs": {
     "/physical/cache/compat/with-heavy-job": "<sha256>",
     "/home/launcher-owner/.cache/compat/job_runner.py": "<sha256>",
+    "/home/launcher-owner/.cache/compat/job-limits.json": "<sha256>",
     "/usr/bin/timeout": "<sha256>",
     "/usr/bin/systemctl": "<sha256>",
     "/usr/bin/python3.13": "<sha256>",
@@ -56,7 +57,8 @@ payload output paths belong to the reviewed plan.
 The explicit environment replaces the parent's environment. Supply the runtime
 bus keys required by the installed pool and required toolchain flags in the
 reviewed map. The installed `with-heavy-job` shell entry locates its Python entry
-through HOME: use the launcher's real HOME and pin that `job_runner.py` too. A
+through HOME: use the launcher's real HOME and pin that `job_runner.py` and the
+installed `job-limits.json` too. Readiness checks these stock-wrapper dependencies. A
 private payload HOME must be an explicit reviewed `env -i` argv inside the lease,
 with all required payload keys, not a replacement of the launcher's HOME. Keep
 package/tmp/output paths private. Do not copy the agent's entire environment.

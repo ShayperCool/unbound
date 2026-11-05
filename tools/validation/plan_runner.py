@@ -119,6 +119,13 @@ def check(plan_path, approval_path):
     for name, value in plan['env'].items():
         require(re.fullmatch('[A-Za-z_][A-Za-z0-9_]*', name), 'invalid environment key')
         expand(value, run)
+    if Path(plan['launcher']).name == 'with-heavy-job':
+        # The stock installed shell wrapper resolves its Python entry via HOME.
+        # Check this declared dependency before spending a lease, not after spawn.
+        home = physical(plan['env'].get('HOME'))
+        cache = physical(plan['env'].get('UNBOUND_JOB_RUNNER_STATE', str(home/'.cache/compat')))
+        for dependency in [home/'.cache/compat/job_runner.py', cache/'job-limits.json']:
+            require(str(dependency) in plan['inputs'], 'installed launcher dependency must be pinned: ' + str(dependency))
     require(isinstance(plan['jobs'], list) and plan['jobs'], 'nonempty jobs required')
     ids = []
     for job in plan['jobs']:
