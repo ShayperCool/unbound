@@ -1484,25 +1484,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal void RemoveBufferFromLeakDetector() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.RemoveBufferFromLeakDetector"); }
         public global::UnityEngine.GraphicsBufferHandle bufferHandle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.bufferHandle"); return default; } }
         [global::Unbound.Stub]
-        public unsafe partial struct IndirectDrawArgs
-        {
-            public const int size = 16;
-            public uint vertexCountPerInstance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawArgs.vertexCountPerInstance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawArgs.vertexCountPerInstance"); } }
-            public uint instanceCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawArgs.instanceCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawArgs.instanceCount"); } }
-            public uint startVertex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawArgs.startVertex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawArgs.startVertex"); } }
-            public uint startInstance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawArgs.startInstance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawArgs.startInstance"); } }
-        }
-        [global::Unbound.Stub]
-        public unsafe partial struct IndirectDrawIndexedArgs
-        {
-            public const int size = 20;
-            public uint indexCountPerInstance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawIndexedArgs.indexCountPerInstance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawIndexedArgs.indexCountPerInstance"); } }
-            public uint instanceCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawIndexedArgs.instanceCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawIndexedArgs.instanceCount"); } }
-            public uint startIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawIndexedArgs.startIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawIndexedArgs.startIndex"); } }
-            public uint baseVertexIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawIndexedArgs.baseVertexIndex"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawIndexedArgs.baseVertexIndex"); } }
-            public uint startInstance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawIndexedArgs.startInstance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.IndirectDrawIndexedArgs.startInstance"); } }
-        }
-        [global::Unbound.Stub]
         internal unsafe static partial class BindingsMarshaller
         {
             [global::Unbound.Stub] public static global::UnityEngine.GraphicsBuffer ConvertToManaged(global::System.IntPtr ptr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.GraphicsBuffer.BindingsMarshaller.ConvertToManaged"); return default; }
