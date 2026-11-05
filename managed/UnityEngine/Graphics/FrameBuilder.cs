@@ -1352,16 +1352,20 @@ namespace Unbound.Runtime
         static readonly List<DrawItem> s_Queued = new List<DrawItem>();
 
         /// <summary>Meshes queued with Graphics.DrawMesh that the camera draws: lit and shadowed as
-        /// their settings say (ShadowsOnly ones only cast).</summary>
+        /// their settings say (ShadowsOnly ones only cast). A RenderParams draw with world bounds
+        /// is culled by them, with the renderers' frustum test, and sorted by their centre; it
+        /// still casts shadows as other queued draws do.</summary>
         static void CollectQueued(CameraContext camera, List<DrawItem> into)
         {
             int mask = camera.Camera.cullingMask;
+            var culling = camera.Camera.projectionMatrix * camera.Camera.worldToCameraMatrix;
             s_Queued.Clear();
             foreach (var q in Immediate.Queued)
             {
                 if (q.Camera != null && q.Camera != camera.Camera) continue;
                 if ((mask & (1 << q.Layer)) == 0) continue;
                 var bounds = WorldBounds(q.Mesh.bounds, q.Matrix);
+                bool seen = q.WorldBounds is not Bounds world || InFrustum(culling, world);
                 var item = new DrawItem
                 {
                     Mesh = q.Mesh.Sync(),
@@ -1370,7 +1374,7 @@ namespace Unbound.Runtime
                     Model = q.Matrix,
                     Color = Color.white,
                     Queue = q.Material.renderQueue,
-                    Distance = Distance(camera, bounds.center),
+                    Distance = Distance(camera, (q.WorldBounds ?? bounds).center),
                     Sequence = s_Sequence++,
                     Properties = q.Properties,
                     Setup = q.Setup,
@@ -1379,7 +1383,7 @@ namespace Unbound.Runtime
                     Layer = q.Layer,
                 };
                 s_Queued.Add(item);
-                if (item.Lighting.Cast != ShadowCastingMode.ShadowsOnly) into.Add(item);
+                if (seen && item.Lighting.Cast != ShadowCastingMode.ShadowsOnly) into.Add(item);
             }
             // A mesh queued for one camera is drawn by its next render only (measured:
             // tests/projects/graphics, a second Camera.Render the same frame draws none).

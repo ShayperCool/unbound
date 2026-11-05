@@ -166,11 +166,23 @@ namespace UnityEngine
 
         /// <summary>A RenderParams draw queued for this frame's cameras: its material, layer, camera,
         /// property block (or <paramref name="properties"/> in its place), shadow and probe
-        /// settings; <paramref name="setup"/> for instanced or indirect draws.</summary>
+        /// settings; <paramref name="setup"/> for instanced or indirect draws. Set world bounds go
+        /// with the draw: cameras cull and sort it by them ("Used to cull and sort the rendered
+        /// geometry", RenderParams.worldBounds), each draw of one call alike.</summary>
         static void Render(in RenderParams rparams, Mesh mesh, int submeshIndex, Matrix4x4 objectToWorld, DrawSetup? setup, MaterialPropertyBlock properties = null)
         {
             if (rparams.material == null) throw new ArgumentNullException("rparams.material");
+            int queued = Immediate.Queued.Count;
             Immediate.Queue(mesh, objectToWorld, rparams.material, rparams.layer, rparams.camera, submeshIndex, properties ?? rparams.matProps, setup, Lighting(rparams));
+            // Bounds left at the constructor's zero value are not set: the draw keeps its mesh's
+            // bounds (Unbound's choice; a RenderMesh with them is drawn, measured:
+            // tests/projects/graphics renderMesh).
+            if (Immediate.Queued.Count == queued + 1 && !rparams.worldBounds.Equals(default(Bounds)))
+            {
+                var entry = Immediate.Queued[queued];
+                entry.WorldBounds = rparams.worldBounds;
+                Immediate.Queued[queued] = entry;
+            }
         }
 
         static ImmediateLighting Lighting(in RenderParams rparams) =>
