@@ -1,0 +1,263 @@
+using System;
+using System.Collections.Generic;
+using Xunit;
+
+namespace UnityEngine.Tests
+{
+    /// <summary>
+    /// Rigidbody.collisionDetectionMode per mode (Unity 6000.0 Scripting API: CollisionDetectionMode,
+    /// its four values and Rigidbody.collisionDetectionMode; Manual: Rigidbody component reference,
+    /// "Continuous collision detection (CCD)", "Sweep-based CCD", "Speculative CCD").
+    /// Documented and asserted:
+    /// - Discrete: CCD is off; collisions are only checked at the fixed time step.
+    /// - Continuous: sweep CCD against static colliders (colliders without a Rigidbody) only; the
+    ///   Manual lists collisions with moving colliders as what it is not for.
+    /// - ContinuousDynamic: sweep CCD against every other collider except those set to Discrete
+    ///   (Manual, Rigidbody component); a Continuous body also stops a ContinuousDynamic one
+    ///   (Scripting API, CollisionDetectionMode.Continuous).
+    /// - ContinuousSpeculative: speculative CCD against static and dynamic geometry, usable on
+    ///   kinematic bodies too.
+    /// Outcomes are asserted as tunnelled or not, with generous margins, in deterministic
+    /// fixed-step scenes whose step moves the fast body far past a thin obstacle: no contact exists
+    /// at either end of the step, so only CCD can stop it.
+    /// Not asserted: what a kinematic body in Continuous or ContinuousDynamic does itself (not
+    /// documented; Unbound gives it no sweep, unmeasured), positions, impulses and event order.
+    /// No Editor reference measures these scenes: the expectations are per documentation, unmeasured.
+    ///
+    /// Red base 4d0029d5: the file compiles there (it uses only existing public API). There every
+    /// mode other than Discrete raised sweep CCD on the body and every pair with a moving body was
+    /// swept, so the "tunnels" rows of the moving-obstacle cases and the kinematic speculative row
+    /// fail there; each test names its own red.
+    /// </summary>
+    public class PhysicsCcdModeTests : IDisposable
+    {
+        const float Dt = 0.02f;
+        // 100 m/s: 2 m per step, far more than the sphere's diameter and the obstacle's thickness.
+        const float Speed = 100f;
+        // Far from the origin, away from anything other tests leave in the default physics scene.
+        static readonly Vector3 Origin = new Vector3(0f, 0f, 800f);
+        static int s_Lane;
+
+        readonly List<GameObject> m_Made = new List<GameObject>();
+        readonly Vector3 m_Gravity;
+        readonly SimulationMode m_Mode;
+        readonly bool m_AutoSync;
+
+        public PhysicsCcdModeTests()
+        {
+            m_Gravity = Physics.gravity;
+            m_Mode = Physics.simulationMode;
+            m_AutoSync = Physics.autoSyncTransforms;
+            Physics.gravity = Vector3.zero;
+            Physics.autoSyncTransforms = true;
+            Physics.simulationMode = SimulationMode.Script;
+        }
+
+        public void Dispose()
+        {
+            foreach (var go in m_Made)
+                if (go != null) Object.DestroyImmediate(go);
+            Physics.Simulate(Dt);
+            Physics.gravity = m_Gravity;
+            Physics.autoSyncTransforms = m_AutoSync;
+            Physics.simulationMode = m_Mode;
+        }
+
+        /// <summary>A fresh lane, 10 m away from every other one.</summary>
+        static Vector3 Lane() => Origin + new Vector3(0f, 10f * s_Lane++, 0f);
+
+        GameObject Make(string name, PrimitiveType type, Vector3 position, Vector3 scale)
+        {
+            var go = GameObject.CreatePrimitive(type);
+            go.name = name;
+            go.transform.position = position;
+            go.transform.localScale = scale;
+            m_Made.Add(go);
+            return go;
+        }
+
+        /// <summary>A sphere of radius 0.1 one metre before the obstacle, flying at it.</summary>
+        Rigidbody Bullet(Vector3 lane, CollisionDetectionMode mode)
+        {
+            var go = Make("bullet", PrimitiveType.Sphere, lane + new Vector3(-1f, 0f, 0f), Vector3.one * 0.2f);
+            var rb = go.AddComponent<Rigidbody>();
+            rb.useGravity = false;
+            rb.mass = 1f;
+            rb.collisionDetectionMode = mode;
+            rb.linearVelocity = new Vector3(Speed, 0f, 0f);
+            return rb;
+        }
+
+        /// <summary>A 0.1 m thin, 2 m wide plate across the lane at x 0 (a static collider).</summary>
+        GameObject Wall(Vector3 lane) => Make("wall", PrimitiveType.Cube, lane, new Vector3(0.1f, 2f, 2f));
+
+        /// <summary>The same plate as a heavy dynamic body, so a hit barely moves it.</summary>
+        Rigidbody Plate(Vector3 lane, CollisionDetectionMode mode)
+        {
+            var rb = Wall(lane).AddComponent<Rigidbody>();
+            rb.useGravity = false;
+            rb.mass = 1000f;
+            rb.collisionDetectionMode = mode;
+            return rb;
+        }
+
+        static void Run(int steps)
+        {
+            for (int i = 0; i < steps; i++) Physics.Simulate(Dt);
+        }
+
+        /// <summary>Tunnelled: the sphere's centre ends at least 0.5 m past the obstacle's centre
+        /// (untouched it is about 5 m past after three steps; stopped it stays behind, below 0).</summary>
+        static bool Tunnelled(Rigidbody bullet, Vector3 obstacle) => bullet.position.x - obstacle.x > 0.5f;
+
+        static bool Stopped(Rigidbody bullet, Vector3 obstacle) => bullet.position.x < obstacle.x;
+
+        // Red: none at 4d0029d5 (it passes there: Discrete had no CCD, the others swept). Guard;
+        // head-only reds: in native apply_ccd drop eENABLE_SPECULATIVE_CCD (the Speculative row
+        // tunnels), or make sweeps() false against statics (the Continuous rows tunnel).
+        [Theory]
+        [InlineData(CollisionDetectionMode.Discrete, true)]
+        [InlineData(CollisionDetectionMode.Continuous, false)]
+        [InlineData(CollisionDetectionMode.ContinuousDynamic, false)]
+        [InlineData(CollisionDetectionMode.ContinuousSpeculative, false)]
+        public void FastSphereAgainstThinStaticWallTunnelsOnlyWhenDiscrete(CollisionDetectionMode mode, bool tunnels)
+        {
+            var lane = Lane();
+            Wall(lane);
+            var bullet = Bullet(lane, mode);
+            Run(3);
+            Assert.Equal(tunnels, Tunnelled(bullet, lane));
+            Assert.Equal(!tunnels, Stopped(bullet, lane));
+        }
+
+        // A Continuous body is swept against static colliders only: a fast Continuous sphere is not
+        // swept against a Discrete or Continuous dynamic plate (and so passes it in this scene), while
+        // a ContinuousDynamic plate is swept against it ("all other colliders except Discrete").
+        // Red at 4d0029d5: the Discrete and Continuous rows (every moving pair was swept there).
+        [Theory]
+        [InlineData(CollisionDetectionMode.Discrete, true)]
+        [InlineData(CollisionDetectionMode.Continuous, true)]
+        [InlineData(CollisionDetectionMode.ContinuousDynamic, false)]
+        public void FastContinuousSphereAgainstDynamicPlate(CollisionDetectionMode plateMode, bool tunnels)
+        {
+            var lane = Lane();
+            var plate = Plate(lane, plateMode);
+            var bullet = Bullet(lane, CollisionDetectionMode.Continuous);
+            Run(3);
+            Assert.Equal(tunnels, Tunnelled(bullet, plate.position));
+            Assert.Equal(!tunnels, Stopped(bullet, plate.position));
+        }
+
+        // ContinuousDynamic sweeps against every collider except Discrete ones.
+        // Red at 4d0029d5: the Discrete row. The ContinuousDynamic and Continuous rows pass there;
+        // their red is head with only the managed mapping (Rigidbody.cs, PhysicsWorld.cs) reverted to
+        // 4d0029d5, which sends ContinuousDynamic as 1 (Continuous), so neither body sweeps the pair.
+        // The ContinuousSpeculative row is the same red under that revert (the plate becomes
+        // Continuous, the sphere too).
+        [Theory]
+        [InlineData(CollisionDetectionMode.Discrete, true)]
+        [InlineData(CollisionDetectionMode.Continuous, false)]
+        [InlineData(CollisionDetectionMode.ContinuousDynamic, false)]
+        [InlineData(CollisionDetectionMode.ContinuousSpeculative, false)]
+        public void FastContinuousDynamicSphereAgainstDynamicPlate(CollisionDetectionMode plateMode, bool tunnels)
+        {
+            var lane = Lane();
+            var plate = Plate(lane, plateMode);
+            var bullet = Bullet(lane, CollisionDetectionMode.ContinuousDynamic);
+            Run(3);
+            Assert.Equal(tunnels, Tunnelled(bullet, plate.position));
+            Assert.Equal(!tunnels, Stopped(bullet, plate.position));
+        }
+
+        // A fast kinematic plate (0.1 m thin, MovePosition 2 m a step) passes a resting sphere of
+        // radius 0.25 entirely within one step. Speculative CCD, which the docs allow on kinematic
+        // bodies, makes it hit; Discrete does not.
+        // Red at 4d0029d5: the ContinuousSpeculative row (sent as sweep CCD, which a kinematic body
+        // cannot take, so the plate had no CCD). Also red with only the managed mapping reverted.
+        [Theory]
+        [InlineData(CollisionDetectionMode.Discrete, false)]
+        [InlineData(CollisionDetectionMode.ContinuousSpeculative, true)]
+        public void FastKinematicPlateHitsRestingSphereOnlyWhenSpeculative(CollisionDetectionMode mode, bool hits)
+        {
+            var lane = Lane();
+            var sphere = Make("target", PrimitiveType.Sphere, lane, Vector3.one * 0.5f).AddComponent<Rigidbody>();
+            sphere.useGravity = false;
+            sphere.mass = 1f;
+            var start = lane + new Vector3(-1.2f, 0f, 0f);
+            var plate = Make("paddle", PrimitiveType.Cube, start, new Vector3(0.1f, 2f, 2f)).AddComponent<Rigidbody>();
+            plate.isKinematic = true;
+            plate.collisionDetectionMode = mode;
+            Physics.Simulate(Dt);
+            Assert.Equal(mode, plate.collisionDetectionMode);
+            for (int i = 1; i <= 3; i++)
+            {
+                plate.MovePosition(start + new Vector3(Speed * Dt * i, 0f, 0f));
+                Physics.Simulate(Dt);
+            }
+            // Hit: pushed ahead of the plate (about 5 m); missed: still at rest where it was.
+            bool pushed = sphere.position.x - lane.x > 0.5f;
+            bool untouched = Mathf.Abs(sphere.position.x - lane.x) < 0.01f && sphere.linearVelocity.magnitude < 0.01f;
+            Assert.Equal(hits, pushed);
+            Assert.Equal(!hits, untouched);
+        }
+
+        // A mode set after the body exists reaches it: a sphere built as ContinuousDynamic and then
+        // switched to Continuous passes a Continuous plate; one built as Continuous and switched to
+        // ContinuousDynamic is stopped by it.
+        // Red at 4d0029d5: the first half (every non-Discrete pair was swept there). The second half
+        // passes there; its red is head with only the managed mapping reverted (both bodies sent as
+        // 1, Continuous) or with the runtime path dropped (ApplyBodySettings not passing the mode).
+        [Fact]
+        public void ModeChangedAtRuntimeReachesTheBody()
+        {
+            var laneA = Lane();
+            var plateA = Plate(laneA, CollisionDetectionMode.Continuous);
+            var bulletA = Bullet(laneA, CollisionDetectionMode.ContinuousDynamic);
+            bulletA.linearVelocity = Vector3.zero;
+            var laneB = Lane();
+            var plateB = Plate(laneB, CollisionDetectionMode.Continuous);
+            var bulletB = Bullet(laneB, CollisionDetectionMode.Continuous);
+            bulletB.linearVelocity = Vector3.zero;
+            Physics.Simulate(Dt); // both bodies exist, at rest
+
+            bulletA.collisionDetectionMode = CollisionDetectionMode.Continuous;
+            bulletB.collisionDetectionMode = CollisionDetectionMode.ContinuousDynamic;
+            bulletA.linearVelocity = new Vector3(Speed, 0f, 0f);
+            bulletB.linearVelocity = new Vector3(Speed, 0f, 0f);
+            Run(3);
+            Assert.Equal(CollisionDetectionMode.Continuous, bulletA.collisionDetectionMode);
+            Assert.Equal(CollisionDetectionMode.ContinuousDynamic, bulletB.collisionDetectionMode);
+            Assert.True(Tunnelled(bulletA, plateA.position), $"switched to Continuous: x {bulletA.position.x - laneA.x}");
+            Assert.True(Stopped(bulletB, plateB.position), $"switched to ContinuousDynamic: x {bulletB.position.x - laneB.x}");
+        }
+
+        // The getter returns the mode set, before and after the body exists, dynamic or kinematic;
+        // the default is Discrete.
+        // Red: none at 4d0029d5 (it passes there). Guard against a native-only or kinematic rewrite
+        // of the stored value.
+        [Fact]
+        public void ModeGetterRoundTrips()
+        {
+            var lane = Lane();
+            var rb = Make("roundtrip", PrimitiveType.Cube, lane, Vector3.one).AddComponent<Rigidbody>();
+            rb.useGravity = false;
+            Assert.Equal(CollisionDetectionMode.Discrete, rb.collisionDetectionMode);
+            var modes = new[]
+            {
+                CollisionDetectionMode.Continuous, CollisionDetectionMode.ContinuousDynamic,
+                CollisionDetectionMode.ContinuousSpeculative, CollisionDetectionMode.Discrete,
+            };
+            foreach (bool kinematic in new[] { false, true })
+            {
+                rb.isKinematic = kinematic;
+                foreach (var mode in modes)
+                {
+                    rb.collisionDetectionMode = mode;
+                    Assert.Equal(mode, rb.collisionDetectionMode);
+                    Physics.Simulate(Dt);
+                    Assert.Equal(mode, rb.collisionDetectionMode);
+                }
+            }
+        }
+    }
+}

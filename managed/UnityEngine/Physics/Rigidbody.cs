@@ -49,6 +49,9 @@ namespace UnityEngine
         internal ulong m_Body;
         internal bool m_HasCreatedBody;
         internal bool m_Registered;
+        /// <summary>The physics scene it was last registered in, and its GameObject's scene then.</summary>
+        internal PhysicsWorld.Space m_Space;
+        internal int m_SceneHandle;
         internal bool m_BodyDirty;
         internal bool m_MassDirty;
         internal bool m_KinematicPending;
@@ -101,6 +104,16 @@ namespace UnityEngine
 
         internal B3.BodyType BodyType => m_IsKinematic ? B3.BodyType.Kinematic : B3.BodyType.Dynamic;
 
+        /// <summary>The collision detection mode the native body takes (0-3, the enum's values). A value
+        /// outside the enum is Discrete there; the getter still returns what was set.</summary>
+        internal int NativeCollisionDetection => m_CollisionDetection switch
+        {
+            CollisionDetectionMode.Continuous => 1,
+            CollisionDetectionMode.ContinuousDynamic => 2,
+            CollisionDetectionMode.ContinuousSpeculative => 3,
+            _ => 0,
+        };
+
         /// <summary>Box3D's motion locks: RigidbodyConstraints without its unused first bit.</summary>
         internal int Locks => ((int)m_Constraints >> 1) & 63;
 
@@ -129,7 +142,7 @@ namespace UnityEngine
             B3.ua3_body_set_damping(body, Mathf.Max(0f, m_LinearDamping), Mathf.Max(0f, m_AngularDamping));
             B3.ua3_body_set_gravity_scale(body, m_UseGravity ? 1f : 0f);
             B3.ua3_body_set_locks(body, Locks);
-            B3.ua3_body_set_bullet(body, m_CollisionDetection != CollisionDetectionMode.Discrete ? 1 : 0);
+            B3.ua3_body_set_bullet(body, NativeCollisionDetection);
             ApplyTuning();
             // Changing the type drops the mass data.
             m_MassDirty = true;
@@ -484,7 +497,7 @@ namespace UnityEngine
             {
                 if (m_DetectCollisions == value) return;
                 m_DetectCollisions = value;
-                foreach (var c in W.Colliders)
+                foreach (var c in W.CollidersOf(this))
                     if (ReferenceEquals(c.m_AttachedBody, this)) W.Refilter(c);
             }
         }
@@ -495,7 +508,7 @@ namespace UnityEngine
             set
             {
                 m_IncludeLayers = value;
-                foreach (var c in W.Colliders)
+                foreach (var c in W.CollidersOf(this))
                     if (ReferenceEquals(c.m_AttachedBody, this)) W.Refilter(c);
             }
         }
@@ -506,7 +519,7 @@ namespace UnityEngine
             set
             {
                 m_ExcludeLayers = value;
-                foreach (var c in W.Colliders)
+                foreach (var c in W.CollidersOf(this))
                     if (ReferenceEquals(c.m_AttachedBody, this)) W.Refilter(c);
             }
         }
@@ -808,7 +821,7 @@ namespace UnityEngine
         {
             var best = worldCenterOfMass;
             float bestDistance = float.PositiveInfinity;
-            foreach (var c in W.Colliders)
+            foreach (var c in W.CollidersOf(this))
             {
                 if (!ReferenceEquals(c.m_AttachedBody, this) || c.m_Shape == 0) continue;
                 var p = B3.ua3_shape_closest_point(c.m_Shape, point);
@@ -836,7 +849,7 @@ namespace UnityEngine
         {
             bool any = false;
             var bounds = new Bounds();
-            foreach (var c in W.Colliders)
+            foreach (var c in W.CollidersOf(this))
             {
                 if (!ReferenceEquals(c.m_AttachedBody, this)) continue;
                 if (!any) bounds = c.bounds;
@@ -875,7 +888,9 @@ namespace UnityEngine
             var result = new List<RaycastHit>();
             W.PrepareQuery();
             int mask = Physics.GetLayerCollisionMask(gameObject.layer);
-            foreach (var c in W.Colliders)
+            // The sweep meets the colliders of the body's own physics scene.
+            using (PhysicsQueries.In(m_Space))
+            foreach (var c in W.CollidersOf(this))
             {
                 if (!ReferenceEquals(c.m_AttachedBody, this) || c.m_Shape == 0) continue;
                 foreach (var hit in PhysicsQueries.CastCollider(c, direction, maxDistance, mask, triggers, closest))

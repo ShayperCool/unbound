@@ -33,6 +33,9 @@ namespace UnityEngine
         /// <summary>Its GameObject is active in the hierarchy (the engine enabled it).</summary>
         internal bool m_Active;
         internal bool m_Registered;
+        /// <summary>The physics scene it was last registered in, and its GameObject's scene then.</summary>
+        internal PhysicsWorld.Space m_Space;
+        internal int m_SceneHandle;
         internal bool m_ShapeDirty;
         internal bool m_GeometryDirty;
         internal Rigidbody m_AttachedBody;
@@ -299,6 +302,13 @@ namespace UnityEngine
             var direction = ray.direction;
             if (direction.sqrMagnitude < 1e-12f) return false;
             float length = PhysicsQueries.Length(maxDistance);
+            // Documented (6000.0 Physics.queriesHitBackfaces): the setting applies to "all physics
+            // queries such as a raycast or a shape sweep"; whether Collider.Raycast reads it is not
+            // documented or measured. Unbound's per-collider ray never hits back faces, so a
+            // triangle collider queried with the setting on is reported, not silently answered.
+            if (Physics.s_QueriesHitBackfaces && (this is MeshCollider { m_Convex: false } || this is TerrainCollider))
+                Stubs.Ignored("Collider.Raycast with Physics.queriesHitBackfaces",
+                    "is not honoured yet: Unbound's Collider.Raycast does not hit the back faces of a non-convex MeshCollider or a TerrainCollider");
             if (B3.ua3_shape_raycast(m_Shape, ray.origin, direction.normalized * length, out var hit) == 0) return false;
             hitInfo = PhysicsQueries.ToHit(hit, this, length);
             return true;
@@ -554,10 +564,49 @@ namespace UnityEngine
             set { m_Convex = value; ShapeChanged(); }
         }
 
+        /// <summary>A change cooks the mesh again (Unbound's choice, unmeasured: when Unity re-cooks
+        /// is not documented).</summary>
         public MeshColliderCookingOptions cookingOptions
         {
             get => m_CookingOptions;
-            set => m_CookingOptions = value;
+            set
+            {
+                if (m_CookingOptions == value) return;
+                m_CookingOptions = value;
+                ShapeChanged();
+            }
+        }
+
+        /// <summary>The most triangles the native cooking takes: the count shares its argument with
+        /// the cooking options (see ua3_mesh_create).</summary>
+        const int MaxCookedTriangles = (1 << 27) - 1;
+
+        /// <summary>The cooking options turned off, as ua3_mesh_create takes them in the triangle
+        /// count's bits 27-30 (0: every option on, Unity's default). Documented (6000.0 Manual, Mesh
+        /// Collider component reference, Cooking Options): Cook for Faster Simulation off cooks faster
+        /// and retrieves the mesh data more slowly at runtime; Enable Mesh Cleaning off keeps
+        /// degenerate triangles and other artifacts; Weld Colocated Vertices off keeps vertices with the
+        /// same position apart; Use Fast Midphase off uses the slower legacy midphase. The PhysX
+        /// parameters they map to are Unbound's choice (unmeasured), named on the native side.
+        /// Two combinations PhysX's cooking cannot make are reported, not approximated: welding off
+        /// with cleaning on (cleaning merges vertices at the same position), and welding on with
+        /// cleaning off (PhysX welds only while cleaning). InflateConvexMesh is obsolete in 6000.0 and
+        /// is not read; the options name triangle mesh cooking, so convex hulls do not read them
+        /// (Unbound's reading, unmeasured).</summary>
+        int CookingFlags()
+        {
+            var o = m_CookingOptions;
+            bool fast = (o & MeshColliderCookingOptions.CookForFasterSimulation) != 0;
+            bool clean = (o & MeshColliderCookingOptions.EnableMeshCleaning) != 0;
+            bool weld = (o & MeshColliderCookingOptions.WeldColocatedVertices) != 0;
+            bool midphase = (o & MeshColliderCookingOptions.UseFastMidphase) != 0;
+            if (!weld && clean)
+                Stubs.Ignored("MeshColliderCookingOptions.WeldColocatedVertices (off)",
+                    "is not honoured yet: with EnableMeshCleaning on, cooking still merges vertices at the same position");
+            if (weld && !clean)
+                Stubs.Ignored("MeshColliderCookingOptions.WeldColocatedVertices (without EnableMeshCleaning)",
+                    "is not honoured yet: cooking merges vertices at the same position only while it cleans the mesh");
+            return (fast ? 0 : 1) | (clean ? 0 : 2) | (weld ? 0 : 4) | (midphase ? 0 : 8);
         }
 
         internal override unsafe ulong CreateShape(ulong body, in B3.ShapeDef def, Matrix4x4 toBody, Rigidbody rigidbody)
@@ -590,9 +639,28 @@ namespace UnityEngine
             }
             if (indices.Count < 3) return 0;
             var triangles = indices.ToArray();
+            int triangleCount = triangles.Length / 3;
+            if (triangleCount > MaxCookedTriangles)
+            {
+                Debug.LogError($"Unbound: the MeshCollider on '{name}' has {triangleCount} triangles; at most {MaxCookedTriangles} are cooked, so it has no collision.", this);
+                return 0;
+            }
+            int flags = CookingFlags();
+            if ((flags & 2) != 0)
+            {
+                // Without cleaning the cooking reads the indices as they are (Unity: "it's the user's
+                // responsibility to provide valid data, otherwise the behaviour might be undefined");
+                // one outside the vertices is reported instead of read (Unbound's choice).
+                foreach (int index in triangles)
+                {
+                    if ((uint)index < (uint)vertices.Length) continue;
+                    Debug.LogError($"Unbound: the MeshCollider on '{name}' has a triangle index {index} outside its {vertices.Length} vertices, with EnableMeshCleaning off; it has no collision.", this);
+                    return 0;
+                }
+            }
             fixed (Vector3* v = vertices)
             fixed (int* t = triangles)
-                m_MeshData = B3.ua3_mesh_create(v, vertices.Length, t, triangles.Length / 3);
+                m_MeshData = B3.ua3_mesh_create(v, vertices.Length, t, triangleCount | (flags << 27));
             if (m_MeshData == IntPtr.Zero) return 0;
             return B3.ua3_shape_mesh(body, def, m_MeshData, Vector3.one);
         }

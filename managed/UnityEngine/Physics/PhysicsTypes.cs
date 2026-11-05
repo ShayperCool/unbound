@@ -84,7 +84,12 @@ namespace UnityEngine
         }
     }
 
-    /// <summary>The result of a 3D ray or shape cast.</summary>
+    /// <summary>The result of a 3D ray or shape cast. It holds the hit collider's instance ID, not
+    /// a reference, so it is unmanaged and can live in a NativeArray (RaycastCommand and the other
+    /// cast commands write their results into one). Every collider-dependent property looks the
+    /// collider up by that ID when read: the same Collider object while it lives, null once it is
+    /// destroyed (Unbound's choice, unmeasured: the 6000.0 RaycastHit pages do not say what a hit
+    /// on a since-destroyed collider reads).</summary>
     public partial struct RaycastHit
     {
         internal Vector3 m_Point;
@@ -93,11 +98,15 @@ namespace UnityEngine
         internal float m_Distance;
         internal Vector2 m_UV;
         internal int m_Collider;
-        internal Collider m_ColliderRef;
 
-        public Collider collider => m_ColliderRef;
+        /// <summary>The live Collider with the hit's instance ID; null for no hit (ID 0) or a
+        /// collider destroyed since.</summary>
+        Collider HitCollider => m_Collider == 0 ? null : Object.FindObjectFromInstanceID(m_Collider) as Collider;
 
-        public int colliderInstanceID => m_ColliderRef != null ? m_ColliderRef.GetInstanceID() : m_Collider;
+        public Collider collider => HitCollider;
+
+        /// <summary>The ID the hit recorded, also once that collider is destroyed.</summary>
+        public int colliderInstanceID => m_Collider;
 
         public Vector3 point
         {
@@ -134,7 +143,7 @@ namespace UnityEngine
 
         Vector2 TextureCoordinate(int channel)
         {
-            if (!(m_ColliderRef is MeshCollider meshCollider) || meshCollider == null || meshCollider.convex) return Vector2.zero;
+            if (!(HitCollider is MeshCollider meshCollider) || meshCollider == null || meshCollider.convex) return Vector2.zero;
             var mesh = meshCollider.sharedMesh;
             if (mesh == null || m_FaceID == uint.MaxValue) return Vector2.zero;
             var uv = mesh.m_UVs[channel];
@@ -170,8 +179,9 @@ namespace UnityEngine
                 var uv = TextureCoordinate(1);
                 // The Editor applies the renderer's transform even with no baked lightmap index.
                 // Its default hit throws when it attempts the collider's component lookup.
-                if (m_ColliderRef == null) throw new NullReferenceException();
-                var renderer = m_ColliderRef.GetComponent<Renderer>();
+                var c = HitCollider;
+                if (c == null) throw new NullReferenceException();
+                var renderer = c.GetComponent<Renderer>();
                 if (renderer == null) return uv;
                 var st = renderer.lightmapScaleOffset;
                 return new Vector2(uv.x * st.x + st.z, uv.y * st.y + st.w);
@@ -182,14 +192,21 @@ namespace UnityEngine
         {
             get
             {
-                var c = m_ColliderRef;
+                var c = HitCollider;
                 if (c == null) return null;
                 var rb = c.attachedRigidbody;
                 return rb != null ? rb.transform : c.transform;
             }
         }
 
-        public Rigidbody rigidbody => m_ColliderRef != null ? m_ColliderRef.attachedRigidbody : null;
+        public Rigidbody rigidbody
+        {
+            get
+            {
+                var c = HitCollider;
+                return c != null ? c.attachedRigidbody : null;
+            }
+        }
 
     }
 

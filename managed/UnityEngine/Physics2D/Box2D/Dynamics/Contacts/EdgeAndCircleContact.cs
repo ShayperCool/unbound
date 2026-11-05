@@ -20,7 +20,8 @@ namespace Unbound.Box2D.Dynamics.Contacts
                 (EdgeShape)FixtureA.Shape,
                 xfA,
                 (CircleShape)FixtureB.Shape,
-                xfB);
+                xfB,
+                useAdjacency: true); // Unbound: EdgeCollider2D segments use their ghost vertices.
         }
     }
 

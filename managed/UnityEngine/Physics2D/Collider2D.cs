@@ -1069,28 +1069,45 @@ namespace UnityEngine
             }
         }
 
+        // The adjacent points shape the collision at the chain ends, so they rebuild it.
         public bool useAdjacentStartPoint
         {
             get => m_UseAdjacentStartPoint;
-            set => m_UseAdjacentStartPoint = value;
+            set
+            {
+                m_UseAdjacentStartPoint = value;
+                ShapeChanged();
+            }
         }
 
         public bool useAdjacentEndPoint
         {
             get => m_UseAdjacentEndPoint;
-            set => m_UseAdjacentEndPoint = value;
+            set
+            {
+                m_UseAdjacentEndPoint = value;
+                ShapeChanged();
+            }
         }
 
         public Vector2 adjacentStartPoint
         {
             get => m_AdjacentStartPoint;
-            set => m_AdjacentStartPoint = value;
+            set
+            {
+                m_AdjacentStartPoint = value;
+                ShapeChanged();
+            }
         }
 
         public Vector2 adjacentEndPoint
         {
             get => m_AdjacentEndPoint;
-            set => m_AdjacentEndPoint = value;
+            set
+            {
+                m_AdjacentEndPoint = value;
+                ShapeChanged();
+            }
         }
 
         public void Reset()
@@ -1122,6 +1139,7 @@ namespace UnityEngine
             // Unity does not scale the edge radius with the transform.
             float radius = B2Settings.PolygonRadius + m_EdgeRadius;
             int dropped = 0, made = 0;
+            EdgeShape first = null, previous = null;
             for (int i = 0; i + 1 < m_Points.Length; i++)
             {
                 var a = ToBody(toBody, m_Points[i] + m_Offset);
@@ -1134,8 +1152,33 @@ namespace UnityEngine
                 var edge = new EdgeShape();
                 edge.SetTwoSided(a, b);
                 edge.Radius = radius;
+                // The segments form one connected, two-sided chain: each one's neighbours are
+                // its ghost vertices, so a body sliding across a connection does not catch on it.
+                if (previous != null)
+                {
+                    edge.HasVertex0 = true;
+                    edge.Vertex0 = previous.Vertex1;
+                    previous.HasVertex3 = true;
+                    previous.Vertex3 = b;
+                }
                 shapes.Add(edge);
+                first ??= edge;
+                previous = edge;
                 made++;
+            }
+            if (first != null)
+            {
+                // The chain ends use the adjacent points only when enabled.
+                if (m_UseAdjacentStartPoint)
+                {
+                    first.HasVertex0 = true;
+                    first.Vertex0 = ToBody(toBody, m_AdjacentStartPoint + m_Offset);
+                }
+                if (m_UseAdjacentEndPoint)
+                {
+                    previous.HasVertex3 = true;
+                    previous.Vertex3 = ToBody(toBody, m_AdjacentEndPoint + m_Offset);
+                }
             }
             m_ErrorState = made == 0 ? ColliderErrorState2D.NoShapes : dropped > 0 ? ColliderErrorState2D.RemovedShapes : ColliderErrorState2D.None;
         }

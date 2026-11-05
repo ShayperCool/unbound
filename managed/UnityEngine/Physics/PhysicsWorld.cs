@@ -22,22 +22,237 @@ namespace Unbound.Runtime
     /// The simulation runs in FixedUpdate.PhysicsFixedUpdate (SimulationMode.FixedUpdate), in
     /// PreLateUpdate.PhysicsLateUpdate (Update) or only through Physics.Simulate (Script); interpolated
     /// bodies get their transform poses in PreUpdate.PhysicsUpdate.
+    ///
+    /// A scene created or loaded with LocalPhysicsMode.Physics3D owns a physics scene of its own (a
+    /// separate native world, <see cref="Space"/>): its components are simulated, queried and
+    /// reported only there, and only by its PhysicsScene.Simulate. Everything else is in the default
+    /// physics scene, whose behaviour is expected to be unchanged (not yet measured).
     /// </summary>
     internal static unsafe class PhysicsWorld
     {
-        static uint s_World;
         static bool s_Registered;
-        static bool s_StructureDirty;
-        static bool s_AttachmentDirty;
         static bool s_Stepping;
-        static readonly List<Rigidbody> s_Rigidbodies = new List<Rigidbody>();
-        static readonly HashSet<Rigidbody> s_InitiallyKinematic = new HashSet<Rigidbody>();
-        static readonly List<Collider> s_Colliders = new List<Collider>();
         static readonly Dictionary<ulong, Collider> s_ByShape = new Dictionary<ulong, Collider>();
 
+        // ------------------------------------------------------------------ physics scenes
+
+        /// <summary>
+        /// One 3D physics scene (PhysicsScene): the default one, or the local one a scene made with
+        /// LocalPhysicsMode.Physics3D owns (6000.0 Scripting API: LocalPhysicsMode, PhysicsScene).
+        /// Each is its own native world. Components join the physics scene of their GameObject's
+        /// scene; only the default one is simulated automatically.
+        /// </summary>
+        internal sealed class Space
+        {
+            internal uint World;
+            internal bool StructureDirty;
+            internal bool AttachmentDirty;
+            internal readonly List<Rigidbody> Rigidbodies = new List<Rigidbody>();
+            internal readonly HashSet<Rigidbody> InitiallyKinematic = new HashSet<Rigidbody>();
+            internal readonly List<Collider> Colliders = new List<Collider>();
+            internal readonly Dictionary<(PairKey Colliders, bool Trigger), Pair> Pairs = new Dictionary<(PairKey, bool), Pair>();
+            internal readonly List<Pair> PairOrder = new List<Pair>();
+            internal readonly HashSet<(ulong, ulong)> PublicContactPairs = new HashSet<(ulong, ulong)>();
+            /// <summary>The handle of the scene that owns it; 0 for the default physics scene.</summary>
+            internal readonly int Scene;
+            /// <summary>Its PhysicsScene identity. The default scene is (0, 0) (measured:
+            /// contactevents3d); local identities are Unbound's own (Unity's are not measured).</summary>
+            internal readonly int Index, Version;
+            internal bool Released;
+
+            internal Space(int scene, int index, int version)
+            {
+                Scene = scene;
+                Index = index;
+                Version = version;
+            }
+        }
+
+        static readonly Space s_Default = new Space(0, 0, 0);
+        /// <summary>The physics scene the code below works on; the default one except while a
+        /// local scene's members are changed, synced, queried or simulated.</summary>
+        static Space s_Space = s_Default;
+        static readonly List<Space> s_Locals = new List<Space>();
+        static readonly Dictionary<int, Space> s_ByScene = new Dictionary<int, Space>();
+        static int s_NextLocalIndex = 1;
+        /// <summary>Native worlds of physics scenes released during a step, destroyed after it.</summary>
+        static readonly List<uint> s_PendingDestroy = new List<uint>();
+
+        static void DestroyPendingWorlds()
+        {
+            if (s_Stepping || s_PendingDestroy.Count == 0) return;
+            var worlds = s_PendingDestroy.ToArray();
+            s_PendingDestroy.Clear();
+            foreach (var world in worlds) B3.ua3_world_destroy(world);
+        }
+
+        // The state of the current physics scene, under the names it had when there was one.
+        static uint s_World { get => s_Space.World; set => s_Space.World = value; }
+        static bool s_StructureDirty { get => s_Space.StructureDirty; set => s_Space.StructureDirty = value; }
+        static bool s_AttachmentDirty { get => s_Space.AttachmentDirty; set => s_Space.AttachmentDirty = value; }
+        static List<Rigidbody> s_Rigidbodies => s_Space.Rigidbodies;
+        static HashSet<Rigidbody> s_InitiallyKinematic => s_Space.InitiallyKinematic;
+        static List<Collider> s_Colliders => s_Space.Colliders;
+        static Dictionary<(PairKey Colliders, bool Trigger), Pair> s_Pairs => s_Space.Pairs;
+        static List<Pair> s_PairOrder => s_Space.PairOrder;
+        static HashSet<(ulong, ulong)> s_PublicContactPairs => s_Space.PublicContactPairs;
+
+        readonly struct Scope : IDisposable
+        {
+            readonly Space m_Previous;
+            internal Scope(Space space)
+            {
+                m_Previous = s_Space;
+                s_Space = space;
+            }
+            public void Dispose() => s_Space = m_Previous;
+        }
+
+        static Scope Enter(Space space) => new Scope(space ?? s_Default);
+
+        internal static Space DefaultSpace => s_Default;
+
+        /// <summary>No physics scene: no world and nothing to hit (an invalid PhysicsScene's queries).</summary>
+        internal static readonly Space NoSpace = new Space(-1, -1, -1) { Released = true };
+
+        /// <summary>The physics scene a GameObject's components belong to: its scene's local one,
+        /// or the default one.</summary>
+        internal static Space SpaceOf(GameObject go) =>
+            s_ByScene.Count == 0 || go == null || !s_ByScene.TryGetValue(go.m_Scene.Value, out var space) ? s_Default : space;
+
+        /// <summary>The local physics scene a scene owns, also one already released with the scene's
+        /// unload; null when the scene uses the default one.</summary>
+        internal static Space LocalOf(int sceneHandle) =>
+            s_ByScene.TryGetValue(sceneHandle, out var space) || s_Released.TryGetValue(sceneHandle, out space) ? space : null;
+
+        /// <summary>Released local physics scenes by the scene that owned them.</summary>
+        static readonly Dictionary<int, Space> s_Released = new Dictionary<int, Space>();
+
+        /// <summary>A valid physics scene by its PhysicsScene identity; null when there is none.</summary>
+        internal static Space Find(int index, int version)
+        {
+            if (index == 0 && version == 0) return s_Default;
+            foreach (var space in s_Locals)
+                if (space.Index == index && space.Version == version) return space;
+            return null;
+        }
+
+        /// <summary>The PhysicsScene a physics scene is seen as.</summary>
+        internal static PhysicsScene SceneOf(Space space) => new PhysicsScene(space.Index, space.Version);
+
+        /// <summary>A scene made with LocalPhysicsMode.Physics3D gets its own physics scene. Its
+        /// native world is created with the first component that joins it.</summary>
+        internal static void CreateLocal(int sceneHandle)
+        {
+            if (s_ByScene.ContainsKey(sceneHandle)) return;
+            var space = new Space(sceneHandle, s_NextLocalIndex++, 1);
+            s_Locals.Add(space);
+            s_ByScene[sceneHandle] = space;
+        }
+
+        /// <summary>The scene that owns a local physics scene is unloaded: the physics scene goes with
+        /// it (6000.0 Scripting API, LocalPhysicsMode: "the lifetime of the physics Scene(s) is the
+        /// same as the Scene"). Objects moved out of the scene first join their new physics scene;
+        /// what is left leaves the simulation.</summary>
+        internal static void ReleaseLocal(int sceneHandle)
+        {
+            if (!s_ByScene.TryGetValue(sceneHandle, out var space)) return;
+            if (!s_Stepping) Migrate();
+            using (Enter(space))
+            {
+                foreach (var rb in s_Rigidbodies.ToArray()) Remove(rb);
+                foreach (var c in s_Colliders.ToArray()) Remove(c);
+                // During a step's callbacks the native reports being delivered are the world's:
+                // it goes once the step has ended.
+                if (s_World != 0)
+                {
+                    if (s_Stepping) s_PendingDestroy.Add(s_World);
+                    else B3.ua3_world_destroy(s_World);
+                }
+                s_World = 0;
+                s_InitiallyKinematic.Clear();
+                s_Pairs.Clear();
+                s_PairOrder.Clear();
+                s_PublicContactPairs.Clear();
+                s_StructureDirty = false;
+                s_AttachmentDirty = false;
+            }
+            space.Released = true;
+            s_Locals.Remove(space);
+            s_ByScene.Remove(sceneHandle);
+            s_Released[sceneHandle] = space;
+        }
+
+        /// <summary>GameObjects moved to another scene (SceneManager.MoveGameObjectToScene, a scene
+        /// merge, DontDestroyOnLoad or a new parent) take their bodies and colliders to that scene's
+        /// physics scene. Without local physics scenes every component is in the default one.</summary>
+        internal static void SceneMembershipChanged()
+        {
+            if (s_Locals.Count > 0 && !s_Stepping) Migrate();
+        }
+
+        static void Migrate()
+        {
+            List<Rigidbody> bodies = null;
+            List<Collider> colliders = null;
+            Collect(s_Default);
+            for (int i = 0; i < s_Locals.Count; i++) Collect(s_Locals[i]);
+            if (bodies == null && colliders == null) return;
+            // Leave the old physics scene (a body takes its shapes along), then join the new one
+            // as an activation does: at the current transform, keeping the body's velocity. Unity
+            // documents only the move; the kept velocity and the timing (here: the next physics
+            // access) are Unbound's, not measured.
+            if (bodies != null) foreach (var rb in bodies) Remove(rb);
+            if (colliders != null) foreach (var c in colliders) Remove(c);
+            if (bodies != null) foreach (var rb in bodies) Add(rb);
+            if (colliders != null) foreach (var c in colliders) Add(c);
+
+            void Collect(Space space)
+            {
+                foreach (var rb in space.Rigidbodies)
+                {
+                    int scene = rb.m_GameObject.m_Scene.Value;
+                    if (scene == rb.m_SceneHandle) continue;
+                    if (ReferenceEquals(SpaceOf(rb.m_GameObject), space)) rb.m_SceneHandle = scene;
+                    else (bodies ??= new List<Rigidbody>()).Add(rb);
+                }
+                foreach (var c in space.Colliders)
+                {
+                    int scene = c.m_GameObject.m_Scene.Value;
+                    if (scene == c.m_SceneHandle) continue;
+                    if (ReferenceEquals(SpaceOf(c.m_GameObject), space)) c.m_SceneHandle = scene;
+                    else (colliders ??= new List<Collider>()).Add(c);
+                }
+            }
+        }
+
         internal static bool IsStepping => s_Stepping;
+        /// <summary>The members of the current physics scene (the one being simulated).</summary>
         internal static IReadOnlyList<Rigidbody> Rigidbodies => s_Rigidbodies;
         internal static IReadOnlyList<Collider> Colliders => s_Colliders;
+        /// <summary>The colliders of a body's physics scene.</summary>
+        internal static IReadOnlyList<Collider> CollidersOf(Rigidbody rb) => (rb.m_Space ?? s_Default).Colliders;
+
+        /// <summary>Whether any physics scene has bodies or colliders.</summary>
+        internal static bool HasMembers
+        {
+            get
+            {
+                if (s_Default.Colliders.Count > 0 || s_Default.Rigidbodies.Count > 0) return true;
+                foreach (var space in s_Locals)
+                    if (space.Colliders.Count > 0 || space.Rigidbodies.Count > 0) return true;
+                return false;
+            }
+        }
+
+        /// <summary>PhysicsScene.IsEmpty. The 6000.0 Scripting API does not say what counts; Unbound's
+        /// choice (unmeasured): empty when no Rigidbody or Collider is in the physics scene, counted
+        /// after pending scene moves.</summary>
+        internal static bool IsEmpty(Space space)
+        {
+            SceneMembershipChanged();
+            return space.Rigidbodies.Count == 0 && space.Colliders.Count == 0;
+        }
 
         internal static uint World
         {
@@ -73,7 +288,19 @@ namespace Unbound.Runtime
 
         internal static void SetImprovedPatchFriction(bool value)
         {
-            if (s_World != 0) B3.ua3_set_improved_patch_friction(value ? 1 : 0);
+            // A native setting of every world; applied once a world exists, as before.
+            bool any = s_Default.World != 0;
+            foreach (var space in s_Locals) any |= space.World != 0;
+            if (any) B3.ua3_set_improved_patch_friction(value ? 1 : 0);
+        }
+
+        /// <summary>Physics.bounceThreshold: every physics scene's restitution threshold. The default
+        /// world is created for it, as before.</summary>
+        internal static void SetBounceThreshold(float value)
+        {
+            using (Enter(s_Default)) B3.ua3_world_set_restitution_threshold(World, value);
+            foreach (var space in s_Locals)
+                if (space.World != 0) B3.ua3_world_set_restitution_threshold(space.World, value);
         }
 
         internal static void EnsureRegistered()
@@ -94,6 +321,18 @@ namespace Unbound.Runtime
         /// <summary>Forgets every body (the game domain is torn down).</summary>
         internal static void Reset()
         {
+            foreach (var space in s_Locals)
+            {
+                if (space.World != 0) B3.ua3_world_destroy(space.World);
+                space.World = 0;
+                space.Released = true;
+            }
+            s_Locals.Clear();
+            s_ByScene.Clear();
+            s_Released.Clear();
+            foreach (var world in s_PendingDestroy) B3.ua3_world_destroy(world);
+            s_PendingDestroy.Clear();
+            s_Space = s_Default;
             if (s_World != 0) B3.ua3_world_destroy(s_World);
             s_World = 0;
             s_Rigidbodies.Clear();
@@ -136,9 +375,16 @@ namespace Unbound.Runtime
 
         internal static void Add(Rigidbody rb)
         {
+            using (Enter(rb.m_Registered ? rb.m_Space : SpaceOf(rb.m_GameObject))) AddCurrent(rb);
+        }
+
+        static void AddCurrent(Rigidbody rb)
+        {
             EnsureWorld();
             if (rb.m_Registered) return;
             rb.m_Registered = true;
+            rb.m_Space = s_Space;
+            rb.m_SceneHandle = rb.m_GameObject.m_Scene.Value;
             // Activation/import/cloning enters with the serialized type already set. Adding a
             // component then setting isKinematic transitions after its shapes, as before.
             if (rb.m_IsKinematic) s_InitiallyKinematic.Add(rb);
@@ -163,6 +409,11 @@ namespace Unbound.Runtime
         internal static void Remove(Rigidbody rb)
         {
             if (!rb.m_Registered) return;
+            using (Enter(rb.m_Space)) RemoveCurrent(rb);
+        }
+
+        static void RemoveCurrent(Rigidbody rb)
+        {
             ReleaseJointsOf(rb);
             rb.m_Registered = false;
             s_Rigidbodies.Remove(rb);
@@ -181,9 +432,16 @@ namespace Unbound.Runtime
 
         internal static void Add(Collider c)
         {
+            using (Enter(c.m_Registered ? c.m_Space : SpaceOf(c.m_GameObject))) AddCurrent(c);
+        }
+
+        static void AddCurrent(Collider c)
+        {
             EnsureWorld();
             if (c.m_Registered) return;
             c.m_Registered = true;
+            c.m_Space = s_Space;
+            c.m_SceneHandle = c.m_GameObject.m_Scene.Value;
             c.m_ShapeDirty = true;
             var t = c.m_GameObject.m_Transform;
             c.m_UseAddedPose = true;
@@ -203,6 +461,11 @@ namespace Unbound.Runtime
         internal static void Remove(Collider c)
         {
             if (!c.m_Registered) return;
+            using (Enter(c.m_Space)) RemoveCurrent(c);
+        }
+
+        static void RemoveCurrent(Collider c)
+        {
             c.m_Registered = false;
             s_Colliders.Remove(c);
             DestroyShape(c);
@@ -222,6 +485,11 @@ namespace Unbound.Runtime
         internal static void MarkShapeDirty(Collider c, bool geometryChanged)
         {
             if (!c.m_Registered) return;
+            using (Enter(c.m_Space)) MarkShapeDirtyCurrent(c, geometryChanged);
+        }
+
+        static void MarkShapeDirtyCurrent(Collider c, bool geometryChanged)
+        {
             c.m_GeometryDirty |= geometryChanged;
             if (c is BoxCollider box && c.m_Shape != 0 && ReferenceEquals(FindRigidbody(c), c.m_AttachedBody))
             {
@@ -243,13 +511,18 @@ namespace Unbound.Runtime
         {
             if (!rb.m_Registered) return;
             rb.m_BodyDirty = true;
-            s_StructureDirty = true;
+            (rb.m_Space ?? s_Default).StructureDirty = true;
         }
 
         internal static void MarkAttachmentDirty()
         {
-            s_StructureDirty = true;
-            s_AttachmentDirty = true;
+            s_Default.StructureDirty = true;
+            s_Default.AttachmentDirty = true;
+            foreach (var space in s_Locals)
+            {
+                space.StructureDirty = true;
+                space.AttachmentDirty = true;
+            }
         }
 
         // ------------------------------------------------------------------ structure
@@ -258,7 +531,20 @@ namespace Unbound.Runtime
         /// <see cref="SyncTransforms"/> does that).</summary>
         internal static void Flush()
         {
-            if (!s_StructureDirty || s_World == 0 || s_Stepping) return;
+            if (s_Stepping) return;
+            if (s_Locals.Count > 0) Migrate();
+            FlushSpace(s_Default);
+            for (int i = 0; i < s_Locals.Count; i++) FlushSpace(s_Locals[i]);
+        }
+
+        static void FlushSpace(Space space)
+        {
+            if (!space.StructureDirty || space.World == 0 || s_Stepping) return;
+            using (Enter(space)) FlushCurrent();
+        }
+
+        static void FlushCurrent()
+        {
             s_StructureDirty = false;
             for (int i = 0; i < s_Rigidbodies.Count; i++)
             {
@@ -300,7 +586,7 @@ namespace Unbound.Runtime
             if (j.m_Destroyed) return;
             j.m_Dirty = true;
             if (!s_DirtyJoints.Contains(j)) s_DirtyJoints.Add(j);
-            s_StructureDirty = true;
+            SpaceOf(j.m_GameObject).StructureDirty = true;
         }
 
         internal static void Register(Joint j) => s_Joints[j.m_Joint] = j;
@@ -338,6 +624,12 @@ namespace Unbound.Runtime
             foreach (var j in joints)
             {
                 if (j == null || j.m_Destroyed || !j.m_GameObject.activeInHierarchy) continue;
+                // A joint is built into its own physics scene, by that scene's flush.
+                if (s_Locals.Count > 0 && !ReferenceEquals(SpaceOf(j.m_GameObject), s_Space))
+                {
+                    s_DirtyJoints.Add(j);
+                    continue;
+                }
                 try { j.Build(); }
                 catch (Exception e) { Debug.LogException(e, j); }
             }
@@ -401,7 +693,7 @@ namespace Unbound.Runtime
                 Locks = rb.Locks,
                 EnableSleep = 1,
                 IsAwake = 1,
-                IsBullet = rb.m_CollisionDetection != CollisionDetectionMode.Discrete ? 1 : 0,
+                IsBullet = rb.NativeCollisionDetection,
             };
             rb.m_Body = B3.ua3_body_create(s_World, def);
             rb.m_HasCreatedBody = true;
@@ -638,7 +930,9 @@ namespace Unbound.Runtime
 
         internal static void RefilterAll()
         {
-            foreach (var c in s_Colliders) Refilter(c);
+            foreach (var c in s_Default.Colliders) Refilter(c);
+            foreach (var space in s_Locals)
+                foreach (var c in space.Colliders) Refilter(c);
         }
 
         static void UpdateMaterial(Collider c)
@@ -653,8 +947,18 @@ namespace Unbound.Runtime
 
         // ------------------------------------------------------------------ transforms
 
-        /// <summary>Moves bodies and shapes to their transforms where the transforms changed.</summary>
+        /// <summary>Moves bodies and shapes to their transforms where the transforms changed
+        /// (Physics.SyncTransforms). Syncing every physics scene here is Unbound's choice
+        /// (unmeasured).</summary>
         internal static void SyncTransforms()
+        {
+            using (Enter(s_Default)) SyncCurrent();
+            for (int i = 0; i < s_Locals.Count; i++)
+                using (Enter(s_Locals[i])) SyncCurrent();
+        }
+
+        /// <summary>The transform sync of the current physics scene.</summary>
+        static void SyncCurrent()
         {
             if (s_World == 0) return;
             Flush();
@@ -736,22 +1040,56 @@ namespace Unbound.Runtime
         /// Physics.autoSyncTransforms is set.</summary>
         internal static void PrepareQuery()
         {
-            if (s_World == 0) return;
+            if (s_Default.World == 0 && s_Locals.Count == 0) return;
             if (Physics.s_AutoSyncTransforms) SyncTransforms();
             else Flush();
         }
 
+        /// <summary>Before a query of one physics scene (the default one for Physics, a scene's own
+        /// for its PhysicsScene): the same preparation, for that physics scene's transforms only
+        /// (Unbound's choice, unmeasured).</summary>
+        internal static void PrepareQuery(Space space)
+        {
+            using (Enter(space))
+            {
+                if (s_World == 0) return;
+                if (Physics.s_AutoSyncTransforms) SyncCurrent();
+                else Flush();
+            }
+        }
+
         // ------------------------------------------------------------------ simulation
 
-        internal static void Simulate(float deltaTime)
+        /// <summary>A step of the default physics scene: the automatic simulation and Physics.Simulate.
+        /// Local physics scenes are only simulated by their PhysicsScene.Simulate (6000.0 Scripting
+        /// API, PhysicsScene.Simulate, comment in its example: "All of the non-default physics scenes
+        /// need to be simulated manually").</summary>
+        internal static void Simulate(float deltaTime) => Simulate(s_Default, deltaTime);
+
+        /// <summary>A step of one physics scene: only the components in it move and get callbacks
+        /// (6000.0 Scripting API, PhysicsScene.Simulate).</summary>
+        internal static void Simulate(Space space, float deltaTime)
         {
             if (s_Stepping)
             {
                 Debug.LogError("Physics.Simulate cannot be called during a simulation step or its callbacks.");
                 return;
             }
+            if (s_Locals.Count > 0) Migrate();
+            try
+            {
+                using (Enter(space)) SimulateCurrent(deltaTime);
+            }
+            finally
+            {
+                DestroyPendingWorlds();
+            }
+        }
+
+        static void SimulateCurrent(float deltaTime)
+        {
             if (s_World == 0 || deltaTime <= 0f) return;
-            SyncTransforms();
+            SyncCurrent();
             B3.ua3_world_set_gravity(s_World, Physics.s_Gravity);
 
             ReadBodyStates();
@@ -850,7 +1188,7 @@ namespace Unbound.Runtime
                 try
                 {
                     s_Stepping = true;
-                    Physics.SendContactEvent(view);
+                    Physics.SendContactEvent(SceneOf(s_Space), view);
                     foreach (var delivery in deliveries)
                         if (Physics.s_InvokeCollisionCallbacks)
                             Physics2DWorld.Deliver(delivery.Receiver, delivery.Name, typeof(Collision), delivery.Collision);
@@ -858,7 +1196,6 @@ namespace Unbound.Runtime
                 finally { s_Stepping = false; Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.Release(safety); }
             }
         }
-        static readonly HashSet<(ulong,ulong)> s_PublicContactPairs = new HashSet<(ulong,ulong)>();
         static readonly Dictionary<Type,bool> s_HasCollisionMessages = new Dictionary<Type,bool>();
         static bool WantsPublicContacts(Collider collider)
         {
@@ -984,6 +1321,11 @@ namespace Unbound.Runtime
         /// <summary>Interpolated and extrapolated bodies: their transforms show the pose between steps.</summary>
         static void Interpolate()
         {
+            using (Enter(s_Default)) InterpolateCurrent();
+        }
+
+        static void InterpolateCurrent()
+        {
             if (s_World == 0 || Physics.s_SimulationMode != SimulationMode.FixedUpdate) return;
             float dt = Time.fixedDeltaTime;
             if (dt <= 0f) return;
@@ -1052,8 +1394,11 @@ namespace Unbound.Runtime
 
         static void ApplyIgnore(PairKey key, bool ignore)
         {
-            if (s_World == 0 || key.First.m_Shape == 0 || key.Second.m_Shape == 0) return;
-            B3.ua3_ignore_pair(s_World, key.First.m_Shape, key.Second.m_Shape, ignore ? 1 : 0);
+            // Colliders in different physics scenes never meet: only a pair in one is filtered.
+            var space = key.First.m_Space ?? s_Default;
+            if (!ReferenceEquals(space, key.Second.m_Space ?? s_Default)) return;
+            if (space.World == 0 || key.First.m_Shape == 0 || key.Second.m_Shape == 0) return;
+            B3.ua3_ignore_pair(space.World, key.First.m_Shape, key.Second.m_Shape, ignore ? 1 : 0);
         }
 
         /// <summary>A collider got a new shape: its ignored pairs apply to it again.</summary>
@@ -1078,8 +1423,6 @@ namespace Unbound.Runtime
             internal Vector3 EnterRelativeVelocity;
         }
 
-        static readonly Dictionary<(PairKey Colliders, bool Trigger), Pair> s_Pairs = new Dictionary<(PairKey, bool), Pair>();
-        static readonly List<Pair> s_PairOrder = new List<Pair>();
         static B3.Pair[] s_EventBuffer = new B3.Pair[64];
 
         static (PairKey, bool) EventKey(Collider a, Collider b, bool trigger) => (new PairKey(a, b), trigger);

@@ -30,9 +30,26 @@ namespace Unbound.Box2D.Collision
             CollideEdgeAndCircle(ref manifold, edgeA, xfA, circleB.Position, circleB.Radius, xfB);
         }
 
+        /// <summary>
+        ///     Unbound: edge versus circle for contacts. With <paramref name="useAdjacency"/> a two-sided
+        ///     edge also uses its ghost vertices (HasVertex0/HasVertex3), as Box2D v2.3 does for
+        ///     m_hasVertex0/m_hasVertex3, except an exactly zero-length ghost segment, which is absent
+        ///     (UsesVertex0/UsesVertex3). Queries keep calling the overload without adjacency.
+        /// </summary>
+        public static void CollideEdgeAndCircle(
+            ref Manifold manifold,
+            EdgeShape edgeA,
+            in Transform xfA,
+            CircleShape circleB,
+            in Transform xfB,
+            bool useAdjacency)
+        {
+            CollideEdgeAndCircle(ref manifold, edgeA, xfA, circleB.Position, circleB.Radius, xfB, useAdjacency);
+        }
+
         internal static void CollideEdgeAndCircle(
             ref Manifold manifold, EdgeShape edgeA, in Transform xfA,
-            Vector2 circlePosition, float circleRadius, in Transform xfB)
+            Vector2 circlePosition, float circleRadius, in Transform xfB, bool useAdjacency = false)
         {
             manifold.PointCount = 0;
 
@@ -76,7 +93,7 @@ namespace Unbound.Box2D.Collision
                 }
 
                 // Is there an edge connected to A?
-                if (edgeA.OneSided)
+                if (edgeA.OneSided || (useAdjacency && edgeA.UsesVertex0))
                 {
                     var A1 = edgeA.Vertex0;
                     var B1 = A;
@@ -115,7 +132,7 @@ namespace Unbound.Box2D.Collision
                 }
 
                 // Is there an edge connected to B?
-                if (edgeA.OneSided)
+                if (edgeA.OneSided || (useAdjacency && edgeA.UsesVertex3))
                 {
                     var B2 = edgeA.Vertex3;
                     var A2 = B;
