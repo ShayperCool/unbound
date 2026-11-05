@@ -214,7 +214,7 @@ namespace Unbound.Tests
             var plain = new RenderParams(NewMaterial()) { worldBounds = new Bounds(Vector3.zero, Vector3.one * 10f) };
             int b0 = Hits(bounds), m0 = Hits(mask), p0 = Hits(priority), v0 = Hits(motion);
             Graphics.RenderPrimitives(plain, MeshTopology.Triangles, 3);
-            Assert.Equal(b0 + 1, Hits(bounds));
+            Assert.Equal(b0, Hits(bounds));
             Assert.Equal((m0, p0, v0), (Hits(mask), Hits(priority), Hits(motion)));
             var set = new RenderParams(NewMaterial())
             {
@@ -223,7 +223,7 @@ namespace Unbound.Tests
                 motionVectorMode = MotionVectorGenerationMode.Object,
             };
             Graphics.RenderPrimitives(set, MeshTopology.Triangles, 3);
-            Assert.Equal(b0 + 2, Hits(bounds));
+            Assert.Equal(b0, Hits(bounds));
             Assert.Equal((m0 + 1, p0 + 1, v0 + 1), (Hits(mask), Hits(priority), Hits(motion)));
             Assert.Equal(2, TakeQueued().Length);
         }

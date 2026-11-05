@@ -228,15 +228,13 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ RenderPrimitives, RenderMeshIndirect, RenderMeshPrimitives
 
-        /// <summary>The RenderParams settings these draws do not act on yet, each warned once: the
-        /// world bounds (Unity culls and sorts by them; Unbound draws the geometry for every camera
-        /// that renders its layer, sorted by its mesh's bounds), and non-default rendering layer
-        /// mask, renderer priority and motion vector mode. The instance ID (Scene view picking) and
-        /// the Scene culling mask are Editor scene-view settings a game's cameras do not observe.</summary>
+        /// <summary>The RenderParams settings these draws do not act on yet, each warned once:
+        /// non-default rendering layer mask, renderer priority and motion vector mode. The world
+        /// bounds are honoured (Render culls and sorts the draw by them), so they are not warned.
+        /// The instance ID (Scene view picking) and the Scene culling mask are Editor scene-view
+        /// settings a game's cameras do not observe.</summary>
         static void WarnUnhonoured(in RenderParams rparams, string method)
         {
-            Stubs.Ignored("Graphics." + method + " RenderParams.worldBounds",
-                "is not used to cull or sort the draw yet: it is drawn by every camera that renders its layer");
             uint defaultMask = RenderingLayerMask.defaultRenderingLayerMask;
             if (rparams.renderingLayerMask != defaultMask) Stubs.Ignored("Graphics.Render* RenderParams.renderingLayerMask");
             if (rparams.rendererPriority != 0) Stubs.Ignored("Graphics.Render* RenderParams.rendererPriority");
