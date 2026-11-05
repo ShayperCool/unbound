@@ -268,7 +268,8 @@ namespace UnityEngine
         /// back to the Particle System, during a call to OnParticleTrigger"; offset and count
         /// select "a subset of the returned particles"). A null list, a negative offset and an
         /// out-of-range count behave as in SetParticles (the count then covers every particle
-        /// the list and the entries both have).</summary>
+        /// the list and the entries both have). Only the public fields the script changed are
+        /// written: see <see cref="MergeChangedFields"/>.</summary>
         internal void WriteBackTriggerParticles(ParticleSystemTriggerEventType type, List<Particle> particles, int offset, int count)
         {
             if (particles == null) throw new System.ArgumentNullException(nameof(particles));
@@ -298,26 +299,92 @@ namespace UnityEngine
             }
             var slots = new int[count];
             var values = new Particle[count];
+            var valueOf = new Dictionary<int, int>();
             int n = 0;
             for (int k = 0; k < count; k++)
             {
-                uint serial = TriggerSerialOf(entries[offset + k]);
+                var entry = entries[offset + k];
+                uint serial = TriggerSerialOf(entry);
                 // Unbound's choices (unmeasured): an entry whose particle is gone (killed as a
                 // newborn, replaced, removed by a script) writes nothing, and a write-back does
                 // not undo a trigger Kill of the same update (the particle still dies).
                 if (!slotOf.TryGetValue(serial, out int slot)) continue;
                 if ((m_Particles[slot].m_Flags & Particle.FlagTriggerKilled) != 0) continue;
+                // A particle listed twice (by two internal steps) gets both entries' changes,
+                // the later entry's winning a field both changed (Unbound's choice, unmeasured).
                 var value = particles[offset + k];
-                // The written particle stays the entry's, for later calls in this callback, and
-                // keeps its own inside/outside state (the entry may come from an earlier internal
-                // step of the update; Unbound's choice, unmeasured).
-                const uint inside = Particle.FlagInsideTrigger;
-                value.m_Flags = (value.m_Flags & ~(TriggerSerialMask | inside)) | (m_Particles[slot].m_Flags & inside) | (serial << TriggerSerialShift);
+                if (valueOf.TryGetValue(slot, out int index))
+                {
+                    MergeChangedFields(ref values[index], value, entry);
+                    continue;
+                }
+                var probe = default(Particle);
+                if (!MergeChangedFields(ref probe, value, entry)) continue;
+                // WriteParticlesAt allocates the axis attribute first: read the live particle
+                // after it, so an unchanged axis stays the allocated one.
+                if (n == 0) MaterializeAxisOfRotation();
+                var merged = m_Particles[slot];
+                MergeChangedFields(ref merged, value, entry);
+                valueOf.Add(slot, n);
                 slots[n] = slot;
-                values[n++] = value;
+                values[n++] = merged;
             }
             WriteParticlesAt(slots, values, n);
         }
+
+        // Unbound's choice (unmeasured; the 6000.0 docs say "Write modified particles back"
+        // and show only a whole-list write-back after a colour change): an entry is a copy of
+        // the particle taken part-way through an internal step (after it moved, before its
+        // rotation and birth sub-emitters advanced) and possibly an earlier step of the update,
+        // so writing a whole entry back would roll those back. Only the public Particle fields
+        // whose value differs bit for bit from the entry the script was given are written onto
+        // the live particle; the rest of it, its internal state (encoded age, sub-emitter
+        // counters, noise, flags, trigger serial) included, stays as it is now. A
+        // changed remaining or start lifetime clears the encoded age, as the Particle setters
+        // do, so WriteParticlesAt kills or re-encodes it as SetParticles does; an unchanged
+        // entry writes nothing.
+
+        /// <summary>Copies onto <paramref name="target"/> the public fields of
+        /// <paramref name="value"/> that differ from <paramref name="entry"/>; false when none
+        /// does.</summary>
+        static bool MergeChangedFields(ref Particle target, in Particle value, in Particle entry)
+        {
+            bool changed = false;
+            if (!Same(value.m_Position, entry.m_Position)) { target.m_Position = value.m_Position; changed = true; }
+            if (!Same(value.m_Velocity, entry.m_Velocity)) { target.m_Velocity = value.m_Velocity; changed = true; }
+            if (!Same(value.m_AxisOfRotation, entry.m_AxisOfRotation)) { target.m_AxisOfRotation = value.m_AxisOfRotation; changed = true; }
+            if (!Same(value.m_Rotation, entry.m_Rotation)) { target.m_Rotation = value.m_Rotation; changed = true; }
+            if (!Same(value.m_AngularVelocity, entry.m_AngularVelocity)) { target.m_AngularVelocity = value.m_AngularVelocity; changed = true; }
+            if (!Same(value.m_StartSize, entry.m_StartSize)) { target.m_StartSize = value.m_StartSize; changed = true; }
+            var c = value.m_StartColor;
+            var e = entry.m_StartColor;
+            if (c.r != e.r || c.g != e.g || c.b != e.b || c.a != e.a) { target.m_StartColor = c; changed = true; }
+            if (value.m_RandomSeed != entry.m_RandomSeed) { target.m_RandomSeed = value.m_RandomSeed; changed = true; }
+            const uint meshSet = Particle.FlagMeshIndexSet;
+            if (value.m_MeshIndex != entry.m_MeshIndex || ((value.m_Flags ^ entry.m_Flags) & meshSet) != 0)
+            {
+                target.m_MeshIndex = value.m_MeshIndex;
+                target.m_Flags = (target.m_Flags & ~meshSet) | (value.m_Flags & meshSet);
+                changed = true;
+            }
+            if (!Same(value.m_StartLifetime, entry.m_StartLifetime))
+            {
+                target.m_StartLifetime = value.m_StartLifetime;
+                target.m_Flags &= ~Particle.FlagAgeInitialized;
+                changed = true;
+            }
+            if (!Same(value.m_Lifetime, entry.m_Lifetime))
+            {
+                target.m_Lifetime = value.m_Lifetime;
+                target.m_Flags &= ~(Particle.FlagAgeInitialized | Particle.FlagTriggerKilled);
+                changed = true;
+            }
+            return changed;
+        }
+
+        static bool Same(float a, float b) => System.BitConverter.SingleToInt32Bits(a) == System.BitConverter.SingleToInt32Bits(b);
+
+        static bool Same(Vector3 a, Vector3 b) => Same(a.x, b.x) && Same(a.y, b.y) && Same(a.z, b.z);
 
         internal void SendTriggerMessage()
         {

@@ -501,10 +501,13 @@ namespace UnityEngine
 
         /// <summary>SetParticles' write path for live slots in any order (the trigger
         /// write-back): each particle replaces its slot as SetParticles writes one (a slot
-        /// listed twice keeps the later particle), the written slots that die are removed at
-        /// once and the others encode their age as SetParticles does. SetParticles' removal
-        /// order is measured for a contiguous range only; here the dead slots go highest
-        /// first, so no pending slot moves (Unbound's choice, unmeasured).</summary>
+        /// listed twice keeps the later particle). A written particle whose encoded age a
+        /// remaining or start lifetime setter cleared dies at once or encodes its age as
+        /// SetParticles does; one that still has its encoded age keeps it and its life
+        /// (Unbound's choice, unmeasured: the trigger write-back changes only the fields a
+        /// script changed). SetParticles' removal order is measured for a contiguous range
+        /// only; here the dead slots go highest first, so no pending slot moves (Unbound's
+        /// choice, unmeasured).</summary>
         internal void WriteParticlesAt(int[] slots, Particle[] particles, int count)
         {
             if (count <= 0) return;
@@ -516,6 +519,7 @@ namespace UnityEngine
             {
                 int slot = slots[k];
                 if (!written.Add(slot)) continue;
+                if ((m_Particles[slot].m_Flags & Particle.FlagAgeInitialized) != 0) continue;
                 if (DiesWhenWritten(slot)) dead.Add(slot);
                 else SettleWrittenParticle(slot);
             }
