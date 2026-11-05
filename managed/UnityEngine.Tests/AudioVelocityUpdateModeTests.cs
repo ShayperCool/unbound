@@ -15,7 +15,11 @@ namespace UnityEngine.Tests
     /// Rigidbody2D does not, the last fixed step wins, a frame without a step keeps the velocity, a
     /// loop change restarts the sampling) is Unbound's unmeasured choice, revisable when measured.
     /// The fixed node is driven through the player loop registry, so the file builds without the
-    /// fixed-loop sampling it checks.
+    /// fixed-loop sampling it checks. Predictions (unexecuted): without fixed-loop sampling, 8
+    /// cases fail (FixedMode ×2, SeveralSteps, AutoWithARigidbody ×4, ChangingTheLoop) and the
+    /// 5 frame-loop controls pass, as do the 8 interpolated-body cases (the in-between pose moves
+    /// linearly per frame); with fixed-loop sampling of the Transform, the 8 interpolated-body
+    /// cases fail and the other 13 pass; with the simulated-pose sample, all 21 pass.
     /// </summary>
     public class AudioVelocityUpdateModeTests : IDisposable
     {
@@ -233,6 +237,106 @@ namespace UnityEngine.Tests
             ear.MoveTo(9.75f);
             FixedStep(0.25f);
             Assert.Equal(X(3f), ear.Velocity);
+        }
+
+        /// <summary>The source or (only, so hearing) listener added to an existing GameObject.</summary>
+        static Ear Attach(GameObject go, bool listener, AudioVelocityUpdateMode mode)
+        {
+            var ear = new Ear { Owner = go };
+            if (listener) ear.Listener = go.AddComponent<AudioListener>();
+            else ear.Source = go.AddComponent<AudioSource>();
+            ear.Mode = mode;
+            return ear;
+        }
+
+        static void AssertNear(Vector3 expected, Vector3 actual, int frame)
+        {
+            if ((expected - actual).magnitude < 1e-3f) return;
+            Assert.Fail($"frame {frame}: expected ({expected.x:F4}, {expected.y:F4}, {expected.z:F4}), got ({actual.x:F4}, {actual.y:F4}, {actual.z:F4})");
+        }
+
+        // Documented: Auto with a Rigidbody updates in the fixed loop, and the Remarks of
+        // velocityUpdateMode tie the loop to the one the object moves in. An interpolated or
+        // extrapolated body's Transform holds the pose between steps when the fixed sample runs
+        // (PreUpdate.PhysicsUpdate writes it each frame). Unbound's choice (unmeasured): the fixed
+        // sample reads the step's simulated pose, a child keeping its offset from the body, so a
+        // body at constant velocity gives that velocity at every step. Frames every 0.015 s, steps
+        // every 0.02 s: one step in most frames, none in some; the body is turned 90 degrees about
+        // y and the child sits at local (0, 0, 1). The values are physics results, compared within
+        // 1e-3 (a Transform sample is off by 0.5 or more: 1.5 or 3 instead of 2).
+        [Theory]
+        [InlineData(RigidbodyInterpolation.Interpolate, false, false)]
+        [InlineData(RigidbodyInterpolation.Interpolate, false, true)]
+        [InlineData(RigidbodyInterpolation.Interpolate, true, false)]
+        [InlineData(RigidbodyInterpolation.Interpolate, true, true)]
+        [InlineData(RigidbodyInterpolation.Extrapolate, false, false)]
+        [InlineData(RigidbodyInterpolation.Extrapolate, false, true)]
+        [InlineData(RigidbodyInterpolation.Extrapolate, true, false)]
+        [InlineData(RigidbodyInterpolation.Extrapolate, true, true)]
+        public void InterpolatedBodiesSampleTheSimulatedPoseInFixedSteps(RigidbodyInterpolation interpolation, bool onChild, bool listener)
+        {
+            const float step = 0.02f;
+            const double frame = 0.015;
+            var mode = Physics.simulationMode;
+            double time = Time.s_Time, fixedTime = Time.s_FixedTime;
+            var interpolate = typeof(PhysicsWorld).GetMethod("Interpolate", StaticPrivate);
+            Assert.NotNull(interpolate);
+            try
+            {
+                Physics.simulationMode = SimulationMode.FixedUpdate;
+                var body = Track(new GameObject("body"));
+                body.transform.position = new Vector3(100f, 200f, 300f);
+                body.transform.rotation = Quaternion.Euler(0f, 90f, 0f);
+                body.AddComponent<BoxCollider>();
+                var rb = body.AddComponent<Rigidbody>();
+                rb.useGravity = false;
+                rb.linearDamping = 0f;
+                rb.sleepThreshold = 0f;
+                rb.interpolation = interpolation;
+                rb.linearVelocity = X(2f);
+                Ear ear;
+                if (onChild)
+                {
+                    ear = Make(listener, AudioVelocityUpdateMode.Auto, body.transform);
+                    ear.Owner.transform.localPosition = new Vector3(0f, 0f, 1f);
+                }
+                else ear = Attach(body, listener, AudioVelocityUpdateMode.Auto);
+
+                Time.s_Time = Time.s_FixedTime = 0.0;
+                bool first = true;
+                int steps = 0, checkedSteps = 0;
+                for (int f = 0; f < 20; f++)
+                {
+                    if (f > 0) Time.s_Time += frame;
+                    bool stepped = false;
+                    // FixedUpdate: AudioFixedUpdate, then PhysicsFixedUpdate, per step.
+                    while (first || Time.s_FixedTime + step <= Time.s_Time + 1e-7)
+                    {
+                        if (!first) Time.s_FixedTime += step;
+                        first = false;
+                        FixedStep(step);
+                        PhysicsWorld.Simulate(step);
+                        stepped = true;
+                        steps++;
+                    }
+                    interpolate.Invoke(null, null); // PreUpdate.PhysicsUpdate
+                    Frame(frame);
+                    // From the third sample on, every frame with a step has sampled the motion
+                    // between two simulated poses.
+                    if (stepped && steps >= 3)
+                    {
+                        AssertNear(X(2f), ear.Velocity, f);
+                        checkedSteps++;
+                    }
+                }
+                Assert.True(checkedSteps >= 10, $"checked {checkedSteps} steps");
+            }
+            finally
+            {
+                Physics.simulationMode = mode;
+                Time.s_Time = time;
+                Time.s_FixedTime = fixedTime;
+            }
         }
     }
 }
