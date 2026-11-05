@@ -16,6 +16,16 @@ Meshes, textures and materials are identified by `u64` handles the managed side 
 is destroyed. Imported textures are uploaded by the native side itself (`import_texture`), which
 knows the asset pipeline and its cache.
 
+### Render protocol 8: indexed draws from a buffer (NativeApi 17 alone; 18 with audio filters)
+
+`DrawIndices` (opcode 28) follows a `DrawSetup` when the next `Draw` reads indices from a
+GraphicsBuffer instead of its mesh, for `Graphics.RenderPrimitivesIndexed`. It selects `count`
+16-bit indices starting at `first`, with base vertex 0. The current combined implementation
+decodes it only under NativeApi 18. A missing buffer, another index size, zero count or an
+overflowing range rejects the stream as malformed. The stream has no version field or header.
+32-bit and indirect indexed draws are refused on the managed side; see COMPATIBILITY_GAPS
+row 212. Another NativeApi version is refused at startup before any packet is decoded.
+
 ### Render protocol 7: buffer copies, counters, indirect dispatches (NativeApi 15)
 
 NativeApi 15 adds the commands `CopyBuffer`, `SetCounter`, `CopyCounter` and `DispatchIndirect`
@@ -190,6 +200,7 @@ before and after it, as on Unity's render thread) and a read back.
 26 CopyCounter  u64 src, u64 dst, u32 offset         // the counter (a u32) into dst at a byte offset;
                                                 // nothing before a dispatch has bound the counter
 27 DispatchIndirect u64 args, u32 offset, then Dispatch's fields   // group counts: 3 u32s of args
+28 DrawIndices  u64 buffer, u8 index_size (2), u32 first, u32 count   // next Draw's 16-bit indices, base vertex 0 (protocol 8)
 property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 (element bits in Draw and Global
             only, see render protocol 6) + f32x4 st, 3 int i32, 4 matrix,
             5 buffer u64, 6 array u32 components (0: consecutive values) u32 n f32[n], 7 image u64 texture i32 mip)
