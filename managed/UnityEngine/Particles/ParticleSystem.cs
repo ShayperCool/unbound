@@ -452,18 +452,37 @@ namespace UnityEngine
             int count = offset + size;
             Reserve(count);
             if (count > 0) MaterializeAxisOfRotation();
-            for (int i = 0; i < size && offset + i < count; i++)
-            {
-                // Native optional noise arrays are separate from the public particle struct.
-                var noiseSum = m_Particles[offset + i].m_NoiseSum;
-                var noiseImpulse = m_Particles[offset + i].m_NoiseImpulse;
-                m_Particles[offset + i] = particles[i];
-                m_Particles[offset + i].m_NoiseSum = noiseSum;
-                m_Particles[offset + i].m_NoiseImpulse = noiseImpulse;
-            }
+            for (int i = 0; i < size && offset + i < count; i++) WriteParticle(offset + i, particles[i]);
             for (int s = 0; s < 2; s++)
                 if (m_Custom[s] != null && m_Custom[s].Length < count) Array.Resize(ref m_Custom[s], m_Particles.Length);
             m_Count = count;
+            // A written particle with a nonpositive lifetime is removed below; its trail ends as
+            // at its death (TrailModule.dieWithParticles): freed when trails die with their
+            // particles, else left to fade. Unbound's choices (unmeasured): the trail ends at this
+            // call rather than at the next step; a fading trail is left with no carrier particle (a
+            // natural death keeps one); a trail still held by a particle that survives this call (in
+            // the retained prefix, or written and kept) is not ended; a removed carrier of a fading
+            // trail, or a link to a free or fading slot, ends nothing; trails freed by one call
+            // return their slots in written order. Ending a live slot moves no particle
+            // (FreeTrail's carrier scan runs only for a fading slot), so the compaction below
+            // removes the same particles in the same order.
+            // Survivors' links are collected once, at the first candidate, so the pass is expected linear.
+            HashSet<int> survivors = null;
+            for (int r = offset; r < m_Count; r++)
+            {
+                int link = m_Particles[r].m_TrailId;
+                if (!(m_Particles[r].m_Lifetime <= 0f) || link <= 0 || (m_Particles[r].m_Flags & Particle.FlagOrphanTrail) != 0) continue;
+                if (link > m_TrailList.Count || !(m_TrailList[link - 1] is { Orphan: false })) continue;
+                if (survivors == null)
+                {
+                    survivors = new HashSet<int>();
+                    for (int i = 0; i < m_Count; i++)
+                        if (i < offset || !(m_Particles[i].m_Lifetime <= 0f)) survivors.Add(m_Particles[i].m_TrailId);
+                }
+                if (survivors.Contains(link)) continue;
+                var owner = new Particle { m_TrailId = link };
+                EndTrail(ref owner);
+            }
             // Native consumes the input lifetime before encoding normalized age. Nonpositive
             // inputs die immediately; tiny positive inputs can export as zero and still survive.
             // Native's observed compaction order is four-slot groups aligned to the buffer:
@@ -473,21 +492,66 @@ namespace UnityEngine
             {
                 int dead = 0;
                 for (int i = Math.Max(block, offset); i < Math.Min(block + 4, m_Count); i++)
-                    if (m_Particles[i].m_Lifetime <= 0f) dead |= 1 << (i - block);
+                    if (DiesWhenWritten(i)) dead |= 1 << (i - block);
                 if (dead == 0) { block += 4; continue; }
                 for (int lane = 3; lane >= 0; lane--)
                     if ((dead & (1 << lane)) != 0) RemoveAt(block + lane);
             }
-            for (int i = offset; i < m_Count; i++)
+            for (int i = offset; i < m_Count; i++) SettleWrittenParticle(i);
+        }
+
+        /// <summary>SetParticles' write of one slot: the public particle replaces it.</summary>
+        void WriteParticle(int index, in Particle particle)
+        {
+            // Native optional noise arrays are separate from the public particle struct.
+            var noiseSum = m_Particles[index].m_NoiseSum;
+            var noiseImpulse = m_Particles[index].m_NoiseImpulse;
+            m_Particles[index] = particle;
+            m_Particles[index].m_NoiseSum = noiseSum;
+            m_Particles[index].m_NoiseImpulse = noiseImpulse;
+        }
+
+        /// <summary>Whether a written slot dies at once (SetParticles' nonpositive remaining lifetime).</summary>
+        bool DiesWhenWritten(int index) => m_Particles[index].m_Lifetime <= 0f;
+
+        /// <summary>SetParticles' encoding of a written survivor's age.</summary>
+        void SettleWrittenParticle(int index)
+        {
+            m_Particles[index].InitializeAge();
+            // SetParticles clamps inputs that exceed their start lifetime to birth.
+            if (m_Particles[index].m_AgePercent < 0f)
             {
-                m_Particles[i].InitializeAge();
-                // SetParticles clamps inputs that exceed their start lifetime to birth.
-                if (m_Particles[i].m_AgePercent < 0f)
-                {
-                    m_Particles[i].m_AgePercent = 0f;
-                    m_Particles[i].ExportLifetime();
-                }
+                m_Particles[index].m_AgePercent = 0f;
+                m_Particles[index].ExportLifetime();
             }
+        }
+
+        /// <summary>SetParticles' write path for live slots in any order (the trigger
+        /// write-back): each particle replaces its slot as SetParticles writes one (a slot
+        /// listed twice keeps the later particle). A written particle whose encoded age a
+        /// remaining or start lifetime setter cleared dies at once or encodes its age as
+        /// SetParticles does; one that still has its encoded age keeps it and its life
+        /// (Unbound's choice, unmeasured: the trigger write-back changes only the fields a
+        /// script changed). SetParticles' removal order is measured for a contiguous range
+        /// only; here the dead slots go highest first, so no pending slot moves (Unbound's
+        /// choice, unmeasured).</summary>
+        internal void WriteParticlesAt(int[] slots, Particle[] particles, int count)
+        {
+            if (count <= 0) return;
+            MaterializeAxisOfRotation();
+            for (int k = 0; k < count; k++) WriteParticle(slots[k], particles[k]);
+            var written = new HashSet<int>();
+            var dead = new List<int>();
+            for (int k = 0; k < count; k++)
+            {
+                int slot = slots[k];
+                if (!written.Add(slot)) continue;
+                if ((m_Particles[slot].m_Flags & Particle.FlagAgeInitialized) != 0) continue;
+                if (DiesWhenWritten(slot)) dead.Add(slot);
+                else SettleWrittenParticle(slot);
+            }
+            dead.Sort();
+            for (int k = dead.Count - 1; k >= 0; k--) RemoveAt(dead[k]);
         }
 
         public void SetParticles(Particle[] particles, int size) => SetParticles(particles, size, 0);
@@ -645,10 +709,31 @@ namespace UnityEngine
             trailData.textureOffsets.Clear();
             trailData.maxTrailCount = 0;
             trailData.maxPositionsPerTrailCount = 0;
+            // The trail state is captured in Unbound's own form beside these fields, which stay
+            // empty: their layout is undocumented. A Trails passed again is refilled in place
+            // (Scripting API: GetTrails(ref) avoids garbage with presized data).
+            CaptureTrails(trailData);
+            // Documented as the number of trails, but a 6000.0.71f1 capture returned the storage
+            // size (maxTrailCount x maxPositionsPerTrailCount); the return is left as it was.
             return 0;
         }
 
-        public void SetTrails(Trails trailData) => Unbound.Runtime.Stubs.Ignored("ParticleSystem.SetTrails", "is not honoured yet: trail data is not written back");
+        /// <summary>Scripting API 6000.0: restores the state stored by an earlier GetTrails, used
+        /// together with SetParticles and SetPlaybackState. A Trails that GetTrails never filled,
+        /// one from another system, or one whose particles are not the current ones is refused
+        /// with an error and changes nothing (Unbound's choice, unmeasured). When the particles
+        /// changed since GetTrails, SetParticles must restore them before SetTrails: the docs
+        /// give no order, so the other order is refused (Unbound's choice, unmeasured).</summary>
+        public void SetTrails(Trails trailData)
+        {
+            var mismatch = TrailCaptureMismatch(trailData);
+            if (mismatch != null)
+            {
+                Debug.LogError("Unbound: ParticleSystem.SetTrails " + mismatch + "; the trails were left unchanged", this);
+                return;
+            }
+            RestoreTrails(trailData);
+        }
 
         // ------------------------------------------------------------------ internals
 
@@ -725,6 +810,7 @@ namespace UnityEngine
             m_NoiseScroll = 0f;
             m_Time = 0f;
             m_TotalTime = 0f;
+            m_CullingMissed = 0f;
             m_Loop = 0;
             m_RateAccumulator = 0f;
             m_EmitPhase = 0f;
@@ -789,6 +875,7 @@ namespace UnityEngine
                 m_IsPaused = false;
                 m_StopEmitting = false;
                 m_DelayRemaining = 0f;
+                m_CullingMissed = 0f;
                 if (wasPlaying) OnStopped();
                 return;
             }
@@ -856,6 +943,7 @@ namespace UnityEngine
             m_IsPlaying = false;
             m_IsPaused = false;
             m_StopEmitting = false;
+            m_CullingMissed = 0f;
         }
 
         internal override void OnEngineDestroy()
@@ -863,6 +951,217 @@ namespace UnityEngine
             OnEngineDisable();
             foreach (var e in m_SubEmitters.emitters)
                 if (e.system != null && e.system.m_SubEmitterParent == this) e.system.m_SubEmitterParent = null;
+        }
+
+        // ------------------------------------------------------------------ culling
+
+        /// <summary>PauseAndCatchup: the simulation time (simulation speed applied) missed while
+        /// culled, and the system's total time when that began.</summary>
+        float m_CullingMissed;
+        float m_CullingMissedFrom;
+
+        /// <summary>Whether the system's update would advance it (it is not paused by a script
+        /// and plays, has particles or has trails left).</summary>
+        bool CullingSimulates => !m_IsPaused && (m_IsPlaying || m_Count > 0 || HasAliveTrails);
+
+        /// <summary>
+        /// The frame's update under MainModule.cullingMode. Documented (6000.0 Scripting API
+        /// ParticleSystemCullingMode, Manual "Main module" Culling Mode): AlwaysSimulate simulates
+        /// every frame "regardless of whether it is on screen or not"; Pause "stops simulating while
+        /// offscreen"; PauseAndCatchup also stops and, "when re-entering the view, the simulation
+        /// performs a large step to reach the point where it would have been had it not paused";
+        /// Automatic: "Looping systems use Pause, and all other system use Always Simulate".
+        /// <para>A culled frame is like a frame paused by a script: the emitter's position is still
+        /// tracked (the movement while culled is not emitted over later), nothing ages, moves,
+        /// emits or ends, and the play state is unchanged. It sends no collision or trigger
+        /// message (it has no simulation to report; Unbound's choice, unmeasured).</para>
+        /// <para>PauseAndCatchup: the missed time is simulated as one step of that length (not
+        /// split by Time.maximumParticleDeltaTime: the Manual's "large step"; unmeasured), before
+        /// the frame's own time, in the first update the system is visible and simulates; its
+        /// collision and trigger messages go out with that frame's. The emitter's movement while
+        /// culled is not replayed (the docs advise AlwaysSimulate for a moving system, especially
+        /// in World simulation space, whose culling bounds may be inaccurate). Time missed
+        /// while a script paused the system does not count, and a script call that changes the
+        /// playback while culled (Simulate, a restart) drops the time missed before it (Unbound's
+        /// choices, unmeasured). A new playback (Restart) and a deactivation clear the missed time,
+        /// so a restart or reactivation while culled from total time 0 drops it as well (an
+        /// implementation invariant, unmeasured against Unity). Stop(StopEmittingAndClear) drops
+        /// it too, so particles emitted right after it are not stepped by it (an implementation
+        /// invariant, unmeasured); plain Clear() does not, and its Emit edge stays open and
+        /// unmeasured.</para>
+        /// <para>Automatic with a looping system is not applied: the 6000.0 docs also say that a
+        /// non-procedural system "must continue updating itself even when offscreen"
+        /// (ParticleSystem.automaticCullingEnabled), and Unbound does not decide procedural
+        /// simulation (<see cref="proceduralSimulationSupported"/>). Such a system keeps simulating
+        /// offscreen, as with AlwaysSimulate, and the first such frame is reported once.</para>
+        /// <para>Visibility is <see cref="Renderer.isVisible"/> of the system's own
+        /// ParticleSystemRenderer, read when the update runs: what the previous frame's cameras and
+        /// shadow casters left after this frame's EarlyUpdate (Unity also counts shadow casting and,
+        /// in the Editor, the Scene view's cameras; Unbound has no Scene view). Before the first
+        /// camera has culled it a renderer is not visible, so a Pause or PauseAndCatchup system
+        /// waits for the first frame drawn (unmeasured). Unbound's choices (unmeasured): a
+        /// sub-emitter decides by its own renderer and mode, not its parent's; a system without an
+        /// enabled ParticleSystemRenderer keeps simulating (the docs do not say), reported once.
+        /// A paused system's bounds stay as they were, which lets it become visible again.</para>
+        /// <para>Drawn bounds (Unbound's choice, unmeasured: the bounds Unity culls particles by are
+        /// not measured). The renderer's bounds are its live particles' centres ± size/2, which
+        /// the engine draws particle renderers regardless of (FrameBuilder: they are not trusted),
+        /// so a system is paused only where Unbound can bound what it draws, see
+        /// <see cref="CullingBoundsCoverDraw"/>: then it pauses while it is not visible and no
+        /// enabled camera drawing its layer has the particles' centres ± size·√3/2 (emitter scale
+        /// applied) in its frustum, tested in the update (<see cref="ConservativeBoundsInView"/>),
+        /// reported once. Any other system (stretched, mesh or none render mode, trails, a pivot,
+        /// a minimum particle size) keeps simulating offscreen, as with AlwaysSimulate, reported
+        /// once. A camera rendered only by script while disabled (Camera.Render) is seen only
+        /// through isVisible.</para>
+        /// </summary>
+        internal void CullingFrameUpdate()
+        {
+            var mode = m_Main.cullingMode;
+            if (!CulledThisFrame(mode))
+            {
+                float catchUp = mode == ParticleSystemCullingMode.PauseAndCatchup && m_TotalTime == m_CullingMissedFrom ? m_CullingMissed : 0f;
+                // Missed time a frame cannot simulate yet (a zero time scale) waits for the next.
+                if (FrameUpdate(catchUp) || catchUp == 0f) m_CullingMissed = 0f;
+                return;
+            }
+            float raw = m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
+            TrackEmitter(raw);
+            m_CollisionEvents.Clear();
+            foreach (var list in m_TriggerParticles) list.Clear();
+            if (mode != ParticleSystemCullingMode.PauseAndCatchup)
+            {
+                m_CullingMissed = 0f;
+                return;
+            }
+            float dt = raw * m_Main.simulationSpeed;
+            if (!CullingSimulates || !(dt > 0f)) return;
+            if (m_CullingMissed == 0f || m_TotalTime != m_CullingMissedFrom)
+            {
+                m_CullingMissed = 0f;
+                m_CullingMissedFrom = m_TotalTime;
+            }
+            m_CullingMissed += dt;
+        }
+
+        /// <summary>Whether <paramref name="mode"/> pauses the system this frame (see
+        /// <see cref="CullingFrameUpdate"/>).</summary>
+        bool CulledThisFrame(ParticleSystemCullingMode mode)
+        {
+            if (mode == ParticleSystemCullingMode.AlwaysSimulate) return false;
+            if (mode == ParticleSystemCullingMode.Automatic && !m_Main.loop) return false;
+            var renderer = CullingRenderer;
+            if (renderer == null || !renderer.enabled)
+            {
+                if (CullingSimulates)
+                    Unbound.Runtime.Stubs.Ignored("ParticleSystem.main.cullingMode without a renderer",
+                        "keeps simulating a system without an enabled ParticleSystemRenderer (its culling is not decided)");
+                return false;
+            }
+            if (renderer.isVisible) return false;
+            if (mode == ParticleSystemCullingMode.Automatic)
+            {
+                if (CullingSimulates)
+                    Unbound.Runtime.Stubs.Ignored("ParticleSystem.main.cullingMode Automatic",
+                        "keeps simulating an offscreen looping system: the docs also keep a non-procedural system updating offscreen, and Unbound does not decide procedural simulation");
+                return false;
+            }
+            if (!CullingBoundsCoverDraw(renderer))
+            {
+                if (CullingSimulates)
+                    Unbound.Runtime.Stubs.Ignored("Particle culling without covering bounds",
+                        "keeps simulating an offscreen Pause or PauseAndCatchup system: its culling bounds do not cover what it draws (a stretched, mesh or none render mode, trails, a pivot or a minimum particle size)");
+                return false;
+            }
+            if (ConservativeBoundsInView(renderer)) return false;
+            if (CullingSimulates)
+                Unbound.Runtime.Stubs.Ignored("Particle culling with approximate bounds",
+                    "pauses an offscreen billboard system by its live particles' centres ± size·√3/2 (the bounds Unity culls by are not measured)");
+            return true;
+        }
+
+        /// <summary>The system's ParticleSystemRenderer, looked up again only when it is gone or
+        /// belongs to another object.</summary>
+        ParticleSystemRenderer m_CullingRenderer;
+
+        ParticleSystemRenderer CullingRenderer
+        {
+            get
+            {
+                if (m_GameObject == null) return null;
+                if (!m_CullingRenderer || m_CullingRenderer.m_GameObject != m_GameObject)
+                    m_CullingRenderer = m_GameObject.GetComponent<ParticleSystemRenderer>();
+                return m_CullingRenderer;
+            }
+        }
+
+        /// <summary>Whether every quad the renderer draws lies within √2/2 of the particle's
+        /// size (emitter scale applied) of its centre, so that centres ± size·√3/2 cover it: a
+        /// billboard render mode (a quad of the particle's size, or 1/√2 of it, about its centre,
+        /// at any rotation and alignment), no trails, a zero pivot and no minimum particle size
+        /// (which can enlarge a far particle). The maximum particle size only shrinks quads.
+        /// Stretched quads, meshes, trails and pivots reach further (Unbound's choice: they are not
+        /// culled, see <see cref="CullingFrameUpdate"/>).</summary>
+        bool CullingBoundsCoverDraw(ParticleSystemRenderer renderer)
+        {
+            switch (renderer.renderMode)
+            {
+                case ParticleSystemRenderMode.Billboard:
+                case ParticleSystemRenderMode.HorizontalBillboard:
+                case ParticleSystemRenderMode.VerticalBillboard:
+                    break;
+                default:
+                    return false;
+            }
+            var pivot = renderer.pivot;
+            return !m_Trails.enabled && !HasAliveTrails
+                && pivot.x == 0f && pivot.y == 0f && pivot.z == 0f
+                && !(renderer.minParticleSize > 0f);
+        }
+
+        /// <summary>Whether an enabled camera whose culling mask has the renderer's layer has the
+        /// live particles' centres ± size·√3/2 (the largest size axis, by the largest emitter scale
+        /// axis) at least partly in its view frustum now. Conservative on purpose: the cameras'
+        /// displays, layer cull distances and LOD groups are not applied (a camera that would not
+        /// draw the system only keeps it simulating).</summary>
+        bool ConservativeBoundsInView(ParticleSystemRenderer renderer)
+        {
+            if (m_Count == 0) return false;
+            int layer = 1 << renderer.m_GameObject.m_Layer;
+            bool bounded = false;
+            var bounds = new Bounds();
+            foreach (var camera in Camera.s_Enabled)
+            {
+                if (!camera || !camera.isActiveAndEnabled || (camera.cullingMask & layer) == 0) continue;
+                if (!bounded)
+                {
+                    bounds = ConservativeWorldBounds();
+                    bounded = true;
+                }
+                if (Unbound.Runtime.FrameBuilder.InFrustum(camera.projectionMatrix * camera.worldToCameraMatrix, bounds)) return true;
+            }
+            return false;
+        }
+
+        Bounds ConservativeWorldBounds()
+        {
+            const float halfSqrt3 = 0.8660254f;
+            var toWorld = SimulationToWorld();
+            var scale = EmitterScale();
+            float maxScale = Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
+            Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue), max = -min;
+            for (int i = 0; i < m_Count; i++)
+            {
+                ref var p = ref m_Particles[i];
+                var w = toWorld.MultiplyPoint3x4(p.m_Position);
+                var s = CurrentSize3D(ref p);
+                float r = halfSqrt3 * maxScale * Mathf.Max(Mathf.Abs(s.x), Mathf.Max(Mathf.Abs(s.y), Mathf.Abs(s.z)));
+                min = Vector3.Min(min, w - new Vector3(r, r, r));
+                max = Vector3.Max(max, w + new Vector3(r, r, r));
+            }
+            var b = new Bounds();
+            b.SetMinMax(min, max);
+            return b;
         }
 
         // ------------------------------------------------------------------ storage
@@ -973,7 +1272,7 @@ namespace Unbound.Runtime
                 {
                     var ps = s_Snapshot[i];
                     if (ps == null || !ps.m_Registered) continue;
-                    try { ps.FrameUpdate(); }
+                    try { ps.CullingFrameUpdate(); }
                     catch (Exception e) { Debug.LogException(e, ps); }
                 }
             }
