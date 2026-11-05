@@ -119,7 +119,7 @@ namespace UnityEngine.Tests
                 int liveBefore = LiveTrails(ps);
                 var pointsBefore = TrailPoints(ps);
 
-                particles[k].remainingLifetime = 0f;
+                particles[k].remainingLifetime = -1f;
                 ps.SetParticles(particles);
 
                 Assert.Equal(particles.Length - 1, ps.particleCount);
@@ -146,7 +146,7 @@ namespace UnityEngine.Tests
                 int link = particles[k].m_TrailId;
                 var pointsBefore = TrailPoints(ps);
 
-                particles[k].remainingLifetime = 0f;
+                particles[k].remainingLifetime = -1f;
                 ps.SetParticles(particles);
 
                 Assert.Equal(particles.Length - 1, ps.particleCount);
@@ -184,6 +184,94 @@ namespace UnityEngine.Tests
                 Assert.Equal(particles.Length, ps.particleCount);
                 Assert.Equal(points, TrailPoints(ps));
                 Assert.Equal(orphans, TrailOrphans(ps));
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        // A trail still held by a particle that survives the call is not ended: Unbound's choice
+        // (unmeasured).
+
+        [Fact]
+        public void RemovingACopyOfARetainedParticleKeepsItsTrailLive()
+        {
+            var ps = Make("setparticles-trail-prefix", dieWithParticles: true);
+            try
+            {
+                var particles = Particles(ps);
+                int k = WithTrail(ps, particles);
+                int link = particles[k].m_TrailId;
+                var points = TrailPoints(ps);
+                var orphans = TrailOrphans(ps);
+                // Written after the retained prefix [0, offset), a removed copy of a prefix
+                // particle carries that particle's link.
+                var copy = particles[k];
+                copy.remainingLifetime = -1f;
+
+                ps.SetParticles(new[] { copy }, 1, particles.Length);
+
+                Assert.Equal(particles.Length, ps.particleCount);
+                Assert.NotNull(ps.m_TrailList[link - 1]);
+                Assert.False(ps.m_TrailList[link - 1].Orphan);
+                Assert.Equal(points, TrailPoints(ps));
+                Assert.Equal(orphans, TrailOrphans(ps));
+                Assert.Contains(Particles(ps), p => p.m_TrailId == link);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void RemovingACopyOfAKeptParticleKeepsItsTrailLive()
+        {
+            var ps = Make("setparticles-trail-kept", dieWithParticles: true);
+            try
+            {
+                var particles = Particles(ps);
+                int k = WithTrail(ps, particles);
+                int link = particles[k].m_TrailId;
+                var points = TrailPoints(ps);
+                var orphans = TrailOrphans(ps);
+                // Written first, a removed copy of a written and kept particle carries its link;
+                // its removal swaps the last particle into its place.
+                var copy = particles[k];
+                copy.remainingLifetime = -1f;
+                var written = new[] { copy }.Concat(particles).ToArray();
+
+                ps.SetParticles(written);
+
+                Assert.Equal(particles.Length, ps.particleCount);
+                Assert.NotNull(ps.m_TrailList[link - 1]);
+                Assert.False(ps.m_TrailList[link - 1].Orphan);
+                Assert.Equal(points, TrailPoints(ps));
+                Assert.Equal(orphans, TrailOrphans(ps));
+                Assert.Contains(Particles(ps), p => p.m_TrailId == link);
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void RemovingEveryParticleThatHoldsATrailEndsItOnce()
+        {
+            var ps = Make("setparticles-trail-all-holders", dieWithParticles: true);
+            try
+            {
+                var particles = Particles(ps);
+                int k = WithTrail(ps, particles);
+                int link = particles[k].m_TrailId;
+                int liveBefore = LiveTrails(ps);
+                // The particle and a copy written before it are both removed.
+                var copy = particles[k];
+                copy.remainingLifetime = -1f;
+                particles[k].remainingLifetime = -1f;
+                var written = new[] { copy }.Concat(particles).ToArray();
+
+                ps.SetParticles(written);
+
+                Assert.Equal(particles.Length - 1, ps.particleCount);
+                Assert.Null(ps.m_TrailList[link - 1]);
+                Assert.Equal(liveBefore - 1, LiveTrails(ps));
+                // The slot is freed once: of two new trails, only one takes it.
+                ps.Emit(2);
+                Assert.Single(Particles(ps), p => p.m_TrailId == link);
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
