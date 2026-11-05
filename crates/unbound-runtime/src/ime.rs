@@ -53,7 +53,10 @@ impl ImeSnapshot {
     }
 
     /// Applies one event; committed text is appended to the frame's `text`.
-    pub fn apply(&mut self, event: ImeEvent<'_>, text: &mut String) {
+    /// Applies a window event; answers the byte range of `text` it added (empty unless it
+    /// committed text).
+    pub fn apply(&mut self, event: ImeEvent<'_>, text: &mut String) -> std::ops::Range<usize> {
+        let start = text.len();
         match event {
             ImeEvent::Preedit { value, cursor } => {
                 self.composition.clear();
@@ -71,6 +74,7 @@ impl ImeSnapshot {
                 self.clear_composition();
             }
         }
+        start..text.len()
     }
 
     /// Whether a window reads the input method; losing it drops what it had reported.
@@ -130,9 +134,11 @@ pub fn attach(available: bool) {
     STATE.lock().unwrap().set_available(available);
 }
 
-/// An input method event from the window; committed text joins the frame's `text`.
-pub fn event(event: ImeEvent<'_>, text: &mut String) {
-    STATE.lock().unwrap().apply(event, text);
+/// An input method event from the window; committed text joins the frame's `text`. Answers the
+/// byte range of `text` the event added (empty unless it committed text), so the window can
+/// deliver it as a character event like typed text.
+pub fn event(event: ImeEvent<'_>, text: &mut String) -> std::ops::Range<usize> {
+    STATE.lock().unwrap().apply(event, text)
 }
 
 /// The `ime-state` control call.
@@ -289,5 +295,17 @@ mod tests {
             v,
             json!({"available": false, "composition": "", "cursor": null, "selected": false})
         );
+    }
+
+    #[test]
+    fn apply_answers_the_committed_range_only() {
+        let mut s = ImeSnapshot::new();
+        let mut text = String::from("a");
+        assert!(s.apply(ImeEvent::Enabled, &mut text).is_empty());
+        assert!(s.apply(preedit("に", Some((0, 3))), &mut text).is_empty());
+        let range = s.apply(ImeEvent::Commit("日本"), &mut text);
+        assert_eq!(range, 1..7);
+        assert_eq!(&text[range], "日本");
+        assert!(s.apply(ImeEvent::Disabled, &mut text).is_empty());
     }
 }

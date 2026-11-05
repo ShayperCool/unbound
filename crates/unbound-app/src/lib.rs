@@ -346,9 +346,9 @@ fn drive(
                     text_length: 0,
                 });
             }
-            // Text the input method commits joins the frame's text (`Input.inputString`); the
-            // composition and whether it is enabled go to `Input.compositionString` and
-            // `Input.imeIsSelected`.
+            // Text the input method commits joins the frame's text (`Input.inputString`) and comes
+            // as a text-only key event; the composition and whether it is enabled go to
+            // `Input.compositionString` and `Input.imeIsSelected`.
             WindowEvent::Ime(input) => {
                 use unbound_runtime::ime::{self, ImeEvent};
                 let event = match input {
@@ -360,7 +360,17 @@ fn drive(
                     bevy::window::Ime::Enabled { .. } => ImeEvent::Enabled,
                     bevy::window::Ime::Disabled { .. } => ImeEvent::Disabled,
                 };
-                ime::event(event, &mut driver.text);
+                // Committed text also comes as a text-only key event (key 0), as typed text does,
+                // so IMGUI/uGUI text fields and the Input System receive it, not only inputString.
+                let added = ime::event(event, &mut driver.text);
+                if !added.is_empty() {
+                    driver.key_events.push(KeyEvent {
+                        key: 0,
+                        pressed: 1,
+                        text_start: added.start as i32,
+                        text_length: added.len() as i32,
+                    });
+                }
             }
             _ => {}
         }
