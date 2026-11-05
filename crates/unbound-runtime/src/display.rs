@@ -1,9 +1,9 @@
 //! The display the game's window is on, for `Screen.currentResolution`, `Screen.resolutions`,
 //! `Screen.dpi` and `Screen.mainWindowDisplayInfo`. The windowed app publishes it from the
 //! monitors the window system reports; the managed engine reads it through the `display-info`
-//! control call. A run without a window (headless) never publishes one, and a remote session
-//! publishes that its viewers' displays are unknown: the managed side then keeps its constants
-//! and says so.
+//! control call. Nothing is published before the window opens (the first scene starts before
+//! it) nor in a run without a window (headless), and a remote session publishes that its
+//! viewers' displays are unknown: the managed side then keeps its constants and says so.
 use anyhow::Result;
 use serde_json::{Value as Json, json};
 use std::sync::Mutex;
@@ -41,8 +41,9 @@ pub enum Display {
     Unavailable(String),
 }
 
-/// Why there is no display when the app never published one.
-pub const HEADLESS: &str = "the run has no window (headless)";
+/// Why there is no display when the app has not published one.
+pub const UNPUBLISHED: &str =
+    "no window has reported its display: the run is headless, or the window is not open yet";
 
 /// The display last published, with a version that counts its changes (0: never published).
 static STATE: Mutex<(u64, Option<Display>)> = Mutex::new((0, None));
@@ -81,7 +82,7 @@ pub fn encode(version: u64, display: Option<&Display>, since: Option<u64>) -> Js
         return json!({ "version": version, "unchanged": true });
     }
     match display {
-        None => json!({ "version": version, "available": false, "reason": HEADLESS }),
+        None => json!({ "version": version, "available": false, "reason": UNPUBLISHED }),
         Some(Display::Unavailable(reason)) => {
             json!({ "version": version, "available": false, "reason": reason })
         }
@@ -187,7 +188,7 @@ mod tests {
     fn missing_display_says_why() {
         assert_eq!(
             encode(0, None, None),
-            json!({ "version": 0, "available": false, "reason": HEADLESS })
+            json!({ "version": 0, "available": false, "reason": UNPUBLISHED })
         );
         let remote = Display::Unavailable("remote".into());
         assert_eq!(
