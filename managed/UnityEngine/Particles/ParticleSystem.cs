@@ -452,15 +452,7 @@ namespace UnityEngine
             int count = offset + size;
             Reserve(count);
             if (count > 0) MaterializeAxisOfRotation();
-            for (int i = 0; i < size && offset + i < count; i++)
-            {
-                // Native optional noise arrays are separate from the public particle struct.
-                var noiseSum = m_Particles[offset + i].m_NoiseSum;
-                var noiseImpulse = m_Particles[offset + i].m_NoiseImpulse;
-                m_Particles[offset + i] = particles[i];
-                m_Particles[offset + i].m_NoiseSum = noiseSum;
-                m_Particles[offset + i].m_NoiseImpulse = noiseImpulse;
-            }
+            for (int i = 0; i < size && offset + i < count; i++) WriteParticle(offset + i, particles[i]);
             for (int s = 0; s < 2; s++)
                 if (m_Custom[s] != null && m_Custom[s].Length < count) Array.Resize(ref m_Custom[s], m_Particles.Length);
             m_Count = count;
@@ -500,21 +492,66 @@ namespace UnityEngine
             {
                 int dead = 0;
                 for (int i = Math.Max(block, offset); i < Math.Min(block + 4, m_Count); i++)
-                    if (m_Particles[i].m_Lifetime <= 0f) dead |= 1 << (i - block);
+                    if (DiesWhenWritten(i)) dead |= 1 << (i - block);
                 if (dead == 0) { block += 4; continue; }
                 for (int lane = 3; lane >= 0; lane--)
                     if ((dead & (1 << lane)) != 0) RemoveAt(block + lane);
             }
-            for (int i = offset; i < m_Count; i++)
+            for (int i = offset; i < m_Count; i++) SettleWrittenParticle(i);
+        }
+
+        /// <summary>SetParticles' write of one slot: the public particle replaces it.</summary>
+        void WriteParticle(int index, in Particle particle)
+        {
+            // Native optional noise arrays are separate from the public particle struct.
+            var noiseSum = m_Particles[index].m_NoiseSum;
+            var noiseImpulse = m_Particles[index].m_NoiseImpulse;
+            m_Particles[index] = particle;
+            m_Particles[index].m_NoiseSum = noiseSum;
+            m_Particles[index].m_NoiseImpulse = noiseImpulse;
+        }
+
+        /// <summary>Whether a written slot dies at once (SetParticles' nonpositive remaining lifetime).</summary>
+        bool DiesWhenWritten(int index) => m_Particles[index].m_Lifetime <= 0f;
+
+        /// <summary>SetParticles' encoding of a written survivor's age.</summary>
+        void SettleWrittenParticle(int index)
+        {
+            m_Particles[index].InitializeAge();
+            // SetParticles clamps inputs that exceed their start lifetime to birth.
+            if (m_Particles[index].m_AgePercent < 0f)
             {
-                m_Particles[i].InitializeAge();
-                // SetParticles clamps inputs that exceed their start lifetime to birth.
-                if (m_Particles[i].m_AgePercent < 0f)
-                {
-                    m_Particles[i].m_AgePercent = 0f;
-                    m_Particles[i].ExportLifetime();
-                }
+                m_Particles[index].m_AgePercent = 0f;
+                m_Particles[index].ExportLifetime();
             }
+        }
+
+        /// <summary>SetParticles' write path for live slots in any order (the trigger
+        /// write-back): each particle replaces its slot as SetParticles writes one (a slot
+        /// listed twice keeps the later particle). A written particle whose encoded age a
+        /// remaining or start lifetime setter cleared dies at once or encodes its age as
+        /// SetParticles does; one that still has its encoded age keeps it and its life
+        /// (Unbound's choice, unmeasured: the trigger write-back changes only the fields a
+        /// script changed). SetParticles' removal order is measured for a contiguous range
+        /// only; here the dead slots go highest first, so no pending slot moves (Unbound's
+        /// choice, unmeasured).</summary>
+        internal void WriteParticlesAt(int[] slots, Particle[] particles, int count)
+        {
+            if (count <= 0) return;
+            MaterializeAxisOfRotation();
+            for (int k = 0; k < count; k++) WriteParticle(slots[k], particles[k]);
+            var written = new HashSet<int>();
+            var dead = new List<int>();
+            for (int k = 0; k < count; k++)
+            {
+                int slot = slots[k];
+                if (!written.Add(slot)) continue;
+                if ((m_Particles[slot].m_Flags & Particle.FlagAgeInitialized) != 0) continue;
+                if (DiesWhenWritten(slot)) dead.Add(slot);
+                else SettleWrittenParticle(slot);
+            }
+            dead.Sort();
+            for (int k = dead.Count - 1; k >= 0; k--) RemoveAt(dead[k]);
         }
 
         public void SetParticles(Particle[] particles, int size) => SetParticles(particles, size, 0);
