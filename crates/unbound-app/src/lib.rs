@@ -349,9 +349,9 @@ fn drive(
             // Text the input method commits joins the frame's text (`Input.inputString`); the
             // composition and whether it is enabled go to `Input.compositionString` and
             // `Input.imeIsSelected`.
-            WindowEvent::Ime(ime) => {
+            WindowEvent::Ime(input) => {
                 use unbound_runtime::ime::{self, ImeEvent};
-                let event = match ime {
+                let event = match input {
                     bevy::window::Ime::Preedit { value, cursor, .. } => ImeEvent::Preedit {
                         value,
                         cursor: *cursor,
