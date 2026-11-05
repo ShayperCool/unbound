@@ -52,7 +52,6 @@ impl ImeSnapshot {
         }
     }
 
-    /// Applies one event; committed text is appended to the frame's `text`.
     /// Applies a window event; answers the byte range of `text` it added (empty unless it
     /// committed text).
     pub fn apply(&mut self, event: ImeEvent<'_>, text: &mut String) -> std::ops::Range<usize> {
