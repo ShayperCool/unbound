@@ -5,6 +5,7 @@ pub mod bundles;
 pub mod clipboard;
 pub mod config;
 pub mod cursor;
+pub mod display;
 pub mod editor_resources;
 pub mod fonts;
 pub mod game;

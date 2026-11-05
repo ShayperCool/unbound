@@ -219,6 +219,7 @@ pub fn run(
     });
     app.add_systems(Startup, spawn_view);
     app.add_systems(PreUpdate, drive.after(bevy::input::InputSystems));
+    app.add_systems(PreUpdate, publish_display.before(drive));
     app.add_systems(Update, finish_run);
     match app.run() {
         AppExit::Success => Ok(()),
@@ -606,4 +607,65 @@ fn save_png(image: &Image, path: &std::path::Path) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("the screenshot's size does not match its data"))?;
     buffer.save_with_format(path, image::ImageFormat::Png)?;
     Ok(())
+}
+
+/// Publishes the display the window is on for `Screen.currentResolution` & co
+/// (`unbound_runtime::display`): the monitor the window system places the window on, else the
+/// primary monitor. A remote session's viewers watch on displays of their own, which are not
+/// known. Republished when the window changes monitor or the monitor's description changes.
+fn publish_display(
+    settings: Res<RunSettings>,
+    windows: Query<Option<&bevy::window::OnMonitor>, With<PrimaryWindow>>,
+    monitors: Query<(
+        Entity,
+        Ref<bevy::window::Monitor>,
+        bevy::ecs::query::Has<bevy::window::PrimaryMonitor>,
+    )>,
+    mut published: Local<Option<Option<Entity>>>,
+) {
+    use unbound_runtime::display::{self, Display, DisplayMode, DisplaySnapshot};
+    if settings.remote.is_some() {
+        if published.is_none() {
+            *published = Some(None);
+            display::publish(Display::Unavailable(
+                "a remote session's viewers watch on displays that are not known".into(),
+            ));
+        }
+        return;
+    }
+    let on = windows.single().ok().flatten().map(|link| link.0);
+    let found = on
+        .and_then(|entity| monitors.get(entity).ok())
+        .or_else(|| monitors.iter().find(|(_, _, primary)| *primary));
+    let key = found.as_ref().map(|(entity, _, _)| *entity);
+    let changed = found
+        .as_ref()
+        .is_some_and(|(_, monitor, _)| monitor.is_changed());
+    if *published == Some(key) && !changed {
+        return;
+    }
+    *published = Some(key);
+    let Some((entity, monitor, _)) = found else {
+        display::publish(Display::Unavailable(
+            "the window system reports no monitor".into(),
+        ));
+        return;
+    };
+    display::publish(Display::Known(DisplaySnapshot {
+        id: entity.to_bits(),
+        name: monitor.name.clone(),
+        width: monitor.physical_width,
+        height: monitor.physical_height,
+        refresh_rate_millihertz: monitor.refresh_rate_millihertz,
+        scale_factor: monitor.scale_factor,
+        modes: monitor
+            .video_modes
+            .iter()
+            .map(|mode| DisplayMode {
+                width: mode.physical_size.x,
+                height: mode.physical_size.y,
+                refresh_rate_millihertz: mode.refresh_rate_millihertz,
+            })
+            .collect(),
+    }));
 }
