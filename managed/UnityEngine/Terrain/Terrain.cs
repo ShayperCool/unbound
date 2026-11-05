@@ -209,7 +209,8 @@ namespace UnityEngine
         // rule or rebuild time. Unbound's choices (unmeasured): only active terrains with data
         // take part; a neighbour has the same X/Z size and sits exactly one tile over on one axis
         // and level on the other (heights ignored), within a ten-thousandth of the tile size; a
-        // side with several candidates stays empty with a warning; the connectivity is also marked
+        // side with several candidates stays empty with a warning, given once per tile and side
+        // (the warning would otherwise repeat on every rebuild); the connectivity is also marked
         // dirty when a terrain is enabled, disabled or destroyed; it is rebuilt lazily, on the
         // next neighbour read or SetNeighbors call, not on moves or setting changes. The adjacency
         // is the tile-grid rule of TryGetTileCoord, which TerrainMap.CreateFromPlacement uses too;
@@ -217,6 +218,7 @@ namespace UnityEngine
 
         static bool s_TilesChanged;
         static readonly List<Terrain> s_AutoConnected = new List<Terrain>();
+        static readonly HashSet<(int tile, string side)> s_WarnedOverlap = new HashSet<(int tile, string side)>();
         const float k_TileTolerance = 1e-4f;
 
         /// <summary>Rebuilds the auto-connect links when the connectivity is dirty.</summary>
@@ -261,7 +263,8 @@ namespace UnityEngine
                 count++;
             }
             if (count <= 1) return found;
-            Debug.LogWarning($"Unbound: terrain '{name}' has {count} overlapping auto-connect tiles on its {side} (grouping ID {m_GroupingID}); that side is left unconnected.", this);
+            if (s_WarnedOverlap.Add((GetInstanceID(), side)))
+                Debug.LogWarning($"Unbound: terrain '{name}' has {count} overlapping auto-connect tiles on its {side} (grouping ID {m_GroupingID}); that side is left unconnected.", this);
             return null;
         }
 
