@@ -263,7 +263,11 @@ mod tests {
     fn the_filter_descriptor_layout_is_native_api_16() {
         assert_eq!(crate::native_api::NATIVE_API_VERSION, 16);
         assert_eq!(
-            [filter_kind::LOWPASS, filter_kind::HIGHPASS, filter_kind::ECHO],
+            [
+                filter_kind::LOWPASS,
+                filter_kind::HIGHPASS,
+                filter_kind::ECHO
+            ],
             [1, 2, 3]
         );
         assert_eq!(
