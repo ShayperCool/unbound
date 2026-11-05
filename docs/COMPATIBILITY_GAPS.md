@@ -304,7 +304,7 @@ volume/snapshots/exposed parameters, `OnAudioFilterRead`, VideoPlayer.
 | Spatializer and ambisonic plugins not loaded (`GetSpatializerPluginNames` empty, `Set*Float` fail) | `Audio/AudioSettings.cs`, `AudioSource.cs` | W | L-M (VR audio) |
 | VideoClip/VideoPlayer audio track info (channels, rate, language), `VideoClip.sRGB` | `Video/VideoPlayer.cs` | W | L-M |
 | Tracker modules (`.xm/.it/.mod/.s3m`); `Microphone.devices` null | `crates/unbound-assets/src/audio.rs:28`, stub | W | L-M |
-| `velocityUpdateMode`, VideoPlayer `timeReference`/`skipOnDrop` | `Audio/AudioSource.cs:199`, `Video/VideoPlayer.cs` | S | L |
+| `velocityUpdateMode`: source ready, unvalidated (2c3aba2a): Fixed, and Auto with a Rigidbody on the object or a parent, sample the doppler velocity each fixed step (FixedUpdate.AudioFixedUpdate); Dynamic and Auto without one keep the per-frame sample. Rigidbody2D does not count, the last step of a frame wins, frames without a step keep the velocity: unmeasured choices. VideoPlayer `timeReference`/`skipOnDrop` stored only | `Audio/AudioSystem.cs`, `AudioSource.cs`, `AudioListener.cs`, `Video/VideoPlayer.cs` | S | L |
 
 ### UI, text, input
 
