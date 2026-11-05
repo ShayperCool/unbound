@@ -27,6 +27,25 @@ namespace Unbound.Box2D.Collision.Shapes
         /// Uses m_vertex0 and m_vertex3 to create smooth collision.
         public bool OneSided;
 
+        /// Unbound: a two-sided edge that is connected to a preceding edge at Vertex1 through
+        /// Vertex0 (Box2D v2.3's m_hasVertex0). Unity's EdgeCollider2D segments collide on both
+        /// sides and use their neighbours, or the adjacent start point, as ghost vertices.
+        public bool HasVertex0;
+
+        /// Unbound: a two-sided edge that is connected to a following edge at Vertex2 through
+        /// Vertex3 (Box2D v2.3's m_hasVertex3); the neighbour or the adjacent end point.
+        public bool HasVertex3;
+
+        /// Unbound: whether the ghost vertex Vertex0 takes part in collision adjacency. An exactly
+        /// zero-length ghost segment (Vertex0 equal to Vertex1, e.g. an adjacent start point on the
+        /// chain's first point) has no direction, so collisions treat it as absent; HasVertex0 and
+        /// the vertices stay as stored. Unity's behaviour for such a point is unmeasured.
+        internal bool UsesVertex0 => HasVertex0 && Vertex0 != Vertex1;
+
+        /// Unbound: the same for Vertex3; an exactly zero-length following ghost segment
+        /// (Vertex3 equal to Vertex2) is absent for collision adjacency.
+        internal bool UsesVertex3 => HasVertex3 && Vertex3 != Vertex2;
+
         public EdgeShape()
         {
             ShapeType = ShapeType.Edge;
@@ -62,6 +81,8 @@ namespace Unbound.Box2D.Collision.Shapes
             Vertex1 = v1;
             Vertex2 = v2;
             OneSided = false;
+            HasVertex0 = false;
+            HasVertex3 = false;
         }
 
         /// <inheritdoc />
@@ -73,7 +94,9 @@ namespace Unbound.Box2D.Collision.Shapes
                 Vertex1 = Vertex1,
                 Vertex2 = Vertex2,
                 Vertex3 = Vertex3,
-                OneSided = OneSided
+                OneSided = OneSided,
+                HasVertex0 = HasVertex0,
+                HasVertex3 = HasVertex3
             };
             return clone;
         }

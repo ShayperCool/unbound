@@ -15,9 +15,25 @@ namespace Unbound.Box2D.Dynamics.Contacts
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal override void Evaluate(ref Manifold manifold, in Transform xfA, Transform xfB)
         {
+            var edge = (EdgeShape)FixtureA.Shape;
+
+            // Unbound: a two-sided EdgeCollider2D segment connected to its neighbours or to the
+            // adjacent start/end points uses Box2D v2.3's adjacency (no ghost collisions). A segment
+            // whose ghost segments are all exactly zero-length collides like an isolated one.
+            if (!edge.OneSided && (edge.UsesVertex0 || edge.UsesVertex3))
+            {
+                CollisionUtils.CollideEdgeAndPolygonAdjacent(
+                    ref manifold,
+                    edge,
+                    xfA,
+                    (PolygonShape)FixtureB.Shape,
+                    xfB);
+                return;
+            }
+
             CollisionUtils.CollideEdgeAndPolygon(
                 ref manifold,
-                (EdgeShape)FixtureA.Shape,
+                edge,
                 xfA,
                 (PolygonShape)FixtureB.Shape,
                 xfB);

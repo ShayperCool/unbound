@@ -9,6 +9,7 @@ Origin
 Licenses
   Box2D       MIT, Copyright (c) 2019 Erin Catto              -> LICENSE-Box2D.txt
   Box2DSharp  MIT, Copyright (c) 2018-present Zonciu Liang    -> LICENSE-Box2DSharp.txt
+  Box2D v2.3.1 zlib, Copyright (c) 2007-2009 Erin Catto (b2CollideEdge.cpp) -> notice in Collision/ColliderEdgeAdjacency.cs
 
 Local changes
   - Namespace Box2DSharp -> Unbound.Box2D; every type is internal to UnityEngine.CoreModule.
