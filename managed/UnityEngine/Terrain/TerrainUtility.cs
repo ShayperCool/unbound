@@ -91,7 +91,8 @@ namespace UnityEngine.TerrainUtils
         /// <paramref name="gridSize"/> (X, Z) anchored at <paramref name="gridOrigin"/> (X, Z).
         /// Unbound's choices (unmeasured): a terrain is placed by the tile-grid rule auto-connect
         /// uses (its X/Z size equals the cell size and it sits a whole number of cells from the
-        /// origin, within a ten-thousandth of the cell size; heights ignored), other terrains and
+        /// origin, within a ten-thousandth of the cell size; heights ignored), so a grid size that
+        /// differs from the terrains' size places nothing; other terrains and
         /// terrains without data are left out; a cell that several terrains share stays empty, with
         /// a warning; a null filter keeps every active terrain, because this overload has no origin
         /// terrain whose group the documented fallback could match; the map is null when no
@@ -137,7 +138,8 @@ namespace UnityEngine.TerrainUtils
         /// <paramref name="originTerrain"/> at tile (0, 0) and the terrains reached from it through
         /// the left (-X), right (+X), top (+Z) and bottom (-Z) neighbour links, each one tile from
         /// the terrain it was reached from; a null filter applies none, as documented. Unbound's
-        /// choices (unmeasured): the origin must pass the filter, else the map is null; a terrain
+        /// choices (unmeasured): a null origin gives null; the origin must pass the filter, else the
+        /// map is null; a terrain
         /// that fails the filter is left out and not followed; the links are walked breadth-first
         /// in left, right, top, bottom order, and each terrain keeps the first tile it is reached
         /// at; a terrain reached at a tile another terrain already holds is left out, with a
