@@ -476,7 +476,19 @@ namespace UnityEngine
                     if (m_Particles[i].m_Lifetime <= 0f) dead |= 1 << (i - block);
                 if (dead == 0) { block += 4; continue; }
                 for (int lane = 3; lane >= 0; lane--)
-                    if ((dead & (1 << lane)) != 0) RemoveAt(block + lane);
+                {
+                    if ((dead & (1 << lane)) == 0) continue;
+                    // A removed particle's trail ends as at its death (TrailModule.dieWithParticles):
+                    // freed when trails die with their particles, else left to fade. Ending it at
+                    // this call rather than at the next step is Unbound's choice (unmeasured). The
+                    // carrier of a fading trail, or a link to a free or fading slot, ends nothing.
+                    ref var removed = ref m_Particles[block + lane];
+                    int link = removed.m_TrailId;
+                    if (link > 0 && (removed.m_Flags & Particle.FlagOrphanTrail) == 0
+                        && link <= m_TrailList.Count && m_TrailList[link - 1] is { Orphan: false })
+                        EndTrail(ref removed);
+                    RemoveAt(block + lane);
+                }
             }
             for (int i = offset; i < m_Count; i++)
             {
