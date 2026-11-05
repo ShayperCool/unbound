@@ -34,19 +34,31 @@ namespace UnityEngine
         /// <summary>The length of the last step.</summary>
         internal float m_LastStepDt;
 
-        internal void FrameUpdate()
+        /// <summary>The frame's update; whether it advanced the system. <paramref name="catchUp"/>
+        /// is PauseAndCatchup's missed time, simulated first as one step inside the frame's
+        /// collision and trigger collection (see CullingFrameUpdate).</summary>
+        internal bool FrameUpdate(float catchUp = 0f)
         {
             float raw = m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
             TrackEmitter(raw);
-            if (m_IsPaused) return;
-            if (!m_IsPlaying && m_Count == 0 && !HasAliveTrails) return;
+            if (m_IsPaused) return false;
+            if (!m_IsPlaying && m_Count == 0 && !HasAliveTrails) return false;
             float dt = raw * m_Main.simulationSpeed;
-            if (dt <= 0f) return;
+            if (dt <= 0f) return false;
             m_CollisionEvents.Clear();
             foreach (var list in m_TriggerParticles) list.Clear();
             m_CollectTriggers = true;
-            try { Advance(dt, m_FrameDistance, true); }
+            try
+            {
+                if (catchUp > 0f)
+                {
+                    Step(catchUp, 0f);
+                    if (m_IsPaused || !m_Registered) return true;
+                }
+                Advance(dt, m_FrameDistance, true);
+            }
             finally { m_CollectTriggers = false; }
+            return true;
         }
 
         void TrackEmitter(float dt)

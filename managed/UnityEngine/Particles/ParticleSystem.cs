@@ -865,6 +865,112 @@ namespace UnityEngine
                 if (e.system != null && e.system.m_SubEmitterParent == this) e.system.m_SubEmitterParent = null;
         }
 
+        // ------------------------------------------------------------------ culling
+
+        /// <summary>PauseAndCatchup: the simulation time (simulation speed applied) missed while
+        /// culled, and the system's total time when that began.</summary>
+        float m_CullingMissed;
+        float m_CullingMissedFrom;
+
+        /// <summary>Whether the system's update would advance it (it is not paused by a script
+        /// and plays, has particles or has trails left).</summary>
+        bool CullingSimulates => !m_IsPaused && (m_IsPlaying || m_Count > 0 || HasAliveTrails);
+
+        /// <summary>
+        /// The frame's update under MainModule.cullingMode. Documented (6000.0 Scripting API
+        /// ParticleSystemCullingMode, Manual "Main module" Culling Mode): AlwaysSimulate simulates
+        /// every frame "regardless of whether it is on screen or not"; Pause "stops simulating while
+        /// offscreen"; PauseAndCatchup also stops and, "when re-entering the view, the simulation
+        /// performs a large step to reach the point where it would have been had it not paused";
+        /// Automatic: "Looping systems use Pause, and all other system use Always Simulate".
+        /// <para>A culled frame is like a frame paused by a script: the emitter's position is still
+        /// tracked (the movement while culled is not emitted over later), nothing ages, moves,
+        /// emits or ends, and the play state is unchanged. It sends no collision or trigger
+        /// message (it has no simulation to report; Unbound's choice, unmeasured).</para>
+        /// <para>PauseAndCatchup: the missed time is simulated as one step of that length (not
+        /// split by Time.maximumParticleDeltaTime: the Manual's "large step"; unmeasured), before
+        /// the frame's own time, in the first update the system is visible and simulates; its
+        /// collision and trigger messages go out with that frame's. The emitter's movement while
+        /// culled is not replayed (the docs advise AlwaysSimulate for a moving system). Time missed
+        /// while a script paused the system does not count, and a script call that changes the
+        /// playback while culled (Simulate, a restart) drops the time missed before it (Unbound's
+        /// choices, unmeasured).</para>
+        /// <para>Automatic with a looping system is not applied: the 6000.0 docs also say that a
+        /// non-procedural system "must continue updating itself even when offscreen"
+        /// (ParticleSystem.automaticCullingEnabled), and Unbound does not decide procedural
+        /// simulation (<see cref="proceduralSimulationSupported"/>). Such a system keeps simulating
+        /// offscreen, as with AlwaysSimulate, and the first such frame is reported once.</para>
+        /// <para>Visibility is <see cref="Renderer.isVisible"/> of the system's own
+        /// ParticleSystemRenderer, read when the update runs: what the previous frame's cameras and
+        /// shadow casters left after this frame's EarlyUpdate (Unity also counts shadow casting and,
+        /// in the Editor, the Scene view's cameras; Unbound has no Scene view). Before the first
+        /// camera has culled it a renderer is not visible, so a Pause or PauseAndCatchup system
+        /// waits for the first frame drawn (unmeasured). Unbound's choices (unmeasured): no margin
+        /// is added to the renderer's bounds; a sub-emitter decides by its own renderer and mode,
+        /// not its parent's; a system without an enabled ParticleSystemRenderer keeps simulating
+        /// (the docs do not say), reported once. The bounds Unity culls by are approximated in
+        /// Unbound (the live particles' centres and sizes; trails, stretching, meshes and pivots
+        /// are not included), so a paused system can be partly on screen; the first such pause is
+        /// reported once. A paused system's bounds stay as they were, which lets it become visible
+        /// again.</para>
+        /// </summary>
+        internal void CullingFrameUpdate()
+        {
+            var mode = m_Main.cullingMode;
+            if (!CulledThisFrame(mode))
+            {
+                float catchUp = mode == ParticleSystemCullingMode.PauseAndCatchup && m_TotalTime == m_CullingMissedFrom ? m_CullingMissed : 0f;
+                // Missed time a frame cannot simulate yet (a zero time scale) waits for the next.
+                if (FrameUpdate(catchUp) || catchUp == 0f) m_CullingMissed = 0f;
+                return;
+            }
+            float raw = m_Main.useUnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
+            TrackEmitter(raw);
+            m_CollisionEvents.Clear();
+            foreach (var list in m_TriggerParticles) list.Clear();
+            if (mode != ParticleSystemCullingMode.PauseAndCatchup)
+            {
+                m_CullingMissed = 0f;
+                return;
+            }
+            float dt = raw * m_Main.simulationSpeed;
+            if (!CullingSimulates || !(dt > 0f)) return;
+            if (m_CullingMissed == 0f || m_TotalTime != m_CullingMissedFrom)
+            {
+                m_CullingMissed = 0f;
+                m_CullingMissedFrom = m_TotalTime;
+            }
+            m_CullingMissed += dt;
+        }
+
+        /// <summary>Whether <paramref name="mode"/> pauses the system this frame (see
+        /// <see cref="CullingFrameUpdate"/>).</summary>
+        bool CulledThisFrame(ParticleSystemCullingMode mode)
+        {
+            if (mode == ParticleSystemCullingMode.AlwaysSimulate) return false;
+            if (mode == ParticleSystemCullingMode.Automatic && !m_Main.loop) return false;
+            var renderer = m_GameObject != null ? m_GameObject.GetComponent<ParticleSystemRenderer>() : null;
+            if (renderer == null || !renderer.enabled)
+            {
+                if (CullingSimulates)
+                    Unbound.Runtime.Stubs.Ignored("ParticleSystem.main.cullingMode without a renderer",
+                        "keeps simulating a system without an enabled ParticleSystemRenderer (its culling is not decided)");
+                return false;
+            }
+            if (renderer.isVisible) return false;
+            if (mode == ParticleSystemCullingMode.Automatic)
+            {
+                if (CullingSimulates)
+                    Unbound.Runtime.Stubs.Ignored("ParticleSystem.main.cullingMode Automatic",
+                        "keeps simulating an offscreen looping system: the docs also keep a non-procedural system updating offscreen, and Unbound does not decide procedural simulation");
+                return false;
+            }
+            if (CullingSimulates)
+                Unbound.Runtime.Stubs.Ignored("Particle culling with approximate bounds",
+                    "pauses an offscreen system by the bounds of its live particles' centres and sizes (trails, stretching, meshes and pivots are not included)");
+            return true;
+        }
+
         // ------------------------------------------------------------------ storage
 
         void Reserve(int count)
@@ -973,7 +1079,7 @@ namespace Unbound.Runtime
                 {
                     var ps = s_Snapshot[i];
                     if (ps == null || !ps.m_Registered) continue;
-                    try { ps.FrameUpdate(); }
+                    try { ps.CullingFrameUpdate(); }
                     catch (Exception e) { Debug.LogException(e, ps); }
                 }
             }
