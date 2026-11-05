@@ -466,11 +466,12 @@ namespace UnityEngine
             m_Count = count;
             // A written particle with a nonpositive lifetime is removed below; its trail ends as
             // at its death (TrailModule.dieWithParticles): freed when trails die with their
-            // particles, else left to fade, with no carrier particle (a natural death keeps one).
-            // Unbound's choices (unmeasured): the trail ends at this call rather than at the next
-            // step; a trail still held by a particle that survives this call (in the retained
-            // prefix, or written and kept) is not ended; a removed carrier of a fading trail, or
-            // a link to a free or fading slot, ends nothing. Ending a live slot moves no particle
+            // particles, else left to fade. Unbound's choices (unmeasured): the trail ends at this
+            // call rather than at the next step; a fading trail is left with no carrier particle (a
+            // natural death keeps one); a trail still held by a particle that survives this call (in
+            // the retained prefix, or written and kept) is not ended; a removed carrier of a fading
+            // trail, or a link to a free or fading slot, ends nothing; trails freed by one call
+            // return their slots in written order. Ending a live slot moves no particle
             // (FreeTrail's carrier scan runs only for a fading slot), so the compaction below
             // removes the same particles in the same order.
             for (int r = offset; r < m_Count; r++)
