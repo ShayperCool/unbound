@@ -12,6 +12,13 @@ feature work. A worker finishing a task does not by itself authorize a new featu
 
 ## Short readiness check
 
+For new, unstarted validations use the stable [plan runner](PLAN_RUNNER.md).
+Review the exact runner implementation once, then review each package's plan,
+inputs and semantic consumers. Do not generate another transport/accounting
+framework or repeat unchanged transport conformance per package. If a grant
+requires a capability the runner lacks, identify that concrete gap for Root;
+do not silently migrate an active plan or omit its required controls.
+
 Complete this check before spending the next build, suite or capture, using saved
 evidence and read-only checks first. Record one compact readiness result in the
 package's existing plan/index, with exact input hashes and links; do not introduce
