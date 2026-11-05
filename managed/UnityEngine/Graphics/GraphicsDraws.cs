@@ -189,7 +189,10 @@ namespace UnityEngine
             ImmediateLighting.Of(rparams.shadowCastingMode, rparams.receiveShadows, rparams.lightProbeUsage, null, rparams.reflectionProbeUsage);
 
         /// <summary>Instances whose data starts with their object-to-world matrix (Matrix4x4 or a
-        /// struct led by one).</summary>
+        /// struct led by one). Set world bounds override the instances' own: cameras cull and sort
+        /// all the instances of the call by them as one entity ("unless you override the bounds
+        /// using RenderParams.worldBounds", RenderMeshInstanced). Bounds left at the constructor's
+        /// zero value keep each instance's mesh bounds, as before.</summary>
         static void RenderInstances(in RenderParams rparams, Mesh mesh, int submeshIndex, ReadOnlySpan<byte> data, int stride, int instanceCount, int startInstance)
         {
             if (mesh == null) throw new ArgumentNullException(nameof(mesh));
@@ -200,11 +203,13 @@ namespace UnityEngine
             if (instanceCount < 0) instanceCount = available - startInstance;
             if (startInstance < 0 || startInstance + instanceCount > available) throw new ArgumentOutOfRangeException(nameof(startInstance), "instance range out of the data's bounds");
             var lighting = Lighting(rparams);
+            int queued = Immediate.Queued.Count;
             for (int i = 0; i < instanceCount; i++)
             {
                 var matrix = System.Runtime.InteropServices.MemoryMarshal.Read<Matrix4x4>(data.Slice((startInstance + i) * stride, 64));
                 Immediate.Queue(mesh, matrix, rparams.material, rparams.layer, rparams.camera, submeshIndex, Instance(rparams.matProps, startInstance + i), lighting);
             }
+            WithWorldBounds(queued, rparams.worldBounds);
         }
 
         public static void RenderMeshInstanced<T>(in RenderParams rparams, Mesh mesh, int submeshIndex, T[] instanceData, int instanceCount = -1, int startInstance = 0) where T : unmanaged
@@ -318,14 +323,18 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ procedural
 
-
+        /// <summary>Procedural primitives culled and sorted by <paramref name="bounds"/> ("The
+        /// bounding volume surrounding the instances you intend to draw") as one entity; bounds
+        /// equal to default(Bounds) are not set (see WithWorldBounds).</summary>
         public static void DrawProcedural(Material material, Bounds bounds, MeshTopology topology, int vertexCount, int instanceCount = 1, Camera camera = null,
             MaterialPropertyBlock properties = null, ShadowCastingMode castShadows = ShadowCastingMode.On, bool receiveShadows = true, int layer = 0)
         {
             if (material == null) throw new ArgumentNullException(nameof(material));
             if (vertexCount <= 0 || instanceCount <= 0) return;
+            int queued = Immediate.Queued.Count;
             Immediate.Queue(ProceduralMeshes.Get(topology, vertexCount), Matrix4x4.identity, material, layer, camera, 0, properties,
                 instanceCount > 1 ? new DrawSetup { Instances = (uint)instanceCount } : (DrawSetup?)null, ImmediateLighting.Of(castShadows, receiveShadows));
+            WithWorldBounds(queued, bounds);
         }
 
         // ------------------------------------------------------------------ DrawTexture
