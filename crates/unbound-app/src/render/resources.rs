@@ -549,12 +549,9 @@ pub fn norm_format(
             "this device cannot draw into {format:?} with {samples} samples"
         ));
     }
+    // Kernels' 16-bit normalized storage also needs TEXTURE_FORMAT_16BIT_NORM (wgpu validates
+    // their shaders with it), which a format without features above lacks.
     if random_write {
-        if format != F::Rgb10a2Unorm {
-            return Err(format!(
-                "kernels cannot write {format:?} yet: the compute shader compiler has no 16-bit normalized storage format"
-            ));
-        }
         if !features.allowed_usages.contains(U::STORAGE_BINDING)
             || !features
                 .flags
@@ -1350,20 +1347,89 @@ mod tests {
         assert_eq!(stored(15, true, true, 1, &caps).format, F::Rgba8Unorm);
     }
 
+    /// Kernels write every one of the formats where the device lets them read and write it.
     #[test]
-    fn kernels_write_only_the_10_10_10_2_format() {
+    fn kernels_write_the_formats_the_device_stores_for_them() {
+        use wgpu::TextureFormat as F;
         let caps = full_caps();
-        for code in [13, 14] {
-            let s = stored(code, true, true, 1, &caps);
-            assert_eq!(s.format, wgpu::TextureFormat::Rgba8Unorm, "code {code}");
-            assert!(
-                matches!(&s.fallback, Some(FormatFallback::Unsupported(why)) if why.contains("kernels"))
+        for (code, format, bytes) in [
+            (13, F::Rg16Unorm, 4),
+            (14, F::Rgba16Unorm, 8),
+            (15, F::Rgb10a2Unorm, 4),
+        ] {
+            assert_eq!(
+                stored(code, true, true, 1, &caps),
+                TextureStorage {
+                    format,
+                    bytes_per_pixel: bytes,
+                    fallback: None
+                },
+                "code {code}"
             );
         }
-        assert_eq!(
-            stored(15, true, true, 1, &caps).format,
-            wgpu::TextureFormat::Rgb10a2Unorm
-        );
+    }
+
+    /// Where the device cannot let kernels read and write a format (no storage binding, or
+    /// read-only/write-only access only), its RW render textures fall back, loudly; the same
+    /// format without kernel writes is kept.
+    #[test]
+    fn kernel_writes_follow_the_devices_storage_features() {
+        use wgpu::{TextureFormatFeatureFlags as Flags, TextureUsages as U};
+        let without = |usages: U, flags: Flags| {
+            Some(wgpu::TextureFormatFeatures {
+                allowed_usages: U::all() - usages,
+                flags: Flags::all() - flags,
+            })
+        };
+        for features in [
+            without(U::STORAGE_BINDING, Flags::empty()),
+            without(U::empty(), Flags::STORAGE_READ_WRITE),
+            without(U::empty(), Flags::STORAGE_WRITE_ONLY),
+        ] {
+            let caps = NormFormatCaps {
+                rg16: features,
+                rgba16: features,
+                rgb10a2: features,
+            };
+            for code in [13, 14, 15] {
+                let s = stored(code, true, true, 1, &caps);
+                assert_eq!(s.format, wgpu::TextureFormat::Rgba8Unorm, "code {code}");
+                assert!(
+                    matches!(&s.fallback, Some(FormatFallback::Unsupported(why)) if why.contains("kernels read and write")),
+                    "code {code}: {:?}",
+                    s.fallback
+                );
+                assert_eq!(stored(code, true, false, 1, &caps).fallback, None);
+            }
+        }
+        // Without TEXTURE_FORMAT_16BIT_NORM, kernels cannot write the 16-bit formats either.
+        let caps = NormFormatCaps {
+            rg16: None,
+            rgba16: None,
+            rgb10a2: full(),
+        };
+        for code in [13, 14] {
+            assert!(
+                matches!(&stored(code, true, true, 1, &caps).fallback, Some(FormatFallback::Unsupported(why)) if why.contains("TEXTURE_FORMAT_16BIT_NORM")),
+                "code {code}"
+            );
+        }
+        // WebGPU's guaranteed features give the 16-bit formats read-only/write-only storage but
+        // no drawing into them: they fall back, kernel writes or not.
+        let guaranteed = |f: wgpu::TextureFormat| {
+            Some(f.guaranteed_format_features(wgpu::Features::TEXTURE_FORMAT_16BIT_NORM))
+        };
+        let caps = NormFormatCaps {
+            rg16: guaranteed(wgpu::TextureFormat::Rg16Unorm),
+            rgba16: guaranteed(wgpu::TextureFormat::Rgba16Unorm),
+            rgb10a2: full(),
+        };
+        for code in [13, 14] {
+            assert_eq!(
+                stored(code, true, true, 1, &caps).format,
+                wgpu::TextureFormat::Rgba8Unorm
+            );
+        }
     }
 
     fn floats(texels: &[[f32; 4]]) -> Vec<u8> {
