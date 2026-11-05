@@ -9,10 +9,12 @@ namespace UnityEngine.Tests
 {
     /// <summary>The hit normal of a NavMesh raycast stopped by a wall (DtNavMeshQuery.Raycast, which
     /// NavMesh.Raycast and NavMeshAgent.Raycast report as NavMeshHit.normal).
-    /// Documented (Scripting API 6000.0 NavMeshHit.normal): "Normal at the point of hit"; no
-    /// direction is documented. Observed, not documented (tests/projects/navmesh/Reference/
-    /// unity-6000.0.71f1.json, "raycast"): blocked rays report a horizontal unit normal facing back
-    /// along the ray, also on a wall that is not axis-aligned (n0.8,0,-0.6 for a ray along +z).
+    /// Documented (Scripting API 6000.0 NavMeshHit.normal,
+    /// https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/ai/navmeshhit/normal):
+    /// the normal points towards the inner side of the last NavMesh polygon the query traverses.
+    /// Observed (tests/projects/navmesh/Reference/unity-6000.0.71f1.json, "raycast"): blocked rays
+    /// report a horizontal unit normal facing back along the ray, also on a wall that is not
+    /// axis-aligned (n0.8,0,-0.6 for a ray along +z).
     /// The tests check the wall polygon edge the query itself reports (the last visited polygon and
     /// its hit edge index): the normal is horizontal, unit length, perpendicular to that edge and
     /// faces back along the ray, into the polygon the ray leaves (Detour's side, which the capture
