@@ -2,6 +2,7 @@
 //! its frame loop. Rendering and windowing live in `unbound-app`.
 pub mod audio;
 pub mod bundles;
+pub mod clipboard;
 pub mod config;
 pub mod cursor;
 pub mod editor_resources;
