@@ -211,13 +211,16 @@ namespace UnityEngine
         // and level on the other (heights ignored), within a ten-thousandth of the tile size; a
         // side with several candidates stays empty with a warning; the connectivity is also marked
         // dirty when a terrain is enabled, disabled or destroyed; it is rebuilt lazily, on the
-        // next neighbour read or SetNeighbors call, not on moves or setting changes.
+        // next neighbour read or SetNeighbors call, not on moves or setting changes. The adjacency
+        // is the tile-grid rule of TryGetTileCoord, which TerrainMap.CreateFromPlacement uses too;
+        // TerrainUtility.AutoConnect runs this pass.
 
         static bool s_TilesChanged;
         static readonly List<Terrain> s_AutoConnected = new List<Terrain>();
         const float k_TileTolerance = 1e-4f;
 
-        static void ConnectTiles()
+        /// <summary>Rebuilds the auto-connect links when the connectivity is dirty.</summary>
+        internal static void ConnectTiles()
         {
             if (!s_TilesChanged) return;
             s_TilesChanged = false;
@@ -246,22 +249,53 @@ namespace UnityEngine
         {
             var size = m_TerrainData.size;
             var origin = GetPosition();
-            float toleranceX = size.x * k_TileTolerance, toleranceZ = size.z * k_TileTolerance;
+            var gridOrigin = new Vector2(origin.x, origin.z);
+            var gridSize = new Vector2(size.x, size.z);
             Terrain found = null;
             int count = 0;
             foreach (var other in tiles)
             {
                 if (other == this || other.m_GroupingID != m_GroupingID) continue;
-                var otherSize = other.m_TerrainData.size;
-                if (Mathf.Abs(otherSize.x - size.x) > toleranceX || Mathf.Abs(otherSize.z - size.z) > toleranceZ) continue;
-                var offset = other.GetPosition() - origin;
-                if (Mathf.Abs(offset.x - stepX * size.x) > toleranceX || Mathf.Abs(offset.z - stepZ * size.z) > toleranceZ) continue;
+                if (!TryGetTileCoord(other, gridOrigin, gridSize, out int tileX, out int tileZ) || tileX != stepX || tileZ != stepZ) continue;
                 found = other;
                 count++;
             }
             if (count <= 1) return found;
             Debug.LogWarning($"Unbound: terrain '{name}' has {count} overlapping auto-connect tiles on its {side} (grouping ID {m_GroupingID}); that side is left unconnected.", this);
             return null;
+        }
+
+        /// <summary>
+        /// The tile-grid rule shared by auto-connect and <c>TerrainMap.CreateFromPlacement</c>
+        /// (Unbound's choice, unmeasured; the docs only say the grid size is "typically" the
+        /// terrain's size.x and size.z): a terrain with data sits on the grid of cells
+        /// <paramref name="gridSize"/> (X, Z) anchored at <paramref name="gridOrigin"/> (X, Z) when
+        /// its X/Z size equals the cell size and its position is a whole number of cells from the
+        /// origin on both axes, each within a ten-thousandth of the cell size. Heights are ignored.
+        /// A cell size that is not positive and finite, or a position that is not finite, places
+        /// nothing.
+        /// </summary>
+        internal static bool TryGetTileCoord(Terrain terrain, Vector2 gridOrigin, Vector2 gridSize, out int tileX, out int tileZ)
+        {
+            tileX = tileZ = 0;
+            var data = terrain.m_TerrainData;
+            if (data == null) return false;
+            if (!(gridSize.x > 0f && gridSize.x < float.PositiveInfinity && gridSize.y > 0f && gridSize.y < float.PositiveInfinity)) return false;
+            float toleranceX = gridSize.x * k_TileTolerance, toleranceZ = gridSize.y * k_TileTolerance;
+            var size = data.size;
+            if (Mathf.Abs(size.x - gridSize.x) > toleranceX || Mathf.Abs(size.z - gridSize.y) > toleranceZ) return false;
+            var position = terrain.GetPosition();
+            float offsetX = position.x - gridOrigin.x, offsetZ = position.z - gridOrigin.y;
+            double cellX = Math.Round((double)offsetX / gridSize.x), cellZ = Math.Round((double)offsetZ / gridSize.y);
+            if (!(Math.Abs(cellX) <= int.MaxValue && Math.Abs(cellZ) <= int.MaxValue)) return false;
+            tileX = (int)cellX;
+            tileZ = (int)cellZ;
+            if (Mathf.Abs(offsetX - tileX * gridSize.x) > toleranceX || Mathf.Abs(offsetZ - tileZ * gridSize.y) > toleranceZ)
+            {
+                tileX = tileZ = 0;
+                return false;
+            }
+            return true;
         }
 
         public Vector3 GetPosition() => transform.position;
