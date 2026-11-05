@@ -130,7 +130,8 @@ namespace Unbound.Tests
         {
             // "Unity automatically calculates bounds for all the instances": the box around the
             // instances' bounds (z -30.5 to 10.5) is in view and its centre (z -10) is every
-            // instance's sort point. Opaque, front to back: the instances keep the call's order.
+            // instance's sort point. Opaque, front to back: the instances keep the call's order
+            // (Unbound's choice, unmeasured).
             var rp = new RenderParams(NewMaterial(instancing: true));
             Assert.Equal(default(Bounds), rp.worldBounds);
             Graphics.RenderMeshInstanced(rp, NewMesh(), 0, new[] { At(-20f), At(10f), At(-30f) });
@@ -291,7 +292,7 @@ namespace Unbound.Tests
         public void DrawMeshInstancedGroupSortsAmongOtherDrawsKeepingItsCallOrder()
         {
             // Transparent, back to front: the group (centre z -10, 100) between the draws at
-            // 15 (225) and 5 (25); within the group, the call's order.
+            // 15 (225) and 5 (25); within the group, the call's order (Unbound's choice, unmeasured).
             Graphics.DrawMeshInstanced(NewMesh(), 0, NewMaterial(3000, instancing: true), new[] { At(-20f), At(10f), At(-30f) });
             Graphics.DrawMesh(NewMesh(), At(15f), NewMaterial(3000), 0);
             Graphics.DrawMesh(NewMesh(), At(5f), NewMaterial(3000), 0);

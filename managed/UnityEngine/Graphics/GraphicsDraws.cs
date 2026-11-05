@@ -100,7 +100,8 @@ namespace UnityEngine
         /// Meshes, calculates the center point, then uses this information to cull and sort the
         /// Mesh instances", DrawMeshInstanced 6000.0): every instance carries the box around the
         /// mesh's bounds through each drawn matrix as its world bounds, so cameras keep or cull
-        /// them together and sort them at its centre, in the call's order among themselves ("does
+        /// them together and sort them at its centre, in the call's order among themselves (Unbound's
+        /// choice, unmeasured; "does
         /// not further cull individual instances ... does not sort individual instances"). Each
         /// instance is still lit, probed and shadowed as before.</summary>
         public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, Matrix4x4[] matrices, int count, MaterialPropertyBlock properties,
