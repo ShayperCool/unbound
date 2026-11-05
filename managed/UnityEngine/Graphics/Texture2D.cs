@@ -631,21 +631,29 @@ namespace UnityEngine
         }
 
         /// <summary>
-        /// Resources.UnloadAsset (and UnloadUnusedAssets) of an imported texture: the file is
-        /// imported again into the same renderer handle, so materials and sprites that bind the
-        /// texture draw the saved texels. What scripts did to it (pixels, size, format,
-        /// readability, sampler settings) is gone; the CPU pixels are read from the import when a
-        /// script next asks for them, as after loading. The object stays the same one (as measured
-        /// for materials, tests/projects/droppedparams unload.material; textures themselves are
-        /// unmeasured). False, with nothing changed, for a texture no texture file made or a file
-        /// that no longer imports as a 2D texture.
+        /// Resources.UnloadAsset of an imported texture (UnloadUnusedAssets keeps textures: it
+        /// cannot load one back lazily): the file is imported again into the same renderer handle,
+        /// so materials and sprites that bind the texture draw the saved texels. What scripts did
+        /// to it (pixels, size, format, readability, sampler settings) is gone; the CPU pixels are
+        /// read from the import when a script next asks for them, as after loading. The object
+        /// stays the same one (as measured for materials, tests/projects/droppedparams
+        /// unload.material; textures themselves are unmeasured). False, with nothing changed, for a
+        /// texture no texture file made or a file that cannot be imported again. False too, with a
+        /// warning, when the file now imports as a cubemap, an array or a 3D texture (its import
+        /// settings changed while running): the renderer's data under the handle is already that
+        /// new import, but this Texture2D keeps its own size, format and pixels.
         /// </summary>
         internal bool ReloadImported()
         {
             if (m_ImportedFrom == null) return false;
             ulong handle = m_NativeHandle != 0 ? m_NativeHandle : RenderHandles.Next();
             var (ok, info) = Reimport(handle, m_ImportedFrom);
-            if (!ok || info.Dimension is 3 or 4 or 5) return false;
+            if (!ok) return false;
+            if (info.Dimension is 3 or 4 or 5)
+            {
+                Debug.LogWarning($"Unbound: unloading texture '{m_Name}': its file now imports as a {(UnityEngine.Rendering.TextureDimension)info.Dimension} texture, not a Texture2D; its renderer data was replaced, the Texture2D was not.");
+                return false;
+            }
             ReleaseStore();
             m_Pixels = null;
             m_Hdr = null;
