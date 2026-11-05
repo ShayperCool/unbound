@@ -719,7 +719,8 @@ namespace Unbound.UIElements
         }
 
         // ListView and TreeView `item-template`, a UXML template (VisualTreeAsset) reference. Documented
-        // (6000.0 Manual "ListView", UXML attribute `item-template` of type UIElements.VisualTreeAsset, and
+        // (6000.0 Manual "ListView" and "TreeView", UXML attribute `item-template` of type
+        // UIElements.VisualTreeAsset, and
         // Scripting API ListView.itemTemplate: "A UXML template that constructs each recycled and
         // rebound element within the list. This template is designed to replace the ListView.makeItem
         // definition", TreeView.itemTemplate: the same text for "the tree"; Manual "Reference other

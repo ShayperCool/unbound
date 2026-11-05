@@ -417,8 +417,9 @@ namespace UnityEngine.Tests
 
         // [doc] TreeView.itemTemplate: "A UXML template that constructs each recycled and rebound
         // element within the tree. This template is designed to replace the makeItem definition."
-        // [choice] The attribute on <TreeView> is read as on <ListView> (the same `item-template`
-        // name, reader and diagnostics), on the property TreeView declares.
+        // [doc] 6000.0 Manual "TreeView": UXML attribute `item-template` of type UIElements.VisualTreeAsset.
+        // [choice] It is read as on <ListView> (the same reader and diagnostics), on the property
+        // TreeView declares.
         // Red at 7e4d5b9c (this file overlaid; every member it uses exists there): the builder cannot
         // convert the text to a VisualTreeAsset and drops it silently; Assert.Same(row.Template,
         // view.itemTemplate) fails (null).

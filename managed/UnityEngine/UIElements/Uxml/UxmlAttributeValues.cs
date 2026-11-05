@@ -635,7 +635,7 @@ namespace Unbound.UIElements
         }
 
         /// <summary>A UXML template (VisualTreeAsset) reference of <paramref name="document"/>, such as
-        /// ListView `item-template`: resolved, checked and reported exactly as UxmlImageReferences reads
+        /// ListView or TreeView `item-template`: resolved, checked and reported exactly as UxmlImageReferences reads
         /// the asset references of `icon-image` (the same url forms, the same handling of a #name naming
         /// several candidates, an error text for a missing asset or one of another class). An empty
         /// value is no template (null).</summary>
