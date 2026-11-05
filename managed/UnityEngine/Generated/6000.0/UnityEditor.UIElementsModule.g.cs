@@ -588,14 +588,10 @@ namespace UnityEditor.UIElements
         [global::Unbound.Stub] public static bool HasConverter(global::System.Type type) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlAttributeConverter.HasConverter"); return default; }
         [global::Unbound.Stub] public static bool TryGetConverter(global::System.Type type, out global::UnityEditor.UIElements.IUxmlAttributeConverter converter) { converter = default; global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlAttributeConverter.TryGetConverter"); return default; }
     }
-    [global::Unbound.Stub]
-    public unsafe abstract partial class UxmlAttributeConverter<T> : global::UnityEditor.UIElements.IUxmlAttributeConverter
+    unsafe partial class UxmlAttributeConverter<T> : global::UnityEditor.UIElements.IUxmlAttributeConverter
     {
-        public abstract T FromString(string value);
-        [global::Unbound.Stub] public virtual string ToString(T value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlAttributeConverter<T>.ToString"); return default; }
         [global::Unbound.Stub] string global::UnityEditor.UIElements.IUxmlAttributeConverter.ToString(object value, global::UnityEngine.UIElements.VisualTreeAsset visualTreeAsset) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlAttributeConverter<T>.ToString"); return default; }
         [global::Unbound.Stub] object global::UnityEditor.UIElements.IUxmlAttributeConverter.FromString(string value, global::UnityEngine.UIElements.CreationContext cc) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlAttributeConverter<T>.FromString"); return default; }
-        [global::Unbound.Stub] protected UxmlAttributeConverter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEditor.UIElements.UxmlAttributeConverter<T>.ctor"); }
     }
     [global::Unbound.Stub]
     internal unsafe partial class UxmlCodeDependencies

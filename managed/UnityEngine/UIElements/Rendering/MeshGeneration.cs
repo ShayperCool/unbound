@@ -85,12 +85,30 @@ namespace UnityEngine.UIElements
     /// and the renderer's own primitives, drawn after its background and border.</summary>
     public partial class MeshGenerationContext
     {
-        internal VisualElement uaElement;
+        VisualElement m_UaElement;
+        Painter2D m_UaPainter2D;
         internal UaPainter uaPainter;
 
         internal MeshGenerationContext() { }
 
+        /// <summary>The element whose content is being generated. Setting it starts that element's
+        /// generateVisualContent call, which gets the painter with an empty path and its default
+        /// state (Unbound's choice, unmeasured).</summary>
+        internal VisualElement uaElement
+        {
+            get => m_UaElement;
+            set
+            {
+                m_UaElement = value;
+                m_UaPainter2D?.UaResetForElement();
+            }
+        }
+
         public VisualElement visualElement => uaElement;
+
+        /// <summary>The vector painter object used to issue drawing commands: it draws into this
+        /// context, as meshes of the element's content in its local space.</summary>
+        public Painter2D painter2D => m_UaPainter2D ??= new Painter2D(this);
 
         /// <summary>Allocates a mesh of the element's content, drawn with <paramref name="texture"/>
         /// (none: vertex colors only); the caller fills it before the callback returns.</summary>
