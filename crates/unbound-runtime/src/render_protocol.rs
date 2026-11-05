@@ -176,7 +176,9 @@ pub mod texture_format {
         if (SRGB_RGBA8..=RGB10A2_UNORM).contains(&code) {
             Ok(code)
         } else {
-            Err(format!("texture packet format {code} is not a known format code"))
+            Err(format!(
+                "texture packet format {code} is not a known format code"
+            ))
         }
     }
 
@@ -669,10 +671,7 @@ mod tests {
     #[test]
     fn texture_format_codes() {
         use texture_format::*;
-        assert_eq!(
-            (RG16_UNORM, RGBA16_UNORM, RGB10A2_UNORM),
-            (13, 14, 15)
-        );
+        assert_eq!((RG16_UNORM, RGBA16_UNORM, RGB10A2_UNORM), (13, 14, 15));
         for code in 0..=15 {
             assert_eq!(validate(code), Ok(code));
         }
