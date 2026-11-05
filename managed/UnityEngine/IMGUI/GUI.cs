@@ -262,6 +262,7 @@ namespace UnityEngine
             if (!CalculateScaledTextureRects(position, scaleMode, imageAspect, ref screen, ref source)) return;
             var tint = color;
             if (!enabled) tint.a *= 0.5f;
+            if (!alphaBlend) DrawTextureReportOpaque();
             if (!DrawTextureNeedsShape(borderWidths, borderRadiuses))
             {
                 GuiRender.DrawTexture(screen, image, source, tint, alphaBlend);
@@ -285,6 +286,22 @@ namespace UnityEngine
         // (GUI.color, and GUI.enabled's halved alpha) is applied as for blended draws, so its alpha
         // reaches the target's alpha but not the coverage; clipping, GUI.matrix and draw order are
         // those of blended draws.
+
+        /// <summary>Whether the opaque-drawing notice was given (once per session).</summary>
+        internal static bool s_DrawTextureOpaqueReported;
+
+        /// <summary>
+        /// Opaque draws write the UI shader's output as is, and that output is premultiplied by
+        /// alpha: a texel with alpha below 1 (or a tint alpha below 1) comes out darker, black at
+        /// alpha 0. Whether Unity's opaque draw shows the texture's straight colour instead is not
+        /// measured, so the first opaque draw of a session says so, once, loudly.
+        /// </summary>
+        internal static void DrawTextureReportOpaque()
+        {
+            if (s_DrawTextureOpaqueReported) return;
+            s_DrawTextureOpaqueReported = true;
+            Debug.LogWarning("Unbound: GUI.DrawTexture/GUI.DrawTextureWithTexCoords with alphaBlend false draws without blending, but writes the UI shader's alpha-premultiplied colour: texels (or a tint) with alpha below 1 come out darker than the texture. Unity's output here is not measured.");
+        }
 
         // ------------------------------------------------------------------ DrawTexture: border and corners
 
@@ -505,6 +522,7 @@ namespace UnityEngine
             if (Current.type != EventType.Repaint || image == null) return;
             var tint = color;
             if (!enabled) tint.a *= 0.5f;
+            if (!alphaBlend) DrawTextureReportOpaque();
             GuiRender.DrawTexture(position, image, texCoords, tint, alphaBlend);
         }
 

@@ -269,16 +269,16 @@ namespace UnityEngine.Tests
         // ------------------------------------------------------------------ alphaBlend
 
         /// <summary>Documented: alphaBlend false draws without alpha blending. The plain quad and the
-        /// border/corner triangles both reach an opaque IMGUI draw now, with no "not supported"
-        /// warning; the opaque border call adds as many indices as the blended one and as
-        /// DrawTextureShape builds. (Render state: <see cref="GuiOpaqueDrawTests"/>.) Replaces
-        /// b3398e3b's warning-only check. b3398e3b: at most one warning per session, and all three
-        /// calls drawn blended into one merged batch. Red: pass <c>true</c> instead of
-        /// <c>alphaBlend</c> to GuiRender.DrawTexture / DrawTriangles in GUI.DrawTexture (the items
-        /// are not opaque), or log a warning when alphaBlend is false (the warning list is not
-        /// empty). UNEXECUTED.</summary>
+        /// border/corner triangles both reach an opaque IMGUI draw now; the opaque border call adds
+        /// as many indices as the blended one and as DrawTextureShape builds. (Render state:
+        /// <see cref="GuiOpaqueDrawTests"/>.) The premultiplied output of partly transparent texels
+        /// is unmeasured and reported once per session (one notice for both opaque calls). Replaces
+        /// b3398e3b's warning-only check. b3398e3b: one "not supported" warning, and all three calls
+        /// drawn blended into one merged batch. Red: pass <c>true</c> instead of <c>alphaBlend</c>
+        /// to GuiRender.DrawTexture / DrawTriangles in GUI.DrawTexture (the items are not opaque),
+        /// or drop the notice or its once-per-session flag (not exactly one notice). UNEXECUTED.</summary>
         [Fact]
-        public void AlphaBlendFalseDrawsOpaqueWithoutAWarning()
+        public void AlphaBlendFalseDrawsOpaqueWithOneUnmeasuredNotice()
         {
             using var f = new GuiOpaqueDrawTests.Fixture();
             var texture = f.Texture(611);
@@ -290,6 +290,8 @@ namespace UnityEngine.Tests
             {
                 if (type == LogType.Warning) warnings.Add(message);
             }
+            bool previousReported = GUI.s_DrawTextureOpaqueReported;
+            GUI.s_DrawTextureOpaqueReported = false;
             Application.logMessageReceived += Capture;
             try
             {
@@ -303,8 +305,12 @@ namespace UnityEngine.Tests
             finally
             {
                 Application.logMessageReceived -= Capture;
+                GUI.s_DrawTextureOpaqueReported = previousReported;
             }
-            Assert.Empty(warnings);
+            var notice = Assert.Single(warnings);
+            Assert.Contains("alphaBlend false", notice);
+            Assert.Contains("premultiplied", notice);
+            Assert.Contains("not measured", notice);
             var items = f.Collect();
             Assert.Equal(new[] { true, false, true }, items.Select(i => i.OpaqueImgui).ToArray());
             var counts = f.BatchIndexCounts();
