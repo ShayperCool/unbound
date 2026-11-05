@@ -14,7 +14,9 @@ namespace UnityEngine.Tests
     /// an avoidance obstacle (Unbound's choice, unmeasured). The obstacles' shapes in avoidance
     /// (circles covering a box's outline, a capsule's radius), the scripted velocity as the
     /// obstacle's motion and the height-span test are Unbound's choices (unmeasured); the bounds the
-    /// tests check are wide enough for any covering of the shape, not one fixed trajectory.
+    /// tests check are wide enough for any covering of the shape, not one fixed trajectory, except
+    /// where a test states the cover's bound (C5 in ObstacleSystem: circles at most sqrt(2) times a
+    /// box's half-width) or the crowd's 32 neighbour candidates (C7).
     /// The level is one 20 m by 10 m platform; an agent walks from x = -8 to x = 8 along z = 0.
     /// The agent update runs directly at a fixed 0.02 s step, so this shares the frame-stepping
     /// collection (the global clock).</summary>
@@ -28,6 +30,8 @@ namespace UnityEngine.Tests
         readonly float m_DeltaTime = Time.s_DeltaTime;
         readonly bool m_InFixedTimeStep = Time.s_InFixedTimeStep;
         readonly bool m_Warned = ObstacleSystem.s_Warned;
+        readonly bool m_WarnedLongBox = ObstacleSystem.s_WarnedLongBox;
+        readonly bool m_WarnedCandidates = ObstacleSystem.s_WarnedCandidates;
         readonly NavMeshDataInstance m_Data;
         readonly List<GameObject> m_Objects = new List<GameObject>();
 
@@ -53,20 +57,24 @@ namespace UnityEngine.Tests
                 if (go != null) Object.DestroyImmediate(go);
             NavMesh.RemoveNavMeshData(m_Data);
             ObstacleSystem.s_Warned = m_Warned;
+            ObstacleSystem.s_WarnedLongBox = m_WarnedLongBox;
+            ObstacleSystem.s_WarnedCandidates = m_WarnedCandidates;
             Time.s_DeltaTime = m_DeltaTime;
             Time.s_InFixedTimeStep = m_InFixedTimeStep;
         }
 
         static void Step() => AgentSystem.Step();
 
-        NavMeshAgent Agent()
+        NavMeshAgent Agent() => Agent(Start, Goal);
+
+        NavMeshAgent Agent(Vector3 start, Vector3 goal)
         {
             var go = new GameObject("agent");
             m_Objects.Add(go);
-            go.transform.position = Start;
+            go.transform.position = start;
             var agent = go.AddComponent<NavMeshAgent>();
             Assert.True(agent.isOnNavMesh);
-            Assert.True(agent.SetDestination(Goal));
+            Assert.True(agent.SetDestination(goal));
             return agent;
         }
 
@@ -111,6 +119,20 @@ namespace UnityEngine.Tests
                 if (new Vector2(p.x - Goal.x, p.z - Goal.z).magnitude <= 1e-2f) return (deviation, passed, true);
             }
             return (deviation, passed, false);
+        }
+
+        /// <summary>Two agents' walks: the closest they came to each other (centre to centre).</summary>
+        static float Closest(NavMeshAgent a, NavMeshAgent b, int steps = 400)
+        {
+            float closest = float.MaxValue;
+            for (int i = 0; i < steps; i++)
+            {
+                Step();
+                var p = a.nextPosition;
+                var q = b.nextPosition;
+                closest = Mathf.Min(closest, new Vector2(p.x - q.x, p.z - q.z).magnitude);
+            }
+            return closest;
         }
 
         void Remove(Component component)
@@ -184,9 +206,12 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheShapeAndSizeAreRespected()
         {
-            // A box 5 m long across the path takes the agent further out than a 1 m box; turned a
-            // quarter, a box 5 m along x is the same; raised above the agents' height it is no
+            // A box 5.5 m long across the path takes the agent further out than a 1 m box; turned a
+            // quarter, a box 5.5 m along x is the same; raised above the agents' height it is no
             // obstacle; a capsule's radius counts.
+            // The 1 m box (z -0.3 to 0.7) needs the agent 0.8 m off the line whatever covers it; its
+            // cover's bound (C5: one circle of 0.71 m) clears at 1.01 m, and 2 m leaves the agent's
+            // avoidance a metre of lead.
             var small = Box(new Vector3(0f, 0.5f, 0.2f), Vector3.one);
             var agent = Agent();
             float smallDeviation = Walk(agent).Deviation;
@@ -194,18 +219,23 @@ namespace UnityEngine.Tests
             Remove(agent);
             Remove(small);
 
-            var across = Box(new Vector3(0f, 0.5f, 0.2f), new Vector3(1f, 1f, 5f));
+            // The long box reaches 2.3 m to one side of the line (2.8 m off it to pass, whatever
+            // covers it) and 3.2 m to the other: both ways round stay on the 10 m wide platform, and
+            // one is clearly shorter, so the agent meets no even standoff in front of the wall (a
+            // straight wall is no trap for local avoidance, which only fails at concave ones).
+            var across = Box(new Vector3(0f, 0.5f, 0.45f), new Vector3(1f, 1f, 5.5f));
             agent = Agent();
             var walk = Walk(agent);
-            Assert.True(walk.Deviation > 2.6f, $"5 m box: {walk.Deviation} m from the line");
+            Assert.True(walk.Deviation > 2.6f, $"5.5 m box: {walk.Deviation} m from the line");
             Assert.True(walk.Passed);
             Remove(agent);
             Remove(across);
 
-            var turned = Box(new Vector3(0f, 0.5f, 0.2f), new Vector3(5f, 1f, 1f), Quaternion.Euler(0f, 90f, 0f));
+            var turned = Box(new Vector3(0f, 0.5f, 0.45f), new Vector3(5.5f, 1f, 1f), Quaternion.Euler(0f, 90f, 0f));
             agent = Agent();
             walk = Walk(agent);
-            Assert.True(walk.Deviation > 2.6f, $"turned 5 m box: {walk.Deviation} m from the line");
+            Assert.True(walk.Deviation > 2.6f, $"turned 5.5 m box: {walk.Deviation} m from the line");
+            Assert.True(walk.Passed);
             Remove(agent);
             Remove(turned);
 
@@ -222,6 +252,100 @@ namespace UnityEngine.Tests
             Assert.True(walk.Deviation > 1.6f, $"1.5 m capsule: {walk.Deviation} m from the line");
             Remove(agent);
             Remove(wide);
+        }
+
+        [Fact]
+        public void ALongThinBoxBesideThePathLeavesTheWalkStraight()
+        {
+            // A wall 12 m long and 0.8 m thick beside the line (its side 1.1 m from it; 0.6 m clear
+            // of the agent's 0.5 m radius). Its cover (C5) is 15 circles of 0.57 m, at most
+            // (sqrt(2) - 1) half-widths beyond its sides: 0.43 m clear of the agent, and their
+            // centres stay beyond the agent's keep-apart distance (2.5 radii), so it walks
+            // straight. A cover whose circles grow with the wall's length (four circles of 1.55 m)
+            // would reach past the line and push the agent half a metre out.
+            Box(new Vector3(0f, 0.5f, 1.5f), new Vector3(12f, 1f, 0.8f));
+            var agent = Agent();
+            var walk = Walk(agent);
+            Assert.True(walk.Deviation < 1e-3f, $"pushed {walk.Deviation} m off its line by a wall beside it");
+            Assert.True(walk.Arrived, $"stopped at {agent.nextPosition}");
+        }
+
+        [Fact]
+        public void FarObstaclesLeaveTwoAgentsAvoidingEachOther()
+        {
+            // Control: two agents walking at each other, 0.3 m apart sideways, keep apart (their
+            // radii together are 1 m) and get past each other.
+            var other = new Vector3(8f, 0f, 0.3f);
+            var otherGoal = new Vector3(-8f, 0f, 0.3f);
+            var a = Agent();
+            var b = Agent(other, otherGoal);
+            float control = Closest(a, b);
+            Assert.True(control > 0.7f, $"without obstacles the agents came {control} m close");
+            Assert.True(a.nextPosition.x > 2f && b.nextPosition.x < -2f, $"stuck at {a.nextPosition}, {b.nextPosition}");
+            Remove(a);
+            Remove(b);
+
+            // 40 obstacles 20 m off the line, beyond every agent's neighbour range (15 m) plus their
+            // radius, in the proximity-grid cells the agents' neighbour queries scan first. They are
+            // no neighbours of anyone, so they must not take the crowd's 32 neighbour candidates
+            // (C7) and leave the agents out of each other's avoidance.
+            for (int i = 0; i < 40; i++)
+                Capsule(new Vector3(-11.5f + 0.55f * i, 1f, -20f), 0.2f);
+            a = Agent();
+            b = Agent(other, otherGoal);
+            float crowded = Closest(a, b);
+            Assert.True(crowded > 0.7f, $"with far obstacles the agents came {crowded} m close");
+            Assert.True(a.nextPosition.x > 2f && b.nextPosition.x < -2f, $"stuck at {a.nextPosition}, {b.nextPosition}");
+            Assert.Equal(2, CrowdMembers(a));
+        }
+
+        [Fact]
+        public void ALongBoxAndACrowdedNeighbourQueryAreReportedOnce()
+        {
+            var warnings = new List<string>();
+            WithWarnings(warnings, () =>
+            {
+                ObstacleSystem.s_WarnedLongBox = false;
+                ObstacleSystem.s_WarnedCandidates = false;
+                Agent();
+                // A box 10 m by 0.2 m needs 50 circles of its width, more than the 16 it gets (C5).
+                Box(new Vector3(0f, 0.5f, 3f), new Vector3(10f, 1f, 0.2f));
+                Step();
+                Step();
+                Assert.Single(warnings, w => w.Contains("times as long as it is wide"));
+                Assert.DoesNotContain(warnings, w => w.Contains("neighbours its avoidance considers"));
+
+                // 40 small obstacles near the agent: with the box's 16 circles and the agent, more
+                // than the 32 neighbour candidates the crowd gathers (C7).
+                for (int i = 0; i < 40; i++)
+                    Capsule(new Vector3(-4f + 0.2f * i, 1f, -3f), 0.05f);
+                Step();
+                Step();
+                Assert.Single(warnings, w => w.Contains("times as long as it is wide"));
+                Assert.Single(warnings, w => w.Contains("neighbours its avoidance considers"));
+            });
+        }
+
+        /// <summary>Runs <paramref name="body"/> collecting the warnings logged, forwarding every call.</summary>
+        static void WithWarnings(List<string> warnings, Action body)
+        {
+            var logger = Debug.unityLogger;
+            var previous = logger.logHandler;
+            bool previousEnabled = logger.logEnabled;
+            var previousFilter = logger.filterLogType;
+            logger.logHandler = new Capture(previous, warnings);
+            logger.logEnabled = true;
+            logger.filterLogType = LogType.Log;
+            try
+            {
+                body();
+            }
+            finally
+            {
+                logger.logHandler = previous;
+                logger.logEnabled = previousEnabled;
+                logger.filterLogType = previousFilter;
+            }
         }
 
         [Fact]
