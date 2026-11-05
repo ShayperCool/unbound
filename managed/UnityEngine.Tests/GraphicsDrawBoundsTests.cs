@@ -20,8 +20,12 @@ namespace Unbound.Tests
     /// draw"; the legacy draws' cull and sort are (inferred from DrawMeshInstanced's "culls and sorts instanced Meshes as a group" and the replacements' "cull and sort ... as a single entity"; unmeasured)): the draws a camera collects from the queue, culled by those bounds with the
     /// renderers' frustum test and sorted by their centre, the whole call as one entity. Bounds
     /// equal to default(Bounds) are not set (Unbound's choice, unmeasured): those draws are never
-    /// culled and sort by their mesh's bounds, as before. The camera sits at the origin looking
-    /// along +Z (60°, 0.3 to 100).
+    /// culled and sort by their mesh's bounds, as before. Graphics.DrawMeshInstanced ("Unity culls
+    /// and sorts instanced Meshes as a group ... does not further cull individual instances ...
+    /// does not sort individual instances") and RenderMeshInstanced with unset worldBounds use the
+    /// box around every instance's mesh bounds (Unbound's choice of the box and of the call order
+    /// within it, unmeasured); each instance keeps its own lighting, probe and shadow data. The
+    /// camera sits at the origin looking along +Z (60°, 0.3 to 100).
     /// </summary>
     public class GraphicsDrawBoundsTests : IDisposable
     {
@@ -122,17 +126,41 @@ namespace Unbound.Tests
         }
 
         [Fact]
-        public void RenderMeshInstancedWithDefaultWorldBoundsIsUnchanged()
+        public void RenderMeshInstancedWithDefaultWorldBoundsSortsAllInstancesAsOneGroup()
         {
-            // Guard (green before and after): each instance is collected and sorts at its own mesh.
-            // Unbound's current behaviour, not the documented automatic group bounds: update with
-            // follow-up F-A2.
+            // "Unity automatically calculates bounds for all the instances": the box around the
+            // instances' bounds (z -30.5 to 10.5) is in view and its centre (z -10) is every
+            // instance's sort point. Opaque, front to back: the instances keep the call's order.
             var rp = new RenderParams(NewMaterial(instancing: true));
             Assert.Equal(default(Bounds), rp.worldBounds);
             Graphics.RenderMeshInstanced(rp, NewMesh(), 0, new[] { At(-20f), At(10f), At(-30f) });
             var collected = Collect();
-            Assert.Equal(new[] { 400f, 100f, 900f }, collected.Select(d => d.Distance).ToArray());
+            Assert.Equal(new[] { 100f, 100f, 100f }, collected.Select(d => d.Distance).ToArray());
+            // Each instance's own bounds (lighting and probes) are unchanged.
             Assert.Equal(new[] { -20f, 10f, -30f }, collected.Select(d => d.Bounds.center.z).ToArray());
+            FrameBuilder.SortForCamera(collected);
+            Assert.Equal(new[] { At(-20f), At(10f), At(-30f) }, collected.Select(d => d.Model).ToArray());
+        }
+
+        [Fact]
+        public void RenderMeshInstancedWithDefaultWorldBoundsAndEveryInstanceOutsideTheFrustumCollectsNone()
+        {
+            var rp = new RenderParams(NewMaterial(instancing: true));
+            Graphics.RenderMeshInstanced(rp, NewMesh(), 0, new[] { At(-20f), At(-30f) });
+            Assert.Equal(2, Immediate.Queued.Count);
+            Assert.Empty(Collect());
+        }
+
+        [Fact]
+        public void RenderMeshInstancedWithSetWorldBoundsStillOverridesTheGroupBounds()
+        {
+            // Guard (green before and after): the instances' own box would sort at z -5 (25);
+            // the set bounds at z 30 win.
+            var rp = new RenderParams(NewMaterial(instancing: true)) { worldBounds = Box(30f) };
+            Graphics.RenderMeshInstanced(rp, NewMesh(), 0, new[] { At(-20f), At(10f) });
+            var collected = Collect();
+            Assert.Equal(new[] { 900f, 900f }, collected.Select(d => d.Distance).ToArray());
+            Assert.Equal(new[] { -20f, 10f }, collected.Select(d => d.Bounds.center.z).ToArray());
         }
 
         // ---------------------------------------------------------------- the legacy draws' bounds
@@ -215,18 +243,91 @@ namespace Unbound.Tests
             Assert.Equal(900f, Assert.Single(Collect()).Distance);
         }
 
-        // ---------------------------------------------------------------- guard (green before and after)
+        // ---------------------------------------------------------------- DrawMeshInstanced: one group
 
         [Fact]
-        public void DrawMeshInstancedWithMatricesIsNeitherCulledNorSortedDifferently()
+        public void DrawMeshInstancedSortsAllInstancesAtTheirGroupBoundsCentre()
         {
-            // Unbound's current per-instance behaviour, not DrawMeshInstanced's documented group
-            // culling and sorting: update with follow-up F-C.
+            // The box around both instances (z -20.5 to 10.5) has its centre at z -5.
             var matrices = new[] { At(-20f), At(10f) };
             Graphics.DrawMeshInstanced(NewMesh(), 0, NewMaterial(instancing: true), matrices);
             var collected = Collect();
             Assert.Equal(matrices, collected.Select(d => d.Model).ToArray());
-            Assert.Equal(new[] { 400f, 100f }, collected.Select(d => d.Distance).ToArray());
+            Assert.Equal(new[] { 25f, 25f }, collected.Select(d => d.Distance).ToArray());
+            Assert.Equal(new[] { -20f, 10f }, collected.Select(d => d.Bounds.center.z).ToArray());
+        }
+
+        [Fact]
+        public void DrawMeshInstancedWithEveryInstanceOutsideTheFrustumCollectsNone()
+        {
+            var material = NewMaterial(instancing: true);
+            Graphics.DrawMeshInstanced(NewMesh(), 0, material, new[] { At(-20f), At(-30f) });
+            Assert.Equal(2, Immediate.Queued.Count);
+            Assert.Empty(Collect());
+            // Still shadow casters, as other queued draws.
+            Assert.Equal(2, ((List<FrameBuilder.DrawItem>)s_Casters.GetValue(null)).Count);
+            Immediate.Queued.Clear();
+            Graphics.DrawMeshInstanced(NewMesh(), 0, material, new List<Matrix4x4> { At(-20f), At(-30f) });
+            Assert.Equal(2, Immediate.Queued.Count);
+            Assert.Empty(Collect());
+        }
+
+        [Fact]
+        public void DrawMeshInstancedWithOneInstanceInViewCollectsEveryInstance()
+        {
+            // Two instances far to the sides, out of view, one ahead: the group box (x -50.5 to
+            // 50.5 at z 10) is in view, so all three are drawn, at its centre.
+            var matrices = new[]
+            {
+                Matrix4x4.Translate(new Vector3(-50f, 0f, 10f)), At(10f), Matrix4x4.Translate(new Vector3(50f, 0f, 10f)),
+            };
+            Graphics.DrawMeshInstanced(NewMesh(), 0, NewMaterial(instancing: true), new List<Matrix4x4>(matrices));
+            var collected = Collect();
+            Assert.Equal(matrices, collected.Select(d => d.Model).ToArray());
+            Assert.Equal(new[] { 100f, 100f, 100f }, collected.Select(d => d.Distance).ToArray());
+        }
+
+        [Fact]
+        public void DrawMeshInstancedGroupSortsAmongOtherDrawsKeepingItsCallOrder()
+        {
+            // Transparent, back to front: the group (centre z -10, 100) between the draws at
+            // 15 (225) and 5 (25); within the group, the call's order.
+            Graphics.DrawMeshInstanced(NewMesh(), 0, NewMaterial(3000, instancing: true), new[] { At(-20f), At(10f), At(-30f) });
+            Graphics.DrawMesh(NewMesh(), At(15f), NewMaterial(3000), 0);
+            Graphics.DrawMesh(NewMesh(), At(5f), NewMaterial(3000), 0);
+            var collected = Collect();
+            Assert.Equal(new[] { 100f, 100f, 100f, 225f, 25f }, collected.Select(d => d.Distance).ToArray());
+            FrameBuilder.SortForCamera(collected);
+            Assert.Equal(new[] { At(15f), At(-20f), At(10f), At(-30f), At(5f) }, collected.Select(d => d.Model).ToArray());
+        }
+
+        // ---------------------------------------------------------------- guard (green before and after)
+
+        [Fact]
+        public void InstancedDrawsKeepTheirPerInstanceLightingProbesAndProperties()
+        {
+            // DrawMeshInstanced: one blended probe for the batch at its bounds' centre (measured:
+            // tests/projects/lightprobes), each instance its own bounds and array element.
+            var colors = new[] { new Vector4(1f, 0f, 0f, 1f), new Vector4(0f, 1f, 0f, 1f) };
+            var block = new MaterialPropertyBlock();
+            block.SetVectorArray("_Color", colors);
+            Graphics.DrawMeshInstanced(NewMesh(), 0, NewMaterial(instancing: true), new[] { At(-20f), At(10f) }, 2, block);
+            var collected = Collect();
+            Assert.Equal(2, collected.Count);
+            Assert.All(collected, d => Assert.Equal((Vector3?)new Vector3(0f, 0f, -5f), d.Lighting.ProbePosition));
+            Assert.All(collected, d => Assert.Equal(LightProbeUsage.BlendProbes, d.Lighting.Probes));
+            Assert.Equal(new[] { -20f, 10f }, collected.Select(d => d.Bounds.center.z).ToArray());
+            int color = Shader.PropertyToID("_Color");
+            Assert.Equal(colors, collected.Select(d => (Vector4)d.Properties[color]).ToArray());
+
+            // RenderMeshInstanced with unset world bounds: probes for each instance at its bounds.
+            Immediate.Queued.Clear();
+            var rp = new RenderParams(NewMaterial(instancing: true)) { lightProbeUsage = LightProbeUsage.BlendProbes };
+            Graphics.RenderMeshInstanced(rp, NewMesh(), 0, new[] { At(-20f), At(10f) });
+            collected = Collect();
+            Assert.Equal(2, collected.Count);
+            Assert.All(collected, d => Assert.False(d.Lighting.ProbePosition.HasValue));
+            Assert.All(collected, d => Assert.Equal(LightProbeUsage.BlendProbes, d.Lighting.Probes));
             Assert.Equal(new[] { -20f, 10f }, collected.Select(d => d.Bounds.center.z).ToArray());
         }
     }
