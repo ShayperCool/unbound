@@ -374,5 +374,31 @@ namespace UnityEngine.Tests
             // unmeasured: a new playback drops the time missed before it).
             Near(26 * Dt, ps.time);
         }
+
+        // Implementation invariant (an unmeasured inference, not a Native observation):
+        // Stop(StopEmittingAndClear) drops the time a culled playback missed, so particles a
+        // script emits right after it (same frame, fixed seed) are not stepped by time that passed
+        // before they existed. Plain Clear() followed by Emit is not covered (open, unmeasured).
+        [Fact]
+        public void PauseAndCatchupStopAndClearDropsTheMissedTimeBeforeAnEmit()
+        {
+            var ps = Make(ParticleSystemCullingMode.PauseAndCatchup, loop: false);
+            // The seed can only change on a stopped, cleared system.
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            ps.useAutoRandomSeed = false;
+            ps.randomSeed = 12345u;
+            ps.Play();
+            // Never seen: culled from total time 0, with 40 frames of missed time pending.
+            Frames(40);
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            ps.Emit(3);
+            SetVisible(ps, true);
+            Frames(1);
+            // Only the visible frame's own time ages the emitted particles (5 s lifetime).
+            Assert.Equal(3, ps.particleCount);
+            foreach (var p in ParticlesOf(ps))
+                Near(5f - Dt, p.remainingLifetime);
+            Near(Dt, ps.time);
+        }
     }
 }
