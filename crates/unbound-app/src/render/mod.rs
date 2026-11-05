@@ -12,7 +12,9 @@ use bevy::{
     prelude::*,
     render::{
         Render, RenderApp, RenderSystems,
-        renderer::{RenderAdapterInfo, RenderContext, RenderDevice, RenderQueue, ViewQuery},
+        renderer::{
+            RenderAdapter, RenderAdapterInfo, RenderContext, RenderDevice, RenderQueue, ViewQuery,
+        },
         view::ViewTarget,
     },
 };
@@ -88,6 +90,12 @@ impl Plugin for UnityRenderPlugin {
                 .features()
                 .contains(wgpu::Features::TEXTURE_COMPRESSION_BC),
         );
+        // What the device does with the normalized 16-bit and 10-10-10-2 formats (its features
+        // are the adapter's: WgpuSettings' default priority asks for all of them).
+        resources::set_norm_format_caps(resources::NormFormatCaps::query(
+            render_app.world().resource::<RenderAdapter>(),
+            device.wgpu_device().features(),
+        ));
         let wgpu_queue: wgpu::Queue = std::ops::Deref::deref(&queue).clone();
         self.backend.install(UnityRenderer::new(
             device.wgpu_device().clone(),
