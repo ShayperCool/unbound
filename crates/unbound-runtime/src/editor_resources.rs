@@ -214,10 +214,11 @@ fn to_json(value: &Value, externals: &[String], self_guid: &str) -> Json {
 #[cfg(test)]
 mod tests {
     //! Built-in objects by `{guid, fileId}`. The installed-file tests read the resources of the
-    //! 6000.0.71f1 install and are skipped without it, or when its files are not the bytes the
-    //! expected values were read from (length, embedded version string and object count bound
-    //! below; a Native asset-state observation of that install, not a measured API readout). The
-    //! others are mechanism tests over constructed values or a missing install.
+    //! 6000.0.71f1 install and are skipped without it, or when a file's length is not the length
+    //! the expected values were read from; a file of the bound length must read with the bound
+    //! embedded version string and object count (a Native asset-state observation of that install,
+    //! not a measured API readout). The others are mechanism tests over constructed values or a
+    //! missing install.
     use super::*;
     use unbound_yaml::Map;
 
