@@ -12,6 +12,12 @@ feature work. A worker finishing a task does not by itself authorize a new featu
 
 ## Short readiness check
 
+Use existing build, test and probe commands. The [plan runner](PLAN_RUNNER.md)
+is optional, not a prerequisite for validation. An applicable release remains
+sufficient authority for its checks; do not add a second approval layer or
+generate a per-package launch framework. Preserve active plans, spending limits,
+stop conditions and required controls.
+
 Complete this check before spending the next build, suite or capture, using saved
 evidence and read-only checks first. Record one compact readiness result in the
 package's existing plan/index, with exact input hashes and links; do not introduce

@@ -18,6 +18,8 @@ Fill this brief for a NEW child. Do not attach a retired conversation.
   diagnostic producer/capture route, test inventory and remaining finite budget:
 - Conditional progression authority, prerequisites and stop conditions; otherwise
   the exact Root decision still needed before validation:
+- Existing validation commands, result paths and applicable release; optional
+  shared runner inputs only if used. No runner-adoption prerequisite:
 - Known insignificant residuals: keys/regions, size, suspected cause and receipt;
   separate strict verifier failures from package admission:
 
