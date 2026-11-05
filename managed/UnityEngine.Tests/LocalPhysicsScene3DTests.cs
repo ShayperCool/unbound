@@ -10,11 +10,11 @@ namespace UnityEngine.Tests
     /// PhysicsScene, PhysicsScene.Simulate, PhysicsSceneExtensions.GetPhysicsScene,
     /// Physics.defaultPhysicsScene). A scene created with LocalPhysicsMode.Physics3D owns its own
     /// physics scene: its bodies are simulated only by its PhysicsScene.Simulate, and its colliders
-    /// are found only by its queries. The default physics scene behaves as when it was the only one.
-    /// These are documented guarantees. That MoveGameObjectToScene takes a body into the new scene's
-    /// physics scene is inferred from them (SceneManager.MoveGameObjectToScene documents only the
-    /// move), not documented or measured. Local identities, unload timing and invalid-scene queries
-    /// are not asserted.
+    /// are found only by its queries. These isolation guarantees are documented.
+    /// Keeping the default physics scene's behavior unchanged is inferred from that isolation.
+    /// That MoveGameObjectToScene takes a body into the new scene's physics scene is also inferred
+    /// from it (SceneManager.MoveGameObjectToScene documents only the move), not measured.
+    /// Local identities, unload timing and invalid-scene queries are not asserted.
     /// </summary>
     public class LocalPhysicsScene3DTests : IDisposable
     {
