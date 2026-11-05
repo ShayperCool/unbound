@@ -80,14 +80,16 @@ Documented:
   clamps at 10.
 - The measured mixer Echo accepts 1 to 5000 ms. The component's documented range is 10 to 5000,
   and the descriptor uses that range.
+- **Low-pass cutoff clamping.** AudioLowPassFilter.cutoffFrequency: "Values outside this range are
+  clamped"
+  (https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/audiolowpassfilter/cutofffrequency).
+  The setter clamps to 10 to 22000.
 
 Unbound's choices (unmeasured):
 
-- **Clamping.** AudioLowPassFilter.cutoffFrequency is documented to clamp to 10 to 22000 on set
-  (https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioLowPassFilter-cutoffFrequency.html)
-  and does. The other properties, and serialized values, return the value that was set; their
-  pages do not say whether Unity clamps. The descriptor clamps to the
-  documented ranges.
+- **Clamping.** The other properties return the value that was set; their pages do not say
+  whether Unity clamps. Serialized values, including the low-pass cutoff, are read as stored. The
+  descriptor clamps to the documented ranges.
 - **Signal point.** Components process the source's voices after volume, mute, panning and spatial
   gain. This is the same signal the existing OnAudioFilterRead path receives.
 - **Chain processing.**

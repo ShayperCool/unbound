@@ -14,8 +14,8 @@ namespace UnityEngine
     // AudioSource components. Defaults and ranges are the 6000.0 Scripting API's. The descriptor
     // clamps to those ranges. AudioLowPassFilter.cutoffFrequency clamps on set, as its Scripting
     // API page documents ("Values outside this range are clamped"); the other property pages do not
-    // say, so whether Unity clamps them on set is unmeasured and they return what was set, as do
-    // serialized values. Parameters reach the mixer with the source's next packet (at the latest the
+    // say, so whether Unity clamps them on set is unmeasured and they return what was set.
+    // Serialized values are read as stored. Parameters reach the mixer with the source's next packet (at the latest the
     // next audio update).
 
     /// <summary>Passes the low frequencies of an AudioSource. Cutoff 10 to 22000 Hz (default 5000;
