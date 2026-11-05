@@ -13,13 +13,20 @@ namespace Unbound.Tests
         public TextAsset text;
     }
 
-    /// <summary>Statics of a class whose class initialization is only its field initializers
-    /// (beforefieldinit), as game code often has next to cached ids.</summary>
+    /// <summary>Statics of a class without class initialization: read by the walk.</summary>
     static class UnloadStaticHolder
     {
-        internal static readonly int s_TintId = Shader.PropertyToID("_Tint");
         internal static Material s_Highlight;
         internal static TextAsset s_Table;
+    }
+
+    /// <summary>Statics of a class whose class initialization is its field initializers
+    /// (beforefieldinit), as game code often has next to cached ids: not read by the walk, which
+    /// would run the initializers early (Unbound's choice).</summary>
+    static class UnloadInitializedHolder
+    {
+        internal static readonly int s_TintId = Shader.PropertyToID("_Tint");
+        internal static Material s_Held;
     }
 
     /// <summary>Records whether <see cref="UnloadExplicitCctorHolder"/>'s static constructor ran
@@ -32,7 +39,7 @@ namespace Unbound.Tests
     /// <summary>A class with an explicit static constructor: nothing may run it but its first use.</summary>
     static class UnloadExplicitCctorHolder
     {
-        internal static Material s_Held;
+        internal static Material s_Held = null;
 
         static UnloadExplicitCctorHolder() { UnloadCctorProbe.Ran = true; }
     }
@@ -363,27 +370,33 @@ Mesh:
         }
 
         [Fact]
-        public void UnloadUnusedAssetsSeesInitializedStaticsAndTheSkybox()
+        public void UnloadUnusedAssetsSeesStaticsAndTheSkybox()
         {
-            // "Static variables are also examined" (Scripting API 6000.0): a class with static field
-            // initializers holds its statics as any other, and the active skybox is in use.
+            // "Static variables are also examined" (Scripting API 6000.0): statics the walk can read
+            // hold their assets, and the active skybox is in use. A class with field initializers is
+            // not read (Unbound's choice): what only it holds counts as unused, and keeps its edits.
+            const string heldGuid = "c0de0000000000000000000000000010";
             const string highlightGuid = "c0de000000000000000000000000000a";
             const string skyGuid = "c0de000000000000000000000000000b";
             const string tableGuid = "c0de000000000000000000000000000c";
             var highlight = new Material { name = "Highlight", color = Color.white, IsPersistentAsset = true };
             var sky = new Material { name = "Sky", color = Color.white, IsPersistentAsset = true };
+            var held = new Material { name = "Held", color = Color.white, IsPersistentAsset = true };
             var tablePath = TempFile("table 0");
             var table = ImportedText(tablePath);
             Loaded(highlightGuid, "Assets/Resources/Highlight.mat", 2100000, highlight);
             Loaded(skyGuid, "Assets/Sky.mat", 2100000, sky);
+            Loaded(heldGuid, "Assets/Resources/Held.mat", 2100000, held);
             Loaded(tableGuid, "Assets/Resources/Table.txt", AssetImporters.TextAssetFileId, table);
             var previousSky = RenderSettings.skybox;
             try
             {
                 UnloadStaticHolder.s_Highlight = highlight;
                 UnloadStaticHolder.s_Table = table;
+                UnloadInitializedHolder.s_Held = held;
                 RenderSettings.skybox = sky;
                 highlight.color = Color.red;
+                held.color = Color.green;
                 sky.color = Color.blue;
                 Assert.Equal("table 0", table.text);
                 File.WriteAllText(tablePath, "table 1");
@@ -392,6 +405,7 @@ Mesh:
                 Assert.True(reached.Contains(highlight));
                 Assert.True(reached.Contains(table));
                 Assert.True(reached.Contains(sky));
+                Assert.False(reached.Contains(held));
 
                 Assert.Empty(Errors(() => Resources.UnloadUnusedAssets()));
 
@@ -400,14 +414,19 @@ Mesh:
                 Assert.Equal(Color.blue, sky.color);
                 Assert.Same(sky, RenderSettings.skybox);
                 Assert.Equal("table 0", table.text);
+                // Unused but a material: kept as it is, edit included.
+                Assert.False(held.m_Destroyed);
+                Assert.Equal(Color.green, held.color);
             }
             finally
             {
                 UnloadStaticHolder.s_Highlight = null;
                 UnloadStaticHolder.s_Table = null;
+                UnloadInitializedHolder.s_Held = null;
                 RenderSettings.skybox = previousSky;
-                foreach (var g in new[] { highlightGuid, skyGuid, tableGuid }) AssetDatabaseRuntime.Invalidate(g);
+                foreach (var g in new[] { highlightGuid, skyGuid, heldGuid, tableGuid }) AssetDatabaseRuntime.Invalidate(g);
                 Object.DestroyImmediate(highlight, true);
+                Object.DestroyImmediate(held, true);
                 Object.DestroyImmediate(sky, true);
                 Object.DestroyImmediate(table, true);
                 File.Delete(tablePath);
