@@ -247,9 +247,11 @@ fn storage_format(name: &str) -> Option<naga::StorageFormat> {
         "R32Float" => F::R32Float,
         "R32Uint" => F::R32Uint,
         "R32Sint" => F::R32Sint,
+        "Rg16Unorm" => F::Rg16Unorm,
         "Rg16Float" => F::Rg16Float,
         "Rg32Float" => F::Rg32Float,
         "Rgba8Unorm" => F::Rgba8Unorm,
+        "Rgba16Unorm" => F::Rgba16Unorm,
         "Rgba16Float" => F::Rgba16Float,
         "Rgba32Float" => F::Rgba32Float,
         "Rgba32Uint" => F::Rgba32Uint,
@@ -542,6 +544,31 @@ RWStructuredBuffer<uint> _Out;
             assert!(names.contains(&buffer), "{kernel}: {names:?}");
             assert!(names.contains(&counter.as_str()), "{kernel}: {names:?}");
             naga::front::wgsl::parse_str(&k.wgsl).unwrap();
+        }
+    }
+
+    /// Render textures of the normalized 16-bit formats are written in them (where the device
+    /// lets kernels write them, the renderer stores them so and names them here).
+    #[test]
+    fn rw_textures_compile_in_normalized_16_bit_formats() {
+        use naga::StorageFormat as F;
+        assert_eq!(storage_format("Rg16Unorm"), Some(F::Rg16Unorm));
+        assert_eq!(storage_format("Rgba16Unorm"), Some(F::Rgba16Unorm));
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        for (name, wgsl) in [("Rg16Unorm", "rg16unorm"), ("Rgba16Unorm", "rgba16unorm")] {
+            let k = compiler
+                .compile_kernel(&program(), "Fill", &[], &[("_Result".into(), name.into())])
+                .unwrap();
+            let result = k.resources.iter().find(|r| r.name == "_Result").unwrap();
+            assert_eq!(
+                result.kind,
+                ResourceKind::StorageTexture {
+                    dim: TextureDim::D2,
+                    format: name.into(),
+                    write_only: true
+                }
+            );
+            assert!(k.wgsl.contains(wgsl), "{}", k.wgsl);
         }
     }
 
