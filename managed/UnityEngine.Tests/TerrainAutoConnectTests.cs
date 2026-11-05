@@ -81,7 +81,8 @@ namespace UnityEngine.Tests
             Assert.Same(sameGroup, centre.rightNeighbor);
             Assert.Null(centre.leftNeighbor);
             Assert.Null(otherGroup.rightNeighbor);
-            // The Manual's Reconnect: both tiles must have Auto Connect enabled.
+            // Documented for the Manual's Reconnect (both tiles must have Auto Connect enabled),
+            // applied to the runtime pass.
             Assert.Null(centre.topNeighbor);
             Assert.Null(optedOut.bottomNeighbor);
         }

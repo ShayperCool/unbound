@@ -240,7 +240,8 @@ namespace UnityEngine
 
         /// <summary>The tile one step of (<paramref name="stepX"/>, <paramref name="stepZ"/>) tiles
         /// away in the same group, with the same X/Z size; null when there is none, or when several
-        /// overlapping tiles qualify.</summary>
+        /// overlapping tiles qualify. The links stay one-sided: each overlapping tile still takes
+        /// this tile as its own neighbour on the opposite side.</summary>
         Terrain AdjacentTile(List<Terrain> tiles, int stepX, int stepZ, string side)
         {
             var size = m_TerrainData.size;
