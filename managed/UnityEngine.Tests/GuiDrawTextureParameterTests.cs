@@ -285,14 +285,18 @@ namespace UnityEngine.Tests
             var rect = new Rect(0f, 0f, 60f, 40f);
             var widths = new Vector4(3f, 5f, 7f, 9f);
             var radii = new Vector4(12f, 0f, 6f, 20f);
+            // Unbound's own notices skip the game's log callbacks, so the logger's handler is
+            // where they are seen (forwarded unchanged).
             var warnings = new List<string>();
-            void Capture(string message, string stack, LogType type)
-            {
-                if (type == LogType.Warning) warnings.Add(message);
-            }
+            var logger = Debug.unityLogger;
+            var previousHandler = logger.logHandler;
+            bool previousEnabled = logger.logEnabled;
+            var previousFilter = logger.filterLogType;
             bool previousReported = GUI.s_DrawTextureOpaqueReported;
             GUI.s_DrawTextureOpaqueReported = false;
-            Application.logMessageReceived += Capture;
+            logger.logHandler = new WarningCapture(previousHandler, warnings);
+            logger.logEnabled = true;
+            logger.filterLogType = LogType.Log;
             try
             {
                 f.Repaint(() =>
@@ -304,7 +308,9 @@ namespace UnityEngine.Tests
             }
             finally
             {
-                Application.logMessageReceived -= Capture;
+                logger.logHandler = previousHandler;
+                logger.logEnabled = previousEnabled;
+                logger.filterLogType = previousFilter;
                 GUI.s_DrawTextureOpaqueReported = previousReported;
             }
             var notice = Assert.Single(warnings);
@@ -318,6 +324,29 @@ namespace UnityEngine.Tests
             Assert.Equal(counts[1], counts[2]);
             var shape = Build(rect, widths, radii);
             Assert.Equal(shape.Indices.Count, counts[2]);
+        }
+
+        /// <summary>Records warnings and forwards every call unchanged.</summary>
+        sealed class WarningCapture : ILogHandler
+        {
+            readonly ILogHandler m_Inner;
+            readonly List<string> m_Warnings;
+
+            internal WarningCapture(ILogHandler inner, List<string> warnings)
+            {
+                m_Inner = inner;
+                m_Warnings = warnings;
+            }
+
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Warning)
+                    m_Warnings.Add(args == null || args.Length == 0 ? format
+                        : string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args));
+                m_Inner.LogFormat(type, context, format, args);
+            }
+
+            public void LogException(Exception exception, Object context) => m_Inner.LogException(exception, context);
         }
     }
 }
