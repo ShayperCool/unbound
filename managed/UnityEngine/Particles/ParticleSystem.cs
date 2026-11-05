@@ -896,9 +896,9 @@ namespace UnityEngine
         /// culled is not replayed (the docs advise AlwaysSimulate for a moving system). Time missed
         /// while a script paused the system does not count, and a script call that changes the
         /// playback while culled (Simulate, a restart) drops the time missed before it (Unbound's
-        /// choices, unmeasured). Known defect, open: the playback is told apart by its total time,
-        /// so a restart or reactivation while culled from total time 0 keeps the earlier missed
-        /// time; clearing it where a playback begins lies outside this update.</para>
+        /// choices, unmeasured). A new playback (Restart) and a deactivation clear the missed time,
+        /// so a restart or reactivation while culled from total time 0 drops it as well (an
+        /// implementation invariant, unmeasured against Unity).</para>
         /// <para>Automatic with a looping system is not applied: the 6000.0 docs also say that a
         /// non-procedural system "must continue updating itself even when offscreen"
         /// (ParticleSystem.automaticCullingEnabled), and Unbound does not decide procedural
