@@ -7,14 +7,20 @@ namespace UnityEngine.Networking
     /// with the handler's CRC. Unity's documentation (6000.0, Scripting API and the installed module
     /// documentation) guarantees: a nonzero CRC that does not match logs an error and loads nothing;
     /// with autoLoadAssetBundle the bundle is loaded as part of the request, otherwise on the first
-    /// access of assetBundle; assetBundle and GetContent give the bundle or null; data and text throw
-    /// NotSupportedException; isDownloadComplete is true once the download part is complete.
+    /// access of assetBundle; autoLoadAssetBundle is false by default ("Default: false.",
+    /// https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/networking/downloadhandlerassetbundle/autoloadassetbundle);
+    /// an error decoding the bundle is logged and assetBundle returns null; assetBundle and GetContent
+    /// give the bundle or null; data and text throw NotSupportedException; isDownloadComplete is true
+    /// once the download part is complete.
     ///
-    /// Unbound's choices (unmeasured): autoLoadAssetBundle is true by default; with it the bundle
-    /// is loaded when the request completes, before its isDone, its completed event and waiting
-    /// coroutines see it; data that does not load completes the request as DataProcessingError
-    /// (Unity documents that result for data "corrupted or not in the correct format"), with the
-    /// loader's error logged and an exception naming the URL; the handler's own messages.
+    /// Unbound's choices (unmeasured): by default (load on access) data that does not load leaves
+    /// the request's result Success; the first access logs the loader's error once, sets the
+    /// handler's error and returns null, and later accesses return null without loading again.
+    /// With autoLoadAssetBundle the bundle is loaded when the request completes, before its isDone,
+    /// its completed event and waiting coroutines see it; data that does not load completes the
+    /// request as DataProcessingError (Unity documents that result for data "corrupted or not in
+    /// the correct format"), with the loader's error logged and an exception naming the URL. The
+    /// wording of the handler's messages is Unbound's own.
     ///
     /// The versioned, hashed and CachedAssetBundle constructors do not use a cache: Unbound has no
     /// AssetBundle cache yet. They warn once, then download and load the bundle every time, as the
@@ -25,7 +31,7 @@ namespace UnityEngine.Networking
         readonly System.IO.MemoryStream m_Stream = new System.IO.MemoryStream();
         readonly string m_Url;
         readonly uint m_Crc;
-        bool m_AutoLoad = true;
+        bool m_AutoLoad;
         bool m_DownloadComplete;
         bool m_LoadAttempted;
         AssetBundle m_AssetBundle;
@@ -88,12 +94,15 @@ namespace UnityEngine.Networking
             bool loaded = !received || !m_AutoLoad || Load();
             base.End(received);
             // The request reports a data processing error for the exception (UnityWebRequest.Finish).
+            // Known difference, unresolved, pending a Root decision: Finish also logs this exception,
+            // so a failed automatic load gives two console entries (the loader's error plus a
+            // LogType.Exception naming the URL) where Unity documents one logged error.
             if (!loaded) throw new InvalidOperationException(m_Error);
         }
 
-        protected override byte[] GetData() => throw new NotSupportedException("Raw data access is not supported for asset bundles");
+        protected override byte[] GetData() => throw new NotSupportedException("Unbound: DownloadHandlerAssetBundle does not expose the downloaded bytes; read the bundle from assetBundle or DownloadHandlerAssetBundle.GetContent");
 
-        protected override string GetText() => throw new NotSupportedException("String access is not supported for asset bundles");
+        protected override string GetText() => throw new NotSupportedException("Unbound: DownloadHandlerAssetBundle has no text form of the download; read the bundle from assetBundle or DownloadHandlerAssetBundle.GetContent");
 
         public override void Dispose()
         {
