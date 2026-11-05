@@ -469,6 +469,7 @@ namespace UnityEngine
             // Native's observed compaction order is four-slot groups aligned to the buffer:
             // collect dead slots, remove high to low, then revisit the group after swap-back.
             // The retained prefix is untouched, even when its exported lifetime is zero.
+            List<int> removedLinks = null;
             for (int block = offset & ~3; block < m_Count;)
             {
                 int dead = 0;
@@ -478,18 +479,31 @@ namespace UnityEngine
                 for (int lane = 3; lane >= 0; lane--)
                 {
                     if ((dead & (1 << lane)) == 0) continue;
-                    // A removed particle's trail ends as at its death (TrailModule.dieWithParticles):
-                    // freed when trails die with their particles, else left to fade. Ending it at
-                    // this call rather than at the next step is Unbound's choice (unmeasured). The
-                    // carrier of a fading trail, or a link to a free or fading slot, ends nothing.
+                    // Read the trail link before the swap-back overwrites the slot. The carrier of
+                    // a fading trail ends nothing.
                     ref var removed = ref m_Particles[block + lane];
-                    int link = removed.m_TrailId;
-                    if (link > 0 && (removed.m_Flags & Particle.FlagOrphanTrail) == 0
-                        && link <= m_TrailList.Count && m_TrailList[link - 1] is { Orphan: false })
-                        EndTrail(ref removed);
+                    if (removed.m_TrailId > 0 && (removed.m_Flags & Particle.FlagOrphanTrail) == 0)
+                        (removedLinks ??= new List<int>()).Add(removed.m_TrailId);
                     RemoveAt(block + lane);
                 }
             }
+            // A removed particle's trail ends as at its death (TrailModule.dieWithParticles):
+            // freed when trails die with their particles, else left to fade, with no carrier
+            // particle (a natural death keeps one). Unbound's choices (unmeasured): the trail ends
+            // at this call rather than at the next step; a trail still held by a particle that
+            // survives this call (in the retained prefix or written and kept) is not ended; a
+            // link to a free or fading slot ends nothing. Ending only after the compaction sees
+            // every removal and keeps FreeTrail's carrier scan out of the loop.
+            if (removedLinks != null)
+                foreach (int link in removedLinks)
+                {
+                    if (link > m_TrailList.Count || !(m_TrailList[link - 1] is { Orphan: false })) continue;
+                    bool held = false;
+                    for (int i = 0; i < m_Count && !held; i++) held = m_Particles[i].m_TrailId == link;
+                    if (held) continue;
+                    var owner = new Particle { m_TrailId = link };
+                    EndTrail(ref owner);
+                }
             for (int i = offset; i < m_Count; i++)
             {
                 m_Particles[i].InitializeAge();
