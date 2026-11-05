@@ -12,14 +12,19 @@ namespace UnityEngine.Tests
     /// velocity. Documented (Unity 6000.0 AudioVelocityUpdateMode): Fixed updates in the FixedUpdate
     /// loop, Dynamic in the Update loop, Auto in the FixedUpdate loop when attached to a Rigidbody
     /// and in the Update loop otherwise. Everything else checked here (the parent Rigidbody counts,
-    /// Rigidbody2D does not, the last fixed step wins, a frame without a step keeps the velocity, a
-    /// loop change restarts the sampling) is Unbound's unmeasured choice, revisable when measured.
+    /// Rigidbody2D does not for Auto, the last fixed step wins, a frame without a step keeps the
+    /// velocity, a loop change restarts the sampling, a fixed sample reads an interpolated or
+    /// extrapolated body's simulated pose) is Unbound's unmeasured choice, revisable when measured.
     /// The fixed node is driven through the player loop registry, so the file builds without the
-    /// fixed-loop sampling it checks. Predictions (unexecuted): without fixed-loop sampling, 8
-    /// cases fail (FixedMode ×2, SeveralSteps, AutoWithARigidbody ×4, ChangingTheLoop) and the
-    /// 5 frame-loop controls pass, as do the 8 interpolated-body cases (the in-between pose moves
-    /// linearly per frame); with fixed-loop sampling of the Transform, the 8 interpolated-body
-    /// cases fail and the other 13 pass; with the simulated-pose sample, all 21 pass.
+    /// fixed-loop sampling it checks. Predictions (unexecuted): without fixed-loop sampling, 12
+    /// cases fail (FixedMode ×2, SeveralSteps, AutoWithARigidbody ×4, ChangingTheLoop, and the 4
+    /// child cases of InterpolatedRigidbody2D, whose per-frame chord of a turning child differs
+    /// from the per-step chord) and 17 pass: the 5 frame-loop controls, the 8 interpolated 3D
+    /// body cases and the 4 Rigidbody2D body cases (the in-between pose moves linearly per
+    /// frame); with fixed-loop sampling of the Transform, the 8 interpolated 3D cases and the 8
+    /// Rigidbody2D cases fail and the other 13 pass; with the simulated pose of a 3D body only,
+    /// the 8 Rigidbody2D cases fail and the other 21 pass; with the simulated pose of both kinds
+    /// of body, all 29 pass.
     /// </summary>
     public class AudioVelocityUpdateModeTests : IDisposable
     {
@@ -334,6 +339,101 @@ namespace UnityEngine.Tests
             finally
             {
                 Physics.simulationMode = mode;
+                Time.s_Time = time;
+                Time.s_FixedTime = fixedTime;
+            }
+        }
+
+        // The 2D counterpart, in explicit Fixed mode (Auto with only a Rigidbody2D stays in the frame
+        // loop). PreUpdate.Physics2DUpdate writes the pose between steps to an interpolated or
+        // extrapolated Rigidbody2D's Transform each frame. Unbound's choice (unmeasured): the fixed
+        // sample reads the step's simulated pose, a child keeping its offset from the body turned
+        // with the simulated angle. Frames every 0.015 s, steps every 0.02 s. The body, turned 30
+        // degrees about z, moves at (2, 0) and turns at 90 degrees/s; the child sits at local
+        // (1, 0, 0). The body must give (2, 0, 0) at every step; the child the chord between the
+        // simulated poses that Rigidbody2D.position and rotation report before each step. Compared
+        // within 1e-3: a float32 model of this arithmetic puts the expected error below 2e-5, and a
+        // Transform sample is off by 0.5 or more (1.5 instead of 2 for the body at frame 3).
+        [Theory]
+        [InlineData(RigidbodyInterpolation2D.Interpolate, false, false)]
+        [InlineData(RigidbodyInterpolation2D.Interpolate, false, true)]
+        [InlineData(RigidbodyInterpolation2D.Interpolate, true, false)]
+        [InlineData(RigidbodyInterpolation2D.Interpolate, true, true)]
+        [InlineData(RigidbodyInterpolation2D.Extrapolate, false, false)]
+        [InlineData(RigidbodyInterpolation2D.Extrapolate, false, true)]
+        [InlineData(RigidbodyInterpolation2D.Extrapolate, true, false)]
+        [InlineData(RigidbodyInterpolation2D.Extrapolate, true, true)]
+        public void InterpolatedRigidbody2DSampleTheSimulatedPoseInFixedMode(RigidbodyInterpolation2D interpolation, bool onChild, bool listener)
+        {
+            const float step = 0.02f;
+            const double frame = 0.015;
+            var mode = Physics2D.simulationMode;
+            double time = Time.s_Time, fixedTime = Time.s_FixedTime;
+            var interpolate = typeof(Physics2DWorld).GetMethod("Interpolate", StaticPrivate);
+            Assert.NotNull(interpolate);
+            try
+            {
+                Physics2D.simulationMode = SimulationMode2D.FixedUpdate;
+                var body = Track(new GameObject("body2D"));
+                body.transform.position = new Vector3(1f, 2f, 3f);
+                body.transform.rotation = Quaternion.Euler(0f, 0f, 30f);
+                var rb = body.AddComponent<Rigidbody2D>();
+                rb.gravityScale = 0f;
+                rb.linearDamping = 0f;
+                rb.angularDamping = 0f;
+                rb.interpolation = interpolation;
+                rb.linearVelocity = new Vector2(2f, 0f);
+                rb.angularVelocity = 90f;
+                Ear ear;
+                if (onChild)
+                {
+                    ear = Make(listener, AudioVelocityUpdateMode.Fixed, body.transform);
+                    ear.Owner.transform.localPosition = new Vector3(1f, 0f, 0f);
+                }
+                else ear = Attach(body, listener, AudioVelocityUpdateMode.Fixed);
+
+                // The simulated pose of the sampled object, from what the body reports.
+                Vector3 Simulated()
+                {
+                    var at = new Vector3(rb.position.x, rb.position.y, 3f);
+                    return onChild ? at + Quaternion.Euler(0f, 0f, rb.rotation) * Vector3.right : at;
+                }
+
+                Time.s_Time = Time.s_FixedTime = 0.0;
+                bool first = true;
+                int steps = 0, checkedSteps = 0;
+                var last = Vector3.zero;
+                var chord = Vector3.zero;
+                for (int f = 0; f < 20; f++)
+                {
+                    if (f > 0) Time.s_Time += frame;
+                    bool stepped = false;
+                    // FixedUpdate: AudioFixedUpdate, then Physics2DFixedUpdate, per step.
+                    while (first || Time.s_FixedTime + step <= Time.s_Time + 1e-7)
+                    {
+                        if (!first) Time.s_FixedTime += step;
+                        var pose = Simulated();
+                        if (!first) chord = (pose - last) / step;
+                        last = pose;
+                        first = false;
+                        FixedStep(step);
+                        Physics2DWorld.Simulate(step, -1, fromLoop: true);
+                        stepped = true;
+                        steps++;
+                    }
+                    interpolate.Invoke(null, null); // PreUpdate.Physics2DUpdate
+                    Frame(frame);
+                    if (stepped && steps >= 3)
+                    {
+                        AssertNear(onChild ? chord : X(2f), ear.Velocity, f);
+                        checkedSteps++;
+                    }
+                }
+                Assert.True(checkedSteps >= 10, $"checked {checkedSteps} steps");
+            }
+            finally
+            {
+                Physics2D.simulationMode = mode;
                 Time.s_Time = time;
                 Time.s_FixedTime = fixedTime;
             }
