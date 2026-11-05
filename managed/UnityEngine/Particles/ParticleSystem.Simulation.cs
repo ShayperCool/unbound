@@ -1621,7 +1621,7 @@ namespace UnityEngine
             var bursts = child.m_Emission.bursts;
             if (bursts.Count == 0) return;
             if (bursts.Count > 1 && sub.type != ParticleSystemSubEmitterType.Death)
-                ReportUnsupported("script-triggered sub-emitter burst after the first (only the first is emitted, the rule Unity documents for Death)");
+                ReportUnsupported("script-triggered sub-emitter bursts after the first (Unbound emits only the first, the rule Unity documents for Death)");
             // One burst's cycles all at once (unmeasured).
             var burst = bursts[0];
             int count = child.BurstCount(burst.m_Count, 0f) * Math.Max(1, burst.cycleCount);
