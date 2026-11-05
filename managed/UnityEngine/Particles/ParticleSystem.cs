@@ -464,6 +464,33 @@ namespace UnityEngine
             for (int s = 0; s < 2; s++)
                 if (m_Custom[s] != null && m_Custom[s].Length < count) Array.Resize(ref m_Custom[s], m_Particles.Length);
             m_Count = count;
+            // A written particle with a nonpositive lifetime is removed below; its trail ends as
+            // at its death (TrailModule.dieWithParticles): freed when trails die with their
+            // particles, else left to fade. Unbound's choices (unmeasured): the trail ends at this
+            // call rather than at the next step; a fading trail is left with no carrier particle (a
+            // natural death keeps one); a trail still held by a particle that survives this call (in
+            // the retained prefix, or written and kept) is not ended; a removed carrier of a fading
+            // trail, or a link to a free or fading slot, ends nothing; trails freed by one call
+            // return their slots in written order. Ending a live slot moves no particle
+            // (FreeTrail's carrier scan runs only for a fading slot), so the compaction below
+            // removes the same particles in the same order.
+            // Survivors' links are collected once, at the first candidate, so the pass is expected linear.
+            HashSet<int> survivors = null;
+            for (int r = offset; r < m_Count; r++)
+            {
+                int link = m_Particles[r].m_TrailId;
+                if (!(m_Particles[r].m_Lifetime <= 0f) || link <= 0 || (m_Particles[r].m_Flags & Particle.FlagOrphanTrail) != 0) continue;
+                if (link > m_TrailList.Count || !(m_TrailList[link - 1] is { Orphan: false })) continue;
+                if (survivors == null)
+                {
+                    survivors = new HashSet<int>();
+                    for (int i = 0; i < m_Count; i++)
+                        if (i < offset || !(m_Particles[i].m_Lifetime <= 0f)) survivors.Add(m_Particles[i].m_TrailId);
+                }
+                if (survivors.Contains(link)) continue;
+                var owner = new Particle { m_TrailId = link };
+                EndTrail(ref owner);
+            }
             // Native consumes the input lifetime before encoding normalized age. Nonpositive
             // inputs die immediately; tiny positive inputs can export as zero and still survive.
             // Native's observed compaction order is four-slot groups aligned to the buffer:
@@ -645,10 +672,31 @@ namespace UnityEngine
             trailData.textureOffsets.Clear();
             trailData.maxTrailCount = 0;
             trailData.maxPositionsPerTrailCount = 0;
+            // The trail state is captured in Unbound's own form beside these fields, which stay
+            // empty: their layout is undocumented. A Trails passed again is refilled in place
+            // (Scripting API: GetTrails(ref) avoids garbage with presized data).
+            CaptureTrails(trailData);
+            // Documented as the number of trails, but a 6000.0.71f1 capture returned the storage
+            // size (maxTrailCount x maxPositionsPerTrailCount); the return is left as it was.
             return 0;
         }
 
-        public void SetTrails(Trails trailData) => Unbound.Runtime.Stubs.Ignored("ParticleSystem.SetTrails", "is not honoured yet: trail data is not written back");
+        /// <summary>Scripting API 6000.0: restores the state stored by an earlier GetTrails, used
+        /// together with SetParticles and SetPlaybackState. A Trails that GetTrails never filled,
+        /// one from another system, or one whose particles are not the current ones is refused
+        /// with an error and changes nothing (Unbound's choice, unmeasured). When the particles
+        /// changed since GetTrails, SetParticles must restore them before SetTrails: the docs
+        /// give no order, so the other order is refused (Unbound's choice, unmeasured).</summary>
+        public void SetTrails(Trails trailData)
+        {
+            var mismatch = TrailCaptureMismatch(trailData);
+            if (mismatch != null)
+            {
+                Debug.LogError("Unbound: ParticleSystem.SetTrails " + mismatch + "; the trails were left unchanged", this);
+                return;
+            }
+            RestoreTrails(trailData);
+        }
 
         // ------------------------------------------------------------------ internals
 
