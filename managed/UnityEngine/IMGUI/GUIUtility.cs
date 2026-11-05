@@ -138,7 +138,7 @@ namespace UnityEngine
         {
             if (s_ClipboardFailing) return;
             s_ClipboardFailing = true;
-            Debug.LogWarning(Unbound.Runtime.Log.DiagnosticPrefix +"GUIUtility.systemCopyBuffer could not " + action +
+            Debug.LogWarning(Unbound.Runtime.Log.DiagnosticPrefix + "GUIUtility.systemCopyBuffer could not " + action +
                 " the system clipboard (" + e.Message + "); the game's in-process copy is used until it answers again");
         }
 
