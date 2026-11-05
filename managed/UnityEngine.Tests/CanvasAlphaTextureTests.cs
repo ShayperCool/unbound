@@ -186,7 +186,7 @@ namespace UnityEngine.Tests
             renderer.SetAlphaTexture(MakeTexture("alpha"));
             var split = Assert.Single(Draws());
             Assert.Equal(handle, split.MainTexture);
-            Assert.False(split.Properties.ContainsKey(s_MainTex));
+            Assert.DoesNotContain(s_MainTex, split.Properties.Keys);
         }
     }
 }
