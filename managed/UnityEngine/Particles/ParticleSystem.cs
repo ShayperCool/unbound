@@ -894,12 +894,16 @@ namespace UnityEngine
         /// split by Time.maximumParticleDeltaTime: the Manual's "large step"; unmeasured), before
         /// the frame's own time, in the first update the system is visible and simulates; its
         /// collision and trigger messages go out with that frame's. The emitter's movement while
-        /// culled is not replayed (the docs advise AlwaysSimulate for a moving system). Time missed
+        /// culled is not replayed (the docs advise AlwaysSimulate for a moving system, especially
+        /// in World simulation space, whose culling bounds may be inaccurate). Time missed
         /// while a script paused the system does not count, and a script call that changes the
         /// playback while culled (Simulate, a restart) drops the time missed before it (Unbound's
         /// choices, unmeasured). A new playback (Restart) and a deactivation clear the missed time,
         /// so a restart or reactivation while culled from total time 0 drops it as well (an
-        /// implementation invariant, unmeasured against Unity).</para>
+        /// implementation invariant, unmeasured against Unity). Stop(StopEmittingAndClear) drops
+        /// it too, so particles emitted right after it are not stepped by it (an implementation
+        /// invariant, unmeasured); plain Clear() does not, and its Emit edge stays open and
+        /// unmeasured.</para>
         /// <para>Automatic with a looping system is not applied: the 6000.0 docs also say that a
         /// non-procedural system "must continue updating itself even when offscreen"
         /// (ParticleSystem.automaticCullingEnabled), and Unbound does not decide procedural
