@@ -645,10 +645,29 @@ namespace UnityEngine
             trailData.textureOffsets.Clear();
             trailData.maxTrailCount = 0;
             trailData.maxPositionsPerTrailCount = 0;
+            // The trail state is captured in Unbound's own form beside these fields, which stay
+            // empty: their layout is undocumented. A Trails passed again is refilled in place
+            // (Scripting API: GetTrails(ref) avoids garbage with presized data).
+            CaptureTrails(trailData);
+            // Documented as the number of trails, but a 6000.0.71f1 capture returned the storage
+            // size (maxTrailCount x maxPositionsPerTrailCount); the return is left as it was.
             return 0;
         }
 
-        public void SetTrails(Trails trailData) => Unbound.Runtime.Stubs.Ignored("ParticleSystem.SetTrails", "is not honoured yet: trail data is not written back");
+        /// <summary>Scripting API 6000.0: restores the state stored by an earlier GetTrails, used
+        /// together with SetParticles and SetPlaybackState. A Trails that GetTrails never filled,
+        /// one from another system, or one whose particles are not the current ones is refused
+        /// with an error and changes nothing (Unbound's choice, unmeasured).</summary>
+        public void SetTrails(Trails trailData)
+        {
+            var mismatch = TrailCaptureMismatch(trailData);
+            if (mismatch != null)
+            {
+                Debug.LogError("Unbound: ParticleSystem.SetTrails " + mismatch + "; the trails were left unchanged", this);
+                return;
+            }
+            RestoreTrails(trailData);
+        }
 
         // ------------------------------------------------------------------ internals
 

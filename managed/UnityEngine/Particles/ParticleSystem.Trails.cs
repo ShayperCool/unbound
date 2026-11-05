@@ -27,7 +27,49 @@ namespace UnityEngine
             internal List<Color32> Colors;
             internal float WidthRandom, ColorRandom;
             internal Vector3? BirthPosition;
+
+            /// <summary>A deep copy: a capture and the live trail never share points.</summary>
+            internal Trail Copy()
+            {
+                var copy = new Trail
+                {
+                    Lifetime = Lifetime, Head = Head, Color = Color, Width = Width, Age01 = Age01,
+                    Orphan = Orphan, HeadTime = HeadTime, Ribbon = Ribbon,
+                    Widths = Widths != null ? new List<float>(Widths) : null,
+                    Colors = Colors != null ? new List<Color32>(Colors) : null,
+                    WidthRandom = WidthRandom, ColorRandom = ColorRandom, BirthPosition = BirthPosition,
+                };
+                copy.Points.AddRange(Points);
+                copy.Times.AddRange(Times);
+                return copy;
+            }
         }
+
+        /// <summary>What <c>GetTrails</c> captures: the system's own per-particle
+        /// trail state, so <c>SetTrails</c> can put it back exactly. Unity's
+        /// <c>Trails</c> layout is undocumented (only <c>capacity</c> is public), so this is
+        /// Unbound's representation, not Unity's.</summary>
+        internal sealed class TrailCapture
+        {
+            /// <summary>The system the trails were captured from.</summary>
+            internal ParticleSystem Owner;
+            /// <summary>Copies of the trail slots by id; null slots are free.</summary>
+            internal readonly List<Trail> Slots = new List<Trail>();
+            /// <summary>The free slot ids in the order the next trails take them.</summary>
+            internal int[] FreeOrder = global::System.Array.Empty<int>();
+            internal float TrailTime;
+            /// <summary>Each particle's trail link at capture time, in particle order.</summary>
+            internal int[] ParticleTrailIds = global::System.Array.Empty<int>();
+        }
+
+        /// <summary>The capture each Trails value holds, keyed by the storage list GetTrails gives it
+        /// (copies of a Trails value share that list, so they share the capture, and GetTrails(ref)
+        /// refills it in place). Kept beside the struct so its fields stay as they are.</summary>
+        static readonly global::System.Runtime.CompilerServices.ConditionalWeakTable<List<Vector4>, TrailCapture> s_TrailCaptures =
+            new global::System.Runtime.CompilerServices.ConditionalWeakTable<List<Vector4>, TrailCapture>();
+
+        static TrailCapture CaptureOf(in Trails trailData) =>
+            trailData.positions != null && s_TrailCaptures.TryGetValue(trailData.positions, out var capture) ? capture : null;
 
         /// <summary>Trails by id (a particle's m_TrailId − 1); null slots are free.</summary>
         internal readonly List<Trail> m_TrailList = new List<Trail>();
@@ -178,6 +220,54 @@ namespace UnityEngine
             m_TrailList.Clear();
             m_FreeTrails.Clear();
             m_TrailTime = 0f;
+        }
+
+        /// <summary>Copies the trail state into the capture <paramref name="trailData"/> holds
+        /// (live and fading trails; Ribbon mode keeps none, its ribbons are drawn from the
+        /// particles). Its storage list must be set.</summary>
+        internal void CaptureTrails(in Trails trailData)
+        {
+            var capture = s_TrailCaptures.GetValue(trailData.positions, _ => new TrailCapture());
+            capture.Owner = this;
+            capture.Slots.Clear();
+            foreach (var trail in m_TrailList) capture.Slots.Add(trail?.Copy());
+            capture.FreeOrder = m_FreeTrails.ToArray();
+            capture.TrailTime = m_TrailTime;
+            if (capture.ParticleTrailIds.Length != m_Count) capture.ParticleTrailIds = new int[m_Count];
+            for (int i = 0; i < m_Count; i++) capture.ParticleTrailIds[i] = m_Particles[i].m_TrailId;
+        }
+
+        /// <summary>Why the capture <paramref name="trailData"/> holds cannot be put back into this
+        /// system as it is now, or null when it can. Unity documents only restoring an earlier
+        /// GetTrails, together with SetParticles and SetPlaybackState; anything else is refused
+        /// whole rather than half-applied (Unbound's choice, unmeasured).</summary>
+        internal string TrailCaptureMismatch(in Trails trailData)
+        {
+            var capture = CaptureOf(trailData);
+            if (capture == null)
+                return "was given a Trails value that ParticleSystem.GetTrails never filled";
+            if (!ReferenceEquals(capture.Owner, this))
+                return "was given trails captured from another particle system";
+            if (capture.ParticleTrailIds.Length != m_Count)
+                return "was given trails captured with " + capture.ParticleTrailIds.Length + " particles, but the system has "
+                    + m_Count + " now (restore the particles captured with them first, with SetParticles)";
+            for (int i = 0; i < m_Count; i++)
+                if (m_Particles[i].m_TrailId != capture.ParticleTrailIds[i])
+                    return "was given trails that do not belong to the current particles (particle " + i
+                        + " differs; restore the particles captured with them first, with SetParticles)";
+            return null;
+        }
+
+        /// <summary>Puts a capture back: the trail slots, their free order and the trail clock, as
+        /// copies, so the capture can be applied again later.</summary>
+        internal void RestoreTrails(in Trails trailData)
+        {
+            var capture = CaptureOf(trailData);
+            m_TrailList.Clear();
+            foreach (var trail in capture.Slots) m_TrailList.Add(trail?.Copy());
+            m_FreeTrails.Clear();
+            for (int i = capture.FreeOrder.Length - 1; i >= 0; i--) m_FreeTrails.Push(capture.FreeOrder[i]);
+            m_TrailTime = capture.TrailTime;
         }
 
         internal IEnumerable<Trail> RenderTrails()
