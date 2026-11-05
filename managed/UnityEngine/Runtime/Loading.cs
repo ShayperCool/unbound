@@ -713,9 +713,7 @@ namespace Unbound.Runtime
         /// stays the same object, as the material does (unmeasured for these kinds). False for
         /// what is not unloaded (other kinds, shared-file materials and ScriptableObjects).
         /// </summary>
-        internal static bool Unload(Object asset) => Unload(asset, unused: false);
-
-        static bool Unload(Object asset, bool unused)
+        internal static bool Unload(Object asset)
         {
             string guid = null;
             long fileId = 0;
@@ -724,10 +722,7 @@ namespace Unbound.Runtime
             if (guid == null || !s_Files.TryGetValue(guid, out var file) || file == null) return false;
             switch (asset)
             {
-                // UnloadUnusedAssets does not load ScriptableObjects back (Scripting API 6000.0), and
-                // the engine cannot see every reference to one (see UnloadUnused): it keeps them
-                // rather than destroy one still in use.
-                case ScriptableObject when file.Objects.Count == 1 && !unused:
+                case ScriptableObject when file.Objects.Count == 1:
                     Invalidate(guid);
                     Object.DestroyImmediate(asset, true);
                     return true;
@@ -789,13 +784,21 @@ namespace Unbound.Runtime
         /// <summary>
         /// Resources.UnloadUnusedAssets (Scripting API 6000.0): "An asset is deemed to be unused if it
         /// isn't reached after walking the whole game object hierarchy, including script
-        /// components. Static variables are also examined", and every asset but ScriptableObjects
-        /// is loaded back at its next use. Each loaded asset that <see cref="Reachability"/> does not
-        /// reach, and whose hide flags do not include DontUnloadUnusedAsset, is unloaded as
-        /// <see cref="Unload(Object)"/> unloads it, except ScriptableObjects, which are kept: the
-        /// engine does not see the stack (nor does Unity) nor the statics of classes with a class
-        /// constructor, so destroying one could break an object still in use. Returns how many
-        /// assets were unloaded.
+        /// components. Static variables are also examined", and "All assets other than
+        /// ScriptableObjects are loaded back in the next time one of its properties or methods is
+        /// used". Each loaded asset that <see cref="Reachability"/> does not reach, and whose hide
+        /// flags do not include DontUnloadUnusedAsset, is unloaded when Unbound can load it back
+        /// lazily, at its next use: an imported TextAsset frees its bytes and reads its file again
+        /// when next asked for them. One already unloaded is not touched again. Every other kind is
+        /// kept as it is, with what scripts changed: loading a material, mesh, texture or audio
+        /// clip back at its next use would need hooks in their accessors and in the renderer and
+        /// mixer, outside this mechanism, and reading them again now, on every call, would redo
+        /// the work for nothing (<see cref="Unload(Object)"/>, the explicit Resources.UnloadAsset,
+        /// still does that). ScriptableObjects are kept too: the engine does not see every
+        /// reference to one (the stack, as in Unity; statics it cannot read safely), so destroying
+        /// one could break an object still in use. Nothing reached only through what the engine
+        /// cannot see is reverted: no kind kept here loses an edit. A failure unloading one asset
+        /// is reported and the others are still unloaded. Returns how many assets were unloaded.
         /// </summary>
         internal static int UnloadUnused()
         {
@@ -810,9 +813,28 @@ namespace Unbound.Runtime
             }
             int unloaded = 0;
             foreach (var obj in candidates)
-                if (!obj.m_Destroyed && Unload(obj, unused: true)) unloaded++;
+            {
+                if (obj.m_Destroyed) continue;
+                try
+                {
+                    if (UnloadUnusedOne(obj)) unloaded++;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"Unbound: Resources.UnloadUnusedAssets could not unload '{obj.m_Name}' ({obj.GetType().Name}): {e.Message}");
+                }
+            }
             return unloaded;
         }
+
+        /// <summary>Unloads one unused asset of a kind loaded back lazily; false (nothing done) for
+        /// the kinds kept and for an asset already unloaded.</summary>
+        static bool UnloadUnusedOne(Object asset) => asset switch
+        {
+            // Not a MonoScript (a TextAsset too): unloading scripts is not covered.
+            TextAsset text when text.GetType() == typeof(TextAsset) && text.DataLoaded => text.UnloadData(),
+            _ => false,
+        };
 
         /// <summary>
         /// The objects the engine can see in use, for UnloadUnusedAssets: everything reachable,

@@ -281,7 +281,8 @@ namespace UnityEngine
         }
 
         /// <summary>
-        /// Resources.UnloadAsset (and UnloadUnusedAssets) of an imported clip: the file is imported
+        /// Resources.UnloadAsset of an imported clip (UnloadUnusedAssets keeps clips: it cannot load
+        /// one back lazily): the file is imported
         /// again into the same mixer handle, so SetData's changes are gone and sources that hold
         /// the clip play the saved samples. Its load state starts over as after loading
         /// (preloaded or unloaded); that, and keeping the one object, are unmeasured for clips

@@ -51,6 +51,10 @@ namespace UnityEngine
         /// <summary>The file an imported asset was made from (null for other text assets).</summary>
         readonly string m_SourceFile;
 
+        /// <summary>An imported text asset whose bytes are in memory (false before their first use
+        /// and after <see cref="UnloadData"/>: there is nothing to unload).</summary>
+        internal bool DataLoaded => m_SourceFile != null && m_File == null;
+
         /// <summary>
         /// Resources.UnloadAsset (and UnloadUnusedAssets) of an imported text asset: its loaded
         /// bytes are freed and read from its file again when next used. Views GetData handed out
