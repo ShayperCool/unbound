@@ -536,6 +536,13 @@ namespace UnityEngine.Networking
                         result = Result.DataProcessingError;
                         error = "Data Processing Error, see Download Handler error";
                     }
+                    // A handler that opted in has reported its own failure: complete it the same
+                    // way without throwing, so nothing else is logged.
+                    if (result == Result.Success && m_DownloadHandler.ProcessingFailed)
+                    {
+                        result = Result.DataProcessingError;
+                        error = "Data Processing Error, see Download Handler error";
+                    }
                 }
                 m_Result = result;
                 m_Error = error;
