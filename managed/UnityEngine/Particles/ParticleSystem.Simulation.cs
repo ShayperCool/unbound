@@ -1616,15 +1616,27 @@ namespace UnityEngine
                 if (e.type == type) TriggerSubEmitterAt(e, ref parent);
         }
 
-        /// <summary>A death/collision/trigger/manual sub-emitter: the child emits its bursts at the particle.</summary>
+        /// <summary>A Death sub-emitter, or one triggered from script (Manual): the child emits its
+        /// first burst at the particle.</summary>
         void TriggerSubEmitterAt(SubEmitter sub, ref Particle parent)
         {
             var child = sub.system;
             if (child == null || child == this || child.m_GameObject == null) return;
             if (sub.emitProbability < 1f && NextFloat() >= sub.emitProbability) return;
-            int count = 0;
-            foreach (var burst in child.m_Emission.bursts)
-                count += child.BurstCount(burst.m_Count, 0f) * Math.Max(1, burst.cycleCount);
+            // SubEmittersModule.death0 (6000.0): the sub-emitter "uses the first set of emission
+            // burst properties ... If the system does not contain burst properties, then the system
+            // emits nothing; if the system contains more than one set of burst properties, then it
+            // ignores the additional properties." TriggerSubEmitter and the Manual type say nothing
+            // about bursts; the Manual lists Manual with Death among the conditions that "support
+            // only a single burst". Unbound's choice (unmeasured): script-triggered sub-emitters
+            // follow the Death rule, and say so once.
+            var bursts = child.m_Emission.bursts;
+            if (bursts.Count == 0) return;
+            if (bursts.Count > 1 && sub.type != ParticleSystemSubEmitterType.Death)
+                ReportUnsupported("script-triggered sub-emitter bursts after the first (Unbound emits only the first, the rule Unity documents for Death)");
+            // One burst's cycles all at once (unmeasured).
+            var burst = bursts[0];
+            int count = child.BurstCount(burst.m_Count, 0f) * Math.Max(1, burst.cycleCount);
             if (count > 0) child.EmitFromParent(this, ref parent, sub.properties, count, 0f);
         }
 
