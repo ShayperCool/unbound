@@ -319,6 +319,8 @@ namespace UnityEngine.AI
             // Changed area costs make the agents' paths stale (Scripting API, isPathStale).
             if (NavMeshAreas.Costs[areaIndex] != cost) NavWorld.MarkPathsStale();
             NavMeshAreas.Costs[areaIndex] = cost;
+            // "This will replace any custom area costs on all agents" (Scripting API 6000.0).
+            NavMeshAgent.ReplaceAreaCost(areaIndex, cost);
         }
 
         public static float GetAreaCost(int areaIndex)

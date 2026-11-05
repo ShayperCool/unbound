@@ -103,9 +103,27 @@ namespace UnityEngine.AI
             }
         }
 
+        // Area costs. Documented (Scripting API 6000.0): NavMesh.SetAreaCost sets an area's cost "on
+        // all agents", replacing any custom area costs on all agents, and is the default for agents
+        // created later; enabling or disabling an agent resets its costs to the defaults
+        // (NavMeshAgent.SetAreaCost). Unbound's choices (unmeasured): NavMesh.SetAreaCost replaces
+        // the custom cost of that one area (an agent's custom costs for other areas stay), on every
+        // agent with custom costs, enabled or not, and makes the path of an agent whose cost it
+        // changes stale (as the agent's own SetAreaCost does); the reset happens at once when the
+        // agent is enabled and when it is disabled, before it is placed, and does not by itself
+        // make the path stale.
+
+        /// <summary>The agents with their own area costs (<see cref="m_AreaCosts"/> set).</summary>
+        static readonly List<NavMeshAgent> s_WithOwnAreaCosts = new List<NavMeshAgent>();
+
         public void SetAreaCost(int areaIndex, float areaCost)
         {
-            m_AreaCosts ??= (float[])NavMeshAreas.Costs.Clone();
+            if (m_AreaCosts == null)
+            {
+                NavMeshAreas.Ensure();
+                m_AreaCosts = (float[])NavMeshAreas.Costs.Clone();
+                s_WithOwnAreaCosts.Add(this);
+            }
             if (areaIndex < 0 || areaIndex >= 32) return;
             // The agent's own area costs changed: its path is stale (unmeasured).
             if (m_AreaCosts[areaIndex] != areaCost) m_OwnPathStale = true;
@@ -124,6 +142,30 @@ namespace UnityEngine.AI
 
         [Obsolete("Use GetAreaCost instead.")]
         public float GetLayerCost(int layer) => GetAreaCost(layer);
+
+        /// <summary>NavMesh.SetAreaCost: the area's cost replaces every agent's own cost for it.</summary>
+        internal static void ReplaceAreaCost(int areaIndex, float cost)
+        {
+            for (int i = s_WithOwnAreaCosts.Count - 1; i >= 0; i--)
+            {
+                var agent = s_WithOwnAreaCosts[i];
+                if (agent.m_Destroyed || agent.m_AreaCosts == null)
+                {
+                    s_WithOwnAreaCosts.RemoveAt(i);
+                    continue;
+                }
+                if (agent.m_AreaCosts[areaIndex] != cost) agent.m_OwnPathStale = true;
+                agent.m_AreaCosts[areaIndex] = cost;
+            }
+        }
+
+        /// <summary>Enabled or disabled: the agent's area costs are the defaults again.</summary>
+        void ResetAreaCosts()
+        {
+            if (m_AreaCosts == null) return;
+            m_AreaCosts = null;
+            s_WithOwnAreaCosts.Remove(this);
+        }
 
         internal AreaFilter Filter => AreaFilter.Of(m_AreaMask, m_AreaCosts);
 
@@ -518,9 +560,17 @@ namespace UnityEngine.AI
         internal Vector3 WrittenPosition { get => m_WrittenPosition; set => m_WrittenPosition = value; }
         internal int WorldVersion { get => m_WorldVersion; set => m_WorldVersion = value; }
 
-        internal override void OnEngineEnable() => AgentSystem.Add(this);
+        internal override void OnEngineEnable()
+        {
+            ResetAreaCosts();
+            AgentSystem.Add(this);
+        }
 
-        internal override void OnEngineDisable() => AgentSystem.Remove(this);
+        internal override void OnEngineDisable()
+        {
+            ResetAreaCosts();
+            AgentSystem.Remove(this);
+        }
 
         internal override void OnEngineDestroy() => AgentSystem.Remove(this);
 
