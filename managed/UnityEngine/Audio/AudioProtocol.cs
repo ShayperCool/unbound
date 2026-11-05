@@ -58,6 +58,45 @@ namespace Unbound.Runtime
         internal float* RolloffCurve;
         internal float* SpatialBlendCurve;
         internal float* SpreadCurve;
+        /// <summary>Enabled filter components (NativeApi 16); 0 when none.</summary>
+        internal int FilterCount;
+        internal int Pad2;
+        /// <summary><see cref="FilterCount"/> descriptors in component order; null when none. Valid
+        /// during the call only (the mixer copies them).</summary>
+        internal AudioFilterDescriptor* Filters;
+    }
+
+    internal static class AudioFilterKind
+    {
+        internal const int LowPass = 1;
+        internal const int HighPass = 2;
+        internal const int Echo = 3;
+    }
+
+    /// <summary>Where a component sits relative to the scripts with OnAudioFilterRead on its
+    /// GameObject.</summary>
+    internal static class AudioFilterStage
+    {
+        internal const int BeforeScripts = 0;
+        internal const int AfterScripts = 1;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    internal struct AudioFilterDescriptor
+    {
+        /// <summary>The component's instance ID: the mixer keeps its state while it is the same.</summary>
+        internal ulong Id;
+        internal int Kind;
+        internal int Stage;
+        internal float Cutoff;
+        internal float Resonance;
+        internal float Delay;
+        internal float Decay;
+        internal float DryMix;
+        internal float WetMix;
+
+        /// <summary>The most descriptors one source sends (a resource bound, not a Unity limit).</summary>
+        internal const int MaxPerSource = 64;
     }
 
     internal static class AudioCommandKind

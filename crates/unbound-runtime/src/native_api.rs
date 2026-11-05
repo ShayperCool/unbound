@@ -17,7 +17,10 @@ use crate::{
 /// 13: render protocol 6, texture handle element bits (`render_protocol::handle`).
 /// 14: `wrap_w` at the end of `TexturePacket` and `ImportedTextureInfo`.
 /// 15: render protocol 7 (buffer copies, counters, indirect dispatches) and `read_texture`.
-pub const NATIVE_API_VERSION: u32 = 17;
+/// 16: filter component descriptors at the end of `AudioSourcePacket`.
+/// 17: render protocol 8 (`DrawIndices`, opcode 28), without the filter descriptors of 16.
+/// 18: both: the filter descriptors of 16 and render protocol 8 of 17.
+pub const NATIVE_API_VERSION: u32 = 18;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]

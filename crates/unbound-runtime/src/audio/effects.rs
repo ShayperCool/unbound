@@ -229,6 +229,18 @@ impl Effect {
         self.tune();
         Ok(())
     }
+    /// Forgets the histories and the parameter ramp, leaving the effect as [`Effect::new`] makes
+    /// it at the current rate. The Echo buffer keeps its allocation (zeroed).
+    pub fn reset(&mut self) {
+        self.stages = Default::default();
+        self.lowpass = Default::default();
+        self.echo.history.fill([0; 2]);
+        self.echo.position = 0;
+        self.cutoff = 5000.0;
+        self.resonance = 1.0;
+        self.gain = self.spec.gain;
+        self.tune();
+    }
     fn tune(&mut self) {
         match self.spec.kind.as_str() {
             "Lowpass" => self.lowpass.tune(self.cutoff, self.resonance, self.rate),

@@ -293,9 +293,10 @@ mod op {
 /// The size of a `DrawIndices` index on the wire: 16-bit indices, the only ones drawn.
 pub const DRAW_INDEX_SIZE: u8 = 2;
 
-/// Render protocol 8 is NativeApi 17's: `DrawIndices` is decoded only under that version, checked
-/// before any of its bytes are read. The stream itself carries no version.
-const INDEXED_DRAWS: bool = crate::native_api::NATIVE_API_VERSION == 17;
+/// Render protocol 8 is NativeApi 18's (17's alone, 18 with the audio filter descriptors of 16):
+/// `DrawIndices` is decoded only under that version, checked before any of its bytes are read. The
+/// stream itself carries no version.
+const INDEXED_DRAWS: bool = crate::native_api::NATIVE_API_VERSION == 18;
 
 /// Property kinds in the stream.
 mod kind {
@@ -1273,11 +1274,11 @@ mod tests {
         }
     }
 
-    /// `DrawIndices` is decoded only under NativeApi 17, the version render protocol 8 has
-    /// (audio alone is 16; a union of both is 18).
+    /// `DrawIndices` is decoded only under NativeApi 18, the version render protocol 8 has with the
+    /// audio filter descriptors (17 was render protocol 8 alone, 16 the audio descriptors alone).
     #[test]
-    fn draw_indices_need_native_api_17() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 17);
+    fn draw_indices_need_native_api_18() {
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 18);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
     }
 

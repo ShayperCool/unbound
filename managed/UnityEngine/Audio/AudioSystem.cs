@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.Audio;
+using B2BodyType = Unbound.Box2D.Dynamics.BodyType;
 
 namespace Unbound.Runtime
 {
@@ -12,7 +13,8 @@ namespace Unbound.Runtime
     /// The audio update (PlayerLoop PostLateUpdate.UpdateAudio, registered when an audio type is
     /// first used): snapshot transitions and mixer group levels, every active source's transform and
     /// settings, the listener; then the mixer's frame (the virtual device advances by the frame's
-    /// real time).
+    /// real time). The doppler velocity of a source or listener whose <c>velocityUpdateMode</c>
+    /// picks the fixed loop is sampled in FixedUpdate.AudioFixedUpdate instead (<see cref="FixedUpdate"/>).
     /// </summary>
     internal static class AudioSystem
     {
@@ -34,6 +36,7 @@ namespace Unbound.Runtime
         static AudioSystem()
         {
             PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PostLateUpdate.UpdateAudio), Update);
+            PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.FixedUpdate.AudioFixedUpdate), FixedUpdate);
             try { AudioBackend.Current.InstallCallback(); }
             catch (Exception e) { Debug.LogException(e); }
         }
@@ -124,6 +127,136 @@ namespace Unbound.Runtime
             return false;
         }
 
+        // ------------------------------------------------------------------ velocity update mode
+
+        /// <summary>
+        /// Whether the velocity of a source or listener on <paramref name="go"/> follows the fixed
+        /// loop. Unity 6000.0 AudioVelocityUpdateMode: Fixed updates in the FixedUpdate loop,
+        /// Dynamic in the Update loop, Auto in the FixedUpdate loop "if it is attached to a
+        /// Rigidbody", dynamic otherwise. Unbound's choices (unmeasured): "attached" means a 3D
+        /// Rigidbody on this GameObject or on a parent (what moves the object in fixed steps, as
+        /// colliders attach to a parent's body); Rigidbody2D and ArticulationBody do not count (the
+        /// page names Rigidbody); a value outside the enum is Dynamic.
+        /// </summary>
+        internal static bool UpdatesInFixedStep(AudioVelocityUpdateMode mode, GameObject go)
+        {
+            if (mode == AudioVelocityUpdateMode.Fixed) return true;
+            if (mode != AudioVelocityUpdateMode.Auto || go == null) return false;
+            for (var t = go.transform; t != null; t = t.m_Parent)
+            {
+                var owner = t.m_GameObject;
+                if (owner == null) break;
+                foreach (var c in owner.m_Components)
+                    if (c is Rigidbody body && !body.m_Destroyed) return true;
+            }
+            return false;
+        }
+
+        /// <summary>
+        /// The position a fixed-loop sample of <paramref name="t"/> reads: the pose of the last
+        /// physics step, not the pose between steps that an interpolated or extrapolated body's
+        /// Transform shows (PreUpdate.PhysicsUpdate and PreUpdate.Physics2DUpdate write that pose to
+        /// the Transform each frame). Unbound's choices (unmeasured): the nearest GameObject (this
+        /// one or a parent) with a Rigidbody or a Rigidbody2D decides, and on one GameObject a
+        /// Rigidbody counts before a Rigidbody2D. While a 3D body's Transform shows the in-between
+        /// pose (it has a body, interpolates or extrapolates, the simulation runs in FixedUpdate,
+        /// and no script moved the Transform since physics wrote it), the object keeps its current
+        /// offset from the body's Transform, carried by the body's rotation: simulated position +
+        /// simulated rotation × (inverse Transform rotation × (object position − body Transform
+        /// position)). The body itself reads exactly its simulated position (the same pose
+        /// <c>Rigidbody.position</c> returns). For a Rigidbody2D see <see cref="FixedStepPosition2D"/>.
+        /// Otherwise the Transform's position.
+        /// </summary>
+        internal static Vector3 FixedStepPosition(Transform t)
+        {
+            for (var p = t; p != null; p = p.m_Parent)
+            {
+                var owner = p.m_GameObject;
+                if (owner == null) break;
+                Rigidbody2D body2D = null;
+                foreach (var c in owner.m_Components)
+                {
+                    if (c is Rigidbody2D candidate)
+                    {
+                        if (body2D == null && !candidate.m_Destroyed) body2D = candidate;
+                        continue;
+                    }
+                    if (c is not Rigidbody body || body.m_Destroyed) continue;
+                    if (body.m_Body == 0 || body.m_Interpolation == RigidbodyInterpolation.None
+                        || Physics.s_SimulationMode != SimulationMode.FixedUpdate
+                        || p.m_Version != body.m_TransformVersion)
+                        return t.position;
+                    if (ReferenceEquals(p, t)) return body.m_CurrentPosition;
+                    var offset = Quaternion.Inverse(p.rotation) * (t.position - p.position);
+                    return body.m_CurrentPosition + body.m_CurrentRotation * offset;
+                }
+                if (body2D != null) return FixedStepPosition2D(t, p, body2D);
+            }
+            return t.position;
+        }
+
+        /// <summary>
+        /// <see cref="FixedStepPosition"/> for an object on, or under, the Rigidbody2D
+        /// <paramref name="rb"/> on <paramref name="p"/>. The Transform shows the in-between pose
+        /// under the conditions PreUpdate.Physics2DUpdate writes it: the body exists, interpolates or
+        /// extrapolates, is not static, 2D physics simulates in FixedUpdate, and no script moved the
+        /// Transform since physics wrote it. Then the body reads its simulated position at its
+        /// Transform's z (the pose <c>Rigidbody2D.position</c> returns; 2D physics keeps z), and a
+        /// child keeps its current offset from the body's Transform, turned about z by the simulated
+        /// angle minus the angle the Transform shows (Unbound's choice, unmeasured). Otherwise the
+        /// Transform's position.
+        /// </summary>
+        static Vector3 FixedStepPosition2D(Transform t, Transform p, Rigidbody2D rb)
+        {
+            var body = rb.m_Body;
+            if (body == null || rb.m_Interpolate == RigidbodyInterpolation2D.None
+                || body.BodyType == B2BodyType.StaticBody
+                || Physics2D.s_SimulationMode != SimulationMode2D.FixedUpdate
+                || p.m_Version != rb.m_TransformVersion)
+                return t.position;
+            var at = p.position;
+            var simulated = new Vector3(rb.m_CurrentPosition.x, rb.m_CurrentPosition.y, at.z);
+            if (ReferenceEquals(p, t)) return simulated;
+            var turn = Quaternion.AngleAxis((rb.m_CurrentAngle - rb.m_SyncAngle) * Mathf.Rad2Deg, Vector3.forward);
+            return simulated + turn * (t.position - at);
+        }
+
+        /// <summary>
+        /// Each fixed step (FixedUpdate.AudioFixedUpdate): the velocity of the sources and the
+        /// hearing listener that follow the fixed loop, from the motion since the previous fixed
+        /// step over the step's <c>fixedDeltaTime</c>. Unbound's choices (unmeasured): every step
+        /// samples, so the frame's packet carries the last step's velocity; a frame without a step
+        /// (also every frame at timeScale 0) keeps the previous velocity; positions are read at
+        /// this node, before the step's physics, as the previous step's simulated pose for an
+        /// interpolated or extrapolated body (<see cref="FixedStepPosition"/>); teleports are not
+        /// filtered, as in the frame loop.
+        /// </summary>
+        internal static void FixedUpdate()
+        {
+            float step = Time.fixedDeltaTime;
+            int n = s_Sources.Count;
+            if (n > 0)
+            {
+                if (s_Snapshot.Length < n) s_Snapshot = new AudioSource[Math.Max(n, s_Snapshot.Length * 2)];
+                s_Sources.CopyTo(s_Snapshot);
+                for (int i = 0; i < n; i++)
+                {
+                    var source = s_Snapshot[i];
+                    s_Snapshot[i] = null;
+                    if (source == null || source.m_GameObject == null) continue;
+                    try { source.SampleMotion(fixedStep: true, step); }
+                    catch (Exception e) { Debug.LogException(e, source); }
+                }
+            }
+            s_Listeners.RemoveAll(l => l == null);
+            if (s_Listeners.Count > 0)
+            {
+                var listener = s_Listeners[s_Listeners.Count - 1];
+                try { listener.SampleMotion(fixedStep: true, step); }
+                catch (Exception e) { Debug.LogException(e, listener); }
+            }
+        }
+
         // ------------------------------------------------------------------ the frame
 
         internal static void Update()
@@ -161,7 +294,7 @@ namespace Unbound.Runtime
                 if (source == null || source.m_GameObject == null) continue;
                 try
                 {
-                    source.UpdateMotion(realDelta);
+                    source.SampleMotion(fixedStep: false, realDelta);
                     bool hasFilter = AudioFilters.Update(source.Handle, source.m_GameObject);
                     source.m_HasFilter = hasFilter;
                     source.Flush(always: true);
@@ -192,13 +325,14 @@ namespace Unbound.Runtime
                 // The most recently enabled listener hears.
                 var listener = s_Listeners[listeners - 1];
                 var t = listener.transform;
-                listener.UpdateMotion(realDelta);
+                listener.SampleMotion(fixedStep: false, realDelta);
                 frame.ListenerPosition = t.position;
                 frame.ListenerForward = t.forward;
                 frame.ListenerUp = t.up;
                 frame.ListenerVelocity = listener.m_Velocity;
                 frame.Flags |= AudioFrameFlags.HasListener;
                 if (AudioFilters.Update(AudioFilters.ListenerKey, listener.m_GameObject)) frame.Flags |= AudioFrameFlags.ListenerFilter;
+                AudioFilterChain.CheckListener(listener);
                 s_WarnedNoListener = false;
             }
             else
@@ -229,6 +363,7 @@ namespace Unbound.Runtime
             s_ListenerPaused = false;
             s_WarnedListeners = 1;
             s_WarnedNoListener = false;
+            AudioFilterChain.ResetForTests();
         }
     }
 
@@ -269,6 +404,10 @@ namespace Unbound.Runtime
             s_Methods[type] = method;
             return method;
         }
+
+        /// <summary>Whether <see cref="Update"/> collects this component's OnAudioFilterRead.</summary>
+        internal static bool IsFilterScript(Component c) =>
+            c is MonoBehaviour mb && !mb.m_Destroyed && mb.isActiveAndEnabled && MethodOf(mb.GetType()) != null;
 
         /// <summary>Rebuilds the filters of one key from its GameObject; true when there are some.</summary>
         internal static bool Update(ulong key, GameObject go)

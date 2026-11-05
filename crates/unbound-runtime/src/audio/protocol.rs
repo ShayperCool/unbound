@@ -67,6 +67,56 @@ pub struct AudioSourcePacket {
     pub spatial_blend_curve: *const f32,
     /// Spread by distance, normalized (1 = 360 degrees); nullable (then `spread`).
     pub spread_curve: *const f32,
+    /// Enabled filter components of the source's GameObject (NativeApi 16); 0 when none.
+    pub filter_count: i32,
+    pub _pad2: i32,
+    /// `filter_count` [`AudioFilterDescriptor`]s in component order; null when the count is 0.
+    /// Valid during the call only: the mixer copies them before it returns.
+    pub filters: *const AudioFilterDescriptor,
+}
+
+/// `AudioFilterDescriptor.kind`: the filter components the mixer runs on a source.
+pub mod filter_kind {
+    /// `AudioLowPassFilter`.
+    pub const LOWPASS: i32 = 1;
+    /// `AudioHighPassFilter`.
+    pub const HIGHPASS: i32 = 2;
+    /// `AudioEchoFilter`.
+    pub const ECHO: i32 = 3;
+}
+
+/// `AudioFilterDescriptor.stage`: where a component sits relative to the scripts with
+/// `OnAudioFilterRead` on the same GameObject (the Inspector order is the processing order).
+pub mod filter_stage {
+    /// Above every such script, or on a source without one.
+    pub const BEFORE_SCRIPTS: i32 = 0;
+    /// Below every such script.
+    pub const AFTER_SCRIPTS: i32 = 1;
+}
+
+/// The most filter components one source may send (a resource bound, not a Unity limit).
+pub const MAX_SOURCE_FILTERS: i32 = 64;
+
+/// One enabled filter component of an AudioSource's GameObject.
+#[repr(C)]
+#[derive(Debug, Clone, Copy, Default, PartialEq)]
+pub struct AudioFilterDescriptor {
+    /// The component's identity (its instance ID): state is kept while it stays the same.
+    pub id: u64,
+    /// [`filter_kind`].
+    pub kind: i32,
+    /// [`filter_stage`].
+    pub stage: i32,
+    /// Lowpass/Highpass: hertz.
+    pub cutoff: f32,
+    /// Lowpass/Highpass resonance Q.
+    pub resonance: f32,
+    /// Echo: milliseconds.
+    pub delay: f32,
+    /// Echo decay ratio.
+    pub decay: f32,
+    pub dry_mix: f32,
+    pub wet_mix: f32,
 }
 
 /// `AudioSourceCommand.kind`.
@@ -187,10 +237,44 @@ mod tests {
         assert_eq!(offset_of!(AudioSourcePacket, volume), 40);
         assert_eq!(offset_of!(AudioSourcePacket, flags), 84);
         assert_eq!(offset_of!(AudioSourcePacket, rolloff_curve), 96);
-        assert_eq!(size_of::<AudioSourcePacket>(), 120);
+        assert_eq!(offset_of!(AudioSourcePacket, spread_curve), 112);
+        assert_eq!(offset_of!(AudioSourcePacket, filter_count), 120);
+        assert_eq!(offset_of!(AudioSourcePacket, filters), 128);
+        assert_eq!(size_of::<AudioSourcePacket>(), 136);
+        assert_eq!(size_of::<AudioFilterDescriptor>(), 40);
+        assert_eq!(std::mem::align_of::<AudioFilterDescriptor>(), 8);
+        assert_eq!(offset_of!(AudioFilterDescriptor, kind), 8);
+        assert_eq!(offset_of!(AudioFilterDescriptor, stage), 12);
+        assert_eq!(offset_of!(AudioFilterDescriptor, cutoff), 16);
+        assert_eq!(offset_of!(AudioFilterDescriptor, resonance), 20);
+        assert_eq!(offset_of!(AudioFilterDescriptor, delay), 24);
+        assert_eq!(offset_of!(AudioFilterDescriptor, decay), 28);
+        assert_eq!(offset_of!(AudioFilterDescriptor, dry_mix), 32);
+        assert_eq!(offset_of!(AudioFilterDescriptor, wet_mix), 36);
         assert_eq!(size_of::<AudioSourceCommand>(), 32);
         assert_eq!(size_of::<AudioSourceState>(), 24);
         assert_eq!(size_of::<AudioFramePacket>(), 64);
         assert_eq!(size_of::<AudioStatus>(), 32);
+    }
+
+    /// The source packet's filter descriptors are NativeApi 18's (added at 16, with render
+    /// protocol 8 at 18); the managed side pins the same value and refuses 14 to 17 and 19
+    /// (NativeApiVersionTests).
+    #[test]
+    fn the_filter_descriptor_layout_is_native_api_18() {
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 18);
+        assert_eq!(
+            [
+                filter_kind::LOWPASS,
+                filter_kind::HIGHPASS,
+                filter_kind::ECHO
+            ],
+            [1, 2, 3]
+        );
+        assert_eq!(
+            [filter_stage::BEFORE_SCRIPTS, filter_stage::AFTER_SCRIPTS],
+            [0, 1]
+        );
+        assert_eq!(MAX_SOURCE_FILTERS, 64);
     }
 }

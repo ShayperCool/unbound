@@ -44,7 +44,7 @@ namespace Unbound.Runtime
         internal abstract void CreateClip(ulong handle, int frames, int channels, int frequency, bool stream);
         internal abstract bool ClipData(ulong handle, int offsetFrames, Span<float> data, bool write);
         internal abstract void ReleaseClip(ulong handle);
-        /// <summary>The packet's curve pointers are valid during the call only.</summary>
+        /// <summary>The packet's curve and filter pointers are valid during the call only.</summary>
         internal abstract void UpdateSource(ulong handle, ref AudioSourcePacket packet);
         internal abstract void Command(ulong handle, in AudioSourceCommand command);
         internal abstract AudioSourceState State(ulong handle);
@@ -218,6 +218,8 @@ namespace Unbound.Runtime
         sealed class Source
         {
             internal AudioSourcePacket Params;
+            /// <summary>The filter descriptors, copied out of the packet.</summary>
+            internal AudioFilterDescriptor[] Filters = Array.Empty<AudioFilterDescriptor>();
             internal Voice Main;
             internal readonly List<Voice> OneShots = new List<Voice>();
             internal double Pending;
@@ -287,13 +289,57 @@ namespace Unbound.Runtime
         internal override void UpdateSource(ulong handle, ref AudioSourcePacket packet)
         {
             var copy = packet;
+            var source = SourceOf(handle);
             unsafe
             {
                 copy.RolloffCurve = null;
                 copy.SpatialBlendCurve = null;
                 copy.SpreadCurve = null;
+                // As the native mixer: the descriptors are copied now, a refused set keeps the
+                // previous one, and the rest of the packet applies either way.
+                var error = CopyFilters(packet, out var filters);
+                if (error == null) source.Filters = filters;
+                else FilterRejections.Add(error);
+                copy.FilterCount = source.Filters.Length;
+                copy.Filters = null;
             }
-            SourceOf(handle).Params = copy;
+            source.Params = copy;
+        }
+
+        /// <summary>Why packets' filter descriptors were refused (tests).</summary>
+        internal readonly List<string> FilterRejections = new List<string>();
+
+        /// <summary>A source's last packet, with its pointers cleared (tests).</summary>
+        internal AudioSourcePacket ParamsOf(ulong handle) =>
+            m_Sources.TryGetValue(handle, out var source) ? source.Params : default;
+
+        /// <summary>A source's filter descriptors, as last accepted (tests).</summary>
+        internal AudioFilterDescriptor[] FiltersOf(ulong handle) =>
+            m_Sources.TryGetValue(handle, out var source) ? source.Filters : Array.Empty<AudioFilterDescriptor>();
+
+        /// <summary>The native mixer's checks on a packet's descriptors; null when they are valid.</summary>
+        internal static unsafe string CopyFilters(in AudioSourcePacket p, out AudioFilterDescriptor[] filters)
+        {
+            filters = Array.Empty<AudioFilterDescriptor>();
+            if (p.FilterCount < 0 || p.FilterCount > AudioFilterDescriptor.MaxPerSource) return "filter count " + p.FilterCount + " is outside 0.." + AudioFilterDescriptor.MaxPerSource;
+            if (p.FilterCount == 0) return null;
+            if (p.Filters == null) return "filter descriptors are null";
+            if ((ulong)p.Filters % 8 != 0) return "filter descriptors are misaligned";
+            var copy = new ReadOnlySpan<AudioFilterDescriptor>(p.Filters, p.FilterCount).ToArray();
+            bool generator = p.Clip == 0 && (p.Flags & AudioSourceFlags.Filter) != 0;
+            for (int i = 0; i < copy.Length; i++)
+            {
+                var f = copy[i];
+                if (f.Kind < AudioFilterKind.LowPass || f.Kind > AudioFilterKind.Echo) return "unsupported filter kind " + f.Kind;
+                if (f.Stage != AudioFilterStage.BeforeScripts && f.Stage != AudioFilterStage.AfterScripts) return "invalid filter stage " + f.Stage;
+                if (generator && f.Stage == AudioFilterStage.BeforeScripts) return "a filter component above a clipless OnAudioFilterRead generator is unsupported";
+                if (!float.IsFinite(f.Cutoff) || !float.IsFinite(f.Resonance) || !float.IsFinite(f.Delay)
+                    || !float.IsFinite(f.Decay) || !float.IsFinite(f.DryMix) || !float.IsFinite(f.WetMix)) return "filter parameters must be finite";
+                for (int j = 0; j < i; j++)
+                    if (copy[j].Id == f.Id) return "duplicate filter component " + f.Id;
+            }
+            filters = copy;
+            return null;
         }
 
         internal override void Command(ulong handle, in AudioSourceCommand command)

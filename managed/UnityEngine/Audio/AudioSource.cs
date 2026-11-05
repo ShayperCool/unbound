@@ -59,7 +59,12 @@ namespace UnityEngine
         internal Vector3 m_LastPosition;
         internal Vector3 m_Velocity;
         internal bool m_HasLastPosition;
+        // The loop the last position was sampled in (false: the frame loop).
+        internal bool m_MotionInFixedStep;
         float[] m_RolloffTable, m_SpatialBlendTable, m_SpreadTable;
+        // The filter components sent with the last packet (reused), and the chain error reported.
+        internal AudioFilterDescriptor[] m_FilterTable;
+        string m_FilterChainError;
 
         /// <summary>Samples per distance curve sent to the mixer.</summary>
         const int CurveSamples = 64;
@@ -615,18 +620,32 @@ namespace UnityEngine
                 Flags = flags,
                 CurveLength = CurveSamples,
             };
+            // A clipless source with OnAudioFilterRead plays its first script as the clip.
+            bool generator = packet.Clip == 0 && (flags & AudioSourceFlags.Filter) != 0;
+            int filterCount = AudioFilterChain.Collect(this, generator, ref m_FilterTable);
             unsafe
             {
                 fixed (float* rolloff = m_RolloffTable)
                 fixed (float* blend = m_SpatialBlendTable)
                 fixed (float* spread = m_SpreadTable)
+                fixed (AudioFilterDescriptor* filters = m_FilterTable)
                 {
                     packet.RolloffCurve = rolloff;
                     packet.SpatialBlendCurve = blend;
                     packet.SpreadCurve = spread;
+                    packet.FilterCount = filterCount;
+                    packet.Filters = filterCount > 0 ? filters : null;
                     AudioBackend.Current.UpdateSource(handle, ref packet);
                 }
             }
+        }
+
+        /// <summary>Logs a filter chain Unbound cannot place once, until it changes.</summary>
+        internal void ReportFilterChain(string error)
+        {
+            if (error == m_FilterChainError) return;
+            m_FilterChainError = error;
+            if (error != null) Debug.LogError("Unbound: AudioSource on '" + m_GameObject?.m_Name + "': " + error + "; its filter components are not applied", this);
         }
 
         static float[] Sample(AnimationCurve curve)
@@ -636,10 +655,36 @@ namespace UnityEngine
             return table;
         }
 
-        /// <summary>Once per frame: the velocity from the transform's motion.</summary>
+        /// <summary>The velocity from the transform's motion since the last sample.</summary>
         internal void UpdateMotion(float deltaTime)
         {
             var position = transform.position;
+            if (m_HasLastPosition && deltaTime > 0f)
+                m_Velocity = (position - m_LastPosition) / deltaTime;
+            m_LastPosition = position;
+            m_HasLastPosition = true;
+        }
+
+        /// <summary>Samples the velocity when <paramref name="fixedStep"/> is the loop
+        /// <c>velocityUpdateMode</c> picks (<see cref="AudioSystem.UpdatesInFixedStep"/>). When the
+        /// picked loop changes, sampling starts again from the next position and the last velocity
+        /// is kept until then (Unbound's choice, unmeasured).</summary>
+        internal void SampleMotion(bool fixedStep, float deltaTime)
+        {
+            bool inFixedStep = AudioSystem.UpdatesInFixedStep(m_VelocityUpdateMode, m_GameObject);
+            if (inFixedStep != fixedStep) return;
+            if (inFixedStep != m_MotionInFixedStep)
+            {
+                m_MotionInFixedStep = inFixedStep;
+                m_HasLastPosition = false;
+            }
+            if (!fixedStep)
+            {
+                UpdateMotion(deltaTime);
+                return;
+            }
+            // The step's simulated pose, not an interpolated Transform's (Unbound's choice, unmeasured).
+            var position = AudioSystem.FixedStepPosition(transform);
             if (m_HasLastPosition && deltaTime > 0f)
                 m_Velocity = (position - m_LastPosition) / deltaTime;
             m_LastPosition = position;

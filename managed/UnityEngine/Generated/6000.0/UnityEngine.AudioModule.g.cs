@@ -46,35 +46,6 @@ namespace UnityEngine
     }
     [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.AudioBehaviour))]
     [global::Unbound.Stub]
-    public unsafe sealed partial class AudioEchoFilter : global::UnityEngine.Behaviour
-    {
-        [global::Unbound.Stub] public AudioEchoFilter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioEchoFilter.ctor"); }
-        public float delay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioEchoFilter.delay"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioEchoFilter.delay"); } }
-        public float decayRatio { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioEchoFilter.decayRatio"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioEchoFilter.decayRatio"); } }
-        public float dryMix { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioEchoFilter.dryMix"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioEchoFilter.dryMix"); } }
-        public float wetMix { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioEchoFilter.wetMix"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioEchoFilter.wetMix"); } }
-    }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.AudioBehaviour))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AudioHighPassFilter : global::UnityEngine.Behaviour
-    {
-        [global::Unbound.Stub] public AudioHighPassFilter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioHighPassFilter.ctor"); }
-        [global::System.Obsolete("AudioHighPassFilter.highpassResonaceQ is obsolete. Use highpassResonanceQ instead (UnityUpgradable) -> highpassResonanceQ")] public float highpassResonaceQ { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioHighPassFilter.highpassResonaceQ"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioHighPassFilter.highpassResonaceQ"); } }
-        public float cutoffFrequency { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioHighPassFilter.cutoffFrequency"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioHighPassFilter.cutoffFrequency"); } }
-        public float highpassResonanceQ { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioHighPassFilter.highpassResonanceQ"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioHighPassFilter.highpassResonanceQ"); } }
-    }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.AudioBehaviour))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AudioLowPassFilter : global::UnityEngine.Behaviour
-    {
-        [global::Unbound.Stub] public AudioLowPassFilter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioLowPassFilter.ctor"); }
-        [global::System.Obsolete("AudioLowPassFilter.lowpassResonaceQ is obsolete. Use lowpassResonanceQ instead (UnityUpgradable) -> lowpassResonanceQ")] public float lowpassResonaceQ { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioLowPassFilter.lowpassResonaceQ"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioLowPassFilter.lowpassResonaceQ"); } }
-        public global::UnityEngine.AnimationCurve customCutoffCurve { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioLowPassFilter.customCutoffCurve"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioLowPassFilter.customCutoffCurve"); } }
-        public float cutoffFrequency { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioLowPassFilter.cutoffFrequency"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioLowPassFilter.cutoffFrequency"); } }
-        public float lowpassResonanceQ { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioLowPassFilter.lowpassResonanceQ"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioLowPassFilter.lowpassResonanceQ"); } }
-    }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.AudioBehaviour))]
-    [global::Unbound.Stub]
     public unsafe sealed partial class AudioReverbFilter : global::UnityEngine.Behaviour
     {
         [global::Unbound.Stub] public AudioReverbFilter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioReverbFilter.ctor"); }
