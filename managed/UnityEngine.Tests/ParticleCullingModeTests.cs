@@ -347,5 +347,32 @@ namespace UnityEngine.Tests
             // The update's own test with centres ± size·√3/2 sees it (Unbound's choice, unmeasured).
             Near(time + 10 * Dt, ps.time);
         }
+
+        // Implementation invariant (an unmeasured inference, not a Native observation): a new
+        // playback drops the time missed by an earlier one, even when both were culled from total
+        // time 0 and the restart (Stop(StopEmittingAndClear) + Play in one frame, fixed seed)
+        // leaves the same time and random state the culled frames saw.
+        [Fact]
+        public void PauseAndCatchupDropsTheMissedTimeOfAnEarlierPlayback()
+        {
+            var ps = Make(ParticleSystemCullingMode.PauseAndCatchup, loop: false);
+            // Duration and seed can only change on a stopped, cleared system.
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.duration = 1f;
+            ps.useAutoRandomSeed = false;
+            ps.randomSeed = 12345u;
+            ps.Play();
+            // Never seen: culled from total time 0.
+            Frames(40);
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            ps.Play();
+            Frames(25);
+            SetVisible(ps, true);
+            Frames(1);
+            // Only the new playback's 25 missed frames and the visible one (Unbound's choice,
+            // unmeasured: a new playback drops the time missed before it).
+            Near(26 * Dt, ps.time);
+        }
     }
 }
