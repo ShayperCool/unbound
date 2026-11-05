@@ -597,26 +597,173 @@ namespace UnityEngine
         public static AccelerationEvent[] accelerationEvents => Array.Empty<AccelerationEvent>();
         public static AccelerationEvent GetAccelerationEvent(int index) => throw new ArgumentException("Index out of bounds.");
         public static DeviceOrientation deviceOrientation => DeviceOrientation.Unknown;
-        public static IMECompositionMode imeCompositionMode { get; set; }
+        // IME (legacy Input Manager). The window's input method state is polled from the host once
+        // per frame, on first use (`ime-state`); the game's mode and candidate-window position go
+        // to the window as a request (`ime-request`). Text the input method commits reaches
+        // inputString through the frame's text. Without a window that reads the input method
+        // (headless, a remote session) the answers stay "" and false, with one warning.
+        static IMECompositionMode s_ImeCompositionMode = IMECompositionMode.Auto;
+        static Vector2 s_CompositionCursorPos;
+        static bool s_ImePolled;
+        static int s_ImeFrame;
+        static bool s_ImeHostFailed;
+        static bool s_ImeAvailable;
+        static string s_Composition = "";
+        static bool s_ImeSelected;
+        static bool s_ImeWarned;
+        static string s_ImeUnavailableReason;
+
+        /// <summary>The IME's host calls (method, JSON request) → JSON answer; tests replace it.</summary>
+        internal static Func<string, string, string> ImeHost = Native.Call;
+
+        /// <summary>Unity: Auto (the default) enables IME input only while a text field is
+        /// selected, On enables it, Off disables it. Unbound sees no text field selection here, so
+        /// Auto asks for the input method off, as with no text field selected (Unbound's choice,
+        /// unmeasured).</summary>
+        public static IMECompositionMode imeCompositionMode
+        {
+            get => s_ImeCompositionMode;
+            set
+            {
+                if (s_ImeCompositionMode == value) return;
+                s_ImeCompositionMode = value;
+                SendImeRequest();
+            }
+        }
+
         public static string compositionString
         {
             get
             {
-                Stubs.Ignored("Input.compositionString", "is always empty (IME composition is not read yet)");
-                return CompositionString;
+                PollIme();
+                WarnIfImeUnavailable();
+                return s_Composition;
             }
         }
+
         /// <summary>The IME composition for the engine's own polling (InputForUI): no warning.</summary>
-        internal static string CompositionString => "";
+        internal static string CompositionString
+        {
+            get
+            {
+                PollIme();
+                return s_Composition;
+            }
+        }
+
+        /// <summary>Whether the window system reports the input method enabled for the window
+        /// (Unbound's choice, unmeasured: Unity asks whether the user's keyboard is configured for
+        /// IME input; the window system reports it only while the input method is allowed).</summary>
         public static bool imeIsSelected
         {
             get
             {
-                Stubs.Ignored("Input.imeIsSelected", "is always false (IME state is not read yet)");
-                return false;
+                PollIme();
+                WarnIfImeUnavailable();
+                return s_ImeSelected;
             }
         }
-        public static Vector2 compositionCursorPos { get; set; }
+
+        /// <summary>Where the input method opens its windows. Unity does not document the
+        /// coordinate space: Unbound passes the value as window pixels from the top left, with no
+        /// flip (Unbound's choice, unmeasured).</summary>
+        public static Vector2 compositionCursorPos
+        {
+            get => s_CompositionCursorPos;
+            set
+            {
+                if (s_CompositionCursorPos.x.Equals(value.x) && s_CompositionCursorPos.y.Equals(value.y)) return;
+                s_CompositionCursorPos = value;
+                SendImeRequest();
+            }
+        }
+
+        /// <summary>Reads the host's IME state once per frame.</summary>
+        static void PollIme()
+        {
+            int frame = Time.frameCount;
+            if (s_ImePolled && s_ImeFrame == frame) return;
+            s_ImePolled = true;
+            s_ImeFrame = frame;
+            s_ImeAvailable = false;
+            s_Composition = "";
+            s_ImeSelected = false;
+            if (s_ImeHostFailed) return;
+            try
+            {
+                using var document = System.Text.Json.JsonDocument.Parse(ImeHost("ime-state", "{}"));
+                var root = document.RootElement;
+                if (!root.GetProperty("available").GetBoolean())
+                {
+                    s_ImeUnavailableReason = "no window reads the input method: a headless run or a remote session";
+                    return;
+                }
+                string composition = root.GetProperty("composition").GetString() ?? "";
+                bool selected = root.GetProperty("selected").GetBoolean();
+                s_ImeAvailable = true;
+                s_Composition = composition;
+                s_ImeSelected = selected;
+            }
+            catch (Exception e)
+            {
+                s_ImeHostFailed = true;
+                s_ImeUnavailableReason = "the host's IME state is not read: " + e.Message;
+            }
+        }
+
+        /// <summary>Hands the game's IME mode and position to the window (applied after the frame).</summary>
+        static void SendImeRequest()
+        {
+            if (!s_ImeHostFailed)
+            {
+                bool enabled = s_ImeCompositionMode == IMECompositionMode.On;
+                string json = "{\"enabled\":" + (enabled ? "true" : "false") + ",\"position\":["
+                    + ImeCoordinate(s_CompositionCursorPos.x) + "," + ImeCoordinate(s_CompositionCursorPos.y) + "]}";
+                try
+                {
+                    ImeHost("ime-request", json);
+                }
+                catch (Exception e)
+                {
+                    s_ImeHostFailed = true;
+                    s_ImeAvailable = false;
+                    s_Composition = "";
+                    s_ImeSelected = false;
+                    s_ImeUnavailableReason = "the host takes no IME request: " + e.Message;
+                }
+            }
+            PollIme();
+            WarnIfImeUnavailable();
+        }
+
+        /// <summary>A coordinate as a JSON number; a non-finite one goes as 0 (Unbound's choice,
+        /// unmeasured).</summary>
+        static string ImeCoordinate(float v) =>
+            float.IsFinite(v) ? v.ToString("R", System.Globalization.CultureInfo.InvariantCulture) : "0";
+
+        static void WarnIfImeUnavailable()
+        {
+            if (s_ImeAvailable || s_ImeWarned) return;
+            s_ImeWarned = true;
+            Debug.LogWarning("Unbound: IME input is not available (" + s_ImeUnavailableReason
+                + "): Input.compositionString stays \"\" and Input.imeIsSelected false");
+        }
+
+        /// <summary>Forgets the IME state and restores the host calls, for tests.</summary>
+        internal static void ResetIme()
+        {
+            s_ImeCompositionMode = IMECompositionMode.Auto;
+            s_CompositionCursorPos = default;
+            s_ImePolled = false;
+            s_ImeFrame = 0;
+            s_ImeHostFailed = false;
+            s_ImeAvailable = false;
+            s_Composition = "";
+            s_ImeSelected = false;
+            s_ImeWarned = false;
+            s_ImeUnavailableReason = null;
+            ImeHost = Native.Call;
+        }
         public static bool backButtonLeavesApp { get; set; }
         public static bool compensateSensors { get; set; } = true;
         public static LocationService location { get; } = new LocationService();
