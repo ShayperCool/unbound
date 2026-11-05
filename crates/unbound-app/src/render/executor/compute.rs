@@ -66,9 +66,11 @@ fn storage_format_name(format: wgpu::TextureFormat) -> Option<&'static str> {
         F::R32Float => "R32Float",
         F::R32Uint => "R32Uint",
         F::R32Sint => "R32Sint",
+        F::Rg16Unorm => "Rg16Unorm",
         F::Rg16Float => "Rg16Float",
         F::Rg32Float => "Rg32Float",
         F::Rgba8Unorm => "Rgba8Unorm",
+        F::Rgba16Unorm => "Rgba16Unorm",
         F::Rgba16Float => "Rgba16Float",
         F::Rgba32Float => "Rgba32Float",
         F::Rgb10a2Unorm => "Rgb10a2Unorm",
@@ -85,8 +87,10 @@ fn wgpu_storage_format(name: &str) -> wgpu::TextureFormat {
         "R32Float" => F::R32Float,
         "R32Uint" => F::R32Uint,
         "R32Sint" => F::R32Sint,
+        "Rg16Unorm" => F::Rg16Unorm,
         "Rg16Float" => F::Rg16Float,
         "Rg32Float" => F::Rg32Float,
+        "Rgba16Unorm" => F::Rgba16Unorm,
         "Rgba16Float" => F::Rgba16Float,
         "Rgba32Float" => F::Rgba32Float,
         "Rgba32Uint" => F::Rgba32Uint,
@@ -938,4 +942,38 @@ pub(super) fn encode_copy(encoder: &mut wgpu::CommandEncoder, c: &BufferCopyOp) 
         c.destination_offset,
         c.size,
     );
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A kernel's RW texture of a normalized 16-bit format binds in that format, not RGBA8, so the
+    /// bind group matches the texture the renderer stores.
+    #[test]
+    fn normalized_16_bit_storage_formats_round_trip() {
+        use wgpu::TextureFormat as F;
+        for (format, name) in [(F::Rg16Unorm, "Rg16Unorm"), (F::Rgba16Unorm, "Rgba16Unorm")] {
+            assert_eq!(storage_format_name(format), Some(name));
+            assert_eq!(wgpu_storage_format(name), format);
+        }
+        // Every named format binds as itself.
+        for format in [
+            F::R8Unorm,
+            F::R16Float,
+            F::R32Float,
+            F::R32Uint,
+            F::R32Sint,
+            F::Rg16Float,
+            F::Rg32Float,
+            F::Rgba8Unorm,
+            F::Rgba16Float,
+            F::Rgba32Float,
+            F::Rgb10a2Unorm,
+            F::Rg11b10Ufloat,
+        ] {
+            let name = storage_format_name(format).unwrap();
+            assert_eq!(wgpu_storage_format(name), format, "{name}");
+        }
+    }
 }
