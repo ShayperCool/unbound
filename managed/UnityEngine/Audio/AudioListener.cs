@@ -95,7 +95,17 @@ namespace UnityEngine
                 m_MotionInFixedStep = inFixedStep;
                 m_HasLastPosition = false;
             }
-            UpdateMotion(deltaTime);
+            if (!fixedStep)
+            {
+                UpdateMotion(deltaTime);
+                return;
+            }
+            // The step's simulated pose, not an interpolated Transform's (Unbound's choice, unmeasured).
+            var position = AudioSystem.FixedStepPosition(transform);
+            if (m_HasLastPosition && deltaTime > 0f)
+                m_Velocity = (position - m_LastPosition) / deltaTime;
+            m_LastPosition = position;
+            m_HasLastPosition = true;
         }
 
         internal override void OnEngineEnable()

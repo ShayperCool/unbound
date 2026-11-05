@@ -152,12 +152,48 @@ namespace Unbound.Runtime
         }
 
         /// <summary>
+        /// The position a fixed-loop sample of <paramref name="t"/> reads: the pose of the last
+        /// physics step, not the pose between steps that an interpolated or extrapolated body's
+        /// Transform shows (PreUpdate.PhysicsUpdate writes that pose to the Transform each frame).
+        /// Unbound's choice (unmeasured): the nearest 3D Rigidbody on this GameObject or a parent
+        /// decides; while its Transform shows the in-between pose (it has a body, interpolates or
+        /// extrapolates, the simulation runs in FixedUpdate, and no script moved the Transform since
+        /// physics wrote it), the object keeps its current offset from the body's Transform, carried
+        /// by the body's rotation: simulated position + simulated rotation × (inverse Transform
+        /// rotation × (object position − body Transform position)). The body itself reads exactly
+        /// its simulated position (the same pose <c>Rigidbody.position</c> returns). Otherwise, and
+        /// for a Rigidbody2D, the Transform's position.
+        /// </summary>
+        internal static Vector3 FixedStepPosition(Transform t)
+        {
+            for (var p = t; p != null; p = p.m_Parent)
+            {
+                var owner = p.m_GameObject;
+                if (owner == null) break;
+                foreach (var c in owner.m_Components)
+                {
+                    if (c is not Rigidbody body || body.m_Destroyed) continue;
+                    if (body.m_Body == 0 || body.m_Interpolation == RigidbodyInterpolation.None
+                        || Physics.s_SimulationMode != SimulationMode.FixedUpdate
+                        || p.m_Version != body.m_TransformVersion)
+                        return t.position;
+                    if (ReferenceEquals(p, t)) return body.m_CurrentPosition;
+                    var offset = Quaternion.Inverse(p.rotation) * (t.position - p.position);
+                    return body.m_CurrentPosition + body.m_CurrentRotation * offset;
+                }
+            }
+            return t.position;
+        }
+
+        /// <summary>
         /// Each fixed step (FixedUpdate.AudioFixedUpdate): the velocity of the sources and the
         /// hearing listener that follow the fixed loop, from the motion since the previous fixed
         /// step over the step's <c>fixedDeltaTime</c>. Unbound's choices (unmeasured): every step
         /// samples, so the frame's packet carries the last step's velocity; a frame without a step
         /// (also every frame at timeScale 0) keeps the previous velocity; positions are read at
-        /// this node, before the step's physics; teleports are not filtered, as in the frame loop.
+        /// this node, before the step's physics, as the previous step's simulated pose for an
+        /// interpolated or extrapolated body (<see cref="FixedStepPosition"/>); teleports are not
+        /// filtered, as in the frame loop.
         /// </summary>
         internal static void FixedUpdate()
         {
