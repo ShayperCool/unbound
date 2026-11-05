@@ -316,6 +316,8 @@ namespace UnityEngine.AI
         {
             NavMeshAreas.Ensure();
             if (areaIndex < 0 || areaIndex >= 32) return;
+            // Changed area costs make the agents' paths stale (Scripting API, isPathStale).
+            if (NavMeshAreas.Costs[areaIndex] != cost) NavWorld.MarkPathsStale();
             NavMeshAreas.Costs[areaIndex] = cost;
         }
 
@@ -477,9 +479,20 @@ namespace UnityEngine.AI
                 Debug.LogError("Cannot set 'owner' on an invalid NavMeshLinkInstance");
         }
 
-        internal static int AddLinkInternal(NavMeshLinkData link, Vector3 position, Quaternion rotation) => NavWorld.AddLink(link, position, rotation);
+        // A link enabled or disabled makes the agents' paths stale (Scripting API, isPathStale);
+        // the link components enable and disable by adding and removing their link.
+        internal static int AddLinkInternal(NavMeshLinkData link, Vector3 position, Quaternion rotation)
+        {
+            NavWorld.MarkPathsStale();
+            return NavWorld.AddLink(link, position, rotation);
+        }
 
-        internal static void RemoveLinkInternal(int handle) => NavWorld.RemoveLink(handle);
+        internal static void RemoveLinkInternal(int handle)
+        {
+            if (NavWorld.FindLink(handle) == null) return;
+            NavWorld.MarkPathsStale();
+            NavWorld.RemoveLink(handle);
+        }
 
         internal static bool IsOffMeshConnectionOccupied(int handle) => NavMeshAgent.LinkOccupied(handle);
 
@@ -490,6 +503,7 @@ namespace UnityEngine.AI
             var link = NavWorld.FindLink(linkHandle);
             if (link == null || link.Active == activated) return;
             link.Active = activated;
+            NavWorld.MarkPathsStale();
             NavWorld.MarkDirty();
         }
 
