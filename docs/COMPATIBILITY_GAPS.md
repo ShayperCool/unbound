@@ -332,7 +332,7 @@ ListView), legacy Input Manager axes, Input System keyboard/mouse/gamepads, Inpu
 | Colour glyphs/emoji, hinted render modes, GPOS marks/GSUB | `Text/FontEngine.cs:288-550`, `crates/unbound-assets/src/font.rs` | S/W | L-M |
 | `Mouse.WarpCursorPosition`; mouse position frozen outside the window | `Input/NativeInput.cs:209`, `crates/unbound-app/src/lib.rs:316` | S | L-M |
 | Legacy pen input (`Input.penEventCount/GetPenEvent/GetLastPenContactEvent`) never read | `Input/LegacyPen.cs` | W | L |
-| `GUI.DrawTexture(alphaBlend: false)`, border radius | `IMGUI/GUI.cs:243-268` | S | L-M |
+| `GUI.DrawTexture(alphaBlend: false)`, border radius | `IMGUI/GUI.cs`, `IMGUI/GuiRender.cs` | S | source ready, unvalidated (3dd9d697): documented border widths (left, top, right, bottom) and corner radiuses (top-left, top-right, bottom-right, bottom-left) draw a texture-patterned border and rounded corners; shape details are unmeasured Unbound choices; zero values keep the plain quad. `alphaBlend: false` still draws blended and warns once (no opaque IMGUI material). L-M |
 | `CanvasRenderer.SetAlphaTexture` | `UI/Canvas.cs` | S | L |
 | `Screen.currentResolution`/`dpi`/refresh rate constants | `Core/Input.cs:31-33` | S | L |
 
