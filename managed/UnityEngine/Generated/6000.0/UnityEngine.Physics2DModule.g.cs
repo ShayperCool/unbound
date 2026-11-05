@@ -117,40 +117,7 @@ namespace UnityEngine
     }
     unsafe partial class Rigidbody2D
     {
-        [global::Unbound.Stub] public global::UnityEngine.Rigidbody2D.SlideResults Slide(global::UnityEngine.Vector2 velocity, float deltaTime, global::UnityEngine.Rigidbody2D.SlideMovement slideMovement) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.Slide"); return default; }
         [global::Unbound.Stub] internal void SetDragBehaviour(bool dragged) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SetDragBehaviour"); }
         [global::Unbound.Stub] public int GetShapes(global::UnityEngine.PhysicsShapeGroup2D physicsShapeGroup) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.GetShapes"); return default; }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial struct SlideMovement
-        {
-            [global::Unbound.Stub] public SlideMovement() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.ctor"); }
-            [global::Unbound.Stub] public void SetLayerMask(global::UnityEngine.LayerMask mask) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.SetLayerMask"); }
-            [global::Unbound.Stub] public void SetStartPosition(global::UnityEngine.Vector2 position) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.SetStartPosition"); }
-            public int maxIterations { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.maxIterations"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.maxIterations"); } }
-            public float surfaceSlideAngle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.surfaceSlideAngle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.surfaceSlideAngle"); } }
-            public float gravitySlipAngle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.gravitySlipAngle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.gravitySlipAngle"); } }
-            public global::UnityEngine.Vector2 surfaceUp { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.surfaceUp"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.surfaceUp"); } }
-            public global::UnityEngine.Vector2 surfaceAnchor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.surfaceAnchor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.surfaceAnchor"); } }
-            public global::UnityEngine.Vector2 gravity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.gravity"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.gravity"); } }
-            public global::UnityEngine.Vector2 startPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.startPosition"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.startPosition"); } }
-            public global::UnityEngine.Collider2D selectedCollider { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.selectedCollider"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.selectedCollider"); } }
-            public global::UnityEngine.LayerMask layerMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.layerMask"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.layerMask"); } }
-            public bool useLayerMask { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.useLayerMask"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.useLayerMask"); } }
-            public bool useStartPosition { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.useStartPosition"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.useStartPosition"); } }
-            public bool useNoMove { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.useNoMove"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.useNoMove"); } }
-            public bool useSimulationMove { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.useSimulationMove"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.useSimulationMove"); } }
-            public bool useAttachedTriggers { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.useAttachedTriggers"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideMovement.useAttachedTriggers"); } }
-        }
-        [global::System.Serializable]
-        [global::Unbound.Stub]
-        public unsafe partial struct SlideResults
-        {
-            public global::UnityEngine.Vector2 remainingVelocity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideResults.remainingVelocity"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideResults.remainingVelocity"); } }
-            public global::UnityEngine.Vector2 position { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideResults.position"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideResults.position"); } }
-            public int iterationsUsed { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideResults.iterationsUsed"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideResults.iterationsUsed"); } }
-            public global::UnityEngine.RaycastHit2D slideHit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideResults.slideHit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideResults.slideHit"); } }
-            public global::UnityEngine.RaycastHit2D surfaceHit { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideResults.surfaceHit"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rigidbody2D.SlideResults.surfaceHit"); } }
-        }
     }
 }
