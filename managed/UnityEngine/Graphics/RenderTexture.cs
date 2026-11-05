@@ -260,8 +260,10 @@ namespace UnityEngine
         public bool IsCreatedOrPending() => m_Created;
 
         /// <summary>The native target format: packed 11/11/10 floats as themselves, half floats for
-        /// other HDR formats, RGBA8 otherwise (an sRGB view for sRGB ones).</summary>
-        int PacketFormat()
+        /// other HDR formats, normalized 16-bit RG/RGBA and packed 10-10-10-2 as themselves (as
+        /// linear RGBA8, with a warning, where the device cannot keep them), RGBA8 otherwise (an
+        /// sRGB view for sRGB ones).</summary>
+        internal int PacketFormat()
         {
             var f = m_Descriptor.graphicsFormat;
             if (f == GraphicsFormat.None && m_Descriptor.depthStencilFormat != GraphicsFormat.None) return 5;
@@ -273,9 +275,16 @@ namespace UnityEngine
             if (f == GraphicsFormat.R32G32_SFloat) return 10;
             if (f == GraphicsFormat.R16_SFloat) return 11;
             if (f == GraphicsFormat.R16G16_SFloat) return 12;
+            int norm = PixelFormats.GpuNormFormat(f);
+            if (norm >= 0) return norm;
             if (GraphicsFormatUtility.IsHDRFormat(f) || GraphicsFormatUtility.IsIEEE754Format(f)) return 2;
+            if (GraphicsFormatUtility.IsIntegerFormat(f) && s_WarnedIntegerFormats.Add(f))
+                Debug.LogWarning($"Unbound: render texture '{name}' has the integer format {f}, which Unbound does not store yet: it is kept as 8-bit RGBA (values beyond 8 bits per channel are lost).");
             return GraphicsFormatUtility.IsSRGBFormat(f) ? 0 : 1;
         }
+
+        /// <summary>Integer formats warned about (once each).</summary>
+        static readonly HashSet<GraphicsFormat> s_WarnedIntegerFormats = new HashSet<GraphicsFormat>();
 
         /// <summary>The layers the renderer allocates: an array's depth, a cube's six faces, else one
         /// (3D and cube-array targets have a 2D stand-in).</summary>

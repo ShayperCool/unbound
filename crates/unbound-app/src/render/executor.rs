@@ -22,7 +22,7 @@ use std::{
 };
 use unbound_runtime::render_protocol::{
     commands::{self, Command},
-    handle, owned,
+    handle, owned, texture_format,
 };
 use unbound_shaders::SampleKind;
 
@@ -2565,6 +2565,9 @@ impl UnityRenderer {
             wgpu::TextureFormat::R16Float => 11,
             wgpu::TextureFormat::Rg16Float => 12,
             wgpu::TextureFormat::Rg11b10Ufloat => 4,
+            wgpu::TextureFormat::Rg16Unorm => texture_format::RG16_UNORM,
+            wgpu::TextureFormat::Rgba16Unorm => texture_format::RGBA16_UNORM,
+            wgpu::TextureFormat::Rgb10a2Unorm => texture_format::RGB10A2_UNORM,
             _ => 0,
         };
         let next = handle::PLAIN_MAX - self.grabs.len() as u64;
@@ -3102,6 +3105,20 @@ impl UnityRenderer {
                                 out.extend_from_slice(&v.to_le_bytes());
                             } else {
                                 out.push((v.clamp(0.0, 1.0) * 255.0).round() as u8);
+                            }
+                        }
+                    }
+                }
+                wgpu::TextureFormat::Rg16Unorm
+                | wgpu::TextureFormat::Rgba16Unorm
+                | wgpu::TextureFormat::Rgb10a2Unorm => {
+                    for pixel in line.chunks_exact(texel as usize) {
+                        let rgba = resources::norm_texel_to_f32(format, pixel)?;
+                        for v in rgba {
+                            if float {
+                                out.extend_from_slice(&v.to_le_bytes());
+                            } else {
+                                out.push((v * 255.0).round() as u8);
                             }
                         }
                     }

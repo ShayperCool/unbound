@@ -197,20 +197,7 @@ impl ShaderCompiler {
         let mut defines = self.defines(&p, &selected, 50, true, "SHADER_STAGE_COMPUTE");
         defines.extend(declared.defines.iter().cloned());
         let source = self.preprocess(&p, &defines)?.text;
-        let hash = {
-            let mut h = blake3::Hasher::new();
-            h.update(b"kernel");
-            h.update(&FORMAT_VERSION.to_le_bytes());
-            h.update(&(source.len() as u64).to_le_bytes());
-            h.update(source.as_bytes());
-            h.update(kernel.as_bytes());
-            h.update(selected.join(" ").as_bytes());
-            for (name, format) in storage_formats {
-                h.update(name.as_bytes());
-                h.update(format.as_bytes());
-            }
-            h.finalize().to_hex().to_string()
-        };
+        let hash = kernel_cache_key(&source, kernel, &selected, storage_formats);
         let cached = self
             .settings
             .cache_dir
@@ -247,9 +234,11 @@ fn storage_format(name: &str) -> Option<naga::StorageFormat> {
         "R32Float" => F::R32Float,
         "R32Uint" => F::R32Uint,
         "R32Sint" => F::R32Sint,
+        "Rg16Unorm" => F::Rg16Unorm,
         "Rg16Float" => F::Rg16Float,
         "Rg32Float" => F::Rg32Float,
         "Rgba8Unorm" => F::Rgba8Unorm,
+        "Rgba16Unorm" => F::Rgba16Unorm,
         "Rgba16Float" => F::Rgba16Float,
         "Rgba32Float" => F::Rgba32Float,
         "Rgba32Uint" => F::Rgba32Uint,
@@ -452,10 +441,68 @@ fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<Compi
     })
 }
 
+/// The kernel cache key: every input is length-prefixed, so two different inputs cannot join
+/// into the same bytes ("ab"+"c" vs "a"+"bc"); the `kernel-v2` tag keeps keys of the earlier
+/// unprefixed layout from ever matching.
+fn kernel_cache_key(
+    source: &str,
+    kernel: &str,
+    keywords: &[String],
+    storage_formats: &[(String, String)],
+) -> String {
+    fn field(h: &mut blake3::Hasher, bytes: &[u8]) {
+        h.update(&(bytes.len() as u64).to_le_bytes());
+        h.update(bytes);
+    }
+    let mut h = blake3::Hasher::new();
+    h.update(b"kernel-v2");
+    h.update(&FORMAT_VERSION.to_le_bytes());
+    field(&mut h, source.as_bytes());
+    field(&mut h, kernel.as_bytes());
+    h.update(&(keywords.len() as u64).to_le_bytes());
+    for keyword in keywords {
+        field(&mut h, keyword.as_bytes());
+    }
+    h.update(&(storage_formats.len() as u64).to_le_bytes());
+    for (name, format) in storage_formats {
+        field(&mut h, name.as_bytes());
+        field(&mut h, format.as_bytes());
+    }
+    h.finalize().to_hex().to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use crate::Settings;
+
+    #[test]
+    fn kernel_cache_key_separates_its_fields() {
+        let rw = |pairs: &[(&str, &str)]| -> Vec<(String, String)> {
+            pairs
+                .iter()
+                .map(|(a, b)| (a.to_string(), b.to_string()))
+                .collect()
+        };
+        let keys =
+            |words: &[&str]| -> Vec<String> { words.iter().map(|w| w.to_string()).collect() };
+        // Field boundaries move without the bytes changing: every key must differ.
+        let a = kernel_cache_key("s", "CSMain", &keys(&[]), &rw(&[("ab", "Rgba8Unorm")]));
+        let b = kernel_cache_key("s", "CSMain", &keys(&[]), &rw(&[("a", "bRgba8Unorm")]));
+        let c = kernel_cache_key("s", "CSMai", &keys(&[]), &rw(&[("nab", "Rgba8Unorm")]));
+        let d = kernel_cache_key("s", "CSMain", &keys(&["A B"]), &rw(&[]));
+        let e = kernel_cache_key("s", "CSMain", &keys(&["A", "B"]), &rw(&[]));
+        let all = [&a, &b, &c, &d, &e];
+        for (i, x) in all.iter().enumerate() {
+            for y in &all[i + 1..] {
+                assert_ne!(x, y);
+            }
+        }
+        assert_eq!(
+            a,
+            kernel_cache_key("s", "CSMain", &keys(&[]), &rw(&[("ab", "Rgba8Unorm")]))
+        );
+    }
 
     const SOURCE: &str = r#"
 #pragma kernel Fill
@@ -542,6 +589,31 @@ RWStructuredBuffer<uint> _Out;
             assert!(names.contains(&buffer), "{kernel}: {names:?}");
             assert!(names.contains(&counter.as_str()), "{kernel}: {names:?}");
             naga::front::wgsl::parse_str(&k.wgsl).unwrap();
+        }
+    }
+
+    /// Render textures of the normalized 16-bit formats are written in them (where the device
+    /// lets kernels write them, the renderer stores them so and names them here).
+    #[test]
+    fn rw_textures_compile_in_normalized_16_bit_formats() {
+        use naga::StorageFormat as F;
+        assert_eq!(storage_format("Rg16Unorm"), Some(F::Rg16Unorm));
+        assert_eq!(storage_format("Rgba16Unorm"), Some(F::Rgba16Unorm));
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        for (name, wgsl) in [("Rg16Unorm", "rg16unorm"), ("Rgba16Unorm", "rgba16unorm")] {
+            let k = compiler
+                .compile_kernel(&program(), "Fill", &[], &[("_Result".into(), name.into())])
+                .unwrap();
+            let result = k.resources.iter().find(|r| r.name == "_Result").unwrap();
+            assert_eq!(
+                result.kind,
+                ResourceKind::StorageTexture {
+                    dim: TextureDim::D2,
+                    format: name.into(),
+                    write_only: true
+                }
+            );
+            assert!(k.wgsl.contains(wgsl), "{}", k.wgsl);
         }
     }
 

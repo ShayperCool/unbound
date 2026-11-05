@@ -1,7 +1,8 @@
 //! GPU copies of the protocol's meshes and textures.
 use bytemuck::{Pod, Zeroable};
-use std::collections::HashMap;
-use unbound_runtime::render_protocol::owned;
+use std::collections::{BTreeSet, HashMap};
+use std::sync::{Mutex, RwLock};
+use unbound_runtime::render_protocol::{owned, texture_format};
 
 /// The one vertex layout every mesh is uploaded with (`VertexIn` in unity.wgsl).
 #[repr(C)]
@@ -450,6 +451,269 @@ fn f32_to_f16(value: f32) -> u16 {
     sign | ((e as u32) << 10 | (mantissa + 0x1000) >> 13) as u16
 }
 
+/// What the device does with the formats only some devices have: those of the normalized 16-bit
+/// and packed 10-10-10-2 codes ([`texture_format::RG16_UNORM`] ..). Each is the format's features
+/// as wgpu checks them (the adapter's when the device has
+/// `TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES`, else WebGPU's guaranteed ones), or none where the
+/// device lacks the feature the format needs (`TEXTURE_FORMAT_16BIT_NORM`).
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
+pub struct NormFormatCaps {
+    pub rg16: Option<wgpu::TextureFormatFeatures>,
+    pub rgba16: Option<wgpu::TextureFormatFeatures>,
+    pub rgb10a2: Option<wgpu::TextureFormatFeatures>,
+}
+
+impl NormFormatCaps {
+    /// Nothing known: every such texture falls back.
+    pub const NONE: Self = Self {
+        rg16: None,
+        rgba16: None,
+        rgb10a2: None,
+    };
+
+    /// The device's, from its adapter. The device asks for the adapter's features when it is
+    /// made, so it has the 16-bit normalized formats exactly where the adapter does.
+    pub fn query(adapter: &wgpu::Adapter, device_features: wgpu::Features) -> Self {
+        let features = |format: wgpu::TextureFormat| {
+            if device_features.contains(wgpu::Features::TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES) {
+                adapter.get_texture_format_features(format)
+            } else {
+                format.guaranteed_format_features(device_features)
+            }
+        };
+        let norm16 = device_features.contains(wgpu::Features::TEXTURE_FORMAT_16BIT_NORM);
+        Self {
+            rg16: norm16.then(|| features(wgpu::TextureFormat::Rg16Unorm)),
+            rgba16: norm16.then(|| features(wgpu::TextureFormat::Rgba16Unorm)),
+            rgb10a2: Some(features(wgpu::TextureFormat::Rgb10a2Unorm)),
+        }
+    }
+}
+
+/// The renderer's device's [`NormFormatCaps`] (none until the renderer reads them).
+static NORM_FORMAT_CAPS: RwLock<NormFormatCaps> = RwLock::new(NormFormatCaps::NONE);
+
+/// Records the device's [`NormFormatCaps`], read when the renderer starts.
+pub fn set_norm_format_caps(caps: NormFormatCaps) {
+    *NORM_FORMAT_CAPS.write().unwrap_or_else(|e| e.into_inner()) = caps;
+}
+
+fn norm_format_caps() -> NormFormatCaps {
+    *NORM_FORMAT_CAPS.read().unwrap_or_else(|e| e.into_inner())
+}
+
+/// The format a normalized 16-bit or 10-10-10-2 code is stored in, or why this device cannot
+/// keep it. Every such texture must be one the device samples, filters, copies, draws into and
+/// blends, whatever its own use, so render textures and textures of one format stay
+/// copy-compatible (Graphics.CopyTexture). A multisampled target also needs the sample count
+/// and resolving, and one kernels write (enableRandomWrite) storage access.
+pub fn norm_format(
+    code: i32,
+    caps: &NormFormatCaps,
+    render_target: bool,
+    random_write: bool,
+    samples: u32,
+) -> Result<wgpu::TextureFormat, String> {
+    use wgpu::{TextureFormat as F, TextureFormatFeatureFlags as Flags, TextureUsages as U};
+    let (format, features) = match code {
+        texture_format::RG16_UNORM => (F::Rg16Unorm, caps.rg16),
+        texture_format::RGBA16_UNORM => (F::Rgba16Unorm, caps.rgba16),
+        texture_format::RGB10A2_UNORM => (F::Rgb10a2Unorm, caps.rgb10a2),
+        _ => {
+            return Err(format!(
+                "format code {code} is not a normalized 16-bit or 10-10-10-2 code"
+            ));
+        }
+    };
+    let Some(features) = features else {
+        return Err(format!(
+            "{format:?} needs the TEXTURE_FORMAT_16BIT_NORM device feature, which this device does not have"
+        ));
+    };
+    let usages = U::TEXTURE_BINDING | U::COPY_SRC | U::COPY_DST | U::RENDER_ATTACHMENT;
+    if !features.allowed_usages.contains(usages)
+        || !features
+            .flags
+            .contains(Flags::FILTERABLE | Flags::BLENDABLE)
+    {
+        return Err(format!(
+            "this device cannot sample, filter, copy, draw into and blend {format:?}"
+        ));
+    }
+    if render_target
+        && samples > 1
+        && !(features.flags.sample_count_supported(samples)
+            && features.flags.contains(Flags::MULTISAMPLE_RESOLVE))
+    {
+        return Err(format!(
+            "this device cannot draw into {format:?} with {samples} samples"
+        ));
+    }
+    // Kernels' 16-bit normalized storage also needs TEXTURE_FORMAT_16BIT_NORM (wgpu validates
+    // their shaders with it), which a format without features above lacks.
+    if random_write {
+        if !features.allowed_usages.contains(U::STORAGE_BINDING)
+            || !features
+                .flags
+                .contains(Flags::STORAGE_WRITE_ONLY | Flags::STORAGE_READ_WRITE)
+        {
+            return Err(format!(
+                "this device cannot let kernels read and write {format:?}"
+            ));
+        }
+    }
+    Ok(format)
+}
+
+/// Why a texture is not stored in its code's own format.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum FormatFallback {
+    /// A code outside the protocol's table (an error: no producer sends one).
+    Unknown(String),
+    /// A format this device cannot keep for the texture's use.
+    Unsupported(String),
+}
+
+/// The format a packet's texture is stored in and its bytes per texel on the GPU.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TextureStorage {
+    pub format: wgpu::TextureFormat,
+    pub bytes_per_pixel: u32,
+    /// Set when the texture is stored as linear RGBA8 instead of its code's format.
+    pub fallback: Option<FormatFallback>,
+}
+
+/// The storage of a packet's format code. `samples` is a render target's MSAA sample count;
+/// `packed` whether the device draws into packed 11/11/10 floats.
+pub fn texture_storage(
+    t: &owned::Texture,
+    samples: u32,
+    packed: bool,
+    caps: &NormFormatCaps,
+) -> TextureStorage {
+    // Imported textures may come BC7-compressed (7: colour, sampled through an sRGB view in a
+    // linear project like 0; 8: linear data like 1).
+    let compressed = matches!(t.format, 7 | 8) && !t.render_target;
+    let stored = |format: wgpu::TextureFormat, bytes_per_pixel: u32| TextureStorage {
+        format,
+        bytes_per_pixel,
+        fallback: None,
+    };
+    let rgba8 = |fallback: FormatFallback| TextureStorage {
+        format: wgpu::TextureFormat::Rgba8Unorm,
+        bytes_per_pixel: 4,
+        fallback: Some(fallback),
+    };
+    if let Err(why) = texture_format::validate(t.format) {
+        // As the default color target, so the handle still names a texture.
+        return rgba8(FormatFallback::Unknown(why));
+    }
+    match t.format {
+        2 => stored(wgpu::TextureFormat::Rgba16Float, 8),
+        6 => stored(wgpu::TextureFormat::R32Float, 4),
+        9 => stored(wgpu::TextureFormat::Rgba32Float, 16),
+        10 => stored(wgpu::TextureFormat::Rg32Float, 8),
+        11 => stored(wgpu::TextureFormat::R16Float, 2),
+        12 => stored(wgpu::TextureFormat::Rg16Float, 4),
+        4 if packed && !t.random_write => stored(wgpu::TextureFormat::Rg11b10Ufloat, 4),
+        4 => stored(wgpu::TextureFormat::Rgba16Float, 8),
+        texture_format::RG16_UNORM..=texture_format::RGB10A2_UNORM => {
+            // Where the device cannot keep them, linear RGBA8: what they were before they had
+            // codes of their own.
+            match norm_format(t.format, caps, t.render_target, t.random_write, samples) {
+                Ok(format) => stored(format, format.block_copy_size(None).unwrap_or(4)),
+                Err(why) => rgba8(FormatFallback::Unsupported(why)),
+            }
+        }
+        _ if compressed => stored(wgpu::TextureFormat::Bc7RgbaUnorm, 0),
+        _ => stored(wgpu::TextureFormat::Rgba8Unorm, 4),
+    }
+}
+
+/// Logs a texture's format fallback, once per code and reason.
+fn report_fallback(code: i32, fallback: &FormatFallback) {
+    static REPORTED: Mutex<BTreeSet<(i32, String)>> = Mutex::new(BTreeSet::new());
+    let (FormatFallback::Unknown(why) | FormatFallback::Unsupported(why)) = fallback;
+    if !REPORTED
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .insert((code, why.clone()))
+    {
+        return;
+    }
+    match fallback {
+        FormatFallback::Unknown(why) => tracing::error!(
+            "texture upload rejected ({why}): the texture is made as linear RGBA8 instead"
+        ),
+        FormatFallback::Unsupported(why) => tracing::warn!(
+            "Unbound: a texture of format code {code} is kept as linear RGBA8 (8 bits per channel, not its own precision): {why}"
+        ),
+    }
+}
+
+/// A float as an unsigned normalized integer of `max` steps: clamped to 0..=1, rounded to the
+/// nearest step; NaN is 0.
+fn unorm(v: f32, max: u32) -> u32 {
+    if v.is_nan() {
+        0
+    } else {
+        (v.clamp(0.0, 1.0) * max as f32).round() as u32
+    }
+}
+
+/// Upload data (four f32 per texel) of a normalized 16-bit or 10-10-10-2 code as `format`
+/// stores it: its own format, or RGBA8 where it falls back.
+pub fn norm_texels(format: wgpu::TextureFormat, data: &[u8]) -> Vec<u8> {
+    let texel = format.block_copy_size(None).unwrap_or(4) as usize;
+    let mut out = Vec::with_capacity(data.len() / 16 * texel);
+    for chunk in data.chunks_exact(16) {
+        let c: [f32; 4] = std::array::from_fn(|i| {
+            f32::from_le_bytes(chunk[i * 4..i * 4 + 4].try_into().unwrap())
+        });
+        match format {
+            wgpu::TextureFormat::Rg16Unorm => {
+                for v in &c[..2] {
+                    out.extend_from_slice(&(unorm(*v, 0xffff) as u16).to_le_bytes());
+                }
+            }
+            wgpu::TextureFormat::Rgba16Unorm => {
+                for v in c {
+                    out.extend_from_slice(&(unorm(v, 0xffff) as u16).to_le_bytes());
+                }
+            }
+            // Red in the low bits, alpha in the top two.
+            wgpu::TextureFormat::Rgb10a2Unorm => {
+                let packed = unorm(c[0], 0x3ff)
+                    | unorm(c[1], 0x3ff) << 10
+                    | unorm(c[2], 0x3ff) << 20
+                    | unorm(c[3], 3) << 30;
+                out.extend_from_slice(&packed.to_le_bytes());
+            }
+            _ => out.extend(c.map(|v| unorm(v, 0xff) as u8)),
+        }
+    }
+    out
+}
+
+/// A texel of a normalized 16-bit or 10-10-10-2 format as RGBA floats (a two-channel one reads
+/// (r, g, 0, 1), as the float formats do); none for other formats or a short texel.
+pub fn norm_texel_to_f32(format: wgpu::TextureFormat, texel: &[u8]) -> Option<[f32; 4]> {
+    let u16_at =
+        |i: usize| f32::from(u16::from_le_bytes([texel[i * 2], texel[i * 2 + 1]])) / 65535.0;
+    Some(match format {
+        wgpu::TextureFormat::Rg16Unorm if texel.len() >= 4 => [u16_at(0), u16_at(1), 0.0, 1.0],
+        wgpu::TextureFormat::Rgba16Unorm if texel.len() >= 8 => {
+            [u16_at(0), u16_at(1), u16_at(2), u16_at(3)]
+        }
+        wgpu::TextureFormat::Rgb10a2Unorm if texel.len() >= 4 => {
+            let p = u32::from_le_bytes(texel[..4].try_into().unwrap());
+            let ten = |shift: u32| ((p >> shift) & 0x3ff) as f32 / 1023.0;
+            [ten(0), ten(10), ten(20), (p >> 30) as f32 / 3.0]
+        }
+        _ => return None,
+    })
+}
+
 /// Creates (or rewrites in place, when the shape is unchanged) a texture from a packet.
 pub fn upload_texture(
     device: &wgpu::Device,
@@ -493,21 +757,13 @@ pub fn upload_texture(
     let packed = device
         .features()
         .contains(wgpu::Features::RG11B10UFLOAT_RENDERABLE);
-    // Imported textures may come BC7-compressed (7: colour, sampled through an sRGB view in a
-    // linear project like 0; 8: linear data like 1).
+    // Imported textures may come BC7-compressed (see `texture_storage`).
     let compressed = matches!(t.format, 7 | 8) && !render_target;
-    let (format, bytes_per_pixel) = match t.format {
-        2 => (wgpu::TextureFormat::Rgba16Float, 8),
-        6 => (wgpu::TextureFormat::R32Float, 4),
-        9 => (wgpu::TextureFormat::Rgba32Float, 16),
-        10 => (wgpu::TextureFormat::Rg32Float, 8),
-        11 => (wgpu::TextureFormat::R16Float, 2),
-        12 => (wgpu::TextureFormat::Rg16Float, 4),
-        4 if packed && !t.random_write => (wgpu::TextureFormat::Rg11b10Ufloat, 4),
-        4 => (wgpu::TextureFormat::Rgba16Float, 8),
-        _ if compressed => (wgpu::TextureFormat::Bc7RgbaUnorm, 0),
-        _ => (wgpu::TextureFormat::Rgba8Unorm, 4),
-    };
+    let storage = texture_storage(t, samples, packed, &norm_format_caps());
+    if let Some(fallback) = &storage.fallback {
+        report_fallback(t.format, fallback);
+    }
+    let (format, bytes_per_pixel) = (storage.format, storage.bytes_per_pixel);
     let color = t.format == 0 || t.format == 7;
     let srgb_format = if compressed {
         wgpu::TextureFormat::Bc7RgbaUnormSrgb
@@ -728,7 +984,7 @@ pub fn upload_texture(
         }
     } else if !t.data.is_empty() {
         let source_bpp = match t.format {
-            2 | 6 | 9..=12 => 16,
+            c if texture_format::float_data(c) => 16,
             3 => 1,
             _ => 4,
         };
@@ -755,6 +1011,11 @@ pub fn upload_texture(
                     // Alpha8 samples as (0, 0, 0, a), like Unity's.
                     3 => {
                         converted = src.iter().flat_map(|&a| [0, 0, 0, a]).collect::<Vec<u8>>();
+                        &converted
+                    }
+                    // Normalized integers from floats, in the format the texture is stored in.
+                    texture_format::RG16_UNORM..=texture_format::RGB10A2_UNORM => {
+                        converted = norm_texels(format, src);
                         &converted
                     }
                     2 | 6 | 9..=12 => {
@@ -936,5 +1197,305 @@ mod tests {
         assert_eq!(indices, vec![0, 1, 2, 0, 2, 3]);
         assert_eq!(submeshes[0].count, 6);
         assert_eq!(size_of::<Vertex>(), 108);
+    }
+
+    /// Every usage and flag: a device that does everything with the format.
+    fn full() -> Option<wgpu::TextureFormatFeatures> {
+        Some(wgpu::TextureFormatFeatures {
+            allowed_usages: wgpu::TextureUsages::all(),
+            flags: wgpu::TextureFormatFeatureFlags::all(),
+        })
+    }
+
+    fn full_caps() -> NormFormatCaps {
+        NormFormatCaps {
+            rg16: full(),
+            rgba16: full(),
+            rgb10a2: full(),
+        }
+    }
+
+    fn packet(format: i32, render_target: bool, random_write: bool) -> owned::Texture {
+        owned::Texture {
+            width: 4,
+            height: 4,
+            format,
+            mip_count: 1,
+            render_target,
+            random_write,
+            samples: 1,
+            layers: 1,
+            dimension: 2,
+            ..Default::default()
+        }
+    }
+
+    fn stored(
+        code: i32,
+        rt: bool,
+        rw: bool,
+        samples: u32,
+        caps: &NormFormatCaps,
+    ) -> TextureStorage {
+        texture_storage(&packet(code, rt, rw), samples, true, caps)
+    }
+
+    #[test]
+    fn norm_codes_keep_their_precision() {
+        use wgpu::TextureFormat as F;
+        let caps = full_caps();
+        for rt in [false, true] {
+            for (code, format, bytes) in [
+                (13, F::Rg16Unorm, 4),
+                (14, F::Rgba16Unorm, 8),
+                (15, F::Rgb10a2Unorm, 4),
+            ] {
+                assert_eq!(
+                    stored(code, rt, false, if rt { 4 } else { 1 }, &caps),
+                    TextureStorage {
+                        format,
+                        bytes_per_pixel: bytes,
+                        fallback: None
+                    },
+                    "code {code}, render target {rt}"
+                );
+            }
+        }
+        // The codes before them are stored as they were.
+        for (code, format) in [
+            (0, F::Rgba8Unorm),
+            (1, F::Rgba8Unorm),
+            (2, F::Rgba16Float),
+            (4, F::Rg11b10Ufloat),
+            (6, F::R32Float),
+            (9, F::Rgba32Float),
+            (10, F::Rg32Float),
+            (11, F::R16Float),
+            (12, F::Rg16Float),
+        ] {
+            let s = stored(code, true, false, 1, &caps);
+            assert_eq!((s.format, s.fallback), (format, None), "code {code}");
+        }
+    }
+
+    #[test]
+    fn unknown_codes_are_rejected() {
+        for code in [-1, 16, 99, i32::MAX] {
+            let s = stored(code, true, false, 1, &full_caps());
+            assert_eq!(s.format, wgpu::TextureFormat::Rgba8Unorm);
+            assert!(
+                matches!(s.fallback, Some(FormatFallback::Unknown(_))),
+                "code {code}: {:?}",
+                s.fallback
+            );
+        }
+        assert!(norm_format(12, &full_caps(), true, false, 1).is_err());
+    }
+
+    #[test]
+    fn norm16_without_the_device_feature_falls_back_to_rgba8() {
+        let caps = NormFormatCaps {
+            rg16: None,
+            rgba16: None,
+            rgb10a2: full(),
+        };
+        for code in [13, 14] {
+            let s = stored(code, true, false, 1, &caps);
+            assert_eq!(s.format, wgpu::TextureFormat::Rgba8Unorm, "code {code}");
+            assert_eq!(s.bytes_per_pixel, 4);
+            assert!(
+                matches!(&s.fallback, Some(FormatFallback::Unsupported(why)) if why.contains("TEXTURE_FORMAT_16BIT_NORM")),
+                "code {code}: {:?}",
+                s.fallback
+            );
+        }
+        assert_eq!(
+            stored(15, true, false, 1, &caps).format,
+            wgpu::TextureFormat::Rgb10a2Unorm
+        );
+        // Before the renderer reads the device, every one of them falls back.
+        for code in [13, 14, 15] {
+            assert!(
+                stored(code, false, false, 1, &NormFormatCaps::NONE)
+                    .fallback
+                    .is_some()
+            );
+        }
+    }
+
+    /// WebGPU's guaranteed features (no adapter-specific ones) do not let 16-bit normalized
+    /// formats be drawn into: plain textures fall back too, so copies between them and render
+    /// textures of the format keep working.
+    #[test]
+    fn norm_formats_follow_the_devices_format_features() {
+        use wgpu::{Features, TextureFormat as F};
+        let guaranteed = |f: F, features: Features| Some(f.guaranteed_format_features(features));
+        let caps = NormFormatCaps {
+            rg16: guaranteed(F::Rg16Unorm, Features::TEXTURE_FORMAT_16BIT_NORM),
+            rgba16: guaranteed(F::Rgba16Unorm, Features::TEXTURE_FORMAT_16BIT_NORM),
+            rgb10a2: guaranteed(F::Rgb10a2Unorm, Features::empty()),
+        };
+        for code in [13, 14] {
+            for rt in [false, true] {
+                assert_eq!(stored(code, rt, false, 1, &caps).format, F::Rgba8Unorm);
+            }
+        }
+        // 10-10-10-2 is drawn into, blended and resolved at 4 samples everywhere, but not at 2
+        // or as storage unless the adapter says so.
+        assert_eq!(stored(15, true, false, 4, &caps).format, F::Rgb10a2Unorm);
+        assert_eq!(stored(15, true, false, 2, &caps).format, F::Rgba8Unorm);
+        assert_eq!(stored(15, true, true, 1, &caps).format, F::Rgba8Unorm);
+    }
+
+    /// Kernels write every one of the formats where the device lets them read and write it.
+    #[test]
+    fn kernels_write_the_formats_the_device_stores_for_them() {
+        use wgpu::TextureFormat as F;
+        let caps = full_caps();
+        for (code, format, bytes) in [
+            (13, F::Rg16Unorm, 4),
+            (14, F::Rgba16Unorm, 8),
+            (15, F::Rgb10a2Unorm, 4),
+        ] {
+            assert_eq!(
+                stored(code, true, true, 1, &caps),
+                TextureStorage {
+                    format,
+                    bytes_per_pixel: bytes,
+                    fallback: None
+                },
+                "code {code}"
+            );
+        }
+    }
+
+    /// Where the device cannot let kernels read and write a format (no storage binding, or
+    /// read-only/write-only access only), its RW render textures fall back, loudly; the same
+    /// format without kernel writes is kept.
+    #[test]
+    fn kernel_writes_follow_the_devices_storage_features() {
+        use wgpu::{TextureFormatFeatureFlags as Flags, TextureUsages as U};
+        let without = |usages: U, flags: Flags| {
+            Some(wgpu::TextureFormatFeatures {
+                allowed_usages: U::all() - usages,
+                flags: Flags::all() - flags,
+            })
+        };
+        for features in [
+            without(U::STORAGE_BINDING, Flags::empty()),
+            without(U::empty(), Flags::STORAGE_READ_WRITE),
+            without(U::empty(), Flags::STORAGE_WRITE_ONLY),
+        ] {
+            let caps = NormFormatCaps {
+                rg16: features,
+                rgba16: features,
+                rgb10a2: features,
+            };
+            for code in [13, 14, 15] {
+                let s = stored(code, true, true, 1, &caps);
+                assert_eq!(s.format, wgpu::TextureFormat::Rgba8Unorm, "code {code}");
+                assert!(
+                    matches!(&s.fallback, Some(FormatFallback::Unsupported(why)) if why.contains("kernels read and write")),
+                    "code {code}: {:?}",
+                    s.fallback
+                );
+                assert_eq!(stored(code, true, false, 1, &caps).fallback, None);
+            }
+        }
+        // Without TEXTURE_FORMAT_16BIT_NORM, kernels cannot write the 16-bit formats either.
+        let caps = NormFormatCaps {
+            rg16: None,
+            rgba16: None,
+            rgb10a2: full(),
+        };
+        for code in [13, 14] {
+            assert!(
+                matches!(&stored(code, true, true, 1, &caps).fallback, Some(FormatFallback::Unsupported(why)) if why.contains("TEXTURE_FORMAT_16BIT_NORM")),
+                "code {code}"
+            );
+        }
+        // WebGPU's guaranteed features give the 16-bit formats read-only/write-only storage but
+        // no drawing into them: they fall back, kernel writes or not.
+        let guaranteed = |f: wgpu::TextureFormat| {
+            Some(f.guaranteed_format_features(wgpu::Features::TEXTURE_FORMAT_16BIT_NORM))
+        };
+        let caps = NormFormatCaps {
+            rg16: guaranteed(wgpu::TextureFormat::Rg16Unorm),
+            rgba16: guaranteed(wgpu::TextureFormat::Rgba16Unorm),
+            rgb10a2: full(),
+        };
+        for code in [13, 14] {
+            assert_eq!(
+                stored(code, true, true, 1, &caps).format,
+                wgpu::TextureFormat::Rgba8Unorm
+            );
+        }
+    }
+
+    fn floats(texels: &[[f32; 4]]) -> Vec<u8> {
+        texels
+            .iter()
+            .flatten()
+            .flat_map(|v| v.to_le_bytes())
+            .collect()
+    }
+
+    #[test]
+    fn norm_texels_round_to_the_nearest_step() {
+        use wgpu::TextureFormat as F;
+        let data = floats(&[[0.0, 0.5, 1.0, 1.0], [-1.0, 2.0, f32::NAN, 0.25]]);
+        let u16s = |bytes: Vec<u8>| -> Vec<u16> {
+            bytes
+                .chunks_exact(2)
+                .map(|b| u16::from_le_bytes([b[0], b[1]]))
+                .collect()
+        };
+        assert_eq!(
+            u16s(norm_texels(F::Rgba16Unorm, &data)),
+            [0, 32768, 65535, 65535, 0, 65535, 0, 16384]
+        );
+        assert_eq!(u16s(norm_texels(F::Rg16Unorm, &data)), [0, 32768, 0, 65535]);
+        let packed: Vec<u32> = norm_texels(F::Rgb10a2Unorm, &data)
+            .chunks_exact(4)
+            .map(|b| u32::from_le_bytes(b.try_into().unwrap()))
+            .collect();
+        assert_eq!(
+            packed,
+            [512 << 10 | 1023 << 20 | 3 << 30, 1023 << 10 | 1 << 30]
+        );
+        // The RGBA8 fallback: the precision these formats had before.
+        assert_eq!(
+            norm_texels(F::Rgba8Unorm, &data),
+            [0, 128, 255, 255, 0, 255, 0, 64]
+        );
+    }
+
+    #[test]
+    fn norm_texels_read_back_as_floats() {
+        use wgpu::TextureFormat as F;
+        let read = |format: F, texel: &[[f32; 4]]| {
+            norm_texel_to_f32(format, &norm_texels(format, &floats(texel))).unwrap()
+        };
+        assert_eq!(
+            read(F::Rg16Unorm, &[[1.0, 0.0, 0.7, 0.2]]),
+            [1.0, 0.0, 0.0, 1.0]
+        );
+        assert_eq!(
+            read(F::Rgba16Unorm, &[[1.0, 0.0, 1.0, 0.0]]),
+            [1.0, 0.0, 1.0, 0.0]
+        );
+        // A 16-bit step, finer than 8 bits can hold.
+        let v = read(F::Rgba16Unorm, &[[1.0 / 65535.0; 4]])[0];
+        assert_eq!(v, 1.0 / 65535.0);
+        assert_eq!(
+            read(F::Rgb10a2Unorm, &[[1.0, 0.0, 1.0, 1.0]]),
+            [1.0, 0.0, 1.0, 1.0]
+        );
+        assert_eq!(
+            read(F::Rgb10a2Unorm, &[[0.0, 0.0, 0.0, 2.0 / 3.0]])[3],
+            2.0 / 3.0
+        );
+        assert_eq!(norm_texel_to_f32(F::Rgba8Unorm, &[0; 4]), None);
+        assert_eq!(norm_texel_to_f32(F::Rgba16Unorm, &[0; 4]), None);
     }
 }
