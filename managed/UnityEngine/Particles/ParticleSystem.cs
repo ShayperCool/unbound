@@ -790,6 +790,7 @@ namespace UnityEngine
                 m_IsPaused = false;
                 m_StopEmitting = false;
                 m_DelayRemaining = 0f;
+                m_CullingMissed = 0f;
                 if (wasPlaying) OnStopped();
                 return;
             }
