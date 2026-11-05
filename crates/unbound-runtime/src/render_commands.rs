@@ -151,6 +151,14 @@ pub enum Command {
         offset: u32,
         indexed: bool,
     },
+    /// The indices the next `Draw` reads instead of its mesh's (`Graphics.RenderPrimitivesIndexed`,
+    /// render protocol 8, NativeApi 17): `count` 16-bit indices from index `first` of a buffer
+    /// (its handle), drawn with base vertex 0.
+    DrawIndices {
+        buffer: u64,
+        first: u32,
+        count: u32,
+    },
     /// Clears the viewport of the target ([`clear`] flags).
     Clear {
         flags: u8,
@@ -278,7 +286,16 @@ mod op {
     pub const SET_COUNTER: u8 = 25;
     pub const COPY_COUNTER: u8 = 26;
     pub const DISPATCH_INDIRECT: u8 = 27;
+    // Render protocol 8 (NativeApi 17).
+    pub const DRAW_INDICES: u8 = 28;
 }
+
+/// The size of a `DrawIndices` index on the wire: 16-bit indices, the only ones drawn.
+pub const DRAW_INDEX_SIZE: u8 = 2;
+
+/// Render protocol 8 is NativeApi 17's: `DrawIndices` is decoded only under that version, checked
+/// before any of its bytes are read. The stream itself carries no version.
+const INDEXED_DRAWS: bool = crate::native_api::NATIVE_API_VERSION == 17;
 
 /// Property kinds in the stream.
 mod kind {
@@ -444,6 +461,26 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 offset: r.u32()?,
                 indexed: r.u8()? != 0,
             },
+            op::DRAW_INDICES if INDEXED_DRAWS => {
+                let buffer = r.u64()?;
+                let size = r.u8()?;
+                let first = r.u32()?;
+                let count = r.u32()?;
+                if buffer == 0 {
+                    return Err("DrawIndices without a buffer".into());
+                }
+                if size != DRAW_INDEX_SIZE {
+                    return Err(format!("DrawIndices of {size}-byte indices"));
+                }
+                if count == 0 || first.checked_add(count).is_none() {
+                    return Err(format!("DrawIndices of {count} indices from {first}"));
+                }
+                Command::DrawIndices {
+                    buffer,
+                    first,
+                    count,
+                }
+            }
             op::CLEAR => Command::Clear {
                 flags: r.u8()?,
                 color: r.floats()?,
@@ -733,6 +770,17 @@ impl Writer {
                 self.u64(*args);
                 self.u32(*offset);
                 self.bytes.push(*indexed as u8);
+            }
+            Command::DrawIndices {
+                buffer,
+                first,
+                count,
+            } => {
+                self.bytes.push(op::DRAW_INDICES);
+                self.u64(*buffer);
+                self.bytes.push(DRAW_INDEX_SIZE);
+                self.u32(*first);
+                self.u32(*count);
             }
             Command::Clear {
                 flags,
@@ -1154,5 +1202,101 @@ mod tests {
         let grab = handle::PLAIN_MAX - 3;
         assert_eq!(handle::split(grab), (grab, false));
         assert_eq!(handle::sampled(grab, "grab"), Ok(grab));
+    }
+
+    /// One render protocol 8 `DrawIndices` as bytes: opcode 28, buffer, index size, first index,
+    /// index count.
+    fn draw_indices_bytes(buffer: u64, size: u8, first: u32, count: u32) -> Vec<u8> {
+        let mut bytes = vec![28u8];
+        bytes.extend_from_slice(&buffer.to_le_bytes());
+        bytes.push(size);
+        bytes.extend_from_slice(&first.to_le_bytes());
+        bytes.extend_from_slice(&count.to_le_bytes());
+        bytes
+    }
+
+    /// Render protocol 8: a draw's 16-bit indices from a buffer decode between its setup and the
+    /// next command, and encode back to the same bytes.
+    #[test]
+    fn draw_indices_round_trip() {
+        let mut w = Writer::default();
+        w.write(&Command::DrawSetup {
+            instances: 3,
+            args: 0,
+            offset: 0,
+            indexed: false,
+        });
+        let at = w.bytes.len();
+        w.bytes.extend_from_slice(&draw_indices_bytes(7, 2, 6, 12));
+        w.write(&Command::EndFrame);
+        let commands = parse(&w.bytes).unwrap();
+        assert_eq!(commands.len(), 3);
+        assert_eq!(
+            format!("{:?}", commands[1]),
+            "DrawIndices { buffer: 7, first: 6, count: 12 }"
+        );
+        let mut again = Writer::default();
+        for c in &commands {
+            again.write(c);
+        }
+        assert_eq!(again.bytes, w.bytes);
+        assert_eq!(w.bytes[at..at + 18], draw_indices_bytes(7, 2, 6, 12)[..]);
+        // The last index a range can end at.
+        let last = draw_indices_bytes(1, 2, u32::MAX - 1, 1);
+        assert_eq!(
+            format!("{:?}", parse(&last).unwrap()),
+            format!(
+                "[DrawIndices {{ buffer: 1, first: {}, count: 1 }}]",
+                u32::MAX - 1
+            )
+        );
+    }
+
+    /// A malformed or truncated `DrawIndices` is an error, never a draw: no buffer, indices of
+    /// another size, no indices, a range past `u32`, or the stream ending inside the command.
+    #[test]
+    fn malformed_draw_indices_are_rejected() {
+        for bad in [
+            draw_indices_bytes(0, 2, 0, 3),
+            draw_indices_bytes(7, 4, 0, 3),
+            draw_indices_bytes(7, 1, 0, 3),
+            draw_indices_bytes(7, 0, 0, 3),
+            draw_indices_bytes(7, 2, 0, 0),
+            draw_indices_bytes(7, 2, u32::MAX, 1),
+            draw_indices_bytes(7, 2, 1, u32::MAX),
+        ] {
+            assert!(parse(&bad).is_err(), "{bad:?}");
+        }
+        let good = draw_indices_bytes(7, 2, 0, 3);
+        for end in 1..good.len() {
+            assert!(parse(&good[..end]).is_err(), "truncated at {end}");
+        }
+    }
+
+    /// `DrawIndices` is decoded only under NativeApi 17, the version render protocol 8 has
+    /// (audio alone is 16; a union of both is 18).
+    #[test]
+    fn draw_indices_need_native_api_17() {
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 17);
+        assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
+    }
+
+    /// Render protocol 7's commands keep their bytes: a draw setup is still opcode 22 and its
+    /// 17 bytes, with nothing after it.
+    #[test]
+    fn draw_setup_bytes_are_unchanged() {
+        let mut w = Writer::default();
+        w.write(&Command::DrawSetup {
+            instances: 4,
+            args: 9,
+            offset: 20,
+            indexed: true,
+        });
+        let mut expected = vec![22u8];
+        expected.extend_from_slice(&4u32.to_le_bytes());
+        expected.extend_from_slice(&9u64.to_le_bytes());
+        expected.extend_from_slice(&20u32.to_le_bytes());
+        expected.push(1);
+        assert_eq!(w.bytes, expected);
     }
 }

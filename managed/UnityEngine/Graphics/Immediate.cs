@@ -293,6 +293,8 @@ namespace Unbound.Runtime
             internal DrawSetup? Setup;
             /// <summary>How the draw is lit and shadowed.</summary>
             internal ImmediateLighting Lighting;
+            /// <summary>A RenderParams draw's worldBounds, a legacy draw's bounds argument, or an instanced call's group bounds; null when unset.</summary>
+            internal UnityEngine.Bounds? WorldBounds;
         }
 
         /// <summary>Meshes queued with Graphics.DrawMesh, drawn by this frame's cameras.</summary>

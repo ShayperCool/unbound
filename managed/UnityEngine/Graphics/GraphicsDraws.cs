@@ -95,6 +95,15 @@ namespace UnityEngine
             if (count < 0 || count > kMaxDrawMeshInstanceCount) throw new ArgumentOutOfRangeException(nameof(count), $"Count must be in the range of 0 to {kMaxDrawMeshInstanceCount}.");
         }
 
+        /// <summary>The instances culled and sorted as a group ("Unity culls and sorts instanced
+        /// Meshes as a group. It creates an axis-aligned bounding box that contains all the
+        /// Meshes, calculates the center point, then uses this information to cull and sort the
+        /// Mesh instances", DrawMeshInstanced 6000.0): every instance carries the box around the
+        /// mesh's bounds through each drawn matrix as its world bounds, so cameras keep or cull
+        /// them together and sort them at its centre, in the call's order among themselves (Unbound's
+        /// choice, unmeasured; "does
+        /// not further cull individual instances ... does not sort individual instances"). Each
+        /// instance is still lit, probed and shadowed as before.</summary>
         public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, Matrix4x4[] matrices, int count, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows, bool receiveShadows, int layer, Camera camera, LightProbeUsage lightProbeUsage)
         {
@@ -102,17 +111,27 @@ namespace UnityEngine
             count = Math.Min(count, matrices.Length);
             CheckInstanced(mesh, submeshIndex, material, count);
             var lighting = ImmediateLighting.Of(castShadows, receiveShadows, lightProbeUsage);
+            // The box around every drawn instance's mesh bounds (the union of each instance's
+            // bounds through its matrix: Unbound's choice of how the box is built, unmeasured).
+            var bounds = default(Bounds);
+            if (count > 0)
+            {
+                bounds = Transformed(mesh.bounds, matrices[0]);
+                for (int i = 1; i < count; i++) bounds.Encapsulate(Transformed(mesh.bounds, matrices[i]));
+            }
             if (lightProbeUsage == LightProbeUsage.BlendProbes && count > 0)
             {
                 // One probe lights the whole batch: the one at the instances' bounds centre
                 // (measured: tests/projects/lightprobes, a row of instances all lit alike).
                 lighting = new ImmediateLighting { Cast = lighting.Cast, Receive = lighting.Receive, Probes = lighting.Probes, Reflections = lighting.Reflections };
-                var bounds = Transformed(mesh.bounds, matrices[0]);
-                for (int i = 1; i < count; i++) bounds.Encapsulate(Transformed(mesh.bounds, matrices[i]));
                 lighting.ProbePosition = bounds.center;
             }
+            int queued = Immediate.Queued.Count;
             for (int i = 0; i < count; i++)
                 Immediate.Queue(mesh, matrices[i], material, layer, camera, submeshIndex, Instance(properties, i), lighting);
+            // The group's sort key is the box's centre, ties within the call kept in call order
+            // (Unbound's choice, unmeasured).
+            WithWorldBounds(queued, bounds);
         }
 
         public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, Matrix4x4[] matrices, int count, MaterialPropertyBlock properties,
@@ -161,15 +180,41 @@ namespace UnityEngine
         public static void RenderMesh(in RenderParams rparams, Mesh mesh, int submeshIndex, Matrix4x4 objectToWorld, Matrix4x4? prevObjectToWorld = null)
         {
             if (mesh == null) throw new ArgumentNullException(nameof(mesh));
+            Render(rparams, mesh, submeshIndex, objectToWorld, null);
+        }
+
+        /// <summary>A RenderParams draw queued for this frame's cameras: its material, layer, camera,
+        /// property block (or <paramref name="properties"/> in its place), shadow and probe
+        /// settings; <paramref name="setup"/> for instanced or indirect draws. Set world bounds go
+        /// with the draw: cameras cull and sort it by them ("Used to cull and sort the rendered
+        /// geometry", RenderParams.worldBounds), each draw of one call alike.</summary>
+        static void Render(in RenderParams rparams, Mesh mesh, int submeshIndex, Matrix4x4 objectToWorld, DrawSetup? setup, MaterialPropertyBlock properties = null)
+        {
             if (rparams.material == null) throw new ArgumentNullException("rparams.material");
-            Immediate.Queue(mesh, objectToWorld, rparams.material, rparams.layer, rparams.camera, submeshIndex, rparams.matProps, Lighting(rparams));
+            int queued = Immediate.Queued.Count;
+            Immediate.Queue(mesh, objectToWorld, rparams.material, rparams.layer, rparams.camera, submeshIndex, properties ?? rparams.matProps, setup, Lighting(rparams));
+            // Bounds left at the constructor's zero value are not set: the draw keeps its mesh's
+            // bounds (Unbound's choice; a RenderMesh with them is drawn, measured:
+            // tests/projects/graphics renderMesh).
+            if (Immediate.Queued.Count == queued + 1 && !rparams.worldBounds.Equals(default(Bounds)))
+            {
+                var entry = Immediate.Queued[queued];
+                entry.WorldBounds = rparams.worldBounds;
+                Immediate.Queued[queued] = entry;
+            }
         }
 
         static ImmediateLighting Lighting(in RenderParams rparams) =>
             ImmediateLighting.Of(rparams.shadowCastingMode, rparams.receiveShadows, rparams.lightProbeUsage, null, rparams.reflectionProbeUsage);
 
         /// <summary>Instances whose data starts with their object-to-world matrix (Matrix4x4 or a
-        /// struct led by one).</summary>
+        /// struct led by one). Cameras cull and sort all the instances of the call by one set of
+        /// bounds, as one entity ("Unity automatically calculates bounds for all the instances of
+        /// this Mesh unless you override the bounds using RenderParams.worldBounds. Unity uses the
+        /// bounds to cull and sort all the instances of this Mesh as a single entity",
+        /// RenderMeshInstanced 6000.0): set world bounds, or, when they are left at the
+        /// constructor's zero value, the box around every drawn instance's mesh bounds. Each
+        /// instance is still lit, probed and shadowed as before.</summary>
         static void RenderInstances(in RenderParams rparams, Mesh mesh, int submeshIndex, ReadOnlySpan<byte> data, int stride, int instanceCount, int startInstance)
         {
             if (mesh == null) throw new ArgumentNullException(nameof(mesh));
@@ -180,11 +225,22 @@ namespace UnityEngine
             if (instanceCount < 0) instanceCount = available - startInstance;
             if (startInstance < 0 || startInstance + instanceCount > available) throw new ArgumentOutOfRangeException(nameof(startInstance), "instance range out of the data's bounds");
             var lighting = Lighting(rparams);
+            // Unset world bounds: the box around each drawn instance's mesh bounds through its
+            // matrix (Unbound's choice of how the automatic bounds are built, unmeasured).
+            bool automatic = rparams.worldBounds.Equals(default(Bounds));
+            var bounds = default(Bounds);
+            int queued = Immediate.Queued.Count;
             for (int i = 0; i < instanceCount; i++)
             {
                 var matrix = System.Runtime.InteropServices.MemoryMarshal.Read<Matrix4x4>(data.Slice((startInstance + i) * stride, 64));
                 Immediate.Queue(mesh, matrix, rparams.material, rparams.layer, rparams.camera, submeshIndex, Instance(rparams.matProps, startInstance + i), lighting);
+                if (!automatic) continue;
+                if (i == 0) bounds = Transformed(mesh.bounds, matrix);
+                else bounds.Encapsulate(Transformed(mesh.bounds, matrix));
             }
+            // The entity's sort key is the bounds' centre, ties within the call kept in call
+            // order (Unbound's choice, unmeasured).
+            WithWorldBounds(queued, automatic ? bounds : rparams.worldBounds);
         }
 
         public static void RenderMeshInstanced<T>(in RenderParams rparams, Mesh mesh, int submeshIndex, T[] instanceData, int instanceCount = -1, int startInstance = 0) where T : unmanaged
@@ -206,16 +262,185 @@ namespace UnityEngine
             RenderInstances(rparams, mesh, submeshIndex, bytes, size, instanceCount, startInstance);
         }
 
+        // ------------------------------------------------------------------ RenderPrimitives, RenderMeshIndirect, RenderMeshPrimitives
+
+        /// <summary>The RenderParams settings these draws do not act on yet, each warned once:
+        /// non-default rendering layer mask, renderer priority and motion vector mode. The world
+        /// bounds are honoured (cameras cull and sort the draw by them in FrameBuilder.CollectQueued), so
+        /// they are not warned.
+        /// The instance ID (Scene view picking) and the Scene culling mask are Editor scene-view
+        /// settings a game's cameras do not observe.</summary>
+        static void WarnUnhonoured(in RenderParams rparams, string method)
+        {
+            uint defaultMask = RenderingLayerMask.defaultRenderingLayerMask;
+            if (rparams.renderingLayerMask != defaultMask) Stubs.Ignored("Graphics.Render* RenderParams.renderingLayerMask");
+            if (rparams.rendererPriority != 0) Stubs.Ignored("Graphics.Render* RenderParams.rendererPriority");
+            if (rparams.motionVectorMode != MotionVectorGenerationMode.Camera) Stubs.Ignored("Graphics.Render* RenderParams.motionVectorMode");
+        }
+
+        /// <summary>Non-indexed primitives without a mesh (the shader builds them from SV_VertexID
+        /// and SV_InstanceID): DrawProcedural with RenderParams.</summary>
+        public static void RenderPrimitives(in RenderParams rparams, MeshTopology topology, int vertexCount, int instanceCount = 1)
+        {
+            if (rparams.material == null) throw new ArgumentNullException("rparams.material");
+            WarnUnhonoured(rparams, nameof(RenderPrimitives));
+            if (vertexCount <= 0 || instanceCount <= 0) return;
+            Render(rparams, ProceduralMeshes.Get(topology, vertexCount), 0, Matrix4x4.identity,
+                instanceCount > 1 ? new DrawSetup { Instances = (uint)instanceCount } : (DrawSetup?)null);
+        }
+
+        /// <summary>Instances of a mesh's submesh whose per-instance data the shader reads itself
+        /// (SV_InstanceID): DrawMeshInstancedProcedural with RenderParams.</summary>
+        public static void RenderMeshPrimitives(in RenderParams rparams, Mesh mesh, int submeshIndex, int instanceCount = 1)
+        {
+            if (mesh == null) throw new ArgumentNullException(nameof(mesh));
+            if (rparams.material == null) throw new ArgumentNullException("rparams.material");
+            WarnUnhonoured(rparams, nameof(RenderMeshPrimitives));
+            if (instanceCount <= 0) return;
+            Render(rparams, mesh, submeshIndex, Matrix4x4.identity, new DrawSetup { Instances = (uint)instanceCount });
+        }
+
+        /// <summary>Non-indexed primitives whose counts the GPU reads from
+        /// <paramref name="commandBuffer"/>'s GraphicsBuffer.IndirectDrawArgs (16 bytes each):
+        /// commands <paramref name="startCommand"/> to startCommand + commandCount − 1, one
+        /// DrawProceduralIndirect each.</summary>
+        public static void RenderPrimitivesIndirect(in RenderParams rparams, MeshTopology topology, GraphicsBuffer commandBuffer, int commandCount = 1, int startCommand = 0)
+        {
+            if (rparams.material == null) throw new ArgumentNullException("rparams.material");
+            RenderCommands(rparams, nameof(RenderPrimitivesIndirect), ProceduralMeshes.Get(topology, ProceduralMeshes.IndirectVertices),
+                commandBuffer, commandCount, startCommand, false);
+        }
+
+        /// <summary>Instances of a mesh whose counts, first index and base vertex (into the whole
+        /// mesh's indices, as Mesh.GetIndexStart and GetBaseVertex give them) the GPU reads from
+        /// <paramref name="commandBuffer"/>'s GraphicsBuffer.IndirectDrawIndexedArgs (20 bytes
+        /// each): one DrawMeshInstancedIndirect per command.</summary>
+        public static void RenderMeshIndirect(in RenderParams rparams, Mesh mesh, GraphicsBuffer commandBuffer, int commandCount = 1, int startCommand = 0)
+        {
+            if (mesh == null) throw new ArgumentNullException(nameof(mesh));
+            if (rparams.material == null) throw new ArgumentNullException("rparams.material");
+            RenderCommands(rparams, nameof(RenderMeshIndirect), mesh, commandBuffer, commandCount, startCommand, true);
+        }
+
+        /// <summary>One indirect draw per command, its arguments at the command's offset. The
+        /// shader sees the command buffer as <c>unity_IndirectDrawArgs</c> and the command's index
+        /// as <c>unity_BaseCommandID</c>, the names UnityIndirect.cginc's InitIndirectDrawArgs and
+        /// GetCommandID read (each command is its own draw, so its draw ID is 0).</summary>
+        static void RenderCommands(in RenderParams rparams, string method, Mesh mesh, GraphicsBuffer commandBuffer, int commandCount, int startCommand, bool indexed)
+        {
+            if (commandBuffer == null) throw new ArgumentNullException(nameof(commandBuffer));
+            if ((commandBuffer.target & GraphicsBuffer.Target.IndirectArguments) == 0)
+                throw new ArgumentException($"Graphics.{method}: the command buffer must be created with GraphicsBuffer.Target.IndirectArguments.", nameof(commandBuffer));
+            if (commandCount < 0) throw new ArgumentOutOfRangeException(nameof(commandCount), $"Graphics.{method}: commandCount must not be negative.");
+            if (startCommand < 0) throw new ArgumentOutOfRangeException(nameof(startCommand), $"Graphics.{method}: startCommand must not be negative.");
+            int size = indexed ? GraphicsBuffer.IndirectDrawIndexedArgs.size : GraphicsBuffer.IndirectDrawArgs.size;
+            long bytes = (long)commandBuffer.count * commandBuffer.stride;
+            if (((long)startCommand + commandCount) * size > bytes)
+                throw new ArgumentOutOfRangeException(nameof(commandCount),
+                    $"Graphics.{method}: commands {startCommand} to {(long)startCommand + commandCount - 1} of {size} bytes each do not fit the command buffer's {bytes} bytes.");
+            WarnUnhonoured(rparams, method);
+            int argsId = Shader.PropertyToID("unity_IndirectDrawArgs"), commandId = Shader.PropertyToID("unity_BaseCommandID");
+            for (int i = 0; i < commandCount; i++)
+            {
+                int command = startCommand + i;
+                var properties = new MaterialPropertyBlock();
+                if (rparams.matProps != null) properties.CopyFrom(rparams.matProps);
+                properties.m_Values[argsId] = commandBuffer;
+                properties.m_Values[commandId] = command;
+                Render(rparams, mesh, 0, Matrix4x4.identity,
+                    new DrawSetup { Instances = 1, Args = commandBuffer.Handle, Offset = (uint)((long)command * size), Indexed = indexed }, properties);
+            }
+        }
+
+        // ------------------------------------------------------------------ RenderPrimitivesIndexed, RenderPrimitivesIndexedIndirect
+
+        /// <summary>The vertices of the stand-in an indexed procedural draw binds (zeroed: the shader
+        /// builds its vertices from SV_VertexID, which the indices set): one for each of the 2^16
+        /// values a 16-bit index takes, so with base vertex 0 every index has its vertex.</summary>
+        const int k_IndexedVertices = 1 << 16;
+
+        const string k_Indexed = "UnityEngine.Graphics.RenderPrimitivesIndexed";
+
+        /// <summary>Primitives whose vertex ids are read from <paramref name="indexBuffer"/>:
+        /// <paramref name="indexCount"/> indices from <paramref name="startIndex"/>, per instance
+        /// (RenderPrimitivesIndexed 6000.0: the shader fetches or calculates vertex data from
+        /// SV_VertexID, "set with values in the indexBuffer"). Drawn from 16-bit index buffers
+        /// (stride 2) of triangles, lines or points: every index value has a vertex in the
+        /// 65536-vertex stand-in. Not drawn, each case counted and warned once: 32-bit indices (the
+        /// documented example's), whose values Unbound cannot bound, quads, line strips and other
+        /// strides.</summary>
+        public static void RenderPrimitivesIndexed(in RenderParams rparams, MeshTopology topology, GraphicsBuffer indexBuffer, int indexCount, int startIndex = 0, int instanceCount = 1)
+        {
+            const string method = "Graphics.RenderPrimitivesIndexed";
+            if (rparams.material == null) throw new ArgumentNullException("rparams.material");
+            if (indexBuffer == null) throw new ArgumentNullException(nameof(indexBuffer));
+            if (startIndex < 0) throw new ArgumentOutOfRangeException(nameof(startIndex), $"{method}: startIndex must not be negative.");
+            int stride = indexBuffer.stride;
+            if ((stride == 2 || stride == 4) && indexCount > 0 && (long)startIndex + indexCount > indexBuffer.count)
+                throw new ArgumentOutOfRangeException(nameof(indexCount),
+                    $"{method}: indices {startIndex} to {(long)startIndex + indexCount - 1} do not fit the index buffer's {indexBuffer.count} indices.");
+            WarnUnhonoured(rparams, nameof(RenderPrimitivesIndexed));
+            if (indexCount <= 0 || instanceCount <= 0) return;
+            if (stride == 4)
+            {
+                Stubs.Ignored(k_Indexed, "with 32-bit indices is not drawn yet: Unbound draws indexed primitives only from 16-bit index buffers, whose every index value it gives a vertex");
+                return;
+            }
+            if (stride != 2)
+            {
+                Stubs.Ignored(k_Indexed + " index stride", "other than 2 or 4 bytes is not drawn");
+                return;
+            }
+            if (topology != MeshTopology.Triangles && topology != MeshTopology.Lines && topology != MeshTopology.Points)
+            {
+                string name = topology == MeshTopology.Quads || topology == MeshTopology.LineStrip ? topology.ToString() : "other";
+                Stubs.Ignored(k_Indexed + " MeshTopology." + name, "is not drawn yet from an index buffer");
+                return;
+            }
+            Render(rparams, ProceduralMeshes.Get(topology, k_IndexedVertices), 0, Matrix4x4.identity,
+                new DrawSetup { Instances = (uint)instanceCount, Indices = indexBuffer.Handle, FirstIndex = (uint)startIndex, IndexCount = (uint)indexCount });
+        }
+
+        /// <summary>Indexed primitives whose counts, first index and base vertex the GPU reads
+        /// from <paramref name="commandBuffer"/>'s GraphicsBuffer.IndirectDrawIndexedArgs
+        /// (RenderPrimitivesIndexedIndirect 6000.0). The arguments are checked as
+        /// RenderPrimitivesIndirect's are; the call is then not drawn, counted and warned once:
+        /// with a base vertex read on the GPU, Unbound cannot prove every index has a
+        /// vertex.</summary>
+        public static void RenderPrimitivesIndexedIndirect(in RenderParams rparams, MeshTopology topology, GraphicsBuffer indexBuffer, GraphicsBuffer commandBuffer, int commandCount = 1, int startCommand = 0)
+        {
+            const string method = "Graphics.RenderPrimitivesIndexedIndirect";
+            if (rparams.material == null) throw new ArgumentNullException("rparams.material");
+            if (indexBuffer == null) throw new ArgumentNullException(nameof(indexBuffer));
+            if (commandBuffer == null) throw new ArgumentNullException(nameof(commandBuffer));
+            if ((commandBuffer.target & GraphicsBuffer.Target.IndirectArguments) == 0)
+                throw new ArgumentException($"{method}: the command buffer must be created with GraphicsBuffer.Target.IndirectArguments.", nameof(commandBuffer));
+            if (commandCount < 0) throw new ArgumentOutOfRangeException(nameof(commandCount), $"{method}: commandCount must not be negative.");
+            if (startCommand < 0) throw new ArgumentOutOfRangeException(nameof(startCommand), $"{method}: startCommand must not be negative.");
+            int size = GraphicsBuffer.IndirectDrawIndexedArgs.size;
+            long bytes = (long)commandBuffer.count * commandBuffer.stride;
+            if (((long)startCommand + commandCount) * size > bytes)
+                throw new ArgumentOutOfRangeException(nameof(commandCount),
+                    $"{method}: commands {startCommand} to {(long)startCommand + commandCount - 1} of {size} bytes each do not fit the command buffer's {bytes} bytes.");
+            WarnUnhonoured(rparams, nameof(RenderPrimitivesIndexedIndirect));
+            if (commandCount == 0) return;
+            Stubs.Ignored(k_Indexed + "Indirect", "is not drawn yet: each command's base vertex and counts are read on the GPU, so Unbound cannot prove every index has a vertex");
+        }
+
         // ------------------------------------------------------------------ procedural
 
-
+        /// <summary>Procedural primitives culled and sorted by <paramref name="bounds"/> ("The
+        /// bounding volume surrounding the instances you intend to draw") as one entity
+        /// (inferred from DrawMeshInstanced's "culls and sorts instanced Meshes as a group" and the replacements' "cull and sort ... as a single entity"; unmeasured); bounds equal to default(Bounds) are not set (see WithWorldBounds).</summary>
         public static void DrawProcedural(Material material, Bounds bounds, MeshTopology topology, int vertexCount, int instanceCount = 1, Camera camera = null,
             MaterialPropertyBlock properties = null, ShadowCastingMode castShadows = ShadowCastingMode.On, bool receiveShadows = true, int layer = 0)
         {
             if (material == null) throw new ArgumentNullException(nameof(material));
             if (vertexCount <= 0 || instanceCount <= 0) return;
+            int queued = Immediate.Queued.Count;
             Immediate.Queue(ProceduralMeshes.Get(topology, vertexCount), Matrix4x4.identity, material, layer, camera, 0, properties,
                 instanceCount > 1 ? new DrawSetup { Instances = (uint)instanceCount } : (DrawSetup?)null, ImmediateLighting.Of(castShadows, receiveShadows));
+            WithWorldBounds(queued, bounds);
         }
 
         // ------------------------------------------------------------------ DrawTexture
