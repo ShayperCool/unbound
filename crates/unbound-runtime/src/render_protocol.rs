@@ -135,6 +135,60 @@ pub mod handle {
     }
 }
 
+/// The codes of [`TexturePacket::format`].
+pub mod texture_format {
+    /// sRGB RGBA8 (sampled through an sRGB view in linear projects).
+    pub const SRGB_RGBA8: i32 = 0;
+    /// Linear RGBA8: also the default color render target.
+    pub const LINEAR_RGBA8: i32 = 1;
+    /// RGBA floats, kept as half floats.
+    pub const RGBA_HALF: i32 = 2;
+    /// Alpha8, sampled as (0, 0, 0, a).
+    pub const ALPHA8: i32 = 3;
+    /// Packed 11/11/10 floats (render targets only, no data).
+    pub const RG11B10_FLOAT: i32 = 4;
+    /// A depth-only render target.
+    pub const DEPTH_ONLY: i32 = 5;
+    pub const R32_FLOAT: i32 = 6;
+    /// BC7 color, from native producers only.
+    pub const BC7_COLOR: i32 = 7;
+    /// BC7 linear data, from native producers only.
+    pub const BC7_DATA: i32 = 8;
+    pub const RGBA32_FLOAT: i32 = 9;
+    pub const RG32_FLOAT: i32 = 10;
+    pub const R16_FLOAT: i32 = 11;
+    pub const RG16_FLOAT: i32 = 12;
+    /// Two normalized 16-bit channels (Unity's `R16G16_UNorm`: RenderTextureFormat.RG32,
+    /// TextureFormat.RG32). Needs the device's 16-bit normalized formats; data: four f32 per
+    /// texel, of which the first two are kept.
+    pub const RG16_UNORM: i32 = 13;
+    /// Four normalized 16-bit channels (Unity's `R16G16B16A16_UNorm`: RenderTextureFormat.ARGB64,
+    /// TextureFormat.RGBA64). Needs the device's 16-bit normalized formats; data: four f32 per
+    /// texel.
+    pub const RGBA16_UNORM: i32 = 14;
+    /// Normalized 10-bit RGB and 2-bit alpha packed in 32 bits, red in the low bits (Unity's
+    /// `A2B10G10R10_UNormPack32`: RenderTextureFormat.ARGB2101010); data: four f32 per texel.
+    pub const RGB10A2_UNORM: i32 = 15;
+
+    /// The packet's code, or why the renderer cannot take it: codes outside the table are
+    /// rejected rather than drawn as some other format.
+    pub fn validate(code: i32) -> Result<i32, String> {
+        if (SRGB_RGBA8..=RGB10A2_UNORM).contains(&code) {
+            Ok(code)
+        } else {
+            Err(format!("texture packet format {code} is not a known format code"))
+        }
+    }
+
+    /// Codes whose upload data is four f32 per texel.
+    pub fn float_data(code: i32) -> bool {
+        matches!(
+            code,
+            RGBA_HALF | R32_FLOAT | RGBA32_FLOAT..=RG16_FLOAT | RG16_UNORM..=RGB10A2_UNORM
+        )
+    }
+}
+
 #[repr(C)]
 #[derive(Debug)]
 pub struct TexturePacket {
@@ -142,9 +196,10 @@ pub struct TexturePacket {
     pub height: i32,
     /// 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBA floats (kept as half floats), 3 Alpha8, 4 packed
     /// 11/11/10 floats (render targets only, no data), 5 none: a depth-only render target, which
-    /// reads as its depth when sampled; 6 R32F, 9 RGBA32F, 10 RG32F, 11 R16F, 12 RG16F.
-    /// Float upload data is always four f32 channels. 7/8 are BC7 color/data imported textures,
-    /// passed only by native producers.
+    /// reads as its depth when sampled; 6 R32F, 9 RGBA32F, 10 RG32F, 11 R16F, 12 RG16F,
+    /// 13 RG16 unorm, 14 RGBA16 unorm, 15 RGB10A2 unorm (see [`texture_format`]).
+    /// Float upload data is always four f32 channels (13..=15 included). 7/8 are BC7 color/data
+    /// imported textures, passed only by native producers.
     pub format: i32,
     pub mip_count: i32,
     pub data: *const u8,
@@ -607,5 +662,31 @@ mod tests {
         assert_eq!(size_of::<MaterialProperty>(), 72);
         assert_eq!(size_of::<MeshPacket>(), 136);
         assert_eq!(offset_of!(MeshPacket, uv), 40);
+    }
+
+    /// The normalized 16-bit and 10-10-10-2 codes extend the table by value: the packet keeps
+    /// its layout, and codes past the table are rejected.
+    #[test]
+    fn texture_format_codes() {
+        use texture_format::*;
+        assert_eq!(
+            (RG16_UNORM, RGBA16_UNORM, RGB10A2_UNORM),
+            (13, 14, 15)
+        );
+        for code in 0..=15 {
+            assert_eq!(validate(code), Ok(code));
+        }
+        for code in [-1, 16, 17, i32::MAX, i32::MIN] {
+            assert!(validate(code).is_err(), "{code} is accepted");
+        }
+        for code in [RG16_UNORM, RGBA16_UNORM, RGB10A2_UNORM] {
+            assert!(float_data(code), "{code} data is not four floats");
+        }
+        let floats: Vec<i32> = (0..=15).filter(|&c| float_data(c)).collect();
+        assert_eq!(floats, [2, 6, 9, 10, 11, 12, 13, 14, 15]);
+        // The packet itself does not change (NativeApi layout).
+        assert_eq!(offset_of!(TexturePacket, format), 8);
+        assert_eq!(offset_of!(TexturePacket, wrap_w), 64);
+        assert_eq!(size_of::<TexturePacket>(), 72);
     }
 }
