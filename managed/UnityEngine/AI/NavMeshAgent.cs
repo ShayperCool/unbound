@@ -73,10 +73,19 @@ namespace UnityEngine.AI
         public bool autoTraverseOffMeshLink { get => m_AutoTraverseOffMeshLink; set => m_AutoTraverseOffMeshLink = value; }
         public bool autoBraking { get => m_AutoBraking; set => m_AutoBraking = value; }
         public bool autoRepath { get => m_AutoRepath; set => m_AutoRepath = value; }
-        public int areaMask { get => m_AreaMask; set => m_AreaMask = value; }
+        /// <summary>Changing it makes the path stale (Scripting API).</summary>
+        public int areaMask
+        {
+            get => m_AreaMask;
+            set
+            {
+                if (m_AreaMask != value) m_OwnPathStale = true;
+                m_AreaMask = value;
+            }
+        }
 
         [Obsolete("Use areaMask instead.")]
-        public int walkableMask { get => m_AreaMask; set => m_AreaMask = value; }
+        public int walkableMask { get => areaMask; set => areaMask = value; }
 
         public ObstacleAvoidanceType obstacleAvoidanceType { get => m_ObstacleAvoidanceType; set { m_ObstacleAvoidanceType = value; ApplyParams(); } }
         public int avoidancePriority { get => m_AvoidancePriority; set { m_AvoidancePriority = value; ApplyParams(); } }
@@ -94,10 +103,31 @@ namespace UnityEngine.AI
             }
         }
 
+        // Area costs. Documented (Scripting API 6000.0): NavMesh.SetAreaCost sets an area's cost "on
+        // all agents", replacing any custom area costs on all agents, and is the default for agents
+        // created later; enabling or disabling an agent resets its costs to the defaults
+        // (NavMeshAgent.SetAreaCost). Unbound's choices (unmeasured): NavMesh.SetAreaCost replaces
+        // the custom cost of that one area (an agent's custom costs for other areas stay), on every
+        // agent with custom costs, enabled or not, and makes the path of an agent whose cost it
+        // changes stale (as the agent's own SetAreaCost does); the reset happens at once when the
+        // agent is enabled and when it is disabled, before it is placed, and does not by itself
+        // make the path stale.
+
+        /// <summary>The agents with their own area costs (<see cref="m_AreaCosts"/> set).</summary>
+        static readonly List<NavMeshAgent> s_WithOwnAreaCosts = new List<NavMeshAgent>();
+
         public void SetAreaCost(int areaIndex, float areaCost)
         {
-            m_AreaCosts ??= (float[])NavMeshAreas.Costs.Clone();
-            if (areaIndex >= 0 && areaIndex < 32) m_AreaCosts[areaIndex] = areaCost;
+            if (m_AreaCosts == null)
+            {
+                NavMeshAreas.Ensure();
+                m_AreaCosts = (float[])NavMeshAreas.Costs.Clone();
+                s_WithOwnAreaCosts.Add(this);
+            }
+            if (areaIndex < 0 || areaIndex >= 32) return;
+            // The agent's own area costs changed: its path is stale (unmeasured).
+            if (m_AreaCosts[areaIndex] != areaCost) m_OwnPathStale = true;
+            m_AreaCosts[areaIndex] = areaCost;
         }
 
         public float GetAreaCost(int areaIndex)
@@ -112,6 +142,30 @@ namespace UnityEngine.AI
 
         [Obsolete("Use GetAreaCost instead.")]
         public float GetLayerCost(int layer) => GetAreaCost(layer);
+
+        /// <summary>NavMesh.SetAreaCost: the area's cost replaces every agent's own cost for it.</summary>
+        internal static void ReplaceAreaCost(int areaIndex, float cost)
+        {
+            for (int i = s_WithOwnAreaCosts.Count - 1; i >= 0; i--)
+            {
+                var agent = s_WithOwnAreaCosts[i];
+                if (agent.m_Destroyed || agent.m_AreaCosts == null)
+                {
+                    s_WithOwnAreaCosts.RemoveAt(i);
+                    continue;
+                }
+                if (agent.m_AreaCosts[areaIndex] != cost) agent.m_OwnPathStale = true;
+                agent.m_AreaCosts[areaIndex] = cost;
+            }
+        }
+
+        /// <summary>Enabled or disabled: the agent's area costs are the defaults again.</summary>
+        void ResetAreaCosts()
+        {
+            if (m_AreaCosts == null) return;
+            m_AreaCosts = null;
+            s_WithOwnAreaCosts.Remove(this);
+        }
 
         internal AreaFilter Filter => AreaFilter.Of(m_AreaMask, m_AreaCosts);
 
@@ -215,6 +269,8 @@ namespace UnityEngine.AI
 
         public void ResetPath()
         {
+            m_PathGiven = false;
+            m_OwnPathStale = false;
             m_HasDestination = false;
             m_PathPending = false;
             m_PathStatus = NavMeshPathStatus.PathInvalid;
@@ -233,13 +289,27 @@ namespace UnityEngine.AI
 
         public bool pathPending => m_PathPending;
 
-        public bool isPathStale
+        // Path staleness. Documented (Scripting API 6000.0, isPathStale and areaMask): changing the
+        // areaMask, enabling or disabling an off-mesh link, or changing the NavMesh area costs
+        // makes the path stale; the agent goes on following it. Unbound's choices (unmeasured):
+        // the flag is set at once by the change; area cost and link changes count for every
+        // agent, areaMask and the agent's own area costs for that agent; only a changed value
+        // counts; NavMesh data added or removed does not; it concerns the path last applied to
+        // the agent (from SetPath or a path request) until a new one is applied or ResetPath
+        // clears it; a pending or failed request keeps the flag; and it starts no new path.
+        bool m_PathGiven;
+        bool m_OwnPathStale;
+        int m_PathStaleVersion;
+
+        public bool isPathStale =>
+            m_Crowd != null && m_PathGiven && (m_OwnPathStale || m_PathStaleVersion != NavWorld.PathStaleVersion);
+
+        /// <summary>A new path was applied: it is not stale.</summary>
+        internal void PathRenewed()
         {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("NavMeshAgent.isPathStale", "is always false (NavMesh changes do not mark paths stale)");
-                return false;
-            }
+            m_PathGiven = true;
+            m_OwnPathStale = false;
+            m_PathStaleVersion = NavWorld.PathStaleVersion;
         }
 
         public NavMeshPathStatus pathStatus => m_PathStatus;
@@ -299,12 +369,19 @@ namespace UnityEngine.AI
             result.m_Status = m_PathStatus;
         }
 
+        /// <summary>The owner of the NavMeshDataInstance whose polygon the agent stands on, and null
+        /// when that instance has no owner or the agent is on no NavMesh (Scripting API 6000.0).
+        /// On an off-mesh link: the link instance's owner (the page names NavMesh and link
+        /// instance owners; reporting the link's while on it is Unbound's choice, unmeasured).</summary>
         public Object navMeshOwner
         {
             get
             {
-                Unbound.Runtime.Stubs.Ignored("NavMeshAgent.navMeshOwner", "is always null");
-                return null;
+                AgentSystem.Sync(this);
+                if (m_Crowd == null || !m_OnNavMesh) return null;
+                if (isOnOffMeshLink) return m_LinkId != 0 ? NavMesh.InternalGetLinkOwner(m_LinkId) : null;
+                int data = NavWorld.DataOfPoly(m_Surface, m_Crowd.corridor.GetFirstPoly());
+                return data != 0 ? NavMesh.InternalGetOwner(data) : null;
             }
         }
 
@@ -483,9 +560,17 @@ namespace UnityEngine.AI
         internal Vector3 WrittenPosition { get => m_WrittenPosition; set => m_WrittenPosition = value; }
         internal int WorldVersion { get => m_WorldVersion; set => m_WorldVersion = value; }
 
-        internal override void OnEngineEnable() => AgentSystem.Add(this);
+        internal override void OnEngineEnable()
+        {
+            ResetAreaCosts();
+            AgentSystem.Add(this);
+        }
 
-        internal override void OnEngineDisable() => AgentSystem.Remove(this);
+        internal override void OnEngineDisable()
+        {
+            ResetAreaCosts();
+            AgentSystem.Remove(this);
+        }
 
         internal override void OnEngineDestroy() => AgentSystem.Remove(this);
 
@@ -663,7 +748,30 @@ namespace Unbound.Runtime
             };
         }
 
-        /// <summary>The crowds follow the NavMesh: when it was rebuilt, agents rejoin at their places.</summary>
+        /// <summary>The crowds follow the NavMesh: when it was rebuilt, agents rejoin at their places.
+        /// An agent that was following a path goes on to its destination; one waiting for a path
+        /// still waits for it.</summary>
+        // The NavMesh changing (a link added, removed, enabled or disabled; NavMesh data added,
+        // removed or updated) rebuilds Unbound's NavMesh, whose polygons are new, so the agents'
+        // corridors cannot be kept as they are. Documented (Scripting API 6000.0): the change makes
+        // the path stale (isPathStale), pathPending is true while a path is being computed
+        // (pathPending, SetDestination). Observed, not documented (navlinks capture
+        // tests/projects/navlinks/Reference/unity-6000.0.71f1.jsonl, committed at 982cee91, not
+        // admitted; sha256 b5d6cbe7...23bf): through four link toggles, every agent of the other
+        // lanes walking a path (11 to 26 per toggle) kept hasPath true and pathPending false, with
+        // no drop in speed, in the frame of the toggle and the next. Unbound's choices (unmeasured
+        // unless noted): the path of an agent following one is planned again, at once and in full,
+        // from where the agent rejoins the new NavMesh to its destination, with no pathPending in
+        // between and no part of the frame's pathfinding iterations, and the agent keeps its
+        // velocity; autoRepath is not consulted (the rebuild discards Unbound's corridor whether or
+        // not Unity's path became invalid); the new path is a newly applied path for isPathStale; a
+        // path that cannot be planned leaves the agent without a path (PathInvalid, its destination
+        // kept), as a failed request does; an agent the new NavMesh cannot place loses its pending
+        // request; an agent that had arrived, whose request had failed, or that has no destination
+        // is given no path; a path given by SetPath is planned again to its last corner. The rebuild
+        // is taken in when Unbound next refreshes its NavMesh (a NavMesh query or an agent
+        // placement), which can be later than the change. An agent on an off-mesh link, or
+        // completing one, rejoins as before.
         static void Rebuild()
         {
             s_CrowdVersion = NavWorld.Version;
@@ -674,6 +782,9 @@ namespace Unbound.Runtime
                 if (agent.m_Crowd == null) continue;
                 var destination = agent.HasDestination ? agent.RequestedDestination : (Vector3?)null;
                 var old = agent.isOnOffMeshLink ? agent.m_Crowd : null;
+                bool onLink = old != null || agent.m_LinkCompleting;
+                bool following = !onLink && destination.HasValue && agent.hasPath;
+                var moving = agent.m_Crowd;
                 agent.m_Crowd = null;
                 agent.m_Surface = null;
                 if (old != null && RejoinOnLink(agent, old))
@@ -683,8 +794,41 @@ namespace Unbound.Runtime
                     continue;
                 }
                 Place(agent, agent.m_NextPosition);
-                if (destination.HasValue && agent.m_Crowd != null) RequestPath(agent);
+                if (onLink)
+                {
+                    if (destination.HasValue && agent.m_Crowd != null) RequestPath(agent);
+                    continue;
+                }
+                if (agent.m_Crowd == null)
+                {
+                    // Off the new NavMesh no path can be computed.
+                    agent.SetPathPending(false);
+                    continue;
+                }
+                if (agent.pathPending) RequestPath(agent);
+                else if (following) PlanAgain(agent, moving);
             }
+        }
+
+        /// <summary>The path of an agent that was following one, planned again on the rebuilt
+        /// NavMesh from where the agent now stands to its destination; the agent keeps its velocity
+        /// (see the note on <see cref="Rebuild"/>).</summary>
+        static void PlanAgain(NavMeshAgent agent, DtCrowdAgent moving)
+        {
+            var ag = agent.m_Crowd;
+            ag.vel = moving.vel;
+            ag.nvel = moving.nvel;
+            ag.pvel = moving.pvel;
+            ag.dvel = moving.dvel;
+            ag.desiredSpeed = moving.desiredSpeed;
+            var search = NavMesh.PathSearch.Begin(agent.m_Surface, agent.m_NextPosition, agent.RequestedDestination, agent.Filter, agent.agentTypeID);
+            int budget = int.MaxValue;
+            if (search != null && search.Step(ref budget) && search.Result != null)
+            {
+                ApplyPath(agent, search.Result);
+                return;
+            }
+            agent.SetPathStatus(NavMeshPathStatus.PathInvalid);
         }
 
         /// <summary>An agent on a link stays on it when the NavMesh changes, its link deactivated
@@ -846,6 +990,7 @@ namespace Unbound.Runtime
             agent.SetPathPending(false);
             agent.SetArrived(false);
             agent.SetPathStatus(path.status);
+            agent.PathRenewed();
             // The corners the agent steers by, for this frame's queries.
             ag.ncorners = ag.corridor.FindCorners(ag.corners, DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS, crowd.GetNavMeshQuery(), crowd.GetFilter(0));
         }
@@ -877,7 +1022,12 @@ namespace Unbound.Runtime
                 foreach (var crowd in s_Crowds.Values) ConfigureAvoidance(crowd);
             foreach (var agent in s_Agents)
                 if (agent.m_Crowd != null) PrepareLink(agent);
-            foreach (var crowd in s_Crowds.Values) crowd.Update(dt, null);
+            foreach (var pair in s_Crowds)
+            {
+                // The enabled NavMeshObstacles, as they stand now, are among what the agents avoid.
+                ObstacleSystem.Feed(pair.Value, pair.Key);
+                pair.Value.Update(dt, null);
+            }
             foreach (var agent in s_Agents)
             {
                 if (agent.m_Crowd == null) continue;

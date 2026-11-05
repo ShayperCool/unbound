@@ -35,4 +35,8 @@ Altered (marked `Unbound:` in the sources):
   neighbours (half from equals), overlaps resolved by the less important agent alone (half each
   between equals);
 - `DtNavMeshQuery.GetPathToNode` is visible to the engine (partial paths end at the reachable
-  polygon nearest to the target).
+  polygon nearest to the target);
+- `DtNavMeshQuery.Raycast` (`DotRecast.Detour/DtNavMeshQuery.cs`) computes the hit wall edge's z
+  extent as its end's z minus its start's z (the port subtracted the start's x), so the hit normal
+  is perpendicular to the wall that stops the ray (`NavMesh.Raycast`'s and `NavMeshAgent.Raycast`'s
+  `NavMeshHit.normal`).

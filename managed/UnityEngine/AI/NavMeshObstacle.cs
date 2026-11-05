@@ -4,8 +4,8 @@ using Unbound.Runtime;
 namespace UnityEngine.AI
 {
     /// <summary>
-    /// An obstacle agents avoid; a carving obstacle cuts its footprint (grown by the agents'
-    /// radius) out of the NavMesh while it stands still.
+    /// An obstacle agents avoid in their local avoidance. Unity's carving obstacle cuts a hole in
+    /// the NavMesh; Unbound does not carve yet and reports it (see ObstacleSystem).
     /// </summary>
     [ClassId(208)]
     public sealed partial class NavMeshObstacle : Behaviour
@@ -189,15 +189,85 @@ namespace UnityEngine.AI
 namespace Unbound.Runtime
 {
     using System.Collections.Generic;
+    using System.Runtime.CompilerServices;
+    using DotRecast.Core.Numerics;
+    using DotRecast.Detour.Crowd;
     using UnityEngine;
     using UnityEngine.AI;
 
-    /// <summary>The enabled obstacles. Carving is not supported yet: a carving obstacle is
-    /// reported once and leaves the NavMesh as it is.</summary>
+    /// <summary>
+    /// The enabled obstacles, and their shapes in the agents' local avoidance.
+    /// </summary>
+    // Documented (Scripting API 6000.0, NavMeshObstacle; Manual "NavMesh Obstacle" and "Inner
+    // Workings of the Navigation System", AI Navigation 2.0): an obstacle for agents to avoid; by
+    // default it affects only the agents' avoidance, not their paths: agents plot paths ignoring it
+    // and sidestep it as they move, and one blocking a gap stops them until it is clear. Local
+    // avoidance only looks at imminent collisions: it cannot steer around traps or a blocked path.
+    // A carving obstacle cuts a hole in the NavMesh, which paths route around, when it stands still
+    // (carveOnlyStationary, after carvingTimeToStationary) or as it moves past carvingMoveThreshold;
+    // while it moves without carving it is an obstruction for avoidance; the hole takes effect in
+    // the next frame.
+    //
+    // C1: carving is not supported: Unbound's NavMesh tiles are the baked polygons, with no source
+    // geometry or tile cache to rebuild them from, so a hole cannot be cut without approximating
+    // the polygons around it. A carving obstacle is reported once and leaves the NavMesh (and
+    // isPathStale) as it is; Unbound's choice (unmeasured): it stays an avoidance obstacle, moving
+    // or not, so agents sidestep it instead of planning around it.
+    //
+    // Avoidance: each enabled obstacle is one or more circles that the agents of every agent type
+    // avoid in their crowd as they avoid other agents, moving at the obstacle's velocity. The
+    // circles are fixed crowd members that never move themselves and that every agent ranks as more
+    // important than itself, so agents also keep apart from them and are pushed out of them, as from
+    // a more important agent.
+    // C2 (Unbound's choice, unmeasured): the obstacle's position is read from its transform when the
+    //   agents update.
+    // C3: its velocity in avoidance is the velocity property; an obstacle a script moves without
+    //   setting it is avoided where it stands. Documented support: the velocity page's own example
+    //   (Scripting API 6000.0 NavMeshObstacle.velocity, ManualObstacleVelocityUpdater,
+    //   https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AI.NavMeshObstacle-velocity.html)
+    //   is a script that moves the object and computes and sets velocity itself. Obstacles moved by
+    //   physics or animation are unmeasured.
+    // C4 (Unbound's choice, unmeasured): a capsule is an upright circle of its radius times the
+    //   larger horizontal scale (the Scripting API calls the obstacle "cylindrical in shape").
+    // C5 (Unbound's choice, unmeasured): a box is the rectangle around its horizontal outline, along
+    //   its turned x axis, cut into ceil(long side / short side) equal pieces along its longer side,
+    //   each covered by the circle through its corners. Bound: each circle's radius is at most
+    //   sqrt(2) times the box's half-width, so the cover bulges at most (sqrt(2) - 1) times the
+    //   half-width beyond the box's long sides and less than the half-width beyond its ends (a square
+    //   box is one circle). At most MaxBoxCircles (16) circles per box: a box
+    //   longer than 16 times its width (or with no width) gets 16 circles of larger radius, whose
+    //   bulge grows with its length; that is reported once per run.
+    // C6 (Unbound's choice, unmeasured): an obstacle counts for an agent whose height span overlaps
+    //   its own. The span is the agent type's height (NavMeshBuildSettings.agentHeight): the test is
+    //   exact only for an agent whose height equals its agent type's height; for another height h
+    //   it is shifted by (h - agent type height) / 2.
+    // C7 (Unbound's choice, unmeasured): an obstacle circle whose centre lies beyond an agent's
+    //   neighbour range is not seen, and circles take places among the agent's nearest neighbours as
+    //   other agents do. Limit: Detour's crowd gathers at most 32 neighbour candidates per agent from
+    //   the proximity-grid cells its range touches before it keeps the nearest (DtCrowd
+    //   GetNeighbours), so obstacle circles there can leave agents out. To keep that from happening
+    //   needlessly, only circles that can be an agent's neighbour are fed: within some walking
+    //   agent's neighbour range plus the circle's radius, with an overlapping height span (C6). When
+    //   an agent's candidates still exceed 32 with obstacle circles among them, it is reported once
+    //   per run.
+    // C8: agents keep apart from obstacle circles and are pushed out of them, including agents with
+    //   NoObstacleAvoidance. Documented support: AI Navigation 2.0 Manual, NavMesh Agent component
+    //   (https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/NavMeshAgent.html),
+    //   Quality None: "collisions resolve, but other agents and obstacles are not actively
+    //   avoided"; Manual, NavMesh Obstacle
+    //   (https://docs.unity3d.com/Packages/com.unity.ai.navigation@2.0/manual/AboutObstacles.html):
+    //   "NavMesh Agents try to avoid collisions with the NavMesh Obstacle, and when close, they
+    //   collide with the NavMesh Obstacle." How far and how fast a collision resolves is unmeasured.
     internal static class ObstacleSystem
     {
         static readonly List<NavMeshObstacle> s_Obstacles = new List<NavMeshObstacle>();
-        static bool s_Warned;
+        /// <summary>The carving warning was given (once per run).</summary>
+        internal static bool s_Warned;
+        /// <summary>A box was covered by fewer circles than its length needs (C5; once per run).</summary>
+        internal static bool s_WarnedLongBox;
+        /// <summary>An agent's neighbour candidates exceeded the crowd's cap with obstacle circles
+        /// among them (C7; once per run).</summary>
+        internal static bool s_WarnedCandidates;
 
         internal static void Add(NavMeshObstacle obstacle)
         {
@@ -212,8 +282,249 @@ namespace Unbound.Runtime
             if (obstacle.carving && obstacle.isActiveAndEnabled && !s_Warned)
             {
                 s_Warned = true;
-                Debug.LogWarning("Unbound: NavMeshObstacle carving is not supported yet; carving obstacles leave the NavMesh unchanged.", obstacle);
+                Debug.LogWarning("Unbound: NavMeshObstacle carving is not supported yet; carving obstacles leave the NavMesh unchanged "
+                    + "and agents only avoid them locally.", obstacle);
             }
         }
+
+        // ------------------------------------------------------------------ avoidance
+
+        /// <summary>The most circles a box becomes (C5).</summary>
+        internal const int MaxBoxCircles = 16;
+
+        /// <summary>The most neighbour candidates Detour's crowd gathers for an agent before it keeps
+        /// the nearest (DtCrowd.GetNeighbours; C7).</summary>
+        internal const int NeighbourCandidates = 32;
+
+        readonly struct Circle
+        {
+            internal readonly Vector3 Center;
+            internal readonly float Radius;
+            internal readonly float Bottom;
+            internal readonly float Top;
+            internal readonly Vector3 Velocity;
+            internal readonly NavMeshObstacle Owner;
+
+            internal Circle(Vector3 center, float radius, float bottom, float top, Vector3 velocity, NavMeshObstacle owner)
+            {
+                Center = center;
+                Radius = radius;
+                Bottom = bottom;
+                Top = top;
+                Velocity = velocity;
+                Owner = owner;
+            }
+
+            internal float Height => Mathf.Max(0f, Top - Bottom);
+        }
+
+        /// <summary>The obstacle circles in each crowd, reused from update to update.</summary>
+        static readonly ConditionalWeakTable<DtCrowd, List<DtCrowdAgent>> s_InCrowd = new ConditionalWeakTable<DtCrowd, List<DtCrowdAgent>>();
+        static readonly List<Circle> s_Circles = new List<Circle>();
+        /// <summary>The circles fed this update (near a walking agent) and their crowd positions.</summary>
+        static readonly List<Circle> s_Near = new List<Circle>();
+        static readonly List<RcVec3f> s_NearPositions = new List<RcVec3f>();
+
+        /// <summary>Before the crowd of <paramref name="surface"/> updates: the enabled obstacles,
+        /// where they are now, become its obstacle circles, those near a walking agent (C7). Without
+        /// obstacles (and none fed before) the crowd is left untouched.</summary>
+        internal static void Feed(DtCrowd crowd, NavWorld.Surface surface)
+        {
+            if (!s_InCrowd.TryGetValue(crowd, out var members))
+            {
+                if (s_Obstacles.Count == 0) return;
+                members = new List<DtCrowdAgent>();
+                s_InCrowd.Add(crowd, members);
+            }
+            s_Circles.Clear();
+            foreach (var obstacle in s_Obstacles)
+                if (obstacle != null && obstacle.isActiveAndEnabled) AddCircles(obstacle, s_Circles);
+            // The agents' neighbour test compares their feet with the circle's position over half
+            // their heights together: placed half the agent type's height under the obstacle's
+            // middle, it passes when the height spans overlap (C6).
+            float agentHeight = surface != null ? surface.Settings.agentHeight : 2f;
+            var agents = crowd.GetActiveAgents();
+            s_Near.Clear();
+            s_NearPositions.Clear();
+            foreach (var c in s_Circles)
+            {
+                var position = new RcVec3f(c.Center.x, (c.Bottom + c.Top) * 0.5f - agentHeight * 0.5f, c.Center.z);
+                if (!NearAWalkingAgent(agents, position, c)) continue;
+                s_Near.Add(c);
+                s_NearPositions.Add(position);
+            }
+            while (members.Count > s_Near.Count)
+            {
+                crowd.RemoveAgent(members[members.Count - 1]);
+                members.RemoveAt(members.Count - 1);
+            }
+            if (s_Near.Count == 0) return;
+            if (!s_WarnedCandidates) CheckCandidates(crowd, agents, members.Count);
+            for (int i = 0; i < s_Near.Count; i++)
+            {
+                var c = s_Near[i];
+                var position = s_NearPositions[i];
+                var options = new DtCrowdAgentParams
+                {
+                    radius = c.Radius,
+                    height = c.Height,
+                    maxAcceleration = 0f,
+                    maxSpeed = 0f,
+                    collisionQueryRange = 0f,
+                    pathOptimizationRange = 0f,
+                    separationWeight = 0f,
+                    updateFlags = 0,
+                    obstacleAvoidanceType = 0,
+                    queryFilterType = 0,
+                    userData = c.Owner,
+                    // More important than any agent: every agent avoids it, and it never gives way.
+                    avoidancePriority = int.MinValue,
+                };
+                if (i == members.Count) members.Add(crowd.AddAgent(position, options));
+                var member = members[i];
+                crowd.UpdateAgentParameters(member, options);
+                // Not walking: the crowd neither steers, moves nor pushes it; agents still see it as
+                // a neighbour.
+                member.state = DtCrowdAgentState.DT_CROWDAGENT_STATE_INVALID;
+                member.targetState = DtMoveRequestState.DT_CROWDAGENT_TARGET_NONE;
+                member.npos = position;
+                var velocity = NavMesh.V(c.Velocity);
+                member.vel = velocity;
+                member.dvel = velocity;
+                member.nvel = velocity;
+                member.pvel = velocity;
+            }
+        }
+
+        /// <summary>Whether the circle, placed at <paramref name="position"/>, can be the neighbour of
+        /// a walking agent of the crowd: within its neighbour range plus the circle's radius, with
+        /// the crowd's height test passing (C6, C7).</summary>
+        static bool NearAWalkingAgent(IList<DtCrowdAgent> agents, RcVec3f position, Circle circle)
+        {
+            float height = circle.Height;
+            for (int i = 0; i < agents.Count; i++)
+            {
+                var ag = agents[i];
+                // Obstacle circles are never walking; agents on links or off the NavMesh do not look
+                // for neighbours.
+                if (ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING) continue;
+                if (MathF.Abs(ag.npos.Y - position.Y) >= (ag.option.height + height) * 0.5f) continue;
+                float dx = ag.npos.X - position.X, dz = ag.npos.Z - position.Z;
+                float reach = ag.option.collisionQueryRange + circle.Radius;
+                if (dx * dx + dz * dz <= reach * reach) return true;
+            }
+            return false;
+        }
+
+        /// <summary>Reports once when a walking agent's neighbour query will gather more candidates
+        /// than the crowd keeps, obstacle circles among them: the proximity-grid items (agents and
+        /// the circles fed now) in the grid cells its range touches, as the crowd counts them (C7).
+        /// Positions are those before the crowd updates.</summary>
+        static void CheckCandidates(DtCrowd crowd, IList<DtCrowdAgent> agents, int fedBefore)
+        {
+            if (agents.Count - fedBefore + s_Near.Count <= NeighbourCandidates) return;
+            float inv = 1.0f / crowd.GetGrid().GetCellSize();
+            for (int i = 0; i < agents.Count; i++)
+            {
+                var ag = agents[i];
+                if (ag.state != DtCrowdAgentState.DT_CROWDAGENT_STATE_WALKING) continue;
+                float range = ag.option.collisionQueryRange;
+                int x0 = Cell(ag.npos.X - range, inv), x1 = Cell(ag.npos.X + range, inv);
+                int z0 = Cell(ag.npos.Z - range, inv), z1 = Cell(ag.npos.Z + range, inv);
+                int candidates = 0, circles = 0;
+                for (int j = 0; j < agents.Count; j++)
+                {
+                    var other = agents[j];
+                    // Last update's circles are replaced by this update's below.
+                    if (other.option.userData is NavMeshObstacle) continue;
+                    if (InCells(other.npos.X, other.npos.Z, other.option.radius, x0, x1, z0, z1, inv)) candidates++;
+                }
+                for (int j = 0; j < s_Near.Count; j++)
+                    if (InCells(s_NearPositions[j].X, s_NearPositions[j].Z, s_Near[j].Radius, x0, x1, z0, z1, inv)) circles++;
+                if (circles == 0 || candidates + circles <= NeighbourCandidates) continue;
+                s_WarnedCandidates = true;
+                Debug.LogWarning("Unbound: " + (candidates + circles) + " NavMesh agents and NavMeshObstacle circles ("
+                    + circles + " circles) are near one agent, more than the " + NeighbourCandidates
+                    + " neighbours its avoidance considers; some may be left out of its avoidance and collisions.",
+                    ag.option.userData as UnityEngine.Object);
+                return;
+            }
+        }
+
+        /// <summary>The proximity grid's cell of a coordinate, as Detour's grid computes it.</summary>
+        static int Cell(float v, float inv) => (int)MathF.Floor(v * inv);
+
+        static bool InCells(float x, float z, float r, int x0, int x1, int z0, int z1, float inv) =>
+            Cell(x - r, inv) <= x1 && Cell(x + r, inv) >= x0 && Cell(z - r, inv) <= z1 && Cell(z + r, inv) >= z0;
+
+        /// <summary>The obstacle's shape as circles in the horizontal plane, with its height span.</summary>
+        static void AddCircles(NavMeshObstacle obstacle, List<Circle> into)
+        {
+            var t = obstacle.transform;
+            var center = t.TransformPoint(obstacle.center);
+            var scale = t.lossyScale;
+            var velocity = obstacle.velocity;
+            if (obstacle.shape == NavMeshObstacleShape.Capsule)
+            {
+                float radius = obstacle.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
+                float half = obstacle.height * Mathf.Abs(scale.y) * 0.5f;
+                into.Add(new Circle(center, radius, center.y - half, center.y + half, velocity, obstacle));
+                return;
+            }
+            var rotation = t.rotation;
+            var size = obstacle.size;
+            var ax = rotation * new Vector3(size.x * scale.x * 0.5f, 0f, 0f);
+            var ay = rotation * new Vector3(0f, size.y * scale.y * 0.5f, 0f);
+            var az = rotation * new Vector3(0f, 0f, size.z * scale.z * 0.5f);
+            float halfHeight = Mathf.Abs(ax.y) + Mathf.Abs(ay.y) + Mathf.Abs(az.y);
+            // The rectangle's axes: the box's x axis turned about the vertical (its z axis turned a
+            // quarter when x stands upright).
+            var right = rotation * Vector3.right;
+            var u = new Vector2(right.x, right.z);
+            if (u.sqrMagnitude < 1e-8f)
+            {
+                var forward = rotation * Vector3.forward;
+                u = new Vector2(forward.z, -forward.x);
+            }
+            u.Normalize();
+            var v = new Vector2(-u.y, u.x);
+            float hu = Extent(ax, u) + Extent(ay, u) + Extent(az, u);
+            float hv = Extent(ax, v) + Extent(ay, v) + Extent(az, v);
+            var along = hu >= hv ? u : v;
+            // Half the long and short sides.
+            float length = Mathf.Max(hu, hv), width = Mathf.Min(hu, hv);
+            // Pieces no longer than wide, so each circle's radius is at most sqrt(2) half-widths
+            // (C5); beyond MaxBoxCircles the pieces lengthen.
+            bool beyondCap;
+            int count;
+            if (width > 0f)
+            {
+                float pieces = length / width - 1e-4f;
+                beyondCap = pieces > MaxBoxCircles;
+                count = beyondCap ? MaxBoxCircles : Mathf.Max(1, Mathf.CeilToInt(pieces));
+            }
+            else
+            {
+                beyondCap = length > 0f;
+                count = beyondCap ? MaxBoxCircles : 1;
+            }
+            if (beyondCap && !s_WarnedLongBox)
+            {
+                s_WarnedLongBox = true;
+                Debug.LogWarning("Unbound: NavMeshObstacle '" + obstacle.name + "' is a box more than " + MaxBoxCircles
+                    + " times as long as it is wide; agents avoid it as " + MaxBoxCircles
+                    + " circles that reach beyond its long sides further the longer it is.", obstacle);
+            }
+            float piece = length / count;
+            float circleRadius = Mathf.Sqrt(width * width + piece * piece);
+            for (int i = 0; i < count; i++)
+            {
+                float offset = -length + piece * (2 * i + 1);
+                var c = center + new Vector3(along.x, 0f, along.y) * offset;
+                into.Add(new Circle(c, circleRadius, center.y - halfHeight, center.y + halfHeight, velocity, obstacle));
+            }
+        }
+
+        static float Extent(Vector3 axis, Vector2 direction) => Mathf.Abs(axis.x * direction.x + axis.z * direction.y);
     }
 }
