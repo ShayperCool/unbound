@@ -76,6 +76,7 @@ namespace UnityEngine
                     normal = hit.normal;
                     other = hit.collider != null ? hit.collider.gameObject : null;
                     colliderId = hit.collider != null ? hit.collider.GetInstanceID() : 0;
+                    if (C.colliderForce != 0f && hit.collider != null) ReportColliderForce(hit.collider.attachedRigidbody);
                 }
             }
             if (float.IsPositiveInfinity(fraction)) return true;
@@ -85,6 +86,15 @@ namespace UnityEngine
             var velocity = simToWorldRotation * p.m_Velocity;
             float speed = (simToWorldRotation * (p.m_Velocity + p.m_AnimatedVelocity)).magnitude;
             var impact = w0 + move * fraction;
+            // Collision sub-emitters ("Spawns new particles when particles from the parent
+            // system collide with something"; collision0/1 spawn "at the locations of the
+            // collision") emit at the point the particle meets the plane or collider, the
+            // ParticleCollisionEvent intersection, whether or not collision messages are sent.
+            // Unbound's choices (unmeasured): one emission per detected collision, also when the
+            // collision then kills the particle (its Death sub-emitters fire as well), and what
+            // the children inherit is the particle as it arrives, before the bounce, dampen and
+            // lifetime loss.
+            if (m_SubEmitters.enabled) EventSubEmitters(ParticleSystemSubEmitterType.Collision, p, toWorld.inverse.MultiplyPoint3x4(impact));
             if (C.sendCollisionMessages && other != null)
                 m_CollisionEvents.Add((other, new ParticleCollisionEvent
                 {
@@ -105,6 +115,59 @@ namespace UnityEngine
             p.m_AgePercent += C.lifetimeLoss.Evaluate(age, R.Value(seed, R.Collision + 2)) * 100f;
             p.ExportLifetime();
             return p.m_AgePercent <= 100f;
+        }
+
+        /// <summary>colliderForce: the 6000.0 docs say only that it is "How much force is
+        /// applied to a Collider when hit by particles" and that the three multiply flags scale
+        /// it by the collision angle ("Grazing angles will generate less force than a head-on
+        /// collision"), the particle speed and the particle size. They give no formula, force
+        /// mode, direction or point of application, so no force is applied: a collision that
+        /// would push a body (a Rigidbody that physics affects, i.e. not kinematic) is reported
+        /// instead.</summary>
+        static void ReportColliderForce(Rigidbody body)
+        {
+            if (body == null || body.isKinematic) return;
+            Unbound.Runtime.Stubs.Ignored("ParticleSystem.CollisionModule.colliderForce",
+                "is not applied: particle collisions do not push Rigidbodies (the force formula, mode and direction are undocumented)");
+        }
+
+        /// <summary>The systems handing a Collision or Trigger event of one of their particles
+        /// to their sub-emitters, innermost last.</summary>
+        static readonly List<ParticleSystem> s_EventSubEmitting = new List<ParticleSystem>();
+
+        /// <summary>A Collision or Trigger event of <paramref name="parent"/>: its sub-emitters
+        /// of <paramref name="type"/> emit their bursts at <paramref name="position"/>
+        /// (simulation space) through the Death/Manual path (TriggerSubEmitterAt: emitProbability,
+        /// burst counts, the inherited properties), the rest of the particle as it is now.</summary>
+        void EventSubEmitters(ParticleSystemSubEmitterType type, in Particle parent, Vector3 position)
+        {
+            if (!HasSubEmitters(type)) return;
+            var at = parent;
+            at.m_Position = position;
+            // The event comes from inside a particle's step, which holds a reference into this
+            // system's buffer: a sub-emitter chain that leads back here (a cycle, possible only
+            // through scripts) would grow that buffer under it, so it does not emit.
+            s_EventSubEmitting.Add(this);
+            try
+            {
+                foreach (var e in m_SubEmitters.emitters)
+                {
+                    if (e.type != type || e.system == null) continue;
+                    if (s_EventSubEmitting.Contains(e.system))
+                    {
+                        ReportUnsupported("collision/trigger sub-emitter cycle (a sub-emitter that leads back to a system emitting it)");
+                        continue;
+                    }
+                    if ((e.properties & ParticleSystemSubEmitterProperties.InheritDuration) != 0)
+                        ReportUnsupported("sub-emitter Inherit Duration");
+                    // The Manual: Collision and Trigger sub-emitters support "only a single burst";
+                    // Unity's result with more is undocumented, so they all emit, reported.
+                    if (e.system.m_Emission.bursts.Count > 1)
+                        ReportUnsupported("collision/trigger sub-emitter with more than one burst");
+                    TriggerSubEmitterAt(e, ref at);
+                }
+            }
+            finally { s_EventSubEmitting.RemoveAt(s_EventSubEmitting.Count - 1); }
         }
 
         /// <summary>The particles of the frame's trigger events by type, for OnParticleTrigger and
@@ -202,6 +265,16 @@ namespace UnityEngine
 
         bool Act(ref Particle p, ParticleSystemOverlapAction action, ParticleSystemTriggerEventType type)
         {
+            // Trigger sub-emitters spawn "when particles from the parent system pass conditions
+            // in the Trigger Module" (the Manual: "when a parent particle interacts with a
+            // trigger volume"). Unbound's choices (unmeasured): a condition is passed when the
+            // particle meets an Inside, Outside, Enter or Exit condition whose action is not
+            // Ignore (Callback or Kill), each time the trigger evaluation finds it (once per
+            // internal step, and once for each such condition met in that step), at the
+            // particle's position, before a Kill takes it, and whether or not this update
+            // collects the OnParticleTrigger lists.
+            if (action != ParticleSystemOverlapAction.Ignore && m_SubEmitters.enabled)
+                EventSubEmitters(ParticleSystemSubEmitterType.Trigger, p, p.m_Position);
             if (action == ParticleSystemOverlapAction.Kill) return false;
             if (action == ParticleSystemOverlapAction.Callback && m_CollectTriggers)
             {
