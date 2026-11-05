@@ -73,10 +73,19 @@ namespace UnityEngine.AI
         public bool autoTraverseOffMeshLink { get => m_AutoTraverseOffMeshLink; set => m_AutoTraverseOffMeshLink = value; }
         public bool autoBraking { get => m_AutoBraking; set => m_AutoBraking = value; }
         public bool autoRepath { get => m_AutoRepath; set => m_AutoRepath = value; }
-        public int areaMask { get => m_AreaMask; set => m_AreaMask = value; }
+        /// <summary>Changing it makes the path stale (Scripting API).</summary>
+        public int areaMask
+        {
+            get => m_AreaMask;
+            set
+            {
+                if (m_AreaMask != value) m_OwnPathStale = true;
+                m_AreaMask = value;
+            }
+        }
 
         [Obsolete("Use areaMask instead.")]
-        public int walkableMask { get => m_AreaMask; set => m_AreaMask = value; }
+        public int walkableMask { get => areaMask; set => areaMask = value; }
 
         public ObstacleAvoidanceType obstacleAvoidanceType { get => m_ObstacleAvoidanceType; set { m_ObstacleAvoidanceType = value; ApplyParams(); } }
         public int avoidancePriority { get => m_AvoidancePriority; set { m_AvoidancePriority = value; ApplyParams(); } }
@@ -97,7 +106,10 @@ namespace UnityEngine.AI
         public void SetAreaCost(int areaIndex, float areaCost)
         {
             m_AreaCosts ??= (float[])NavMeshAreas.Costs.Clone();
-            if (areaIndex >= 0 && areaIndex < 32) m_AreaCosts[areaIndex] = areaCost;
+            if (areaIndex < 0 || areaIndex >= 32) return;
+            // The agent's own area costs changed: its path is stale (unmeasured).
+            if (m_AreaCosts[areaIndex] != areaCost) m_OwnPathStale = true;
+            m_AreaCosts[areaIndex] = areaCost;
         }
 
         public float GetAreaCost(int areaIndex)
@@ -215,6 +227,8 @@ namespace UnityEngine.AI
 
         public void ResetPath()
         {
+            m_PathGiven = false;
+            m_OwnPathStale = false;
             m_HasDestination = false;
             m_PathPending = false;
             m_PathStatus = NavMeshPathStatus.PathInvalid;
@@ -233,13 +247,27 @@ namespace UnityEngine.AI
 
         public bool pathPending => m_PathPending;
 
-        public bool isPathStale
+        // Path staleness. Documented (Scripting API 6000.0, isPathStale and areaMask): changing the
+        // areaMask, enabling or disabling an off-mesh link, or changing the NavMesh area costs
+        // makes the path stale; the agent goes on following it. Unbound's choices (unmeasured):
+        // the flag is set at once by the change; area cost and link changes count for every
+        // agent, areaMask and the agent's own area costs for that agent; only a changed value
+        // counts; NavMesh data added or removed does not; it concerns the path last applied to
+        // the agent (from SetPath or a path request) until a new one is applied or ResetPath
+        // clears it; a pending or failed request keeps the flag; and it starts no new path.
+        bool m_PathGiven;
+        bool m_OwnPathStale;
+        int m_PathStaleVersion;
+
+        public bool isPathStale =>
+            m_Crowd != null && m_PathGiven && (m_OwnPathStale || m_PathStaleVersion != NavWorld.PathStaleVersion);
+
+        /// <summary>A new path was applied: it is not stale.</summary>
+        internal void PathRenewed()
         {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("NavMeshAgent.isPathStale", "is always false (NavMesh changes do not mark paths stale)");
-                return false;
-            }
+            m_PathGiven = true;
+            m_OwnPathStale = false;
+            m_PathStaleVersion = NavWorld.PathStaleVersion;
         }
 
         public NavMeshPathStatus pathStatus => m_PathStatus;
@@ -299,12 +327,19 @@ namespace UnityEngine.AI
             result.m_Status = m_PathStatus;
         }
 
+        /// <summary>The owner of the NavMeshDataInstance whose polygon the agent stands on, and null
+        /// when that instance has no owner or the agent is on no NavMesh (Scripting API 6000.0).
+        /// On an off-mesh link: the link instance's owner (the page names NavMesh and link
+        /// instance owners; reporting the link's while on it is Unbound's choice, unmeasured).</summary>
         public Object navMeshOwner
         {
             get
             {
-                Unbound.Runtime.Stubs.Ignored("NavMeshAgent.navMeshOwner", "is always null");
-                return null;
+                AgentSystem.Sync(this);
+                if (m_Crowd == null || !m_OnNavMesh) return null;
+                if (isOnOffMeshLink) return m_LinkId != 0 ? NavMesh.InternalGetLinkOwner(m_LinkId) : null;
+                int data = NavWorld.DataOfPoly(m_Surface, m_Crowd.corridor.GetFirstPoly());
+                return data != 0 ? NavMesh.InternalGetOwner(data) : null;
             }
         }
 
@@ -846,6 +881,7 @@ namespace Unbound.Runtime
             agent.SetPathPending(false);
             agent.SetArrived(false);
             agent.SetPathStatus(path.status);
+            agent.PathRenewed();
             // The corners the agent steers by, for this frame's queries.
             ag.ncorners = ag.corridor.FindCorners(ag.corners, DtCrowdConst.DT_CROWDAGENT_MAX_CORNERS, crowd.GetNavMeshQuery(), crowd.GetFilter(0));
         }
