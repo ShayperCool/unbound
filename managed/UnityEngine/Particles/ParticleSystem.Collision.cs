@@ -203,8 +203,109 @@ namespace UnityEngine
         bool Act(ref Particle p, ParticleSystemOverlapAction action, ParticleSystemTriggerEventType type)
         {
             if (action == ParticleSystemOverlapAction.Kill) return false;
-            if (action == ParticleSystemOverlapAction.Callback && m_CollectTriggers) m_TriggerParticles[(int)type].Add(p);
+            if (action == ParticleSystemOverlapAction.Callback && m_CollectTriggers)
+            {
+                StampTriggerSerial(ref p);
+                m_TriggerParticles[(int)type].Add(p);
+            }
             return true;
+        }
+
+        // Trigger entry identity, for SetTriggerParticles. Each entry is a copy of a live
+        // particle; the write-back goes to that particle wherever it is by then (removals move
+        // particles, emission and SetParticles add or replace them). Act stamps the live
+        // particle with a per-system serial in bits 8-31 of its flags (the Particle.Flag*
+        // constants use bits 0-6), so the stamp moves with it through swap-back removal and
+        // SetParticles round trips, a reused slot loses it (InitParticle starts from default),
+        // and the entry's copy carries it. Serials run 1..TriggerSerialCount, wrapping, and
+        // only those handed out since the lists were last cleared are current.
+        const int TriggerSerialShift = 8;
+        const uint TriggerSerialMask = 0xFFFFFF00u;
+        const uint TriggerSerialCount = 0xFFFFFFu;
+        uint m_TriggerSerialNext = 1;
+        /// <summary>The first serial of the entries now in <see cref="m_TriggerParticles"/>.</summary>
+        uint m_TriggerSerialStart = 1;
+        /// <summary>This system's OnParticleTrigger is being sent: SetTriggerParticles is valid.</summary>
+        bool m_SendingTriggerMessage;
+
+        static uint TriggerSerialOf(in Particle p) => (p.m_Flags & TriggerSerialMask) >> TriggerSerialShift;
+
+        bool IsCurrentTriggerSerial(uint serial)
+        {
+            if (serial == 0) return false;
+            uint span = (m_TriggerSerialNext + TriggerSerialCount - m_TriggerSerialStart) % TriggerSerialCount;
+            return (serial + TriggerSerialCount - m_TriggerSerialStart) % TriggerSerialCount < span;
+        }
+
+        /// <summary>Gives the live particle a serial for this collection, keeping the one it was
+        /// already given in it (the same particle can be listed by several events and steps).</summary>
+        void StampTriggerSerial(ref Particle p)
+        {
+            bool first = true;
+            foreach (var list in m_TriggerParticles)
+                if (list.Count > 0) { first = false; break; }
+            // FrameUpdate cleared the lists: a new collection, earlier serials are stale.
+            if (first) m_TriggerSerialStart = m_TriggerSerialNext;
+            if (IsCurrentTriggerSerial(TriggerSerialOf(p))) return;
+            p.m_Flags = (p.m_Flags & ~TriggerSerialMask) | (m_TriggerSerialNext << TriggerSerialShift);
+            m_TriggerSerialNext = m_TriggerSerialNext == TriggerSerialCount ? 1 : m_TriggerSerialNext + 1;
+        }
+
+        /// <summary>SetTriggerParticles: writes particles[offset, offset + count) back to the
+        /// live particles the <paramref name="type"/> entries at the same positions came from,
+        /// through SetParticles' write path (6000.0 Scripting API: "Write modified particles
+        /// back to the Particle System, during a call to OnParticleTrigger"; offset and count
+        /// select "a subset of the returned particles"). A null list, a negative offset and an
+        /// out-of-range count behave as in SetParticles (the count then covers every particle
+        /// the list and the entries both have).</summary>
+        internal void WriteBackTriggerParticles(ParticleSystemTriggerEventType type, List<Particle> particles, int offset, int count)
+        {
+            if (particles == null) throw new System.ArgumentNullException(nameof(particles));
+            if (offset < 0) throw new System.ArgumentOutOfRangeException(nameof(offset));
+            var entries = m_TriggerParticles[(int)type];
+            // The docs give no result outside the callback (Unbound's choice, unmeasured): an
+            // error, and nothing is written.
+            if (!m_SendingTriggerMessage)
+            {
+                Debug.LogError("ParticlePhysicsExtensions.SetTriggerParticles is only valid during a call to OnParticleTrigger of the particle system; nothing was written back");
+                return;
+            }
+            // GetSafeTriggerParticlesSize bounds the entries (Unbound's choice, unmeasured: an
+            // offset past them is an error, as a negative one is).
+            int available = System.Math.Min(particles.Count, entries.Count) - offset;
+            if (available < 0) throw new System.ArgumentOutOfRangeException(nameof(offset));
+            if (count < 0 || count > available) count = available;
+            if (count == 0) return;
+
+            var slotOf = new Dictionary<uint, int>();
+            for (int i = 0; i < m_Count; i++)
+            {
+                // An orphaned trail is no longer a particle.
+                if ((m_Particles[i].m_Flags & Particle.FlagOrphanTrail) != 0) continue;
+                uint serial = TriggerSerialOf(m_Particles[i]);
+                if (IsCurrentTriggerSerial(serial)) slotOf.TryAdd(serial, i);
+            }
+            var slots = new int[count];
+            var values = new Particle[count];
+            int n = 0;
+            for (int k = 0; k < count; k++)
+            {
+                uint serial = TriggerSerialOf(entries[offset + k]);
+                // Unbound's choices (unmeasured): an entry whose particle is gone (killed as a
+                // newborn, replaced, removed by a script) writes nothing, and a write-back does
+                // not undo a trigger Kill of the same update (the particle still dies).
+                if (!slotOf.TryGetValue(serial, out int slot)) continue;
+                if ((m_Particles[slot].m_Flags & Particle.FlagTriggerKilled) != 0) continue;
+                var value = particles[offset + k];
+                // The written particle stays the entry's, for later calls in this callback, and
+                // keeps its own inside/outside state (the entry may come from an earlier internal
+                // step of the update; Unbound's choice, unmeasured).
+                const uint inside = Particle.FlagInsideTrigger;
+                value.m_Flags = (value.m_Flags & ~(TriggerSerialMask | inside)) | (m_Particles[slot].m_Flags & inside) | (serial << TriggerSerialShift);
+                slots[n] = slot;
+                values[n++] = value;
+            }
+            WriteParticlesAt(slots, values, n);
         }
 
         internal void SendTriggerMessage()
@@ -213,7 +314,10 @@ namespace UnityEngine
             foreach (var list in m_TriggerParticles)
                 if (list.Count > 0)
                 {
-                    Messaging.SendFast(m_GameObject, "OnParticleTrigger");
+                    bool sending = m_SendingTriggerMessage;
+                    m_SendingTriggerMessage = true;
+                    try { Messaging.SendFast(m_GameObject, "OnParticleTrigger"); }
+                    finally { m_SendingTriggerMessage = sending; }
                     return;
                 }
         }

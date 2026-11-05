@@ -478,10 +478,14 @@ namespace UnityEngine
             return GetTriggerParticles(ps, type, particles);
         }
 
+        /// <summary>Writes particles[offset, offset + count) back to the particles the trigger
+        /// entries at the same positions came from, during OnParticleTrigger.</summary>
         public static void SetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles, int offset, int count) =>
-            Unbound.Runtime.Stubs.Ignored("ParticlePhysicsExtensions.SetTriggerParticles", "is not honoured yet: changed trigger particles are not written back");
+            ps.WriteBackTriggerParticles(type, particles, offset, count);
 
+        /// <summary>Writes every particle of the list back, as SetParticles(particles) writes the
+        /// whole array.</summary>
         public static void SetTriggerParticles(this ParticleSystem ps, ParticleSystemTriggerEventType type, List<ParticleSystem.Particle> particles) =>
-            Unbound.Runtime.Stubs.Ignored("ParticlePhysicsExtensions.SetTriggerParticles", "is not honoured yet: changed trigger particles are not written back");
+            ps.WriteBackTriggerParticles(type, particles, 0, -1);
     }
 }
