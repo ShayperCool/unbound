@@ -255,5 +255,97 @@ namespace UnityEngine.Tests
             Frames(1);
             Near(time + Dt, ps.time);
         }
+
+        /// <summary>A camera at <see cref="kFar"/> looking along +z at the test layer only.</summary>
+        Camera MakeCamera(bool orthographic)
+        {
+            var camera = new GameObject("CullingCamera").AddComponent<Camera>();
+            m_Objects.Add(camera.gameObject);
+            camera.transform.position = kFar;
+            camera.orthographic = orthographic;
+            camera.orthographicSize = 5f;
+            camera.fieldOfView = 60;
+            camera.nearClipPlane = 0.3f;
+            camera.farClipPlane = 100;
+            camera.aspect = 16f / 9f;
+            camera.cullingMask = 1 << kLayer;
+            return camera;
+        }
+
+        /// <summary>Whether a vertex of the geometry the renderer draws for the camera (baked in
+        /// world space) is inside the camera's view frustum.</summary>
+        bool DrawsInView(ParticleSystemRenderer renderer, Camera camera)
+        {
+            var mesh = new Mesh();
+            m_Objects.Add(mesh);
+            renderer.BakeMesh(mesh, camera, ParticleSystemBakeMeshOptions.BakeRotationAndScale | ParticleSystemBakeMeshOptions.BakePosition);
+            var viewProjection = camera.projectionMatrix * camera.worldToCameraMatrix;
+            foreach (var v in mesh.vertices)
+            {
+                var c = viewProjection * new Vector4(v.x, v.y, v.z, 1f);
+                if (c.w > 0f && Math.Abs(c.x) <= c.w && Math.Abs(c.y) <= c.w && Math.Abs(c.z) <= c.w) return true;
+            }
+            return false;
+        }
+
+        /// <summary>The camera culls the renderer by its bounds (the live particles' centres ±
+        /// size/2), which miss the view, and the next frame's EarlyUpdate makes it invisible.</summary>
+        static void CullOut(Camera camera, ParticleSystemRenderer renderer)
+        {
+            FrameBuilder.CullCamera(camera);
+            Time.s_FrameCount += 2;
+            Renderer.NotifyInvisible();
+            Assert.False(renderer.isVisible);
+        }
+
+        [Fact]
+        public void PauseKeepsSimulatingStretchedQuadsInViewWithTheirCentresOutside()
+        {
+            const string notCovered = "Particle culling without covering bounds";
+            var camera = MakeCamera(orthographic: false);
+            var ps = Make(ParticleSystemCullingMode.Pause);
+            // Above the view (its top is at y 5.77 at 10 m), each quad stretched 10 m down into it.
+            ps.transform.position = kFar + new Vector3(0f, 8f, 10f);
+            var renderer = RendererOf(ps);
+            renderer.renderMode = ParticleSystemRenderMode.Stretch;
+            renderer.lengthScale = 10f;
+            SetVisible(ps, true);
+            Frames(10);
+            Assert.True(ps.particleCount > 0);
+            Assert.True(DrawsInView(renderer, camera));
+
+            CullOut(camera, renderer);
+            int reported = Hits(notCovered);
+            float time = ps.time;
+            Frames(10);
+            // Drawn on screen, so not frozen there: the bounds Unbound culls by do not cover a
+            // stretched quad, and the system keeps simulating, reported (Unbound's choice,
+            // unmeasured).
+            Near(time + 10 * Dt, ps.time);
+            Assert.True(Hits(notCovered) > reported);
+        }
+
+        [Fact]
+        public void PauseKeepsSimulatingARotatedBillboardCornerInView()
+        {
+            var camera = MakeCamera(orthographic: true);
+            var ps = Make(ParticleSystemCullingMode.Pause);
+            var main = ps.main;
+            main.startRotation = 45f * Mathf.Deg2Rad;
+            // Centres 0.6 m above the view's top (y 5): centre ± 0.5 misses it, but the turned
+            // 1 m quad's lower corner reaches 0.707 m down, into the view.
+            ps.transform.position = kFar + new Vector3(0f, 5.6f, 10f);
+            var renderer = RendererOf(ps);
+            SetVisible(ps, true);
+            Frames(10);
+            Assert.True(ps.particleCount > 0);
+            Assert.True(DrawsInView(renderer, camera));
+
+            CullOut(camera, renderer);
+            float time = ps.time;
+            Frames(10);
+            // The update's own test with centres ± size·√3/2 sees it (Unbound's choice, unmeasured).
+            Near(time + 10 * Dt, ps.time);
+        }
     }
 }
