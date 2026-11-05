@@ -332,6 +332,7 @@ namespace Unbound.Runtime
                 frame.ListenerVelocity = listener.m_Velocity;
                 frame.Flags |= AudioFrameFlags.HasListener;
                 if (AudioFilters.Update(AudioFilters.ListenerKey, listener.m_GameObject)) frame.Flags |= AudioFrameFlags.ListenerFilter;
+                AudioFilterChain.CheckListener(listener);
                 s_WarnedNoListener = false;
             }
             else
@@ -362,6 +363,7 @@ namespace Unbound.Runtime
             s_ListenerPaused = false;
             s_WarnedListeners = 1;
             s_WarnedNoListener = false;
+            AudioFilterChain.ResetForTests();
         }
     }
 
@@ -402,6 +404,10 @@ namespace Unbound.Runtime
             s_Methods[type] = method;
             return method;
         }
+
+        /// <summary>Whether <see cref="Update"/> collects this component's OnAudioFilterRead.</summary>
+        internal static bool IsFilterScript(Component c) =>
+            c is MonoBehaviour mb && !mb.m_Destroyed && mb.isActiveAndEnabled && MethodOf(mb.GetType()) != null;
 
         /// <summary>Rebuilds the filters of one key from its GameObject; true when there are some.</summary>
         internal static bool Update(ulong key, GameObject go)

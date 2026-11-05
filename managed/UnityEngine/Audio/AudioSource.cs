@@ -62,6 +62,9 @@ namespace UnityEngine
         // The loop the last position was sampled in (false: the frame loop).
         internal bool m_MotionInFixedStep;
         float[] m_RolloffTable, m_SpatialBlendTable, m_SpreadTable;
+        // The filter components sent with the last packet (reused), and the chain error reported.
+        internal AudioFilterDescriptor[] m_FilterTable;
+        string m_FilterChainError;
 
         /// <summary>Samples per distance curve sent to the mixer.</summary>
         const int CurveSamples = 64;
@@ -617,18 +620,32 @@ namespace UnityEngine
                 Flags = flags,
                 CurveLength = CurveSamples,
             };
+            // A clipless source with OnAudioFilterRead plays its first script as the clip.
+            bool generator = packet.Clip == 0 && (flags & AudioSourceFlags.Filter) != 0;
+            int filterCount = AudioFilterChain.Collect(this, generator, ref m_FilterTable);
             unsafe
             {
                 fixed (float* rolloff = m_RolloffTable)
                 fixed (float* blend = m_SpatialBlendTable)
                 fixed (float* spread = m_SpreadTable)
+                fixed (AudioFilterDescriptor* filters = m_FilterTable)
                 {
                     packet.RolloffCurve = rolloff;
                     packet.SpatialBlendCurve = blend;
                     packet.SpreadCurve = spread;
+                    packet.FilterCount = filterCount;
+                    packet.Filters = filterCount > 0 ? filters : null;
                     AudioBackend.Current.UpdateSource(handle, ref packet);
                 }
             }
+        }
+
+        /// <summary>Logs a filter chain Unbound cannot place once, until it changes.</summary>
+        internal void ReportFilterChain(string error)
+        {
+            if (error == m_FilterChainError) return;
+            m_FilterChainError = error;
+            if (error != null) Debug.LogError("Unbound: AudioSource on '" + m_GameObject?.m_Name + "': " + error + "; its filter components are not applied", this);
         }
 
         static float[] Sample(AnimationCurve curve)
