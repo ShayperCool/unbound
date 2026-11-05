@@ -13,7 +13,7 @@ namespace UnityEngine.Tests
     /// one that fails without it fails on its own assertion.</summary>
     public class ParticleSetTrailsTests
     {
-        static ParticleSystem Make(string name)
+        static ParticleSystem Make(string name, bool dieWithParticles)
         {
             var go = new GameObject(name); go.SetActive(false);
             var ps = go.AddComponent<ParticleSystem>();
@@ -24,6 +24,7 @@ namespace UnityEngine.Tests
             s.radius = .1f; s.arcMode = ParticleSystemShapeMultiModeValue.Loop; s.arcSpeed = .7f;
             var v = ps.velocityOverLifetime; v.enabled = true; v.orbitalZ = 1.5f;
             var t = ps.trails; t.enabled = true; t.lifetime = .5f; t.minVertexDistance = .05f; t.widthOverTrail = .5f;
+            t.dieWithParticles = dieWithParticles;
             go.SetActive(true);
             Step(ps, 30, true);
             return ps;
@@ -46,7 +47,8 @@ namespace UnityEngine.Tests
                 Camera.transform.position = new Vector3(0, 0, -6); Camera.fieldOfView = 40; Camera.aspect = 1;
             }
 
-            internal ParticleSystem NewSystem(string name) => Track(Make(name).gameObject).GetComponent<ParticleSystem>();
+            internal ParticleSystem NewSystem(string name, bool dieWithParticles = true) =>
+                Track(Make(name, dieWithParticles).gameObject).GetComponent<ParticleSystem>();
 
             T Track<T>(T o) where T : Object { m_Objects.Add(o); return o; }
 
@@ -85,18 +87,56 @@ namespace UnityEngine.Tests
             return buffer.Take(n).ToArray();
         }
 
-        /// <summary>The SetTrails errors logged while <paramref name="action"/> runs.</summary>
+        /// <summary>Records the SetTrails errors and forwards every call to the original handler.</summary>
+        sealed class ErrorCapture : ILogHandler
+        {
+            readonly ILogHandler m_Inner;
+            internal readonly List<string> Errors = new List<string>();
+
+            internal ErrorCapture(ILogHandler inner) => m_Inner = inner;
+
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Error)
+                {
+                    string message = args == null || args.Length == 0 ? format
+                        : string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args);
+                    if (message.Contains("ParticleSystem.SetTrails")) Errors.Add(message);
+                }
+                m_Inner.LogFormat(type, context, format, args);
+            }
+
+            public void LogException(System.Exception exception, Object context) => m_Inner.LogException(exception, context);
+        }
+
+        /// <summary>The SetTrails errors logged while <paramref name="action"/> runs. Unbound
+        /// diagnostics ("Unbound: ...") never reach Application's log callbacks, so they are read
+        /// at the logger's handler, which is restored afterwards.</summary>
         static List<string> SetTrailsErrors(System.Action action)
         {
-            var errors = new List<string>();
-            Application.LogCallback capture = (message, stack, type) =>
-            {
-                if (type == LogType.Error && message.Contains("ParticleSystem.SetTrails")) errors.Add(message);
-            };
-            Application.logMessageReceived += capture;
+            var logger = Debug.unityLogger;
+            var previousHandler = logger.logHandler;
+            bool previousEnabled = logger.logEnabled;
+            var previousFilter = logger.filterLogType;
+            var capture = new ErrorCapture(previousHandler);
+            logger.logHandler = capture;
+            logger.logEnabled = true;
+            logger.filterLogType = LogType.Log;
             try { action(); }
-            finally { Application.logMessageReceived -= capture; }
-            return errors;
+            finally
+            {
+                logger.logHandler = previousHandler;
+                logger.logEnabled = previousEnabled;
+                logger.filterLogType = previousFilter;
+            }
+            return capture.Errors;
+        }
+
+        /// <summary>Steps until a particle has died and left its trail fading.</summary>
+        static void StepUntilATrailFades(ParticleSystem ps)
+        {
+            for (int i = 0; i < 90 && !ps.m_TrailList.Any(t => t != null && t.Orphan); i++) Step(ps, 1);
+            Assert.Contains(ps.m_TrailList, t => t != null && t.Orphan);
         }
 
         [Fact]
@@ -148,6 +188,52 @@ namespace UnityEngine.Tests
             ps.SetTrails(trails);
             Assert.Equal(pointsThen, TrailPoints(ps));
             SameBake(bakedThen, Bake(ps, scene.Camera));
+        }
+
+        [Fact]
+        public void ARestoreWhileATrailFadesPutsTheFadingTrailBack()
+        {
+            using var scene = new Scene();
+            var ps = scene.NewSystem("set-trails-fading", dieWithParticles: false);
+            StepUntilATrailFades(ps);
+            var bakedThen = Bake(ps, scene.Camera);
+            var pointsThen = TrailPoints(ps);
+            var particles = Particles(ps);
+            // The dead particle that carries the fading trail is exported at zero lifetime, and
+            // SetParticles drops it and reorders the others.
+            Assert.Contains(particles, p => p.remainingLifetime <= 0f);
+            var trails = ps.GetTrails();
+
+            Step(ps, 10);
+            Assert.NotEqual(pointsThen, TrailPoints(ps));
+
+            var errors = SetTrailsErrors(() =>
+            {
+                ps.SetParticles(particles);
+                ps.SetTrails(trails);
+            });
+
+            Assert.Empty(errors);
+            Assert.Equal(pointsThen, TrailPoints(ps));
+            SameBake(bakedThen, Bake(ps, scene.Camera));
+        }
+
+        [Fact]
+        public void ARoundTripWhileATrailFadesIsAcceptedAndChangesNothing()
+        {
+            using var scene = new Scene();
+            var ps = scene.NewSystem("set-trails-fading-round-trip", dieWithParticles: false);
+            StepUntilATrailFades(ps);
+            var baked = Bake(ps, scene.Camera);
+            var points = TrailPoints(ps);
+
+            // The carrier of the fading trail is still there: GetTrails then SetTrails, without
+            // SetParticles, is accepted.
+            var errors = SetTrailsErrors(() => ps.SetTrails(ps.GetTrails()));
+
+            Assert.Empty(errors);
+            Assert.Equal(points, TrailPoints(ps));
+            SameBake(baked, Bake(ps, scene.Camera));
         }
 
         [Fact]
