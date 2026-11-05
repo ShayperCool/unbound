@@ -13,6 +13,30 @@ namespace Unbound.Tests
         public TextAsset text;
     }
 
+    /// <summary>Statics of a class whose class initialization is only its field initializers
+    /// (beforefieldinit), as game code often has next to cached ids.</summary>
+    static class UnloadStaticHolder
+    {
+        internal static readonly int s_TintId = Shader.PropertyToID("_Tint");
+        internal static Material s_Highlight;
+        internal static TextAsset s_Table;
+    }
+
+    /// <summary>Records whether <see cref="UnloadExplicitCctorHolder"/>'s static constructor ran
+    /// (no class initialization of its own).</summary>
+    static class UnloadCctorProbe
+    {
+        internal static bool Ran;
+    }
+
+    /// <summary>A class with an explicit static constructor: nothing may run it but its first use.</summary>
+    static class UnloadExplicitCctorHolder
+    {
+        internal static Material s_Held;
+
+        static UnloadExplicitCctorHolder() { UnloadCctorProbe.Ran = true; }
+    }
+
     /// <summary>
     /// Resources.UnloadAsset of textures, meshes, audio clips and text assets, and
     /// Resources.UnloadUnusedAssets. Scripting API 6000.0, Resources.UnloadUnusedAssets: "An asset is
@@ -335,6 +359,131 @@ Mesh:
             {
                 AssetDatabaseRuntime.Invalidate(guid);
                 Object.DestroyImmediate(data, true);
+            }
+        }
+
+        [Fact]
+        public void UnloadUnusedAssetsSeesInitializedStaticsAndTheSkybox()
+        {
+            // "Static variables are also examined" (Scripting API 6000.0): a class with static field
+            // initializers holds its statics as any other, and the active skybox is in use.
+            const string highlightGuid = "c0de000000000000000000000000000a";
+            const string skyGuid = "c0de000000000000000000000000000b";
+            const string tableGuid = "c0de000000000000000000000000000c";
+            var highlight = new Material { name = "Highlight", color = Color.white, IsPersistentAsset = true };
+            var sky = new Material { name = "Sky", color = Color.white, IsPersistentAsset = true };
+            var tablePath = TempFile("table 0");
+            var table = ImportedText(tablePath);
+            Loaded(highlightGuid, "Assets/Resources/Highlight.mat", 2100000, highlight);
+            Loaded(skyGuid, "Assets/Sky.mat", 2100000, sky);
+            Loaded(tableGuid, "Assets/Resources/Table.txt", AssetImporters.TextAssetFileId, table);
+            var previousSky = RenderSettings.skybox;
+            try
+            {
+                UnloadStaticHolder.s_Highlight = highlight;
+                UnloadStaticHolder.s_Table = table;
+                RenderSettings.skybox = sky;
+                highlight.color = Color.red;
+                sky.color = Color.blue;
+                Assert.Equal("table 0", table.text);
+                File.WriteAllText(tablePath, "table 1");
+
+                var reached = AssetDatabaseRuntime.Reachability.Walk();
+                Assert.True(reached.Contains(highlight));
+                Assert.True(reached.Contains(table));
+                Assert.True(reached.Contains(sky));
+
+                Assert.Empty(Errors(() => Resources.UnloadUnusedAssets()));
+
+                // Script edits kept, nothing read again.
+                Assert.Equal(Color.red, highlight.color);
+                Assert.Equal(Color.blue, sky.color);
+                Assert.Same(sky, RenderSettings.skybox);
+                Assert.Equal("table 0", table.text);
+            }
+            finally
+            {
+                UnloadStaticHolder.s_Highlight = null;
+                UnloadStaticHolder.s_Table = null;
+                RenderSettings.skybox = previousSky;
+                foreach (var g in new[] { highlightGuid, skyGuid, tableGuid }) AssetDatabaseRuntime.Invalidate(g);
+                Object.DestroyImmediate(highlight, true);
+                Object.DestroyImmediate(sky, true);
+                Object.DestroyImmediate(table, true);
+                File.Delete(tablePath);
+            }
+        }
+
+        [Fact]
+        public void TheWalkDoesNotRunExplicitStaticConstructors()
+        {
+            // Guard: a class with an explicit static constructor is initialized exactly at its first
+            // use; examining statics must not run it (its statics are not read).
+            AssetDatabaseRuntime.Reachability.Walk();
+            Resources.UnloadUnusedAssets();
+            Assert.False(UnloadCctorProbe.Ran);
+        }
+
+        [Fact]
+        public void ASecondUnloadUnusedAssetsDoesNoReloadWork()
+        {
+            // "Loaded back in the next time one of its properties or methods is used" (Scripting
+            // API 6000.0): nothing is read again while unloading. A text asset frees its bytes once;
+            // textures and meshes, which Unbound cannot load back lazily, are kept with their edits.
+            const string textureGuid = "c0de000000000000000000000000000d";
+            const string meshGuid = "c0de000000000000000000000000000e";
+            const string textGuid = "c0de000000000000000000000000000f";
+            var info = new ImportedTextureInfo
+            {
+                Width = 4, Height = 2, MipCount = 1, Srgb = 1, FilterMode = (int)FilterMode.Bilinear,
+                AnisoLevel = 1, Readable = 1, Format = 0, Dimension = 2,
+            };
+            var reimports = new List<string>();
+            var reads = new List<string>();
+            var previousReimport = Texture2D.Reimport;
+            var previousReload = AssetDatabaseRuntime.ReloadDocuments;
+            Texture2D.Reimport = (handle, g) => { reimports.Add(g); return (true, info); };
+            AssetDatabaseRuntime.ReloadDocuments = g => { reads.Add(g); return UnityYaml.Parse(TriangleMesh); };
+            var texture = Texture2D.FromImport(9002, textureGuid, "Unused", info);
+            Loaded(textureGuid, "Assets/Resources/Unused.png", AssetImporters.Texture2DFileId, texture);
+            var mesh = new Mesh { name = "Triangle", IsPersistentAsset = true };
+            var meshFile = Loaded(meshGuid, "Assets/Resources/Triangle.asset", 4300000, mesh);
+            ((ISerializedAsset)mesh).ReadSerialized(UnityYaml.Parse(TriangleMesh)[0].Body, meshFile);
+            var textPath = TempFile("note 0");
+            var text = ImportedText(textPath);
+            Loaded(textGuid, "Assets/Resources/Note.txt", AssetImporters.TextAssetFileId, text);
+            try
+            {
+                texture.filterMode = FilterMode.Point;
+                var edited = new[] { new Vector3(5, 5, 5), new Vector3(6, 5, 5), new Vector3(5, 6, 5) };
+                mesh.vertices = edited;
+                Assert.Equal("note 0", text.text);
+                Assert.True(text.DataLoaded);
+                File.WriteAllText(textPath, "note 1");
+
+                int first = AssetDatabaseRuntime.UnloadUnused();
+                Assert.False(text.DataLoaded);
+                int second = AssetDatabaseRuntime.UnloadUnused();
+
+                Assert.True(first >= 1);
+                Assert.Equal(0, second);
+                Assert.Empty(reimports);
+                Assert.Empty(reads);
+                Assert.False(text.DataLoaded);
+                Assert.Equal(FilterMode.Point, texture.filterMode);
+                Assert.Equal(edited, mesh.vertices);
+                // Loaded back at its next use.
+                Assert.Equal("note 1", text.text);
+            }
+            finally
+            {
+                Texture2D.Reimport = previousReimport;
+                AssetDatabaseRuntime.ReloadDocuments = previousReload;
+                foreach (var g in new[] { textureGuid, meshGuid, textGuid }) AssetDatabaseRuntime.Invalidate(g);
+                Object.DestroyImmediate(texture, true);
+                Object.DestroyImmediate(mesh, true);
+                Object.DestroyImmediate(text, true);
+                File.Delete(textPath);
             }
         }
     }
