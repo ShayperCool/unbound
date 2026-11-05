@@ -256,7 +256,7 @@ fn drive(
     mut wheel: MessageReader<MouseWheel>,
     mut window_events: MessageReader<WindowEvent>,
     mut close: MessageReader<WindowCloseRequested>,
-    windows: Query<&Window, With<PrimaryWindow>>,
+    mut windows: Query<&mut Window, With<PrimaryWindow>>,
     motion: Res<AccumulatedMouseMotion>,
     mut cursors: Query<(Entity, &mut CursorOptions), With<PrimaryWindow>>,
     mut images: ResMut<Assets<Image>>,
@@ -313,6 +313,8 @@ fn drive(
     }
     driver.text.clear();
     driver.key_events.clear();
+    // The input method is the window's own; a remote session's viewers type elsewhere.
+    unbound_runtime::ime::attach(settings.remote.is_none());
     // Key and mouse button changes in the order they happened: several may fall between two
     // frames (a click within a frame is a press and a release).
     for event in window_events.read() {
@@ -343,6 +345,32 @@ fn drive(
                     text_start: start,
                     text_length: 0,
                 });
+            }
+            // Text the input method commits joins the frame's text (`Input.inputString`) and comes
+            // as a text-only key event; the composition and whether it is enabled go to
+            // `Input.compositionString` and `Input.imeIsSelected`.
+            WindowEvent::Ime(input) => {
+                use unbound_runtime::ime::{self, ImeEvent};
+                let event = match input {
+                    bevy::window::Ime::Preedit { value, cursor, .. } => ImeEvent::Preedit {
+                        value,
+                        cursor: *cursor,
+                    },
+                    bevy::window::Ime::Commit { value, .. } => ImeEvent::Commit(value),
+                    bevy::window::Ime::Enabled { .. } => ImeEvent::Enabled,
+                    bevy::window::Ime::Disabled { .. } => ImeEvent::Disabled,
+                };
+                // Committed text also comes as a text-only key event (key 0), as typed text does,
+                // so IMGUI/uGUI text fields and the Input System receive it, not only inputString.
+                let added = ime::event(event, &mut driver.text);
+                if !added.is_empty() {
+                    driver.key_events.push(KeyEvent {
+                        key: 0,
+                        pressed: 1,
+                        text_start: added.start as i32,
+                        text_length: added.len() as i32,
+                    });
+                }
             }
             _ => {}
         }
@@ -435,6 +463,20 @@ fn drive(
                 options.visible = cursor.visible;
                 driver.cursor_released = false;
             }
+        }
+    }
+    // The game's IME request (`Input.imeCompositionMode`, `Input.compositionCursorPos` in window
+    // pixels from the top left; Bevy places the input method's windows in logical pixels).
+    if let Some(request) = unbound_runtime::ime::take_request()
+        && settings.remote.is_none()
+        && let Ok(mut window) = windows.single_mut()
+    {
+        let position = Vec2::from(request.position) / window.scale_factor();
+        if window.ime_enabled != request.enabled {
+            window.ime_enabled = request.enabled;
+        }
+        if window.ime_position != position {
+            window.ime_position = position;
         }
     }
     driver.frames += 1;

@@ -9,6 +9,7 @@ pub mod editor_resources;
 pub mod fonts;
 pub mod game;
 pub mod gamepads;
+pub mod ime;
 pub mod lighting;
 mod models;
 pub mod native_api;

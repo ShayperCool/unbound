@@ -374,6 +374,8 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: Request = serde_json::from_str(request)?;
             Ok(crate::gamepads::poll(&r.family).to_string())
         }
+        "ime-state" => crate::ime::state(request),
+        "ime-request" => crate::ime::request(request),
         "bundle-open" => open_bundle(request),
         "bundle-close" => {
             #[derive(serde::Deserialize)]
