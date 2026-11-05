@@ -450,7 +450,8 @@ namespace UnityEngine.Video
                     if (m_Clip == null) return Fail("VideoPlayer cannot play: no VideoClip is set.");
                     m_File = m_Clip.m_File;
                     Adopt(m_Clip);
-                    if (!m_Clip.sRGB)
+                    // The sRGB setting only changes the picture in Linear colour space.
+                    if (!m_Clip.sRGB && QualitySettings.activeColorSpace == ColorSpace.Linear)
                         Warn($"video '{m_Name}' is imported without sRGB (VideoClipImporter sRGB off), but its pictures are still converted as sRGB colour in Linear colour space.");
                 }
                 if (m_AudioOutputMode != VideoAudioOutputMode.None && m_SourceAudioTracks > 0)
