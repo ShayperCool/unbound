@@ -20,7 +20,12 @@ namespace Unbound.Runtime
             RenderPipelineOp = 15, PassTagsOp = 16, DepthBiasOp = 17, StateOverrideOp = 18, ColorSpaceOp = 19, AnisotropyOp = 20,
             SetTargetsOp = 21, DrawSetupOp = 22, GenerateMipsOp = 23,
             // Render protocol 7.
-            CopyBufferOp = 24, SetCounterOp = 25, CopyCounterOp = 26, DispatchIndirectOp = 27;
+            CopyBufferOp = 24, SetCounterOp = 25, CopyCounterOp = 26, DispatchIndirectOp = 27,
+            // Render protocol 8 (NativeApi 17).
+            DrawIndicesOp = 28;
+
+        /// <summary>The size of a DrawIndices index: 16-bit indices, the only ones drawn.</summary>
+        internal const byte DrawIndexSize = 2;
 
         internal const ulong NoTexture = ulong.MaxValue;
         internal const byte ClearColor = 1, ClearDepth = 2, ClearStencil = 4;
@@ -264,7 +269,9 @@ namespace Unbound.Runtime
         }
 
         /// <summary>How the next draw runs: instances, or counts read on the GPU from an arguments
-        /// buffer (indexed: DrawMeshInstancedIndirect's layout; not: DrawProceduralIndirect's).</summary>
+        /// buffer (indexed: DrawMeshInstancedIndirect's layout; not: DrawProceduralIndirect's);
+        /// then, when it has them, the 16-bit indices from a buffer it reads instead of its mesh's
+        /// (DrawIndices: buffer, index size, first index, index count).</summary>
         internal static void DrawSetup(in Unbound.Runtime.DrawSetup setup)
         {
             U8(DrawSetupOp);
@@ -272,6 +279,12 @@ namespace Unbound.Runtime
             U64(setup.Args);
             U32(setup.Offset);
             U8(setup.Indexed ? (byte)1 : (byte)0);
+            if (setup.Indices == 0) return;
+            U8(DrawIndicesOp);
+            U64(setup.Indices);
+            U8(DrawIndexSize);
+            U32(setup.FirstIndex);
+            U32(setup.IndexCount);
         }
 
         internal static void Clear(byte flags, Color color, float depth = 1f, uint stencil = 0)

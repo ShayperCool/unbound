@@ -352,6 +352,81 @@ namespace UnityEngine
             }
         }
 
+        // ------------------------------------------------------------------ RenderPrimitivesIndexed, RenderPrimitivesIndexedIndirect
+
+        /// <summary>The vertices of the stand-in an indexed procedural draw binds (zeroed: the shader
+        /// builds its vertices from SV_VertexID, which the indices set): one for each of the 2^16
+        /// values a 16-bit index takes, so with base vertex 0 every index has its vertex.</summary>
+        const int k_IndexedVertices = 1 << 16;
+
+        const string k_Indexed = "UnityEngine.Graphics.RenderPrimitivesIndexed";
+
+        /// <summary>Primitives whose vertex ids are read from <paramref name="indexBuffer"/>:
+        /// <paramref name="indexCount"/> indices from <paramref name="startIndex"/>, per instance
+        /// (RenderPrimitivesIndexed 6000.0: the shader fetches or calculates vertex data from
+        /// SV_VertexID, "set with values in the indexBuffer"). Drawn from 16-bit index buffers
+        /// (stride 2) of triangles, lines or points: every index value has a vertex in the
+        /// 65536-vertex stand-in. Not drawn, each case counted and warned once: 32-bit indices (the
+        /// documented example's), whose values Unbound cannot bound, quads, line strips and other
+        /// strides.</summary>
+        public static void RenderPrimitivesIndexed(in RenderParams rparams, MeshTopology topology, GraphicsBuffer indexBuffer, int indexCount, int startIndex = 0, int instanceCount = 1)
+        {
+            const string method = "Graphics.RenderPrimitivesIndexed";
+            if (rparams.material == null) throw new ArgumentNullException("rparams.material");
+            if (indexBuffer == null) throw new ArgumentNullException(nameof(indexBuffer));
+            if (startIndex < 0) throw new ArgumentOutOfRangeException(nameof(startIndex), $"{method}: startIndex must not be negative.");
+            int stride = indexBuffer.stride;
+            if ((stride == 2 || stride == 4) && indexCount > 0 && (long)startIndex + indexCount > indexBuffer.count)
+                throw new ArgumentOutOfRangeException(nameof(indexCount),
+                    $"{method}: indices {startIndex} to {(long)startIndex + indexCount - 1} do not fit the index buffer's {indexBuffer.count} indices.");
+            WarnUnhonoured(rparams, nameof(RenderPrimitivesIndexed));
+            if (indexCount <= 0 || instanceCount <= 0) return;
+            if (stride == 4)
+            {
+                Stubs.Ignored(k_Indexed, "with 32-bit indices is not drawn yet: Unbound draws indexed primitives only from 16-bit index buffers, whose every index value it gives a vertex");
+                return;
+            }
+            if (stride != 2)
+            {
+                Stubs.Ignored(k_Indexed + " index stride", "other than 2 or 4 bytes is not drawn");
+                return;
+            }
+            if (topology != MeshTopology.Triangles && topology != MeshTopology.Lines && topology != MeshTopology.Points)
+            {
+                string name = topology == MeshTopology.Quads || topology == MeshTopology.LineStrip ? topology.ToString() : "other";
+                Stubs.Ignored(k_Indexed + " MeshTopology." + name, "is not drawn yet from an index buffer");
+                return;
+            }
+            Render(rparams, ProceduralMeshes.Get(topology, k_IndexedVertices), 0, Matrix4x4.identity,
+                new DrawSetup { Instances = (uint)instanceCount, Indices = indexBuffer.Handle, FirstIndex = (uint)startIndex, IndexCount = (uint)indexCount });
+        }
+
+        /// <summary>Indexed primitives whose counts, first index and base vertex the GPU reads
+        /// from <paramref name="commandBuffer"/>'s GraphicsBuffer.IndirectDrawIndexedArgs
+        /// (RenderPrimitivesIndexedIndirect 6000.0). The arguments are checked as
+        /// RenderPrimitivesIndirect's are; the call is then not drawn, counted and warned once:
+        /// with a base vertex read on the GPU, Unbound cannot prove every index has a
+        /// vertex.</summary>
+        public static void RenderPrimitivesIndexedIndirect(in RenderParams rparams, MeshTopology topology, GraphicsBuffer indexBuffer, GraphicsBuffer commandBuffer, int commandCount = 1, int startCommand = 0)
+        {
+            const string method = "Graphics.RenderPrimitivesIndexedIndirect";
+            if (rparams.material == null) throw new ArgumentNullException("rparams.material");
+            if (indexBuffer == null) throw new ArgumentNullException(nameof(indexBuffer));
+            if (commandBuffer == null) throw new ArgumentNullException(nameof(commandBuffer));
+            if ((commandBuffer.target & GraphicsBuffer.Target.IndirectArguments) == 0)
+                throw new ArgumentException($"{method}: the command buffer must be created with GraphicsBuffer.Target.IndirectArguments.", nameof(commandBuffer));
+            if (commandCount < 0) throw new ArgumentOutOfRangeException(nameof(commandCount), $"{method}: commandCount must not be negative.");
+            if (startCommand < 0) throw new ArgumentOutOfRangeException(nameof(startCommand), $"{method}: startCommand must not be negative.");
+            int size = GraphicsBuffer.IndirectDrawIndexedArgs.size;
+            long bytes = (long)commandBuffer.count * commandBuffer.stride;
+            if (((long)startCommand + commandCount) * size > bytes)
+                throw new ArgumentOutOfRangeException(nameof(commandCount),
+                    $"{method}: commands {startCommand} to {(long)startCommand + commandCount - 1} of {size} bytes each do not fit the command buffer's {bytes} bytes.");
+            WarnUnhonoured(rparams, nameof(RenderPrimitivesIndexedIndirect));
+            if (commandCount == 0) return;
+            Stubs.Ignored(k_Indexed + "Indirect", "is not drawn yet: each command's base vertex and counts are read on the GPU, so Unbound cannot prove every index has a vertex");
+        }
+
         // ------------------------------------------------------------------ procedural
 
         /// <summary>Procedural primitives culled and sorted by <paramref name="bounds"/> ("The

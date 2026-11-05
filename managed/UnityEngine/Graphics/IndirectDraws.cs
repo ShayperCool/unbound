@@ -10,13 +10,19 @@ namespace Unbound.Runtime
     /// counts read on the GPU from an arguments buffer (<see cref="Args"/>, a buffer handle) at
     /// <see cref="Offset"/> bytes: indexed (DrawMeshInstancedIndirect: index count per instance,
     /// instance count, start index, base vertex, start instance) or not (DrawProceduralIndirect:
-    /// vertex count per instance, instance count, start vertex, start instance).</summary>
+    /// vertex count per instance, instance count, start vertex, start instance). A direct draw may
+    /// read <see cref="IndexCount"/> 16-bit indices from <see cref="FirstIndex"/> of buffer
+    /// <see cref="Indices"/> (a buffer handle; 0: its mesh's own) with base vertex 0
+    /// (RenderPrimitivesIndexed, render protocol 8).</summary>
     internal struct DrawSetup
     {
         internal uint Instances;
         internal ulong Args;
         internal uint Offset;
         internal bool Indexed;
+        internal ulong Indices;
+        internal uint FirstIndex;
+        internal uint IndexCount;
     }
 
     internal static class IndirectArgs
