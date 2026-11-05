@@ -718,20 +718,22 @@ namespace Unbound.UIElements
             }
         }
 
-        // ListView `item-template`, a UXML template (VisualTreeAsset) reference. Documented (6000.0
-        // Manual "ListView", UXML attribute `item-template` of type UIElements.VisualTreeAsset, and
+        // ListView and TreeView `item-template`, a UXML template (VisualTreeAsset) reference. Documented
+        // (6000.0 Manual "ListView", UXML attribute `item-template` of type UIElements.VisualTreeAsset, and
         // Scripting API ListView.itemTemplate: "A UXML template that constructs each recycled and
         // rebound element within the list. This template is designed to replace the ListView.makeItem
-        // definition"; Manual "Reference other files from UXML": absolute paths begin with `/` or
-        // `project://database/`, relative paths start from the current file). Unbound's choices
-        // (unmeasured; the pages do not describe them): the reference is resolved, checked and reported
-        // as the `icon-image` references are (UxmlAttributeValues.TryReadTemplate), and one that does
-        // not resolve to a VisualTreeAsset logs ONE error naming the document, the element and the
-        // attribute, itemTemplate keeping its value; only the attribute's documented name is read, on
-        // the property ListView declares (other elements' VisualTreeAsset properties are not mapped
-        // here). The ListView.itemTemplate setter makes the rows from the template.
+        // definition", TreeView.itemTemplate: the same text for "the tree"; Manual "Reference other
+        // files from UXML": absolute paths begin with `/` or `project://database/`, relative paths start
+        // from the current file). Unbound's choices (unmeasured; the pages do not describe them): the
+        // reference is resolved, checked and reported as the `icon-image` references are
+        // (UxmlAttributeValues.TryReadTemplate), and one that does not resolve to a VisualTreeAsset
+        // logs ONE error naming the document, the element and the attribute, itemTemplate keeping its
+        // value; only the attribute's documented name is read, on the property ListView or TreeView
+        // declares (other elements' VisualTreeAsset properties are not mapped here). The itemTemplate
+        // setters make the rows from the template.
         static bool IsItemTemplate(PropertyInfo property, string name) =>
-            name == "item-template" && property.PropertyType == typeof(VisualTreeAsset) && property.DeclaringType == typeof(ListView);
+            name == "item-template" && property.PropertyType == typeof(VisualTreeAsset)
+            && (property.DeclaringType == typeof(ListView) || property.DeclaringType == typeof(TreeView));
 
         static void ApplyItemTemplateAttribute(VisualElement element, PropertyInfo property, string name, string value, VisualTreeAsset asset, UxmlNode node)
         {
