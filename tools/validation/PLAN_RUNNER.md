@@ -1,5 +1,10 @@
 # Reusable finite validation runner
 
+This is an optional helper, not a required validation step. Prefer existing
+working commands when adopting this helper adds preparation or review work.
+Its plan/approval files are its own interface, not an extra requirement for
+other validation routes. Do not migrate active runs.
+
 `plan_runner.py` owns the repeated transport: input binding, read-only readiness,
 one installed lease per job, timeout, once-only accounting, private logs and a
 compact result. A package supplies data and its existing verifier commands.

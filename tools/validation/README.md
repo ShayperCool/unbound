@@ -2,10 +2,9 @@
 
 Parity integration and new child briefs also follow [PARITY_WORKFLOW.md](PARITY_WORKFLOW.md).
 
-For new, unstarted finite validation plans, use the reusable
-[plan runner](PLAN_RUNNER.md) instead of generating per-package launch and
-accounting scripts. It uses this installed pool; semantic checks and Root
-approval remain separate. Existing active plans keep their pinned drivers.
+Run validation with the existing build, test and probe commands through this
+installed pool. The [plan runner](PLAN_RUNNER.md) is optional. Do not delay a
+package to adopt it or create another per-package launch framework.
 
 Use tests/editor_runner.py for supervised Native captures; see
 [../../tests/EDITOR_RUNNER.md](../../tests/EDITOR_RUNNER.md).
