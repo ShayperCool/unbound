@@ -130,7 +130,9 @@ namespace UnityEngine
             set => m_Speed = value;
         }
 
-        /// <summary>Stored; Unbound does not cull animators (they always animate).</summary>
+        /// <summary>Applied by the player loop's update (<see cref="Tick"/>): CullCompletely skips the
+        /// whole update while no renderer of the hierarchy is visible; CullUpdateTransforms is
+        /// reported and not applied yet (see <see cref="CulledThisUpdate"/>).</summary>
         public AnimatorCullingMode cullingMode
         {
             get => m_CullingMode;
@@ -263,15 +265,110 @@ namespace UnityEngine
             base.OnEngineDestroy();
         }
 
-        /// <summary>One update of the controller by the player loop.</summary>
+        /// <summary>One update of the controller by the player loop, unless culled (see
+        /// <see cref="CulledThisUpdate"/>).</summary>
         internal void Tick(float deltaTime)
+        {
+            if (m_CullingMode != AnimatorCullingMode.AlwaysAnimate && CulledThisUpdate()) return;
+            Advance(deltaTime);
+        }
+
+        void Advance(float deltaTime)
         {
             var player = EnsurePlayer();
             player?.Tick(deltaTime);
         }
 
-        /// <summary>Evaluates the animator now, advancing it by <paramref name="deltaTime"/>.</summary>
-        public void Update(float deltaTime) => Tick(deltaTime);
+        /// <summary>Evaluates the animator now, advancing it by <paramref name="deltaTime"/>.
+        /// Unbound's choice (unmeasured): an explicit call is not culled, whatever the culling mode
+        /// and the renderers' visibility.</summary>
+        public void Update(float deltaTime) => Advance(deltaTime);
+
+        /// <summary>
+        /// Whether the player loop's update skips this Animator. Documented (6000.0
+        /// AnimatorCullingMode, Manual "Animator component"): CullCompletely, "Animation is
+        /// completely disabled when renderers are not visible"; CullUpdateTransforms, "Retarget,
+        /// IK and write of Transforms are disabled when renderers are not visible".
+        /// <para>CullCompletely: the update is skipped as a whole, so the state machines (and the
+        /// triggers their transitions consume), events, StateMachineBehaviour and OnAnimatorMove
+        /// callbacks, root motion and every write wait; nothing catches up when a renderer becomes
+        /// visible again, the next update advances by its own delta time only (Unbound's reading of
+        /// "completely disabled", unmeasured).</para>
+        /// <para>CullUpdateTransforms is not applied: keeping the state machines, events and root
+        /// motion while skipping only the transform writes needs a hook inside the player's
+        /// evaluation (AnimatorPlayer), outside this change. While no renderer is visible such an
+        /// Animator still animates as with AlwaysAnimate, and the first such update is reported
+        /// once.</para>
+        /// <para>Visibility is <see cref="AnyRendererVisible"/> of the Animator's GameObject, read
+        /// when the update runs; see there for the unmeasured choices.</para>
+        /// </summary>
+        bool CulledThisUpdate()
+        {
+            switch (m_CullingMode)
+            {
+                case AnimatorCullingMode.CullCompletely:
+                    return !AnyRendererVisible(m_GameObject);
+                case AnimatorCullingMode.CullUpdateTransforms:
+                    if (!AnyRendererVisible(m_GameObject))
+                        Unbound.Runtime.Stubs.Ignored("Animator.cullingMode CullUpdateTransforms",
+                            "is not honoured yet: while no renderer is visible the Animator still writes transforms (as AlwaysAnimate)");
+                    return false;
+                default:
+                    return false;
+            }
+        }
+
+        /// <summary>
+        /// Whether any Renderer of <paramref name="root"/>'s hierarchy (the GameObject and all of its
+        /// descendants) is visible (<see cref="Renderer.isVisible"/>), for animation culling.
+        /// Unbound's choices (unmeasured):
+        /// <list type="bullet">
+        /// <item>Visibility is read when the animation update runs (PreLateUpdate, or FixedUpdate for
+        /// physics-rate updates): it is what the previous frame's camera culling (and shadow
+        /// casting) left, after this frame's EarlyUpdate made the renderers no camera took
+        /// invisible. Animation runs before this frame's rendering.</item>
+        /// <item>The hierarchy is every descendant, including the renderers under a nested Animator
+        /// or Animation; renderers outside it (another hierarchy driven by its bindings) do not
+        /// count. Disabled and inactive renderers are not visible.</item>
+        /// <item>Every Renderer type counts (mesh, skinned, sprite, particle, line, trail, ...). A
+        /// hierarchy without any Renderer (a uGUI hierarchy has CanvasRenderers, which are not
+        /// Renderers) is never visible, so a culling animator there is culled.</item>
+        /// <item>SkinnedMeshRenderer.updateWhenOffscreen is not consulted.</item>
+        /// <item>Only renderers whose culling bounds Unbound computes as Unity does (MeshRenderer,
+        /// SpriteRenderer) decide by isVisible. Every other enabled renderer in an active hierarchy
+        /// (skinned, particle, line, trail, ...) counts as visible: their bounds are approximate in
+        /// Unbound (a skinned mesh's bind-pose bounds, not Unity's root-bone bounds), so judging by
+        /// them could freeze an on-screen character. Reported once (stub report "Animation culling
+        /// with approximate renderer bounds").</item>
+        /// </list>
+        /// </summary>
+        internal static bool AnyRendererVisible(GameObject root)
+        {
+            if (root == null) return false;
+            var components = root.m_Components;
+            for (int i = 0; i < components.Count; i++)
+            {
+                if (!(components[i] is Renderer renderer)) continue;
+                if (renderer.isVisible) return true;
+                if (!HasExactCullingBounds(renderer) && renderer.enabled && root.activeInHierarchy)
+                {
+                    Unbound.Runtime.Stubs.Ignored("Animation culling with approximate renderer bounds",
+                        "counts skinned, particle, line and trail renderers as visible while they are enabled (their culling bounds are approximate in Unbound)");
+                    return true;
+                }
+            }
+            var children = root.m_Transform != null ? root.m_Transform.m_Children : null;
+            if (children == null) return false;
+            for (int i = 0; i < children.Count; i++)
+            {
+                var child = children[i];
+                if (child != null && AnyRendererVisible(child.m_GameObject)) return true;
+            }
+            return false;
+        }
+
+        static bool HasExactCullingBounds(Renderer renderer) =>
+            renderer.GetType() == typeof(MeshRenderer) || renderer is SpriteRenderer;
 
         /// <summary>As Unity's: the animated properties go back to their defaults (the values the
         /// animator first bound, measured in the Editor's Play mode), then bind again.</summary>
@@ -493,6 +590,20 @@ namespace UnityEngine
             var p = EnsurePlayer();
             int i = p != null ? p.ParameterIndex(name) : -1;
             if (i >= 0) p.SetFromCurve(i, value);
+        }
+
+        /// <summary>Whether animation outputs write through <paramref name="bindings"/> now (they
+        /// are <see cref="StreamBindings"/>), without making a player. A controller playable keeps
+        /// the bindings it was first played with; once the Animator's own player was replaced
+        /// (a controller swap, a disable that drops its state) they are stale. Unbound's
+        /// lifetime choice (unmeasured).</summary>
+        internal bool StreamsThrough(AnimationBindings bindings)
+        {
+            if (bindings == null || m_GameObject == null) return false;
+            if (m_Player != null) return ReferenceEquals(m_Player.Bindings, bindings);
+            // Without a player the next one (if the controller has a graph) brings new bindings.
+            if (m_Controller != null && m_Controller.Graph != null) return false;
+            return ReferenceEquals(m_OutputBindings, bindings);
         }
 
         // ------------------------------------------------------------------ layers

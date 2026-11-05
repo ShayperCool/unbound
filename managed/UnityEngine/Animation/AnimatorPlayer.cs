@@ -369,6 +369,49 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>
+        /// This player's own sample of one float channel (a parameter curve's) from the layer poses
+        /// its last <see cref="EvaluateInto"/> built, for its own parameter: the per-channel rule of
+        /// <see cref="PoseWriter.CombineLayers"/> over <paramref name="defaultValue"/> (the
+        /// parameter's default, below the layers and filling them, as the Animator's own write
+        /// combines over the default values) with <paramref name="current"/> held where a state
+        /// keeps its value. Nothing is recorded (the pose's own combination did that). False when no
+        /// layer animates the channel. Unbound's choice (unmeasured): the held value is the
+        /// parameter's current value.
+        /// </summary>
+        internal bool LayeredSample(int channel, float defaultValue, float current, out float value)
+        {
+            float r = defaultValue;
+            bool any = false, written = false;
+            int count = Math.Min(Layers.Length, m_LayerPoses.Length);
+            for (int l = 0; l < count; l++)
+            {
+                var layer = m_LayerPoses[l];
+                var pose = layer.AnimationPose;
+                if (pose == null || channel < 0 || channel >= Bindings.FloatCount || channel >= pose.Weight.Length) continue;
+                float w = pose.Weight[channel], keep = pose.Keep[channel];
+                if (w <= 0f && keep <= 0f && pose.Fill[channel] <= 0f && pose.Rest[channel] <= 0f) continue;
+                any = true;
+                float lw = layer.Weight;
+                if (lw <= 0f) continue;
+                float v = pose.Value[channel];
+                if (layer.Additive)
+                {
+                    r += lw * v;
+                    written = true;
+                    continue;
+                }
+                float fill = w > 0f || keep > 0f ? pose.Fill[channel] : 0f;
+                v += keep * (written ? r : current) + fill * defaultValue;
+                w += keep + fill;
+                float lv = w >= 1f ? v / w : v + (1f - w) * r;
+                r = lw >= 1f ? lv : r + (lv - r) * lw;
+                written = true;
+            }
+            value = r;
+            return any;
+        }
+
         void Step(LayerRun layer, int index, float dt)
         {
             layer.Completed = null;

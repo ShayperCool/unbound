@@ -465,6 +465,9 @@ namespace Unbound.Runtime.Playables
             var player = EnsurePlayer(e.Animator);
             if (player == null || player.Bindings != e.Bindings || e.ReferencePose) return;
             player.EvaluateInto(into.Values, into.Animated, into.Objects, into.ObjectAnimated);
+            // Its parameter curves drive its own float parameters from its own layers, before the
+            // graph mixes this pose with anything (see PlayableParameters.Sample).
+            PlayableParameters.Sample(player, e.Animator);
             e.Note(this, node);
         }
 

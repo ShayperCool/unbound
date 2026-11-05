@@ -98,6 +98,243 @@ namespace Unbound.Runtime
         }
     }
 
+    /// <summary>
+    /// An Animator float parameter channel: clip curves of its name (Animator parameter curves,
+    /// documented, 6000.0 Manual "Animation curves on imported clips": a curve with the name of a
+    /// parameter in the Animator Controller gives that parameter its value; the curves of several
+    /// clips of the same controller blend, a clip without the curve blends with the parameter's
+    /// default).
+    /// <list type="bullet">
+    /// <item><see cref="OwnDriven"/>: the Animator's own controller had a float of this name when the
+    /// channel was bound. Every write drives the Animator's own parameter, exactly as the plain
+    /// accessor did before (any curve of the name on these bindings, whoever plays it).</item>
+    /// <item>A controller playable (an AnimatorControllerPlayable on an animation output targeting
+    /// the Animator) whose own clips feed this channel, and whose controller has a float of this
+    /// name, owns its parameter of the channel, whether or not the Animator's controller has one.
+    /// The channel's writes never reach it: the playable takes its own controller's layered sample
+    /// when it is evaluated (<see cref="PlayableParameters.Sample"/>), before outer graph mixing.</item>
+    /// </list>
+    /// </summary>
+    internal sealed class ParameterCurveGroup : PropertyGroup
+    {
+        readonly Animator m_Animator;
+        internal readonly string Name;
+        /// <summary>The Animator's own controller has the float (decided when bound, as before).</summary>
+        internal readonly bool OwnDriven;
+        /// <summary>The bindings the channel belongs to; null for a scene handle (own only).</summary>
+        internal AnimationBindings Bindings;
+        /// <summary>The clip whose curve made a channel for a controller playable's parameter (its
+        /// player is being made while the channel is bound): see <see cref="PlayableValue"/>.</summary>
+        internal AnimationClip MadeBy;
+        AnimatorPlayer m_FedPlayer;
+        int m_FedEpoch = -1;
+        int m_FedOverride;
+        bool m_Fed;
+
+        internal ParameterCurveGroup(Animator animator, string name, bool ownDriven)
+        {
+            Target = animator;
+            Width = 1;
+            m_Animator = animator;
+            Name = name;
+            OwnDriven = ownDriven;
+        }
+
+        internal override void Read(float[] values, int offset) =>
+            values[offset] = OwnDriven ? m_Animator.GetParameterAsFloat(Name) : PlayableValue();
+
+        /// <summary>The own parameter, as the accessor wrote it (only when the value changes). A
+        /// controller playable's parameter is never written from the channel: the channel holds the
+        /// Animator-wide blend of every source (outputs, mixers, other playables, jobs and stream
+        /// writes), not its controller's own sample.</summary>
+        internal override bool Write(float[] values, int offset)
+        {
+            float v = values[offset];
+            if (!OwnDriven || v == m_Animator.GetParameterAsFloat(Name)) return false;
+            m_Animator.SetParameterFromCurve(Name, v);
+            return true;
+        }
+
+        /// <summary>The channel's value on the playables' side (what is captured as its default and
+        /// read as its current value; no playable parameter is written from it): the first owning
+        /// playable's parameter, else, while an owning playable's player is being made (its clips
+        /// binding), its controller's default. Only a controller whose own clips feed the channel
+        /// counts: an unrelated playable's default never does. Which owning playable comes first
+        /// (the graph's node order) is Unbound's choice (unmeasured).</summary>
+        float PlayableValue()
+        {
+            foreach (var kind in PlayableParameters.ControllersOn(m_Animator))
+            {
+                var player = kind.Player;
+                if (player != null)
+                {
+                    int i = FedIndex(player);
+                    if (i < 0 && !player.Attached && (Bindings == null || player.Bindings == Bindings) && PlayableParameters.Plays(player.Controller, player.Graph, MadeBy))
+                        i = PlayableParameters.FloatIndex(player.Graph, Name);
+                    if (i >= 0) return player.Floats[i];
+                    continue;
+                }
+                var controller = kind.Controller;
+                var graph = controller.Graph;
+                int d = PlayableParameters.FloatIndex(graph, Name);
+                if (d < 0) continue;
+                if (PlayableParameters.Plays(controller, graph, MadeBy) || (Bindings != null && Bindings.Feeds(controller, graph, First)))
+                    return graph.Parameters[d].DefaultFloat;
+            }
+            return 0f;
+        }
+
+        /// <summary>The index of this float parameter in a controller playable's player whose own
+        /// clips feed this channel through these bindings, or -1.</summary>
+        internal int FedIndex(AnimatorPlayer player)
+        {
+            if (player == null || player.Attached || Bindings == null || player.Bindings != Bindings) return -1;
+            int i = PlayableParameters.FloatIndex(player.Graph, Name);
+            if (i < 0) return -1;
+            int version = player.Controller.OverrideVersion;
+            if (!ReferenceEquals(player, m_FedPlayer) || m_FedEpoch != Bindings.ClipEpoch || m_FedOverride != version)
+            {
+                m_FedPlayer = player;
+                m_FedEpoch = Bindings.ClipEpoch;
+                m_FedOverride = version;
+                m_Fed = Bindings.Feeds(player, First);
+            }
+            return m_Fed ? i : -1;
+        }
+    }
+
+    /// <summary>The controller playables that animate an Animator (through animation outputs
+    /// targeting it), for the parameters their clips drive.</summary>
+    internal static class PlayableParameters
+    {
+        internal static bool HasOutputs(Animator animator) =>
+            animator != null && Unbound.Runtime.Playables.AnimationOutputs.Of(animator) is { Count: > 0 };
+
+        /// <summary>The controller playables of the live graphs with an animation output targeting
+        /// <paramref name="animator"/>, each graph once, connected to the output or not (they may
+        /// own a parameter channel; only an evaluated one samples it).</summary>
+        internal static IEnumerable<Unbound.Runtime.Playables.ControllerKind> ControllersOn(Animator animator)
+        {
+            var outputs = animator != null ? Unbound.Runtime.Playables.AnimationOutputs.Of(animator) : null;
+            if (outputs == null) yield break;
+            for (int o = 0; o < outputs.Count; o++)
+            {
+                var output = outputs[o];
+                var graph = output.Graph;
+                if (output.Destroyed || graph == null || graph.Destroyed) continue;
+                if (!ReferenceEquals((output.Engine as Unbound.Runtime.Playables.AnimationOutputState)?.Target, animator)) continue;
+                bool seen = false;
+                for (int e = 0; e < o && !seen; e++) seen = ReferenceEquals(outputs[e].Graph, graph) && !outputs[e].Destroyed;
+                if (seen) continue;
+                foreach (var node in graph.Nodes)
+                    if (!node.Destroyed && node.Kind is Unbound.Runtime.Playables.ControllerKind kind && kind.Controller != null)
+                        yield return kind;
+            }
+        }
+
+        internal static int FloatIndex(ControllerGraph graph, string name)
+        {
+            int i = graph != null ? graph.ParameterIndex(name) : -1;
+            return i >= 0 && graph.Parameters[i].Type == AnimatorControllerParameterType.Float ? i : -1;
+        }
+
+        /// <summary>Whether <paramref name="clip"/> is one of the controller's clips (after overrides).</summary>
+        internal static bool Plays(RuntimeAnimatorController controller, ControllerGraph graph, AnimationClip clip)
+        {
+            if (clip == null || controller == null || graph == null) return false;
+            foreach (var original in graph.Clips)
+                if (ReferenceEquals(controller.MapClip(original), clip)) return true;
+            return false;
+        }
+
+        /// <summary>Whether a controller playable on <paramref name="animator"/> plays
+        /// <paramref name="clip"/> (among its controller's clips, after overrides) and has a float
+        /// parameter named <paramref name="name"/>: the clip's curve of that name then drives it.
+        /// The Animator's own controller graph is not a playable here, nor is a playable whose
+        /// player animates another Animator (a graph whose outputs target several Animators: its
+        /// player is made for the first, as before): such a curve stays reported as not supported.</summary>
+        internal static bool Owned(Animator animator, string name, AnimationClip clip)
+        {
+            if (clip == null || !HasOutputs(animator)) return false;
+            foreach (var kind in ControllersOn(animator))
+            {
+                var player = kind.Player;
+                if (player != null && (player.Attached || !ReferenceEquals(player.Bindings.Root, animator.m_GameObject))) continue;
+                var controller = kind.Controller;
+                if (FloatIndex(controller.Graph, name) < 0) continue;
+                if (Plays(controller, controller.Graph, clip)) return true;
+            }
+            return false;
+        }
+
+        sealed class SampleMap
+        {
+            internal int Epoch = -1;
+            internal int Override;
+            internal int Count;
+            internal int Parameters;
+            internal int[] Parameter = Array.Empty<int>();
+            internal int[] Channel = Array.Empty<int>();
+        }
+
+        static readonly System.Runtime.CompilerServices.ConditionalWeakTable<AnimatorPlayer, SampleMap> s_Maps =
+            new System.Runtime.CompilerServices.ConditionalWeakTable<AnimatorPlayer, SampleMap>();
+
+        /// <summary>
+        /// A controller playable's own parameter curves, right after its player evaluated its pose
+        /// (AnimatorControllerPlayable's evaluation, before the graph mixes it with anything): each
+        /// float parameter whose channel its own clips feed takes that player's layered sample of the
+        /// channel (<see cref="AnimatorPlayer.LayeredSample"/>), over the parameter's own default.
+        /// Nothing else writes it: not the Animator-wide channel, other playables, other graphs,
+        /// jobs or stream writes; a playable that is not evaluated (unconnected, its graph not
+        /// evaluated) keeps its values.
+        /// Documented (6000.0 Manual, "Animation curves on imported clips"): the parameter takes the
+        /// curve's value; the clips of the same controller blend; a clip without the curve blends
+        /// with the parameter's default. Unbound's choices (unmeasured): the outer graph's weights
+        /// (outputs, mixers, layer mixers) do not scale a playable's own sample, so a playable at
+        /// weight 0 is driven too; "keep" (a state without write defaults) holds the parameter's
+        /// current value; the sample is taken at each evaluation of the playable (a playable reached
+        /// twice samples twice, with the same layers); a layer that animates nothing of the channel
+        /// leaves the parameter unchanged.
+        /// </summary>
+        internal static void Sample(AnimatorPlayer player, Animator animator)
+        {
+            if (player == null || player.Attached || animator == null) return;
+            var bindings = player.Bindings;
+            var graph = player.Graph;
+            if (bindings == null || graph == null || graph.Parameters.Length == 0) return;
+            var map = s_Maps.GetValue(player, _ => new SampleMap());
+            int version = player.Controller.OverrideVersion;
+            if (map.Epoch != bindings.ClipEpoch || map.Override != version || map.Parameters != graph.Parameters.Length)
+            {
+                map.Epoch = bindings.ClipEpoch;
+                map.Override = version;
+                map.Parameters = graph.Parameters.Length;
+                map.Count = 0;
+                for (int i = 0; i < graph.Parameters.Length; i++)
+                {
+                    if (graph.Parameters[i].Type != AnimatorControllerParameterType.Float) continue;
+                    var group = bindings.ParameterChannel(animator, graph.Parameters[i].Name);
+                    if (group == null || group.FedIndex(player) != i) continue;
+                    if (map.Count == map.Parameter.Length)
+                    {
+                        Array.Resize(ref map.Parameter, Math.Max(4, map.Count * 2));
+                        Array.Resize(ref map.Channel, map.Parameter.Length);
+                    }
+                    map.Parameter[map.Count] = i;
+                    map.Channel[map.Count] = group.First;
+                    map.Count++;
+                }
+            }
+            for (int k = 0; k < map.Count; k++)
+            {
+                int i = map.Parameter[k];
+                if (player.LayeredSample(map.Channel[k], graph.Parameters[i].DefaultFloat, player.Floats[i], out float value))
+                    player.Floats[i] = value;
+            }
+        }
+    }
+
     /// <summary>A serialized field of a script (or an engine object's own field), by its property
     /// path (`m_Color.r`): numbers, bools and enums are one float channel each.</summary>
     internal sealed class FieldGroup : PropertyGroup
@@ -217,6 +454,10 @@ namespace Unbound.Runtime
         readonly Dictionary<(Object, string), PropertyGroup> m_Index = new Dictionary<(Object, string), PropertyGroup>();
         readonly Dictionary<AnimationClip, BoundClip> m_Clips = new Dictionary<AnimationClip, BoundClip>();
 
+        /// <summary>Changes whenever a clip is (re)bound: what <see cref="ParameterCurveGroup"/>
+        /// caches which clips feed it by.</summary>
+        internal int ClipEpoch;
+
         internal AnimationBindings(GameObject root)
         {
             Root = root;
@@ -225,10 +466,23 @@ namespace Unbound.Runtime
         internal BoundClip Bind(AnimationClip clip)
         {
             clip.EnsureHumanCurves();
-            if (m_Clips.TryGetValue(clip, out var bound) && bound.Version == clip.m_Version) return bound;
+            if (m_Clips.TryGetValue(clip, out var bound) && bound.Version == clip.m_Version && !NowOwned(bound)) return bound;
             bound = Map(clip, create: true);
             m_Clips[clip] = bound;
+            ClipEpoch++;
             return bound;
+        }
+
+        /// <summary>A clip bound before a controller playable that plays it existed (one it shares
+        /// with the Animator's own controller, say) left its curves of that playable's float
+        /// parameters unbound: it binds again once such a playable is there. Clips without such
+        /// curves, and Animators without animation outputs, keep their binding as before.</summary>
+        static bool NowOwned(BoundClip bound)
+        {
+            if (bound.MissedParameters == null) return false;
+            foreach (var (animator, name) in bound.MissedParameters)
+                if (PlayableParameters.Owned(animator, name, bound.Clip)) return true;
+            return false;
         }
 
         /// <summary>A clip's curves on channels; without <paramref name="create"/> only on the
@@ -258,7 +512,7 @@ namespace Unbound.Runtime
                     i += 2;
                     continue;
                 }
-                bound.Float[i] = BindCurve(curve.Binding, objectValued: false, clip, create);
+                bound.Float[i] = BindCurve(curve.Binding, objectValued: false, clip, create, bound);
             }
             bound.Object = new int[clip.m_ObjectCurves.Count];
             for (int i = 0; i < clip.m_ObjectCurves.Count; i++)
@@ -336,17 +590,24 @@ namespace Unbound.Runtime
             }
         }
 
-        int BindCurve(CurveBinding binding, bool objectValued, AnimationClip clip, bool create = true)
+        int BindCurve(CurveBinding binding, bool objectValued, AnimationClip clip, bool create = true, BoundClip into = null)
         {
             try
             {
                 var spec = PropertyBinder.Resolve(Root, binding, objectValued, clip);
-                if (spec.Factory == null) return -1;
+                if (spec.Factory == null)
+                {
+                    // An Animator curve no controller here claims yet (see NowOwned).
+                    if (spec.MissedAnimator != null && into != null)
+                        (into.MissedParameters ??= new List<(Animator, string)>()).Add((spec.MissedAnimator, spec.MissedName));
+                    return -1;
+                }
                 if (!m_Index.TryGetValue((spec.Target, spec.Key), out var group))
                 {
                     if (!create) return -1;
                     group = spec.Factory();
                     if (group == null) return -1;
+                    if (group is ParameterCurveGroup parameter) parameter.Bindings = this;
                     group.Transform ??= (spec.Target as Component)?.transform ?? (spec.Target as GameObject)?.transform;
                     Add(group);
                     m_Index[(spec.Target, spec.Key)] = group;
@@ -407,13 +668,48 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>The Animator parameter a curve drives (Animator float parameters animated by clips).</summary>
+        /// <summary>Whether a curve drives the Animator's own parameter (Animator float parameters
+        /// animated by clips): as before, any curve of the name bound here while the Animator's own
+        /// controller has that float. A channel bound only for a controller playable's parameter
+        /// does not count.</summary>
         internal bool AnimatesParameter(Animator animator, string name)
         {
-            foreach (var key in m_Index.Keys)
-                if (ReferenceEquals(key.Item1, animator) && key.Item2 == "param:" + name) return true;
+            foreach (var pair in m_Index)
+                if (ReferenceEquals(pair.Key.Item1, animator) && pair.Key.Item2 == "param:" + name && pair.Value is ParameterCurveGroup { OwnDriven: true })
+                    return true;
             return false;
         }
+
+        /// <summary>Whether the clips of <paramref name="player"/>'s controller (after overrides),
+        /// as bound here, feed <paramref name="channel"/>.</summary>
+        internal bool Feeds(AnimatorPlayer player, int channel) => Feeds(player.Controller, player.Graph, channel);
+
+        /// <summary>Whether the clips of <paramref name="controller"/> (after overrides), as bound
+        /// here, feed <paramref name="channel"/>.</summary>
+        internal bool Feeds(RuntimeAnimatorController controller, ControllerGraph graph, int channel)
+        {
+            if (controller == null || graph == null) return false;
+            foreach (var original in graph.Clips)
+            {
+                var clip = controller.MapClip(original);
+                if (clip == null || clip.m_Legacy || !m_Clips.TryGetValue(clip, out var bound)) continue;
+                foreach (var ch in bound.Float)
+                    if (ch == channel) return true;
+            }
+            return false;
+        }
+
+        /// <summary>The parameter channel of <paramref name="name"/> on <paramref name="animator"/>
+        /// bound here, or null.</summary>
+        internal ParameterCurveGroup ParameterChannel(Animator animator, string name) =>
+            m_Index.TryGetValue((animator, "param:" + name), out var group) ? group as ParameterCurveGroup : null;
+
+        /// <summary>Whether a curve of one of <paramref name="player"/>'s own clips drives its float
+        /// parameter <paramref name="name"/> on <paramref name="animator"/> (a controller playable's
+        /// IsParameterControlledByCurve). Curves of other playables' clips do not count.</summary>
+        internal bool FeedsParameter(AnimatorPlayer player, Animator animator, string name) =>
+            m_Index.TryGetValue((animator, "param:" + name), out var group) && group is ParameterCurveGroup parameter
+            && parameter.FedIndex(player) >= 0;
     }
 
     /// <summary>A clip's curves mapped to channels of one AnimationBindings (-1: not bound).</summary>
@@ -422,6 +718,9 @@ namespace Unbound.Runtime
         internal AnimationClip Clip;
         internal int Version;
         internal int[] Float;
+        /// <summary>Animator curves (on the root's Animator) left unbound because no controller had
+        /// a float of their name: see <see cref="AnimationBindings.Bind"/>. Null when none.</summary>
+        internal List<(Animator Animator, string Name)> MissedParameters;
         /// <summary>Per curve that starts an Euler triple, the first of its rotation's four channels
         /// (-1 elsewhere); null when the clip has none.</summary>
         internal int[] EulerRotation;
@@ -472,6 +771,10 @@ namespace Unbound.Runtime
             internal string Key;
             internal int Component;
             internal Func<PropertyGroup> Factory;
+            /// <summary>Without a factory: the root's Animator and the curve name no controller
+            /// claims as a float parameter yet (see <see cref="AnimationBindings.Bind"/>).</summary>
+            internal Animator MissedAnimator;
+            internal string MissedName;
         }
 
         static readonly HashSet<string> s_Warned = new HashSet<string>();
@@ -483,7 +786,7 @@ namespace Unbound.Runtime
             if (binding.Hashed) return ResolveHashed(root, binding, objectValued, clip);
             var t = binding.Path.Length == 0 ? root.transform : root.transform.Find(binding.Path);
             if (t == null) return spec; // a missing path is not animated (Unity shows it as missing)
-            return Resolve(t, binding, binding.Attribute, objectValued, clip);
+            return Resolve(root, t, binding, binding.Attribute, objectValued, clip);
         }
 
         /// <summary>A player clip's binding: the path by its hash below the root, then the
@@ -506,16 +809,18 @@ namespace Unbound.Runtime
                 {
                     // The matching component's own type (a script found by its fields).
                     var named = CurveBinding.ForType("", attribute, component.GetType());
-                    return Resolve(t, named, attribute, objectValued, clip);
+                    return Resolve(root, t, named, attribute, objectValued, clip);
                 }
-                return Resolve(t, CurveBinding.ForType("", attribute, typeof(GameObject)), attribute, objectValued, clip);
+                return Resolve(root, t, CurveBinding.ForType("", attribute, typeof(GameObject)), attribute, objectValued, clip);
             }
-            return Resolve(t, binding, attribute, objectValued, clip);
+            return Resolve(root, t, binding, attribute, objectValued, clip);
         }
 
-        static Spec Resolve(Transform t, CurveBinding binding, string attribute, bool objectValued, AnimationClip clip)
+        static Spec Resolve(GameObject root, Transform t, CurveBinding binding, string attribute, bool objectValued, AnimationClip clip)
         {
             var spec = default(Spec);
+            Animator missedAnimator = null;
+            string missedName = null;
             var go = t.m_GameObject;
             var type = binding.ResolveType();
             if (type == null)
@@ -590,8 +895,16 @@ namespace Unbound.Runtime
                     // Clip curves drive float parameters only; int and bool ones keep their
                     // values (measured, tests/projects/modelclips).
                     if (animator.HasFloatParameterNamed(name))
-                        return Make(animator, "param:" + name, 0, () => new AccessorGroup(animator, 1,
-                            () => new Vector4(animator.GetParameterAsFloat(name), 0), v => animator.SetParameterFromCurve(name, v.x)));
+                        return Make(animator, "param:" + name, 0, () => new ParameterCurveGroup(animator, name, ownDriven: true));
+                    // The root Animator's own controller has no such float: a clip a controller
+                    // playable on it plays drives that playable's float of the name.
+                    if (clip != null && ReferenceEquals(go, root))
+                    {
+                        if (PlayableParameters.Owned(animator, name, clip))
+                            return Make(animator, "param:" + name, 0, () => new ParameterCurveGroup(animator, name, ownDriven: false) { MadeBy = clip });
+                        missedAnimator = animator;
+                        missedName = name;
+                    }
                     break;
                 }
             }
@@ -619,6 +932,8 @@ namespace Unbound.Runtime
                 return Make(component, "field:" + attribute, 0, () => new FieldGroup(component, chain) { Script = mb });
             }
             Unsupported(clip, binding);
+            spec.MissedAnimator = missedAnimator;
+            spec.MissedName = missedName;
             return spec;
         }
 

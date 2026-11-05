@@ -83,7 +83,8 @@ namespace UnityEngine
             set => m_CullingType = value ? AnimationCullingType.BasedOnRenderers : AnimationCullingType.AlwaysAnimate;
         }
 
-        /// <summary>Stored; culling is not applied (Unbound always animates).</summary>
+        /// <summary>Applied by the player loop's update (<see cref="Step"/>): BasedOnRenderers
+        /// skips it while no renderer of the hierarchy is visible (see <see cref="Culled"/>).</summary>
         public AnimationCullingType cullingType
         {
             get => m_CullingType;
@@ -771,9 +772,64 @@ namespace UnityEngine
             return false;
         }
 
-        /// <summary>Synchronizing layers is not implemented; the states keep their own times.</summary>
-        public void SyncLayer(int layer) =>
-            Unbound.Runtime.Stubs.Ignored("Animation.SyncLayer", "does not synchronize the layer's states yet");
+        /// <summary>
+        /// Synchronizes the playback speed of all animations in the layer: Unbound's reading of the
+        /// method's purpose. The 6000.0 Scripting API has no page for Animation.SyncLayer and
+        /// nothing measures it, so all of the behaviour below is unmeasured.
+        /// <para>Unbound's choices (unmeasured hypotheses): the layer stays synchronized from the
+        /// call on, for states that join it later too (there is no call that undoes it), and a
+        /// layer without states is no different until states play in it. Each update, the enabled
+        /// states of the layer (not waiting in a queue) advance by one shared normalized speed: the
+        /// weighted mean of their normalizedSpeed (speed / length), weighted by their weights
+        /// before this update's fades. A state of weight 0 contributes nothing to the mean but
+        /// advances by it; a state of length 0 contributes nothing and keeps its own speed. Their
+        /// normalized times keep their offsets (they are not aligned), and their speed and
+        /// normalizedSpeed properties keep their values; a Once state ends by the direction it
+        /// advances in. Without any weight in the layer its states advance by their own speeds. A
+        /// queued state waiting for a state of the layer to complete still estimates the time left
+        /// by that state's own speed. A state started this update (sampled where it starts, it does
+        /// not advance yet) still contributes its weight and normalizedSpeed to the mean.</para>
+        /// <para>Since none of this is documented or measured, every call is reported (counted,
+        /// the first in the process logged once) as having unmeasured semantics; the behaviour is
+        /// the hypothesis above, unchanged by the notice.</para>
+        /// </summary>
+        public void SyncLayer(int layer)
+        {
+            Unbound.Runtime.Stubs.Ignored("Animation.SyncLayer",
+                "has unmeasured semantics (no 6000.0 Scripting API page, no measurement): Unbound advances the layer's states by the weighted mean of their normalized speeds, an unsupported hypothesis that may differ from Unity");
+            (m_SyncedLayers ??= new HashSet<int>()).Add(layer);
+        }
+
+        HashSet<int> m_SyncedLayers;
+
+        /// <summary>The shared normalized speed of each synchronized layer with weight in it (see
+        /// <see cref="SyncLayer"/>); null when no layer is synchronized.</summary>
+        Dictionary<int, float> SyncedNormalizedSpeeds(List<AnimationState> states)
+        {
+            if (m_SyncedLayers == null) return null;
+            var sums = new Dictionary<int, (double Speed, double Weight)>();
+            foreach (var s in states)
+            {
+                if (!m_SyncedLayers.Contains(s.m_Layer) || !Advances(s) || !(s.m_Weight > 0f)) continue;
+                float length = s.length;
+                if (!(length > 0f)) continue;
+                sums.TryGetValue(s.m_Layer, out var sum);
+                sums[s.m_Layer] = (sum.Speed + (double)s.m_Weight * s.m_Speed / length, sum.Weight + s.m_Weight);
+            }
+            var speeds = new Dictionary<int, float>();
+            foreach (var (layer, sum) in sums) speeds[layer] = (float)(sum.Speed / sum.Weight);
+            return speeds;
+        }
+
+        static bool Advances(AnimationState s) => s.m_Enabled && !s.m_WaitingInQueue && s.m_Clip != null && s.m_Clip.m_Legacy;
+
+        /// <summary>The speed (seconds of the clip per second) a state advances by this update.</summary>
+        static float AdvanceSpeed(AnimationState s, Dictionary<int, float> synced)
+        {
+            if (synced == null || !synced.TryGetValue(s.m_Layer, out var normalized)) return s.m_Speed;
+            float length = s.length;
+            return length > 0f ? normalized * length : s.m_Speed;
+        }
 
         // ------------------------------------------------------------------ engine side
 
@@ -812,8 +868,42 @@ namespace UnityEngine
             base.OnEngineDestroy();
         }
 
-        /// <summary>One update: advances the playing states, writes the blended pose, fires events.</summary>
-        internal void Step(float deltaTime) => Evaluate(deltaTime, advance: true);
+        /// <summary>One update: advances the playing states, writes the blended pose, fires events;
+        /// nothing when culled (see <see cref="Culled"/>).</summary>
+        internal void Step(float deltaTime)
+        {
+            if (m_CullingType != AnimationCullingType.AlwaysAnimate && Culled()) return;
+            Evaluate(deltaTime, advance: true);
+        }
+
+        /// <summary>
+        /// Whether the player loop's update skips this Animation. Documented (6000.0
+        /// AnimationCullingType): BasedOnRenderers, "Animation is disabled when renderers are not
+        /// visible"; "When Animation component is culled it won't do anything: it won't update
+        /// animation states, execute events or sample animations". So a culled update advances no
+        /// state time, fades, queues or events and writes nothing; nothing catches up when a
+        /// renderer becomes visible again (the next update advances by its own delta time only:
+        /// Unbound's reading, unmeasured). Explicit calls (Sample, Play, Stop, ...) are not culled
+        /// (unmeasured).
+        /// <para>Visibility is Animator.AnyRendererVisible of the Animation's GameObject, read when
+        /// the update runs (see there for the unmeasured choices). The Manual's "Cull based on the
+        /// default animation pose" and Animation.localBounds are not used: visibility is the
+        /// renderers' own, as their last culling left it (unmeasured).</para>
+        /// <para>The obsolete BasedOnClipBounds and BasedOnUserBounds are reported once and animate
+        /// as AlwaysAnimate (as before this culling existed).</para>
+        /// </summary>
+        bool Culled()
+        {
+            switch (m_CullingType)
+            {
+                case AnimationCullingType.BasedOnRenderers:
+                    return !Animator.AnyRendererVisible(m_GameObject);
+                default:
+                    Unbound.Runtime.Stubs.Ignored("Animation.cullingType BasedOnClipBounds/BasedOnUserBounds",
+                        "(obsolete) is not honoured: the Animation always animates");
+                    return false;
+            }
+        }
 
         bool m_Evaluating;
 
@@ -839,6 +929,7 @@ namespace UnityEngine
             m_Bindings ??= new AnimationBindings(m_GameObject);
 
             var playing = new List<(AnimationState State, double From, double To, bool Fresh, bool Finished)>();
+            var synced = advance ? SyncedNormalizedSpeeds(states) : null;
             foreach (var s in states.ToArray())
             {
                 if (!s.m_Enabled || s.m_WaitingInQueue || s.m_Clip == null || !s.m_Clip.m_Legacy) continue;
@@ -846,13 +937,14 @@ namespace UnityEngine
                 bool finished = false;
                 if (advance)
                 {
+                    float speed = AdvanceSpeed(s, synced);
                     // A state started since the last update is sampled where it starts (measured).
-                    if (!s.m_Fresh) s.m_Time += deltaTime * s.m_Speed;
+                    if (!s.m_Fresh) s.m_Time += deltaTime * speed;
                     s.UpdateFade(deltaTime);
                     if (!s.m_Enabled) continue; // faded out
                     var wrap = s.EffectiveWrap;
                     float length = s.length;
-                    if (wrap == WrapMode.Once && (s.m_Speed >= 0f ? s.m_Time >= length : s.m_Time <= 0.0))
+                    if (wrap == WrapMode.Once && (speed >= 0f ? s.m_Time >= length : s.m_Time <= 0.0))
                         finished = true;
                 }
                 playing.Add((s, from, s.m_Time, s.m_Fresh, finished));

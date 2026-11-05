@@ -402,8 +402,134 @@ namespace UnityEngine
             }
         }
 
-        public void EnsureQuaternionContinuity() =>
-            Unbound.Runtime.Stubs.Ignored("AnimationClip.EnsureQuaternionContinuity", "does not flip quaternion keys yet");
+        /// <summary>
+        /// Realigns quaternion keys for the shortest interpolation path (documented, 6000.0
+        /// AnimationClip.EnsureQuaternionContinuity): q and −q are the same rotation, so a key whose
+        /// quaternion lies in the opposite hemisphere from the key before it (a negative dot product,
+        /// that key already realigned) is negated, from the first key on.
+        /// <para>Unbound's choice (unmeasured): the rotations realigned are the clip's quaternion
+        /// rotation curves (four marked curves from a clip file's rotation curves) and the
+        /// m_LocalRotation.x, .y, .z, .w curves of one Transform (SetCurve's localRotation); Euler
+        /// angle curves and float curves on the Animator are kept as they are. A negated key's in
+        /// and out tangents are negated with it (its weights are kept), so the curve keeps its shape
+        /// about the key. Legacy and non-legacy clips are treated alike. The clip's curves are
+        /// replaced only when a key is negated, which also redoes the clip's bindings; clips made
+        /// from it before (Animation.AddClip with frames) keep their keys.</para>
+        /// <para>A rotation whose four curves do not have their keys at the same times, or that is a
+        /// player clip's compiled curve, keeps its keys, with a warning naming it on every call.</para>
+        /// </summary>
+        public void EnsureQuaternionContinuity()
+        {
+            bool changed = false;
+            List<string> kept = null;
+            foreach (var group in QuaternionRotations())
+            {
+                var reason = AlignQuaternionKeys(group, ref changed);
+                if (reason != null) (kept ??= new List<string>()).Add($"{m_Curves[group[0]].Binding} ({reason})");
+            }
+            if (changed) m_Version++;
+            if (kept != null)
+                Debug.LogWarning($"Unbound: AnimationClip.EnsureQuaternionContinuity on '{name}': these rotations keep their keys as they are: {string.Join("; ", kept)}.", this);
+        }
+
+        /// <summary>The quaternion rotations among the clip's curves, as four curve indices (x, y,
+        /// z, w): four curves in a row from one marked <see cref="ClipCurve.QuaternionStart"/>, and
+        /// the m_LocalRotation.x, .y, .z, .w curves of one Transform. A rotation with a component
+        /// missing or given twice is not one.</summary>
+        List<int[]> QuaternionRotations()
+        {
+            var groups = new List<int[]>();
+            var marked = new bool[m_Curves.Count];
+            for (int i = 0; i + 3 < m_Curves.Count; i++)
+            {
+                if (!m_Curves[i].QuaternionStart) continue;
+                groups.Add(new[] { i, i + 1, i + 2, i + 3 });
+                for (int k = 0; k < 4; k++) marked[i + k] = true;
+                i += 3;
+            }
+            var byTarget = new Dictionary<(string, bool, uint), int[]>();
+            var order = new List<int[]>();
+            for (int i = 0; i < m_Curves.Count; i++)
+            {
+                if (marked[i]) continue;
+                var b = m_Curves[i].Binding;
+                int axis = LocalRotationAxis(b);
+                if (axis < 0) continue;
+                var key = (b.Path ?? "", b.Hashed, b.PathHash);
+                if (!byTarget.TryGetValue(key, out var g))
+                {
+                    byTarget[key] = g = new[] { -1, -1, -1, -1, 0 };
+                    order.Add(g);
+                }
+                if (g[axis] >= 0) g[4] = 1; // given twice
+                else g[axis] = i;
+            }
+            foreach (var g in order)
+                if (g[4] == 0 && g[0] >= 0 && g[1] >= 0 && g[2] >= 0 && g[3] >= 0) groups.Add(new[] { g[0], g[1], g[2], g[3] });
+            return groups;
+        }
+
+        /// <summary>The component (0..3 for x, y, z, w) of a Transform's m_LocalRotation a binding
+        /// animates, or -1.</summary>
+        static int LocalRotationAxis(CurveBinding b)
+        {
+            const string head = "m_LocalRotation.";
+            var a = b.Attribute;
+            if (a == null || a.Length != head.Length + 1 || !a.StartsWith(head, StringComparison.Ordinal)) return -1;
+            bool transform = b.Type != null ? typeof(Transform).IsAssignableFrom(b.Type)
+                : b.ClassId == EngineTypes.TransformId || b.ClassId == EngineTypes.RectTransformId;
+            return transform ? "xyzw".IndexOf(a[head.Length]) : -1;
+        }
+
+        /// <summary>Negates the keys of one rotation (curves <paramref name="group"/>) that are in
+        /// the opposite hemisphere from the key before them; null, or why its keys are kept.</summary>
+        string AlignQuaternionKeys(int[] group, ref bool changed)
+        {
+            var keys = new Keyframe[4][];
+            for (int k = 0; k < 4; k++)
+            {
+                var c = m_Curves[group[k]];
+                if (c.Sampled != null) return "a player clip's compiled curve";
+                if (c.Curve == null) return "a curve without keys";
+                keys[k] = c.Curve.keys;
+            }
+            int n = keys[0].Length;
+            for (int k = 1; k < 4; k++)
+                if (keys[k].Length != n) return "its x, y, z and w curves have different numbers of keys";
+            for (int i = 0; i < n; i++)
+                for (int k = 1; k < 4; k++)
+                    if (keys[k][i].time != keys[0][i].time) return "its x, y, z and w curves have keys at different times";
+            bool flipped = false;
+            for (int i = 1; i < n; i++)
+            {
+                float dot = 0f;
+                for (int k = 0; k < 4; k++) dot += keys[k][i - 1].value * keys[k][i].value;
+                if (!(dot < 0f)) continue;
+                for (int k = 0; k < 4; k++)
+                {
+                    var key = keys[k][i];
+                    key.value = -key.value;
+                    key.inTangent = -key.inTangent;
+                    key.outTangent = -key.outTangent;
+                    keys[k][i] = key;
+                }
+                flipped = true;
+            }
+            if (!flipped) return null;
+            for (int k = 0; k < 4; k++)
+            {
+                var c = m_Curves[group[k]];
+                m_Curves[group[k]] = new ClipCurve
+                {
+                    Binding = c.Binding,
+                    Curve = new AnimationCurve(keys[k]) { preWrapMode = c.Curve.preWrapMode, postWrapMode = c.Curve.postWrapMode },
+                    QuaternionStart = c.QuaternionStart,
+                    EulerStart = c.EulerStart,
+                };
+            }
+            changed = true;
+            return null;
+        }
 
         public void ClearCurves()
         {
