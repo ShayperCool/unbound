@@ -474,7 +474,7 @@ namespace UnityEngine
             // return their slots in written order. Ending a live slot moves no particle
             // (FreeTrail's carrier scan runs only for a fading slot), so the compaction below
             // removes the same particles in the same order.
-            // Survivors' links are collected once, at the first candidate, so the pass is linear.
+            // Survivors' links are collected once, at the first candidate, so the pass is expected linear.
             HashSet<int> survivors = null;
             for (int r = offset; r < m_Count; r++)
             {
