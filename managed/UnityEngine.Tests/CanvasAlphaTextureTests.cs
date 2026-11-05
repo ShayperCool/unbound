@@ -50,7 +50,7 @@ namespace UnityEngine.Tests
             return o;
         }
 
-        Texture2D Texture(string name)
+        Texture2D MakeTexture(string name)
         {
             var texture = Own(new Texture2D(2, 2, TextureFormat.RGBA32, false) { name = name });
             texture.SetPixels(new[] { Color.red, Color.red, Color.red, Color.red });
@@ -93,8 +93,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheAlphaTextureReachesTheDrawAsAlphaTex()
         {
-            var alpha = Texture("alpha");
-            var renderer = Renderer("graphic", Texture("main"));
+            var alpha = MakeTexture("alpha");
+            var renderer = Renderer("graphic", MakeTexture("main"));
             renderer.SetAlphaTexture(alpha);
             var draw = Assert.Single(Draws());
             Assert.Same(alpha, AlphaOf(draw));
@@ -104,8 +104,8 @@ namespace UnityEngine.Tests
         public void APopInstructionDrawCarriesTheAlphaTextureToo()
         {
             // Pop draws carry the renderer's texture as its own draws do; the alpha texture follows it.
-            var alpha = Texture("alpha");
-            var renderer = Renderer("mask", Texture("main"));
+            var alpha = MakeTexture("alpha");
+            var renderer = Renderer("mask", MakeTexture("main"));
             renderer.popMaterialCount = 1;
             renderer.SetPopMaterial(m_Material, 0);
             renderer.SetAlphaTexture(alpha);
@@ -117,9 +117,9 @@ namespace UnityEngine.Tests
         [Fact]
         public void Unmeasured_ANullAlphaTexturePassesNone()
         {
-            var alpha = Texture("alpha");
-            var renderer = Renderer("graphic", Texture("main"));
-            m_Material.SetTexture("_AlphaTex", Texture("material alpha"));
+            var alpha = MakeTexture("alpha");
+            var renderer = Renderer("graphic", MakeTexture("main"));
+            m_Material.SetTexture("_AlphaTex", MakeTexture("material alpha"));
             renderer.SetAlphaTexture(alpha);
             Assert.Same(alpha, AlphaOf(Assert.Single(Draws())));
             renderer.SetAlphaTexture(null);
@@ -133,9 +133,9 @@ namespace UnityEngine.Tests
         {
             // The API says only "Remove all cached vertices"; Unbound's Clear also drops the
             // texture, and the alpha texture with it, until the graphic sets them again.
-            var main = Texture("main");
+            var main = MakeTexture("main");
             var renderer = Renderer("graphic", main);
-            renderer.SetAlphaTexture(Texture("alpha"));
+            renderer.SetAlphaTexture(MakeTexture("alpha"));
             renderer.Clear();
             Assert.Null(renderer.m_AlphaTexture);
             Fill(renderer, main);
@@ -146,9 +146,9 @@ namespace UnityEngine.Tests
         [Fact]
         public void RenderersWithDifferentAlphaTexturesAreNotDrawnTogether()
         {
-            var main = Texture("main");
-            var a = Texture("alpha a");
-            var b = Texture("alpha b");
+            var main = MakeTexture("main");
+            var a = MakeTexture("alpha a");
+            var b = MakeTexture("alpha b");
             Renderer("first", main).SetAlphaTexture(a);
             Renderer("second", main).SetAlphaTexture(b);
             var draws = Draws();
@@ -161,8 +161,8 @@ namespace UnityEngine.Tests
         public void RenderersWithTheSameAlphaTextureDrawAsBefore()
         {
             // One draw per renderer and material slot, as without an alpha texture.
-            var main = Texture("main");
-            var alpha = Texture("alpha");
+            var main = MakeTexture("main");
+            var alpha = MakeTexture("alpha");
             Renderer("first", main).SetAlphaTexture(alpha);
             Renderer("second", main).SetAlphaTexture(alpha);
             var draws = Draws();
@@ -176,14 +176,14 @@ namespace UnityEngine.Tests
         {
             // Guard: the renderer's texture stays the draw's main texture, not a property, with or
             // without an alpha texture.
-            var main = Texture("main");
+            var main = MakeTexture("main");
             var renderer = Renderer("graphic", main);
             ulong handle = TextureHandles.Of(main);
             Assert.NotEqual(0UL, handle);
             var plain = Assert.Single(Draws());
             Assert.Equal(handle, plain.MainTexture);
             Assert.False(plain.Properties != null && plain.Properties.ContainsKey(s_MainTex));
-            renderer.SetAlphaTexture(Texture("alpha"));
+            renderer.SetAlphaTexture(MakeTexture("alpha"));
             var split = Assert.Single(Draws());
             Assert.Equal(handle, split.MainTexture);
             Assert.False(split.Properties.ContainsKey(s_MainTex));
