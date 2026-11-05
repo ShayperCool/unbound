@@ -411,6 +411,12 @@ namespace Unbound.Runtime
                         break;
                     }
                     case 28:
+                        // The built-in uGUI sprites' textures: the install's own, never drawn.
+                        if (BuiltinSpriteData.Reads(guid, name))
+                        {
+                            obj = BuiltinSpriteData.LoadTexture(guid, fileId, name);
+                            break;
+                        }
                         obj = BuiltinFonts.Get(name) ?? (name == "Default-Checker-Gray" ? Texture2D.FromSerialized(guid, fileId) : null) ?? BuiltinTexture(name);
                         break;
                     case 43:
@@ -420,8 +426,15 @@ namespace Unbound.Runtime
                         break;
                     case 213:
                     {
+                        // The built-in uGUI sprites: the install's records, with their own texture
+                        // reference, rect, pivot, pixels per unit, border and mesh.
+                        if (BuiltinSpriteData.Reads(guid, name))
+                        {
+                            obj = BuiltinSpriteData.LoadSprite(guid, fileId, name);
+                            break;
+                        }
                         var texture = (Texture2D)Get(guid, fileId - 1, name);
-                        float border = name == "Knob" || name == "Checkmark" || name == "DropdownArrow" ? 0f : 10f;
+                        const float border = 10f;
                         obj = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, new Vector4(border, border, border, border));
                         obj.m_Name = name;
                         break;
@@ -514,7 +527,8 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>The built-in UI textures, drawn here: rounded rectangles, a circle, a check mark.</summary>
+        /// <summary>The other built-in UI textures, drawn here: rounded rectangles. (UISprite,
+        /// Background, Knob, Checkmark and DropdownArrow are the install's own: BuiltinSpriteData.)</summary>
         static Texture2D BuiltinTexture(string name)
         {
             const int size = 32;
@@ -524,28 +538,11 @@ namespace Unbound.Runtime
             {
                 for (int x = 0; x < size; x++)
                 {
-                    float a;
                     float cx = x + 0.5f - size / 2f, cy = y + 0.5f - size / 2f;
-                    switch (name)
-                    {
-                        case "Knob":
-                            a = Mathf.Clamp01(size / 2f - 1f - Mathf.Sqrt(cx * cx + cy * cy) + 0.5f);
-                            break;
-                        case "Checkmark":
-                            a = Mathf.Abs(y - (x < 13 ? 26 - x : x - 2)) < 2.5f && x > 5 && x < 28 ? 1f : 0f;
-                            break;
-                        case "DropdownArrow":
-                            a = y > 8 && y < 22 && Mathf.Abs(cx) < (y - 8) * 0.6f ? 1f : 0f;
-                            break;
-                        default:
-                        {
-                            // A rounded rectangle with a 4 pixel radius.
-                            float dx = Mathf.Max(0f, Mathf.Abs(cx) - (size / 2f - 4f));
-                            float dy = Mathf.Max(0f, Mathf.Abs(cy) - (size / 2f - 4f));
-                            a = Mathf.Clamp01(4f - Mathf.Sqrt(dx * dx + dy * dy) + 0.5f);
-                            break;
-                        }
-                    }
+                    // A rounded rectangle with a 4 pixel radius.
+                    float dx = Mathf.Max(0f, Mathf.Abs(cx) - (size / 2f - 4f));
+                    float dy = Mathf.Max(0f, Mathf.Abs(cy) - (size / 2f - 4f));
+                    float a = Mathf.Clamp01(4f - Mathf.Sqrt(dx * dx + dy * dy) + 0.5f);
                     pixels[y * size + x] = new Color32(255, 255, 255, (byte)(a * 255));
                 }
             }

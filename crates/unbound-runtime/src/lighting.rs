@@ -17,8 +17,9 @@ use unbound_yaml::{Guid, Value};
 /// Unity's built-in resources (`unity_builtin_extra`, `unity default resources`).
 const BUILTIN_EXTRA: &str = "0000000000000000f000000000000000";
 
-/// The file a `{guid}` names: an asset of the project, or the install's built-in resources.
-fn serialized_file(db: &AssetDb, unity_data: &Path, guid: &str) -> Result<PathBuf> {
+/// The file a `{guid}` names: an asset of the project, or the install's built-in resources (also
+/// the routing of the `editor-resource` op's built-in objects, `editor_resources::builtin_object`).
+pub(crate) fn serialized_file(db: &AssetDb, unity_data: &Path, guid: &str) -> Result<PathBuf> {
     Ok(if guid.eq_ignore_ascii_case(BUILTIN_EXTRA) {
         unity_data.join("Resources/unity_builtin_extra")
     } else if guid.eq_ignore_ascii_case(crate::editor_resources::EDITOR_GUID) {
