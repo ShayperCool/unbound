@@ -703,10 +703,19 @@ namespace Unbound.Runtime
             }
         }
 
-        /// <summary>Resources.UnloadAsset of a loaded asset: a material alone in its file reads it
-        /// again in place; a ScriptableObject alone in its file is destroyed and the file forgotten, so the
-        /// next load reads it again. False for what is not unloaded (other kinds, sub-assets).</summary>
-        internal static bool Unload(Object asset)
+        /// <summary>
+        /// Resources.UnloadAsset of a loaded asset. A material alone in its file reads it again in
+        /// place; a ScriptableObject alone in its file is destroyed and the file forgotten, so the
+        /// next load reads it again (both measured, tests/projects/droppedparams unload.*). An
+        /// imported Texture2D or AudioClip is imported again into its renderer or mixer handle, a
+        /// mesh read from a document (a model's, a mesh asset's) takes that document's data again,
+        /// and an imported TextAsset frees its bytes, read from its file at their next use: each
+        /// stays the same object, as the material does (unmeasured for these kinds). False for
+        /// what is not unloaded (other kinds, shared-file materials and ScriptableObjects).
+        /// </summary>
+        internal static bool Unload(Object asset) => Unload(asset, unused: false);
+
+        static bool Unload(Object asset, bool unused)
         {
             string guid = null;
             long fileId = 0;
@@ -715,7 +724,10 @@ namespace Unbound.Runtime
             if (guid == null || !s_Files.TryGetValue(guid, out var file) || file == null) return false;
             switch (asset)
             {
-                case ScriptableObject when file.Objects.Count == 1:
+                // UnloadUnusedAssets does not load ScriptableObjects back (Scripting API 6000.0), and
+                // the engine cannot see every reference to one (see UnloadUnused): it keeps them
+                // rather than destroy one still in use.
+                case ScriptableObject when file.Objects.Count == 1 && !unused:
                     Invalidate(guid);
                     Object.DestroyImmediate(asset, true);
                     return true;
@@ -727,8 +739,183 @@ namespace Unbound.Runtime
                     if (saved == null) return false;
                     material.RevertTo(saved);
                     return true;
+                case Texture2D texture:
+                    return texture.ReloadImported();
+                case Mesh mesh:
+                    return ReloadMesh(mesh, guid, fileId, file);
+                case AudioClip clip:
+                    return clip.ReloadImported();
+                // Not a MonoScript (a TextAsset too): unloading scripts is not covered.
+                case TextAsset text when text.GetType() == typeof(TextAsset):
+                    return text.UnloadData();
                 default:
                     return false;
+            }
+        }
+
+        /// <summary>The documents of an asset file, read again (tests replace it).</summary>
+        internal static Func<string, List<YDocument>> ReloadDocuments = guid => Native.LoadDocuments(guid);
+
+        /// <summary>A mesh built from a document of its file (a model's mesh, a mesh asset) takes
+        /// that document's data again. Its siblings are not read: a mesh references none.</summary>
+        static bool ReloadMesh(Mesh mesh, string guid, long fileId, LoadedFile file)
+        {
+            if (file.UnknownFileIds) return false;
+            YDocument document = null;
+            try
+            {
+                foreach (var doc in ReloadDocuments(guid))
+                    if (doc.FileId == fileId && !doc.Stripped) { document = doc; break; }
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: reading mesh '{mesh.m_Name}' again: {e.Message}");
+                return false;
+            }
+            if (document == null || !typeof(Mesh).IsAssignableFrom(EngineTypes.ForClassId(document.ClassId, document.TypeName))) return false;
+            var saved = new Mesh { m_Name = document.Body.Str("m_Name") };
+            try
+            {
+                ((ISerializedAsset)saved).ReadSerialized(document.Body, file);
+                mesh.RevertTo(saved);
+            }
+            finally
+            {
+                Object.DestroyImmediate(saved);
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// Resources.UnloadUnusedAssets (Scripting API 6000.0): "An asset is deemed to be unused if it
+        /// isn't reached after walking the whole game object hierarchy, including script
+        /// components. Static variables are also examined", and every asset but ScriptableObjects
+        /// is loaded back at its next use. Each loaded asset that <see cref="Reachability"/> does not
+        /// reach, and whose hide flags do not include DontUnloadUnusedAsset, is unloaded as
+        /// <see cref="Unload(Object)"/> unloads it, except ScriptableObjects, which are kept: the
+        /// engine does not see the stack (nor does Unity) nor the statics of classes with a class
+        /// constructor, so destroying one could break an object still in use. Returns how many
+        /// assets were unloaded.
+        /// </summary>
+        internal static int UnloadUnused()
+        {
+            var reached = Reachability.Walk();
+            var candidates = new List<Object>();
+            var listed = new HashSet<Object>(ReferenceEqualityComparer.Instance);
+            foreach (var obj in s_Objects.Values)
+            {
+                if (obj == null || obj.m_Destroyed || !obj.IsPersistentAsset || reached.Contains(obj)) continue;
+                if ((obj.hideFlags & HideFlags.DontUnloadUnusedAsset) != 0) continue;
+                if (listed.Add(obj)) candidates.Add(obj);
+            }
+            int unloaded = 0;
+            foreach (var obj in candidates)
+                if (!obj.m_Destroyed && Unload(obj, unused: true)) unloaded++;
+            return unloaded;
+        }
+
+        /// <summary>
+        /// The objects the engine can see in use, for UnloadUnusedAssets: everything reachable,
+        /// through the fields of objects (any accessibility; arrays and collections through their
+        /// storage), from every live object that is not an asset (the objects of loaded scenes,
+        /// DontDestroyOnLoad ones, objects made at run time), from every object flagged
+        /// DontUnloadUnusedAsset, and from static fields of non-framework assemblies. Not seen: the
+        /// stack and handles (as in Unity), statics of generic classes, and statics of classes with a
+        /// class constructor (reading them would run it, and whether it already ran cannot be told);
+        /// assets held only there count as unused. The asset database's own tables are not roots.
+        /// </summary>
+        internal static class Reachability
+        {
+            const System.Reflection.BindingFlags InstanceFields = System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly;
+            const System.Reflection.BindingFlags StaticFields = System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.DeclaredOnly;
+            static readonly Dictionary<Type, System.Reflection.FieldInfo[]> s_Fields = new Dictionary<Type, System.Reflection.FieldInfo[]>();
+            static readonly Dictionary<Type, bool> s_MayHoldReferences = new Dictionary<Type, bool>();
+            static readonly Dictionary<System.Reflection.Assembly, System.Reflection.FieldInfo[]> s_Statics = new Dictionary<System.Reflection.Assembly, System.Reflection.FieldInfo[]>();
+
+            internal static HashSet<object> Walk()
+            {
+                var seen = new HashSet<object>(ReferenceEqualityComparer.Instance);
+                var pending = new Stack<object>();
+                void Push(object value)
+                {
+                    if (value == null || value is string || value is System.Reflection.MemberInfo || value is System.Reflection.Assembly || value is System.Reflection.Module || value is System.Reflection.Pointer) return;
+                    if (seen.Add(value)) pending.Push(value);
+                }
+                foreach (var obj in ObjectRegistry.All(typeof(Object)))
+                    if (!obj.IsPersistentAsset || (obj.hideFlags & HideFlags.DontUnloadUnusedAsset) != 0) Push(obj);
+                foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
+                    foreach (var field in StaticsOf(assembly))
+                    {
+                        object value;
+                        try { value = field.GetValue(null); }
+                        catch (Exception) { continue; }
+                        Push(value);
+                    }
+                while (pending.Count > 0)
+                {
+                    var value = pending.Pop();
+                    if (value is Array array)
+                    {
+                        if (MayHoldReferences(array.GetType().GetElementType()))
+                            foreach (var item in array) Push(item);
+                        continue;
+                    }
+                    foreach (var field in FieldsOf(value.GetType()))
+                    {
+                        object item;
+                        try { item = field.GetValue(value); }
+                        catch (Exception) { continue; }
+                        Push(item);
+                    }
+                }
+                return seen;
+            }
+
+            /// <summary>The instance fields of a type and its bases that may hold references.</summary>
+            static System.Reflection.FieldInfo[] FieldsOf(Type type)
+            {
+                if (s_Fields.TryGetValue(type, out var cached)) return cached;
+                var fields = new List<System.Reflection.FieldInfo>();
+                for (var t = type; t != null; t = t.BaseType)
+                    foreach (var field in t.GetFields(InstanceFields))
+                        if (MayHoldReferences(field.FieldType)) fields.Add(field);
+                return s_Fields[type] = fields.ToArray();
+            }
+
+            static bool MayHoldReferences(Type type)
+            {
+                if (type == null || type.IsPointer || type.IsFunctionPointer || type.IsByRef || type.IsPrimitive || type.IsEnum || type == typeof(string)) return false;
+                if (!type.IsValueType) return true;
+                if (s_MayHoldReferences.TryGetValue(type, out var known)) return known;
+                s_MayHoldReferences[type] = false;
+                bool result = false;
+                foreach (var field in type.GetFields(InstanceFields))
+                    if (MayHoldReferences(field.FieldType)) { result = true; break; }
+                return s_MayHoldReferences[type] = result;
+            }
+
+            static System.Reflection.FieldInfo[] StaticsOf(System.Reflection.Assembly assembly)
+            {
+                if (s_Statics.TryGetValue(assembly, out var cached)) return cached;
+                var fields = new List<System.Reflection.FieldInfo>();
+                var name = assembly.GetName().Name ?? "";
+                bool framework = assembly.IsDynamic || name == "System" || name.StartsWith("System.", StringComparison.Ordinal)
+                    || name.StartsWith("Microsoft.", StringComparison.Ordinal) || name == "mscorlib" || name == "netstandard";
+                if (!framework)
+                {
+                    Type[] types;
+                    try { types = assembly.GetTypes(); }
+                    catch (System.Reflection.ReflectionTypeLoadException e) { types = e.Types; }
+                    catch (Exception) { types = Array.Empty<Type>(); }
+                    foreach (var type in types)
+                    {
+                        if (type == null || type.ContainsGenericParameters || type.TypeInitializer != null) continue;
+                        if (type == typeof(AssetDatabaseRuntime) || type == typeof(ObjectRegistry)) continue;
+                        foreach (var field in type.GetFields(StaticFields))
+                            if (!field.IsLiteral && MayHoldReferences(field.FieldType)) fields.Add(field);
+                    }
+                }
+                return s_Statics[assembly] = fields.ToArray();
             }
         }
 

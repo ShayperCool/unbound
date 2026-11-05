@@ -85,9 +85,15 @@ namespace UnityEngine
         /// null is ignored. An unloaded material reads its saved state again where it is referenced
         /// (what was set from script is gone); an unloaded ScriptableObject is destroyed and the
         /// next load reads a new one from its file. The Editor hands the reloaded material out as a
-        /// new wrapper of the same object; Unbound keeps the one object. Other asset kinds are not
-        /// unloaded yet (warns). An unloaded custom render texture asset stops updating and
-        /// frees its GPU data (tests/projects/customrt).
+        /// new wrapper of the same object; Unbound keeps the one object. An unloaded custom render
+        /// texture asset stops updating and frees its GPU data (tests/projects/customrt).
+        /// Not measured, done as for materials (Scripting API 6000.0 UnloadUnusedAssets: assets other
+        /// than ScriptableObjects "are loaded back the next time one of its properties or methods
+        /// is used"): an imported Texture2D or AudioClip is imported again, a mesh reads its
+        /// document again and an imported TextAsset reads its file again at its next use, each
+        /// staying the same object with what scripts changed gone
+        /// (<see cref="AssetDatabaseRuntime.Unload"/>). Other kinds, and materials and
+        /// ScriptableObjects sharing their file, are not unloaded (warns).
         /// </summary>
         public static void UnloadAsset(Object assetToUnload)
         {
@@ -107,12 +113,22 @@ namespace UnityEngine
             if (assetToUnload is CustomRenderTexture crt) { crt.UnloadAsset(); return; }
             if (!Unbound.Runtime.AssetDatabaseRuntime.Unload(assetToUnload))
                 Unbound.Runtime.Stubs.Ignored("Resources.UnloadAsset(" + assetToUnload.GetType().Name + ")",
-                    "does not unload this kind of asset yet (materials and single ScriptableObjects are)");
+                    "does not unload this kind of asset yet (materials and ScriptableObjects alone in their file, imported textures, audio clips and text assets, and meshes are)");
         }
 
+        /// <summary>
+        /// Unloads the loaded assets the engine does not see in use
+        /// (<see cref="AssetDatabaseRuntime.UnloadUnused"/>: references from scene, DontDestroyOnLoad
+        /// and run-time objects and from the statics it can read; not the stack, nor statics of
+        /// classes with a class constructor), each as <see cref="UnloadAsset"/> unloads it, except
+        /// ScriptableObjects, which are kept. The operation is complete when it returns, as before.
+        /// Scene loads and EditorUtility.UnloadUnusedAssetsImmediate still only compact the object
+        /// registry (<see cref="UnloadUnusedAssetsInternal"/>).
+        /// </summary>
         public static AsyncOperation UnloadUnusedAssets()
         {
             UnloadUnusedAssetsInternal();
+            AssetDatabaseRuntime.UnloadUnused();
             return AsyncOperation.Completed();
         }
 
