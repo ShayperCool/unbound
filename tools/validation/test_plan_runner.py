@@ -61,6 +61,30 @@ class PlanRunnerTests(unittest.TestCase):
         runner.check(self.plan_path, self.approval_path)
         self.assertFalse(self.run.exists())
 
+    def test_build_wrapper_without_direct_refused_before_cost(self):
+        self.plan['jobs'][0]['kind'] = 'build'
+        self.plan['jobs'][0]['argv'] = [self.python, 'tools/build.py', '--', 'test', '--locked']
+        self.write()
+        with self.assertRaisesRegex(runner.Refused, 'explicitly approved --direct'):
+            self.execute()
+        self.assertFalse(self.run.exists())
+
+    def test_build_wrapper_explicit_direct_reuses_runner_lease(self):
+        self.plan['jobs'][0]['kind'] = 'build'
+        self.plan['jobs'][0]['argv'] = [self.python, '-I', '-B', '/reviewed/tools/build.py',
+                                       '--direct', '--', 'test', '--locked']
+        self.write()
+        runner.check(self.plan_path, self.approval_path)
+        self.assertFalse(self.run.exists())
+
+    def test_cargo_direct_argument_is_not_wrapper_direct(self):
+        self.plan['jobs'][0]['kind'] = 'build'
+        self.plan['jobs'][0]['argv'] = [self.python, 'tools/build.py', '--', 'test', '--direct']
+        self.write()
+        with self.assertRaisesRegex(runner.Refused, 'explicitly approved --direct'):
+            self.execute()
+        self.assertFalse(self.run.exists())
+
     def test_interrupted_receipt_write_can_be_finalized(self):
         self.run.mkdir()
         output = self.run/'result.json'

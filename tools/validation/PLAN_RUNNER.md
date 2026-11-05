@@ -91,6 +91,14 @@ recorded before spawn; accounting does not depend on truncated command strings.
 Jobs run sequentially. Independent plans can run concurrently under the installed
 pool's unchanged limits.
 
+For the stock Cargo wrapper, use a `kind: build` job with argv
+`["/usr/bin/python3.14", "/reviewed/checkout/tools/build.py", "--direct", "--", "test", "--locked", "-p", "unbound-runtime", "--lib", "editor_resources::tests", "--", "--nocapture"]`.
+The runner owns the single build lease; `--direct` disables the wrapper's inner
+lease. Readiness refuses the known wrapper without that flag. The runner never
+inserts or edits arguments: Root must explicitly approve this exact argv. An
+existing proposal without `--direct` needs a plan amendment, not an unleased
+adapter or a second lease mode that loses ownership of the payload scope.
+
 All exits remain raw. A nonzero exit stops the sequence, including timeout 124.
 If a strict comparator legitimately returns 1 for retained differences, its
 existing reviewed semantic consumer must separately decide package eligibility;

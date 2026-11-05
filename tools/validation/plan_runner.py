@@ -88,6 +88,24 @@ def expand(value, run):
     return value.replace(TOKEN, str(run))
 
 
+def check_build_lease(job):
+    """The stock Cargo wrapper must reuse this runner's existing build lease."""
+    args = job['argv']
+    index = 0
+    if re.fullmatch(r'python[0-9.]*', Path(args[0]).name):
+        index = 1
+        while index < len(args) and args[index] in {'-I', '-B', '-E', '-s', '-S', '-u', '-P'}:
+            index += 1
+    if index >= len(args):
+        return
+    script = Path(args[index])
+    if script.name == 'build.py' and script.parent.name == 'tools':
+        options = args[index + 1:]
+        options = options[:options.index('--')] if '--' in options else []
+        require(job['kind'] == 'build' and '--direct' in options,
+                'tools/build.py needs an explicitly approved --direct under the runner build lease')
+
+
 def check(plan_path, approval_path):
     """Read-only preflight; does not create the run directory or launch a process."""
     plan_path, approval_path = physical(str(plan_path)), physical(str(approval_path))
@@ -139,6 +157,7 @@ def check(plan_path, approval_path):
         require(isinstance(job['argv'], list) and job['argv'], 'nonempty argv required')
         for arg in job['argv']:
             expand(arg, run)
+        check_build_lease(job)
         exe = physical(job['argv'][0])
         require(str(exe) in plan['inputs'] and os.access(exe, os.X_OK), 'executable must be pinned')
         cwd = expand(job['cwd'], run)
