@@ -93,8 +93,8 @@ namespace UnityEngine
         static readonly object s_DisplayLock = new object();
         static DisplayAnswer s_Display;
         static ulong? s_DisplayVersion;
-        /// <summary>Counts the frames (play, paused and Edit mode alike: every frame's input
-        /// passes <see cref="Update"/>); the answer is kept for one.</summary>
+        /// <summary>Counts the frames whose input passes <see cref="Update"/> (play and Edit mode;
+        /// paused frames do not, so the answer is kept across them); the answer is kept for one.</summary>
         static int s_DisplayFrame;
         static int s_DisplayAskedFrame = int.MinValue;
         /// <summary>Set when the host does not answer `display-info` (an older host): it will

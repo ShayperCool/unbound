@@ -15,6 +15,10 @@ namespace UnityEngine.Tests
     {
         readonly List<string> m_Requests = new List<string>();
         readonly List<string> m_Warnings = new List<string>();
+        readonly ILogger m_Logger = Debug.unityLogger;
+        readonly ILogHandler m_PreviousHandler;
+        readonly bool m_PreviousLogEnabled;
+        readonly LogType m_PreviousFilter;
         Func<string, string> m_Answer;
         int m_Frame = 1;
 
@@ -23,20 +27,46 @@ namespace UnityEngine.Tests
             Screen.ResetDisplayForTests();
             Screen.s_DisplayFrameForTests = m_Frame;
             Screen.s_DisplayCallForTests = Call;
-            Application.logMessageReceived += Capture;
+            m_PreviousHandler = m_Logger.logHandler;
+            m_PreviousLogEnabled = m_Logger.logEnabled;
+            m_PreviousFilter = m_Logger.filterLogType;
+            // Unbound diagnostics ("Unbound: ...") bypass the game's Application log callbacks:
+            // observe them at the logger's handler and forward every call to the original one.
+            m_Logger.logHandler = new CaptureHandler(m_PreviousHandler, m_Warnings);
+            m_Logger.logEnabled = true;
+            m_Logger.filterLogType = LogType.Log;
+        }
+
+        sealed class CaptureHandler : ILogHandler
+        {
+            readonly ILogHandler m_Inner;
+            readonly List<string> m_Warnings;
+
+            internal CaptureHandler(ILogHandler inner, List<string> warnings)
+            {
+                m_Inner = inner;
+                m_Warnings = warnings;
+            }
+
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                string message = args == null || args.Length == 0 ? format
+                    : string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args);
+                if (type == LogType.Warning && message.Contains("Screen.currentResolution")) m_Warnings.Add(message);
+                m_Inner.LogFormat(type, context, format, args);
+            }
+
+            public void LogException(Exception exception, Object context) => m_Inner.LogException(exception, context);
         }
 
         public void Dispose()
         {
-            Application.logMessageReceived -= Capture;
+            m_Logger.logHandler = m_PreviousHandler;
+            m_Logger.logEnabled = m_PreviousLogEnabled;
+            m_Logger.filterLogType = m_PreviousFilter;
             Screen.s_DisplayCallForTests = null;
             Screen.s_DisplayFrameForTests = null;
             Screen.ResetDisplayForTests();
-        }
-
-        void Capture(string message, string stack, LogType type)
-        {
-            if (type == LogType.Warning && message.Contains("Screen.currentResolution")) m_Warnings.Add(message);
         }
 
         string Call(string method, string request)
