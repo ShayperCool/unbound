@@ -399,6 +399,25 @@ namespace Unbound.Runtime
                 color);
         }
 
+        /// <summary>Textured triangles in local GUI coordinates (<paramref name="uvs"/> in texture
+        /// space, v up), one tint, batched and clipped as quads are: GUI.DrawTexture's border and
+        /// rounded corners.</summary>
+        internal static void DrawTriangles(Texture texture, List<Vector2> positions, List<Vector2> uvs, List<int> indices, Color color)
+        {
+            if (texture == null || indices.Count == 0) return;
+            if (CurrentClip().width <= 0f) return;
+            var batch = BatchFor(texture);
+            int start = s_Positions.Count;
+            Color32 tint = color;
+            for (int i = 0; i < positions.Count; i++)
+            {
+                s_Positions.Add(GUIClip.GUIToScreen(positions[i]));
+                s_Uvs.Add(uvs[i]);
+                s_Colors.Add(tint);
+            }
+            foreach (int index in indices) batch.Add(start + index);
+        }
+
         internal static void FillRect(Rect rect, Color color) => DrawTexture(rect, Texture2D.whiteTexture, new Rect(0, 0, 1, 1), color);
 
         /// <summary>A texture nine-sliced by its border (pixels): corners keep their size, edges and
