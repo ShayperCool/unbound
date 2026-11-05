@@ -693,7 +693,7 @@ namespace Unbound.Runtime
                 Locks = rb.Locks,
                 EnableSleep = 1,
                 IsAwake = 1,
-                IsBullet = rb.m_CollisionDetection != CollisionDetectionMode.Discrete ? 1 : 0,
+                IsBullet = rb.NativeCollisionDetection,
             };
             rb.m_Body = B3.ua3_body_create(s_World, def);
             rb.m_HasCreatedBody = true;

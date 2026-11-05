@@ -175,11 +175,26 @@ struct ShapeInfo
 };
 
 // Simulation filter data: word0 the category (the layer's bit), word1 the mask, word2 flags.
+// word2 bits 3-4 carry the body's collision detection mode, so the filter shader can decide
+// which pairs get sweep CCD; bit 5 marks a collider of an actor that has no mode (a character
+// controller's).
 enum : PxU32
 {
 	FlagContactEvents = 1,
 	FlagSensorEvents = 2,
 	FlagIgnores = 4,
+	FlagCcdShift = 3,
+	FlagCcdMask = 3u << FlagCcdShift,
+	FlagCcdModeless = 32,
+};
+
+// Unity's CollisionDetectionMode values, as ua3_body_set_bullet and ua3_body_def.isBullet carry them.
+enum : PxU32
+{
+	CcdDiscrete = 0,
+	CcdContinuous = 1,
+	CcdContinuousDynamic = 2,
+	CcdContinuousSpeculative = 3,
 };
 
 std::unordered_set<PxRigidActor*> s_bodies;
@@ -206,6 +221,48 @@ PxRigidDynamic* dynamic_of( uint64_t id )
 {
 	PxRigidActor* actor = body_of( id );
 	return actor != nullptr ? actor->is<PxRigidDynamic>() : nullptr;
+}
+
+// A body keeps its collision detection mode in its actor's userData, which nothing else uses for
+// bodies (statics keep Discrete). Another actor (a character controller's) has no mode.
+PxU32 ccd_bits( const PxRigidActor* actor )
+{
+	if ( actor == nullptr )
+	{
+		return 0u;
+	}
+	if ( !s_bodies.count( const_cast<PxRigidActor*>( actor ) ) )
+	{
+		return FlagCcdModeless;
+	}
+	return ( static_cast<PxU32>( reinterpret_cast<uintptr_t>( actor->userData ) ) & 3u ) << FlagCcdShift;
+}
+
+PxU32 ccd_mode_of( int value )
+{
+	return value >= 0 && value <= static_cast<int>( CcdContinuousSpeculative ) ? static_cast<PxU32>( value ) : CcdDiscrete;
+}
+
+// Continuous and ContinuousDynamic raise sweep CCD (which PhysX does not run for kinematic bodies,
+// so they get none), ContinuousSpeculative speculative CCD; which pairs are swept is the filter
+// shader's decision.
+void apply_ccd( PxRigidDynamic* body, PxU32 mode )
+{
+	body->userData = reinterpret_cast<void*>( static_cast<uintptr_t>( mode ) );
+	PxRigidBodyFlags flags = body->getRigidBodyFlags();
+	flags &= ~( PxRigidBodyFlag::eENABLE_CCD | PxRigidBodyFlag::eENABLE_SPECULATIVE_CCD );
+	if ( ( mode == CcdContinuous || mode == CcdContinuousDynamic ) && !( flags & PxRigidBodyFlag::eKINEMATIC ) )
+	{
+		flags |= PxRigidBodyFlag::eENABLE_CCD;
+	}
+	if ( mode == CcdContinuousSpeculative )
+	{
+		flags |= PxRigidBodyFlag::eENABLE_SPECULATIVE_CCD;
+	}
+	if ( flags != body->getRigidBodyFlags() )
+	{
+		body->setRigidBodyFlags( flags );
+	}
 }
 
 PxJoint* joint_of( uint64_t id )
@@ -501,6 +558,24 @@ PxFilterFlags Filter::pairFound( PxU32, PxFilterObjectAttributes, PxFilterData, 
 	return PxFilterFlag::eDEFAULT;
 }
 
+// Whether a moving body's own mode sweeps it against the other collider (Unity 6000.0 Manual,
+// Rigidbody component): Continuous against static colliders, ContinuousDynamic against every
+// other collider except those set to Discrete. ContinuousSpeculative is the body's speculative
+// CCD flag, not a swept pair.
+bool sweeps( bool moving, PxU32 flags, PxFilterObjectAttributes other, PxU32 otherFlags )
+{
+	PxU32 mode = ( flags & FlagCcdMask ) >> FlagCcdShift, otherMode = ( otherFlags & FlagCcdMask ) >> FlagCcdShift;
+	if ( !moving )
+	{
+		return false;
+	}
+	if ( PxGetFilterObjectType( other ) == PxFilterObjectType::eRIGID_STATIC )
+	{
+		return mode == CcdContinuous || mode == CcdContinuousDynamic;
+	}
+	return mode == CcdContinuousDynamic && ( otherMode != CcdDiscrete || ( otherFlags & FlagCcdModeless ) );
+}
+
 // Layers collide when each one's category is in the other's mask. Trigger pairs include
 // trigger/trigger overlaps. The scene's kinematic pair filtering modes decide which non-dynamic
 // pairs reach this shader. Those pairs generate contacts and reports, without solver response.
@@ -523,7 +598,11 @@ PxFilterFlags shader( PxFilterObjectAttributes attributes0, PxFilterData data0, 
 				PxPairFlag::eNOTIFY_TOUCH_PERSISTS | PxPairFlag::eNOTIFY_CONTACT_POINTS;
 	if ( moving0 || moving1 )
 	{
-		pairFlags |= PxPairFlag::eSOLVE_CONTACT | PxPairFlag::eDETECT_CCD_CONTACT;
+		pairFlags |= PxPairFlag::eSOLVE_CONTACT;
+		if ( sweeps( moving0, data0.word2, attributes1, data1.word2 ) || sweeps( moving1, data1.word2, attributes0, data0.word2 ) )
+		{
+			pairFlags |= PxPairFlag::eDETECT_CCD_CONTACT;
+		}
 	}
 	return ( data0.word2 | data1.word2 ) & FlagIgnores ? PxFilterFlag::eCALLBACK : PxFilterFlag::eDEFAULT;
 }
@@ -569,11 +648,18 @@ void refilter( PxShape* shape )
 	}
 }
 
-void set_filter_flags( PxShape* shape )
+// A shape not yet attached passes the body it is going to.
+PxU32 filter_flags( const PxShape* shape, const PxRigidActor* actor )
 {
 	ShapeInfo* i = info( shape );
+	return ( i->contactEvents ? FlagContactEvents : 0u ) | ( i->sensorEvents ? FlagSensorEvents : 0u ) | ( i->ignores > 0 ? FlagIgnores : 0u ) |
+		   ccd_bits( actor != nullptr ? actor : shape->getActor() );
+}
+
+void set_filter_flags( PxShape* shape, const PxRigidActor* actor = nullptr )
+{
 	PxFilterData data = shape->getSimulationFilterData();
-	data.word2 = ( i->contactEvents ? FlagContactEvents : 0u ) | ( i->sensorEvents ? FlagSensorEvents : 0u ) | ( i->ignores > 0 ? FlagIgnores : 0u );
+	data.word2 = filter_flags( shape, actor );
 	shape->setSimulationFilterData( data );
 }
 
@@ -1198,7 +1284,7 @@ UA3_API uint64_t ua3_body_create( uint32_t id, const ua3_body_def* def )
 		body->setSleepThreshold( def->enableSleep && world->sleeping ? s_sleepThreshold : 0.0f );
 		body->setMaxDepenetrationVelocity( s_maxDepenetration );
 		body->setMaxAngularVelocity( s_maxAngularVelocity );
-		body->setRigidBodyFlag( PxRigidBodyFlag::eENABLE_CCD, def->isBullet != 0 );
+		apply_ccd( body, ccd_mode_of( def->isBullet ) );
 		if ( def->type == 2 )
 		{
 			body->setLinearVelocity( def->linearVelocity, false );
@@ -1256,7 +1342,15 @@ UA3_API void ua3_body_set_type( uint64_t id, int type )
 {
 	if ( PxRigidDynamic* body = dynamic_of( id ) )
 	{
-		body->setRigidBodyFlag( PxRigidBodyFlag::eKINEMATIC, type == 1 );
+		bool kinematic = type == 1;
+		// PhysX ignores sweep CCD on a kinematic body and warns when the switch finds it set: drop it
+		// first, then re-apply the body's own mode (apply_ccd restores sweep CCD for a dynamic body).
+		if ( kinematic )
+		{
+			body->setRigidBodyFlag( PxRigidBodyFlag::eENABLE_CCD, false );
+		}
+		body->setRigidBodyFlag( PxRigidBodyFlag::eKINEMATIC, kinematic );
+		apply_ccd( body, static_cast<PxU32>( reinterpret_cast<uintptr_t>( body->userData ) ) & 3u );
 	}
 }
 
@@ -1533,11 +1627,24 @@ UA3_API void ua3_body_set_locks( uint64_t id, int locks )
 	}
 }
 
-UA3_API void ua3_body_set_bullet( uint64_t id, int flag )
+// The body's collision detection mode (Unity's CollisionDetectionMode, 0-3; others are Discrete).
+// Its shapes carry it into the filter shader, so a change refilters their pairs.
+UA3_API void ua3_body_set_bullet( uint64_t id, int mode )
 {
-	if ( PxRigidDynamic* body = dynamic_of( id ) )
+	PxRigidDynamic* body = dynamic_of( id );
+	if ( body == nullptr )
 	{
-		body->setRigidBodyFlag( PxRigidBodyFlag::eENABLE_CCD, flag != 0 );
+		return;
+	}
+	apply_ccd( body, ccd_mode_of( mode ) );
+	std::vector<PxShape*> shapes( body->getNbShapes() );
+	body->getShapes( shapes.data(), static_cast<PxU32>( shapes.size() ) );
+	for ( PxShape* shape : shapes )
+	{
+		if ( info( shape ) != nullptr && filter_flags( shape, body ) != shape->getSimulationFilterData().word2 )
+		{
+			set_filter_flags( shape, body );
+		}
 	}
 }
 
@@ -1623,7 +1730,7 @@ uint64_t attach( uint64_t bodyId, const ua3_shape_def* def, const PxGeometry& ge
 	shape->userData = i;
 	PxFilterData simulation( static_cast<PxU32>( def->categoryBits ), static_cast<PxU32>( def->maskBits ), 0, 0 );
 	shape->setSimulationFilterData( simulation );
-	set_filter_flags( shape );
+	set_filter_flags( shape, actor );
 	shape->setQueryFilterData( query_data( static_cast<PxU32>( def->categoryBits ), actor, def->isSensor != 0 ) );
 	actor->attachShape( *shape );
 	shape->release(); // the actor holds it

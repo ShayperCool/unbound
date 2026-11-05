@@ -104,6 +104,16 @@ namespace UnityEngine
 
         internal B3.BodyType BodyType => m_IsKinematic ? B3.BodyType.Kinematic : B3.BodyType.Dynamic;
 
+        /// <summary>The collision detection mode the native body takes (0-3, the enum's values). A value
+        /// outside the enum is Discrete there; the getter still returns what was set.</summary>
+        internal int NativeCollisionDetection => m_CollisionDetection switch
+        {
+            CollisionDetectionMode.Continuous => 1,
+            CollisionDetectionMode.ContinuousDynamic => 2,
+            CollisionDetectionMode.ContinuousSpeculative => 3,
+            _ => 0,
+        };
+
         /// <summary>Box3D's motion locks: RigidbodyConstraints without its unused first bit.</summary>
         internal int Locks => ((int)m_Constraints >> 1) & 63;
 
@@ -132,7 +142,7 @@ namespace UnityEngine
             B3.ua3_body_set_damping(body, Mathf.Max(0f, m_LinearDamping), Mathf.Max(0f, m_AngularDamping));
             B3.ua3_body_set_gravity_scale(body, m_UseGravity ? 1f : 0f);
             B3.ua3_body_set_locks(body, Locks);
-            B3.ua3_body_set_bullet(body, m_CollisionDetection != CollisionDetectionMode.Discrete ? 1 : 0);
+            B3.ua3_body_set_bullet(body, NativeCollisionDetection);
             ApplyTuning();
             // Changing the type drops the mass data.
             m_MassDirty = true;
