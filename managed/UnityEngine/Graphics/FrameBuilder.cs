@@ -58,6 +58,9 @@ namespace Unbound.Runtime
             internal bool ClipEnabled;
             /// <summary>Canvas supplies its clip variant independently of the global keyword.</summary>
             internal bool CanvasDraw;
+            /// <summary>An IMGUI draw with alphaBlend false: blending is turned off for this draw
+            /// alone, over the state override in force (<see cref="BeginOpaqueImgui"/>).</summary>
+            internal bool OpaqueImgui;
             internal int Queue;
             internal int SortingLayer;
             internal int SortingOrder;
@@ -805,8 +808,18 @@ namespace Unbound.Runtime
             if (item.Setup is DrawSetup setup) GfxStream.DrawSetup(setup);
             bool restoreCanvasClip = item.CanvasDraw && Shader.s_GlobalKeywords.Contains("UNITY_UI_CLIP_RECT");
             if (restoreCanvasClip) GfxStream.Keyword("UNITY_UI_CLIP_RECT", false);
-            GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
-                item.ClipEnabled ? item.Clip : (Rect?)null, properties);
+            // Inside the mask's override, so the opaque draw keeps its stencil test and the mask's
+            // After puts back what was there before both.
+            var beforeOpaque = item.OpaqueImgui ? BeginOpaqueImgui() : null;
+            try
+            {
+                GfxStream.Draw(item.Mesh, item.Submesh, material, pass, item.Model, item.Color, item.MainTexture,
+                    item.ClipEnabled ? item.Clip : (Rect?)null, properties);
+            }
+            finally
+            {
+                if (item.OpaqueImgui) EndOpaqueImgui(beforeOpaque);
+            }
             if (restoreCanvasClip) GfxStream.Keyword("UNITY_UI_CLIP_RECT", true);
             if (masking) SpriteMasking.After(previousState);
             foreach (var k in s_DrawKeywords) if (!Shader.s_GlobalKeywords.Contains(k)) GfxStream.Keyword(k, false);
