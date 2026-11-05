@@ -83,7 +83,10 @@ Documented:
 
 Unbound's choices (unmeasured):
 
-- **Clamping.** The properties return the value that was set. The descriptor clamps to the
+- **Clamping.** AudioLowPassFilter.cutoffFrequency is documented to clamp to 10 to 22000 on set
+  (https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioLowPassFilter-cutoffFrequency.html)
+  and does. The other properties, and serialized values, return the value that was set; their
+  pages do not say whether Unity clamps. The descriptor clamps to the
   documented ranges.
 - **Signal point.** Components process the source's voices after volume, mute, panning and spatial
   gain. This is the same signal the existing OnAudioFilterRead path receives.

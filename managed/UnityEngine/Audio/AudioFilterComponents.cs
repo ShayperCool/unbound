@@ -12,8 +12,10 @@ namespace UnityEngine
     // MonoBehaviour script is shown in the Inspector" (Scripting API). The DSP reuses the AudioMixer
     // Lowpass, Highpass and Echo kernels measured on mixer groups; no capture measures them as
     // AudioSource components. Defaults and ranges are the 6000.0 Scripting API's. The descriptor
-    // clamps to those ranges; whether Unity clamps on set is unmeasured, so the properties return
-    // what was set. Parameters reach the mixer with the source's next packet (at the latest the
+    // clamps to those ranges. AudioLowPassFilter.cutoffFrequency clamps on set, as its Scripting
+    // API page documents ("Values outside this range are clamped"); the other property pages do not
+    // say, so whether Unity clamps them on set is unmeasured and they return what was set, as do
+    // serialized values. Parameters reach the mixer with the source's next packet (at the latest the
     // next audio update).
 
     /// <summary>Passes the low frequencies of an AudioSource. Cutoff 10 to 22000 Hz (default 5000;
@@ -28,10 +30,12 @@ namespace UnityEngine
         internal float m_LowpassResonanceQ = 1f;
         bool m_ReportedInvalid;
 
+        /// <summary>Clamped to 10 to 22000 on set (6000.0 Scripting API,
+        /// AudioLowPassFilter.cutoffFrequency).</summary>
         public float cutoffFrequency
         {
             get => m_CutoffFrequency;
-            set => m_CutoffFrequency = value;
+            set => m_CutoffFrequency = Mathf.Clamp(value, 10f, 22000f);
         }
 
         public float lowpassResonanceQ

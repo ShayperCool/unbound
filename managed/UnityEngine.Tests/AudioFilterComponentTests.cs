@@ -9,8 +9,9 @@ namespace UnityEngine.Tests
     /// AudioLowPassFilter, AudioHighPassFilter and AudioEchoFilter on an AudioSource. Documented
     /// (Unity 6000.0): defaults and ranges of the Scripting API; components apply in component order
     /// and only while enabled (Manual, Use audio filters); an OnAudioFilterRead script sits at its
-    /// own place in that order (Scripting API). Unbound's choices (unmeasured): the properties keep
-    /// what was set while the descriptor clamps to the documented ranges; chains Unbound cannot place
+    /// own place in that order (Scripting API); AudioLowPassFilter.cutoffFrequency clamps to 10 to
+    /// 22000 on set (its Scripting API page). Unbound's choices (unmeasured): the other properties
+    /// keep what was set while the descriptor clamps to the documented ranges; chains Unbound cannot place
     /// (a component between two scripts, one above a clipless generator script), a custom cutoff
     /// curve, components on the AudioListener and unread serialized fields fail loudly. The wire
     /// layout is NativeApi 16, checked against the same offsets in
@@ -139,7 +140,7 @@ namespace UnityEngine.Tests
 #pragma warning restore CS0618
 
         [Fact]
-        public void DescriptorsClampToTheDocumentedRangesAndPropertiesKeepTheirValues()
+        public void DescriptorsClampToTheDocumentedRangesAndOnlyTheLowPassCutoffClampsOnSet()
         {
             var source = Source("ranges");
             var lowPass = source.gameObject.AddComponent<AudioLowPassFilter>();
@@ -159,7 +160,12 @@ namespace UnityEngine.Tests
             Assert.Equal((10f, 0f, 1f, 0f), (d[2].Delay, d[2].Decay, d[2].DryMix, d[2].WetMix));
             echo.delay = 6000f;
             Assert.Equal(5000f, Collected(source)[2].Delay);
-            Assert.Equal((0f, 30000f, 6000f), (lowPass.cutoffFrequency, highPass.cutoffFrequency, echo.delay));
+            Assert.Equal((10f, 30000f, 6000f), (lowPass.cutoffFrequency, highPass.cutoffFrequency, echo.delay));
+            Assert.Equal(0.5f, lowPass.lowpassResonanceQ);
+            lowPass.cutoffFrequency = float.PositiveInfinity;
+            Assert.Equal(22000f, lowPass.cutoffFrequency);
+            lowPass.cutoffFrequency = 4000f;
+            Assert.Equal(4000f, lowPass.cutoffFrequency);
         }
 
         [Fact]
