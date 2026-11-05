@@ -268,16 +268,6 @@ namespace UnityEngine.TerrainTools
 }
 namespace UnityEngine.TerrainUtils
 {
-    [global::Unbound.Stub]
-    public unsafe partial class TerrainMap
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Terrain GetTerrain(int tileX, int tileZ) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainUtils.TerrainMap.GetTerrain"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TerrainUtils.TerrainMap CreateFromConnectedNeighbors(global::UnityEngine.Terrain originTerrain, global::System.Predicate<global::UnityEngine.Terrain> filter = null, bool fullValidation = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainUtils.TerrainMap.CreateFromConnectedNeighbors"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TerrainUtils.TerrainMap CreateFromPlacement(global::UnityEngine.Terrain originTerrain, global::System.Predicate<global::UnityEngine.Terrain> filter = null, bool fullValidation = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainUtils.TerrainMap.CreateFromPlacement"); return default; }
-        [global::Unbound.Stub] public static global::UnityEngine.TerrainUtils.TerrainMap CreateFromPlacement(global::UnityEngine.Vector2 gridOrigin, global::UnityEngine.Vector2 gridSize, global::System.Predicate<global::UnityEngine.Terrain> filter = null, bool fullValidation = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainUtils.TerrainMap.CreateFromPlacement"); return default; }
-        [global::Unbound.Stub] public TerrainMap() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainUtils.TerrainMap.ctor"); }
-        public global::System.Collections.Generic.Dictionary<global::UnityEngine.TerrainUtils.TerrainTileCoord, global::UnityEngine.Terrain> terrainTiles { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainUtils.TerrainMap.terrainTiles"); return new global::System.Collections.Generic.Dictionary<global::UnityEngine.TerrainUtils.TerrainTileCoord, global::UnityEngine.Terrain>(); } }
-    }
     internal enum TerrainMapStatusCode
     {
         OK = 0,
@@ -285,19 +275,10 @@ namespace UnityEngine.TerrainUtils
         SizeMismatch = 4,
         EdgeAlignmentMismatch = 8,
     }
-    [global::Unbound.Stub]
-    public unsafe readonly partial struct TerrainTileCoord
-    {
-        [global::Unbound.Stub] public readonly int tileX;
-        [global::Unbound.Stub] public readonly int tileZ;
-        [global::Unbound.Stub] public TerrainTileCoord(int tileX, int tileZ) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainUtils.TerrainTileCoord.ctor"); }
-    }
-    [global::Unbound.Stub]
-    public unsafe static partial class TerrainUtility
+    unsafe static partial class TerrainUtility
     {
         [global::Unbound.Stub] internal static bool ValidTerrainsExist() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainUtils.TerrainUtility.ValidTerrainsExist"); return default; }
         [global::Unbound.Stub] internal static void ClearConnectivity() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainUtils.TerrainUtility.ClearConnectivity"); }
         [global::Unbound.Stub] internal static global::System.Collections.Generic.Dictionary<int, global::UnityEngine.TerrainUtils.TerrainMap> CollectTerrains(bool onlyAutoConnectedTerrains = true) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainUtils.TerrainUtility.CollectTerrains"); return new global::System.Collections.Generic.Dictionary<int, global::UnityEngine.TerrainUtils.TerrainMap>(); }
-        [global::Unbound.Stub] public static void AutoConnect() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TerrainUtils.TerrainUtility.AutoConnect"); }
     }
 }
