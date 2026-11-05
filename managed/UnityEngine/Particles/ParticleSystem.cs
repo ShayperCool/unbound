@@ -474,15 +474,20 @@ namespace UnityEngine
             // return their slots in written order. Ending a live slot moves no particle
             // (FreeTrail's carrier scan runs only for a fading slot), so the compaction below
             // removes the same particles in the same order.
+            // Survivors' links are collected once, at the first candidate, so the pass is linear.
+            HashSet<int> survivors = null;
             for (int r = offset; r < m_Count; r++)
             {
                 int link = m_Particles[r].m_TrailId;
                 if (!(m_Particles[r].m_Lifetime <= 0f) || link <= 0 || (m_Particles[r].m_Flags & Particle.FlagOrphanTrail) != 0) continue;
                 if (link > m_TrailList.Count || !(m_TrailList[link - 1] is { Orphan: false })) continue;
-                bool held = false;
-                for (int i = 0; i < m_Count && !held; i++)
-                    held = m_Particles[i].m_TrailId == link && (i < offset || !(m_Particles[i].m_Lifetime <= 0f));
-                if (held) continue;
+                if (survivors == null)
+                {
+                    survivors = new HashSet<int>();
+                    for (int i = 0; i < m_Count; i++)
+                        if (i < offset || !(m_Particles[i].m_Lifetime <= 0f)) survivors.Add(m_Particles[i].m_TrailId);
+                }
+                if (survivors.Contains(link)) continue;
                 var owner = new Particle { m_TrailId = link };
                 EndTrail(ref owner);
             }
