@@ -262,41 +262,29 @@ namespace UnityEngine
             if (!CalculateScaledTextureRects(position, scaleMode, imageAspect, ref screen, ref source)) return;
             var tint = color;
             if (!enabled) tint.a *= 0.5f;
-            if (!alphaBlend) DrawTextureReportOpaque();
             if (!DrawTextureNeedsShape(borderWidths, borderRadiuses))
             {
-                GuiRender.DrawTexture(screen, image, source, tint);
+                GuiRender.DrawTexture(screen, image, source, tint, alphaBlend);
                 return;
             }
             var positions = new List<Vector2>();
             var uvs = new List<Vector2>();
             var indices = new List<int>();
             DrawTextureShape(screen, source, borderWidths, borderRadiuses, positions, uvs, indices);
-            GuiRender.DrawTriangles(image, positions, uvs, indices, tint);
+            GuiRender.DrawTriangles(image, positions, uvs, indices, tint, alphaBlend);
         }
 
         // ------------------------------------------------------------------ DrawTexture: alphaBlend
 
-        /// <summary>Whether the opaque-drawing warning was given (once per session).</summary>
-        internal static bool s_DrawTextureOpaqueReported;
-
-        /// <summary>
-        /// Documented: alphaBlend is "whether to apply alpha blending when drawing the image (enabled
-        /// by default)"; for DrawTextureWithTexCoords, "if false, the picture is drawn on to the
-        /// display". Unbound's IMGUI draws go through one alpha-blended UI material. The only
-        /// built-in GUI shaders whose declared properties include blend factors
-        /// (Hidden/Internal-GUIRoundedRect and its per-border-color variant) declare no corner or
-        /// border inputs, so those must come from values Unbound does not know (an inference from the
-        /// declared properties only), and Unbound cannot drive them faithfully. Opaque drawing is therefore
-        /// not supported yet: it is reported once, loudly, and the texture is drawn blended, as
-        /// before this change (expected unchanged until measured).
-        /// </summary>
-        internal static void DrawTextureReportOpaque()
-        {
-            if (s_DrawTextureOpaqueReported) return;
-            s_DrawTextureOpaqueReported = true;
-            Debug.LogWarning("Unbound: GUI.DrawTexture/GUI.DrawTextureWithTexCoords with alphaBlend false is not supported yet; the texture is drawn alpha-blended.");
-        }
+        // Documented (Unity 6000.0 Scripting API): alphaBlend is "whether to apply alpha blending when
+        // drawing the image (enabled by default)"; for DrawTextureWithTexCoords, "if false, the picture
+        // is drawn on to the display". Every overload of both methods hands alphaBlend to the IMGUI
+        // renderer: a false value puts the draw (plain quad, or border and rounded corners) in its own
+        // batch, drawn with blending off for that draw alone (FrameBuilder.BeginOpaqueImgui); the
+        // default (true) keeps the alpha-blended path. Unbound's choices (unmeasured): the tint
+        // (GUI.color, and GUI.enabled's halved alpha) is applied as for blended draws, so its alpha
+        // reaches the target's alpha but not the coverage; clipping, GUI.matrix and draw order are
+        // those of blended draws.
 
         // ------------------------------------------------------------------ DrawTexture: border and corners
 
@@ -509,16 +497,15 @@ namespace UnityEngine
         public static void DrawTextureWithTexCoords(Rect position, Texture image, Rect texCoords) => DrawTextureWithTexCoords(position, image, texCoords, true);
 
         /// <summary>A texture's <paramref name="texCoords"/> (texture space) stretched over the rect.
-        /// Documented: alphaBlend false draws the picture without alpha blending, which Unbound
-        /// reports as unsupported (<see cref="DrawTextureReportOpaque"/>).</summary>
+        /// Documented: alphaBlend false draws "the picture on to the display" without alpha blending
+        /// (see the alphaBlend notes after DrawTexture's main overload).</summary>
         public static void DrawTextureWithTexCoords(Rect position, Texture image, Rect texCoords, bool alphaBlend)
         {
             GUIUtility.CheckOnGUI();
             if (Current.type != EventType.Repaint || image == null) return;
             var tint = color;
             if (!enabled) tint.a *= 0.5f;
-            if (!alphaBlend) DrawTextureReportOpaque();
-            GuiRender.DrawTexture(position, image, texCoords, tint);
+            GuiRender.DrawTexture(position, image, texCoords, tint, alphaBlend);
         }
 
         // ------------------------------------------------------------------ buttons and toggles

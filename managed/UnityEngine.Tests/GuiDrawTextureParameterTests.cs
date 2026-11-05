@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 using Xunit;
 
@@ -267,35 +268,50 @@ namespace UnityEngine.Tests
 
         // ------------------------------------------------------------------ alphaBlend
 
-        /// <summary>Documented: alphaBlend false draws without alpha blending. Unbound cannot draw
-        /// IMGUI textures opaque yet, so it says so once, loudly, instead of silently blending.
-        /// Red: remove the once-only guard (two warnings) or the warning (none). The call sites in
-        /// GUI.DrawTexture and GUI.DrawTextureWithTexCoords are not exercised here (they need an
-        /// OnGUI Repaint context).</summary>
+        /// <summary>Documented: alphaBlend false draws without alpha blending. The plain quad and the
+        /// border/corner triangles both reach an opaque IMGUI draw now, with no "not supported"
+        /// warning; the opaque border call adds as many indices as the blended one and as
+        /// DrawTextureShape builds. (Render state: <see cref="GuiOpaqueDrawTests"/>.) Replaces
+        /// b3398e3b's warning-only check. b3398e3b: at most one warning per session, and all three
+        /// calls drawn blended into one merged batch. Red: pass <c>true</c> instead of
+        /// <c>alphaBlend</c> to GuiRender.DrawTexture / DrawTriangles in GUI.DrawTexture (the items
+        /// are not opaque), or log a warning when alphaBlend is false (the warning list is not
+        /// empty). UNEXECUTED.</summary>
         [Fact]
-        public void OpaqueDrawingIsReportedOnceAsUnsupported()
+        public void AlphaBlendFalseDrawsOpaqueWithoutAWarning()
         {
-            bool previous = GUI.s_DrawTextureOpaqueReported;
+            using var f = new GuiOpaqueDrawTests.Fixture();
+            var texture = f.Texture(611);
+            var rect = new Rect(0f, 0f, 60f, 40f);
+            var widths = new Vector4(3f, 5f, 7f, 9f);
+            var radii = new Vector4(12f, 0f, 6f, 20f);
             var warnings = new List<string>();
             void Capture(string message, string stack, LogType type)
             {
                 if (type == LogType.Warning) warnings.Add(message);
             }
-            GUI.s_DrawTextureOpaqueReported = false;
             Application.logMessageReceived += Capture;
             try
             {
-                GUI.DrawTextureReportOpaque();
-                GUI.DrawTextureReportOpaque();
+                f.Repaint(() =>
+                {
+                    GUI.DrawTexture(rect, texture, ScaleMode.StretchToFill, false);
+                    GUI.DrawTexture(rect, texture, ScaleMode.StretchToFill, true, 0f, Color.white, widths, radii);
+                    GUI.DrawTexture(rect, texture, ScaleMode.StretchToFill, false, 0f, Color.white, widths, radii);
+                });
             }
             finally
             {
                 Application.logMessageReceived -= Capture;
-                GUI.s_DrawTextureOpaqueReported = previous;
             }
-            var warning = Assert.Single(warnings);
-            Assert.Contains("alphaBlend false", warning);
-            Assert.Contains("not supported", warning);
+            Assert.Empty(warnings);
+            var items = f.Collect();
+            Assert.Equal(new[] { true, false, true }, items.Select(i => i.OpaqueImgui).ToArray());
+            var counts = f.BatchIndexCounts();
+            Assert.Equal(6, counts[0]);
+            Assert.Equal(counts[1], counts[2]);
+            var shape = Build(rect, widths, radii);
+            Assert.Equal(shape.Indices.Count, counts[2]);
         }
     }
 }
