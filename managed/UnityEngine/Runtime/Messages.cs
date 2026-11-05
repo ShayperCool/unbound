@@ -101,19 +101,34 @@ namespace Unbound.Runtime
             return m;
         }
 
-        /// <summary>Unity messages Unbound does not send yet: a script that implements one would
-        /// silently never get it, so the first class of each says so. Remove a name once it is
-        /// sent. (OnDrawGizmos* are not here: the Game view draws no gizmos, as in the Editor.)</summary>
-        static readonly string[] s_NotSent =
+        /// <summary>Unity 6000.0 script messages Unbound does not send yet, each with the engine
+        /// class that documents it: a script that implements one would silently never get it, so
+        /// the script class declaring it says so once. Remove an entry once it is sent.
+        /// Not listed, because the Editor's Play mode does not send them to the game either:
+        /// MonoBehaviour/ScriptableObject.Reset ("only called in Edit mode") and OnDrawGizmos*
+        /// (Unbound draws no Scene view and no Game view gizmos). Interface callbacks
+        /// (ISerializationCallbackReceiver, ...) are not messages and are never listed.</summary>
+        static readonly (Type Host, string Name)[] s_NotSent =
         {
-            "OnParticleUpdateJobScheduled",
+            (typeof(MonoBehaviour), "OnParticleUpdateJobScheduled"),
+            // Only sent while the parent's RectTransform.sendChildDimensionsChange is true, which
+            // Unbound does not implement (a generated stub).
+            (typeof(MonoBehaviour), "OnChildRectTransformDimensionsChange"),
+            // No IK pass calls state behaviours; OnAnimatorIK is sent.
+            (typeof(StateMachineBehaviour), "OnStateIK"),
         };
 
-        static void WarnNotSent(Type type)
+        /// <summary>Warns once per declaring script class and message (Stubs semantics) for each
+        /// not-sent message <paramref name="type"/> declares or inherits from a script base class.
+        /// Called once per type when its messages are first looked up, never per frame.</summary>
+        internal static void WarnNotSent(Type type)
         {
-            foreach (var name in s_NotSent)
+            foreach (var (host, name) in s_NotSent)
             {
-                for (var t = type; t != null && t != typeof(MonoBehaviour) && t != typeof(Behaviour); t = t.BaseType)
+                if (type == null || !host.IsAssignableFrom(type)) continue;
+                // Script classes only: the walk stops at the engine class that documents the
+                // message (whose own virtual, as StateMachineBehaviour.OnStateIK, is no script's).
+                for (var t = type; t != null && t != host && t != typeof(Behaviour); t = t.BaseType)
                 {
                     bool declared;
                     try
@@ -126,7 +141,9 @@ namespace Unbound.Runtime
                         declared = false;
                     }
                     if (!declared) continue;
-                    Stubs.Ignored(t.FullName + "." + name, "is a Unity message Unbound does not send yet");
+                    // A generic script base is named once, not once per closed type.
+                    var owner = t.IsGenericType ? t.GetGenericTypeDefinition() : t;
+                    Stubs.Ignored((owner.FullName ?? owner.Name) + "." + name, "is a Unity message Unbound does not send yet");
                     break;
                 }
             }

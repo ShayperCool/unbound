@@ -161,16 +161,45 @@ namespace UnityEngine.Animations
             if (i >= 0) p.Bools[i] = false;
         }
 
+        /// <summary>Whether a curve controls the parameter (documented, 6000.0: true if the
+        /// parameter is controlled by a curve, false otherwise). True when a curve of one of this
+        /// playable's own clips (its controller's, after overrides) drives this float parameter of
+        /// the playable, whether or not the Animator's own controller has a parameter of that name,
+        /// or has a controller at all; such a curve then drives the playable's parameter with the
+        /// playable's own layered sample, each time the playable is evaluated, before the graph mixes
+        /// it (PlayableParameters.Sample). Curves of other playables' clips, or of the Animator's own
+        /// controller, do not make it true. Unbound's choices (unmeasured): the name must be a
+        /// float parameter of this playable's controller (clip curves drive float parameters only);
+        /// an invalid playable, one not yet played by an animation output, and an unknown parameter
+        /// answer false without a warning, as the Animator's query does; the Animator's own
+        /// controller graph (Animator.playableGraph) answers as Animator.IsParameterControlledByCurve
+        /// does. A playable played before the Animator's own player was replaced (a controller
+        /// swap, a disable that drops its state) answers from the bindings it was played with,
+        /// which the Animator no longer animates through: reported once as not honoured.</summary>
         public bool IsParameterControlledByCurve(string name)
         {
-            Unbound.Runtime.Stubs.Ignored("AnimatorControllerPlayable.IsParameterControlledByCurve", "is always false for a playable");
-            return false;
+            var player = Player;
+            return ControlledByCurve(player, player?.ParameterIndex(name) ?? -1);
         }
 
         public bool IsParameterControlledByCurve(int id)
         {
-            Unbound.Runtime.Stubs.Ignored("AnimatorControllerPlayable.IsParameterControlledByCurve", "is always false for a playable");
-            return false;
+            var player = Player;
+            return ControlledByCurve(player, player?.ParameterIndex(id) ?? -1);
+        }
+
+        static bool ControlledByCurve(AnimatorPlayer player, int index)
+        {
+            if (player == null || index < 0) return false;
+            var p = player.Graph.Parameters[index];
+            if (p.Type != AnimatorControllerParameterType.Float) return false;
+            var animator = player.Bindings.Root != null ? player.Bindings.Root.GetComponent<Animator>() : null;
+            if (animator == null) return false;
+            if (player.Attached) return player.Bindings.AnimatesParameter(animator, p.Name);
+            if (!animator.StreamsThrough(player.Bindings))
+                Unbound.Runtime.Stubs.Ignored("AnimatorControllerPlayable.IsParameterControlledByCurve",
+                    "answers from the bindings the playable was first played with after the Animator's own player was replaced; its curves no longer drive its parameters there");
+            return player.Bindings.FeedsParameter(player, animator, p.Name);
         }
 
         public int GetParameterCount() => Player?.Graph.Parameters.Length ?? 0;
