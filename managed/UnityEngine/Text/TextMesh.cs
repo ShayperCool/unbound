@@ -100,8 +100,25 @@ namespace UnityEngine
         internal Mesh RenderMesh()
         {
             if (m_Font == null) return null;
-            if (m_Dirty || m_Mesh == null || m_BuiltAtRebuild != s_FontRebuilds) Generate();
+            if (m_Dirty || m_Mesh == null || m_BuiltAtRebuild != s_FontRebuilds)
+            {
+                Generate();
+                ReportMissingMaterial();
+            }
             return m_Mesh;
+        }
+
+        /// <summary>A TextMesh added by script gets a MeshRenderer without a material, so nothing
+        /// is drawn. Unbound assigns none (what Unity shows there is unmeasured), so it says so
+        /// rather than drawing nothing silently.</summary>
+        void ReportMissingMaterial()
+        {
+            var renderer = GetComponent<MeshRenderer>();
+            if (renderer == null) return;
+            foreach (var material in renderer.m_Materials)
+                if (material != null) return;
+            Stubs.Ignored("TextMesh without a material",
+                "is not drawn: its MeshRenderer has no material, and Unbound assigns none (assign one, such as the font's material)");
         }
 
         void Generate()
@@ -261,7 +278,8 @@ namespace UnityEngine
             m_Dirty = true;
         }
 
-        /// <summary>A packed rgba: red in the low byte (as the serialized Color32s Unbound reads).</summary>
+        /// <summary>A packed rgba: red in the low byte, as the serialized Color32s Unbound reads
+        /// (Unbound's choice, unmeasured for TextMesh: every shipped sample is white).</summary>
         static Color PackedColor(YNode packed, Color fallback)
         {
             if (packed == null || packed.Kind != YKind.Scalar) return fallback;

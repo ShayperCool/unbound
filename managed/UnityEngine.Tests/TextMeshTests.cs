@@ -235,6 +235,19 @@ namespace Unbound.Tests
 
         // Without a font nothing is drawn, not even a MeshFilter's mesh.
         // Red at the stub: the renderer draws the MeshFilter's mesh.
+        // Loud, not silent: a TextMesh whose MeshRenderer has no material (as one added by script
+        // has) is reported once per regeneration through the stub report. Unbound's choice
+        // (unmeasured): no material is assigned. Red at 6eb03391: nothing is reported.
+        [Fact]
+        public void AMissingMaterialIsReported()
+        {
+            static int Hits() => Stubs.HitReport().FirstOrDefault(h => h.Key == "TextMesh without a material").Value;
+            int before = Hits();
+            var text = Make("AB", BoxFont());
+            Assert.NotNull(Drawn(text));
+            Assert.Equal(before + 1, Hits());
+        }
+
         [Fact]
         public void NoFontDrawsNothing()
         {
@@ -252,7 +265,8 @@ namespace Unbound.Tests
 
         // A TextMesh as Unity 6000.0's shipped data serializes it (the URP package samples'
         // Shaders/Lit/Prefabs/*Podium.prefab: serializedVersion 3 and these field names); the
-        // values here are the test's own. The packed rgba has red in its low byte.
+        // values here are the test's own. The packed rgba has red in its low byte (Unbound's
+        // choice, unmeasured).
         const string SerializedTextMesh = """
             --- !u!1 &1
             GameObject:
