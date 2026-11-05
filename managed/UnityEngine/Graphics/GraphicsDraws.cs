@@ -95,6 +95,14 @@ namespace UnityEngine
             if (count < 0 || count > kMaxDrawMeshInstanceCount) throw new ArgumentOutOfRangeException(nameof(count), $"Count must be in the range of 0 to {kMaxDrawMeshInstanceCount}.");
         }
 
+        /// <summary>The instances culled and sorted as a group ("Unity culls and sorts instanced
+        /// Meshes as a group. It creates an axis-aligned bounding box that contains all the
+        /// Meshes, calculates the center point, then uses this information to cull and sort the
+        /// Mesh instances", DrawMeshInstanced 6000.0): every instance carries the box around the
+        /// mesh's bounds through each drawn matrix as its world bounds, so cameras keep or cull
+        /// them together and sort them at its centre, in the call's order among themselves ("does
+        /// not further cull individual instances ... does not sort individual instances"). Each
+        /// instance is still lit, probed and shadowed as before.</summary>
         public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, Matrix4x4[] matrices, int count, MaterialPropertyBlock properties,
             ShadowCastingMode castShadows, bool receiveShadows, int layer, Camera camera, LightProbeUsage lightProbeUsage)
         {
@@ -102,17 +110,27 @@ namespace UnityEngine
             count = Math.Min(count, matrices.Length);
             CheckInstanced(mesh, submeshIndex, material, count);
             var lighting = ImmediateLighting.Of(castShadows, receiveShadows, lightProbeUsage);
+            // The box around every drawn instance's mesh bounds (the union of each instance's
+            // bounds through its matrix: Unbound's choice of how the box is built, unmeasured).
+            var bounds = default(Bounds);
+            if (count > 0)
+            {
+                bounds = Transformed(mesh.bounds, matrices[0]);
+                for (int i = 1; i < count; i++) bounds.Encapsulate(Transformed(mesh.bounds, matrices[i]));
+            }
             if (lightProbeUsage == LightProbeUsage.BlendProbes && count > 0)
             {
                 // One probe lights the whole batch: the one at the instances' bounds centre
                 // (measured: tests/projects/lightprobes, a row of instances all lit alike).
                 lighting = new ImmediateLighting { Cast = lighting.Cast, Receive = lighting.Receive, Probes = lighting.Probes, Reflections = lighting.Reflections };
-                var bounds = Transformed(mesh.bounds, matrices[0]);
-                for (int i = 1; i < count; i++) bounds.Encapsulate(Transformed(mesh.bounds, matrices[i]));
                 lighting.ProbePosition = bounds.center;
             }
+            int queued = Immediate.Queued.Count;
             for (int i = 0; i < count; i++)
                 Immediate.Queue(mesh, matrices[i], material, layer, camera, submeshIndex, Instance(properties, i), lighting);
+            // The group's sort key is the box's centre, ties within the call kept in call order
+            // (Unbound's choice, unmeasured).
+            WithWorldBounds(queued, bounds);
         }
 
         public static void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, Matrix4x4[] matrices, int count, MaterialPropertyBlock properties,
@@ -189,10 +207,13 @@ namespace UnityEngine
             ImmediateLighting.Of(rparams.shadowCastingMode, rparams.receiveShadows, rparams.lightProbeUsage, null, rparams.reflectionProbeUsage);
 
         /// <summary>Instances whose data starts with their object-to-world matrix (Matrix4x4 or a
-        /// struct led by one). Set world bounds override the instances' own: cameras cull and sort
-        /// all the instances of the call by them as one entity ("unless you override the bounds
-        /// using RenderParams.worldBounds", RenderMeshInstanced). Bounds left at the constructor's
-        /// zero value keep each instance's mesh bounds, as before.</summary>
+        /// struct led by one). Cameras cull and sort all the instances of the call by one set of
+        /// bounds, as one entity ("Unity automatically calculates bounds for all the instances of
+        /// this Mesh unless you override the bounds using RenderParams.worldBounds. Unity uses the
+        /// bounds to cull and sort all the instances of this Mesh as a single entity",
+        /// RenderMeshInstanced 6000.0): set world bounds, or, when they are left at the
+        /// constructor's zero value, the box around every drawn instance's mesh bounds. Each
+        /// instance is still lit, probed and shadowed as before.</summary>
         static void RenderInstances(in RenderParams rparams, Mesh mesh, int submeshIndex, ReadOnlySpan<byte> data, int stride, int instanceCount, int startInstance)
         {
             if (mesh == null) throw new ArgumentNullException(nameof(mesh));
@@ -203,13 +224,22 @@ namespace UnityEngine
             if (instanceCount < 0) instanceCount = available - startInstance;
             if (startInstance < 0 || startInstance + instanceCount > available) throw new ArgumentOutOfRangeException(nameof(startInstance), "instance range out of the data's bounds");
             var lighting = Lighting(rparams);
+            // Unset world bounds: the box around each drawn instance's mesh bounds through its
+            // matrix (Unbound's choice of how the automatic bounds are built, unmeasured).
+            bool automatic = rparams.worldBounds.Equals(default(Bounds));
+            var bounds = default(Bounds);
             int queued = Immediate.Queued.Count;
             for (int i = 0; i < instanceCount; i++)
             {
                 var matrix = System.Runtime.InteropServices.MemoryMarshal.Read<Matrix4x4>(data.Slice((startInstance + i) * stride, 64));
                 Immediate.Queue(mesh, matrix, rparams.material, rparams.layer, rparams.camera, submeshIndex, Instance(rparams.matProps, startInstance + i), lighting);
+                if (!automatic) continue;
+                if (i == 0) bounds = Transformed(mesh.bounds, matrix);
+                else bounds.Encapsulate(Transformed(mesh.bounds, matrix));
             }
-            WithWorldBounds(queued, rparams.worldBounds);
+            // The entity's sort key is the bounds' centre, ties within the call kept in call
+            // order (Unbound's choice, unmeasured).
+            WithWorldBounds(queued, automatic ? bounds : rparams.worldBounds);
         }
 
         public static void RenderMeshInstanced<T>(in RenderParams rparams, Mesh mesh, int submeshIndex, T[] instanceData, int instanceCount = -1, int startInstance = 0) where T : unmanaged
