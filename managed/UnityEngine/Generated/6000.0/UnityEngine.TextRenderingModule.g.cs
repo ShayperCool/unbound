@@ -33,22 +33,4 @@ namespace UnityEngine
             [global::Unbound.Stub] public static global::System.IntPtr ConvertToNative(global::UnityEngine.TextGenerator textGenerator) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextGenerator.BindingsMarshaller.ConvertToNative"); return default; }
         }
     }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.Transform), typeof(global::UnityEngine.MeshRenderer))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class TextMesh : global::UnityEngine.Component
-    {
-        [global::Unbound.Stub] public TextMesh() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.ctor"); }
-        public string text { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.text"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.text"); } }
-        public global::UnityEngine.Font font { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.font"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.font"); } }
-        public int fontSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.fontSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.fontSize"); } }
-        public global::UnityEngine.FontStyle fontStyle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.fontStyle"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.fontStyle"); } }
-        public float offsetZ { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.offsetZ"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.offsetZ"); } }
-        public global::UnityEngine.TextAlignment alignment { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.alignment"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.alignment"); } }
-        public global::UnityEngine.TextAnchor anchor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.anchor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.anchor"); } }
-        public float characterSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.characterSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.characterSize"); } }
-        public float lineSpacing { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.lineSpacing"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.lineSpacing"); } }
-        public float tabSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.tabSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.tabSize"); } }
-        public bool richText { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.richText"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.richText"); } }
-        public global::UnityEngine.Color color { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.color"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.TextMesh.color"); } }
-    }
 }
