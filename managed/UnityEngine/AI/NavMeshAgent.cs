@@ -698,7 +698,27 @@ namespace Unbound.Runtime
             };
         }
 
-        /// <summary>The crowds follow the NavMesh: when it was rebuilt, agents rejoin at their places.</summary>
+        /// <summary>The crowds follow the NavMesh: when it was rebuilt, agents rejoin at their places.
+        /// An agent that was following a path goes on to its destination; one waiting for a path
+        /// still waits for it.</summary>
+        // The NavMesh changing (a link added, removed, enabled or disabled; NavMesh data added,
+        // removed or updated) rebuilds Unbound's NavMesh, whose polygons are new, so the agents'
+        // corridors cannot be kept as they are. Documented (Scripting API 6000.0): the change makes
+        // the path stale (isPathStale), pathPending is true while a path is being computed
+        // (pathPending, SetDestination). Observed, not documented (navlinks capture
+        // tests/projects/navlinks/Reference/unity-6000.0.71f1.jsonl, committed at 982cee91, not
+        // admitted; sha256 b5d6cbe7...23bf): through four link toggles, every agent of the other
+        // lanes walking a path (11 to 26 per toggle) kept hasPath true and pathPending false, with
+        // no drop in speed, in the frame of the toggle and the next. Unbound's choices (unmeasured
+        // unless noted): the path of an agent following one is planned again, at once and in full,
+        // from where the agent rejoins the new NavMesh to its destination, with no pathPending in
+        // between and no part of the frame's pathfinding iterations, and the agent keeps its
+        // velocity; autoRepath is not consulted (the rebuild discards Unbound's corridor whether or
+        // not Unity's path became invalid); the new path is a newly applied path for isPathStale; a
+        // path that cannot be planned leaves the agent without a path (PathInvalid, its destination
+        // kept), as a failed request does; an agent the new NavMesh cannot place loses its pending
+        // request; an agent that had arrived, whose request had failed, or that has no destination
+        // is given no path. An agent on an off-mesh link, or completing one, rejoins as before.
         static void Rebuild()
         {
             s_CrowdVersion = NavWorld.Version;
@@ -709,6 +729,9 @@ namespace Unbound.Runtime
                 if (agent.m_Crowd == null) continue;
                 var destination = agent.HasDestination ? agent.RequestedDestination : (Vector3?)null;
                 var old = agent.isOnOffMeshLink ? agent.m_Crowd : null;
+                bool onLink = old != null || agent.m_LinkCompleting;
+                bool following = !onLink && destination.HasValue && agent.hasPath;
+                var moving = agent.m_Crowd;
                 agent.m_Crowd = null;
                 agent.m_Surface = null;
                 if (old != null && RejoinOnLink(agent, old))
@@ -718,8 +741,41 @@ namespace Unbound.Runtime
                     continue;
                 }
                 Place(agent, agent.m_NextPosition);
-                if (destination.HasValue && agent.m_Crowd != null) RequestPath(agent);
+                if (onLink)
+                {
+                    if (destination.HasValue && agent.m_Crowd != null) RequestPath(agent);
+                    continue;
+                }
+                if (agent.m_Crowd == null)
+                {
+                    // Off the new NavMesh no path can be computed.
+                    agent.SetPathPending(false);
+                    continue;
+                }
+                if (agent.pathPending) RequestPath(agent);
+                else if (following) PlanAgain(agent, moving);
             }
+        }
+
+        /// <summary>The path of an agent that was following one, planned again on the rebuilt
+        /// NavMesh from where the agent now stands to its destination; the agent keeps its velocity
+        /// (see the note on <see cref="Rebuild"/>).</summary>
+        static void PlanAgain(NavMeshAgent agent, DtCrowdAgent moving)
+        {
+            var ag = agent.m_Crowd;
+            ag.vel = moving.vel;
+            ag.nvel = moving.nvel;
+            ag.pvel = moving.pvel;
+            ag.dvel = moving.dvel;
+            ag.desiredSpeed = moving.desiredSpeed;
+            var search = NavMesh.PathSearch.Begin(agent.m_Surface, agent.m_NextPosition, agent.RequestedDestination, agent.Filter, agent.agentTypeID);
+            int budget = int.MaxValue;
+            if (search != null && search.Step(ref budget) && search.Result != null)
+            {
+                ApplyPath(agent, search.Result);
+                return;
+            }
+            agent.SetPathStatus(NavMeshPathStatus.PathInvalid);
         }
 
         /// <summary>An agent on a link stays on it when the NavMesh changes, its link deactivated
