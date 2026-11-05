@@ -36,10 +36,11 @@ namespace Unbound.Runtime
         internal const long ShaderFileId = 4800000;
         internal const long MonoScriptFileId = 11500000;
 
-        /// <summary>A video file: its VideoClip (fileID 32900000), probed through ffprobe.</summary>
+        /// <summary>A video file: its VideoClip (fileID 32900000), probed through ffprobe, its sRGB
+        /// flag from the importer settings.</summary>
         static LoadedFile ImportVideo(AssetDatabaseRuntime.AssetInfo info)
         {
-            var clip = UnityEngine.Video.VideoClip.Probe(info.File, info.Path);
+            var clip = UnityEngine.Video.VideoClip.Probe(info.File, info.Path, info.Guid);
             var file = new LoadedFile { MainObject = clip };
             file.Objects[32900000] = clip;
             return file;

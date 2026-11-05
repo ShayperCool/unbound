@@ -16,7 +16,9 @@ namespace UnityEngine.Video
     public enum VideoTimeUpdateMode { DSPTime = 0, GameTime = 1, UnscaledGameTime = 2 }
 
     /// <summary>A video file of the project (a VideoClipImporter's asset): its properties come from
-    /// ffprobe; the VideoPlayer decodes it through ffmpeg.</summary>
+    /// ffprobe (audio tracks: their count, and per track its channels, sample rate and language), its
+    /// sRGB flag from the importer's settings in the .meta; the VideoPlayer decodes it through
+    /// ffmpeg.</summary>
     [ClassId(329)]
     public sealed partial class VideoClip : Object
     {
@@ -28,6 +30,34 @@ namespace UnityEngine.Video
         internal uint m_Width, m_Height;
         internal uint m_AspectNumerator = 1, m_AspectDenominator = 1;
         internal ushort m_AudioTracks;
+        /// <summary>Each audio track's format, in the file's stream order; null when the host did not
+        /// report it.</summary>
+        internal AudioTrack[] m_AudioTrackInfo;
+        /// <summary>VideoClipImporter.sRGBClip, copied into the clip on import.</summary>
+        internal bool m_sRGB = true;
+
+        /// <summary>An audio track's channel count, sample rate (Hz) and language tag ("" without one).</summary>
+        internal readonly struct AudioTrack
+        {
+            internal readonly ushort Channels;
+            internal readonly uint SampleRate;
+            internal readonly string Language;
+
+            internal AudioTrack(ushort channels, uint sampleRate, string language)
+            {
+                Channels = channels;
+                SampleRate = sampleRate;
+                Language = language ?? "";
+            }
+        }
+
+        /// <summary>Stand-ins for the host in tests: its calls (method, request: answer) and the
+        /// importer section of a guid's .meta.</summary>
+        internal static Func<string, string, string> s_CallForTests;
+        internal static Func<string, YNode> s_ImporterForTests;
+
+        internal static string Call(string method, string request) =>
+            s_CallForTests != null ? s_CallForTests(method, request) : Native.Call(method, request);
 
         VideoClip() { }
 
@@ -39,24 +69,43 @@ namespace UnityEngine.Video
         public uint height => m_Height;
         public uint pixelAspectRatioNumerator => m_AspectNumerator;
         public uint pixelAspectRatioDenominator => m_AspectDenominator;
-        public bool sRGB
-        {
-            get
-            {
-                Stubs.Ignored("VideoClip.sRGB", "is not read from the import settings: video is always treated as sRGB");
-                return true;
-            }
-        }
+        /// <summary>The importer's sRGB setting ("copied into the VideoClip.sRGB value of the
+        /// resulting clip"). Pictures are still converted as sRGB: a clip without it warns when
+        /// played.</summary>
+        public bool sRGB => m_sRGB;
         public ushort audioTrackCount => m_AudioTracks;
 
-        public ushort GetAudioChannelCount(ushort audioTrackIdx) { Stubs.Ignored("VideoClip.GetAudioChannelCount", "is not known yet: the video's audio is not decoded"); return 0; }
-        public uint GetAudioSampleRate(ushort audioTrackIdx) { Stubs.Ignored("VideoClip.GetAudioSampleRate", "is not known yet: the video's audio is not decoded"); return 0; }
-        public string GetAudioLanguage(ushort audioTrackIdx) { Stubs.Ignored("VideoClip.GetAudioLanguage", "is not known yet: the video's audio is not decoded"); return ""; }
+        public ushort GetAudioChannelCount(ushort audioTrackIdx) =>
+            TryTrack(m_AudioTrackInfo, m_AudioTracks, audioTrackIdx, "VideoClip.GetAudioChannelCount", out var track) ? track.Channels : (ushort)0;
+        public uint GetAudioSampleRate(ushort audioTrackIdx) =>
+            TryTrack(m_AudioTrackInfo, m_AudioTracks, audioTrackIdx, "VideoClip.GetAudioSampleRate", out var track) ? track.SampleRate : 0u;
+        /// <summary>The track's language tag as the file has it; "" for a track without one (as
+        /// documented).</summary>
+        public string GetAudioLanguage(ushort audioTrackIdx) =>
+            TryTrack(m_AudioTrackInfo, m_AudioTracks, audioTrackIdx, "VideoClip.GetAudioLanguage", out var track) ? track.Language : "";
 
-        /// <summary>A clip of a file, its properties probed.</summary>
-        internal static VideoClip Probe(string file, string assetPath)
+        /// <summary>Track <paramref name="index"/> of <paramref name="count"/>. An index past the
+        /// tracks answers 0 or "" without an error: Unity's documentation does not say what it does
+        /// (Unbound's choice, unmeasured). A track whose format the host did not report says so
+        /// once.</summary>
+        internal static bool TryTrack(AudioTrack[] info, ushort count, ushort index, string member, out AudioTrack track)
         {
-            var root = JsonDocument.Parse(Native.Call("video-probe", JsonSerializer.Serialize(new { path = file }))).RootElement;
+            track = default;
+            if (index >= count) return false;
+            if (info == null || index >= info.Length)
+            {
+                Stubs.Ignored(member, "is not known: the video host did not report the audio track's format");
+                return false;
+            }
+            track = info[index];
+            return true;
+        }
+
+        /// <summary>A clip of a file, its properties probed; an imported asset's (with its
+        /// <paramref name="guid"/>) also reads its importer settings.</summary>
+        internal static VideoClip Probe(string file, string assetPath, string guid = null)
+        {
+            var root = JsonDocument.Parse(Call("video-probe", JsonSerializer.Serialize(new { path = file }))).RootElement;
             VideoClip clip;
             using (ObjectRegistry.AsAssets())
                 clip = new VideoClip { IsPersistentAsset = true };
@@ -72,7 +121,61 @@ namespace UnityEngine.Video
             clip.m_AudioTracks = (ushort)root.GetProperty("audioTracks").GetInt32();
             clip.m_AspectNumerator = root.GetProperty("aspectNumerator").GetUInt32();
             clip.m_AspectDenominator = root.GetProperty("aspectDenominator").GetUInt32();
+            clip.m_AudioTrackInfo = ReadAudioTracks(root);
+            if (guid != null) clip.m_sRGB = ReadSRGB(ImporterSettings(guid, assetPath ?? file), assetPath ?? file);
             return clip;
+        }
+
+        /// <summary>The probe's per-track formats, in stream order; null from a host without them.</summary>
+        static AudioTrack[] ReadAudioTracks(JsonElement root)
+        {
+            if (!root.TryGetProperty("audioTrackInfo", out var list) || list.ValueKind != JsonValueKind.Array) return null;
+            var tracks = new AudioTrack[list.GetArrayLength()];
+            int i = 0;
+            foreach (var t in list.EnumerateArray())
+            {
+                tracks[i++] = new AudioTrack(
+                    (ushort)Math.Min(t.GetProperty("channels").GetUInt64(), ushort.MaxValue),
+                    (uint)Math.Min(t.GetProperty("sampleRate").GetUInt64(), uint.MaxValue),
+                    t.GetProperty("language").GetString());
+            }
+            return tracks;
+        }
+
+        /// <summary>The VideoClipImporter section of the asset's .meta; null without one.</summary>
+        static YNode ImporterSettings(string guid, string asset)
+        {
+            if (s_ImporterForTests != null) return s_ImporterForTests(guid);
+            try
+            {
+                var docs = Native.LoadDocuments("meta:" + guid);
+                return docs.Count > 0 && docs[0].TypeName == "VideoClipImporter" ? docs[0].Body : null;
+            }
+            catch (Exception e)
+            {
+                Debug.LogWarning($"Unbound: the import settings of {asset} could not be read ({e.Message}); VideoClip.sRGB reports the importer's default (true)");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// VideoClipImporter.sRGBClip from the importer's settings: the .meta key <c>colorSpace</c>.
+        /// 0 is sRGB on: the Editor saved 0 for a clip imported with default settings
+        /// (tests/projects/video/Assets/Video/clip.webm.meta), and the Manual says sRGB is on by
+        /// default. 1 is sRGB off: the setting's other value (Unbound's choice, unmeasured). No key
+        /// is the default (on); any other value warns and counts as the default.
+        /// </summary>
+        internal static bool ReadSRGB(YNode importer, string asset)
+        {
+            if (importer == null || !importer.TryGet("colorSpace", out var node) || node.IsNull) return true;
+            switch (node.AsLong(-1))
+            {
+                case 0: return true;
+                case 1: return false;
+                default:
+                    Debug.LogWarning($"Unbound: the VideoClipImporter colorSpace '{node.AsString()}' of {asset} is not understood; VideoClip.sRGB reports the importer's default (true)");
+                    return true;
+            }
         }
     }
 
@@ -125,6 +228,9 @@ namespace UnityEngine.Video
         double m_FrameRate;
         ulong m_FrameCount;
         double m_Length;
+        /// <summary>The opened source's audio tracks (a URL's are answered once prepared).</summary>
+        ushort m_SourceAudioTracks;
+        VideoClip.AudioTrack[] m_SourceAudioTrackInfo;
 
         static readonly List<VideoPlayer> s_Active = new List<VideoPlayer>();
         static bool s_Registered;
@@ -190,7 +296,12 @@ namespace UnityEngine.Video
         public uint height => m_Prepared ? m_Height : 0;
         public uint pixelAspectRatioNumerator => m_Clip != null ? m_Clip.pixelAspectRatioNumerator : 1;
         public uint pixelAspectRatioDenominator => m_Clip != null ? m_Clip.pixelAspectRatioDenominator : 1;
-        public ushort audioTrackCount => m_Clip != null ? m_Clip.audioTrackCount : (ushort)0;
+        /// <summary>The configured source's audio tracks: the clip's, or a URL's once its preparation
+        /// is completed ("For URL sources, this will only be set once the source preparation is
+        /// completed"); 0 before.</summary>
+        public ushort audioTrackCount => m_Source == VideoSource.Url
+            ? (m_Prepared ? m_SourceAudioTracks : (ushort)0)
+            : (m_Clip != null ? m_Clip.audioTrackCount : (ushort)0);
         [Unbound.EditorFaithful("a constant in Unity too (the desktop Editor's limit)")]
         public static ushort controlledAudioTrackMaxCount => 64;
         public ushort controlledAudioTrackCount { get => m_ControlledAudioTrackCount; set => m_ControlledAudioTrackCount = value; }
@@ -230,10 +341,32 @@ namespace UnityEngine.Video
             }
         }
 
-        // Audio: not played yet (the clip's sound is not decoded).
-        public string GetAudioLanguageCode(ushort trackIndex) { Stubs.Ignored("VideoPlayer.GetAudioLanguageCode", "is not known yet: the video's audio is not decoded"); return ""; }
-        public ushort GetAudioChannelCount(ushort trackIndex) { Stubs.Ignored("VideoPlayer.GetAudioChannelCount", "is not known yet: the video's audio is not decoded"); return 0; }
-        public uint GetAudioSampleRate(ushort trackIndex) { Stubs.Ignored("VideoPlayer.GetAudioSampleRate", "is not known yet: the video's audio is not decoded"); return 0; }
+        // Audio: its tracks' formats are known (the probe); the sound is not played yet.
+        // The current clip's tracks, or a URL's once prepared ("For URL sources, this will only be
+        // set once the source preparation is completed"): 0 or "" before, and past the tracks
+        // (Unbound's choice, unmeasured).
+        public string GetAudioLanguageCode(ushort trackIndex) =>
+            TryTrack(trackIndex, "VideoPlayer.GetAudioLanguageCode", out var track) ? track.Language : "";
+        public ushort GetAudioChannelCount(ushort trackIndex) =>
+            TryTrack(trackIndex, "VideoPlayer.GetAudioChannelCount", out var track) ? track.Channels : (ushort)0;
+        public uint GetAudioSampleRate(ushort trackIndex) =>
+            TryTrack(trackIndex, "VideoPlayer.GetAudioSampleRate", out var track) ? track.SampleRate : 0u;
+
+        bool TryTrack(ushort index, string member, out VideoClip.AudioTrack track)
+        {
+            if (m_Source == VideoSource.Url)
+            {
+                if (m_Prepared) return VideoClip.TryTrack(m_SourceAudioTrackInfo, m_SourceAudioTracks, index, member, out track);
+                track = default;
+                return false;
+            }
+            if (m_Clip == null)
+            {
+                track = default;
+                return false;
+            }
+            return VideoClip.TryTrack(m_Clip.m_AudioTrackInfo, m_Clip.m_AudioTracks, index, member, out track);
+        }
         readonly Dictionary<ushort, (bool Enabled, float Volume, bool Mute, AudioSource Source)> m_Tracks = new Dictionary<ushort, (bool, float, bool, AudioSource)>();
         (bool Enabled, float Volume, bool Mute, AudioSource Source) Track(ushort i) => m_Tracks.TryGetValue(i, out var t) ? t : (true, 1f, false, null);
         public void EnableAudioTrack(ushort trackIndex, bool enabled) { var t = Track(trackIndex); t.Enabled = enabled; m_Tracks[trackIndex] = t; }
@@ -317,10 +450,12 @@ namespace UnityEngine.Video
                     if (m_Clip == null) return Fail("VideoPlayer cannot play: no VideoClip is set.");
                     m_File = m_Clip.m_File;
                     Adopt(m_Clip);
+                    if (!m_Clip.sRGB)
+                        Warn($"video '{m_Name}' is imported without sRGB (VideoClipImporter sRGB off), but its pictures are still converted as sRGB colour in Linear colour space.");
                 }
-                if (m_AudioOutputMode != VideoAudioOutputMode.None && audioTrackCount > 0)
+                if (m_AudioOutputMode != VideoAudioOutputMode.None && m_SourceAudioTracks > 0)
                     Warn($"the sound of video '{m_Name}' is not played yet (only its pictures).");
-                m_Decoder = JsonDocument.Parse(Native.Call("video-open", JsonSerializer.Serialize(new { path = m_File, width = m_Width, height = m_Height, fps = m_FrameRate })))
+                m_Decoder = JsonDocument.Parse(VideoClip.Call("video-open", JsonSerializer.Serialize(new { path = m_File, width = m_Width, height = m_Height, fps = m_FrameRate })))
                     .RootElement.GetProperty("id").GetUInt64();
                 return true;
             }
@@ -338,6 +473,8 @@ namespace UnityEngine.Video
             m_FrameRate = clip.m_FrameRate > 0 ? clip.m_FrameRate : 30;
             m_FrameCount = clip.m_FrameCount;
             m_Length = clip.m_Length;
+            m_SourceAudioTracks = clip.m_AudioTracks;
+            m_SourceAudioTrackInfo = clip.m_AudioTrackInfo;
         }
 
         bool Fail(string message)
@@ -352,7 +489,7 @@ namespace UnityEngine.Video
         {
             if (m_Decoder != 0)
             {
-                try { Native.Call("video-close", JsonSerializer.Serialize(new { id = m_Decoder })); } catch (Exception) { }
+                try { VideoClip.Call("video-close", JsonSerializer.Serialize(new { id = m_Decoder })); } catch (Exception) { }
                 m_Decoder = 0;
             }
             m_Prepared = m_Preparing = false;
