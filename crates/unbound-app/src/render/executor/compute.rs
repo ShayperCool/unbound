@@ -172,10 +172,9 @@ impl UnityRenderer {
         if usage & buffer::VERTEX != 0 {
             flags |= wgpu::BufferUsages::VERTEX;
         }
-        if usage & buffer::INDEX != 0 {
-            flags |= wgpu::BufferUsages::INDEX;
-        }
-        // Any buffer can hold indirect arguments; the managed side checks what Unity allows.
+        // Any buffer can be read as indices (RenderPrimitivesIndexed's documented example binds a
+        // Structured one) or hold indirect arguments; the managed side checks what Unity allows.
+        flags |= wgpu::BufferUsages::INDEX;
         flags |= wgpu::BufferUsages::INDIRECT;
         if usage & buffer::CONSTANT != 0 {
             flags |= wgpu::BufferUsages::UNIFORM;
