@@ -239,5 +239,63 @@ namespace UnityEngine.Tests
             EdgeLevel();
             AssertAgentLands(new Vector3(-7f, 0f, 0f), new Vector3(7f, 0f, 0f));
         }
+
+        // Many links landing in one tile: the east level with twenty bidirectional links side by side,
+        // 0.2 m apart, all landing on the east platform. Each landing takes a link slot of the
+        // landing tile for its way back, more slots than the tile as built holds.
+        const int ManyLinks = 20;
+
+        [Fact]
+        public void ManyLinksLandingInOneTileAllConnectBothWays()
+        {
+            var sources = new List<NavMeshBuildSource> { Platform(EastA), Platform(EastB) };
+            var bounds = new Bounds((EastA + EastB) * 0.5f, new Vector3(Mathf.Abs(EastB.x - EastA.x) + 10f, 4f, 10f));
+            var data = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(0), sources, bounds, Vector3.zero, Quaternion.identity);
+            var starts = new Vector3[ManyLinks];
+            var ends = new Vector3[ManyLinks];
+            for (int i = 0; i < ManyLinks; i++)
+            {
+                float z = EastStart.z - 2f + i * 0.2f;
+                starts[i] = new Vector3(EastStart.x, 0f, z);
+                ends[i] = new Vector3(EastEnd.x, 0f, z);
+            }
+            // The landing tile as built has fewer link slots in all than there are landings.
+            int landingSlots = -1;
+            foreach (var t in data.m_Tiles)
+            {
+                var h = t.header;
+                if (EastEnd.x >= h.bmin.X && EastEnd.x <= h.bmax.X && EastEnd.z >= h.bmin.Z && EastEnd.z <= h.bmax.Z)
+                    landingSlots = h.maxLinkCount;
+            }
+            bool tooFew = landingSlots >= 0 && landingSlots < ManyLinks;
+            Assert.True(tooFew, $"landing tile slots {landingSlots}, landings {ManyLinks}");
+            m_Data.Add(NavMesh.AddNavMeshData(data));
+            for (int i = 0; i < ManyLinks; i++)
+                m_Links.Add(NavMesh.AddLink(new NavMeshLinkData
+                {
+                    startPosition = starts[i],
+                    endPosition = ends[i],
+                    bidirectional = true,
+                    costModifier = -1f,
+                    width = 0f,
+                    area = 0,
+                    agentTypeID = 0,
+                }));
+            // The refresh with every link: it must not throw (out of landing-tile link slots).
+            Assert.NotNull(NavWorld.Get(0));
+            var s = Tile(starts[0]);
+            for (int i = 0; i < ManyLinks; i++)
+            {
+                Assert.Equal(s, Tile(starts[i]));
+                Assert.Equal((s.X + 1, s.Z), Tile(ends[i]));
+            }
+            // Every link connects both ways: the straight route across at its own z goes over it.
+            for (int i = 0; i < ManyLinks; i++)
+            {
+                float z = starts[i].z;
+                AssertCompleteRoute(new Vector3(-7f, 0f, z), new Vector3(7f, 0f, z), starts[i]);
+                AssertCompleteRoute(new Vector3(7f, 0f, z), new Vector3(-7f, 0f, z), ends[i]);
+            }
+        }
     }
 }
