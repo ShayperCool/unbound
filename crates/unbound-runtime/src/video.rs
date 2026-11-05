@@ -22,12 +22,15 @@ fn rate(text: &str) -> f64 {
     }
 }
 
-/// A clip's properties: size, frame rate (as a fraction too), frame count, length, audio tracks,
-/// pixel aspect ratio.
+/// A clip's properties: size, frame rate (as a fraction too), frame count, length, audio tracks
+/// (their count, and per track its channels, sample rate and language), pixel aspect ratio.
 pub fn probe(path: &str) -> Result<Json> {
     let output = Command::new("ffprobe")
         .args(["-v", "error", "-count_packets", "-show_entries"])
-        .arg("stream=codec_type,width,height,r_frame_rate,nb_read_packets,sample_aspect_ratio:format=duration")
+        .arg(
+            "stream=codec_type,width,height,r_frame_rate,nb_read_packets,sample_aspect_ratio,channels,sample_rate\
+             :stream_tags=language:format=duration",
+        )
         .args(["-of", "json", path])
         .output()
         .context("Unbound plays video through ffmpeg; `ffprobe` could not be run (is ffmpeg installed?)")?;
@@ -38,15 +41,22 @@ pub fn probe(path: &str) -> Result<Json> {
         );
     }
     let root: Json = serde_json::from_slice(&output.stdout)?;
+    clip_properties(path, &root)
+}
+
+/// [`probe`]'s answer from ffprobe's JSON (`streams`, `format`).
+fn clip_properties(path: &str, root: &Json) -> Result<Json> {
     let streams = root["streams"].as_array().cloned().unwrap_or_default();
     let video = streams
         .iter()
         .find(|s| s["codec_type"] == "video")
         .with_context(|| format!("{path} has no video stream"))?;
-    let audio_tracks = streams
+    let audio_track_info: Vec<Json> = streams
         .iter()
         .filter(|s| s["codec_type"] == "audio")
-        .count();
+        .map(audio_track)
+        .collect();
+    let audio_tracks = audio_track_info.len();
     let rate_text = video["r_frame_rate"].as_str().unwrap_or("0/1");
     let (numerator, denominator) = match rate_text.split_once('/') {
         Some((n, d)) => (n.parse::<u64>().unwrap_or(0), d.parse::<u64>().unwrap_or(1)),
@@ -82,7 +92,23 @@ pub fn probe(path: &str) -> Result<Json> {
         "audioTracks": audio_tracks,
         "aspectNumerator": aspect_n,
         "aspectDenominator": aspect_d,
+        "audioTrackInfo": audio_track_info,
     }))
+}
+
+/// An audio stream's format, in stream order: its channel count, its sample rate in Hz (ffprobe
+/// writes it as text) and its container's language tag as written ("" without one); 0 for what
+/// ffprobe does not report.
+fn audio_track(stream: &Json) -> Json {
+    let sample_rate = match &stream["sample_rate"] {
+        Json::String(text) => text.parse::<u64>().unwrap_or(0),
+        other => other.as_u64().unwrap_or(0),
+    };
+    json!({
+        "channels": stream["channels"].as_u64().unwrap_or(0),
+        "sampleRate": sample_rate,
+        "language": stream["tags"]["language"].as_str().unwrap_or(""),
+    })
 }
 
 struct Decoder {
@@ -225,4 +251,116 @@ pub fn frame(id: u64, n: i64, handles: [u64; 3]) -> Result<bool> {
         );
     }
     Ok(true)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// ffprobe's JSON for a clip with a video stream and two audio tracks of different formats
+    /// (stereo English at 48 kHz, 5.1 French at 44.1 kHz), as `probe`'s `-show_entries` asks.
+    const TWO_TRACKS: &str = r#"{
+        "programs": [],
+        "streams": [
+            {"codec_type": "video", "width": 64, "height": 48, "r_frame_rate": "10/1",
+             "sample_aspect_ratio": "1:1", "nb_read_packets": "30"},
+            {"codec_type": "audio", "sample_rate": "48000", "channels": 2, "r_frame_rate": "0/0",
+             "nb_read_packets": "141", "tags": {"language": "eng"}},
+            {"codec_type": "audio", "sample_rate": "44100", "channels": 6, "r_frame_rate": "0/0",
+             "nb_read_packets": "130", "tags": {"language": "fre"}}
+        ],
+        "format": {"duration": "3.000000"}
+    }"#;
+
+    /// A video-only clip: no audio streams, no tags.
+    const VIDEO_ONLY: &str = r#"{
+        "programs": [],
+        "streams": [
+            {"codec_type": "video", "width": 64, "height": 48, "r_frame_rate": "10/1",
+             "nb_read_packets": "30"}
+        ],
+        "format": {"duration": "3.000000"}
+    }"#;
+
+    fn parse(text: &str) -> Json {
+        clip_properties("clip.webm", &serde_json::from_str(text).unwrap()).unwrap()
+    }
+
+    #[test]
+    fn audio_tracks_report_their_channels_rate_and_language_in_stream_order() {
+        let clip = parse(TWO_TRACKS);
+        assert_eq!(clip["audioTracks"], 2);
+        assert_eq!(
+            clip["audioTrackInfo"],
+            json!([
+                {"channels": 2, "sampleRate": 48000, "language": "eng"},
+                {"channels": 6, "sampleRate": 44100, "language": "fre"},
+            ])
+        );
+    }
+
+    #[test]
+    fn a_track_without_a_language_tag_reports_an_empty_language() {
+        let text = TWO_TRACKS.replace(r#", "tags": {"language": "fre"}"#, "");
+        let clip = parse(&text);
+        assert_eq!(clip["audioTrackInfo"][0]["language"], "eng");
+        assert_eq!(clip["audioTrackInfo"][1]["language"], "");
+        assert_eq!(clip["audioTrackInfo"][1]["channels"], 6);
+    }
+
+    #[test]
+    fn a_video_only_clip_has_no_audio_track_info() {
+        let clip = parse(VIDEO_ONLY);
+        assert_eq!(clip["audioTracks"], 0);
+        assert_eq!(clip["audioTrackInfo"], json!([]));
+    }
+
+    /// The fields earlier hosts answered keep their names and values; only `audioTrackInfo` is new.
+    #[test]
+    fn the_existing_fields_are_unchanged() {
+        for (text, audio) in [(TWO_TRACKS, 2), (VIDEO_ONLY, 0)] {
+            let clip = parse(text);
+            let mut keys: Vec<&str> = clip
+                .as_object()
+                .unwrap()
+                .keys()
+                .map(String::as_str)
+                .collect();
+            keys.sort_unstable();
+            assert_eq!(
+                keys,
+                [
+                    "aspectDenominator",
+                    "aspectNumerator",
+                    "audioTrackInfo",
+                    "audioTracks",
+                    "frameCount",
+                    "frameRate",
+                    "frameRateDenominator",
+                    "frameRateNumerator",
+                    "height",
+                    "length",
+                    "width",
+                ]
+            );
+            assert_eq!(clip["width"], 64);
+            assert_eq!(clip["height"], 48);
+            assert_eq!(clip["frameRate"], 10.0);
+            assert_eq!(clip["frameRateNumerator"], 10);
+            assert_eq!(clip["frameRateDenominator"], 1);
+            assert_eq!(clip["frameCount"], 30);
+            assert_eq!(clip["length"], 3.0);
+            assert_eq!(clip["audioTracks"], audio);
+            assert_eq!(clip["aspectNumerator"], 1);
+            assert_eq!(clip["aspectDenominator"], 1);
+        }
+    }
+
+    #[test]
+    fn a_clip_without_a_video_stream_is_an_error() {
+        let text = r#"{"streams": [{"codec_type": "audio", "channels": 2, "sample_rate": "48000"}], "format": {}}"#;
+        let error =
+            clip_properties("sound.webm", &serde_json::from_str(text).unwrap()).unwrap_err();
+        assert!(error.to_string().contains("has no video stream"), "{error}");
+    }
 }
