@@ -520,6 +520,7 @@ impl Game {
         if !self.stopped {
             self.stopped = true;
             unsafe { (self.shutdown)() };
+            crate::clipboard::release();
         }
     }
 

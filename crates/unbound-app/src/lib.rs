@@ -121,6 +121,8 @@ struct Driver {
     /// in the window takes it again).
     cursor: Option<unbound_runtime::cursor::CursorState>,
     cursor_released: bool,
+    /// Whether a warp outside the window was reported (once).
+    warp_outside_warned: bool,
 }
 
 impl Driver {
@@ -206,6 +208,7 @@ pub fn run(
         cursor_seen: 0,
         cursor: None,
         cursor_released: false,
+        warp_outside_warned: false,
     });
     app.insert_resource(RunSettings {
         screenshot: options.screenshot.clone(),
@@ -219,6 +222,7 @@ pub fn run(
     });
     app.add_systems(Startup, spawn_view);
     app.add_systems(PreUpdate, drive.after(bevy::input::InputSystems));
+    app.add_systems(PreUpdate, publish_display.before(drive));
     app.add_systems(Update, finish_run);
     match app.run() {
         AppExit::Success => Ok(()),
@@ -256,7 +260,7 @@ fn drive(
     mut wheel: MessageReader<MouseWheel>,
     mut window_events: MessageReader<WindowEvent>,
     mut close: MessageReader<WindowCloseRequested>,
-    windows: Query<&Window, With<PrimaryWindow>>,
+    mut windows: Query<&mut Window, With<PrimaryWindow>>,
     motion: Res<AccumulatedMouseMotion>,
     mut cursors: Query<(Entity, &mut CursorOptions), With<PrimaryWindow>>,
     mut images: ResMut<Assets<Image>>,
@@ -313,6 +317,8 @@ fn drive(
     }
     driver.text.clear();
     driver.key_events.clear();
+    // The input method is the window's own; a remote session's viewers type elsewhere.
+    unbound_runtime::ime::attach(settings.remote.is_none());
     // Key and mouse button changes in the order they happened: several may fall between two
     // frames (a click within a frame is a press and a release).
     for event in window_events.read() {
@@ -344,9 +350,40 @@ fn drive(
                     text_length: 0,
                 });
             }
+            // Text the input method commits joins the frame's text (`Input.inputString`) and comes
+            // as a text-only key event; the composition and whether it is enabled go to
+            // `Input.compositionString` and `Input.imeIsSelected`.
+            WindowEvent::Ime(input) => {
+                use unbound_runtime::ime::{self, ImeEvent};
+                let event = match input {
+                    bevy::window::Ime::Preedit { value, cursor, .. } => ImeEvent::Preedit {
+                        value,
+                        cursor: *cursor,
+                    },
+                    bevy::window::Ime::Commit { value, .. } => ImeEvent::Commit(value),
+                    bevy::window::Ime::Enabled { .. } => ImeEvent::Enabled,
+                    bevy::window::Ime::Disabled { .. } => ImeEvent::Disabled,
+                };
+                // Committed text also comes as a text-only key event (key 0), as typed text does,
+                // so IMGUI/uGUI text fields and the Input System receive it, not only inputString.
+                let added = ime::event(event, &mut driver.text);
+                if !added.is_empty() {
+                    driver.key_events.push(KeyEvent {
+                        key: 0,
+                        pressed: 1,
+                        text_start: added.start as i32,
+                        text_length: added.len() as i32,
+                    });
+                }
+            }
             _ => {}
         }
     }
+    // Bevy knows the pointer only while it is over the window (it forgets it on leaving, and
+    // drops positions outside): the last position inside stays until it returns. Documented-
+    // contract gap, not a choice: Unity 6000.0 Input.mousePosition reports the pointer outside
+    // the game view (values below 0 or above the screen size) while the cursor is neither locked
+    // nor confined. Open in docs/COMPATIBILITY_GAPS.md.
     if let Some(position) = window.physical_cursor_position() {
         driver.mouse = position;
     }
@@ -417,10 +454,20 @@ fn drive(
     };
     let keep_going = driver.inner.frame(&input);
     if let Ok((entity, mut options)) = cursors.single_mut() {
-        if let Some(cursor) = unbound_runtime::cursor::changed(&mut driver.cursor_seen) {
-            apply_cursor(&cursor, entity, &mut options, &mut images, &mut commands);
+        if let Some(mut cursor) = unbound_runtime::cursor::changed(&mut driver.cursor_seen) {
+            let warp = cursor.warp.take();
+            // A warp alone leaves the applied lock, visibility and image (and a pointer Escape
+            // gave back) as they are.
+            if warp.is_none() || driver.cursor.as_ref() != Some(&cursor) {
+                apply_cursor(&cursor, entity, &mut options, &mut images, &mut commands);
+                driver.cursor_released = false;
+            }
             driver.cursor = Some(cursor);
-            driver.cursor_released = false;
+            if let Some(warp) = warp
+                && let Ok(mut window) = windows.single_mut()
+            {
+                warp_cursor(&mut window, warp, &mut driver.warp_outside_warned);
+            }
         } else if let Some(cursor) = &driver.cursor
             && (cursor.lock != 0 || !cursor.visible)
         {
@@ -435,6 +482,20 @@ fn drive(
                 options.visible = cursor.visible;
                 driver.cursor_released = false;
             }
+        }
+    }
+    // The game's IME request (`Input.imeCompositionMode`, `Input.compositionCursorPos` in window
+    // pixels from the top left; Bevy places the input method's windows in logical pixels).
+    if let Some(request) = unbound_runtime::ime::take_request()
+        && settings.remote.is_none()
+        && let Ok(mut window) = windows.single_mut()
+    {
+        let position = Vec2::from(request.position) / window.scale_factor();
+        if window.ime_enabled != request.enabled {
+            window.ime_enabled = request.enabled;
+        }
+        if window.ime_position != position {
+            window.ime_position = position;
         }
     }
     driver.frames += 1;
@@ -488,6 +549,25 @@ fn apply_cursor(
         }
     };
     commands.entity(window).insert(icon);
+}
+
+/// `Mouse.WarpCursorPosition`: Unity's screen coordinates (window pixels from the bottom left)
+/// as the window's (from the top left). Bevy moves the system's cursor when the window's cursor
+/// position changes, only to a position inside the window; one outside is reported (once) and
+/// not applied. The next frame reads the new position as a pointer move.
+fn warp_cursor(window: &mut Window, [x, y]: [f64; 2], warned: &mut bool) {
+    let width = f64::from(window.physical_width());
+    let height = f64::from(window.physical_height());
+    let target = bevy::math::DVec2::new(x, height - y);
+    if target.x >= 0.0 && target.y >= 0.0 && target.x < width && target.y < height {
+        window.set_physical_cursor_position(Some(target));
+    } else if !*warned {
+        *warned = true;
+        tracing::warn!(
+            "Mouse.WarpCursorPosition({x}, {y}) lies outside the {width}x{height} window: \
+             Unbound moves the cursor only within the window, this warp and later ones outside it are ignored"
+        );
+    }
 }
 
 /// Unity's `CursorLockMode` as a grab mode.
@@ -564,4 +644,65 @@ fn save_png(image: &Image, path: &std::path::Path) -> Result<()> {
         .ok_or_else(|| anyhow::anyhow!("the screenshot's size does not match its data"))?;
     buffer.save_with_format(path, image::ImageFormat::Png)?;
     Ok(())
+}
+
+/// Publishes the display the window is on for `Screen.currentResolution` & co
+/// (`unbound_runtime::display`): the monitor the window system places the window on, else the
+/// primary monitor. A remote session's viewers watch on displays of their own, which are not
+/// known. Republished when the window changes monitor or the monitor's description changes.
+fn publish_display(
+    settings: Res<RunSettings>,
+    windows: Query<Option<&bevy::window::OnMonitor>, With<PrimaryWindow>>,
+    monitors: Query<(
+        Entity,
+        Ref<bevy::window::Monitor>,
+        bevy::ecs::query::Has<bevy::window::PrimaryMonitor>,
+    )>,
+    mut published: Local<Option<Option<Entity>>>,
+) {
+    use unbound_runtime::display::{self, Display, DisplayMode, DisplaySnapshot};
+    if settings.remote.is_some() {
+        if published.is_none() {
+            *published = Some(None);
+            display::publish(Display::Unavailable(
+                "a remote session's viewers watch on displays that are not known".into(),
+            ));
+        }
+        return;
+    }
+    let on = windows.single().ok().flatten().map(|link| link.0);
+    let found = on
+        .and_then(|entity| monitors.get(entity).ok())
+        .or_else(|| monitors.iter().find(|(_, _, primary)| *primary));
+    let key = found.as_ref().map(|(entity, _, _)| *entity);
+    let changed = found
+        .as_ref()
+        .is_some_and(|(_, monitor, _)| monitor.is_changed());
+    if *published == Some(key) && !changed {
+        return;
+    }
+    *published = Some(key);
+    let Some((entity, monitor, _)) = found else {
+        display::publish(Display::Unavailable(
+            "the window system reports no monitor".into(),
+        ));
+        return;
+    };
+    display::publish(Display::Known(DisplaySnapshot {
+        id: entity.to_bits(),
+        name: monitor.name.clone(),
+        width: monitor.physical_width,
+        height: monitor.physical_height,
+        refresh_rate_millihertz: monitor.refresh_rate_millihertz,
+        scale_factor: monitor.scale_factor,
+        modes: monitor
+            .video_modes
+            .iter()
+            .map(|mode| DisplayMode {
+                width: mode.physical_size.x,
+                height: mode.physical_size.y,
+                refresh_rate_millihertz: mode.refresh_rate_millihertz,
+            })
+            .collect(),
+    }));
 }

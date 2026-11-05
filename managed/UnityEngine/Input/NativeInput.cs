@@ -44,6 +44,8 @@ namespace Unbound.Runtime
         const long GenericSuccess = 1;
         const int KeyboardLayoutCommand = 0x4B424C54; // 'KBLT'
         const int KeyNameCommand = 0x4B594346; // 'KYCF'
+        // Mouse.WarpCursorPosition: a Vector2 payload, the position in player window space.
+        const int WarpMousePositionCommand = 0x57504D53; // 'WPMS'
 
         /// <summary>Whether the project lets the Input System's native backends run
         /// (Player Settings' active input handling is the Input System package or both).</summary>
@@ -206,7 +208,9 @@ namespace Unbound.Runtime
 
         internal static long DeviceCommand(int deviceId, int code, IntPtr data, int sizeInBytes)
         {
-            if (!Enabled || deviceId != KeyboardId || data == IntPtr.Zero) return GenericFailure;
+            if (!Enabled || data == IntPtr.Zero) return GenericFailure;
+            if (deviceId == MouseId) return MouseCommand(code, (byte*)data, sizeInBytes);
+            if (deviceId != KeyboardId) return GenericFailure;
             // data points at the command's payload, after its 8-byte header.
             switch (code)
             {
@@ -222,6 +226,43 @@ namespace Unbound.Runtime
                 }
                 default:
                     return GenericFailure;
+            }
+        }
+
+        /// <summary>The mouse answers only the warp command (Input System 1.19
+        /// <c>Mouse.WarpCursorPosition</c>: the position in player window space, Unity's screen
+        /// coordinates as <c>Mouse.position</c> reports them, from the bottom left). The window
+        /// moves the system's cursor after the frame; the new position then arrives as the
+        /// window's next pointer move, so <c>Pointer.position</c> does not change at once, as the
+        /// package documents. Which update first reports it (the next frame's), and that the move
+        /// carries a delta like any other, are Unbound's choice (unmeasured).</summary>
+        static long MouseCommand(int code, byte* data, int sizeInBytes)
+        {
+            if (code != WarpMousePositionCommand || sizeInBytes < 8) return GenericFailure;
+            var position = new Vector2(((float*)data)[0], ((float*)data)[1]);
+            // No screen position is NaN or infinite (Unbound's choice: refused, unmeasured).
+            if (!float.IsFinite(position.x) || !float.IsFinite(position.y)) return GenericFailure;
+            return RequestWarp(position) ? GenericSuccess : GenericFailure;
+        }
+
+        /// <summary>Hands a warp to the window; tests replace it.</summary>
+        internal static Func<Vector2, bool> RequestWarp = SendWarp;
+
+        /// <summary>The warp through the window's cursor control call (one-shot: the window
+        /// applies it once, keeping the cursor's lock, visibility and image).</summary>
+        static bool SendWarp(Vector2 position)
+        {
+            var culture = System.Globalization.CultureInfo.InvariantCulture;
+            var json = "{\"warp\":[" + position.x.ToString("R", culture) + "," + position.y.ToString("R", culture) + "]}";
+            try
+            {
+                Native.Call("cursor", json);
+                return true;
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Unbound: Mouse.WarpCursorPosition({position.x}, {position.y}) was not applied: {e.Message}");
+                return false;
             }
         }
 
@@ -433,6 +474,11 @@ namespace Unbound.Runtime
 
         static void MouseMove(FrameInput* input, double time)
         {
+            // The window reports the pointer only while it is over the window: once it leaves,
+            // the last position inside stays and no move is queued until it returns. This is a
+            // documented-contract gap, not a choice: Unity 6000.0 Input.mousePosition reports the
+            // pointer outside the game view (values below 0 or above the screen size) while the
+            // cursor is neither locked nor confined. Open, see docs/COMPATIBILITY_GAPS.md.
             var window = new Vector2(input->MouseX, input->MouseY);
             // The first frame tells where the pointer is, not that it moved: a pointer that never
             // moves sends nothing, as the Editor's does.

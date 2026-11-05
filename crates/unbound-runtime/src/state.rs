@@ -366,6 +366,7 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             Ok("{}".into())
         }
         "cursor" => crate::cursor::set(request),
+        "display-info" => crate::display::query(request),
         "gamepads-poll" => {
             #[derive(serde::Deserialize)]
             struct Request {
@@ -374,6 +375,8 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             let r: Request = serde_json::from_str(request)?;
             Ok(crate::gamepads::poll(&r.family).to_string())
         }
+        "ime-state" => crate::ime::state(request),
+        "ime-request" => crate::ime::request(request),
         "bundle-open" => open_bundle(request),
         "bundle-close" => {
             #[derive(serde::Deserialize)]
@@ -747,6 +750,9 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 r.delta_time,
             )?)?)
         }
+        // The system clipboard's text (`GUIUtility.systemCopyBuffer`).
+        "clipboard-get" => crate::clipboard::get(request),
+        "clipboard-set" => crate::clipboard::set(request),
         other => bail!("unknown native method `{other}`"),
     }
 }

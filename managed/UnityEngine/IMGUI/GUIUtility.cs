@@ -45,11 +45,101 @@ namespace UnityEngine
             set => s_KeyboardControl = value;
         }
 
-        /// <summary>The copy buffer: shared within the game (the native clipboard is not connected).</summary>
+        /// <summary>
+        /// The system-wide clipboard's text (6000.0 Scripting API: "Get access to the system-wide
+        /// clipboard."), through the host's <c>clipboard-get</c>/<c>clipboard-set</c> calls.
+        /// <c>EditorGUIUtility.systemCopyBuffer</c> is this same property. Text and line ends pass
+        /// unchanged. Unbound's choices (unmeasured): a clipboard holding no text (empty, another
+        /// format, or not UTF-8) reads as ""; when the clipboard cannot be read or written (no
+        /// display, an older host, an error) the game's in-process copy (<see cref="s_CopyBuffer"/>,
+        /// the last text set or read) answers instead, with one warning each time the clipboard
+        /// stops answering; null is stored as "". Without a native host (unit tests) only the
+        /// in-process copy is used.
+        /// </summary>
         public static string systemCopyBuffer
         {
-            get => s_CopyBuffer;
-            set => s_CopyBuffer = value ?? "";
+            get => ReadSystemCopyBuffer();
+            set => WriteSystemCopyBuffer(value ?? "");
+        }
+
+        /// <summary>Stands in for the host's control call in tests: (method, request) → answer, or
+        /// throws as the native call does.</summary>
+        internal static Func<string, string, string> s_ClipboardCallForTests;
+        static readonly object s_ClipboardLock = new object();
+        /// <summary>The last clipboard call failed and was warned about.</summary>
+        static bool s_ClipboardFailing;
+
+        internal static void ResetClipboardForTests()
+        {
+            lock (s_ClipboardLock)
+            {
+                s_CopyBuffer = "";
+                s_ClipboardFailing = false;
+            }
+        }
+
+        static bool ClipboardConnected => s_ClipboardCallForTests != null || Native.IsReady;
+
+        static string ClipboardCall(string method, string request) =>
+            s_ClipboardCallForTests != null ? s_ClipboardCallForTests(method, request) : Native.Call(method, request);
+
+        static string ReadSystemCopyBuffer()
+        {
+            lock (s_ClipboardLock)
+            {
+                if (!ClipboardConnected) return s_CopyBuffer;
+                string text;
+                try
+                {
+                    using var answer = System.Text.Json.JsonDocument.Parse(ClipboardCall("clipboard-get", "{}"));
+                    var value = answer.RootElement.GetProperty("text");
+                    text = value.ValueKind switch
+                    {
+                        System.Text.Json.JsonValueKind.String => value.GetString(),
+                        // No text on the clipboard: an answer, not a failure.
+                        System.Text.Json.JsonValueKind.Null => "",
+                        _ => throw new FormatException("the clipboard answer's text is " + value.ValueKind),
+                    };
+                }
+                catch (Exception e)
+                {
+                    ClipboardFailed("read", e);
+                    return s_CopyBuffer;
+                }
+                s_ClipboardFailing = false;
+                s_CopyBuffer = text;
+                return text;
+            }
+        }
+
+        static void WriteSystemCopyBuffer(string text)
+        {
+            lock (s_ClipboardLock)
+            {
+                s_CopyBuffer = text;
+                if (!ClipboardConnected) return;
+                try
+                {
+                    var request = System.Text.Json.JsonSerializer.Serialize(new Dictionary<string, string> { ["text"] = text });
+                    ClipboardCall("clipboard-set", request);
+                }
+                catch (Exception e)
+                {
+                    ClipboardFailed("write", e);
+                    return;
+                }
+                s_ClipboardFailing = false;
+            }
+        }
+
+        /// <summary>Warns once until the clipboard answers again. The message names the cause,
+        /// never the text.</summary>
+        static void ClipboardFailed(string action, Exception e)
+        {
+            if (s_ClipboardFailing) return;
+            s_ClipboardFailing = true;
+            Debug.LogWarning(Unbound.Runtime.Log.DiagnosticPrefix + "GUIUtility.systemCopyBuffer could not " + action +
+                " the system clipboard (" + e.Message + "); the game's in-process copy is used until it answers again");
         }
 
         public static bool hasModalWindow => GUI.HasModalWindow;
