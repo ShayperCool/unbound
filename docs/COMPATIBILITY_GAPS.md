@@ -65,6 +65,12 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       small table where 0/null is wrong (`ScalableBufferManager`, `Microphone.devices`, ...).
 - [ ] Message coverage: Unity's full MonoBehaviour/UIBehaviour message list against the messages
       the engine sends; `unbound doctor` lists the project's scripts that define one never sent.
+      Source ready, unvalidated (`runtime/message-coverage`): the 6000.0 MonoBehaviour,
+      UIBehaviour, ScriptableObject and StateMachineBehaviour messages are classified
+      (`MessageCoverageTests`), and `Messages.cs` `s_NotSent` warns once per declaring script
+      class for `OnParticleUpdateJobScheduled` and `OnChildRectTransformDimensionsChange`, and
+      lists `OnStateIK` (its warning call is pending). Remaining: the `OnStateIK` warning call at
+      the state machine behaviour instantiation site, and the `unbound doctor` listing.
 - [ ] Unread serialized data: diff each class's native type tree (already dumped for settings
       assets) against the keys its reader consumes; `unbound doctor` lists non-default values of
       unread keys in the project's scenes, prefabs, assets and `.meta` import settings.
@@ -320,6 +326,7 @@ ListView), legacy Input Manager axes, Input System keyboard/mouse/gamepads, Inpu
 | UI Toolkit text measurement cache | `UIElements/Controls/TextElement.cs`, `UIElements/Style/StyleResolver.cs`, `UIElements/Text/UaTextHandle.cs` | S | measured fix: stylesheet matching and inherited input changes invalidate cached measurements even when final overridden text values remain equal. Label width54→53 is resolved; focused union608384/608384 and existing UIToolkit JSON36846/36846 pass in the delivered branch. Root confirms the same full-union results, tests837/837, API0/2279, all transition/Canvas/color/clipping gates and zero introduced or worsened image channels. Existing Native image differences remain. |
 | Canvas creation, driven RectTransform state and lifecycle | `UI/Canvas.cs`, `CanvasSystem.cs`, `Core/RectTransform.cs` | S | done for the measured Unity 6 runtime matrix (8671 observations, 293 snapshots and 401 callbacks; authored/driven poses, nested setters, activation, reparenting, resize, scene/prefab/clone behavior) |
 | Built-in uGUI sprites (UISprite, Background, Knob, Checkmark, ...) drawn in code, not Unity's | `Graphics/AssetImporters.cs:328-450` | S | M-H (against the no-hand-ports rule) |
+| uGUI layout groups never get `OnChildRectTransformDimensionsChange` (`RectTransform.sendChildDimensionsChange` not implemented; uGUI's `LayoutGroup` declares the message) | `Runtime/Messages.cs`, `Core/RectTransform.cs` | W | unmeasured: a run with uGUI layout groups logs one console line (keyed on `LayoutGroup`); what the missing message changes in layout is not measured |
 | Press and release within one frame lost (mouse buttons, legacy keys) | `crates/unbound-app/src/lib.rs`, `Core/Input.cs`, `IMGUI/Event.cs`, `Input/NativeInput.cs` | S | done (ordered presses and releases in the Input Manager, IMGUI at PreUpdate, Input System events, fixed-update input; tests/projects/inputframes 3785/3786, the missing record an unexplained keyboard DCFG event) |
 | RectMask2D is a screen scissor: no `_ClipRect`/`UNITY_UI_CLIP_RECT`, no softness, rotated canvases clip wrong | `UI/CanvasSystem.cs`, `UI/CanvasRenderer.Clipping.cs`, `Graphics/FrameBuilder.cs` | S | done for measured paths (root-space batching, clipping uniforms/local keyword precedence, negative/fractional softness, live masks/pop draws, direct renderer and real uGUI across WorldSpace/Camera/Overlay; Linear, Gamma and quality-MSAA each 1211 observations and 266 images pass after the camera sample-selection follow-up) |
 | `Canvas.vertexColorAlwaysGammaSpace` and byte color batching | `UI/CanvasRenderer.Colors.cs`, `CanvasSystem.cs` | S | done (98402 Editor observations in Linear/Gamma: source/tint conversion, byte quantization, nearest Canvas flags, original UI/Default and custom shaders, alpha/group inheritance, toggles, mesh snapshots, pop draws and cloning; World Space and Screen Space Camera) |
