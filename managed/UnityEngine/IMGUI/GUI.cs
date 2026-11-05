@@ -238,8 +238,15 @@ namespace UnityEngine
         public static void DrawTexture(Rect position, Texture image, ScaleMode scaleMode, bool alphaBlend, float imageAspect, Color color, Vector4 borderWidths, float borderRadius) =>
             DrawTexture(position, image, scaleMode, alphaBlend, imageAspect, color, borderWidths, Vector4.one * borderRadius);
 
-        /// <summary>A texture scaled into a rect. Border widths draw only the outline of that width
-        /// (rounded corners are drawn square).</summary>
+        /// <summary>
+        /// A texture scaled into a rect (Unity 6000.0 Scripting API, GUI.DrawTexture). Documented:
+        /// <paramref name="borderWidths"/> are (left, top, right, bottom) and Vector4.zero draws the
+        /// full texture; <paramref name="borderRadiuses"/> are (top-left, top-right, bottom-right,
+        /// bottom-left) and Vector4.zero leaves the corners square; with a border, only "a border with
+        /// rounded corners within a rectangle" is drawn, "the texture is used to pattern the border".
+        /// How that border is shaped and patterned is Unbound's choice (unmeasured), see
+        /// <see cref="DrawTextureShape"/>.
+        /// </summary>
         public static void DrawTexture(Rect position, Texture image, ScaleMode scaleMode, bool alphaBlend, float imageAspect, Color color, Vector4 borderWidths, Vector4 borderRadiuses)
         {
             GUIUtility.CheckOnGUI();
@@ -255,18 +262,215 @@ namespace UnityEngine
             if (!CalculateScaledTextureRects(position, scaleMode, imageAspect, ref screen, ref source)) return;
             var tint = color;
             if (!enabled) tint.a *= 0.5f;
-            if (borderWidths == Vector4.zero)
+            if (!alphaBlend) DrawTextureReportOpaque();
+            if (!DrawTextureNeedsShape(borderWidths, borderRadiuses))
             {
-                GuiRender.DrawTexture(screen, image, source, tint);
+                GuiRender.DrawTexture(screen, image, source, tint, alphaBlend);
                 return;
             }
-            // Left, top, right, bottom strips.
-            float l = borderWidths.x, t = borderWidths.y, r = borderWidths.z, b = borderWidths.w;
-            GuiRender.DrawTexture(new Rect(screen.x, screen.y, l, screen.height), image, source, tint);
-            GuiRender.DrawTexture(new Rect(screen.xMax - r, screen.y, r, screen.height), image, source, tint);
-            GuiRender.DrawTexture(new Rect(screen.x + l, screen.y, Math.Max(0f, screen.width - l - r), t), image, source, tint);
-            GuiRender.DrawTexture(new Rect(screen.x + l, screen.yMax - b, Math.Max(0f, screen.width - l - r), b), image, source, tint);
+            var positions = new List<Vector2>();
+            var uvs = new List<Vector2>();
+            var indices = new List<int>();
+            DrawTextureShape(screen, source, borderWidths, borderRadiuses, positions, uvs, indices);
+            GuiRender.DrawTriangles(image, positions, uvs, indices, tint, alphaBlend);
         }
+
+        // ------------------------------------------------------------------ DrawTexture: alphaBlend
+
+        // Documented (Unity 6000.0 Scripting API): alphaBlend is "whether to apply alpha blending when
+        // drawing the image (enabled by default)"; for DrawTextureWithTexCoords, "if false, the picture
+        // is drawn on to the display". Every overload of both methods hands alphaBlend to the IMGUI
+        // renderer: a false value puts the draw (plain quad, or border and rounded corners) in its own
+        // batch, drawn with blending off for that draw alone (FrameBuilder.BeginOpaqueImgui); the
+        // default (true) keeps the alpha-blended path. Unbound's choices (unmeasured): the tint
+        // (GUI.color, and GUI.enabled's halved alpha) is applied as for blended draws, so its alpha
+        // reaches the target's alpha but not the coverage; clipping, GUI.matrix and draw order are
+        // those of blended draws.
+
+        /// <summary>Whether the opaque-drawing notice was given (once per session).</summary>
+        internal static bool s_DrawTextureOpaqueReported;
+
+        /// <summary>
+        /// Opaque draws write the UI shader's output as is, and that output is premultiplied by
+        /// alpha: a texel with alpha below 1 (or a tint alpha below 1) comes out darker, black at
+        /// alpha 0. Whether Unity's opaque draw shows the texture's straight colour instead is not
+        /// measured, so the first opaque draw of a session says so, once, loudly.
+        /// </summary>
+        internal static void DrawTextureReportOpaque()
+        {
+            if (s_DrawTextureOpaqueReported) return;
+            s_DrawTextureOpaqueReported = true;
+            Debug.LogWarning("Unbound: GUI.DrawTexture/GUI.DrawTextureWithTexCoords with alphaBlend false draws without blending, but writes the UI shader's alpha-premultiplied colour: texels (or a tint) with alpha below 1 come out darker than the texture. Unity's output here is not measured.");
+        }
+
+        // ------------------------------------------------------------------ DrawTexture: border and corners
+
+        /// <summary>
+        /// Whether a border or a rounded corner is asked for. Documented: zero widths draw the full
+        /// texture and zero radiuses leave the corners square, which keeps the plain quad. Unbound's
+        /// choice (unmeasured): negative or NaN widths and radiuses count as zero.
+        /// </summary>
+        internal static bool DrawTextureNeedsShape(Vector4 borderWidths, Vector4 borderRadiuses) =>
+            DrawTexturePositive(borderWidths) != Vector4.zero || DrawTexturePositive(borderRadiuses) != Vector4.zero;
+
+        static float DrawTexturePositive(float v) => v > 0f ? v : 0f;
+
+        static Vector4 DrawTexturePositive(Vector4 v) =>
+            new Vector4(DrawTexturePositive(v.x), DrawTexturePositive(v.y), DrawTexturePositive(v.z), DrawTexturePositive(v.w));
+
+        /// <summary>The largest distance (GUI points) between a corner arc and its chords; Unbound's
+        /// choice (unmeasured).</summary>
+        internal const float DrawTextureArcTolerance = 0.25f;
+
+        internal const int DrawTextureMaxArcSegments = 32;
+
+        /// <summary>Chords for a quarter arc of <paramref name="radius"/>: 0 for a square corner.
+        /// Unbound's choice (unmeasured).</summary>
+        internal static int DrawTextureArcSegments(float radius)
+        {
+            if (!(radius > 0f)) return 0;
+            double cos = 1.0 - DrawTextureArcTolerance / radius;
+            if (cos <= 0.0) return 1;
+            double step = 2.0 * Math.Acos(cos);
+            return Math.Clamp((int)Math.Ceiling(Math.PI / 2.0 / step), 1, DrawTextureMaxArcSegments);
+        }
+
+        /// <summary>
+        /// Triangles of a texture drawn over <paramref name="screen"/> with rounded corners, or only
+        /// its border. Positions are GUI coordinates; uvs are in texture space (v up) as
+        /// <see cref="GuiRender.DrawTexture"/> maps <paramref name="source"/> over the rect.
+        /// Documented: widths (left, top, right, bottom), radiuses (top-left, top-right,
+        /// bottom-right, bottom-left), the border lies within the rect. Unbound's choices (unmeasured):
+        /// <list type="bullet">
+        /// <item>the texture is mapped over the whole rect and the border shows the part of it under
+        /// the border (the full texture with zero widths);</item>
+        /// <item>negative or NaN widths and radiuses are zero; when two radiuses on one side add up
+        /// to more than that side, every radius shrinks by the same factor until they fit;</item>
+        /// <item>the inner edge of a corner is an ellipse with radiuses (radius minus the adjacent
+        /// widths, at least zero), scaled to fit the inner rect the same way;</item>
+        /// <item>when the widths meet (left + right at least the width, or top + bottom at least the
+        /// height) the whole rounded rect is drawn;</item>
+        /// <item>arcs are chords no farther than <see cref="DrawTextureArcTolerance"/> from the circle,
+        /// with hard (not anti-aliased) edges; a rect with zero or negative width or height draws
+        /// nothing.</item>
+        /// </list>
+        /// </summary>
+        internal static void DrawTextureShape(Rect screen, Rect source, Vector4 borderWidths, Vector4 borderRadiuses,
+            List<Vector2> positions, List<Vector2> uvs, List<int> indices)
+        {
+            float w = screen.width, h = screen.height;
+            if (!(w > 0f) || !(h > 0f)) return;
+            float x0 = screen.xMin, y0 = screen.yMin, x1 = screen.xMax, y1 = screen.yMax;
+
+            float l = DrawTexturePositive(borderWidths.x), t = DrawTexturePositive(borderWidths.y);
+            float r = DrawTexturePositive(borderWidths.z), b = DrawTexturePositive(borderWidths.w);
+            // Corners in drawing order: top-left, top-right, bottom-right, bottom-left.
+            var radius = new float[4];
+            for (int i = 0; i < 4; i++) radius[i] = DrawTexturePositive(borderRadiuses[i]);
+            float fit = DrawTextureFit(w, h, radius, radius);
+            for (int i = 0; i < 4; i++) radius[i] *= fit;
+
+            var segments = new int[4];
+            for (int i = 0; i < 4; i++) segments[i] = DrawTextureArcSegments(radius[i]);
+
+            int start = positions.Count;
+            bool filled = (l <= 0f && t <= 0f && r <= 0f && b <= 0f) || l + r >= w || t + b >= h;
+            if (filled)
+            {
+                // A fan from the centre: a rounded rect is convex.
+                DrawTextureVertex(screen, source, new Vector2((x0 + x1) * 0.5f, (y0 + y1) * 0.5f), positions, uvs);
+                int contour = DrawTextureContour(screen, source, x0, y0, x1, y1, radius, radius, segments, positions, uvs);
+                for (int i = 0; i < contour; i++)
+                {
+                    indices.Add(start);
+                    indices.Add(start + 1 + i);
+                    indices.Add(start + 1 + (i + 1) % contour);
+                }
+                return;
+            }
+
+            float ix0 = x0 + l, iy0 = y0 + t, ix1 = x1 - r, iy1 = y1 - b;
+            // Inner corner radiuses: horizontal and vertical, corner order as above.
+            var rx = new[] { DrawTexturePositive(radius[0] - l), DrawTexturePositive(radius[1] - r), DrawTexturePositive(radius[2] - r), DrawTexturePositive(radius[3] - l) };
+            var ry = new[] { DrawTexturePositive(radius[0] - t), DrawTexturePositive(radius[1] - t), DrawTexturePositive(radius[2] - b), DrawTexturePositive(radius[3] - b) };
+            float innerFit = DrawTextureFit(ix1 - ix0, iy1 - iy0, rx, ry);
+            for (int i = 0; i < 4; i++)
+            {
+                rx[i] *= innerFit;
+                ry[i] *= innerFit;
+            }
+            // Outer and inner contours with the same chords per corner, so their points pair up.
+            int outer = DrawTextureContour(screen, source, x0, y0, x1, y1, radius, radius, segments, positions, uvs);
+            DrawTextureContour(screen, source, ix0, iy0, ix1, iy1, rx, ry, segments, positions, uvs);
+            for (int i = 0; i < outer; i++)
+            {
+                int j = (i + 1) % outer;
+                int o0 = start + i, o1 = start + j, i0 = start + outer + i, i1 = start + outer + j;
+                indices.Add(o0);
+                indices.Add(o1);
+                indices.Add(i1);
+                indices.Add(i1);
+                indices.Add(i0);
+                indices.Add(o0);
+            }
+        }
+
+        /// <summary>The factor (at most 1) that makes the corner radiuses (horizontal
+        /// <paramref name="rx"/>, vertical <paramref name="ry"/>, corner order top-left, top-right,
+        /// bottom-right, bottom-left) on every side of a w x h rect fit that side.</summary>
+        static float DrawTextureFit(float w, float h, float[] rx, float[] ry)
+        {
+            float fit = 1f;
+            void Side(float length, float a, float c)
+            {
+                if (a + c > length && a + c > 0f) fit = Math.Min(fit, Math.Max(0f, length) / (a + c));
+            }
+            Side(w, rx[0], rx[1]);
+            Side(w, rx[3], rx[2]);
+            Side(h, ry[0], ry[3]);
+            Side(h, ry[1], ry[2]);
+            return fit;
+        }
+
+        /// <summary>Appends a rounded rect's contour, clockwise on the screen from the top-left
+        /// corner: per corner <c>segments + 1</c> points of its quarter ellipse (one point for a
+        /// square corner). Returns the number of points.</summary>
+        static int DrawTextureContour(Rect screen, Rect source, float x0, float y0, float x1, float y1,
+            float[] rx, float[] ry, int[] segments, List<Vector2> positions, List<Vector2> uvs)
+        {
+            int count = 0;
+            for (int corner = 0; corner < 4; corner++)
+            {
+                // Corner centres and the arc from the previous side to the next (y down).
+                float cx = corner == 0 || corner == 3 ? x0 + rx[corner] : x1 - rx[corner];
+                float cy = corner < 2 ? y0 + ry[corner] : y1 - ry[corner];
+                double from = Math.PI + corner * (Math.PI / 2.0);
+                int n = segments[corner];
+                for (int k = 0; k <= n; k++)
+                {
+                    double angle = n == 0 ? from : from + k * (Math.PI / 2.0) / n;
+                    var p = new Vector2(cx + rx[corner] * (float)Math.Cos(angle), cy + ry[corner] * (float)Math.Sin(angle));
+                    // Exact ends, so straight sides stay straight.
+                    if (rx[corner] == 0f) p.x = cx;
+                    if (ry[corner] == 0f) p.y = cy;
+                    DrawTextureVertex(screen, source, p, positions, uvs);
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        static void DrawTextureVertex(Rect screen, Rect source, Vector2 p, List<Vector2> positions, List<Vector2> uvs)
+        {
+            positions.Add(p);
+            uvs.Add(DrawTextureUv(screen, source, p));
+        }
+
+        /// <summary>The texture coordinate under a point of the rect, as the plain quad maps
+        /// <paramref name="source"/> (its top edge is v = source.yMax).</summary>
+        internal static Vector2 DrawTextureUv(Rect screen, Rect source, Vector2 p) => new Vector2(
+            source.xMin + (p.x - screen.xMin) / screen.width * source.width,
+            source.yMax - (p.y - screen.yMin) / screen.height * source.height);
 
         internal static bool CalculateScaledTextureRects(Rect position, ScaleMode scaleMode, float imageAspect, ref Rect outScreenRect, ref Rect outSourceRect)
         {
@@ -309,13 +513,17 @@ namespace UnityEngine
 
         public static void DrawTextureWithTexCoords(Rect position, Texture image, Rect texCoords) => DrawTextureWithTexCoords(position, image, texCoords, true);
 
+        /// <summary>A texture's <paramref name="texCoords"/> (texture space) stretched over the rect.
+        /// Documented: alphaBlend false draws "the picture on to the display" without alpha blending
+        /// (see the alphaBlend notes after DrawTexture's main overload).</summary>
         public static void DrawTextureWithTexCoords(Rect position, Texture image, Rect texCoords, bool alphaBlend)
         {
             GUIUtility.CheckOnGUI();
             if (Current.type != EventType.Repaint || image == null) return;
             var tint = color;
             if (!enabled) tint.a *= 0.5f;
-            GuiRender.DrawTexture(position, image, texCoords, tint);
+            if (!alphaBlend) DrawTextureReportOpaque();
+            GuiRender.DrawTexture(position, image, texCoords, tint, alphaBlend);
         }
 
         // ------------------------------------------------------------------ buttons and toggles

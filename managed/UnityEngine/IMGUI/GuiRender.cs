@@ -288,8 +288,8 @@ namespace Unbound.Runtime
 
     /// <summary>
     /// What UnityGUI draws in a frame: textured, tinted quads in screen pixels, each with the clip
-    /// rect in force, batched by texture and clip. They become one mesh drawn over everything else
-    /// (after the screen-space overlay canvases) with the UI shader.
+    /// rect in force, batched by texture, clip and blending. They become one mesh drawn over
+    /// everything else (after the screen-space overlay canvases) with the UI shader.
     /// </summary>
     internal static class GuiRender
     {
@@ -297,6 +297,9 @@ namespace Unbound.Runtime
         {
             internal Texture Texture;
             internal Rect Clip;
+            /// <summary>Drawn without alpha blending (GUI.DrawTexture / DrawTextureWithTexCoords
+            /// with alphaBlend false); a batch never mixes blended and opaque triangles.</summary>
+            internal bool Opaque;
             internal List<int> Indices;
         }
 
@@ -351,26 +354,28 @@ namespace Unbound.Runtime
             return clip;
         }
 
-        static List<int> BatchFor(Texture texture)
+        /// <summary>The batch the next triangles go to: the last one when it has the same texture,
+        /// clip and blending, else a new one after it (draw order is call order).</summary>
+        static List<int> BatchFor(Texture texture, bool opaque = false)
         {
             var clip = CurrentClip();
             if (s_Batches.Count > 0)
             {
                 var last = s_Batches[s_Batches.Count - 1];
-                if (last.Texture == texture && last.Clip == clip) return last.Indices;
+                if (last.Texture == texture && last.Clip == clip && last.Opaque == opaque) return last.Indices;
             }
             var indices = s_Spare.Count > 0 ? s_Spare.Pop() : new List<int>();
-            s_Batches.Add(new Batch { Texture = texture, Clip = clip, Indices = indices });
+            s_Batches.Add(new Batch { Texture = texture, Clip = clip, Opaque = opaque, Indices = indices });
             return indices;
         }
 
         /// <summary>A quad from local corners (top left, top right, bottom right, bottom left) and
         /// the matching texture coordinates.</summary>
         static void Quad(Texture texture, Vector2 tl, Vector2 tr, Vector2 br, Vector2 bl,
-            Vector2 uvTl, Vector2 uvTr, Vector2 uvBr, Vector2 uvBl, Color32 color)
+            Vector2 uvTl, Vector2 uvTr, Vector2 uvBr, Vector2 uvBl, Color32 color, bool opaque = false)
         {
             if (CurrentClip().width <= 0f) return;
-            var indices = BatchFor(texture);
+            var indices = BatchFor(texture, opaque);
             int start = s_Positions.Count;
             s_Positions.Add(GUIClip.GUIToScreen(tl));
             s_Positions.Add(GUIClip.GUIToScreen(tr));
@@ -390,13 +395,36 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A texture stretched over a rect; <paramref name="uv"/> is in texture space (v up).</summary>
-        internal static void DrawTexture(Rect rect, Texture texture, Rect uv, Color color)
+        internal static void DrawTexture(Rect rect, Texture texture, Rect uv, Color color) => DrawTexture(rect, texture, uv, color, true);
+
+        /// <summary>A texture stretched over a rect, alpha-blended or (<paramref name="alphaBlend"/>
+        /// false) not: GUI.DrawTexture's and GUI.DrawTextureWithTexCoords' quad.</summary>
+        internal static void DrawTexture(Rect rect, Texture texture, Rect uv, Color color, bool alphaBlend)
         {
             if (texture == null || rect.width == 0f || rect.height == 0f) return;
             Quad(texture,
                 new Vector2(rect.xMin, rect.yMin), new Vector2(rect.xMax, rect.yMin), new Vector2(rect.xMax, rect.yMax), new Vector2(rect.xMin, rect.yMax),
                 new Vector2(uv.xMin, uv.yMax), new Vector2(uv.xMax, uv.yMax), new Vector2(uv.xMax, uv.yMin), new Vector2(uv.xMin, uv.yMin),
-                color);
+                color, !alphaBlend);
+        }
+
+        /// <summary>Textured triangles in local GUI coordinates (<paramref name="uvs"/> in texture
+        /// space, v up), one tint, batched and clipped as quads are: GUI.DrawTexture's border and
+        /// rounded corners, alpha-blended or (<paramref name="alphaBlend"/> false) not.</summary>
+        internal static void DrawTriangles(Texture texture, List<Vector2> positions, List<Vector2> uvs, List<int> indices, Color color, bool alphaBlend = true)
+        {
+            if (texture == null || indices.Count == 0) return;
+            if (CurrentClip().width <= 0f) return;
+            var batch = BatchFor(texture, !alphaBlend);
+            int start = s_Positions.Count;
+            Color32 tint = color;
+            for (int i = 0; i < positions.Count; i++)
+            {
+                s_Positions.Add(GUIClip.GUIToScreen(positions[i]));
+                s_Uvs.Add(uvs[i]);
+                s_Colors.Add(tint);
+            }
+            foreach (int index in indices) batch.Add(start + index);
         }
 
         internal static void FillRect(Rect rect, Color color) => DrawTexture(rect, Texture2D.whiteTexture, new Rect(0, 0, 1, 1), color);
@@ -482,7 +510,15 @@ namespace Unbound.Runtime
             for (int i = 0; i < s_Batches.Count; i++)
                 s_Mesh.SetTriangles(s_Batches[i].Indices, i, false);
             ulong mesh = s_Mesh.Sync();
-            var material = CanvasSystem.DefaultMaterial;
+            CollectItems(mesh, CanvasSystem.DefaultMaterial, height, into);
+        }
+
+        /// <summary>One draw per batch, in batch (call) order, of submesh i of the frame's mesh. All
+        /// share the one UI material, which is never changed here; an opaque batch's draw is marked
+        /// <see cref="FrameBuilder.DrawItem.OpaqueImgui"/>, and the renderer turns blending off for
+        /// that draw alone (<see cref="FrameBuilder.BeginOpaqueImgui"/>).</summary>
+        internal static void CollectItems(ulong mesh, Material material, float height, List<FrameBuilder.DrawItem> into)
+        {
             for (int i = 0; i < s_Batches.Count; i++)
             {
                 var b = s_Batches[i];
@@ -496,6 +532,7 @@ namespace Unbound.Runtime
                     MainTexture = TextureHandles.Of(b.Texture),
                     Clip = new Rect(b.Clip.x, height - b.Clip.yMax, b.Clip.width, b.Clip.height),
                     ClipEnabled = true,
+                    OpaqueImgui = b.Opaque,
                     Queue = material.renderQueue,
                     Sequence = FrameBuilder.NextSequence(),
                 });
