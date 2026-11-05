@@ -657,7 +657,9 @@ namespace UnityEngine
         /// <summary>Scripting API 6000.0: restores the state stored by an earlier GetTrails, used
         /// together with SetParticles and SetPlaybackState. A Trails that GetTrails never filled,
         /// one from another system, or one whose particles are not the current ones is refused
-        /// with an error and changes nothing (Unbound's choice, unmeasured).</summary>
+        /// with an error and changes nothing (Unbound's choice, unmeasured). When the particles
+        /// changed since GetTrails, SetParticles must restore them before SetTrails: the docs
+        /// give no order, so the other order is refused (Unbound's choice, unmeasured).</summary>
         public void SetTrails(Trails trailData)
         {
             var mismatch = TrailCaptureMismatch(trailData);
