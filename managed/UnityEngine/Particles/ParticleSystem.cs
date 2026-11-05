@@ -725,6 +725,7 @@ namespace UnityEngine
             m_NoiseScroll = 0f;
             m_Time = 0f;
             m_TotalTime = 0f;
+            m_CullingMissed = 0f;
             m_Loop = 0;
             m_RateAccumulator = 0f;
             m_EmitPhase = 0f;
@@ -856,6 +857,7 @@ namespace UnityEngine
             m_IsPlaying = false;
             m_IsPaused = false;
             m_StopEmitting = false;
+            m_CullingMissed = 0f;
         }
 
         internal override void OnEngineDestroy()
