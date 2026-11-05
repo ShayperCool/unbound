@@ -1383,6 +1383,7 @@ namespace Unbound.Runtime
         {
             if (asset == null) return null;
             if (m_Instances.TryGetValue(asset, out var instance)) return instance;
+            ScriptMessages.WarnNotSent(asset.GetType());
             if (asset.GetType().IsDefined(typeof(SharedBetweenAnimatorsAttribute), true)) instance = asset;
             else
             {
