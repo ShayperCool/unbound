@@ -60,9 +60,7 @@ namespace Unbound.Runtime
             animator.m_RootAngularVelocity = Vector3.zero;
             animator.m_RootMotionApplied = false;
             animator.m_RootMotionReady = false;
-            m_HasMonoMove = false;
-            foreach (var mb in animator.gameObject.GetComponents<MonoBehaviour>())
-                if (mb != null && MoveMethod(mb) != null) { m_HasMonoMove = true; break; }
+            m_HasMonoMove = HasMoveCallback(animator);
             m_HasStateMove = false;
             foreach (var state in MovingStates())
                 if (HandlesStateMove(state.Behaviour)) { m_HasStateMove = true; break; }
@@ -81,6 +79,49 @@ namespace Unbound.Runtime
                 }
             }
             if (!animator.m_ApplyRootMotion && !m_HasMonoMove) return;
+            var (delta, turn) = ContributionMotion(pos, rot);
+            // Root motion scales in its own frame before applying the current world rotation.
+            // TransformVector would apply a nonuniform parent's scale after the root's rotation.
+            var scale = RootMotionScale(t);
+            animator.m_DeltaPosition = animator.m_MotionRootRotation * Vector3.Scale(scale, delta);
+            animator.m_DeltaRotation = turn;
+            MatchStep(animator, scale, pos, rot);
+            RootVelocities(animator.m_DeltaPosition, animator.m_DeltaRotation, animator.m_MotionRootRotation, m_RootDeltaTime,
+                out animator.m_RootVelocity, out animator.m_RootAngularVelocity);
+        }
+
+        static bool HasMoveCallback(Animator animator)
+        {
+            foreach (var mb in animator.gameObject.GetComponents<MonoBehaviour>())
+                if (mb != null && MoveMethod(mb) != null) return true;
+            return false;
+        }
+
+        static Vector3 RootMotionScale(Transform t)
+        {
+            var scale = t.localScale;
+            if (t.parent != null) scale = Vector3.Scale(scale, t.parent.lossyScale);
+            return scale;
+        }
+
+        /// <summary>Per-second root motion: the world delta over the step, and the delta rotation's
+        /// angle (the short way) about its axis turned into world space.</summary>
+        static void RootVelocities(Vector3 deltaPosition, Quaternion deltaRotation, Quaternion rootRotation, float deltaTime,
+            out Vector3 velocity, out Vector3 angularVelocity)
+        {
+            velocity = Vector3.zero;
+            angularVelocity = Vector3.zero;
+            if (deltaTime == 0f) return;
+            velocity = deltaPosition / deltaTime;
+            deltaRotation.ToAngleAxis(out float angle, out var axis);
+            if (angle > 180f) angle -= 360f;
+            angularVelocity = rootRotation * axis * (angle * Mathf.Deg2Rad / deltaTime);
+        }
+
+        /// <summary>The root's movement over the step from the layers' contributions, in the root's
+        /// own frame: positions summed by weight, rotations blended per layer and composed.</summary>
+        (Vector3 Delta, Quaternion Turn) ContributionMotion(int pos, int rot)
+        {
             var delta = Vector3.zero;
             var turn = Quaternion.identity;
             if (m_RootTurns.Length != Layers.Length)
@@ -114,20 +155,47 @@ namespace Unbound.Runtime
                 if (weight < 1) sum.w += sum.w < 0 ? weight - 1 : 1 - weight;
                 turn *= Quaternion.Slerp(Quaternion.identity, sum.normalized, i == 0 ? 1 : Layers[i].Evaluated);
             }
-            // Root motion scales in its own frame before applying the current world rotation.
-            // TransformVector would apply a nonuniform parent's scale after the root's rotation.
-            var scale = t.localScale;
-            if (t.parent != null) scale = Vector3.Scale(scale, t.parent.lossyScale);
-            animator.m_DeltaPosition = animator.m_MotionRootRotation * Vector3.Scale(scale, delta);
-            animator.m_DeltaRotation = turn;
-            MatchStep(animator, scale, pos, rot);
-            if (m_RootDeltaTime != 0f)
-            {
-                animator.m_RootVelocity = animator.m_DeltaPosition / m_RootDeltaTime;
-                animator.m_DeltaRotation.ToAngleAxis(out float angle, out var axis);
-                if (angle > 180f) angle -= 360f;
-                animator.m_RootAngularVelocity = animator.m_MotionRootRotation * axis * (angle * Mathf.Deg2Rad / m_RootDeltaTime);
-            }
+            return (delta, turn);
+        }
+
+        /// <summary>A controller playable's root motion as an animation stream reports it
+        /// (AnimationStream.velocity and angularVelocity): the contribution deltas of the evaluation
+        /// that just built this player's layer poses, converted as the Animator's own root motion is,
+        /// over the stream's delta time. Nothing moves and target matching does not take part. Zero
+        /// motion when the Animator requests none (applyRootMotion off and no OnAnimatorMove).
+        /// <paramref name="start"/>/<paramref name="startRotation"/> are the root's current pose in
+        /// the root motion convention of <see cref="Animator.CaptureRootMotionPose"/>. False when
+        /// humanoid clips play: their stream root motion is not computed.</summary>
+        internal bool StreamRootMotion(float deltaTime, out Vector3 start, out Quaternion startRotation,
+            out Vector3 velocity, out Vector3 angularVelocity)
+        {
+            velocity = Vector3.zero;
+            angularVelocity = Vector3.zero;
+            var animator = m_Animator;
+            var t = animator.transform;
+            var parent = t.parent;
+            // The convention of Animator.SyncRootPose (the animation stream's root composition).
+            start = parent == null ? t.localPosition
+                : parent.position + parent.rotation * Vector3.Scale(parent.lossyScale, t.localPosition);
+            startRotation = parent == null ? t.localRotation : parent.rotation * t.localRotation;
+            foreach (var (_, _, _, clip, _) in m_Contributions)
+                if (clip.HasHumanCurves) return false;
+            if (!animator.m_ApplyRootMotion && !HasMoveCallback(animator)) return true;
+            int pos = Bindings.ChannelOf(t, "position"), rot = Bindings.ChannelOf(t, "rotation");
+            var (delta, turn) = ContributionMotion(pos, rot);
+            RootVelocities(startRotation * Vector3.Scale(RootMotionScale(t), delta), turn, startRotation, deltaTime,
+                out velocity, out angularVelocity);
+            return true;
+        }
+
+        /// <summary>A clip of the evaluation that just built this player's layer poses has a root
+        /// node's motion (MotionT/MotionQ curves), which moves the root without the root's own
+        /// channels showing it (for a controller playable in a layer mixer's layer).</summary>
+        internal bool SampledRootNodeMotion()
+        {
+            foreach (var (_, _, _, clip, _) in m_Contributions)
+                if (clip.MotionCurves() != null) return true;
+            return false;
         }
 
         void ProcessRootMotion()

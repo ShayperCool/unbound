@@ -68,6 +68,8 @@ namespace Unbound.Runtime.Playables
         internal AnimatorHandles Handles;
         internal readonly List<(StreamContext Context, float Weight)> Inputs = new List<(StreamContext, float)>();
         internal int Id;
+        /// <summary>The stream's root motion (AnimationStream.velocity, rootMotionPosition, ...).</summary>
+        internal StreamMotion Motion = StreamMotion.None;
 
         static readonly List<StreamContext> s_Active = new List<StreamContext> { null };
 
@@ -191,18 +193,94 @@ namespace Unbound.Runtime.Playables
         }
     }
 
+    /// <summary>
+    /// An animation stream's root motion for the evaluated frame. Velocities are per second; Unbound
+    /// takes them in world space, as Animator.velocity/angularVelocity are (Unbound's choice,
+    /// unmeasured); the root motion pose is the root's current pose moved by them over the stream's
+    /// delta time. Unbound computes it from the existing Animator root motion of an
+    /// AnimatorControllerPlayable input, from the root motion a generic Animator's clips and mixers
+    /// carry in the stream (RootMotionStep), or carries what a job below set; other streams report
+    /// no motion (zero, identity) and warn when read.
+    /// <para>Also Unbound's choices (unmeasured): the input's weight does not scale the motion; the
+    /// motion includes the playable's speed but is divided by the stream's unscaled delta time;
+    /// CopyAnimationStreamMotion copies the start pose and whether the motion was computed too; a
+    /// stream without computed motion starts from the origin.</para>
+    /// </summary>
+    internal struct StreamMotion
+    {
+        /// <summary>Derived from an input's root motion (else reads warn).</summary>
+        internal bool Computed;
+        internal Vector3 Velocity, AngularVelocity;
+        /// <summary>The root's pose before this frame's motion.</summary>
+        internal Vector3 StartPosition;
+        internal Quaternion StartRotation;
+
+        internal static StreamMotion None => new StreamMotion { StartRotation = Quaternion.identity };
+
+        internal Vector3 Position(float deltaTime) => StartPosition + Velocity * deltaTime;
+
+        internal Quaternion Rotation(float deltaTime)
+        {
+            float speed = AngularVelocity.magnitude;
+            if (speed == 0f || deltaTime == 0f) return StartRotation;
+            return Quaternion.AngleAxis(speed * deltaTime * Mathf.Rad2Deg, AngularVelocity / speed) * StartRotation;
+        }
+
+        /// <summary>The motion of the stream an input playable produced (just evaluated): a
+        /// controller playable's root motion, the motion an animation job's stream ended with, or
+        /// the root motion clips and mixers carry in the stream (a generic Animator's playable
+        /// output root motion, see AnimationEvaluation.Run).</summary>
+        internal static StreamMotion Of(AnimationEvaluation e, PlayableNode node, AnimStream stream)
+        {
+            float deltaTime = stream.DeltaTime;
+            switch (node?.Kind)
+            {
+                case ControllerKind controller when controller.Player is AnimatorPlayer player && player.Bindings == e.Bindings:
+                    if (!player.StreamRootMotion(deltaTime, out var start, out var startRotation, out var velocity, out var angular))
+                    {
+                        Stubs.Ignored("AnimationStream root motion of humanoid clips",
+                            "is not computed: velocity and angularVelocity read zero for an AnimatorControllerPlayable playing humanoid clips");
+                        return new StreamMotion { StartPosition = start, StartRotation = startRotation };
+                    }
+                    return new StreamMotion
+                    {
+                        Computed = true, Velocity = velocity, AngularVelocity = angular,
+                        StartPosition = start, StartRotation = startRotation,
+                    };
+                case JobKind job:
+                    return job.Motion;
+                default:
+                    if (!stream.Motion.Known || e.Animator == null) return None;
+                    stream.Motion.ToStream(e.Animator, deltaTime, out var from, out var fromRotation, out var linear, out var turn);
+                    return new StreamMotion
+                    {
+                        Computed = true, Velocity = linear, AngularVelocity = turn,
+                        StartPosition = from, StartRotation = fromRotation,
+                    };
+            }
+        }
+
+        /// <summary>The same motion values (what a job can change).</summary>
+        internal bool SameAs(StreamMotion other) =>
+            Computed == other.Computed && Velocity.Equals(other.Velocity) && AngularVelocity.Equals(other.AngularVelocity);
+    }
+
     /// <summary>An AnimationScriptPlayable: runs its job on the stream of its first input (or the
     /// stream it starts from), synchronously, as part of the evaluation.</summary>
     internal sealed class JobKind : AnimationKind
     {
         internal object Job;
         internal bool ProcessInputs = true;
+        /// <summary>The motion its stream ended with in its last evaluation (a job above reads it).</summary>
+        internal StreamMotion Motion = StreamMotion.None;
 
         internal override void Evaluate(AnimationEvaluation e, PlayableNode node, int viaPort, float weight, AnimStream into)
         {
             if (e.ReferencePose) return;
             var handles = AnimatorHandles.Of(e.Animator);
             var context = StreamContext.Open(into, handles);
+            var entry = StreamMotion.None;
+            bool ran = false;
             try
             {
                 for (int i = 0; i < node.Inputs.Count; i++)
@@ -212,14 +290,19 @@ namespace Unbound.Runtime.Playables
                     if (i == 0 && ProcessInputs)
                     {
                         e.EvaluateInto(input.Node, input.SourcePort, weight * input.Weight, into);
+                        context.Motion = StreamMotion.Of(e, input.Node, into);
                         context.Inputs.Add((context, input.Weight));
                         continue;
                     }
                     if (!ProcessInputs) continue;
                     var s = e.Evaluate(input.Node, input.SourcePort, weight * input.Weight);
-                    context.Inputs.Add((StreamContext.Open(s, handles), input.Weight));
+                    var inputContext = StreamContext.Open(s, handles);
+                    inputContext.Motion = StreamMotion.Of(e, input.Node, s);
+                    context.Inputs.Add((inputContext, input.Weight));
                     into.Inputs.Add((s, input.Weight));
                 }
+                entry = context.Motion;
+                ran = true;
                 if (Job is UnityEngine.Animations.IAnimationJob job)
                 {
                     var stream = context.ToStream();
@@ -233,6 +316,13 @@ namespace Unbound.Runtime.Playables
             }
             finally
             {
+                Motion = context.Motion;
+                // The motion the job's stream ends with is its stream's root motion for the output
+                // when the job changed it (set velocities, CopyAnimationStreamMotion) or the stream
+                // does not carry its input's motion itself (an input whose motion is not known).
+                bool changed = ran && !context.Motion.SameAs(entry);
+                if (e.MotionMode == RootMotionMode.Compute && (changed || (ran && context.Motion.Computed && !into.Motion.Known)))
+                    into.Motion = RootMotionStep.FromVelocities(e.Animator, into.DeltaTime, context.Motion.Velocity, context.Motion.AngularVelocity);
                 foreach (var (input, _) in context.Inputs)
                     if (input != context) StreamContext.Close(input);
                 context.Inputs.Clear();
@@ -384,32 +474,49 @@ namespace UnityEngine.Animations
             }
         }
 
+        /// <summary>The stream's motion, warning once per member when Unbound has not computed it
+        /// (the stream's input is not an AnimatorControllerPlayable, a generic Animator's clip or
+        /// mixer, or a job above one).</summary>
+        StreamContext MotionContext(string member)
+        {
+            CheckIsValid();
+            var c = Context;
+            if (!c.Motion.Computed)
+                Unbound.Runtime.Stubs.Ignored("AnimationStream." + member,
+                    "is not computed for this stream (only from an AnimatorControllerPlayable input, or a generic Animator's clip or mixer input): it reads no motion or the value a job set");
+            return c;
+        }
+
+        /// <summary>A job's motion change stays in the stream (jobs above and CopyAnimationStreamMotion
+        /// see it) and moves a generic Animator through its playable output (AnimationEvaluation.Run).
+        /// Setting stays loud: how Unity turns a set velocity into the Animator's motion is not
+        /// measured, and humanoid Animators and Animators whose own controller plays do not apply it.</summary>
+        StreamContext SetMotionContext(string member)
+        {
+            CheckIsValid();
+            Unbound.Runtime.Stubs.Ignored("AnimationStream." + member + " (set)",
+                "moves a generic Animator through its playable output by velocity times the stream's delta time (Unbound's choice, unmeasured); humanoid Animators and Animators whose own controller plays do not apply it");
+            return Context;
+        }
+
         public Vector3 velocity
         {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("AnimationStream.velocity", "is always zero (playable root motion is not computed yet)");
-                return Vector3.zero;
-            }
-            set => Unbound.Runtime.Stubs.Ignored("AnimationStream.velocity", "is always zero (playable root motion is not computed yet)");
+            get => MotionContext("velocity").Motion.Velocity;
+            set => SetMotionContext("velocity").Motion.Velocity = value;
         }
 
         public Vector3 angularVelocity
         {
-            get
-            {
-                Unbound.Runtime.Stubs.Ignored("AnimationStream.angularVelocity", "is always zero (playable root motion is not computed yet)");
-                return Vector3.zero;
-            }
-            set => Unbound.Runtime.Stubs.Ignored("AnimationStream.angularVelocity", "is always zero (playable root motion is not computed yet)");
+            get => MotionContext("angularVelocity").Motion.AngularVelocity;
+            set => SetMotionContext("angularVelocity").Motion.AngularVelocity = value;
         }
 
         public Vector3 rootMotionPosition
         {
             get
             {
-                Unbound.Runtime.Stubs.Ignored("AnimationStream.rootMotionPosition", "is always zero (playable root motion is not computed yet)");
-                return Vector3.zero;
+                var c = MotionContext("rootMotionPosition");
+                return c.Motion.Position(c.Stream.DeltaTime);
             }
         }
 
@@ -417,8 +524,8 @@ namespace UnityEngine.Animations
         {
             get
             {
-                Unbound.Runtime.Stubs.Ignored("AnimationStream.rootMotionRotation", "is always identity (playable root motion is not computed yet)");
-                return Quaternion.identity;
+                var c = MotionContext("rootMotionRotation");
+                return c.Motion.Rotation(c.Stream.DeltaTime);
             }
         }
 
@@ -426,8 +533,9 @@ namespace UnityEngine.Animations
         {
             get
             {
-                Unbound.Runtime.Stubs.Ignored("AnimationStream.isHumanStream", "is always false (humanoid avatars are not supported yet)");
-                return false;
+                CheckIsValid();
+                var animator = Context.Handles.Animator;
+                return animator != null && animator.isHuman;
             }
         }
 
@@ -455,8 +563,12 @@ namespace UnityEngine.Animations
             return index >= 0 && index < inputs.Count ? inputs[index].Weight : 0f;
         }
 
-        public void CopyAnimationStreamMotion(AnimationStream animationStream) =>
-            Unbound.Runtime.Stubs.Ignored("AnimationStream.CopyAnimationStreamMotion", "does not copy root motion yet");
+        public void CopyAnimationStreamMotion(AnimationStream animationStream)
+        {
+            CheckIsValid();
+            animationStream.CheckIsValid();
+            Context.Motion = animationStream.Context.Motion;
+        }
     }
 
     /// <summary>A transform in the animation stream.</summary>

@@ -70,6 +70,12 @@ namespace Unbound.Runtime.Playables
                 into.Values[c] = m_Pose.Value[c] / w;
                 into.Animated[c] = true;
             }
+            if (!e.ReferencePose && e.MotionMode != RootMotionMode.Unsupported)
+            {
+                var motion = e.MotionMode == RootMotionMode.Compute ? Motion(e, bound, node) : RootMotionStep.Zero;
+                motion.RootUnanimated = !AnimatesRoot(e);
+                into.Motion = motion;
+            }
             // Under root motion playables the root starts where the clip's first frame is removed.
             if (e.RootMotion && RemoveStartOffset) RemoveStart(e, bound, into);
             int m = Math.Min(into.ObjectCount, e.Bindings.ObjectCount);
@@ -86,6 +92,85 @@ namespace Unbound.Runtime.Playables
             m_To = node.Time;
             m_Weight = weight;
             e.Note(this, node);
+        }
+
+        /// <summary>The clip just sampled has curves for the Animator transform's position or
+        /// rotation, or a root node's motion (MotionT/MotionQ curves) that moves it.</summary>
+        bool AnimatesRoot(AnimationEvaluation e)
+        {
+            if (Clip.MotionCurves() != null || !RootAnimation.Channels(e, out int pos, out int rot)) return true;
+            return RootAnimation.Any(m_Pose.Weight, e.Bindings.FloatCount, pos, rot);
+        }
+
+        readonly AnimationPose m_MotionPose = new AnimationPose();
+
+        /// <summary>
+        /// The root's movement over this evaluation: from the playable's previous local time to its
+        /// time on the clip (wrapped when it loops, clamped otherwise), whole loops included, as the
+        /// Animator's own clip root motion moves between a state's previous and current times. The
+        /// root is the Animator's transform; a root node's MotionT/MotionQ curves move it when the
+        /// clip has them. Unbound's choices (unmeasured): a seek (SetTime) or a paused playable
+        /// moves the root by nothing; a playable whose own time wrapped at its duration
+        /// (DirectorWrapMode.Loop) moved forward through the wrap.
+        /// </summary>
+        RootMotionStep Motion(AnimationEvaluation e, BoundClip bound, PlayableNode node)
+        {
+            if (!node.LastPlaying || (node.FrameFlags & FrameData.Flags.SeekOccured) != 0) return RootMotionStep.Zero;
+            double from = node.PreviousTime, to = node.Time;
+            if ((node.FrameFlags & FrameData.Flags.Loop) != 0 && to < from && node.Duration > 0 && node.Duration < double.MaxValue)
+                to += node.Duration;
+            if (from == to) return RootMotionStep.Zero;
+            var root = e.Animator.transform;
+            int pos = e.Bindings.ChannelOf(root, "position"), rot = e.Bindings.ChannelOf(root, "rotation");
+            if (pos < 0 && rot < 0 && Clip.MotionCurves() == null) return RootMotionStep.Zero;
+            return Between(e, bound, from, to, pos, rot);
+        }
+
+        RootMotionStep Between(AnimationEvaluation e, BoundClip bound, double from, double to, int pos, int rot)
+        {
+            float length = Clip.length;
+            if (!Loops || length <= 0f) return Segment(e, bound, (float)ClipTime(from), (float)ClipTime(to), pos, rot);
+            if (to < from) return Between(e, bound, to, from, pos, rot).Inverse();
+            double first = Math.Floor(from / length), last = Math.Floor(to / length);
+            if (first == last) return Segment(e, bound, (float)ClipTime(from), (float)ClipTime(to), pos, rot);
+            float start = Clip.StartTime, end = start + length;
+            var motion = Segment(e, bound, (float)ClipTime(from), end, pos, rot);
+            var cycle = Segment(e, bound, start, end, pos, rot);
+            for (long n = (long)(last - first) - 1; n > 0; n >>= 1)
+            {
+                if ((n & 1) != 0) motion = motion.Then(cycle);
+                cycle = cycle.Then(cycle);
+            }
+            return motion.Then(Segment(e, bound, start, (float)ClipTime(to), pos, rot));
+        }
+
+        /// <summary>The root's movement from one clip time to another, in its frame at the first.</summary>
+        RootMotionStep Segment(AnimationEvaluation e, BoundClip bound, float t0, float t1, int pos, int rot)
+        {
+            var (p0, r0) = RootPose(e, bound, t0, pos, rot);
+            var (p1, r1) = RootPose(e, bound, t1, pos, rot);
+            var inverse = Quaternion.Inverse(r0);
+            return new RootMotionStep { Known = true, Delta = inverse * (p1 - p0), Turn = inverse * r1 };
+        }
+
+        (Vector3, Quaternion) RootPose(AnimationEvaluation e, BoundClip bound, float time, int pos, int rot)
+        {
+            if (Clip.MotionCurves() != null) return Clip.MotionPose(time);
+            m_MotionPose.Reset(e.Bindings.FloatCount, e.Bindings.ObjectCount);
+            ClipSampling.Sample(bound, time, 1f, m_MotionPose);
+            var p = Vector3.zero;
+            if (pos >= 0 && m_MotionPose.Weight[pos] > 0f)
+                p = new Vector3(m_MotionPose.Value[pos] / m_MotionPose.Weight[pos],
+                    m_MotionPose.Value[pos + 1] / Math.Max(m_MotionPose.Weight[pos + 1], 1e-6f),
+                    m_MotionPose.Value[pos + 2] / Math.Max(m_MotionPose.Weight[pos + 2], 1e-6f));
+            var r = Quaternion.identity;
+            if (rot >= 0 && m_MotionPose.Weight[rot] > 0f)
+            {
+                r = new Quaternion(m_MotionPose.Value[rot], m_MotionPose.Value[rot + 1], m_MotionPose.Value[rot + 2], m_MotionPose.Value[rot + 3]);
+                float n = MathF.Sqrt(r.x * r.x + r.y * r.y + r.z * r.z + r.w * r.w);
+                r = n > 1e-6f ? new Quaternion(r.x / n, r.y / n, r.z / n, r.w / n) : Quaternion.identity;
+            }
+            return (p, r);
         }
 
         readonly AnimationPose m_StartPose = new AnimationPose();
@@ -152,7 +237,55 @@ namespace Unbound.Runtime.Playables
                 inputs.Add((s, i.Weight));
             }
             AnimationEvaluation.MixInto(into, inputs);
+            if (e.MotionMode != RootMotionMode.Unsupported)
+            {
+                var motion = RootMotionStep.Mix(inputs);
+                // The mixer animates the root when an input does, whatever its weight, as its pose
+                // marks a channel any input animates (Unbound's choice, unmeasured).
+                if (motion.Known)
+                {
+                    motion.RootUnanimated = true;
+                    foreach (var (s, _) in inputs)
+                        if (!s.Motion.RootUnanimated) { motion.RootUnanimated = false; break; }
+                }
+                into.Motion = motion;
+            }
             foreach (var (s, _) in inputs) AnimStream.Return(s);
+        }
+    }
+
+    /// <summary>The root motion root's channels (the Animator transform's position and rotation),
+    /// for <see cref="RootMotionStep.RootUnanimated"/>.</summary>
+    internal static class RootAnimation
+    {
+        /// <summary>The first position and rotation channels of the Animator's transform (-1 when not
+        /// bound); false without an Animator.</summary>
+        internal static bool Channels(AnimationEvaluation e, out int pos, out int rot)
+        {
+            pos = rot = -1;
+            var t = e.Animator != null ? e.Animator.transform : null;
+            if (t == null || e.Bindings == null) return false;
+            pos = e.Bindings.ChannelOf(t, "position");
+            rot = e.Bindings.ChannelOf(t, "rotation");
+            return true;
+        }
+
+        /// <summary>Any of the root's channels below <paramref name="count"/> has a weight.</summary>
+        internal static bool Any(float[] weight, int count, int pos, int rot)
+        {
+            count = Math.Min(count, weight.Length);
+            for (int c = pos; pos >= 0 && c < pos + 3 && c < count; c++) if (weight[c] > 0f) return true;
+            for (int c = rot; rot >= 0 && c < rot + 4 && c < count; c++) if (weight[c] > 0f) return true;
+            return false;
+        }
+
+        /// <summary>Any of the root's channels below <paramref name="count"/> is animated.</summary>
+        internal static bool Any(bool[] animated, int count, int pos, int rot)
+        {
+            count = Math.Min(count, animated.Length);
+            for (int c = pos; pos >= 0 && c < pos + 3 && c < count; c++) if (animated[c]) return true;
+            for (int c = rot; rot >= 0 && c < rot + 4 && c < count; c++) if (animated[c]) return true;
+            return false;
         }
     }
 
@@ -191,8 +324,57 @@ namespace Unbound.Runtime.Playables
             return channels;
         }
 
+        /// <summary>Whether a layer's mask lets it animate the Animator's own transform (the root
+        /// motion root), by the transform's path below the bound root as <see cref="MaskChannels"/>
+        /// takes it: the mask's root entry is the empty path. No mask, or an empty one, allows it.</summary>
+        bool MaskAllowsRoot(AnimationEvaluation e, int layer)
+        {
+            var mask = layer < Masks.Count ? Masks[layer] : null;
+            if (mask == null || mask.m_Elements.Count == 0) return true;
+            var root = e.Bindings.Root != null ? e.Bindings.Root.transform : null;
+            var t = e.Animator != null ? e.Animator.transform : null;
+            if (root == null || t == null) return true;
+            var parts = new List<string>();
+            for (var p = t; p != null && p != root; p = p.m_Parent) parts.Insert(0, p.m_GameObject.m_Name);
+            return mask.Allows(string.Join("/", parts));
+        }
+
+        /// <summary>
+        /// A layer's root motion over the motion of the layers below it. Unbound's choices
+        /// (unmeasured; the Scripting API documents no root motion for layer mixers, only that
+        /// "Additive layers blend with previous layers" and that layers otherwise "override the
+        /// animation from previous layers"): layers apply in layer order, starting from no motion;
+        /// only layers that animate the root contribute: an override layer of weight w blends the
+        /// motion so far toward its own by w (deltas lerped, turns slerped, see
+        /// <see cref="RootMotionStep.Over"/>); an additive layer adds its delta times w and turns by
+        /// its turn slerped from none by w; a layer of weight 0, one whose mask excludes the root,
+        /// or one whose playables animate neither the root's position nor its rotation nor a root
+        /// node's motion (<see cref="RootMotionStep.RootUnanimated"/>) contributes nothing, as the
+        /// layer's pose overrides only the channels it animates; a contributing layer whose motion
+        /// is unknown makes the result unknown, unless a later override layer of weight 1 replaces
+        /// it. The Animator's own controller layers instead sum their deltas by weight; this
+        /// follows the layer mixer's pose rule instead. A weight above 1 (outside SetInputWeight's
+        /// "between 0 and 1") scales an additive delta but not its turn, as the additive pose does
+        /// (positions by w, rotations by a slerp clamped to 1); an override layer above 1 takes the
+        /// layer's motion, as its pose's positions do.
+        /// </summary>
+        static RootMotionStep LayerMotion(RootMotionStep below, RootMotionStep layer, float w, bool additive)
+        {
+            if (w <= 0f) return below;
+            if (!layer.Known) return RootMotionStep.Unknown;
+            if (!additive) return RootMotionStep.Over(below, layer, w);
+            return new RootMotionStep
+            {
+                Known = below.Known,
+                Delta = below.Delta + layer.Delta * w,
+                Turn = below.Turn * Quaternion.Slerp(Quaternion.identity, layer.Turn, Math.Min(w, 1f)),
+            };
+        }
+
         internal override void Evaluate(AnimationEvaluation e, PlayableNode node, int viaPort, float weight, AnimStream into)
         {
+            var motion = RootMotionStep.Zero;
+            bool any = false, rootAnimated = false;
             for (int l = 0; l < node.Inputs.Count; l++)
             {
                 var input = node.Inputs[l];
@@ -200,8 +382,16 @@ namespace Unbound.Runtime.Playables
                 var s = AnimStream.Rent(e.Bindings);
                 s.DeltaTime = e.DeltaTime;
                 e.EvaluateInto(input.Node, input.SourcePort, weight * input.Weight, s);
+                any = true;
+                bool additive = l < Additive.Count && Additive[l];
+                // A layer that does not animate the root is skipped like a masked-out one.
+                if (e.MotionMode != RootMotionMode.Unsupported && MaskAllowsRoot(e, l) && !s.Motion.RootUnanimated)
+                {
+                    motion = LayerMotion(motion, s.Motion, input.Weight, additive);
+                    rootAnimated = true;
+                }
                 var mask = MaskChannels(e, l);
-                if (l < Additive.Count && Additive[l])
+                if (additive)
                 {
                     bool was = e.ReferencePose;
                     e.ReferencePose = true;
@@ -213,6 +403,14 @@ namespace Unbound.Runtime.Playables
                 }
                 else AnimationEvaluation.BlendOver(into, s, input.Weight, mask);
                 AnimStream.Return(s);
+            }
+            // Without a connected layer the motion is unknown, as for an empty mixer (Unbound's choice).
+            // A layer mixer in a layer above animates the root when one of its layers does, whatever
+            // its weight, as its pose marks the channels a layer animates (Unbound's choice, unmeasured).
+            if (e.MotionMode != RootMotionMode.Unsupported)
+            {
+                if (any && motion.Known) motion.RootUnanimated = !rootAnimated;
+                into.Motion = any ? motion : RootMotionStep.Unknown;
             }
         }
     }
@@ -268,6 +466,36 @@ namespace Unbound.Runtime.Playables
             if (player == null || player.Bindings != e.Bindings || e.ReferencePose) return;
             player.EvaluateInto(into.Values, into.Animated, into.Objects, into.ObjectAnimated);
             e.Note(this, node);
+        }
+
+        /// <summary>
+        /// The root motion the controller's evaluation just carried into its stream (called right
+        /// after <see cref="Evaluate"/>): the controller's own root motion as
+        /// <see cref="AnimatorPlayer.StreamRootMotion"/> computes it for an animation stream fed by
+        /// this playable, turned back into a step by <see cref="RootMotionStep.FromVelocities"/>,
+        /// the conversion a job above a controller playable already uses. Zero when the Animator
+        /// requests no root motion; unknown when the evaluation sampled nothing (no player, another
+        /// Animator's bindings, an additive layer's reference) or humanoid clips play. Unbound's
+        /// choices (unmeasured): the motion is the Animator's own controller root motion for the
+        /// same states; a zero delta time carries no motion; the controller animates the root when
+        /// its evaluation animated the root's position or rotation channels (its clips' curves,
+        /// their write defaults, or, for a state without write defaults, every channel it keeps) or
+        /// one of its sampled clips has a root node's motion.
+        /// </summary>
+        internal RootMotionStep RootMotion(AnimationEvaluation e, AnimStream into)
+        {
+            if (e.ReferencePose || e.MotionMode == RootMotionMode.Unsupported || e.Animator == null) return RootMotionStep.Unknown;
+            var player = Player;
+            if (player == null || player.Bindings != e.Bindings) return RootMotionStep.Unknown;
+            var motion = RootMotionStep.Zero;
+            if (e.MotionMode != RootMotionMode.Zero)
+            {
+                if (!player.StreamRootMotion(into.DeltaTime, out _, out _, out var velocity, out var angular)) return RootMotionStep.Unknown;
+                motion = RootMotionStep.FromVelocities(e.Animator, into.DeltaTime, velocity, angular);
+            }
+            motion.RootUnanimated = RootAnimation.Channels(e, out int pos, out int rot)
+                && !RootAnimation.Any(into.Animated, into.FloatCount, pos, rot) && !player.SampledRootNodeMotion();
+            return motion;
         }
 
         internal override void AfterWrite(AnimationEvaluation e, PlayableNode node) => Player?.AfterEvaluate();
