@@ -286,18 +286,37 @@ namespace Unbound.Runtime
         };
 
         /// <summary>The active links of the surface's agent type whose start lies over this tile
-        /// become its off-mesh connections (Detour connects their ends when tiles are added).</summary>
+        /// become its off-mesh connections (Detour connects their ends when tiles are added).
+        /// A start on the edge between two tiles lies over both and is added to each; each copy's
+        /// end side is classified against its own tile, so every copy lands where its tile's
+        /// neighbours are. The links whose end lies over this tile (or within the snap radius of it)
+        /// land in it, and a bidirectional landing takes one of this tile's link slots for the way
+        /// back, so this tile reserves slots for them too, whether or not it holds any start.</summary>
         static void AddLinks(Surface surface, DtMeshData tile)
         {
             var h = tile.header;
             var add = new List<(LinkInstance Link, Vector3 Start, Vector3 End)>();
+            int ends = 0;
             foreach (var link in s_Links)
             {
                 if (!link.Active || link.Link.agentTypeID != surface.AgentTypeID) continue;
+                var end = link.End;
+                // Over the tile or within the snap radius of it: Detour lands an end on a polygon of
+                // the tile up to the snap radius away (DtNavMesh.ConnectExtOffMeshLinks).
+                float snap = LinkSnapRadius;
+                if (!(end.x < h.bmin.X - snap || end.x > h.bmax.X + snap || end.z < h.bmin.Z - snap || end.z > h.bmax.Z + snap)) ends++;
                 var start = link.Start;
                 if (start.x < h.bmin.X || start.x > h.bmax.X || start.z < h.bmin.Z || start.z > h.bmax.Z) continue;
-                add.Add((link, start, link.End));
+                add.Add((link, start, end));
             }
+            // Three link slots per end that can land here. DotRecast's own tile builder reserves two
+            // per end inside the tile for baked connections (DtNavMeshBuilder.CreateNavMeshData:
+            // offMeshConLinkCount counts each end inside the tile, maxLinkCount adds it twice), but it
+            // stores each connection in one tile only. Here a start on a tile edge or corner is added
+            // to every tile it lies over, up to four; each copy's bidirectional landing takes a slot of
+            // the landing tile for the way back, and up to three copies besides this tile's own (which
+            // the start reservation below covers) can land here. So deliberately more than the builder.
+            h.maxLinkCount += ends * 3;
             if (add.Count == 0) return;
             int baseVert = h.vertCount, basePoly = h.polyCount;
             var verts = new float[(h.vertCount + add.Count * 2) * 3];
@@ -312,6 +331,7 @@ namespace Unbound.Runtime
                 int v = baseVert + i * 2;
                 verts[v * 3] = start.x; verts[v * 3 + 1] = start.y; verts[v * 3 + 2] = start.z;
                 verts[v * 3 + 3] = end.x; verts[v * 3 + 4] = end.y; verts[v * 3 + 5] = end.z;
+                var endPos = new RcVec3f(end.x, end.y, end.z);
                 var poly = new DtPoly(basePoly + i, DtDetour.DT_VERTS_PER_POLYGON);
                 poly.verts[0] = v;
                 poly.verts[1] = v + 1;
@@ -322,11 +342,15 @@ namespace Unbound.Runtime
                 polys[basePoly + i] = poly;
                 var con = new DtOffMeshConnection
                 {
-                    pos = new[] { new RcVec3f(start.x, start.y, start.z), new RcVec3f(end.x, end.y, end.z) },
+                    pos = new[] { new RcVec3f(start.x, start.y, start.z), endPos },
                     rad = LinkSnapRadius,
                     poly = basePoly + i,
                     flags = link.Link.bidirectional ? DtDetour.DT_OFFMESH_CON_BIDIR : 0,
-                    side = 0xff,
+                    // Where the end lies from this tile: 0xff over it, else the neighbour (0..7)
+                    // Detour looks for the landing in. Classified as DotRecast's own tile builder
+                    // does (DtNavMeshBuilder.CreateNavMeshData: the end against the tile's bounds),
+                    // so an end in the next tile lands there instead of never connecting.
+                    side = DtNavMeshBuilder.ClassifyOffMeshPoint(endPos, h.bmin, h.bmax),
                     userId = link.Id,
                 };
                 cons[tile.offMeshCons.Length + i] = con;
