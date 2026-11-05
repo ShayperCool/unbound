@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Runtime.ExceptionServices;
 using Xunit;
 using TriggerEvent = UnityEngine.ParticleSystemTriggerEventType;
@@ -373,6 +374,129 @@ namespace UnityEngine.Tests
             Assert.Equal(White, killed.startColor);
             Frame(f);
             Assert.Equal(0, f.ps.particleCount);
+        }
+
+        static readonly FieldInfo SerialNext = typeof(ParticleSystem).GetField("m_TriggerSerialNext", BindingFlags.NonPublic | BindingFlags.Instance);
+
+        [Fact]
+        public void AParticleNoLongerListedIsNotWrittenAfterTheSerialCounterWraps()
+        {
+            Assert.NotNull(SerialNext);
+            using var f = new Fixture(enter: Overlap.Callback);
+            // Seed 1 (first in the buffer) enters now and gets the counter's last serial; seed 2
+            // enters in the next frame, when the counter is back at that serial, as after
+            // 2^24 - 1 further stamps. Seed 1 stays inside and is not listed again.
+            f.ps.SetParticles(new[] { At(1, Center), At(2, Away) });
+            SerialNext.SetValue(f.ps, 0xFFFFFFu);
+            uint[] first = null;
+            f.writer.handler = ps => first = Seeds(Entries(ps, TriggerEvent.Enter));
+            TriggerFrame(f);
+            Assert.Equal(new uint[] { 1 }, first);
+            var all = new ParticleSystem.Particle[2];
+            Assert.Equal(2, f.ps.GetParticles(all));
+            for (int i = 0; i < all.Length; i++)
+                if (all[i].randomSeed == 2) all[i].position = Center + new Vector3(.2f, 0f, 0f);
+            f.ps.SetParticles(all);
+            SerialNext.SetValue(f.ps, 0xFFFFFFu);
+            uint[] second = null;
+            f.writer.handler = ps =>
+            {
+                var list = Entries(ps, TriggerEvent.Enter);
+                second = Seeds(list);
+                Recolor(list);
+                ps.SetTriggerParticles(TriggerEvent.Enter, list);
+            };
+            TriggerFrame(f);
+            Assert.Equal(new uint[] { 2 }, second);
+            Assert.Equal(2, f.ps.GetParticles(all));
+            Assert.Equal(new uint[] { 1, 2 }, Seeds(all));
+            Assert.Equal(White, all.Single(p => p.randomSeed == 1).startColor);
+            Assert.Equal(Red, all.Single(p => p.randomSeed == 2).startColor);
+        }
+
+        /// <summary>A system whose particles rotate at a constant rate and run a Birth
+        /// sub-emitter whose rate never completes a child in the test, so its counter only
+        /// accumulates. Seed 1 sits in the trigger, seed 2 (its twin) away from it.</summary>
+        static ParticleSystem RotatingWithBirthCounter(Fixture f)
+        {
+            var rotation = f.ps.rotationOverLifetime; rotation.enabled = true; rotation.z = 1f;
+            var go = new GameObject("birth child");
+            go.SetActive(false);
+            var child = go.AddComponent<ParticleSystem>();
+            var main = child.main; main.playOnAwake = false; main.startSpeed = 0f;
+            var shape = child.shape; shape.enabled = false;
+            var emission = child.emission; emission.rateOverTime = 4f;
+            go.SetActive(true);
+            var subs = f.ps.subEmitters; subs.enabled = true;
+            subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing);
+            f.ps.SetParticles(new[] { At(1, Center), At(2, Away) });
+            return child;
+        }
+
+        static ParticleSystem.Particle Internal(ParticleSystem ps, uint seed) =>
+            ps.m_Particles.Take(ps.particleCount).Single(p => p.randomSeed == seed);
+
+        /// <summary>The listed particle's rotation, life and Birth counter advanced exactly as
+        /// its unlisted twin's did.</summary>
+        static void AssertAdvancedLikeItsTwin(ParticleSystem ps)
+        {
+            var live = Live(ps);
+            Assert.NotEqual(0f, live[2].rotation3D.z);
+            Assert.Equal(live[2].rotation3D, live[1].rotation3D);
+            Assert.Equal(live[2].angularVelocity3D, live[1].angularVelocity3D);
+            Assert.Equal(live[2].remainingLifetime, live[1].remainingLifetime);
+            var twin = Internal(ps, 2);
+            var listed = Internal(ps, 1);
+            Assert.NotEqual(0f, twin.m_EmitAccumulator0);
+            Assert.Equal(twin.m_EmitAccumulator0, listed.m_EmitAccumulator0);
+        }
+
+        [Fact]
+        public void AnUnchangedWriteBackLeavesRotationAndBirthCountersAdvancing()
+        {
+            using var f = new Fixture(inside: Overlap.Callback);
+            var child = RotatingWithBirthCounter(f);
+            try
+            {
+                f.writer.handler = ps =>
+                {
+                    var list = Entries(ps, TriggerEvent.Inside);
+                    Assert.Equal(new uint[] { 1 }, Seeds(list));
+                    ps.SetTriggerParticles(TriggerEvent.Inside, list);
+                };
+                for (int frame = 0; frame < 3; frame++) TriggerFrame(f);
+                Assert.Equal(3, f.writer.calls);
+                Assert.Equal(0, child.particleCount);
+                AssertAdvancedLikeItsTwin(f.ps);
+            }
+            finally { Object.DestroyImmediate(child.gameObject); }
+        }
+
+        [Fact]
+        public void AColorOnlyChangePersistsWithoutRollingBackTheRestOfTheParticle()
+        {
+            using var f = new Fixture(inside: Overlap.Callback);
+            var child = RotatingWithBirthCounter(f);
+            try
+            {
+                // .05 s runs as two .025 s steps: each lists seed 1, and the first entry predates
+                // the second step.
+                f.writer.handler = ps =>
+                {
+                    var list = Entries(ps, TriggerEvent.Inside);
+                    Assert.Equal(new uint[] { 1, 1 }, Seeds(list));
+                    Recolor(list);
+                    ps.SetTriggerParticles(TriggerEvent.Inside, list);
+                };
+                for (int frame = 0; frame < 2; frame++) TriggerFrame(f, .05f);
+                Assert.Equal(2, f.writer.calls);
+                Assert.Equal(0, child.particleCount);
+                var live = Live(f.ps);
+                Assert.Equal(Red, live[1].startColor);
+                Assert.Equal(White, live[2].startColor);
+                AssertAdvancedLikeItsTwin(f.ps);
+            }
+            finally { Object.DestroyImmediate(child.gameObject); }
         }
     }
 }
