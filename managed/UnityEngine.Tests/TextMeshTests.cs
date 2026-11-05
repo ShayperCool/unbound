@@ -233,11 +233,10 @@ namespace Unbound.Tests
             Assert.Same(material, renderer.sharedMaterial);
         }
 
-        // Without a font nothing is drawn, not even a MeshFilter's mesh.
-        // Red at the stub: the renderer draws the MeshFilter's mesh.
         // Loud, not silent: a TextMesh whose MeshRenderer has no material (as one added by script
         // has) is reported once per regeneration through the stub report. Unbound's choice
-        // (unmeasured): no material is assigned. Red at 6eb03391: nothing is reported.
+        // (unmeasured): no material is assigned. Red at 6eb03391: nothing is reported; red at the
+        // stub: nothing is drawn.
         [Fact]
         public void AMissingMaterialIsReported()
         {
@@ -248,6 +247,8 @@ namespace Unbound.Tests
             Assert.Equal(before + 1, Hits());
         }
 
+        // Without a font nothing is drawn, not even a MeshFilter's mesh.
+        // Red at the stub: the renderer draws the MeshFilter's mesh.
         [Fact]
         public void NoFontDrawsNothing()
         {
