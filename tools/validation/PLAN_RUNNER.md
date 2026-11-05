@@ -29,7 +29,7 @@ payload output paths belong to the reviewed plan.
   "timeout": "/usr/bin/timeout",
   "systemctl": "/usr/bin/systemctl",
   "env": {
-    "HOME": "/physical/owned-home",
+    "HOME": "/home/launcher-owner",
     "PATH": "/usr/bin:/bin",
     "LANG": "C.UTF-8",
     "XDG_RUNTIME_DIR": "/run/user/1000",
@@ -37,6 +37,7 @@ payload output paths belong to the reviewed plan.
   },
   "inputs": {
     "/physical/cache/compat/with-heavy-job": "<sha256>",
+    "/home/launcher-owner/.cache/compat/job_runner.py": "<sha256>",
     "/usr/bin/timeout": "<sha256>",
     "/usr/bin/systemctl": "<sha256>",
     "/usr/bin/python3.13": "<sha256>",
@@ -53,9 +54,13 @@ payload output paths belong to the reviewed plan.
 ```
 
 The explicit environment replaces the parent's environment. Supply the runtime
-bus keys required by the installed pool, private HOME/package/tmp/output paths
-and required toolchain flags in the reviewed map. Do not copy the agent's entire
-environment. The installed pool retains its documented compiler-server flags.
+bus keys required by the installed pool and required toolchain flags in the
+reviewed map. The installed `with-heavy-job` shell entry locates its Python entry
+through HOME: use the launcher's real HOME and pin that `job_runner.py` too. A
+private payload HOME must be an explicit reviewed `env -i` argv inside the lease,
+with all required payload keys, not a replacement of the launcher's HOME. Keep
+package/tmp/output paths private. Do not copy the agent's entire environment.
+The installed pool retains its documented compiler-server flags.
 The plan and payload logs can contain sensitive data; keep them private and
 follow the package's existing publication rules. The runner's console and result
 contain no argv or environment values.
