@@ -278,8 +278,13 @@ namespace UnityEngine
             int norm = PixelFormats.GpuNormFormat(f);
             if (norm >= 0) return norm;
             if (GraphicsFormatUtility.IsHDRFormat(f) || GraphicsFormatUtility.IsIEEE754Format(f)) return 2;
+            if (GraphicsFormatUtility.IsIntegerFormat(f) && s_WarnedIntegerFormats.Add(f))
+                Debug.LogWarning($"Unbound: render texture '{name}' has the integer format {f}, which Unbound does not store yet: it is kept as 8-bit RGBA (values beyond 8 bits per channel are lost).");
             return GraphicsFormatUtility.IsSRGBFormat(f) ? 0 : 1;
         }
+
+        /// <summary>Integer formats warned about (once each).</summary>
+        static readonly HashSet<GraphicsFormat> s_WarnedIntegerFormats = new HashSet<GraphicsFormat>();
 
         /// <summary>The layers the renderer allocates: an array's depth, a cube's six faces, else one
         /// (3D and cube-array targets have a 2D stand-in).</summary>
