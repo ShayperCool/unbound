@@ -400,5 +400,37 @@ namespace UnityEngine.Tests
                 Near(5f - Dt, p.remainingLifetime);
             Near(Dt, ps.time);
         }
+
+        // Implementation invariant (an unmeasured inference, not a Native observation): the
+        // restart reset on its own. A plain Stop() (StopEmitting) with nothing alive stops a culled
+        // system without the clearing branch, so only the new playback (Play -> Restart, fixed
+        // seed) can drop the earlier playback's missed time. Expected 26 * Dt = 0.52: the new
+        // playback's 25 missed frames and the visible one.
+        [Fact]
+        public void PauseAndCatchupRestartAfterAPlainStopDropsTheMissedTime()
+        {
+            var ps = Make(ParticleSystemCullingMode.PauseAndCatchup, loop: false);
+            // Nothing is alive yet: a plain Stop() stops it, and the duration and seed can change.
+            Assert.Equal(0, ps.particleCount);
+            ps.Stop();
+            Assert.True(ps.isStopped);
+            var main = ps.main;
+            main.duration = 1f;
+            ps.useAutoRandomSeed = false;
+            ps.randomSeed = 12345u;
+            ps.Play();
+            // Never seen: culled from total time 0, nothing emitted, 40 frames of missed time pending.
+            Frames(40);
+            Assert.Equal(0, ps.particleCount);
+            ps.Stop();
+            // Stopped without clearing, so the next Play begins a new playback.
+            Assert.True(ps.isStopped);
+            ps.Play();
+            Assert.True(ps.isPlaying);
+            Frames(25);
+            SetVisible(ps, true);
+            Frames(1);
+            Near(26 * Dt, ps.time);
+        }
     }
 }
