@@ -33,14 +33,30 @@ namespace Unbound.Runtime
             $"built-in {type} '{name}' ({{fileID: {fileId}, guid: {guid}}})";
 
         /// <summary>The installed texture `fileId` of `unity_builtin_extra`, through the serialized
-        /// Texture2D loader; null, with an error naming it, when it cannot be read or is not the
-        /// texture the profile's table names.</summary>
+        /// Texture2D loader, with the sampler of its record (`m_TextureSettings`: filter mode,
+        /// anisotropic level, mip bias, wrap modes). Null, with an error naming it, when its record
+        /// or its pixels cannot be read or it is not the texture the profile's table names.</summary>
         internal static Texture2D LoadTexture(string guid, long fileId, string name)
         {
             var identity = Identity("Texture2D", guid, fileId, name);
             if (!Native.IsReady)
             {
                 Debug.LogError($"Unbound: {identity} is not available: it is read from the install's resources by the host, which is not connected.");
+                return null;
+            }
+            // The loader uploads the texture with its stored sampler; the managed texture reports
+            // that sampler too (and sends it again when a script changes one of its settings).
+            (FilterMode Filter, TextureWrapMode U, TextureWrapMode V, TextureWrapMode W, int Aniso, float MipBias) sampler;
+            try
+            {
+                var fields = RecordFields(guid, fileId, Texture2DClassId, "Texture2D");
+                var recordName = Str(fields, "m_Name");
+                if (recordName != name) throw new FormatException($"the install's object {fileId} is the texture '{recordName}'");
+                sampler = SamplerOf(Field(fields, "m_TextureSettings"));
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"Unbound: {identity} is not available: its record could not be read ({e.Message}).");
                 return null;
             }
             var texture = Texture2D.FromSerialized(guid, fileId);
@@ -55,7 +71,62 @@ namespace Unbound.Runtime
                 Object.DestroyImmediate(texture, true);
                 return null;
             }
+            texture.SetSamplerQuietly(sampler.Filter, sampler.U, sampler.V, sampler.W, sampler.Aniso, sampler.MipBias);
+            if (sampler.MipBias != 0f)
+            {
+                // The loader's upload carries no mip bias: it goes on its own, as for any texture
+                // uploaded with a quiet one.
+                try
+                {
+                    texture.EmitSamplerMetadata();
+                }
+                catch (Exception e)
+                {
+                    Debug.LogError($"Unbound: {identity} is not available: its mip bias {sampler.MipBias} could not be set ({e.Message}).");
+                    Object.DestroyImmediate(texture, true);
+                    return null;
+                }
+            }
             return texture;
+        }
+
+        /// <summary>A texture record's sampler (`m_TextureSettings`), checked: a filter or wrap
+        /// mode outside Unity's enums or a negative anisotropic level is not read here. A record
+        /// without a mip bias has none.</summary>
+        static (FilterMode, TextureWrapMode, TextureWrapMode, TextureWrapMode, int, float) SamplerOf(JsonElement settings)
+        {
+            int filter = Int(settings, "m_FilterMode");
+            if (filter < (int)FilterMode.Point || filter > (int)FilterMode.Trilinear)
+                throw new NotSupportedException($"the texture's filter mode {filter} is not read here");
+            int aniso = Int(settings, "m_Aniso");
+            if (aniso < 0) throw new NotSupportedException($"the texture's anisotropic level {aniso} is not read here");
+            float mipBias = settings.TryGetProperty("m_MipBias", out _) ? Float(settings, "m_MipBias") : 0f;
+            if (!float.IsFinite(mipBias)) throw new FormatException($"the texture's mip bias {mipBias}");
+            return ((FilterMode)filter, Wrap(settings, "m_WrapU"), Wrap(settings, "m_WrapV"), Wrap(settings, "m_WrapW"), aniso, mipBias);
+        }
+
+        static TextureWrapMode Wrap(JsonElement settings, string name)
+        {
+            int wrap = Int(settings, name);
+            if (wrap < (int)TextureWrapMode.Repeat || wrap > (int)TextureWrapMode.MirrorOnce)
+                throw new NotSupportedException($"the texture's wrap mode {wrap} (`{name}`) is not read here");
+            return (TextureWrapMode)wrap;
+        }
+
+        /// <summary>The `fields` of the install's object `fileId` as the host's `editor-resource`
+        /// call answers it; an error when the host cannot answer or the object is not of class
+        /// `classId`.</summary>
+        static JsonElement RecordFields(string guid, long fileId, int classId, string className)
+        {
+            var answer = Native.Call("editor-resource", JsonSerializer.Serialize(new { guid, fileId }));
+            using var document = JsonDocument.Parse(answer);
+            var root = document.RootElement;
+            if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("classId", out var classElement)
+                || classElement.ValueKind != JsonValueKind.Number || !classElement.TryGetInt32(out var actual))
+                throw new FormatException("the answer names no class");
+            if (actual != classId)
+                throw new FormatException($"the install's object {fileId} is of class {actual}, not a {className} ({classId})");
+            return Field(root, "fields").Clone();
         }
 
         /// <summary>The installed Sprite `fileId` of `unity_builtin_extra` from its record: its
@@ -73,15 +144,7 @@ namespace Unbound.Runtime
             Record entry;
             try
             {
-                var answer = Native.Call("editor-resource", JsonSerializer.Serialize(new { guid, fileId }));
-                using var document = JsonDocument.Parse(answer);
-                var root = document.RootElement;
-                if (root.ValueKind != JsonValueKind.Object || !root.TryGetProperty("classId", out var classElement)
-                    || classElement.ValueKind != JsonValueKind.Number || !classElement.TryGetInt32(out var classId))
-                    throw new FormatException("the answer names no class");
-                if (classId != SpriteClassId)
-                    throw new FormatException($"the install's object {fileId} is of class {classId}, not a Sprite ({SpriteClassId})");
-                entry = Record.Read(Field(root, "fields"));
+                entry = Record.Read(RecordFields(guid, fileId, SpriteClassId, "Sprite"));
             }
             catch (Exception e)
             {

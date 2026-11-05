@@ -17,13 +17,15 @@ namespace UnityEngine.Tests
     /// The built-in uGUI sprites of `unity_builtin_extra` (UISprite, Background, Knob, Checkmark,
     /// DropdownArrow) and their textures are the install's own objects: the Sprite record comes
     /// from the host's `editor-resource` call by `{guid, fileId}`, its texture through the
-    /// serialized Texture2D loader (`load-texture-object`) by the record's texture reference.
-    /// A stand-in host answers both calls in the shape the host's type-tree reader gives
+    /// serialized Texture2D loader (`load-texture-object`) by the record's texture reference,
+    /// with the sampler of the texture's own record (`editor-resource` again).
+    /// A stand-in host answers these calls in the shape the host's type-tree reader gives
     /// (scalars as strings, byte arrays as hex, references as `{fileID, guid}`).
     ///
     /// Provenance of the values: the ids, classes, names, texture sizes and mip counts, rects,
     /// pivots, pixels per unit, borders, texture rects, uv transforms, `settingsRaw`, vertex,
-    /// index and physics-point counts in <see cref="s_Installed"/> are the 6000.0.71f1 install's
+    /// index and physics-point counts in <see cref="s_Installed"/>, and the texture samplers
+    /// (<see cref="InstalledFilter"/> and the constants after it), are the 6000.0.71f1 install's
     /// `unity_builtin_extra` records (a Native asset-state observation of the resource file read
     /// as data, not a measured API readout; the host's own reading of the file is tested on the
     /// Rust side). The mesh positions, physics points, index order and image data are NOT the
@@ -92,9 +94,15 @@ namespace UnityEngine.Tests
             },
         };
 
+        /// <summary>The sampler (`m_TextureSettings`) every one of the five texture records
+        /// stores: filter mode 1 (Bilinear), anisotropic level 16, mip bias 0, wrap U/V/W 1 (Clamp).</summary>
+        const int InstalledFilter = 1, InstalledAniso = 16, InstalledWrap = 1;
+        const float InstalledMipBias = 0f;
+
         /// <summary>The stand-in host's answers by (method, guid, fileId): status 0 with JSON, else an error.</summary>
         static readonly Dictionary<(string, string, long), (int Status, string Answer)> s_Answers = new Dictionary<(string, string, long), (int, string)>();
-        /// <summary>Every native call in order: "method guid fileId" for the two answered calls, else the method.</summary>
+        /// <summary>Every native call in order: "method guid fileId" for the two answered calls,
+        /// "texture-sampler-state request" for a mip bias sent, else the method.</summary>
         static readonly List<string> s_Calls = new List<string>();
 
         readonly object m_PreviousApi = Api.GetValue(null), m_PreviousReady = Ready.GetValue(null);
@@ -175,6 +183,11 @@ namespace UnityEngine.Tests
                     long fileId = input.RootElement.GetProperty("fileId").GetInt64();
                     s_Calls.Add(name + " " + guid + " " + fileId);
                     (status, result) = s_Answers.TryGetValue((name, guid, fileId), out var answer) ? answer : (1, "no object " + fileId);
+                }
+                else if (name == "texture-sampler-state")
+                {
+                    s_Calls.Add(name + " " + Encoding.UTF8.GetString(request, requestLength));
+                    (status, result) = (0, "null");
                 }
                 else
                 {
@@ -315,18 +328,49 @@ namespace UnityEngine.Tests
                 ["dimension"] = 2, ["rgbm"] = false, ["linear"] = false,
             }.ToJsonString();
 
-        /// <summary>The host answers the installed sprite `name` (record and texture), the record
-        /// changed by <paramref name="change"/>.</summary>
-        static void Answer(string name, Action<JsonObject> change = null)
+        /// <summary>The record the host answers for an installed texture: its name, size, mips and
+        /// stored sampler (the image data, which the reader does not use, is left out).</summary>
+        static JsonObject TextureRecord(string name)
+        {
+            var row = s_Installed[name];
+            var fields = new JsonObject
+            {
+                ["m_Name"] = name,
+                ["m_Width"] = row.TextureWidth.ToString(CultureInfo.InvariantCulture),
+                ["m_Height"] = row.TextureHeight.ToString(CultureInfo.InvariantCulture),
+                ["m_MipCount"] = row.Mips.ToString(CultureInfo.InvariantCulture),
+                ["m_IsReadable"] = "false",
+                ["m_TextureSettings"] = new JsonObject
+                {
+                    ["m_FilterMode"] = InstalledFilter.ToString(CultureInfo.InvariantCulture),
+                    ["m_Aniso"] = InstalledAniso.ToString(CultureInfo.InvariantCulture),
+                    ["m_MipBias"] = S(InstalledMipBias),
+                    ["m_WrapU"] = InstalledWrap.ToString(CultureInfo.InvariantCulture),
+                    ["m_WrapV"] = InstalledWrap.ToString(CultureInfo.InvariantCulture),
+                    ["m_WrapW"] = InstalledWrap.ToString(CultureInfo.InvariantCulture),
+                },
+            };
+            return new JsonObject { ["classId"] = 28, ["fields"] = fields };
+        }
+
+        /// <summary>The host answers the installed sprite `name` (sprite record, texture record and
+        /// texture), the sprite record changed by <paramref name="change"/>, the texture record by
+        /// <paramref name="texture"/>.</summary>
+        static void Answer(string name, Action<JsonObject> change = null, Action<JsonObject> texture = null)
         {
             var row = s_Installed[name];
             var record = Record(name);
             change?.Invoke(record);
             s_Answers[("editor-resource", Extra, row.Sprite)] = (0, record.ToJsonString());
+            var textureRecord = TextureRecord(name);
+            texture?.Invoke(textureRecord);
+            s_Answers[("editor-resource", Extra, row.Texture)] = (0, textureRecord.ToJsonString());
             s_Answers[("load-texture-object", Extra, row.Texture)] = (0, TextureAnswer(name, row.TextureWidth, row.TextureHeight, row.Mips));
         }
 
         static JsonObject Fields(JsonObject record) => (JsonObject)record["fields"];
+
+        static JsonObject Settings(JsonObject textureRecord) => (JsonObject)Fields(textureRecord)["m_TextureSettings"];
 
         static JsonObject Rd(JsonObject record) => (JsonObject)Fields(record)["m_RD"];
 
@@ -442,7 +486,8 @@ namespace UnityEngine.Tests
 
         /// <summary>Red on 8ece7bb2 (assertion: load-texture-object Asked 0, the texture is drawn,
         /// 32x32 and readable). Each selected texture is the install's, through the serialized
-        /// Texture2D loader, not readable (as stored).</summary>
+        /// Texture2D loader, not readable (as stored); its own record is read once (for its
+        /// sampler).</summary>
         [Theory]
         [InlineData("UISprite")]
         [InlineData("Background")]
@@ -461,7 +506,66 @@ namespace UnityEngine.Tests
             Assert.Equal(row.TextureHeight, texture.height);
             Assert.Equal(row.Mips, texture.mipmapCount);
             Assert.False(texture.isReadable);
-            Assert.Equal(0, Asked("editor-resource", row.Texture));
+            Assert.Equal(1, Asked("editor-resource", row.Texture));
+        }
+
+        /// <summary>Red on 70769329 (assertion: wrapModeU is Repeat, the Texture default the
+        /// serialized loader left) and on 8ece7bb2 (assertion: the drawn texture's anisoLevel is
+        /// 1). Each selected texture reports its record's sampler, quietly (the loader uploaded it
+        /// with that sampler), and the sprite's texture is that texture; the record is read once.</summary>
+        [Theory]
+        [InlineData("UISprite")]
+        [InlineData("Background")]
+        [InlineData("Knob")]
+        [InlineData("Checkmark")]
+        [InlineData("DropdownArrow")]
+        public void TheSelectedTexturesReportTheirRecordsSampler(string name)
+        {
+            var row = s_Installed[name];
+            Answer(name);
+            var texture = BuiltinShaders.Resolve(Extra, row.Texture) as Texture2D;
+            Assert.NotNull(texture);
+            Assert.Equal((FilterMode)InstalledFilter, texture.filterMode);
+            Assert.Equal((TextureWrapMode)InstalledWrap, texture.wrapModeU);
+            Assert.Equal((TextureWrapMode)InstalledWrap, texture.wrapModeV);
+            Assert.Equal((TextureWrapMode)InstalledWrap, texture.wrapModeW);
+            Assert.Equal(InstalledAniso, texture.anisoLevel);
+            Assert.Equal(InstalledMipBias, texture.mipMapBias);
+            var sprite = (Sprite)BuiltinShaders.Resolve(Extra, row.Sprite);
+            Assert.Same(texture, sprite.texture);
+            Assert.Equal(1, Asked("editor-resource", row.Texture));
+            Assert.DoesNotContain(s_Calls, c => c.StartsWith("texture-sampl", StringComparison.Ordinal));
+        }
+
+        /// <summary>Red on 70769329 (assertion: filterMode is Bilinear, the Texture default) and
+        /// on 8ece7bb2 (assertion: the drawn texture's filterMode is Bilinear). The sampler is
+        /// whatever the texture's record says (mechanism stand-in values, not the installed
+        /// ones): Point, wrap U Mirror, V Repeat, W MirrorOnce, anisotropic level 4; a mip bias,
+        /// which the loader's upload does not carry, is sent on its own for the texture.</summary>
+        [Fact]
+        public void TheSamplerIsTheTexturesOwnRecords()
+        {
+            Answer("Knob", texture: r =>
+            {
+                var settings = Settings(r);
+                settings["m_FilterMode"] = "0";
+                settings["m_WrapU"] = "2";
+                settings["m_WrapV"] = "0";
+                settings["m_WrapW"] = "3";
+                settings["m_Aniso"] = "4";
+                settings["m_MipBias"] = S(-0.5f);
+            });
+            var texture = (Texture2D)BuiltinShaders.Resolve(Extra, 10912);
+            Assert.Equal(FilterMode.Point, texture.filterMode);
+            Assert.Equal(TextureWrapMode.Mirror, texture.wrapModeU);
+            Assert.Equal(TextureWrapMode.Repeat, texture.wrapModeV);
+            Assert.Equal(TextureWrapMode.MirrorOnce, texture.wrapModeW);
+            Assert.Equal(4, texture.anisoLevel);
+            Assert.Equal(-0.5f, texture.mipMapBias);
+            var sent = Assert.Single(s_Calls, c => c.StartsWith("texture-sampler-state ", StringComparison.Ordinal));
+            using var request = JsonDocument.Parse(sent.Substring("texture-sampler-state ".Length));
+            Assert.Equal(texture.m_NativeHandle, request.RootElement.GetProperty("handle").GetUInt64());
+            Assert.Equal(-0.5f, request.RootElement.GetProperty("mipBias").GetSingle());
         }
 
         /// <summary>Red on 8ece7bb2 (assertion: load-texture-object Asked 0). The texture a
@@ -549,6 +653,50 @@ namespace UnityEngine.Tests
             Assert.Contains(errors, e => e.Contains("built-in Sprite 'Checkmark' ({fileID: 10901, guid: " + Extra + "})"));
             NothingMadeFor(10900);
             NothingMadeFor(10901);
+        }
+
+        /// <summary>Red on 70769329 (assertion: the texture is returned, its record never asked
+        /// for) and on 8ece7bb2 (assertion: a drawn texture is returned). A texture whose record
+        /// the host cannot answer, an object of another class or name, or a sampler this reader
+        /// does not take, is an error naming the texture: its pixels are not loaded, nothing is
+        /// made, and the sprite using it is not made either.</summary>
+        [Theory]
+        [InlineData("missing", "no object 10912")]
+        [InlineData("class", "is of class 213, not a Texture2D (28)")]
+        [InlineData("name", "is the texture 'Checkmark'")]
+        [InlineData("no-settings", "no `m_TextureSettings`")]
+        [InlineData("filter", "filter mode 3")]
+        [InlineData("wrap", "wrap mode 4 (`m_WrapV`)")]
+        [InlineData("aniso", "anisotropic level -1")]
+        public void AnUnreadableTextureRecordIsAnError(string variant, string message)
+        {
+            Answer("Knob", texture: r =>
+            {
+                switch (variant)
+                {
+                    case "class": r["classId"] = 213; break;
+                    case "name": Fields(r)["m_Name"] = "Checkmark"; break;
+                    case "no-settings": Fields(r).Remove("m_TextureSettings"); break;
+                    case "filter": Settings(r)["m_FilterMode"] = "3"; break;
+                    case "wrap": Settings(r)["m_WrapV"] = "4"; break;
+                    case "aniso": Settings(r)["m_Aniso"] = "-1"; break;
+                }
+            });
+            if (variant == "missing") s_Answers.Remove(("editor-resource", Extra, 10912L));
+            Object texture = null, sprite = null;
+            var errors = Errors(() =>
+            {
+                texture = BuiltinShaders.Resolve(Extra, 10912);
+                sprite = BuiltinShaders.Resolve(Extra, 10913);
+            });
+            Assert.Null(texture);
+            Assert.Null(sprite);
+            Assert.Contains(errors, e => e.Contains("built-in Texture2D 'Knob' ({fileID: 10912, guid: " + Extra + "})")
+                && e.Contains("its record could not be read") && e.Contains(message));
+            Assert.Contains(errors, e => e.Contains("built-in Sprite 'Knob' ({fileID: 10913, guid: " + Extra + "})"));
+            Assert.Equal(0, Asked("load-texture-object", 10912));
+            NothingMadeFor(10912);
+            NothingMadeFor(10913);
         }
 
         /// <summary>Red on 8ece7bb2 (assertion: a drawn texture is returned). A loaded texture
