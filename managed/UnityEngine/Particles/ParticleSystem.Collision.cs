@@ -218,7 +218,9 @@ namespace UnityEngine
         // constants use bits 0-6), so the stamp moves with it through swap-back removal and
         // SetParticles round trips, a reused slot loses it (InitParticle starts from default),
         // and the entry's copy carries it. Serials run 1..TriggerSerialCount, wrapping, and
-        // only those handed out since the lists were last cleared are current.
+        // only those handed out since the lists were last cleared are current. A new collection
+        // first strips every live particle's serial, so a particle not listed in it carries
+        // none, even once the counter has wrapped back to the serial it was given earlier.
         const int TriggerSerialShift = 8;
         const uint TriggerSerialMask = 0xFFFFFF00u;
         const uint TriggerSerialCount = 0xFFFFFFu;
@@ -244,8 +246,17 @@ namespace UnityEngine
             bool first = true;
             foreach (var list in m_TriggerParticles)
                 if (list.Count > 0) { first = false; break; }
-            // FrameUpdate cleared the lists: a new collection, earlier serials are stale.
-            if (first) m_TriggerSerialStart = m_TriggerSerialNext;
+            // FrameUpdate cleared the lists: a new collection, earlier serials are stale. Strip
+            // them all (the particle being listed included, wherever it is), so after a wrap a
+            // reissued serial can only be on the particle it is reissued to. A serial an older
+            // GetParticles copy brings back through SetParticles stays outside the window
+            // until the counter wraps.
+            if (first)
+            {
+                m_TriggerSerialStart = m_TriggerSerialNext;
+                for (int i = 0; i < m_Count; i++) m_Particles[i].m_Flags &= ~TriggerSerialMask;
+                p.m_Flags &= ~TriggerSerialMask;
+            }
             if (IsCurrentTriggerSerial(TriggerSerialOf(p))) return;
             p.m_Flags = (p.m_Flags & ~TriggerSerialMask) | (m_TriggerSerialNext << TriggerSerialShift);
             m_TriggerSerialNext = m_TriggerSerialNext == TriggerSerialCount ? 1 : m_TriggerSerialNext + 1;
