@@ -517,9 +517,24 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             struct Request {
                 path: Option<String>,
                 path_id: Option<i64>,
+                // An object of a built-in resource file by `{guid, fileId}`.
+                guid: Option<String>,
+                file_id: Option<i64>,
             }
             let r: Request = serde_json::from_str(request)?;
-            if let Some(path) = r.path {
+            if let Some(guid) = r.guid {
+                anyhow::ensure!(
+                    r.path.is_none() && r.path_id.is_none(),
+                    "an editor resource request by guid takes a fileId, not a path or a path id"
+                );
+                let file_id = r
+                    .file_id
+                    .context("an editor resource request by guid needs a fileId")?;
+                Ok(
+                    crate::editor_resources::builtin_object(&s.db, &s.unity_data, &guid, file_id)?
+                        .to_string(),
+                )
+            } else if let Some(path) = r.path {
                 Ok(crate::editor_resources::find(&s.unity_data, &path)?.to_string())
             } else {
                 let id = r
