@@ -543,6 +543,9 @@ namespace UnityEngine
 
         internal override Bounds GetLocalBounds()
         {
+            // A TextMesh's generated text replaces a MeshFilter's mesh (see TextMesh).
+            if (TextMesh.Of(m_GameObject) is TextMesh text)
+                return text.RenderMesh() is Mesh generated ? generated.bounds : default;
             var filter = m_GameObject.GetComponent<MeshFilter>();
             return filter != null && filter.m_Mesh != null ? filter.m_Mesh.bounds : default;
         }
@@ -557,7 +560,8 @@ namespace UnityEngine
         internal override Mesh DrawGeometry(out Matrix4x4 model)
         {
             model = RenderMatrix;
-            var mesh = m_GameObject.GetComponent<MeshFilter>()?.m_Mesh;
+            // A TextMesh's generated text, drawn with this renderer's materials; none without a font.
+            var mesh = TextMesh.Of(m_GameObject) is TextMesh text ? text.RenderMesh() : m_GameObject.GetComponent<MeshFilter>()?.m_Mesh;
             return mesh != null ? Streamed(mesh) : null;
         }
 
