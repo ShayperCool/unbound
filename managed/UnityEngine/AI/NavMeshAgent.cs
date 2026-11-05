@@ -1022,7 +1022,12 @@ namespace Unbound.Runtime
                 foreach (var crowd in s_Crowds.Values) ConfigureAvoidance(crowd);
             foreach (var agent in s_Agents)
                 if (agent.m_Crowd != null) PrepareLink(agent);
-            foreach (var crowd in s_Crowds.Values) crowd.Update(dt, null);
+            foreach (var pair in s_Crowds)
+            {
+                // The enabled NavMeshObstacles, as they stand now, are among what the agents avoid.
+                ObstacleSystem.Feed(pair.Value, pair.Key);
+                pair.Value.Update(dt, null);
+            }
             foreach (var agent in s_Agents)
             {
                 if (agent.m_Crowd == null) continue;
