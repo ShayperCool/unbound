@@ -475,9 +475,10 @@ namespace Unbound.Runtime
         static void MouseMove(FrameInput* input, double time)
         {
             // The window reports the pointer only while it is over the window: once it leaves,
-            // the last position inside stays and no move is queued until it returns. What the
-            // Editor reports outside its game view is unmeasured; holding the last position is
-            // Unbound's choice (unmeasured), see docs/COMPATIBILITY_GAPS.md.
+            // the last position inside stays and no move is queued until it returns. This is a
+            // documented-contract gap, not a choice: Unity 6000.0 Input.mousePosition reports the
+            // pointer outside the game view (values below 0 or above the screen size) while the
+            // cursor is neither locked nor confined. Open, see docs/COMPATIBILITY_GAPS.md.
             var window = new Vector2(input->MouseX, input->MouseY);
             // The first frame tells where the pointer is, not that it moved: a pointer that never
             // moves sends nothing, as the Editor's does.

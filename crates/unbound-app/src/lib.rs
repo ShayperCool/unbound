@@ -351,8 +351,10 @@ fn drive(
         }
     }
     // Bevy knows the pointer only while it is over the window (it forgets it on leaving, and
-    // drops positions outside): the last position inside stays until it returns. Unity's report
-    // outside the game view is unmeasured; holding it is Unbound's choice (unmeasured).
+    // drops positions outside): the last position inside stays until it returns. Documented-
+    // contract gap, not a choice: Unity 6000.0 Input.mousePosition reports the pointer outside
+    // the game view (values below 0 or above the screen size) while the cursor is neither locked
+    // nor confined. Open in docs/COMPATIBILITY_GAPS.md.
     if let Some(position) = window.physical_cursor_position() {
         driver.mouse = position;
     }
