@@ -5833,9 +5833,6 @@ namespace UnityEngine.UIElements
         [global::Unbound.Stub] protected TreeViewController() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewController.ctor"); }
         protected global::UnityEngine.UIElements.TreeView treeView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.UIElements.TreeViewController.treeView"); return default; } }
     }
-    public unsafe partial class TreeViewExpansionChangedArgs
-    {
-    }
     [global::Unbound.Stub]
     internal unsafe static partial class TreeViewHelpers<T, TDefaultController> where TDefaultController : global::UnityEngine.UIElements.BaseTreeViewController, global::UnityEngine.UIElements.IDefaultTreeViewController<T>
     {
