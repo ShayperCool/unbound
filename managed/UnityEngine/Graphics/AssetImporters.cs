@@ -80,7 +80,9 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A project shader: its declared name, queue and properties (the renderer reads its
-        /// render states from the source itself).</summary>
+        /// render states from the source itself). The queue kept here is the source's first `Queue`
+        /// text, the fallback <see cref="Shader.renderQueue"/> answers while the selected
+        /// SubShader's declared tag is not known.</summary>
         static LoadedFile ImportShader(AssetDatabaseRuntime.AssetInfo info)
         {
             var source = System.IO.File.ReadAllText(info.File);
@@ -344,6 +346,41 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>The render queue override a built-in Material stores (`m_CustomRenderQueue`,
+        /// read from the install's resource file by the host): -1 is none, the material then
+        /// follows its shader's queue; another value is its override (Material.rawRenderQueue,
+        /// 6000.0). False, with an error naming the object, when it cannot be read (no host, no
+        /// such Material, malformed data): no queue is guessed for it.</summary>
+        static bool TryStoredRenderQueue(string guid, long fileId, string name, out int queue)
+        {
+            queue = -1;
+            var identity = $"built-in Material '{name}' ({{fileID: {fileId}, guid: {guid}}})";
+            if (!Native.IsReady)
+            {
+                Debug.LogError($"Unbound: {identity} is not available: its stored render queue is read from the install's resources by the host.");
+                return false;
+            }
+            try
+            {
+                var answer = Native.Call("builtin-material-queue", System.Text.Json.JsonSerializer.Serialize(new { guid, fileId }));
+                using var document = System.Text.Json.JsonDocument.Parse(answer);
+                var root = document.RootElement;
+                if (root.ValueKind == System.Text.Json.JsonValueKind.Object
+                    && root.TryGetProperty("classId", out var classId) && classId.ValueKind == System.Text.Json.JsonValueKind.Number
+                    && classId.TryGetInt32(out var id) && id == 21
+                    && root.TryGetProperty("customRenderQueue", out var stored) && stored.ValueKind == System.Text.Json.JsonValueKind.Number
+                    && stored.TryGetInt32(out queue))
+                    return true;
+                throw new FormatException($"unexpected answer {answer}");
+            }
+            catch (Exception e)
+            {
+                queue = -1;
+                Debug.LogError($"Unbound: {identity} is not available: its stored render queue could not be read ({e.Message}).");
+                return false;
+            }
+        }
+
         internal static Object Get(string guid, long fileId, string name)
         {
             guid = guid.ToLowerInvariant();
@@ -363,8 +400,16 @@ namespace Unbound.Runtime
                         obj = BuiltinFonts.Get(name);
                         break;
                     case 21:
-                        obj = BuiltinFonts.Get(name) ?? new Material(Shader.Find(MaterialShader(name)) ?? BuiltinShaders.ByName("Standard")) { name = name };
+                    {
+                        obj = BuiltinFonts.Get(name);
+                        if (obj != null) break;
+                        // Read before the material exists: one that cannot be read is not made.
+                        if (!TryStoredRenderQueue(guid, fileId, name, out var rawQueue)) return null;
+                        var material = new Material(Shader.Find(MaterialShader(name)) ?? BuiltinShaders.ByName("Standard")) { name = name };
+                        material.m_CustomRenderQueue = rawQueue;
+                        obj = material;
                         break;
+                    }
                     case 28:
                         obj = BuiltinFonts.Get(name) ?? (name == "Default-Checker-Gray" ? Texture2D.FromSerialized(guid, fileId) : null) ?? BuiltinTexture(name);
                         break;

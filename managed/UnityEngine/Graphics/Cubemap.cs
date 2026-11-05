@@ -23,7 +23,8 @@ namespace UnityEngine
         Color[][][] m_Pixels;
         /// <summary>The data is RGBM encoded (a reflection cubemap).</summary>
         internal bool m_Rgbm;
-        /// <summary>An imported readable cubemap whose faces the importer gives on first access.</summary>
+        /// <summary>An imported cubemap whose faces the importer gives on first access (an unreadable
+        /// one's on its first clone).</summary>
         string m_AssetGuid;
 
         public Cubemap(int width, TextureFormat textureFormat, bool mipChain) : this(width, textureFormat, mipChain ? -1 : 1, false) { }
@@ -293,6 +294,8 @@ namespace UnityEngine
             {
                 ReleaseStore();
                 m_Readable = false;
+                // Kept for clones only, as Texture2D keeps its retained storage.
+                m_UnreadablePixels = m_Pixels;
                 m_Pixels = null;
             }
         }
@@ -428,7 +431,8 @@ namespace UnityEngine
             Cubemap cube;
             using (ObjectRegistry.AsAssets())
                 cube = new Cubemap { IsPersistentAsset = true, m_Readable = info.Readable != 0 };
-            if (cube.m_Readable) cube.m_AssetGuid = guid;
+            // An unreadable cubemap reads its faces from the importer for its clones only.
+            cube.m_AssetGuid = guid;
             cube.m_NativeHandle = handle;
             cube.m_Name = name;
             cube.m_Width = cube.m_Height = info.Width;

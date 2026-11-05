@@ -101,6 +101,9 @@ namespace Unbound.Runtime
         internal readonly bool[] Bools;
         readonly float[] m_Velocity;
         internal readonly LayerRun[] Layers;
+        /// <summary>By source layer: the layers synced to it with "Timing" on, in layer order (null
+        /// where none). Their motions share the source state's duration (see <see cref="TimedLength"/>).</summary>
+        readonly int[][] m_TimingLayers;
         int m_OverrideVersion;
 
         readonly Dictionary<StateMachineBehaviour, StateMachineBehaviour> m_Instances = new Dictionary<StateMachineBehaviour, StateMachineBehaviour>();
@@ -168,6 +171,7 @@ namespace Unbound.Runtime
             m_LayerMasks = new (bool[], bool[], int)[graph.Layers.Length];
             for (int i = 0; i < Layers.Length; i++)
                 Layers[i] = new LayerRun { Def = graph.Layers[i], Weight = graph.Layers[i].DefaultWeight };
+            m_TimingLayers = TimingLayers(controller, graph);
             foreach (var layer in Layers)
             {
                 if (layer.Def.Root == null) continue;
@@ -728,8 +732,87 @@ namespace Unbound.Runtime
             return state.Motion;
         }
 
-        /// <summary>A state's length in seconds (the motion's; 1 for a state without one).</summary>
-        internal float StateLength(LayerRun layer, StateRun run) => MotionLength(layer, MotionOf(layer.Def, run.Def));
+        /// <summary>A state's length in seconds (the motion's; 1 for a state without one), with the
+        /// layers synced to it with "Timing" on taken into account (<see cref="TimedLength"/>).</summary>
+        internal float StateLength(LayerRun layer, StateRun run) => TimedLength(layer, run.Def, MotionLength(layer, MotionOf(layer.Def, run.Def)));
+
+        /// <summary>
+        /// A source layer state's duration with its synced layers' "Timing". The 6000.0 Manual
+        /// (Animation Layers): without Timing, the synced layer's animation is stretched to the
+        /// length of the original layer's (the original layer is the sole master: the length stays
+        /// <paramref name="length"/>); with Timing, the length is "a balance for both animations,
+        /// based on weight", a compromise that both layers then play over. The balance as a linear
+        /// interpolation by the synced layer's weight (clamped to 0..1: its motion's length at 1,
+        /// the source's at 0) is Unbound's reading of "based on weight", not a measured curve. A
+        /// synced layer without a motion for the state counts as 1 s, like any state without a
+        /// motion: an unmeasured hypothesis that <see cref="TimingLayers"/> warns about.
+        /// </summary>
+        float TimedLength(LayerRun source, StateDef state, float length)
+        {
+            int index = source.Def.Index;
+            var synced = index >= 0 && index < m_TimingLayers.Length ? m_TimingLayers[index] : null;
+            if (synced == null) return length;
+            foreach (int i in synced)
+            {
+                var layer = Layers[i];
+                float weight = i == 0 ? 1f : Math.Clamp(layer.Evaluated, 0f, 1f);
+                if (weight <= 0f) continue;
+                length += weight * (MotionLength(layer, MotionOf(layer.Def, state)) - length);
+            }
+            return length;
+        }
+
+        /// <summary>The layers synced with "Timing" on, by source layer. Several on one source
+        /// combine in layer order, which no reference measures: that warns. So does a Timing
+        /// layer without a motion of its own for a source state that has one: the balance then
+        /// counts the empty motion as 1 s (a state without a motion), an unmeasured hypothesis
+        /// that changes the source state's duration.</summary>
+        static int[][] TimingLayers(RuntimeAnimatorController controller, ControllerGraph graph)
+        {
+            var result = new int[graph.Layers.Length][];
+            for (int i = 0; i < graph.Layers.Length; i++)
+            {
+                int source = graph.Layers[i].SyncedLayerIndex;
+                if (source < 0 || source >= graph.Layers.Length || source == i) continue;
+                if (graph.Layers[source].SyncedLayerIndex >= 0 || !controller.SyncedLayerAffectsTiming(i)) continue;
+                var list = result[source] ?? Array.Empty<int>();
+                Array.Resize(ref list, list.Length + 1);
+                list[^1] = i;
+                result[source] = list;
+                if (list.Length == 2)
+                    Debug.LogWarning($"Unbound: animator controller '{controller.name}' has several layers synced to layer '{graph.Layers[source].Name}' with Timing on; their durations are combined in layer order, which is not measured against Unity.");
+                WarnMotionlessTimingStates(controller, graph.Layers[i], graph.Layers[source]);
+            }
+            return result;
+        }
+
+        /// <summary>Warns once per Timing layer when source states with a motion have none on it.</summary>
+        static void WarnMotionlessTimingStates(RuntimeAnimatorController controller, LayerDef layer, LayerDef source)
+        {
+            List<string> names = null;
+            foreach (var state in source.States)
+            {
+                if (state.Motion == null) continue;
+                if (layer.SyncedMotions.TryGetValue(state, out var motion) && motion != null) continue;
+                (names ??= new List<string>()).Add(state.Name);
+            }
+            if (names != null)
+                Debug.LogWarning($"Unbound: animator controller '{controller.name}' layer '{layer.Name}' is synced to layer '{source.Name}' with Timing on but has no motion for state(s) '{string.Join("', '", names)}'; their durations count the missing motion as 1 s, which is not measured against Unity.");
+        }
+
+        /// <summary>The length a state info reports for a state of <paramref name="layer"/>: the
+        /// state's duration (AnimatorStateInfo.length). With Timing on, a synced layer plays the
+        /// source state's balanced duration and reports it; a synced layer without Timing keeps
+        /// reporting its own motion's length (what Unity reports there is not measured).</summary>
+        float InfoLength(LayerRun layer, StateDef state, Motion motion)
+        {
+            int source = layer.Def.SyncedLayerIndex;
+            if (source < 0 || source >= Layers.Length) return TimedLength(layer, state, MotionLength(layer, motion));
+            var synced = m_TimingLayers[source];
+            if (synced == null || Array.IndexOf(synced, layer.Def.Index) < 0) return MotionLength(layer, motion);
+            var owner = Layers[source];
+            return TimedLength(owner, state, MotionLength(owner, MotionOf(owner.Def, state)));
+        }
 
         /// <summary>A state's duration at its speed: what normalized transition durations scale.</summary>
         float StateDuration(LayerRun layer, StateRun run)
@@ -1229,7 +1312,7 @@ namespace Unbound.Runtime
                 m_Path = def.LayerPathHash,
                 m_FullPath = def.FullPathHash,
                 m_NormalizedTime = (float)run.Normalized,
-                m_Length = MotionLength(layer, motion),
+                m_Length = InfoLength(layer, def, motion),
                 m_Speed = def.Speed,
                 m_SpeedMultiplier = def.SpeedParameter >= 0 ? Floats[def.SpeedParameter] : 1f,
                 m_Tag = def.TagHash,

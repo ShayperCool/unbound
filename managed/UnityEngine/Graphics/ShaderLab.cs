@@ -11,7 +11,9 @@ namespace Unbound.Runtime
     internal static class ShaderLab
     {
         static readonly Regex s_Name = new Regex("^\\s*Shader\\s+\"([^\"]+)\"", RegexOptions.Multiline);
-        static readonly Regex s_Queue = new Regex("\"Queue\"\\s*=\\s*\"(\\w+)([+-]\\d+)?\"");
+        static readonly Regex s_Queue = new Regex("\"Queue\"\\s*=\\s*\"([^\"]*)\"");
+        // A named queue with an optional signed offset, or a queue number.
+        static readonly Regex s_QueueValue = new Regex(@"^(?:(?<name>[A-Za-z]+)(?:\s*(?<sign>[+-])\s*(?<offset>\d+))?|(?<number>\d+))$");
         static readonly Regex s_Property = new Regex(
             @"(?<attributes>(?:\[[^\]]*\]\s*)*)(\w+)\s*\(\s*""([^""]*)""\s*,\s*(\w+)[^)]*?(?:\(([^)]*)\))?\s*\)\s*=\s*(""[^""]*""(?:\s*\{[^{}]*\})?|\([^()]*\)|[^\s{}()""]+)",
             RegexOptions.Multiline);
@@ -25,24 +27,56 @@ namespace Unbound.Runtime
             return m.Success ? m.Groups[1].Value : null;
         }
 
-        /// <summary>A `Queue` tag's value as a render queue ("AlphaTest+10": 2460).</summary>
-        internal static int QueueTag(string value) => Queue("\"Queue\"=\"" + value.Trim() + "\"");
-
-        internal static int Queue(string source)
+        /// <summary>
+        /// A SubShader `Queue` tag's value as a render queue, null when it is not one of the
+        /// documented forms (Unity 6000.0 Manual, SubShader tags and "Add a shader tag": a queue
+        /// name, the name with a `+`/`-` integer offset, or a queue number such as `"3000"`; the
+        /// names' values from the render queues page). Whitespace around the sign follows the
+        /// reference signature `"[queue name] + [offset]"`; whether Unity's parser accepts it is
+        /// not measured. Names match as documented, in their case.
+        /// </summary>
+        internal static int? QueueValue(string value)
         {
-            var m = s_Queue.Match(source);
-            if (!m.Success) return 2000;
-            int queue = m.Groups[1].Value switch
+            if (value == null) return null;
+            var m = s_QueueValue.Match(value.Trim());
+            if (!m.Success) return null;
+            if (m.Groups["number"].Success)
+                return int.TryParse(m.Groups["number"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var number) ? number : null;
+            int? queue = m.Groups["name"].Value switch
             {
                 "Background" => 1000,
                 "Geometry" => 2000,
                 "AlphaTest" => 2450,
                 "Transparent" => 3000,
                 "Overlay" => 4000,
-                _ => 2000,
+                _ => null,
             };
-            if (m.Groups[2].Success && int.TryParse(m.Groups[2].Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out var offset)) queue += offset;
-            return queue;
+            if (queue == null || !m.Groups["offset"].Success) return queue;
+            if (!int.TryParse(m.Groups["offset"].Value, NumberStyles.None, CultureInfo.InvariantCulture, out var offset)) return null;
+            long sum = (long)queue.Value + (m.Groups["sign"].Value == "-" ? -offset : offset);
+            return sum < int.MinValue || sum > int.MaxValue ? null : (int)sum;
+        }
+
+        /// <summary>A `Queue` tag's value as a render queue ("AlphaTest+10": 2460). A value that
+        /// is none of the documented forms keeps Geometry (2000, the behaviour before values were
+        /// checked) and is reported: what Unity makes of it is not measured.</summary>
+        internal static int QueueTag(string value)
+        {
+            if (QueueValue(value) is int queue) return queue;
+            Stubs.Ignored("Shader.renderQueue of the Queue tag \"" + value + "\"", "is 2000: the value is not a documented queue form");
+            return 2000;
+        }
+
+        /// <summary>
+        /// The first `"Queue"="…"` text anywhere in a source (2000 without one), as a render
+        /// queue. A fallback only: the text may be in a comment, a string, a pass, another
+        /// pipeline's SubShader or one a LOD limit skips. <see cref="UnityEngine.Shader.renderQueue"/>
+        /// answers from the selected SubShader's declared tag whenever that is known.
+        /// </summary>
+        internal static int Queue(string source)
+        {
+            var m = s_Queue.Match(source);
+            return m.Success ? QueueTag(m.Groups[1].Value) : 2000;
         }
 
         static readonly Regex s_Attribute = new Regex("\\[\\s*([^\\]]*?)\\s*\\]");

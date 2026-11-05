@@ -38,6 +38,12 @@ namespace UnityEngine
         /// <summary>The compiled state machines (of the base controller, for an override controller).</summary>
         internal virtual ControllerGraph Graph => m_Graph ??= ControllerGraph.Build(this);
 
+        /// <summary>Whether layer <paramref name="index"/> is a synced layer with "Timing" on
+        /// (AnimatorControllerLayer.syncedLayerAffectsTiming). The flag of a layer that is not
+        /// synced does nothing.</summary>
+        internal virtual bool SyncedLayerAffectsTiming(int index) =>
+            index >= 0 && index < m_Layers.Count && m_Layers[index].SyncedLayerIndex >= 0 && m_Layers[index].SyncedLayerAffectsTiming;
+
         /// <summary>The clip played in place of an original clip of the graph.</summary>
         internal virtual AnimationClip MapClip(AnimationClip original) => original;
 
@@ -144,6 +150,9 @@ namespace UnityEngine
         }
 
         internal override ControllerGraph Graph => m_Controller != null ? m_Controller.Graph : null;
+
+        /// <summary>The overridden controller's layers: an override replaces clips only.</summary>
+        internal override bool SyncedLayerAffectsTiming(int index) => m_Controller != null && m_Controller.SyncedLayerAffectsTiming(index);
 
         internal override AnimationClip MapClip(AnimationClip original)
         {

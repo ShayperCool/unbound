@@ -323,6 +323,20 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
             )?
             .to_string())
         }
+        // A built-in Material's stored render queue override (-1: none).
+        "builtin-material-queue" => {
+            #[derive(serde::Deserialize)]
+            #[serde(rename_all = "camelCase")]
+            struct Request {
+                guid: String,
+                file_id: i64,
+            }
+            let r: Request = serde_json::from_str(request)?;
+            Ok(
+                crate::lighting::builtin_material_queue(&s.db, &s.unity_data, &r.guid, r.file_id)?
+                    .to_string(),
+            )
+        }
         "video-probe" => {
             #[derive(serde::Deserialize)]
             struct Request {
