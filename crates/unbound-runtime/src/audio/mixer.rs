@@ -2726,4 +2726,375 @@ mod tests {
         );
     }
 
+    // ------------------------------------------------------------------ filter components
+    // Wiring controls only: the kernels are the AudioMixer ones measured in
+    // tests/projects/mixerfilters and tests/projects/mixerecho. No capture measures a filter
+    // component on an AudioSource, so these tests do not establish component parity.
+
+    fn component(id: u64, kind: i32, stage: i32) -> AudioFilterDescriptor {
+        AudioFilterDescriptor {
+            id,
+            kind,
+            stage,
+            cutoff: 1000.0,
+            resonance: 1.0,
+            delay: 10.0,
+            decay: 0.5,
+            dry_mix: 1.0,
+            wet_mix: 1.0,
+        }
+    }
+
+    fn components() -> Vec<AudioFilterDescriptor> {
+        vec![
+            component(11, filter_kind::LOWPASS, filter_stage::BEFORE_SCRIPTS),
+            AudioFilterDescriptor {
+                cutoff: 300.0,
+                resonance: 3.0,
+                ..component(12, filter_kind::HIGHPASS, filter_stage::BEFORE_SCRIPTS)
+            },
+            component(13, filter_kind::ECHO, filter_stage::BEFORE_SCRIPTS),
+        ]
+    }
+
+    /// The components run over `input` by the mixer kernels directly, each from a fresh state.
+    fn through(input: &[f32], filters: &[AudioFilterDescriptor], rate: u32) -> Vec<f32> {
+        let mut out = input.to_vec();
+        for d in filters {
+            Effect::new(effect_spec(d), rate).unwrap().process(&mut out, false);
+        }
+        out
+    }
+
+    fn stereo_tone(frames: usize) -> Clip {
+        let samples = (0..frames)
+            .flat_map(|i| [0.5 * (i as f32 * 0.05).sin(), (i % 7) as f32 / 14.0 - 0.25])
+            .collect();
+        Clip::new(2, 48000, samples)
+    }
+
+    fn render_source(
+        filters: &[AudioFilterDescriptor],
+        flags: u32,
+        clip: Clip,
+        frames: usize,
+    ) -> Vec<f32> {
+        let mut m = Mixer::new(MixerConfig::default());
+        m.add_clip(1, clip);
+        source_with(&mut m, 7, 1, |p| {
+            p.flags = flags;
+            p.filters = filters.to_vec();
+        });
+        play(&mut m, 7, command::PLAY, 0.0);
+        let mut out = vec![0.0; frames * 2];
+        m.render(&mut out, 2);
+        out
+    }
+
+    fn packet(clip: u64, flags: u32, filters: &[AudioFilterDescriptor]) -> AudioSourcePacket {
+        AudioSourcePacket {
+            clip,
+            group: 0,
+            position: Vector3::default(),
+            velocity: Vector3::default(),
+            volume: 1.0,
+            pitch: 1.0,
+            pan_stereo: 0.0,
+            spatial_blend: 0.0,
+            spread: 0.0,
+            doppler_level: 1.0,
+            min_distance: 1.0,
+            max_distance: 500.0,
+            reverb_zone_mix: 1.0,
+            rolloff_mode: 0,
+            priority: 128,
+            flags,
+            curve_length: 0,
+            _pad: 0,
+            rolloff_curve: std::ptr::null(),
+            spatial_blend_curve: std::ptr::null(),
+            spread_curve: std::ptr::null(),
+            filter_count: filters.len() as i32,
+            _pad2: 0,
+            filters: if filters.is_empty() { std::ptr::null() } else { filters.as_ptr() },
+        }
+    }
+
+    #[test]
+    fn source_components_run_the_mixer_kernels_in_component_order() {
+        let dry = render_source(&[], 0, stereo_tone(8192), 4096);
+        assert!(dry.iter().any(|x| x.abs() > 0.1));
+        let wet = render_source(&components(), 0, stereo_tone(8192), 4096);
+        assert_eq!(wet, through(&dry, &components(), 48000));
+        // Another order is another chain.
+        let mut reversed = components();
+        reversed.reverse();
+        let other = render_source(&reversed, 0, stereo_tone(8192), 4096);
+        assert_eq!(other, through(&dry, &reversed, 48000));
+        assert_ne!(other, wet);
+    }
+
+    #[test]
+    fn a_source_without_components_or_with_bypassed_effects_is_unchanged() {
+        let dry = render_source(&[], 0, stereo_tone(8192), 4096);
+        // bypassEffects skips the components; the samples are the dry voice's.
+        let bypassed = render_source(&components(), source_flags::BYPASS_EFFECTS, stereo_tone(8192), 4096);
+        assert_eq!(bypassed, dry);
+        // A NativeApi 15 style packet (no descriptors) decodes to no components.
+        let params = unsafe { SourceParams::from_packet(&packet(1, 0, &[])) };
+        assert!(params.filters.is_empty());
+        assert_eq!(params.filters_rejected, None);
+        // Count 0 never reads the pointer.
+        let mut dangling = packet(1, 0, &[]);
+        dangling.filters = std::ptr::NonNull::<AudioFilterDescriptor>::dangling().as_ptr();
+        let params = unsafe { SourceParams::from_packet(&dangling) };
+        assert!(params.filters.is_empty() && params.filters_rejected.is_none());
+        // A source with components leaves another source's samples alone.
+        let mut m = Mixer::new(MixerConfig::default());
+        m.add_clip(1, stereo_tone(8192));
+        source_with(&mut m, 7, 1, |p| p.flags = source_flags::KEEP_OUTPUT);
+        source_with(&mut m, 8, 1, |p| p.filters = components());
+        play(&mut m, 7, command::PLAY, 0.0);
+        play(&mut m, 8, command::PLAY, 0.0);
+        let mut out = vec![0.0; 4096 * 2];
+        m.render(&mut out, 2);
+        let mut left = vec![0.0; 4096];
+        assert!(m.output_data(7, 0, &mut left, -1));
+        let alone: Vec<f32> = dry.chunks_exact(2).map(|f| f[0]).collect();
+        assert_eq!(left, alone);
+    }
+
+    #[test]
+    fn component_state_belongs_to_one_source_and_one_channel() {
+        // A left-only impulse: the right channel stays silent through every component.
+        let mut impulse = vec![0.0; 4096 * 2];
+        impulse[100 * 2] = 0.5;
+        let filters = components();
+        let alone = render_source(&filters, 0, Clip::new(2, 48000, impulse.clone()), 2048);
+        assert!(alone.chunks_exact(2).all(|f| f[1] == 0.0));
+        assert!(alone[600 * 2..].chunks_exact(2).any(|f| f[0].abs() > 1e-6));
+        // The same component identities on a second, silent source share nothing.
+        let mut m = Mixer::new(MixerConfig::default());
+        m.add_clip(1, Clip::new(2, 48000, impulse));
+        m.add_clip(2, Clip::new(2, 48000, vec![0.0; 4096 * 2]));
+        source_with(&mut m, 7, 1, |p| {
+            p.flags = source_flags::KEEP_OUTPUT;
+            p.filters = filters.clone();
+        });
+        source_with(&mut m, 8, 2, |p| {
+            p.flags = source_flags::KEEP_OUTPUT;
+            p.filters = filters.clone();
+        });
+        play(&mut m, 7, command::PLAY, 0.0);
+        play(&mut m, 8, command::PLAY, 0.0);
+        let mut out = vec![0.0; 2048 * 2];
+        m.render(&mut out, 2);
+        let mut silent = vec![1.0; 2048];
+        assert!(m.output_data(8, 0, &mut silent, -1));
+        assert!(silent.iter().all(|x| *x == 0.0));
+        let mut heard = vec![0.0; 2048];
+        assert!(m.output_data(7, 0, &mut heard, -1));
+        let expected: Vec<f32> = alone.chunks_exact(2).map(|f| f[0]).collect();
+        assert_eq!(heard, expected);
+    }
+
+    #[test]
+    fn unchanged_components_keep_their_state_and_a_new_identity_starts_empty() {
+        fn run(update: impl Fn(&mut Mixer, usize)) -> Vec<f32> {
+            let mut m = Mixer::new(MixerConfig::default());
+            m.add_clip(1, stereo_tone(8192));
+            source_with(&mut m, 7, 1, |p| p.filters = components());
+            play(&mut m, 7, command::PLAY, 0.0);
+            let mut out = vec![0.0; 4096 * 2];
+            for (block, chunk) in out.chunks_mut(512 * 2).enumerate() {
+                update(&mut m, block);
+                m.render(chunk, 2);
+            }
+            out
+        }
+        let steady = run(|_, _| {});
+        // The engine sends the packet every frame: equal descriptors change nothing.
+        assert_eq!(run(|m, _| source_with(m, 7, 1, |p| p.filters = components())), steady);
+        // A replaced component (new instance ID) restarts its history.
+        let replaced = run(|m, block| {
+            let mut filters = components();
+            if block >= 4 {
+                filters[2].id = 99;
+            }
+            source_with(m, 7, 1, |p| p.filters = filters);
+        });
+        assert_eq!(replaced[..2048 * 2], steady[..2048 * 2]);
+        assert_ne!(replaced[2048 * 2..], steady[2048 * 2..]);
+    }
+
+    #[test]
+    fn stop_and_the_end_of_playback_restart_the_components_empty() {
+        let first = render_source(&components(), 0, stereo_tone(1024), 2048);
+        let mut m = Mixer::new(MixerConfig::default());
+        m.add_clip(1, stereo_tone(1024));
+        source_with(&mut m, 7, 1, |p| p.filters = components());
+        // Natural end: the voice finishes inside the first 2048 frames.
+        play(&mut m, 7, command::PLAY, 0.0);
+        let mut out = vec![0.0; 2048 * 2];
+        m.render(&mut out, 2);
+        assert_eq!(out, first);
+        assert_eq!(m.source_state(7).main, voice_state::NONE);
+        m.render(&mut out, 2);
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.render(&mut out, 2);
+        assert_eq!(out, first);
+        // Stop inside the clip, then play again.
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.render(&mut out[..512 * 2], 2);
+        play(&mut m, 7, command::STOP, 0.0);
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.render(&mut out, 2);
+        assert_eq!(out, first);
+    }
+
+    #[test]
+    fn components_sit_above_or_below_the_on_audio_filter_read_scripts() {
+        use std::cell::RefCell;
+        #[derive(Default)]
+        struct Trace { input: Vec<f32>, emitted: Vec<f32> }
+        thread_local! { static TRACE: RefCell<Trace> = RefCell::new(Trace::default()); }
+        extern "C" fn script(kind: i32, _: u64, data: *mut f32, frames: i32, channels: i32, _: i64) {
+            if kind != callback::SOURCE_FILTER { return; }
+            let values = unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+            TRACE.with(|trace| {
+                let mut trace = trace.borrow_mut();
+                trace.input.extend_from_slice(values);
+                for value in values.iter_mut() { *value *= 0.5; }
+                trace.emitted.extend_from_slice(values);
+            });
+        }
+        let run = |stage: Option<i32>| -> (Vec<f32>, Trace) {
+            TRACE.with(|trace| *trace.borrow_mut() = Trace::default());
+            let mut m = Mixer::new(MixerConfig::default());
+            m.set_callback(Some(script));
+            m.add_clip(1, stereo_tone(8192));
+            let filters: Vec<_> = stage.map_or(Vec::new(), |stage| {
+                vec![AudioFilterDescriptor { cutoff: 300.0, ..component(12, filter_kind::HIGHPASS, stage) }]
+            });
+            source_with(&mut m, 7, 1, |p| {
+                p.flags = source_flags::FILTER;
+                p.filters = filters;
+            });
+            play(&mut m, 7, command::PLAY, 0.0);
+            let mut out = vec![0.0; 2048 * 2];
+            m.render(&mut out, 2);
+            (out, TRACE.with(|trace| std::mem::take(&mut *trace.borrow_mut())))
+        };
+        let highpass = [AudioFilterDescriptor {
+            cutoff: 300.0,
+            ..component(12, filter_kind::HIGHPASS, filter_stage::BEFORE_SCRIPTS)
+        }];
+        let (dry, plain) = run(None);
+        assert_eq!(dry, plain.emitted[..dry.len()]);
+        // Above the scripts: they receive the filtered voice.
+        let (out, above) = run(Some(filter_stage::BEFORE_SCRIPTS));
+        assert_eq!(above.input, through(&plain.input, &highpass, 48000));
+        assert_eq!(out, above.emitted[..out.len()]);
+        // Below them: they receive the voice, the component filters what they emit.
+        let (out, below) = run(Some(filter_stage::AFTER_SCRIPTS));
+        assert_eq!(below.input, plain.input);
+        assert_eq!(out, through(&below.emitted, &highpass, 48000)[..out.len()]);
+    }
+
+    #[test]
+    fn malformed_filter_descriptors_are_refused_and_keep_the_previous_chain() {
+        let valid = components();
+        let refused = |p: &AudioSourcePacket| -> String {
+            let params = unsafe { SourceParams::from_packet(p) };
+            assert!(params.filters.is_empty());
+            params.filters_rejected.expect("refused")
+        };
+        let mut negative = packet(1, 0, &valid);
+        negative.filter_count = -1;
+        assert!(refused(&negative).contains("outside"));
+        let many: Vec<_> = (0..65).map(|id| component(id, filter_kind::LOWPASS, 0)).collect();
+        assert!(refused(&packet(1, 0, &many)).contains("outside"));
+        let mut null = packet(1, 0, &valid);
+        null.filters = std::ptr::null();
+        assert!(refused(&null).contains("null"));
+        let storage = vec![0u64; 16];
+        let mut misaligned = packet(1, 0, &valid[..1]);
+        misaligned.filters = unsafe { (storage.as_ptr() as *const u8).add(4) } as *const AudioFilterDescriptor;
+        assert!(refused(&misaligned).contains("misaligned"));
+        for kind in [0, 4, -1] {
+            assert!(refused(&packet(1, 0, &[component(1, kind, 0)])).contains("kind"));
+        }
+        assert!(refused(&packet(1, 0, &[component(1, filter_kind::ECHO, 2)])).contains("stage"));
+        for bad in [f32::NAN, f32::INFINITY] {
+            let lowpass = AudioFilterDescriptor { cutoff: bad, ..component(1, filter_kind::LOWPASS, 0) };
+            assert!(refused(&packet(1, 0, &[lowpass])).contains("finite"));
+            let echo = AudioFilterDescriptor { delay: bad, ..component(1, filter_kind::ECHO, 0) };
+            assert!(refused(&packet(1, 0, &[echo])).contains("finite"));
+        }
+        let twice = [component(5, filter_kind::LOWPASS, 0), component(5, filter_kind::ECHO, 0)];
+        assert!(refused(&packet(1, 0, &twice)).contains("duplicate"));
+        // A clipless generator plays its first script; nothing may sit above it.
+        let generator = packet(0, source_flags::FILTER, &[component(1, filter_kind::LOWPASS, 0)]);
+        assert!(refused(&generator).contains("generator"));
+        let below = packet(0, source_flags::FILTER,
+            &[component(1, filter_kind::LOWPASS, filter_stage::AFTER_SCRIPTS)]);
+        assert!(unsafe { SourceParams::from_packet(&below) }.filters_rejected.is_none());
+        // The resource bound itself is accepted.
+        let most: Vec<_> = (0..64).map(|id| component(id, filter_kind::LOWPASS, 0)).collect();
+        assert_eq!(unsafe { SourceParams::from_packet(&packet(1, 0, &most)) }.filters.len(), 64);
+
+        // A refused packet still updates the source, and its chain stays as it was.
+        let mut m = Mixer::new(MixerConfig::default());
+        m.update_source(7, unsafe { SourceParams::from_packet(&packet(1, 0, &valid)) });
+        let mut bad = packet(1, 0, &valid);
+        bad.filter_count = -1;
+        bad.volume = 0.25;
+        m.update_source(7, unsafe { SourceParams::from_packet(&bad) });
+        let source = m.source(7).unwrap();
+        assert_eq!(source.params.volume, 0.25);
+        assert_eq!(source.params.filters, valid);
+        assert_eq!(source.params.filters_rejected, None);
+        assert_eq!(source.chain.filters.len(), 3);
+    }
+
+    #[test]
+    fn echo_components_beyond_the_history_bound_fail_without_replacing_the_chain() {
+        let mut m = Mixer::new(MixerConfig { sample_rate: i32::MAX as u32, ..Default::default() });
+        let echo = [AudioFilterDescriptor { delay: 5000.0, ..component(1, filter_kind::ECHO, 0) }];
+        source_with(&mut m, 7, 1, |p| p.filters = echo.to_vec());
+        assert!(m.source(7).unwrap().params.filters.is_empty());
+        assert!(m.source(7).unwrap().chain.filters.is_empty());
+
+        let mut m = Mixer::new(MixerConfig::default());
+        source_with(&mut m, 7, 1, |p| p.filters = echo.to_vec());
+        let before = m.config;
+        let error = m.reconfigure(MixerConfig { sample_rate: i32::MAX as u32, ..before }).unwrap_err();
+        assert!(error.to_string().contains("8 MiB"));
+        assert_eq!(m.config, before);
+        assert_eq!(m.source(7).unwrap().params.filters, echo);
+    }
+
+    #[test]
+    fn a_new_output_rate_restarts_the_components_at_that_rate() {
+        let clip = || Clip::new(2, 44100, stereo_tone(8192).samples);
+        let fresh = {
+            let mut m = Mixer::new(MixerConfig { sample_rate: 44100, ..Default::default() });
+            m.add_clip(1, clip());
+            source_with(&mut m, 7, 1, |p| p.filters = components());
+            play(&mut m, 7, command::PLAY, 0.0);
+            let mut out = vec![0.0; 2048 * 2];
+            m.render(&mut out, 2);
+            out
+        };
+        let mut m = Mixer::new(MixerConfig::default());
+        m.add_clip(1, clip());
+        source_with(&mut m, 7, 1, |p| p.filters = components());
+        play(&mut m, 7, command::PLAY, 0.0);
+        let mut out = vec![0.0; 2048 * 2];
+        m.render(&mut out, 2);
+        m.reconfigure(MixerConfig { sample_rate: 44100, ..m.config }).unwrap();
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.render(&mut out, 2);
+        assert_eq!(out, fresh);
+    }
 }
