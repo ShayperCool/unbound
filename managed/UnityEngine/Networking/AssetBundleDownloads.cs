@@ -18,9 +18,10 @@ namespace UnityEngine.Networking
     /// handler's error and returns null, and later accesses return null without loading again.
     /// With autoLoadAssetBundle the bundle is loaded when the request completes, before its isDone,
     /// its completed event and waiting coroutines see it; data that does not load completes the
-    /// request as DataProcessingError (Unity documents that result for data "corrupted or not in
-    /// the correct format"), with the loader's error logged and an exception naming the URL. The
-    /// wording of the handler's messages is Unbound's own.
+    /// request as DataProcessingError with the error "Data Processing Error, see Download Handler
+    /// error" (Unity documents that result for data "corrupted or not in the correct format"; its
+    /// use and that error text here are unmeasured), and only the loader's error is logged: no
+    /// exception is logged for it. The wording of the handler's messages is Unbound's own.
     ///
     /// The versioned, hashed and CachedAssetBundle constructors do not use a cache: Unbound has no
     /// AssetBundle cache yet. They warn once, then download and load the bundle every time, as the
@@ -34,6 +35,7 @@ namespace UnityEngine.Networking
         bool m_AutoLoad;
         bool m_DownloadComplete;
         bool m_LoadAttempted;
+        bool m_AutoLoadFailed;
         AssetBundle m_AssetBundle;
 
         public DownloadHandlerAssetBundle(string url, uint crc)
@@ -91,14 +93,13 @@ namespace UnityEngine.Networking
         internal override void End(bool received)
         {
             m_DownloadComplete = received;
-            bool loaded = !received || !m_AutoLoad || Load();
+            // The loader has logged why; UnityWebRequest.Finish reads this instead of an exception,
+            // so the failure is reported once, as Unity documents one logged error.
+            m_AutoLoadFailed = received && m_AutoLoad && !Load();
             base.End(received);
-            // The request reports a data processing error for the exception (UnityWebRequest.Finish).
-            // Known difference, unresolved, pending a Root decision: Finish also logs this exception,
-            // so a failed automatic load gives two console entries (the loader's error plus a
-            // LogType.Exception naming the URL) where Unity documents one logged error.
-            if (!loaded) throw new InvalidOperationException(m_Error);
         }
+
+        internal override bool ProcessingFailed => m_AutoLoadFailed;
 
         protected override byte[] GetData() => throw new NotSupportedException("Unbound: DownloadHandlerAssetBundle does not expose the downloaded bytes; read the bundle from assetBundle or DownloadHandlerAssetBundle.GetContent");
 

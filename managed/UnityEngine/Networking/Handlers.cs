@@ -120,6 +120,12 @@ namespace UnityEngine.Networking
             }
         }
 
+        /// <summary>Read by UnityWebRequest.Finish after a successful End: true when the handler
+        /// could not process the data it received and has already reported why, so the request
+        /// completes as a data processing error without another log entry. Opt-in: only the
+        /// AssetBundle handler sets it; every other handler keeps false.</summary>
+        internal virtual bool ProcessingFailed => false;
+
         void CheckDisposed()
         {
             if (m_Disposed) throw new NullReferenceException("Download handler has been disposed");
