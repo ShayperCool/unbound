@@ -1132,7 +1132,17 @@ namespace UnityEngine.UIElements
 
         internal void SetBindItemWithoutNotify(Action<VisualElement, int> callback) => m_BindItem = callback;
 
-        internal override bool HasValidDataAndBindings() => base.HasValidDataAndBindings() && (makeItem != null) == (bindItem != null);
+        /// <summary>Rows come from <see cref="itemTemplate"/> with no <see cref="bindItem"/>: there is a
+        /// template, makeItem is still the template factory the itemTemplate setter assigned (not a
+        /// game callback), and no bind callback is set. Unity documents this as the codeless workflow,
+        /// filled by bindings (bindingSourceSelectionMode AutoAssign). Unbound has no runtime data
+        /// binding yet, so its interim is to show the template rows unbound, with a warning, instead
+        /// of an empty list. Replacing makeItem or clearing the template ends the exemption.</summary>
+        internal bool bindsTemplateWithoutBindItem =>
+            m_ItemTemplate != null && m_BindItem == null && ReferenceEquals(m_MakeItem, m_TemplateMakeItem);
+
+        internal override bool HasValidDataAndBindings() =>
+            base.HasValidDataAndBindings() && ((makeItem != null) == (bindItem != null) || bindsTemplateWithoutBindItem);
 
         protected override CollectionViewController CreateViewController() => new ListViewController();
 
@@ -1419,6 +1429,14 @@ namespace UnityEngine.UIElements
         {
             if (listView.bindItem == null)
             {
+                if (listView.bindsTemplateWithoutBindItem)
+                {
+                    // Unbound interim: the template row is shown as instantiated. No data is bound and
+                    // no data source is assigned to it.
+                    Unbound.Runtime.Stubs.Ignored("ListView.itemTemplate",
+                        "rows are shown unbound: runtime data binding (bindItem omitted with an item template) not implemented");
+                    return;
+                }
                 if (listView.makeItem != null) throw new NotImplementedException("You must specify bindItem if makeItem is specified.");
                 if (element is Label label)
                 {
