@@ -768,7 +768,10 @@ namespace Unbound.Runtime
         // path that cannot be planned leaves the agent without a path (PathInvalid, its destination
         // kept), as a failed request does; an agent the new NavMesh cannot place loses its pending
         // request; an agent that had arrived, whose request had failed, or that has no destination
-        // is given no path. An agent on an off-mesh link, or completing one, rejoins as before.
+        // is given no path; a path given by SetPath is planned again to its last corner. The rebuild
+        // is taken in when Unbound next refreshes its NavMesh (a NavMesh query or an agent
+        // placement), which can be later than the change. An agent on an off-mesh link, or
+        // completing one, rejoins as before.
         static void Rebuild()
         {
             s_CrowdVersion = NavWorld.Version;
