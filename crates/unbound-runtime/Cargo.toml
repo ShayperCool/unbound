@@ -22,6 +22,7 @@ rayon.workspace = true
 walkdir.workspace = true
 memmap2 = "0.9"
 libloading = "0.8"
+arboard = { version = "=3.7.0", default-features = false, features = ["wayland-data-control"] }
 
 [dev-dependencies]
 syn = { version = "2", features = ["full"] }
