@@ -135,18 +135,22 @@ namespace UnityEngine
         /// to their sub-emitters, innermost last.</summary>
         static readonly List<ParticleSystem> s_EventSubEmitting = new List<ParticleSystem>();
 
-        /// <summary>A Collision or Trigger event of <paramref name="parent"/>: its sub-emitters
-        /// of <paramref name="type"/> emit their bursts at <paramref name="position"/>
-        /// (simulation space) through the Death/Manual path (TriggerSubEmitterAt: emitProbability,
-        /// burst counts, the inherited properties), the rest of the particle as it is now.</summary>
+        /// <summary>A Collision or Trigger event of <paramref name="parent"/>: each of its
+        /// sub-emitters of <paramref name="type"/> emits its first burst at
+        /// <paramref name="position"/> (simulation space), with the Death/Manual path's
+        /// emitProbability roll, burst count and inherited properties, the rest of the particle as
+        /// it is now.</summary>
         void EventSubEmitters(ParticleSystemSubEmitterType type, in Particle parent, Vector3 position)
         {
             if (!HasSubEmitters(type)) return;
             var at = parent;
             at.m_Position = position;
             // The event comes from inside a particle's step, which holds a reference into this
-            // system's buffer: a sub-emitter chain that leads back here (a cycle, possible only
-            // through scripts) would grow that buffer under it, so it does not emit.
+            // system's buffer: a chain of Collision/Trigger sub-emitters that leads back here (a
+            // self, direct or indirect cycle made only of such links, possible only through
+            // scripts) would grow that buffer under it, so it does not emit. Only those links are
+            // seen: a cycle that closes through a Birth link is not caught, the same hazard pure
+            // Birth cycles already have.
             s_EventSubEmitting.Add(this);
             try
             {
@@ -160,11 +164,26 @@ namespace UnityEngine
                     }
                     if ((e.properties & ParticleSystemSubEmitterProperties.InheritDuration) != 0)
                         ReportUnsupported("sub-emitter Inherit Duration");
-                    // The Manual: Collision and Trigger sub-emitters support "only a single burst";
-                    // Unity's result with more is undocumented, so they all emit, reported.
-                    if (e.system.m_Emission.bursts.Count > 1)
-                        ReportUnsupported("collision/trigger sub-emitter with more than one burst");
-                    TriggerSubEmitterAt(e, ref at);
+                    var child = e.system;
+                    // As TriggerSubEmitterAt: never itself or a destroyed object, and the same
+                    // emitProbability roll on this system's random sequence.
+                    if (child == this || child.m_GameObject == null) continue;
+                    if (e.emitProbability < 1f && NextFloat() >= e.emitProbability) continue;
+                    // SubEmittersModule.collision0/1 (6000.0): the sub-emitter "uses the first set
+                    // of emission burst properties ... If the system does not contain burst
+                    // properties, then the system emits nothing; if the system contains more than
+                    // one set of burst properties, then it ignores the additional properties."
+                    // The Manual lists Trigger among the conditions that "support only a single
+                    // burst" without saying what happens with more; Unbound's choice (unmeasured):
+                    // Trigger follows the Collision rule, and says so once.
+                    var bursts = child.m_Emission.bursts;
+                    if (bursts.Count == 0) continue;
+                    if (type == ParticleSystemSubEmitterType.Trigger && bursts.Count > 1)
+                        ReportUnsupported("trigger sub-emitter burst after the first (only the first is emitted, the rule Unity documents for Collision)");
+                    // One burst's cycles all at once, as the Death path counts them (unmeasured).
+                    var burst = bursts[0];
+                    int count = child.BurstCount(burst.m_Count, 0f) * System.Math.Max(1, burst.cycleCount);
+                    if (count > 0) child.EmitFromParent(this, ref at, e.properties, count, 0f);
                 }
             }
             finally { s_EventSubEmitting.RemoveAt(s_EventSubEmitting.Count - 1); }
