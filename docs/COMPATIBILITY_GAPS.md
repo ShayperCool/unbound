@@ -334,7 +334,7 @@ ListView), legacy Input Manager axes, Input System keyboard/mouse/gamepads, Inpu
 | Legacy pen input (`Input.penEventCount/GetPenEvent/GetLastPenContactEvent`) never read | `Input/LegacyPen.cs` | W | L |
 | `GUI.DrawTexture(alphaBlend: false)`, border radius | `IMGUI/GUI.cs:243-268` | S | L-M |
 | `CanvasRenderer.SetAlphaTexture` | `UI/Canvas.cs` | S | L |
-| `Screen.currentResolution`/`dpi`/refresh rate constants | `Core/Input.cs:31-33` | S | L |
+| `Screen.currentResolution`/`dpi`/refresh rate constants | `Core/Input.cs` (Screen), `crates/unbound-runtime/src/display.rs`, `crates/unbound-app/src/lib.rs` (publish_display) | S | source ready, unvalidated (source 843fa178, tests adbb2e33): the app publishes the monitor winit places the window on (else the primary one) and the `display-info` call answers it. `currentResolution` is that desktop's resolution and refresh ratio (documented for windowed mode), `resolutions` its modes sorted by width then height (documented) then rate, one per size and rate, `mainWindowDisplayInfo`/`GetDisplayLayout` that display. Unbound's choices (unmeasured): `dpi` = 96 × the window system's scale factor; the work area is the whole display; an unknown rate is 60 Hz with a warning. The Linux Editor's own answers are unmeasured. Before the window opens (first scene's Awake/OnEnable), headless, `--remote`, without a monitor or with an older host, the old constants stay with one warning per reason. The refresh rate now paces vsync frames; tests unexecuted |
 
 ### Assets, import, networking
 
