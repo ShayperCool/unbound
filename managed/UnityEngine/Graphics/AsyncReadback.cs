@@ -224,9 +224,12 @@ namespace Unbound.Runtime
 
         /// <summary>Whether the declared format keeps 8 bits per channel: those read as the stored
         /// bytes; every other format reads as floats, which the renderer converts from whatever it
-        /// stores the texture in (its storage may differ from the declared format).</summary>
-        static bool EightBit(GraphicsFormat format) =>
+        /// stores the texture in (its storage may differ from the declared format). A packed format
+        /// is never 8 bits per channel, even where its block has one byte per component
+        /// (10-10-10-2: A2B10G10R10_UNormPack32).</summary>
+        internal static bool EightBit(GraphicsFormat format) =>
             !GraphicsFormatUtility.IsHalfFormat(format) && !GraphicsFormatUtility.IsIEEE754Format(format)
+            && !GraphicsFormatUtility.IsPackedFormat(format)
             && GraphicsFormatUtility.GetComponentCount(format) > 0
             && GraphicsFormatUtility.GetBlockSize(format) == GraphicsFormatUtility.GetComponentCount(format);
 
