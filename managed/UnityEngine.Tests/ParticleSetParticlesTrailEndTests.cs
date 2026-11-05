@@ -277,6 +277,59 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void RemovingManyTrailedParticlesInOneCallEndsEachUnheldTrailOnceInWrittenOrder()
+        {
+            var ps = Make("setparticles-trail-many", dieWithParticles: true);
+            try
+            {
+                ps.Emit(80);
+                var particles = Particles(ps);
+                const int offset = 8, removed = 64;
+                Assert.True(particles.Length > offset + removed);
+                Assert.All(ps.m_TrailList, t => Assert.NotNull(t));
+                Assert.All(particles, p => Assert.NotEqual(0, p.m_TrailId));
+                Assert.Equal(particles.Length, particles.Select(p => p.m_TrailId).Distinct().Count());
+                int slots = ps.m_TrailList.Count;
+                var points = TrailPoints(ps);
+
+                static ParticleSystem.Particle RemovedCopy(ParticleSystem.Particle p) { p.remainingLifetime = -1f; return p; }
+                // After the retained prefix [0, offset), the first 64 written originals are removed.
+                // Removed copies are mixed in: of a removed original (written first, so its trail
+                // ends first; written last, it ends nothing more), of prefix particles and of a kept
+                // original (those trails are held and stay live).
+                var tail = particles.Skip(offset).ToArray();
+                for (int j = 0; j < removed; j++) tail[j].remainingLifetime = -1f;
+                var written = new List<ParticleSystem.Particle> { RemovedCopy(tail[5]), RemovedCopy(particles[0]), RemovedCopy(tail[removed]) };
+                for (int j = 0; j < tail.Length; j++)
+                {
+                    written.Add(tail[j]);
+                    if (j % 16 == 15 && j < removed) written.Add(RemovedCopy(particles[1 + j / 16]));
+                }
+                written.Add(RemovedCopy(tail[10]));
+                written.Add(RemovedCopy(particles[offset - 1]));
+                var ended = new List<int> { tail[5].m_TrailId };
+                ended.AddRange(tail.Take(removed).Select(p => p.m_TrailId).Where(link => link != tail[5].m_TrailId));
+
+                ps.SetParticles(written.ToArray(), written.Count, offset);
+
+                Assert.Equal(particles.Length - removed, ps.particleCount);
+                Assert.Equal(particles.Take(offset).Concat(tail.Skip(removed)).Select(p => p.m_TrailId).OrderBy(link => link).ToArray(),
+                    Particles(ps).Select(p => p.m_TrailId).OrderBy(link => link).ToArray());
+                var expected = new List<Vector3[]>(points);
+                foreach (int link in ended) expected[link - 1] = null;
+                Assert.Equal(expected, TrailPoints(ps));
+                Assert.All(ps.m_TrailList.Where(t => t != null), t => Assert.False(t.Orphan));
+                // Each ended slot is freed once, in written order: new trails take them last first,
+                // then a new slot.
+                ps.Emit(removed + 1);
+                Assert.Equal(particles.Length + 1, ps.particleCount);
+                Assert.Equal(Enumerable.Reverse(ended).Append(slots + 1),
+                    Particles(ps).Skip(particles.Length - removed).Select(p => p.m_TrailId));
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
         public void SetTrailsAfterASetParticlesThatDropsAParticleRestoresTheCapture()
         {
             // Particles paused at the end of their life are exported at zero lifetime, so
