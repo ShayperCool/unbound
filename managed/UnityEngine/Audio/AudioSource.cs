@@ -59,6 +59,8 @@ namespace UnityEngine
         internal Vector3 m_LastPosition;
         internal Vector3 m_Velocity;
         internal bool m_HasLastPosition;
+        // The loop the last position was sampled in (false: the frame loop).
+        internal bool m_MotionInFixedStep;
         float[] m_RolloffTable, m_SpatialBlendTable, m_SpreadTable;
 
         /// <summary>Samples per distance curve sent to the mixer.</summary>
@@ -636,7 +638,7 @@ namespace UnityEngine
             return table;
         }
 
-        /// <summary>Once per frame: the velocity from the transform's motion.</summary>
+        /// <summary>The velocity from the transform's motion since the last sample.</summary>
         internal void UpdateMotion(float deltaTime)
         {
             var position = transform.position;
@@ -644,6 +646,22 @@ namespace UnityEngine
                 m_Velocity = (position - m_LastPosition) / deltaTime;
             m_LastPosition = position;
             m_HasLastPosition = true;
+        }
+
+        /// <summary>Samples the velocity when <paramref name="fixedStep"/> is the loop
+        /// <c>velocityUpdateMode</c> picks (<see cref="AudioSystem.UpdatesInFixedStep"/>). When the
+        /// picked loop changes, sampling starts again from the next position and the last velocity
+        /// is kept until then (Unbound's choice, unmeasured).</summary>
+        internal void SampleMotion(bool fixedStep, float deltaTime)
+        {
+            bool inFixedStep = AudioSystem.UpdatesInFixedStep(m_VelocityUpdateMode, m_GameObject);
+            if (inFixedStep != fixedStep) return;
+            if (inFixedStep != m_MotionInFixedStep)
+            {
+                m_MotionInFixedStep = inFixedStep;
+                m_HasLastPosition = false;
+            }
+            UpdateMotion(deltaTime);
         }
 
         // ------------------------------------------------------------------ engine hooks

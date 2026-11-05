@@ -17,6 +17,8 @@ namespace UnityEngine
         internal Vector3 m_LastPosition;
         internal Vector3 m_Velocity;
         internal bool m_HasLastPosition;
+        // The loop the last position was sampled in (false: the frame loop).
+        internal bool m_MotionInFixedStep;
 
         public AudioListener() { }
 
@@ -78,6 +80,22 @@ namespace UnityEngine
                 m_Velocity = (position - m_LastPosition) / deltaTime;
             m_LastPosition = position;
             m_HasLastPosition = true;
+        }
+
+        /// <summary>Samples the velocity when <paramref name="fixedStep"/> is the loop
+        /// <c>velocityUpdateMode</c> picks (<see cref="AudioSystem.UpdatesInFixedStep"/>). When the
+        /// picked loop changes, sampling starts again from the next position and the last velocity
+        /// is kept until then (Unbound's choice, unmeasured).</summary>
+        internal void SampleMotion(bool fixedStep, float deltaTime)
+        {
+            bool inFixedStep = AudioSystem.UpdatesInFixedStep(m_VelocityUpdateMode, m_GameObject);
+            if (inFixedStep != fixedStep) return;
+            if (inFixedStep != m_MotionInFixedStep)
+            {
+                m_MotionInFixedStep = inFixedStep;
+                m_HasLastPosition = false;
+            }
+            UpdateMotion(deltaTime);
         }
 
         internal override void OnEngineEnable()
