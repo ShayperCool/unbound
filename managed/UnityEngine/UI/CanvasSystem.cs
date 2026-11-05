@@ -19,6 +19,7 @@ namespace Unbound.Runtime
         static readonly Vector3[] s_Corners = new Vector3[4];
         static long s_RegistrationOrder;
         static readonly Dictionary<Canvas, long> s_Order = new Dictionary<Canvas, long>();
+        static readonly int s_AlphaTexProperty = Shader.PropertyToID("_AlphaTex");
 
         static CanvasSystem()
         {
@@ -341,6 +342,8 @@ namespace Unbound.Runtime
                 ulong texture = cr.m_Texture != null ? TextureHandles.Of(cr.m_Texture) : 0;
                 int submeshes = Math.Max(1, cr.m_Mesh.subMeshCount);
                 if (camera != null) AddDrawnBounds(cr.m_Mesh.bounds, t.localToWorldMatrix);
+                // Each material slot of each renderer is a draw of its own: nothing merges canvas
+                // draws, so renderers with different alpha textures never share one.
                 for (int i = 0; i < cr.m_MaterialCount; i++)
                 {
                     var material = cr.GetMaterial(i) ?? DefaultMaterial;
@@ -352,7 +355,7 @@ namespace Unbound.Runtime
                         Material = cr.CanvasMaterial(material),
                         Model = model,
                         Color = Color.white,
-                        Properties = cr.CanvasProperties(alwaysGamma),
+                        Properties = DrawProperties(cr, alwaysGamma),
                         MainTexture = texture,
                         Queue = material.renderQueue,
                         SortingLayer = layer,
@@ -388,7 +391,7 @@ namespace Unbound.Runtime
                         Material = cr.CanvasMaterial(material),
                         Model = model,
                         Color = Color.white,
-                        Properties = cr.CanvasProperties(alwaysGamma),
+                        Properties = DrawProperties(cr, alwaysGamma),
                         MainTexture = texture,
                         Queue = material.renderQueue,
                         SortingLayer = layer,
@@ -397,6 +400,19 @@ namespace Unbound.Runtime
                     });
                 }
             }
+        }
+
+        /// <summary>A renderer's per-draw properties, with its alpha texture as <c>_AlphaTex</c>
+        /// (CanvasRenderer.SetAlphaTexture, 6000.0 Scripting API: "passed to the Shader under the
+        /// _AlphaTex property"), over the material's as its texture is over <c>_MainTex</c>.
+        /// Without one nothing is passed and the material's own value, else the shader's
+        /// default, is sampled (Unbound's choice, unmeasured).</summary>
+        static Dictionary<int, object> DrawProperties(CanvasRenderer cr, bool alwaysGamma)
+        {
+            var properties = cr.CanvasProperties(alwaysGamma);
+            if (cr.m_AlphaTexture != null) properties[s_AlphaTexProperty] = cr.m_AlphaTexture;
+            else properties.Remove(s_AlphaTexProperty);
+            return properties;
         }
 
         /// <summary>Whether every vertex of a mesh is fully transparent (what
