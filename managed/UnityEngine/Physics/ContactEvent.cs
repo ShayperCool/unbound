@@ -18,14 +18,15 @@ namespace UnityEngine
         }
         internal static bool HasContactEventSubscribers => ContactEvent != null;
 
-        internal static void SendContactEvent(NativeArray<ContactPairHeader>.ReadOnly headers)
+        /// <summary>The contact reports of one physics scene's step, with that scene.</summary>
+        internal static void SendContactEvent(PhysicsScene scene, NativeArray<ContactPairHeader>.ReadOnly headers)
         {
-            try { ContactEvent?.Invoke(defaultPhysicsScene, headers); }
+            try { ContactEvent?.Invoke(scene, headers); }
             catch (Exception exception) { Debug.LogException(exception); }
         }
     }
-    // This engine currently exposes only the default scene. Its default value is the
-    // default scene in the installed Editor too, as recorded by contactevents3d.
+    // The default value is the default scene, in the installed Editor too, as recorded by
+    // contactevents3d. Local physics scenes and the queries are in PhysicsScene.cs.
     public partial struct PhysicsScene : IEquatable<PhysicsScene>
     {
         public static bool operator ==(PhysicsScene lhs, PhysicsScene rhs) => lhs.Equals(rhs);
@@ -33,7 +34,7 @@ namespace UnityEngine
         private int m_index;
         private int m_version;
         public bool Equals(PhysicsScene other) => m_index == other.m_index && m_version == other.m_version;
-        public bool IsValid() => m_index == 0 && m_version == 0;
+        public bool IsValid() => Unbound.Runtime.PhysicsWorld.Find(m_index, m_version) != null;
         public override string ToString() => $"PhysicsScene(Index: {m_index}, Version: {m_version})";
         public override int GetHashCode() => base.GetHashCode();
         public override bool Equals(object other) => other is PhysicsScene scene && Equals(scene);

@@ -26,8 +26,38 @@ namespace Unbound.Runtime
             _ => Physics.s_QueriesHitTriggers ? 1 : 0,
         };
 
+        /// <summary>The ray and shape casts' query flags (the native hitTriggers argument): bit 0 hits
+        /// triggers, bit 1 hits the back faces of mesh triangles. Documented (6000.0
+        /// Physics.queriesHitBackfaces): "By default, all physics queries such as a raycast or a
+        /// shape sweep (e.g. SphereCastAll) won't detect hits with back-face triangles."</summary>
+        static int CastFlags(QueryTriggerInteraction q) => HitTriggers(q) | (HitsBackfaces ? 2 : 0);
+
+        /// <summary>Whether the casts hit back faces now: Physics.queriesHitBackfaces, or the batch
+        /// command's QueryParameters.hitBackfaces while it is answered.</summary>
+        static bool HitsBackfaces => s_Backfaces ?? Physics.s_QueriesHitBackfaces;
+
+        static bool? s_Backfaces;
+
+        internal readonly struct BackfacesScope : IDisposable
+        {
+            readonly bool? m_Previous;
+            internal BackfacesScope(bool value)
+            {
+                m_Previous = s_Backfaces;
+                s_Backfaces = value;
+            }
+            public void Dispose() => s_Backfaces = m_Previous;
+        }
+
+        /// <summary>Casts in the scope hit back faces as <paramref name="value"/> says, whatever
+        /// Physics.queriesHitBackfaces is: a batch command's own QueryParameters.hitBackfaces (Unbound's
+        /// reading, unmeasured: the field has no "use the global setting" value).</summary>
+        internal static BackfacesScope Backfaces(bool value) => new BackfacesScope(value);
+
         static ulong Mask(int layerMask) => unchecked((uint)layerMask);
 
+        /// <summary>A hit records the collider by instance ID only (RaycastHit is unmanaged); its
+        /// collider-dependent properties look it up when read.</summary>
         internal static RaycastHit ToHit(B3.Hit hit, Collider collider, float length) => new RaycastHit
         {
             m_Point = hit.Point,
@@ -35,16 +65,36 @@ namespace Unbound.Runtime
             m_Distance = hit.Fraction * length,
             m_FaceID = unchecked((uint)hit.TriangleIndex),
             m_UV = hit.UV,
-            m_ColliderRef = collider,
             m_Collider = collider != null ? collider.GetInstanceID() : 0,
         };
+
+        /// <summary>The physics scene the queries search: the default one (Physics), or the one a
+        /// PhysicsScene query or a body's sweep names.</summary>
+        static W.Space s_Target;
+
+        internal readonly struct Target : IDisposable
+        {
+            readonly W.Space m_Previous;
+            internal Target(W.Space space)
+            {
+                m_Previous = s_Target;
+                s_Target = space;
+            }
+            public void Dispose() => s_Target = m_Previous;
+        }
+
+        /// <summary>Queries in the scope search this physics scene (null: the default one).</summary>
+        internal static Target In(W.Space space) => new Target(space);
 
         /// <summary>The world, ready for a query; 0 when there is nothing to hit.</summary>
         static uint ReadyWorld()
         {
-            if (W.Colliders.Count == 0) return 0;
-            W.PrepareQuery();
-            return W.World;
+            var space = s_Target ?? W.DefaultSpace;
+            // Objects that just changed scene join their physics scene before it is searched.
+            W.SceneMembershipChanged();
+            if (space.Colliders.Count == 0) return 0;
+            W.PrepareQuery(space);
+            return space.World;
         }
 
         delegate int HitQuery(B3.Hit* hits, int capacity);
@@ -86,7 +136,7 @@ namespace Unbound.Runtime
             var dir = direction.normalized;
             float length = Length(maxDistance);
             var translation = dir * length;
-            int hitTriggers = HitTriggers(triggers);
+            int hitTriggers = CastFlags(triggers);
             return Collect((hits, capacity) => B3.ua3_raycast(world, origin, translation, Mask(layerMask), hitTriggers, closest ? 1 : 0, hits, capacity),
                 length, dir, closest);
         }
@@ -98,7 +148,7 @@ namespace Unbound.Runtime
             var dir = direction.normalized;
             float length = Length(maxDistance);
             var translation = dir * length;
-            int hitTriggers = HitTriggers(triggers);
+            int hitTriggers = CastFlags(triggers);
             var q = Quaternion.Normalize(rotation);
             return Collect((hits, capacity) => B3.ua3_shapecast(world, (int)kind, a, b, q, Mathf.Max(0f, radius), translation, Mask(layerMask), hitTriggers, closest ? 1 : 0, hits, capacity),
                 length, dir, closest);

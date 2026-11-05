@@ -209,7 +209,7 @@ namespace UnityEngine
             {
                 EnsureSettings();
                 s_BounceThreshold = value;
-                B3.ua3_world_set_restitution_threshold(W.World, Mathf.Max(0f, value));
+                W.SetBounceThreshold(Mathf.Max(0f, value));
             }
         }
 
@@ -323,6 +323,8 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ simulation
 
+        /// <summary>Steps the default physics scene; a scene's local physics scene only moves through
+        /// its own PhysicsScene.Simulate.</summary>
         public static void Simulate(float step)
         {
             if (simulationMode != SimulationMode.Script)
@@ -336,7 +338,7 @@ namespace UnityEngine
 
         public static void SyncTransforms()
         {
-            if (W.Colliders.Count == 0 && W.Rigidbodies.Count == 0) return;
+            if (!W.HasMembers) return;
             W.SyncTransforms();
         }
 

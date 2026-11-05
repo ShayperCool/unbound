@@ -46,7 +46,7 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 9
+#define UA3_VERSION 11
 
 struct ua3_scene_def
 {
@@ -1718,12 +1718,24 @@ UA3_API uint64_t ua3_shape_hull( uint64_t body, const ua3_shape_def* def, const 
 
 // Triangle mesh data (Unity's winding: the cross product of a front face's edges points out, as
 // in PhysX); released when the caller and every shape using it let go.
+//
+// The triangle count's low 27 bits are the count; bits 27-30 name the MeshCollider cooking
+// options turned off (0: Unity's default, every option on, which is how the SDK's cooking is set
+// up): 1 CookForFasterSimulation off, 2 EnableMeshCleaning off, 4 WeldColocatedVertices off,
+// 8 UseFastMidphase off. The mapping to PhysX's cooking parameters is Unbound's choice
+// (unmeasured): faster cooking is the midphase's fast-cooking setting (BVH33's cooking hint,
+// BVH34's largest leaf), no cleaning is eDISABLE_CLEAN_MESH, no welding clears eWELD_VERTICES
+// (with the SDK's weld tolerance 0 the cleaning still merges vertices at the same position, so the
+// managed side reports that case), and the legacy midphase is BVH33 (R-trees).
 UA3_API void* ua3_mesh_create( const PxVec3* vertices, int vertexCount, const int32_t* indices, int triangleCount )
 {
 	if ( s_cooking == nullptr && !sdk() )
 	{
 		return nullptr;
 	}
+	const int countBits = 27;
+	const int options = ( triangleCount >> countBits ) & 0xf;
+	triangleCount &= ( 1 << countBits ) - 1;
 	PxTriangleMeshDesc desc;
 	desc.points.count = static_cast<PxU32>( vertexCount );
 	desc.points.stride = sizeof( PxVec3 );
@@ -1731,7 +1743,39 @@ UA3_API void* ua3_mesh_create( const PxVec3* vertices, int vertexCount, const in
 	desc.triangles.count = static_cast<PxU32>( triangleCount );
 	desc.triangles.stride = 3 * sizeof( int32_t );
 	desc.triangles.data = indices;
-	return s_cooking->createTriangleMesh( desc, s_physics->getPhysicsInsertionCallback() );
+	if ( options == 0 )
+	{
+		return s_cooking->createTriangleMesh( desc, s_physics->getPhysicsInsertionCallback() );
+	}
+	const PxCookingParams unity = s_cooking->getParams();
+	PxCookingParams params = unity;
+	if ( options & 2 )
+	{
+		params.meshPreprocessParams |= PxMeshPreprocessingFlag::eDISABLE_CLEAN_MESH;
+	}
+	if ( options & 4 )
+	{
+		params.meshPreprocessParams.clear( PxMeshPreprocessingFlag::eWELD_VERTICES );
+	}
+	if ( options & 8 )
+	{
+		params.midphaseDesc = PxMeshMidPhase::eBVH33;
+	}
+	if ( options & 1 )
+	{
+		if ( params.midphaseDesc.getType() == PxMeshMidPhase::eBVH33 )
+		{
+			params.midphaseDesc.mBVH33Desc.meshCookingHint = PxMeshCookingHint::eCOOKING_PERFORMANCE;
+		}
+		else
+		{
+			params.midphaseDesc.mBVH34Desc.numPrimsPerLeaf = 15;
+		}
+	}
+	s_cooking->setParams( params );
+	PxTriangleMesh* mesh = s_cooking->createTriangleMesh( desc, s_physics->getPhysicsInsertionCallback() );
+	s_cooking->setParams( unity );
+	return mesh;
 }
 
 UA3_API void ua3_mesh_destroy( void* mesh )
@@ -2130,10 +2174,25 @@ PxGeometryHolder query_geometry( int kind, PxVec3 a, PxVec3 b, PxQuat rotation, 
 }
 
 const PxU32 MaxTouches = 4096;
+
+// The ray and shape casts' query flags (their hitTriggers argument): bit 0 hits triggers, bit 1
+// hits the back faces of mesh triangles (Physics.queriesHitBackfaces, QueryParameters.hitBackfaces).
+const int QueryHitTriggers = 1;
+const int QueryHitBackfaces = 2;
+
+// The cast's hit flags: back faces through PhysX's eMESH_BOTH_SIDES (Unbound's choice, unmeasured).
+PxHitFlags cast_flags( PxHitFlags flags, int queryFlags )
+{
+	if ( queryFlags & QueryHitBackfaces )
+	{
+		flags |= PxHitFlag::eMESH_BOTH_SIDES;
+	}
+	return flags;
+}
 } // namespace
 
 // Ray casts: the closest hit (closest != 0, one hit written) or all hits along the ray. Returns
-// the number of hits; at most capacity are written.
+// the number of hits; at most capacity are written. hitTriggers carries the query flags above.
 UA3_API int ua3_raycast( uint32_t id, ua3_vec3 originIn, ua3_vec3 translationIn, uint64_t maskBits, int hitTriggers, int closest, ua3_hit* hits,
 						 int capacity )
 {
@@ -2148,8 +2207,9 @@ UA3_API int ua3_raycast( uint32_t id, ua3_vec3 originIn, ua3_vec3 translationIn,
 	std::vector<PxRaycastHit> touches( MaxTouches );
 	PxRaycastBuffer buffer( touches.data(), MaxTouches );
 	QueryFilter filter;
-	filter.hitTriggers = hitTriggers != 0;
-	world->scene->raycast( origin, translation / length, length, buffer, PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX | PxHitFlag::eUV,
+	filter.hitTriggers = ( hitTriggers & QueryHitTriggers ) != 0;
+	world->scene->raycast( origin, translation / length, length, buffer,
+						   cast_flags( PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX | PxHitFlag::eUV, hitTriggers ),
 						   query_filter( maskBits ), &filter );
 	return collect( buffer.touches, buffer.nbTouches, length, closest, hits, capacity );
 }
@@ -2172,9 +2232,10 @@ UA3_API int ua3_shapecast( uint32_t id, int kind, ua3_vec3 aIn, ua3_vec3 bIn, ua
 	std::vector<PxSweepHit> touches( MaxTouches );
 	PxSweepBuffer buffer( touches.data(), MaxTouches );
 	QueryFilter filter;
-	filter.hitTriggers = hitTriggers != 0;
+	filter.hitTriggers = ( hitTriggers & QueryHitTriggers ) != 0;
 	world->scene->sweep( geometry.any(), pose, translation / length, length, buffer,
-						 PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX, query_filter( maskBits ), &filter );
+						 cast_flags( PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX, hitTriggers ), query_filter( maskBits ),
+						 &filter );
 	return collect( buffer.touches, buffer.nbTouches, length, closest, hits, capacity );
 }
 
@@ -2419,12 +2480,19 @@ UA3_API void ua3_d6_set_swing_limit( uint64_t id, float yAngle, float zAngle, fl
 	d6->setSwingLimit( limit );
 }
 
-// Drives: 0 x, 1 y, 2 z, 3 swing, 4 twist, 5 slerp.
+// Drives: 0 x, 1 y, 2 z, 3 swing, 4 twist, 5 slerp. acceleration: bit 0 an acceleration drive; on
+// the twist drive, bit 1 extends the joint's angular limits beyond (-pi, pi]
+// (HingeJoint.extendedLimits, which sets the twist drive on every configuration: PhysX's
+// eENABLE_EXTENDED_LIMITS, Unbound's choice, unmeasured).
 UA3_API void ua3_d6_set_drive( uint64_t id, int index, float stiffness, float damping, float forceLimit, int acceleration )
 {
 	if ( PxD6Joint* d6 = d6_of( id ) )
 	{
-		d6->setDrive( static_cast<PxD6Drive::Enum>( index ), PxD6JointDrive( stiffness, damping, forceLimit, acceleration != 0 ) );
+		d6->setDrive( static_cast<PxD6Drive::Enum>( index ), PxD6JointDrive( stiffness, damping, forceLimit, ( acceleration & 1 ) != 0 ) );
+		if ( index == PxD6Drive::eTWIST )
+		{
+			d6->setConstraintFlag( PxConstraintFlag::eENABLE_EXTENDED_LIMITS, ( acceleration & 2 ) != 0 );
+		}
 	}
 }
 

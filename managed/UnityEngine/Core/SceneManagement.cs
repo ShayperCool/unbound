@@ -214,6 +214,7 @@ namespace UnityEngine.SceneManagement
                 if (s.Name == sceneName)
                     throw new ArgumentException($"A scene named '{sceneName}' already exists.");
             var data = SceneRegistry.Create(sceneName, "", -1);
+            SceneManagerInternal.CreateLocalPhysics(data, parameters.localPhysicsMode);
             data.IsLoaded = true;
             data.LoadingState = Scene.LoadingState.Loaded;
             SceneRegistry.Loaded.Add(data);
@@ -308,6 +309,7 @@ namespace UnityEngine.SceneManagement
             var destination = destinationScene.Data;
             if (source == null || destination == null) throw new ArgumentException("Invalid scene.");
             foreach (var go in source.Roots.ToArray()) SceneRegistry.MoveToScene(go, destination);
+            Unbound.Runtime.PhysicsWorld.SceneMembershipChanged();
             SceneManagerInternal.Unload(source);
         }
 
@@ -318,6 +320,8 @@ namespace UnityEngine.SceneManagement
             var data = scene.Data;
             if (data == null || !data.IsLoaded) throw new ArgumentException("The scene is invalid or not loaded.");
             SceneRegistry.MoveToScene(go, data);
+            // Its bodies and colliders move to the new scene's physics scene.
+            Unbound.Runtime.PhysicsWorld.SceneMembershipChanged();
         }
 
         public static void MoveGameObjectsToScene(Unity.Collections.NativeArray<int> instanceIDs, Scene scene)
@@ -326,7 +330,11 @@ namespace UnityEngine.SceneManagement
                 if (ObjectRegistry.FindById(id) is GameObject go) MoveGameObjectToScene(go, scene);
         }
 
-        internal static void MoveToDontDestroyOnLoad(GameObject go) => SceneRegistry.MoveToScene(go, SceneRegistry.DontDestroyOnLoad);
+        internal static void MoveToDontDestroyOnLoad(GameObject go)
+        {
+            SceneRegistry.MoveToScene(go, SceneRegistry.DontDestroyOnLoad);
+            Unbound.Runtime.PhysicsWorld.SceneMembershipChanged();
+        }
     }
 
     public static partial class SceneUtility
@@ -444,6 +452,7 @@ namespace UnityEngine.SceneManagement
             Unbound.Runtime.Trace.Scenes($"load scene #{buildIndex} ({parameters.loadSceneMode}{(async ? ", async" : "")})");
             var (path, _) = ProjectInfo.BuildScenes[buildIndex];
             var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, buildIndex);
+            CreateLocalPhysics(data, parameters.localPhysicsMode);
             data.LoadingState = Scene.LoadingState.Loading;
             s_Requested.Add(data);
             var op = new AsyncOperation();
@@ -463,12 +472,26 @@ namespace UnityEngine.SceneManagement
         {
             Unbound.Runtime.Trace.Scenes($"load scene {path} from an AssetBundle ({parameters.loadSceneMode})");
             var data = SceneRegistry.Create(Path.GetFileNameWithoutExtension(path), path, -1);
+            CreateLocalPhysics(data, parameters.localPhysicsMode);
             data.LoadKey = key;
             data.LoadingState = Scene.LoadingState.Loading;
             s_Requested.Add(data);
             var op = new AsyncOperation();
             s_Pending.Add((op, -1, parameters, data));
             return new LoadResult { Scene = new Scene(data.Handle), Operation = op };
+        }
+
+        /// <summary>
+        /// A scene created or loaded with LocalPhysicsMode.Physics3D owns a local 3D physics scene
+        /// from its creation, so its objects join it as they are made (6000.0 Scripting API:
+        /// LocalPhysicsMode, CreateSceneParameters, LoadSceneParameters). A local 2D physics scene
+        /// is not supported: Unbound says so, and the scene's 2D physics stays in the default world.
+        /// </summary>
+        internal static void CreateLocalPhysics(SceneData data, LocalPhysicsMode mode)
+        {
+            if ((mode & LocalPhysicsMode.Physics3D) != 0) Unbound.Runtime.PhysicsWorld.CreateLocal(data.Handle.Value);
+            if ((mode & LocalPhysicsMode.Physics2D) != 0)
+                Debug.LogWarning($"Unbound: LocalPhysicsMode.Physics2D is not supported yet; the 2D physics of scene '{data.Name}' is simulated in the default 2D physics scene.");
         }
 
         /// <summary>Runs the loads requested since the last frame (called early in the frame).</summary>
@@ -728,6 +751,9 @@ namespace UnityEngine.SceneManagement
                 if (keepDontSave && KeptBySingleLoad(root)) SceneRegistry.MoveToScene(root, SceneRegistry.Detached);
                 else Destruction.DestroyImmediate(root);
             }
+            // Its local physics scene goes with it, once its objects have gone (when within the
+            // unload is not documented or measured).
+            Unbound.Runtime.PhysicsWorld.ReleaseLocal(data.Handle.Value);
             data.IsLoaded = false;
             data.LoadingState = Scene.LoadingState.NotLoaded;
             SceneRegistry.Loaded.Remove(data);

@@ -215,6 +215,13 @@ namespace UnityEngine
                 return;
             }
             var connected = m_ConnectedBody != null && m_ConnectedBody.m_Registered ? m_ConnectedBody : null;
+            if (connected != null && !ReferenceEquals(connected.m_Space, rb.m_Space))
+            {
+                // One native world cannot join bodies of two physics scenes; not approximated.
+                W.ReleaseJoint(this);
+                Debug.LogError($"Unbound: the {GetType().Name} on '{name}' connects bodies in different physics scenes (LocalPhysicsMode.Physics3D); it is not simulated.", this);
+                return;
+            }
             ulong body1 = connected != null ? connected.m_Body : 0;
             if (connected != null && body1 == 0) return;
             if (m_Joint != 0 && (m_Body0 != rb.m_Body || m_Body1 != body1)) W.ReleaseJoint(this);
@@ -401,8 +408,11 @@ namespace UnityEngine
             {
                 if (m_Joint == 0) return 0f;
                 B3.ua3_d6_twist(m_Joint, out float a, out _);
-                // In (-180, 180].
                 float degrees = -a * Mathf.Rad2Deg;
+                // Documented (6000.0 HingeJoint.extendedLimits): "If enabled, the angle of the hinge
+                // is extended to [-360, 360] degrees": PhysX's twist angle as it is, in [-360, 360]
+                // (the frames make it 0 at rest). Otherwise in (-180, 180].
+                if (m_ExtendedLimits) return degrees;
                 degrees %= 360f;
                 if (degrees > 180f) degrees -= 360f;
                 else if (degrees <= -180f) degrees += 360f;
@@ -420,6 +430,13 @@ namespace UnityEngine
             }
         }
 
+        /// <summary>The twist drive's flags: bit 0 an acceleration drive, bit 1 extended limits. Every
+        /// configuration sets the twist drive, so the joint's extended limits follow
+        /// extendedLimits (PhysX's eENABLE_EXTENDED_LIMITS on the native side: the limits and the
+        /// drive see the twist angle in (-360, 360) instead of (-180, 180]; Unbound's choice,
+        /// unmeasured).</summary>
+        int DriveFlags(bool acceleration) => (acceleration ? 1 : 0) | (m_ExtendedLimits ? 2 : 0);
+
         internal override void Configure()
         {
             B3.ua3_d6_set_motion(m_Joint, 3, m_UseLimits ? 1 : 2);
@@ -428,17 +445,26 @@ namespace UnityEngine
                     BounceThreshold(m_Limits.bounceMinVelocity), AngularContact(m_Limits.contactDistance));
             if (m_UseMotor)
             {
-                B3.ua3_d6_set_drive(m_Joint, 4, 0f, MotorDamping, Mathf.Max(0f, m_Motor.force), m_UseAcceleration ? 1 : 0);
+                // Documented (6000.0 JointMotor.freeSpin): "If freeSpin is enabled the motor will only
+                // accelerate but never slow down." PhysX's D6 drive brakes as well as accelerates
+                // (its impulse is bounded by the force on both sides) and has no free-spin mode, so
+                // it is reported rather than approximated. Measured (tests/projects/joints Reference,
+                // "hinge motor free spin"): with freeSpin on, the hinge stopped once its target was
+                // set to 0, as this drive stops it; a hinge turning faster than a non-zero target is
+                // not measured.
+                if (m_Motor.freeSpin)
+                    Stubs.Ignored("JointMotor.freeSpin", "is not honoured yet: a HingeJoint motor also brakes a hinge turning faster than its targetVelocity");
+                B3.ua3_d6_set_drive(m_Joint, 4, 0f, MotorDamping, Mathf.Max(0f, m_Motor.force), DriveFlags(m_UseAcceleration));
                 B3.ua3_d6_set_drive_target(m_Joint, Vector3.zero, Quaternion.identity, Vector3.zero, new Vector3(Rad(m_Motor.targetVelocity), 0f, 0f));
             }
             else if (m_UseSpring)
             {
-                B3.ua3_d6_set_drive(m_Joint, 4, Mathf.Max(0f, m_Spring.spring), Mathf.Max(0f, m_Spring.damper), float.MaxValue, m_UseAcceleration ? 1 : 0);
+                B3.ua3_d6_set_drive(m_Joint, 4, Mathf.Max(0f, m_Spring.spring), Mathf.Max(0f, m_Spring.damper), float.MaxValue, DriveFlags(m_UseAcceleration));
                 B3.ua3_d6_set_drive_target(m_Joint, Vector3.zero, Quaternion.AngleAxis(-m_Spring.targetPosition, Vector3.right), Vector3.zero, Vector3.zero);
             }
             else
             {
-                B3.ua3_d6_set_drive(m_Joint, 4, 0f, 0f, 0f, 0);
+                B3.ua3_d6_set_drive(m_Joint, 4, 0f, 0f, 0f, DriveFlags(false));
             }
         }
 
