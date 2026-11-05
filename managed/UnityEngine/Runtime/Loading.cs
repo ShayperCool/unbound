@@ -841,10 +841,24 @@ namespace Unbound.Runtime
         /// through the fields of objects (any accessibility; arrays and collections through their
         /// storage), from every live object that is not an asset (the objects of loaded scenes,
         /// DontDestroyOnLoad ones, objects made at run time), from every object flagged
-        /// DontUnloadUnusedAsset, and from static fields of non-framework assemblies. Not seen: the
-        /// stack and handles (as in Unity), statics of generic classes, and statics of classes with a
-        /// class constructor (reading them would run it, and whether it already ran cannot be told);
-        /// assets held only there count as unused. The asset database's own tables are not roots.
+        /// DontUnloadUnusedAsset, from static fields of non-framework assemblies, and from the
+        /// engine's own holders of scene state (<see cref="EngineRoots"/>).
+        /// <para>Statics of a class whose only class initialization is its static field
+        /// initializers (C# marks it beforefieldinit) are read: the runtime may run those
+        /// initializers at any time before the first access to a static field (ECMA-335
+        /// II.10.5.3.2; C# "Static field initialization"), so reading them here is within the
+        /// language contract, though it may run initializers the game has not reached yet. Statics
+        /// of a class with an explicit static constructor are not read: the constructor runs exactly
+        /// at the class's first use, reading would run it, and whether it already ran cannot be
+        /// told. Initializers are run this way only in assemblies built against the engine (the
+        /// game's scripts, packages and plugins); elsewhere, and in the engine's own assembly,
+        /// only classes without class initialization are read. The engine's scene-state holders
+        /// are explicit roots instead, so no other engine initializer runs here.</para>
+        /// Not seen: the stack and handles (as in Unity), statics of generic classes, statics of
+        /// classes with an explicit static constructor, and statics with initializers in assemblies
+        /// not built against the engine; assets held only there count as unused,
+        /// which <see cref="UnloadUnused"/> makes safe by never reverting or destroying what it
+        /// unloads. The asset database's own tables are not roots.
         /// </summary>
         internal static class Reachability
         {
@@ -853,6 +867,12 @@ namespace Unbound.Runtime
             static readonly Dictionary<Type, System.Reflection.FieldInfo[]> s_Fields = new Dictionary<Type, System.Reflection.FieldInfo[]>();
             static readonly Dictionary<Type, bool> s_MayHoldReferences = new Dictionary<Type, bool>();
             static readonly Dictionary<System.Reflection.Assembly, System.Reflection.FieldInfo[]> s_Statics = new Dictionary<System.Reflection.Assembly, System.Reflection.FieldInfo[]>();
+
+            /// <summary>The engine classes whose statics hold the loaded scenes' state, all of it a
+            /// root: RenderSettings (skybox, halo and custom reflection, the settings kept for the
+            /// other loaded scenes), LightmapSettings (lightmaps, light probes) and Shader (global
+            /// textures and buffers).</summary>
+            internal static readonly Type[] EngineRoots = { typeof(RenderSettings), typeof(LightmapSettings), typeof(Shader) };
 
             internal static HashSet<object> Walk()
             {
@@ -868,6 +888,15 @@ namespace Unbound.Runtime
                 foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
                     foreach (var field in StaticsOf(assembly))
                     {
+                        object value;
+                        try { value = field.GetValue(null); }
+                        catch (Exception) { continue; }
+                        Push(value);
+                    }
+                foreach (var type in EngineRoots)
+                    foreach (var field in type.GetFields(StaticFields))
+                    {
+                        if (field.IsLiteral || !MayHoldReferences(field.FieldType)) continue;
                         object value;
                         try { value = field.GetValue(null); }
                         catch (Exception) { continue; }
@@ -929,9 +958,15 @@ namespace Unbound.Runtime
                     try { types = assembly.GetTypes(); }
                     catch (System.Reflection.ReflectionTypeLoadException e) { types = e.Types; }
                     catch (Exception) { types = Array.Empty<Type>(); }
+                    bool engine = assembly == typeof(AssetDatabaseRuntime).Assembly;
+                    // Initializers run here only in code built against the engine (the game's
+                    // scripts, packages and plugins), never in libraries or the host's.
+                    bool script = !engine && Array.Exists(assembly.GetReferencedAssemblies(),
+                        r => r.Name == "UnityEngine" || (r.Name != null && r.Name.StartsWith("UnityEngine.", StringComparison.Ordinal)));
                     foreach (var type in types)
                     {
-                        if (type == null || type.ContainsGenericParameters || type.TypeInitializer != null) continue;
+                        if (type == null || type.ContainsGenericParameters) continue;
+                        if (type.TypeInitializer != null && (!script || (type.Attributes & System.Reflection.TypeAttributes.BeforeFieldInit) == 0)) continue;
                         if (type == typeof(AssetDatabaseRuntime) || type == typeof(ObjectRegistry)) continue;
                         foreach (var field in type.GetFields(StaticFields))
                             if (!field.IsLiteral && MayHoldReferences(field.FieldType)) fields.Add(field);
