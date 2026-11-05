@@ -623,28 +623,85 @@ namespace UnityEngine
         {
             Texture2D texture;
             using (ObjectRegistry.AsAssets())
-                texture = new Texture2D { m_Name = name, IsPersistentAsset = true, m_AssetGuid = guid };
+                texture = new Texture2D { m_Name = name, IsPersistentAsset = true, m_AssetGuid = guid, m_ImportedFrom = guid };
             texture.m_NativeHandle = handle;
-            texture.m_Width = info.Width;
-            texture.m_Height = info.Height;
-            texture.m_MipCount = info.MipCount;
-            texture.m_GpuMipCount = Math.Max(1, info.MipCount);
-            texture.m_IsReadable = info.Readable != 0;
-            texture.m_Linear = info.Srgb == 0 || info.Format == 2;
+            texture.ApplyImport(info);
+            return texture;
+        }
+
+        /// <summary>The texture file this texture was imported from. Unlike <see cref="m_AssetGuid"/>
+        /// it stays when a script reinitializes the texture: unloading reads the file again.</summary>
+        string m_ImportedFrom;
+
+        /// <summary>Imports a texture file again under a renderer handle (tests replace it).</summary>
+        internal static Func<ulong, string, (bool Ok, ImportedTextureInfo Info)> Reimport =
+            (handle, guid) => (Native.ImportTexture(handle, guid, out var info), info);
+
+        /// <summary>The shape, readability and sampler an import gives.</summary>
+        void ApplyImport(in ImportedTextureInfo info)
+        {
+            m_Width = info.Width;
+            m_Height = info.Height;
+            m_MipCount = info.MipCount;
+            m_GpuMipCount = Math.Max(1, info.MipCount);
+            m_IsReadable = info.Readable != 0;
+            m_Linear = info.Srgb == 0 || info.Format == 2;
             // The target override may keep HDR working pixels as float32 instead of half.
-            texture.m_Format = info.Format switch
+            m_Format = info.Format switch
             {
                 2 => TextureFormat.RGBAHalf,
                 9 => TextureFormat.RGBAFloat,
                 _ => TextureFormat.RGBA32,
             };
-            texture.m_WrapModeW = (TextureWrapMode)info.WrapW;
-            texture.filterMode = (FilterMode)info.FilterMode;
-            texture.wrapModeU = (TextureWrapMode)info.WrapU;
-            texture.wrapModeV = (TextureWrapMode)info.WrapV;
-            texture.anisoLevel = info.AnisoLevel;
-            texture.ReadSamplerMetadata();
-            return texture;
+            m_WrapModeW = (TextureWrapMode)info.WrapW;
+            filterMode = (FilterMode)info.FilterMode;
+            wrapModeU = (TextureWrapMode)info.WrapU;
+            wrapModeV = (TextureWrapMode)info.WrapV;
+            anisoLevel = info.AnisoLevel;
+            ReadSamplerMetadata();
+        }
+
+        /// <summary>
+        /// Resources.UnloadAsset of an imported texture (UnloadUnusedAssets keeps textures: it
+        /// cannot load one back lazily): the file is imported again into the same renderer handle,
+        /// so materials and sprites that bind the texture draw the saved texels. What scripts did
+        /// to it (pixels, size, format, readability, sampler settings) is gone; the CPU pixels are
+        /// read from the import when a script next asks for them, as after loading. The object
+        /// stays the same one (as measured for materials, tests/projects/droppedparams
+        /// unload.material; textures themselves are unmeasured). False, with nothing changed, for a
+        /// texture no texture file made or a file that cannot be imported again. False too, with a
+        /// warning, when the file now imports as a cubemap, an array or a 3D texture (its import
+        /// settings changed while running): the renderer's data under the handle is already that
+        /// new import, but this Texture2D keeps its own size, format and pixels.
+        /// </summary>
+        internal bool ReloadImported()
+        {
+            if (m_ImportedFrom == null) return false;
+            ulong handle = m_NativeHandle != 0 ? m_NativeHandle : RenderHandles.Next();
+            var (ok, info) = Reimport(handle, m_ImportedFrom);
+            if (!ok) return false;
+            if (info.Dimension is 3 or 4 or 5)
+            {
+                Debug.LogWarning($"Unbound: unloading texture '{m_Name}': its file now imports as a {(UnityEngine.Rendering.TextureDimension)info.Dimension} texture, not a Texture2D; its renderer data was replaced, the Texture2D was not.");
+                return false;
+            }
+            ReleaseStore();
+            m_Pixels = null;
+            m_Hdr = null;
+            m_Raw = null;
+            m_SourceRaw = null;
+            m_UnreadableRaw = null;
+            m_MipPixels = null;
+            m_MipHdr = null;
+            m_SourceFormat = null;
+            m_SourceMips = 0;
+            m_PixelsDirty = false;
+            m_AssetGuid = m_ImportedFrom;
+            m_NativeHandle = handle;
+            // The mip bias is the import's again (read back from the renderer, 0 without one).
+            SetSamplerQuietly(filterMode, wrapModeU, wrapModeV, m_WrapModeW, anisoLevel, 0f);
+            ApplyImport(info);
+            return true;
         }
 
         /// <summary>A texture serialized in an asset file (TextMeshPro atlases): pixels as hex.</summary>

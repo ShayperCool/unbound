@@ -251,7 +251,7 @@ namespace UnityEngine
         {
             AudioClip clip;
             using (ObjectRegistry.AsAssets())
-                clip = new AudioClip { m_Name = name, IsPersistentAsset = true, m_IsAsset = true };
+                clip = new AudioClip { m_Name = name, IsPersistentAsset = true, m_IsAsset = true, m_ImportedFrom = guid };
             clip.m_Handle = AudioBackend.NextHandle();
             if (!AudioBackend.Current.ImportClip(clip.m_Handle, guid, out var info))
             {
@@ -259,16 +259,43 @@ namespace UnityEngine
                 clip.m_LoadState = AudioDataLoadState.Failed;
                 throw new InvalidOperationException("the audio clip could not be imported (see the error above)");
             }
-            clip.m_Samples = info.Frames;
-            clip.m_Channels = info.Channels;
-            clip.m_Frequency = info.Frequency;
-            clip.m_LoadType = (AudioClipLoadType)info.LoadType;
-            clip.m_PreloadAudioData = info.Preload != 0;
-            clip.m_LoadInBackground = info.LoadInBackground != 0;
-            clip.m_Ambisonic = info.Ambisonic != 0;
-            clip.m_CompressionFormat = info.CompressionFormat;
-            if (clip.m_PreloadAudioData) clip.LoadAudioData();
+            clip.ApplyImport(info);
             return clip;
+        }
+
+        /// <summary>The audio file an imported clip comes from (null for other clips).</summary>
+        string m_ImportedFrom;
+
+        /// <summary>The properties an import gives; its data loads now when it preloads.</summary>
+        void ApplyImport(in AudioClipInfo info)
+        {
+            m_Samples = info.Frames;
+            m_Channels = info.Channels;
+            m_Frequency = info.Frequency;
+            m_LoadType = (AudioClipLoadType)info.LoadType;
+            m_PreloadAudioData = info.Preload != 0;
+            m_LoadInBackground = info.LoadInBackground != 0;
+            m_Ambisonic = info.Ambisonic != 0;
+            m_CompressionFormat = info.CompressionFormat;
+            if (m_PreloadAudioData) LoadAudioData();
+        }
+
+        /// <summary>
+        /// Resources.UnloadAsset of an imported clip (UnloadUnusedAssets keeps clips: it cannot load
+        /// one back lazily): the file is imported
+        /// again into the same mixer handle, so SetData's changes are gone and sources that hold
+        /// the clip play the saved samples. Its load state starts over as after loading
+        /// (preloaded or unloaded); that, and keeping the one object, are unmeasured for clips
+        /// (materials are measured, tests/projects/droppedparams unload.material). False, with
+        /// nothing changed, for a clip no audio file made or one that cannot be imported again.
+        /// </summary>
+        internal bool ReloadImported()
+        {
+            if (m_ImportedFrom == null || m_Handle == 0) return false;
+            if (!AudioBackend.Current.ImportClip(m_Handle, m_ImportedFrom, out var info)) return false;
+            m_LoadState = AudioDataLoadState.Unloaded;
+            ApplyImport(info);
+            return true;
         }
 
         /// <summary>A player clip (an AssetBundle's): its properties, and its FSB5 bank, in the

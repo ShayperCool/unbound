@@ -43,8 +43,40 @@ namespace UnityEngine
         internal TextAsset(string file, string name, long size)
         {
             m_File = file;
+            m_SourceFile = file;
             m_Size = size;
             m_Name = name;
+        }
+
+        /// <summary>The file an imported asset was made from (null for other text assets).</summary>
+        readonly string m_SourceFile;
+
+        /// <summary>An imported text asset whose bytes are in memory (false before their first use
+        /// and after <see cref="UnloadData"/>: there is nothing to unload).</summary>
+        internal bool DataLoaded => m_SourceFile != null && m_File == null;
+
+        /// <summary>
+        /// Resources.UnloadAsset (and UnloadUnusedAssets) of an imported text asset: its loaded
+        /// bytes are freed and read from its file again when next used. Views GetData handed out
+        /// end with the bytes they show, as they do when the asset is destroyed. The object stays
+        /// the same one (as measured for materials; text assets are unmeasured). False for a text
+        /// asset no file made.
+        /// </summary>
+        internal bool UnloadData()
+        {
+            if (m_SourceFile == null) return false;
+            if (m_Safety.versionNode != IntPtr.Zero)
+            {
+                Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.Release(m_Safety);
+                m_Safety = default;
+            }
+            if (m_Pinned.IsAllocated) m_Pinned.Free();
+            m_Data = Array.Empty<byte>();
+            m_File = m_SourceFile;
+            try { m_Size = new System.IO.FileInfo(m_SourceFile).Length; }
+            catch (System.IO.IOException) { }
+            catch (UnauthorizedAccessException) { }
+            return true;
         }
 
         long m_Size = -1;

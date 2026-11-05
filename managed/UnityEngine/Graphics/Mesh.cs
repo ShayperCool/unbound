@@ -110,6 +110,17 @@ namespace UnityEngine
             m_Dirty = true;
         }
 
+        /// <summary>Resources.UnloadAsset of a mesh asset (UnloadUnusedAssets keeps meshes: it
+        /// cannot load one back lazily): it takes the
+        /// data its file holds again (<paramref name="saved"/>, a copy read from it), readability
+        /// included; its renderer handle stays, so the saved geometry is uploaded at its next use.
+        /// The object stays the same one (as measured for materials; meshes are unmeasured).</summary>
+        internal void RevertTo(Mesh saved)
+        {
+            CopyGeometryFrom(saved);
+            m_IsReadable = saved.m_IsReadable;
+        }
+
         void Changed() => m_Dirty = true;
 
         public bool isReadable => m_IsReadable;
