@@ -20,10 +20,12 @@ namespace UnityEngine.Tests
     /// reader does. Native and the main-thread id are global, hence the frame collection.
     ///
     /// Documented (6000.0 Scripting API): a mismatching nonzero CRC logs an error and loads nothing;
-    /// autoLoadAssetBundle loads with the request, or on the first assetBundle access when false;
-    /// GetContent is assetBundle; data and text throw NotSupportedException. Implementation checks
-    /// of Unbound's unmeasured choices: the default of autoLoadAssetBundle (true), invalid data
-    /// completing as DataProcessingError, the cached overloads' warning.</summary>
+    /// autoLoadAssetBundle loads with the request, or on the first assetBundle access when false,
+    /// and is false by default ("Default: false."); an error decoding the bundle is logged and
+    /// assetBundle returns null; GetContent is assetBundle; data and text throw
+    /// NotSupportedException. Implementation checks of Unbound's unmeasured choices: by default
+    /// invalid data leaves the request Success and the first access logs once; with
+    /// autoLoadAssetBundle it completes as DataProcessingError; the cached overloads' warning.</summary>
     [Collection("Frames")]
     public unsafe class WebRequestAssetBundleTests : IDisposable
     {
@@ -76,6 +78,17 @@ namespace UnityEngine.Tests
         List<string> Logged(LogType type)
         {
             lock (logs) return logs.Where(l => l.Type == type).Select(l => l.Message).ToList();
+        }
+
+        /// <summary>The errors, exceptions and assertions logged since the last call.</summary>
+        List<(LogType Type, string Message)> TakeProblems()
+        {
+            lock (logs)
+            {
+                var problems = logs.Where(l => l.Type is LogType.Error or LogType.Exception or LogType.Assert).ToList();
+                logs.Clear();
+                return problems;
+            }
         }
 
         static int Opens
@@ -167,14 +180,16 @@ namespace UnityEngine.Tests
                 Assert.Equal(UnityWebRequest.Result.Success, request.result);
                 Assert.Equal(UnityWebRequest.kHttpVerbGET, request.method);
                 var handler = Assert.IsType<DownloadHandlerAssetBundle>(request.downloadHandler);
+                // Documented default: autoLoadAssetBundle is false, so the request only downloads
+                // and the bundle is loaded on the first access of assetBundle.
+                Assert.False(handler.autoLoadAssetBundle);
                 Assert.True(handler.isDownloadComplete);
                 Assert.True(handler.isDone);
-                // Loaded as part of the request (autoLoadAssetBundle, true unless set: Unbound's
-                // unmeasured default), before the request reported done.
-                Assert.Equal(1, Opens);
-                AssertOpened(0);
+                Assert.Equal(0, Opens);
                 var bundle = handler.assetBundle;
                 Assert.NotNull(bundle);
+                Assert.Equal(1, Opens);
+                AssertOpened(0);
                 Assert.Same(bundle, DownloadHandlerAssetBundle.GetContent(request));
                 Assert.Equal(1, Opens);
                 bundle.Unload(false);
@@ -182,9 +197,28 @@ namespace UnityEngine.Tests
             using (var request = Send(UnityWebRequestAssetBundle.GetAssetBundle(new Uri(url), Good)))
             {
                 Assert.Equal(UnityWebRequest.Result.Success, request.result);
-                Assert.NotNull(DownloadHandlerAssetBundle.GetContent(request));
+                Assert.Equal(1, Opens);
+                // GetContent is assetBundle: the first access loads.
+                var bundle = DownloadHandlerAssetBundle.GetContent(request);
+                Assert.NotNull(bundle);
+                Assert.Equal(2, Opens);
                 AssertOpened(Good);
-                DownloadHandlerAssetBundle.GetContent(request).Unload(false);
+                bundle.Unload(false);
+            }
+            // autoLoadAssetBundle = true: loaded as part of the request, before it reported done.
+            var eager = new DownloadHandlerAssetBundle(url, Good) { autoLoadAssetBundle = true };
+            Assert.True(eager.autoLoadAssetBundle);
+            using (var request = Send(new UnityWebRequest(url, UnityWebRequest.kHttpVerbGET, eager, null)))
+            {
+                Assert.Equal(UnityWebRequest.Result.Success, request.result);
+                Assert.True(eager.isDownloadComplete);
+                Assert.Equal(3, Opens);
+                AssertOpened(Good);
+                var bundle = eager.assetBundle;
+                Assert.NotNull(bundle);
+                Assert.Same(bundle, DownloadHandlerAssetBundle.GetContent(request));
+                Assert.Equal(3, Opens);
+                bundle.Unload(false);
             }
             Assert.Empty(Logged(LogType.Error));
             Assert.Empty(Logged(LogType.Exception));
@@ -195,28 +229,68 @@ namespace UnityEngine.Tests
         {
             var loaded = AssetBundle.GetAllLoadedAssetBundles_Native().Length;
             var garbage = Write("garbage.bundle", Encoding.ASCII.GetBytes("<html>not a bundle</html>"));
+            var url = Write("good.bundle", bundleBytes);
+
+            // Default (load on access). The request itself succeeds: Unbound's choice (unmeasured),
+            // the docs do not say. The first access logs the loader's error once and returns null
+            // (documented); later accesses return null without loading or logging again.
             using (var request = Send(UnityWebRequestAssetBundle.GetAssetBundle(garbage)))
             {
-                Assert.Equal(UnityWebRequest.Result.DataProcessingError, request.result);
-                Assert.Equal("Data Processing Error, see Download Handler error", request.error);
+                Assert.Equal(UnityWebRequest.Result.Success, request.result);
                 var handler = (DownloadHandlerAssetBundle)request.downloadHandler;
                 Assert.True(handler.isDownloadComplete);
+                Assert.Equal(0, Opens);
+                Assert.Empty(TakeProblems());
+                Assert.Null(handler.assetBundle);
+                Assert.Equal(1, Opens);
                 Assert.Contains(garbage, handler.error);
                 Assert.Null(handler.assetBundle);
                 Assert.Null(DownloadHandlerAssetBundle.GetContent(request));
                 Assert.Equal(1, Opens);
             }
-            Assert.Single(Logged(LogType.Error), e => e.Contains("not an AssetBundle archive"));
-            Assert.Single(Logged(LogType.Exception), e => e.Contains(garbage));
+            var logged = Assert.Single(TakeProblems());
+            Assert.Equal(LogType.Error, logged.Type);
+            Assert.Contains("not an AssetBundle archive", logged.Message);
 
-            var url = Write("good.bundle", bundleBytes);
             using (var request = Send(UnityWebRequestAssetBundle.GetAssetBundle(url, Bad)))
             {
-                Assert.Equal(UnityWebRequest.Result.DataProcessingError, request.result);
-                Assert.Null(((DownloadHandlerAssetBundle)request.downloadHandler).assetBundle);
+                Assert.Equal(UnityWebRequest.Result.Success, request.result);
+                var handler = (DownloadHandlerAssetBundle)request.downloadHandler;
+                Assert.Equal(1, Opens);
+                Assert.Null(handler.assetBundle);
+                Assert.Equal(2, Opens);
                 AssertOpened(Bad);
+                Assert.Null(DownloadHandlerAssetBundle.GetContent(request));
+                Assert.Equal(2, Opens);
             }
-            Assert.Single(Logged(LogType.Error), e => e.Contains("CRC mismatch"));
+            logged = Assert.Single(TakeProblems());
+            Assert.Equal(LogType.Error, logged.Type);
+            Assert.Contains("CRC mismatch", logged.Message);
+
+            // autoLoadAssetBundle = true: the load fails as part of the request, which completes as
+            // DataProcessingError (Unbound's choice, unmeasured).
+            int opens = 2;
+            foreach (var (source, crc, reason) in new[] { (garbage, 0U, "not an AssetBundle archive"), (url, Bad, "CRC mismatch") })
+            {
+                var handler = new DownloadHandlerAssetBundle(source, crc) { autoLoadAssetBundle = true };
+                using (var request = Send(new UnityWebRequest(source, UnityWebRequest.kHttpVerbGET, handler, null)))
+                {
+                    Assert.Equal(UnityWebRequest.Result.DataProcessingError, request.result);
+                    Assert.Equal("Data Processing Error, see Download Handler error", request.error);
+                    Assert.True(handler.isDownloadComplete);
+                    Assert.Equal(++opens, Opens);
+                    Assert.Contains(source, handler.error);
+                    Assert.Null(handler.assetBundle);
+                    Assert.Null(DownloadHandlerAssetBundle.GetContent(request));
+                    Assert.Equal(opens, Opens);
+                }
+                var problems = TakeProblems();
+                Assert.Equal(2, problems.Count);
+                Assert.Contains(problems, l => l.Type == LogType.Error && l.Message.Contains(reason));
+                // Known difference, unresolved, pending a Root decision: the request also logs the
+                // handler's exception naming the URL, where Unity documents one logged error.
+                Assert.Contains(problems, l => l.Type == LogType.Exception && l.Message.Contains(source));
+            }
             Assert.Equal(loaded, AssetBundle.GetAllLoadedAssetBundles_Native().Length);
         }
 
@@ -258,10 +332,12 @@ namespace UnityEngine.Tests
                 {
                     Send(request);
                     Assert.Equal(UnityWebRequest.Result.Success, request.result);
-                    // Never a cache hit: every request downloads and loads again.
-                    Assert.Equal(++opens, Opens);
+                    // Loaded on access (the documented default), never from a cache: every request
+                    // downloads and loads again.
+                    Assert.Equal(opens, Opens);
                     var bundle = DownloadHandlerAssetBundle.GetContent(request);
                     Assert.NotNull(bundle);
+                    Assert.Equal(++opens, Opens);
                     bundle.Unload(false);
                 }
             }
