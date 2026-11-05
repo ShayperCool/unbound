@@ -46,7 +46,7 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 11
+#define UA3_VERSION 12
 
 struct ua3_scene_def
 {
