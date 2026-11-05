@@ -297,5 +297,74 @@ namespace UnityEngine.Tests
                 AssertCompleteRoute(new Vector3(7f, 0f, z), new Vector3(-7f, 0f, z), ends[i]);
             }
         }
+
+        // Many links starting on a tile corner: the world origin is the corner of four tiles, and a
+        // 6 m platform round it has ground in each of them, so each link's start is added to all four.
+        // Every link lands on a platform in the tile north-east of the origin, from that tile's own
+        // copy and from the three others, and each landing takes a link slot of the landing tile for
+        // its way back. The ends lie on a line across the direction from the origin, 0.21 m apart.
+        const int CornerLinks = 24;
+
+        [Fact]
+        public void ManyLinksStartingOnATileCornerAllConnectBothWays()
+        {
+            var corner = Vector3.zero;
+            var landing = new Vector3(10f, 0f, 10f);
+            var sources = new List<NavMeshBuildSource> { Platform(corner), Platform(landing) };
+            var bounds = new Bounds((corner + landing) * 0.5f, new Vector3(20f, 4f, 20f));
+            var data = NavMeshBuilder.BuildNavMeshData(NavMesh.GetSettingsByID(0), sources, bounds, Vector3.zero, Quaternion.identity);
+            var ends = new Vector3[CornerLinks];
+            var behind = new Vector3[CornerLinks];
+            for (int i = 0; i < CornerLinks; i++)
+            {
+                float t = -1.725f + i * 0.15f;
+                ends[i] = new Vector3(landing.x + t, 0f, landing.z - t);
+                // 0.3 m further from the corner, straight behind the end: from here the way back to
+                // the corner over link i is strictly shorter than over any other link.
+                behind[i] = ends[i] + ends[i].normalized * 0.3f;
+            }
+            // The landing tile as built has fewer link slots in all than there are links.
+            int landingSlots = -1;
+            foreach (var tile in data.m_Tiles)
+            {
+                var h = tile.header;
+                if (ends[0].x >= h.bmin.X && ends[0].x <= h.bmax.X && ends[0].z >= h.bmin.Z && ends[0].z <= h.bmax.Z)
+                    landingSlots = h.maxLinkCount;
+            }
+            bool tooFew = landingSlots >= 0 && landingSlots < CornerLinks;
+            Assert.True(tooFew, $"landing tile slots {landingSlots}, links {CornerLinks}");
+            m_Data.Add(NavMesh.AddNavMeshData(data));
+            for (int i = 0; i < CornerLinks; i++)
+                m_Links.Add(NavMesh.AddLink(new NavMeshLinkData
+                {
+                    startPosition = corner,
+                    endPosition = ends[i],
+                    bidirectional = true,
+                    costModifier = -1f,
+                    width = 0f,
+                    area = 0,
+                    agentTypeID = 0,
+                }));
+            // The refresh with every link: it must not throw (out of landing-tile link slots).
+            Assert.NotNull(NavWorld.Get(0));
+            var sw = Tile(new Vector3(-0.01f, 0f, -0.01f));
+            var ne = Tile(new Vector3(0.01f, 0f, 0.01f));
+            Assert.Equal((sw.X + 1, sw.Z + 1), ne);
+            Assert.Equal((sw.X, sw.Z + 1), Tile(new Vector3(-0.01f, 0f, 0.01f)));
+            Assert.Equal((sw.X + 1, sw.Z), Tile(new Vector3(0.01f, 0f, -0.01f)));
+            for (int i = 0; i < CornerLinks; i++)
+            {
+                Assert.Equal(ne, Tile(ends[i]));
+                Assert.Equal(ne, Tile(behind[i]));
+            }
+            // Every link connects both ways: back from behind its end, the route enters it at its
+            // end; out from the corner platform, the route enters a link at the corner.
+            var home = new Vector3(-2f, 0f, -2f);
+            for (int i = 0; i < CornerLinks; i++)
+            {
+                AssertCompleteRoute(behind[i], home, ends[i]);
+                AssertCompleteRoute(home, behind[i], corner);
+            }
+        }
     }
 }
