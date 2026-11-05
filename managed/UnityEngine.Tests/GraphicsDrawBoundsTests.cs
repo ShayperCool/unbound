@@ -17,7 +17,7 @@ namespace Unbound.Tests
     /// bounds to cull and sort all the instances of this Mesh as a single entity") and the
     /// <c>bounds</c> of DrawProcedural, DrawProceduralIndirect, DrawMeshInstancedIndirect and
     /// DrawMeshInstancedProcedural ("The bounding volume surrounding the instances you intend to
-    /// draw"): the draws a camera collects from the queue, culled by those bounds with the
+    /// draw"; the legacy draws' cull and sort are (inferred from DrawMeshInstanced's "culls and sorts instanced Meshes as a group" and the replacements' "cull and sort ... as a single entity"; unmeasured)): the draws a camera collects from the queue, culled by those bounds with the
     /// renderers' frustum test and sorted by their centre, the whole call as one entity. Bounds
     /// equal to default(Bounds) are not set (Unbound's choice, unmeasured): those draws are never
     /// culled and sort by their mesh's bounds, as before. The camera sits at the origin looking
@@ -116,7 +116,7 @@ namespace Unbound.Tests
             var collected = Collect();
             Assert.Equal(new[] { 100f, 100f, 100f, 225f }, collected.Select(d => d.Distance).ToArray());
             // Transparent, back to front: the other draw first, then the instances as one
-            // entity, in their call's order.
+            // entity, in their call's order (Unbound's tie-break, unmeasured).
             FrameBuilder.SortForCamera(collected);
             Assert.Equal(new[] { At(15f), At(-20f), At(-30f), At(-40f) }, collected.Select(d => d.Model).ToArray());
         }
@@ -125,6 +125,8 @@ namespace Unbound.Tests
         public void RenderMeshInstancedWithDefaultWorldBoundsIsUnchanged()
         {
             // Guard (green before and after): each instance is collected and sorts at its own mesh.
+            // Unbound's current behaviour, not the documented automatic group bounds: update with
+            // follow-up F-A2.
             var rp = new RenderParams(NewMaterial(instancing: true));
             Assert.Equal(default(Bounds), rp.worldBounds);
             Graphics.RenderMeshInstanced(rp, NewMesh(), 0, new[] { At(-20f), At(10f), At(-30f) });
@@ -218,6 +220,8 @@ namespace Unbound.Tests
         [Fact]
         public void DrawMeshInstancedWithMatricesIsNeitherCulledNorSortedDifferently()
         {
+            // Unbound's current per-instance behaviour, not DrawMeshInstanced's documented group
+            // culling and sorting: update with follow-up F-C.
             var matrices = new[] { At(-20f), At(10f) };
             Graphics.DrawMeshInstanced(NewMesh(), 0, NewMaterial(instancing: true), matrices);
             var collected = Collect();

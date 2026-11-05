@@ -104,7 +104,7 @@ namespace UnityEngine
     {
         /// <summary>One draw of <paramref name="mesh"/> queued for this frame's cameras, culled and
         /// sorted by <paramref name="bounds"/> ("The bounding volume surrounding the instances you
-        /// intend to draw") as one entity: see <see cref="WithWorldBounds"/>.</summary>
+        /// intend to draw") as one entity (inferred from DrawMeshInstanced's "culls and sorts instanced Meshes as a group" and the replacements' "cull and sort ... as a single entity"; unmeasured): see <see cref="WithWorldBounds"/>.</summary>
         static void QueueMesh(Mesh mesh, int submeshIndex, Material material, Bounds bounds, MaterialPropertyBlock properties, int layer, Camera camera, DrawSetup setup,
             ShadowCastingMode castShadows = ShadowCastingMode.On, bool receiveShadows = true, LightProbeUsage lightProbeUsage = LightProbeUsage.BlendProbes)
         {

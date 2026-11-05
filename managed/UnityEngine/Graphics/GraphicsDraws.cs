@@ -324,8 +324,8 @@ namespace UnityEngine
         // ------------------------------------------------------------------ procedural
 
         /// <summary>Procedural primitives culled and sorted by <paramref name="bounds"/> ("The
-        /// bounding volume surrounding the instances you intend to draw") as one entity; bounds
-        /// equal to default(Bounds) are not set (see WithWorldBounds).</summary>
+        /// bounding volume surrounding the instances you intend to draw") as one entity
+        /// (inferred from DrawMeshInstanced's "culls and sorts instanced Meshes as a group" and the replacements' "cull and sort ... as a single entity"; unmeasured); bounds equal to default(Bounds) are not set (see WithWorldBounds).</summary>
         public static void DrawProcedural(Material material, Bounds bounds, MeshTopology topology, int vertexCount, int instanceCount = 1, Camera camera = null,
             MaterialPropertyBlock properties = null, ShadowCastingMode castShadows = ShadowCastingMode.On, bool receiveShadows = true, int layer = 0)
         {
