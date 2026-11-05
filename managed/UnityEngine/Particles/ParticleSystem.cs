@@ -894,7 +894,9 @@ namespace UnityEngine
         /// culled is not replayed (the docs advise AlwaysSimulate for a moving system). Time missed
         /// while a script paused the system does not count, and a script call that changes the
         /// playback while culled (Simulate, a restart) drops the time missed before it (Unbound's
-        /// choices, unmeasured).</para>
+        /// choices, unmeasured). Known defect, open: the playback is told apart by its total time,
+        /// so a restart or reactivation while culled from total time 0 keeps the earlier missed
+        /// time; clearing it where a playback begins lies outside this update.</para>
         /// <para>Automatic with a looping system is not applied: the 6000.0 docs also say that a
         /// non-procedural system "must continue updating itself even when offscreen"
         /// (ParticleSystem.automaticCullingEnabled), and Unbound does not decide procedural
@@ -905,14 +907,21 @@ namespace UnityEngine
         /// shadow casters left after this frame's EarlyUpdate (Unity also counts shadow casting and,
         /// in the Editor, the Scene view's cameras; Unbound has no Scene view). Before the first
         /// camera has culled it a renderer is not visible, so a Pause or PauseAndCatchup system
-        /// waits for the first frame drawn (unmeasured). Unbound's choices (unmeasured): no margin
-        /// is added to the renderer's bounds; a sub-emitter decides by its own renderer and mode,
-        /// not its parent's; a system without an enabled ParticleSystemRenderer keeps simulating
-        /// (the docs do not say), reported once. The bounds Unity culls by are approximated in
-        /// Unbound (the live particles' centres and sizes; trails, stretching, meshes and pivots
-        /// are not included), so a paused system can be partly on screen; the first such pause is
-        /// reported once. A paused system's bounds stay as they were, which lets it become visible
-        /// again.</para>
+        /// waits for the first frame drawn (unmeasured). Unbound's choices (unmeasured): a
+        /// sub-emitter decides by its own renderer and mode, not its parent's; a system without an
+        /// enabled ParticleSystemRenderer keeps simulating (the docs do not say), reported once.
+        /// A paused system's bounds stay as they were, which lets it become visible again.</para>
+        /// <para>Drawn bounds (Unbound's choice, unmeasured: the bounds Unity culls particles by are
+        /// not measured). The renderer's bounds are its live particles' centres ± size/2, which
+        /// the engine draws particle renderers regardless of (FrameBuilder: they are not trusted),
+        /// so a system is paused only where Unbound can bound what it draws, see
+        /// <see cref="CullingBoundsCoverDraw"/>: then it pauses while it is not visible and no
+        /// enabled camera drawing its layer has the particles' centres ± size·√3/2 (emitter scale
+        /// applied) in its frustum, tested in the update (<see cref="ConservativeBoundsInView"/>),
+        /// reported once. Any other system (stretched, mesh or none render mode, trails, a pivot,
+        /// a minimum particle size) keeps simulating offscreen, as with AlwaysSimulate, reported
+        /// once. A camera rendered only by script while disabled (Camera.Render) is seen only
+        /// through isVisible.</para>
         /// </summary>
         internal void CullingFrameUpdate()
         {
@@ -949,7 +958,7 @@ namespace UnityEngine
         {
             if (mode == ParticleSystemCullingMode.AlwaysSimulate) return false;
             if (mode == ParticleSystemCullingMode.Automatic && !m_Main.loop) return false;
-            var renderer = m_GameObject != null ? m_GameObject.GetComponent<ParticleSystemRenderer>() : null;
+            var renderer = CullingRenderer;
             if (renderer == null || !renderer.enabled)
             {
                 if (CullingSimulates)
@@ -965,10 +974,102 @@ namespace UnityEngine
                         "keeps simulating an offscreen looping system: the docs also keep a non-procedural system updating offscreen, and Unbound does not decide procedural simulation");
                 return false;
             }
+            if (!CullingBoundsCoverDraw(renderer))
+            {
+                if (CullingSimulates)
+                    Unbound.Runtime.Stubs.Ignored("Particle culling without covering bounds",
+                        "keeps simulating an offscreen Pause or PauseAndCatchup system: its culling bounds do not cover what it draws (a stretched, mesh or none render mode, trails, a pivot or a minimum particle size)");
+                return false;
+            }
+            if (ConservativeBoundsInView(renderer)) return false;
             if (CullingSimulates)
                 Unbound.Runtime.Stubs.Ignored("Particle culling with approximate bounds",
-                    "pauses an offscreen system by the bounds of its live particles' centres and sizes (trails, stretching, meshes and pivots are not included)");
+                    "pauses an offscreen billboard system by its live particles' centres ± size·√3/2 (the bounds Unity culls by are not measured)");
             return true;
+        }
+
+        /// <summary>The system's ParticleSystemRenderer, looked up again only when it is gone or
+        /// belongs to another object.</summary>
+        ParticleSystemRenderer m_CullingRenderer;
+
+        ParticleSystemRenderer CullingRenderer
+        {
+            get
+            {
+                if (m_GameObject == null) return null;
+                if (!m_CullingRenderer || m_CullingRenderer.m_GameObject != m_GameObject)
+                    m_CullingRenderer = m_GameObject.GetComponent<ParticleSystemRenderer>();
+                return m_CullingRenderer;
+            }
+        }
+
+        /// <summary>Whether every quad the renderer draws lies within √2/2 of the particle's
+        /// size (emitter scale applied) of its centre, so that centres ± size·√3/2 cover it: a
+        /// billboard render mode (a quad of the particle's size, or 1/√2 of it, about its centre,
+        /// at any rotation and alignment), no trails, a zero pivot and no minimum particle size
+        /// (which can enlarge a far particle). The maximum particle size only shrinks quads.
+        /// Stretched quads, meshes, trails and pivots reach further (Unbound's choice: they are not
+        /// culled, see <see cref="CullingFrameUpdate"/>).</summary>
+        bool CullingBoundsCoverDraw(ParticleSystemRenderer renderer)
+        {
+            switch (renderer.renderMode)
+            {
+                case ParticleSystemRenderMode.Billboard:
+                case ParticleSystemRenderMode.HorizontalBillboard:
+                case ParticleSystemRenderMode.VerticalBillboard:
+                    break;
+                default:
+                    return false;
+            }
+            var pivot = renderer.pivot;
+            return !m_Trails.enabled && !HasAliveTrails
+                && pivot.x == 0f && pivot.y == 0f && pivot.z == 0f
+                && !(renderer.minParticleSize > 0f);
+        }
+
+        /// <summary>Whether an enabled camera whose culling mask has the renderer's layer has the
+        /// live particles' centres ± size·√3/2 (the largest size axis, by the largest emitter scale
+        /// axis) at least partly in its view frustum now. Conservative on purpose: the cameras'
+        /// displays, layer cull distances and LOD groups are not applied (a camera that would not
+        /// draw the system only keeps it simulating).</summary>
+        bool ConservativeBoundsInView(ParticleSystemRenderer renderer)
+        {
+            if (m_Count == 0) return false;
+            int layer = 1 << renderer.m_GameObject.m_Layer;
+            bool bounded = false;
+            var bounds = new Bounds();
+            foreach (var camera in Camera.s_Enabled)
+            {
+                if (!camera || !camera.isActiveAndEnabled || (camera.cullingMask & layer) == 0) continue;
+                if (!bounded)
+                {
+                    bounds = ConservativeWorldBounds();
+                    bounded = true;
+                }
+                if (Unbound.Runtime.FrameBuilder.InFrustum(camera.projectionMatrix * camera.worldToCameraMatrix, bounds)) return true;
+            }
+            return false;
+        }
+
+        Bounds ConservativeWorldBounds()
+        {
+            const float halfSqrt3 = 0.8660254f;
+            var toWorld = SimulationToWorld();
+            var scale = EmitterScale();
+            float maxScale = Mathf.Max(Mathf.Abs(scale.x), Mathf.Max(Mathf.Abs(scale.y), Mathf.Abs(scale.z)));
+            Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue), max = -min;
+            for (int i = 0; i < m_Count; i++)
+            {
+                ref var p = ref m_Particles[i];
+                var w = toWorld.MultiplyPoint3x4(p.m_Position);
+                var s = CurrentSize3D(ref p);
+                float r = halfSqrt3 * maxScale * Mathf.Max(Mathf.Abs(s.x), Mathf.Max(Mathf.Abs(s.y), Mathf.Abs(s.z)));
+                min = Vector3.Min(min, w - new Vector3(r, r, r));
+                max = Vector3.Max(max, w + new Vector3(r, r, r));
+            }
+            var b = new Bounds();
+            b.SetMinMax(min, max);
+            return b;
         }
 
         // ------------------------------------------------------------------ storage
