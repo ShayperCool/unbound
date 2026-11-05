@@ -958,9 +958,10 @@ namespace Unbound.Runtime
                     try { types = assembly.GetTypes(); }
                     catch (System.Reflection.ReflectionTypeLoadException e) { types = e.Types; }
                     catch (Exception) { types = Array.Empty<Type>(); }
-                    bool engine = assembly == typeof(AssetDatabaseRuntime).Assembly;
+                    // The engine's own assembly and Unbound's others (its host, compiler and tools).
+                    bool engine = assembly == typeof(AssetDatabaseRuntime).Assembly || name.StartsWith("Unbound.", StringComparison.Ordinal);
                     // Initializers run here only in code built against the engine (the game's
-                    // scripts, packages and plugins), never in libraries or the host's.
+                    // scripts, packages and plugins), never in libraries or Unbound's own.
                     bool script = !engine && Array.Exists(assembly.GetReferencedAssemblies(),
                         r => r.Name == "UnityEngine" || (r.Name != null && r.Name.StartsWith("UnityEngine.", StringComparison.Ordinal)));
                     foreach (var type in types)
