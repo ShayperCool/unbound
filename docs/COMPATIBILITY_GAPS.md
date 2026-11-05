@@ -333,7 +333,7 @@ ListView), legacy Input Manager axes, Input System keyboard/mouse/gamepads, Inpu
 | `Mouse.WarpCursorPosition`; mouse position frozen outside the window | `Input/NativeInput.cs:209`, `crates/unbound-app/src/lib.rs:316` | S | L-M |
 | Legacy pen input (`Input.penEventCount/GetPenEvent/GetLastPenContactEvent`) never read | `Input/LegacyPen.cs` | W | L |
 | `GUI.DrawTexture(alphaBlend: false)`, border radius | `IMGUI/GUI.cs:243-268` | S | L-M |
-| `CanvasRenderer.SetAlphaTexture` | `UI/Canvas.cs` | S | L |
+| `CanvasRenderer.SetAlphaTexture` | `UI/Canvas.cs`, `UI/CanvasSystem.cs` | S | source ready, unvalidated (source 763c6c8a, 0b2e001c; tests 73a098ca): each draw of the renderer, mask pop draws included, passes its alpha texture to the shader as a per-draw `_AlphaTex` (the 6000.0 Scripting API's property name) over the material's value. Without one nothing is passed and the material's own `_AlphaTex`, else the shader's default, is sampled (Unbound's choice, unmeasured). `Clear` drops it with the texture (Unbound's choice, unmeasured; the API says only "Remove all cached vertices"). Canvas draws are never merged, so renderers with different alpha textures keep separate draws. By static reading, the release's resources name `UI/DefaultETC1` and its source reaches the built-in shader path as `UI/Default`'s does (expected, not run). `Sprite.associatedAlphaSplitTexture` is still always null, so an Image gets no split alpha from its sprite; managed tests unexecuted |
 | `Screen.currentResolution`/`dpi`/refresh rate constants | `Core/Input.cs:31-33` | S | L |
 
 ### Assets, import, networking
