@@ -121,7 +121,8 @@ namespace UnityEngine
         /// (<see cref="AssetDatabaseRuntime.UnloadUnused"/>: references from scene, DontDestroyOnLoad
         /// and run-time objects, the engine's scene settings (skybox, lightmaps, shader globals) and
         /// the statics it can read; not the stack, nor statics of generic classes or of classes with
-        /// an explicit static constructor), where it can load them back lazily at their next use,
+        /// class initialization, which reading could run early), where it can load them back lazily
+        /// at their next use,
         /// as the Scripting API 6000.0 says: imported text assets free their bytes. Materials,
         /// meshes, textures, audio clips and ScriptableObjects are kept, with what scripts changed,
         /// and nothing already unloaded is processed again. The operation is complete when it

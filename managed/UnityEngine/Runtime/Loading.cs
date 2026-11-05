@@ -843,22 +843,15 @@ namespace Unbound.Runtime
         /// DontDestroyOnLoad ones, objects made at run time), from every object flagged
         /// DontUnloadUnusedAsset, from static fields of non-framework assemblies, and from the
         /// engine's own holders of scene state (<see cref="EngineRoots"/>).
-        /// <para>Statics of a class whose only class initialization is its static field
-        /// initializers (C# marks it beforefieldinit) are read: the runtime may run those
-        /// initializers at any time before the first access to a static field (ECMA-335
-        /// II.10.5.3.2; C# "Static field initialization"), so reading them here is within the
-        /// language contract, though it may run initializers the game has not reached yet. Statics
-        /// of a class with an explicit static constructor are not read: the constructor runs exactly
-        /// at the class's first use, reading would run it, and whether it already ran cannot be
-        /// told. Initializers are run this way only in assemblies built against the engine (the
-        /// game's scripts, packages and plugins); elsewhere, and in the engine's own assembly,
-        /// only classes without class initialization are read. The engine's scene-state holders
-        /// are explicit roots instead, so no other engine initializer runs here.</para>
-        /// Not seen: the stack and handles (as in Unity), statics of generic classes, statics of
-        /// classes with an explicit static constructor, and statics with initializers in assemblies
-        /// not built against the engine; assets held only there count as unused,
-        /// which <see cref="UnloadUnused"/> makes safe by never reverting or destroying what it
-        /// unloads. The asset database's own tables are not roots.
+        /// <para>Statics of a class with class initialization (static field initializers or a
+        /// static constructor) are not read: reading one may run that initialization before the
+        /// game first uses the class, capturing the wrong state or failing for good. The engine's
+        /// scene-state holders are explicit roots instead.</para>
+        /// Not seen: the stack and handles (as in Unity), statics of generic classes, and statics of
+        /// classes with class initialization (Unbound's choice, unlike Unity's "Static variables
+        /// are also examined"); assets held only there count as unused, which
+        /// <see cref="UnloadUnused"/> makes safe by never reverting or destroying what it unloads.
+        /// The asset database's own tables are not roots.
         /// </summary>
         internal static class Reachability
         {
@@ -958,16 +951,11 @@ namespace Unbound.Runtime
                     try { types = assembly.GetTypes(); }
                     catch (System.Reflection.ReflectionTypeLoadException e) { types = e.Types; }
                     catch (Exception) { types = Array.Empty<Type>(); }
-                    // The engine's own assembly and Unbound's others (its host, compiler and tools).
-                    bool engine = assembly == typeof(AssetDatabaseRuntime).Assembly || name.StartsWith("Unbound.", StringComparison.Ordinal);
-                    // Initializers run here only in code built against the engine (the game's
-                    // scripts, packages and plugins), never in libraries or Unbound's own.
-                    bool script = !engine && Array.Exists(assembly.GetReferencedAssemblies(),
-                        r => r.Name == "UnityEngine" || (r.Name != null && r.Name.StartsWith("UnityEngine.", StringComparison.Ordinal)));
                     foreach (var type in types)
                     {
-                        if (type == null || type.ContainsGenericParameters) continue;
-                        if (type.TypeInitializer != null && (!script || (type.Attributes & System.Reflection.TypeAttributes.BeforeFieldInit) == 0)) continue;
+                        // Reading a static of a class with class initialization (field initializers
+                        // or a static constructor) may run it, before the game first uses the class.
+                        if (type == null || type.ContainsGenericParameters || type.TypeInitializer != null) continue;
                         if (type == typeof(AssetDatabaseRuntime) || type == typeof(ObjectRegistry)) continue;
                         foreach (var field in type.GetFields(StaticFields))
                             if (!field.IsLiteral && MayHoldReferences(field.FieldType)) fields.Add(field);
