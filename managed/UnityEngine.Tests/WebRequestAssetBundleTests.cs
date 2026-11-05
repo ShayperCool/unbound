@@ -25,7 +25,9 @@ namespace UnityEngine.Tests
     /// assetBundle returns null; GetContent is assetBundle; data and text throw
     /// NotSupportedException. Implementation checks of Unbound's unmeasured choices: by default
     /// invalid data leaves the request Success and the first access logs once; with
-    /// autoLoadAssetBundle it completes as DataProcessingError; the cached overloads' warning.</summary>
+    /// autoLoadAssetBundle it completes, once, as DataProcessingError, the loader's error being
+    /// its one log entry (Unity documents one logged error); the cached overloads' warning. Other
+    /// handlers and failed downloads keep their own reporting.</summary>
     [Collection("Frames")]
     public unsafe class WebRequestAssetBundleTests : IDisposable
     {
@@ -42,9 +44,22 @@ namespace UnityEngine.Tests
         readonly string directory;
         readonly byte[] bundleBytes = { 0x55, 0x6e, 0x69, 0x74, 0x79, 0x46, 0x53, 0x00, 7, 8, 9 };
         readonly List<(LogType Type, string Message)> logs = new List<(LogType, string)>();
+        // Every report through Debug's logger, "Unbound: " diagnostics included (those skip
+        // Application.logMessageReceived), so a second entry of any kind cannot go unseen.
+        readonly List<(LogType Type, string Message)> reports = new List<(LogType, string)>();
+        readonly ILogger logger = Debug.unityLogger;
+        readonly ILogHandler previousHandler;
+        readonly bool previousLogEnabled;
+        readonly LogType previousFilter;
 
         public WebRequestAssetBundleTests()
         {
+            previousHandler = logger.logHandler;
+            previousLogEnabled = logger.logEnabled;
+            previousFilter = logger.filterLogType;
+            logger.logHandler = new CaptureHandler(previousHandler, reports);
+            logger.logEnabled = true;
+            logger.filterLogType = LogType.Log;
             previousApi = Api.GetValue(null);
             previousReady = Ready.GetValue(null);
             previousMainThread = MainThread.GetValue(null);
@@ -62,6 +77,9 @@ namespace UnityEngine.Tests
         public void Dispose()
         {
             Application.logMessageReceivedThreaded -= Capture;
+            logger.logHandler = previousHandler;
+            logger.logEnabled = previousLogEnabled;
+            logger.filterLogType = previousFilter;
             foreach (var bundle in AssetBundle.GetAllLoadedAssetBundles_Native())
                 if (bundle.m_NativeId > 9500) bundle.Unload(false);
             Api.SetValue(null, previousApi);
@@ -73,6 +91,49 @@ namespace UnityEngine.Tests
         void Capture(string message, string stack, LogType type)
         {
             lock (logs) logs.Add((type, message));
+        }
+
+        /// <summary>Records every report other than a plain log and forwards each call unchanged.</summary>
+        sealed class CaptureHandler : ILogHandler
+        {
+            readonly ILogHandler inner;
+            readonly List<(LogType Type, string Message)> reports;
+
+            internal CaptureHandler(ILogHandler inner, List<(LogType, string)> reports)
+            {
+                this.inner = inner;
+                this.reports = reports;
+            }
+
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type != LogType.Log)
+                {
+                    string message = args == null || args.Length == 0 ? format
+                        : string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args);
+                    lock (reports) reports.Add((type, message));
+                }
+                inner.LogFormat(type, context, format, args);
+            }
+
+            public void LogException(Exception exception, Object context)
+            {
+                if (exception != null)
+                    lock (reports) reports.Add((LogType.Exception, $"{exception.GetType().Name}: {exception.Message}"));
+                inner.LogException(exception, context);
+            }
+        }
+
+        /// <summary>The reports through Debug's logger since the last call, warnings excluded
+        /// (the cached overloads' warning is checked through the stub counter).</summary>
+        List<(LogType Type, string Message)> TakeReports()
+        {
+            lock (reports)
+            {
+                var taken = reports.Where(r => r.Type != LogType.Warning).ToList();
+                reports.Clear();
+                return taken;
+            }
         }
 
         List<string> Logged(LogType type)
@@ -222,6 +283,7 @@ namespace UnityEngine.Tests
             }
             Assert.Empty(Logged(LogType.Error));
             Assert.Empty(Logged(LogType.Exception));
+            Assert.Empty(TakeReports());
         }
 
         [Fact]
@@ -251,6 +313,7 @@ namespace UnityEngine.Tests
             var logged = Assert.Single(TakeProblems());
             Assert.Equal(LogType.Error, logged.Type);
             Assert.Contains("not an AssetBundle archive", logged.Message);
+            Assert.Equal(LogType.Error, Assert.Single(TakeReports()).Type);
 
             using (var request = Send(UnityWebRequestAssetBundle.GetAssetBundle(url, Bad)))
             {
@@ -266,9 +329,11 @@ namespace UnityEngine.Tests
             logged = Assert.Single(TakeProblems());
             Assert.Equal(LogType.Error, logged.Type);
             Assert.Contains("CRC mismatch", logged.Message);
+            Assert.Equal(LogType.Error, Assert.Single(TakeReports()).Type);
 
             // autoLoadAssetBundle = true: the load fails as part of the request, which completes as
-            // DataProcessingError (Unbound's choice, unmeasured).
+            // DataProcessingError (Unbound's choice, unmeasured). Only the loader's error is logged,
+            // as Unity documents one logged error: no exception is logged for it.
             int opens = 2;
             foreach (var (source, crc, reason) in new[] { (garbage, 0U, "not an AssetBundle archive"), (url, Bad, "CRC mismatch") })
             {
@@ -284,14 +349,106 @@ namespace UnityEngine.Tests
                     Assert.Null(DownloadHandlerAssetBundle.GetContent(request));
                     Assert.Equal(opens, Opens);
                 }
-                var problems = TakeProblems();
-                Assert.Equal(2, problems.Count);
-                Assert.Contains(problems, l => l.Type == LogType.Error && l.Message.Contains(reason));
-                // Known difference, unresolved, pending a Root decision: the request also logs the
-                // handler's exception naming the URL, where Unity documents one logged error.
-                Assert.Contains(problems, l => l.Type == LogType.Exception && l.Message.Contains(source));
+                var problem = Assert.Single(TakeProblems());
+                Assert.Equal(LogType.Error, problem.Type);
+                Assert.Contains(reason, problem.Message);
+                var report = Assert.Single(TakeReports());
+                Assert.Equal(LogType.Error, report.Type);
+                Assert.Contains(reason, report.Message);
             }
             Assert.Equal(loaded, AssetBundle.GetAllLoadedAssetBundles_Native().Length);
+        }
+
+        [Fact]
+        public void AFailedAutoLoadCompletesOnceAfterItsOneError()
+        {
+            var garbage = Write("garbage.bundle", Encoding.ASCII.GetBytes("<html>not a bundle</html>"));
+            // This thread becomes the main thread, so every delivery, the completion included, runs
+            // only while it is pumped here and the completed handler is attached before it can run.
+            MainThreadContext.Instance.RunPending();
+            MainThread.SetValue(null, Environment.CurrentManagedThreadId);
+            var handler = new DownloadHandlerAssetBundle(garbage, 0U) { autoLoadAssetBundle = true };
+            using var request = new UnityWebRequest(garbage, UnityWebRequest.kHttpVerbGET, handler, null);
+            int completions = 0;
+            var atCompletion = UnityWebRequest.Result.InProgress;
+            string errorAtCompletion = null;
+            bool doneAtCompletion = false;
+            List<(LogType Type, string Message)> reportedAtCompletion = null;
+            var operation = request.SendWebRequest();
+            operation.completed += _ =>
+            {
+                completions++;
+                atCompletion = request.result;
+                errorAtCompletion = request.error;
+                doneAtCompletion = request.isDone;
+                lock (reports) reportedAtCompletion = reports.Where(r => r.Type != LogType.Warning).ToList();
+            };
+            var deadline = DateTime.UtcNow.AddSeconds(15);
+            while (completions == 0 && DateTime.UtcNow < deadline)
+            {
+                MainThreadContext.Instance.RunPending();
+                Thread.Sleep(1);
+            }
+            for (int i = 0; i < 3; i++) MainThreadContext.Instance.RunPending();
+            Assert.Equal(1, completions);
+            Assert.True(operation.isDone);
+            // At its completion the request is done and failed, and the loader's error, logged
+            // during the request, is the one entry.
+            Assert.True(doneAtCompletion);
+            Assert.Equal(UnityWebRequest.Result.DataProcessingError, atCompletion);
+            Assert.Equal("Data Processing Error, see Download Handler error", errorAtCompletion);
+            var report = Assert.Single(reportedAtCompletion);
+            Assert.Equal(LogType.Error, report.Type);
+            Assert.Contains("not an AssetBundle archive", report.Message);
+            // Loaded once, nothing logged since.
+            Assert.Equal(1, Opens);
+            Assert.Null(handler.assetBundle);
+            Assert.Equal(1, Opens);
+            Assert.Equal(reportedAtCompletion, TakeReports());
+            Assert.Equal(UnityWebRequest.Result.DataProcessingError, request.result);
+        }
+
+        /// <summary>A script handler whose completion throws, as game code can.</summary>
+        sealed class ThrowingScriptHandler : DownloadHandlerScript
+        {
+            protected override void CompleteContent() => throw new InvalidOperationException("the script handler failed");
+        }
+
+        [Fact]
+        public void OtherHandlersAndFailuresAreReportedAsBefore()
+        {
+            var url = Write("plain.bin", bundleBytes);
+            // A script handler's own exception is still logged, once, and the request still succeeds.
+            using (var request = Send(new UnityWebRequest(url, UnityWebRequest.kHttpVerbGET, new ThrowingScriptHandler(), null)))
+            {
+                Assert.Equal(UnityWebRequest.Result.Success, request.result);
+                Assert.Null(request.error);
+            }
+            var report = Assert.Single(TakeReports());
+            Assert.Equal(LogType.Exception, report.Type);
+            Assert.Equal("InvalidOperationException: the script handler failed", report.Message);
+
+            // An ordinary handler completes as before, without any report.
+            using (var request = Send(new UnityWebRequest(url, UnityWebRequest.kHttpVerbGET, new DownloadHandlerBuffer(), null)))
+            {
+                Assert.Equal(UnityWebRequest.Result.Success, request.result);
+                Assert.Null(request.error);
+                Assert.Equal(bundleBytes, request.downloadHandler.data);
+            }
+            Assert.Empty(TakeReports());
+
+            // A failed download with autoLoadAssetBundle stays a connection error and loads nothing.
+            var missing = "file://" + Path.Combine(directory, "missing.bundle");
+            var handler = new DownloadHandlerAssetBundle(missing, 0U) { autoLoadAssetBundle = true };
+            using (var request = Send(new UnityWebRequest(missing, UnityWebRequest.kHttpVerbGET, handler, null)))
+            {
+                Assert.Equal(UnityWebRequest.Result.ConnectionError, request.result);
+                Assert.NotEqual("Data Processing Error, see Download Handler error", request.error);
+                Assert.False(handler.isDownloadComplete);
+                Assert.Null(handler.assetBundle);
+            }
+            Assert.Equal(0, Opens);
+            Assert.Empty(TakeReports());
         }
 
         [Fact]
