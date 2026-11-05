@@ -120,6 +120,29 @@ namespace UnityEngine.Tests
             finally { Done(ps.gameObject, plane.gameObject); }
         }
 
+        /// <summary>SubEmittersModule.collision0/1 (6000.0): the sub-emitter "uses the first set
+        /// of emission burst properties ... if the system contains more than one set of burst
+        /// properties, then it ignores the additional properties". A child with bursts of 1 and 3
+        /// emits 1 for the one collision, not 4.</summary>
+        [Fact]
+        public void ACollisionSubEmitterEmitsOnlyItsFirstBurst()
+        {
+            var (ps, child, plane) = FallOntoPlane((subs, c) =>
+            {
+                c.emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1), new ParticleSystem.Burst(0f, (short)3) });
+                subs.AddSubEmitter(c, ParticleSystemSubEmitterType.Collision, ParticleSystemSubEmitterProperties.InheritNothing);
+            });
+            try
+            {
+                Assert.Equal(0, child.particleCount);
+                ps.Simulate(.025f, false, false, false);
+                // The one collision happened: the parent bounced off the plane.
+                Assert.True(Assert.Single(Live(ps)).velocity.y > 0f);
+                Assert.Equal(1, child.particleCount);
+            }
+            finally { Done(ps.gameObject, plane.gameObject); }
+        }
+
         /// <summary>A radius-.5 sphere trigger at z 1.5 (as in the trigger tests) and a system
         /// whose one still particle sits at its centre, with the given Inside action and a
         /// Trigger sub-emitter.</summary>
