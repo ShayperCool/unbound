@@ -747,6 +747,9 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
                 r.delta_time,
             )?)?)
         }
+        // The system clipboard's text (`GUIUtility.systemCopyBuffer`).
+        "clipboard-get" => crate::clipboard::get(request),
+        "clipboard-set" => crate::clipboard::set(request),
         other => bail!("unknown native method `{other}`"),
     }
 }

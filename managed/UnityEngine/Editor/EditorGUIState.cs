@@ -733,7 +733,13 @@ namespace UnityEditor
             return new GUIContent(text, EditorIcons.Load(((obj != null ? obj.GetType() : type)?.Name ?? "DefaultAsset") + " Icon", logError: false) ?? EditorIcons.Placeholder);
         }
 
-        public static string systemCopyBuffer { get; set; } = "";
+        /// <summary>The system copy buffer: the same system-wide clipboard, and the same in-process
+        /// copy, as <see cref="GUIUtility.systemCopyBuffer"/>.</summary>
+        public static string systemCopyBuffer
+        {
+            get => GUIUtility.systemCopyBuffer;
+            set => GUIUtility.systemCopyBuffer = value;
+        }
     }
 
     /// <summary>The Editor's built-in icons, by the names its resources have
