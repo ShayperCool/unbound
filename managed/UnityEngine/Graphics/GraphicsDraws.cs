@@ -230,7 +230,8 @@ namespace UnityEngine
 
         /// <summary>The RenderParams settings these draws do not act on yet, each warned once:
         /// non-default rendering layer mask, renderer priority and motion vector mode. The world
-        /// bounds are honoured (Render culls and sorts the draw by them), so they are not warned.
+        /// bounds are honoured (cameras cull and sort the draw by them in FrameBuilder.CollectQueued), so
+        /// they are not warned.
         /// The instance ID (Scene view picking) and the Scene culling mask are Editor scene-view
         /// settings a game's cameras do not observe.</summary>
         static void WarnUnhonoured(in RenderParams rparams, string method)

@@ -173,7 +173,7 @@ namespace Unbound.Tests
         [Fact]
         public void ZeroSizeWorldBoundsAtAPointAreNeverCulledAndSortAtThatPoint()
         {
-            // Set bounds without size count as inside, as for renderers (FrameBuilder.InFrustum).
+            // Unbound's choice (unmeasured; the renderers' InFrustum rule): set bounds without size count as inside.
             var rp = new RenderParams(NewMaterial()) { worldBounds = new Bounds(new Vector3(0f, 0f, -30f), Vector3.zero) };
             Graphics.RenderMesh(rp, NewMesh(), 0, At(10f));
             Assert.Equal(900f, Assert.Single(Collect()).Distance);
