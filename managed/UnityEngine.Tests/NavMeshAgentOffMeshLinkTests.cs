@@ -363,5 +363,23 @@ namespace UnityEngine.Tests
             Assert.True(agent.nextPosition.x > LinkEnd.x, $"at {agent.nextPosition}");
             WalkTo(agent, target);
         }
+
+        /// <summary>Diagnostic (added; the facts above are unchanged): this level's own route over
+        /// the link, with no agent. The link crosses the NavMesh tile edge at x = 0 and starts on
+        /// the one at z = 0, so a failure here as well as at StepOntoLink points at the link's
+        /// connection to the NavMesh rather than at the agent's traversal.</summary>
+        [Fact]
+        public void TheLevelHasACompleteRouteOverTheLink()
+        {
+            var path = new NavMeshPath();
+            Assert.True(NavMesh.CalculatePath(new Vector3(-7f, 0f, 0f), Destination, NavMesh.AllAreas, path), "no path search");
+            var corners = path.corners;
+            string route = string.Join(" ", corners);
+            bool complete = path.status == NavMeshPathStatus.PathComplete;
+            Assert.True(complete, $"{path.status}: {route}");
+            bool overLink = Array.Exists(corners, c => Dist2D(c, LinkStart) <= NavWorld.LinkSnapRadius + 1e-3f);
+            Assert.True(overLink, $"not over the link: {route}");
+            Assert.True(Dist2D(corners[corners.Length - 1], Destination) <= 1e-2f, $"ends short: {route}");
+        }
     }
 }
