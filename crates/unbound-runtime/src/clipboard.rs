@@ -372,4 +372,157 @@ mod tests {
             );
         }
     }
+
+    /// `Game::shutdown` releases the clipboard once, after the game's quit callbacks (read from
+    /// the source: a `Game` needs the managed runtime). Inside the `if !self.stopped` guard, the
+    /// release follows the synchronous managed `(self.shutdown)()`, so a copy made in
+    /// OnApplicationQuit, `Application.quitting` or `Application.unloading` is still served
+    /// until then, and a second shutdown runs neither again.
+    #[test]
+    fn shutdown_releases_the_clipboard_after_the_quit_callbacks() {
+        fn unparen(mut expr: &syn::Expr) -> &syn::Expr {
+            while let syn::Expr::Paren(p) = expr {
+                expr = p.expr.as_ref();
+            }
+            expr
+        }
+        /// `self.<name>`.
+        fn is_self_field(expr: &syn::Expr, name: &str) -> bool {
+            let syn::Expr::Field(field) = unparen(expr) else {
+                return false;
+            };
+            matches!(&field.member, syn::Member::Named(member) if member == name)
+                && matches!(unparen(&field.base), syn::Expr::Path(p) if p.path.is_ident("self"))
+        }
+        /// What a statement evaluates: `e;`, a tail `e` or `let _ = e;`.
+        fn evaluated(stmt: &syn::Stmt) -> Option<&syn::Expr> {
+            match stmt {
+                syn::Stmt::Expr(expr, _) => Some(expr),
+                syn::Stmt::Local(syn::Local {
+                    init: Some(init), ..
+                }) => Some(init.expr.as_ref()),
+                _ => None,
+            }
+        }
+        /// `(self.shutdown)()`, directly or as the only statement of an `unsafe` block.
+        fn is_managed_shutdown(expr: &syn::Expr) -> bool {
+            match unparen(expr) {
+                syn::Expr::Unsafe(block) => matches!(
+                    block.block.stmts.as_slice(),
+                    [only] if evaluated(only).is_some_and(is_managed_shutdown)
+                ),
+                syn::Expr::Call(call) => {
+                    call.args.is_empty() && is_self_field(&call.func, "shutdown")
+                }
+                _ => false,
+            }
+        }
+        /// `crate::clipboard::release()`, or the same function by a path game.rs can name it.
+        fn is_release(expr: &syn::Expr) -> bool {
+            let syn::Expr::Call(call) = unparen(expr) else {
+                return false;
+            };
+            let syn::Expr::Path(path) = unparen(&call.func) else {
+                return false;
+            };
+            let segments = path
+                .path
+                .segments
+                .iter()
+                .map(|s| s.ident.to_string())
+                .collect::<Vec<_>>();
+            call.args.is_empty()
+                && path.qself.is_none()
+                && path.path.leading_colon.is_none()
+                && matches!(
+                    segments.as_slice(),
+                    [first, clipboard, release]
+                        if (first == "crate" || first == "super")
+                            && clipboard == "clipboard"
+                            && release == "release"
+                )
+        }
+
+        let file = syn::parse_file(include_str!("game.rs")).unwrap();
+        let shutdowns: Vec<&syn::ImplItemFn> = file
+            .items
+            .iter()
+            .filter_map(|item| match item {
+                syn::Item::Impl(block)
+                    if block.trait_.is_none()
+                        && matches!(
+                            block.self_ty.as_ref(),
+                            syn::Type::Path(ty) if ty.qself.is_none() && ty.path.is_ident("Game")
+                        ) =>
+                {
+                    Some(block)
+                }
+                _ => None,
+            })
+            .flat_map(|block| block.items.iter())
+            .filter_map(|item| match item {
+                syn::ImplItem::Fn(f) if f.sig.ident == "shutdown" => Some(f),
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            shutdowns.len(),
+            1,
+            "game.rs has one `impl Game` `fn shutdown`"
+        );
+        let body = &shutdowns[0].block.stmts;
+        let guards: Vec<&syn::ExprIf> = body
+            .iter()
+            .filter_map(|stmt| match evaluated(stmt) {
+                Some(syn::Expr::If(guard))
+                    if matches!(
+                        unparen(&guard.cond),
+                        syn::Expr::Unary(syn::ExprUnary {
+                            op: syn::UnOp::Not(_),
+                            expr,
+                            ..
+                        }) if is_self_field(expr, "stopped")
+                    ) =>
+                {
+                    Some(guard)
+                }
+                _ => None,
+            })
+            .collect();
+        assert_eq!(
+            guards.len(),
+            1,
+            "`Game::shutdown` has one `if !self.stopped` guard"
+        );
+        let guarded = &guards[0].then_branch.stmts;
+        let callbacks: Vec<usize> = guarded
+            .iter()
+            .enumerate()
+            .filter(|(_, stmt)| evaluated(stmt).is_some_and(is_managed_shutdown))
+            .map(|(i, _)| i)
+            .collect();
+        assert_eq!(
+            callbacks.len(),
+            1,
+            "the guard calls the managed `(self.shutdown)()` once"
+        );
+        let releases: Vec<usize> = guarded
+            .iter()
+            .enumerate()
+            .filter(|(_, stmt)| evaluated(stmt).is_some_and(is_release))
+            .map(|(i, _)| i)
+            .collect();
+        assert!(
+            releases.len() == 1 && releases[0] > callbacks[0],
+            "inside `if !self.stopped`, `crate::clipboard::release()` must run once, after the \
+             managed `(self.shutdown)()` (statement {}); found at statements {releases:?}",
+            callbacks[0]
+        );
+        assert!(
+            !body
+                .iter()
+                .any(|stmt| evaluated(stmt).is_some_and(is_release)),
+            "`Game::shutdown` releases the clipboard only inside its `if !self.stopped` guard"
+        );
+    }
 }
