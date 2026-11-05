@@ -286,7 +286,10 @@ namespace Unbound.Runtime
         };
 
         /// <summary>The active links of the surface's agent type whose start lies over this tile
-        /// become its off-mesh connections (Detour connects their ends when tiles are added).</summary>
+        /// become its off-mesh connections (Detour connects their ends when tiles are added).
+        /// A start on the edge between two tiles lies over both and is added to each; each copy's
+        /// end side is classified against its own tile, so every copy lands where its tile's
+        /// neighbours are.</summary>
         static void AddLinks(Surface surface, DtMeshData tile)
         {
             var h = tile.header;
@@ -312,6 +315,7 @@ namespace Unbound.Runtime
                 int v = baseVert + i * 2;
                 verts[v * 3] = start.x; verts[v * 3 + 1] = start.y; verts[v * 3 + 2] = start.z;
                 verts[v * 3 + 3] = end.x; verts[v * 3 + 4] = end.y; verts[v * 3 + 5] = end.z;
+                var endPos = new RcVec3f(end.x, end.y, end.z);
                 var poly = new DtPoly(basePoly + i, DtDetour.DT_VERTS_PER_POLYGON);
                 poly.verts[0] = v;
                 poly.verts[1] = v + 1;
@@ -322,11 +326,15 @@ namespace Unbound.Runtime
                 polys[basePoly + i] = poly;
                 var con = new DtOffMeshConnection
                 {
-                    pos = new[] { new RcVec3f(start.x, start.y, start.z), new RcVec3f(end.x, end.y, end.z) },
+                    pos = new[] { new RcVec3f(start.x, start.y, start.z), endPos },
                     rad = LinkSnapRadius,
                     poly = basePoly + i,
                     flags = link.Link.bidirectional ? DtDetour.DT_OFFMESH_CON_BIDIR : 0,
-                    side = 0xff,
+                    // Where the end lies from this tile: 0xff over it, else the neighbour (0..7)
+                    // Detour looks for the landing in. Classified as DotRecast's own tile builder
+                    // does (DtNavMeshBuilder.CreateNavMeshData: the end against the tile's bounds),
+                    // so an end in the next tile lands there instead of never connecting.
+                    side = DtNavMeshBuilder.ClassifyOffMeshPoint(endPos, h.bmin, h.bmax),
                     userId = link.Id,
                 };
                 cons[tile.offMeshCons.Length + i] = con;
