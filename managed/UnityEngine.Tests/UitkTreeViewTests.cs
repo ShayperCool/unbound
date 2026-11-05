@@ -500,6 +500,64 @@ namespace UnityEngine.Tests
             if (before == 0) Assert.StartsWith(UnboundTemplateNotice, capture.Notices[0]);
         }
 
+        /// <summary>A tree whose rows come from a one-Label item template set in C#, with 20-pixel rows,
+        /// three root items and no callback set by the test.</summary>
+        static TreeView TemplatedTree(out VisualTreeAsset template)
+        {
+            template = ScriptableObject.CreateInstance<VisualTreeAsset>();
+            template.name = "UitkTreeViewRow";
+            UxmlImporter.Import("Assets/UI/UitkTreeViewRow.uxml", "<ui:UXML xmlns:ui=\"UnityEngine.UIElements\"><ui:Label name=\"row-label\" /></ui:UXML>", template);
+            var view = new TreeView { fixedItemHeight = 20f };
+            view.itemTemplate = template;
+            view.SetRootItems(new List<TreeViewItemData<string>>
+            {
+                new TreeViewItemData<string>(1, "a"),
+                new TreeViewItemData<string>(2, "b"),
+                new TreeViewItemData<string>(3, "c"),
+            });
+            return view;
+        }
+
+        // [interim] Control: a game makeItem without bindItem is still rejected, also on a tree that
+        // had a template: replacing the template's makeItem ends the exemption, and binding a row
+        // throws as before, with no unbound-template report.
+        // Passes at 411b77c2, at 1764758a and at head (not a per-case red). Red under a mutation
+        // dropping the "makeItem is the template's factory" term: the tree is valid and the row is
+        // reported instead of rejected.
+        [Fact]
+        public void AGameMakeItemWithoutBindItemIsStillRejectedOnATemplatedTree()
+        {
+            var view = TemplatedTree(out var template);
+            view.makeItem = () => new Label();
+            Assert.Same(template, view.itemTemplate);
+            Assert.Null(view.bindItem);
+            Assert.False(view.HasValidDataAndBindings());
+
+            int before = Hits(UnboundTemplateMember);
+            var error = Assert.Throws<NotImplementedException>(() => view.virtualizationController.Resize(new Vector2(100f, 100f)));
+            Assert.Equal("You must specify bindItem if makeItem is specified.", error.Message);
+            Assert.Equal(before, Hits(UnboundTemplateMember));
+        }
+
+        // [interim] Control: clearing the template ends the exemption. makeItem stays the template's
+        // factory (the itemTemplate setter keeps it), so the tree is again an unpaired makeItem and
+        // is not valid.
+        // Red at 411b77c2: the first Assert.True(view.HasValidDataAndBindings()) fails (no
+        // exemption). Red at head under a mutation dropping the "there is a template" term: the
+        // cleared tree stays valid.
+        [Fact]
+        public void ClearingTheTemplateEndsTheTreeExemption()
+        {
+            var view = TemplatedTree(out _);
+            Assert.True(view.HasValidDataAndBindings());
+
+            view.itemTemplate = null;
+            Assert.Null(view.itemTemplate);
+            Assert.NotNull(view.makeItem);
+            Assert.Null(view.bindItem);
+            Assert.False(view.HasValidDataAndBindings());
+        }
+
         // ------------------------------------------------------------------ USS classes and rows
 
         // [doc] The Manual's USS class table of TreeView and BaseTreeView's static fields.

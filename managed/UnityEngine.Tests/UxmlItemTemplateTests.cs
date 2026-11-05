@@ -11,7 +11,9 @@ using Xunit;
 using Object = UnityEngine.Object;
 
 // UXML ListView `item-template`: a reference to a UXML template (VisualTreeAsset) whose instances
-// are the list's rows. Each test names its source:
+// are the list's rows. The TreeView cases read the same attribute on <TreeView>
+// (TreeView.itemTemplate); their red base is 7e4d5b9c, before the TreeView mapping. Each test
+// names its source:
 //   [doc]    the Unity 6000.0 Manual "ListView" (UXML attribute `item-template`, type
 //            UIElements.VisualTreeAsset: "A UXML template that constructs each recycled and rebound
 //            element within the list. This template is designed to replace the makeItem
@@ -409,6 +411,66 @@ namespace UnityEngine.Tests
                 AssetDatabaseRuntime.Invalidate(SheetGuid);
                 Object.DestroyImmediate(sheet, true);
             }
+        }
+
+        // ------------------------------------------------------------------ TreeView
+
+        // [doc] TreeView.itemTemplate: "A UXML template that constructs each recycled and rebound
+        // element within the tree. This template is designed to replace the makeItem definition."
+        // [choice] The attribute on <TreeView> is read as on <ListView> (the same `item-template`
+        // name, reader and diagnostics), on the property TreeView declares.
+        // Red at 7e4d5b9c (this file overlaid; every member it uses exists there): the builder cannot
+        // convert the text to a VisualTreeAsset and drops it silently; Assert.Same(row.Template,
+        // view.itemTemplate) fails (null).
+        [Fact]
+        public void TreeViewItemTemplateResolvesAndRowsAreTemplateInstances()
+        {
+            using var row = new RowFile();
+            VisualElement root = null;
+            var logs = Logged(() => root = Clone($"<ui:TreeView item-template=\"{RowRef}\" />").Root);
+            var view = Assert.IsType<TreeView>(root[0]);
+            Assert.Same(row.Template, view.itemTemplate);
+            Assert.Empty(logs);
+
+            var bound = new List<(VisualElement Element, int Index)>();
+            view.fixedItemHeight = 20f;
+            view.bindItem = (e, i) => bound.Add((e, i));
+            view.SetRootItems(new List<TreeViewItemData<string>>
+            {
+                new TreeViewItemData<string>(1, "a"),
+                new TreeViewItemData<string>(2, "b"),
+                new TreeViewItemData<string>(3, "c"),
+            });
+            view.virtualizationController.Resize(new Vector2(100f, 100f));
+            var rows = view.activeItems.OrderBy(r => r.index).Select(r => r.bindableElement).ToList();
+            Assert.Equal(3, rows.Count);
+            foreach (var element in rows)
+            {
+                var container = Assert.IsType<TemplateContainer>(element);
+                Assert.Same(row.Template, container.templateSource);
+                Assert.NotNull(container.Q<Label>("row-label"));
+            }
+            Assert.Equal(3, rows.Distinct().Count());
+            Assert.Equal(new[] { 0, 1, 2 }, bound.Select(b => b.Index).OrderBy(i => i));
+            Assert.All(bound, b => Assert.Contains(b.Element, rows));
+        }
+
+        // [choice] A relative reference on <TreeView> that resolves to nothing logs ONE error naming
+        // the document, the element and the attribute; the tree keeps no template and no makeItem.
+        // Red at 7e4d5b9c: nothing is logged; Assert.Single(logs) fails (empty).
+        [Fact]
+        public void TreeViewUnresolvedReferenceLogsOneErrorAndLeavesNoTemplate()
+        {
+            VisualElement root = null;
+            var logs = Logged(() => root = Clone("<ui:TreeView item-template=\"Rows/Missing.uxml\" />").Root);
+            var view = Assert.IsType<TreeView>(root[0]);
+            var error = Assert.Single(logs);
+            Assert.Contains("<UnityEngine.UIElements.TreeView>", error);
+            Assert.Contains("'item-template'", error);
+            Assert.Contains("no VisualTreeAsset asset at 'Rows/Missing.uxml'", error);
+            Assert.Contains("keeps its value", error);
+            Assert.Null(view.itemTemplate);
+            Assert.Null(view.makeItem);
         }
 
         // ------------------------------------------------------------------ guards
