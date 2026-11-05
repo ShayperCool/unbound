@@ -289,9 +289,9 @@ namespace Unbound.Runtime
         /// become its off-mesh connections (Detour connects their ends when tiles are added).
         /// A start on the edge between two tiles lies over both and is added to each; each copy's
         /// end side is classified against its own tile, so every copy lands where its tile's
-        /// neighbours are. The links whose end lies over this tile land in it, and a bidirectional
-        /// landing takes one of this tile's link slots for the way back, so this tile reserves
-        /// slots for them too, whether or not it holds any start.</summary>
+        /// neighbours are. The links whose end lies over this tile (or within the snap radius of it)
+        /// land in it, and a bidirectional landing takes one of this tile's link slots for the way
+        /// back, so this tile reserves slots for them too, whether or not it holds any start.</summary>
         static void AddLinks(Surface surface, DtMeshData tile)
         {
             var h = tile.header;
@@ -301,15 +301,22 @@ namespace Unbound.Runtime
             {
                 if (!link.Active || link.Link.agentTypeID != surface.AgentTypeID) continue;
                 var end = link.End;
-                if (!(end.x < h.bmin.X || end.x > h.bmax.X || end.z < h.bmin.Z || end.z > h.bmax.Z)) ends++;
+                // Over the tile or within the snap radius of it: Detour lands an end on a polygon of
+                // the tile up to the snap radius away (DtNavMesh.ConnectExtOffMeshLinks).
+                float snap = LinkSnapRadius;
+                if (!(end.x < h.bmin.X - snap || end.x > h.bmax.X + snap || end.z < h.bmin.Z - snap || end.z > h.bmax.Z + snap)) ends++;
                 var start = link.Start;
                 if (start.x < h.bmin.X || start.x > h.bmax.X || start.z < h.bmin.Z || start.z > h.bmax.Z) continue;
                 add.Add((link, start, end));
             }
-            // Two link slots per end over the tile, as DotRecast's own tile builder reserves for the
-            // ends of baked connections (DtNavMeshBuilder.CreateNavMeshData: offMeshConLinkCount
-            // counts each end inside the tile, maxLinkCount adds it twice).
-            h.maxLinkCount += ends * 2;
+            // Three link slots per end that can land here. DotRecast's own tile builder reserves two
+            // per end inside the tile for baked connections (DtNavMeshBuilder.CreateNavMeshData:
+            // offMeshConLinkCount counts each end inside the tile, maxLinkCount adds it twice), but it
+            // stores each connection in one tile only. Here a start on a tile edge or corner is added
+            // to every tile it lies over, up to four; each copy's bidirectional landing takes a slot of
+            // the landing tile for the way back, and up to three copies besides this tile's own (which
+            // the start reservation below covers) can land here. So deliberately more than the builder.
+            h.maxLinkCount += ends * 3;
             if (add.Count == 0) return;
             int baseVert = h.vertCount, basePoly = h.polyCount;
             var verts = new float[(h.vertCount + add.Count * 2) * 3];
