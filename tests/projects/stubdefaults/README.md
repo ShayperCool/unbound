@@ -9,7 +9,7 @@ G9 (identical on Mono and CoreCLR), colors and matrices as comma-separated float
 already answers (`ScalableBufferManager` scale factors, `Microphone.devices` being an array,
 `Camera.CalculateObliqueMatrix`).
 
-The canonical Native oracle is `Reference/unity-6000.0.71f1.jsonl` (26 records, Unity 6000.0.71f1
+The canonical Native oracle is `Reference/unity-6000.0.71f1.jsonl` (33 records, Unity 6000.0.71f1
 on Linux, GPU Editor in batchmode with graphics). Two independent captures were byte-identical.
 
 ## Running
@@ -37,14 +37,20 @@ tolerance are printed.
 
 - `Gizmos.color` is white and `Gizmos.matrix` is the zero matrix outside `OnDrawGizmos`.
   `Gizmos.probeSize` is 0.29999998f, one ulp under 0.3f.
-- `DynamicGI`: indirectScale 1, updateThreshold 1, materialUpdateTimeSlice 8, synchronousMode
-  false, isConverged true (no realtime GI in the scene).
+- `DynamicGI`: updateThreshold 1, materialUpdateTimeSlice 8, synchronousMode false, isConverged
+  true. The scene has no realtime GI; a scene with realtime GI is neither measured nor supported.
 - `GarbageCollector.GCMode` Enabled, incrementalTimeSliceNanoseconds 3000000.
 - `ReflectionProbe` baked cubemap resolution range 16..2048; `SplashScreen.isFinished` true;
   `MuscleHandle.muscleHandleCount` 95; `Caching.compressionEnabled` true;
   `QualitySettings.maxQueuedFrames` 2; `Graphics.activeTier` Tier3, `activeColorGamut` sRGB;
-  `PixelPerfectRendering.pixelSnapSpacing` 0; `RenderTexture.GetTexelOffset` (0, 0).
+  `PixelPerfectRendering.pixelSnapSpacing` 0; `RenderTexture.GetTexelOffset` (0, 0);
+  `AccessibilitySettings.fontScale` 1; `AvatarMask.humanoidBodyPartCount` 13.
+- Obsolete members whose message states the answer: `SystemInfo.supportsRenderTextures` true,
+  `supportsStencil` 1, `supportsVertexPrograms` true, `graphicsPixelFillrate` -1,
+  `RenderTexture.enabled` true, `Application.isPlayer` false. (`Light.attenuate` and
+  `Application.webSecurityEnabled` are compile errors in Unity, so no script reads them.)
 
-Not recorded, because the answer is not a constant: `GarbageCollector.isIncremental` follows the
+Not recorded, because the answer is not a constant: `DynamicGI.indirectScale` is the scene's
+Indirect Intensity; `GarbageCollector.isIncremental` follows the
 project's `gcIncremental` player setting, and `Caching.cacheCount` (1 in the Editor) would claim a
 cache that the stubbed `Caching` API cannot hand out.

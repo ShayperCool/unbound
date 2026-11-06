@@ -2,7 +2,6 @@
 {"key":"Gizmos.matrix","value":"0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0"}
 {"key":"Gizmos.probeSize","value":"0.299999982"}
 {"key":"Gizmos.exposure","value":"null"}
-{"key":"DynamicGI.indirectScale","value":"1"}
 {"key":"DynamicGI.updateThreshold","value":"1"}
 {"key":"DynamicGI.materialUpdateTimeSlice","value":"8"}
 {"key":"DynamicGI.synchronousMode","value":"false"}
@@ -19,6 +18,14 @@
 {"key":"Graphics.activeColorGamut","value":"sRGB=0"}
 {"key":"PixelPerfectRendering.pixelSnapSpacing","value":"0"}
 {"key":"RenderTexture.GetTexelOffset","value":"0,0"}
+{"key":"Accessibility.AccessibilitySettings.fontScale","value":"1"}
+{"key":"SystemInfo.supportsRenderTextures","value":"true"}
+{"key":"SystemInfo.supportsStencil","value":"1"}
+{"key":"SystemInfo.supportsVertexPrograms","value":"true"}
+{"key":"SystemInfo.graphicsPixelFillrate","value":"-1"}
+{"key":"RenderTexture.enabled","value":"true"}
+{"key":"Application.isPlayer","value":"false"}
+{"key":"AvatarMask.humanoidBodyPartCount","value":"13"}
 {"key":"ScalableBufferManager.widthScaleFactor","value":"1"}
 {"key":"ScalableBufferManager.heightScaleFactor","value":"1"}
 {"key":"Microphone.devices","value":"array"}

@@ -77,8 +77,12 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       `defaultCache`), the `QualitySettings` terrain and texture streaming settings, `Physics2D.jobOptions`
       and `GraphicsSettings` asset values, `Time.captureDeltaTimeRational`, serialized component
       values (`AudioReverbFilter`/`AudioChorusFilter`/`AudioReverbZone`, physical camera,
-      `ArticulationBody`), and the stubbed `SystemInfo` caps (`maxGraphicsBufferSize`,
-      `maxComputeBufferInputs*`, a rendering decision).
+      `ArticulationBody`), `DynamicGI.indirectScale` (the scene's Indirect Intensity), the
+      stubbed `SystemInfo` caps (`maxGraphicsBufferSize`, `maxComputeBufferInputs*`, a rendering
+      decision), and obsolete members that should forward to their replacement
+      (`Physics.solverIterationCount`, `Application.levelCount`, `RenderSettings.ambientSkyboxAmount`,
+      `Light.pixelLightCount`, `SystemInfo.supportsGPUFence`, ...). Settable table members keep
+      answering their constant after a set.
 - [ ] Message coverage: Unity's full MonoBehaviour/UIBehaviour message list against the messages
       the engine sends; `unbound doctor` lists the project's scripts that define one never sent.
       Source ready, unvalidated (`runtime/message-coverage`): the 6000.0 MonoBehaviour,

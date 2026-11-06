@@ -65,7 +65,6 @@ public class StubDefaultsProbe : MonoBehaviour
         Try("Gizmos.probeSize", () => Record("Gizmos.probeSize", Gizmos.probeSize));
         Try("Gizmos.exposure", () => Record("Gizmos.exposure", Gizmos.exposure == null ? "null" : Gizmos.exposure.name));
 
-        Try("DynamicGI.indirectScale", () => Record("DynamicGI.indirectScale", DynamicGI.indirectScale));
         Try("DynamicGI.updateThreshold", () => Record("DynamicGI.updateThreshold", DynamicGI.updateThreshold));
         Try("DynamicGI.materialUpdateTimeSlice", () => Record("DynamicGI.materialUpdateTimeSlice", DynamicGI.materialUpdateTimeSlice));
         Try("DynamicGI.synchronousMode", () => Record("DynamicGI.synchronousMode", DynamicGI.synchronousMode));
@@ -92,6 +91,23 @@ public class StubDefaultsProbe : MonoBehaviour
             rt.Release();
             UnityEngine.Object.Destroy(rt);
         });
+        Try("Accessibility.AccessibilitySettings.fontScale", () => Record("Accessibility.AccessibilitySettings.fontScale", UnityEngine.Accessibility.AccessibilitySettings.fontScale));
+
+        // Obsolete members whose message states a constant answer.
+#pragma warning disable 618
+        Try("SystemInfo.supportsRenderTextures", () => Record("SystemInfo.supportsRenderTextures", SystemInfo.supportsRenderTextures));
+        Try("SystemInfo.supportsStencil", () => Record("SystemInfo.supportsStencil", SystemInfo.supportsStencil));
+        Try("SystemInfo.supportsVertexPrograms", () => Record("SystemInfo.supportsVertexPrograms", SystemInfo.supportsVertexPrograms));
+        Try("SystemInfo.graphicsPixelFillrate", () => Record("SystemInfo.graphicsPixelFillrate", SystemInfo.graphicsPixelFillrate));
+        Try("RenderTexture.enabled", () => Record("RenderTexture.enabled", RenderTexture.enabled));
+        Try("Application.isPlayer", () => Record("Application.isPlayer", Application.isPlayer));
+        Try("AvatarMask.humanoidBodyPartCount", () =>
+        {
+            var mask = new AvatarMask();
+            Record("AvatarMask.humanoidBodyPartCount", mask.humanoidBodyPartCount);
+            UnityEngine.Object.Destroy(mask);
+        });
+#pragma warning restore 618
 
         // Members answered by hand-written code before this probe, kept here as regression guards.
         Try("ScalableBufferManager.widthScaleFactor", () => Record("ScalableBufferManager.widthScaleFactor", ScalableBufferManager.widthScaleFactor));
