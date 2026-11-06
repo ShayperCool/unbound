@@ -1093,6 +1093,11 @@ namespace Unbound.Runtime
                 if (!deferred && hdrIntermediate && sceneTarget != cameraTarget && cameraTarget != null
                     && camera.clearFlags is CameraClearFlags.Depth or CameraClearFlags.Nothing)
                     Graphics.Blit(cameraTarget, sceneTarget);
+                // On the screen the intermediate starts as the screen under the camera's rect:
+                // Depth only and Don't Clear keep the color earlier cameras drew there.
+                else if (!deferred && msaaTarget != null && resolveTarget == null
+                    && camera.clearFlags is CameraClearFlags.Depth or CameraClearFlags.Nothing)
+                    SeedFromScreen(msaaTarget, camera.pixelRect);
                 int width = (int)viewport.width, height = (int)viewport.height;
                 // The camera's textures, as the camera asks and as directional shadows need
                 // (measured: tests/projects/builtinrp events.*): depth, then depth and normals.
@@ -1417,6 +1422,26 @@ namespace Unbound.Runtime
             var y = new Vector3(Mathf.Abs(m.m01), Mathf.Abs(m.m11), Mathf.Abs(m.m21)) * e.y;
             var z = new Vector3(Mathf.Abs(m.m02), Mathf.Abs(m.m12), Mathf.Abs(m.m22)) * e.z;
             return new Bounds(center, 2f * (x + y + z));
+        }
+
+        /// <summary>The screen's pixels under <paramref name="pixelRect"/>, stretched over the
+        /// whole of a screen camera's intermediate (its pixel size). The screen is copied as the
+        /// bytes it stores into an 8-bit texture of the same encoding (sRGB in Linear color
+        /// space), so sampling reads the colors the screen shows.</summary>
+        static void SeedFromScreen(RenderTexture intermediate, Rect pixelRect)
+        {
+            int width = Math.Max(1, Screen.width), height = Math.Max(1, Screen.height);
+            var screen = RenderTexture.GetTemporary(width, height, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
+            screen.filterMode = FilterMode.Point;
+            GfxStream.CopyTexture(RenderTexture.ScreenStandIn?.EnsureCreated() ?? 0, 0, 0, new RectInt(0, 0, width, height),
+                screen.EnsureCreated(), 0, 0, 0, 0);
+            // A copy, not a draw: GL.wireframe leaves it alone.
+            bool wireframe = GL.wireframe;
+            if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
+            Graphics.Blit(screen, intermediate, new Vector2(pixelRect.width / width, pixelRect.height / height),
+                new Vector2(pixelRect.x / width, pixelRect.y / height));
+            if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, true);
+            RenderTexture.ReleaseTemporary(screen);
         }
 
         /// <summary>A camera's target, viewport, clear and matrices.</summary>
