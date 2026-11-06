@@ -17,6 +17,9 @@ Context: <related landed commits, earlier attempts, known pitfalls; or "none">
 Done when: the probe matches the Unity reference (or residuals are recorded), managed tests pass,
 the reviewer has no P1/P2 left, and the change is landed on main.
 You may start exactly one reviewer subagent per review round, as WORKFLOW.md describes.
+Do not end your turn until the change is landed or you are blocked. Wait for long commands
+(builds, tests, probes, land.py) with t3_background_wait or in the foreground; ending the turn
+while they run wakes the orchestrator for nothing.
 Report in at most 10 lines: landed commit or blocker; what changed; probe result; residuals;
 follow-ups for the queue.
 ```

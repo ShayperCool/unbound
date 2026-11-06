@@ -64,7 +64,8 @@ Its full instructions are in [ORCHESTRATOR.md](ORCHESTRATOR.md).
    optional.
    If you disagree with a finding, say why in your report.
 8. Land: `python3 tools/agents/land.py --probe '<probe command>' ...`.
-   - Run it in the background and wait for completion; it may queue behind another landing.
+   - Run it in the background and wait for completion (`t3_background_wait`); it may queue
+     behind another landing.
    - Exit 3 is a conflict: run `git rebase main`, resolve (see Conflicts), re-run the affected tests,
      land again.
    - Exit 5 is a failed gate: fix it, land again.
@@ -86,6 +87,9 @@ Rules:
   the compatibility profile.
 - When you are blocked on something only the user or the orchestrator can decide, report it at once
   instead of guessing.
+- Your final message is your report: do not end your turn before landing or a real blocker. Wait
+  for background builds, tests and `land.py` with `t3_background_wait` (or run them in the
+  foreground); an ended turn wakes the orchestrator with nothing to act on.
 
 ## Reviewer
 
