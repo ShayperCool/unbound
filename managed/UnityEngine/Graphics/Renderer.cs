@@ -376,6 +376,7 @@ namespace UnityEngine
             if (m_IsVisible == visible) return;
             m_IsVisible = visible;
             Messaging.SendFast(m_GameObject, visible ? "OnBecameVisible" : "OnBecameInvisible");
+            if (visible) Animator.RendererBecameVisible(m_GameObject);
         }
 
         /// <summary>A camera's culling (or a light's shadow casters) took it this frame: it becomes

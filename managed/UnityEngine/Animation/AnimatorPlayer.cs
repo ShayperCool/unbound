@@ -292,6 +292,39 @@ namespace Unbound.Runtime
 
         bool m_Ticking;
 
+        /// <summary>Whether the player has had an update (Animator culling: a CullCompletely
+        /// Animator's first update runs even while culled).</summary>
+        internal bool Ticked;
+
+        /// <summary>Set by the Animator for a culled update (<see cref="Animator.Tick"/>): the state
+        /// machines, events, callbacks and root motion run, the pose is not written and the IK pass
+        /// does not run.</summary>
+        internal bool SkipWrites;
+
+        /// <summary>A culled Animator one of whose renderers became visible
+        /// (<see cref="Animator.RendererBecameVisible"/>): the pose of its last evaluation is written
+        /// and the IK pass runs, without advancing; with <paramref name="move"/>, the movement
+        /// callbacks (or the builtin root motion) run first with that evaluation's deltas, applied
+        /// again (measured, tests/projects/animculling).</summary>
+        internal void EvaluateOnVisible(bool move)
+        {
+            if (m_Ticking || !Ticked || m_LayerPoses.Length < Layers.Length) return;
+            m_Ticking = true;
+            try
+            {
+                if (move)
+                {
+                    m_Animator.m_RootMotionApplied = false;
+                    ProcessRootMotion();
+                }
+                WritePose(Layers.Length);
+            }
+            finally
+            {
+                m_Ticking = false;
+            }
+        }
+
         void TickCore(float deltaTime)
         {
             if (Controller.OverrideVersion != m_OverrideVersion)
@@ -299,6 +332,7 @@ namespace Unbound.Runtime
                 m_OverrideVersion = Controller.OverrideVersion;
                 BindClips();
             }
+            Ticked = true;
             m_RootDeltaTime = deltaTime;
             m_CallbacksStarted |= deltaTime != 0f;
             StepLayers(deltaTime * m_Animator.m_Speed);
@@ -932,6 +966,12 @@ namespace Unbound.Runtime
             ComputeRootMotion(count);
             AfterEvaluate();
             ProcessRootMotion();
+            if (SkipWrites) return;
+            WritePose(count);
+        }
+
+        void WritePose(int count)
+        {
             if (m_Written.Length < Bindings.FloatCount)
             {
                 Array.Resize(ref m_Written, Bindings.FloatCount);

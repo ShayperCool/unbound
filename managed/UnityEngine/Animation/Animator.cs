@@ -130,9 +130,9 @@ namespace UnityEngine
             set => m_Speed = value;
         }
 
-        /// <summary>Applied by the player loop's update (<see cref="Tick"/>): CullCompletely skips the
-        /// whole update while no renderer of the hierarchy is visible; CullUpdateTransforms is
-        /// reported and not applied yet (see <see cref="CulledThisUpdate"/>).</summary>
+        /// <summary>Applied by the player loop's update (<see cref="Tick"/>) while no renderer of the
+        /// hierarchy is visible: CullUpdateTransforms does not write the pose or run IK,
+        /// CullCompletely skips the update.</summary>
         public AnimatorCullingMode cullingMode
         {
             get => m_CullingMode;
@@ -265,12 +265,86 @@ namespace UnityEngine
             base.OnEngineDestroy();
         }
 
-        /// <summary>One update of the controller by the player loop, unless culled (see
-        /// <see cref="CulledThisUpdate"/>).</summary>
+        /// <summary>
+        /// One update of the controller by the player loop, culled by renderer visibility.
+        /// Documented (6000.0 AnimatorCullingMode, Manual "Animator component"): CullUpdateTransforms,
+        /// "Retarget, IK and write of Transforms are disabled when renderers are not visible";
+        /// CullCompletely, "Animation is completely disabled when renderers are not visible".
+        /// Measured (tests/projects/animculling, Unity 6000.0.71f1, a Game view camera only), while
+        /// no renderer of the hierarchy is visible (<see cref="AnyRendererVisible"/>, read at the
+        /// update):
+        /// <list type="bullet">
+        /// <item>CullUpdateTransforms: time, the state machines, events, OnAnimatorMove and root motion
+        /// advance as usual; the pose is not written (the transforms keep what they last had) and
+        /// OnAnimatorIK does not run.</item>
+        /// <item>CullCompletely: the update is skipped; nothing catches up later. The Animator's first
+        /// update still runs, without advancing time and without writes or IK (OnAnimatorMove
+        /// runs).</item>
+        /// <item>When one of its renderers becomes visible after such an update, during the camera's
+        /// culling, the pose is written and the IK pass runs once more; after a skipped update (or
+        /// that first one) the movement callbacks and builtin root motion also run again with the
+        /// last evaluation's deltas (<see cref="RendererBecameVisible"/>).</item>
+        /// </list>
+        /// Unbound's choice (unmeasured): under CullUpdateTransforms the other animated properties
+        /// (materials, script fields, ...) are not written either.
+        /// </summary>
         internal void Tick(float deltaTime)
         {
-            if (m_CullingMode != AnimatorCullingMode.AlwaysAnimate && CulledThisUpdate()) return;
-            Advance(deltaTime);
+            if (m_CullingMode == AnimatorCullingMode.AlwaysAnimate || AnyRendererVisible(m_GameObject))
+            {
+                m_Culled = CulledUpdate.None;
+                Advance(deltaTime);
+                return;
+            }
+            var player = EnsurePlayer();
+            if (player == null) return;
+            if (m_CullingMode == AnimatorCullingMode.CullCompletely)
+            {
+                bool first = !player.Ticked;
+                m_Culled = CulledUpdate.Skipped;
+                if (!first) return;
+                deltaTime = 0f;
+            }
+            else m_Culled = CulledUpdate.NotWritten;
+            player.SkipWrites = true;
+            try
+            {
+                player.Tick(deltaTime);
+            }
+            finally
+            {
+                player.SkipWrites = false;
+            }
+        }
+
+        enum CulledUpdate : byte { None, NotWritten, Skipped }
+
+        CulledUpdate m_Culled;
+
+        /// <summary>A renderer became visible in a camera's culling: each culled Animator above it (its
+        /// GameObject included) writes its pose and runs its IK pass, and after a skipped update its
+        /// movement too (see <see cref="Tick"/>; measured, tests/projects/animculling).</summary>
+        internal static void RendererBecameVisible(GameObject go)
+        {
+            for (var t = go != null ? go.m_Transform : null; t != null; t = t.parent)
+            {
+                var components = t.m_GameObject.m_Components;
+                for (int i = 0; i < components.Count; i++)
+                {
+                    if (!(components[i] is Animator animator) || animator.m_Culled == CulledUpdate.None) continue;
+                    var culled = animator.m_Culled;
+                    animator.m_Culled = CulledUpdate.None;
+                    if (!animator.isActiveAndEnabled || animator.m_Player == null) continue;
+                    try
+                    {
+                        animator.m_Player.EvaluateOnVisible(move: culled == CulledUpdate.Skipped);
+                    }
+                    catch (Exception e)
+                    {
+                        Debug.LogException(e, animator);
+                    }
+                }
+            }
         }
 
         void Advance(float deltaTime)
@@ -285,61 +359,28 @@ namespace UnityEngine
         public void Update(float deltaTime) => Advance(deltaTime);
 
         /// <summary>
-        /// Whether the player loop's update skips this Animator. Documented (6000.0
-        /// AnimatorCullingMode, Manual "Animator component"): CullCompletely, "Animation is
-        /// completely disabled when renderers are not visible"; CullUpdateTransforms, "Retarget,
-        /// IK and write of Transforms are disabled when renderers are not visible".
-        /// <para>CullCompletely: the update is skipped as a whole, so the state machines (and the
-        /// triggers their transitions consume), events, StateMachineBehaviour and OnAnimatorMove
-        /// callbacks, root motion and every write wait; nothing catches up when a renderer becomes
-        /// visible again, the next update advances by its own delta time only (Unbound's reading of
-        /// "completely disabled", unmeasured).</para>
-        /// <para>CullUpdateTransforms is not applied: keeping the state machines, events and root
-        /// motion while skipping only the transform writes needs a hook inside the player's
-        /// evaluation (AnimatorPlayer), outside this change. While no renderer is visible such an
-        /// Animator still animates as with AlwaysAnimate, and the first such update is reported
-        /// once.</para>
-        /// <para>Visibility is <see cref="AnyRendererVisible"/> of the Animator's GameObject, read
-        /// when the update runs; see there for the unmeasured choices.</para>
-        /// </summary>
-        bool CulledThisUpdate()
-        {
-            switch (m_CullingMode)
-            {
-                case AnimatorCullingMode.CullCompletely:
-                    return !AnyRendererVisible(m_GameObject);
-                case AnimatorCullingMode.CullUpdateTransforms:
-                    if (!AnyRendererVisible(m_GameObject))
-                        Unbound.Runtime.Stubs.Ignored("Animator.cullingMode CullUpdateTransforms",
-                            "is not honoured yet: while no renderer is visible the Animator still writes transforms (as AlwaysAnimate)");
-                    return false;
-                default:
-                    return false;
-            }
-        }
-
-        /// <summary>
         /// Whether any Renderer of <paramref name="root"/>'s hierarchy (the GameObject and all of its
         /// descendants) is visible (<see cref="Renderer.isVisible"/>), for animation culling.
-        /// Unbound's choices (unmeasured):
         /// <list type="bullet">
-        /// <item>Visibility is read when the animation update runs (PreLateUpdate, or FixedUpdate for
-        /// physics-rate updates): it is what the previous frame's camera culling (and shadow
-        /// casting) left, after this frame's EarlyUpdate made the renderers no camera took
-        /// invisible. Animation runs before this frame's rendering.</item>
-        /// <item>The hierarchy is every descendant, including the renderers under a nested Animator
-        /// or Animation; renderers outside it (another hierarchy driven by its bindings) do not
-        /// count. Disabled and inactive renderers are not visible.</item>
-        /// <item>Every Renderer type counts (mesh, skinned, sprite, particle, line, trail, ...). A
-        /// hierarchy without any Renderer (a uGUI hierarchy has CanvasRenderers, which are not
-        /// Renderers) is never visible, so a culling animator there is culled.</item>
-        /// <item>SkinnedMeshRenderer.updateWhenOffscreen is not consulted.</item>
-        /// <item>Only renderers whose culling bounds Unbound computes as Unity does (MeshRenderer,
-        /// SpriteRenderer) decide by isVisible. Every other enabled renderer in an active hierarchy
-        /// (skinned, particle, line, trail, ...) counts as visible: their bounds are approximate in
-        /// Unbound (a skinned mesh's bind-pose bounds, not Unity's root-bone bounds), so judging by
-        /// them could freeze an on-screen character. Reported once (stub report "Animation culling
-        /// with approximate renderer bounds").</item>
+        /// <item>Visibility is read when the animation update runs: what the previous frame's camera
+        /// culling (and shadow casting) left, after this frame's EarlyUpdate made the renderers no
+        /// camera took invisible; a renderer disabled earlier in the frame no longer counts
+        /// (measured, tests/projects/animculling, the default update mode).</item>
+        /// <item>A hierarchy without any Renderer is never visible, so a culling animator there is
+        /// culled (measured). A uGUI hierarchy has CanvasRenderers, which are not Renderers.</item>
+        /// <item>Unbound's choice (unmeasured): the hierarchy is every descendant, including the
+        /// renderers under a nested Animator or Animation; renderers outside it (another hierarchy
+        /// driven by its bindings) do not count.</item>
+        /// <item>MeshRenderer, SpriteRenderer and SkinnedMeshRenderer decide by isVisible; a
+        /// skinned renderer's updateWhenOffscreen does not change that (measured,
+        /// tests/projects/animculling: a disabled or inactive renderer and one off screen do not
+        /// count, with updateWhenOffscreen on or off; one visible renderer of several is enough).
+        /// A skinned renderer's culling bounds are its mesh's bounds in the renderer's space, an
+        /// approximation of Unity's root-bone bounds.</item>
+        /// <item>Every other enabled renderer in an active hierarchy (particle, line, trail, ...)
+        /// counts as visible: their bounds are approximate in Unbound and their effect on animation
+        /// culling is unmeasured. Reported once (stub report "Animation culling with approximate
+        /// renderer bounds").</item>
         /// </list>
         /// </summary>
         internal static bool AnyRendererVisible(GameObject root)
@@ -353,7 +394,7 @@ namespace UnityEngine
                 if (!HasExactCullingBounds(renderer) && renderer.enabled && root.activeInHierarchy)
                 {
                     Unbound.Runtime.Stubs.Ignored("Animation culling with approximate renderer bounds",
-                        "counts skinned, particle, line and trail renderers as visible while they are enabled (their culling bounds are approximate in Unbound)");
+                        "counts particle, line and trail renderers as visible while they are enabled (their culling bounds are approximate in Unbound)");
                     return true;
                 }
             }
@@ -368,7 +409,7 @@ namespace UnityEngine
         }
 
         static bool HasExactCullingBounds(Renderer renderer) =>
-            renderer.GetType() == typeof(MeshRenderer) || renderer is SpriteRenderer;
+            renderer.GetType() == typeof(MeshRenderer) || renderer is SpriteRenderer || renderer is SkinnedMeshRenderer;
 
         /// <summary>As Unity's: the animated properties go back to their defaults (the values the
         /// animator first bound, measured in the Editor's Play mode), then bind again.</summary>
