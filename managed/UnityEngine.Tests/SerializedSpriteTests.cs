@@ -15,8 +15,9 @@ namespace UnityEngine.Tests
         readonly string m_Guid;
         readonly List<LoadedFile> m_Loaded = new List<LoadedFile>();
 
-        static List<YDocument> Documents(string name) => UnityYaml.Parse(File.ReadAllText(
-            Path.Combine(AppContext.BaseDirectory, "SpriteFixtures", name + ".asset")));
+        static List<YDocument> Documents(string name) => UnityYamlText.Parse(File.ReadAllText(
+            Path.Combine(AppContext.BaseDirectory, "SpriteFixtures", name + ".asset")))
+            .Select(d => new YDocument { ClassId = d.ClassId, FileId = d.FileId, TypeName = d.ClassName, Body = d.Body.ToNode() }).ToList();
 
         public SerializedSpriteTests()
         {
@@ -36,7 +37,7 @@ namespace UnityEngine.Tests
 
         LoadedFile Load(List<YDocument> docs)
         {
-            var file = ObjectGraphBuilder.Build(docs, "Assets/SerializedSprite.asset", null, ObjectGraphBuilder.Kind.Asset, null);
+            var file = ObjectGraphBuilder.Build(docs, "Assets/SerializedSprite.asset", null, ObjectGraphBuilder.Kind.Asset, null, created: _ => { });
             m_Loaded.Add(file);
             return file;
         }
@@ -96,6 +97,20 @@ namespace UnityEngine.Tests
             Assert.Contains("settingsRaw 1", rejected.Detail);
             found.SpriteDocuments["Assets/packed.asset"] = text;
             Assert.Equal("Read", Assert.Single(ClassCoverage.Report("6000.0.71f1", new[] { found }).Classes).Reading);
+        }
+
+        [Fact]
+        public void ATextureDocumentAfterItsSpriteIsFilledBeforeResolvingItsDimensions()
+        {
+            var docs = Documents("Rectangle");
+            Set(docs[0].Body.Get("m_RD"), "texture", YNode.MakeMap(("fileID", YNode.MakeScalar("2800000"))));
+            docs.Add(new YDocument { ClassId = 28, FileId = 2800000, TypeName = "Texture2D",
+                Body = YNode.MakeMap(("m_Name", YNode.MakeScalar("LocalTexture")), ("m_Width", YNode.MakeScalar("64")),
+                    ("m_Height", YNode.MakeScalar("64")), ("m_IsReadable", YNode.MakeScalar("1"))) });
+            var file = Load(docs);
+            var sprite = Assert.IsType<Sprite>(file.MainObject);
+            Assert.Same(file.Objects[2800000], sprite.texture);
+            Assert.Equal(64, sprite.texture.width);
         }
 
         static void Set(YNode node, string key, YNode value)
@@ -162,7 +177,7 @@ namespace UnityEngine.Tests
             internal Errors(ILogHandler inner) { m_Inner = inner; }
             public void LogFormat(LogType type, Object context, string format, params object[] args)
             {
-                string text = string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args);
+                string text = args == null || args.Length == 0 ? format : string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args);
                 if (type == LogType.Error && text.Contains("cannot load Sprite")) Messages.Add(text);
                 m_Inner.LogFormat(type, context, format, args);
             }

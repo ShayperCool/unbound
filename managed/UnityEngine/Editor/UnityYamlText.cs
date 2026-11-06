@@ -227,6 +227,13 @@ namespace Unbound.Runtime
                 var text = lines[at].Text;
                 at++;
                 var rest = text.Length > 2 ? text.Substring(2) : "";
+                if (IsItem(rest))
+                {
+                    // Compact nested sequences, e.g. a Sprite's `- - {x: ..., y: ...}`.
+                    lines.Insert(at, new Line { Indent = indent + 2, Text = rest });
+                    seq.Items.Add(ParseSeq(lines, ref at, indent + 2));
+                    continue;
+                }
                 if (text == "-")
                 {
                     seq.Items.Add(at < lines.Count && lines[at].Indent > indent ? ParseBlock(lines, ref at, lines[at].Indent) : YText.Scalar(null));

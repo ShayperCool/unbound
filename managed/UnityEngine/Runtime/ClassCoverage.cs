@@ -200,9 +200,9 @@ namespace Unbound.Runtime
                     {
                         try
                         {
-                            foreach (var doc in UnityYaml.Parse(pair.Value))
+                            foreach (var doc in UnityYamlText.Parse(pair.Value))
                             {
-                                try { Sprite.ValidateSerialized(doc.Body); }
+                                try { Sprite.ValidateSerialized(doc.Body.ToNode()); }
                                 catch (Exception e) { problems.Add($"{pair.Key} fileID {doc.FileId}: {e.Message}"); }
                             }
                         }

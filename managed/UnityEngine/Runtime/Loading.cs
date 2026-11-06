@@ -237,7 +237,7 @@ namespace Unbound.Runtime
                     Debug.LogWarning($"Unbound: reading {doc.TypeName} of '{c.m_GameObject?.m_Name}' in {path}: {e}");
                 }
             }
-            foreach (var (asset, doc) in assets)
+            foreach (var (asset, doc) in AssetsInReadOrder(assets))
             {
                 try
                 {
@@ -270,11 +270,20 @@ namespace Unbound.Runtime
             return file;
         }
 
+        /// <summary>Read a Sprite after the local texture documents it can reference.</summary>
+        static IEnumerable<(Object Asset, YDocument Doc)> AssetsInReadOrder(List<(Object Asset, YDocument Doc)> assets)
+        {
+            // A Sprite's local texture may occur later in the document stream. Fill textures
+            // before Sprites, keeping the original list intact for main-object selection.
+            foreach (var entry in assets) if (!(entry.Asset is Sprite)) yield return entry;
+            foreach (var entry in assets) if (entry.Asset is Sprite) yield return entry;
+        }
+
         /// <summary>The main object: a prefab's root GameObject; an asset file's first object.</summary>
         static void SetMainObject(LoadedFile file, Kind kind, List<(Object Asset, YDocument Doc)> assets)
         {
             if (kind == Kind.PrefabAsset) file.MainObject = file.Roots.Count > 0 ? file.Roots[0] : null;
-            else if (kind == Kind.Asset && assets.Count > 0) file.MainObject = assets[0].Asset;
+            else if (kind == Kind.Asset) file.MainObject = assets.Count > 0 ? assets[0].Asset : null;
         }
 
         /// <summary>The class a MonoBehaviour's `m_Script` names: a project script by GUID, or an
