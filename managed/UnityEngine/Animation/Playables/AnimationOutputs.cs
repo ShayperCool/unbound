@@ -658,6 +658,7 @@ namespace Unbound.Runtime.Playables
         internal static void ApplyRootMotion(Animator animator, AnimStream result, RootMotionStep motion, float deltaTime)
         {
             animator.CaptureRootMotionPose();
+            animator.m_RootMotionApplied = false;
             animator.m_DeltaPosition = Vector3.zero;
             animator.m_DeltaRotation = Quaternion.identity;
             animator.m_RootVelocity = Vector3.zero;
@@ -684,7 +685,6 @@ namespace Unbound.Runtime.Playables
                 animator.m_Player.ProcessRootMotion();
                 return;
             }
-            animator.m_RootMotionApplied = false;
             animator.m_RootMotionReady = true;
             try
             {

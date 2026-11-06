@@ -350,18 +350,21 @@ namespace UnityEngine.Tests
             finally { graph.Destroy(); }
         }
 
-        [Fact]
-        public void AControllerlessOutputReplaysItsLastVisibleMotionAfterSkippedUpdates()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void AnOutputReplaysItsLastVisibleMotionAfterSkippedUpdates(bool controller)
         {
             var camera = MakeCamera();
             // Root movement is measured on a generic Transform rig, as in animculling p/*.
             var root = new GameObject("PlayableActor");
             m_Objects.Add(root);
-            var text = new GameObject("ContinueText").transform;
+            var text = new GameObject("ContinueText", typeof(RectTransform)).transform;
             text.SetParent(root.transform, false);
             var renderer = AddRenderer(root);
             var animator = root.AddComponent<Animator>();
             animator.cullingMode = AnimatorCullingMode.CullCompletely;
+            if (controller) animator.runtimeAnimatorController = (RuntimeAnimatorController)Load(AnimationFixtures.PopupButton).Objects[9100000];
             animator.applyRootMotion = true;
             var graph = PlayableRig(animator, out var playable);
             try
