@@ -30,7 +30,10 @@ vertices, normals, UV, UV2) as one JSON line per mesh and quits. The Editor reco
         ~/.cache/unbound/validation/runs/lightmapuvs/<L>/unbound/lightmapuvs.jsonl
 
 The comparison is exact (float32 values at tolerance 0) and lists every mesh with each field that
-is missing or differs.
+is missing or differs. `--uv2` judges only the vertex count and the UV2 of every triangle corner
+(found by the corners' positions and UVs, so independent of the vertex and triangle order the
+Editor's mesh optimization gives); `--expect Cube,Multi,Pieces` lets only those meshes decide the
+exit status (the gate: `compare.py ... --uv2 --expect Cube,Multi,Pieces`).
 
 After changing a generator, regenerate (`blender -b --factory-startup --python
 tests/projects/lightmapuvs/Tools/make_models.py -- tests/projects/lightmapuvs/Sources`, then
@@ -41,5 +44,11 @@ What the reference shows (Unity 6000.0.71f1): a generated UV2 splits vertices al
 on the hard angle and the distortion settings only where the mesh has charts to merge or split
 (Organic, Torus). The margin method and its inputs move and scale every chart.
 
-State in Unbound: the importer reads the settings and warns that lightmap UVs are not generated
-(the meshes keep the file's UV2); only the Off variant matches.
+State in Unbound: the unwrap is reproduced for connected parts of up to 100 triangles. Cube, Multi
+and Pieces match in every variant (vertex count and UV2 per corner); TwoUV's UV2 matches, its
+vertex count does not (Unbound keeps the file's unnormalized normals, which split vertices the
+Editor welds). The Torus is unwrapped as the Editor does, but its mesh is named after the OBJ
+object, not "default", so the comparison cannot pair it. Meshes Unbound does not reproduce yet
+warn and keep the file's UV2: the Cylinder (its 16-gon caps are triangulated differently than by
+the Editor's FBX reader) and Organic (non-manifold vertices after welding, and parts of more than
+100 triangles).
