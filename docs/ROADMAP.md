@@ -120,7 +120,7 @@ In dependency order; each item ends with an Editor-reference probe.
 - [x] Left of the built-in RP: several colors at once (render buffers, RenderTargetSetup, command
       buffer arrays), RenderBuffer targets, CubemapArray, GPU instances and indirect draws (procedural
       and mesh, Now and command buffer forms); `tests/projects/graphics` matches the Editor (49/49).
-      Left: GraphicsTexture overloads, indirect draws with an index buffer of their own. (Light
+      Left: GraphicsTexture overloads and `RenderPrimitivesIndexedIndirect`; command-buffer indexed indirect draws are measured by cmdbuffers. (Light
       command buffers run around the built-in shadows: the shadow map, its passes and the
       screen-space mask.)
 - [x] Built-in RP camera textures and per-object rules: depth, depth-normals (Unity's replacement

@@ -57,9 +57,11 @@ renderer copies a counter only after a dispatch has bound it, as Unity does. A 1
 side refuse each other at startup in either pairing.
 
 A `Dispatch` buffer property named after one of the kernel's cbuffers (a constant buffer, usage
-bit 512) fills that cbuffer with the buffer's written bytes, from the byte offset in the int
-property `<name>@offset` when there is one (`ComputeShader.SetConstantBuffer`); the cbuffer's
-own uniform properties are then not used.
+bit 512) binds that cbuffer directly to the GPU buffer, from the byte offset in the int property
+`<name>@offset`, for `<name>@size` bytes (`ComputeShader.SetConstantBuffer`). Preceding GPU
+writes remain ordered; the cbuffer's own uniform properties are then not used. An invalid binding
+skips the dispatch with a warning. Shader cache format 19 also records active instanced-property
+declarations so only their scalar overrides fall back after instance zero.
 
 ### Render protocol 6: texture handle element bits (NativeApi 13)
 

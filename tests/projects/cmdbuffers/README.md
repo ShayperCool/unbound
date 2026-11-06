@@ -46,7 +46,12 @@ UNBOUND_CLI=/path/to/unbound python3 tests/projects/cmdbuffers/run.py check
 ```
 
 `native` records two batchmode Editors on the NVIDIA GPU; `publish` needs both captures complete and
-byte-identical. `check` (the landing gate) runs Unbound and compares every value exactly.
+byte-identical. `verify` compares every value exactly and exits nonzero on any difference. `check` runs that
+same strict report, then checks the explicitly required safe Append skip separately: exactly the
+`uav.append.nocounter` payload and its missing Editor warning may differ, the entire 48-word
+buffer must retain its sentinel, and the engine log must contain the counter-owner warning.
+All other missing, extra and failing values fail the gate. This is an intentional safety
+difference for invalid Append bindings, not an insignificant visual residual.
 
 ## What the Editor does (OpenGLCore, RTX 4060)
 
@@ -80,3 +85,16 @@ byte-identical. `check` (the landing gate) runs Unbound and compares every value
   or an unmade one throws.
 * An Append program whose buffer has no counter warns and appends through some other counter
   (a GPU race); Unbound skips such a draw with a warning.
+
+## Unity 6000.0 contracts and observations
+
+| Source | Documented guarantee / limitation | Measured context |
+|---|---|---|
+| [DrawMeshInstanced](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.DrawMeshInstanced.html), [GPU instancing](https://docs.unity3d.com/6000.0/Documentation/Manual/gpu-instancing-shader.html) | Explicit pass or all passes, per-instance property arrays; instancing support required | 6000.0.71f1 OpenGLCore accepts 1024 instances and throws at record time for disabled instancing despite the API page's execution-time description. A scalar instanced property changes only instance 0; ordinary scalar uniforms still apply to all. |
+| [DrawProcedural](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.DrawProcedural.html), [DrawProceduralIndirect](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.DrawProceduralIndirect.html) | Indexed variant has no vertex buffer; indirect arguments contain index count, instance count, first index, base vertex and first instance | Readbacks cover 16/32-bit indices, base vertex and both argument buffer types. Topologies other than triangles, lines and points remain refused loudly. |
+| [SetComputeConstantBufferParam](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.SetComputeConstantBufferParam.html), [SetComputeBufferParam](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.SetComputeBufferParam.html) | Constant binding has byte offset and size with device alignment; regular buffer bindings are per kernel and retain counter values | Constant offsets align to 256 bytes on this device; captures cover recording-time mutation and graphics/compute buffers. The renderer binds the GPU buffer directly, preserving preceding GPU writes. |
+| [CreateGraphicsFence](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.CreateGraphicsFence.html), [WaitOnAsyncGraphicsFence](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.CommandBuffer.WaitOnAsyncGraphicsFence.html), [passed](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.GraphicsFence-passed.html) | Fence follows preceding GPU work; waits affect the GPU and accept async queue fences only | Async compute is absent and async fence `passed` throws. CPU fences remain false during the recorded frame and true three frames later after completion. One/two-frame Editor visibility is unmeasured. Unbound uses actual GPU queue completion and exposes it from the following frame; single-queue waits need no barrier. |
+
+The two independent final Editor captures are byte-identical to the committed reference. The
+reference retains the invalid Append case's unrelated-counter writes and warning. Unbound's
+skip is required by the task and changes invalid-input behavior; it is not claimed as Unity parity.

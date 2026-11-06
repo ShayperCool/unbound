@@ -73,8 +73,24 @@ def publish(labels):
                                  complete=[editor_runner.jsonl_complete(OUT)])
 
 
-def verify(candidate):
-    return subprocess.run([sys.executable, str(ROOT/'compare.py'), str(reference_file(ROOT, 'jsonl')), str(candidate)]).returncode
+def verify(candidate, safe_append_skip=False):
+    code = subprocess.run([sys.executable, str(ROOT/'compare.py'), str(reference_file(ROOT, 'jsonl')), str(candidate)]).returncode
+    if not code or not safe_append_skip:
+        return code
+    # The task explicitly requires skipping an Append draw without a counter, rather than
+    # reproducing the Editor's unrelated-counter writes. Keep the strict report above intact.
+    import compare
+    ref, act = compare.rows(reference_file(ROOT, 'jsonl')), compare.rows(candidate)
+    missing = object()
+    differences = {key for key in ref.keys() | act.keys() if ref.get(key, missing) != act.get(key, missing)}
+    warning = 'uses the counter of buffer `_App`, which is not set or not an Append or Counter buffer: the draw is skipped'
+    if (differences == {'uav.append.nocounter', 'uav.append.nocounter.log'}
+            and act.get('uav.append.nocounter') == [0xAAAA0000] * 48
+            and 'uav.append.nocounter.log' not in act
+            and warning in (candidate.parent/'engine.log').read_text()):
+        print('gate: required safe Append skip verified; both raw differences remain above')
+        return 0
+    return code
 
 
 def main():
@@ -94,7 +110,7 @@ def main():
         return publish(args.labels)
     if args.mode == 'check':
         label = time.strftime('check-%Y%m%d-%H%M%S-') + str(os.getpid())
-        return engine(label) or verify(WORK/label/OUT)
+        return engine(label) or verify(WORK/label/OUT, safe_append_skip=True)
     if not args.candidate:
         parser.error('verify needs --candidate')
     return verify(args.candidate)
