@@ -122,3 +122,15 @@ indices or GPU base vertices remain refused by R6's renderer guard; procedural s
 vertex buffer. Topologies beyond triangles, lines and points and strides beyond 2/4 bytes remain
 separate scope and fail loudly. Standalone mesh-instancing logical IDs and XR/plugin stubs are
 separate tasks.
+
+6000.0.71f1 observations for `render.indexed.*`: both final Native repeats are byte-identical.
+Direct 16/32-bit and Structured int buffers draw the selected cells, including IDs over 65535.
+Indirect start index and base vertex change the fetched vertex; `startCommand` also changes
+`GetCommandID(0)` to the absolute command index. Raw instance IDs and `GetIndirectInstanceID`
+start at zero on this GLCore device, while `GetIndirectInstanceID_Base` includes the argument's
+start instance. CPU writes after queuing and GPU writes before camera execution are visible to
+both the index fetch and shader argument reads. A direct instance count of zero renders one
+instance on this device. Null index/command buffers throw ArgumentNullException; null material
+draws nothing; an argument buffer missing IndirectArguments logs an error and draws nothing.
+Unbound retains its existing explicit range checks for unsafe direct/command ranges. These
+checks are defensive restrictions, not claimed as measured Unity exception contracts.

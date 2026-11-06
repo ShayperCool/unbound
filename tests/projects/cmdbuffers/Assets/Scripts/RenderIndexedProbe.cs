@@ -107,7 +107,8 @@ public partial class CmdBuffersProbe
         });
         foreach (var c in cases)
         {
-            Try(c.key, () => { c.draw(); cam.Render(); });
+            Try(c.key, c.draw);
+            cam.Render();
             Value(c.key, Read(grid));
             yield return null; // A separate camera frame per queued draw, including in batchmode.
         }
