@@ -95,7 +95,7 @@ namespace UnityEngine.Tests
         static ulong Id(Component c) => unchecked((ulong)(long)c.GetInstanceID());
 
         [Fact]
-        public void PacketAndDescriptorLayoutsAreNativeApi18sInNineteen()
+        public void PacketAndDescriptorLayoutsUnchangedInNativeApi19()
         {
             // Added at 16, unchanged in 19 (render protocol 9).
             Assert.Equal(19u, NativeApi.CurrentVersion);

@@ -1096,7 +1096,8 @@ namespace Unbound.Runtime
                     msaaTarget = RenderTexture.GetTemporary(stack.width, stack.height, 24, RenderTextureFormat.DefaultHDR,
                         RenderTextureReadWrite.Linear, stack.antiAliasing);
                     if (camera.clearFlags == CameraClearFlags.Nothing) GfxStream.CopyDepth(depthSource, TextureHandles.Of(msaaTarget));
-                    // The stack's own colors, not the 8-bit screen's.
+                    // A fallback: the plan makes a stack HDR when any of its cameras is, so this runs
+                    // only when allowHDR changed since. The stack's own colors, not the 8-bit screen's.
                     bool wireframe = GL.wireframe;
                     if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
                     Graphics.Blit(stack, msaaTarget);
@@ -1509,18 +1510,18 @@ namespace Unbound.Runtime
         /// for the full-screen cameras after it that keep the color (see RenderCamera).</summary>
         static RenderTexture s_ScreenStack;
         static long s_ScreenStackLease;
-        /// <summary><see cref="GfxStream.ScreenBindings"/> after the stack's resolve: any other
-        /// drawing on the screen since (late command buffers, blits, GL, scripts) ends it.</summary>
+        /// <summary><see cref="GfxStream.ScreenWrites"/> after the stack's resolve: anything drawn on
+        /// the screen since (late command buffers, blits, GL, scripts) ends it.</summary>
         static long s_StackScreenMark = -1;
 
         /// <summary>The stack a full-screen camera that keeps the color renders into: the kept one,
         /// for the frame's rendering (<paramref name="automatic"/>), when nothing drew on the screen
         /// since its resolve.</summary>
         internal static RenderTexture JoinableScreenStack(bool automatic) =>
-            automatic && GfxStream.ScreenBindings == s_StackScreenMark ? s_ScreenStack : null;
+            automatic && GfxStream.ScreenWrites == s_StackScreenMark ? s_ScreenStack : null;
 
         /// <summary>The kept stack was resolved onto the screen just now.</summary>
-        internal static void MarkScreenStackResolved() => s_StackScreenMark = GfxStream.ScreenBindings;
+        internal static void MarkScreenStackResolved() => s_StackScreenMark = GfxStream.ScreenWrites;
 
         internal static void KeepScreenStack(RenderTexture texture)
         {

@@ -31,9 +31,12 @@ namespace Unbound.Runtime
 
         internal const ulong NoTexture = ulong.MaxValue;
 
-        /// <summary>How many times the screen has been bound as the target: what drew on it since
-        /// a given point (FrameBuilder's screen stack).</summary>
-        internal static long ScreenBindings;
+        /// <summary>How many draws, clears and copies have gone into the screen: whether anything
+        /// was drawn on it since a given point (FrameBuilder's screen stack). Binding it alone does
+        /// not count.</summary>
+        internal static long ScreenWrites;
+
+        static bool OnScreen => s_State.Color == 0 && s_State.Colors == null;
         internal const byte ClearColor = 1, ClearDepth = 2, ClearStencil = 4;
         internal const uint CameraOverlay = 1;
         /// <summary>The camera's draws cull the other faces (a view that mirrors, GL.invertCulling).</summary>
@@ -224,7 +227,6 @@ namespace Unbound.Runtime
         /// first, as on GL when the shader picks no layer.</para></summary>
         internal static void SetTarget(ulong color, ulong depth = 0, int mip = 0, int slice = 0, int layers = 1)
         {
-            if (color == 0) ScreenBindings++;
             s_State.Color = color;
             s_State.Colors = null;
             s_State.Depth = depth;
@@ -314,6 +316,7 @@ namespace Unbound.Runtime
             if ((flags & (ClearDepth | ClearStencil)) != 0) SpriteMasking.Cleared(s_State.Color, s_State.Depth);
             var viewport = s_State.Viewport;
             if (s_State.Scissor is Rect scissor) Viewport(Intersect(viewport, scissor));
+            if (OnScreen) ScreenWrites++;
             U8(ClearOp);
             U8(flags);
             Color(color);
@@ -571,6 +574,7 @@ namespace Unbound.Runtime
         {
             if (s_State.Scissor is Rect scissor) clip = clip.HasValue ? Intersect(clip.Value, scissor) : scissor;
             Resolve(properties);
+            if (OnScreen) ScreenWrites++;
             U8(DrawOp);
             U64(mesh);
             I32(submesh);
@@ -767,6 +771,7 @@ namespace Unbound.Runtime
         internal static void CopyTexture(ulong source, int sourceSlice, int sourceMip, RectInt sourceRect,
             ulong destination, int destinationSlice, int destinationMip, int destinationX, int destinationY)
         {
+            if (destination == 0) ScreenWrites++;
             U8(CopyTextureOp);
             U64(source);
             I32(sourceSlice);
@@ -783,6 +788,7 @@ namespace Unbound.Runtime
         /// of its size (0: the screen's); the destination's stencil is cleared.</summary>
         internal static void CopyDepth(ulong source, ulong destination)
         {
+            if (destination == 0) ScreenWrites++;
             U8(CopyDepthOp);
             U64(source);
             U64(destination);

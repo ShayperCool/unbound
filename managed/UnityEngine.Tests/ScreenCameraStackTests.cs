@@ -33,16 +33,76 @@ namespace UnityEngine.Tests
             Assert.Null(FrameBuilder.JoinableScreenStack(true));
         }
 
+        /// <summary>The stream's pending bytes are put back: the commands these tests emit never
+        /// reach a renderer.</summary>
+        sealed class StreamScope : System.IDisposable
+        {
+            static readonly System.Reflection.FieldInfo Length =
+                typeof(GfxStream).GetField("s_Length", System.Reflection.BindingFlags.Static | System.Reflection.BindingFlags.NonPublic);
+            readonly int m_Length = (int)Length.GetValue(null);
+            readonly RenderTexture m_Active = RenderTexture.active;
+
+            public void Dispose()
+            {
+                RenderTexture.active = m_Active;
+                Length.SetValue(null, m_Length);
+            }
+        }
+
         [Fact]
-        public void DrawingOnTheScreenAfterTheResolveEndsTheStack()
+        public void BindingTheScreenAloneKeepsTheStack()
         {
             var texture = Intermediate();
+            using var stream = new StreamScope();
             try
             {
                 FrameBuilder.KeepScreenStack(texture);
                 FrameBuilder.MarkScreenStackResolved();
-                // A late command buffer, a blit or GL drawing on the screen binds it.
+                // A script restoring the screen as the active target after an offscreen blit.
+                RenderTexture.active = texture;
+                RenderTexture.active = null;
                 GfxStream.SetTarget(0);
+                Assert.Same(texture, FrameBuilder.JoinableScreenStack(true));
+            }
+            finally
+            {
+                FrameBuilder.EndScreenStack();
+            }
+        }
+
+        [Fact]
+        public void ClearingTheBoundScreenEndsTheStack()
+        {
+            var texture = Intermediate();
+            using var stream = new StreamScope();
+            try
+            {
+                // The resolve leaves the screen bound; what comes next draws without binding it.
+                GfxStream.SetTarget(0);
+                FrameBuilder.KeepScreenStack(texture);
+                FrameBuilder.MarkScreenStackResolved();
+                RenderTexture.active = null;
+                GL.Clear(true, true, Color.red);
+                Assert.Null(FrameBuilder.JoinableScreenStack(true));
+            }
+            finally
+            {
+                FrameBuilder.EndScreenStack();
+            }
+        }
+
+        [Fact]
+        public void DrawingOnTheBoundScreenEndsTheStack()
+        {
+            var texture = Intermediate();
+            using var stream = new StreamScope();
+            try
+            {
+                GfxStream.SetTarget(0);
+                FrameBuilder.KeepScreenStack(texture);
+                FrameBuilder.MarkScreenStackResolved();
+                // What a late command buffer's DrawMesh or a GL draw emits on the screen.
+                GfxStream.Draw(1, 0, 1, GfxStream.AllPasses, Matrix4x4.identity, Color.white);
                 Assert.Null(FrameBuilder.JoinableScreenStack(true));
             }
             finally
