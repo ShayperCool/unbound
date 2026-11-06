@@ -119,8 +119,63 @@ namespace UnityEngine
 
         internal override bool GetIsHumanMotion() => HasHumanCurves;
 
-        /// <summary>Converts a Humanoid model's transform curves into muscle curves (once).</summary>
+        bool m_HumanMirrored;
+
+        /// <summary>Converts a Humanoid model's transform curves into muscle curves (once), then
+        /// mirrors the humanoid curves of a mirrored clip.</summary>
         internal void EnsureHumanCurves()
+        {
+            ConvertHumanCurves();
+            if (m_HumanMirrored || !m_Mirror || (m_HumanAvatar != null && !m_HumanConverted)) return;
+            m_HumanMirrored = true;
+            MirrorHumanCurves();
+        }
+
+        /// <summary>Mirror: each humanoid curve plays on its <see cref="HumanClipImport.MirrorCurve"/>,
+        /// as a new curve (negated where that says so; measured, tests/projects/humanoid).</summary>
+        void MirrorHumanCurves()
+        {
+            bool changed = false;
+            for (int k = 0; k < m_Curves.Count; k++)
+            {
+                var c = m_Curves[k];
+                int i = c.Binding.ClassId == AnimatorClassId && c.Curve != null ? HumanClipImport.CurveIndex(c.Binding.Attribute) : -1;
+                if (i < 0) continue;
+                if (i >= HumanClipImport.TDoFFirst)
+                    throw new NotSupportedException($"AnimationClip '{name}': mirrored humanoid clips with translation DoF curves are not supported");
+                int j = HumanClipImport.MirrorCurve[i];
+                if (j == i) continue;
+                float sign = j < 0 ? -1f : 1f;
+                if (j < 0) j = ~j;
+                var keys = c.Curve.keys;
+                for (int n = 0; n < keys.Length; n++)
+                {
+                    keys[n].value *= sign;
+                    keys[n].inTangent *= sign;
+                    keys[n].outTangent *= sign;
+                }
+                var b = c.Binding;
+                m_Curves[k] = new ClipCurve
+                {
+                    Binding = new CurveBinding { Path = b.Path, Attribute = HumanClipImport.CurveNames[j], ClassId = b.ClassId },
+                    Curve = new AnimationCurve(keys) { preWrapMode = c.Curve.preWrapMode, postWrapMode = c.Curve.postWrapMode },
+                };
+                changed = true;
+            }
+            if (changed) m_Version++;
+        }
+
+        /// <summary>A humanoid body curve (RootT, RootQ): loop pose moves the body relative to the
+        /// motion instead (<see cref="HumanClipMotion.LoopBlendX"/>), not the curve's values.</summary>
+        static bool IsHumanBodyCurve(ClipCurve c)
+        {
+            if (c.Binding.ClassId != AnimatorClassId) return false;
+            int i = HumanClipImport.CurveIndex(c.Binding.Attribute);
+            return i >= HumanClipImport.RootFirst && i < HumanClipImport.GoalFirst;
+        }
+
+        /// <summary>Converts a Humanoid model's transform curves into muscle curves (once).</summary>
+        void ConvertHumanCurves()
         {
             if (m_HumanConverted || m_HumanAvatar == null) return;
             m_HumanConverted = true;

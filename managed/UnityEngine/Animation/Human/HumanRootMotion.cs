@@ -31,6 +31,18 @@ namespace Unbound.Runtime.Humanoid
         /// the default settings).</summary>
         public F4 OrientationReference = F4.QIdentity;
 
+        /// <summary>What a part baked into the pose keeps: the start's body position (the lowest foot's
+        /// height with the root position Y based upon the feet) and yaw.</summary>
+        public F4 BakedT, BakedQ = F4.QIdentity;
+
+        /// <summary>The root position Y is based upon the feet: the motion's height is the lowest foot
+        /// goal's (measured, tests/projects/humanoid).</summary>
+        public bool HeightFromFeet;
+
+        /// <summary>Loop pose: the body relative to the motion at the stop, inverted, times the
+        /// start's; a cycle's body is moved by its fraction of it (identity without loop pose).</summary>
+        public Trs LoopBlendX = Trs.Identity;
+
         /// <summary>The motion at the start and at the stop (see <see cref="HumanRootMotion.MotionX"/>);
         /// a loop's cycle moves the motion by MotionStopX · MotionStartX⁻¹.</summary>
         public Trs MotionStartX, MotionStopX;
@@ -57,12 +69,10 @@ namespace Unbound.Runtime.Humanoid
         /// <param name="present">Per curve index, whether the clip has the curve.</param>
         /// <param name="start">The clip's start time (AnimationClipSettings.startTime, the clip's range).</param>
         /// <param name="stop">The clip's stop time.</param>
-        /// <param name="settings">The clip's settings; only the defaults are supported (loop time on or
-        /// off).</param>
+        /// <param name="settings">The clip's settings.</param>
         public static HumanClipMotion Build(Action<float, float[]> sample, bool[] present, float start, float stop,
             in HumanClipSettings settings)
         {
-            settings.RequireDefaultPlayback();
             for (int c = 0; c < HumanClipImport.RootFirst; c++)
                 if (present[c])
                     throw new NotSupportedException("humanoid clips with motion curves (a root motion node) are not supported");
@@ -70,17 +80,33 @@ namespace Unbound.Runtime.Humanoid
             for (int c = HumanClipImport.RootFirst; c < HumanClipImport.GoalFirst; c++) m.HasRootCurves |= present[c];
             var values = new float[HumanClipImport.CurveCount];
 
+            m.HeightFromFeet = settings.HeightFromFeet && !settings.KeepOriginalPositionY;
             sample(start, values);
             m.StartRootX = HumanRootMotion.ReadRoot(values, present);
+            float startFeet = HumanRootMotion.FeetY(values, present, m.StartRootX);
             sample(stop, values);
             m.StopRootX = HumanRootMotion.ReadRoot(values, present);
+            float stopFeet = HumanRootMotion.FeetY(values, present, m.StopRootX);
 
-            // The defaults: no XZ offset, the Y offset brings the start's body height to the level.
+            // Based upon the original: the motion starts at the origin (XZ, Y) or facing forward
+            // (rotation) and follows the body from there; otherwise it is the body's (center of
+            // mass) position and yaw. The offsets add the level and turn the yaw.
+            var startX = m.StartRootX;
             float level = settings.Level;
-            m.Offset = new F4(0f, settings.KeepOriginalPositionY ? level - m.StartRootX.t.y : level, 0f, 0f);
-            m.OrientationReference = F4.QIdentity;
-            m.MotionStartX = HumanRootMotion.MotionX(m, m.StartRootX.t, m.StartRootX.q);
-            m.MotionStopX = HumanRootMotion.MotionX(m, m.StopRootX.t, m.StopRootX.q);
+            m.Offset = new F4(settings.KeepOriginalPositionXZ ? -startX.t.x : 0f, settings.KeepOriginalPositionY ? level - startX.t.y : level,
+                settings.KeepOriginalPositionXZ ? -startX.t.z : 0f, 0f);
+            float half = settings.OrientationOffsetY * (MathF.PI / 360f);
+            m.OrientationReference = new F4(0f, MathF.Sin(half), 0f, MathF.Cos(half));
+            if (settings.KeepOriginalOrientation) m.OrientationReference = M.QNormalize(M.QMul(m.OrientationReference, M.QConj(HumanRootMotion.Yaw(startX.q))));
+            // Bake into pose: the motion keeps the start's value of that part.
+            m.BakedT = new F4(startX.t.x, m.HeightFromFeet ? startFeet : startX.t.y, startX.t.z, 0f);
+            m.BakedQ = HumanRootMotion.Yaw(startX.q);
+            m.MotionStartX = HumanRootMotion.MotionX(m, m.StartRootX.t, m.StartRootX.q, startFeet);
+            m.MotionStopX = HumanRootMotion.MotionX(m, m.StopRootX.t, m.StopRootX.q, stopFeet);
+            // Loop pose: the body relative to the motion moves by the stop-to-start difference
+            // over the cycle, so that the stop's body is the start's.
+            if (settings.LoopBlend && settings.LoopTime)
+                m.LoopBlendX = M.InvMul(M.InvMul(m.MotionStopX, m.StopRootX), M.InvMul(m.MotionStartX, m.StartRootX));
 
             m.ComputeAverageSpeed(sample, present, values);
             return m;
@@ -102,7 +128,7 @@ namespace Unbound.Runtime.Humanoid
                     sample(time, values);
                     var root = HumanRootMotion.ReadRoot(values, present);
                     var p = root.t;
-                    var q = M.QNormalize(M.QMul(OrientationReference, HumanRootMotion.Yaw(root.q)));
+                    var q = M.QNormalize(M.QMul(OrientationReference, Settings.LoopBlendOrientation ? BakedQ : HumanRootMotion.Yaw(root.q)));
                     if (i != 0)
                     {
                         var c = M.QConj(prevQ);
@@ -247,13 +273,24 @@ namespace Unbound.Runtime.Humanoid
             return HumanClipImport.NormalizeCurveQ(new F4(p.x * 0f, p.y, p.z * 0f, p.w));
         }
 
-        /// <summary>The motion of a body: its position plus the clip's offset, its yaw turned by the
-        /// clip's orientation reference, scale 1.</summary>
-        public static Trs MotionX(HumanClipMotion clip, F4 t, F4 q)
+        /// <summary>The height of a clip's lowest foot goal (clip space) for the body <paramref name="root"/>.</summary>
+        public static float FeetY(float[] v, bool[] present, in Trs root) =>
+            MathF.Min(M.Mul(root, ReadGoal(v, present, 0)).t.y, M.Mul(root, ReadGoal(v, present, 1)).t.y);
+
+        /// <summary>The motion of a body: its position (with the root position Y based upon the feet,
+        /// the lowest foot's height <paramref name="feetY"/>) plus the clip's offset, its yaw turned
+        /// by the clip's orientation reference, scale 1; the parts baked into the pose keep the
+        /// start's value (measured, tests/projects/humanoid).</summary>
+        public static Trs MotionX(HumanClipMotion clip, F4 t, F4 q, float feetY = 0f)
         {
             var o = clip.Offset;
+            ref readonly var s = ref clip.Settings;
+            var b = clip.BakedT;
+            if (clip.HeightFromFeet) t.y = feetY;
+            if (s.LoopBlendPositionXZ) { t.x = b.x; t.z = b.z; }
+            if (s.LoopBlendPositionY) t.y = b.y;
             return new Trs(new F4(t.x + o.x, t.y + o.y, t.z + o.z, t.w + 0f),
-                M.QNormalize(M.QMul(clip.OrientationReference, Yaw(q))), F4.One3);
+                M.QNormalize(M.QMul(clip.OrientationReference, s.LoopBlendOrientation ? clip.BakedQ : Yaw(q))), F4.One3);
         }
 
         /// <summary>The clip time a normalized state time samples and the loop cycle it is in: a
@@ -330,19 +367,19 @@ namespace Unbound.Runtime.Humanoid
             if (!clip.HasRootCurves) return;
             result.HasMotion = true;
 
-            ClipTime(clip, input.Time, input.Speed, input.CycleOffset, out float cycle);
-            ClipTime(clip, input.PreviousTime, input.Speed, input.CycleOffset, out float prevCycle);
+            float curTime = ClipTime(clip, input.Time, input.Speed, input.CycleOffset, out float cycle);
+            float prevTime = ClipTime(clip, input.PreviousTime, input.Speed, input.CycleOffset, out float prevCycle);
 
             var cur = ReadRoot(current, present);
             var prev = ReadRoot(previous, present);
-            var curX = MotionX(clip, cur.t, cur.q);
-            var prevX = MotionX(clip, prev.t, prev.q);
+            var curX = MotionX(clip, cur.t, cur.q, clip.HeightFromFeet ? FeetY(current, present, cur) : 0f);
+            var prevX = MotionX(clip, prev.t, prev.q, clip.HeightFromFeet ? FeetY(previous, present, prev) : 0f);
 
             // The body relative to the motion.
             var curConj = M.QConj(curX.q);
-            var body = new Trs(M.QRotate(curConj, cur.t - curX.t), M.QMul(curConj, cur.q), F4.One3);
+            var body = LoopBlend(clip, new Trs(M.QRotate(curConj, cur.t - curX.t), M.QMul(curConj, cur.q), F4.One3), curTime);
             var prevConj = M.QConj(prevX.q);
-            var prevBody = new Trs(M.QRotate(prevConj, prev.t - prevX.t), M.QMul(prevConj, prev.q), F4.One3);
+            var prevBody = LoopBlend(clip, new Trs(M.QRotate(prevConj, prev.t - prevX.t), M.QMul(prevConj, prev.q), F4.One3), prevTime);
 
             // The step: the previous motion to the current one, across the cycles a loop wrapped.
             F4 dt = F4.Zero, dq = F4.QIdentity;
@@ -377,6 +414,21 @@ namespace Unbound.Runtime.Humanoid
                 result.LeftFootSlip = Slip(delta, result.LeftFoot, M.Mul(prevBody, ReadGoal(previous, present, 0)));
                 result.RightFootSlip = Slip(delta, result.RightFoot, M.Mul(prevBody, ReadGoal(previous, present, 1)));
             }
+        }
+
+        /// <summary>A body relative to the motion at a clip time with the clip's loop pose (with loop
+        /// time, as generic loop pose): moved by
+        /// the time's fraction of the cycle of <see cref="HumanClipMotion.LoopBlendX"/> in its own
+        /// frame, body · (u t, normalize(u q.xyz, q.w)) as generic loop pose turns rotations
+        /// (measured, tests/projects/humanoid).</summary>
+        static Trs LoopBlend(HumanClipMotion clip, in Trs body, float time)
+        {
+            if (!clip.Settings.LoopBlend || !clip.LoopTime || !(clip.StopTime > clip.StartTime)) return body;
+            float u = (time - clip.StartTime) / (clip.StopTime - clip.StartTime);
+            var d = clip.LoopBlendX;
+            var q = d.q;
+            var part = new Trs(d.t * u, M.QNormalize(new F4(q.x * u, q.y * u, q.z * u, q.w)), F4.One3);
+            return M.Mul(body, part);
         }
 
         /// <summary>The root motion of several clip evaluations blended by weight (the states of a

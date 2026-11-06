@@ -100,7 +100,7 @@ namespace Unbound.Runtime.Humanoid
             if (motion.LoopTime && cycle != 0f && motion.HasRootCurves)
             {
                 // A looping clip's body goes on with its motion across whole cycles.
-                var x = HumanRootMotion.MotionX(motion, body.t, body.q);
+                var x = HumanRootMotion.MotionX(motion, body.t, body.q, motion.HeightFromFeet ? HumanRootMotion.FeetY(m_Current, clip.HumanPresent, body) : 0f);
                 body = M.Mul(HumanRootMotion.CycleX(x, motion.MotionStartX, motion.MotionStopX, (int)cycle), M.InvMul(x, body));
             }
             bool referenced = clip.m_HasAdditiveReferencePose && clip.m_AdditiveReferencePoseClip != null;

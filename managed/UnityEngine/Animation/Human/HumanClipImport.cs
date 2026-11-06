@@ -5,7 +5,7 @@ namespace Unbound.Runtime.Humanoid
     /// <summary>The settings of a humanoid clip import. The model importer's muscle conversion only
     /// depends on the oversampling, the root motion node, the clip's range in its take and the body
     /// mask; the root transform settings (keep original, bake into pose, offsets, mirror, loop blend)
-    /// are stored in the clip and only change how it is played (see <see cref="RequireDefaultPlayback"/>).</summary>
+    /// are stored in the clip and only change how it is played (see <see cref="HumanClipMotion.Build"/>).</summary>
     internal struct HumanClipSettings
     {
         /// <summary>ModelImporter.humanoidOversampling (1, 2, 4 or 8).</summary>
@@ -36,24 +36,6 @@ namespace Unbound.Runtime.Humanoid
                 throw new NotSupportedException("humanoid clips that are only a part of their take (firstFrame/lastFrame) are not supported");
             if (MasksBodyParts)
                 throw new NotSupportedException("humanoid clips with a body mask that leaves out body parts are not supported");
-        }
-
-        /// <summary>Throws unless the root transform settings are the defaults, the only ones whose
-        /// playback is reproduced.</summary>
-        public void RequireDefaultPlayback()
-        {
-            string what = null;
-            if (LoopBlend || LoopBlendOrientation || LoopBlendPositionY || LoopBlendPositionXZ) what = "loop pose / bake into pose";
-            else if (KeepOriginalOrientation) what = "root rotation based upon the original";
-            else if (!KeepOriginalPositionY) what = "root position Y based upon the center of mass";
-            else if (KeepOriginalPositionXZ) what = "root position XZ based upon the original";
-            else if (HeightFromFeet) what = "root position Y based upon the feet";
-            else if (Mirror) what = "mirror";
-            else if (OrientationOffsetY != 0f) what = "root rotation offset";
-            else if (Level != 0f) what = "root position Y offset";
-            else if (CycleOffset != 0f) what = "cycle offset";
-            if (what != null)
-                throw new NotSupportedException($"humanoid clip setting '{what}' is not supported");
         }
     }
 
@@ -156,6 +138,33 @@ namespace Unbound.Runtime.Humanoid
 
         /// <summary>The curve index of an attribute name (−1 when it is not a muscle curve).</summary>
         public static int CurveIndex(string attribute) => Array.IndexOf(CurveNames, attribute);
+
+        /// <summary>Per curve index, the curve a mirrored clip plays it on, negated when the index is
+        /// complemented (~j): the left and right goals, muscles and fingers swap, the x of positions
+        /// and the y and z of rotations flip, and so do the body's Left-Right muscles (measured,
+        /// tests/projects/humanoid; translation DoF are not mirrored).</summary>
+        public static readonly int[] MirrorCurve = BuildMirror();
+
+        static int[] BuildMirror()
+        {
+            var m = new int[CurveCount];
+            for (int i = 0; i < CurveCount; i++)
+            {
+                int j = i, c = i < GoalFirst ? i % 7 : (i - GoalFirst) % 7;
+                bool negate = i < MuscleFirst && (c == 0 || c == 4 || c == 5);
+                if (i >= GoalFirst && i < MuscleFirst) j = GoalFirst + 7 * (((i - GoalFirst) / 7) ^ 1) + c;
+                else if (i >= MuscleFirst && i < LeftHandFirst)
+                {
+                    string n = CurveNames[i];
+                    if (n.StartsWith("Left ", StringComparison.Ordinal)) j = CurveIndex("Right " + n.Substring(5));
+                    else if (n.StartsWith("Right ", StringComparison.Ordinal)) j = CurveIndex("Left " + n.Substring(6));
+                    else negate = n.Contains("Left-Right");
+                }
+                else if (i >= LeftHandFirst && i < TDoFFirst) j = i < RightHandFirst ? i + 20 : i - 20;
+                m[i] = negate ? ~j : j;
+            }
+            return m;
+        }
 
         /// <summary>Per bone (<see cref="BodyBoneNames"/> order): its AvatarMaskBodyPart (Body 1,
         /// Head 2, LeftLeg 3, RightLeg 4, LeftArm 5, RightArm 6).</summary>

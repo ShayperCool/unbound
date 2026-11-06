@@ -136,7 +136,7 @@ namespace UnityEngine
                 for (int i = 0; i < m_Curves.Count; i++)
                 {
                     m_LoopStart[i] = m_Curves[i].Evaluate(StartTime);
-                    m_LoopStop[i] = m_Curves[i].Evaluate(StartTime + length);
+                    m_LoopStop[i] = IsHumanBodyCurve(m_Curves[i]) ? m_LoopStart[i] : m_Curves[i].Evaluate(StartTime + length);
                 }
                 m_LoopVersion = m_Version;
             }
