@@ -473,7 +473,8 @@ pub enum OutputKind {
 }
 
 /// The scalar each color location a compiled fragment program writes holds (see
-/// [`fragment_outputs`]); location 0 as floats where the entry's result cannot be read.
+/// [`fragment_outputs`]); location 0 as floats where the entry's result cannot be read, none for
+/// an entry that writes only builtins.
 pub fn fragment_output_kinds(wgsl: &str) -> [Option<OutputKind>; 8] {
     let kind = |ty: &str| {
         Some(if ty.contains("i32") {
@@ -505,8 +506,9 @@ pub fn fragment_output_kinds(wgsl: &str) -> [Option<OutputKind>; 8] {
         kinds[0] = kind(single);
         return kinds;
     }
+    // A single builtin output (`frag_depth`): no colors.
     if result.starts_with('@') {
-        return fallback;
+        return kinds;
     }
     let name = result
         .split(|c: char| !(c.is_alphanumeric() || c == '_'))
@@ -528,11 +530,7 @@ pub fn fragment_output_kinds(wgsl: &str) -> [Option<OutputKind>; 8] {
             kinds[n] = kind(ty.split(':').nth(1).unwrap_or(ty));
         }
     }
-    if kinds.iter().all(Option::is_none) {
-        fallback
-    } else {
-        kinds
-    }
+    kinds
 }
 
 /// Whether a target format takes outputs of a scalar kind (integer formats integers of their
@@ -566,6 +564,8 @@ mod tests {
             super::fragment_output_kinds("@fragment fn f() -> @location(0) vec4<u32> {}")[0],
             Some(K::Uint)
         );
+        let depth = "@fragment fn f() -> @builtin(frag_depth) f32 {}";
+        assert_eq!(super::fragment_output_kinds(depth), [None; 8]);
         assert!(super::takes_output(wgpu::TextureFormat::R8Sint, K::Sint));
         assert!(!super::takes_output(wgpu::TextureFormat::R8Sint, K::Float));
         assert!(!super::takes_output(

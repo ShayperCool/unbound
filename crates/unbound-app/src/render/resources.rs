@@ -462,7 +462,7 @@ pub struct NormFormatCaps {
     pub rg16: Option<wgpu::TextureFormatFeatures>,
     pub rgba16: Option<wgpu::TextureFormatFeatures>,
     pub rgb10a2: Option<wgpu::TextureFormatFeatures>,
-    /// The [`INTEGER_FORMATS`] kernels may write (bit `i` for the `i`th).
+    /// The [`INTEGER_FORMATS`] kernels may read and write (bit `i` for the `i`th).
     pub integer_storage: u32,
 }
 
@@ -573,8 +573,10 @@ impl NormFormatCaps {
                     let f = features(**f);
                     f.allowed_usages
                         .contains(wgpu::TextureUsages::STORAGE_BINDING)
-                        && f.flags
-                            .contains(wgpu::TextureFormatFeatureFlags::STORAGE_WRITE_ONLY)
+                        && f.flags.contains(
+                            wgpu::TextureFormatFeatureFlags::STORAGE_WRITE_ONLY
+                                | wgpu::TextureFormatFeatureFlags::STORAGE_READ_WRITE,
+                        )
                 })
                 .fold(0, |bits, (i, _)| bits | 1 << i),
         }
@@ -730,7 +732,7 @@ pub fn texture_storage(
                     format: wide,
                     bytes_per_pixel: 16,
                     fallback: Some(FormatFallback::Unsupported(format!(
-                        "this device cannot let kernels write {format:?}: kept as {wide:?}"
+                        "this device cannot let kernels read and write {format:?}: kept as {wide:?}"
                     ))),
                 }
             }

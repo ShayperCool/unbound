@@ -365,7 +365,7 @@ namespace UnityEngine
                 Debug.LogError($"Unbound: ReadPixels cannot read the integer render texture '{active.name}' ({active.graphicsFormat}); the texture is left unchanged.");
                 return;
             }
-            var bytes =Native.ReadPixels(active != null ? active.EnsureCreated() : 0, x0, y0, w, h, true);
+            var bytes = Native.ReadPixels(active != null ? active.EnsureCreated() : 0, x0, y0, w, h, true);
             if (bytes == null)
             {
                 Debug.LogWarning("Unbound: Texture2D.ReadPixels has no GPU to read from (headless run); the texture is left unchanged.");

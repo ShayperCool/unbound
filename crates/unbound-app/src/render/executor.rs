@@ -2237,6 +2237,13 @@ impl UnityRenderer {
                         && viewport[1] <= 0.0
                         && viewport[0] + viewport[2] >= target.width as f32
                         && viewport[1] + viewport[3] >= target.height as f32;
+                    // Integer targets are cleared by a pass's load (the clear pipeline writes
+                    // floats): a whole-target clear after draws starts a pass of its own.
+                    let integer = resources::is_integer(target.format);
+                    if full && integer && !last_pass(&mut passes).items.is_empty() {
+                        let pass = self.new_pass(target.clone());
+                        passes.push(Op::Pass(pass));
+                    }
                     let pass = last_pass(&mut passes);
                     if full && pass.items.is_empty() {
                         if clear_color {
@@ -2250,9 +2257,9 @@ impl UnityRenderer {
                         if clear_depth {
                             pass.depth_clear = Some((depth, stencil));
                         }
-                    } else if clear_color && resources::is_integer(target.format) {
+                    } else if integer && (clear_color || clear_depth) {
                         self.warn_once(format!("int-clear{:?}", target.format), || {
-                            format!("a clear of part of an integer target ({:?}) is not supported: skipped", target.format)
+                            format!("a clear of part of an integer target ({:?}, viewport {viewport:?}) is not supported: its color and depth are left as they are", target.format)
                         });
                     } else if clear_color || clear_depth {
                         let pipeline = self.pipelines.clear(

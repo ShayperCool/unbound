@@ -691,8 +691,8 @@ mod tests {
         assert_eq!(offset_of!(MeshPacket, uv), 40);
     }
 
-    /// The normalized 16-bit and 10-10-10-2 codes extend the table by value: the packet keeps
-    /// its layout, and codes past the table are rejected.
+    /// The normalized 16-bit, 10-10-10-2 and integer codes extend the table by value: the packet
+    /// keeps its layout, and codes past the table are rejected.
     #[test]
     fn texture_format_codes() {
         use texture_format::*;
@@ -700,10 +700,13 @@ mod tests {
             (RG16_UNORM, RGBA16_UNORM, RGB10A2_UNORM, R16_UNORM),
             (13, 14, 15, 16)
         );
-        for code in 0..=16 {
+        for code in 0..=INTEGER_LAST {
             assert_eq!(validate(code), Ok(code));
         }
-        for code in [-1, 17, 18, i32::MAX, i32::MIN] {
+        // The integer codes follow the normalized ones, without upload data.
+        assert_eq!((integer(1, 8, false), integer(4, 32, true)), (17, 34));
+        assert!((INTEGER_FIRST..=INTEGER_LAST).all(|c| !float_data(c)));
+        for code in [-1, 35, 36, i32::MAX, i32::MIN] {
             assert!(validate(code).is_err(), "{code} is accepted");
         }
         for code in [RG16_UNORM, RGBA16_UNORM, RGB10A2_UNORM, R16_UNORM] {
