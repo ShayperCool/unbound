@@ -210,7 +210,7 @@ public class HumanoidProbe : MonoBehaviour
 
     /// <summary>Plays a controller on a fresh instance of a rig: Update(0), then 24 steps of 1/30 s
     /// and four of 0.1 s.</summary>
-    static void Play(string key, string rig, string controller, Action<Animator> setup = null)
+    static void Play(string key, string rig, string controller, Action<Animator> setup = null, bool motion = false)
     {
         var instance = Instantiate(Resources.Load<GameObject>(rig));
         var animator = instance.GetComponent<Animator>();
@@ -222,10 +222,28 @@ public class HumanoidProbe : MonoBehaviour
             s_IKKey = key + ".step" + step;
             animator.Update(step == 0 ? 0f : step <= 24 ? 1f / 30f : 0.1f);
             Step(key + ".step" + step, animator, handler);
+            if (motion) Motion(key + ".step" + step, animator);
         }
         s_IKKey = null;
         handler.Dispose();
         Destroy(instance);
+    }
+
+    /// <summary>The Animator's root motion of a step and the states and clips that made it.</summary>
+    static void Motion(string key, Animator animator)
+    {
+        Put(key + ".motion", "{\"deltaPosition\":" + V(animator.deltaPosition) + ",\"deltaRotation\":" + Q(animator.deltaRotation)
+            + ",\"velocity\":" + V(animator.velocity) + ",\"angularVelocity\":" + V(animator.angularVelocity) + "}");
+        var states = new List<string>();
+        for (int layer = 0; layer < animator.layerCount; layer++)
+        {
+            var info = animator.GetCurrentAnimatorStateInfo(layer);
+            var clips = animator.GetCurrentAnimatorClipInfo(layer);
+            var weights = new List<string>();
+            foreach (var clip in clips) weights.Add(F(clip.weight));
+            states.Add("[" + F(info.normalizedTime) + "," + B(animator.IsInTransition(layer)) + ",[" + string.Join(",", weights) + "]]");
+        }
+        Put(key + ".states", "[" + string.Join(",", states) + "]");
     }
 
     internal static string s_IKKey;
@@ -249,6 +267,11 @@ public class HumanoidProbe : MonoBehaviour
             Play("retargetBA", "HumanA", "HumanB");
             Play("ik", "HumanA", "HumanAIK", animator => animator.gameObject.AddComponent<HumanoidIK>());
             Play("ikB", "HumanB", "HumanAIK", animator => animator.gameObject.AddComponent<HumanoidIK>());
+            Play("blendTransition", "HumanA", "HumanBlendTransition", motion: true);
+            Play("blendOverride", "HumanA", "HumanBlendOverride", motion: true);
+            Play("blendAdditive", "HumanA", "HumanBlendAdditive", motion: true);
+            Play("blendTree", "HumanA", "HumanBlendTree", motion: true);
+            Play("blendTreeB", "HumanB", "HumanBlendTree", motion: true);
         }
         catch (Exception e)
         {

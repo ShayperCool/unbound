@@ -51,6 +51,7 @@ public static class ProbeRunner
                     EditorUtility.SetDirty(ik);
                 }
             }
+            Blends();
             AssetDatabase.SaveAssets();
         }
         catch (System.Exception e)
@@ -59,6 +60,68 @@ public static class ProbeRunner
             code = 1;
         }
         EditorApplication.Exit(code);
+    }
+
+    static AnimationClip ClipOf(string name) =>
+        AssetDatabase.LoadAllAssetsAtPath(Dir + name + ".fbx").OfType<AnimationClip>().First(c => !c.name.StartsWith("__preview__"));
+
+    /// <summary>The blended root motion controllers, HumanA's clip (A) and HumanB's (B):
+    /// HumanBlendTransition (A, then B after an exit time of 0.25 over 0.3 s), HumanBlendOverride
+    /// (A, B on an override layer of weight 0.5), HumanBlendAdditive (A, B on an additive layer of
+    /// weight 0.6) and HumanBlendTree (a 1D blend tree of A at 0 and B at 1, blend 0.35).</summary>
+    static void Blends()
+    {
+        var a = ClipOf("HumanA");
+        var b = ClipOf("HumanB");
+        AnimatorController Make(string name)
+        {
+            var path = Dir + name + ".controller";
+            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(path) != null) return null;
+            return AnimatorController.CreateAnimatorControllerAtPath(path);
+        }
+        var transition = Make("HumanBlendTransition");
+        if (transition != null)
+        {
+            var machine = transition.layers[0].stateMachine;
+            var first = machine.AddState("A");
+            first.motion = a;
+            var second = machine.AddState("B");
+            second.motion = b;
+            machine.defaultState = first;
+            var t = first.AddTransition(second);
+            t.hasExitTime = true;
+            t.exitTime = 0.25f;
+            t.hasFixedDuration = true;
+            t.duration = 0.3f;
+            EditorUtility.SetDirty(transition);
+        }
+        foreach (var (name, mode, weight) in new[] { ("HumanBlendOverride", AnimatorLayerBlendingMode.Override, 0.5f),
+                     ("HumanBlendAdditive", AnimatorLayerBlendingMode.Additive, 0.6f) })
+        {
+            var controller = Make(name);
+            if (controller == null) continue;
+            controller.layers[0].stateMachine.AddState("A").motion = a;
+            controller.AddLayer("B");
+            var layers = controller.layers;
+            layers[1].blendingMode = mode;
+            layers[1].defaultWeight = weight;
+            controller.layers = layers;
+            controller.layers[1].stateMachine.AddState("B").motion = b;
+            EditorUtility.SetDirty(controller);
+        }
+        var tree = Make("HumanBlendTree");
+        if (tree != null)
+        {
+            tree.AddParameter("Blend", AnimatorControllerParameterType.Float);
+            var parameters = tree.parameters;
+            parameters[0].defaultFloat = 0.35f;
+            tree.parameters = parameters;
+            var state = tree.CreateBlendTreeInController("Tree", out var blend, 0);
+            blend.blendParameter = "Blend";
+            blend.AddChild(a, 0f);
+            blend.AddChild(b, 1f);
+            EditorUtility.SetDirty(tree);
+        }
     }
 
     public static void Record()
