@@ -307,13 +307,15 @@ namespace Unbound.Runtime.Playables
         bool[] MaskChannels(AnimationEvaluation e, int layer)
         {
             var mask = layer < Masks.Count ? Masks[layer] : null;
-            if (mask == null || mask.m_Elements.Count == 0) return null;
+            if (mask == null || (mask.m_Elements.Count == 0 && !mask.MasksHumanoidParts)) return null;
             if (m_MaskCache.TryGetValue(layer, out var cached) && cached.Mask == mask && cached.Count == e.Bindings.FloatCount) return cached.Channels;
             var b = e.Bindings;
             var channels = new bool[b.FloatCount];
             var root = b.Root != null ? b.Root.transform : null;
             for (int c = 0; c < channels.Length; c++)
             {
+                // Humanoid curves follow the mask's body parts.
+                if (b.FloatOwner[c] != null && b.FloatOwner[c].HumanCurve >= 0) { channels[c] = mask.AllowsHumanCurve(b.FloatOwner[c].HumanCurve); continue; }
                 var t = b.FloatOwner[c]?.Transform;
                 if (t == null || root == null) { channels[c] = true; continue; }
                 var parts = new List<string>();

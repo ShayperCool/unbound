@@ -157,6 +157,23 @@ namespace Unbound.Runtime.Humanoid
         /// <summary>The curve index of an attribute name (−1 when it is not a muscle curve).</summary>
         public static int CurveIndex(string attribute) => Array.IndexOf(CurveNames, attribute);
 
+        /// <summary>Per bone (<see cref="BodyBoneNames"/> order): its AvatarMaskBodyPart (Body 1,
+        /// Head 2, LeftLeg 3, RightLeg 4, LeftArm 5, RightArm 6).</summary>
+        static readonly int[] BonePart = { 1, 3, 4, 3, 4, 3, 4, 1, 1, 1, 2, 2, 5, 6, 5, 6, 5, 6, 5, 6, 3, 4, 2, 2, 2 };
+
+        /// <summary>The AvatarMaskBodyPart that masks a curve (Manual 6000.0, Avatar Mask window): the
+        /// motion and body curves Root, the goals the IK parts, muscles and translation DoF their bone's
+        /// part, fingers the hand's fingers.</summary>
+        public static int BodyPart(int curve)
+        {
+            if (curve < GoalFirst) return 0;
+            if (curve < MuscleFirst) return 9 + (curve - GoalFirst) / 7;
+            if (curve < LeftHandFirst) return BonePart[MuscleBone[curve - MuscleFirst]];
+            if (curve < RightHandFirst) return 7;
+            if (curve < TDoFFirst) return 8;
+            return BonePart[TDoFBones[(curve - TDoFFirst) / 3]];
+        }
+
         // ---------------------------------------------------------------- import
 
         /// <summary>The times the importer samples a clip whose transform curves span

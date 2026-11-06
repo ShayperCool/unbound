@@ -938,8 +938,57 @@ namespace Unbound.Runtime
                 Array.Resize(ref m_WrittenHeld, Bindings.FloatCount);
             }
             PoseWriter.WriteLayers(Bindings, m_LayerPoses, count, m_Written, m_WrittenHeld, humanBodyInRootMotion: Attached);
+            if (Attached) WriteMassCenterPose(count);
             if (Attached) m_Animator.ApplyHumanPose();
             if (Attached) m_Animator.CaptureRootMotionPose();
+        }
+
+        LayerPose[] m_MassCenterLayers = Array.Empty<LayerPose>();
+        float[] m_MassCenterValues = Array.Empty<float>();
+
+        /// <summary>A humanoid Animator's mass center pose, which places the body (hips) before the
+        /// muscles of every layer apply: the layers whose avatar mask leaves out Root do not take part
+        /// (measured, tests/projects/humanoid: the hips stay where the layers below put them). Only
+        /// set when such a layer has weight; otherwise the whole pose places the body.</summary>
+        void WriteMassCenterPose(int count)
+        {
+            var human = m_Animator.Human;
+            if (human == null) return;
+            bool any = false;
+            for (int i = 1; i < count && !any; i++)
+                any = m_LayerPoses[i].Weight > 0f && !PlacesBody(i);
+            if (!any) return;
+            if (m_MassCenterLayers.Length < count) m_MassCenterLayers = new LayerPose[count];
+            int k = 0;
+            for (int i = 0; i < count; i++)
+            {
+                if (i > 0 && !PlacesBody(i)) continue;
+                var layer = m_LayerPoses[i];
+                // Combined again without recording the layers' own values.
+                layer.Last = null;
+                layer.Held = null;
+                m_MassCenterLayers[k++] = layer;
+            }
+            int n = Bindings.FloatCount;
+            if (m_MassCenterValues.Length < n) m_MassCenterValues = new float[n];
+            for (int c = 0; c < n; c++)
+            {
+                var owner = Bindings.FloatOwner[c];
+                m_MassCenterValues[c] = owner != null && owner.HumanCurve >= 0 ? human.Value(owner.HumanCurve) : 0f;
+            }
+            PoseWriter.CombineLayers(Bindings, m_MassCenterLayers, k, m_MassCenterValues, null, overDefaults: true, humanBodyInRootMotion: true);
+            for (int c = 0; c < n; c++)
+            {
+                var owner = Bindings.FloatOwner[c];
+                if (owner != null && owner.HumanCurve >= 0 && owner.First == c) human.SetMassCenter(owner.HumanCurve, m_MassCenterValues[c]);
+            }
+        }
+
+        /// <summary>Whether a layer's avatar mask lets it place the humanoid body (its Root part).</summary>
+        bool PlacesBody(int layer)
+        {
+            var mask = Layers[layer].Def.Mask;
+            return mask == null || mask.m_HumanoidParts[(int)AvatarMaskBodyPart.Root];
         }
 
         int BuildLayerPoses()
@@ -1273,7 +1322,7 @@ namespace Unbound.Runtime
         (bool[], bool[]) LayerMask(int index)
         {
             var mask = Layers[index].Def.Mask;
-            if (mask == null || mask.m_Elements.Count == 0) return (null, null);
+            if (mask == null || (mask.m_Elements.Count == 0 && !mask.MasksHumanoidParts)) return (null, null);
             var cached = m_LayerMasks[index];
             if (cached.Floats != null && cached.FloatCount == Bindings.FloatCount && cached.Objects.Length == Bindings.ObjectCount)
                 return (cached.Floats, cached.Objects);
@@ -1287,9 +1336,11 @@ namespace Unbound.Runtime
         }
 
         /// <summary>A transform mask masks Transform properties only: other components' properties
-        /// are animated whatever the mask says about their object.</summary>
+        /// are animated whatever the mask says about their object. Humanoid curves follow the mask's
+        /// body parts.</summary>
         static bool Allowed(AvatarMask mask, Transform root, PropertyGroup group)
         {
+            if (group != null && group.HumanCurve >= 0) return mask.AllowsHumanCurve(group.HumanCurve);
             if (!(group?.Target is Transform)) return true;
             var t = group.Transform;
             if (t == null || root == null) return true;

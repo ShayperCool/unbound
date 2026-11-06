@@ -26,6 +26,9 @@ namespace Unbound.Runtime
         /// <summary>A humanoid body curve (RootT, RootQ): additive layers leave it to the root
         /// motion pass, which composes their body differences (<see cref="AnimatorPlayer"/>).</summary>
         internal bool HumanBody;
+        /// <summary>The humanoid curve (<see cref="Unbound.Runtime.Humanoid.HumanClipImport"/>) this
+        /// writes, −1 for other properties: layer masks filter it by its body part.</summary>
+        internal int HumanCurve = -1;
 
         /// <summary>A script whose fields this writes: it gets OnDidApplyAnimationProperties.</summary>
         internal MonoBehaviour Script;
@@ -896,6 +899,7 @@ namespace Unbound.Runtime
                             v => animator.Human.Set(human, v.x))
                         {
                             AlwaysWrite = true,
+                            HumanCurve = human,
                             HumanBody = human >= Unbound.Runtime.Humanoid.HumanClipImport.RootFirst && human < Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst,
                         });
                     }

@@ -355,13 +355,14 @@ namespace Unbound.Runtime
         /// state's previous and current times, blended by the clips' weights in each layer (the
         /// states of a transition, a blend tree's clips); override layers move it towards theirs by
         /// the layer weight, additive layers leave it (measured, tests/projects/humanoid) and compose
-        /// their body differences onto the body below instead. It becomes a delta of the root
+        /// their body differences onto the body below instead; layer masks filter both
+        /// (<see cref="Unbound.Runtime.Humanoid.HumanRootMotion.CombineLayer"/>). It becomes a delta of the root
         /// (applied like generic root motion) and places the body relative to it for the pose.
         /// False when no humanoid clip plays.</summary>
         bool HumanRootMotion(Animator animator, Unbound.Runtime.Humanoid.AnimatorHuman human)
         {
             human.ClearMotion();
-            Unbound.Runtime.Humanoid.HumanRootMotionSample blended = default, layerSample;
+            Unbound.Runtime.Humanoid.HumanRootMotionSample blended = default;
             bool any = false;
             for (int i = 0; i < Layers.Length; i++)
             {
@@ -396,39 +397,12 @@ namespace Unbound.Runtime
                     m_HumanWeights.Add(weight);
                 }
                 float layerWeight = i == 0 ? 1f : Layers[i].Evaluated;
-                if (additive)
-                {
-                    if (m_HumanBodyDifferences.Count == 0 || layerWeight <= 0f) continue;
-                    if (!any)
-                    {
-                        Unbound.Runtime.Stubs.Ignored("Animator additive humanoid body over no humanoid clip",
-                            "an additive layer's humanoid body differences over no humanoid clip below are left out (not measured)");
-                        continue;
-                    }
-                    if (Layers[i].Def.Mask != null)
-                        Unbound.Runtime.Stubs.Ignored("Animator additive humanoid body with layer masks",
-                            "a masked additive layer's humanoid body differences apply as if the layer had no mask");
-                    var difference = Unbound.Runtime.Humanoid.HumanRootMotion.AdditiveBody(
-                        System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanBodyDifferences),
-                        System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanWeights), layerWeight);
-                    Unbound.Runtime.Humanoid.HumanRootMotion.AddBody(ref blended, difference);
-                    continue;
-                }
-                if (m_HumanSamples.Count == 0 || layerWeight <= 0f) continue;
-                layerSample = Unbound.Runtime.Humanoid.HumanRootMotion.Blend(
+                var mask = Layers[i].Def.Mask;
+                Unbound.Runtime.Humanoid.HumanRootMotion.CombineLayer(ref blended, ref any,
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanSamples),
-                    System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanWeights));
-                if (Layers[i].Def.Mask != null)
-                    Unbound.Runtime.Stubs.Ignored("Animator humanoid root motion with layer masks",
-                        "a masked layer's humanoid clips move the root as if the layer had no mask");
-                if (layerWeight < 1f && layerSample.HasMotion && !(any && blended.HasMotion))
-                    Unbound.Runtime.Stubs.Ignored("Animator humanoid root motion of a partial layer over none",
-                        "a layer's humanoid root motion over no humanoid root motion below moves the root by the layer weight's share (not measured)");
-                // Skipped layers (weight 0) and no humanoid motion below keep the feet pivot as it was.
-                blended = any ? Unbound.Runtime.Humanoid.HumanRootMotion.Override(blended, layerSample, layerWeight)
-                    : layerSample.HasMotion ? Unbound.Runtime.Humanoid.HumanRootMotion.Override(Unbound.Runtime.Humanoid.HumanRootMotion.NoMotion, layerSample, layerWeight)
-                    : layerSample;
-                any = true;
+                    System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanBodyDifferences),
+                    System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanWeights), additive, layerWeight,
+                    mask != null && mask.MasksHumanoidParts ? mask.m_HumanoidParts : null);
             }
             if (!any) return false;
             human.ApplyMotion(blended, m_RootDeltaTime, out var rm);

@@ -165,5 +165,98 @@ namespace UnityEngine.Tests
             // The root motion stays.
             Assert.Equal(delta.t.z, sample.Delta.t.z);
         }
+
+        static bool[] Parts(params AvatarMaskBodyPart[] excluded)
+        {
+            var parts = new bool[(int)AvatarMaskBodyPart.LastBodyPart];
+            for (int p = 0; p < parts.Length; p++) parts[p] = Array.IndexOf(excluded, (AvatarMaskBodyPart)p) < 0;
+            return parts;
+        }
+
+        [Fact]
+        public void LayersCombineOverrideThenAdditive()
+        {
+            var below = default(HumanRootMotionSample);
+            bool any = false;
+            HumanRootMotion.CombineLayer(ref below, ref any, new[] { Sample(1f, 0f, 0f) }, ReadOnlySpan<Trs>.Empty, new[] { 1f }, false, 1f, null);
+            Assert.True(any);
+            Near(1f, below.Delta.t.z);
+            HumanRootMotion.CombineLayer(ref below, ref any, new[] { Sample(3f, 0f, 0f) }, ReadOnlySpan<Trs>.Empty, new[] { 1f }, false, 0.5f, null);
+            Near(2f, below.Delta.t.z);
+            // An additive layer composes its body difference, scaled by its weight, and leaves the motion.
+            float bodyZ = below.Body.t.z;
+            HumanRootMotion.CombineLayer(ref below, ref any, ReadOnlySpan<HumanRootMotionSample>.Empty, new[] { X(0f, 1f, 0f) },
+                new[] { 1f }, true, 0.5f, null);
+            Near(2f, below.Delta.t.z);
+            Near(bodyZ + 0.5f, below.Body.t.z);
+            // A layer of weight 0 changes nothing.
+            HumanRootMotion.CombineLayer(ref below, ref any, new[] { Sample(9f, 0f, 0f) }, ReadOnlySpan<Trs>.Empty, new[] { 1f }, false, 0f, null);
+            Near(2f, below.Delta.t.z);
+        }
+
+        [Fact]
+        public void AnAdditiveBodyOverNoHumanoidClipIsLeftOut()
+        {
+            var below = default(HumanRootMotionSample);
+            bool any = false;
+            HumanRootMotion.CombineLayer(ref below, ref any, ReadOnlySpan<HumanRootMotionSample>.Empty, new[] { X(0f, 1f, 0f) },
+                new[] { 1f }, true, 1f, null);
+            Assert.False(any);
+            Assert.False(below.HasMotion);
+        }
+
+        [Fact]
+        public void ALayerMaskWithoutRootAddsNoBodyOrMotion()
+        {
+            var below = Sample(1f, 0f, 0f);
+            bool any = true;
+            var noRoot = Parts(AvatarMaskBodyPart.Root);
+            HumanRootMotion.CombineLayer(ref below, ref any, new[] { Sample(3f, 20f, 0.5f) }, ReadOnlySpan<Trs>.Empty, new[] { 1f }, false, 0.5f, noRoot);
+            Assert.Equal(1f, below.Delta.t.z);
+            Assert.Equal(0f, below.LeftFootSlip.t.z);
+            HumanRootMotion.CombineLayer(ref below, ref any, ReadOnlySpan<HumanRootMotionSample>.Empty, new[] { X(0f, 1f, 30f) },
+                new[] { 1f }, true, 1f, noRoot);
+            Assert.Equal(0f, below.Body.t.z);
+        }
+
+        [Fact]
+        public void AnOverrideLayerMaskWithoutFootIKKeepsTheFeetBelow()
+        {
+            var below = Sample(1f, 0f, 0f);
+            bool any = true;
+            var layer = Sample(3f, 0f, 0.5f);
+            layer.LeftFoot = layer.RightFoot = X(0.3f, 1f, 0f);
+            HumanRootMotion.CombineLayer(ref below, ref any, new[] { layer }, ReadOnlySpan<Trs>.Empty, new[] { 1f }, false, 0.5f,
+                Parts(AvatarMaskBodyPart.LeftFootIK));
+            // The step blends; the left foot stays the one below, the right one blends.
+            Near(2f, below.Delta.t.z);
+            Near(0.1f, below.LeftFoot.t.x);
+            Near(0f, below.LeftFootSlip.t.z);
+            Near(0.2f, below.RightFoot.t.x);
+            Near(0.5f, below.RightFootSlip.t.z);
+        }
+
+        [Fact]
+        public void MaskBodyPartsOfHumanoidCurves()
+        {
+            int Part(string curve) => HumanClipImport.BodyPart(HumanClipImport.CurveIndex(curve));
+            Assert.Equal((int)AvatarMaskBodyPart.Root, Part("MotionT.x"));
+            Assert.Equal((int)AvatarMaskBodyPart.Root, Part("RootQ.w"));
+            Assert.Equal((int)AvatarMaskBodyPart.LeftFootIK, Part("LeftFootT.x"));
+            Assert.Equal((int)AvatarMaskBodyPart.RightHandIK, Part("RightHandQ.w"));
+            Assert.Equal((int)AvatarMaskBodyPart.Body, Part("UpperChest Twist Left-Right"));
+            Assert.Equal((int)AvatarMaskBodyPart.Head, Part("Jaw Close"));
+            Assert.Equal((int)AvatarMaskBodyPart.Head, Part("Left Eye In-Out"));
+            Assert.Equal((int)AvatarMaskBodyPart.LeftLeg, Part("Left Toes Up-Down"));
+            Assert.Equal((int)AvatarMaskBodyPart.RightLeg, Part("Right Upper Leg In-Out"));
+            Assert.Equal((int)AvatarMaskBodyPart.LeftArm, Part("Left Shoulder Down-Up"));
+            Assert.Equal((int)AvatarMaskBodyPart.RightArm, Part("Right Hand In-Out"));
+            Assert.Equal((int)AvatarMaskBodyPart.LeftFingers, Part("LeftHand.Little.3 Stretched"));
+            Assert.Equal((int)AvatarMaskBodyPart.RightFingers, Part("RightHand.Thumb.1 Stretched"));
+            Assert.Equal((int)AvatarMaskBodyPart.Body, Part("SpineTDOF.y"));
+            Assert.Equal((int)AvatarMaskBodyPart.RightArm, Part("RightHandTDOF.z"));
+            Assert.Equal((int)AvatarMaskBodyPart.LeftLeg, Part("LeftToesTDOF.x"));
+            for (int c = 0; c < HumanClipImport.CurveCount; c++) Assert.InRange(HumanClipImport.BodyPart(c), 0, 12);
+        }
     }
 }

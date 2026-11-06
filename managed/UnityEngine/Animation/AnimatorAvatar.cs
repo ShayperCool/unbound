@@ -105,6 +105,13 @@ namespace UnityEngine
             m_HumanoidParts[(int)index] = value;
         }
 
+        /// <summary>Whether a humanoid body part is left out.</summary>
+        internal bool MasksHumanoidParts => Array.IndexOf(m_HumanoidParts, false) >= 0;
+
+        /// <summary>Whether the mask lets a layer animate a humanoid curve
+        /// (<see cref="Unbound.Runtime.Humanoid.HumanClipImport.BodyPart"/>).</summary>
+        internal bool AllowsHumanCurve(int curve) => m_HumanoidParts[Unbound.Runtime.Humanoid.HumanClipImport.BodyPart(curve)];
+
         /// <summary>`m_Mask`: the body parts as hex-encoded little-endian 32-bit flags.</summary>
         internal void ReadHumanoidMask(string hex)
         {

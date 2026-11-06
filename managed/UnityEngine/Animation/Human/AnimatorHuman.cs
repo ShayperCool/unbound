@@ -47,6 +47,23 @@ namespace Unbound.Runtime.Humanoid
             m_Dirty = true;
         }
 
+        internal float Value(int curve) => m_Values[curve];
+
+        // The mass center pose's curve values (layers whose mask leaves out Root left out), when set.
+        readonly float[] m_MassCenterValues = new float[HumanClipImport.CurveCount];
+        bool m_HasMassCenter;
+
+        /// <summary>A curve value of the pose that places the body, when it differs from the
+        /// animated pose (see AnimatorPlayer.WriteMassCenterPose); kept for the next
+        /// <see cref="Apply"/>.</summary>
+        internal void SetMassCenter(int curve, float value)
+        {
+            if (!m_HasMassCenter) Array.Copy(m_Values, m_MassCenterValues, m_Values.Length);
+            m_MassCenterValues[curve] = value;
+            m_HasMassCenter = true;
+            m_Dirty = true;
+        }
+
         readonly HumanPose m_Base = new HumanPose();
 
         // The root motion of this update: the body relative to the motion, the feet pivot.
@@ -77,9 +94,15 @@ namespace Unbound.Runtime.Humanoid
         {
             if (input.Mirror)
                 throw new NotSupportedException("mirrored humanoid states are not supported");
-            float time = HumanRootMotion.ClipTime(motion, input.Time, input.Speed, input.CycleOffset, out _);
+            float time = HumanRootMotion.ClipTime(motion, input.Time, input.Speed, input.CycleOffset, out float cycle);
             clip.SampleHuman(time, m_Current);
             var body = HumanRootMotion.ReadRoot(m_Current, clip.HumanPresent);
+            if (motion.LoopTime && cycle != 0f && motion.HasRootCurves)
+            {
+                // A looping clip's body goes on with its motion across whole cycles.
+                var x = HumanRootMotion.MotionX(motion, body.t, body.q);
+                body = M.Mul(HumanRootMotion.CycleX(x, motion.MotionStartX, motion.MotionStopX, (int)cycle), M.InvMul(x, body));
+            }
             bool referenced = clip.m_HasAdditiveReferencePose && clip.m_AdditiveReferencePoseClip != null;
             var source = referenced ? clip.m_AdditiveReferencePoseClip : clip;
             float referenceTime = source.StartTime + (clip.m_HasAdditiveReferencePose ? clip.m_AdditiveReferencePoseTime : 0f);
@@ -116,7 +139,15 @@ namespace Unbound.Runtime.Humanoid
             var human = m_Constant.Human;
             HumanClipImport.PoseFromCurves(m_Values, m_Present, m_Pose);
             if (m_HasSample) HumanRootMotion.ApplyToPose(m_Pose, m_Sample);
-            HumanIK.Retarget(human, m_Base, m_Pose, true, AvatarX(), Output, m_W0, m_W1, true);
+            // The mass center pose places the body, then the animated pose's muscles apply.
+            bool massCenter = m_HasMassCenter;
+            m_HasMassCenter = false;
+            if (massCenter)
+            {
+                HumanClipImport.PoseFromCurves(m_MassCenterValues, m_Present, m_Base);
+                if (m_HasSample) HumanRootMotion.ApplyToPose(m_Base, m_Sample);
+            }
+            HumanIK.Retarget(human, m_Base, m_Pose, !massCenter, AvatarX(), Output, m_W0, m_W1, true);
             HasOutput = true;
             HumanIK.EvaluateIK(human, Output, m_W0, m_W1, m_W2, true, out _, out _);
             HumanIK.EvaluateEnd(m_Constant, AvatarX(), m_W0, m_W1, m_W2, m_AvatarPose);

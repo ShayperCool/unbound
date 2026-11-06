@@ -499,6 +499,52 @@ namespace Unbound.Runtime.Humanoid
         public static void AddBody(ref HumanRootMotionSample sample, in Trs difference) =>
             sample.Body = M.Mul(sample.Body, difference);
 
+        /// <summary>One layer of a humanoid Animator's root motion over the layers below it
+        /// (<paramref name="below"/>; <paramref name="any"/>: whether a layer below has humanoid
+        /// clips). An override layer blends its clips' <paramref name="samples"/> and moves the motion
+        /// towards them by its weight; an additive layer composes its clips' body
+        /// <paramref name="differences"/> onto the body below (<see cref="AdditiveBody"/>). With the
+        /// layer mask's humanoid <paramref name="parts"/> (AvatarMaskBodyPart order, null: all), a
+        /// layer without Root adds neither body nor motion, and an override layer without a foot IK
+        /// part keeps the feet below for the feet pivot (measured, tests/projects/humanoid).</summary>
+        public static void CombineLayer(ref HumanRootMotionSample below, ref bool any, ReadOnlySpan<HumanRootMotionSample> samples,
+            ReadOnlySpan<Trs> differences, ReadOnlySpan<float> weights, bool additive, float layerWeight, bool[] parts)
+        {
+            if (additive ? differences.Length == 0 : samples.Length == 0) return;
+            if (layerWeight <= 0f) return;
+            if (parts != null && !parts[0])
+            {
+                if (!any)
+                    Unbound.Runtime.Stubs.Ignored("Animator humanoid layer mask without Root over no humanoid clip",
+                        "a layer whose mask leaves out Root adds no body or root motion over no humanoid clip below (not measured)");
+                return;
+            }
+            if (additive)
+            {
+                if (!any)
+                {
+                    Unbound.Runtime.Stubs.Ignored("Animator additive humanoid body over no humanoid clip",
+                        "an additive layer's humanoid body differences over no humanoid clip below are left out (not measured)");
+                    return;
+                }
+                AddBody(ref below, AdditiveBody(differences, weights, layerWeight));
+                return;
+            }
+            var layer = Blend(samples, weights);
+            if (layerWeight < 1f && layer.HasMotion && !(any && below.HasMotion))
+                Unbound.Runtime.Stubs.Ignored("Animator humanoid root motion of a partial layer over none",
+                    "a layer's humanoid root motion over no humanoid root motion below moves the root by the layer weight's share (not measured)");
+            // Skipped layers (weight 0) and no humanoid motion below keep the feet pivot as it was.
+            var result = any ? Override(below, layer, layerWeight) : layer.HasMotion ? Override(NoMotion, layer, layerWeight) : layer;
+            if (any && below.HasMotion && layer.HasMotion && parts != null)
+            {
+                if (!parts[9]) { result.LeftFoot = below.LeftFoot; result.LeftFootSlip = below.LeftFootSlip; }
+                if (!parts[10]) { result.RightFoot = below.RightFoot; result.RightFootSlip = below.RightFootSlip; }
+            }
+            below = result;
+            any = true;
+        }
+
         static bool Same(F4 a, F4 b) => a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 
         static void Add(ref Trs sum, in Trs x, float w)
