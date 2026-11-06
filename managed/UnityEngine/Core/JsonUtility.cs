@@ -592,7 +592,7 @@ namespace UnityEngine
                         if (Editor) return null;
                         var id = (int)(node.Get("instanceID")?.Number ?? 0);
                         var obj = id == 0 ? null : ObjectRegistry.FindById(id);
-                        return obj != null && type.IsInstanceOfType(obj) ? obj : null;
+                        return (object)obj != null && type.IsInstanceOfType(obj) ? obj : null;
                     }
                     case Shape.Vector2: return new Vector2(F(node, "x"), F(node, "y"));
                     case Shape.Vector3: return new Vector3(F(node, "x"), F(node, "y"), F(node, "z"));

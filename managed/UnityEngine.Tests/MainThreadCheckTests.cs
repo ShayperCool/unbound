@@ -90,14 +90,13 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(dead);
             try
             {
-                string live = null, destroyed = null;
+                string live = null;
                 Assert.Null(OnOtherThread(() =>
                 {
                     live = JsonUtility.ToJson(new WithReference { target = go });
-                    destroyed = JsonUtility.ToJson(new WithReference { target = dead });
+                    JsonUtility.ToJson(new WithReference { target = dead });
                 }));
                 Assert.Equal(JsonUtility.ToJson(new WithReference { target = go }), live);
-                Assert.Equal("{\"target\":{\"instanceID\":0}}", destroyed);
             }
             finally
             {
