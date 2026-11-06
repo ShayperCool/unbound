@@ -28,15 +28,16 @@ properties that use that element. Ordinary uniform arrays keep every element. A 
 `<InstanceScalar><name>` falls back to the material after instance zero only when the compiled
 variant declares that property as instanced. NativeApi 21 and 22 refuse each other at startup.
 
-### Render protocol 10: 32-bit indices (NativeApi 21)
+### Render protocol 10: 32-bit indices (NativeApi 22)
 
 `DrawIndices` takes an index size of 2 or 4. A draw reads 32-bit indices, and an indirect draw
 (whose `DrawSetup` names an arguments buffer, `indexed` set) reads a buffer's indices with the
 arguments' first index and base vertex, only when its program reads no vertex inputs: such a
 program's pipeline binds no vertex buffer ("without a vertex buffer", the indexed
 `CommandBuffer.DrawProcedural`), so no index can fetch past one. A program that reads vertex
-inputs keeps protocol 8's limits; refused draws are skipped with a warning. A 20 side and a 21
-side refuse each other at startup.
+inputs keeps protocol 8's limits; refused draws are skipped with a warning. A 21 side and a 22
+side refuse each other at startup. NativeApi 21 carries main's audio reverb-zone frame layout;
+22 adds both render protocols 10 and 11 while preserving that layout.
 
 ### Render protocol 9: depth copies (NativeApi 19)
 

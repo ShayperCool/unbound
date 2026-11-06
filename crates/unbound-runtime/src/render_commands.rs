@@ -155,7 +155,7 @@ pub enum Command {
     },
     /// The indices the next `Draw` reads instead of its mesh's (`Graphics.RenderPrimitivesIndexed`,
     /// render protocol 8, NativeApi 17): `count` indices of `size` bytes (2; 4 from render
-    /// protocol 10, NativeApi 21) from index `first` of a buffer (its handle), drawn with base
+    /// protocol 10, NativeApi 22) from index `first` of a buffer (its handle), drawn with base
     /// vertex 0, or the draw's arguments' when indirect.
     DrawIndices {
         buffer: u64,
@@ -314,8 +314,8 @@ pub const DRAW_INDEX32_SIZE: u8 = 4;
 /// are read. The stream itself carries no version.
 const INDEXED_DRAWS: bool = crate::native_api::NATIVE_API_VERSION >= 18;
 
-/// Render protocol 10 (NativeApi 21): `DrawIndices` of 32-bit indices.
-const INDEX32_DRAWS: bool = crate::native_api::NATIVE_API_VERSION >= 21;
+/// Render protocol 10 (NativeApi 22): `DrawIndices` of 32-bit indices.
+const INDEX32_DRAWS: bool = crate::native_api::NATIVE_API_VERSION >= 22;
 
 /// Property kinds in the stream.
 mod kind {
