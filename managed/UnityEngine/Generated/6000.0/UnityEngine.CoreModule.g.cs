@@ -5612,6 +5612,8 @@ namespace UnityEngine.Rendering
     }
     unsafe partial struct GraphicsFence
     {
+        [global::Unbound.Stub] internal global::System.IntPtr m_Ptr;
+        [global::Unbound.Stub] internal int m_Version;
         [global::Unbound.Stub] internal static global::UnityEngine.Rendering.SynchronisationStageFlags TranslateSynchronizationStageToFlags(global::UnityEngine.Rendering.SynchronisationStage s) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsFence.TranslateSynchronizationStageToFlags"); return default; }
         [global::Unbound.Stub] internal void InitPostAllocation() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsFence.InitPostAllocation"); }
         [global::Unbound.Stub] internal bool IsFencePending() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.GraphicsFence.IsFencePending"); return default; }
