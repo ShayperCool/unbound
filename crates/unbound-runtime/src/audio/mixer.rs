@@ -3034,10 +3034,12 @@ mod tests {
         let twice = [component(5, filter_kind::LOWPASS, 0), component(5, filter_kind::ECHO, 0)];
         assert!(refused(&packet(1, 0, &twice)).contains("duplicate"));
         // A clipless generator plays its first script; nothing may sit above it.
-        let generator = packet(0, source_flags::FILTER, &[component(1, filter_kind::LOWPASS, 0)]);
+        // Packet pointers borrow these arrays through both decoding calls.
+        let generator_filters = [component(1, filter_kind::LOWPASS, 0)];
+        let generator = packet(0, source_flags::FILTER, &generator_filters);
         assert!(refused(&generator).contains("generator"));
-        let below = packet(0, source_flags::FILTER,
-            &[component(1, filter_kind::LOWPASS, filter_stage::AFTER_SCRIPTS)]);
+        let below_filters = [component(1, filter_kind::LOWPASS, filter_stage::AFTER_SCRIPTS)];
+        let below = packet(0, source_flags::FILTER, &below_filters);
         assert!(unsafe { SourceParams::from_packet(&below) }.filters_rejected.is_none());
         // The resource bound itself is accepted.
         let most: Vec<_> = (0..64).map(|id| component(id, filter_kind::LOWPASS, 0)).collect();
