@@ -91,11 +91,29 @@ public class CmdBuffersProbe : MonoBehaviour
             ConvertTextures();
             TemporaryArrays();
             Slices();
+            Instanced();
+            IndexedDraws();
+            ComputeParams();
         }
         catch (Exception e)
         {
             Value("fatal", Q(e.ToString()));
             code = 1;
+        }
+        // Fences span frames: run step by step, a failure recorded as fatal.
+        var fences = Fences();
+        while (code == 0)
+        {
+            bool more;
+            try { more = fences.MoveNext(); }
+            catch (Exception e)
+            {
+                Value("fatal", Q(e.ToString()));
+                code = 1;
+                break;
+            }
+            if (!more) break;
+            yield return fences.Current;
         }
         foreach (var d in disposables) d.Dispose();
         foreach (var o in made) if (o != null) DestroyImmediate(o);
@@ -222,6 +240,7 @@ public class CmdBuffersProbe : MonoBehaviour
         AppendCase("uav.append.twice", 15, b2 => { Graphics.SetRandomWriteTarget(1, b2); DrawNow(append, 15); DrawNow(append, 15); });
         AppendCase("uav.append.material", 16, b2 => { var m = Keep(new Material(append)); m.SetBuffer("_App", b2); DrawNow(m, 16); });
         AppendCase("cmd.uav.append", 17, b2 => Execute(cmd => { cmd.SetRandomWriteTarget(1, b2, false); DrawCmd(cmd, append, 17); }));
+        AppendCase("cmd.uav.append.reset", 30, b2 => { b2.SetCounterValue(5); Execute(cmd => { cmd.SetRandomWriteTarget(1, b2, false); DrawCmd(cmd, append, 30); }); });
         AppendCase("cmd.uav.append.preserve", 18, b2 => { b2.SetCounterValue(3); Execute(cmd => { cmd.SetRandomWriteTarget(1, b2, true); DrawCmd(cmd, append, 18); }); });
 
         // A texture set at an index takes the place of a buffer there.
@@ -230,6 +249,12 @@ public class CmdBuffersProbe : MonoBehaviour
         rwTexture.Create();
         Try("uav.texturereplaces", () => { Graphics.SetRandomWriteTarget(1, t1); Graphics.SetRandomWriteTarget(1, rwTexture); DrawNow(plain, 19); Graphics.ClearRandomWriteTargets(); });
         Value("uav.texturereplaces", Words(t1));
+
+        // An Append program without a buffer of the name, and with a buffer that has no counter.
+        Try("uav.append.unset", () => DrawNow(Keep(new Material(append)), 31));
+        var noCounter = Fresh(48);
+        Try("uav.append.nocounter", () => { Graphics.SetRandomWriteTarget(1, noCounter); DrawNow(append, 32); Graphics.ClearRandomWriteTargets(); });
+        { var w = new uint[48]; noCounter.GetData(w); Value("uav.append.nocounter", U(w.OrderBy(v => v))); }
 
         // Arguments.
         var x = Fresh();
@@ -315,6 +340,13 @@ public class CmdBuffersProbe : MonoBehaviour
         Value("cmd.uav.block.block", Words(p));
         Value("cmd.uav.block.target", Words(q));
 
+        // A texture set at the index in the buffer takes the place of a buffer there.
+        var t1 = Fresh();
+        var rwTexture = Keep(new RenderTexture(4, 4, 0, RenderTextureFormat.ARGB32) { enableRandomWrite = true });
+        rwTexture.Create();
+        Try("cmd.uav.texturereplaces", () => Execute(cmd => { cmd.SetRandomWriteTarget(1, t1); cmd.SetRandomWriteTarget(1, rwTexture); DrawCmd(cmd, plain, 29); cmd.ClearRandomWriteTargets(); }));
+        Value("cmd.uav.texturereplaces", Words(t1));
+
         var x = Fresh();
         Try("cmd.uav.arg.negative", () => Execute(cmd => { cmd.SetRandomWriteTarget(-1, x); cmd.ClearRandomWriteTargets(); }));
         Try("cmd.uav.arg.index8", () => Execute(cmd => { cmd.SetRandomWriteTarget(8, x); cmd.ClearRandomWriteTargets(); }));
@@ -327,6 +359,290 @@ public class CmdBuffersProbe : MonoBehaviour
         random.Create();
         Try("cmd.uav.arg.randomtexture", () => Execute(cmd => { cmd.SetRandomWriteTarget(1, random); cmd.ClearRandomWriteTargets(); }));
         Try("cmd.uav.arg.builtin", () => Execute(cmd => { cmd.SetRandomWriteTarget(1, BuiltinRenderTextureType.CameraTarget); cmd.ClearRandomWriteTargets(); }));
+    }
+
+    // ------------------------------------------------------------ DrawMeshInstanced
+
+    static Vector4 Rgb(int r, int g, int b) => new Vector4(r / 255f, g / 255f, b / 255f, 1);
+
+    void Instanced()
+    {
+        var strip = Keep(new RenderTexture(8, 2, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear));
+        strip.Create();
+        var quad = Keep(new Mesh());
+        quad.vertices = new[] { new Vector3(0, 0, 0), new Vector3(1, 0, 0), new Vector3(1, 1, 0), new Vector3(0, 1, 0) };
+        quad.triangles = new[] { 0, 1, 2, 0, 2, 3 };
+        var m = Keep(new Material(Resources.Load<Shader>("Instanced")) { enableInstancing = true });
+        m.SetVector("_Color", Rgb(255, 20, 40));
+        // Instance i covers the strip's pixel columns 2i and 2i+1 (identity view and projection).
+        var mats = Enumerable.Range(0, 4).Select(i => Matrix4x4.TRS(new Vector3(-1 + 0.5f * i, -1, 0), Quaternion.identity, new Vector3(0.5f, 2, 1))).ToArray();
+        var colors = Enumerable.Range(0, 4).Select(i => Rgb(50 * (i + 1), 200, 10 + i)).ToArray();
+        void Inst(string key, Action<CommandBuffer> record)
+        {
+            Execute(cmd => { cmd.SetRenderTarget(strip); cmd.ClearRenderTarget(false, true, Color.clear); });
+            Try(key, () => Execute(cmd =>
+            {
+                cmd.SetRenderTarget(strip);
+                cmd.SetViewProjectionMatrices(Matrix4x4.identity, Matrix4x4.identity);
+                record(cmd);
+            }));
+            Value(key, Read(strip));
+        }
+        Inst("cmd.instanced.all", cmd => cmd.DrawMeshInstanced(quad, 0, m, 0, mats));
+        Inst("cmd.instanced.count", cmd => cmd.DrawMeshInstanced(quad, 0, m, 0, mats, 2));
+        var block = new MaterialPropertyBlock();
+        block.SetVectorArray("_Color", colors);
+        Inst("cmd.instanced.block", cmd => cmd.DrawMeshInstanced(quad, 0, m, 0, mats, 4, block));
+        var scalar = new MaterialPropertyBlock();
+        scalar.SetVector("_Color", Rgb(7, 77, 177));
+        Inst("cmd.instanced.blockscalar", cmd => cmd.DrawMeshInstanced(quad, 0, m, 0, mats, 4, scalar));
+        Inst("cmd.instanced.allpasses", cmd => cmd.DrawMeshInstanced(quad, 0, m, -1, mats, 3, block));
+        // Matrices and block changed after recording, before the buffer runs.
+        var later = (Matrix4x4[])mats.Clone();
+        var laterBlock = new MaterialPropertyBlock();
+        laterBlock.SetVectorArray("_Color", colors);
+        Inst("cmd.instanced.recorded", cmd =>
+        {
+            cmd.DrawMeshInstanced(quad, 0, m, 0, later, 4, laterBlock);
+            later[0] = Matrix4x4.TRS(new Vector3(5, 5, 0), Quaternion.identity, Vector3.one);
+            laterBlock.SetVectorArray("_Color", colors.Select(c => Rgb(1, 2, 3)).ToArray());
+        });
+        var many = Enumerable.Repeat(mats[1], 1100).ToArray();
+        Inst("cmd.instanced.max", cmd => cmd.DrawMeshInstanced(quad, 0, m, 0, many, 1023));
+        var off = Keep(new Material(m) { enableInstancing = false });
+        Inst("cmd.instanced.noinstancing", cmd => cmd.DrawMeshInstanced(quad, 0, off, 0, mats));
+        Inst("cmd.instanced.arg.mesh", cmd => cmd.DrawMeshInstanced(null, 0, m, 0, mats));
+        Inst("cmd.instanced.arg.material", cmd => cmd.DrawMeshInstanced(quad, 0, null, 0, mats));
+        Inst("cmd.instanced.arg.matrices", cmd => cmd.DrawMeshInstanced(quad, 0, m, 0, null));
+        Inst("cmd.instanced.arg.negative", cmd => cmd.DrawMeshInstanced(quad, 0, m, 0, mats, -1));
+        Inst("cmd.instanced.arg.zero", cmd => cmd.DrawMeshInstanced(quad, 0, m, 0, mats, 0));
+        Inst("cmd.instanced.arg.1024", cmd => cmd.DrawMeshInstanced(quad, 0, m, 0, many, 1024));
+        Inst("cmd.instanced.arg.pastarray", cmd => cmd.DrawMeshInstanced(quad, 0, m, 0, mats, 5));
+        Inst("cmd.instanced.arg.submesh", cmd => cmd.DrawMeshInstanced(quad, 1, m, 0, mats));
+        Inst("cmd.instanced.arg.submeshnegative", cmd => cmd.DrawMeshInstanced(quad, -1, m, 0, mats));
+        Inst("cmd.instanced.arg.pass", cmd => cmd.DrawMeshInstanced(quad, 0, m, 3, mats));
+    }
+
+    // ------------------------------------------------------------ indexed procedural draws
+
+    void IndexedDraws()
+    {
+        var grid = Keep(new RenderTexture(8, 8, 0, RenderTextureFormat.ARGB32, RenderTextureReadWrite.Linear));
+        grid.Create();
+        var mat = Keep(new Material(Resources.Load<Shader>("IndexedGrid")));
+        mat.SetFloat("_Tag", 10);
+        GraphicsBuffer Buffer<T>(GraphicsBuffer.Target t, int stride, T[] data) where T : struct
+        {
+            var b = new GraphicsBuffer(t, data.Length, stride);
+            disposables.Add(b);
+            b.SetData(data);
+            return b;
+        }
+        // Cells (0,0) and (2,1) of the grid; cell (3,2) with 32-bit indices past 16 bits.
+        var idx16 = Buffer(GraphicsBuffer.Target.Index, 2, new ushort[] { 0, 1, 10, 0, 10, 9, 11, 12, 21, 11, 21, 20 });
+        var idx32 = Buffer(GraphicsBuffer.Target.Index, 4, new uint[] { 81021, 81022, 81031, 81021, 81031, 81030 });
+        var structured = Buffer(GraphicsBuffer.Target.Structured, 4, new uint[] { 0, 1, 10, 0, 10, 9 });
+        // Index count, instances, start index, base vertex, start instance.
+        var args = Buffer(GraphicsBuffer.Target.IndirectArguments, 4, new uint[] { 6, 1, 6, 9, 0 });
+        var args32 = Buffer(GraphicsBuffer.Target.IndirectArguments, 4, new uint[] { 6, 1, 0, 1, 0 });
+        var cargs = new ComputeBuffer(10, 4, ComputeBufferType.IndirectArguments);
+        disposables.Add(cargs);
+        cargs.SetData(new uint[] { 0, 0, 0, 0, 0, 6, 2, 0, 0, 0 });
+        MaterialPropertyBlock Tag(float tag) { var b = new MaterialPropertyBlock(); b.SetFloat("_Tag", tag); return b; }
+        var I = Matrix4x4.identity;
+        void Clear() => Execute(cmd => { cmd.SetRenderTarget(grid); cmd.ClearRenderTarget(false, true, Color.clear); });
+        void Grid(string key, Action<CommandBuffer> record)
+        {
+            Clear();
+            Try(key, () => Execute(cmd => { cmd.SetRenderTarget(grid); record(cmd); }));
+            Value(key, Read(grid));
+        }
+        void Now(string key, Action draw)
+        {
+            Clear();
+            Try(key, () =>
+            {
+                var previous = RenderTexture.active;
+                RenderTexture.active = grid;
+                mat.SetPass(0);
+                draw();
+                RenderTexture.active = previous;
+            });
+            Value(key, Read(grid));
+        }
+        Grid("cmd.indexed.u16", cmd => cmd.DrawProcedural(idx16, I, mat, 0, MeshTopology.Triangles, 12));
+        Grid("cmd.indexed.count", cmd => cmd.DrawProcedural(idx16, I, mat, 0, MeshTopology.Triangles, 6));
+        Grid("cmd.indexed.instances", cmd => cmd.DrawProcedural(idx16, I, mat, 0, MeshTopology.Triangles, 6, 2, Tag(20)));
+        Grid("cmd.indexed.u32", cmd => cmd.DrawProcedural(idx32, I, mat, 0, MeshTopology.Triangles, 6));
+        Grid("cmd.indirect.indexed", cmd => cmd.DrawProceduralIndirect(idx16, I, mat, 0, MeshTopology.Triangles, args));
+        Grid("cmd.indirect.indexed.compute", cmd => cmd.DrawProceduralIndirect(idx16, I, mat, 0, MeshTopology.Triangles, cargs, 20, Tag(30)));
+        Grid("cmd.indirect.indexed.u32", cmd => cmd.DrawProceduralIndirect(idx32, I, mat, 0, MeshTopology.Triangles, args32, 0));
+        Grid("cmd.indexed.arg.null", cmd => cmd.DrawProcedural((GraphicsBuffer)null, I, mat, 0, MeshTopology.Triangles, 6));
+        Grid("cmd.indexed.arg.material", cmd => cmd.DrawProcedural(idx16, I, null, 0, MeshTopology.Triangles, 6));
+        Grid("cmd.indexed.arg.structured", cmd => cmd.DrawProcedural(structured, I, mat, 0, MeshTopology.Triangles, 6));
+        Grid("cmd.indexed.arg.past", cmd => cmd.DrawProcedural(idx16, I, mat, 0, MeshTopology.Triangles, 18));
+        Grid("cmd.indexed.arg.zero", cmd => cmd.DrawProcedural(idx16, I, mat, 0, MeshTopology.Triangles, 0));
+        Grid("cmd.indirect.indexed.arg.null", cmd => cmd.DrawProceduralIndirect(null, I, mat, 0, MeshTopology.Triangles, args));
+        Grid("cmd.indirect.indexed.arg.args", cmd => cmd.DrawProceduralIndirect(idx16, I, mat, 0, MeshTopology.Triangles, (GraphicsBuffer)null));
+        Now("graphics.indexed.now", () => Graphics.DrawProceduralNow(MeshTopology.Triangles, idx16, 12, 2));
+        Now("graphics.indirect.indexed.now", () => Graphics.DrawProceduralIndirectNow(MeshTopology.Triangles, idx16, args));
+    }
+
+    // ------------------------------------------------------------ compute constant buffers, buffer handles
+
+    void ComputeParams()
+    {
+        var cs = Resources.Load<ComputeShader>("ConstantRead");
+        int read = cs.FindKernel("Read"), fill = cs.FindKernel("Fill");
+        int align = SystemInfo.constantBufferOffsetAlignment;
+        Value("cbuffer.alignment", align.ToString());
+        GraphicsBuffer Constant(params uint[] words)
+        {
+            var b = new GraphicsBuffer(GraphicsBuffer.Target.Constant, words.Length, 4);
+            disposables.Add(b);
+            b.SetData(words);
+            return b;
+        }
+        void Const(string key, Action<CommandBuffer> record)
+        {
+            var output = Fresh(4);
+            Try(key, () => Execute(cmd =>
+            {
+                record(cmd);
+                cmd.SetComputeBufferParam(cs, read, "_Out", output);
+                cmd.DispatchCompute(cs, read, 1, 1, 1);
+            }));
+            Value(key, Words(output));
+        }
+        var gcb = Constant(1, 2, 3, 4);
+        Const("cmd.cbuffer.graphics", cmd => cmd.SetComputeConstantBufferParam(cs, "Params", gcb, 0, 16));
+        var ccb = new ComputeBuffer(4, 4, ComputeBufferType.Constant);
+        disposables.Add(ccb);
+        ccb.SetData(new uint[] { 5, 6, 7, 8 });
+        Const("cmd.cbuffer.compute", cmd => cmd.SetComputeConstantBufferParam(cs, Shader.PropertyToID("Params"), ccb, 0, 16));
+        var big = Constant(Enumerable.Range(0, align / 4 + 4).Select(i => (uint)(1000 + i)).ToArray());
+        Const("cmd.cbuffer.offset", cmd => cmd.SetComputeConstantBufferParam(cs, "Params", big, align, 16));
+        var changed = Constant(1, 1, 1, 1);
+        Const("cmd.cbuffer.recorded", cmd => { cmd.SetComputeConstantBufferParam(cs, "Params", changed, 0, 16); changed.SetData(new uint[] { 9, 10, 11, 12 }); });
+
+        var h1 = FreshGraphics(4);
+        var h2 = FreshGraphics(4);
+        Value("handle.same", B(h1.bufferHandle == h1.bufferHandle));
+        Value("handle.differs", B(h1.bufferHandle != h2.bufferHandle));
+        Value("handle.notdefault", B(h1.bufferHandle != default(GraphicsBufferHandle)));
+        Try("cmd.handle", () => Execute(cmd =>
+        {
+            cmd.SetComputeIntParam(cs, "_Tag", 7);
+            cmd.SetComputeBufferParam(cs, fill, "_Out", h1.bufferHandle);
+            cmd.DispatchCompute(cs, fill, 1, 1, 1);
+        }));
+        Value("cmd.handle", Words(h1));
+        Try("cmd.handle.id", () => Execute(cmd =>
+        {
+            cmd.SetComputeIntParam(cs, "_Tag", 8);
+            cmd.SetComputeBufferParam(cs, fill, Shader.PropertyToID("_Out"), h2.bufferHandle);
+            cmd.DispatchCompute(cs, fill, 1, 1, 1);
+        }));
+        Value("cmd.handle.id", Words(h2));
+    }
+
+    // ------------------------------------------------------------ graphics fences
+
+    IEnumerator Fences()
+    {
+        Value("fence.supported", B(SystemInfo.supportsGraphicsFence));
+        Value("fence.asynccompute", B(SystemInfo.supportsAsyncCompute));
+        Try("fence.default", () => Value("fence.default.passed", B(default(GraphicsFence).passed)));
+        var cmd = new CommandBuffer { name = "fence" };
+        var unexecutedBuffer = new CommandBuffer { name = "unexecuted" };
+        GraphicsFence f = default, asyncFence = default, unexecuted = default, immediate = default;
+        Try("fence.create", () =>
+        {
+            cmd.SetRenderTarget(target);
+            cmd.ClearRenderTarget(false, true, Color.red);
+            f = cmd.CreateGraphicsFence(GraphicsFenceType.AsyncQueueSynchronisation, SynchronisationStageFlags.PixelProcessing);
+        });
+        Try("fence.recorded", () => Value("fence.recorded.passed", B(f.passed)));
+        Try("fence.execute", () => Graphics.ExecuteCommandBuffer(cmd));
+        Try("fence.executed", () => Value("fence.executed.passed", B(f.passed)));
+        Try("fence.completed", () =>
+        {
+            AsyncGPUReadback.Request(target).WaitForCompletion();
+            Value("fence.completed.passed", B(f.passed));
+        });
+        Try("fence.async", () =>
+        {
+            using (var c = new CommandBuffer())
+            {
+                asyncFence = c.CreateAsyncGraphicsFence();
+                Value("fence.async.recorded", B(asyncFence.passed));
+                Graphics.ExecuteCommandBuffer(c);
+            }
+        });
+        Try("fence.async.stage", () => { using (var c = new CommandBuffer()) c.CreateAsyncGraphicsFence(SynchronisationStage.VertexProcessing); });
+        // CPU synchronisation fences: before their buffer runs, once the GPU is done, never run.
+        GraphicsFence cpu = default, cpuUnexecuted = default, cpuImmediate = default;
+        Try("fence.cpu", () =>
+        {
+            using (var c = new CommandBuffer())
+            {
+                c.SetRenderTarget(target);
+                c.ClearRenderTarget(false, true, Color.green);
+                cpu = c.CreateGraphicsFence(GraphicsFenceType.CPUSynchronisation, SynchronisationStageFlags.PixelProcessing);
+                Value("fence.cpu.recorded", B(cpu.passed));
+                Graphics.ExecuteCommandBuffer(c);
+            }
+        });
+        Try("fence.cpu.completed", () =>
+        {
+            AsyncGPUReadback.Request(target).WaitForCompletion();
+            Value("fence.cpu.completed.passed", B(cpu.passed));
+        });
+        Try("fence.cpu.unexecuted", () =>
+        {
+            cpuUnexecuted = unexecutedBuffer.CreateGraphicsFence(GraphicsFenceType.CPUSynchronisation, SynchronisationStageFlags.ComputeProcessing);
+            Value("fence.cpu.unexecuted.passed", B(cpuUnexecuted.passed));
+        });
+        Try("fence.cpu.wait", () => { using (var c = new CommandBuffer()) { c.WaitOnAsyncGraphicsFence(cpu); Graphics.ExecuteCommandBuffer(c); } });
+        Try("fence.wait", () => { using (var c = new CommandBuffer()) { c.WaitOnAsyncGraphicsFence(f); Graphics.ExecuteCommandBuffer(c); } });
+        Try("fence.wait.stage", () => { using (var c = new CommandBuffer()) { c.WaitOnAsyncGraphicsFence(f, SynchronisationStage.PixelProcessing); Graphics.ExecuteCommandBuffer(c); } });
+        Try("fence.wait.flags", () => { using (var c = new CommandBuffer()) { c.WaitOnAsyncGraphicsFence(f, SynchronisationStageFlags.VertexProcessing); Graphics.ExecuteCommandBuffer(c); } });
+        Try("fence.wait.default", () => { using (var c = new CommandBuffer()) { c.WaitOnAsyncGraphicsFence(default(GraphicsFence)); Graphics.ExecuteCommandBuffer(c); } });
+        Try("fence.graphics", () =>
+        {
+            immediate = Graphics.CreateGraphicsFence(GraphicsFenceType.AsyncQueueSynchronisation, SynchronisationStageFlags.PixelProcessing);
+            Graphics.WaitOnAsyncGraphicsFence(immediate);
+            Graphics.WaitOnAsyncGraphicsFence(immediate, SynchronisationStage.PixelProcessing);
+        });
+        Try("fence.graphics.async", () => Graphics.WaitOnAsyncGraphicsFence(Graphics.CreateAsyncGraphicsFence()));
+        Try("fence.graphics.cpu", () =>
+        {
+            cpuImmediate = Graphics.CreateGraphicsFence(GraphicsFenceType.CPUSynchronisation, SynchronisationStageFlags.PixelProcessing);
+            AsyncGPUReadback.Request(target).WaitForCompletion();
+            Value("fence.graphics.cpu.completed", B(cpuImmediate.passed));
+        });
+        Try("fence.unexecuted", () => unexecuted = unexecutedBuffer.CreateGraphicsFence(GraphicsFenceType.AsyncQueueSynchronisation, SynchronisationStageFlags.PixelProcessing));
+        yield return null;
+        yield return null;
+        yield return null;
+        Try("fence.frames", () =>
+        {
+            Value("fence.frames.executed", B(f.passed));
+            Value("fence.frames.async", B(asyncFence.passed));
+            Value("fence.frames.immediate", B(immediate.passed));
+            Value("fence.frames.unexecuted", B(unexecuted.passed));
+        });
+        Try("fence.frames.cpu", () =>
+        {
+            Value("fence.frames.cpu.executed", B(cpu.passed));
+            Value("fence.frames.cpu.immediate", B(cpuImmediate.passed));
+            Value("fence.frames.cpu.unexecuted", B(cpuUnexecuted.passed));
+        });
+        cmd.Release();
+        unexecutedBuffer.Release();
+        Try("fence.released", () => Value("fence.released.passed", B(f.passed)));
+        Try("fence.released.cpu", () => Value("fence.released.cpu.passed", B(cpuUnexecuted.passed)));
+        Try("fence.released.unexecuted", () => Value("fence.released.unexecuted.passed", B(unexecuted.passed)));
     }
 
     // ------------------------------------------------------------ ConvertTexture

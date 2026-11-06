@@ -1,0 +1,13 @@
+// Copies a constant buffer's four words (and writes through a buffer bound by handle).
+#pragma kernel Read
+#pragma kernel Fill
+
+cbuffer Params { uint4 _Values; };
+RWStructuredBuffer<uint> _Out;
+uint _Tag;
+
+[numthreads(4, 1, 1)]
+void Read(uint id : SV_DispatchThreadID) { _Out[id] = _Values[id]; }
+
+[numthreads(4, 1, 1)]
+void Fill(uint id : SV_DispatchThreadID) { _Out[id] = _Tag * 100 + id; }
