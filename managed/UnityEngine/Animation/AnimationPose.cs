@@ -273,9 +273,11 @@ namespace Unbound.Runtime
         /// states without write defaults keep is the value it holds (where <paramref name="held"/>)
         /// instead of the current one, and it receives what is written. With
         /// <paramref name="humanBodyInRootMotion"/>, additive layers leave a humanoid body's curves to
-        /// the root motion pass (see <see cref="CombineLayers"/>).</summary>
+        /// the root motion pass (see <see cref="CombineLayers"/>). With
+        /// <paramref name="skipTransforms"/>, Transforms and humanoid curves are left as they are
+        /// (an Animator culled by CullUpdateTransforms).</summary>
         internal static void WriteLayers(AnimationBindings b, LayerPose[] layers, int count, float[] written = null, bool[] held = null,
-            bool humanBodyInRootMotion = false)
+            bool humanBodyInRootMotion = false, bool skipTransforms = false)
         {
             var s = Rent(b);
             try
@@ -326,7 +328,7 @@ namespace Unbound.Runtime
                         }
                     }
                 }
-                Write(b, s);
+                Write(b, s, skipTransforms);
             }
             finally
             {
@@ -590,13 +592,13 @@ namespace Unbound.Runtime
             return false;
         }
 
-        static void Write(AnimationBindings b, Scratch s)
+        static void Write(AnimationBindings b, Scratch s, bool skipTransforms = false)
         {
             // The group list may grow while game code runs: iterate what exists now.
             var groups = b.Groups.ToArray();
             foreach (var g in groups)
             {
-                if (!g.Alive) continue;
+                if (!g.Alive || skipTransforms && (g.Target is Transform || g.HumanCurve >= 0)) continue;
                 try
                 {
                     bool changed;

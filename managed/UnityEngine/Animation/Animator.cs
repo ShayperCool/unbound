@@ -285,8 +285,9 @@ namespace UnityEngine
         /// that first one) the movement callbacks and builtin root motion also run again with the
         /// last evaluation's deltas (<see cref="RendererBecameVisible"/>).</item>
         /// </list>
-        /// Unbound's choice (unmeasured): under CullUpdateTransforms the other animated properties
-        /// (materials, script fields, ...) are not written either.
+        /// Following the documentation (unmeasured): under CullUpdateTransforms only the
+        /// Transforms and the humanoid pose are not written; parameter curves, materials and script
+        /// fields are.
         /// </summary>
         internal void Tick(float deltaTime)
         {
@@ -356,7 +357,11 @@ namespace UnityEngine
         /// <summary>Evaluates the animator now, advancing it by <paramref name="deltaTime"/>.
         /// Unbound's choice (unmeasured): an explicit call is not culled, whatever the culling mode
         /// and the renderers' visibility.</summary>
-        public void Update(float deltaTime) => Advance(deltaTime);
+        public void Update(float deltaTime)
+        {
+            m_Culled = CulledUpdate.None;
+            Advance(deltaTime);
+        }
 
         /// <summary>
         /// Whether any Renderer of <paramref name="root"/>'s hierarchy (the GameObject and all of its
@@ -376,7 +381,8 @@ namespace UnityEngine
         /// tests/projects/animculling: a disabled or inactive renderer and one off screen do not
         /// count, with updateWhenOffscreen on or off; one visible renderer of several is enough).
         /// A skinned renderer's culling bounds are its mesh's bounds in the renderer's space, an
-        /// approximation of Unity's root-bone bounds.</item>
+        /// approximation of Unity's root-bone bounds: reported once when it has a root bone of its
+        /// own (stub report "Animation culling by a skinned renderer with a root bone").</item>
         /// <item>Every other enabled renderer in an active hierarchy (particle, line, trail, ...)
         /// counts as visible: their bounds are approximate in Unbound and their effect on animation
         /// culling is unmeasured. Reported once (stub report "Animation culling with approximate
@@ -390,6 +396,9 @@ namespace UnityEngine
             for (int i = 0; i < components.Count; i++)
             {
                 if (!(components[i] is Renderer renderer)) continue;
+                if (renderer is SkinnedMeshRenderer skinned && skinned.rootBone != null && skinned.rootBone != skinned.transform)
+                    Unbound.Runtime.Stubs.Ignored("Animation culling by a skinned renderer with a root bone",
+                        "judges its visibility by the mesh bounds around the renderer, not Unity's bounds around the root bone: a character whose bones move far from the renderer can be culled on screen");
                 if (renderer.isVisible) return true;
                 if (!HasExactCullingBounds(renderer) && renderer.enabled && root.activeInHierarchy)
                 {

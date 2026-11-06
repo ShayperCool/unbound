@@ -879,14 +879,18 @@ namespace UnityEngine
                 // while culled (measured: the time of an Animation culled from its start catches up
                 // from its second update on). Unbound's choice (unmeasured): a culled update that
                 // starts any state adds nothing, and its start sample and events are not replayed.
-                bool started = false;
+                bool started = false, playing = false;
                 foreach (var state in States)
                 {
-                    if (!state.m_Enabled || !state.m_Fresh) continue;
+                    if (!state.m_Enabled) continue;
+                    playing = true;
+                    if (!state.m_Fresh) continue;
                     state.m_Fresh = false;
                     started = true;
                 }
-                if (!started) m_CulledTime += deltaTime;
+                // Nothing playing: nothing to catch up (Unbound's choice, unmeasured).
+                if (!playing) m_CulledTime = 0f;
+                else if (!started) m_CulledTime += deltaTime;
                 return;
             }
             deltaTime += m_CulledTime;

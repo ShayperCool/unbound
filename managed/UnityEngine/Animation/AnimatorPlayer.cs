@@ -297,9 +297,12 @@ namespace Unbound.Runtime
         internal bool Ticked;
 
         /// <summary>Set by the Animator for a culled update (<see cref="Animator.Tick"/>): the state
-        /// machines, events, callbacks and root motion run, the pose is not written and the IK pass
-        /// does not run.</summary>
+        /// machines, events, callbacks and root motion run, the Transforms and the humanoid pose are
+        /// not written and the IK pass does not run; other properties (parameter curves, materials,
+        /// script fields) are written.</summary>
         internal bool SkipWrites;
+
+        int m_PosedFloats = -1, m_PosedObjects = -1;
 
         /// <summary>A culled Animator one of whose renderers became visible
         /// (<see cref="Animator.RendererBecameVisible"/>): the pose of its last evaluation is written
@@ -317,7 +320,10 @@ namespace Unbound.Runtime
                     m_Animator.m_RootMotionApplied = false;
                     ProcessRootMotion();
                 }
-                WritePose(Layers.Length);
+                // Bindings added since (a playable output's clip, an object rebound) need poses of
+                // their size: sampled again at the same times.
+                bool sized = Bindings.FloatCount == m_PosedFloats && Bindings.ObjectCount == m_PosedObjects;
+                WritePose(sized ? Layers.Length : BuildLayerPoses());
             }
             finally
             {
@@ -966,18 +972,19 @@ namespace Unbound.Runtime
             ComputeRootMotion(count);
             AfterEvaluate();
             ProcessRootMotion();
-            if (SkipWrites) return;
-            WritePose(count);
+            WritePose(count, SkipWrites);
         }
 
-        void WritePose(int count)
+        void WritePose(int count, bool skipTransforms = false)
         {
             if (m_Written.Length < Bindings.FloatCount)
             {
                 Array.Resize(ref m_Written, Bindings.FloatCount);
                 Array.Resize(ref m_WrittenHeld, Bindings.FloatCount);
             }
-            PoseWriter.WriteLayers(Bindings, m_LayerPoses, count, m_Written, m_WrittenHeld, humanBodyInRootMotion: Attached);
+            PoseWriter.WriteLayers(Bindings, m_LayerPoses, count, m_Written, m_WrittenHeld, humanBodyInRootMotion: Attached,
+                skipTransforms: skipTransforms);
+            if (skipTransforms) return;
             if (Attached) WriteMassCenterPose(count);
             if (Attached) m_Animator.ApplyHumanPose();
             if (Attached) m_Animator.CaptureRootMotionPose();
@@ -1094,6 +1101,8 @@ namespace Unbound.Runtime
                     AddNoDifference(pose, 1f, LayerChannels(i).Floats, null, mask, onlyUnweighted: true);
                 }
             }
+            m_PosedFloats = Bindings.FloatCount;
+            m_PosedObjects = Bindings.ObjectCount;
             return count;
         }
 

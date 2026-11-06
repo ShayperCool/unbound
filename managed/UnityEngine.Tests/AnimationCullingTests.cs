@@ -171,6 +171,75 @@ namespace UnityEngine.Tests
             Near.Equal(30f, text.anchoredPosition.y, 1e-3f);
         }
 
+        /// <summary>CullUpdateTransforms leaves only the Transforms (and the humanoid pose) unwritten:
+        /// a clip's parameter curve still drives its parameter while culled, so the state machine's
+        /// conditions keep following it (documented: only "write of Transforms" is disabled).</summary>
+        [Fact]
+        public void CullUpdateTransformsStillWritesParameterCurves()
+        {
+            var file = Load(AnimationFixtures.Locomotion);
+            var idle = (AnimationClip)file.Objects[7400001];
+            idle.m_Curves.Add(new ClipCurve
+            {
+                Binding = new CurveBinding { Path = "", Attribute = "Speed", ClassId = 95 },
+                Curve = AnimationCurve.Constant(0f, 1f, 0.8f),
+            });
+            idle.m_Version++;
+            var root = new GameObject("Character");
+            m_Objects.Add(root);
+            var body = new GameObject("Body");
+            body.transform.SetParent(root.transform, false);
+            var renderer = AddRenderer(body);
+            var animator = root.AddComponent<Animator>();
+            animator.cullingMode = AnimatorCullingMode.CullUpdateTransforms;
+            animator.runtimeAnimatorController = (RuntimeAnimatorController)file.Objects[9100000];
+            Assert.False(renderer.isVisible);
+            Near.Equal(0.5f, animator.GetFloat("Speed"));
+            animator.Tick(0f);
+            animator.Tick(0.1f);
+            Near.Equal(0.8f, animator.GetFloat("Speed"));
+        }
+
+        /// <summary>Channels bound after a culled update (here a clip bound to the Animator's
+        /// bindings, as a playable output's would be) do not break the write on becoming visible:
+        /// the poses are sampled again at their size.</summary>
+        [Fact]
+        public void BecomingVisibleAfterNewBindingsWritesThePose()
+        {
+            var logs = new List<string>();
+            var logger = Debug.unityLogger;
+            var previous = logger.logHandler;
+            logger.logHandler = new ExceptionCapture(logs);
+            try
+            {
+                var camera = MakeCamera();
+                var (animator, text, renderer) = Rig(AnimatorCullingMode.CullUpdateTransforms);
+                animator.Tick(0f);
+                animator.Tick(0.25f);
+                var extra = new AnimationClip { legacy = true, name = "extra" };
+                extra.SetCurve("Body", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 1f, 1f, 2f));
+                animator.m_Player.Bindings.Bind(extra);
+                MakeVisible(camera, renderer);
+                Assert.Empty(logs);
+                Near.Equal(new Vector3(1.0884f, 1.0884f, 1.0884f), text.localScale, 1e-4f);
+            }
+            finally
+            {
+                logger.logHandler = previous;
+            }
+        }
+
+        sealed class ExceptionCapture : ILogHandler
+        {
+            readonly List<string> m_Logs;
+            internal ExceptionCapture(List<string> logs) => m_Logs = logs;
+            public void LogFormat(LogType type, Object context, string format, params object[] args)
+            {
+                if (type == LogType.Error || type == LogType.Exception) m_Logs.Add(format);
+            }
+            public void LogException(System.Exception exception, Object context) => m_Logs.Add(exception.ToString());
+        }
+
         static AnimationClip LegacyLoop()
         {
             var clip = new AnimationClip { legacy = true, wrapMode = WrapMode.Loop, name = "loop" };
