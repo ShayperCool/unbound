@@ -50,8 +50,15 @@ Its full instructions are in [ORCHESTRATOR.md](ORCHESTRATOR.md).
      Git.
    - Run the Editor on the GPU through `~/.cache/compat/with-heavy-job` (or `tests/editor_runner.py`).
    - A new probe declares its land-gate command (the one you pass to `land.py --probe`) in
-     `tests/projects/<probe>/gate.json`, with the release as `$UNBOUND_PROBE_UNITY_VERSION` (export it for `land.py`), so
+     `tests/projects/<probe>/gate.json`, with the release as `$UNBOUND_PROBE_UNITY_VERSION`, so
      the sheriff's suite runs it (format: `tools/agents/suite.py`'s docstring); `suite.py --list` shows it.
+     `land.py` and `suite.py` set that variable (the exported value, else the release of the probe
+     named in the command, else `tests/probe_paths.py`'s default, 6000.0.71f1).
+   - The gate command runs the engine only and compares it with `Reference/` as committed. The
+     Editor is only for recording a reference. When the engine run needs files the Editor authors
+     (mixer assets, scenes, GUIDs), commit them once with `tests/authored_project.py record` and
+     assemble them in the gate. `suite.py` fails a step that starts the Editor or queues an Editor
+     job, and `tests/editor_runner.py` refuses to start one under `UNBOUND_SUITE_NO_EDITOR`.
 4. Implement:
    - Build with `python3 tools/build.py -- build --release --locked -p unbound`.
    - Run the managed tests and the probe against the reference. Iterate until it matches.
@@ -111,7 +118,8 @@ A worker with this task, in its own worktree from current `main`:
    full probe suite on that build, in the background:
    `python3 tools/agents/suite.py > ~/.cache/unbound/agents/logs/suite-$(date +%Y%m%d-%H%M).log 2>&1`.
    It runs every `tests/projects/<probe>` with a `Reference/` (this checkout's release build, or
-   `--cli`/`$UNBOUND`), prints one line per probe (`pass`, `fail`, `report` for comparators
+   `--cli`/`$UNBOUND`) without starting the Unity Editor (a probe whose step starts one fails with
+   `launched the Unity Editor`), prints one line per probe (`pass`, `fail`, `report` for comparators
    without a verdict, `no recipe` with the reason: neither a recipe in `suite.py` nor a valid
    `gate.json` in the probe) and writes
    `~/.cache/unbound/agents/suite/<label>/summary.json`; step logs are in the run's work directory.
