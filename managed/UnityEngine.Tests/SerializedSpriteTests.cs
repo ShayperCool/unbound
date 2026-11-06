@@ -134,6 +134,7 @@ namespace UnityEngine.Tests
         [InlineData("wrong-fileid", "Texture2D")]
         [InlineData("indices", "index 65535")]
         [InlineData("vertices", "m_DataSize")]
+        [InlineData("uv-stream", "stored Sprite UV")]
         public void UnsupportedDataIsAnErrorAndLeavesNoDefaultSprite(string variant, string diagnostic)
         {
             var docs = Documents("Rectangle");
@@ -154,6 +155,12 @@ namespace UnityEngine.Tests
                 case "wrong-fileid": Set(rd.Get("texture"), "fileID", YNode.MakeScalar("2800001")); break;
                 case "indices": Set(rd, "m_IndexBuffer", YNode.MakeScalar("ffff01000200020001000300")); break;
                 case "vertices": Set(rd.Get("m_VertexData"), "_typelessdata", YNode.MakeScalar("00")); break;
+                case "uv-stream":
+                    var vd = rd.Get("m_VertexData");
+                    var bytes = Convert.FromHexString(vd.Str("_typelessdata"));
+                    BitConverter.GetBytes(1f).CopyTo(bytes, 48);
+                    Set(vd, "_typelessdata", YNode.MakeScalar(Convert.ToHexString(bytes)));
+                    break;
             }
             var logger = Debug.unityLogger;
             var previous = logger.logHandler;

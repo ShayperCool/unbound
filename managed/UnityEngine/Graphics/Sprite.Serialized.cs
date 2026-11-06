@@ -61,11 +61,17 @@ namespace UnityEngine
                     throw new NotSupportedException($"Sprite vertex channel {channels.Count} is not supported");
                 channels.Add((Integer(channel, "stream"), Integer(channel, "offset"), Integer(channel, "format"), dimension));
             }
-            if (channels.Count != 14 || channels[4].Format != 0 || channels[4].Dimension != 2)
+            if (channels.Count != 14 || channels[0] != (0, 0, 0, 3) || channels[4] != (1, 0, 0, 2))
                 throw new NotSupportedException("unfamiliar Sprite vertex channel layout");
             var data = Bytes(vd, "_typelessdata");
             if (data.Length != Integer(vd, "m_DataSize")) throw new FormatException("Sprite vertex byte count does not match m_DataSize");
             var vertices = SpriteRenderGeometry.Positions(count, data, channels);
+            // The saved 6000.0.71f1 assets have an empty UV stream; the Editor derives UVs
+            // from uvTransform on load. Other stored-UV representations are not measured.
+            int uvStart = checked((count * 12 + 15) & ~15);
+            if (data.Length != uvStart + (long)count * 8) throw new NotSupportedException("unfamiliar Sprite vertex stream sizes");
+            for (int at = uvStart; at < data.Length; at += 4)
+                if (BitConverter.ToSingle(data, at) != 0f) throw new NotSupportedException("nonempty stored Sprite UV streams are not supported");
             var submeshes = Sequence(rd, "m_SubMeshes");
             if (submeshes.Length != 1) throw new NotSupportedException($"Sprite has {submeshes.Length} submeshes");
             var sub = submeshes[0];
