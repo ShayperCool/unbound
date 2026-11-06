@@ -135,6 +135,12 @@ namespace UnityEngine
 
         AnimationClip m_StateMirrored;
         int m_StateMirroredVersion;
+        /// <summary>The clip a <see cref="StateMirrored"/> copy plays for.</summary>
+        AnimationClip m_StateMirrorSource;
+
+        /// <summary>The clip as game code sees it: a mirrored state's playback copy stands for the
+        /// clip it was made from (events, clip infos, parameter curves).</summary>
+        internal AnimationClip Asset => m_StateMirrorSource ?? this;
 
         /// <summary>The humanoid clip as a mirrored Animator state or blend tree child plays it: its
         /// Mirror setting toggled, so a mirrored clip plays unmirrored (measured,
@@ -146,6 +152,9 @@ namespace UnityEngine
                 EnsureHumanCurves();
                 if (m_StateMirrored != null && m_StateMirroredVersion == m_Version) return m_StateMirrored;
                 var clip = Clone();
+                // A playback copy, not an object of its own (FindObjectsOfTypeAll, instance IDs).
+                Unbound.Runtime.ObjectRegistry.Unregister(clip);
+                clip.m_StateMirrorSource = this;
                 clip.m_Mirror = !m_Mirror;
                 // On an additive layer it adds its difference from the clip's own reference pose,
                 // unmirrored (measured for an unmirrored clip and its first frame).

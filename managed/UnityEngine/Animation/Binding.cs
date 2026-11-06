@@ -248,6 +248,7 @@ namespace Unbound.Runtime
         internal static bool Plays(RuntimeAnimatorController controller, ControllerGraph graph, AnimationClip clip)
         {
             if (clip == null || controller == null || graph == null) return false;
+            clip = clip.Asset;
             foreach (var original in graph.Clips)
                 if (ReferenceEquals(controller.MapClip(original), clip)) return true;
             return false;

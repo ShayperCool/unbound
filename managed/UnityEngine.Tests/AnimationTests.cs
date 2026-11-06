@@ -593,6 +593,49 @@ namespace UnityEngine.Tests
             Assert.Equal(controller.m_Parameters.FindIndex(p => p.m_Name == "Run"), def.MirrorParameter);
         }
 
+        public class ClipInfoReceiver : MonoBehaviour
+        {
+            public readonly List<AnimationClip> Clips = new List<AnimationClip>();
+            void OnStep(AnimationEvent e) => Clips.Add(e.animatorClipInfo.clip);
+        }
+
+        [Fact]
+        public void AMirroredStatesHumanoidClipKeepsItsIdentity()
+        {
+            // A mirrored state plays a humanoid clip through a mirrored copy: events, clip infos
+            // and the object list still see the clip itself.
+            var file = Load(AnimationFixtures.PopupButton);
+            var controller = (RuntimeAnimatorController)file.Objects[9100000];
+            var clip = (AnimationClip)file.Objects[7400000];
+            clip.m_Curves.Add(new ClipCurve
+            {
+                Binding = new CurveBinding { Path = "", Attribute = "Left Arm Down-Up", ClassId = 95 },
+                Curve = AnimationCurve.Linear(0f, 0.2f, 0.3f, -0.4f),
+            });
+            clip.m_Version++;
+            clip.AddEvent(new AnimationEvent { time = 0.1f, functionName = "OnStep" });
+            file.Objects.Values.OfType<ControllerStateAsset>().Single().Mirror = true;
+            Assert.True(clip.HasHumanCurves);
+            int clipsBefore = Resources.FindObjectsOfTypeAll<AnimationClip>().Length;
+
+            var root = new GameObject("Button", typeof(RectTransform));
+            var text = new GameObject("ContinueText", typeof(RectTransform));
+            text.transform.SetParent(root.transform, false);
+            var receiver = root.AddComponent<ClipInfoReceiver>();
+            var animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = controller;
+            animator.Update(0f);
+            animator.Update(0.25f);
+            Assert.Single(receiver.Clips);
+            Assert.Same(clip, receiver.Clips[0]);
+            Assert.Same(clip, animator.GetCurrentAnimatorClipInfo(0).Single().clip);
+            Assert.Equal(clipsBefore, Resources.FindObjectsOfTypeAll<AnimationClip>().Length);
+            Assert.NotNull(clip.StateMirrored);
+            Assert.NotSame(clip, clip.StateMirrored);
+            Assert.Same(clip, clip.StateMirrored.Asset);
+            Object.DestroyImmediate(root);
+        }
+
         [Fact]
         public void SubStateMachinesEnterAndExitWithBehaviours()
         {

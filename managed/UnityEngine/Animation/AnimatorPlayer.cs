@@ -1253,6 +1253,9 @@ namespace Unbound.Runtime
                             Debug.LogWarning($"The AnimationClip '{clip.name}' used by the Animator '{m_Animator.name}' must not be legacy.", m_Animator);
                         return;
                     }
+                    if (mirror && layer.Def.Additive && clip.HasHumanCurves && clip.Asset.m_Mirror)
+                        Unbound.Runtime.Stubs.Ignored("Animator mirrored state of a mirrored humanoid clip on an additive layer",
+                            "it adds its difference from the clip's own mirrored first frame (not measured)");
                     var bound = Bindings.Bind(clip);
                     if (pose.Value.Length < Bindings.FloatCount || pose.Objects.Length < Bindings.ObjectCount) return; // bound after the poses were sized
                     // Cycle offsets (the clip's, the state's and blend trees') shift looping clips
@@ -1409,8 +1412,9 @@ namespace Unbound.Runtime
                     AnimationEvents.Dispatch(go, fired, leftClip);
                 });
             }
-            foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions.ToArray())
+            foreach (var (layer, layerIndex, run, played, weight) in m_Contributions.ToArray())
             {
+                var clip = played.Asset;
                 if (clip.m_Events.Count == 0 || weight <= 0f) continue;
                 double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
                 var info = StateInfo(layer, run);
