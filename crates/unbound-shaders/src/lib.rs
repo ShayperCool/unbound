@@ -26,7 +26,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 19;
+pub const FORMAT_VERSION: u32 = 20;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -1426,6 +1426,34 @@ float4 frag(v2f i) : SV_Target { return float4(i.id, i.pair, i.uv.x); }
             "{}",
             compiled.fragment
         );
+    }
+
+    #[test]
+    fn structured_float3_arrays_use_twelve_byte_elements() {
+        let source = r#"
+#pragma vertex vert
+#pragma fragment frag
+StructuredBuffer<float3> positions;
+float4 vert(uint id : SV_VertexID) : SV_POSITION { return float4(positions[id], 1); }
+float4 frag() : SV_Target { return 1; }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        let module = naga::front::wgsl::parse_str(&compiled.vertex).unwrap();
+        let mut strides = Vec::new();
+        for (_, ty) in module.types.iter() {
+            if let naga::TypeInner::Array {
+                size: naga::ArraySize::Dynamic,
+                stride,
+                ..
+            } = ty.inner
+            {
+                strides.push(stride);
+            }
+        }
+        assert_eq!(strides, vec![12]);
     }
 
     /// Shader cache 18: a program built from its vertex and instance ids reads no vertex inputs

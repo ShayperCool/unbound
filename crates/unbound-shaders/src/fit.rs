@@ -711,7 +711,175 @@ fn front_facing(words: &[u32]) -> Result<Vec<u32>> {
     Ok(out)
 }
 
+/// HLSL StructuredBuffer<T3> elements occupy three scalars. WGSL array<vec3<T>>
+/// instead advances by four. Represent these runtime-array elements as scalar structs and
+/// reconstruct vectors on loads, leaving arithmetic and constant component accesses intact.
+fn pack_storage_vectors(words: &[u32]) -> Result<Vec<u32>> {
+    let mut list = Vec::new();
+    let mut at = 5;
+    while at < words.len() {
+        let count = (words[at] >> 16) as usize;
+        if count == 0 || at + count > words.len() {
+            bail!("malformed SPIR-V");
+        }
+        list.push(&words[at..at + count]);
+        at += count;
+    }
+    let mut scalar32 = std::collections::HashSet::new();
+    let mut vectors = HashMap::new();
+    let mut arrays = HashMap::new();
+    let mut pointers = HashMap::new();
+    let mut members = HashMap::new();
+    let mut values = HashMap::new();
+    let mut constants = HashMap::new();
+    for i in &list {
+        match i[0] & 0xffff {
+            21 | 22 if i[2] == 32 => {
+                scalar32.insert(i[1]);
+            }
+            23 if i[3] == 3 && scalar32.contains(&i[2]) => {
+                vectors.insert(i[1], i[2]);
+            }
+            29 => {
+                arrays.insert(i[1], i[2]);
+            }
+            32 => {
+                pointers.insert(i[1], (i[2], i[3]));
+            }
+            30 => {
+                members.insert(i[1], i[2..].to_vec());
+            }
+            43 if i.len() == 4 => {
+                constants.insert(i[2], i[3]);
+            }
+            59 | 65 | 66 => {
+                values.insert(i[2], i[1]);
+            }
+            _ => {}
+        }
+    }
+    arrays.retain(|_, v| vectors.contains_key(v));
+    if arrays.is_empty() {
+        return Ok(words.to_vec());
+    }
+    let mut bound = words[3];
+    let mut fresh = || {
+        let id = bound;
+        bound += 1;
+        id
+    };
+    let mut packed = HashMap::new();
+    for &vector in arrays.values() {
+        packed.entry(vector).or_insert_with(&mut fresh);
+    }
+    let mut packed_pointers = HashMap::new();
+    for (&id, &(storage, ty)) in &pointers {
+        if (storage == 2 || storage == 12) && packed.contains_key(&ty) {
+            packed_pointers.insert(id, fresh());
+        }
+    }
+    let mut packed_values = HashMap::new();
+    let mut out = words[..5].to_vec();
+    let mut decorated = false;
+    for i in list {
+        let op = i[0] & 0xffff;
+        if !decorated && (op == 71 || op == 72) {
+            decorated = true;
+            for &ty in packed.values() {
+                for m in 0..3 {
+                    out.extend([(5 << 16) | 72, ty, m, 35, m * 4]);
+                }
+            }
+        }
+        match op {
+            71 if i.len() == 4 && i[2] == 6 && arrays.contains_key(&i[1]) => {
+                out.extend([i[0], i[1], i[2], 12]);
+            }
+            23 if packed.contains_key(&i[1]) => {
+                out.extend(i);
+                let scalar = vectors[&i[1]];
+                out.extend([(5 << 16) | 30, packed[&i[1]], scalar, scalar, scalar]);
+            }
+            29 if arrays.contains_key(&i[1]) => {
+                out.extend([i[0], i[1], packed[&i[2]]]);
+            }
+            32 if packed_pointers.contains_key(&i[1]) => {
+                out.extend(i);
+                out.extend([i[0], packed_pointers[&i[1]], i[2], packed[&i[3]]]);
+            }
+            65 | 66 => {
+                let mut ty = values.get(&i[3]).and_then(|p| pointers.get(p)).map(|p| p.1);
+                let mut in_array = false;
+                for index in &i[4..] {
+                    if let Some(t) = ty {
+                        if let Some(&vector) = arrays.get(&t) {
+                            in_array = true;
+                            ty = Some(vector);
+                        } else if let Some(m) = members.get(&t) {
+                            ty = constants
+                                .get(index)
+                                .and_then(|x| m.get(*x as usize))
+                                .copied();
+                        } else if let Some(&scalar) = vectors.get(&t) {
+                            if in_array && !constants.contains_key(index) {
+                                bail!(
+                                    "dynamic component pointers into packed StructuredBuffer vectors are unsupported"
+                                );
+                            }
+                            ty = Some(scalar);
+                        } else {
+                            ty = None;
+                        }
+                    }
+                }
+                if in_array && ty.is_some_and(|t| packed.contains_key(&t)) {
+                    let pointer = packed_pointers
+                        .get(&i[1])
+                        .ok_or_else(|| anyhow!("unsupported packed vector pointer"))?;
+                    packed_values.insert(i[2], ty.unwrap());
+                    out.extend([i[0], *pointer]);
+                    out.extend(&i[2..]);
+                } else {
+                    out.extend(i);
+                }
+            }
+            61 if packed_values.contains_key(&i[3]) => {
+                let vector = packed_values[&i[3]];
+                let loaded = fresh();
+                out.extend([i[0], packed[&vector], loaded]);
+                out.extend(&i[3..]);
+                let mut components = Vec::new();
+                for index in 0..3 {
+                    let c = fresh();
+                    components.push(c);
+                    out.extend([(5 << 16) | 81, vectors[&vector], c, loaded, index]);
+                }
+                out.extend([(6 << 16) | 80, vector, i[2]]);
+                out.extend(components);
+            }
+            62 if packed_values.contains_key(&i[1]) => {
+                let vector = packed_values[&i[1]];
+                let mut components = Vec::new();
+                for index in 0..3 {
+                    let c = fresh();
+                    components.push(c);
+                    out.extend([(5 << 16) | 81, vectors[&vector], c, i[2], index]);
+                }
+                let value = fresh();
+                out.extend([(6 << 16) | 80, packed[&vector], value]);
+                out.extend(components);
+                out.extend([i[0], i[1], value]);
+                out.extend(&i[3..]);
+            }
+            _ => out.extend(i),
+        }
+    }
+    out[3] = bound;
+    Ok(out)
+}
+
 pub(crate) fn parse(words: &[u32]) -> Result<Module> {
+    let words = pack_storage_vectors(words)?;
     let bytes: Vec<u8> = words.iter().flat_map(|w| w.to_le_bytes()).collect();
     let options = naga::front::spv::Options {
         adjust_coordinate_space: true,

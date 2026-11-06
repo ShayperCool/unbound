@@ -563,6 +563,25 @@ void Scale(uint3 id : SV_DispatchThreadID)
     }
 
     #[test]
+    fn packed_float3_buffers_support_whole_vector_and_component_accesses() {
+        let program = ComputeProgram {
+            file: PathBuf::from("Packed.compute"),
+            source: "#pragma kernel Copy\nRWStructuredBuffer<float3> values;\n[numthreads(1,1,1)] void Copy(uint3 id : SV_DispatchThreadID) { float3 v = values[id.x]; values[id.x + 1] = v + 1; values[id.x].y = 9; }".into(),
+        };
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let kernel = compiler.compile_kernel(&program, "Copy", &[], &[]).unwrap();
+        let module = naga::front::wgsl::parse_str(&kernel.wgsl).unwrap();
+        assert!(module.types.iter().any(|(_, t)| matches!(
+            t.inner,
+            naga::TypeInner::Array {
+                size: naga::ArraySize::Dynamic,
+                stride: 12,
+                ..
+            }
+        )));
+    }
+
+    #[test]
     fn reserved_entry_names_match_emitted_wgsl() {
         let program = ComputeProgram {
             file: PathBuf::from("Reserved.compute"),
