@@ -32,11 +32,13 @@ pub struct SfxReverbSpec {
 const EARLY_MS: [[f32; 4]; 2] = [[0.0, 7.926, 20.075, 50.781], [4.984, 12.616, 31.932, 80.76]];
 const EARLY_ALLPASS_MS: [f32; 2] = [5.885, 7.676];
 const EARLY_ALLPASS_GAIN: f32 = 0.63;
-// Line 2's offset lies in [1127.8, 1127.9) frames at 44.1 kHz: Reverb Delay 0.022 s (970.2
-// frames) reaches it 2098 frames on, 0.011 s (485.1 frames) 1612 (tests/projects/audioreverb).
-const LINE_INPUT_MS: [f32; 8] = [
-    1.488, 20.152, 25.575, 32.573, 41.596, 53.236, 68.252, 87.633,
-];
+// The late lines read the input at the delay sum D = Reflect Delay + Reverb Delay: line 0 at
+// floor(D * rate) frames, line k > 0 at floor((D + 18.7 ms * 1.29^(k - 1)) * rate) frames, all in
+// float32, each plus frames(1.488 ms) - 1. The truncation after the tap sum is measured where D
+// is not a whole number of frames (the zone_11 case of tests/projects/audioreverb: lines 2 and 4).
+const LINE0_MS: f32 = 1.488;
+const LATE_TAP_S: f32 = 0.0187;
+const LATE_TAP_RATIO: f32 = 1.29;
 const FAN_OUT_MS: [f32; 8] = [0.0, 0.717, 1.759, 3.279, 5.515, 8.805, 13.648, 20.76];
 /// The nominal length of line k is 61 ms * 1.32^k at Density 100.
 const LINE_MS: f32 = 61.0;
@@ -93,7 +95,7 @@ pub struct SfxReverb {
 impl SfxReverb {
     pub fn new(rate: u32) -> anyhow::Result<Self> {
         // The longest input read is the late network at maximal Reflect and Reverb Delay.
-        let input = frames(400.0 + LINE_INPUT_MS[7], rate) + 2;
+        let input = frames(400.0 + LATE_TAP_S * 1000.0 * LATE_TAP_RATIO.powi(6) + LINE0_MS, rate) + 3;
         let line_len = (LINE_MS * LINE_RATIO.powi(7) * rate as f32 / 1000.0).round() as usize + 2;
         let line_len = line_len.max(frames(FAN_OUT_MS[7], rate) + 1);
         let bytes = (input + 8 * line_len) * std::mem::size_of::<f32>();
@@ -178,13 +180,12 @@ impl SfxReverb {
         c.early_gain = std::f32::consts::FRAC_1_SQRT_2
             * 0.5
             * level(room + p.reflections.clamp(-10000.0, 1000.0));
-        // Measured onsets: line 0 reads max(floor(f32 delay sum) - 1, 0) frames plus its offset,
-        // the other lines floor(f32 delay sum + offset), one sum (0.007 s + 0.011 s: 933 and 864
-        // + offset at 48 kHz, 857 and 794 + offset at 44.1 kHz; Reverb Delay 0.011 s alone gives
-        // 485.1 + 3009.9 = 3495 for line 6 at 44.1 kHz).
+        // Measured onsets (above): 0.007 s + 0.011 s puts lines 0 and 1 at 933 and 1831 frames at
+        // 48 kHz.
         let reverb_delay = p.reverb_delay.clamp(0.0, 0.1);
-        let line0_base = (((reflect + reverb_delay) * rate) as usize).saturating_sub(1);
-        let late_base = ((reflect + reverb_delay) * rate) as f64;
+        let late_delay = reflect + reverb_delay;
+        let line_offset = frames(LINE0_MS, self.rate) - 1;
+        let mut tap = LATE_TAP_S;
         let density = p.density.clamp(0.0, 100.0) / 100.0;
         let scale = 0.1 + 0.9 * density * density * density;
         let decay = p.decay_time.clamp(0.1, 20.0);
@@ -193,11 +194,14 @@ impl SfxReverb {
         let mut energy = 0.0;
         for k in 0..8 {
             let m = LINE_MS * rate / 1000.0 * scale * LINE_RATIO.powi(k as i32);
-            c.late[k] = if k == 0 {
-                line0_base + frames(LINE_INPUT_MS[k], self.rate)
-            } else {
-                (late_base + LINE_INPUT_MS[k] as f64 * self.rate as f64 / 1000.0) as usize
-            };
+            c.late[k] = line_offset
+                + if k == 0 {
+                    ((late_delay * rate) as usize).max(1)
+                } else {
+                    let frames = ((late_delay + tap) * rate) as usize;
+                    tap *= LATE_TAP_RATIO;
+                    frames
+                };
             c.feedback[k] = (m.round() as usize).saturating_sub(1).max(1);
             let c1 = 10f32.powf(m / rate * -60.0 / decay / 20.0);
             c.decay[k] = c1;
@@ -413,6 +417,25 @@ mod tests {
         close(y[2 * 2950], -0.043_943_3);
         close(y[2 * 2984 + 1], -0.043_943_3);
         close(y[2 * 3847], 0.043_943_3);
+    }
+
+    /// Native onsets (tests/projects/audioreverb and mixerreverb). A Generic zone at weight 0.8
+    /// scales its delays to a sum of 691.2 frames at 48 kHz.
+    #[test]
+    fn late_lines_truncate_the_delay_and_tap_sum() {
+        let cases: [(u32, f32, f32, [usize; 8]); 3] = [
+            (48000, 0.007 * 0.8, 0.011 * 0.8, [761, 1658, 1919, 2254, 2688, 3246, 3967, 4897]),
+            (48000, 0.007, 0.011, [933, 1831, 2091, 2427, 2860, 3419, 4140, 5070]),
+            (44100, 0.0, 0.011, [549, 1373, 1612, 1921, 2319, 2832, 3495, 4349]),
+        ];
+        for (rate, reflect, delay, late) in cases {
+            let mut reverb = SfxReverb::new(rate).unwrap();
+            let mut p = spec(&[]);
+            p.reflect_delay = reflect;
+            p.reverb_delay = delay;
+            reverb.tune(&p);
+            assert_eq!(reverb.c.late, late, "{rate} {reflect} {delay}");
+        }
     }
 
     #[test]
