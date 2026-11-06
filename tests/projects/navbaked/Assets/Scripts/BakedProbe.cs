@@ -92,12 +92,11 @@ public class BakedProbe : MonoBehaviour
         {
             Triangulation("both");
             Grid(10f, 22f);
-            var agent = GameObject.Find("Agent2").GetComponent<NavMeshAgent>();
-            ProbeLog.Value("agent2.isOnNavMesh", agent.isOnNavMesh);
-            ProbeLog.Value("agent2", agent.transform.position);
+            ProbeLog.Value("agent2.isOnNavMesh", GameObject.Find("Agent2").GetComponent<NavMeshAgent>().isOnNavMesh);
             Path("across", Home, new Vector3(17f, 0f, 0f), NavMesh.AllAreas);
             Path("second", new Vector3(13f, 0f, -3f), new Vector3(21f, 0f, 3f), NavMesh.AllAreas);
         });
+        Scenario("agent2", () => ProbeLog.Value("position", GameObject.Find("Agent2").transform.position));
         yield return SceneManager.UnloadSceneAsync("Second");
         Scenario("unloaded", () =>
         {

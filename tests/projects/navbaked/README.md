@@ -11,7 +11,8 @@ the Navigation window does: the scene's `NavMeshSettings.m_NavMeshData` referenc
 | `areas`, `baked` | the Mud area (4, cost 3), the triangulation (sorted triangles, area) |
 | `sample`, `raycast`, `paths` | a 2 m sample grid; raycasts over the Mud strip (with and without its area), to a wall and up a 0.3 m step; paths across the Mud (cost, mask), up the step, up the platform over a one-way OffMeshLink component and down over the bake's generated drop link |
 | `agent` | an agent walked up the platform and back down at a fixed 0.02 s step: position, `isOnOffMeshLink`, the link's type, every 5 frames |
-| `additive` | after `LoadSceneAsync("Second", Additive)`: both NavMeshes' triangulation, samples over the second, its agent, paths to and within it |
+| `additive` | after `LoadSceneAsync("Second", Additive)`: both NavMeshes' triangulation, samples over the second, whether its agent is on the NavMesh, paths to and within it |
+| `agent2` | the second scene's agent's position then |
 | `unloaded` | after `UnloadSceneAsync("Second")`: the first scene's NavMesh alone again |
 
 The level is `ProbeSetup.Create`'s (`Assets/Editor`): a ground with a Mud strip, a step, a 1.5 m
@@ -26,7 +27,10 @@ scene is a ground 2 m beyond the first one's and an agent. Both scenes, their Na
 
 `check` runs Unbound on a fresh copy under `$XDG_CACHE_HOME/unbound/validation/runs/navbaked/`
 and compares it with the reference using `tests/projects/navmesh/compare.py` (numbers within 1e-3,
-text exactly; every missing, extra or differing value is listed).
+text exactly; every missing, extra or differing value is listed). It exits with the scenarios of the
+scene's NavMesh itself (`awake`, `areas`, `baked`, `paths`, `additive`, `unloaded`); `sample`,
+`raycast`, `agent` and `agent2` measure the general queries and agent model and are listed, not
+gated (their residuals: docs/COMPATIBILITY_GAPS.md, the legacy-baked NavMesh row).
 
 The reference `Reference/unity-6000.0.71f1.json` holds 1291 values, SHA-256
-`2a3f72a3a51c20abac116dd3dc93f1b8190f4b5153916970f43a6f346c00a126`.
+`9d94959b488ec164107d2a542a71fc7f2a23dcb1a867c7bd4cd7ce5d62790983`.

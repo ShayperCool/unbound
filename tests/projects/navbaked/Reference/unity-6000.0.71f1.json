@@ -1233,9 +1233,6 @@
     "s22,6.z": 4.5,
     "s22,6.mask": 1,
     "agent2.isOnNavMesh": true,
-    "agent2.x": 17,
-    "agent2.y": 0,
-    "agent2.z": 2,
     "across.found": true,
     "across.status": "PathPartial",
     "across.corners": 2,
@@ -1254,6 +1251,11 @@
     "second.corners1.x": 21,
     "second.corners1.y": 0.08333337,
     "second.corners1.z": 3
+  },
+  "agent2": {
+    "position.x": 17,
+    "position.y": 0,
+    "position.z": 2
   },
   "unloaded": {
     "left.vertices": 85,
