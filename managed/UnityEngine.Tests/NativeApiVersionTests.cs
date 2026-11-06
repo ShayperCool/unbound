@@ -5,8 +5,9 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
-    /// <summary>NativeApi 20 (filter component descriptors at the end of AudioSourcePacket, with
-    /// AudioReverbFilter's since 20; render protocol 8: draws that read a GraphicsBuffer's 16-bit
+    /// <summary>NativeApi 21 (filter component descriptors at the end of AudioSourcePacket, with
+    /// AudioReverbFilter's since 20, and the reverb zone of AudioFramePacket since 21; render
+    /// protocol 8: draws that read a GraphicsBuffer's 16-bit
     /// indices, and render protocol 9: depth copies): the managed side
     /// refuses a native side of any other version at startup, older or newer, before anything is
     /// installed.</summary>
@@ -18,7 +19,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheVersionIsAudioFilterDescriptorsAndRenderProtocolNine()
         {
-            Assert.Equal(20u, NativeApi.CurrentVersion);
+            Assert.Equal(21u, NativeApi.CurrentVersion);
             Assert.Equal(1UL << 62, TextureElements.DepthElement);
         }
 
@@ -29,7 +30,8 @@ namespace UnityEngine.Tests
         [InlineData(17u)]
         [InlineData(18u)]
         [InlineData(19u)]
-        [InlineData(21u)]
+        [InlineData(20u)]
+        [InlineData(22u)]
         public void AnotherNativeVersionIsRejectedBeforeInstalling(uint version)
         {
             var before = (NativeApi)Api.GetValue(null);
@@ -39,7 +41,7 @@ namespace UnityEngine.Tests
             try { Native.Initialize(&api); }
             catch (InvalidOperationException e) { error = e; }
             Assert.NotNull(error);
-            Assert.Equal($"native API version {version}, managed expects 20", error.Message);
+            Assert.Equal($"native API version {version}, managed expects 21", error.Message);
             Assert.Equal(before.Version, ((NativeApi)Api.GetValue(null)).Version);
             Assert.Equal(ready, (bool)Ready.GetValue(null));
         }

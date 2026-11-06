@@ -53,6 +53,8 @@ pub struct AudioSourcePacket {
     pub doppler_level: f32,
     pub min_distance: f32,
     pub max_distance: f32,
+    /// The linear gain of the source's send into the reverb zones (NativeApi 21): its
+    /// `reverbZoneMix` as the level Unity applies, 0 with `bypassReverbZones`.
     pub reverb_zone_mix: f32,
     /// `AudioRolloffMode`: 0 logarithmic, 1 linear, 2 custom.
     pub rolloff_mode: i32,
@@ -202,6 +204,10 @@ pub struct AudioFramePacket {
     pub _pad: i32,
     /// Valid during the call only: the mixer copies them before it returns.
     pub filters: *const AudioFilterDescriptor,
+    /// The reverb zones' blended SFX Reverb at the listener (NativeApi 21): kind
+    /// [`filter_kind::REVERB`] while an `AudioReverbZone` is enabled, 0 otherwise. `id` changes
+    /// whenever zones appear after none were enabled; the zone reverb then starts empty.
+    pub zone: AudioFilterDescriptor,
 }
 
 impl Default for AudioFramePacket {
@@ -217,6 +223,7 @@ impl Default for AudioFramePacket {
             filter_count: 0,
             _pad: 0,
             filters: std::ptr::null(),
+            zone: AudioFilterDescriptor::default(),
         }
     }
 }
@@ -281,18 +288,19 @@ mod tests {
         assert_eq!(offset_of!(AudioFilterDescriptor, reverb), 40);
         assert_eq!(size_of::<AudioSourceCommand>(), 32);
         assert_eq!(size_of::<AudioSourceState>(), 24);
-        assert_eq!(size_of::<AudioFramePacket>(), 80);
+        assert_eq!(size_of::<AudioFramePacket>(), 176);
         assert_eq!(offset_of!(AudioFramePacket, filter_count), 64);
         assert_eq!(offset_of!(AudioFramePacket, filters), 72);
+        assert_eq!(offset_of!(AudioFramePacket, zone), 80);
         assert_eq!(size_of::<AudioStatus>(), 32);
     }
 
     /// The source packet's filter descriptors were added at NativeApi 16; 20 adds the reverb
-    /// kind and parameters. The managed side pins the same value and refuses 14 to 19 and 21
-    /// (NativeApiVersionTests).
+    /// kind and parameters, 21 the frame packet's reverb zone. The managed side pins the same
+    /// value and refuses 14 to 20 and 22 (NativeApiVersionTests).
     #[test]
-    fn the_filter_descriptor_layout_is_native_api_20() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 20);
+    fn the_filter_descriptor_layout_is_native_api_21() {
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 21);
         assert_eq!(
             [
                 filter_kind::LOWPASS,

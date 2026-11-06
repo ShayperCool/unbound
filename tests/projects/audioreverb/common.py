@@ -21,7 +21,7 @@ def profile(name):
     """Maps each selected case to the number of frames compared (None: all).
 
     filter: every case without a reverb zone; zone: the zone cases; all: both. gate: the cases the
-    engine reproduces, which the README lists (it changes only with the engine).
+    engine reproduces, which the README lists (it changes only with the engine); now all of them.
     """
     keys = cases()
     zone = [k for k in keys if k.startswith('zone')]
@@ -32,8 +32,9 @@ def profile(name):
     return selected
 
 
-# Zone cases the gate covers (see README).
-GATE_ZONE = ()
+# Zone cases the gate covers (see README): all of them.
+GATE_ZONE = ('zone_in', 'zone_11', 'zone_12_5', 'zone_14', 'zone_out', 'zone_mix_half', 'zone_mix0', 'zone_user',
+             'zone_cave', 'zone_overlap', 'zone_overlap_blend')
 # Metadata outside the cases: the property tables of each component.
 FILTER_TABLES = ('filter.', 'serialized.filter_')
 ZONE_TABLES = ('zone.', 'serialized.zone_', 'serialized.reverb_zone_mix')
@@ -41,7 +42,7 @@ ZONE_TABLES = ('zone.', 'serialized.zone_', 'serialized.reverb_zone_mix')
 
 def tables(name):
     """The metadata key prefixes a profile compares."""
-    return {'all': FILTER_TABLES + ZONE_TABLES, 'zone': ZONE_TABLES}.get(name, FILTER_TABLES)
+    return {'all': FILTER_TABLES + ZONE_TABLES, 'gate': FILTER_TABLES + ZONE_TABLES, 'zone': ZONE_TABLES}.get(name, FILTER_TABLES)
 
 
 def header(root):

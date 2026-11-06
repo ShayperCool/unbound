@@ -49,6 +49,7 @@ namespace Unbound.Runtime
         internal float DopplerLevel;
         internal float MinDistance;
         internal float MaxDistance;
+        /// <summary>The linear gain of the source's send into the reverb zones (NativeApi 21).</summary>
         internal float ReverbZoneMix;
         internal int RolloffMode;
         internal int Priority;
@@ -172,6 +173,9 @@ namespace Unbound.Runtime
         /// <summary><see cref="FilterCount"/> descriptors in component order; valid during the
         /// call only.</summary>
         internal AudioFilterDescriptor* Filters;
+        /// <summary>The reverb zones' SFX Reverb (NativeApi 21): kind Reverb while a zone is
+        /// enabled, 0 otherwise; a new <c>Id</c> restarts the reverb empty.</summary>
+        internal AudioFilterDescriptor Zone;
     }
 
     [StructLayout(LayoutKind.Sequential)]

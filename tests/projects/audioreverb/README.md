@@ -50,7 +50,7 @@ captures the engine at both rates and writes the strict `all` reports. Its exit 
 
 - `filter`: every case without a zone, plus the filter property tables;
 - `zone`: the zone cases and zone tables;
-- `gate`: `filter` plus the zone cases listed in `common.GATE_ZONE` (none yet);
+- `gate`: `filter` plus the zone cases listed in `common.GATE_ZONE` (all of them) and the zone tables;
 - `all`: everything.
 
 The set was recorded from the 48 kHz Native project of the published capture. The authoring reads
@@ -68,12 +68,12 @@ per rate in `Reference/unity-6000.0.71f1/rate-<rate>/`, with gzip sample files.
 
 ## Result
 
-Gate: 1966203/1966203 values at 48 kHz and 1966203/1966203 at 44.1 kHz. The strict all-case
-report keeps:
-
-- 10 (48 kHz) and 11 (44.1 kHz) one-step device PCM flips whose master floats pass (ledgered in
-  docs/COMPATIBILITY_GAPS.md);
-- every zone case and zone table, because `AudioReverbZone` is still a stub.
+Gate: 3047646/3047646 values at 48 kHz and 3047646/3047646 at 44.1 kHz, every case and table.
+The strict all-case report keeps only one-step device PCM flips (ledgered in
+docs/COMPATIBILITY_GAPS.md): 53 at 48 kHz (`underwater` 6, `user_all` 4, `zone_11` 19,
+`zone_12_5` 21, `zone_overlap_blend` 3) and 32 at 44.1 kHz (`default` 1, `user_all` 4, `zone_11`
+23, `zone_12_5` 3, `zone_overlap_blend` 1). The filter cases' master floats pass; the zone cases
+have no master floats.
 
 The measured rules are in docs/AUDIO.md. Unmeasured: other releases, surround output,
 parameter changes while a tail runs, values outside the documented ranges, unrouted sources with

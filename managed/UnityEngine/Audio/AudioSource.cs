@@ -300,6 +300,23 @@ namespace UnityEngine
 
         static float ConstantOf(AnimationCurve curve) => curve.length > 0 ? curve[0].value : 0f;
 
+        /// <summary>The linear gain of this source's send into the reverb zones, as the Editor
+        /// derives it: <c>reverbZoneMix</c> (a curve of more than one key at the listener's
+        /// distance over maxDistance; unmeasured) clamped to 0..1.1, then 2000 log10 of it in
+        /// whole mB up to 1 and (mix - 1) * 10000 mB above; 0 with <c>bypassReverbZones</c>.</summary>
+        internal float ReverbZoneSend()
+        {
+            if (m_BypassReverbZones) return 0f;
+            var curve = m_ReverbZoneMixCurve;
+            float mix = curve.length == 1 || !(m_MaxDistance > 0f) || m_GameObject == null
+                ? ConstantOf(curve)
+                : curve.Evaluate(Vector3.Distance(transform.position, AudioSystem.s_HearingPosition) / m_MaxDistance);
+            mix = Math.Min(1.1f, mix);
+            if (mix < 0f) mix = 0f;
+            int mB = mix > 1f ? (int)((mix - 1f) * 10000f) : mix > 0f ? (int)(MathF.Log10(mix) * 2000f) : -10000;
+            return MathF.Pow(10f, mB / 2000f);
+        }
+
         void SetConstant(ref AnimationCurve curve, float value)
         {
             curve = new AnimationCurve(new Keyframe(0f, value));
@@ -614,7 +631,7 @@ namespace UnityEngine
                 DopplerLevel = m_DopplerLevel,
                 MinDistance = m_MinDistance,
                 MaxDistance = m_MaxDistance,
-                ReverbZoneMix = ConstantOf(m_ReverbZoneMixCurve),
+                ReverbZoneMix = ReverbZoneSend(),
                 RolloffMode = (int)m_RolloffMode,
                 Priority = m_Priority,
                 Flags = flags,

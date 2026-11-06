@@ -425,8 +425,12 @@ namespace Unbound.Runtime
 
         internal float GroupGain(ulong handle) => m_Groups.TryGetValue(handle, out var g) ? g.Gain : 1f;
 
+        /// <summary>The last frame packet (tests; its pointers are stale after the call).</summary>
+        internal AudioFramePacket LastFrame;
+
         internal override AudioStatus Frame(in AudioFramePacket frame)
         {
+            LastFrame = frame;
             m_ListenerPaused = (frame.Flags & AudioFrameFlags.Paused) != 0;
             int rate = m_Configuration.sampleRate, buffer = Math.Max(1, m_Configuration.dspBufferSize);
             m_Owed += Math.Max(0, frame.DeltaTime);

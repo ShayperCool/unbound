@@ -134,7 +134,7 @@ Unbound's choices (unmeasured):
 - On the hearing AudioListener only `AudioReverbFilter` runs. Other filter kinds there, and
   reverb filters next to listener OnAudioFilterRead scripts (an unmeasured order), log an error
   once per listener and are not applied.
-- `AudioChorusFilter`, `AudioDistortionFilter` and `AudioReverbZone` remain generated stubs.
+- `AudioChorusFilter` and `AudioDistortionFilter` remain generated stubs.
 
 ## Follow-up (unexecuted)
 
@@ -200,11 +200,13 @@ milliseconds converted with `floor(ms * rate / 1000)`. The constants are in `rev
   - Reverb Delay, Density, Diffusion and Decay Time do not change them.
 - **Late reverb.**
   - **Lines.** Eight lines `k` with nominal length `m_k = 61 ms * rate * f * 1.32^k`, where
-    `f = 0.1 + 0.9 (Density/100)^3`. Each line is fed the input at its own tap. Line 0's tap is at
-    `max(floor(f32 (ReflectDelay + ReverbDelay) * rate) - 1, 0)` plus its offset. The other lines
-    are at `floor(f32 (ReflectDelay + ReverbDelay) * rate + offset)`, one sum. The fractional
-    delays of the reverb filter presets at 44.1 kHz fix this rule and line 2's offset (25.575 ms;
-    tests/projects/audioreverb). It reproduces every mixerreverb onset as before.
+    `f = 0.1 + 0.9 (Density/100)^3`. Each line is fed the input at its own tap, all in float32
+    with `D = ReflectDelay + ReverbDelay`: line 0 at `max(floor(D * rate), 1)`, line `k > 0` at
+    `floor((D + 18.7 ms * 1.29^(k-1)) * rate)` frames, each plus `frames(1.488 ms) - 1` (70 at 48
+    kHz, 64 at 44.1 kHz). Adding the tap before truncating matters when `D * rate` is fractional:
+    a reverb zone heard at weight 0.8 (691.2 frames at 48 kHz) puts lines 2 and 4 one frame later
+    than truncating `D * rate` first (tests/projects/audioreverb). Every mixerreverb and reverb
+    filter onset is unchanged.
   - **Feedback.** Line `k` also receives `c1_k` times its successor's transformed output, delayed
     by `round(m_k) - 1`.
   - **Damping.** Each line has a one-pole with the DMO I3DL2 coefficients: `c1 = 10^(-3 m / (rate
@@ -235,16 +237,16 @@ milliseconds converted with `floor(ms * rate / 1000)`. The constants are in `rev
   and 5000 Hz. The Room HF formula clamps `cos` at 0.9999 like the DMO reference, so values below
   about 108 Hz at 48 kHz rely on an unmeasured guard.
 - A Wet level above 0 dB (for example through an exposed parameter) fails loudly as unmeasured.
-- Wet mixing on other effects, the other mixer effects and `AudioReverbZone` still fail loudly or
-  remain stubs.
+- Wet mixing on other effects and the other mixer effects still fail loudly or remain stubs.
 
 # AudioReverbFilter and AudioReverbZone
 
 `AudioReverbFilter` runs the AudioMixer SFX Reverb kernel (above) on an AudioSource's chain or on
-the AudioListener's final mix, without wet mixing. `AudioReverbZone` is still a stub. The probe is
-tests/projects/audioreverb (Unity 6000.0.71f1, Linux, 48000 and 44100 Hz, two Native repeats
-bit-identical). Its gate passes every filter case and every filter property table: 1966203/1966203
-values per rate.
+the AudioListener's final mix, without wet mixing. `AudioReverbZone`
+(`managed/UnityEngine/Audio/AudioReverbZone.cs`) blends the enabled zones at the listener into one
+more instance of that kernel (`ZoneReverb` in `mixer.rs`), which every AudioSource feeds at its
+`reverbZoneMix`. The probe is tests/projects/audioreverb (Unity 6000.0.71f1, Linux, 48000 and
+44100 Hz, two Native repeats bit-identical). Its gate covers every case and property table.
 
 ## Unity contract (6000.0)
 
@@ -283,19 +285,37 @@ the Manual (*Audio Reverb Filter*, *Audio Reverb Zone*):
 - On the AudioListener the filter processes the final mix and its tail runs on.
   `bypassListenerEffects` has no effect on a source routed into a mixer group, as documented.
 
-## Measured (zone; not implemented)
+## Measured (zone)
 
-The probe records these as Native references; the engine does not reproduce them yet (the `zone`
-profile and the strict report).
-
-- Zone presets share the filter's levels and times, but have their own Reflections Delay (for
-  example Generic 0.007, Forest 0.162, Mountains 0.3). Room, Room HF, Room LF, Reflections and
-  Reverb are `int`.
-- Zone setters apply whatever the preset is, and clamp to the documented ranges (`minDistance`
-  at least 0, `maxDistance` at least `minDistance`). A preset keeps minDistance/maxDistance.
-- Audio cases: the listener at distance 0, 11, 12.5, 14 and 20 from a Generic zone (10/15),
-  reverbZoneMix 0.5 and 0, User and Cave zones, and two overlapping zones. The zone reverb is
-  heard on the device output only (not in a mixer sink) and outlives the source.
+- A new zone is Generic (minDistance 10, maxDistance 15). Zone presets share the filter's levels
+  and times but have their own Reflections Delay (for example Generic 0.007, Forest 0.162,
+  Mountains 0.3); a preset also sets Room LF 0 and the references 5000/250 Hz and keeps the
+  distances. User keeps the current values. Room, Room HF, Room LF, Reflections and Reverb are
+  `int`.
+- The setters apply under any preset (the preset stays) and clamp: `minDistance` at least 0,
+  `maxDistance` at least `minDistance`, levels -10000 to 0 (Reflections to 1000, Reverb to 2000),
+  Decay Time 0.1 to 20, Decay HF Ratio 0.1 to 2, Reflections Delay 0 to 0.3, Reverb Delay 0 to
+  0.1, HF Reference 1000 to 20000, LF Reference 20 to 1000, Diffusion and Density 0 to 100.
+  Serialized values are read as stored (`m_MinDistance` ... `m_RoomLF`).
+- The blend at the listener (`AudioReverbZone.Blend`): a zone weighs 1 within minDistance, 0 from
+  maxDistance on and 1 - (d - min)/(max - min) between; zones under 0.001 are left out. Each
+  zone adds its parameters times its weight: the levels as e^(mB/500), HF/LF Reference as natural
+  logarithms, everything else linearly. Below a total weight of 1 the remainder is an Off room
+  (-10000 mB) and the sum is used undivided, so a partly heard zone also shortens its delays,
+  decay and diffusion and lowers its references (5000 Hz at weight 0.5 becomes 70.7 Hz). Above 1
+  the sum is divided by the total weight. The levels come back as whole mB, `(int)(500 ln x +
+  0.5)`, so a zone heard at full weight sounds one mB higher than set (-1000 as -999). The result
+  is clamped to the setter ranges; HF Reference stays at least 1000 Hz.
+- Each AudioSource sends its output after its components at `reverbZoneMix` clamped to 0..1.1,
+  converted to whole mB (2000 log10 up to 1, (mix - 1) * 10000 above, -10000 at 0); 0 with
+  `bypassReverbZones`. The zone reverb (Dry Level -10000) is added to the final mix, before the
+  listener's components. It is heard on the device output only (not in a mixer sink) and outlives
+  the source.
+- Each case of the probe starts with an empty zone reverb, also after a case whose tail still
+  rang: the zone reverb starts empty when zones appear after none were enabled.
+- The cases: the listener at 0, 11, 12.5, 14 and 20 from a Generic zone (10/15), `reverbZoneMix`
+  0.5 and 0, User and Cave zones, two zones at the listener and a full zone with a half-heard
+  one. All match within one device PCM step.
 
 ## Limits
 
@@ -307,8 +327,13 @@ profile and the strict report).
   AudioSource (it runs only in the source's chain), and other component kinds there. Parameter
   changes while a tail runs, and a mixer-routed source with `bypassEffects` (the engine still
   applies the listener components to it), are unmeasured too.
-- Residuals: one-step device PCM flips only (10 at 48 kHz, 11 at 44.1 kHz in the strict report;
-  the gate admits one step on device PCM, never on floats).
+- Residuals: one-step device PCM flips only (filter and zone cases; the gate admits one step on
+  device PCM, never on floats).
+- Zones, unmeasured: a source routed into a mixer group (it sends like any other source),
+  listener components processing the zone reverb, a zone disabled and enabled again within one
+  frame (the reverb restarts), parameter changes while a tail runs, `reverbZoneMix` curves of
+  more than one key (evaluated at the listener's distance over maxDistance), 3D sources, other
+  sample rates and releases.
 
 # AudioMixer: Send, Receive and Duck Volume
 

@@ -95,10 +95,14 @@ namespace UnityEngine.Tests
         static ulong Id(Component c) => unchecked((ulong)(long)c.GetInstanceID());
 
         [Fact]
-        public void PacketAndDescriptorLayoutsUnchangedInNativeApi19()
+        public void PacketAndDescriptorLayoutsUnchangedInNativeApi21()
         {
-            // Added at 16; 20 adds the reverb kind and its parameters.
-            Assert.Equal(20u, NativeApi.CurrentVersion);
+            // Added at 16; 20 adds the reverb kind and its parameters, 21 the frame's reverb zone.
+            Assert.Equal(21u, NativeApi.CurrentVersion);
+            var frame = default(AudioFramePacket);
+            byte* f = (byte*)&frame;
+            Assert.Equal((64, 72, 80, 176), ((int)((byte*)&frame.FilterCount - f), (int)((byte*)&frame.Filters - f),
+                (int)((byte*)&frame.Zone - f), sizeof(AudioFramePacket)));
             var p = default(AudioSourcePacket);
             byte* b = (byte*)&p;
             Assert.Equal(40, (int)((byte*)&p.Volume - b));

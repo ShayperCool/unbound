@@ -22,7 +22,9 @@ use crate::{
 /// 18: both: the filter descriptors of 16 and render protocol 8 of 17.
 /// 19: render protocol 9 (`CopyDepth`, opcode 29).
 /// 20: `AudioReverbFilter` descriptors (kind 4 and 14 reverb parameters per descriptor).
-pub const NATIVE_API_VERSION: u32 = 20;
+/// 21: the reverb zone descriptor at the end of `AudioFramePacket`; `reverb_zone_mix` is the
+/// source's send gain.
+pub const NATIVE_API_VERSION: u32 = 21;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]

@@ -19,6 +19,11 @@ namespace Unbound.Runtime
     internal static unsafe class AudioSystem
     {
         static AudioFilterDescriptor[] s_ListenerFilters;
+        static readonly List<AudioReverbZone> s_Zones = new List<AudioReverbZone>();
+        // Counts the times zones appeared after none were enabled: the zone reverb then starts empty.
+        static ulong s_ZoneGeneration;
+        /// <summary>The hearing listener's position at the last update (reverb zone mix curves).</summary>
+        internal static Vector3 s_HearingPosition;
         static readonly List<AudioSource> s_Sources = new List<AudioSource>();
         static readonly List<AudioListener> s_Listeners = new List<AudioListener>();
         static readonly List<AudioMixer> s_Mixers = new List<AudioMixer>();
@@ -80,6 +85,15 @@ namespace Unbound.Runtime
         }
 
         internal static void Remove(AudioListener listener) => s_Listeners.Remove(listener);
+
+        internal static void Add(AudioReverbZone zone)
+        {
+            if (s_Zones.Contains(zone)) return;
+            if (s_Zones.Count == 0) s_ZoneGeneration++;
+            s_Zones.Add(zone);
+        }
+
+        internal static void Remove(AudioReverbZone zone) => s_Zones.Remove(zone);
 
         internal static void Add(AudioMixer mixer)
         {
@@ -283,6 +297,8 @@ namespace Unbound.Runtime
             }
             s_Loading.Clear();
 
+            s_Listeners.RemoveAll(l => l == null);
+            if (s_Listeners.Count > 0) s_HearingPosition = s_Listeners[s_Listeners.Count - 1].transform.position;
             int n = s_Sources.Count;
             if (s_Snapshot.Length < n) s_Snapshot = new AudioSource[Math.Max(n, s_Snapshot.Length * 2)];
             s_Sources.CopyTo(s_Snapshot);
@@ -349,6 +365,13 @@ namespace Unbound.Runtime
                 Debug.LogWarning($"There are {listeners} audio listeners in the scene. Please ensure there is always exactly one audio listener in the scene.");
             s_WarnedListeners = Math.Max(1, listeners);
 
+            s_Zones.RemoveAll(z => z == null);
+            if (s_Zones.Count > 0)
+            {
+                frame.Zone.Kind = AudioFilterKind.Reverb;
+                frame.Zone.Id = s_ZoneGeneration;
+                AudioReverbZone.Blend(s_Zones, frame.ListenerPosition, frame.Zone.Reverb);
+            }
             fixed (AudioFilterDescriptor* filters = s_ListenerFilters)
             {
                 if (frame.FilterCount > 0) frame.Filters = filters;
@@ -361,6 +384,8 @@ namespace Unbound.Runtime
         {
             s_Sources.Clear();
             s_Listeners.Clear();
+            s_Zones.Clear();
+            s_HearingPosition = Vector3.zero;
             s_Mixers.Clear();
             s_Groups.Clear();
             s_Loading.Clear();

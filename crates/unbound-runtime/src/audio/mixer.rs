@@ -16,7 +16,7 @@ use super::{
         MAX_SOURCE_FILTERS, callback, command, filter_kind, filter_stage, source_flags,
         voice_state,
     },
-    reverb::SfxReverbSpec,
+    reverb::{SfxReverb, SfxReverbSpec},
     spatial::{self, Listener, SourceSpatial},
 };
 use crate::render_protocol::Vector3;
@@ -79,6 +79,8 @@ pub struct SourceParams {
     pub doppler_level: f32,
     pub min_distance: f32,
     pub max_distance: f32,
+    /// The linear send gain into the reverb zones.
+    pub reverb_zone_mix: f32,
     pub rolloff_mode: i32,
     pub priority: i32,
     pub flags: u32,
@@ -106,6 +108,7 @@ impl Default for SourceParams {
             doppler_level: 1.0,
             min_distance: 1.0,
             max_distance: 500.0,
+            reverb_zone_mix: 1.0,
             rolloff_mode: spatial::LOGARITHMIC,
             priority: 128,
             flags: 0,
@@ -214,22 +217,7 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         max_channels: 0.0,
         dry_mix: d.dry_mix,
         wet_mix: d.wet_mix,
-        sfx: (d.kind == filter_kind::REVERB).then(|| SfxReverbSpec {
-            dry_level: r[0],
-            room: r[1],
-            room_hf: r[2],
-            decay_time: r[3],
-            decay_hf_ratio: r[4],
-            reflections: r[5],
-            reflect_delay: r[6],
-            reverb: r[7],
-            reverb_delay: r[8],
-            diffusion: r[9],
-            density: r[10],
-            hf_reference: r[11],
-            room_lf: r[12],
-            lf_reference: r[13],
-        }),
+        sfx: (d.kind == filter_kind::REVERB).then(|| sfx_spec(&r)),
         mix_level: None,
         mix_audible: true,
         duck: None,
@@ -238,6 +226,36 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         compressor: None,
         eq: None,
     }
+}
+
+/// A reverb descriptor's 14 parameters in [`SfxReverbSpec`]'s field order.
+fn sfx_spec(r: &[f32; 14]) -> SfxReverbSpec {
+    SfxReverbSpec {
+        dry_level: r[0],
+        room: r[1],
+        room_hf: r[2],
+        decay_time: r[3],
+        decay_hf_ratio: r[4],
+        reflections: r[5],
+        reflect_delay: r[6],
+        reverb: r[7],
+        reverb_delay: r[8],
+        diffusion: r[9],
+        density: r[10],
+        hf_reference: r[11],
+        room_lf: r[12],
+        lf_reference: r[13],
+    }
+}
+
+/// The reverb zones' SFX Reverb (`AudioReverbZone`; tests/projects/audioreverb). Every source
+/// sends its output at its `reverbZoneMix` level; the reverb's output joins the final mix and
+/// outlives the sources. It exists while a zone is enabled and starts empty when zones appear
+/// after none were enabled, as measured between the probe's cases.
+struct ZoneReverb {
+    id: u64,
+    spec: SfxReverbSpec,
+    reverb: SfxReverb,
 }
 
 struct SourceFilter {
@@ -353,6 +371,7 @@ impl SourceParams {
             doppler_level: p.doppler_level,
             min_distance: p.min_distance,
             max_distance: p.max_distance,
+            reverb_zone_mix: p.reverb_zone_mix,
             rolloff_mode: p.rolloff_mode,
             priority: p.priority,
             flags: p.flags,
@@ -602,6 +621,8 @@ pub struct Mixer {
     listener_filters: Vec<AudioFilterDescriptor>,
     listener_chain: FilterChain,
     listener_rejected: bool,
+    zone: Option<ZoneReverb>,
+    zone_input: Vec<f32>,
     /// Unrouted sources with `bypassListenerEffects`, added after `listener_chain`.
     listener_bypass: Vec<f32>,
     listener_output: Ring,
@@ -689,6 +710,8 @@ impl Mixer {
             listener_filters: Vec::new(),
             listener_chain: FilterChain::default(),
             listener_rejected: false,
+            zone: None,
+            zone_input: Vec::new(),
             listener_bypass: Vec::new(),
             listener_output: Ring::new(),
             callback: None,
@@ -737,6 +760,8 @@ impl Mixer {
             node.update(node.spec.clone(), config.sample_rate)?;
         }
         self.listener_chain.reconfigure(config.sample_rate)?;
+        // The next frame packet sets the zone up again at the new rate.
+        self.zone = None;
         for source in self.sources.values_mut() {
             source.main = None;
             source.one_shots.clear();
@@ -856,6 +881,42 @@ impl Mixer {
             self.listener_chain = FilterChain::default();
         }
         self.listener_filters = filters;
+    }
+
+    /// The reverb zones from the frame packet: none (kind 0) removes the zone reverb; the same
+    /// `id` keeps its histories and retunes it when its parameters changed.
+    pub fn update_zone(&mut self, d: &AudioFilterDescriptor) {
+        if d.kind != filter_kind::REVERB {
+            self.zone = None;
+            return;
+        }
+        if !d.reverb.iter().all(|v| v.is_finite()) {
+            tracing::error!("AudioReverbZone parameters must be finite; the reverb zones are silent");
+            self.zone = None;
+            return;
+        }
+        let spec = sfx_spec(&d.reverb);
+        let rate = self.config.sample_rate;
+        if let Some(zone) = &mut self.zone
+            && zone.id == d.id
+            && zone.reverb.rate() == rate
+        {
+            if zone.spec != spec {
+                zone.reverb.tune(&spec);
+                zone.spec = spec;
+            }
+            return;
+        }
+        self.zone = match SfxReverb::new(rate) {
+            Ok(mut reverb) => {
+                reverb.tune(&spec);
+                Some(ZoneReverb { id: d.id, spec, reverb })
+            }
+            Err(error) => {
+                tracing::error!("AudioReverbZone reverb unavailable: {error:#}");
+                None
+            }
+        };
     }
 
     pub fn release_source(&mut self, handle: u64) {
@@ -1415,6 +1476,11 @@ impl Mixer {
             self.listener_bypass.resize(n * 2, 0.0);
             self.listener_bypass.fill(0.0);
         }
+        let zone_on = self.zone.is_some() && need_mix;
+        if zone_on {
+            self.zone_input.resize(n * 2, 0.0);
+            self.zone_input.fill(0.0);
+        }
         let Self {
             sources,
             clips,
@@ -1423,6 +1489,7 @@ impl Mixer {
             mix,
             source_buffer,
             listener_bypass,
+            zone_input,
             ..
         } = self;
         for (&handle, source) in sources.iter_mut() {
@@ -1555,6 +1622,14 @@ impl Mixer {
             if let Some(ring) = &mut source.output {
                 ring.push(buffer);
             }
+            // The zone send takes the source's output after its components, also for a source
+            // routed into a mixer group (unmeasured there).
+            let send = source.params.reverb_zone_mix;
+            if zone_on && send > 0.0 {
+                for (z, b) in zone_input.iter_mut().zip(buffer.iter()) {
+                    *z += *b * send;
+                }
+            }
             if need_mix || filter {
                 // `bypassListenerEffects`: "It also does'nt apply, if the AudioSource is playing
                 // into a mixer group" (6000.0 Scripting API); measured so for AudioReverbFilter.
@@ -1663,6 +1738,14 @@ impl Mixer {
                 *m += *b;
             }
             self.group_nodes.get_mut(&handle).unwrap().buffer = buffer;
+        }
+        // Before the listener's components, which process it too (unmeasured).
+        if zone_on && let Some(zone) = &mut self.zone {
+            let input = &mut self.zone_input[..n * 2];
+            zone.reverb.process(input);
+            for (m, z) in self.mix.iter_mut().zip(input.iter()) {
+                *m += *z;
+            }
         }
         if listener_components {
             if has_listener {
@@ -3295,6 +3378,43 @@ mod tests {
         let mut m = Mixer::new(MixerConfig::default());
         m.update_listener_filters(Err(anyhow::anyhow!("refused")));
         assert!(m.listener_chain.filters.is_empty());
+    }
+
+    #[test]
+    fn reverb_zones_take_each_sources_send_and_restart_empty_with_a_new_id() {
+        let zone = |id: u64| AudioFilterDescriptor {
+            reverb: [
+                -10000.0, -1000.0, -99.0, 1.49, 0.83, -2601.0, 0.007, 200.0, 0.011, 100.0, 100.0,
+                5000.0, 0.0, 250.0,
+            ],
+            ..component(id, filter_kind::REVERB, 0)
+        };
+        let listen = |send: f32| {
+            let mut m = Mixer::new(MixerConfig::default());
+            m.add_clip(1, impulse_clip(300));
+            m.update_zone(&zone(1));
+            source_with(&mut m, 7, 1, |p| p.reverb_zone_mix = send);
+            play(&mut m, 7, command::PLAY, 0.0);
+            m.update_suspension();
+            let mut out = vec![0.0; 2 * 4096];
+            m.render(&mut out, 2);
+            assert!(out[2 * 200] != 0.0);
+            (m, out)
+        };
+        // The tail outlives the source; a zero send leaves the dry signal alone.
+        let (mut m, out) = listen(1.0);
+        assert!(out[2 * 2048..].iter().any(|v| v.abs() > 1e-6));
+        assert!(listen(0.0).1[2 * 201..].iter().all(|v| *v == 0.0));
+        // The same id keeps the tail, a new one starts empty, kind 0 removes the reverb.
+        m.update_zone(&zone(1));
+        let mut tail = vec![0.0; 2 * 1024];
+        m.render(&mut tail, 2);
+        assert!(tail.iter().any(|v| v.abs() > 1e-6));
+        m.update_zone(&zone(2));
+        m.render(&mut tail, 2);
+        assert!(tail.iter().all(|v| *v == 0.0));
+        m.update_zone(&AudioFilterDescriptor::default());
+        assert!(m.zone.is_none());
     }
 
     #[test]
