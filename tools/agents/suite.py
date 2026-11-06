@@ -478,7 +478,15 @@ def summary_verdict(text):
 
 
 def last_lines(text, count=1):
-    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    # A comparator that ends with an indented JSON report: summarize it on one line.
+    start = text.rfind('\n{')
+    if text.rstrip().endswith('}') and (start >= 0 or text.startswith('{')):
+        try:
+            return json.dumps(json.loads(text[start+1 if start >= 0 else 0:]), separators=(',', ':'))[:300]
+        except ValueError:
+            pass
+    # Lines of only JSON brackets carry no information (comparators that print a JSON report).
+    lines = [line.strip() for line in text.splitlines() if line.strip(' \t[]{},')]
     return ' | '.join(lines[-count:])[:300]
 
 
@@ -627,6 +635,14 @@ def promote(summary):
     print(f'suite: baseline is now {summary}')
 
 
+def python_with_pil():
+    """An interpreter that can import PIL and numpy (image comparators need them), else this one."""
+    for candidate in (sys.executable, '/usr/bin/python3', shutil.which('python3')):
+        if candidate and subprocess.run([candidate, '-c', 'import PIL, numpy'], capture_output=True).returncode == 0:
+            return candidate
+    return sys.executable
+
+
 def default_jobs():
     try:
         return json.loads(LIMITS.read_text()).get('engine_slots', 2) + 2
@@ -718,7 +734,7 @@ def main():
     context = {'work_root': work_root, 'env': env,
                'values': {'cli': str(cli), 'managed': str(managed), 'runtime': str(runtime), 'repo': str(REPO),
                           'projects': str(PROJECTS), 'release': args.release, 'label': 'suite-'+label,
-                          'python': sys.executable}}
+                          'python': python_with_pil()}}
 
     print(f'suite: {len(probes)} probes, {args.jobs} at a time; cli {cli}; work {work_root}', flush=True)
     started = time.time()
