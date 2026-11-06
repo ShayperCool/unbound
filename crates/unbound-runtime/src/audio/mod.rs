@@ -599,6 +599,22 @@ mod tests {
     }
 
     #[test]
+    fn reset_rejects_oversized_chorus_before_changing_the_configuration() {
+        let engine = Engine::new(ProjectAudioSettings::default(), false);
+        engine.mixer().configure_group(serde_json::from_value(serde_json::json!({
+            "handle": 1, "parent": 0, "muted": false, "bypass": false,
+            "effects": [{ "id": "chorus", "kind": "Chorus", "chorus": {
+                "dry": 0.5, "wet1": 0.5, "wet2": 0.5, "wet3": 0.5,
+                "delay": 40.0, "rate": 0.8, "depth": 0.03 } }]
+        })).unwrap()).unwrap();
+        let before = engine.configuration();
+        assert!(engine.capture_start());
+        assert!(!engine.reset(AudioConfiguration { sample_rate: i32::MAX as u32, ..before }));
+        assert_eq!(engine.configuration(), before);
+        assert!(engine.capturing.load(Ordering::Acquire));
+    }
+
+    #[test]
     fn reset_rejects_oversized_echo_before_changing_the_configuration() {
         let engine = Engine::new(ProjectAudioSettings::default(), false);
         for delay in [500.0, 5000.0] {

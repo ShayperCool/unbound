@@ -89,11 +89,16 @@ pub struct Chorus {
     delay: f32,
 }
 impl Chorus {
-    pub fn new(rate: u32, buffer: u32) -> anyhow::Result<Self> {
+    pub(crate) fn frames(rate: u32, buffer: u32) -> anyhow::Result<usize> {
+        anyhow::ensure!(rate > 0, "AudioMixer Chorus output rate must be positive");
         let buffer = buffer.max(1) as usize;
-        let frames = (((rate as usize / 10) / buffer + 1).max(2))
+        (((rate as usize / 10) / buffer + 1).max(2))
             .checked_mul(buffer).filter(|n| *n <= 8 * 1024 * 1024 / 4)
-            .ok_or_else(|| anyhow::anyhow!("AudioMixer Chorus history exceeds the supported 8 MiB limit"))?;
+            .ok_or_else(|| anyhow::anyhow!("AudioMixer Chorus history exceeds the supported 8 MiB limit"))
+    }
+    pub fn new(rate: u32, buffer: u32) -> anyhow::Result<Self> {
+        let frames = Self::frames(rate, buffer)?;
+        let buffer = buffer.max(1) as usize;
         let mut history = Vec::new();
         history.try_reserve_exact(frames)?;
         history.resize(frames, [0; 2]);
