@@ -965,7 +965,8 @@ impl UnityRenderer {
     /// A program's buffers: a random write target at a written buffer's register, else by name
     /// the draw's or material's (`material` has the draw's properties over the material's), else
     /// a global one; a hidden counter block its buffer's counter; zeros (with a warning) for one
-    /// nothing set.
+    /// nothing set. Err (warned once) when a hidden counter's buffer is not set or has no counter:
+    /// the pass is not drawn, as such a dispatch is not run.
     fn buffer_bind_group(
         &mut self,
         id: u32,
@@ -973,8 +974,10 @@ impl UnityRenderer {
         overrides: &[(String, owned::PropertyValue)],
         material: &owned::Material,
         globals: &[(String, owned::PropertyValue)],
-    ) -> Option<wgpu::BindGroup> {
-        self.compiled.buffer_layout(id)?;
+    ) -> Result<Option<wgpu::BindGroup>, ()> {
+        if self.compiled.buffer_layout(id).is_none() {
+            return Ok(None);
+        }
         if self.empty_storage.is_none() {
             self.empty_storage = Some(self.device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("unbound empty storage"),
@@ -1028,6 +1031,14 @@ impl UnityRenderer {
                     .and_then(|h| self.buffers.get(&h))
                     .map(|g| g.buffer.clone()),
             };
+            if let (Some(owner), None) = (owner, &buffer) {
+                self.warn_once(format!("drawcount{shader}{owner}"), || {
+                    format!(
+                        "shader `{shader}` uses the counter of buffer `{owner}`, which is not set or not an Append or Counter buffer: the draw is skipped"
+                    )
+                });
+                return Err(());
+            }
             bound.push(buffer.unwrap_or_else(|| {
                 missing.push(b.name.clone());
                 self.empty_storage.clone().unwrap()
@@ -1043,7 +1054,7 @@ impl UnityRenderer {
             .collect();
         let group = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("unbound draw buffers"),
-            layout: self.compiled.buffer_layout(id)?,
+            layout: self.compiled.buffer_layout(id).ok_or(())?,
             entries: &entries,
         });
         for name in missing {
@@ -1053,7 +1064,7 @@ impl UnityRenderer {
                 )
             });
         }
-        Some(group)
+        Ok(Some(group))
     }
 
     fn program_bind_group(
@@ -2871,8 +2882,11 @@ impl UnityRenderer {
             for copy in std::mem::take(&mut self.pre_draw) {
                 planned.push(Planned::Convert(copy));
             }
-            let buffers_bg =
-                self.buffer_bind_group(id, &resolved.shader, overrides, material_props, &globals);
+            let Ok(buffers_bg) =
+                self.buffer_bind_group(id, &resolved.shader, overrides, material_props, &globals)
+            else {
+                continue;
+            };
             let textures = &self.textures;
             let globals_index = &self.globals_index;
             let size = |name: &str| {
