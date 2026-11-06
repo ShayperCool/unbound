@@ -1,8 +1,9 @@
 # Audio: AudioSource filter components
 
 This page covers the wire and lifecycle of the per-AudioSource filter components
-`AudioLowPassFilter`, `AudioHighPassFilter`, `AudioEchoFilter` and `AudioReverbFilter` (measured:
-see "AudioReverbFilter" below). The structures are in
+`AudioLowPassFilter`, `AudioHighPassFilter`, `AudioEchoFilter`, `AudioReverbFilter`,
+`AudioDistortionFilter` and `AudioChorusFilter`. Reverb, Distortion and Chorus have measured
+sections below. The structures are in
 `crates/unbound-runtime/src/audio/protocol.rs` and `managed/UnityEngine/Audio/AudioProtocol.cs`.
 The managed components are in `managed/UnityEngine/Audio/AudioFilterComponents.cs`, and the
 per-source chain is in `crates/unbound-runtime/src/audio/mixer.rs`.
@@ -13,7 +14,7 @@ Those kernels were measured on mixer groups by `tests/projects/mixerfilters` and
 `tests/projects/mixerecho` (Unity 6000.0.71f1, Linux, 48000 and 44100 Hz). Those captures do not
 establish parity for component chains.
 
-## Wire (NativeApi 21)
+## Wire (NativeApi 24)
 
 `AudioSourcePacket` passes through `NativeApi.AudioUpdateSource`. Version 16 appended the filter
 descriptors to it; version 18 carries them together with render protocol 8 (`DrawIndices`,
@@ -22,7 +23,9 @@ managed side refuses any other native version before it installs the table. Vers
 reverb kind (4) with its 14 parameters to the descriptor (96 bytes), and the listener's reverb
 filters to `AudioFramePacket` (`filter_count` at 64, `filters` at 72). Version 21 appends the
 reverb zone descriptor (`zone` at 80, 176 bytes) and sends the source's zone send gain in
-`reverb_zone_mix`.
+`reverb_zone_mix`. Version 23 adds Distortion kind 5 in the existing cutoff field; version 24
+adds Chorus kind 6, using the first seven reverb entries for dry, wet1..3, delay, rate and depth.
+These two additions keep the descriptor and packet layouts unchanged.
 
 | `AudioSourcePacket` field | Offset | Size |
 | --- | --- | --- |
@@ -35,10 +38,10 @@ reverb zone descriptor (`zone` at 80, 176 bytes) and sends the source's zone sen
 | `AudioFilterDescriptor` field | Offset |
 | --- | --- |
 | `id: u64`, the component's instance ID | 0 |
-| `kind: i32` (1 LowPass, 2 HighPass, 3 Echo, 4 Reverb) | 8 |
+| `kind: i32` (1 LowPass, 2 HighPass, 3 Echo, 4 Reverb, 5 Distortion, 6 Chorus) | 8 |
 | `stage: i32` (0 above the OnAudioFilterRead scripts, 1 below them) | 12 |
 | `cutoff`, `resonance`, `delay`, `decay`, `dry_mix`, `wet_mix: f32` | 16 to 36 |
-| `reverb: [f32; 14]`, the SFX Reverb parameters in `SfxReverbSpec` order | 40 |
+| `reverb: [f32; 14]`, the SFX Reverb parameters in `SfxReverbSpec` order, or Chorus parameters above | 40 |
 | total (alignment 8) | 96 |
 
 ### Validation
@@ -136,14 +139,13 @@ Unbound's choices (unmeasured):
 - On the hearing AudioListener only `AudioReverbFilter` runs. Other filter kinds there, and
   reverb filters next to listener OnAudioFilterRead scripts (an unmeasured order), log an error
   once per listener and are not applied.
-- `AudioChorusFilter` and `AudioDistortionFilter` remain generated stubs.
+- Mixer slot wet mixing on Chorus and Distortion fails clearly. Their own effect parameters
+  and AudioSource components use the measured shared kernels described below.
 
-## Follow-up (unexecuted)
+## Follow-up
 
-- Regenerate the stubs (`unbound gen-stubs`). The hand-written signatures should make the
-  generator drop the three removed types.
-- Bless `NativeApi.g.cs` (`UNBOUND_BLESS=1 cargo test -p unbound-runtime native_api`). Only the
-  constant changes.
+The compatibility stubs are regenerated. Source-chain parity for LowPass, HighPass and Echo
+still needs Native captures.
 - Run the managed `AudioFilterComponentTests` and `NativeApiVersionTests`.
 - Run the Rust `audio::mixer` and `audio::protocol` tests.
 - These need a fresh, matching NativeApi-18 CLI and Core. Current API-15 binaries cannot run
@@ -512,4 +514,40 @@ audio update.
 
 Wet mixing is unmeasured and fails clearly when enabled. Listener Distortion, 3D sources,
 surround output, live level/bypass transitions and other sample rates remain unmeasured.
-Chorus, Flange, Normalize and Pitch Shifter remain separate work.
+Flange, Normalize and Pitch Shifter remain separate work.
+
+
+# Mixer and source Chorus
+
+`chorus.rs` runs the same measured kernel on AudioMixer groups and AudioSource
+`AudioChorusFilter` components. NativeApi 24 adds kind 6 with seven parameters in the descriptor's
+existing fixed array. The probe is tests/projects/audiochorus, Unity 6000.0.71f1 Linux Editor,
+48000 and 44100 Hz, stereo output with 1024-frame DSP buffers. Two independent Native captures
+per rate agree bit for bit across 40,633,356 values. One canonical reference per rate is committed,
+with the Editor-authored inputs needed by the engine-only gate.
+
+The [Chorus Effect Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioChorusEffect.html),
+[Chorus Filter Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioChorusFilter.html)
+and [AudioChorusFilter API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AudioChorusFilter.html)
+describe dry and three wet volumes, delay, modulation rate and depth, with successive taps offset
+by 90 degrees. The full contract table, member links and callback limitations are in the probe
+README. Feedback is obsolete: the API getter warns and returns zero, and its setter only warns.
+The obsolete mixer's Feedback control also changes none of the captured output. Slot wet mixing
+is separate from Chorus's own dry/wet controls, remains unmeasured and fails clearly when enabled.
+
+Measured in this release/context, setters retain their arguments, while the DSP clamps dry/wet
+volumes and depth to 0..1, delay to 0..100 ms and rate to 0..20 Hz. In stereo, wet1 processes left,
+wet2 right, and wet3 is silent. Mono clips entering the stereo mix follow that same channel rule.
+The wet path quantizes its history to Q14, wraps large inputs, and interpolates at modulated read
+positions. A delay span of `max(4, delay_ms * depth * sample_rate / 1000 * depth)` slews from zero
+by 1/64 sample per frame. Quarter-wave lookup and floating DSP-buffer coordinates reproduce the
+captured phase, startup envelope and rare interpolation jumps near zero delay. This algorithm
+is an inference constrained by those samples, with arithmetic checked against the installed
+Editor's DSP, and does not establish a contract for other releases.
+
+The 107 cases retain all startup frames, isolated controls before combinations, long ramps,
+noise and tones, impulses, small and large signed DC, defaults/endpoints/intermediates, exposed
+setters and DSP clamps, serialized component fields, group/slot/source/component bypass, mono
+and stereo clips, parent/prefader routing and source filters on both sides of OnAudioFilterRead.
+Listener Chorus reports an error. Listener and 3D processing, other output layouts or buffer
+sizes, live parameter/bypass changes and rates beyond the two captured rates remain unmeasured.
