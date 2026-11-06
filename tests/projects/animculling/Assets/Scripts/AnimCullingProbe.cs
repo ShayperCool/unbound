@@ -4,6 +4,8 @@ using System.Globalization;
 using System.IO;
 using System.Text;
 using UnityEngine;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 
 /// <summary>
 /// Animator.cullingMode and Animation.cullingType against renderer visibility. One camera looks
@@ -37,6 +39,9 @@ public class AnimCullingProbe : MonoBehaviour
         public Transform hips, arm;
         public Quaternion lastHips, lastArm;
         public string atUpdate;
+        public PlayableGraph graph;
+        public AnimationClipPlayable clip;
+        public Playable source;
     }
 
     readonly List<Case> cases = new List<Case>();
@@ -118,6 +123,7 @@ public class AnimCullingProbe : MonoBehaviour
             foreach (var offscreen in new[] { false, true })
                 Animated("s/" + name + "/" + (offscreen ? "on" : "off"), culling, mode, ScheduleA, body: false, skinned: true, updateWhenOffscreen: offscreen);
         }
+        PlayableCases(modes);
         Legacy("l/always/A", AnimationCullingType.AlwaysAnimate, ScheduleA);
         Legacy("l/based/A", AnimationCullingType.BasedOnRenderers, ScheduleA);
         Legacy("l/based/B", AnimationCullingType.BasedOnRenderers, ScheduleB);
@@ -128,6 +134,36 @@ public class AnimCullingProbe : MonoBehaviour
         ld.step = f => ld.renderers[0].enabled = f < 10 || f >= 30;
         foreach (var offscreen in new[] { false, true })
             Legacy("ls/based/" + (offscreen ? "on" : "off"), AnimationCullingType.BasedOnRenderers, ScheduleA, body: false, skinned: true, updateWhenOffscreen: offscreen);
+    }
+
+    void PlayableCases((string name, AnimatorCullingMode mode)[] modes)
+    {
+        foreach (var (name, mode) in modes)
+        foreach (bool controller in new[] { false, true })
+        foreach (bool mixer in new[] { false, true })
+        foreach (string motion in new[] { "pose", "builtin", "move" })
+        {
+            var c = Animated("p/" + name + "/" + (controller ? "controller" : "bare") + "/"
+                + (mixer ? "mixer" : "clip") + "/" + motion,
+                controller ? Resources.Load<RuntimeAnimatorController>("Culling") : null, mode, ScheduleA);
+            c.animator.applyRootMotion = motion != "pose";
+            if (motion == "move") c.move = c.rig.gameObject.AddComponent<CullMoveReceiver>();
+            c.graph = PlayableGraph.Create(c.name);
+            c.graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+            var output = AnimationPlayableOutput.Create(c.graph, "Animation", c.animator);
+            c.clip = AnimationClipPlayable.Create(c.graph, Resources.Load<AnimationClip>("PlayablePose"));
+            c.clip.SetApplyPlayableIK(true);
+            c.source = c.clip;
+            if (mixer)
+            {
+                var mix = AnimationMixerPlayable.Create(c.graph, 2);
+                mix.ConnectInput(0, c.clip, 0, 0.25f);
+                mix.ConnectInput(1, AnimationClipPlayable.Create(c.graph, Resources.Load<AnimationClip>("PlayableSecond")), 0, 0.75f);
+                c.source = mix;
+            }
+            output.SetSourcePlayable(c.source);
+            c.graph.Play();
+        }
     }
 
     /// <summary>Animators and an Animation created in frame 5's Update: their first update in a later frame.</summary>
@@ -303,6 +339,10 @@ public class AnimCullingProbe : MonoBehaviour
         {
             json.Append(",\"m\":[").Append(F(c.marker.localPosition.x)).Append(",").Append(F(c.marker.localPosition.y)).Append("]")
                 .Append(",\"root\":").Append(V(c.rig.localPosition)).Append(",\"ev\":").Append(c.receiver.events);
+            if (c.graph.IsValid())
+                json.Append(",\"gt\":").Append(c.source.GetTime().ToString("R", CultureInfo.InvariantCulture))
+                    .Append(",\"ct\":").Append(c.clip.GetTime().ToString("R", CultureInfo.InvariantCulture))
+                    .Append(",\"ik\":").Append(c.receiver.ik).Append(",\"value\":").Append(F(c.receiver.value)).Append(",\"delta\":").Append(V(c.animator.deltaPosition));
             if (c.animator != null)
             {
                 var info = c.animator.GetCurrentAnimatorStateInfo(0);
@@ -327,6 +367,7 @@ public class AnimCullingProbe : MonoBehaviour
         Put("complete", B(!failed));
         File.WriteAllText(Path.Combine(directory, "values.jsonl"), records.ToString());
         Debug.Log("ANIMCULLING_PROBE_DONE " + directory + " " + code);
+        foreach (var c in cases) if (c.graph.IsValid()) c.graph.Destroy();
         enabled = false;
         if (finished != null) finished(code);
         else

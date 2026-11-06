@@ -51,6 +51,15 @@ public static class ProbeRunner
         AssetDatabase.SaveAssets();
     }
 
+    public static void CreatePlayables()
+    {
+        var a = Clip("PlayablePose", false, ("", "m_LocalPosition.y", 0f, 0.5f), ("Marker", "m_LocalPosition.x", 0f, 1f));
+        var b = Clip("PlayableSecond", false, ("", "m_LocalPosition.y", 0f, 1f), ("Marker", "m_LocalPosition.y", 0f, 2f));
+        AnimationUtility.SetEditorCurve(a, EditorCurveBinding.FloatCurve("", typeof(CullReceiver), "value"), AnimationCurve.Linear(0f, 2f, 0.5f, 3f));
+        AnimationUtility.SetEditorCurve(b, EditorCurveBinding.FloatCurve("", typeof(CullReceiver), "value"), AnimationCurve.Linear(0f, 4f, 0.5f, 6f));
+        AssetDatabase.SaveAssets();
+    }
+
     /// <summary>A 0.5 s looping clip of linear curves with an event "OnClipEvent" at 0.1 s.</summary>
     static AnimationClip Clip(string name, bool legacy, params (string path, string property, float from, float to)[] curves)
     {
