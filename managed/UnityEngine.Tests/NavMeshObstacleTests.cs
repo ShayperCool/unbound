@@ -14,8 +14,8 @@ namespace UnityEngine.Tests
     /// an avoidance obstacle (Unbound's choice, unmeasured). The obstacles' shapes in avoidance
     /// (circles covering a box's outline, a capsule's radius), the scripted velocity as the
     /// obstacle's motion and the height-span test are Unbound's choices (unmeasured); the bounds the
-    /// tests check are wide enough for any covering of the shape, not one fixed trajectory, except
-    /// where a test states the cover's bound (C5 in ObstacleSystem: circles at most sqrt(2) times a
+    /// tests check include per-step box clearance, without guaranteeing progress round long walls;
+    /// other tests state the cover's bound (C5 in ObstacleSystem: circles at most sqrt(2) times a
     /// box's half-width) or the crowd's 32 neighbour candidates (C7).
     /// The level is one 20 m by 10 m platform; an agent walks from x = -8 to x = 8 along z = 0.
     /// The agent update runs directly at a fixed 0.02 s step, so this shares the frame-stepping
@@ -106,7 +106,8 @@ namespace UnityEngine.Tests
 
         /// <summary>The agent's walk: the furthest it went from the straight line z = 0, and whether
         /// it got past x = 2 (beyond the obstacles) and to the goal.</summary>
-        static (float Deviation, bool Passed, bool Arrived) Walk(NavMeshAgent agent, int steps = 600)
+        static (float Deviation, bool Passed, bool Arrived) Walk(NavMeshAgent agent, int steps = 600,
+            NavMeshObstacle clearanceObstacle = null)
         {
             float deviation = 0f;
             bool passed = false;
@@ -114,11 +115,28 @@ namespace UnityEngine.Tests
             {
                 Step();
                 var p = agent.nextPosition;
+                if (clearanceObstacle != null) AssertOutsideBoxFootprint(agent, clearanceObstacle, p);
                 deviation = Mathf.Max(deviation, Mathf.Abs(p.z));
                 if (p.x > 2f) passed = true;
                 if (new Vector2(p.x - Goal.x, p.z - Goal.z).magnitude <= 1e-2f) return (deviation, passed, true);
             }
             return (deviation, passed, false);
+        }
+
+        // A safety invariant of this box-cover implementation, not a promise that local
+        // avoidance plans a route around every wall. Check every original step, including stalls.
+        static void AssertOutsideBoxFootprint(NavMeshAgent agent, NavMeshObstacle obstacle, Vector3 position)
+        {
+            var center = obstacle.transform.TransformPoint(obstacle.center);
+            var x = obstacle.transform.TransformVector(new Vector3(obstacle.size.x * 0.5f, 0f, 0f));
+            var z = obstacle.transform.TransformVector(new Vector3(0f, 0f, obstacle.size.z * 0.5f));
+            var relative = position - center;
+            float hx = new Vector2(x.x, x.z).magnitude, hz = new Vector2(z.x, z.z).magnitude;
+            float qx = Mathf.Abs((relative.x * x.x + relative.z * x.z) / hx) - hx;
+            float qz = Mathf.Abs((relative.x * z.x + relative.z * z.z) / hz) - hz;
+            float outside = Mathf.Sqrt(Mathf.Max(qx, 0f) * Mathf.Max(qx, 0f) + Mathf.Max(qz, 0f) * Mathf.Max(qz, 0f));
+            float clearance = outside + Mathf.Min(Mathf.Max(qx, qz), 0f) - agent.radius;
+            Assert.True(clearance >= -1e-4f, $"agent penetrated the box footprint by {-clearance} m at {position}");
         }
 
         /// <summary>Two agents' walks: the closest they came to each other (centre to centre).</summary>
@@ -214,28 +232,30 @@ namespace UnityEngine.Tests
             // avoidance a metre of lead.
             var small = Box(new Vector3(0f, 0.5f, 0.2f), Vector3.one);
             var agent = Agent();
-            float smallDeviation = Walk(agent).Deviation;
+            float smallDeviation = Walk(agent, clearanceObstacle: small).Deviation;
             Assert.True(smallDeviation > 0.75f && smallDeviation < 2f, $"1 m box: {smallDeviation} m from the line");
             Remove(agent);
             Remove(small);
 
-            // The long box reaches 2.3 m to one side of the line (2.8 m off it to pass, whatever
-            // covers it) and 3.2 m to the other: both ways round stay on the 10 m wide platform, and
-            // one is clearly shorter, so the agent meets no even standoff in front of the wall (a
-            // straight wall is no trap for local avoidance, which only fails at concave ones).
+            // Both ends fit inside the platform, but this does not guarantee that short-range
+            // local avoidance escapes the wall. AI Navigation 2.0 AboutObstacles documents that
+            // avoidance can fail to find a way round. This exact uncarved six-circle case stalls
+            // without penetration in the saved managed trace; Unity has not been measured here.
+            // Check clearance on every step. If it gets past the wall, it must have gone round
+            // an end, retaining the original 2.6 m deviation bound for that reached outcome.
             var across = Box(new Vector3(0f, 0.5f, 0.45f), new Vector3(1f, 1f, 5.5f));
             agent = Agent();
-            var walk = Walk(agent);
-            Assert.True(walk.Deviation > 2.6f, $"5.5 m box: {walk.Deviation} m from the line");
-            Assert.True(walk.Passed);
+            var walk = Walk(agent, clearanceObstacle: across);
+            if (walk.Passed)
+                Assert.True(walk.Deviation > 2.6f, $"5.5 m box: {walk.Deviation} m from the line");
             Remove(agent);
             Remove(across);
 
             var turned = Box(new Vector3(0f, 0.5f, 0.45f), new Vector3(5.5f, 1f, 1f), Quaternion.Euler(0f, 90f, 0f));
             agent = Agent();
-            walk = Walk(agent);
-            Assert.True(walk.Deviation > 2.6f, $"turned 5.5 m box: {walk.Deviation} m from the line");
-            Assert.True(walk.Passed);
+            walk = Walk(agent, clearanceObstacle: turned);
+            if (walk.Passed)
+                Assert.True(walk.Deviation > 2.6f, $"turned 5.5 m box: {walk.Deviation} m from the line");
             Remove(agent);
             Remove(turned);
 
@@ -404,9 +424,39 @@ namespace UnityEngine.Tests
 
                 var agent = Agent();
                 Step();
-                Assert.Equal(2, agent.path.corners.Length);
+                // Unbound's reported, uncarved fallback must leave the complete route and
+                // actual topology unchanged. A collinear tile-seam waypoint is allowed: the
+                // 6000.0 corners API supplies waypoints, not a fixed count for this bake.
+                var originalPath = agent.path;
+                var originalMesh = NavMesh.CalculateTriangulation();
+                int version = NavWorld.Version;
+                obstacle.carving = false;
+                var withoutCarving = agent.path;
+                obstacle.carving = true;
+                var withCarving = agent.path;
+                var finalMesh = NavMesh.CalculateTriangulation();
+                Assert.Equal(version, NavWorld.Version);
+                Assert.Equal(NavMeshPathStatus.PathComplete, originalPath.status);
+                Assert.Equal(originalPath.status, withoutCarving.status);
+                Assert.Equal(originalPath.status, withCarving.status);
+                Assert.Equal(originalPath.corners, withoutCarving.corners);
+                Assert.Equal(originalPath.corners, withCarving.corners);
+                Assert.Equal(originalMesh.vertices, finalMesh.vertices);
+                Assert.Equal(originalMesh.indices, finalMesh.indices);
+                Assert.Equal(originalMesh.areas, finalMesh.areas);
+                Assert.True(originalPath.corners.Length >= 2);
+                Assert.Equal(agent.nextPosition, originalPath.corners[0]);
+                Assert.Equal(Goal.x, originalPath.corners[originalPath.corners.Length - 1].x);
+                Assert.Equal(Goal.z, originalPath.corners[originalPath.corners.Length - 1].z);
+                float previousX = Start.x;
+                foreach (var corner in originalPath.corners)
+                {
+                    Assert.InRange(corner.x, previousX, Goal.x);
+                    Assert.True(Mathf.Abs(corner.z) < 1e-4f, $"uncarved route bent away from the straight platform: {corner}");
+                    previousX = corner.x;
+                }
                 Assert.False(agent.isPathStale);
-                var walk = Walk(agent);
+                var walk = Walk(agent, clearanceObstacle: obstacle);
                 Assert.True(walk.Deviation > 0.75f, $"went through the carving obstacle, {walk.Deviation} m from the line");
                 Assert.True(walk.Arrived, $"stopped at {agent.nextPosition}");
                 Assert.False(agent.isPathStale);
