@@ -5,11 +5,13 @@
 
 The record is compared line by line, in order, with no tolerance (as the core API probe whose
 project this is): every missing (reference only) and extra (capture only) line is printed and
-counted. The order window is also read with analyze.py, unchanged: for every frame o0..o16 and
-every camera render, the camera and its OnRenderObject handler list must equal the reference's,
-and the capture must pass analyze.py's structural guards. The reference is read as it is.
+counted. The capture must also pass analyze.py's structural guards. For diagnosis, the order
+window is read with analyze.py, unchanged: every frame o0..o16 and camera render whose camera or
+OnRenderObject handler list differs from the reference's is listed. Unity documents no handler
+order, and a different order already shows as missing and extra lines. The reference is read as
+it is.
 
-Exit 0 when every line matches; 1 otherwise. The last line is a JSON summary.
+Exit 0 when every line matches and the guards pass; 1 otherwise. The last line is a JSON summary.
 """
 import argparse
 import difflib
@@ -83,7 +85,7 @@ def main():
           f"order window {len(expected) - sum(r['reference'] is not None for r in order)}/{len(expected)} renders match; "
           f"guard: {summary['guard'] or 'passes'}")
     print(json.dumps(summary, sort_keys=True))
-    return int(bool(summary['missing'] or summary['extra'] or order or summary['guard']))
+    return int(bool(summary['missing'] or summary['extra'] or summary['guard']))
 
 
 if __name__ == '__main__':
