@@ -324,7 +324,7 @@ namespace Unbound.Runtime
                         var t = stack.Pop();
                         var go = t.m_GameObject;
                         if (go.m_Destroyed) continue;
-                        if (!includeInactive && !go.m_IsActive) continue;
+                        if (!includeInactive && (!go.m_IsActive || go.m_AwaitingSceneAwake)) continue;
                         yield return go;
                         for (int i = t.m_Children.Count - 1; i >= 0; i--)
                             stack.Push(t.m_Children[i]);

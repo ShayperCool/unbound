@@ -457,9 +457,19 @@ namespace Unbound.Runtime
             // 6000.0 RuntimeInitializeOnLoadMethod: the initial scene is loaded before
             // BeforeSceneLoad, but its scripts have not awakened. Runtime-created objects
             // now belong to that scene rather than an outgoing bootstrap scene.
-            beforeAwake?.Invoke();
+            ActivateRoots(file.Roots, beforeAwake);
+        }
+
+        internal static void ActivateRoots(IReadOnlyList<GameObject> roots, Action beforeAwake = null)
+        {
+            if (beforeAwake != null)
+            {
+                foreach (var root in roots) root.m_AwaitingSceneAwake = true;
+                try { beforeAwake(); }
+                finally { foreach (var root in roots) root.m_AwaitingSceneAwake = false; }
+            }
             var active = new List<Component>();
-            foreach (var root in file.Roots) CollectActive(root.m_Transform, active);
+            foreach (var root in roots) CollectActive(root.m_Transform, active);
             Lifecycle.Activate(active);
         }
 

@@ -85,6 +85,36 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void InitialSceneLookupExcludesObjectsAwaitingAwake()
+        {
+            var root = new GameObject("LoadedRoot");
+            var child = new GameObject("LoadedChild");
+            child.transform.SetParent(root.transform, false);
+            GameObject runtime = null;
+            try
+            {
+                SceneLoader.ActivateRoots(new[] { root }, () =>
+                {
+                    Assert.True(root.activeSelf);
+                    Assert.False(root.activeInHierarchy);
+                    Assert.False(child.activeInHierarchy);
+                    Assert.DoesNotContain(root, Object.FindObjectsByType<GameObject>(FindObjectsInactive.Exclude, FindObjectsSortMode.None));
+                    Assert.Contains(root, Object.FindObjectsByType<GameObject>(FindObjectsInactive.Include, FindObjectsSortMode.None));
+                    runtime = new GameObject("RuntimeRoot");
+                    Assert.True(runtime.activeInHierarchy);
+                });
+                Assert.True(root.activeInHierarchy);
+                Assert.True(child.activeInHierarchy);
+                Assert.Contains(root, Object.FindObjectsByType<GameObject>(FindObjectsInactive.Exclude, FindObjectsSortMode.None));
+            }
+            finally
+            {
+                Object.DestroyImmediate(runtime);
+                Object.DestroyImmediate(root);
+            }
+        }
+
+        [Fact]
         public void FixedStepsAndUnmeasuredReleasesKeepTheirTime()
         {
             string version = ProjectInfo.UnityVersion;

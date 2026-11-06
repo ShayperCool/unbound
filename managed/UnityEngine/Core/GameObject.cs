@@ -12,6 +12,8 @@ namespace UnityEngine
         internal int m_Layer;
         internal string m_Tag = "Untagged";
         internal bool m_IsActive = true;
+        // Scene-authored objects are loaded but inactive during BeforeSceneLoad.
+        internal bool m_AwaitingSceneAwake;
         internal SceneHandle m_Scene;
         /// <summary>A GameObject of an asset (a prefab's contents): never awake, never in a scene.</summary>
         internal bool m_IsPrefabAsset;
@@ -137,7 +139,7 @@ namespace UnityEngine
             {
                 if (m_Destroyed || m_IsPrefabAsset) return false;
                 for (var t = m_Transform; t != null; t = t.m_Parent)
-                    if (!t.m_GameObject.m_IsActive) return false;
+                    if (!t.m_GameObject.m_IsActive || t.m_GameObject.m_AwaitingSceneAwake) return false;
                 return true;
             }
         }
