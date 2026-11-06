@@ -1,0 +1,3 @@
+# Managed unit tests (UnityEngine.Tests) that already fail on main.
+# land.py fails only on failures not listed here. When a fix makes one pass, remove its line.
+# One fully qualified test name per line.
