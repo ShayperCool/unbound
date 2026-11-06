@@ -351,6 +351,13 @@ namespace Unbound.Runtime
         readonly List<float> m_HumanWeights = new List<float>();
         readonly List<Unbound.Runtime.Humanoid.Trs> m_HumanBodyDifferences = new List<Unbound.Runtime.Humanoid.Trs>();
 
+        /// <summary>A whole update's normalized step of a transition's destination.</summary>
+        double DestinationStep(LayerRun layer, StateRun run)
+        {
+            float length = StateLength(layer, run);
+            return run.Def.TimeParameter < 0 && length > 0f ? m_RootDeltaTime * m_Animator.m_Speed * SpeedOf(run.Def) / length : 0.0;
+        }
+
         /// <summary>A humanoid Animator's root motion: each humanoid clip's body motion between its
         /// state's previous and current times, blended by the clips' weights in each layer (the
         /// states of a transition, a blend tree's clips); override layers move it towards theirs by
@@ -378,9 +385,10 @@ namespace Unbound.Runtime
                     var input = new Unbound.Runtime.Humanoid.HumanClipMotionInput
                     {
                         Time = (float)run.Normalized,
-                        // A transition's destination adds no step in the update it starts (measured
-                        // for an exit time's overshoot; applied to cross-fades too).
-                        PreviousTime = (float)(run.Fresh && source.Next == run ? run.Normalized : run.Previous),
+                        // A transition's destination steps a whole update in the update it starts,
+                        // as if it had played all of it (measured for an exit time's overshoot into a
+                        // moving clip; applied to cross-fades too).
+                        PreviousTime = (float)(run.Fresh && source.Next == run ? run.Normalized - DestinationStep(source, run) : run.Previous),
                         Speed = SpeedOf(def),
                         CycleOffset = def.CycleOffset + (Mirrored(def) ? MirrorCycleOffset : 0f),
                     };
