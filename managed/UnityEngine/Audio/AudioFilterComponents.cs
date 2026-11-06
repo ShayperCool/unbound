@@ -211,7 +211,8 @@ namespace UnityEngine
     }
 
     /// <summary>AudioSource Chorus, measured with the mixer kernel on 6000.0.71f1.
-    /// Setters retain their arguments; the DSP clamps them to the measured ranges.</summary>
+    /// Setters retain their arguments. The DSP clamps volumes, rate, depth and negative delay;
+    /// delay above 100 ms leaves its previous DSP value.</summary>
     [ClassId(166)]
     [RequireComponent(typeof(AudioBehaviour))]
     public sealed partial class AudioChorusFilter : Behaviour

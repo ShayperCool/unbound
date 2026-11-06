@@ -135,7 +135,7 @@ impl Chorus {
         else { self.history[index][channel] as f32 * (1.0 / 16384.0) }
     }
     pub fn process(&mut self, samples: &mut [f32], spec: &ChorusSpec) {
-        // Out-of-range delay setters retain their API value, but do not retune the DSP.
+        // Delay above 100 ms retains its API value, but does not retune the DSP.
         if let Some(delay) = spec.delay { self.delay = delay; }
         let target = (((self.delay * spec.depth) * self.rate as f32 / 1000.0) * spec.depth).max(4.0);
         let increment = spec.rate / self.rate as f32;

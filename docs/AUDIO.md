@@ -523,7 +523,7 @@ Flange, Normalize and Pitch Shifter remain separate work.
 `AudioChorusFilter` components. NativeApi 24 adds kind 6 with seven parameters in the descriptor's
 existing fixed array. The probe is tests/projects/audiochorus, Unity 6000.0.71f1 Linux Editor,
 48000 and 44100 Hz, stereo output with 1024-frame DSP buffers. Two independent Native captures
-per rate agree bit for bit across 40,633,356 values. One canonical reference per rate is committed,
+per rate agree bit for bit across 49,022,046 values. One canonical reference per rate is committed,
 with the Editor-authored inputs needed by the engine-only gate.
 
 The [Chorus Effect Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioChorusEffect.html),
@@ -536,16 +536,18 @@ The obsolete mixer's Feedback control also changes none of the captured output. 
 is separate from Chorus's own dry/wet controls, remains unmeasured and fails clearly when enabled.
 
 Measured in this release/context, setters retain their arguments, while the DSP clamps dry/wet
-volumes and depth to 0..1, delay to 0..100 ms and rate to 0..20 Hz. In stereo, wet1 processes left,
+volumes and depth to 0..1 and rate to 0..20 Hz. Negative delay becomes zero; a delay above
+100 ms is ignored by the DSP and leaves its previous valid delay, initially 40 ms. In stereo, wet1 processes left,
 wet2 right, and wet3 is silent. Mono clips entering the stereo mix follow that same channel rule.
 The wet path quantizes its history to Q14, wraps large inputs, and interpolates at modulated read
 positions. A delay span of `max(4, delay_ms * depth * sample_rate / 1000 * depth)` slews from zero
 by 1/64 sample per frame. Quarter-wave lookup and floating DSP-buffer coordinates reproduce the
-captured phase, startup envelope and rare interpolation jumps near zero delay. This algorithm
+captured phase, startup envelope and rare interpolation jumps near zero delay, including
+the zero-extended history endpoint seen in the rate20 and delay100 captures. This algorithm
 is an inference constrained by those samples, with arithmetic checked against the installed
 Editor's DSP, and does not establish a contract for other releases.
 
-The 107 cases retain all startup frames, isolated controls before combinations, long ramps,
+The 115 cases retain all startup frames, isolated controls before combinations, long ramps,
 noise and tones, impulses, small and large signed DC, defaults/endpoints/intermediates, exposed
 setters and DSP clamps, serialized component fields, group/slot/source/component bypass, mono
 and stereo clips, parent/prefader routing and source filters on both sides of OnAudioFilterRead.
