@@ -46,7 +46,7 @@ def corners(row):
     out = {}
     for submesh in row['subMeshes']:
         for t in zip(submesh[::3], submesh[1::3], submesh[2::3]):
-            key = [(tuple(map(f32, row['vertices'][i])), tuple(map(f32, row['uv'][i]))) for i in t]
+            key = [(tuple(map(f32, row['vertices'][i])), tuple(map(f32, row['uv'][i])) if row['uv'] else ()) for i in t]
             uv2 = [tuple(map(f32, row['uv2'][i])) if row['uv2'] else None for i in t]
             k = key.index(min(key))
             out.setdefault(tuple(key[k:] + key[:k]), []).append(tuple(uv2[k:] + uv2[:k]))
