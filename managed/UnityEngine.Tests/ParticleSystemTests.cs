@@ -17,8 +17,25 @@ namespace UnityEngine.Tests
         public ParticleSystem.MinMaxGradient color = Color.white;
     }
 
-    public class ParticleSystemTests
+    public class ParticleSystemTests : IDisposable
     {
+        // Particle gravity is Physics.gravity / Physics2D.gravity: these tests start from the
+        // defaults and give the next tests back what they found.
+        readonly Vector3 m_Gravity3D = Physics.gravity;
+        readonly Vector2 m_Gravity2D = Physics2D.gravity;
+
+        public ParticleSystemTests()
+        {
+            Physics.gravity = new Vector3(0f, -9.81f, 0f);
+            Physics2D.gravity = new Vector2(0f, -9.81f);
+        }
+
+        public void Dispose()
+        {
+            Physics.gravity = m_Gravity3D;
+            Physics2D.gravity = m_Gravity2D;
+        }
+
         /// <summary>A system on a fresh object, configured before it becomes active (and plays on awake).</summary>
         static ParticleSystem Make(Action<ParticleSystem> configure)
         {
@@ -1014,6 +1031,41 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void GravityFollowsThePhysicsGravityOfItsSourceFromTheNextStep()
+        {
+            foreach (var source in new[] { ParticleSystemGravitySource.Physics3D, ParticleSystemGravitySource.Physics2D })
+            {
+                var ps = Make(p =>
+                {
+                    var main = p.main;
+                    main.playOnAwake = false;
+                    main.gravityModifier = 0.5f;
+                    main.gravitySource = source;
+                    main.simulationSpace = ParticleSystemSimulationSpace.World;
+                    var shape = p.shape;
+                    shape.enabled = false;
+                });
+                ps.Emit(1);
+                Physics.gravity = new Vector3(2f, -4f, 6f);
+                Physics2D.gravity = new Vector2(-8f, 10f);
+                var expected = source == ParticleSystemGravitySource.Physics2D ? new Vector3(-8f, 10f, 0f) : new Vector3(2f, -4f, 6f);
+                var particles = new ParticleSystem.Particle[1];
+                ps.Step(0.1f, 0f);
+                ps.GetParticles(particles);
+                Assert.True((particles[0].velocity - expected * 0.05f).magnitude < 1e-5f, source + " " + particles[0].velocity);
+                // A change reaches the running system at its next step.
+                if (source == ParticleSystemGravitySource.Physics2D) Physics2D.gravity = Vector2.zero;
+                else Physics.gravity = Vector3.zero;
+                ps.Step(0.1f, 0f);
+                ps.GetParticles(particles);
+                Assert.True((particles[0].velocity - expected * 0.05f).magnitude < 1e-5f, source + " " + particles[0].velocity);
+                Physics.gravity = new Vector3(0f, -9.81f, 0f);
+                Physics2D.gravity = new Vector2(0f, -9.81f);
+                Done(ps);
+            }
+        }
+
+        [Fact]
         public void VelocityGravityAndLimitMoveParticles()
         {
             var ps = Make(p =>
@@ -1270,8 +1322,7 @@ namespace UnityEngine.Tests
             // Gravity (modifier 2) pulls every particle down; over 0.1 s it falls at most g·t², so a
             // particle emitted near 0° can sit just below the x axis. Lift it by that bound and the
             // emission direction must lie in the 90° arc (the auto random seed picks the directions).
-            // g is the particle simulation's own gravity, not Physics.gravity, which other tests change.
-            float maxFall = main.gravityModifier.constant * ParticleSystem.s_Gravity3D.magnitude * 0.1f * 0.1f;
+            float maxFall = main.gravityModifier.constant * Physics.gravity.magnitude * 0.1f * 0.1f;
             for (int i = 0; i < n; i++)
             {
                 Assert.InRange(particles[i].startLifetime, 0.35f, 0.45f);

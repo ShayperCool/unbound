@@ -11,6 +11,10 @@ namespace UnityEngine.Tests
         readonly List<GameObject> objects = new List<GameObject>();
         readonly List<Exception> callbackFailures = new List<Exception>();
         readonly List<Physics.ContactEventDelegate> handlers = new List<Physics.ContactEventDelegate>();
+        // The global settings these tests change, restored for the tests that run after them.
+        readonly SimulationMode simulationMode = Physics.simulationMode;
+        readonly Vector3 gravity = Physics.gravity;
+        readonly bool autoSyncTransforms = Physics.autoSyncTransforms;
         public PhysicsContactEventTests()
         {
             Physics.simulationMode=SimulationMode.Script;
@@ -35,6 +39,9 @@ namespace UnityEngine.Tests
             foreach(var handler in handlers)Physics.ContactEvent-=handler;
             foreach(var go in objects)Object.DestroyImmediate(go);
             Physics.invokeCollisionCallbacks=true;
+            Physics.simulationMode=simulationMode;
+            Physics.gravity=gravity;
+            Physics.autoSyncTransforms=autoSyncTransforms;
             Assert.Empty(callbackFailures);
         }
         [Fact]
