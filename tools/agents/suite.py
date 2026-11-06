@@ -781,7 +781,8 @@ def run_probe(name, recipe, context):
     if name in NOTES:
         summaries.append('partial: ' + NOTES[name])
         result['note'] = NOTES[name]
-    result.update(status=status, failed_step=stopped, seconds=round(time.time() - started, 1), summary=' || '.join(summaries)[:1000],
+    result.update(status=status, failed_step=stopped, failures=count_failures('\n'.join(summaries)),
+                  seconds=round(time.time() - started, 1), summary=' || '.join(summaries)[:1000],
                   checks={'passed': sum(v is True for v in verdicts), 'failed': sum(v is False for v in verdicts),
                           'report': sum(v is None for v in verdicts), 'total': len(verdicts)},
                   steps=steps)
@@ -850,6 +851,10 @@ FAILURE_COUNT = re.compile(r'''\b(\d+) (?:record\(s\) )?(?:differences|differ|fa
 FAILED_STEP = re.compile(r'(?:^|\|\| )step (\d+) \(')
 
 
+def count_failures(text):
+    return sum(int(a or b) for a, b in FAILURE_COUNT.findall(text or ''))
+
+
 def failed_step(result):
     """The index of the step that stopped a probe, or None (older summaries: from the text)."""
     if 'failed_step' in result:
@@ -864,14 +869,19 @@ def worse(old, new):
     old_step, new_step = failed_step(old), failed_step(new)
     if new_step is not None and (old_step is None or new_step < old_step):
         return f'now fails at step {new_step}'
+    if old_step is not None and (new_step is None or new_step > old_step):
+        return None  # it gets further: checks it never reached before are not a regression
     old_checks, new_checks = old.get('checks') or {}, new.get('checks') or {}
     if new_checks.get('failed', 0) > old_checks.get('failed', 0):
         return f'{new_checks["failed"]} failing checks, was {old_checks.get("failed", 0)}'
     if new_checks.get('passed', 0) < old_checks.get('passed', 0):
         return f'{new_checks["passed"]} passing checks, was {old_checks["passed"]}'
-    count = lambda text: sum(int(a or b) for a, b in FAILURE_COUNT.findall(text or ''))
-    if count(new.get('summary')) > count(old.get('summary')):
-        return f'{count(new.get("summary"))} counted failures, was {count(old.get("summary"))}'
+    if 'failures' in old and 'failures' in new:
+        before, after = old['failures'], new['failures']
+    else:  # older summaries: count what the stored (truncated) summary still shows
+        before, after = count_failures(old.get('summary')), count_failures(new.get('summary'))
+    if after > before:
+        return f'{after} counted failures, was {before}'
     return None
 
 
@@ -984,7 +994,8 @@ def main():
             try:
                 result = future.result()
             except Exception as error:  # a broken recipe must not stop the other probes
-                result = {'probe': name, 'status': 'fail', 'seconds': 0, 'summary': f'suite error: {error!r}'}
+                result = {'probe': name, 'status': 'fail', 'failed_step': 0, 'seconds': 0,
+                          'summary': f'suite error: {error!r}'}
             with lock:
                 results[name] = result
                 print(f'{result["status"]:9} {name:26} {result["seconds"]:6.0f}s  {result["summary"][:220]}',
