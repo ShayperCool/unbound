@@ -869,22 +869,44 @@ namespace UnityEngine
         }
 
         /// <summary>One update: advances the playing states, writes the blended pose, fires events;
-        /// nothing when culled (see <see cref="Culled"/>).</summary>
+        /// nothing when culled (see <see cref="Culled"/>), the culled time is added to the next
+        /// update that runs.</summary>
         internal void Step(float deltaTime)
         {
-            if (m_CullingType != AnimationCullingType.AlwaysAnimate && Culled()) return;
+            if (m_CullingType != AnimationCullingType.AlwaysAnimate && Culled())
+            {
+                // A state's first update, which samples its start without advancing, is spent even
+                // while culled (measured: the time of an Animation culled from its start catches up
+                // from its second update on). Unbound's choice (unmeasured): a culled update that
+                // starts any state adds nothing, and its start sample and events are not replayed.
+                bool started = false;
+                foreach (var state in States)
+                {
+                    if (!state.m_Enabled || !state.m_Fresh) continue;
+                    state.m_Fresh = false;
+                    started = true;
+                }
+                if (!started) m_CulledTime += deltaTime;
+                return;
+            }
+            deltaTime += m_CulledTime;
+            m_CulledTime = 0f;
             Evaluate(deltaTime, advance: true);
         }
+
+        float m_CulledTime;
 
         /// <summary>
         /// Whether the player loop's update skips this Animation. Documented (6000.0
         /// AnimationCullingType): BasedOnRenderers, "Animation is disabled when renderers are not
         /// visible"; "When Animation component is culled it won't do anything: it won't update
         /// animation states, execute events or sample animations". So a culled update advances no
-        /// state time, fades, queues or events and writes nothing; nothing catches up when a
-        /// renderer becomes visible again (the next update advances by its own delta time only:
-        /// Unbound's reading, unmeasured). Explicit calls (Sample, Play, Stop, ...) are not culled
-        /// (unmeasured).
+        /// state time, fades, queues or events and writes nothing. Measured (tests/projects/animculling,
+        /// Unity 6000.0.71f1): the first update that runs again advances by the culled updates' delta
+        /// times as well as its own, so the states' time catches up and the events of the skipped
+        /// span fire then. Unbound's choices (unmeasured): the culled time is kept across Play,
+        /// Stop and time changes made while culled; explicit calls (Sample, Play, Stop, ...) are not
+        /// culled.
         /// <para>Visibility is Animator.AnyRendererVisible of the Animation's GameObject, read when
         /// the update runs (see there for the unmeasured choices). The Manual's "Cull based on the
         /// default animation pose" and Animation.localBounds are not used: visibility is the
