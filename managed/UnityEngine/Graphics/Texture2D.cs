@@ -523,14 +523,13 @@ namespace UnityEngine
 
         unsafe void UploadSampler()
         {
-            int norm = PixelFormats.GpuNormFormat(m_Format);
             var packet = new TexturePacket
             {
                 Width = m_Width,
                 Height = m_Height,
                 // The format the texels went up in: a different one would make a new, empty texture.
                 Format = m_Format == TextureFormat.Alpha8 ? 3 : Texture2DTexels.FloatStored(m_Format) ? PixelFormats.GpuFloatFormat(m_Format)
-                    : norm >= 0 ? norm : m_Linear ? 1 : 0,
+                    : m_Linear ? 1 : 0,
                 MipCount = m_GpuMipCount,
                 FilterMode = (int)filterMode,
                 WrapU = (int)wrapModeU,
@@ -561,35 +560,6 @@ namespace UnityEngine
                         MipCount = m_MipCount,
                         Data = a,
                         DataLength = alpha.Length,
-                        FilterMode = (int)filterMode,
-                        WrapU = (int)wrapModeU,
-                        WrapV = (int)wrapModeV,
-                        WrapW = (int)wrapModeW,
-                        AnisoLevel = anisoLevel,
-                    };
-                    UploadTexture(&packet);
-                }
-                return;
-            }
-            int norm = PixelFormats.GpuNormFormat(m_Format);
-            if (norm >= 0)
-            {
-                // RG32 and RGBA64 are stored on the GPU in their normalized 16-bit format, as render
-                // textures of the format are (copies between them need the same format); their
-                // pixels are the 8-bit ones kept here, sent as floats. Never sRGB: their graphics
-                // formats are UNorm whether or not the texture is linear.
-                var floats = new Color[pixels.Length];
-                for (int i = 0; i < floats.Length; i++) floats[i] = pixels[i];
-                fixed (Color* f = floats)
-                {
-                    var packet = new TexturePacket
-                    {
-                        Width = m_Width,
-                        Height = m_Height,
-                        Format = norm,
-                        MipCount = m_MipCount,
-                        Data = (byte*)f,
-                        DataLength = floats.Length * 16,
                         FilterMode = (int)filterMode,
                         WrapU = (int)wrapModeU,
                         WrapV = (int)wrapModeV,
@@ -809,7 +779,10 @@ namespace Unbound.Runtime
     {
         internal static int GpuFloatFormat(UnityEngine.TextureFormat format) => format switch
         {
-            UnityEngine.TextureFormat.RFloat or UnityEngine.TextureFormat.R16 => 6,
+            UnityEngine.TextureFormat.RFloat => 6,
+            UnityEngine.TextureFormat.R16 => GpuR16UNorm,
+            UnityEngine.TextureFormat.RG32 => GpuRG16UNorm,
+            UnityEngine.TextureFormat.RGBA64 => GpuRGBA16UNorm,
             UnityEngine.TextureFormat.RGBAFloat => 9,
             UnityEngine.TextureFormat.RGFloat => 10,
             UnityEngine.TextureFormat.RHalf => 11,
@@ -818,27 +791,18 @@ namespace Unbound.Runtime
         };
 
         /// <summary>Packet formats the renderer keeps at their own precision where the device can
-        /// (else as linear RGBA8, with a warning): normalized 16-bit RG and RGBA, and packed
+        /// (else as linear RGBA8, with a warning): normalized 16-bit R, RG and RGBA, and packed
         /// 10-10-10-2. Their upload data is four floats per texel.</summary>
-        internal const int GpuRG16UNorm = 13, GpuRGBA16UNorm = 14, GpuRGB10A2UNorm = 15;
+        internal const int GpuRG16UNorm = 13, GpuRGBA16UNorm = 14, GpuRGB10A2UNorm = 15, GpuR16UNorm = 16;
 
         /// <summary>The packet format of a normalized 16-bit or 10-10-10-2 graphics format, or -1.
-        /// R16_UNorm is not one: it keeps the single-channel float storage its Texture2D shares.</summary>
+        /// Textures and render textures of one format share it (copies between them need it).</summary>
         internal static int GpuNormFormat(UnityEngine.Experimental.Rendering.GraphicsFormat format) => format switch
         {
+            UnityEngine.Experimental.Rendering.GraphicsFormat.R16_UNorm => GpuR16UNorm,
             UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16_UNorm => GpuRG16UNorm,
             UnityEngine.Experimental.Rendering.GraphicsFormat.R16G16B16A16_UNorm => GpuRGBA16UNorm,
             UnityEngine.Experimental.Rendering.GraphicsFormat.A2B10G10R10_UNormPack32 => GpuRGB10A2UNorm,
-            _ => -1,
-        };
-
-        /// <summary>As <see cref="GpuNormFormat(UnityEngine.Experimental.Rendering.GraphicsFormat)"/>
-        /// for a texture format: RG32 and RGBA64, whose graphics formats are R16G16_UNorm and
-        /// R16G16B16A16_UNorm whether or not the texture is linear.</summary>
-        internal static int GpuNormFormat(UnityEngine.TextureFormat format) => format switch
-        {
-            UnityEngine.TextureFormat.RG32 => GpuRG16UNorm,
-            UnityEngine.TextureFormat.RGBA64 => GpuRGBA16UNorm,
             _ => -1,
         };
 

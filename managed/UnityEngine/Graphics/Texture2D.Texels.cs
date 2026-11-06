@@ -10,8 +10,12 @@ namespace Unbound.Runtime
     ///
     /// Byte formats keep a Color32 cell holding each channel as the GPU samples it: R8 (r, 0, 0, 255),
     /// RG16 (r, g, 0, 255), Alpha8 (255, 255, 255, a), RGB24 alpha 255, a 4-bit channel n as 17 n,
-    /// RGB565's 5- and 6-bit channels widened by repeating their top bits. R16 and the float
-    /// formats keep a Color cell (R16: n / 65535 in single precision, exact for every n).
+    /// RGB565's 5- and 6-bit channels widened by repeating their top bits. The normalized 16-bit
+    /// formats (R16, RG32, RGBA64) and the float formats keep a Color cell (16-bit channels:
+    /// n / 65535 in single precision, exact for every n; channels the format lacks 1).
+    /// RG32 and RGBA64 as measured in tests/projects/textureformats (GetPixel (r, g, 1, 1) and
+    /// round-half-up quantization, the raw data their 16-bit values); their GetPixels32 bytes are
+    /// unmeasured (each channel's nearest byte, missing ones 255).
     ///
     /// Readers, for a stored 8-bit channel b:
     /// <list type="bullet">
@@ -26,13 +30,26 @@ namespace Unbound.Runtime
     internal static class Texture2DTexels
     {
         /// <summary>Formats whose CPU cells are floats.</summary>
-        internal static bool FloatStored(TextureFormat format) => GraphicsFormatUtility.IsHDRFormat(format) || format == TextureFormat.R16;
+        internal static bool FloatStored(TextureFormat format) => GraphicsFormatUtility.IsHDRFormat(format) || Norm16(format);
+
+        /// <summary>The normalized 16-bit formats.</summary>
+        internal static bool Norm16(TextureFormat format) => format is TextureFormat.R16 or TextureFormat.RG32 or TextureFormat.RGBA64;
+
+        /// <summary>Channels of a normalized 16-bit format (0 for other formats).</summary>
+        static int Norm16Channels(TextureFormat format) => format switch
+        {
+            TextureFormat.R16 => 1,
+            TextureFormat.RG32 => 2,
+            TextureFormat.RGBA64 => 4,
+            _ => 0,
+        };
 
         static bool Packed16(TextureFormat format) => format is TextureFormat.RGBA4444 or TextureFormat.ARGB4444 or TextureFormat.RGB565;
 
         /// <summary>Bytes of one texel, or 0 for formats whose texels Unbound does not store.</summary>
         internal static int TexelBytes(TextureFormat format) =>
-            format is TextureFormat.RG16 or TextureFormat.R16 || Packed16(format) ? 2 : PixelFormats.Size(format, 1, 1);
+            Norm16(format) ? 2 * Norm16Channels(format)
+            : format is TextureFormat.RG16 || Packed16(format) ? 2 : PixelFormats.Size(format, 1, 1);
 
         /// <summary>Bytes of a level, or 0 for formats whose texels Unbound does not store.</summary>
         internal static int Size(TextureFormat format, int width, int height) => TexelBytes(format) * width * height;
@@ -41,8 +58,8 @@ namespace Unbound.Runtime
         internal static bool Coded(TextureFormat format) => format switch
         {
             TextureFormat.RGBA32 or TextureFormat.ARGB32 or TextureFormat.BGRA32 or TextureFormat.RGB24 or TextureFormat.Alpha8
-                or TextureFormat.R8 or TextureFormat.RG16 or TextureFormat.R16 or TextureFormat.RGBA4444 or TextureFormat.ARGB4444
-                or TextureFormat.RGB565 => true,
+                or TextureFormat.R8 or TextureFormat.RG16 or TextureFormat.R16 or TextureFormat.RG32 or TextureFormat.RGBA64
+                or TextureFormat.RGBA4444 or TextureFormat.ARGB4444 or TextureFormat.RGB565 => true,
             _ => FloatStored(format) && PixelFormats.Size(format, 1, 1) > 0,
         };
 
@@ -50,8 +67,15 @@ namespace Unbound.Runtime
         static byte Widen5(int n) => (byte)((n << 3) | (n >> 2));
         static byte Widen6(int n) => (byte)((n << 2) | (n >> 4));
         static int Quantize(float v, int max) => (int)Math.Floor(Mathf.Clamp01(v) * max + 0.5f);
-        static int R16Of(Color cell) => (int)Math.Round(cell.r * 65535.0);
-        static Color R16Cell(int n) => new Color(n / 65535f, 1f, 1f, 1f);
+        static int Norm16Of(float v) => (int)Math.Round(v * 65535.0);
+
+        /// <summary>A 16-bit cell from its channels' values (channels the format lacks 1).</summary>
+        static Color Norm16Cell(TextureFormat format, Func<int, int> channel)
+        {
+            var cell = new Color(1f, 1f, 1f, 1f);
+            for (int k = 0; k < Norm16Channels(format); k++) cell[k] = channel(k) / 65535f;
+            return cell;
+        }
 
         /// <summary>The cell a byte-channel color becomes (channels the format lacks dropped, fewer
         /// bits rounded to the nearest value).</summary>
@@ -88,9 +112,9 @@ namespace Unbound.Runtime
             return Canonical(format, new Color32((byte)Quantize(c.r, 255), (byte)Quantize(c.g, 255), (byte)Quantize(c.b, 255), (byte)Quantize(c.a, 255)));
         }
 
-        /// <summary>The float cell a set color becomes (R16: the nearest 16-bit value).</summary>
+        /// <summary>The float cell a set color becomes (16-bit channels: the nearest value).</summary>
         internal static Color QuantizeFloat(TextureFormat format, Color c) =>
-            format == TextureFormat.R16 ? R16Cell(Quantize(c.r, 65535)) : PixelFormats.QuantizeFloat(format, c);
+            Norm16(format) ? Norm16Cell(format, k => Quantize(c[k], 65535)) : PixelFormats.QuantizeFloat(format, c);
 
         internal static Color32 DecodeCell(TextureFormat format, ReadOnlySpan<byte> t)
         {
@@ -139,17 +163,24 @@ namespace Unbound.Runtime
 
         internal static Color DecodeFloatCell(TextureFormat format, ReadOnlySpan<byte> t)
         {
-            if (format == TextureFormat.R16) return R16Cell(t[0] | t[1] << 8);
+            if (Norm16(format))
+            {
+                var bytes = t.ToArray();
+                return Norm16Cell(format, k => bytes[2 * k] | bytes[2 * k + 1] << 8);
+            }
             return PixelFormats.QuantizeFloat(format, PixelFormats.DecodeFloatTexel(format, t));
         }
 
         internal static void EncodeFloatCell(TextureFormat format, Color c, Span<byte> t)
         {
-            if (format == TextureFormat.R16)
+            if (Norm16(format))
             {
-                int n = R16Of(c);
-                t[0] = (byte)n;
-                t[1] = (byte)(n >> 8);
+                for (int k = 0; k < Norm16Channels(format); k++)
+                {
+                    int n = Norm16Of(c[k]);
+                    t[2 * k] = (byte)n;
+                    t[2 * k + 1] = (byte)(n >> 8);
+                }
                 return;
             }
             PixelFormats.EncodeFloatTexel(format, c, t);
@@ -165,9 +196,14 @@ namespace Unbound.Runtime
 
         internal static Color32 Pixel32(TextureFormat format, Color cell)
         {
-            if (format != TextureFormat.R16) return cell;
-            byte v = (byte)((R16Of(cell) * 255 + 32767) / 65535);
-            return new Color32(v, v, v, 255);
+            static byte Byte(int n) => (byte)((n * 255 + 32767) / 65535);
+            if (format == TextureFormat.R16)
+            {
+                byte v = Byte(Norm16Of(cell.r));
+                return new Color32(v, v, v, 255);
+            }
+            if (!Norm16(format)) return cell;
+            return new Color32(Byte(Norm16Of(cell.r)), Byte(Norm16Of(cell.g)), Byte(Norm16Of(cell.b)), Byte(Norm16Of(cell.a)));
         }
 
         const float Scale = 1f / 255f;
@@ -182,9 +218,15 @@ namespace Unbound.Runtime
             return new Color(c.r * Scale, c.g * Scale, c.b * Scale, c.a * Scale);
         }
 
-        /// <summary>As <c>GetPixels</c> reads a float cell.</summary>
-        internal static Color Pixels(TextureFormat format, Color cell) =>
-            format == TextureFormat.R16 ? new Color(R16Of(cell) * (1f / 65535f), 1f, 1f, 1f) : cell;
+        /// <summary>As <c>GetPixels</c> reads a float cell (16-bit channels n × (1 / 65535), the
+        /// channels the format lacks 1).</summary>
+        internal static Color Pixels(TextureFormat format, Color cell)
+        {
+            if (!Norm16(format)) return cell;
+            var c = new Color(1f, 1f, 1f, 1f);
+            for (int k = 0; k < Norm16Channels(format); k++) c[k] = Norm16Of(cell[k]) * (1f / 65535f);
+            return c;
+        }
 
         /// <summary>As <c>GetPixel</c> reads a byte cell.</summary>
         internal static Color Pixel(TextureFormat format, Color32 cell)

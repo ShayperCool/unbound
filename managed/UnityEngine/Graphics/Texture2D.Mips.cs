@@ -80,7 +80,7 @@ namespace UnityEngine
         int FloatChannels => m_Format switch
         {
             TextureFormat.RHalf or TextureFormat.RFloat or TextureFormat.R16 => 1,
-            TextureFormat.RGHalf or TextureFormat.RGFloat => 2,
+            TextureFormat.RGHalf or TextureFormat.RGFloat or TextureFormat.RG32 => 2,
             _ => 4,
         };
 
@@ -88,7 +88,7 @@ namespace UnityEngine
         {
             if (m_Hdr != null)
             {
-                if (m_Format == TextureFormat.R16)
+                if (Texture2DTexels.Norm16(m_Format))
                 {
                     SetFloatCell(mip, i, Texture2DTexels.QuantizeFloat(m_Format, c));
                     return;
@@ -289,7 +289,7 @@ namespace UnityEngine
             if (m_Hdr != null)
             {
                 var pixels = FloatLevel(mip);
-                if (m_Format == TextureFormat.R16)
+                if (Texture2DTexels.Norm16(m_Format))
                 {
                     for (int i = 0; i < pixels.Length; i++) pixels[i] = Texture2DTexels.DecodeFloatCell(m_Format, data.Slice(i * n, n));
                     return;
@@ -313,7 +313,7 @@ namespace UnityEngine
             int size = RawMipSize(mip);
             if (m_Store != null) return new ReadOnlySpan<byte>(m_Store, m_StoreOffsets[mip], size).ToArray();
             int n = TexelBytes, texels = MipWidth(mip) * MipHeight(mip);
-            if (m_Hdr != null && m_Format != TextureFormat.R16) return PixelFormats.EncodeFloat(m_Format, FloatLevel(mip));
+            if (m_Hdr != null && !Texture2DTexels.Norm16(m_Format)) return PixelFormats.EncodeFloat(m_Format, FloatLevel(mip));
             if (m_Hdr == null && !Texture2DTexels.Coded(m_Format)) return PixelFormats.Encode(m_Format, ByteLevel(mip));
             var bytes = new byte[size];
             for (int i = 0; i < texels; i++)

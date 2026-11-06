@@ -260,7 +260,7 @@ namespace UnityEngine
         public bool IsCreatedOrPending() => m_Created;
 
         /// <summary>The native target format: packed 11/11/10 floats as themselves, half floats for
-        /// other HDR formats, normalized 16-bit RG/RGBA and packed 10-10-10-2 as themselves (as
+        /// other HDR formats, normalized 16-bit R/RG/RGBA and packed 10-10-10-2 as themselves (as
         /// linear RGBA8, with a warning, where the device cannot keep them), RGBA8 otherwise (an
         /// sRGB view for sRGB ones).</summary>
         internal int PacketFormat()
@@ -268,9 +268,7 @@ namespace UnityEngine
             var f = m_Descriptor.graphicsFormat;
             if (f == GraphicsFormat.None && m_Descriptor.depthStencilFormat != GraphicsFormat.None) return 5;
             if (f == GraphicsFormat.B10G11R11_UFloatPack32) return 4;
-            // R16's Texture2D storage also uses the existing single-channel float backend.
-            // Keep matching public R16 formats copy-compatible; normalized RT precision is separate.
-            if (f == GraphicsFormat.R32_SFloat || f == GraphicsFormat.R16_UNorm) return 6;
+            if (f == GraphicsFormat.R32_SFloat) return 6;
             if (f == GraphicsFormat.R32G32B32A32_SFloat) return 9;
             if (f == GraphicsFormat.R32G32_SFloat) return 10;
             if (f == GraphicsFormat.R16_SFloat) return 11;
