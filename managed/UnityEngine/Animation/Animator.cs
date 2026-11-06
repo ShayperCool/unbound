@@ -696,7 +696,12 @@ namespace UnityEngine
             var source = Source(player, layer);
             var run = next ? (source.Transition != null ? source.Next : null) : source.Current;
             if (run == null) return result;
-            player.ClipWeights(player.MotionOf(layer.Def, run.Def), 1f, result);
+            // The clips' blending weights: a transition weighs the states by its progress
+            // (measured for the current state, tests/projects/humanoid).
+            float weight = 1f;
+            if (source.Transition != null && source.Next != null)
+                weight = next ? source.Transition.Progress : 1f - source.Transition.Progress;
+            player.ClipWeights(player.MotionOf(layer.Def, run.Def), weight, result);
             return result;
         }
 
