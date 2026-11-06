@@ -272,6 +272,13 @@ namespace UnityEngine
             base.OnEngineDestroy();
         }
 
+        // Hierarchy deactivation also clears a controller retained by enabled=false.
+        // It does not deliver a second component-disable notification.
+        internal void DisabledHierarchyDeactivated()
+        {
+            if (Compat.AnimatorStartupMeasured && !m_KeepAnimatorStateOnDisable) m_Player = null;
+        }
+
         /// <summary>
         /// One update of the controller by the player loop, culled by renderer visibility.
         /// Documented (6000.0 AnimatorCullingMode, Manual "Animator component"): CullUpdateTransforms,

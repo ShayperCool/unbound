@@ -224,6 +224,7 @@ namespace Unbound.Runtime
                     try { c.OnEngineDisable(); }
                     catch (Exception e) { Debug.LogException(e, c); }
                 }
+                else if (c is Animator animator) animator.DisabledHierarchyDeactivated();
             }
         }
 

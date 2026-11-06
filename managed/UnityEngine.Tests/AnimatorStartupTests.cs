@@ -84,6 +84,33 @@ namespace UnityEngine.Tests
             }
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void HierarchyDeactivationAlsoResetsADisabledController(bool keep)
+        {
+            string version = ProjectInfo.UnityVersion;
+            var animator = Create(out var root);
+            try
+            {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                animator.keepAnimatorStateOnDisable = keep;
+                animator.Update(.2f);
+                float before = animator.GetCurrentAnimatorStateInfo(0).normalizedTime;
+                animator.enabled = false;
+                root.SetActive(false);
+                root.SetActive(true);
+                animator.enabled = true;
+                animator.Update(0);
+                Near.Equal(keep ? before : 0f, animator.GetCurrentAnimatorStateInfo(0).normalizedTime);
+            }
+            finally
+            {
+                ProjectInfo.UnityVersion = version;
+                Object.DestroyImmediate(root);
+            }
+        }
+
         [Fact]
         public void InitialSceneLookupExcludesObjectsAwaitingAwake()
         {
