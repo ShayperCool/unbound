@@ -73,6 +73,7 @@ pub struct Output {
     pub pragmas: Vec<Pragma>,
     /// Active instanced-property declarations, including those in included files.
     pub instanced_properties: HashSet<String>,
+    pub instanced_buffer_sizes: HashMap<String, Option<u32>>,
 }
 
 pub struct Preprocessor<'a> {
@@ -81,6 +82,8 @@ pub struct Preprocessor<'a> {
     once: HashSet<PathBuf>,
     pragmas: Vec<Pragma>,
     instanced_properties: HashSet<String>,
+    instanced_buffer_sizes: HashMap<String, Option<u32>>,
+    instance_buffer: Option<String>,
     depth: usize,
     /// Expanding an `#if` expression: `defined` that macros produce is answered too (as GCC and
     /// Unity's compilers do; Unity's includes rely on it).
@@ -97,6 +100,8 @@ impl<'a> Preprocessor<'a> {
             once: HashSet::new(),
             pragmas: Vec::new(),
             instanced_properties: HashSet::new(),
+            instanced_buffer_sizes: HashMap::new(),
+            instance_buffer: None,
             depth: 0,
             in_condition: false,
         }
@@ -121,6 +126,7 @@ impl<'a> Preprocessor<'a> {
             text: out,
             pragmas: self.pragmas,
             instanced_properties: self.instanced_properties,
+            instanced_buffer_sizes: self.instanced_buffer_sizes,
         })
     }
 
@@ -462,6 +468,22 @@ impl<'a> Preprocessor<'a> {
                     newlines += consumed_newlines;
                     let args = fit_args(args, params.len(), m.variadic)
                         .ok_or_else(|| anyhow!("macro {name} takes {} arguments", params.len()))?;
+                    if !self.in_condition && args.len() == 1 {
+                        if &*name == "UNITY_INSTANCING_BUFFER_START" {
+                            let buffer = self.expand(args[0].clone().into())?;
+                            let buffer = buffer
+                                .iter()
+                                .filter(|t| !t.blank())
+                                .map(|t| &*t.text)
+                                .collect::<String>();
+                            self.instanced_buffer_sizes
+                                .entry(buffer.clone())
+                                .or_insert(Some(0));
+                            self.instance_buffer = Some(buffer);
+                        } else if &*name == "UNITY_INSTANCING_BUFFER_END" {
+                            self.instance_buffer = None;
+                        }
+                    }
                     if &*name == "UNITY_DEFINE_INSTANCED_PROP"
                         && !self.in_condition
                         && args.len() == 2
@@ -473,6 +495,16 @@ impl<'a> Preprocessor<'a> {
                             .map(|t| &*t.text)
                             .collect();
                         self.instanced_properties.insert(property);
+                        if let Some(buffer) = self.instance_buffer.clone() {
+                            let ty = self.expand(args[0].clone().into())?;
+                            let ty = ty
+                                .iter()
+                                .filter(|t| !t.blank())
+                                .map(|t| &*t.text)
+                                .collect::<String>();
+                            let size = self.instanced_buffer_sizes.get_mut(&buffer).unwrap();
+                            *size = size.and_then(|offset| instance_member_end(offset, &ty));
+                        }
                     }
                     let mut hide: Vec<Rc<str>> = t
                         .hide
@@ -1015,9 +1047,48 @@ fn number(text: &str) -> Result<i64> {
     parsed.ok_or_else(|| anyhow!("`{text}` is not a number"))
 }
 
+// GLCore constant-buffer struct packing. Unknown user-defined types remain unknown;
+// replay must refuse them instead of guessing an ID batch boundary.
+fn instance_member_end(offset: u32, ty: &str) -> Option<u32> {
+    let suffix = ["float", "half", "fixed", "int", "uint", "bool"]
+        .iter()
+        .find_map(|prefix| ty.strip_prefix(prefix))?;
+    let (align, size) = if suffix.is_empty() {
+        (4, 4)
+    } else if let Ok(n @ 1..=4) = suffix.parse::<u32>() {
+        (if n == 3 { 16 } else { n * 4 }, n * 4)
+    } else {
+        let (rows, cols) = suffix.split_once('x')?;
+        let rows: u32 = rows.parse().ok()?;
+        let cols: u32 = cols.parse().ok()?;
+        if !(2..=4).contains(&rows) || !(2..=4).contains(&cols) {
+            return None;
+        }
+        (16, cols * 16)
+    };
+    Some(offset.div_ceil(align) * align + size)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn instancing_buffers_keep_layout_and_unknown_types_separate() {
+        let out = run(concat!(
+            "#define UNITY_INSTANCING_BUFFER_START(N)\n#define UNITY_INSTANCING_BUFFER_END(N)\n",
+            "#define UNITY_DEFINE_INSTANCED_PROP(T,N) T N;\n",
+            "UNITY_INSTANCING_BUFFER_START(A)\n",
+            "UNITY_DEFINE_INSTANCED_PROP(float4, _Tint)\n",
+            "UNITY_DEFINE_INSTANCED_PROP(float, _Weight)\n",
+            "UNITY_DEFINE_INSTANCED_PROP(float4x4, _Warp)\n",
+            "UNITY_INSTANCING_BUFFER_END(A)\n",
+            "UNITY_INSTANCING_BUFFER_START(B)\n",
+            "UNITY_DEFINE_INSTANCED_PROP(Custom, _Data)\n",
+            "UNITY_INSTANCING_BUFFER_END(B)\n"), &[]).unwrap();
+        assert_eq!(out.instanced_buffer_sizes["A"], Some(96));
+        assert_eq!(out.instanced_buffer_sizes["B"], None);
+    }
 
     #[test]
     fn instanced_properties_follow_active_macro_calls_in_includes() {

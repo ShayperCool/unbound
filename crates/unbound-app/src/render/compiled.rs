@@ -1154,6 +1154,9 @@ mod tests {
             vertex_entry: String::new(),
             fragment_entry: String::new(),
             instanced_properties: Vec::new(),
+            mesh_instance_stride: Some(0),
+            mesh_instance_uniform_scaling: false,
+            mesh_instance_max_count: None,
             uniforms: vec![
                 uniform("unity_ObjectToWorld", 0, 4, 4),
                 uniform("_Color", 64, 4, 1),

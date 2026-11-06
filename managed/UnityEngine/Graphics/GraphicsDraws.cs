@@ -100,6 +100,17 @@ namespace UnityEngine
             return one;
         }
 
+        // The property element remains submission-relative even when the shader ID restarts
+        // at a native batch boundary. The compiled pass supplies its property-buffer layout.
+        static MaterialPropertyBlock MeshInstance(MaterialPropertyBlock block, int index)
+        {
+            var one = Instance(block, index) ?? new MaterialPropertyBlock();
+            var limits = Compat.MeshInstanceBatchLimits;
+            if (limits.x == 0) Stubs.Ignored("Graphics mesh-instancing batch ID limits", "are unmeasured for this Unity release; logical IDs remain sequential");
+            one.SetVector("<MeshInstanceBatchLimits>", limits);
+            return one;
+        }
+
         static Bounds Transformed(Bounds local, Matrix4x4 matrix)
         {
             var center = matrix.MultiplyPoint3x4(local.center);
@@ -154,7 +165,7 @@ namespace UnityEngine
             }
             int queued = Immediate.Queued.Count;
             for (int i = 0; i < count; i++)
-                Immediate.Queue(mesh, matrices[i], material, layer, camera, submeshIndex, Instance(properties, i), lighting);
+                Immediate.Queue(mesh, matrices[i], material, layer, camera, submeshIndex, MeshInstance(properties, i), new DrawSetup { Instances = 1, FirstInstance = (uint)i }, lighting);
             // The group's sort key is the box's centre, ties within the call kept in call order
             // (Unbound's choice, unmeasured).
             WithWorldBounds(queued, bounds);
@@ -259,7 +270,7 @@ namespace UnityEngine
             for (int i = 0; i < instanceCount; i++)
             {
                 var matrix = System.Runtime.InteropServices.MemoryMarshal.Read<Matrix4x4>(data.Slice((startInstance + i) * stride, 64));
-                Immediate.Queue(mesh, matrix, rparams.material, rparams.layer, rparams.camera, submeshIndex, Instance(rparams.matProps, startInstance + i), lighting);
+                Immediate.Queue(mesh, matrix, rparams.material, rparams.layer, rparams.camera, submeshIndex, MeshInstance(rparams.matProps, i), new DrawSetup { Instances = 1, FirstInstance = (uint)i }, lighting);
                 if (!automatic) continue;
                 if (i == 0) bounds = Transformed(mesh.bounds, matrix);
                 else bounds.Encapsulate(Transformed(mesh.bounds, matrix));

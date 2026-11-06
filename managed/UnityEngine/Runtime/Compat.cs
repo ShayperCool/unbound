@@ -33,6 +33,12 @@ namespace Unbound.Runtime
         /// Other releases retain their existing sampling until measured.</summary>
         internal static bool ParticleShapeModifiersMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Standalone mesh-instancing batch limits measured on 6000.0.71f1 GLCore.
+        /// x/y: transform capacities without/with uniform scaling; z: property-buffer bytes.
+        /// Other releases keep sequential IDs until measured.</summary>
+        internal static UnityEngine.Vector4 MeshInstanceBatchLimits => Release == (6000, 0, 71, 'f', 1)
+            ? new UnityEngine.Vector4(511, 1023, 65536, 0) : UnityEngine.Vector4.zero;
+
         /// <summary>6000.0's BakeTrailsMesh joins ribbon strips in its index count and rejects
         /// the resulting out-of-bounds indices. Regular ribbon rendering is unaffected.</summary>
         internal static bool ParticleRibbonBakeRejectsMultipleStrips => Major >= 6000;

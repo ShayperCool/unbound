@@ -18,6 +18,8 @@ namespace Unbound.Runtime
     internal struct DrawSetup
     {
         internal uint Instances;
+        /// <summary>Logical ID of a mesh instance replayed as one draw.</summary>
+        internal uint FirstInstance;
         internal ulong Args;
         internal uint Offset;
         internal bool Indexed;

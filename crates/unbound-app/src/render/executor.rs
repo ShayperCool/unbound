@@ -61,8 +61,8 @@ struct GpuMaterial {
     /// Per pass: the textures of the program it last drew with.
     pass_textures: Vec<Option<ProgramTextures>>,
     /// The program variant (and whether it is the error shader's) per (pass, global keyword
-    /// set, linear colour space).
-    variants: rustc_hash::FxHashMap<(usize, u32, bool), (Option<u32>, bool)>,
+    /// set, linear colour space, standalone mesh replay).
+    variants: rustc_hash::FxHashMap<(usize, u32, bool, bool), (Option<u32>, bool)>,
     /// Its uniform block per program variant (see `CompiledPrograms::material_block`).
     blocks: rustc_hash::FxHashMap<u32, Arc<compiled::MaterialBlock>>,
 }
@@ -2448,6 +2448,35 @@ impl UnityRenderer {
                         match item {
                             Planned::Draw(mut d) => {
                                 d.first_instance = first_instance;
+                                if let Some(owned::PropertyValue::Vector(limits)) = draw
+                                    .properties
+                                    .iter()
+                                    .find(|(name, _)| name == "<MeshInstanceBatchLimits>")
+                                    .map(|(_, value)| value)
+                                    && limits[0] > 0.0
+                                {
+                                    let program = self.compiled.program(d.program.0);
+                                    let Some(stride) = program.mesh_instance_stride else {
+                                        self.warn_once(format!("mesh-instance-layout{}", d.program.0), ||
+                                            "standalone mesh instancing has an unsupported property type: draw skipped".into());
+                                        continue;
+                                    };
+                                    let mut capacity = limits
+                                        [usize::from(program.mesh_instance_uniform_scaling)]
+                                        as u32;
+                                    if stride > 0 {
+                                        capacity = capacity.min(limits[2] as u32 / stride);
+                                    }
+                                    if let Some(max) = program.mesh_instance_max_count {
+                                        capacity = capacity.min(max);
+                                    }
+                                    if capacity == 0 {
+                                        self.warn_once(format!("mesh-instance-capacity{}", d.program.0), ||
+                                            "standalone mesh instancing property data exceeds a native batch: draw skipped".into());
+                                        continue;
+                                    }
+                                    d.first_instance %= capacity;
+                                }
                                 if !open {
                                     let pass = self.new_pass(target.clone());
                                     passes.push(Op::Pass(pass));
@@ -2784,6 +2813,9 @@ impl UnityRenderer {
             pad: [0.0; 4],
         });
         let linear = space == 1;
+        let mesh_replay = overrides
+            .iter()
+            .any(|(name, _)| name == "<MeshInstanceBatchLimits>");
         let mut globals = self.globals.clone();
         self.globals_index.refresh(&globals);
         for (pass_index, pass) in passes {
@@ -2798,7 +2830,7 @@ impl UnityRenderer {
             let layout = self.pipelines.texture_layout.clone();
             // The pass's variant for the material's and the global keywords, chosen once per
             // keyword set (the material's cache goes with it when it changes).
-            let key = (pass_index, self.keyword_set, linear);
+            let key = (pass_index, self.keyword_set, linear, mesh_replay);
             let cached = self
                 .materials
                 .get(&draw.material)
@@ -2808,6 +2840,10 @@ impl UnityRenderer {
                 None => {
                     let mut keywords = resolved.material.keywords.clone();
                     keywords.extend(self.keywords.iter().cloned());
+                    if mesh_replay {
+                        keywords.push("INSTANCING_ON".into());
+                        keywords.push(unbound_shaders::MESH_INSTANCE_REPLAY.into());
+                    }
                     let mut id = self.compiled.variant(
                         &device,
                         &resolved.shader,

@@ -26,7 +26,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 20;
+pub const FORMAT_VERSION: u32 = 21;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -106,6 +106,10 @@ pub struct Compiled {
     pub uniforms: Vec<Uniform>,
     /// Properties declared through UNITY_DEFINE_INSTANCED_PROP in this variant.
     pub instanced_properties: Vec<String>,
+    /// Largest instancing-property struct in the replay variant; unknown types are refused.
+    pub mesh_instance_stride: Option<u32>,
+    pub mesh_instance_uniform_scaling: bool,
+    pub mesh_instance_max_count: Option<u32>,
     /// The uniform block's size (0 without one).
     pub uniform_size: u32,
     pub textures: Vec<String>,
@@ -388,6 +392,24 @@ fn words(w: &[&str]) -> Vec<String> {
     w.iter().map(|s| s.to_string()).collect()
 }
 
+/// Internal variant for CPU-expanded mesh instances. Matrices and property elements are
+/// supplied per draw; the GPU instance input still carries the logical ID.
+pub const MESH_INSTANCE_REPLAY: &str = "UNBOUND_MESH_INSTANCE_REPLAY";
+const MESH_INSTANCE_MACROS: &str = r#"
+#define INSTANCING_ON 1
+#define UNITY_INSTANCING_ENABLED
+static uint unity_InstanceID;
+void UnitySetupInstanceID(uint id) { unity_InstanceID = id; }
+#undef UNITY_VERTEX_INPUT_INSTANCE_ID
+#define UNITY_VERTEX_INPUT_INSTANCE_ID uint instanceID : SV_InstanceID;
+#undef UNITY_GET_INSTANCE_ID
+#define UNITY_GET_INSTANCE_ID(input) input.instanceID
+#undef UNITY_SETUP_INSTANCE_ID
+#define UNITY_SETUP_INSTANCE_ID(input) UnitySetupInstanceID(UNITY_GET_INSTANCE_ID(input))
+#undef UNITY_TRANSFER_INSTANCE_ID
+#define UNITY_TRANSFER_INSTANCE_ID(input, output) output.instanceID = UNITY_GET_INSTANCE_ID(input)
+"#;
+
 /// DX9-style samplers as texture-and-sampler pairs (glslang has no `sampler2D` for HLSL), the
 /// way Unity's own DXC path emulates them; Unity's emulation is skipped (it names the struct
 /// `sampler2D` on OpenGL, a glslang keyword).
@@ -485,7 +507,10 @@ impl ShaderCompiler {
         keywords: &[String],
         linear: bool,
     ) -> Result<Arc<Compiled>> {
-        let pragmas = self.pragmas(program, linear)?;
+        let mut pragmas = self.pragmas(program, linear)?;
+        if keywords.iter().any(|k| k == MESH_INSTANCE_REPLAY) {
+            pragmas.target = pragmas.target.max(35);
+        }
         if let Some(what) = &pragmas.unsupported {
             bail!("{what} programs are not supported (Unbound compiles vertex/fragment programs)");
         }
@@ -497,7 +522,10 @@ impl ShaderCompiler {
             .fragment
             .clone()
             .ok_or_else(|| anyhow!("no #pragma fragment"))?;
-        let selected = pragmas.select(keywords);
+        let mut selected = pragmas.select(keywords);
+        if keywords.iter().any(|k| k == MESH_INSTANCE_REPLAY) {
+            selected.push(MESH_INSTANCE_REPLAY.into());
+        }
         let key = (program.clone(), selected.clone(), linear);
         if let Some(c) = self.memory.get(&key) {
             return Ok(c.clone());
@@ -546,6 +574,25 @@ impl ShaderCompiler {
             .cloned()
             .collect();
         instanced_properties.sort();
+        let mesh_instance_stride = vertex
+            .instanced_buffer_sizes
+            .values()
+            .chain(fragment.instanced_buffer_sizes.values())
+            .try_fold(0u32, |max, size| {
+                size.map(|size| max.max(size.div_ceil(16) * 16))
+            });
+        let options: Vec<_> = vertex
+            .pragmas
+            .iter()
+            .filter(|p| p.words.first().is_some_and(|w| w == "instancing_options"))
+            .flat_map(|p| p.words.iter().skip(1))
+            .collect();
+        let mesh_instance_uniform_scaling =
+            options.iter().any(|w| w.as_str() == "assumeuniformscaling");
+        let mesh_instance_max_count = options.iter().find_map(|w| {
+            w.strip_prefix("forcemaxcount:")
+                .and_then(|n| n.parse::<u32>().ok())
+        });
         let vertex_source = vertex.text;
         let fragment_source = fragment.text;
 
@@ -564,6 +611,7 @@ impl ShaderCompiler {
             }
             h.update(selected.join(" ").as_bytes());
             h.update(instanced_properties.join(" ").as_bytes());
+            h.update(format!("{mesh_instance_stride:?}/{mesh_instance_uniform_scaling}/{mesh_instance_max_count:?}").as_bytes());
             h.finalize().to_hex().to_string()
         };
         let cached = self
@@ -595,6 +643,9 @@ impl ShaderCompiler {
         let mut compiled = fit::fit(&vertex_spv, &fragment_spv, &uav_registers(&fragment_source))?;
         compiled.keywords = selected;
         compiled.instanced_properties = instanced_properties;
+        compiled.mesh_instance_stride = mesh_instance_stride;
+        compiled.mesh_instance_uniform_scaling = mesh_instance_uniform_scaling;
+        compiled.mesh_instance_max_count = mesh_instance_max_count;
         if let Some(path) = &cached {
             if let Some(dir) = path.parent() {
                 let _ = std::fs::create_dir_all(dir);
@@ -670,7 +721,18 @@ impl ShaderCompiler {
     ) -> Result<preprocess::Output> {
         let includes = &self.settings.includes;
         let root = program.file.parent();
-        let resolve = |dir: Option<&Path>, name: &str| resolve_include(includes, root, dir, name);
+        let replay = defines.iter().any(|(k, _)| k == MESH_INSTANCE_REPLAY);
+        let resolve = |dir: Option<&Path>, name: &str| {
+            let (path, text) = resolve_include(includes, root, dir, name)?;
+            let text = if replay && name == "UnityInstancing.cginc" {
+                format!(
+                    "#ifndef UNBOUND_REPLAY_INSTANCING_INCLUDED\n#define UNBOUND_REPLAY_INSTANCING_INCLUDED\n#undef INSTANCING_ON\n{text}\n{MESH_INSTANCE_MACROS}\n#endif\n"
+                )
+            } else {
+                text
+            };
+            Some((path, text))
+        };
         let mut pp = preprocess::Preprocessor::new(&resolve);
         for (k, v) in defines {
             pp.define(k, v);
@@ -1454,6 +1516,45 @@ float4 frag() : SV_Target { return 1; }
             }
         }
         assert_eq!(strides, vec![12]);
+    }
+
+    #[test]
+    fn mesh_replay_transfers_logical_ids_and_preserves_layout_options() {
+        let source = format!(
+            r#"
+#pragma vertex vert
+#pragma fragment frag
+#pragma multi_compile_instancing
+#pragma instancing_options assumeuniformscaling forcemaxcount:4
+{MESH_INSTANCE_MACROS}
+#define UNITY_INSTANCING_BUFFER_START(N)
+#define UNITY_INSTANCING_BUFFER_END(N)
+#define UNITY_DEFINE_INSTANCED_PROP(T,N) T N;
+UNITY_INSTANCING_BUFFER_START(Props)
+UNITY_DEFINE_INSTANCED_PROP(float4, _Tint)
+UNITY_DEFINE_INSTANCED_PROP(float, _Weight)
+UNITY_DEFINE_INSTANCED_PROP(float4x4, _Warp)
+UNITY_INSTANCING_BUFFER_END(Props)
+struct V {{ float4 pos : SV_POSITION; UNITY_VERTEX_INPUT_INSTANCE_ID }};
+V vert(float4 p : POSITION, uint instanceID : SV_InstanceID) {{
+    V o; o.pos = mul(_Warp, p); o.instanceID = instanceID; return o;
+}}
+float4 frag(V i) : SV_Target {{ UNITY_SETUP_INSTANCE_ID(i); return _Tint * _Weight + unity_InstanceID; }}
+"#
+        );
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let compiled = compiler
+            .compile(
+                &program(&source, false),
+                &[MESH_INSTANCE_REPLAY.into()],
+                false,
+            )
+            .unwrap();
+        assert_eq!(compiled.mesh_instance_stride, Some(96));
+        assert!(compiled.mesh_instance_uniform_scaling);
+        assert_eq!(compiled.mesh_instance_max_count, Some(4));
+        assert!(compiled.vertex.contains("instance_index"));
+        assert!(compiled.keywords.iter().any(|k| k == MESH_INSTANCE_REPLAY));
     }
 
     /// Shader cache 18: a program built from its vertex and instance ids reads no vertex inputs
