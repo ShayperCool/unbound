@@ -397,7 +397,8 @@ def recipes(release):
         R[name] = guarded(jsonl('values.jsonl'))
     R['droppedparams'] = guarded(jsonl('capture.jsonl'))
     R['spriteimport'] = guarded(jsonl('sprites.jsonl'))
-    R['lightmapuvs'] = guarded(jsonl('lightmapuvs.jsonl'))
+    R['lightmapuvs'] = guarded(lambda runs: [single_ref(), f'{runs}/lightmapuvs.jsonl', '--uv2', '--expect',
+                                             'Cube,Multi,Pieces'])
     for name in ('appfacts', 'customrt', 'flares', 'gpubuffers', 'lines', 'rtdepth'):
         R[name] = guarded(folder)
     R['assetclones'] = guarded(lambda runs: ['{probe}/Reference/unity-{release}/Main.jsonl', f'{runs}/values.jsonl',
