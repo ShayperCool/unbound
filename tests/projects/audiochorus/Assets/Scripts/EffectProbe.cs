@@ -9,6 +9,14 @@ using Unity.Collections;
 public class EffectProbe : MonoBehaviour
 {
     public static readonly string[][] Cases = {
+        new[] { "mix_mono_noise", "music=noise:0.25", "mono=1", "blocks=256", "Music.Cho.Dry mix=0.25", "Music.Cho.Wet mix tap 1=0.75", "Music.Cho.Wet mix tap 2=0.375", "Music.Cho.Wet mix tap 3=0.125", "Music.Cho.Delay=17.5", "Music.Cho.Rate=5", "Music.Cho.Depth=0.5" },
+        new[] { "mix_mono_tone", "music=tone:0.25:997", "mono=1", "blocks=256", "Music.Cho.Dry mix=0.25", "Music.Cho.Wet mix tap 1=0.75", "Music.Cho.Wet mix tap 2=0.375", "Music.Cho.Wet mix tap 3=0.125", "Music.Cho.Delay=17.5", "Music.Cho.Rate=5", "Music.Cho.Depth=0.5" },
+        new[] { "mix_delay_invalid_depth1_low", "music=imp", "blocks=256", "Music.Cho.Depth=1", "set:Delay=-1" },
+        new[] { "mix_delay_invalid_depth1_high", "music=imp", "blocks=256", "Music.Cho.Depth=1", "set:Delay=200" },
+        new[] { "source_mono_noise", "music=noise:0.25", "mono=1", "blocks=256", "Music:Att", "filter=default", "filter:dryMix=0.25", "filter:wetMix1=0.75", "filter:wetMix2=0.375", "filter:wetMix3=0.125", "filter:delay=17.5", "filter:rate=5", "filter:depth=0.5" },
+        new[] { "source_mono_tone", "music=tone:0.25:997", "mono=1", "blocks=256", "Music:Att", "filter=default", "filter:dryMix=0.25", "filter:wetMix1=0.75", "filter:wetMix2=0.375", "filter:wetMix3=0.125", "filter:delay=17.5", "filter:rate=5", "filter:depth=0.5" },
+        new[] { "source_delay_invalid_depth1_low", "music=imp", "blocks=256", "Music:Att", "filter=default", "filter:depth=1", "filter:delay=-1" },
+        new[] { "source_delay_invalid_depth1_high", "music=imp", "blocks=256", "Music:Att", "filter=default", "filter:depth=1", "filter:delay=200" },
         new[] { "mix_dc_0p00001", "music=dc:0.00001" },
         new[] { "mix_dc_4", "music=dc:4" },
         new[] { "mix_dc_neg4", "music=dc:-4" },
