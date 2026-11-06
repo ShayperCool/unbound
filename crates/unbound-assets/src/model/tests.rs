@@ -554,3 +554,13 @@ fn a_collapsed_quad_is_reported_instead_of_losing_its_valid_triangle() {
     let error = ModelImporter.import(Path::new("Collapsed.obj"), obj, &Value::Null).unwrap_err();
     assert!(error.to_string().contains("degenerate imported quads"), "{error}");
 }
+
+#[test]
+fn reduced_fbx_smoothing_masks_are_diagnosed() {
+    let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/lightmapuvs/Sources/Normals/Groups.fbx");
+    let settings = meta("ModelImporter:\n  tangentSpace:\n    normalImportMode: 1\n    normalSmoothingSource: 1\n");
+    let imported = ModelImporter.import(&source, &std::fs::read(&source).unwrap(), &settings).unwrap();
+    assert!(imported.warnings.iter().any(|w| w.contains("polygon smoothing masks")),
+            "{:?}", imported.warnings);
+}

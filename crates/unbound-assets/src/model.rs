@@ -632,7 +632,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 16;
+    const VERSION: u32 = 17;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -1878,12 +1878,15 @@ impl<'a> Builder<'a> {
                     Some(wedges.iter().map(|w| groups[w.face]).collect::<Vec<u32>>())
                 }
                 _ if self.obj => None,
-                _ if !mesh.face_smoothing.is_empty() => Some(
-                    wedges
-                        .iter()
-                        .map(|w| mesh.face_smoothing[w.face] as u32)
-                        .collect(),
-                ),
+                _ if !mesh.face_smoothing.is_empty() => {
+                    if settings.normal_calculation != 0 && settings.normal_smoothing_source < 2 {
+                        warning.get_or_insert_with(|| {
+                            "FBX polygon smoothing masks are reduced to smooth/hard flags; \
+                             group-based calculated normals are not supported".into()
+                        });
+                    }
+                    Some(wedges.iter().map(|w| mesh.face_smoothing[w.face] as u32).collect())
+                }
                 _ => None,
             };
             if smoothing.is_none()
