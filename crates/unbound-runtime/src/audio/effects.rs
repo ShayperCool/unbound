@@ -1,8 +1,10 @@
 //! Persistent DSP on summed mixer groups. Native captures establish a fourth-order Butterworth
 //! response for Lowpass and a second-order response for Highpass. The independently measured
 //! startup kernels also constrain parameter-dependent delay-history normalization.
+use super::duck::{Duck, DuckSpec};
 use super::reverb::{SfxReverb, SfxReverbSpec};
 use serde::Deserialize;
+use std::collections::HashMap;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -37,6 +39,15 @@ pub struct EffectSpec {
     /// False when the wet level is low enough that Native drops the effect's output.
     #[serde(default = "yes")]
     pub mix_audible: bool,
+    /// Duck Volume parameters; required for that kind.
+    #[serde(default)]
+    pub duck: Option<DuckSpec>,
+    /// A Send's target: the id of a Receive or Duck Volume unit (none: the send goes nowhere).
+    #[serde(default)]
+    pub send_target: Option<String>,
+    /// A Send's linear level (the mixer's gain approximation of its dB setting).
+    #[serde(default)]
+    pub send_level: f32,
 }
 impl EffectSpec {
     pub(crate) fn validate(&self, rate: u32) -> anyhow::Result<()> {
@@ -52,6 +63,13 @@ impl EffectSpec {
             anyhow::ensure!(values.iter().all(|v| v.is_finite()),
                 "AudioMixer SFX Reverb '{}' has a non-finite parameter", self.id);
         }
+        anyhow::ensure!(self.kind != "Duck Volume" || self.duck.is_some(),
+            "AudioMixer Duck Volume '{}' has no parameters", self.id);
+        if let Some(duck) = &self.duck {
+            duck.validate(&self.id)?;
+        }
+        anyhow::ensure!(self.send_level.is_finite() && self.send_level >= 0.0,
+            "invalid AudioMixer send level {}", self.send_level);
         if let Some(level) = self.mix_level {
             anyhow::ensure!(self.kind == "SFX Reverb",
                 "AudioMixer wet mixing is unsupported for effect '{}'", self.kind);
@@ -229,7 +247,8 @@ pub struct Effect {
     lowpass: Lowpass,
     echo: Echo,
     reverb: Option<Box<SfxReverb>>,
-    /// Frames since the effect started, for the wet-mix slot's startup ramp.
+    duck: Duck,
+    /// Frames since the effect started, for the slot's startup ramp.
     frames: u32,
     scratch: Vec<f32>,
     cutoff: f32,
@@ -245,6 +264,7 @@ impl Effect {
             lowpass: Default::default(),
             echo: Default::default(),
             reverb: None,
+            duck: Duck::default(),
             frames: 0,
             scratch: Vec::new(),
             cutoff: 5000.0,
@@ -280,6 +300,7 @@ impl Effect {
         if let Some(reverb) = &mut self.reverb {
             reverb.clear();
         }
+        self.duck = Duck::default();
         self.frames = 0;
         self.cutoff = 5000.0;
         self.resonance = 1.0;
@@ -297,6 +318,38 @@ impl Effect {
     fn slew(current: f32, target: f32) -> f32 {
         let limit = (current.abs() + target.abs()) * 0.01;
         current + (target - current).clamp(-limit, limit)
+    }
+    /// Units that exchange signal between groups, in chain order: a Send adds a copy at its
+    /// level to its target's sidechain, a Receive mixes its sidechain in and a Duck Volume
+    /// ducks by it. Native ignores bypass on them (the Editor disallows it), and nothing reaches
+    /// a sidechain during the mixer's first DSP block (`dsp_block` frames). False for any
+    /// other kind.
+    pub fn process_routed(&mut self, samples: &mut [f32], sidechains: &mut HashMap<String, Vec<f32>>, dsp_block: usize) -> bool {
+        match self.spec.kind.as_str() {
+            "Send" => {
+                let target = self.spec.send_target.as_ref().and_then(|t| sidechains.get_mut(t));
+                if let Some(sidechain) = target {
+                    let skip = dsp_block.saturating_sub(self.frames as usize).min(samples.len() / 2);
+                    for (s, x) in sidechain[skip * 2..samples.len()].iter_mut().zip(&samples[skip * 2..]) {
+                        *s += x * self.spec.send_level;
+                    }
+                }
+            }
+            "Receive" => {
+                if let Some(sidechain) = sidechains.get(&self.spec.id) {
+                    for (x, s) in samples.iter_mut().zip(sidechain) {
+                        *x += s;
+                    }
+                }
+            }
+            "Duck Volume" => {
+                let sidechain = sidechains.get(&self.spec.id).map(|s| &s[..samples.len()]);
+                self.duck.process(samples, sidechain, self.spec.duck.as_ref().unwrap(), self.rate);
+            }
+            _ => return false,
+        }
+        self.frames = self.frames.saturating_add((samples.len() / 2) as u32);
+        true
     }
     pub fn process(&mut self, samples: &mut [f32], bypass: bool) {
         if self.spec.kind == "Attenuation" {

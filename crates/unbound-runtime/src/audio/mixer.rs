@@ -188,6 +188,9 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         sfx: None,
         mix_level: None,
         mix_audible: true,
+        duck: None,
+        send_target: None,
+        send_level: 0.0,
     }
 }
 
@@ -537,6 +540,8 @@ pub struct Mixer {
     groups: HashMap<u64, Group>,
     group_nodes: HashMap<u64, GroupNode>,
     group_order: Vec<u64>,
+    /// Signal sent to each Receive or Duck Volume unit (by unit id) in the current block.
+    sidechains: HashMap<String, Vec<f32>>,
     activated_mixers: HashSet<u64>,
     capture_sinks: HashMap<u64, capture::Sink>,
     pub listener: Listener,
@@ -555,6 +560,54 @@ pub struct Mixer {
     source_buffer: Vec<f32>,
 }
 
+/// Children before their parents, and a group with a Send before the group of its target unit;
+/// otherwise deeper groups first, then by handle, so independent sums stay deterministic. A
+/// cycle through sends fails: the Editor refuses one and Native's order for it is unmeasured.
+fn processing_order(specs: &HashMap<u64, &GroupSpec>) -> anyhow::Result<Vec<u64>> {
+    let depth = |h: u64| {
+        let mut d = 0;
+        let mut p = h;
+        while let Some(spec) = specs.get(&p) {
+            d += 1;
+            p = spec.parent;
+            if p == 0 || d > specs.len() {
+                break;
+            }
+        }
+        d
+    };
+    let mut order: Vec<u64> = specs.keys().copied().collect();
+    order.sort_by_key(|h| (std::cmp::Reverse(depth(*h)), *h));
+    let owner: HashMap<&str, u64> = specs.iter()
+        .flat_map(|(h, spec)| spec.effects.iter().map(move |e| (e.id.as_str(), *h)))
+        .collect();
+    let mut before: HashMap<u64, Vec<u64>> = HashMap::new();
+    for (&h, spec) in specs {
+        if specs.contains_key(&spec.parent) {
+            before.entry(spec.parent).or_default().push(h);
+        }
+        for target in spec.effects.iter().filter_map(|e| e.send_target.as_deref()) {
+            if let Some(&group) = owner.get(target) {
+                before.entry(group).or_default().push(h);
+            }
+        }
+    }
+    // The depth order already satisfies the parent edges, so this keeps it unless a send
+    // requires a later group first.
+    let mut done = HashSet::new();
+    let mut result = Vec::with_capacity(order.len());
+    while result.len() < order.len() {
+        let next = order.iter().copied().find(|h| !done.contains(h)
+            && before.get(h).is_none_or(|b| b.iter().all(|d| done.contains(d))));
+        let Some(next) = next else {
+            anyhow::bail!("cyclic AudioMixer send routing");
+        };
+        done.insert(next);
+        result.push(next);
+    }
+    Ok(result)
+}
+
 fn frame_of(seconds: f64, rate: u32) -> u64 {
     (seconds.max(0.0) * rate as f64).round() as u64
 }
@@ -570,6 +623,7 @@ impl Mixer {
             groups: HashMap::new(),
             group_nodes: HashMap::new(),
             group_order: Vec::new(),
+            sidechains: HashMap::new(),
             activated_mixers: HashSet::new(),
             capture_sinks: HashMap::new(),
             listener: Listener::default(),
@@ -734,7 +788,8 @@ impl Mixer {
             effect.validate(self.config.sample_rate)?;
             anyhow::ensure!(
                 matches!(effect.kind.as_str(),
-                    "Attenuation" | "Lowpass" | "Highpass" | "Echo" | "SFX Reverb")
+                    "Attenuation" | "Lowpass" | "Highpass" | "Echo" | "SFX Reverb"
+                        | "Send" | "Receive" | "Duck Volume")
                     || effect.bypass
                     || spec.bypass,
                 "unsupported AudioMixer effect '{}'",
@@ -757,6 +812,11 @@ impl Mixer {
         {
             return Ok(());
         }
+        let mut specs: HashMap<u64, &GroupSpec> =
+            self.group_nodes.iter().map(|(h, n)| (*h, &n.spec)).collect();
+        specs.insert(handle, &spec);
+        let order = processing_order(&specs)?;
+        let targets: Vec<String> = spec.effects.iter().filter_map(|e| e.send_target.clone()).collect();
         let node = self.group_nodes.entry(handle).or_insert_with(|| GroupNode {
             spec: spec.clone(),
             rendered: 0,
@@ -767,22 +827,10 @@ impl Mixer {
             energy: 0.0,
         });
         node.update(spec, self.config.sample_rate)?;
-        // Children mix into parents. Stable order also makes independent sibling sums deterministic.
-        let depth = |h: u64| {
-            let mut d = 0;
-            let mut p = h;
-            while let Some(node) = self.group_nodes.get(&p) {
-                d += 1;
-                p = node.spec.parent;
-                if p == 0 || d > self.group_nodes.len() {
-                    break;
-                }
-            }
-            d
-        };
-        self.group_order = self.group_nodes.keys().copied().collect();
-        self.group_order
-            .sort_by_key(|h| (std::cmp::Reverse(depth(*h)), *h));
+        for target in targets {
+            self.sidechains.entry(target).or_insert_with(|| vec![0.0; BLOCK * 2]);
+        }
+        self.group_order = order;
         Ok(())
     }
 
@@ -1207,6 +1255,9 @@ impl Mixer {
         for node in self.group_nodes.values_mut() {
             node.buffer[..n * 2].fill(0.0);
         }
+        for sidechain in self.sidechains.values_mut() {
+            sidechain[..n * 2].fill(0.0);
+        }
 
         // Spatialize, then decide which voices are real: the most important `real_voices`.
         let mut playing: Vec<(u64, i32, f32)> = Vec::new();
@@ -1393,8 +1444,10 @@ impl Mixer {
                 continue;
             }
             let node = self.group_nodes.get_mut(&handle).unwrap();
-            // Echo and SFX Reverb retain the measured group input fade even when bypassed.
-            let active = node.effects.iter().any(|e| matches!(e.spec.kind.as_str(), "Echo" | "SFX Reverb"))
+            // Echo, SFX Reverb and Duck Volume retain the measured group input fade even when
+            // bypassed. Send and Receive have none (tests/projects/mixerduck).
+            let active = node.effects.iter()
+                .any(|e| matches!(e.spec.kind.as_str(), "Echo" | "SFX Reverb" | "Duck Volume"))
                 || (!node.spec.bypass
                     && node.effects.iter().any(|e| {
                         !e.spec.bypass && matches!(e.spec.kind.as_str(), "Lowpass" | "Highpass")
@@ -1410,7 +1463,10 @@ impl Mixer {
             }
             node.rendered += n;
             for effect in &mut node.effects {
-                effect.process(&mut node.buffer[..n * 2], node.spec.bypass);
+                let samples = &mut node.buffer[..n * 2];
+                if !effect.process_routed(samples, &mut self.sidechains, config.buffer_size as usize) {
+                    effect.process(samples, node.spec.bypass);
+                }
             }
             if node.spec.muted {
                 node.buffer[..n * 2].fill(0.0);
@@ -2514,6 +2570,50 @@ mod tests {
         assert_eq!(run(false), run(true));
     }
 
+    #[test]
+    fn sends_reach_a_later_sibling_receive_in_the_same_block_after_the_first_dsp_block() {
+        fn group(handle: u64, parent: u64, effects: serde_json::Value) -> GroupSpec {
+            serde_json::from_value(serde_json::json!({ "handle": handle, "parent": parent,
+                "mixer": 1, "muted": false, "bypass": false, "effects": effects })).unwrap()
+        }
+        let mut m = Mixer::new(MixerConfig::default());
+        m.configure_group(group(1, 0, serde_json::json!([{ "id": "a1", "kind": "Attenuation", "gain": 1.0 }]))).unwrap();
+        m.configure_group(group(3, 1, serde_json::json!([{ "id": "recv", "kind": "Receive" },
+            { "id": "a3", "kind": "Attenuation", "gain": 1.0 }]))).unwrap();
+        // The sender has the larger handle, so only the send edge puts it first.
+        m.configure_group(group(5, 1, serde_json::json!([
+            { "id": "send", "kind": "Send", "sendTarget": "recv", "sendLevel": 0.5 },
+            { "id": "a5", "kind": "Attenuation", "gain": 0.0 }]))).unwrap();
+        assert_eq!(m.group_order, vec![5, 3, 1]);
+        let mut input = vec![0.0; 4096 * 2];
+        input[100 * 2] = 1.0;
+        input[2000 * 2] = 1.0;
+        m.add_clip(1, Clip::new(2, 48000, input));
+        source_with(&mut m, 7, 1, |p| p.group = 5);
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.update_suspension(); // submits the routed voice
+        let mut out = vec![0.0; 4096 * 2];
+        m.render(&mut out, 2);
+        // Nothing reaches a receive during the mixer's first DSP block.
+        assert_eq!(out[100 * 2], 0.0);
+        assert_eq!(out[2000 * 2], 0.5);
+        assert_eq!(out.iter().filter(|x| **x != 0.0).count(), 1);
+        // A send into its own group, or one closing a loop, is refused and keeps the graph.
+        assert!(m.configure_group(group(3, 1, serde_json::json!([{ "id": "recv", "kind": "Receive" },
+            { "id": "loop", "kind": "Send", "sendTarget": "recv", "sendLevel": 1.0 }]))).is_err());
+        assert!(m.configure_group(group(1, 0, serde_json::json!([{ "id": "back", "kind": "Duck Volume",
+            "duck": { "threshold": -10.0, "ratio": 2.0, "attackTime": 0.1, "releaseTime": 0.3,
+                "makeupGain": 0.0, "knee": 10.0, "sidechainMix": 1.0 } }]))).is_ok());
+        assert!(m.configure_group(group(5, 1, serde_json::json!([
+            { "id": "send", "kind": "Send", "sendTarget": "recv", "sendLevel": 0.5 }]))).is_ok());
+        assert!(m.configure_group(group(3, 1, serde_json::json!([{ "id": "recv", "kind": "Receive" },
+            { "id": "up", "kind": "Send", "sendTarget": "back", "sendLevel": 1.0 }]))).is_ok());
+        assert!(m.configure_group(group(1, 0, serde_json::json!([{ "id": "back", "kind": "Duck Volume",
+            "duck": { "threshold": -10.0, "ratio": 2.0, "attackTime": 0.1, "releaseTime": 0.3,
+                "makeupGain": 0.0, "knee": 10.0, "sidechainMix": 1.0 } },
+            { "id": "down", "kind": "Send", "sendTarget": "recv", "sendLevel": 1.0 }]))).is_err());
+        assert_eq!(m.group_nodes[&1].spec.effects.len(), 1);
+    }
     #[test]
     fn mixer_group_cycles_and_unsupported_effects_fail_without_replacing_valid_state() {
         let mut m = Mixer::new(MixerConfig::default());

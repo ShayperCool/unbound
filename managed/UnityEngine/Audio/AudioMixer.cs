@@ -9,7 +9,8 @@ namespace UnityEngine.Audio
     /// volumes (dB) and pitches are parameters. A parameter's value comes from the current snapshot
     /// (blended during a transition), unless an exposed parameter is set by <c>SetFloat</c>.
     /// Each frame the audio update sends the group graph and current parameters to the native
-    /// mixer. Lowpass, Highpass, Echo and SFX Reverb process the summed group signal in serialized effect order.
+    /// mixer. Lowpass, Highpass, Echo, SFX Reverb, Send, Receive and Duck Volume process the summed
+    /// group signal in serialized effect order.
     /// </summary>
     [ClassId(241)]
     public partial class AudioMixer : Object, ISerializedAsset
@@ -310,7 +311,12 @@ namespace UnityEngine.Audio
                     for (int i = 0; i < AudioMixerEffectController.SfxReverbParameters.Length; i++)
                         if (effect.Parameter(AudioMixerEffectController.SfxReverbParameters[i]) is string guid)
                             m_Defaults[guid] = AudioMixerEffectController.SfxReverbDefaults[i];
-                if (effect.m_MixLevelGuid != null) m_Defaults[effect.m_MixLevelGuid] = 0f;
+                if (effect.m_EffectName == AudioMixerEffectController.DuckVolume)
+                    for (int i = 0; i < AudioMixerEffectController.DuckParameters.Length; i++)
+                        if (effect.Parameter(AudioMixerEffectController.DuckParameters[i]) is string guid)
+                            m_Defaults[guid] = AudioMixerEffectController.DuckDefaults[i];
+                // A Send's level is its mix level, -80 dB until a snapshot sets it.
+                if (effect.m_MixLevelGuid != null) m_Defaults[effect.m_MixLevelGuid] = effect.m_EffectName == "Send" ? MinVolume : 0f;
             }
             foreach (var guid in group.m_EffectParameters) if (!m_Defaults.ContainsKey(guid)) m_Defaults[guid] = 0f;
             foreach (var child in group.m_Children) if (child != null) Collect(child, group);
@@ -393,11 +399,17 @@ namespace UnityEngine.Audio
             var effects = new List<object>();
             foreach (var effect in m_Effects)
             {
-                bool bypass = m_BypassEffects || effect.m_Bypass;
+                // Native ignores bypass on Send, Receive and Duck Volume (the Editor disallows it).
+                bool routed = effect.m_EffectName == "Send" || effect.m_EffectName == "Receive" || effect.m_EffectName == AudioMixerEffectController.DuckVolume;
+                bool bypass = !routed && (m_BypassEffects || effect.m_Bypass);
                 bool reverb = effect.m_EffectName == AudioMixerEffectController.SfxReverb;
-                if (!bypass && !reverb && effect.m_EffectName != "Attenuation" && effect.m_EffectName != "Lowpass" && effect.m_EffectName != "Highpass" && effect.m_EffectName != "Echo")
+                if (!bypass && !reverb && !routed && effect.m_EffectName != "Attenuation" && effect.m_EffectName != "Lowpass" && effect.m_EffectName != "Highpass" && effect.m_EffectName != "Echo")
                     throw new NotSupportedException("Unsupported AudioMixer effect '" + effect.m_EffectName + "' in group '" + Path + "'");
                 // Wet mixing is measured only on SFX Reverb (tests/projects/mixerreverb).
+                // A send's target registers its group, which may have no source of its own.
+                var target = effect.m_EffectName == "Send" ? effect.m_SendTarget : null;
+                var targetGroup = target == null ? null : m_Mixer?.m_Groups.Find(g => g.m_Effects.Contains(target));
+                if (targetGroup != null) _ = targetGroup.Handle;
                 if (!bypass && !reverb && effect.m_EnableWetMix)
                     throw new NotSupportedException("AudioMixer wet mixing is unsupported for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
                 float wetDb = effect.m_MixLevelGuid != null ? m_Mixer.Value(effect.m_MixLevelGuid) : 0f;
@@ -419,6 +431,9 @@ namespace UnityEngine.Audio
                     // effect output at -70 dB (the boundary between them is unmeasured).
                     mixLevel = reverb && effect.m_EnableWetMix ? AudioMixer.DspGain(wetDb) : (float?)null,
                     mixAudible = wetDb > -69f,
+                    duck = effect.m_EffectName == AudioMixerEffectController.DuckVolume ? effect.DuckConfiguration(m_Mixer) : null,
+                    sendTarget = targetGroup != null ? target.m_EffectId : null,
+                    sendLevel = targetGroup != null ? AudioMixer.DspGain(wetDb) : 0f,
                 });
             }
             var parent = m_Parent ?? m_Mixer?.m_OutputGroup;
@@ -536,6 +551,22 @@ namespace Unbound.Runtime
             "Reverb", "Reverb Delay", "Diffusion", "Density", "HF Reference", "Room LF", "LF Reference" };
         internal static readonly float[] SfxReverbDefaults = {
             0f, -10000f, 0f, 1f, 0.5f, -10000f, 0.02f, 0f, 0.04f, 100f, 100f, 5000f, 0f, 250f };
+        internal const string DuckVolume = "Duck Volume";
+        // Parameter definitions of 6000.0.71f1. Native's runtime default Release Time is 0.3 s,
+        // not the Editor's 0.1 s: tests/projects/mixerduck (release01 against default).
+        internal static readonly string[] DuckParameters = {
+            "Threshold", "Ratio", "Attack Time", "Release Time", "Make-up Gain", "Knee", "Sidechain Mix" };
+        internal static readonly float[] DuckDefaults = { -10f, 2f, 0.1f, 0.3f, 0f, 10f, 1f };
+        internal AudioMixerEffectController m_SendTarget;
+        internal object DuckConfiguration(UnityEngine.Audio.AudioMixer mixer)
+        {
+            var v = new float[DuckParameters.Length];
+            for (int i = 0; i < v.Length; i++)
+                v[i] = Parameter(DuckParameters[i]) is string guid ? mixer.Value(guid) : DuckDefaults[i];
+            return new {
+                threshold = v[0], ratio = v[1], attackTime = v[2], releaseTime = v[3],
+                makeupGain = v[4], knee = v[5], sidechainMix = v[6] };
+        }
         internal object SfxReverbConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {
             var v = new float[SfxReverbParameters.Length];
@@ -556,6 +587,8 @@ namespace Unbound.Runtime
             m_EffectId = body.Str("m_EffectID");
             m_Bypass = body.Bool("m_Bypass");
             m_EnableWetMix = body.Bool("m_EnableWetMix");
+            var send = body.Ref("m_SendTarget");
+            m_SendTarget = send.IsNull || resolver == null ? null : resolver.Resolve(send, typeof(AudioMixerEffectController)) as AudioMixerEffectController;
             m_ParameterGuids.Clear();
             m_Parameters.Clear();
             var mix = UnityEngine.Audio.AudioMixerGroup.NullIfZero(body.Str("m_MixLevel"));
