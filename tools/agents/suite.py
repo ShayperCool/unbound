@@ -13,8 +13,9 @@ old regress script. A probe without one runs what it declares in tests/projects/
 
 commands are the shell commands it gives `land.py --probe`, run in order from the repository root
 with $UNBOUND, $UNBOUND_CLI, $UNBOUND_MANAGED_DIR and $UNBOUND_PROBE_UNITY_VERSION (the release;
-a command names no other) set; each must exit 0 and admits its own heavy jobs. summary (optional) is a
-regex: the step's summary is every match in its output, else its last line. A probe that declares
+a command names no other) set for it to use; each must exit 0 and admits its own heavy jobs.
+summary (optional) is a regex: the step's summary is every match in its output, else its last
+line. A probe that declares
 nothing, or declares it wrongly, is listed as "no recipe" with the reason; none is skipped
 silently. Comparators, references and tolerances are used as they are.
 

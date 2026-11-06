@@ -50,8 +50,8 @@ Its full instructions are in [ORCHESTRATOR.md](ORCHESTRATOR.md).
      Git.
    - Run the Editor on the GPU through `~/.cache/compat/with-heavy-job` (or `tests/editor_runner.py`).
    - A new probe declares its land-gate command (the one you pass to `land.py --probe`) in
-     `tests/projects/<probe>/gate.json`, with the release as `$UNBOUND_PROBE_UNITY_VERSION`, so the
-     sheriff's suite runs it (format: `tools/agents/suite.py`'s docstring); `suite.py --list` shows it.
+     `tests/projects/<probe>/gate.json`, with the release as `$UNBOUND_PROBE_UNITY_VERSION` (export it for `land.py`), so
+     the sheriff's suite runs it (format: `tools/agents/suite.py`'s docstring); `suite.py --list` shows it.
 4. Implement:
    - Build with `python3 tools/build.py -- build --release --locked -p unbound`.
    - Run the managed tests and the probe against the reference. Iterate until it matches.
