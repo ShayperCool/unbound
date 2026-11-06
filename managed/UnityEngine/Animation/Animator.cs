@@ -697,7 +697,8 @@ namespace UnityEngine
             var run = next ? (source.Transition != null ? source.Next : null) : source.Current;
             if (run == null) return result;
             // The clips' blending weights: a transition weighs the states by its progress
-            // (measured for the current state, tests/projects/humanoid).
+            // (measured for the current state, tests/projects/humanoid; the next state's weight
+            // and transitions to or from a state without a motion are not measured).
             float weight = 1f;
             if (source.Transition != null && source.Next != null)
                 weight = next ? source.Transition.Progress : 1f - source.Transition.Progress;

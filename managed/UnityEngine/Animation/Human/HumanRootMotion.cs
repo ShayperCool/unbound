@@ -422,12 +422,26 @@ namespace Unbound.Runtime.Humanoid
             return r;
         }
 
+        /// <summary>No root motion: every part identity.</summary>
+        public static readonly HumanRootMotionSample NoMotion = new HumanRootMotionSample
+        {
+            Delta = Trs.Identity, Motion = Trs.Identity, Body = Trs.Identity, Root = Trs.Identity, LeftFoot = Trs.Identity,
+            RightFoot = Trs.Identity, LeftFootSlip = Trs.Identity, RightFootSlip = Trs.Identity, GravityWeight = 1f,
+        };
+
         /// <summary>An override layer's root motion over the layers below it: each part moved
-        /// towards the layer's by its weight (positions lerped, rotations by the normalized lerp).</summary>
+        /// towards the layer's by its weight (positions lerped, rotations by the normalized lerp).
+        /// Over no motion the layer's step is its weight's share (not measured).</summary>
         public static HumanRootMotionSample Override(in HumanRootMotionSample below, in HumanRootMotionSample layer, float weight)
         {
             if (!layer.HasMotion || weight <= 0f) return below;
-            if (!below.HasMotion || weight >= 1f) return layer;
+            if (weight >= 1f) return layer;
+            if (!below.HasMotion)
+            {
+                Span<HumanRootMotionSample> one = stackalloc HumanRootMotionSample[] { layer };
+                Span<float> share = stackalloc float[] { weight };
+                return Blend(one, share);
+            }
             Span<HumanRootMotionSample> pair = stackalloc HumanRootMotionSample[] { below, layer };
             Span<float> weights = stackalloc float[] { 1f - weight, weight };
             return Blend(pair, weights);

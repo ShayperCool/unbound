@@ -86,6 +86,17 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void APartialLayerOverNoMotionMovesByItsShare()
+        {
+            var layer = Sample(4f, 0f, 0f);
+            var r = HumanRootMotion.Override(HumanRootMotion.NoMotion, layer, 0.25f);
+            Assert.True(r.HasMotion);
+            Near(1f, r.Delta.t.z);
+            Assert.False(HumanRootMotion.Override(HumanRootMotion.NoMotion, layer, 0f).HasMotion);
+            Assert.Equal(4f, HumanRootMotion.Override(HumanRootMotion.NoMotion, layer, 1f).Delta.t.z);
+        }
+
+        [Fact]
         public void ThePoseBodyIsTheBlendedBodyPlusWhatTheValuesAdd()
         {
             var sample = Sample(1f, 0f, 0f);

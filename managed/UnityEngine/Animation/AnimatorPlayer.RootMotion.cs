@@ -389,14 +389,19 @@ namespace Unbound.Runtime
                     m_HumanSamples.Add(sample);
                     m_HumanWeights.Add(weight);
                 }
-                if (m_HumanSamples.Count == 0) continue;
+                float layerWeight = i == 0 ? 1f : Layers[i].Evaluated;
+                if (m_HumanSamples.Count == 0 || layerWeight <= 0f) continue;
                 layerSample = Unbound.Runtime.Humanoid.HumanRootMotion.Blend(
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanSamples),
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanWeights));
-                if (i > 0 && Layers[i].Def.Mask != null)
+                if (Layers[i].Def.Mask != null)
                     Unbound.Runtime.Stubs.Ignored("Animator humanoid root motion with layer masks",
                         "a masked layer's humanoid clips move the root as if the layer had no mask");
-                blended = !any ? layerSample : Unbound.Runtime.Humanoid.HumanRootMotion.Override(blended, layerSample, Layers[i].Evaluated);
+                if (layerWeight < 1f && layerSample.HasMotion && !(any && blended.HasMotion))
+                    Unbound.Runtime.Stubs.Ignored("Animator humanoid root motion of a partial layer over none",
+                        "a layer's humanoid root motion over no humanoid root motion below moves the root by the layer weight's share (not measured)");
+                blended = Unbound.Runtime.Humanoid.HumanRootMotion.Override(any ? blended : Unbound.Runtime.Humanoid.HumanRootMotion.NoMotion,
+                    layerSample, layerWeight);
                 any = true;
             }
             if (!any) return false;
