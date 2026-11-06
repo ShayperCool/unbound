@@ -894,7 +894,11 @@ pub fn fit(
     // as FXC assigns it (measured: with one target, Unity binds the random write target at 1).
     let mut next = fragment_targets(&fragment);
     for k in 0..buffers.len() {
-        if buffers[k].read_only || buffers[k].register.is_some() {
+        // A hidden counter (`<name>@count`) is part of its buffer's UAV, with no register.
+        if buffers[k].read_only
+            || buffers[k].register.is_some()
+            || buffers[k].name.ends_with("@count")
+        {
             continue;
         }
         while buffers.iter().any(|b| b.register == Some(next)) {

@@ -78,11 +78,13 @@ namespace UnityEngine
             RandomWriteTargets.SetBuffer(index, uav, uav?.Storage, uav != null && uav.IsValid(), preserveCounterValue);
 
         /// <summary>A render texture is checked (it must allow random writes; null is accepted) and
-        /// not bound (see <see cref="RandomWriteTargets"/>).</summary>
+        /// not bound (see <see cref="RandomWriteTargets"/>): it takes the place of a buffer set at
+        /// the index.</summary>
         public static void SetRandomWriteTarget(int index, RenderTexture uav)
         {
             RandomWriteTargets.CheckIndex(index);
             if (uav != null && !uav.enableRandomWrite) throw new ArgumentException("uav RenderTexture must have random write enabled");
+            RandomWriteTargets.Set(index, 0);
         }
 
         public static void ClearRandomWriteTargets() => RandomWriteTargets.Clear();

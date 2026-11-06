@@ -45,7 +45,7 @@ pub struct BufferCopyOp {
 }
 
 /// The suffix glslang gives the block holding a buffer's hidden counter.
-const COUNTER_SUFFIX: &str = "@count";
+pub(super) const COUNTER_SUFFIX: &str = "@count";
 
 pub struct KernelGpu {
     kernel: Arc<CompiledKernel>,

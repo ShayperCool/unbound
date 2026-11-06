@@ -1906,6 +1906,23 @@ float4 frag(V i) : SV_Target { _Hits[0] = 1; return i.color + _Positions[0]; }
             registers("RWStructuredBuffer<uint> _Out;", &mut compiler),
             [("_In".to_string(), None), ("_Out".to_string(), Some(1))]
         );
+        // A hidden counter is part of its buffer's UAV: it takes no register.
+        let source = "#pragma vertex vert\n#pragma fragment frag\n\
+            AppendStructuredBuffer<uint> _App;\nRWStructuredBuffer<uint> _B;\n\
+            float4 vert(float4 v : POSITION) : SV_POSITION { return v; }\n\
+            float4 frag(float4 p : SV_POSITION) : SV_Target { _App.Append(1); _B[0] = 2; return 1; }\n";
+        let c = compiler
+            .compile(&program(source, false), &[], false)
+            .unwrap();
+        let slots: Vec<_> = c
+            .buffers
+            .iter()
+            .map(|b| (b.name.as_str(), b.register))
+            .collect();
+        assert_eq!(
+            slots,
+            [("_App", Some(1)), ("_App@count", None), ("_B", Some(2))]
+        );
         assert_eq!(
             uav_registers(
                 "RWStructuredBuffer<uint> _A : register( u2 );\nTexture2D _T : register(t1);\nRWByteAddressBuffer _B:register(u5, space0);"

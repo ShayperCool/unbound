@@ -962,8 +962,9 @@ impl UnityRenderer {
     /// The textures (group 1) of a material's pass drawn with program `id`, cached on the
     /// material. A texture property takes the material's texture, else the global one
     /// (`Shader.SetGlobalTexture`), else the property's default.
-    /// A program's buffers by name: the draw's or material's (`material` has the draw's
-    /// properties over the material's), else a global one; zeros (with a warning) for one
+    /// A program's buffers: a random write target at a written buffer's register, else by name
+    /// the draw's or material's (`material` has the draw's properties over the material's), else
+    /// a global one; a hidden counter block its buffer's counter; zeros (with a warning) for one
     /// nothing set.
     fn buffer_bind_group(
         &mut self,
@@ -983,44 +984,55 @@ impl UnityRenderer {
             }));
         }
         let program = self.compiled.program(id).clone();
-        let mut missing = Vec::new();
-        let bound: Vec<&wgpu::Buffer> = program
-            .buffers
-            .iter()
-            .map(|b| {
-                // A random write target at the buffer's UAV register (a global the managed
-                // Graphics.SetRandomWriteTarget sets; cleared to no buffer) binds first.
-                let target = b.register.and_then(|r| {
-                    let key = format!("{RANDOM_WRITE_TARGET}{r}");
-                    globals.iter().find_map(|(n, v)| match v {
-                        owned::PropertyValue::Buffer(h)
-                            if *n == key && self.buffers.contains_key(h) =>
-                        {
-                            Some(*h)
-                        }
+        // The buffer bound to a slot: a random write target at its UAV register (a global the
+        // managed Graphics.SetRandomWriteTarget sets; cleared to no buffer, 0) first, a released
+        // one binding nothing; else one of its name.
+        let handle_of = |b: &unbound_shaders::BufferSlot| {
+            let target = b.register.and_then(|r| {
+                let key = format!("{RANDOM_WRITE_TARGET}{r}");
+                globals.iter().find_map(|(n, v)| match v {
+                    owned::PropertyValue::Buffer(h) if *n == key && *h != 0 => Some(*h),
+                    _ => None,
+                })
+            });
+            target.or_else(|| {
+                overrides
+                    .iter()
+                    .rev()
+                    .chain(material.properties.iter())
+                    .chain(globals.iter())
+                    .find_map(|(n, v)| match v {
+                        owned::PropertyValue::Buffer(h) if *n == b.name => Some(*h),
                         _ => None,
                     })
-                });
-                let handle = target.or_else(|| {
-                    overrides
-                        .iter()
-                        .rev()
-                        .chain(material.properties.iter())
-                        .chain(globals.iter())
-                        .find_map(|(n, v)| match v {
-                            owned::PropertyValue::Buffer(h) if *n == b.name => Some(*h),
-                            _ => None,
-                        })
-                });
-                match handle.and_then(|h| self.buffers.get(&h)) {
-                    Some(g) => &g.buffer,
-                    None => {
-                        missing.push(b.name.clone());
-                        self.empty_storage.as_ref().unwrap()
-                    }
-                }
             })
-            .collect();
+        };
+        let mut missing = Vec::new();
+        let mut bound: Vec<wgpu::Buffer> = Vec::with_capacity(program.buffers.len());
+        for b in &program.buffers {
+            // glslang's hidden counter of an Append or Counter buffer (`<name>@count`) binds
+            // that buffer's counter.
+            let owner = b.name.strip_suffix(compute::COUNTER_SUFFIX);
+            let buffer = match owner {
+                Some(owner) => program
+                    .buffers
+                    .iter()
+                    .find(|o| o.name == owner)
+                    .and_then(&handle_of)
+                    .and_then(|h| self.buffers.get_mut(&h))
+                    .and_then(|g| {
+                        g.counter_used |= g.counter.is_some();
+                        g.counter.clone()
+                    }),
+                None => handle_of(b)
+                    .and_then(|h| self.buffers.get(&h))
+                    .map(|g| g.buffer.clone()),
+            };
+            bound.push(buffer.unwrap_or_else(|| {
+                missing.push(b.name.clone());
+                self.empty_storage.clone().unwrap()
+            }));
+        }
         let entries: Vec<_> = bound
             .iter()
             .enumerate()
