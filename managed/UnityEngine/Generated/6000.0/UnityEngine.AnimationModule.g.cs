@@ -240,7 +240,7 @@ namespace UnityEngine
     unsafe partial class AvatarMask
     {
         [global::Unbound.Stub] internal void Copy(global::UnityEngine.AvatarMask other) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.Copy"); }
-        [global::System.Obsolete("AvatarMask.humanoidBodyPartCount is deprecated, use AvatarMaskBodyPart.LastBodyPart instead.")] public int humanoidBodyPartCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.humanoidBodyPartCount"); return default; } }
+        [global::System.Obsolete("AvatarMask.humanoidBodyPartCount is deprecated, use AvatarMaskBodyPart.LastBodyPart instead.")] public int humanoidBodyPartCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.humanoidBodyPartCount"); return 13; } }
         internal bool hasFeetIK { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AvatarMask.hasFeetIK"); return default; } }
     }
     public enum BodyDof
