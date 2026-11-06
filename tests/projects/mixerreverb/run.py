@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """Gate: fresh private Native project, engine capture through $UNBOUND, steady-state comparison.
 
-Writes the strict all-case reports as well; only the steady profile (with one device PCM step)
-decides the exit status. Every run directory lives under the cache.
+Writes the strict all-case reports as well; only the gate profile (steady cases, startup cases
+before their first reverb arrival, one device PCM step) decides the exit status. Every run directory lives under the cache.
 """
 import argparse
 import datetime
@@ -35,7 +35,7 @@ for rate in a.rate or (48000, 44100):
            '--work', work/f'engine-{rate}'): raise SystemExit(f'engine {rate} failed')
     candidate = work/f'engine-{rate}/capture'
     run('compare.py', '--profile', 'all', '--candidate', candidate, '--report', work/f'all-{rate}.jsonl.gz')
-    failed |= bool(run('compare.py', '--profile', 'steady', '--pcm-steps', '1', '--candidate', candidate,
-                       '--report', work/f'steady-{rate}.jsonl.gz'))
+    failed |= bool(run('compare.py', '--profile', 'gate', '--pcm-steps', '1', '--candidate', candidate,
+                       '--report', work/f'gate-{rate}.jsonl.gz'))
 print('reports:', work)
 raise SystemExit(failed)

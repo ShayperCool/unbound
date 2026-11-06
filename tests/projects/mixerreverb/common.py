@@ -16,12 +16,21 @@ def cases():
     return re.findall(r'new\[\] \{ "([a-z0-9_]+)"', body)
 
 
-def profile(name):
-    """steady: signals after the first DSP block; startup: impulses inside it (all = both)."""
+def profile(name, rate):
+    """Maps each selected case to the number of frames compared (None: all).
+
+    steady: every case except `startup*`; startup: only those; all: both. gate: steady, plus the
+    startup cases before the first reverb arrival of their in-block impulses (the impulse at frame 1
+    reaches the first early tap at frame floor(0.02 * rate)), which still covers their dry path,
+    group fade and wet-mix ramp.
+    """
     keys = cases()
-    if name == 'all': return keys
     startup = [k for k in keys if k.startswith('startup')]
-    return startup if name == 'startup' else [k for k in keys if k not in startup]
+    if name == 'all': return dict.fromkeys(keys)
+    if name == 'startup': return dict.fromkeys(startup)
+    selected = {k: None for k in keys if k not in startup}
+    if name == 'gate': selected.update(dict.fromkeys(startup, int(0.02 * rate)))
+    return selected
 
 
 def header(root):

@@ -57,9 +57,9 @@ public static class ProbeRunner
             var child = Call(mixer, "CreateNewGroup", "Child", true); Call(mixer, "AddChildToParent", child, master);
             object effect = null;
             if (key != "dry_stereo")
-                effect = Effect(mixer, key == "parent_reverb" ? master : child, "SFX Reverb", ReverbProbe.Overrides(key), key == "effect_bypass");
+                effect = Effect(mixer, key == "parent_reverb" ? master : child, "SFX Reverb", ReverbProbe.Overrides(key), key == "effect_bypass" || key == "bypass_startup_effect");
             if (key == "reverb_lp") Effect(mixer, child, "Lowpass", null);
-            if (key == "group_bypass") Set(child, "bypassEffects", true);
+            if (key == "group_bypass" || key == "bypass_startup_group") Set(child, "bypassEffects", true);
             if (key == "volume_reverb") Call(child, "SetValueForVolume", mixer, Get(mixer, "TargetSnapshot"), -6f);
             if (key == "set_early") {
                 var type = T("ExposedAudioParameter"); var exposed = Array.CreateInstance(type, ReverbProbe.Exposed.Length);

@@ -58,6 +58,9 @@ public class ReverbProbe : MonoBehaviour
         new[] { "set_early", "Room=-10000" },
         new[] { "startup", "Room=0", "Reflections=0" },
         new[] { "startup_wet", "Room=0", "Reflections=0", "Wet=-6" },
+        // Bypassed reverbs with the startup signal: does the group still fade in its first block?
+        new[] { "bypass_startup_effect", "Room=0", "Reflections=0" },
+        new[] { "bypass_startup_group", "Room=0", "Reflections=0" },
     };
     public static readonly string[] Parameters = {
         "Dry Level", "Room", "Room HF", "Decay Time", "Decay HF Ratio", "Reflections", "Reflect Delay",
@@ -122,7 +125,7 @@ public class ReverbProbe : MonoBehaviour
             // Separate left and right impulses, then a simultaneous pair that tests the mono sum.
             float value = c == 0 ? (f == 2048 ? 0.25f : f == 5120 ? 0.2f : 0) : (f == 3072 ? -0.125f : f == 5120 ? -0.1f : 0);
             if (key.StartsWith("tone")) value = f >= 1024 && f < 9216 ? (float)(0.125 * Math.Sin(2 * Math.PI * (c == 0 ? 400 : 1700) * f / rate)) : 0;
-            if (key.StartsWith("startup")) value = c == 0 && (Array.IndexOf(StartupFrames, f) >= 0 || f == 2048) ? 0.25f : 0;
+            if (key.StartsWith("startup") || key.StartsWith("bypass_startup")) value = c == 0 && (Array.IndexOf(StartupFrames, f) >= 0 || f == 2048) ? 0.25f : 0;
             if (key == "silence") value = 0;
             data[f * channels + c] = value;
         }

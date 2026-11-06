@@ -168,6 +168,8 @@ namespace UnityEngine.Tests
             Assert.True(mixer.SetFloat("Wet", -70f));
             using (var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration())))
                 Assert.False(payload.RootElement.GetProperty("effects")[0].GetProperty("mixAudible").GetBoolean());
+            Assert.True(mixer.SetFloat("Wet", 3f));
+            Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
         }
 
         [Fact]

@@ -211,7 +211,7 @@ milliseconds converted with `floor(ms * rate / 1000)`. The constants are in `rev
   - At -70 dB and below, the effect output is dropped while `1 - wet` still applies. -68 dB keeps
     it; the boundary in between is unmeasured, and the engine uses -69 dB.
 - **Group fade.** The group keeps its 1024-frame input fade even when the effect or the group is
-  bypassed, as for Echo.
+  bypassed, as for Echo (`bypass_startup_effect`, `bypass_startup_group`).
 
 ## Limits
 
@@ -219,6 +219,9 @@ milliseconds converted with `floor(ms * rate / 1000)`. The constants are in `rev
   which is not modelled (a residual).
 - Parameter changes take effect at once, keeping the histories. Smoothing while a tail runs and
   timed snapshot transitions are unmeasured.
-- Measured only for stereo output at 48000 and 44100 Hz.
+- Measured only for stereo output at 48000 and 44100 Hz. HF Reference was measured at 1000, 4000
+  and 5000 Hz. The Room HF formula clamps `cos` at 0.9999 like the DMO reference, so values below
+  about 108 Hz at 48 kHz rely on an unmeasured guard.
+- A Wet level above 0 dB (reachable only through an exposed parameter) fails loudly as unmeasured.
 - Wet mixing on other effects, the other mixer effects, `AudioReverbFilter` and `AudioReverbZone`
   still fail loudly or remain stubs.

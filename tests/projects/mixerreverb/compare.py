@@ -29,7 +29,8 @@ def safe(value):
 def compare(reference, candidate, report, keys, exact=False, before=None, pcm_steps=0):
     roots = [reference, candidate] if before is None else [reference, before, candidate]
     manifests = [header(root) for root in roots]
-    fields = ['release', 'rate'] + [k+s for k in keys for s in SUFFIXES]
+    limits = {k+s: frames for k, frames in keys.items() for s in SUFFIXES}
+    fields = ['release', 'rate'] + list(limits)
     fields += sorted({f for m in manifests for f in m if f.split('.')[0] in keys and f not in fields
                       and not any(f == k+s for k in keys for s in SUFFIXES)})
     counts = dict(introduced=0, retained=0, resolved=0)
@@ -59,10 +60,14 @@ def compare(reference, candidate, report, keys, exact=False, before=None, pcm_st
             values = [m.get(key, MISSING) for m in manifests]
             record(key, values)
             data = [samples(root, meta) for root, meta in zip(roots, values)]
-            for i in range(max(map(len, data))):
+            frames = limits.get(key)
+            count = max(map(len, data)) if frames is None else min(max(map(len, data)), 2*frames)
+            for i in range(count):
                 record(key, [v[i] if i < len(v) else MISSING for v in data], i)
         result = dict(tested=tested, failed=failed, exact=exact, atol=0 if exact else ATOL,
-                      rtol=0 if exact else RTOL, pcm_steps=pcm_steps, failing_values_by_case=by_case,
+                      rtol=0 if exact else RTOL, pcm_steps=pcm_steps,
+                      frame_limits={k: v for k, v in keys.items() if v is not None},
+                      failing_values_by_case=by_case,
                       roots=list(map(str, roots)), counts=counts)
         output.write(json.dumps(dict(summary=result))+'\n')
     report.with_suffix('').with_suffix('.summary.json').write_text(json.dumps(result, indent=2)+'\n')
@@ -74,7 +79,7 @@ if __name__ == '__main__':
     p = argparse.ArgumentParser()
     p.add_argument('--release', required=True)
     p.add_argument('--rate', type=int, choices=(44100, 48000), required=True)
-    p.add_argument('--profile', choices=('all', 'steady', 'startup'), default='all')
+    p.add_argument('--profile', choices=('all', 'steady', 'startup', 'gate'), default='all')
     p.add_argument('--reference', type=Path, help='Override only for independent Native agreement')
     p.add_argument('--candidate', type=Path, required=True)
     p.add_argument('--before', type=Path)
@@ -86,4 +91,4 @@ if __name__ == '__main__':
     if not a.report.name.endswith('.jsonl.gz'): p.error('report must end in .jsonl.gz')
     reference = a.reference or FIXTURE/'Reference'/('unity-'+a.release)/('rate-'+str(a.rate))
     assert header(reference)['release'] == a.release and header(reference)['rate'] == a.rate
-    raise SystemExit(bool(compare(reference, a.candidate, a.report, profile(a.profile), a.exact, a.before, a.pcm_steps)))
+    raise SystemExit(bool(compare(reference, a.candidate, a.report, profile(a.profile, a.rate), a.exact, a.before, a.pcm_steps)))
