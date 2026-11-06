@@ -383,8 +383,10 @@ namespace Unbound.Runtime
                         PreviousTime = (float)(run.Fresh && source.Next == run ? run.Normalized : run.Previous),
                         Speed = SpeedOf(def),
                         CycleOffset = def.CycleOffset,
-                        Mirror = def.Mirror,
+                        Mirror = def.MirrorParameter >= 0 ? Bools[def.MirrorParameter] : def.Mirror,
                     };
+                    if (input.Mirror)
+                        throw new NotSupportedException($"Animator '{animator.name}': mirrored humanoid states are not supported (state '{def.Name}')");
                     if (additive)
                     {
                         // Additive layers leave the root motion alone; only their body differences apply.

@@ -586,6 +586,11 @@ namespace UnityEngine.Tests
             var def = graph.Layers.SelectMany(l => l.States).Single(s => s.Name == state.m_Name);
             Assert.True(def.Mirror);
             Assert.All(graph.Layers.SelectMany(l => l.States).Where(s => s != def), s => Assert.False(s.Mirror));
+            Assert.Equal(-1, def.MirrorParameter);
+            // A mirror parameter (a bool) decides instead when it is active.
+            state.MirrorParameter = "Run";
+            def = ControllerGraph.Build(controller).Layers.SelectMany(l => l.States).Single(s => s.Name == state.m_Name);
+            Assert.Equal(controller.m_Parameters.FindIndex(p => p.m_Name == "Run"), def.MirrorParameter);
         }
 
         [Fact]

@@ -187,6 +187,7 @@ namespace Unbound.Runtime
                 state.SpeedParameter = Parameter(ctx, U(s, "m_SpeedParamID"));
                 state.CycleOffsetParameter = Parameter(ctx, U(s, "m_CycleOffsetParamID"));
                 state.TimeParameter = Parameter(ctx, U(s, "m_TimeParamID"));
+                state.MirrorParameter = Parameter(ctx, U(s, "m_MirrorParamID"));
                 state.Motion = StateMotion(s, 0, ctx);
                 if (behaviours.TryGetValue((U(s, "m_FullPathID"), layerIndex), out var list)) state.Behaviours.AddRange(list);
                 int dot = full.LastIndexOf('.');

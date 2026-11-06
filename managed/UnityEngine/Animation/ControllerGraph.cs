@@ -148,6 +148,7 @@ namespace Unbound.Runtime
                         SpeedParameter = m_Graph.ParameterIndex(s.SpeedParameter),
                         CycleOffsetParameter = m_Graph.ParameterIndex(s.CycleOffsetParameter),
                         TimeParameter = m_Graph.ParameterIndex(s.TimeParameter),
+                        MirrorParameter = m_Graph.ParameterIndex(s.MirrorParameter),
                         Behaviours = s.Behaviours.ToArray(),
                         Index = m_Layer.States.Count,
                     };
@@ -280,8 +281,10 @@ namespace Unbound.Runtime
         internal int TagHash;
         internal float Speed = 1f;
         internal float CycleOffset;
-        /// <summary>AnimatorState.mirror (humanoid root motion throws for it: not supported).</summary>
+        /// <summary>AnimatorState.mirror, or its bool parameter (mirrorParameterActive) when set;
+        /// humanoid root motion throws for mirrored states (not supported).</summary>
         internal bool Mirror;
+        internal int MirrorParameter = -1;
         internal bool WriteDefaults = true;
         internal Motion Motion;
         internal int SpeedParameter = -1;

@@ -426,6 +426,7 @@ namespace Unbound.Runtime
         internal string SpeedParameter;
         internal string CycleOffsetParameter;
         internal string TimeParameter;
+        internal string MirrorParameter;
 
         public void ReadSerialized(YNode body, IReferenceResolver resolver)
         {
@@ -443,6 +444,7 @@ namespace Unbound.Runtime
             SpeedParameter = body.Bool("m_SpeedParameterActive") ? body.Str("m_SpeedParameter") : null;
             CycleOffsetParameter = body.Bool("m_CycleOffsetParameterActive") ? body.Str("m_CycleOffsetParameter") : null;
             TimeParameter = body.Bool("m_TimeParameterActive") ? body.Str("m_TimeParameter") : null;
+            MirrorParameter = body.Bool("m_MirrorParameterActive") ? body.Str("m_MirrorParameter") : null;
         }
     }
 

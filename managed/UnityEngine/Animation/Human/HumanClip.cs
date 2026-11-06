@@ -137,7 +137,7 @@ namespace UnityEngine
         /// as a new curve (negated where that says so; measured, tests/projects/humanoid).</summary>
         void MirrorHumanCurves()
         {
-            bool changed = false;
+            bool changed = false, goalRotations = false;
             for (int k = 0; k < m_Curves.Count; k++)
             {
                 var c = m_Curves[k];
@@ -145,6 +145,7 @@ namespace UnityEngine
                 if (i < 0) continue;
                 if (i >= HumanClipImport.TDoFFirst)
                     throw new NotSupportedException($"AnimationClip '{name}': mirrored humanoid clips with translation DoF curves are not supported");
+                goalRotations |= i >= HumanClipImport.GoalFirst && i < HumanClipImport.MuscleFirst && (i - HumanClipImport.GoalFirst) % 7 >= 3;
                 int j = HumanClipImport.MirrorCurve[i];
                 if (j == i) continue;
                 float sign = j < 0 ? -1f : 1f;
@@ -165,6 +166,9 @@ namespace UnityEngine
                 changed = true;
             }
             if (changed) m_Version++;
+            if (goalRotations)
+                Unbound.Runtime.Stubs.Ignored("AnimationClip mirrored humanoid goal rotations",
+                    "a mirrored humanoid clip's IK goal rotations flip y and z like the body's (not measured)");
         }
 
         /// <summary>A humanoid body curve (RootT, RootQ): loop pose moves the body relative to the
