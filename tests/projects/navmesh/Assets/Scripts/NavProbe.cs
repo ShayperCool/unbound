@@ -21,6 +21,14 @@ public class NavProbe : MonoBehaviour
     readonly List<(string Name, NavMeshAgent Agent)> m_Agents = new List<(string, NavMeshAgent)>();
     int m_Frame;
     NavMeshObstacle m_Carver;
+    NavMeshObstacle m_Parked;
+    string m_UpdateHoles;
+    // A carving obstacle with the default settings (carveOnlyStationary, 0.5 s to stationary,
+    // 0.1 m threshold), away from the agents: carved once stationary, moved below and above the
+    // threshold, then its carving turned off.
+    static readonly Vector3 CarverAt = new Vector3(2f, 0.5f, 7.5f);
+    static readonly Vector3 ParkedAt = new Vector3(-8.5f, 0.5f, 5f);
+    static readonly Vector3 ParkedMoved = new Vector3(-7.25f, 0.5f, 5f);
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Create()
@@ -242,6 +250,45 @@ public class NavProbe : MonoBehaviour
         }
     }
 
+    /// <summary>Whether the NavMesh is there (not carved away) at the carving obstacles' places:
+    /// the carver, the parked obstacle's first and second place.</summary>
+    static string Holes()
+    {
+        static char Open(Vector3 p) => NavMesh.SamplePosition(new Vector3(p.x, 0.054f, p.z), out _, 0.05f, NavMesh.AllAreas) ? '1' : '0';
+        return new string(new[] { Open(CarverAt), Open(ParkedAt), Open(ParkedMoved) });
+    }
+
+    /// <summary>A carved hole's outline: rays from 16 directions around <paramref name="center"/>
+    /// towards it stop at its edge; then the NavMesh vertices within <paramref name="reach"/>.</summary>
+    static void HoleShape(string name, Vector3 center, float reach)
+    {
+        ProbeLog.Begin(name);
+        center.y = 0.054f;
+        for (int i = 0; i < 16; i++)
+        {
+            float a = i * 22.5f * Mathf.Deg2Rad;
+            var from = center + new Vector3(Mathf.Cos(a), 0f, Mathf.Sin(a)) * reach;
+            if (!NavMesh.SamplePosition(from, out var start, 0.3f, NavMesh.AllAreas))
+            {
+                ProbeLog.Value("ray" + i, "off");
+                continue;
+            }
+            bool hit = NavMesh.Raycast(start.position, center, out var h, NavMesh.AllAreas);
+            ProbeLog.Value("ray" + i, V(start.position) + (hit ? " hit " : " clear ") + V(h.position) + " n" + V(h.normal));
+        }
+        var t = NavMesh.CalculateTriangulation();
+        var near = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (var v in t.vertices)
+            if (Mathf.Abs(v.x - center.x) <= reach && Mathf.Abs(v.z - center.z) <= reach) near.Add(V(v));
+        ProbeLog.Value("vertices", string.Join(" ", near));
+    }
+
+    void Update()
+    {
+        if (m_Agents.Count == 0) return;
+        m_UpdateHoles = Holes();
+    }
+
     void LateUpdate()
     {
         if (m_Agents.Count == 0) return;
@@ -250,14 +297,30 @@ public class NavProbe : MonoBehaviour
         {
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             go.name = "Carver";
-            go.transform.position = new Vector3(2f, 0.5f, 7.5f);
+            go.transform.position = CarverAt;
             go.transform.localScale = new Vector3(1f, 1f, 3f);
             m_Carver = go.AddComponent<NavMeshObstacle>();
             m_Carver.carving = true;
             m_Carver.carveOnlyStationary = false;
         }
+        if (m_Frame == 70) HoleShape("carve.carver", CarverAt, 2.6f);
+        if (m_Frame == 100)
+        {
+            var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            go.name = "Parked";
+            go.transform.position = ParkedAt;
+            go.transform.rotation = Quaternion.Euler(0f, 30f, 0f);
+            m_Parked = go.AddComponent<NavMeshObstacle>();
+            m_Parked.carving = true;
+        }
+        if (m_Frame == 150) HoleShape("carve.parked", ParkedAt, 1.6f);
+        // Below the move threshold, then well above it.
+        if (m_Frame == 160) m_Parked.transform.position = ParkedAt + new Vector3(0.05f, 0f, 0f);
+        if (m_Frame == 180) m_Parked.transform.position = ParkedMoved;
+        if (m_Frame == 230) m_Parked.carving = false;
         ProbeLog.Begin("agents.f" + m_Frame);
         ProbeLog.Value("dt", Time.deltaTime);
+        if (m_Frame >= 58) ProbeLog.Value("holes", "u" + m_UpdateHoles + " l" + Holes());
         if (m_Frame <= 3)
         {
             ProbeLog.Value("time", Time.time);
@@ -267,8 +330,10 @@ public class NavProbe : MonoBehaviour
         {
             ProbeLog.Value(name, V(agent.transform.position) + " v" + V(agent.velocity) + " r" + F(agent.remainingDistance)
                 + (agent.hasPath ? " path" : "") + (agent.pathPending ? " pending" : "") + (agent.isOnOffMeshLink ? " link" : "")
-                + " " + agent.pathStatus + " c" + agent.path.corners.Length);
+                + (agent.isPathStale ? " stale" : "") + " " + agent.pathStatus + " c" + agent.path.corners.Length);
         }
+        if (m_Frame == 62 || m_Frame == 100 || m_Frame == 200)
+            ProbeLog.Value("blocked.corners", string.Join(" ", m_Agents[5].Agent.path.corners.Select(V)));
         // NAVMESH_PROBE_STEER=<frames>: each agent's steering in full precision over the first
         // frames, for working on the agents (not part of the reference).
         if (int.TryParse(Environment.GetEnvironmentVariable("NAVMESH_PROBE_STEER"), out int steer) && m_Frame <= steer)

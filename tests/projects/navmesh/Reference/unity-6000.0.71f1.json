@@ -1209,6 +1209,7 @@
   },
   "agents.f58": {
     "dt": 0.0199999921,
+    "holes": "u111 l111",
     "walker": "-5.246,0.054,-8.556 v3.495,0,0.087 rInfinity path PathComplete c8",
     "left": "-3.119,0.054,-2.608 v2.994,0,-0.12 r9.122 path PathComplete c4",
     "right": "3.444,0.054,-2.963 v-2.441,0,-0.751 r9.467 path PathComplete c3",
@@ -1218,6 +1219,7 @@
   },
   "agents.f59": {
     "dt": 0.0199999921,
+    "holes": "u111 l111",
     "walker": "-5.176,0.054,-8.554 v3.495,0,0.088 rInfinity path PathComplete c8",
     "left": "-3.059,0.054,-2.61 v2.994,0,-0.12 r9.062 path PathComplete c4",
     "right": "3.395,0.054,-2.978 v-2.444,0,-0.742 r9.419 path PathComplete c3",
@@ -1227,6 +1229,7 @@
   },
   "agents.f60": {
     "dt": 0.0199999921,
+    "holes": "u111 l111",
     "walker": "-5.106,0.054,-8.552 v3.495,0,0.09 rInfinity path PathComplete c8",
     "left": "-2.999,0.054,-2.613 v2.994,0,-0.119 r9.002 path PathComplete c4",
     "right": "3.346,0.054,-2.992 v-2.447,0,-0.732 r9.372 path PathComplete c3",
@@ -1236,6 +1239,7 @@
   },
   "agents.f61": {
     "dt": 0.0199999921,
+    "holes": "u111 l111",
     "walker": "-5.036,0.054,-8.55 v3.494,0,0.091 rInfinity path PathComplete c8",
     "left": "-2.939,0.054,-2.615 v2.994,0,-0.118 r8.942 path PathComplete c4",
     "right": "3.297,0.054,-3.007 v-2.45,0,-0.723 r9.324 path PathComplete c2",
@@ -1245,15 +1249,18 @@
   },
   "agents.f62": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-4.966,0.054,-8.548 v3.494,0,0.093 rInfinity path PathComplete c6",
     "left": "-2.879,0.054,-2.617 v2.994,0,-0.117 r8.882 path PathComplete c4",
     "right": "3.248,0.054,-3.021 v-2.453,0,-0.713 r9.276 path PathComplete c2",
     "linker": "9.333,0.054,0.5 v0,0,0 r0 PathPartial c1",
     "climber": "0.416,0.054,-6 v-2.436,0,0 r6.589 path PathComplete c2",
-    "blocked": "-6.08,0.054,7.5 v2,0,0 rInfinity path PathComplete c5"
+    "blocked": "-6.08,0.054,7.5 v2,0,0 rInfinity path PathComplete c5",
+    "blocked.corners": "-6.08,0.054,7.5 -2,0.054,4.5 3.5,0.137,3.5 6.5,0.137,3.5 8,0.093,7.5"
   },
   "agents.f63": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-4.896,0.054,-8.546 v3.494,0,0.095 rInfinity path PathComplete c6",
     "left": "-2.819,0.054,-2.62 v2.994,0,-0.116 r8.822 path PathComplete c4",
     "right": "3.199,0.054,-3.035 v-2.455,0,-0.703 r9.228 path PathComplete c2",
@@ -1263,6 +1270,7 @@
   },
   "agents.f64": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-4.827,0.054,-8.544 v3.494,0,0.097 rInfinity path PathComplete c6",
     "left": "-2.759,0.054,-2.622 v2.994,0,-0.115 r8.762 path PathComplete c4",
     "right": "3.15,0.054,-3.049 v-2.457,0,-0.699 r9.18 path PathComplete c2",
@@ -1272,6 +1280,7 @@
   },
   "agents.f65": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-4.757,0.054,-8.543 v3.494,0,0.099 rInfinity path PathComplete c6",
     "left": "-2.7,0.054,-2.624 v2.994,0,-0.114 r8.702 path PathComplete c4",
     "right": "3.1,0.054,-3.063 v-2.458,0,-0.694 r9.132 path PathComplete c2",
@@ -1281,6 +1290,7 @@
   },
   "agents.f66": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-4.687,0.054,-8.541 v3.494,0,0.101 rInfinity path PathComplete c6",
     "left": "-2.64,0.054,-2.627 v2.994,0,-0.113 r8.642 path PathComplete c4",
     "right": "3.051,0.054,-3.077 v-2.459,0,-0.689 r9.085 path PathComplete c2",
@@ -1290,6 +1300,7 @@
   },
   "agents.f67": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-4.617,0.054,-8.538 v3.494,0,0.103 rInfinity path PathComplete c6",
     "left": "-2.58,0.054,-2.629 v2.994,0,-0.111 r8.582 path PathComplete c4",
     "right": "3.002,0.054,-3.09 v-2.461,0,-0.684 r9.037 path PathComplete c2",
@@ -1299,6 +1310,7 @@
   },
   "agents.f68": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-4.547,0.054,-8.536 v3.494,0,0.105 rInfinity path PathComplete c6",
     "left": "-2.52,0.054,-2.631 v2.994,0,-0.11 r8.522 path PathComplete c4",
     "right": "2.953,0.054,-3.104 v-2.462,0,-0.68 r8.989 path PathComplete c2",
@@ -1308,6 +1320,7 @@
   },
   "agents.f69": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-4.477,0.054,-8.534 v3.494,0,0.108 rInfinity path PathComplete c6",
     "left": "-2.46,0.054,-2.633 v2.994,0,-0.109 r8.463 path PathComplete c4",
     "right": "2.904,0.054,-3.118 v-2.463,0,-0.675 r8.941 path PathComplete c2",
@@ -1315,8 +1328,28 @@
     "climber": "0.075,0.054,-6 v-2.429,0,0 r6.258 path PathComplete c2",
     "blocked": "-5.814,0.054,7.457 v1.823,0,-0.531 rInfinity path PathComplete c5"
   },
+  "carve.carver": {
+    "ray0": "4.6,0.093,7.5 hit 3,0.069,7.5 n1,0,0",
+    "ray1": "4.402,0.054,8.495 hit 3,0.054,7.914 n1,0,0",
+    "ray2": "3.838,0.054,9.333 hit 3,0.054,8.497 n1,0,0",
+    "ray3": "off",
+    "ray4": "off",
+    "ray5": "off",
+    "ray6": "0.162,0.054,9.333 hit 1,0.054,8.497 n-1,0,0",
+    "ray7": "-0.402,0.054,8.495 hit 1,0.054,7.914 n-1,0,0",
+    "ray8": "-0.6,0.054,7.5 hit 1,0.054,7.5 n-1,0,0",
+    "ray9": "-0.402,0.054,6.505 hit 1,0.054,7.086 n-1,0,0",
+    "ray10": "0.162,0.054,5.662 hit 1,0.054,6.5 n-1,0,0",
+    "ray11": "1.005,0.054,5.098 hit 1.172,0.054,5.5 n0,0,-1",
+    "ray12": "2,0.054,4.9 hit 2,0.054,5.5 n0,0,-1",
+    "ray13": "2.995,0.109,5.098 hit 2.828,0.1,5.5 n0,0,-1",
+    "ray14": "3.838,0.137,5.662 hit 3,0.109,6.5 n1,0,0",
+    "ray15": "4.402,0.137,6.505 hit 3,0.094,7.086 n1,0,0",
+    "vertices": "0,0.054,7.5 0,0.054,9.333 1,0.054,5.5 1,0.054,7 1,0.054,7.5 1,0.054,8.417 1,0.054,9.333 2,0.054,5.5 3,0.054,9.333 3,0.109,5.5 3,0.109,6.5 3,0.109,6.833 3.5,0.137,6.5"
+  },
   "agents.f70": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-4.407,0.054,-8.532 v3.494,0,0.111 rInfinity path PathComplete c6",
     "left": "-2.4,0.054,-2.635 v2.994,0,-0.108 r8.403 path PathComplete c4",
     "right": "2.854,0.054,-3.131 v-2.465,0,-0.67 r8.893 path PathComplete c2",
@@ -1326,6 +1359,7 @@
   },
   "agents.f71": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-4.337,0.054,-8.529 v3.497,0,0.147 rInfinity path PathComplete c6",
     "left": "-2.34,0.054,-2.637 v2.994,0,-0.106 r8.343 path PathComplete c4",
     "right": "2.805,0.054,-3.144 v-2.466,0,-0.665 r8.845 path PathComplete c2",
@@ -1335,6 +1369,7 @@
   },
   "agents.f72": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-4.267,0.054,-8.527 v3.494,0,0.117 rInfinity path PathComplete c6",
     "left": "-2.28,0.054,-2.639 v2.994,0,-0.105 r8.283 path PathComplete c4",
     "right": "2.756,0.054,-3.157 v-2.467,0,-0.66 r8.797 path PathComplete c2",
@@ -1344,6 +1379,7 @@
   },
   "agents.f73": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-4.198,0.054,-8.524 v3.494,0,0.118 rInfinity path PathComplete c6",
     "left": "-2.22,0.054,-2.642 v2.995,0,-0.103 r8.223 path PathComplete c4",
     "right": "2.706,0.054,-3.171 v-2.469,0,-0.655 r8.75 path PathComplete c2",
@@ -1353,6 +1389,7 @@
   },
   "agents.f74": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-4.128,0.054,-8.522 v3.494,0,0.122 rInfinity path PathComplete c6",
     "left": "-2.16,0.054,-2.643 v2.999,0,-0.073 r8.163 path PathComplete c4",
     "right": "2.657,0.054,-3.184 v-2.47,0,-0.65 r8.702 path PathComplete c2",
@@ -1362,6 +1399,7 @@
   },
   "agents.f75": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-4.058,0.054,-8.519 v3.496,0,0.16 rInfinity path PathComplete c6",
     "left": "-2.101,0.054,-2.645 v2.995,0,-0.1 r8.103 path PathComplete c4",
     "right": "2.607,0.054,-3.196 v-2.471,0,-0.645 r8.654 path PathComplete c2",
@@ -1371,6 +1409,7 @@
   },
   "agents.f76": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-3.988,0.054,-8.515 v3.496,0,0.166 rInfinity path PathComplete c6",
     "left": "-2.041,0.054,-2.647 v2.995,0,-0.1 r8.043 path PathComplete c4",
     "right": "2.558,0.054,-3.209 v-2.473,0,-0.64 r8.606 path PathComplete c2",
@@ -1380,6 +1419,7 @@
   },
   "agents.f77": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-3.918,0.054,-8.512 v3.496,0,0.167 rInfinity path PathComplete c6",
     "left": "-1.981,0.054,-2.649 v2.995,0,-0.098 r7.983 path PathComplete c4",
     "right": "2.508,0.054,-3.222 v-2.474,0,-0.635 r8.558 path PathComplete c2",
@@ -1389,6 +1429,7 @@
   },
   "agents.f78": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-3.848,0.054,-8.509 v3.496,0,0.167 rInfinity path PathComplete c6",
     "left": "-1.921,0.054,-2.651 v2.995,0,-0.096 r7.923 path PathComplete c4",
     "right": "2.459,0.054,-3.235 v-2.475,0,-0.63 r8.51 path PathComplete c2",
@@ -1398,6 +1439,7 @@
   },
   "agents.f79": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-3.778,0.054,-8.505 v3.496,0,0.167 rInfinity path PathComplete c6",
     "left": "-1.861,0.054,-2.653 v2.995,0,-0.094 r7.863 path PathComplete c4",
     "right": "2.409,0.054,-3.247 v-2.477,0,-0.624 r8.463 path PathComplete c2",
@@ -1407,6 +1449,7 @@
   },
   "agents.f80": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-3.708,0.054,-8.502 v3.496,0,0.167 rInfinity path PathComplete c6",
     "left": "-1.801,0.054,-2.655 v2.995,0,-0.091 r7.803 path PathComplete c4",
     "right": "2.361,0.054,-3.261 v-2.396,0,-0.694 r8.416 path PathComplete c2",
@@ -1416,6 +1459,7 @@
   },
   "agents.f81": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-3.638,0.054,-8.499 v3.496,0,0.167 rInfinity path PathComplete c5",
     "left": "-1.741,0.054,-2.656 v2.995,0,-0.089 r7.743 path PathComplete c4",
     "right": "2.314,0.054,-3.275 v-2.397,0,-0.689 r8.37 path PathComplete c2",
@@ -1425,6 +1469,7 @@
   },
   "agents.f82": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-3.568,0.054,-8.495 v3.496,0,0.167 rInfinity path PathComplete c5",
     "left": "-1.681,0.054,-2.658 v2.995,0,-0.086 r7.683 path PathComplete c4",
     "right": "2.266,0.054,-3.288 v-2.399,0,-0.683 r8.324 path PathComplete c2",
@@ -1434,6 +1479,7 @@
   },
   "agents.f83": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-3.499,0.054,-8.489 v3.456,0,0.322 rInfinity path PathComplete c5",
     "left": "-1.621,0.054,-2.66 v2.995,0,-0.082 r7.624 path PathComplete c4",
     "right": "2.218,0.054,-3.302 v-2.4,0,-0.678 r8.278 path PathComplete c2",
@@ -1443,6 +1489,7 @@
   },
   "agents.f84": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-3.431,0.054,-8.479 v3.414,0,0.477 r20.97 path PathComplete c4",
     "left": "-1.561,0.054,-2.661 v2.995,0,-0.079 r7.564 path PathComplete c4",
     "right": "2.169,0.054,-3.315 v-2.402,0,-0.672 r8.232 path PathComplete c2",
@@ -1452,6 +1499,7 @@
   },
   "agents.f85": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-3.364,0.054,-8.467 v3.35,0,0.623 r20.91 path PathComplete c4",
     "left": "-1.502,0.054,-2.663 v2.995,0,-0.074 r7.504 path PathComplete c4",
     "right": "2.121,0.054,-3.329 v-2.404,0,-0.667 r8.186 path PathComplete c2",
@@ -1461,6 +1509,7 @@
   },
   "agents.f86": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-3.298,0.054,-8.451 v3.312,0,0.778 r20.848 path PathComplete c4",
     "left": "-1.442,0.054,-2.664 v2.995,0,-0.069 r7.444 path PathComplete c4",
     "right": "2.073,0.054,-3.342 v-2.405,0,-0.661 r8.14 path PathComplete c2",
@@ -1470,6 +1519,7 @@
   },
   "agents.f87": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-3.233,0.054,-8.433 v3.252,0,0.927 r20.785 path PathComplete c4",
     "left": "-1.382,0.054,-2.665 v2.996,0,-0.063 r7.384 path PathComplete c4",
     "right": "2.025,0.054,-3.355 v-2.407,0,-0.655 r8.094 path PathComplete c2",
@@ -1479,6 +1529,7 @@
   },
   "agents.f88": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-3.169,0.054,-8.411 v3.188,0,1.073 r20.722 path PathComplete c4",
     "left": "-1.322,0.054,-2.666 v3,0,-0.027 r7.324 path PathComplete c4",
     "right": "1.975,0.054,-3.366 v-2.489,0,-0.574 r8.046 path PathComplete c2",
@@ -1488,6 +1539,7 @@
   },
   "agents.f89": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-3.107,0.054,-8.387 v3.106,0,1.211 r20.658 path PathComplete c4",
     "left": "-1.262,0.054,-2.666 v3,0,-0.017 r7.264 path PathComplete c4",
     "right": "1.926,0.054,-3.378 v-2.49,0,-0.568 r7.999 path PathComplete c2",
@@ -1497,6 +1549,7 @@
   },
   "agents.f90": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-3.046,0.054,-8.36 v3.054,0,1.362 r20.593 path PathComplete c4",
     "left": "-1.202,0.054,-2.667 v3,0,-0.013 r7.204 path PathComplete c3",
     "right": "1.876,0.054,-3.389 v-2.492,0,-0.562 r7.951 path PathComplete c2",
@@ -1506,6 +1559,7 @@
   },
   "agents.f91": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-2.986,0.054,-8.33 v2.992,0,1.51 r20.528 path PathComplete c4",
     "left": "-1.142,0.054,-2.667 v2.996,0,-0.039 r7.144 path PathComplete c3",
     "right": "1.826,0.054,-3.4 v-2.493,0,-0.557 r7.903 path PathComplete c2",
@@ -1515,6 +1569,7 @@
   },
   "agents.f92": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-2.927,0.054,-8.296 v2.937,0,1.66 r20.461 path PathComplete c4",
     "left": "-1.082,0.054,-2.667 v3,0,0 r7.084 path PathComplete c3",
     "right": "1.776,0.054,-3.411 v-2.494,0,-0.551 r7.855 path PathComplete c2",
@@ -1524,6 +1579,7 @@
   },
   "agents.f93": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-2.87,0.054,-8.26 v2.88,0,1.809 r20.394 path PathComplete c4",
     "left": "-1.022,0.054,-2.667 v3,0,0.003 r7.024 path PathComplete c3",
     "right": "1.726,0.054,-3.422 v-2.495,0,-0.546 r7.807 path PathComplete c2",
@@ -1533,6 +1589,7 @@
   },
   "agents.f94": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-2.813,0.054,-8.221 v2.822,0,1.959 r20.325 path PathComplete c4",
     "left": "-0.962,0.054,-2.667 v3,0,0.004 r6.964 path PathComplete c3",
     "right": "1.676,0.054,-3.433 v-2.497,0,-0.54 r7.759 path PathComplete c2",
@@ -1542,6 +1599,7 @@
   },
   "agents.f95": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-2.758,0.054,-8.179 v2.764,0,2.108 r20.255 path PathComplete c4",
     "left": "-0.902,0.054,-2.667 v3,0,0.004 r6.904 path PathComplete c3",
     "right": "1.626,0.054,-3.444 v-2.498,0,-0.534 r7.712 path PathComplete c2",
@@ -1551,6 +1609,7 @@
   },
   "agents.f96": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-2.703,0.054,-8.135 v2.732,0,2.187 r20.185 path PathComplete c4",
     "left": "-0.842,0.054,-2.667 v3,0,0.004 r6.844 path PathComplete c3",
     "right": "1.576,0.054,-3.454 v-2.499,0,-0.528 r7.664 path PathComplete c2",
@@ -1560,6 +1619,7 @@
   },
   "agents.f97": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-2.649,0.054,-8.091 v2.732,0,2.188 r20.115 path PathComplete c4",
     "left": "-0.782,0.054,-2.667 v3,0,0.004 r6.784 path PathComplete c3",
     "right": "1.526,0.054,-3.465 v-2.5,0,-0.523 r7.616 path PathComplete c2",
@@ -1569,6 +1629,7 @@
   },
   "agents.f98": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-2.594,0.054,-8.048 v2.732,0,2.188 r20.045 path PathComplete c4",
     "left": "-0.722,0.054,-2.667 v3,0,0.004 r6.724 path PathComplete c3",
     "right": "1.476,0.054,-3.475 v-2.501,0,-0.517 r7.568 path PathComplete c2",
@@ -1578,6 +1639,7 @@
   },
   "agents.f99": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-2.539,0.054,-8.004 v2.732,0,2.188 r19.975 path PathComplete c4",
     "left": "-0.662,0.054,-2.667 v3,0,0.004 r6.664 path PathComplete c3",
     "right": "1.426,0.054,-3.485 v-2.503,0,-0.511 r7.52 path PathComplete c2",
@@ -1587,15 +1649,18 @@
   },
   "agents.f100": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-2.485,0.054,-7.96 v2.732,0,2.188 r19.905 path PathComplete c4",
     "left": "-0.602,0.054,-2.667 v3,0,0.004 r6.604 path PathComplete c3",
     "right": "1.376,0.054,-3.495 v-2.504,0,-0.505 r7.472 path PathComplete c2",
     "linker": "9.333,0.054,0.5 v0,0,0 r0 PathPartial c1",
     "climber": "-1.432,0.565,-6 v-2.441,1.03,0 r4.674 path PathComplete c2",
-    "blocked": "-4.822,0.054,6.746 v1.565,0,-1.246 rInfinity path PathComplete c5"
+    "blocked": "-4.822,0.054,6.746 v1.565,0,-1.246 rInfinity path PathComplete c5",
+    "blocked.corners": "-4.822,0.054,6.746 -2,0.054,4.5 3.5,0.137,3.5 6.5,0.137,3.5 8,0.093,7.5"
   },
   "agents.f101": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "-2.43,0.054,-7.916 v2.732,0,2.188 r19.835 path PathComplete c4",
     "left": "-0.542,0.054,-2.667 v3,0,0.004 r6.544 path PathComplete c3",
     "right": "1.326,0.054,-3.505 v-2.505,0,-0.499 r7.424 path PathComplete c2",
@@ -1605,6 +1670,7 @@
   },
   "agents.f102": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-2.375,0.054,-7.873 v2.732,0,2.188 r19.765 path PathComplete c4",
     "left": "-0.482,0.058,-2.667 v3,0.243,0.004 r6.484 path PathComplete c2",
     "right": "1.276,0.054,-3.515 v-2.506,0,-0.493 r7.377 path PathComplete c2",
@@ -1614,6 +1680,7 @@
   },
   "agents.f103": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-2.321,0.054,-7.829 v2.732,0,2.188 r19.695 path PathComplete c4",
     "left": "-0.422,0.074,-2.667 v3,0.8,0.004 r6.424 path PathComplete c2",
     "right": "1.226,0.054,-3.525 v-2.507,0,-0.487 r7.329 path PathComplete c2",
@@ -1623,6 +1690,7 @@
   },
   "agents.f104": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-2.266,0.054,-7.785 v2.732,0,2.188 r19.625 path PathComplete c4",
     "left": "-0.362,0.09,-2.665 v2.999,0.785,0.077 r6.364 path PathComplete c2",
     "right": "1.177,0.054,-3.536 v-2.431,0,-0.56 r7.283 path PathComplete c2",
@@ -1632,6 +1700,7 @@
   },
   "agents.f105": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-2.211,0.054,-7.741 v2.732,0,2.188 r19.555 path PathComplete c4",
     "left": "-0.302,0.106,-2.663 v2.999,0.785,0.078 r6.304 path PathComplete c2",
     "right": "1.127,0.054,-3.546 v-2.51,0,-0.475 r7.235 path PathComplete c2",
@@ -1641,6 +1710,7 @@
   },
   "agents.f106": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-2.157,0.054,-7.698 v2.732,0,2.188 r19.485 path PathComplete c4",
     "left": "-0.242,0.122,-2.662 v2.999,0.785,0.078 r6.244 path PathComplete c2",
     "right": "1.077,0.054,-3.555 v-2.511,0,-0.468 r7.187 path PathComplete c2",
@@ -1650,6 +1720,7 @@
   },
   "agents.f107": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-2.102,0.054,-7.654 v2.732,0,2.188 r19.415 path PathComplete c4",
     "left": "-0.182,0.114,-2.66 v2.999,-0.377,0.078 r6.184 path PathComplete c2",
     "right": "1.026,0.054,-3.564 v-2.512,0,-0.462 r7.139 path PathComplete c2",
@@ -1659,6 +1730,7 @@
   },
   "agents.f108": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-2.047,0.054,-7.61 v2.732,0,2.188 r19.345 path PathComplete c4",
     "left": "-0.122,0.094,-2.659 v2.999,-0.996,0.078 r6.124 path PathComplete c2",
     "right": "0.976,0.054,-3.573 v-2.513,0,-0.456 r7.091 path PathComplete c2",
@@ -1668,6 +1740,7 @@
   },
   "agents.f109": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.993,0.054,-7.566 v2.732,0,2.188 r19.275 path PathComplete c4",
     "left": "-0.062,0.074,-2.657 v2.999,-0.996,0.078 r6.064 path PathComplete c2",
     "right": "0.926,0.054,-3.582 v-2.514,0,-0.449 r7.044 path PathComplete c2",
@@ -1677,6 +1750,7 @@
   },
   "agents.f110": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.938,0.054,-7.523 v2.732,0,2.188 r19.205 path PathComplete c4",
     "left": "-0.002,0.054,-2.656 v2.999,-0.996,0.078 r6.004 path PathComplete c2",
     "right": "0.876,0.054,-3.591 v-2.515,0,-0.443 r6.996 path PathComplete c2",
@@ -1686,6 +1760,7 @@
   },
   "agents.f111": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.884,0.054,-7.479 v2.732,0,2.188 r19.135 path PathComplete c4",
     "left": "0.058,0.054,-2.654 v2.999,-0.033,0.078 r5.944 path PathComplete c2",
     "right": "0.825,0.054,-3.6 v-2.517,0,-0.437 r6.948 path PathComplete c2",
@@ -1695,6 +1770,7 @@
   },
   "agents.f112": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.829,0.054,-7.435 v2.732,0,2.188 r19.065 path PathComplete c4",
     "left": "0.118,0.054,-2.653 v2.999,0,0.078 r5.884 path PathComplete c2",
     "right": "0.775,0.054,-3.608 v-2.518,0,-0.43 r6.9 path PathComplete c2",
@@ -1704,6 +1780,7 @@
   },
   "agents.f113": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.774,0.054,-7.391 v2.732,0,2.188 r18.995 path PathComplete c4",
     "left": "0.178,0.054,-2.651 v2.999,0,0.078 r5.824 path PathComplete c2",
     "right": "0.724,0.054,-3.616 v-2.552,0,-0.392 r6.852 path PathComplete c2",
@@ -1713,6 +1790,7 @@
   },
   "agents.f114": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.72,0.054,-7.348 v2.732,0,2.188 r18.925 path PathComplete c4",
     "left": "0.238,0.054,-2.649 v2.999,0,0.078 r5.764 path PathComplete c2",
     "right": "0.673,0.054,-3.624 v-2.563,0,-0.401 r6.803 path PathComplete c2",
@@ -1722,6 +1800,7 @@
   },
   "agents.f115": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.665,0.072,-7.304 v2.732,0.924,2.188 r18.855 path PathComplete c4",
     "left": "0.298,0.054,-2.648 v2.999,0,0.078 r5.704 path PathComplete c2",
     "right": "0.621,0.054,-3.63 v-2.582,0,-0.302 r6.753 path PathComplete c2",
@@ -1731,6 +1810,7 @@
   },
   "agents.f116": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.61,0.104,-7.26 v2.732,1.619,2.188 r18.786 path PathComplete c4",
     "left": "0.358,0.054,-2.646 v2.999,0,0.078 r5.644 path PathComplete c2",
     "right": "0.567,0.054,-3.636 v-2.688,0,-0.291 r6.702 path PathComplete c2",
@@ -1740,6 +1820,7 @@
   },
   "agents.f117": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.556,0.137,-7.216 v2.732,1.619,2.188 r18.716 path PathComplete c4",
     "left": "0.418,0.054,-2.645 v2.999,0,0.078 r5.584 path PathComplete c2",
     "right": "0.514,0.054,-3.642 v-2.671,0,-0.299 r6.651 path PathComplete c2",
@@ -1749,6 +1830,7 @@
   },
   "agents.f118": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.501,0.169,-7.173 v2.732,1.619,2.188 r18.646 path PathComplete c4",
     "left": "0.478,0.054,-2.643 v2.999,0,0.078 r5.524 path PathComplete c2",
     "right": "0.46,0.054,-3.648 v-2.707,0,-0.295 r6.599 path PathComplete c2",
@@ -1758,6 +1840,7 @@
   },
   "agents.f119": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.446,0.202,-7.129 v2.732,1.619,2.188 r18.577 path PathComplete c4",
     "left": "0.538,0.054,-2.642 v2.999,0,0.078 r5.464 path PathComplete c2",
     "right": "0.403,0.054,-3.652 v-2.821,0,-0.182 r6.544 path PathComplete c2",
@@ -1767,6 +1850,7 @@
   },
   "agents.f120": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.392,0.234,-7.085 v2.732,1.637,2.188 r18.508 path PathComplete c4",
     "left": "0.598,0.054,-2.64 v2.999,0,0.078 r5.404 path PathComplete c2",
     "right": "0.346,0.054,-3.652 v-2.882,0,-0.034 r6.488 path PathComplete c2",
@@ -1776,6 +1860,7 @@
   },
   "agents.f121": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.337,0.289,-7.041 v2.731,2.711,2.187 r18.439 path PathComplete c4",
     "left": "0.658,0.054,-2.639 v2.999,0,0.078 r5.344 path PathComplete c2",
     "right": "0.286,0.054,-3.65 v-2.964,0,0.103 r6.43 path PathComplete c2",
@@ -1785,6 +1870,7 @@
   },
   "agents.f122": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.283,0.343,-6.998 v2.731,2.711,2.187 r18.371 path PathComplete c4",
     "left": "0.718,0.054,-2.637 v2.999,0,0.078 r5.284 path PathComplete c2",
     "right": "0.227,0.054,-3.646 v-2.949,0,0.207 r6.371 path PathComplete c2",
@@ -1794,6 +1880,7 @@
   },
   "agents.f123": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.228,0.397,-6.954 v2.73,2.71,2.187 r18.304 path PathComplete c4",
     "left": "0.778,0.054,-2.635 v2.999,0,0.078 r5.224 path PathComplete c2",
     "right": "0.169,0.054,-3.641 v-2.917,0,0.28 r6.313 path PathComplete c2",
@@ -1803,6 +1890,7 @@
   },
   "agents.f124": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.173,0.451,-6.91 v2.73,2.709,2.186 r18.237 path PathComplete c4",
     "left": "0.838,0.054,-2.634 v2.999,0,0.078 r5.164 path PathComplete c2",
     "right": "0.111,0.054,-3.633 v-2.902,0,0.37 r6.255 path PathComplete c2",
@@ -1812,6 +1900,7 @@
   },
   "agents.f125": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.119,0.43,-6.866 v2.729,-1.037,2.185 r18.166 path PathComplete c4",
     "left": "0.898,0.054,-2.632 v2.999,0,0.078 r5.104 path PathComplete c2",
     "right": "0.053,0.054,-3.624 v-2.905,0,0.48 r6.196 path PathComplete c2",
@@ -1821,6 +1910,7 @@
   },
   "agents.f126": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.064,0.408,-6.823 v2.728,-1.144,2.184 r18.095 path PathComplete c4",
     "left": "0.958,0.054,-2.631 v2.999,0,0.078 r5.044 path PathComplete c2",
     "right": "-0.006,0.055,-3.611 v-2.924,0.094,0.608 r6.136 path PathComplete c2",
@@ -1830,6 +1920,7 @@
   },
   "agents.f127": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-1.01,0.385,-6.779 v2.728,-1.118,2.185 r18.024 path PathComplete c4",
     "left": "1.018,0.054,-2.629 v2.999,0,0.078 r4.984 path PathComplete c2",
     "right": "-0.064,0.075,-3.599 v-2.931,0.974,0.641 r6.076 path PathComplete c2",
@@ -1839,6 +1930,7 @@
   },
   "agents.f128": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.955,0.368,-6.735 v2.728,-0.877,2.185 r17.953 path PathComplete c4",
     "left": "1.078,0.054,-2.628 v2.999,0,0.078 r4.924 path PathComplete c2",
     "right": "-0.123,0.094,-3.586 v-2.931,0.974,0.641 r6.016 path PathComplete c2",
@@ -1848,6 +1940,7 @@
   },
   "agents.f129": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.901,0.35,-6.692 v2.729,-0.877,2.185 r17.883 path PathComplete c4",
     "left": "1.138,0.054,-2.626 v2.999,0,0.078 r4.864 path PathComplete c2",
     "right": "-0.181,0.114,-3.573 v-2.931,0.974,0.641 r5.956 path PathComplete c2",
@@ -1857,6 +1950,7 @@
   },
   "agents.f130": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.846,0.333,-6.648 v2.729,-0.877,2.186 r17.812 path PathComplete c4",
     "left": "1.198,0.054,-2.625 v2.999,0,0.078 r4.804 path PathComplete c2",
     "right": "-0.24,0.133,-3.56 v-2.931,0.974,0.641 r5.897 path PathComplete c2",
@@ -1866,6 +1960,7 @@
   },
   "agents.f131": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.791,0.315,-6.604 v2.729,-0.877,2.186 r17.741 path PathComplete c4",
     "left": "1.258,0.054,-2.623 v2.999,0,0.078 r4.744 path PathComplete c2",
     "right": "-0.299,0.153,-3.547 v-2.931,0.974,0.641 r5.837 path PathComplete c2",
@@ -1875,6 +1970,7 @@
   },
   "agents.f132": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.737,0.298,-6.56 v2.729,-0.877,2.186 r17.671 path PathComplete c4",
     "left": "1.318,0.054,-2.621 v2.999,0,0.078 r4.684 path PathComplete c2",
     "right": "-0.357,0.172,-3.535 v-2.93,0.974,0.641 r5.777 path PathComplete c2",
@@ -1884,6 +1980,7 @@
   },
   "agents.f133": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.682,0.28,-6.517 v2.73,-0.877,2.186 r17.6 path PathComplete c4",
     "left": "1.378,0.054,-2.62 v2.999,0,0.078 r4.624 path PathComplete c2",
     "right": "-0.416,0.192,-3.522 v-2.93,0.974,0.641 r5.718 path PathComplete c2",
@@ -1893,6 +1990,7 @@
   },
   "agents.f134": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.628,0.262,-6.473 v2.73,-0.893,2.186 r17.53 path PathComplete c4",
     "left": "1.438,0.054,-2.618 v2.999,0,0.078 r4.564 path PathComplete c2",
     "right": "-0.475,0.211,-3.509 v-2.93,0.973,0.641 r5.658 path PathComplete c2",
@@ -1902,6 +2000,7 @@
   },
   "agents.f135": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.573,0.244,-6.429 v2.73,-0.907,2.186 r17.459 path PathComplete c4",
     "left": "1.498,0.054,-2.617 v2.999,0,0.078 r4.504 path PathComplete c2",
     "right": "-0.533,0.211,-3.496 v-2.93,-0.019,0.641 r5.598 path PathComplete c2",
@@ -1911,6 +2010,7 @@
   },
   "agents.f136": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.518,0.226,-6.386 v2.73,-0.907,2.187 r17.389 path PathComplete c4",
     "left": "1.558,0.054,-2.615 v2.999,0,0.078 r4.444 path PathComplete c2",
     "right": "-0.592,0.193,-3.483 v-2.93,-0.911,0.641 r5.538 path PathComplete c2",
@@ -1920,6 +2020,7 @@
   },
   "agents.f137": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.464,0.208,-6.342 v2.731,-0.907,2.187 r17.318 path PathComplete c4",
     "left": "1.617,0.054,-2.614 v2.999,0,0.078 r4.384 path PathComplete c2",
     "right": "-0.65,0.174,-3.47 v-2.93,-0.911,0.641 r5.478 path PathComplete c2",
@@ -1929,6 +2030,7 @@
   },
   "agents.f138": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.409,0.19,-6.298 v2.731,-0.907,2.187 r17.248 path PathComplete c4",
     "left": "1.677,0.054,-2.612 v2.999,0,0.078 r4.324 path PathComplete c2",
     "right": "-0.709,0.154,-3.458 v-2.93,-1.006,0.641 r5.417 path PathComplete c2",
@@ -1938,6 +2040,7 @@
   },
   "agents.f139": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.355,0.171,-6.254 v2.731,-0.907,2.187 r17.178 path PathComplete c4",
     "left": "1.737,0.054,-2.611 v2.999,0,0.078 r4.264 path PathComplete c2",
     "right": "-0.767,0.133,-3.445 v-2.93,-1.062,0.641 r5.357 path PathComplete c2",
@@ -1947,6 +2050,7 @@
   },
   "agents.f140": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.3,0.153,-6.211 v2.731,-0.907,2.187 r17.107 path PathComplete c4",
     "left": "1.797,0.054,-2.609 v2.999,0,0.078 r4.204 path PathComplete c2",
     "right": "-0.826,0.112,-3.432 v-2.93,-1.062,0.641 r5.297 path PathComplete c2",
@@ -1956,6 +2060,7 @@
   },
   "agents.f141": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.245,0.135,-6.167 v2.731,-0.907,2.187 r17.037 path PathComplete c4",
     "left": "1.857,0.054,-2.607 v2.999,0,0.078 r4.144 path PathComplete c2",
     "right": "-0.885,0.091,-3.419 v-2.93,-1.062,0.641 r5.236 path PathComplete c2",
@@ -1965,6 +2070,7 @@
   },
   "agents.f142": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.191,0.117,-6.123 v2.732,-0.908,2.188 r16.967 path PathComplete c4",
     "left": "1.917,0.054,-2.606 v2.999,0,0.078 r4.084 path PathComplete c2",
     "right": "-0.943,0.069,-3.406 v-2.931,-1.062,0.641 r5.176 path PathComplete c2",
@@ -1974,6 +2080,7 @@
   },
   "agents.f143": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.136,0.099,-6.079 v2.732,-0.908,2.188 r16.897 path PathComplete c4",
     "left": "1.977,0.054,-2.604 v2.999,0,0.078 r4.024 path PathComplete c2",
     "right": "-1.002,0.054,-3.393 v-2.931,-0.787,0.641 r5.116 path PathComplete c2",
@@ -1983,6 +2090,7 @@
   },
   "agents.f144": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.081,0.081,-6.036 v2.732,-0.908,2.188 r16.827 path PathComplete c4",
     "left": "2.037,0.054,-2.603 v2.999,0,0.078 r3.964 path PathComplete c2",
     "right": "-1.061,0.054,-3.381 v-2.931,0,0.641 r5.056 path PathComplete c2",
@@ -1992,6 +2100,7 @@
   },
   "agents.f145": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "-0.027,0.062,-5.992 v2.732,-0.908,2.188 r16.757 path PathComplete c4",
     "left": "2.097,0.054,-2.601 v2.999,0,0.078 r3.904 path PathComplete c2",
     "right": "-1.119,0.054,-3.368 v-2.931,0,0.641 r4.996 path PathComplete c2",
@@ -2001,6 +2110,7 @@
   },
   "agents.f146": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.028,0.054,-5.948 v2.732,-0.445,2.188 r16.687 path PathComplete c4",
     "left": "2.157,0.054,-2.6 v2.999,0,0.078 r3.844 path PathComplete c2",
     "right": "-1.178,0.054,-3.355 v-2.931,0,0.641 r4.936 path PathComplete c2",
@@ -2010,6 +2120,7 @@
   },
   "agents.f147": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.083,0.054,-5.904 v2.732,0,2.188 r16.617 path PathComplete c4",
     "left": "2.217,0.054,-2.598 v2.999,0,0.078 r3.784 path PathComplete c2",
     "right": "-1.236,0.054,-3.342 v-2.931,0,0.641 r4.876 path PathComplete c2",
@@ -2019,6 +2130,7 @@
   },
   "agents.f148": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.137,0.054,-5.861 v2.732,0,2.188 r16.547 path PathComplete c4",
     "left": "2.277,0.054,-2.597 v2.999,0,0.078 r3.724 path PathComplete c2",
     "right": "-1.295,0.054,-3.329 v-2.931,0,0.641 r4.816 path PathComplete c2",
@@ -2028,6 +2140,7 @@
   },
   "agents.f149": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.192,0.054,-5.817 v2.732,0,2.188 r16.477 path PathComplete c4",
     "left": "2.337,0.054,-2.595 v2.999,0,0.078 r3.664 path PathComplete c2",
     "right": "-1.354,0.054,-3.317 v-2.931,0,0.641 r4.756 path PathComplete c2",
@@ -2035,8 +2148,28 @@
     "climber": "-3.85,1.472,-6 v-2.497,0.936,0 r2.152 path PathComplete c2",
     "blocked": "-3.288,0.054,5.525 v1.565,0,-1.246 rInfinity path PathComplete c5"
   },
+  "carve.parked": {
+    "ray0": "-6.9,0.054,5 hit -7.345,0.054,5 n0.866,0,-0.5",
+    "ray1": "-7.022,0.054,5.612 hit -7.335,0.054,5.482 n0.5,0,0.866",
+    "ray2": "-7.369,0.054,6.131 hit -7.768,0.054,5.732 n0.5,0,0.866",
+    "ray3": "-7.888,0.054,6.478 hit -8.114,0.054,5.932 n0.5,0,0.866",
+    "ray4": "-8.5,0.054,6.6 hit -8.5,0.054,6.155 n0.5,0,0.866",
+    "ray5": "-9.112,0.054,6.478 hit -8.982,0.054,6.165 n-0.866,0,0.5",
+    "ray6": "-9.333,0.054,6.131 hit -9.147,0.054,5.879 n-0.866,0,0.5",
+    "ray7": "off",
+    "ray8": "off",
+    "ray9": "off",
+    "ray10": "-9.333,0.054,3.869 hit -9.097,0.054,4.19 n-0.5,0,-0.866",
+    "ray11": "-9.112,0.054,3.522 hit -8.886,0.054,4.068 n-0.5,0,-0.866",
+    "ray12": "-8.5,0.054,3.4 hit -8.5,0.054,3.845 n-0.5,0,-0.866",
+    "ray13": "-7.888,0.054,3.522 hit -8.018,0.054,3.835 n0.866,0,-0.5",
+    "ray14": "-7.369,0.054,3.869 hit -7.768,0.054,4.268 n0.866,0,-0.5",
+    "ray15": "-7.022,0.054,4.388 hit -7.568,0.054,4.614 n0.866,0,-0.5",
+    "vertices": "-7.134,0.054,5.366 -7.167,0.054,3.833 -7.5,0.054,3.5 -8.019,0.054,3.833 -8.134,0.054,3.634 -8.479,0.054,3.833 -8.866,0.054,6.366 -9.333,0.054,3.833 -9.333,0.054,4.326 -9.333,0.054,5.557"
+  },
   "agents.f150": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.246,0.054,-5.773 v2.732,0,2.188 r16.407 path PathComplete c4",
     "left": "2.397,0.054,-2.593 v2.999,0,0.078 r3.604 path PathComplete c2",
     "right": "-1.412,0.054,-3.304 v-2.931,0,0.641 r4.696 path PathComplete c2",
@@ -2046,6 +2179,7 @@
   },
   "agents.f151": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.301,0.054,-5.729 v2.732,0,2.188 r16.337 path PathComplete c4",
     "left": "2.457,0.054,-2.592 v2.999,0,0.078 r3.544 path PathComplete c2",
     "right": "-1.471,0.054,-3.291 v-2.931,0,0.641 r4.636 path PathComplete c2",
@@ -2055,6 +2189,7 @@
   },
   "agents.f152": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.356,0.054,-5.685 v2.732,0,2.188 r16.267 path PathComplete c4",
     "left": "2.517,0.054,-2.59 v2.999,0,0.078 r3.484 path PathComplete c2",
     "right": "-1.529,0.054,-3.278 v-2.931,0,0.641 r4.576 path PathComplete c2",
@@ -2064,6 +2199,7 @@
   },
   "agents.f153": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.41,0.054,-5.642 v2.732,0,2.188 r16.197 path PathComplete c4",
     "left": "2.577,0.054,-2.589 v2.999,0,0.078 r3.424 path PathComplete c2",
     "right": "-1.588,0.054,-3.265 v-2.931,0,0.641 r4.516 path PathComplete c2",
@@ -2073,6 +2209,7 @@
   },
   "agents.f154": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.465,0.054,-5.598 v2.732,0,2.188 r16.127 path PathComplete c4",
     "left": "2.637,0.054,-2.587 v2.999,0,0.078 r3.364 path PathComplete c2",
     "right": "-1.647,0.054,-3.252 v-2.931,0,0.641 r4.456 path PathComplete c2",
@@ -2082,6 +2219,7 @@
   },
   "agents.f155": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.52,0.054,-5.554 v2.732,0,2.188 r16.057 path PathComplete c4",
     "left": "2.697,0.054,-2.586 v2.999,0,0.078 r3.304 path PathComplete c2",
     "right": "-1.705,0.054,-3.24 v-2.931,0,0.641 r4.396 path PathComplete c2",
@@ -2091,6 +2229,7 @@
   },
   "agents.f156": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.574,0.054,-5.51 v2.732,0,2.188 r15.987 path PathComplete c4",
     "left": "2.757,0.054,-2.584 v2.999,0,0.078 r3.244 path PathComplete c2",
     "right": "-1.764,0.054,-3.227 v-2.931,0,0.641 r4.336 path PathComplete c2",
@@ -2100,6 +2239,7 @@
   },
   "agents.f157": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.629,0.054,-5.467 v2.732,0,2.188 r15.917 path PathComplete c4",
     "left": "2.817,0.054,-2.583 v2.999,0,0.078 r3.184 path PathComplete c2",
     "right": "-1.823,0.054,-3.214 v-2.931,0,0.641 r4.276 path PathComplete c2",
@@ -2109,6 +2249,7 @@
   },
   "agents.f158": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.684,0.054,-5.423 v2.732,0,2.188 r15.847 path PathComplete c4",
     "left": "2.877,0.054,-2.581 v2.999,0,0.078 r3.124 path PathComplete c2",
     "right": "-1.881,0.054,-3.201 v-2.931,0,0.641 r4.216 path PathComplete c2",
@@ -2118,6 +2259,7 @@
   },
   "agents.f159": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.738,0.054,-5.379 v2.732,0,2.188 r15.777 path PathComplete c4",
     "left": "2.937,0.054,-2.579 v2.999,0,0.078 r3.064 path PathComplete c2",
     "right": "-1.94,0.054,-3.188 v-2.931,0,0.641 r4.156 path PathComplete c2",
@@ -2127,6 +2269,7 @@
   },
   "agents.f160": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.793,0.054,-5.335 v2.732,0,2.188 r15.707 path PathComplete c4",
     "left": "2.997,0.054,-2.578 v2.999,0,0.078 r3.004 path PathComplete c2",
     "right": "-1.998,0.054,-3.175 v-2.931,0,0.641 r4.096 path PathComplete c2",
@@ -2136,6 +2279,7 @@
   },
   "agents.f161": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.847,0.054,-5.292 v2.732,0,2.188 r15.637 path PathComplete c4",
     "left": "3.057,0.054,-2.576 v2.999,0,0.078 r2.944 path PathComplete c2",
     "right": "-2.057,0.054,-3.163 v-2.931,0,0.641 r4.036 path PathComplete c2",
@@ -2145,6 +2289,7 @@
   },
   "agents.f162": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.902,0.054,-5.248 v2.732,0,2.188 r15.567 path PathComplete c4",
     "left": "3.117,0.054,-2.575 v2.999,0,0.078 r2.884 path PathComplete c2",
     "right": "-2.116,0.054,-3.15 v-2.931,0,0.641 r3.976 path PathComplete c2",
@@ -2154,6 +2299,7 @@
   },
   "agents.f163": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "0.957,0.054,-5.204 v2.732,0,2.188 r15.497 path PathComplete c4",
     "left": "3.177,0.054,-2.573 v2.999,0,0.078 r2.824 path PathComplete c2",
     "right": "-2.174,0.054,-3.137 v-2.931,0,0.641 r3.916 path PathComplete c2",
@@ -2163,6 +2309,7 @@
   },
   "agents.f164": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.011,0.054,-5.16 v2.732,0,2.188 r15.427 path PathComplete c4",
     "left": "3.237,0.054,-2.572 v2.999,0,0.078 r2.764 path PathComplete c2",
     "right": "-2.233,0.054,-3.124 v-2.931,0,0.641 r3.856 path PathComplete c2",
@@ -2172,6 +2319,7 @@
   },
   "agents.f165": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.066,0.054,-5.117 v2.732,0,2.188 r15.357 path PathComplete c4",
     "left": "3.297,0.054,-2.57 v2.999,0,0.078 r2.704 path PathComplete c2",
     "right": "-2.291,0.054,-3.111 v-2.931,0,0.641 r3.796 path PathComplete c2",
@@ -2181,6 +2329,7 @@
   },
   "agents.f166": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.121,0.054,-5.073 v2.732,0,2.188 r15.287 path PathComplete c4",
     "left": "3.357,0.054,-2.569 v2.999,0,0.078 r2.644 path PathComplete c2",
     "right": "-2.35,0.054,-3.099 v-2.931,0,0.641 r3.736 path PathComplete c2",
@@ -2190,6 +2339,7 @@
   },
   "agents.f167": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.175,0.054,-5.029 v2.732,0,2.188 r15.217 path PathComplete c4",
     "left": "3.417,0.054,-2.567 v2.999,0,0.078 r2.584 path PathComplete c2",
     "right": "-2.409,0.054,-3.086 v-2.931,0,0.641 r3.676 path PathComplete c2",
@@ -2199,6 +2349,7 @@
   },
   "agents.f168": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.23,0.054,-4.985 v2.732,0,2.188 r15.147 path PathComplete c4",
     "left": "3.477,0.054,-2.565 v2.999,0,0.078 r2.524 path PathComplete c2",
     "right": "-2.467,0.054,-3.073 v-2.931,0,0.641 r3.616 path PathComplete c2",
@@ -2208,6 +2359,7 @@
   },
   "agents.f169": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.285,0.054,-4.942 v2.732,0,2.188 r15.077 path PathComplete c4",
     "left": "3.537,0.054,-2.564 v2.999,0,0.078 r2.464 path PathComplete c2",
     "right": "-2.526,0.054,-3.06 v-2.931,0,0.641 r3.556 path PathComplete c2",
@@ -2217,6 +2369,7 @@
   },
   "agents.f170": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.339,0.054,-4.898 v2.732,0,2.188 r15.007 path PathComplete c4",
     "left": "3.597,0.054,-2.562 v2.999,0,0.078 r2.404 path PathComplete c2",
     "right": "-2.584,0.054,-3.047 v-2.931,0,0.641 r3.496 path PathComplete c2",
@@ -2226,6 +2379,7 @@
   },
   "agents.f171": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.394,0.054,-4.854 v2.732,0,2.188 r14.937 path PathComplete c4",
     "left": "3.657,0.054,-2.561 v2.999,0,0.078 r2.344 path PathComplete c2",
     "right": "-2.643,0.054,-3.034 v-2.931,0,0.641 r3.436 path PathComplete c2",
@@ -2235,6 +2389,7 @@
   },
   "agents.f172": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.448,0.054,-4.81 v2.732,0,2.188 r14.867 path PathComplete c4",
     "left": "3.717,0.054,-2.559 v2.999,0,0.078 r2.284 path PathComplete c2",
     "right": "-2.702,0.054,-3.022 v-2.931,0,0.641 r3.376 path PathComplete c2",
@@ -2244,6 +2399,7 @@
   },
   "agents.f173": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.503,0.054,-4.767 v2.732,0,2.188 r14.797 path PathComplete c4",
     "left": "3.777,0.054,-2.558 v2.999,0,0.078 r2.224 path PathComplete c2",
     "right": "-2.76,0.054,-3.009 v-2.931,0,0.641 r3.316 path PathComplete c2",
@@ -2253,6 +2409,7 @@
   },
   "agents.f174": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.558,0.054,-4.723 v2.732,0,2.188 r14.727 path PathComplete c4",
     "left": "3.837,0.054,-2.556 v2.999,0,0.078 r2.164 path PathComplete c2",
     "right": "-2.819,0.054,-2.996 v-2.931,0,0.641 r3.256 path PathComplete c2",
@@ -2262,6 +2419,7 @@
   },
   "agents.f175": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.612,0.054,-4.679 v2.732,0,2.188 r14.657 path PathComplete c4",
     "left": "3.897,0.054,-2.555 v2.999,0,0.078 r2.104 path PathComplete c2",
     "right": "-2.878,0.054,-2.983 v-2.931,0,0.641 r3.196 path PathComplete c2",
@@ -2271,6 +2429,7 @@
   },
   "agents.f176": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.667,0.054,-4.635 v2.732,0,2.188 r14.587 path PathComplete c4",
     "left": "3.957,0.054,-2.553 v2.999,0,0.078 r2.044 path PathComplete c2",
     "right": "-2.936,0.054,-2.97 v-2.931,0,0.641 r3.136 path PathComplete c2",
@@ -2280,6 +2439,7 @@
   },
   "agents.f177": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.722,0.054,-4.592 v2.732,0,2.188 r14.517 path PathComplete c4",
     "left": "4.017,0.054,-2.551 v2.999,0,0.078 r1.984 path PathComplete c2",
     "right": "-2.995,0.054,-2.957 v-2.931,0,0.641 r3.076 path PathComplete c2",
@@ -2289,6 +2449,7 @@
   },
   "agents.f178": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.776,0.054,-4.549 v2.729,0,2.113 r14.448 path PathComplete c4",
     "left": "4.077,0.054,-2.55 v2.999,0,0.078 r1.924 path PathComplete c2",
     "right": "-3.053,0.054,-2.945 v-2.931,0,0.641 r3.016 path PathComplete c2",
@@ -2298,6 +2459,7 @@
   },
   "agents.f179": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.831,0.054,-4.507 v2.738,0,2.095 r14.379 path PathComplete c4",
     "left": "4.137,0.054,-2.548 v2.999,0,0.078 r1.864 path PathComplete c2",
     "right": "-3.112,0.054,-2.932 v-2.931,0,0.641 r2.956 path PathComplete c2",
@@ -2307,6 +2469,7 @@
   },
   "agents.f180": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.886,0.054,-4.465 v2.737,0,2.096 r14.31 path PathComplete c4",
     "left": "4.197,0.054,-2.547 v2.999,0,0.078 r1.804 path PathComplete c2",
     "right": "-3.171,0.054,-2.919 v-2.931,0,0.641 r2.896 path PathComplete c2",
@@ -2316,6 +2479,7 @@
   },
   "agents.f181": {
     "dt": 0.0199999921,
+    "holes": "u001 l001",
     "walker": "1.941,0.054,-4.422 v2.747,0,2.161 r14.24 path PathComplete c4",
     "left": "4.257,0.054,-2.545 v2.999,0,0.078 r1.744 path PathComplete c2",
     "right": "-3.229,0.054,-2.906 v-2.931,0,0.641 r2.836 path PathComplete c2",
@@ -2325,6 +2489,7 @@
   },
   "agents.f182": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "1.996,0.054,-4.379 v2.746,0,2.163 r14.17 path PathComplete c4",
     "left": "4.317,0.054,-2.544 v2.999,0.018,0.078 r1.684 path PathComplete c2",
     "right": "-3.288,0.054,-2.893 v-2.931,0,0.641 r2.776 path PathComplete c2",
@@ -2334,6 +2499,7 @@
   },
   "agents.f183": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.051,0.054,-4.336 v2.746,0,2.163 r14.1 path PathComplete c4",
     "left": "4.377,0.056,-2.542 v2.999,0.099,0.078 r1.624 path PathComplete c2",
     "right": "-3.346,0.054,-2.881 v-2.931,0,0.641 r2.716 path PathComplete c2",
@@ -2343,6 +2509,7 @@
   },
   "agents.f184": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.105,0.054,-4.292 v2.728,0,2.193 r14.03 path PathComplete c4",
     "left": "4.437,0.056,-2.541 v2.999,-0.004,0.078 r1.564 path PathComplete c2",
     "right": "-3.405,0.054,-2.868 v-2.931,0,0.641 r2.656 path PathComplete c2",
@@ -2352,6 +2519,7 @@
   },
   "agents.f185": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.16,0.054,-4.249 v2.745,0,2.165 r13.96 path PathComplete c4",
     "left": "4.497,0.056,-2.539 v2.999,-0.004,0.078 r1.504 path PathComplete c2",
     "right": "-3.464,0.054,-2.855 v-2.931,0,0.641 r2.596 path PathComplete c2",
@@ -2361,6 +2529,7 @@
   },
   "agents.f186": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.215,0.054,-4.205 v2.727,0,2.193 r13.89 path PathComplete c4",
     "left": "4.556,0.056,-2.537 v2.999,-0.004,0.078 r1.444 path PathComplete c2",
     "right": "-3.522,0.054,-2.842 v-2.931,0,0.641 r2.536 path PathComplete c2",
@@ -2370,6 +2539,7 @@
   },
   "agents.f187": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.269,0.054,-4.161 v2.727,0,2.194 r13.82 path PathComplete c4",
     "left": "4.616,0.056,-2.536 v2.999,-0.004,0.078 r1.384 path PathComplete c2",
     "right": "-3.581,0.054,-2.829 v-2.931,0,0.641 r2.476 path PathComplete c2",
@@ -2379,6 +2549,7 @@
   },
   "agents.f188": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.324,0.054,-4.118 v2.744,0,2.165 r13.75 path PathComplete c4",
     "left": "4.676,0.055,-2.534 v2.999,-0.004,0.078 r1.324 path PathComplete c2",
     "right": "-3.64,0.054,-2.816 v-2.931,0,0.641 r2.416 path PathComplete c2",
@@ -2388,6 +2559,7 @@
   },
   "agents.f189": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.379,0.054,-4.074 v2.744,0,2.165 r13.68 path PathComplete c4",
     "left": "4.736,0.055,-2.533 v2.999,-0.004,0.078 r1.264 path PathComplete c2",
     "right": "-3.698,0.054,-2.804 v-2.931,0,0.641 r2.356 path PathComplete c2",
@@ -2397,6 +2569,7 @@
   },
   "agents.f190": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.433,0.054,-4.03 v2.726,0,2.195 r13.61 path PathComplete c4",
     "left": "4.796,0.055,-2.531 v2.999,-0.004,0.078 r1.204 path PathComplete c2",
     "right": "-3.757,0.054,-2.791 v-2.931,0,0.641 r2.296 path PathComplete c2",
@@ -2406,6 +2579,7 @@
   },
   "agents.f191": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.488,0.054,-3.987 v2.743,0,2.167 r13.54 path PathComplete c4",
     "left": "4.856,0.055,-2.53 v2.999,-0.004,0.078 r1.144 path PathComplete c2",
     "right": "-3.815,0.054,-2.778 v-2.931,0,0.641 r2.236 path PathComplete c2",
@@ -2415,6 +2589,7 @@
   },
   "agents.f192": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.543,0.054,-3.943 v2.726,0,2.195 r13.47 path PathComplete c4",
     "left": "4.916,0.055,-2.528 v2.999,-0.004,0.078 r1.084 path PathComplete c2",
     "right": "-3.874,0.054,-2.765 v-2.931,0,0.641 r2.176 path PathComplete c2",
@@ -2424,6 +2599,7 @@
   },
   "agents.f193": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.597,0.054,-3.899 v2.725,0,2.196 r13.4 path PathComplete c4",
     "left": "4.976,0.055,-2.527 v2.999,-0.004,0.078 r1.024 path PathComplete c2",
     "right": "-3.933,0.054,-2.752 v-2.931,0,0.641 r2.116 path PathComplete c2",
@@ -2433,6 +2609,7 @@
   },
   "agents.f194": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.652,0.054,-3.856 v2.743,0,2.168 r13.33 path PathComplete c4",
     "left": "5.036,0.055,-2.525 v2.999,-0.004,0.078 r0.964 path PathComplete c2",
     "right": "-3.991,0.054,-2.739 v-2.931,0,0.641 r2.056 path PathComplete c2",
@@ -2442,6 +2619,7 @@
   },
   "agents.f195": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.707,0.054,-3.812 v2.743,0,2.168 r13.261 path PathComplete c4",
     "left": "5.096,0.055,-2.523 v2.999,-0.004,0.078 r0.904 path PathComplete c2",
     "right": "-4.05,0.054,-2.727 v-2.931,0,0.641 r1.996 path PathComplete c2",
@@ -2451,6 +2629,7 @@
   },
   "agents.f196": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.762,0.054,-3.769 v2.742,0,2.168 r13.191 path PathComplete c4",
     "left": "5.154,0.055,-2.522 v2.906,-0.004,0.075 r0.846 path PathComplete c2",
     "right": "-4.108,0.054,-2.714 v-2.931,0,0.641 r1.936 path PathComplete c2",
@@ -2460,6 +2639,7 @@
   },
   "agents.f197": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.817,0.054,-3.726 v2.741,0,2.169 r13.121 path PathComplete c4",
     "left": "5.211,0.055,-2.52 v2.812,-0.004,0.073 r0.79 path PathComplete c2",
     "right": "-4.167,0.054,-2.701 v-2.931,0,0.641 r1.876 path PathComplete c2",
@@ -2469,6 +2649,7 @@
   },
   "agents.f198": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.871,0.054,-3.682 v2.723,0,2.199 r13.051 path PathComplete c4",
     "left": "5.265,0.055,-2.519 v2.719,-0.004,0.071 r0.735 path PathComplete c2",
     "right": "-4.226,0.054,-2.688 v-2.931,0,0.641 r1.816 path PathComplete c2",
@@ -2478,6 +2659,7 @@
   },
   "agents.f199": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.926,0.054,-3.638 v2.74,0,2.171 r12.981 path PathComplete c4",
     "left": "5.318,0.055,-2.518 v2.625,-0.004,0.068 r0.683 path PathComplete c2",
     "right": "-4.284,0.054,-2.675 v-2.931,0,0.641 r1.756 path PathComplete c2",
@@ -2487,15 +2669,18 @@
   },
   "agents.f200": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "2.981,0.054,-3.595 v2.74,0,2.171 r12.911 path PathComplete c4",
     "left": "5.368,0.054,-2.516 v2.531,-0.004,0.066 r0.632 path PathComplete c2",
     "right": "-4.343,0.054,-2.663 v-2.931,0,0.641 r1.696 path PathComplete c2",
     "linker": "9.333,0.054,0.5 v0,0,0 r0 PathPartial c1",
     "climber": "-5.933,1.554,-6 v-0.758,0,0 r0.067 path PathComplete c2",
-    "blocked": "-1.727,0.054,4.474 v1.734,0,-0.501 r12.59 path PathComplete c4"
+    "blocked": "-1.727,0.054,4.474 v1.734,0,-0.501 r12.59 path PathComplete c4",
+    "blocked.corners": "-1.727,0.054,4.474 3.5,0.137,3.5 6.5,0.137,3.5 8,0.093,7.5"
   },
   "agents.f201": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "3.035,0.054,-3.551 v2.739,0,2.172 r12.841 path PathComplete c4",
     "left": "5.417,0.054,-2.515 v2.437,-0.004,0.063 r0.583 path PathComplete c2",
     "right": "-4.402,0.054,-2.65 v-2.931,0,0.641 r1.636 path PathComplete c2",
@@ -2505,6 +2690,7 @@
   },
   "agents.f202": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "3.09,0.054,-3.507 v2.721,0,2.202 r12.771 path PathComplete c4",
     "left": "5.464,0.054,-2.514 v2.343,-0.003,0.061 r0.536 path PathComplete c2",
     "right": "-4.46,0.054,-2.637 v-2.931,0,0.641 r1.576 path PathComplete c2",
@@ -2514,6 +2700,7 @@
   },
   "agents.f203": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "3.145,0.054,-3.464 v2.737,0,2.174 r12.701 path PathComplete c4",
     "left": "5.509,0.054,-2.513 v2.249,-0.003,0.058 r0.491 path PathComplete c2",
     "right": "-4.519,0.054,-2.624 v-2.931,0,0.641 r1.516 path PathComplete c2",
@@ -2523,6 +2710,7 @@
   },
   "agents.f204": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "3.199,0.054,-3.42 v2.737,0,2.175 r12.631 path PathComplete c4",
     "left": "5.552,0.054,-2.512 v2.155,-0.003,0.056 r0.448 path PathComplete c2",
     "right": "-4.577,0.054,-2.611 v-2.931,0,0.641 r1.456 path PathComplete c2",
@@ -2532,6 +2720,7 @@
   },
   "agents.f205": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "3.254,0.054,-3.376 v2.719,0,2.204 r12.561 path PathComplete c4",
     "left": "5.593,0.054,-2.511 v2.06,-0.003,0.053 r0.407 path PathComplete c2",
     "right": "-4.636,0.054,-2.598 v-2.931,0,0.641 r1.396 path PathComplete c2",
@@ -2541,6 +2730,7 @@
   },
   "agents.f206": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "3.308,0.054,-3.332 v2.718,0,2.206 r12.491 path PathComplete c4",
     "left": "5.632,0.054,-2.51 v1.966,-0.003,0.051 r0.368 path PathComplete c2",
     "right": "-4.695,0.054,-2.586 v-2.931,0,0.641 r1.336 path PathComplete c2",
@@ -2550,6 +2740,7 @@
   },
   "agents.f207": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "3.363,0.054,-3.289 v2.735,0,2.177 r12.421 path PathComplete c4",
     "left": "5.67,0.054,-2.509 v1.871,-0.003,0.049 r0.33 path PathComplete c2",
     "right": "-4.753,0.054,-2.573 v-2.931,0,0.641 r1.276 path PathComplete c2",
@@ -2559,6 +2750,7 @@
   },
   "agents.f208": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "3.417,0.054,-3.245 v2.717,0,2.206 r12.351 path PathComplete c4",
     "left": "5.705,0.054,-2.508 v1.775,-0.003,0.046 r0.295 path PathComplete c2",
     "right": "-4.812,0.054,-2.56 v-2.931,0,0.641 r1.216 path PathComplete c2",
@@ -2568,6 +2760,7 @@
   },
   "agents.f209": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "3.472,0.054,-3.201 v2.734,0,2.179 r12.281 path PathComplete c4",
     "left": "5.739,0.054,-2.507 v1.68,-0.002,0.044 r0.261 path PathComplete c2",
     "right": "-4.87,0.054,-2.547 v-2.931,0,0.641 r1.156 path PathComplete c2",
@@ -2577,6 +2770,7 @@
   },
   "agents.f210": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "3.526,0.054,-3.157 v2.716,0,2.207 r12.211 path PathComplete c4",
     "left": "5.771,0.054,-2.506 v1.584,-0.002,0.041 r0.229 path PathComplete c2",
     "right": "-4.929,0.054,-2.534 v-2.931,0,0.641 r1.096 path PathComplete c2",
@@ -2586,6 +2780,7 @@
   },
   "agents.f211": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "3.58,0.054,-3.113 v2.715,0,2.209 r12.141 path PathComplete c4",
     "left": "5.8,0.054,-2.505 v1.488,-0.002,0.039 r0.2 path PathComplete c2",
     "right": "-4.988,0.054,-2.521 v-2.931,0,0.641 r1.036 path PathComplete c2",
@@ -2595,6 +2790,7 @@
   },
   "agents.f212": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "3.635,0.054,-3.069 v2.732,0,2.18 r12.071 path PathComplete c4",
     "left": "5.828,0.054,-2.504 v1.392,-0.002,0.036 r0.172 path PathComplete c2",
     "right": "-5.046,0.054,-2.509 v-2.931,0,0.641 r0.976 path PathComplete c2",
@@ -2604,6 +2800,7 @@
   },
   "agents.f213": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "3.69,0.054,-3.025 v2.732,0,2.18 r12.002 path PathComplete c4",
     "left": "5.854,0.054,-2.504 v1.295,-0.002,0.034 r0.146 path PathComplete c2",
     "right": "-5.105,0.054,-2.496 v-2.931,0,0.641 r0.916 path PathComplete c2",
@@ -2613,6 +2810,7 @@
   },
   "agents.f214": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "3.744,0.054,-2.982 v2.731,0,2.182 r11.932 path PathComplete c4",
     "left": "5.878,0.054,-2.503 v1.197,-0.002,0.031 r0.122 path PathComplete c2",
     "right": "-5.162,0.054,-2.483 v-2.841,0,0.621 r0.858 path PathComplete c2",
@@ -2622,6 +2820,7 @@
   },
   "agents.f215": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "3.799,0.054,-2.938 v2.729,0,2.185 r11.862 path PathComplete c4",
     "left": "5.9,0.054,-2.503 v1.099,-0.002,0.029 r0.1 path PathComplete c2",
     "right": "-5.217,0.054,-2.471 v-2.75,0,0.602 r0.802 path PathComplete c2",
@@ -2631,6 +2830,7 @@
   },
   "agents.f216": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "3.853,0.054,-2.894 v2.727,0,2.187 r11.792 path PathComplete c4",
     "left": "5.92,0.054,-2.502 v1,-0.001,0.026 r0.08 path PathComplete c2",
     "right": "-5.27,0.054,-2.46 v-2.66,0,0.582 r0.747 path PathComplete c2",
@@ -2640,6 +2840,7 @@
   },
   "agents.f217": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "3.908,0.054,-2.85 v2.707,0,2.219 r11.722 path PathComplete c4",
     "left": "5.938,0.054,-2.502 v0.9,-0.001,0.023 r0.062 path PathComplete c2",
     "right": "-5.321,0.054,-2.448 v-2.57,0,0.562 r0.695 path PathComplete c2",
@@ -2649,6 +2850,7 @@
   },
   "agents.f218": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "3.962,0.054,-2.806 v2.722,0,2.193 r11.652 path PathComplete c4",
     "left": "5.954,0.054,-2.501 v0.799,-0.001,0.021 r0.046 path PathComplete c2",
     "right": "-5.371,0.054,-2.438 v-2.479,0,0.542 r0.644 path PathComplete c2",
@@ -2658,6 +2860,7 @@
   },
   "agents.f219": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "4.016,0.054,-2.762 v2.721,0,2.194 r11.582 path PathComplete c4",
     "left": "5.968,0.054,-2.501 v0.696,-0.001,0.018 r0.032 path PathComplete c2",
     "right": "-5.419,0.054,-2.427 v-2.389,0,0.523 r0.595 path PathComplete c2",
@@ -2667,6 +2870,7 @@
   },
   "agents.f220": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "4.071,0.054,-2.718 v2.718,0,2.198 r11.512 path PathComplete c4",
     "left": "5.98,0.054,-2.501 v0.591,-0.001,0.015 r0.02 path PathComplete c2",
     "right": "-5.465,0.054,-2.417 v-2.298,0,0.503 r0.548 path PathComplete c2",
@@ -2676,6 +2880,7 @@
   },
   "agents.f221": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "4.125,0.054,-2.675 v2.724,0,2.171 r11.442 path PathComplete c4",
     "left": "5.989,0.054,-2.5 v0.482,-0.001,0.013 r0.011 path PathComplete c2",
     "right": "-5.509,0.054,-2.407 v-2.207,0,0.483 r0.503 path PathComplete c2",
@@ -2685,6 +2890,7 @@
   },
   "agents.f222": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "4.18,0.054,-2.631 v2.719,0,2.177 r11.373 path PathComplete c4",
     "left": "5.997,0.054,-2.5 v0.368,-0.001,0.01 r0.003 path PathComplete c2",
     "right": "-5.551,0.054,-2.398 v-2.116,0,0.463 r0.46 path PathComplete c2",
@@ -2694,6 +2900,7 @@
   },
   "agents.f223": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "4.234,0.054,-2.587 v2.707,0,2.192 r11.303 path PathComplete c4",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.592,0.054,-2.389 v-2.025,0,0.443 r0.418 path PathComplete c2",
@@ -2703,6 +2910,7 @@
   },
   "agents.f224": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "4.288,0.054,-2.543 v2.689,0,2.214 r11.234 path PathComplete c4",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.63,0.054,-2.381 v-1.934,0,0.423 r0.378 path PathComplete c2",
@@ -2712,6 +2920,7 @@
   },
   "agents.f225": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "4.341,0.054,-2.498 v2.658,0,2.251 r11.164 path PathComplete c3",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.667,0.054,-2.373 v-1.842,0,0.403 r0.341 path PathComplete c2",
@@ -2721,6 +2930,7 @@
   },
   "agents.f226": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "4.392,0.054,-2.451 v2.576,0,2.345 r11.095 path PathComplete c3",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.702,0.054,-2.365 v-1.75,0,0.383 r0.305 path PathComplete c2",
@@ -2730,6 +2940,7 @@
   },
   "agents.f227": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "4.442,0.054,-2.402 v2.475,0,2.469 r11.025 path PathComplete c3",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.735,0.054,-2.358 v-1.658,0,0.363 r0.271 path PathComplete c2",
@@ -2739,6 +2950,7 @@
   },
   "agents.f228": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "4.49,0.054,-2.352 v2.429,0,2.52 r10.955 path PathComplete c3",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.767,0.054,-2.351 v-1.566,0,0.343 r0.239 path PathComplete c2",
@@ -2748,6 +2960,7 @@
   },
   "agents.f229": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "4.539,0.054,-2.301 v2.419,0,2.53 r10.885 path PathComplete c3",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.796,0.054,-2.345 v-1.473,0,0.322 r0.209 path PathComplete c2",
@@ -2757,6 +2970,7 @@
   },
   "agents.f230": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "4.587,0.054,-2.25 v2.416,0,2.533 r10.815 path PathComplete c3",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.824,0.054,-2.339 v-1.38,0,0.302 r0.18 path PathComplete c2",
@@ -2766,6 +2980,7 @@
   },
   "agents.f231": {
     "dt": 0.0199999921,
+    "holes": "u010 l010",
     "walker": "4.635,0.054,-2.2 v2.415,0,2.534 r10.745 path PathComplete c3",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.849,0.054,-2.333 v-1.287,0,0.282 r0.154 path PathComplete c2",
@@ -2775,6 +2990,7 @@
   },
   "agents.f232": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "4.684,0.054,-2.149 v2.414,0,2.534 r10.677 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.873,0.054,-2.328 v-1.193,0,0.261 r0.13 path PathComplete c2",
@@ -2784,6 +3000,7 @@
   },
   "agents.f233": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "4.732,0.054,-2.098 v2.413,0,2.535 r10.614 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.895,0.054,-2.323 v-1.098,0,0.24 r0.107 path PathComplete c2",
@@ -2793,6 +3010,7 @@
   },
   "agents.f234": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "4.777,0.054,-2.046 v2.275,0,2.617 r10.55 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.915,0.054,-2.319 v-1.003,0,0.219 r0.087 path PathComplete c2",
@@ -2802,6 +3020,7 @@
   },
   "agents.f235": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "4.82,0.054,-1.992 v2.138,0,2.699 r10.486 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.933,0.054,-2.315 v-0.907,0,0.198 r0.068 path PathComplete c2",
@@ -2811,6 +3030,7 @@
   },
   "agents.f236": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "4.86,0.054,-1.936 v2,0,2.781 r10.421 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.95,0.054,-2.311 v-0.81,0,0.177 r0.052 path PathComplete c2",
@@ -2820,6 +3040,7 @@
   },
   "agents.f237": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "4.897,0.054,-1.879 v1.863,0,2.862 r10.355 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.964,0.054,-2.308 v-0.711,0,0.156 r0.037 path PathComplete c2",
@@ -2829,6 +3050,7 @@
   },
   "agents.f238": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "4.932,0.054,-1.82 v1.725,0,2.943 r10.288 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.976,0.054,-2.305 v-0.611,0,0.134 r0.024 path PathComplete c2",
@@ -2838,6 +3060,7 @@
   },
   "agents.f239": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "4.964,0.054,-1.76 v1.587,0,3.024 r10.221 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.986,0.054,-2.303 v-0.507,0,0.111 r0.014 path PathComplete c2",
@@ -2847,6 +3070,7 @@
   },
   "agents.f240": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "4.993,0.054,-1.698 v1.448,0,3.105 r10.153 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-5.994,0.054,-2.301 v-0.4,0,0.087 r0.006 PathComplete c2",
@@ -2856,6 +3080,7 @@
   },
   "agents.f241": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "5.019,0.054,-1.634 v1.31,0,3.185 r10.085 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-6,0.054,-2.3 v0,0,0 r0 PathComplete c1",
@@ -2865,6 +3090,7 @@
   },
   "agents.f242": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "5.042,0.054,-1.569 v1.171,0,3.265 r10.015 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-6,0.054,-2.3 v0,0,0 r0 PathComplete c1",
@@ -2874,6 +3100,7 @@
   },
   "agents.f243": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "5.063,0.054,-1.502 v1.035,0,3.344 r9.945 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-6,0.054,-2.3 v0,0,0 r0 PathComplete c1",
@@ -2883,6 +3110,7 @@
   },
   "agents.f244": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "5.084,0.054,-1.435 v1.034,0,3.344 r9.875 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-6,0.054,-2.3 v0,0,0 r0 PathComplete c1",
@@ -2892,6 +3120,7 @@
   },
   "agents.f245": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "5.104,0.054,-1.368 v1.034,0,3.344 r9.805 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-6,0.054,-2.3 v0,0,0 r0 PathComplete c1",
@@ -2901,6 +3130,7 @@
   },
   "agents.f246": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "5.125,0.054,-1.301 v1.034,0,3.344 r9.735 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-6,0.054,-2.3 v0,0,0 r0 PathComplete c1",
@@ -2910,6 +3140,7 @@
   },
   "agents.f247": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "5.146,0.054,-1.234 v1.034,0,3.344 r9.665 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-6,0.054,-2.3 v0,0,0 r0 PathComplete c1",
@@ -2919,6 +3150,7 @@
   },
   "agents.f248": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "5.166,0.054,-1.167 v1.034,0,3.344 r9.595 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-6,0.054,-2.3 v0,0,0 r0 PathComplete c1",
@@ -2928,6 +3160,7 @@
   },
   "agents.f249": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "5.187,0.054,-1.1 v1.034,0,3.344 r9.525 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-6,0.054,-2.3 v0,0,0 r0 PathComplete c1",
@@ -2937,6 +3170,7 @@
   },
   "agents.f250": {
     "dt": 0.0199999921,
+    "holes": "u011 l011",
     "walker": "5.208,0.054,-1.034 v1.034,0,3.344 r9.455 path PathComplete c2",
     "left": "6,0.054,-2.5 v0,0,0 r0 PathComplete c1",
     "right": "-6,0.054,-2.3 v0,0,0 r0 PathComplete c1",
