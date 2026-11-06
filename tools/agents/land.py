@@ -17,6 +17,9 @@ unchanged, therefore does not rebuild. Landing holds one machine-wide lock while
 Gate:
   - the oracle guard (tools/agents/oracle_guard.py);
   - the release build, which fails on "WITHOUT compatibility stubs";
+  - when managed/ or the compatibility profile changed: `$UNBOUND gen-stubs` with the gate's own
+    build, which fails when the hand-written code does not build without stubs or when the
+    generator's output differs from the committed managed/UnityEngine/Generated/ (restored after);
   - managed unit tests, where only failures not listed in known-test-failures.txt count;
   - Rust tests of the touched crates;
   - each --probe command, which must exit 0. $UNBOUND names the built CLI.
@@ -36,6 +39,7 @@ import datetime
 import fcntl
 import hashlib
 import json
+import mmap
 import os
 from pathlib import Path
 import re
@@ -45,10 +49,15 @@ import sys
 import time
 import xml.etree.ElementTree as ET
 
-GATE_VERSION = '1'
+GATE_VERSION = '2'
 STATE = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/agents'
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 DOCS_ONLY = re.compile(r'(\.md$)|(^docs/)')
+GENERATED = 'managed/UnityEngine/Generated'
+# What the generated stubs are made from: the hand-written API and the generator (managed/), and
+# the profile's stub family and platform modules (unbound-compat).
+STUB_INPUTS = re.compile(r'^(managed/|crates/unbound-compat/)')
+STUB_PROJECT = 'tests/projects/packages'
 HERE = Path(__file__).resolve().parent
 
 
@@ -135,6 +144,9 @@ class Gate:
                 die(5, 'the managed engine was built WITHOUT compatibility stubs: run '
                        '`$UNBOUND gen-stubs -p tests/projects/packages`, commit, land again')
 
+        if self.full or any(STUB_INPUTS.match(path) for path in changed):
+            self.stubs(Path(self.env['UNBOUND']))
+
         self.managed_tests(target)
 
         crates = self.touched_crates(changed)
@@ -146,6 +158,40 @@ class Gate:
         for index, probe in enumerate(self.probes, 1):
             if self.step(f'probe {index}: {probe[:80]}', probe, shell=True):
                 self.fail(f'probe {index}')
+
+    def stubs(self, cli):
+        """gen-stubs with the gate's build: the hand-written code must build without stubs and the
+        generator must reproduce the committed Generated/ tree. gen-stubs writes into the checkout
+        the CLI was compiled from, so it runs only when that is this worktree; Generated/ is
+        restored afterwards either way."""
+        source = str(self.worktree/'managed/UnityEngine').encode()
+        with open(cli, 'rb') as binary, mmap.mmap(binary.fileno(), 0, access=mmap.ACCESS_READ) as image:
+            if image.find(source) < 0:
+                die(5, f'{cli} was not compiled from this worktree ({self.worktree}): its gen-stubs would '
+                       'write into another checkout; rebuild without a shared compiler cache result')
+        command = [str(cli), 'gen-stubs', '-p', STUB_PROJECT]
+        if LAUNCHER.is_file():
+            command = [str(LAUNCHER), '--kind', 'build', *command]
+        env = dict(self.env)
+        env.pop('UNBOUND_MANAGED_DIR', None)  # the build's own managed engine, next to the CLI
+        try:
+            code = self.step('generated stubs', command, env=env)
+            drift = git('status', '--porcelain', '--untracked-files=all', '--', GENERATED, cwd=self.worktree)
+            if drift:
+                with self.log.open('a') as out:
+                    out.write(f'\n=== {GENERATED} after gen-stubs:\n{drift}\n'
+                              + git('diff', '--stat', '--', GENERATED, cwd=self.worktree) + '\n')
+        finally:
+            git('checkout', '--', GENERATED, cwd=self.worktree)
+            git('clean', '-fdq', '--', GENERATED, cwd=self.worktree)
+        if code:
+            print(tail(self.log), file=sys.stderr)
+            die(5, 'gate failed at generated stubs: gen-stubs failed (does the hand-written code build '
+                   f'with -p:UnboundNoStubs=true?); full log: {self.log}')
+        if drift:
+            listing = '\n  '.join(drift.splitlines()[:20])
+            die(5, f'gate failed at generated stubs: {GENERATED}/ is not what gen-stubs generates:\n  {listing}\n'
+                   f'Run `$UNBOUND gen-stubs -p {STUB_PROJECT}`, commit the result, land again; full log: {self.log}')
 
     def managed_tests(self, target):
         dotnet = Path.home()/'.dotnet/dotnet'
