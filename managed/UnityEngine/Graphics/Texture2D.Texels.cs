@@ -69,11 +69,11 @@ namespace Unbound.Runtime
         static int Quantize(float v, int max) => (int)Math.Floor(Mathf.Clamp01(v) * max + 0.5f);
         static int Norm16Of(float v) => (int)Math.Round(v * 65535.0);
 
-        /// <summary>A 16-bit cell from its channels' values (channels the format lacks 1).</summary>
-        static Color Norm16Cell(TextureFormat format, Func<int, int> channel)
+        /// <summary>The 16-bit cell of a color's nearest steps (channels the format lacks 1).</summary>
+        static Color Norm16Cell(TextureFormat format, Color c)
         {
             var cell = new Color(1f, 1f, 1f, 1f);
-            for (int k = 0; k < Norm16Channels(format); k++) cell[k] = channel(k) / 65535f;
+            for (int k = 0; k < Norm16Channels(format); k++) cell[k] = Quantize(c[k], 65535) / 65535f;
             return cell;
         }
 
@@ -114,7 +114,7 @@ namespace Unbound.Runtime
 
         /// <summary>The float cell a set color becomes (16-bit channels: the nearest value).</summary>
         internal static Color QuantizeFloat(TextureFormat format, Color c) =>
-            Norm16(format) ? Norm16Cell(format, k => Quantize(c[k], 65535)) : PixelFormats.QuantizeFloat(format, c);
+            Norm16(format) ? Norm16Cell(format, c) : PixelFormats.QuantizeFloat(format, c);
 
         internal static Color32 DecodeCell(TextureFormat format, ReadOnlySpan<byte> t)
         {
@@ -165,8 +165,9 @@ namespace Unbound.Runtime
         {
             if (Norm16(format))
             {
-                var bytes = t.ToArray();
-                return Norm16Cell(format, k => bytes[2 * k] | bytes[2 * k + 1] << 8);
+                var cell = new Color(1f, 1f, 1f, 1f);
+                for (int k = 0; k < Norm16Channels(format); k++) cell[k] = (t[2 * k] | t[2 * k + 1] << 8) / 65535f;
+                return cell;
             }
             return PixelFormats.QuantizeFloat(format, PixelFormats.DecodeFloatTexel(format, t));
         }

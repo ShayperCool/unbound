@@ -234,8 +234,9 @@ namespace Unbound.Runtime
             && GraphicsFormatUtility.GetBlockSize(format) == GraphicsFormatUtility.GetComponentCount(format);
 
         /// <summary>Sources whose missing channels read as 1 when converted (measured: R16 and RG32
-        /// targets and textures into RGBAFloat read (r, 1, 1, 1) and (r, g, 1, 1),
-        /// tests/projects/textureformats .asyncfloat).</summary>
+        /// render targets read into RGBAFloat as (r, 1, 1, 1) and (r, g, 1, 1),
+        /// tests/projects/textureformats rt.*.asyncfloat; Texture2D sources and other destination
+        /// formats follow the same rule unmeasured).</summary>
         static bool MissingChannelsReadAsOne(GraphicsFormat format) =>
             format is GraphicsFormat.R16_UNorm or GraphicsFormat.R16G16_UNorm;
 
