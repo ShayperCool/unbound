@@ -1,0 +1,4 @@
+{
+  "commands": ["python3 tests/projects/spriteassets/run.py check"],
+  "summary": "spriteassets: \\d+ values, 0 differences"
+}
