@@ -51,6 +51,16 @@ imported without keyframe reduction.
   degrees at the start) and `FeetRight` (Y based upon the feet, foot goal curves with the right foot
   lower). An exception in one of these clips or plays is recorded as `<key>.exception` and the
   probe goes on.
+- mirrored states on HumanA (`ProbeRunner.MirrorStates`), recorded like the settings plays:
+  HumanA's clip on a mirrored state (`stateMirror`), the Mirror, Offset and BakeOnce clips on one
+  (`stateMirrorClip`, `stateMirrorOffset`, `stateMirrorOnce`), HumanB's clip (2/3 s) on one
+  (`stateMirrorB`), with a state cycle offset of 0.25 (`stateMirrorCycle`), a state whose mirror is
+  on but driven by the bool parameter Mirror, set at step 8 and cleared at step 18
+  (`stateMirrorParam`), a 1D tree of A and B with B's child mirrored, on a plain and on a mirrored
+  state (`treeMirror`, `treeMirrorState`), B mirrored on an additive layer of weight 0.6
+  (`additiveMirror`), a transition from A to A mirrored (exit time 0.25, 0.3 s:
+  `transitionMirror`), and the IK pass of `ik` on a mirrored state and with the Mirror clip
+  (`ikMirror`, `ikClipMirror`).
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:

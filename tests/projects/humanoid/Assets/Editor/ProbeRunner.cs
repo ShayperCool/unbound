@@ -56,6 +56,7 @@ public static class ProbeRunner
             Blends();
             SettingsControllers();
             MuscleClips();
+            MirrorStates();
             AssetDatabase.SaveAssets();
         }
         catch (System.Exception e)
@@ -361,6 +362,108 @@ public static class ProbeRunner
             blend.AddChild(a, 0f);
             blend.AddChild(b, 1f);
             EditorUtility.SetDirty(controller);
+        }
+    }
+
+    /// <summary>Mirrored states on HumanA (A: its clip, B: HumanB's): HumanStateMirror (A, the
+    /// state's mirror on), HumanStateMirrorClip (the Mirror clip on a mirrored state),
+    /// HumanStateMirrorOffset (the Offset clip mirrored), HumanStateMirrorB (B, 2/3 s long, mirrored),
+    /// HumanStateMirrorOnce (the BakeOnce clip, no loop time, mirrored), HumanStateMirrorCycle (A
+    /// mirrored with a state cycle offset of 0.25), HumanStateMirrorParam (A with mirror on
+    /// and the bool parameter Mirror, default off, as its mirror parameter), HumanTreeMirror (a 1D
+    /// tree of A at 0 and B mirrored at 1, blend 0.35), HumanTreeMirrorState (that tree on a
+    /// mirrored state), HumanAdditiveMirror (A, B mirrored on an additive layer of weight 0.6),
+    /// HumanTransitionMirror (A, then A mirrored after an exit time of 0.25 over 0.3 s),
+    /// HumanAIKMirror (A mirrored on a layer with an IK pass) and HumanAIKClipMirror (the Mirror
+    /// clip on a layer with an IK pass).</summary>
+    static void MirrorStates()
+    {
+        var a = ClipOf("HumanA");
+        var b = ClipOf("HumanB");
+        AnimatorController Make(string name)
+        {
+            var path = Dir + name + ".controller";
+            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(path) != null) return null;
+            return AnimatorController.CreateAnimatorControllerAtPath(path);
+        }
+        void Single(string name, AnimationClip clip, bool ik = false, System.Action<AnimatorController, AnimatorState> set = null)
+        {
+            var controller = Make(name);
+            if (controller == null) return;
+            var state = controller.layers[0].stateMachine.AddState("A");
+            state.motion = clip;
+            state.mirror = true;
+            if (ik)
+            {
+                var layers = controller.layers;
+                layers[0].iKPass = true;
+                controller.layers = layers;
+            }
+            set?.Invoke(controller, state);
+            EditorUtility.SetDirty(controller);
+        }
+        Single("HumanStateMirror", a);
+        Single("HumanStateMirrorClip", ClipOf("HumanA", "Mirror"));
+        Single("HumanStateMirrorOffset", ClipOf("HumanA", "Offset"));
+        Single("HumanStateMirrorParam", a, set: (controller, state) =>
+        {
+            controller.AddParameter("Mirror", AnimatorControllerParameterType.Bool);
+            state.mirrorParameterActive = true;
+            state.mirrorParameter = "Mirror";
+        });
+        Single("HumanStateMirrorB", b);
+        Single("HumanStateMirrorOnce", ClipOf("HumanA", "BakeOnce"));
+        Single("HumanStateMirrorCycle", a, set: (_, state) => state.cycleOffset = 0.25f);
+        Single("HumanAIKMirror", a, ik: true);
+        Single("HumanAIKClipMirror", ClipOf("HumanA", "Mirror"), ik: true, set: (_, state) => state.mirror = false);
+        foreach (var (name, mirrored) in new[] { ("HumanTreeMirror", false), ("HumanTreeMirrorState", true) })
+        {
+            var controller = Make(name);
+            if (controller == null) continue;
+            controller.AddParameter("Blend", AnimatorControllerParameterType.Float);
+            var parameters = controller.parameters;
+            parameters[0].defaultFloat = 0.35f;
+            controller.parameters = parameters;
+            var state = controller.CreateBlendTreeInController("Tree", out var blend, 0);
+            state.mirror = mirrored;
+            blend.blendParameter = "Blend";
+            blend.AddChild(a, 0f);
+            blend.AddChild(b, 1f);
+            var children = blend.children;
+            children[1].mirror = true;
+            blend.children = children;
+            EditorUtility.SetDirty(controller);
+        }
+        var additive = Make("HumanAdditiveMirror");
+        if (additive != null)
+        {
+            additive.layers[0].stateMachine.AddState("A").motion = a;
+            additive.AddLayer("B");
+            var layers = additive.layers;
+            layers[1].blendingMode = AnimatorLayerBlendingMode.Additive;
+            layers[1].defaultWeight = 0.6f;
+            additive.layers = layers;
+            var state = additive.layers[1].stateMachine.AddState("B");
+            state.motion = b;
+            state.mirror = true;
+            EditorUtility.SetDirty(additive);
+        }
+        var transition = Make("HumanTransitionMirror");
+        if (transition != null)
+        {
+            var machine = transition.layers[0].stateMachine;
+            var first = machine.AddState("A");
+            first.motion = a;
+            var second = machine.AddState("AMirror");
+            second.motion = a;
+            second.mirror = true;
+            machine.defaultState = first;
+            var t = first.AddTransition(second);
+            t.hasExitTime = true;
+            t.exitTime = 0.25f;
+            t.hasFixedDuration = true;
+            t.duration = 0.3f;
+            EditorUtility.SetDirty(transition);
         }
     }
 

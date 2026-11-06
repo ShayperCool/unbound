@@ -210,7 +210,8 @@ public class HumanoidProbe : MonoBehaviour
 
     /// <summary>Plays a controller on a fresh instance of a rig: Update(0), then 24 steps of 1/30 s
     /// and four of 0.1 s.</summary>
-    static void Play(string key, string rig, string controller, Action<Animator> setup = null, bool motion = false, bool locals = true)
+    static void Play(string key, string rig, string controller, Action<Animator> setup = null, bool motion = false, bool locals = true,
+        Action<Animator, int> beforeStep = null)
     {
         var instance = Instantiate(Resources.Load<GameObject>(rig));
         var animator = instance.GetComponent<Animator>();
@@ -220,6 +221,7 @@ public class HumanoidProbe : MonoBehaviour
         for (int step = 0; step <= 28; step++)
         {
             s_IKKey = key + ".step" + step;
+            beforeStep?.Invoke(animator, step);
             animator.Update(step == 0 ? 0f : step <= 24 ? 1f / 30f : 0.1f);
             Step(key + ".step" + step, animator, handler, locals);
             if (motion) Motion(key + ".step" + step, animator);
@@ -310,6 +312,18 @@ public class HumanoidProbe : MonoBehaviour
                 Guarded("anim." + name, () => Clip("anim." + name, Resources.Load<AnimationClip>(name)));
                 Guarded("settings" + name, () => Play("settings" + name, "HumanA", "Human" + name, motion: true, locals: false));
             }
+            // Mirrored states (ProbeRunner.MirrorStates); the mirror parameter turns on at step 8
+            // and off at step 18.
+            foreach (var name in new[] { "StateMirror", "StateMirrorClip", "StateMirrorOffset", "StateMirrorB", "StateMirrorOnce", "StateMirrorCycle", "TreeMirror", "TreeMirrorState",
+                         "AdditiveMirror", "TransitionMirror" })
+                Guarded(char.ToLowerInvariant(name[0]) + name.Substring(1), () =>
+                    Play(char.ToLowerInvariant(name[0]) + name.Substring(1), "HumanA", "Human" + name, motion: true, locals: false));
+            Guarded("stateMirrorParam", () => Play("stateMirrorParam", "HumanA", "HumanStateMirrorParam", motion: true, locals: false,
+                beforeStep: (animator, step) => { if (step == 8 || step == 18) animator.SetBool("Mirror", step == 8); }));
+            Guarded("ikMirror", () => Play("ikMirror", "HumanA", "HumanAIKMirror", animator => animator.gameObject.AddComponent<HumanoidIK>(),
+                motion: true, locals: false));
+            Guarded("ikClipMirror", () => Play("ikClipMirror", "HumanA", "HumanAIKClipMirror", animator => animator.gameObject.AddComponent<HumanoidIK>(),
+                motion: true, locals: false));
         }
         catch (Exception e)
         {
