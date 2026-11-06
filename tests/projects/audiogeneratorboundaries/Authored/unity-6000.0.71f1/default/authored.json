@@ -57,7 +57,8 @@
   "Assets/Editor/ProbeRunner.cs": "552c828184ced12250ee1aef5825effd380de63db131efca2c9a37d4cc2e4a8a",
   "Assets/Scripts/GeneratorBoundaryProbe.cs": "01e9abf593f56e50ad6cf940f78b198d52fe2def5d2b28b985e1cf3251538d40",
   "Packages/manifest.json": "86577de3e8b3b1d8925d7d77df7880352ee16a5ed0d4e06447d1a54c19b9e76d",
-  "ProjectSettings/ProjectVersion.txt": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a"
+  "ProjectSettings/ProjectVersion.txt": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a",
+  "tests/projects/audiogeneratorboundaries/run.py": "922893d010b311a0831ed00a4fd7715655e98a5d05987a4da1f3ca6719dbcb5d"
  },
  "format": 1,
  "probe": "audiogeneratorboundaries",

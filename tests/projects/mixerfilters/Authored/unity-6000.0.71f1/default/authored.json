@@ -85,7 +85,8 @@
   "Assets/Scripts/FilterProbe.cs": "13e25afe96a32729b71efe2270c066c4f0b7f540217ab576761329b80219df27",
   "Assets/Scripts/RendererApiProbe.cs": "6817bca05cd01ab7086e0ac835b1d314a6b4e50de89873f8712542c400c55f46",
   "Packages/manifest.json": "86577de3e8b3b1d8925d7d77df7880352ee16a5ed0d4e06447d1a54c19b9e76d",
-  "ProjectSettings/ProjectVersion.txt": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a"
+  "ProjectSettings/ProjectVersion.txt": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a",
+  "tests/projects/mixerfilters/native.py": "82064f30bdf2820983586fe3611a16725420abc468b4361844737523eceef4c1"
  },
  "format": 1,
  "probe": "mixerfilters",

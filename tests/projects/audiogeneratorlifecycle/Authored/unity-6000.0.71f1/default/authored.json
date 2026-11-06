@@ -37,7 +37,8 @@
   "Assets/Editor/ProbeRunner.cs": "7b892c2723e2456cdc805db67d2cfacf63b32b4beecfbe91987aae82511d9871",
   "Assets/Scripts/GeneratorLifecycleProbe.cs": "aec4fda46e62f720dd7dc7b847ef42b23a17183270321018260c03f0f7f7518b",
   "Packages/manifest.json": "86577de3e8b3b1d8925d7d77df7880352ee16a5ed0d4e06447d1a54c19b9e76d",
-  "ProjectSettings/ProjectVersion.txt": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a"
+  "ProjectSettings/ProjectVersion.txt": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a",
+  "tests/projects/audiogeneratorlifecycle/run.py": "c15cd4f3779d50ddf2dacd898274a4904311df7574cfa715fbd049d8ff7beecd"
  },
  "format": 1,
  "probe": "audiogeneratorlifecycle",

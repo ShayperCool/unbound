@@ -105,7 +105,8 @@
   "Assets/Editor/ProbeRunner.cs": "1ded6d96c9d5db6618053421b608e8b806c7d563dce688f9f17a0ccf60c17406",
   "Assets/Scripts/EchoProbe.cs": "73aff9b3eec1efab44f6330290d3711b3aa003a0cd299451dec58f831b2b870b",
   "Packages/manifest.json": "86577de3e8b3b1d8925d7d77df7880352ee16a5ed0d4e06447d1a54c19b9e76d",
-  "ProjectSettings/ProjectVersion.txt": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a"
+  "ProjectSettings/ProjectVersion.txt": "03282bc6dd30504666a9e67cce65afe9bac94643abcc8f1e62ddf9cf75017c6a",
+  "tests/projects/mixerecho/native.py": "3fc72d0a59eb0b59a7cc853f1c28cfcdc13e22bd6b6da650abee79335aea10cc"
  },
  "format": 1,
  "probe": "mixerecho",

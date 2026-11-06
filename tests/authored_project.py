@@ -10,12 +10,12 @@ ProjectSettings, .meta GUIDs) in the same private project in which they capture 
 reference. Their engine runs need that project. `record` keeps every file of such a project's
 Assets/, Packages/ and ProjectSettings/ that the Editor created or changed, under
 tests/projects/<probe>/Authored/unity-<release>/<set>/, with authored.json: the command that
-authored it and the SHA-256 of every fixture file it started from. These are authored inputs, not
+authored it and the SHA-256 of every fixture file it started from and of its authoring driver. These are authored inputs, not
 run output; the capture made in the same Editor session stays in the cache.
 
 `assemble` copies the fixture's Assets/, Packages/ and ProjectSettings/ to a new directory and
-overlays the set: the project the Editor would have authored. It refuses a set whose fixture
-hashes no longer match (a stale set is never used): re-run the recorded command in a fresh cache
+overlays the set: the project the Editor would have authored. It refuses a set whose fixture or
+driver hashes no longer match (a stale set is never used): re-run the recorded command in a fresh cache
 directory and `record` its project again. `check` verifies every set (or those of PROBE).
 """
 import argparse
@@ -40,6 +40,18 @@ def files(root):
     return out
 
 
+def inputs(probe, command):
+    """The fixture files and the authoring driver named in command (it chooses the authored cases)."""
+    out = files(PROJECTS/probe)
+    for word in command.split():
+        if word.startswith('tests/projects/') and word.endswith('.py'):
+            driver = PROJECTS.parent.parent/word
+            if not driver.is_file():
+                raise SystemExit(f'{probe}: authoring driver {word} does not exist')
+            out[word] = hashlib.sha256(driver.read_bytes()).hexdigest()
+    return out
+
+
 def set_dir(probe, release, name):
     return PROJECTS/probe/'Authored'/('unity-'+release)/name
 
@@ -53,11 +65,11 @@ def stale(probe, release, name):
     manifest = json.loads(manifest_path.read_text())
     if manifest.get('format') != FORMAT or manifest.get('release') != release:
         return f'{manifest_path}: format {manifest.get("format")} release {manifest.get("release")}'
-    current = files(PROJECTS/probe)
+    current = inputs(probe, manifest['command'])
     recorded = manifest['fixture']
     changed = sorted(k for k in current.keys() | recorded.keys() if current.get(k) != recorded.get(k))
     if changed:
-        return (f'{probe}/{name}: the fixture changed since the set was authored ({", ".join(changed[:8])}'
+        return (f'{probe}/{name}: the fixture or its driver changed since the set was authored ({", ".join(changed[:8])}'
                 f'{", ..." if len(changed) > 8 else ""}); re-run `{manifest["command"]}` in a fresh cache '
                 f'directory and record its project again')
     overlay = files(directory)
@@ -72,6 +84,9 @@ def record(probe, release, name, project, command):
     if (fixture/'ProjectSettings/ProjectVersion.txt').read_text().splitlines()[0] != 'm_EditorVersion: '+release:
         raise SystemExit(f'{probe}: the fixture is not release {release}')
     base, authored = files(fixture), files(project)
+    hashed = inputs(probe, command)
+    if hashed.keys() == base.keys():
+        raise SystemExit(f'{probe}: the command names no authoring driver under tests/projects/')
     removed = sorted(set(base) - set(authored))
     if removed:
         raise SystemExit(f'{project}: the Editor removed fixture files, which an overlay cannot express: {removed}')
@@ -84,7 +99,7 @@ def record(probe, release, name, project, command):
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(project/relative, target)
     manifest = {'format': FORMAT, 'release': release, 'probe': probe, 'set': name, 'command': command,
-                'fixture': base, 'files': keep}
+                'fixture': hashed, 'files': keep}
     (directory/'authored.json').write_text(json.dumps(manifest, indent=1, sort_keys=True)+'\n')
     print(f'{probe}/{name}: {len(keep)} authored files in {directory}')
 
