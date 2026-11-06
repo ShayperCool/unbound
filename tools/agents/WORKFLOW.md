@@ -70,7 +70,7 @@ Its full instructions are in [ORCHESTRATOR.md](ORCHESTRATOR.md).
      land again.
    - Exit 5 is a failed gate: fix it, land again.
    - When `managed/` or `crates/unbound-compat/` changed, the gate also runs the build's
-     `gen-stubs -p tests/projects/packages` (about a minute). It fails when the hand-written code
+     `gen-stubs -p tests/projects/packages` (about 30 s plus a wait for a tool slot). It fails when the hand-written code
      does not build without stubs or when `managed/UnityEngine/Generated/` differs from what the
      generator writes, and restores `Generated/` afterwards. Regenerate, commit, land again.
    - Never force-push and never bypass the gate.

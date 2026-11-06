@@ -164,14 +164,15 @@ class Gate:
         generator must reproduce the committed Generated/ tree. gen-stubs writes into the checkout
         the CLI was compiled from, so it runs only when that is this worktree; Generated/ is
         restored afterwards either way."""
-        source = str(self.worktree/'managed/UnityEngine').encode()
+        # The CLI finds managed/UnityEngine from its crate's compile-time CARGO_MANIFEST_DIR.
+        manifest = re.escape(str(self.worktree/'crates/unbound').encode()) + rb'(?![\w-])'
         with open(cli, 'rb') as binary, mmap.mmap(binary.fileno(), 0, access=mmap.ACCESS_READ) as image:
-            if image.find(source) < 0:
+            if not re.search(manifest, image):
                 die(5, f'{cli} was not compiled from this worktree ({self.worktree}): its gen-stubs would '
                        'write into another checkout; rebuild without a shared compiler cache result')
         command = [str(cli), 'gen-stubs', '-p', STUB_PROJECT]
-        if LAUNCHER.is_file():
-            command = [str(LAUNCHER), '--kind', 'build', *command]
+        if LAUNCHER.is_file():  # the launcher's kind for unbound subcommands other than run
+            command = [str(LAUNCHER), '--kind', 'tool', *command]
         env = dict(self.env)
         env.pop('UNBOUND_MANAGED_DIR', None)  # the build's own managed engine, next to the CLI
         try:

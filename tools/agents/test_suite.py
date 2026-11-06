@@ -156,8 +156,8 @@ class StubGateTests(unittest.TestCase):
 
     def gate(self, script, compiled_from=None):
         cli = Path(self.temp.name)/'unbound'
-        source = compiled_from or self.tree/'managed/UnityEngine'
-        cli.write_text(f'#!/bin/sh\n# compiled from {source}\n{script}\n')
+        source = compiled_from or self.tree/'crates/unbound'
+        cli.write_text(f'#!/bin/sh\n# {source}-host\n# {source}\n{script}\n')
         cli.chmod(0o755)
         gate = land.Gate(self.tree, 'HEAD', [], False, Path(self.temp.name)/'gate.log')
         return gate, cli
@@ -191,7 +191,10 @@ class StubGateTests(unittest.TestCase):
 
     def test_cli_from_another_checkout_is_not_run(self):
         marker = Path(self.temp.name)/'ran'
-        self.assertEqual(self.run_stubs(f'touch {marker}', compiled_from='/elsewhere/managed/UnityEngine'), 5)
+        self.assertEqual(self.run_stubs(f'touch {marker}', compiled_from='/elsewhere/crates/unbound'), 5)
+        self.assertFalse(marker.exists())
+        # Another crate's directory of this tree is not the CLI's own.
+        self.assertEqual(self.run_stubs(f'touch {marker}', compiled_from=self.tree/'crates/unbound-host'), 5)
         self.assertFalse(marker.exists())
 
 
