@@ -122,6 +122,72 @@ public static class ProbeRunner
             blend.AddChild(b, 1f);
             EditorUtility.SetDirty(tree);
         }
+        Masks(a, b);
+    }
+
+    /// <summary>The humanoid masks (no transforms): MaskNoRoot (every body part but Root), MaskUpper
+    /// (Body, Head, arms, fingers and hand IK) and MaskUpperRoot (MaskUpper and Root). For each mask,
+    /// HumanMask{Override,Additive}{mask} plays A with B on a layer of weight 0.5 (override) or 0.6
+    /// (additive) with the mask; HumanAdditiveTree plays A with a 1D blend tree of A at 0 and B at 1
+    /// (blend 0.35) on an additive layer of weight 0.6.</summary>
+    static void Masks(AnimationClip a, AnimationClip b)
+    {
+        var upper = new[] { AvatarMaskBodyPart.Body, AvatarMaskBodyPart.Head, AvatarMaskBodyPart.LeftArm, AvatarMaskBodyPart.RightArm,
+            AvatarMaskBodyPart.LeftFingers, AvatarMaskBodyPart.RightFingers, AvatarMaskBodyPart.LeftHandIK, AvatarMaskBodyPart.RightHandIK };
+        AvatarMask Mask(string name, System.Func<AvatarMaskBodyPart, bool> active)
+        {
+            var path = Dir + name + ".mask";
+            var mask = AssetDatabase.LoadAssetAtPath<AvatarMask>(path);
+            if (mask != null) return mask;
+            mask = new AvatarMask();
+            for (var part = AvatarMaskBodyPart.Root; part < AvatarMaskBodyPart.LastBodyPart; part++)
+                mask.SetHumanoidBodyPartActive(part, active(part));
+            AssetDatabase.CreateAsset(mask, path);
+            return mask;
+        }
+        var masks = new[]
+        {
+            ("NoRoot", Mask("MaskNoRoot", p => p != AvatarMaskBodyPart.Root)),
+            ("Upper", Mask("MaskUpper", p => System.Array.IndexOf(upper, p) >= 0)),
+            ("UpperRoot", Mask("MaskUpperRoot", p => p == AvatarMaskBodyPart.Root || System.Array.IndexOf(upper, p) >= 0)),
+        };
+        foreach (var (maskName, mask) in masks)
+            foreach (var (kind, mode, weight) in new[] { ("Override", AnimatorLayerBlendingMode.Override, 0.5f),
+                         ("Additive", AnimatorLayerBlendingMode.Additive, 0.6f) })
+            {
+                var path = Dir + "HumanMask" + kind + maskName + ".controller";
+                if (AssetDatabase.LoadAssetAtPath<AnimatorController>(path) != null) continue;
+                var controller = AnimatorController.CreateAnimatorControllerAtPath(path);
+                controller.layers[0].stateMachine.AddState("A").motion = a;
+                controller.AddLayer("B");
+                var layers = controller.layers;
+                layers[1].blendingMode = mode;
+                layers[1].defaultWeight = weight;
+                layers[1].avatarMask = mask;
+                controller.layers = layers;
+                controller.layers[1].stateMachine.AddState("B").motion = b;
+                EditorUtility.SetDirty(controller);
+            }
+        var treePath = Dir + "HumanAdditiveTree.controller";
+        if (AssetDatabase.LoadAssetAtPath<AnimatorController>(treePath) == null)
+        {
+            var controller = AnimatorController.CreateAnimatorControllerAtPath(treePath);
+            controller.AddParameter("Blend", AnimatorControllerParameterType.Float);
+            var parameters = controller.parameters;
+            parameters[0].defaultFloat = 0.35f;
+            controller.parameters = parameters;
+            controller.layers[0].stateMachine.AddState("A").motion = a;
+            controller.AddLayer("Tree");
+            var layers = controller.layers;
+            layers[1].blendingMode = AnimatorLayerBlendingMode.Additive;
+            layers[1].defaultWeight = 0.6f;
+            controller.layers = layers;
+            controller.CreateBlendTreeInController("Tree", out var blend, 1);
+            blend.blendParameter = "Blend";
+            blend.AddChild(a, 0f);
+            blend.AddChild(b, 1f);
+            EditorUtility.SetDirty(controller);
+        }
     }
 
     public static void Record()

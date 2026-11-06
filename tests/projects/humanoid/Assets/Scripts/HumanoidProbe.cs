@@ -272,6 +272,17 @@ public class HumanoidProbe : MonoBehaviour
             Play("blendAdditive", "HumanA", "HumanBlendAdditive", motion: true);
             Play("blendTree", "HumanA", "HumanBlendTree", motion: true);
             Play("blendTreeB", "HumanB", "HumanBlendTree", motion: true);
+            foreach (var mask in new[] { "NoRoot", "Upper", "UpperRoot" })
+            {
+                var asset = Resources.Load<AvatarMask>("Mask" + mask);
+                var parts = new List<string>();
+                for (var part = AvatarMaskBodyPart.Root; part < AvatarMaskBodyPart.LastBodyPart; part++)
+                    parts.Add(B(asset.GetHumanoidBodyPartActive(part)));
+                Put("mask" + mask, "{\"parts\":[" + string.Join(",", parts) + "],\"transformCount\":" + asset.transformCount + "}");
+                Play("maskOverride" + mask, "HumanA", "HumanMaskOverride" + mask, motion: true);
+                Play("maskAdditive" + mask, "HumanA", "HumanMaskAdditive" + mask, motion: true);
+            }
+            Play("additiveTree", "HumanA", "HumanAdditiveTree", motion: true);
         }
         catch (Exception e)
         {

@@ -31,6 +31,11 @@ imported without keyframe reduction.
   (exit time 0.25, 0.3 s), B on an override layer of weight 0.5, B on an additive layer of weight 0.6,
   and a 1D blend tree of A and B at 0.35 (also on HumanB), with `deltaPosition`, `deltaRotation`,
   `velocity`, `angularVelocity` and each layer's state time, transition and clip weights per step.
+- layer avatar masks over humanoid clips on HumanA: B on an override layer (0.5) and on an additive
+  layer (0.6) through three humanoid masks (no transforms), every body part but Root (`MaskNoRoot`),
+  only the upper body (Body, Head, arms, fingers, hand IK: `MaskUpper`) and the upper body with Root
+  (`MaskUpperRoot`), each mask's body parts read back; and a 1D blend tree of A and B (0.35) on an
+  additive layer of weight 0.6 (`additiveTree`), recorded like the blends above.
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:
