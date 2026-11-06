@@ -302,10 +302,10 @@ public class HumanoidProbe : MonoBehaviour
             }
             // HumanA's clip with non-default root settings (ProbeRunner.Settings).
             foreach (var name in new[] { "BakeRot", "BakeY", "BakeXZ", "OrigRot", "OrigXZ", "CoM", "Feet", "Offset", "LoopPose",
-                         "Mirror", "Cycle", "BakeAll", "BakeOrig", "BakeOffset", "BakeLoopPose", "OrigOnce", "BakeOnce" })
+                         "Mirror", "Cycle", "BakeAll", "BakeOrig", "BakeOffset", "BakeLoopPose", "OrigOnce", "BakeOnce", "MirrorOffset" })
                 Guarded("settings" + name, () => Play("settings" + name, "HumanA", "HumanSet" + name, motion: true, locals: false));
             // Humanoid .anim clips whose start and stop differ (ProbeRunner.MuscleClips).
-            foreach (var name in new[] { "LoopMuscles", "LoopMusclesBake", "MirrorMuscles" })
+            foreach (var name in new[] { "LoopMuscles", "LoopMusclesBake", "MirrorMuscles", "OrigTurned", "FeetRight" })
             {
                 Guarded("anim." + name, () => Clip("anim." + name, Resources.Load<AnimationClip>(name)));
                 Guarded("settings" + name, () => Play("settings" + name, "HumanA", "Human" + name, motion: true, locals: false));

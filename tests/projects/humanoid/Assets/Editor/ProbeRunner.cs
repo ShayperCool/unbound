@@ -93,6 +93,7 @@ public static class ProbeRunner
         ("BakeLoopPose", c => { c.lockRootRotation = true; c.lockRootHeightY = true; c.loopPose = true; }),
         ("OrigOnce", c => { c.loopTime = false; c.keepOriginalOrientation = true; c.keepOriginalPositionXZ = true; c.rotationOffset = 15f; }),
         ("BakeOnce", c => { c.loopTime = false; c.lockRootRotation = true; c.lockRootPositionXZ = true; }),
+        ("MirrorOffset", c => { c.mirror = true; c.rotationOffset = 30f; c.heightOffset = 0.1f; c.keepOriginalPositionXZ = true; }),
     };
 
     static ModelImporterClipAnimation[] WithSettings(ModelImporterClipAnimation[] clips)
@@ -115,9 +116,12 @@ public static class ProbeRunner
 
     /// <summary>Humanoid .anim clips (muscle curves) whose start and stop differ, each with a
     /// controller Human{name}: LoopMuscles (loop pose), LoopMusclesBake (loop pose, rotation and Y
-    /// baked into the pose) and MirrorMuscles (mirror).</summary>
+    /// baked into the pose) and MirrorMuscles (mirror); OrigTurned (rotation and XZ based upon the
+    /// original, the body turned 40 degrees at the start) and FeetRight (Y based upon the feet,
+    /// foot goal curves with the right foot lower).</summary>
     static void MuscleClips()
     {
+        TurnedClips();
         foreach (var name in new[] { "LoopMuscles", "LoopMusclesBake", "MirrorMuscles" })
         {
             var path = Dir + name + ".anim";
@@ -150,6 +154,52 @@ public static class ProbeRunner
             settings.loopBlend = name != "MirrorMuscles";
             settings.loopBlendOrientation = settings.loopBlendPositionY = name == "LoopMusclesBake";
             settings.mirror = name == "MirrorMuscles";
+            AnimationUtility.SetAnimationClipSettings(clip, settings);
+            AssetDatabase.CreateAsset(clip, path);
+            AnimatorController.CreateAnimatorControllerAtPathWithClip(Dir + "Human" + name + ".controller", clip);
+        }
+    }
+
+    static void TurnedClips()
+    {
+        foreach (var name in new[] { "OrigTurned", "FeetRight" })
+        {
+            var path = Dir + name + ".anim";
+            if (AssetDatabase.LoadAssetAtPath<AnimationClip>(path) != null) continue;
+            var clip = new AnimationClip();
+            void Set(string attribute, params float[] keys)
+            {
+                var curve = new AnimationCurve();
+                for (int i = 0; i < keys.Length; i += 2) curve.AddKey(keys[i], keys[i + 1]);
+                clip.SetCurve("", typeof(Animator), attribute, curve);
+            }
+            var q0 = Quaternion.Euler(0f, 40f, 0f);
+            var q1 = Quaternion.Euler(5f, 70f, 0f);
+            Set("RootT.x", 0f, 0.1f, 1f, 0.4f);
+            Set("RootT.y", 0f, 1f, 0.5f, 0.97f, 1f, 1.05f);
+            Set("RootT.z", 0f, 0.2f, 1f, 0.6f);
+            Set("RootQ.x", 0f, q0.x, 1f, q1.x);
+            Set("RootQ.y", 0f, q0.y, 1f, q1.y);
+            Set("RootQ.z", 0f, q0.z, 1f, q1.z);
+            Set("RootQ.w", 0f, q0.w, 1f, q1.w);
+            Set("Spine Front-Back", 0f, 0f, 1f, 0.4f);
+            Set("Left Upper Leg Front-Back", 0f, 0.3f, 1f, -0.2f);
+            Set("Right Lower Leg Stretch", 0f, 0.2f, 1f, 0.6f);
+            if (name == "FeetRight")
+            {
+                Set("LeftFootT.x", 0f, -0.1f, 1f, -0.12f);
+                Set("LeftFootT.y", 0f, -0.75f, 1f, -0.8f);
+                Set("LeftFootT.z", 0f, 0.05f, 1f, 0f);
+                Set("LeftFootQ.w", 0f, 1f, 1f, 1f);
+                Set("RightFootT.x", 0f, 0.1f, 1f, 0.12f);
+                Set("RightFootT.y", 0f, -0.9f, 1f, -0.85f);
+                Set("RightFootT.z", 0f, -0.05f, 1f, 0.02f);
+                Set("RightFootQ.w", 0f, 1f, 1f, 1f);
+            }
+            var settings = AnimationUtility.GetAnimationClipSettings(clip);
+            settings.loopTime = true;
+            if (name == "OrigTurned") settings.keepOriginalOrientation = settings.keepOriginalPositionXZ = true;
+            else { settings.keepOriginalPositionY = false; settings.heightFromFeet = true; }
             AnimationUtility.SetAnimationClipSettings(clip, settings);
             AssetDatabase.CreateAsset(clip, path);
             AnimatorController.CreateAnimatorControllerAtPathWithClip(Dir + "Human" + name + ".controller", clip);

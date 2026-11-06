@@ -43,11 +43,13 @@ imported without keyframe reduction.
   bake into pose of the rotation, Y and XZ (`BakeRot`, `BakeY`, `BakeXZ`), based upon the original
   (`OrigRot`, `OrigXZ`), the center of mass and the feet (`CoM`, `Feet`), offsets (`Offset`), loop
   pose, mirror and cycle offset (`LoopPose`, `Mirror`, `Cycle`), combinations (`BakeAll`,
-  `BakeOrig`, `BakeOffset`, `BakeLoopPose`) and two clips without loop time (`OrigOnce`,
+  `BakeOrig`, `BakeOffset`, `BakeLoopPose`, `MirrorOffset`) and two clips without loop time (`OrigOnce`,
   `BakeOnce`); the clips' properties are recorded with the others. Three humanoid `.anim` clips
   (`ProbeRunner.MuscleClips`) whose body and muscles differ at the start and the stop:
   `LoopMuscles` (loop pose), `LoopMusclesBake` (loop pose, rotation and Y baked) and `MirrorMuscles`
-  (mirror). An exception in one of these clips or plays is recorded as `<key>.exception` and the
+  (mirror), and two more: `OrigTurned` (rotation and XZ based upon the original, the body turned 40
+  degrees at the start) and `FeetRight` (Y based upon the feet, foot goal curves with the right foot
+  lower). An exception in one of these clips or plays is recorded as `<key>.exception` and the
   probe goes on.
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
