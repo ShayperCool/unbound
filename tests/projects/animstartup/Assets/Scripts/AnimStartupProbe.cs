@@ -24,7 +24,8 @@ public class AnimStartupProbe : MonoBehaviour
     static readonly List<Case> cases = new List<Case>();
     static readonly StringBuilder records = new StringBuilder();
     static string Output => Environment.GetEnvironmentVariable("ANIMSTARTUP_PROBE_OUT");
-    static bool Recording => Output != null && Application.isPlaying;
+    static bool Recording => Output != null && Application.isPlaying
+        && Environment.GetEnvironmentVariable("ANIMSTARTUP_HUMAN") != "1";
     int updates;
     static bool Delayed => Environment.GetEnvironmentVariable("ANIMSTARTUP_DELAYED") == "1";
 

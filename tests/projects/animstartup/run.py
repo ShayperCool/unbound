@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Records the animation-culling probe in the Unity Editor or runs it in Unbound.
+"""Records Animator startup timing in the Unity Editor or runs it in Unbound.
 
     run.py create  [--release R]              writes the clips, controllers and scene (batchmode Editor)
                                               and copies them back here
     run.py editor  [--release R] --label L    two independent windowed GPU Editor captures (native1, native2)
-    run.py publish [--release R] --label L    checks both captures, publishes one to Reference/unity-R.jsonl
+    run.py publish [--release R] --label L    checks both captures, publishes each selected profile to Reference/unity-R/
     run.py check   [--release R] [--label L]  an Unbound capture strictly compared with Reference/
 
 
@@ -35,7 +35,8 @@ PROBE = Path(__file__).resolve().parent
 REPO = PROBE.parents[2]
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 REPEATS = ('native1', 'native2')
-PROFILES = ('entry', 'delayed')
+PROFILES = ('entry', 'delayed', 'human', 'humanMotion')
+GATE_PROFILES = ('entry', 'delayed', 'human')
 
 def reference():
     return PROBE/'Reference'/('unity-'+unity_version())
@@ -60,8 +61,9 @@ def fresh_output(directory):
 
 def create(work):
     project = copy_project(work/'create')
-    for part in ('Resources', 'Scenes'):
-        shutil.rmtree(project/'Assets'/part, ignore_errors=True)
+    for asset in (project/'Assets/Resources').glob('Startup.*'):
+        asset.unlink()
+    shutil.rmtree(project/'Assets/Scenes', ignore_errors=True)
     log = work/'create.log'
     code = subprocess.run([str(LAUNCHER), '--kind', 'editor-cpu', 'timeout', '-s', 'KILL', '900', str(editor_path()),
                            '-batchmode', '-nographics', '-projectPath', str(project), '-executeMethod',
@@ -84,7 +86,7 @@ def create(work):
 
 def job(work, repeat, profile):
     project, out = work/'projects'/profile/repeat, work/profile/repeat
-    return EditorJob(project, out/'editor.log', out, env={'ANIMSTARTUP_PROBE_OUT': str(out), 'ANIMSTARTUP_DELAYED': '1' if profile == 'delayed' else '0'},
+    return EditorJob(project, out/'editor.log', out, env={'ANIMSTARTUP_PROBE_OUT': str(out), 'ANIMSTARTUP_DELAYED': '1' if profile != 'entry' else '0', 'ANIMSTARTUP_HUMAN': '1' if profile in ('human', 'humanMotion') else '0', 'ANIMSTARTUP_HUMAN_MOTION': '1' if profile == 'humanMotion' else '0'},
                      timeout=1200, progress_files=[out/OUT], progress_timeout=600,
                      screen='1280x720x24', label='animstartup-'+profile+'-'+repeat,
                      launch_inputs={'release': unity_version(),
@@ -141,9 +143,10 @@ def publish(work):
         if (repeats[0]/OUT).read_bytes() != (repeats[1]/OUT).read_bytes():
             sys.exit(f'{profile}: Native repeats differ; not publishing')
     target = reference()
-    if target.exists():
-        sys.exit(f'refusing to overwrite {target}')
-    target.mkdir(parents=True)
+    for profile in PROFILES:
+        if (target/(profile+'.jsonl')).exists():
+            sys.exit(f'refusing to overwrite {target/(profile+".jsonl")}')
+    target.mkdir(parents=True, exist_ok=True)
     for profile in PROFILES:
         shutil.copyfile(work/profile/REPEATS[0]/OUT, target/(profile+'.jsonl'))
     print('published', target)
@@ -155,10 +158,10 @@ def check_profile(work, profile):
     project = work/profile/'project'
     assemble('animstartup', unity_version(), 'startup', project)
     out = fresh_output(work/profile/'unbound')
-    env = dict(os.environ, ANIMSTARTUP_PROBE_OUT=str(out), ANIMSTARTUP_DELAYED='1' if profile == 'delayed' else '0')
+    env = dict(os.environ, ANIMSTARTUP_PROBE_OUT=str(out), ANIMSTARTUP_DELAYED='1' if profile != 'entry' else '0', ANIMSTARTUP_HUMAN='1' if profile in ('human', 'humanMotion') else '0', ANIMSTARTUP_HUMAN_MOTION='1' if profile == 'humanMotion' else '0')
     with (out/'unbound.log').open('w') as log:
         code = subprocess.run([str(LAUNCHER), '--kind', 'engine-gpu', 'timeout', '900', cli, 'run', '-p', str(project),
-                               '--scene', 'Assets/Scenes/Delayed.unity' if profile == 'delayed' else 'Assets/Scenes/Probe.unity',
+                               '--scene', 'Assets/Scenes/Delayed.unity' if profile != 'entry' else 'Assets/Scenes/Probe.unity',
                                '--no-watch', '--frames', '400', '--size', '192x108'],
                               env=env, stdout=log, stderr=subprocess.STDOUT).returncode
     print(profile, 'unbound exit', code, out)
@@ -175,14 +178,17 @@ def check(work):
 
 
 def main():
+    global PROFILES
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument('mode', choices=('create', 'editor', 'publish', 'check'))
     parser.add_argument('--label')
     parser.add_argument('--release')
+    parser.add_argument('--profiles', nargs='+', choices=PROFILES, default=GATE_PROFILES)
     args = parser.parse_args()
+    PROFILES = tuple(args.profiles)
     if args.release:
         os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
-    label = args.label or (time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid()) if args.mode in ('check', 'gate', 'create') else None)
+    label = args.label or (time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid()) if args.mode in ('check', 'create') else None)
     if not label or Path(label).name != label or label in ('.', '..'):
         parser.error('--label must be a single directory name')
     work = run_root(PROBE, label)

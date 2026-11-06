@@ -6,7 +6,9 @@ only. A one-second clip moves `Marker.x` from 2 to 4 and the Animator root's y f
 Snapshots retain normalized time, full state hash, pose, root and delta position,
 event counts, and OnAnimatorMove counts. The receiver applies builtin root motion;
 `builtin` controls omit the receiver. Every case is recorded before animation in
-Update and after animation in LateUpdate for nine Updates.
+Update and after animation in LateUpdate for nine Updates. The entry profile has
+1,831 records; a delayed profile with no Animator until Update 3 has 168. Two
+independent Native captures of each profile agree byte for byte.
 
 Scene-authored enabled and disabled Animators accompany runtime creation in
 BeforeSceneLoad, Awake, OnEnable, AfterSceneLoad, Start, first Update, second Update
@@ -46,11 +48,38 @@ establish startup behavior in other releases or player builds.
 | Does any evaluation consume a per-player initialization delay? | No. Explicit positive Update advances immediately, including before the first loop. The following entry-frame automatic evaluation adds zero time even for this already evaluated player. Update(0) samples the pose, fires the start event once and delivers movement. |
 | Is the entry automatic evaluation skipped? | No. It samples the initial pose, fires start events and calls OnAnimatorMove with zero displacement. Play offsets and explicit positive evaluation are retained. |
 | Cause | The automatic animation time source has an entry evaluation interval of zero, independently of the controller player's first evaluation. This is an implementation inference from the discriminating controls, not a claim about Unity internals. |
+| First registration after entry | The delayed profile creates its first Animator and first graph in Update 3; both advance immediately, including after explicit zero or positive evaluation. Entry is tied to Play initialization, not the first registered Animator or graph. |
+| Fixed and UnscaledTime | Fixed updates retain their fixed deltas, including two fixed steps before the entry Update under this capture clock. UnscaledTime also samples without advancing at entry. This is not a global zero delta for every subsystem. |
+| Initial automatic Play(offset) | A newly created controller first samples the requested normalized offset, without adding that automatic update's delta to state time. Its root movement covers the interval ending at the offset. The controls measure this on generic and humanoid controllers. Established-player seeks and explicit positive Update after Play are not measured by this probe and retain the prior implementation. |
+| Disable/re-enable | Component enabled=false suspends the existing controller, regardless of keepAnimatorStateOnDisable. Hierarchy deactivation clears the state unless kept. A cleared inactive controller reports no current state, then reinitializes on activation. Neither re-enabling context adds an automatic startup delay. |
+| Playable start events | The first automatic GameTime clip sample includes its time-zero event, once, both with a zero entry interval and with a positive later interval. Explicit Graph.Evaluate remains outside this measurement. |
+| BeforeSceneLoad integration | Unity keeps rigs constructed by this callback. Unbound previously created them in an outgoing bootstrap scene and destroyed them on the first Single load. The callback now runs after scene objects are loaded, before their Awake, as the runtime initialization API documents. |
+
 
 Unmeasured: other releases, standalone player startup, custom PlayerLoop replacements,
 scene loads after entry, and creation inside animation callbacks. Explicit playable
 Graph.Evaluate, controller playables, shared graph nodes, fractional output weights
 and humanoid output root motion remain separate compatibility work.
+
+## Humanoid controls and retained follow-up
+
+The `human` profile uses the same HumanA model and IK-enabled controller as
+animculling. Controller creation in Start, first Update, second Update and later
+Update has plain and Play-offset controls. A controller-free GameTime clip output
+requests IK and samples pose with root motion off and no OnAnimatorMove handler.
+It records 193 values including graph/state time, hips and arm quaternions, root
+position/delta and movement/IK counts. Its reference also requires two independent
+byte-identical Native captures.
+
+`humanMotion` is a separate, retained root-motion control with OnAnimatorMove
+applying builtin movement to the humanoid output. It has 193 Native records from
+two agreeing captures. The existing unsupported humanoid output root-motion path
+leaves 60 raw records different in that profile. Run it explicitly with
+`run.py check --profiles humanMotion --release 6000.0.71f1`; every differing root,
+delta and callback count stays visible. Its poses, IK and clocks match. This is the
+separate A12 follow-up named in Q76, not part of the startup gate. No comparator
+ignores fields or tolerances. The default gate strictly checks `entry`, `delayed`
+and `human`.
 
 ## Reproduce
 
@@ -68,5 +97,6 @@ python3 tests/projects/animstartup/run.py check --release 6000.0.71f1
 ```
 
 `gate.json` declares the engine-only check with an explicit release. Authored clips,
-controller, scene, meta files and settings are committed; the gate does not launch
+controller, scenes, model, meta files and settings are committed, with
+`tests/authored_project.py` recording and assembling the normalized inputs; the gate does not launch
 the Editor. No prior oracle or comparator tolerance is changed by this probe.

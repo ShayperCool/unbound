@@ -1,6 +1,8 @@
 {
  "command": "python3 tests/projects/animstartup/run.py create --release 6000.0.71f1 --label create",
  "files": {
+  "Assets/Scripts/AnimStartupHumanProbe.cs.meta": "03a37b6523694bc5930a4fbee28c7695fa2b09babaf09a54d6a044ca0c61cdae",
+  "Assets/Scripts/StartupHumanReceiver.cs.meta": "219deb4602703fa036b94d291d21721db943f95721108e6d3fb7dccf69bfa10e",
   "ProjectSettings/PackageManagerSettings.asset": "5214d891199041a6d249235ff980991c2adfa978a1e44045020e48def6ddd731"
  },
  "fixture": {
@@ -8,6 +10,10 @@
   "Assets/Editor/ProbeRunner.cs": "3b4c02de002b2ebfaae3900295821b6901491216ccd7760d1c3223342d289bef",
   "Assets/Editor/ProbeRunner.cs.meta": "ad5dcde1d12776d11054f8536eea8eeb2492070cc8b9e97bf28896f97bb9b103",
   "Assets/Resources.meta": "0ff0540f3e65506f956e388a8c1e282c6adc4c2eef65f4eaf36f6d1e233d1f2f",
+  "Assets/Resources/HumanA.fbx": "3beaea1216924e52f841e9dfafe3b8a236ff6559ed2629493129e255d9c7d636",
+  "Assets/Resources/HumanA.fbx.meta": "e38f9f467a09df21dd7a8b5e0aca2d9595af7c978423a88a4d82a5efb6243741",
+  "Assets/Resources/HumanAIK.controller": "bf7d57f3c173cd64e401899e3c93a394742e6718e2bb7af6a9987aa4e9df2f8f",
+  "Assets/Resources/HumanAIK.controller.meta": "67935b9502638e7f685b7f1e73d7294a91f4f80fe0d8188d4e6c43b613dec439",
   "Assets/Resources/Startup.anim": "f8e4961c7777b87ea72ac5201c4bd2e23754130516b6120fd4187587d98aca6c",
   "Assets/Resources/Startup.anim.meta": "6d2aabda8295e1728b1ea610101249f1d93a92f466730b0f81093b5d2a86b713",
   "Assets/Resources/Startup.controller": "9618d5822c15ecd1ef0240fbe69ef8e37234c710fd0a16898817767c364ba33f",
@@ -18,8 +24,10 @@
   "Assets/Scenes/Probe.unity": "d712c79a4443a5041421cea8af92089e392088d1de9be80f96b729d06972b04a",
   "Assets/Scenes/Probe.unity.meta": "ed8dfcceceb491f1a6be87ff08a751df6d1a89af08fdfb3cddba8d0ec62836bd",
   "Assets/Scripts.meta": "e74c35c03972ee7edd8b723e8261d7b02720db32fc4ce57ef42ab366e484dde9",
-  "Assets/Scripts/AnimStartupProbe.cs": "f2f2e6549edc74f21780cd089ae92c846e73360a5c79e7bb9ec55a898c9739e2",
+  "Assets/Scripts/AnimStartupHumanProbe.cs": "dd4dfd94cba663cf71d77a9d6f450376e72e3885c7a919c61acdbd423b1d4d15",
+  "Assets/Scripts/AnimStartupProbe.cs": "daf840689ac467538b9fd2ba8a052be14a4ee9ee694974c373f04c01d47929f5",
   "Assets/Scripts/AnimStartupProbe.cs.meta": "928134bc85b1ab6e4787d91bd17b05122dc4692a3f7852c324c922f73b526c94",
+  "Assets/Scripts/StartupHumanReceiver.cs": "b36387295ce932bf09eb041deeab6a83a0f5cb84718668eb2945f66b95cafc68",
   "Assets/Scripts/StartupReceiver.cs": "ebe3b4cefa99950f5e94a0ab6898e12bd2d992d7173dd34fa18a7b3be275ddfe",
   "Assets/Scripts/StartupReceiver.cs.meta": "6e216830692cf3b3767bb526cb29cb5155198fb45b0c56ae629222b3a32b2b6a",
   "Packages/manifest.json": "0e21d38f7775ac89835fa50ba3afad082ff156b590d64ca8410d49513d76384a",
@@ -45,7 +53,7 @@
   "ProjectSettings/UnityConnectSettings.asset": "11251dae0356b6f43dd2c67bb511f6b7ecda4e5de425186bba3297e6f3dc1c6f",
   "ProjectSettings/VFXManager.asset": "9378043da38a17f2198d52a10c17789161d30e3285a387ca3687a71551c32448",
   "ProjectSettings/VersionControlSettings.asset": "e199cdfa6a8f2bf33cfd47e549198f13e3eb2a5099e908fdb4e0f14d939ccc6b",
-  "tests/projects/animstartup/run.py": "5c0baca0edcd2723564508f8cb444a0e48e6d3a7d660a4952f05be1caf6d9473"
+  "tests/projects/animstartup/run.py": "6d171532493c490667f8452e53ac84ec0d7f14351b30abce20b502b243ac7f9c"
  },
  "format": 1,
  "probe": "animstartup",
