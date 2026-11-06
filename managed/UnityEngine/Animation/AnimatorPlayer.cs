@@ -110,7 +110,7 @@ namespace Unbound.Runtime
         internal readonly List<StateMachineBehaviour> AllBehaviours = new List<StateMachineBehaviour>();
         readonly List<Action> m_Callbacks = new List<Action>();
         readonly Dictionary<string, int> m_ParameterIndex = new Dictionary<string, int>();
-        readonly Dictionary<Motion, (bool[] Floats, bool[] Objects, int FloatCount, int ObjectCount)> m_MotionMasks = new Dictionary<Motion, (bool[], bool[], int, int)>();
+        readonly Dictionary<(Motion, bool), (bool[] Floats, bool[] Objects, int FloatCount, int ObjectCount)> m_MotionMasks = new Dictionary<(Motion, bool), (bool[], bool[], int, int)>();
         readonly HashSet<AnimationClip> m_WarnedLegacy = new HashSet<AnimationClip>();
         AnimationPose[] m_Poses = Array.Empty<AnimationPose>();
         LayerPose[] m_LayerPoses = Array.Empty<LayerPose>();
@@ -1087,7 +1087,7 @@ namespace Unbound.Runtime
             if (weight <= 0f || !run.Def.WriteDefaults) return;
             var motion = MotionOf(layer.Def, run.Def);
             if (motion == null) return;
-            var (animated, _) = MotionMask(motion);
+            var (animated, _) = MotionMask(motion, Mirrored(run.Def));
             var (inLayer, _) = LayerChannels(layerIndex);
             for (int c = 0; c < Bindings.FloatCount; c++)
             {
@@ -1170,7 +1170,8 @@ namespace Unbound.Runtime
             if (weight <= 0f) return;
             var motion = MotionOf(layer.Def, run.Def);
             double normalized = run.Normalized + run.Def.CycleOffset + (run.Def.CycleOffsetParameter >= 0 ? Floats[run.Def.CycleOffsetParameter] : 0f);
-            SampleMotion(layer, layerIndex, run, motion, normalized, weight, pose, mask, objectMask);
+            bool mirror = Mirrored(run.Def);
+            SampleMotion(layer, layerIndex, run, motion, mirror, normalized, weight, pose, mask, objectMask);
             if (layer.Def.Additive)
             {
                 // Additive poses are differences. Without write defaults, a state without a motion
@@ -1178,7 +1179,7 @@ namespace Unbound.Runtime
                 // layer animates and it does not (with its weight); with write defaults they add nothing.
                 if (run.Def.WriteDefaults) return;
                 if (motion == null) { SampleLast(layer, weight, pose); return; }
-                var (own, _) = MotionMask(motion);
+                var (own, _) = MotionMask(motion, mirror);
                 var (layerFloats, _) = LayerChannels(layerIndex);
                 AddNoDifference(pose, weight, layerFloats, own, mask);
                 return;
@@ -1192,7 +1193,7 @@ namespace Unbound.Runtime
             // holds the base layer's channels as they were; as the first state it leaves them).
             bool holds = motion == null && !run.Def.WriteDefaults;
             if (holds) SampleLast(layer, weight, pose);
-            var (animated, animatedObjects) = MotionMask(motion);
+            var (animated, animatedObjects) = MotionMask(motion, mirror);
             var (inLayer, objectsInLayer) = LayerChannels(layerIndex);
             var leftAs = holds ? pose.Fill : !run.Def.WriteDefaults ? pose.Keep : motion != null ? pose.Fill : pose.Rest;
             for (int c = 0; c < Bindings.FloatCount; c++)
@@ -1214,14 +1215,37 @@ namespace Unbound.Runtime
             }
         }
 
-        void SampleMotion(LayerRun layer, int layerIndex, StateRun run, Motion motion, double normalized, float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
+        /// <summary>A state is mirrored by its mirror flag, or by its bool parameter when
+        /// mirrorParameterActive is set (AnimatorState.mirror, mirrorParameter).</summary>
+        internal bool Mirrored(StateDef def) => def.MirrorParameter >= 0 ? Bools[def.MirrorParameter] : def.Mirror;
+
+        /// <summary>A mirrored state plays its looping humanoid clips half a cycle later (measured,
+        /// tests/projects/humanoid: its pose and root motion at a normalized time are the mirrored
+        /// clip's at that time + 0.5, for clips of 1 s and 2/3 s; a blend tree child's mirror does not
+        /// shift it).</summary>
+        internal const float MirrorCycleOffset = 0.5f;
+
+        /// <summary>The clip a state plays: mirrored (a blend tree child's mirror toggles the
+        /// state's), a humanoid clip as <see cref="AnimationClip.StateMirrored"/>.</summary>
+        AnimationClip StateClip(AnimationClip original, bool mirror)
+        {
+            var clip = Controller.MapClip(original);
+            if (clip == null || !mirror || clip.m_Legacy || !clip.HasHumanCurves) return clip;
+            if (clip.m_Events.Count > 0)
+                Unbound.Runtime.Stubs.Ignored("Animator mirrored humanoid state events",
+                    "a mirrored state's humanoid clip fires its events at the state's unshifted times (not measured)");
+            return clip.StateMirrored;
+        }
+
+        void SampleMotion(LayerRun layer, int layerIndex, StateRun run, Motion motion, bool mirror, double normalized, float weight, AnimationPose pose,
+            bool[] mask, bool[] objectMask)
         {
             if (weight <= 0f) return;
             switch (motion)
             {
                 case AnimationClip original:
                 {
-                    var clip = Controller.MapClip(original);
+                    var clip = StateClip(original, mirror);
                     if (clip == null) return;
                     if (clip.m_Legacy)
                     {
@@ -1234,6 +1258,7 @@ namespace Unbound.Runtime
                     // Cycle offsets (the clip's, the state's and blend trees') shift looping clips
                     // only; a clip without loop time plays from the state's time (measured,
                     // tests/projects/modelclips).
+                    if (Mirrored(run.Def) && clip.HasHumanCurves) normalized += MirrorCycleOffset;
                     double time = clip.isLooping ? normalized + clip.m_CycleOffset : run.Normalized;
                     ClipSampling.Sample(bound, ClipSampling.ClipTime(clip, time, clip.isLooping), weight, pose, mask, objectMask,
                         layer.Def.Additive ? Bindings.AdditiveReference(bound) : null, loopPose: true);
@@ -1242,32 +1267,34 @@ namespace Unbound.Runtime
                 }
                 case BlendTreeMotion tree:
                 {
-                    if (tree.BlendType == 4) { SampleDirect(layer, layerIndex, run, tree, normalized, weight, pose, mask, objectMask); break; }
+                    if (tree.BlendType == 4) { SampleDirect(layer, layerIndex, run, tree, mirror, normalized, weight, pose, mask, objectMask); break; }
                     var weights = BlendWeights(tree);
                     bool any = false;
                     for (int i = 0; i < weights.Length; i++)
                         if (weights[i] > 0f)
                         {
                             any = true;
-                            SampleMotion(layer, layerIndex, run, tree.Children[i].Motion, normalized + tree.Children[i].CycleOffset, weight * weights[i], pose, mask, objectMask);
+                            SampleMotion(layer, layerIndex, run, tree.Children[i].Motion, mirror ^ tree.Children[i].Mirror,
+                                normalized + tree.Children[i].CycleOffset, weight * weights[i], pose, mask, objectMask);
                         }
-                    if (!any && !layer.Def.Additive) SampleEmptyTree(tree, weight, pose, mask, objectMask);
+                    if (!any && !layer.Def.Additive) SampleEmptyTree(tree, mirror, weight, pose, mask, objectMask);
                     break;
                 }
             }
         }
 
-        (bool[] Floats, bool[] Objects) MotionMask(Motion motion)
+        /// <summary>The channels a motion animates (played mirrored or not).</summary>
+        (bool[] Floats, bool[] Objects) MotionMask(Motion motion, bool mirror)
         {
             int fc = Bindings.FloatCount, oc = Bindings.ObjectCount;
-            var cached = motion == null ? m_NullMotionMask : m_MotionMasks.TryGetValue(motion, out var found) ? found : default;
+            var cached = motion == null ? m_NullMotionMask : m_MotionMasks.TryGetValue((motion, mirror), out var found) ? found : default;
             if (cached.Floats != null && cached.FloatCount == fc && cached.ObjectCount == oc)
                 return (cached.Floats, cached.Objects);
             var floats = new bool[fc];
             var objects = new bool[oc];
-            Collect(motion, floats, objects, 0);
+            Collect(motion, mirror, floats, objects, 0);
             if (motion == null) m_NullMotionMask = (floats, objects, fc, oc);
-            else m_MotionMasks[motion] = (floats, objects, fc, oc);
+            else m_MotionMasks[(motion, mirror)] = (floats, objects, fc, oc);
             return (floats, objects);
         }
 
@@ -1284,28 +1311,35 @@ namespace Unbound.Runtime
             if (cached.Floats != null && cached.FloatCount == fc && cached.ObjectCount == oc) return (cached.Floats, cached.Objects);
             var def = Layers[index].Def;
             var states = def.SyncedLayerIndex >= 0 && def.SyncedLayerIndex < Layers.Length ? Layers[def.SyncedLayerIndex].Def.States : def.States;
-            foreach (var state in states) MotionMask(MotionOf(def, state)); // binds what is not bound yet
+            // A state mirrored through its parameter plays its motion either way.
+            foreach (var state in states)
+                for (int m = 0; m < 2; m++)
+                    if (CanMirror(state, m == 1)) MotionMask(MotionOf(def, state), m == 1); // binds what is not bound yet
             fc = Bindings.FloatCount; oc = Bindings.ObjectCount;
             var floats = new bool[fc];
             var objects = new bool[oc];
             foreach (var state in states)
-            {
-                var (f, o) = MotionMask(MotionOf(def, state));
-                for (int c = 0; c < fc; c++) floats[c] |= f[c];
-                for (int c = 0; c < oc; c++) objects[c] |= o[c];
-            }
+                for (int m = 0; m < 2; m++)
+                {
+                    if (!CanMirror(state, m == 1)) continue;
+                    var (f, o) = MotionMask(MotionOf(def, state), m == 1);
+                    for (int c = 0; c < fc; c++) floats[c] |= f[c];
+                    for (int c = 0; c < oc; c++) objects[c] |= o[c];
+                }
             m_LayerChannels[index] = (floats, objects, fc, oc);
             return (floats, objects);
         }
 
-        void Collect(Motion motion, bool[] floats, bool[] objects, int depth)
+        static bool CanMirror(StateDef state, bool mirror) => state.MirrorParameter >= 0 || state.Mirror == mirror;
+
+        void Collect(Motion motion, bool mirror, bool[] floats, bool[] objects, int depth)
         {
             if (depth > 16) return;
             switch (motion)
             {
                 case AnimationClip original:
                 {
-                    var clip = Controller.MapClip(original);
+                    var clip = StateClip(original, mirror);
                     if (clip == null || clip.m_Legacy) return;
                     var bound = Bindings.Bind(clip);
                     foreach (var ch in bound.Float) if (ch >= 0 && ch < floats.Length) floats[ch] = true;
@@ -1315,7 +1349,7 @@ namespace Unbound.Runtime
                     break;
                 }
                 case BlendTreeMotion tree:
-                    foreach (var c in tree.Children) Collect(c.Motion, floats, objects, depth + 1);
+                    foreach (var c in tree.Children) Collect(c.Motion, mirror ^ c.Mirror, floats, objects, depth + 1);
                     break;
             }
         }

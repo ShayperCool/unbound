@@ -133,11 +133,41 @@ namespace UnityEngine
             MirrorHumanCurves();
         }
 
+        AnimationClip m_StateMirrored;
+        int m_StateMirroredVersion;
+
+        /// <summary>The humanoid clip as a mirrored Animator state or blend tree child plays it: its
+        /// Mirror setting toggled, so a mirrored clip plays unmirrored (measured,
+        /// tests/projects/humanoid).</summary>
+        internal AnimationClip StateMirrored
+        {
+            get
+            {
+                EnsureHumanCurves();
+                if (m_StateMirrored != null && m_StateMirroredVersion == m_Version) return m_StateMirrored;
+                var clip = Clone();
+                clip.m_Mirror = !m_Mirror;
+                // On an additive layer it adds its difference from the clip's own reference pose,
+                // unmirrored (measured for an unmirrored clip and its first frame).
+                if (!(m_HasAdditiveReferencePose && m_AdditiveReferencePoseClip != null))
+                {
+                    clip.m_HasAdditiveReferencePose = true;
+                    clip.m_AdditiveReferencePoseClip = this;
+                    clip.m_AdditiveReferencePoseTime = m_HasAdditiveReferencePose ? m_AdditiveReferencePoseTime : 0f;
+                }
+                clip.EnsureHumanCurves();
+                m_StateMirrored = clip;
+                m_StateMirroredVersion = m_Version;
+                return clip;
+            }
+        }
+
         /// <summary>Mirror: each humanoid curve plays on its <see cref="HumanClipImport.MirrorCurve"/>,
         /// as a new curve (negated where that says so; measured, tests/projects/humanoid).</summary>
         void MirrorHumanCurves()
         {
-            bool changed = false, goalRotations = false;
+            bool changed = false;
+            var goalRotations = new int[4];
             for (int k = 0; k < m_Curves.Count; k++)
             {
                 var c = m_Curves[k];
@@ -145,7 +175,8 @@ namespace UnityEngine
                 if (i < 0) continue;
                 if (i >= HumanClipImport.TDoFFirst)
                     throw new NotSupportedException($"AnimationClip '{name}': mirrored humanoid clips with translation DoF curves are not supported");
-                goalRotations |= i >= HumanClipImport.GoalFirst && i < HumanClipImport.MuscleFirst && (i - HumanClipImport.GoalFirst) % 7 >= 3;
+                if (i >= HumanClipImport.GoalFirst && i < HumanClipImport.MuscleFirst && (i - HumanClipImport.GoalFirst) % 7 >= 3)
+                    goalRotations[(i - HumanClipImport.GoalFirst) / 7]++;
                 int j = HumanClipImport.MirrorCurve[i];
                 if (j == i) continue;
                 float sign = j < 0 ? -1f : 1f;
@@ -166,9 +197,10 @@ namespace UnityEngine
                 changed = true;
             }
             if (changed) m_Version++;
-            if (goalRotations)
-                Unbound.Runtime.Stubs.Ignored("AnimationClip mirrored humanoid goal rotations",
-                    "a mirrored humanoid clip's IK goal rotations flip y and z like the body's (not measured)");
+            // A goal rotation's components trade places: one without all four curves mixes in defaults.
+            if (Array.Exists(goalRotations, n => n != 0 && n != 4))
+                Unbound.Runtime.Stubs.Ignored("AnimationClip mirrored humanoid goal rotation without all four curves",
+                    "a mirrored humanoid clip's goal rotation with some of its curves takes the defaults for the others before mirroring (not measured)");
         }
 
         /// <summary>A humanoid body curve (RootT, RootQ): loop pose moves the body relative to the

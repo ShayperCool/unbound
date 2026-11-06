@@ -92,8 +92,6 @@ namespace Unbound.Runtime.Humanoid
         /// time, else the clip's first frame), reference⁻¹ · body.</summary>
         internal Trs AdditiveBodyDifference(AnimationClip clip, HumanClipMotion motion, in HumanClipMotionInput input)
         {
-            if (input.Mirror)
-                throw new NotSupportedException("mirrored humanoid states are not supported");
             if (motion.Settings.LoopBlend && motion.LoopTime)
                 Unbound.Runtime.Stubs.Ignored("Animator additive humanoid clip with loop pose",
                     "an additive layer's humanoid clip with loop pose adds its body without the loop pose (not measured)");

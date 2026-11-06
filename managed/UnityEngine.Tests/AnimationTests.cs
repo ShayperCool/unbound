@@ -577,7 +577,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void AStatesMirrorReachesItsDefinition()
         {
-            // Humanoid root motion throws for mirrored states (not supported): the flag must get there.
+            // Mirrored states play humanoid clips mirrored: the flag must get there.
             var file = Load(AnimationFixtures.Locomotion);
             var controller = (RuntimeAnimatorController)file.Objects[9100000];
             var state = file.Objects.Values.OfType<ControllerStateAsset>().First();

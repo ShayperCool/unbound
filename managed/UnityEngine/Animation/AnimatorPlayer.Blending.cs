@@ -175,9 +175,9 @@ namespace Unbound.Runtime
         readonly List<AnimationPose> m_DirectScratch = new List<AnimationPose>();
         int m_DirectDepth;
 
-        void SampleEmptyTree(BlendTreeMotion tree, float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
+        void SampleEmptyTree(BlendTreeMotion tree, bool mirror, float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
         {
-            var (animated, objects) = MotionMask(tree);
+            var (animated, objects) = MotionMask(tree, mirror);
             for (int c = 0; c < Bindings.FloatCount; c++)
             {
                 if (!animated[c] || (mask != null && !mask[c])) continue;
@@ -192,7 +192,7 @@ namespace Unbound.Runtime
             }
         }
 
-        void SampleDirect(LayerRun layer, int layerIndex, StateRun run, BlendTreeMotion tree, double normalized,
+        void SampleDirect(LayerRun layer, int layerIndex, StateRun run, BlendTreeMotion tree, bool mirror, double normalized,
             float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
         {
             if (m_DirectDepth == m_DirectScratch.Count) m_DirectScratch.Add(new AnimationPose());
@@ -203,9 +203,9 @@ namespace Unbound.Runtime
                 var weights = BlendWeights(tree);
                 for (int i = 0; i < weights.Length; i++)
                     if (weights[i] > 0f)
-                        SampleMotion(layer, layerIndex, run, tree.Children[i].Motion, normalized + tree.Children[i].CycleOffset,
+                        SampleMotion(layer, layerIndex, run, tree.Children[i].Motion, mirror ^ tree.Children[i].Mirror, normalized + tree.Children[i].CycleOffset,
                             weight * weights[i], scratch, mask, objectMask);
-                var (animated, animatedObjects) = MotionMask(tree);
+                var (animated, animatedObjects) = MotionMask(tree, mirror);
                 pose.Total += weight;
                 for (int c = 0; c < Bindings.FloatCount; c++)
                 {

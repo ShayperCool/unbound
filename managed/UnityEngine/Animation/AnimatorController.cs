@@ -509,6 +509,8 @@ namespace Unbound.Runtime
             internal Vector2 Position;
             internal float TimeScale = 1f;
             internal float CycleOffset;
+            /// <summary>ChildMotion.mirror: toggles the state's mirror for this child (humanoid clips).</summary>
+            internal bool Mirror;
             internal string DirectParameter;
         }
 
@@ -533,6 +535,7 @@ namespace Unbound.Runtime
                     Position = c.Vector2("m_Position"),
                     TimeScale = c.Float("m_TimeScale", 1f),
                     CycleOffset = c.Float("m_CycleOffset"),
+                    Mirror = c.Bool("m_Mirror"),
                     DirectParameter = c.Str("m_DirectBlendParameter"),
                 });
             }

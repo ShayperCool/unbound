@@ -281,8 +281,8 @@ namespace Unbound.Runtime
         internal int TagHash;
         internal float Speed = 1f;
         internal float CycleOffset;
-        /// <summary>AnimatorState.mirror, or its bool parameter (mirrorParameterActive) when set;
-        /// humanoid root motion throws for mirrored states (not supported).</summary>
+        /// <summary>AnimatorState.mirror, or its bool parameter (mirrorParameterActive) when set
+        /// (<see cref="AnimatorPlayer.Mirrored"/>).</summary>
         internal bool Mirror;
         internal int MirrorParameter = -1;
         internal bool WriteDefaults = true;

@@ -141,18 +141,33 @@ namespace Unbound.Runtime.Humanoid
 
         /// <summary>Per curve index, the curve a mirrored clip plays it on, negated when the index is
         /// complemented (~j): the left and right goals, muscles and fingers swap, the x of positions
-        /// and the y and z of rotations flip, and so do the body's Left-Right muscles (measured,
-        /// tests/projects/humanoid; translation DoF are not mirrored).</summary>
+        /// and the y and z of the body's rotation flip, and so do the body's Left-Right muscles. A
+        /// goal's rotation is mirrored as the API gives it (the stored rotation times the goal's
+        /// orientation offset, <see cref="HumanIK.GetGoalRotation"/>): stored, (x, −y, −z, w) times
+        /// a constant, the feet's (z, w, x, y) and the hands' (−y, −x, w, z) of the other side
+        /// (measured, tests/projects/humanoid; translation DoF are not mirrored).</summary>
         public static readonly int[] MirrorCurve = BuildMirror();
 
         static int[] BuildMirror()
         {
+            int[] GoalFootMirror = { 2, 3, 0, 1 }, GoalHandMirror = { 1, 0, 3, 2 };
             var m = new int[CurveCount];
             for (int i = 0; i < CurveCount; i++)
             {
                 int j = i, c = i < GoalFirst ? i % 7 : (i - GoalFirst) % 7;
                 bool negate = i < MuscleFirst && (c == 0 || c == 4 || c == 5);
-                if (i >= GoalFirst && i < MuscleFirst) j = GoalFirst + 7 * (((i - GoalFirst) / 7) ^ 1) + c;
+                if (i >= GoalFirst && i < MuscleFirst)
+                {
+                    int g = (i - GoalFirst) / 7;
+                    j = GoalFirst + 7 * (g ^ 1) + c;
+                    if (c >= 3)
+                    {
+                        // The source component's place (x, y, z, w) in the other side's rotation.
+                        int k = c - 3;
+                        j = GoalFirst + 7 * (g ^ 1) + 3 + (g < 2 ? GoalFootMirror[k] : GoalHandMirror[k]);
+                        negate = g >= 2 && k < 2;
+                    }
+                }
                 else if (i >= MuscleFirst && i < LeftHandFirst)
                 {
                     string n = CurveNames[i];

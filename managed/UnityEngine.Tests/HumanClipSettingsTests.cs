@@ -164,14 +164,74 @@ namespace UnityEngine.Tests
             Assert.Equal(~I("RootQ.y"), m[I("RootQ.y")]);
             Assert.Equal(I("RootQ.w"), m[I("RootQ.w")]);
             Assert.Equal(~I("RightFootT.x"), m[I("LeftFootT.x")]);
-            Assert.Equal(~I("LeftHandQ.z"), m[I("RightHandQ.z")]);
-            Assert.Equal(I("RightHandQ.x"), m[I("LeftHandQ.x")]);
+            Assert.Equal(I("RightFootT.y"), m[I("LeftFootT.y")]);
+            // Goal rotations trade components (measured: see MirroredGoalRotationsAreTheOtherSidesMirrored).
+            Assert.Equal(I("RightFootQ.z"), m[I("LeftFootQ.x")]);
+            Assert.Equal(I("LeftHandQ.w"), m[I("RightHandQ.z")]);
+            Assert.Equal(~I("RightHandQ.y"), m[I("LeftHandQ.x")]);
             Assert.Equal(~I("Spine Left-Right"), m[I("Spine Left-Right")]);
             Assert.Equal(~I("Jaw Left-Right"), m[I("Jaw Left-Right")]);
             Assert.Equal(I("Spine Front-Back"), m[I("Spine Front-Back")]);
             Assert.Equal(I("Right Arm Twist In-Out"), m[I("Left Arm Twist In-Out")]);
             Assert.Equal(I("Left Eye In-Out"), m[I("Right Eye In-Out")]);
             Assert.Equal(I("RightHand.Index.1 Stretched"), m[I("LeftHand.Index.1 Stretched")]);
+        }
+
+        /// <summary>GetIKRotation of a mirrored clip's goal is the other side's mirrored across the
+        /// body's x plane, (x, −y, −z, w) (measured, tests/projects/humanoid ikClipMirror).</summary>
+        [Fact]
+        public void MirroredGoalRotationsAreTheOtherSidesMirrored()
+        {
+            var m = HumanClipImport.MirrorCurve;
+            var random = new System.Random(7);
+            for (int g = 0; g < 4; g++)
+                for (int n = 0; n < 8; n++)
+                {
+                    var q = M.QNormalize(new F4((float)random.NextDouble() - 0.5f, (float)random.NextDouble() - 0.5f,
+                        (float)random.NextDouble() - 0.5f, (float)random.NextDouble() - 0.5f));
+                    var pose = new Unbound.Runtime.Humanoid.HumanPose();
+                    pose.Goals[g].X.q = q;
+                    var mirrored = new Unbound.Runtime.Humanoid.HumanPose();
+                    var values = new float[4];
+                    for (int k = 0; k < 4; k++)
+                    {
+                        int j = m[Goals + 7 * g + 3 + k];
+                        int target = j < 0 ? ~j : j;
+                        Assert.InRange(target - Goals - 7 * (g ^ 1), 3, 6);
+                        values[target - Goals - 7 * (g ^ 1) - 3] = (j < 0 ? -1f : 1f) * q[k];
+                    }
+                    mirrored.Goals[g ^ 1].X.q = new F4(values[0], values[1], values[2], values[3]);
+                    var api = HumanIK.GetGoalRotation(pose, g);
+                    var back = HumanIK.GetGoalRotation(mirrored, g ^ 1);
+                    float sign = MathF.Sign(back.x * api.x - back.y * api.y - back.z * api.z + back.w * api.w);
+                    Near(api.x, sign * back.x, 1e-5f);
+                    Near(-api.y, sign * back.y, 1e-5f);
+                    Near(-api.z, sign * back.z, 1e-5f);
+                    Near(api.w, sign * back.w, 1e-5f);
+                }
+        }
+
+        [Fact]
+        public void AStateMirroredClipTogglesTheClipsMirrorAndKeepsItsReferencePose()
+        {
+            int left = HumanClipImport.CurveIndex("Left Arm Down-Up"), right = HumanClipImport.CurveIndex("Right Arm Down-Up");
+            var clip = new AnimationClip();
+            Add(clip, "Left Arm Down-Up", AnimationCurve.Linear(0f, 0.2f, 1f, -0.4f));
+            var state = clip.StateMirrored;
+            Assert.Same(state, clip.StateMirrored);
+            Assert.Null(state.HumanCurves[left]);
+            Near(-0.1f, state.HumanCurves[right].Evaluate(0.5f));
+            // Its additive reference pose is the clip's own first frame, unmirrored.
+            Assert.True(state.m_HasAdditiveReferencePose);
+            Assert.Same(clip, state.m_AdditiveReferencePoseClip);
+            Assert.Equal(0f, state.m_AdditiveReferencePoseTime);
+            Assert.Equal(clip.m_CycleOffset, state.m_CycleOffset);
+            // A mirrored clip on a mirrored state plays unmirrored.
+            clip.m_Mirror = true;
+            var unmirrored = clip.StateMirrored;
+            Assert.NotSame(state, unmirrored);
+            Assert.Null(unmirrored.HumanCurves[right]);
+            Near(-0.1f, unmirrored.HumanCurves[left].Evaluate(0.5f));
         }
 
         [Fact]

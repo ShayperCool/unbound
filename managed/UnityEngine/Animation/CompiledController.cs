@@ -332,6 +332,7 @@ namespace Unbound.Runtime
                     Threshold = i < thresholds.Count ? thresholds[i] : 0f,
                     Position = i < positions.Count ? positions[i] : Vector2.zero,
                     CycleOffset = child.Float("m_CycleOffset"),
+                    Mirror = child.Bool("m_Mirror"),
                     DirectParameter = i < direct.Count ? ctx.Name(direct[i]) : null,
                 });
             }

@@ -165,8 +165,6 @@ namespace Unbound.Runtime.Humanoid
         public float Speed;
         /// <summary>The state's cycle offset (added to the normalized time of a looping clip).</summary>
         public float CycleOffset;
-        /// <summary>The state mirrors the clip (not supported).</summary>
-        public bool Mirror;
     }
 
     /// <summary>One evaluation of a humanoid clip's root motion (default settings).</summary>
@@ -360,8 +358,6 @@ namespace Unbound.Runtime.Humanoid
         public static void Evaluate(HumanClipMotion clip, in HumanClipMotionInput input, float[] previous, float[] current, bool[] present,
             out HumanRootMotionSample result)
         {
-            if (input.Mirror)
-                throw new NotSupportedException("mirrored humanoid states are not supported");
             result = new HumanRootMotionSample
             {
                 Delta = Trs.Identity, Motion = Trs.Identity, Body = Trs.Identity, Root = Trs.Identity, LeftFoot = Trs.Identity, RightFoot = Trs.Identity,
