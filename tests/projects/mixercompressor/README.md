@@ -37,11 +37,14 @@ done
 python3 tests/projects/mixercompressor/run.py --release 6000.0.71f1 --unbound "$UNBOUND"
 ```
 
-`run.py` is the gate (declared in `gate.json`). It creates fresh private Native projects, copies
+`run.py` is the gate (declared in `gate.json`). It assembles the committed Editor-authored set
+`Authored/unity-6000.0.71f1/default` (tests/authored_project.py, recorded from the 48000 Hz
+reference capture's project), so no Editor starts; `--native` authors a fresh private Native
+project per rate instead. When the fixture changes, record such a project again. It copies
 `$UNBOUND` and its `managed/` outputs into a runtime directory, captures the engine at both rates,
 writes a strict report and exits with the result of the gate report. The gate admits one 1/32768
-step of device PCM and, for the cases in `common.RESIDUALS` only, the recorded ParamEQ rounding
-residual (absolute 4e-4). `engine.py` and `compare.py` run single steps; `--before` produces a
+step of device PCM and, for the keys in `common.RESIDUALS` only, the recorded ParamEQ rounding
+residual (absolute 4e-4 for `eq_startup`, 3e-5 for the sweep's master floats). `engine.py` and `compare.py` run single steps; `--before` produces a
 before/after union. Reports stream every missing, extra and failing value into gzip JSON lines,
 followed by a summary that counts failures per case.
 
@@ -56,6 +59,6 @@ raw repeats stay in the cache.
 ## Result
 
 Gate: 8388738/8388738 values at 48000 Hz and at 44100 Hz. The strict comparison keeps one-step
-device PCM flips and the ParamEQ residual (`eq_startup`, `eq_sweep`, and the device PCM of
-`eq_startup_group_bypass`, which still carries the previous case's ringing tail); they are listed
+device PCM flips and the ParamEQ residual (`eq_startup`, four master floats of `eq_sweep`, and the
+device PCM of `eq_startup_group_bypass`, which still carries the previous case's ringing tail); they are listed
 in docs/COMPATIBILITY_GAPS.md. The measured model and its limits are in docs/AUDIO.md.

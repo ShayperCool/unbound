@@ -8,11 +8,13 @@ import re
 FIXTURE = Path(__file__).resolve().parent
 BLOCKS = 32
 SUFFIXES = ('', '.master')
-# Accepted ParamEQ residual (docs/COMPATIBILITY_GAPS.md): Native's single-precision rounding of a
-# 100 Hz peak's DC gain (about 2e-4 relative) and of the 20 kHz end of the boosted sweep. The
-# device PCM of the case after eq_startup still carries that case's ringing tail. Only the gate
-# admits this absolute bound, for these cases; strict reports keep every value.
-RESIDUALS = {'eq_startup': 4e-4, 'eq_startup_group_bypass': 4e-4, 'eq_sweep': 4e-4}
+# Accepted ParamEQ residual (docs/COMPATIBILITY_GAPS.md), by key: Native's single-precision
+# rounding of a 100 Hz peak's DC gain (about 2e-4 relative) and of four floats near the boosted
+# 1 kHz peak of the sweep. The device PCM of the case after eq_startup still carries that case's
+# ringing tail; its own master floats match. Only the gate admits these absolute bounds; strict
+# reports keep every value.
+RESIDUALS = {'eq_startup': 4e-4, 'eq_startup.master': 4e-4, 'eq_startup_group_bypass': 4e-4,
+             'eq_sweep.master': 3e-5}
 
 
 def cases():

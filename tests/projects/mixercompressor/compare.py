@@ -43,7 +43,7 @@ def compare(reference, candidate, report, keys, exact=False, before=None, pcm_st
             tested += 1
             sample = index is not None
             steps = 0 if key.endswith('.master') else pcm_steps
-            residual = RESIDUALS.get(key.split('.')[0], 0) if residuals else 0
+            residual = RESIDUALS.get(key, 0) if residuals else 0
             wrong = [bad(values[0], v, sample, exact, steps, residual) for v in values[1:]]
             if not any(wrong): return
             failed += 1
