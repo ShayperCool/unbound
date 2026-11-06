@@ -632,7 +632,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 17;
+    const VERSION: u32 = 18;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -1880,10 +1880,9 @@ impl<'a> Builder<'a> {
                 _ if self.obj => None,
                 _ if !mesh.face_smoothing.is_empty() => {
                     if settings.normal_calculation != 0 && settings.normal_smoothing_source < 2 {
-                        warning.get_or_insert_with(|| {
+                        append_warning(&mut warning,
                             "FBX polygon smoothing masks are reduced to smooth/hard flags; \
-                             group-based calculated normals are not supported".into()
-                        });
+                             group-based calculated normals are not supported");
                     }
                     Some(wedges.iter().map(|w| mesh.face_smoothing[w.face] as u32).collect())
                 }
@@ -1894,11 +1893,9 @@ impl<'a> Builder<'a> {
                 && settings.normal_smoothing_source < 2
                 && settings.normal_calculation != 0
             {
-                warning.get_or_insert_with(|| {
+                append_warning(&mut warning,
                     "per-edge smoothing is not converted to smoothing groups; calculated normals \
-                     do not reproduce this smoothing source (not supported)"
-                        .into()
-                });
+                     do not reproduce this smoothing source (not supported)");
             }
             normals::calculate(
                 &file_positions,
@@ -2740,6 +2737,16 @@ fn unity_triangles(mesh: &ufbx::Mesh, face: ufbx::Face, out: &mut [u32]) -> usiz
             t.swap(1, 2);
         }
         count
+    }
+}
+
+/// Keep each unsupported import condition visible, including simultaneous UV and normal gaps.
+fn append_warning(warning: &mut Option<String>, message: &str) {
+    if let Some(warning) = warning {
+        warning.push_str("; ");
+        warning.push_str(message);
+    } else {
+        *warning = Some(message.into());
     }
 }
 

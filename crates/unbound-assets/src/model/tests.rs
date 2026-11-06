@@ -564,3 +564,15 @@ fn reduced_fbx_smoothing_masks_are_diagnosed() {
     assert!(imported.warnings.iter().any(|w| w.contains("polygon smoothing masks")),
             "{:?}", imported.warnings);
 }
+
+#[test]
+fn smoothing_and_lightmap_diagnostics_are_both_retained() {
+    let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/lightmapuvs/Sources/Normals/Groups.fbx");
+    let settings = meta("ModelImporter:\n  meshes:\n    generateSecondaryUV: 1\n    weldVertices: 0\n  tangentSpace:\n    normalImportMode: 1\n    normalSmoothingSource: 1\n");
+    let imported = ModelImporter.import(&source, &std::fs::read(&source).unwrap(), &settings).unwrap();
+    for diagnostic in ["weldVertices", "polygon smoothing masks"] {
+        assert!(imported.warnings.iter().any(|w| w.contains(diagnostic)),
+                "missing {diagnostic}: {:?}", imported.warnings);
+    }
+}
