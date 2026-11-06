@@ -57,6 +57,15 @@ namespace UnityEngine
 
         public Texture2D(int width, int height, GraphicsFormat format, int mipCount, TextureCreationFlags flags)
         {
+            // A format the device cannot sample is refused: the texture is left destroyed (== null),
+            // as the Editor's (measured for A2B10G10R10_UNormPack32 and integer formats on its
+            // OpenGLCore device, tests/projects/textureformats .new).
+            if (!SystemInfo.IsFormatSupported(format, GraphicsFormatUsage.Sample))
+            {
+                Debug.LogError($"Texture creation failed. '{format}' is not supported for Sample usage on this platform. Use 'SystemInfo.IsFormatSupported' C# API to check format support.");
+                MarkDestroyed();
+                return;
+            }
             Init(width, height, TextureFormatOf(format), mipCount, !GraphicsFormatUtility.IsSRGBFormat(format));
         }
 
@@ -358,6 +367,7 @@ namespace UnityEngine
             // ReadPixels copies attachment values, including float-to-byte reads, regardless
             // of the destination's linear flag; the screen's are its 8-bit (in Linear,
             // sRGB-encoded) bytes.
+            bool eightBit = active != null && ReadsAsBytes(active.graphicsFormat);
             unsafe
             {
                 fixed (byte* p = bytes)
@@ -371,6 +381,8 @@ namespace UnityEngine
                             int tx = destX + (x0 - (int)source.x) + col;
                             var c = new Color(f[0], f[1], f[2], f[3]);
                             f += 4;
+                            if (eightBit)
+                                for (int k = 0; k < 4; k++) c[k] = (int)(Mathf.Clamp01(c[k]) * 255f + 0.5f) * (1f / 255f);
                             Write(ty * m_Width + tx, c);
                         }
                     }
@@ -381,6 +393,15 @@ namespace UnityEngine
         }
 
         public void ReadPixels(Rect source, int destX, int destY) => ReadPixels(source, destX, destY, true);
+
+        /// <summary>Whether ReadPixels from a target of <paramref name="source"/> reads 8-bit
+        /// channels (b × (1 / 255) in a float texture): every target that is neither a float format
+        /// nor the texture's own format. Measured on the Editor's OpenGLCore device
+        /// (tests/projects/textureformats .read, .read64): R16, RG32, ARGB64 and ARGB2101010 targets
+        /// read into RGBAFloat at 8 bits, ARGB64 into RGBA64 at 16, float targets at full precision.</summary>
+        bool ReadsAsBytes(GraphicsFormat source) =>
+            !GraphicsFormatUtility.IsHDRFormat(source) && !GraphicsFormatUtility.IsIEEE754Format(source)
+            && source != GraphicsFormatOf();
 
         public Rect[] PackTextures(Texture2D[] textures, int padding, int maximumAtlasSize, bool makeNoLongerReadable) =>
             TexturePacker.Pack(this, textures, padding, maximumAtlasSize, makeNoLongerReadable);
