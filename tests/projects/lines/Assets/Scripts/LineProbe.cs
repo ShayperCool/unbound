@@ -24,7 +24,7 @@ using UnityEngine.Rendering;
 ///
 /// Blend (last, synchronous): the predeclared short-segment cases of blend_cases.py.
 /// </summary>
-public class LineProbe : MonoBehaviour
+public partial class LineProbe : MonoBehaviour
 {
     /// <summary>Set by the Editor runner: ends Play mode and quits with the code.</summary>
     public static Action<int> finished;
@@ -861,7 +861,7 @@ public class LineProbe : MonoBehaviour
         }
         if (code == 0)
         {
-            try { Blend(); CapCounts(); }
+            try { Blend(); CapCounts(); MiterReversals(); }
             catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
         }
         Value("complete", B(code == 0));
