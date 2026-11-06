@@ -8,6 +8,7 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using Unity.Jobs.LowLevel.Unsafe;
+using Unbound.Runtime;
 using Unbound.Runtime.Jobs;
 
 namespace UnityEngine.Jobs
@@ -142,13 +143,13 @@ namespace UnityEngine.Jobs
             get
             {
                 CheckHierarchyValid();
-                return Target.position;
+                using (MainThreadCheck.Engine()) return Target.position;
             }
             set
             {
                 CheckHierarchyValid();
                 CheckWriteAccess();
-                Target.position = value;
+                using (MainThreadCheck.Engine()) Target.position = value;
             }
         }
 
@@ -157,13 +158,13 @@ namespace UnityEngine.Jobs
             get
             {
                 CheckHierarchyValid();
-                return Target.rotation;
+                using (MainThreadCheck.Engine()) return Target.rotation;
             }
             set
             {
                 CheckHierarchyValid();
                 CheckWriteAccess();
-                Target.rotation = value;
+                using (MainThreadCheck.Engine()) Target.rotation = value;
             }
         }
 
@@ -172,13 +173,13 @@ namespace UnityEngine.Jobs
             get
             {
                 CheckHierarchyValid();
-                return Target.localPosition;
+                using (MainThreadCheck.Engine()) return Target.localPosition;
             }
             set
             {
                 CheckHierarchyValid();
                 CheckWriteAccess();
-                Target.localPosition = value;
+                using (MainThreadCheck.Engine()) Target.localPosition = value;
             }
         }
 
@@ -187,13 +188,13 @@ namespace UnityEngine.Jobs
             get
             {
                 CheckHierarchyValid();
-                return Target.localRotation;
+                using (MainThreadCheck.Engine()) return Target.localRotation;
             }
             set
             {
                 CheckHierarchyValid();
                 CheckWriteAccess();
-                Target.localRotation = value;
+                using (MainThreadCheck.Engine()) Target.localRotation = value;
             }
         }
 
@@ -202,13 +203,13 @@ namespace UnityEngine.Jobs
             get
             {
                 CheckHierarchyValid();
-                return Target.localScale;
+                using (MainThreadCheck.Engine()) return Target.localScale;
             }
             set
             {
                 CheckHierarchyValid();
                 CheckWriteAccess();
-                Target.localScale = value;
+                using (MainThreadCheck.Engine()) Target.localScale = value;
             }
         }
 
@@ -217,7 +218,7 @@ namespace UnityEngine.Jobs
             get
             {
                 CheckHierarchyValid();
-                return Target.localToWorldMatrix;
+                using (MainThreadCheck.Engine()) return Target.localToWorldMatrix;
             }
         }
 
@@ -226,7 +227,7 @@ namespace UnityEngine.Jobs
             get
             {
                 CheckHierarchyValid();
-                return Target.worldToLocalMatrix;
+                using (MainThreadCheck.Engine()) return Target.worldToLocalMatrix;
             }
         }
 
@@ -235,25 +236,25 @@ namespace UnityEngine.Jobs
         public void SetPositionAndRotation(Vector3 position, Quaternion rotation)
         {
             CheckHierarchyValid();
-            Target.SetPositionAndRotation(position, rotation);
+            using (MainThreadCheck.Engine()) Target.SetPositionAndRotation(position, rotation);
         }
 
         public void SetLocalPositionAndRotation(Vector3 localPosition, Quaternion localRotation)
         {
             CheckHierarchyValid();
-            Target.SetLocalPositionAndRotation(localPosition, localRotation);
+            using (MainThreadCheck.Engine()) Target.SetLocalPositionAndRotation(localPosition, localRotation);
         }
 
         public void GetPositionAndRotation(out Vector3 position, out Quaternion rotation)
         {
             CheckHierarchyValid();
-            Target.GetPositionAndRotation(out position, out rotation);
+            using (MainThreadCheck.Engine()) Target.GetPositionAndRotation(out position, out rotation);
         }
 
         public void GetLocalPositionAndRotation(out Vector3 localPosition, out Quaternion localRotation)
         {
             CheckHierarchyValid();
-            Target.GetLocalPositionAndRotation(out localPosition, out localRotation);
+            using (MainThreadCheck.Engine()) Target.GetLocalPositionAndRotation(out localPosition, out localRotation);
         }
 
         internal void CheckHierarchyValid()

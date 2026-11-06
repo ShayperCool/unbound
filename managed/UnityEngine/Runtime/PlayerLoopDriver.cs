@@ -69,7 +69,7 @@ namespace Unbound.Runtime
         static readonly Dictionary<Type, List<Action>> s_Engine = new Dictionary<Type, List<Action>>();
         static PlayerLoopSystem? s_Current;
 
-        internal static bool IsMainThread => s_MainThreadId < 0 || Thread.CurrentThread.ManagedThreadId == s_MainThreadId;
+        internal static bool IsMainThread => s_MainThreadId < 0 || Environment.CurrentManagedThreadId == s_MainThreadId;
 
         internal static int MainThreadId => s_MainThreadId;
 

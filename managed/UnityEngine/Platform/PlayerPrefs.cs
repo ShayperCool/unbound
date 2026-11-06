@@ -55,6 +55,7 @@ namespace UnityEngine
 
         public static void Save()
         {
+            MainThreadCheck.Check("Save");
             if (!s_Dirty || s_Values == null) return;
             try
             {
@@ -68,33 +69,43 @@ namespace UnityEngine
             }
         }
 
-        static void Set(string key, object value)
+        static void Set(string binding, string key, object value)
         {
+            MainThreadCheck.Check(binding);
             if (key == null) throw new ArgumentNullException(nameof(key));
             Values[key] = value;
             s_Dirty = true;
         }
 
-        public static void SetInt(string key, int value) => Set(key, value);
-        public static void SetFloat(string key, float value) => Set(key, value);
-        public static void SetString(string key, string value) => Set(key, value ?? "");
+        public static void SetInt(string key, int value) => Set("SetInt", key, value);
+        public static void SetFloat(string key, float value) => Set("SetFloat", key, value);
+        public static void SetString(string key, string value) => Set("SetString", key, value ?? "");
 
-        public static int GetInt(string key, int defaultValue) => Values.TryGetValue(key, out var v) && v is int i ? i : defaultValue;
+        public static int GetInt(string key, int defaultValue) => Check("GetInt") && Values.TryGetValue(key, out var v) && v is int i ? i : defaultValue;
         public static int GetInt(string key) => GetInt(key, 0);
-        public static float GetFloat(string key, float defaultValue) => Values.TryGetValue(key, out var v) && v is float f ? f : defaultValue;
+        public static float GetFloat(string key, float defaultValue) => Check("GetFloat") && Values.TryGetValue(key, out var v) && v is float f ? f : defaultValue;
         public static float GetFloat(string key) => GetFloat(key, 0f);
-        public static string GetString(string key, string defaultValue) => Values.TryGetValue(key, out var v) && v is string s ? s : defaultValue;
+        public static string GetString(string key, string defaultValue) => Check("GetString") && Values.TryGetValue(key, out var v) && v is string s ? s : defaultValue;
         public static string GetString(string key) => GetString(key, "");
 
-        public static bool HasKey(string key) => Values.ContainsKey(key);
+        public static bool HasKey(string key) => Check("HasKey") && Values.ContainsKey(key);
+
+        /// <summary>The main-thread check, as an expression (always true when it returns).</summary>
+        static bool Check(string binding)
+        {
+            MainThreadCheck.Check(binding);
+            return true;
+        }
 
         public static void DeleteKey(string key)
         {
+            MainThreadCheck.Check("DeleteKey");
             if (Values.Remove(key)) s_Dirty = true;
         }
 
         public static void DeleteAll()
         {
+            MainThreadCheck.Check("DeleteAll");
             Values.Clear();
             s_Dirty = true;
         }

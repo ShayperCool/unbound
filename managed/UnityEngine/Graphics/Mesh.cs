@@ -75,6 +75,7 @@ namespace UnityEngine
 
         public Mesh()
         {
+            CheckMainThreadCreation("Internal_Create");
             m_Name = "";
         }
 

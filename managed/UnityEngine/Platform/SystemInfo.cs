@@ -1,4 +1,5 @@
 using System;
+using Unbound.Runtime;
 using System.IO;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Rendering;
@@ -103,13 +104,13 @@ namespace UnityEngine
                 return 0;
             }
         }
-        public static int processorCount => Environment.ProcessorCount;
-        public static int systemMemorySize => s_MemoryMb.Value;
+        public static int processorCount { get { MainThreadCheck.Check("GetProcessorCount"); return Environment.ProcessorCount; } }
+        public static int systemMemorySize { get { MainThreadCheck.Check("GetPhysicalMemoryMB"); return s_MemoryMb.Value; } }
         public static string deviceUniqueIdentifier => s_DeviceId.Value;
         public static string deviceName => Environment.MachineName;
         /// <summary>"PC" on Linux (measured: tests/projects/appfacts); the macOS Editor's hardware
         /// model is not read yet.</summary>
-        public static string deviceModel { get { if (OperatingSystem.IsMacOS()) Unbound.Runtime.Stubs.Ignored("SystemInfo.deviceModel", "is not read on macOS yet: it answers \"PC\""); return "PC"; } }
+        public static string deviceModel { get { MainThreadCheck.Check("GetDeviceModel"); if (OperatingSystem.IsMacOS()) Unbound.Runtime.Stubs.Ignored("SystemInfo.deviceModel", "is not read on macOS yet: it answers \"PC\""); return "PC"; } }
         public static DeviceType deviceType => DeviceType.Desktop;
         [Unbound.EditorFaithful("measured: tests/projects/platform")]
         public static bool supportsAccelerometer => false;
@@ -127,7 +128,7 @@ namespace UnityEngine
         public static string graphicsDeviceVendor => Gpu?.Vendor ?? "Unbound";
         public static int graphicsDeviceID => Gpu?.DeviceId ?? 0;
         public static int graphicsDeviceVendorID => Gpu?.VendorId ?? 0;
-        public static GraphicsDeviceType graphicsDeviceType => GraphicsDeviceType.OpenGLCore;
+        public static GraphicsDeviceType graphicsDeviceType { get { MainThreadCheck.Check("GetGraphicsDeviceType"); return GraphicsDeviceType.OpenGLCore; } }
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe (the Editor's OpenGLCore device)")]
         public static bool graphicsUVStartsAtTop => false;
         public static string graphicsDeviceVersion => Gpu?.Version ?? "OpenGL 4.5.0 (Unbound)";

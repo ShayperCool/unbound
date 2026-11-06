@@ -35,8 +35,16 @@ namespace UnityEngine.SceneManagement
         public string name
         {
             // An invalid scene has no name (measured: tests/projects/messages, null).
-            get => PublicData?.Name;
-            set { if (Data != null) Data.Name = value; }
+            get
+            {
+                MainThreadCheck.Check("GetNameInternal");
+                return PublicData?.Name;
+            }
+            set
+            {
+                MainThreadCheck.Check("SetNameInternal");
+                if (Data != null) Data.Name = value;
+            }
         }
         /// <summary>Not yet while the scene's objects wake up and the scene is processed
         /// (measured: tests/projects/editorcallbacks), and no longer while a SceneManager Single
@@ -137,7 +145,7 @@ namespace UnityEngine.SceneManagement
         internal static void Internal_ActiveSceneChanged(Scene previous, Scene next) => activeSceneChanged?.Invoke(previous, next);
 
         /// <summary>The listed scenes (SceneManagerInternal.Listed), requested and closing ones too.</summary>
-        public static int sceneCount => SceneManagerInternal.Listed().Count;
+        public static int sceneCount { get { MainThreadCheck.Check("get_sceneCount"); return SceneManagerInternal.Listed().Count; } }
 
         /// <summary>The listed scenes whose isLoaded is true: not a scene still loading or being
         /// closed (measured, Unity 6000.0.71f1: tests/projects/lightprobes Reference
@@ -164,7 +172,11 @@ namespace UnityEngine.SceneManagement
 
         internal static SceneHandle GetActiveSceneHandle() => SceneRegistry.EnsureActive().Handle;
 
-        public static Scene GetActiveScene() => new Scene(SceneRegistry.EnsureActive().Handle);
+        public static Scene GetActiveScene()
+        {
+            MainThreadCheck.Check("GetActiveScene");
+            return new Scene(SceneRegistry.EnsureActive().Handle);
+        }
 
         public static bool SetActiveScene(Scene scene)
         {

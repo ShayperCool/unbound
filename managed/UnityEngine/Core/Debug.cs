@@ -165,7 +165,7 @@ namespace UnityEngine
         public static bool developerConsoleEnabled { get; set; }
         public static bool developerConsoleVisible { get; set; }
         [Unbound.EditorFaithful("always true in the Editor")]
-        public static bool isDebugBuild => true;
+        public static bool isDebugBuild { get { MainThreadCheck.Check("get_isDebugBuild"); return true; } }
         public static ILogger logger => s_Logger;
 
         [Conditional("UNITY_ASSERTIONS")]

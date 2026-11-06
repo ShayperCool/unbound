@@ -100,9 +100,9 @@ namespace UnityEngine
         }
 
         /// <summary>The text view of the stored bytes, with Native BOM detection and fallback.</summary>
-        public string text => DecodeTextBytes(m_Bytes);
+        public string text { get { MainThreadCheck.Check("get_bytes"); return DecodeTextBytes(m_Bytes); } }
 
-        public byte[] bytes => (byte[])m_Bytes.Clone();
+        public byte[] bytes { get { MainThreadCheck.Check("get_bytes"); return (byte[])m_Bytes.Clone(); } }
 
         public long dataSize => m_File != null && m_Size >= 0 ? m_Size : m_Bytes.Length;
 

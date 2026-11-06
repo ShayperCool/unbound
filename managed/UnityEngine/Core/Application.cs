@@ -105,7 +105,7 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ state
 
-        public static bool isPlaying => Unbound.Runtime.EditorSession.IsPlaying;
+        public static bool isPlaying { get { MainThreadCheck.Check("get_isPlaying"); return Unbound.Runtime.EditorSession.IsPlaying; } }
         [Unbound.EditorFaithful("Unbound plays as the Editor")]
         public static bool isEditor => true;
         [Unbound.EditorFaithful("Unbound plays as the interactive Editor (-batchmode is not emulated)")]
@@ -128,8 +128,8 @@ namespace UnityEngine
             OperatingSystem.IsMacOS() ? RuntimePlatform.OSXEditor :
             OperatingSystem.IsWindows() ? RuntimePlatform.WindowsEditor : RuntimePlatform.LinuxEditor;
         public static string unityVersion => ProjectInfo.UnityVersion;
-        public static string version => ProjectInfo.BundleVersion;
-        public static string productName => ProjectInfo.ProductName;
+        public static string version { get { MainThreadCheck.Check("get_version"); return ProjectInfo.BundleVersion; } }
+        public static string productName { get { MainThreadCheck.Check("get_productName"); return ProjectInfo.ProductName; } }
         public static string companyName => ProjectInfo.CompanyName;
         public static string identifier => ProjectInfo.Identifier;
         [Unbound.EditorFaithful("the Editor was not installed from a store: no installer name")]
@@ -143,7 +143,12 @@ namespace UnityEngine
         public static SystemLanguage systemLanguage => Unbound.Runtime.SystemLocale.Language;
         public static NetworkReachability internetReachability => NetworkReachability.ReachableViaLocalAreaNetwork;
         public static ThreadPriority backgroundLoadingPriority { get; set; } = ThreadPriority.Normal;
-        public static int targetFrameRate { get; set; } = -1;
+        static int s_TargetFrameRate = -1;
+        public static int targetFrameRate
+        {
+            get { MainThreadCheck.Check("get_targetFrameRate"); return s_TargetFrameRate; }
+            set { MainThreadCheck.Check("set_targetFrameRate"); s_TargetFrameRate = value; }
+        }
         public static CancellationToken exitCancellationToken => s_ExitCancellation.Token;
 
         public static string dataPath => ProjectInfo.AssetsPath;
@@ -154,6 +159,7 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_temporaryCachePath");
                 var path = ProjectInfo.TemporaryCachePath;
                 try
                 {
@@ -170,7 +176,7 @@ namespace UnityEngine
 
         /// <summary>As the Editor computes it: <c>~/.config/unity3d/&lt;company&gt;/&lt;product&gt;</c> on Linux,
         /// <c>~/Library/Application Support/&lt;company&gt;/&lt;product&gt;</c> on macOS.</summary>
-        public static string persistentDataPath => ProjectInfo.PersistentDataPath;
+        public static string persistentDataPath { get { MainThreadCheck.Check("get_persistentDataPath"); return ProjectInfo.PersistentDataPath; } }
 
         [Obsolete("This property is deprecated, please use LoadLevelAsync to detect if a specific scene is currently loading.")]
         public static int loadedLevel => SceneManagement.SceneManager.GetActiveScene().buildIndex;

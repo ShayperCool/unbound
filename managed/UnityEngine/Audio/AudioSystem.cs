@@ -116,8 +116,7 @@ namespace Unbound.Runtime
 
         internal static void CheckMainThread(string api)
         {
-            if (IsCallerAllowed()) return;
-            throw new UnityException(api + " can only be called from the main thread.\nConstructors and field initializers will be executed from the loading thread when loading a scene.\nDon't use this function in the constructor or field initializers, instead move initialization code to the Awake or Start function.");
+            if (!IsCallerAllowed()) MainThreadCheck.Throw(api);
         }
 
         internal static bool ValidSpectrumLength(int length)

@@ -32,6 +32,7 @@ namespace UnityEngine
 
         public static Object Load(string path, Type systemTypeInstance)
         {
+            MainThreadCheck.Check("Load");
             if (systemTypeInstance == null) throw new NullReferenceException("The type is null.");
             foreach (var entry in Find(path, folder: false))
             {

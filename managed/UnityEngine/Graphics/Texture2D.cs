@@ -73,6 +73,7 @@ namespace UnityEngine
 
         void Init(int width, int height, TextureFormat format, int mipCount, bool linear)
         {
+            CheckMainThreadCreation("SupportsTextureFormatNative");
             if (width <= 0 || height <= 0)
                 throw new UnityException($"Failed to create texture because of invalid parameters. Width {width}, height {height}.");
             ReleaseStore();

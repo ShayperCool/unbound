@@ -23,6 +23,7 @@ namespace UnityEngine
 
         public static ScriptableObject CreateInstance(string className)
         {
+            MainThreadCheck.Check("CreateScriptableObjectInstanceFromName");
             var type = GameDomain.FindTypeByName(className);
             if (type == null || !typeof(ScriptableObject).IsAssignableFrom(type))
             {
@@ -34,6 +35,7 @@ namespace UnityEngine
 
         public static ScriptableObject CreateInstance(Type type)
         {
+            MainThreadCheck.Check("CreateScriptableObjectInstanceFromType");
             var instance = CreateInstanceWithoutCallbacks(type);
             instance?.RunCreationCallbacks();
             return instance;

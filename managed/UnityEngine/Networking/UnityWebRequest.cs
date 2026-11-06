@@ -66,6 +66,15 @@ namespace UnityEngine.Networking
         CancellationTokenSource m_Cancel;
         UnityWebRequestAsyncOperation m_Operation;
 
+        /// <summary>Every constructor creates the native request first (Unity's "Create").</summary>
+        readonly bool m_CreatedOnMainThread = CheckCreate();
+
+        static bool CheckCreate()
+        {
+            MainThreadCheck.Check("Create");
+            return true;
+        }
+
         public UnityWebRequest() { }
 
         public UnityWebRequest(string url)

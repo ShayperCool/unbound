@@ -194,7 +194,7 @@ namespace UnityEngine
         public static Awaitable NextFrameAsync(CancellationToken cancellationToken = default)
         {
             var awaitable = new Awaitable();
-            AwaitableScheduler.NextFrame(awaitable, Time.frameCount);
+            AwaitableScheduler.NextFrame(awaitable, Time.s_FrameCount);
             awaitable.WatchCancellation(cancellationToken);
             return awaitable;
         }
@@ -202,7 +202,7 @@ namespace UnityEngine
         public static Awaitable WaitForSecondsAsync(float seconds, CancellationToken cancellationToken = default)
         {
             var awaitable = new Awaitable();
-            AwaitableScheduler.AtTime(awaitable, Time.timeAsDouble + seconds);
+            AwaitableScheduler.AtTime(awaitable, Time.TimeAsDoubleNoCheck + seconds);
             awaitable.WatchCancellation(cancellationToken);
             return awaitable;
         }

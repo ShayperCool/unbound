@@ -41,11 +41,13 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("GetName");
                 ThrowIfDestroyed();
                 return GetName();
             }
             set
             {
+                MainThreadCheck.Check("SetName");
                 ThrowIfDestroyed();
                 SetName(value ?? "");
             }
@@ -56,11 +58,23 @@ namespace UnityEngine
 
         public HideFlags hideFlags
         {
-            get => m_HideFlags;
-            set => m_HideFlags = value;
+            get
+            {
+                MainThreadCheck.Check("get_hideFlags");
+                return m_HideFlags;
+            }
+            set
+            {
+                MainThreadCheck.Check("set_hideFlags");
+                m_HideFlags = value;
+            }
         }
 
-        public int GetInstanceID() => m_InstanceID;
+        public int GetInstanceID()
+        {
+            MainThreadCheck.EnsureRunningOnMainThread();
+            return m_InstanceID;
+        }
 
         public override int GetHashCode() => m_InstanceID;
 
@@ -75,6 +89,7 @@ namespace UnityEngine
 
         public override string ToString()
         {
+            MainThreadCheck.Check("ToString");
             if (m_Destroyed) return "null";
             return $"{GetName()} ({GetType().FullName})";
         }
@@ -96,7 +111,14 @@ namespace UnityEngine
             return lhs.m_InstanceID == rhs.m_InstanceID;
         }
 
-        static bool IsNativeObjectAlive(Object o) => !o.m_Destroyed;
+        static bool IsNativeObjectAlive(Object o)
+        {
+            if (!o.m_Destroyed) return true;
+            // Unity asks the engine by instance id for a destroyed object that is not a script
+            // (GetInstanceID, so only on the main thread).
+            if (!(o is MonoBehaviour || o is ScriptableObject)) MainThreadCheck.EnsureRunningOnMainThread();
+            return false;
+        }
 
         internal void ThrowIfDestroyed()
         {
@@ -111,6 +133,7 @@ namespace UnityEngine
         public static Object Instantiate(Object original)
         {
             CheckNullArgument(original, "The Object you want to instantiate is null.");
+            MainThreadCheck.Check("Internal_CloneSingle");
             return Instantiation.Clone(original, null, false, null, null);
         }
 
@@ -120,24 +143,28 @@ namespace UnityEngine
         public static Object Instantiate(Object original, Transform parent, bool instantiateInWorldSpace)
         {
             CheckNullArgument(original, "The Object you want to instantiate is null.");
+            MainThreadCheck.Check(parent == null ? "Internal_CloneSingle" : "Internal_CloneSingleWithParent");
             return Instantiation.Clone(original, parent, instantiateInWorldSpace, null, null);
         }
 
         public static Object Instantiate(Object original, Vector3 position, Quaternion rotation)
         {
             CheckNullArgument(original, "The Object you want to instantiate is null.");
+            MainThreadCheck.Check("Internal_InstantiateSingle");
             return Instantiation.Clone(original, null, false, position, rotation);
         }
 
         public static Object Instantiate(Object original, Vector3 position, Quaternion rotation, Transform parent)
         {
             CheckNullArgument(original, "The Object you want to instantiate is null.");
+            MainThreadCheck.Check(parent == null ? "Internal_InstantiateSingle" : "Internal_InstantiateSingleWithParent");
             return Instantiation.Clone(original, parent, true, position, rotation);
         }
 
         public static Object Instantiate(Object original, Scene scene)
         {
             CheckNullArgument(original, "The Object you want to instantiate is null.");
+            MainThreadCheck.Check("Internal_CloneSingleWithScene");
             var clone = Instantiation.Clone(original, null, false, null, null);
             if (clone is GameObject go)
                 SceneManager.MoveGameObjectToScene(go, scene);
@@ -164,6 +191,7 @@ namespace UnityEngine
 
         public static void Destroy(Object obj, [UnityEngine.Internal.DefaultValue("0.0F")] float t)
         {
+            MainThreadCheck.Check("Destroy");
             if ((object)obj == null || obj.m_Destroyed) return;
             Destruction.Destroy(obj, t);
         }
@@ -172,6 +200,7 @@ namespace UnityEngine
 
         public static void DestroyImmediate(Object obj, [UnityEngine.Internal.DefaultValue("false")] bool allowDestroyingAssets)
         {
+            MainThreadCheck.Check("DestroyImmediate");
             if ((object)obj == null || obj.m_Destroyed) return;
             if (Unbound.Runtime.PhysicsWorld.IsStepping && obj is GameObject)
             {
@@ -226,15 +255,21 @@ namespace UnityEngine
 
         public static Object[] FindObjectsOfType(Type type) => FindObjectsOfType(type, false);
 
-        public static Object[] FindObjectsOfType(Type type, bool includeInactive) =>
-            ObjectRegistry.TypedArray(type, ObjectRegistry.FindSceneObjects(type, includeInactive, sorted: true));
+        public static Object[] FindObjectsOfType(Type type, bool includeInactive)
+        {
+            MainThreadCheck.Check("FindObjectsByType");
+            return ObjectRegistry.TypedArray(type, ObjectRegistry.FindSceneObjects(type, includeInactive, sorted: true));
+        }
 
         public static Object[] FindObjectsByType(Type type, FindObjectsSortMode sortMode) =>
             FindObjectsByType(type, FindObjectsInactive.Exclude, sortMode);
 
-        public static Object[] FindObjectsByType(Type type, FindObjectsInactive findObjectsInactive, FindObjectsSortMode sortMode) =>
-            ObjectRegistry.TypedArray(type, ObjectRegistry.FindSceneObjects(type, findObjectsInactive == FindObjectsInactive.Include,
+        public static Object[] FindObjectsByType(Type type, FindObjectsInactive findObjectsInactive, FindObjectsSortMode sortMode)
+        {
+            MainThreadCheck.Check("FindObjectsByType");
+            return ObjectRegistry.TypedArray(type, ObjectRegistry.FindSceneObjects(type, findObjectsInactive == FindObjectsInactive.Include,
                 sorted: sortMode == FindObjectsSortMode.InstanceID));
+        }
 
         public static T[] FindObjectsOfType<T>() where T : Object => Cast<T>(FindObjectsOfType(typeof(T), false));
 
@@ -249,8 +284,11 @@ namespace UnityEngine
 
         public static Object FindObjectOfType(Type type) => FindObjectOfType(type, false);
 
-        public static Object FindObjectOfType(Type type, bool includeInactive) =>
-            ObjectRegistry.FindFirstSceneObject(type, includeInactive);
+        public static Object FindObjectOfType(Type type, bool includeInactive)
+        {
+            MainThreadCheck.Check("FindObjectsByType");
+            return ObjectRegistry.FindFirstSceneObject(type, includeInactive);
+        }
 
         public static T FindObjectOfType<T>() where T : Object => (T)FindObjectOfType(typeof(T), false);
 
@@ -295,6 +333,16 @@ namespace UnityEngine
         {
             if (arg == null || (arg is Object o && o.m_Destroyed))
                 throw new ArgumentException(message);
+        }
+
+        /// <summary>A constructor off the main thread: Unity throws before the engine object exists,
+        /// so the managed one is left destroyed and unregistered.</summary>
+        internal void CheckMainThreadCreation(string binding)
+        {
+            if (MainThreadCheck.Allowed) return;
+            m_Destroyed = true;
+            ObjectRegistry.Unregister(this);
+            MainThreadCheck.Throw(binding);
         }
 
         // Called when the engine object is gone; subclasses release what they hold.

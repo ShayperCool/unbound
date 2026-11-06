@@ -96,6 +96,7 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_main");
                 Camera best = null;
                 foreach (var c in s_Enabled)
                 {

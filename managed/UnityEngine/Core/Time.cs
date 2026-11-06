@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using Unbound.Runtime;
 using Unity.IntegerTime;
 
 namespace UnityEngine
@@ -34,26 +35,28 @@ namespace UnityEngine
         /// <summary>The frame's real time, unclamped (audio runs in real time).</summary>
         internal static double s_RealDeltaTime;
 
-        public static float time => (float)(s_InFixedTimeStep ? s_FixedTime : s_Time);
-        public static double timeAsDouble => s_InFixedTimeStep ? s_FixedTime : s_Time;
-        public static float timeSinceLevelLoad => (float)(s_Time - s_TimeSinceLevelLoadStart);
-        public static double timeSinceLevelLoadAsDouble => s_Time - s_TimeSinceLevelLoadStart;
+        public static float time { get { MainThreadCheck.Check("get_time"); return (float)(s_InFixedTimeStep ? s_FixedTime : s_Time); } }
+        /// <summary>The engine's own reading of timeAsDouble, on any thread.</summary>
+        internal static double TimeAsDoubleNoCheck => s_InFixedTimeStep ? s_FixedTime : s_Time;
+        public static double timeAsDouble { get { MainThreadCheck.Check("get_timeAsDouble"); return s_InFixedTimeStep ? s_FixedTime : s_Time; } }
+        public static float timeSinceLevelLoad { get { MainThreadCheck.Check("get_timeSinceLevelLoad"); return (float)(s_Time - s_TimeSinceLevelLoadStart); } }
+        public static double timeSinceLevelLoadAsDouble { get { MainThreadCheck.Check("get_timeSinceLevelLoadAsDouble"); return s_Time - s_TimeSinceLevelLoadStart; } }
         /// <summary>The frame's step (the fixed timestep in the first frame, see BeginFrame).</summary>
-        public static float deltaTime => s_InFixedTimeStep ? s_FixedDeltaTime : s_DeltaTime;
-        public static float fixedTime => (float)s_FixedTime;
-        public static double fixedTimeAsDouble => s_FixedTime;
-        public static float unscaledTime => (float)s_UnscaledTime;
-        public static double unscaledTimeAsDouble => s_UnscaledTime;
-        public static float fixedUnscaledTime => (float)s_FixedUnscaledTime;
-        public static double fixedUnscaledTimeAsDouble => s_FixedUnscaledTime;
-        public static float unscaledDeltaTime => s_InFixedTimeStep ? s_FixedDeltaTime : s_UnscaledDeltaTime;
-        public static float fixedUnscaledDeltaTime => s_FixedDeltaTime;
-        public static float smoothDeltaTime => s_SmoothDeltaTime;
-        public static bool inFixedTimeStep => s_InFixedTimeStep;
-        public static int frameCount => s_FrameCount;
-        public static int renderedFrameCount => s_RenderedFrameCount;
-        public static float realtimeSinceStartup => (float)Realtime();
-        public static double realtimeSinceStartupAsDouble => Realtime();
+        public static float deltaTime { get { MainThreadCheck.Check("get_deltaTime"); return s_InFixedTimeStep ? s_FixedDeltaTime : s_DeltaTime; } }
+        public static float fixedTime { get { MainThreadCheck.Check("get_fixedTime"); return (float)s_FixedTime; } }
+        public static double fixedTimeAsDouble { get { MainThreadCheck.Check("get_fixedTimeAsDouble"); return s_FixedTime; } }
+        public static float unscaledTime { get { MainThreadCheck.Check("get_unscaledTime"); return (float)s_UnscaledTime; } }
+        public static double unscaledTimeAsDouble { get { MainThreadCheck.Check("get_unscaledTimeAsDouble"); return s_UnscaledTime; } }
+        public static float fixedUnscaledTime { get { MainThreadCheck.Check("get_fixedUnscaledTime"); return (float)s_FixedUnscaledTime; } }
+        public static double fixedUnscaledTimeAsDouble { get { MainThreadCheck.Check("get_fixedUnscaledTimeAsDouble"); return s_FixedUnscaledTime; } }
+        public static float unscaledDeltaTime { get { MainThreadCheck.Check("get_unscaledDeltaTime"); return s_InFixedTimeStep ? s_FixedDeltaTime : s_UnscaledDeltaTime; } }
+        public static float fixedUnscaledDeltaTime { get { MainThreadCheck.Check("get_fixedUnscaledDeltaTime"); return s_FixedDeltaTime; } }
+        public static float smoothDeltaTime { get { MainThreadCheck.Check("get_smoothDeltaTime"); return s_SmoothDeltaTime; } }
+        public static bool inFixedTimeStep { get { MainThreadCheck.Check("get_inFixedTimeStep"); return s_InFixedTimeStep; } }
+        public static int frameCount { get { MainThreadCheck.Check("get_frameCount"); return s_FrameCount; } }
+        public static int renderedFrameCount { get { MainThreadCheck.Check("get_renderedFrameCount"); return s_RenderedFrameCount; } }
+        public static float realtimeSinceStartup { get { MainThreadCheck.Check("get_realtimeSinceStartup"); return (float)Realtime(); } }
+        public static double realtimeSinceStartupAsDouble { get { MainThreadCheck.Check("get_realtimeSinceStartupAsDouble"); return Realtime(); } }
 
         /// <summary>The real time at the start of this frame: the sum of the host's real frame
         /// deltas (wall time in a window; the simulated frame times headless, so real-time waits
@@ -66,8 +69,16 @@ namespace UnityEngine
 
         public static float fixedDeltaTime
         {
-            get => s_FixedDeltaTime;
-            set => s_FixedDeltaTime = Math.Max(value, 0.0001f);
+            get
+            {
+                MainThreadCheck.Check("get_fixedDeltaTime");
+                return s_FixedDeltaTime;
+            }
+            set
+            {
+                MainThreadCheck.Check("set_fixedDeltaTime");
+                s_FixedDeltaTime = Math.Max(value, 0.0001f);
+            }
         }
 
         public static float maximumDeltaTime
@@ -84,9 +95,14 @@ namespace UnityEngine
 
         public static float timeScale
         {
-            get => s_TimeScale;
+            get
+            {
+                MainThreadCheck.Check("get_timeScale");
+                return s_TimeScale;
+            }
             set
             {
+                MainThreadCheck.Check("set_timeScale");
                 if (value < 0f || value > 100f || float.IsNaN(value))
                 {
                     Debug.LogError("Time.timeScale is out of range. Needs to be between 0 and 100.");

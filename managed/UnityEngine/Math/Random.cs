@@ -1,5 +1,6 @@
 using System;
 using System.Runtime.InteropServices;
+using Unbound.Runtime;
 
 namespace UnityEngine
 {
@@ -61,12 +62,18 @@ namespace UnityEngine
             // Unity seeds the generator from the clock at startup. UNBOUND_RANDOM_SEED pins the seed,
             // so frame-scripted runs (with --fixed-fps) repeat.
             if (int.TryParse(Environment.GetEnvironmentVariable("UNBOUND_RANDOM_SEED"), out var pinned))
-                InitState(pinned);
+                Seed(pinned);
             else
-                InitState(Environment.TickCount ^ (int)DateTime.UtcNow.Ticks);
+                Seed(Environment.TickCount ^ (int)DateTime.UtcNow.Ticks);
         }
 
         public static void InitState(int seed)
+        {
+            MainThreadCheck.Check("InitState");
+            Seed(seed);
+        }
+
+        static void Seed(int seed)
         {
             s_Seed = seed;
             s_X = (uint)seed;
@@ -78,15 +85,24 @@ namespace UnityEngine
         [Obsolete("Deprecated. Use InitState() function or Random.state property instead.")]
         public static int seed
         {
-            get => s_Seed;
+            get
+            {
+                MainThreadCheck.Check("get_seed");
+                return s_Seed;
+            }
             set => InitState(value);
         }
 
         public static State state
         {
-            get => new State(s_X, s_Y, s_Z, s_W);
+            get
+            {
+                MainThreadCheck.Check("get_state");
+                return new State(s_X, s_Y, s_Z, s_W);
+            }
             set
             {
+                MainThreadCheck.Check("set_state");
                 s_X = value.S0;
                 s_Y = value.S1;
                 s_Z = value.S2;
@@ -114,7 +130,11 @@ namespace UnityEngine
         }
 
         /// <summary>A random float in [minInclusive, maxInclusive].</summary>
-        public static float Range(float minInclusive, float maxInclusive) => RangedFloat(minInclusive, maxInclusive);
+        public static float Range(float minInclusive, float maxInclusive)
+        {
+            MainThreadCheck.Check("Range");
+            return RangedFloat(minInclusive, maxInclusive);
+        }
 
         /// <summary>
         /// A random int in [minInclusive, maxExclusive). If the bounds are equal, minInclusive is
@@ -122,6 +142,7 @@ namespace UnityEngine
         /// </summary>
         public static int Range(int minInclusive, int maxExclusive)
         {
+            MainThreadCheck.Check("RandomRangeInt");
             if (minInclusive < maxExclusive)
             {
                 uint range = (uint)(maxExclusive - minInclusive);
@@ -142,12 +163,20 @@ namespace UnityEngine
         public static int RandomRange(int min, int max) => Range(min, max);
 
         /// <summary>A random float in [0, 1] (both inclusive).</summary>
-        public static float value => NextFloat();
+        public static float value
+        {
+            get
+            {
+                MainThreadCheck.Check("get_value");
+                return NextFloat();
+            }
+        }
 
         public static Vector3 insideUnitSphere
         {
             get
             {
+                MainThreadCheck.Check("get_insideUnitSphere");
                 Vector3 dir = RandomUnitVector();
                 return dir * (float)Math.Pow(NextFloat(), 1.0 / 3.0);
             }
@@ -157,13 +186,21 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("GetRandomUnitCircle");
                 float theta = RangedFloat(0.0f, 2.0f * Mathf.PI);
                 float radius = (float)Math.Sqrt(RangedFloat(0.0f, 1.0f));
                 return new Vector2(radius * (float)Math.Cos(theta), radius * (float)Math.Sin(theta));
             }
         }
 
-        public static Vector3 onUnitSphere => RandomUnitVector();
+        public static Vector3 onUnitSphere
+        {
+            get
+            {
+                MainThreadCheck.Check("get_onUnitSphere");
+                return RandomUnitVector();
+            }
+        }
 
         private static Vector3 RandomUnitVector()
         {
@@ -178,6 +215,7 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_rotation");
                 Quaternion q = new Quaternion(
                     RangedFloat(-1.0f, 1.0f),
                     RangedFloat(-1.0f, 1.0f),
@@ -192,6 +230,7 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_rotationUniform");
                 float u1 = NextFloat();
                 float u2 = RangedFloat(0.0f, 2.0f * Mathf.PI);
                 float u3 = RangedFloat(0.0f, 2.0f * Mathf.PI);

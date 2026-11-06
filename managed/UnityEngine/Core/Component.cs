@@ -33,6 +33,7 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_transform");
                 ThrowIfDestroyed();
                 return m_GameObject.m_Transform;
             }
@@ -42,6 +43,7 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_gameObject");
                 ThrowIfDestroyed();
                 return m_GameObject;
             }
@@ -59,7 +61,11 @@ namespace UnityEngine
 
         public Component GetComponent(Type type) => gameObject.GetComponent(type);
 
-        public T GetComponent<T>() => gameObject.GetComponent<T>();
+        public T GetComponent<T>()
+        {
+            MainThreadCheck.Check("GetComponentFastPath");
+            return gameObject.GetComponent<T>();
+        }
 
         public Component GetComponent(string type) => gameObject.GetComponent(type);
 
@@ -170,11 +176,13 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_enabled");
                 ThrowIfDestroyed();
                 return m_Enabled;
             }
             set
             {
+                MainThreadCheck.Check("set_enabled");
                 ThrowIfDestroyed();
                 if (m_Enabled == value) return;
                 m_Enabled = value;
@@ -187,6 +195,7 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_isActiveAndEnabled");
                 ThrowIfDestroyed();
                 return IsActiveAndEnabledNoThrow;
             }

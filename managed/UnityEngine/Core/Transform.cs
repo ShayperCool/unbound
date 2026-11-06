@@ -34,11 +34,13 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_localPosition");
                 SyncJobs();
                 return GetLocalPosition();
             }
             set
             {
+                MainThreadCheck.Check("set_localPosition");
                 if (!IsFinite(value)) { InvalidValue("localPosition", value); return; }
                 SyncJobs();
                 SetLocalPosition(value);
@@ -64,11 +66,13 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_localRotation");
                 SyncJobs();
                 return m_LocalRotation;
             }
             set
             {
+                MainThreadCheck.Check("set_localRotation");
                 SyncJobs();
                 m_LocalRotation = NormalizeParentingRotation(value);
                 MarkChanged();
@@ -79,11 +83,13 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_localScale");
                 SyncJobs();
                 return m_LocalScale;
             }
             set
             {
+                MainThreadCheck.Check("set_localScale");
                 if (!IsFinite(value)) { InvalidValue("localScale", value); return; }
                 SyncJobs();
                 m_LocalScale = value;
@@ -103,6 +109,7 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_position");
                 SyncJobs();
                 var point = GetLocalPosition();
                 for (var ancestor = m_Parent; ancestor != null; ancestor = ancestor.m_Parent)
@@ -111,6 +118,7 @@ namespace UnityEngine
             }
             set
             {
+                MainThreadCheck.Check("set_position");
                 if (!IsFinite(value)) { InvalidValue("position", value); return; }
                 SyncJobs();
                 SetLocalPosition(m_Parent == null ? value : m_Parent.InverseHierarchyPoint(value));
@@ -121,11 +129,13 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_rotation");
                 EnsureWorld();
                 return m_WorldRotation;
             }
             set
             {
+                MainThreadCheck.Check("set_rotation");
                 SyncJobs();
                 localRotation = m_Parent == null ? value : m_Parent.InverseHierarchyRotation(value);
             }
@@ -153,6 +163,7 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_localToWorldMatrix");
                 EnsureWorld();
                 return m_LocalToWorld;
             }
@@ -162,6 +173,7 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_worldToLocalMatrix");
                 SyncJobs();
                 var inverse = InverseLocalMatrix();
                 for (var ancestor = m_Parent; ancestor != null; ancestor = ancestor.m_Parent)
@@ -208,24 +220,28 @@ namespace UnityEngine
 
         public void SetPositionAndRotation(Vector3 position, Quaternion rotation)
         {
+            MainThreadCheck.Check("SetPositionAndRotation");
             this.rotation = rotation;
             this.position = position;
         }
 
         public void SetLocalPositionAndRotation(Vector3 localPosition, Quaternion localRotation)
         {
+            MainThreadCheck.Check("SetLocalPositionAndRotation");
             m_LocalRotation = localRotation.normalized;
             SetLocalPosition(localPosition);
         }
 
         public void GetPositionAndRotation(out Vector3 position, out Quaternion rotation)
         {
+            MainThreadCheck.Check("GetPositionAndRotation");
             position = this.position;
             rotation = this.rotation;
         }
 
         public void GetLocalPositionAndRotation(out Vector3 localPosition, out Quaternion localRotation)
         {
+            MainThreadCheck.Check("GetLocalPositionAndRotation");
             localPosition = this.localPosition;
             localRotation = m_LocalRotation;
         }
@@ -294,6 +310,7 @@ namespace UnityEngine
 
         public Vector3 TransformPoint(Vector3 position)
         {
+            MainThreadCheck.Check("TransformPoint");
             SyncJobs();
             for (var ancestor = this; ancestor != null; ancestor = ancestor.m_Parent)
                 position = ancestor.TransformLocalPoint(position);
@@ -304,6 +321,7 @@ namespace UnityEngine
 
         public Vector3 InverseTransformPoint(Vector3 position)
         {
+            MainThreadCheck.Check("InverseTransformPoint");
             SyncJobs();
             return InverseHierarchyPoint(position);
         }
@@ -493,7 +511,11 @@ namespace UnityEngine
 
         public Transform parent
         {
-            get => m_Parent;
+            get
+            {
+                MainThreadCheck.Check("GetParent");
+                return m_Parent;
+            }
             set
             {
                 if (this is RectTransform)
@@ -518,10 +540,18 @@ namespace UnityEngine
             }
         }
 
-        public int childCount => m_Children.Count;
+        public int childCount
+        {
+            get
+            {
+                MainThreadCheck.Check("get_childCount");
+                return m_Children.Count;
+            }
+        }
 
         public Transform GetChild(int index)
         {
+            MainThreadCheck.Check("GetChild");
             if (index < 0 || index >= m_Children.Count)
                 throw new UnityException("Transform child out of bounds");
             return m_Children[index];
@@ -534,6 +564,7 @@ namespace UnityEngine
 
         public void SetParent(Transform parent, bool worldPositionStays)
         {
+            MainThreadCheck.Check("SetParent");
             ThrowIfDestroyed();
             if (parent == this)
             {
@@ -697,6 +728,7 @@ namespace UnityEngine
         public Transform Find(string n)
         {
             if (n == null) throw new ArgumentNullException("Name cannot be null");
+            MainThreadCheck.Check("FindRelativeTransformWithPath");
             var current = this;
             foreach (var part in n.Split('/'))
             {

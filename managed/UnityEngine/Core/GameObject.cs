@@ -40,6 +40,7 @@ namespace UnityEngine
 
         static void Internal_Create(GameObject go, Type[] components)
         {
+            go.CheckMainThreadCreation("Internal_CreateGameObject");
             // During a Single load's teardown this is the incoming scene, not the active one, and
             // it is set before any component wakes up.
             go.m_Scene = SceneRegistry.DefaultCreationScene().Handle;
@@ -62,6 +63,7 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_transform");
                 ThrowIfDestroyed();
                 return m_Transform;
             }
@@ -71,9 +73,14 @@ namespace UnityEngine
 
         public int layer
         {
-            get => m_Layer;
+            get
+            {
+                MainThreadCheck.Check("get_layer");
+                return m_Layer;
+            }
             set
             {
+                MainThreadCheck.Check("set_layer");
                 if (value < 0 || value > 31)
                 {
                     Debug.LogError("A game object can only be in one layer. The layer needs to be in the range [0...31]");
@@ -85,9 +92,14 @@ namespace UnityEngine
 
         public string tag
         {
-            get => m_Tag;
+            get
+            {
+                MainThreadCheck.Check("get_tag");
+                return m_Tag;
+            }
             set
             {
+                MainThreadCheck.Check("set_tag");
                 if (!TagManager.IsDefined(value))
                     throw new UnityException($"Tag: {value} is not defined.");
                 m_Tag = value;
@@ -102,6 +114,7 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_activeSelf");
                 ThrowIfDestroyed();
                 return m_IsActive;
             }
@@ -111,6 +124,7 @@ namespace UnityEngine
         {
             get
             {
+                MainThreadCheck.Check("get_activeInHierarchy");
                 ThrowIfDestroyed();
                 return ActiveInHierarchyNoThrow;
             }
@@ -137,12 +151,20 @@ namespace UnityEngine
 
         public bool isStatic { get; set; }
 
-        public Scene scene => new Scene(m_Scene);
+        public Scene scene
+        {
+            get
+            {
+                MainThreadCheck.Check("get_scene");
+                return new Scene(m_Scene);
+            }
+        }
 
         public ulong sceneCullingMask => ulong.MaxValue;
 
         public void SetActive(bool value)
         {
+            MainThreadCheck.Check("SetActive");
             ThrowIfDestroyed();
             if (m_IsActive == value) return;
             bool wasActive = ActiveInHierarchyNoThrow;
@@ -155,14 +177,23 @@ namespace UnityEngine
         [Obsolete("gameObject.SetActiveRecursively() is obsolete. Use GameObject.SetActive(), which is now inherited by children.")]
         public void SetActiveRecursively(bool state) => SetActive(state);
 
-        public bool CompareTag(string tag) => m_Tag == tag;
+        public bool CompareTag(string tag)
+        {
+            MainThreadCheck.Check("CompareTag_Internal");
+            return m_Tag == tag;
+        }
 
-        public bool CompareTag(TagHandle tag) => m_Tag == tag.Name;
+        public bool CompareTag(TagHandle tag)
+        {
+            MainThreadCheck.Check("CompareTagHandle_Internal");
+            return m_Tag == tag.Name;
+        }
 
         // ------------------------------------------------------------------ components
 
         public Component AddComponent(Type componentType)
         {
+            MainThreadCheck.Check("Internal_AddComponentWithType");
             ThrowIfDestroyed();
             return ComponentFactory.Add(this, componentType);
         }
@@ -178,12 +209,14 @@ namespace UnityEngine
         /// A live GameObject without the component gives null.</summary>
         public Component GetComponent(Type type)
         {
+            MainThreadCheck.Check("GetComponent");
             ThrowIfDestroyed();
             return FindComponent(type);
         }
 
         public T GetComponent<T>()
         {
+            MainThreadCheck.Check("GetComponentFastPath");
             ThrowIfDestroyed();
             return FindComponent<T>();
         }
@@ -257,6 +290,7 @@ namespace UnityEngine
 
         public Component[] GetComponents(Type type)
         {
+            MainThreadCheck.Check("GetComponentsInternal");
             var list = new List<Component>();
             ComponentQueries.OnSelf(this, type, list);
             return list.ToArray();
@@ -271,12 +305,14 @@ namespace UnityEngine
 
         public void GetComponents(Type type, List<Component> results)
         {
+            MainThreadCheck.Check("GetComponentsInternal");
             results.Clear();
             ComponentQueries.OnSelf(this, type, results);
         }
 
         public void GetComponents<T>(List<T> results)
         {
+            MainThreadCheck.Check("GetComponentsInternal");
             results.Clear();
             foreach (var c in m_Components)
                 if (!c.m_Destroyed && c is T t)
@@ -378,12 +414,17 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ statics
 
-        public static GameObject Find(string name) => SceneRegistry.FindByPath(name);
+        public static GameObject Find(string name)
+        {
+            MainThreadCheck.Check("Find");
+            return SceneRegistry.FindByPath(name);
+        }
 
         public static GameObject FindWithTag(string tag) => FindGameObjectWithTag(tag);
 
         public static GameObject FindGameObjectWithTag(string tag)
         {
+            MainThreadCheck.Check("FindGameObjectWithTag");
             if (!TagManager.IsDefined(tag))
                 throw new UnityException($"Tag: {tag} is not defined.");
             foreach (var go in SceneRegistry.AllGameObjects(includeInactive: false))
@@ -393,6 +434,7 @@ namespace UnityEngine
 
         public static GameObject[] FindGameObjectsWithTag(string tag)
         {
+            MainThreadCheck.Check("FindGameObjectsWithTag");
             if (!TagManager.IsDefined(tag))
                 throw new UnityException($"Tag: {tag} is not defined.");
             var list = new List<GameObject>();

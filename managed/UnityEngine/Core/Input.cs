@@ -33,7 +33,7 @@ namespace UnityEngine
         /// window system's scale factor (Unbound's choice (unmeasured): Unity documents the
         /// screen's actual DPI, and the window system reports a scale, not a physical density).
         /// Without a display, Unbound's constant 96.</summary>
-        public static float dpi => HostDisplay()?.Dpi ?? 96f;
+        public static float dpi { get { MainThreadCheck.Check("get_dpi"); return HostDisplay()?.Dpi ?? 96f; } }
         /// <summary>The desktop's current resolution and refresh rate on the display the window
         /// is on (documented: in windowed mode, the desktop's resolution, not the window's).
         /// Without a display, Unbound's constant: the window's size at 60 Hz.</summary>
@@ -638,10 +638,10 @@ namespace UnityEngine
             return code != KeyCode.None && s_Keys[(int)code];
         }
 
-        public static bool GetKey(KeyCode key) { CheckEnabled(); return (int)key >= 0 && (int)key < KeyCount && s_Keys[(int)key]; }
+        public static bool GetKey(KeyCode key) { MainThreadCheck.Check("GetKeyInt"); CheckEnabled(); return (int)key >= 0 && (int)key < KeyCount && s_Keys[(int)key]; }
         public static bool GetKeyDown(KeyCode key) { CheckEnabled(); return (int)key >= 0 && (int)key < KeyCount && s_KeysDown[(int)key]; }
         public static bool GetKeyUp(KeyCode key) { CheckEnabled(); return (int)key >= 0 && (int)key < KeyCount && s_KeysUp[(int)key]; }
-        public static bool GetKey(string name) => GetKey(ParseKey(name));
+        public static bool GetKey(string name) { MainThreadCheck.Check("GetKeyString"); return GetKey(ParseKey(name)); }
         public static bool GetKeyDown(string name) => GetKeyDown(ParseKey(name));
         public static bool GetKeyUp(string name) => GetKeyUp(ParseKey(name));
 
@@ -744,7 +744,7 @@ namespace UnityEngine
 
         public static bool anyKeyDown { get { CheckEnabled(); return s_AnyKeyDown; } }
         public static string inputString { get { CheckEnabled(); return s_InputString; } }
-        public static Vector3 mousePosition { get { CheckEnabled(); return s_MousePosition; } }
+        public static Vector3 mousePosition { get { MainThreadCheck.Check("get_mousePosition"); CheckEnabled(); return s_MousePosition; } }
         public static Vector3 mousePositionDelta { get { CheckEnabled(); return s_MouseDelta; } }
         public static Vector2 mouseScrollDelta { get { CheckEnabled(); return s_Scroll; } }
         [Unbound.EditorFaithful("measured: tests/projects/gamepad (the Editor always has a mouse)")]
