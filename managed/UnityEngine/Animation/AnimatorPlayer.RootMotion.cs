@@ -400,8 +400,10 @@ namespace Unbound.Runtime
                 if (layerWeight < 1f && layerSample.HasMotion && !(any && blended.HasMotion))
                     Unbound.Runtime.Stubs.Ignored("Animator humanoid root motion of a partial layer over none",
                         "a layer's humanoid root motion over no humanoid root motion below moves the root by the layer weight's share (not measured)");
-                blended = Unbound.Runtime.Humanoid.HumanRootMotion.Override(any ? blended : Unbound.Runtime.Humanoid.HumanRootMotion.NoMotion,
-                    layerSample, layerWeight);
+                // Skipped layers (weight 0) and no humanoid motion below keep the feet pivot as it was.
+                blended = any ? Unbound.Runtime.Humanoid.HumanRootMotion.Override(blended, layerSample, layerWeight)
+                    : layerSample.HasMotion ? Unbound.Runtime.Humanoid.HumanRootMotion.Override(Unbound.Runtime.Humanoid.HumanRootMotion.NoMotion, layerSample, layerWeight)
+                    : layerSample;
                 any = true;
             }
             if (!any) return false;

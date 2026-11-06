@@ -97,6 +97,30 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void APartialLayerOverNoMotionMovesTheRootByItsShareWithTheFeetPivot()
+        {
+            // A walk with planted feet (no slip): the root steps 0.05 a frame, the feet fall back as much.
+            HumanRootMotionSample Walk(int frame)
+            {
+                var s = Sample(0.05f, 0f, 0f);
+                s.LeftFoot = X(0.1f, -0.05f * frame, 0f);
+                s.RightFoot = X(-0.1f, 0.2f - 0.05f * frame, 0f);
+                s.LeftFootSlip = s.RightFootSlip = Trs.Identity;
+                return s;
+            }
+            var memory = new HumanRootMotionMemory();
+            var root = new Trs(F4.Zero, F4.QIdentity, F4.One3);
+            for (int frame = 0; frame < 4; frame++)
+            {
+                var sample = HumanRootMotion.Override(HumanRootMotion.NoMotion, Walk(frame), 0.3f);
+                HumanRootMotion.ApplyToAnimator(sample, root, 1f / 30f, 1f, 1f, memory, out var result);
+                HumanRootMotion.EndUpdate(memory, 1f / 30f);
+                Near(0.015f, result.DeltaPosition.z);
+                Near(0f, result.DeltaPosition.x);
+            }
+        }
+
+        [Fact]
         public void ThePoseBodyIsTheBlendedBodyPlusWhatTheValuesAdd()
         {
             var sample = Sample(1f, 0f, 0f);

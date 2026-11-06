@@ -375,8 +375,9 @@ namespace Unbound.Runtime.Humanoid
         /// transition, a blend tree's clips): every part (step, motion, body, feet, feet slips)
         /// summed by weight, rotations by their weighted sum (aligned), normalized (measured,
         /// tests/projects/humanoid). Weights summing to less than 1 (a transition from a state
-        /// without a motion) leave the rest of the step still; the other parts are normalized by
-        /// the total weight (not measured).</summary>
+        /// without a motion, a partial layer over none) leave the rest of the step still, the feet
+        /// slipping by what the root no longer covers; the other parts are normalized by the total
+        /// weight (not measured).</summary>
         public static HumanRootMotionSample Blend(ReadOnlySpan<HumanRootMotionSample> samples, ReadOnlySpan<float> weights)
         {
             if (samples.Length == 1 && weights[0] >= 1f) return samples[0];
@@ -385,9 +386,9 @@ namespace Unbound.Runtime.Humanoid
                 if (samples[i].HasMotion) total += weights[i];
             var r = new HumanRootMotionSample { Delta = Trs.Identity, Motion = Trs.Identity, Body = Trs.Identity, Root = Trs.Identity,
                 LeftFoot = Trs.Identity, RightFoot = Trs.Identity, LeftFootSlip = Trs.Identity, RightFootSlip = Trs.Identity };
-            if (total <= 0f) return r;
+            if (total <= 0f) return samples.Length > 0 ? samples[0] : r;
             r.HasMotion = true;
-            Span<Trs> parts = stackalloc Trs[8];
+            Span<Trs> parts = stackalloc Trs[9];
             var zero = new Trs(F4.Zero, F4.Zero, F4.One3);
             for (int k = 0; k < parts.Length; k++) parts[k] = zero;
             for (int i = 0; i < samples.Length; i++)
@@ -403,6 +404,7 @@ namespace Unbound.Runtime.Humanoid
                 Add(ref parts[5], s.RightFootSlip, n);
                 Add(ref parts[6], s.Body, n);
                 Add(ref parts[7], s.Root, n);
+                Add(ref parts[8], s.Delta, n);
                 r.ClipDeltaTime += s.ClipDeltaTime * w;
                 r.GravityWeight += s.GravityWeight * n;
             }
@@ -418,6 +420,12 @@ namespace Unbound.Runtime.Humanoid
             {
                 r.LeftFootSlip = parts[4];
                 r.RightFootSlip = parts[5];
+                if (total < 1f)
+                {
+                    // The feet stay where the clips' whole step leaves them.
+                    r.LeftFootSlip = Slip(r.Delta, r.LeftFoot, Previous(parts[8], r.LeftFoot, r.LeftFootSlip));
+                    r.RightFootSlip = Slip(r.Delta, r.RightFoot, Previous(parts[8], r.RightFoot, r.RightFootSlip));
+                }
             }
             return r;
         }
@@ -552,6 +560,14 @@ namespace Unbound.Runtime.Humanoid
             var p2 = memory.Pivot;
             var ms = moved.s;
             result.PivotPosition = M.QRotate(moved.q, new F4(hs * p2.x * ms.x, hs * p2.y * ms.y, hs * p2.z * ms.z, 0f)) + moved.t;
+        }
+
+        /// <summary>A foot goal at the previous time in the previous motion's frame: delta · cur · slip⁻¹.</summary>
+        static Trs Previous(in Trs delta, in Trs cur, in Trs slip)
+        {
+            var sc = M.QConj(slip.q);
+            var moved = new Trs(M.QRotate(delta.q, cur.t) + delta.t, M.QMul(delta.q, cur.q), F4.One3);
+            return M.Mul(moved, new Trs(M.QRotate(sc, -slip.t), sc, F4.One3));
         }
 
         /// <summary>A foot goal's previous position in the previous motion's frame, recovered from the
