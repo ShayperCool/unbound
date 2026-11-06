@@ -260,6 +260,10 @@ namespace UnityEngine.Tests
             compressor.m_Bypass = true;
             using (var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration())))
                 Assert.Equal(JsonValueKind.Null, payload.RootElement.GetProperty("effects")[0].GetProperty("compressor").ValueKind);
+            Assert.True(mixer.SetFloat("HighCut", 23000f));
+            Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+            high.m_Bypass = true;
+            group.DspConfiguration();
             compressor.m_EnableWetMix = true; compressor.m_Bypass = false;
             Assert.True(mixer.SetFloat("Threshold", -10f));
             Assert.Throws<NotSupportedException>(() => group.DspConfiguration());

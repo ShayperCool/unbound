@@ -93,10 +93,6 @@ impl EffectSpec {
                 && eq.octaves.is_finite() && eq.gain > 0.0 && eq.gain.is_finite(),
                 "AudioMixer ParamEQ '{}' has unsupported parameters", self.id);
         }
-        if matches!(self.kind.as_str(), "Lowpass Simple" | "Highpass Simple") {
-            anyhow::ensure!(self.cutoff.is_finite() && (10.0..=22000.0).contains(&self.cutoff),
-                "AudioMixer {} '{}' cutoff {} is outside the measured 10 to 22000 Hz", self.kind, self.id, self.cutoff);
-        }
         anyhow::ensure!(self.send_level.is_finite() && self.send_level >= 0.0,
             "invalid AudioMixer send level {}", self.send_level);
         if let Some(level) = self.mix_level {

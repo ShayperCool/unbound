@@ -409,6 +409,10 @@ namespace UnityEngine.Audio
                 bool measured = Array.IndexOf(AudioMixerEffectController.MeasuredEffects, effect.m_EffectName) >= 0;
                 if (!bypass && !reverb && !routed && !measured)
                     throw new NotSupportedException("Unsupported AudioMixer effect '" + effect.m_EffectName + "' in group '" + Path + "'");
+                bool simple = effect.m_EffectName == "Lowpass Simple" || effect.m_EffectName == "Highpass Simple";
+                float simpleCutoff = effect.Parameter("Cutoff freq") is string simpleGuid ? m_Mixer.Value(simpleGuid) : AudioMixerEffectController.CutoffDefault(effect.m_EffectName);
+                if (!bypass && simple && !(simpleCutoff >= 10f && simpleCutoff <= 22000f))
+                    throw new NotSupportedException("AudioMixer " + effect.m_EffectName + " Cutoff freq " + simpleCutoff + " is outside the Editor's range 10 to 22000");
                 // A send's target registers its group, which may have no source of its own.
                 var target = effect.m_EffectName == "Send" ? effect.m_SendTarget : null;
                 var targetGroup = target == null ? null : m_Mixer?.m_Groups.Find(g => g.m_Effects.Contains(target));

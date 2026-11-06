@@ -807,6 +807,15 @@ impl Mixer {
                 effect.kind,
                 effect.id
             );
+            anyhow::ensure!(
+                !active
+                    || !matches!(effect.kind.as_str(), "Lowpass Simple" | "Highpass Simple")
+                    || (10.0..=22000.0).contains(&effect.cutoff),
+                "AudioMixer {} '{}' cutoff {} is outside the measured 10 to 22000 Hz",
+                effect.kind,
+                effect.id,
+                effect.cutoff
+            );
         }
         let mut parent = spec.parent;
         for _ in 0..=self.group_nodes.len() {
