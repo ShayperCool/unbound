@@ -225,3 +225,77 @@ milliseconds converted with `floor(ms * rate / 1000)`. The constants are in `rev
 - A Wet level above 0 dB (for example through an exposed parameter) fails loudly as unmeasured.
 - Wet mixing on other effects, the other mixer effects, `AudioReverbFilter` and `AudioReverbZone`
   still fail loudly or remain stubs.
+
+# AudioMixer: Send, Receive and Duck Volume
+
+`crates/unbound-runtime/src/audio/duck.rs` runs the Duck Volume unit; `effects.rs`
+(`Effect::process_routed`) runs Send and Receive and the sidechain buffers, and `mixer.rs`
+(`processing_order`) orders the groups. The managed mixer sends `duck`, `sendTarget` and
+`sendLevel` in the group configuration (JSON; NativeApi unchanged). Validation:
+tests/projects/mixerduck (Unity 6000.0.71f1, Linux, 48000 and 44100 Hz).
+
+## Unity contract (6000.0)
+
+Documented, Manual *AudioGroup Inspector*
+(https://docs.unity.com/en-us/engine/6000.0/manual/audio/mixer/inspectors) and *Introduction to
+the Audio Mixer* (https://docs.unity.com/en-us/engine/6000.0/manual/audio/mixer/overview):
+
+- A Send splits the signal and sends "a potentially attenuated copy of the signal to be used as a
+  side-chain within another Effect Unit". It can go anywhere in the chain; a new Send has no
+  destination and a Send Level of -80 dB. Placing it before or after the Attenuation unit is the
+  pre/post-fader choice; "attenuation can be applied anywhere in the effect stack".
+- A Receive mixes the signal of the Sends that target it into its group's signal; it has no
+  parameters.
+- Duck Volume "attenuates a signal based on audio being played somewhere else in the Audio
+  Mixer"; it needs a Send to feed it. The 6000.0 Manual has no Duck Volume parameter table and no
+  reference page.
+- Effects apply in Inspector order. Snapshots capture Send levels.
+- The Manual states nothing about group processing order for sends, latency, bypass of these
+  units or their startup.
+
+Editor definitions of 6000.0.71f1 (`MixerEffectDefinitions`): Threshold -80 to 0 dB (default -10),
+Ratio 0.2 to 10 (displayed in %, default 2), Attack Time and Release Time 0 to 10 s (default 0.1),
+Make-up Gain -80 to 40 dB (0), Knee 0 to 50 dB (10), Sidechain Mix 0 to 1 (1). A Send's level is
+its mix level (`m_MixLevel`), and `m_SendTarget` names the Receive or Duck Volume unit.
+
+## Measured model
+
+Measured from the captures, not documented. The level detector and the gain curve are those of
+the compressor in Unity's public NativeAudioPlugins (`Plugin_Multiband.cpp`, whose comment calls
+it "duckEnvelope"); the time constants, channel link and interpolation were fitted. The engine
+reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
+
+- **Detector.** Per frame `x = mix * sidechain + (1 - mix) * input` per channel. The level is
+  `s = clamp(max(xL^2, xR^2), 1e-11, 100)`, so the louder channel drives both. The envelope is
+  `env += (s - env) * k + 1e-16`, all in f32. `k` is the attack coefficient while `s > env` and
+  the release coefficient otherwise: `k = 1 - 0.1^(1 / (T * rate))` (90 % of a step in `T`
+  seconds), or 1 at `T = 0`.
+- **Curve.** `t = 10 log10(env) - Threshold`, `c = 0.05 (1/Ratio - 1)`. For `|t| < Knee` the gain
+  is `10^(c (t + Knee)^2 / (4 Knee))`; above that `10^(c t)`; otherwise 1. Make-up Gain scales it.
+  Ratios below 1 expand.
+- **Interpolation.** The gain is evaluated at the first frame of each 8-frame chunk (after that
+  frame's envelope update) and approached linearly over the chunk; the unit starts from gain 0.
+- **Defaults.** An unset Release Time acts as 0.3 s, not the Editor's 0.1 s (`release01` against
+  `default`). The other unset parameters act as their Editor defaults.
+- **Sends.** A Send adds `DspGain(level) * signal` at its chain position to its target, where
+  `DspGain` is the mixer's gain approximation; -80 dB sends nothing. Several sends sum. A Receive
+  adds the sum at its position.
+- **Order.** Sends reach their target in the same block in every measured layout: siblings in
+  both creation orders, a duck or receive in the parent. The engine processes children before
+  parents and senders before the groups they send to. A send cycle (including into its own
+  group) fails loudly as unmeasured.
+- **Bypass.** Native ignores effect bypass and group bypass on all three units (the Editor
+  disallows bypassing them).
+- **Startup.** During the mixer's first DSP block nothing reaches a Receive or Duck Volume. A
+  group with Duck Volume has the 1024-frame group input fade (as Echo and SFX Reverb); groups with
+  only Send or Receive do not. Signals there otherwise show only the voices' 64-frame start fade.
+
+## Limits
+
+- `ramp_ratio02`: an expanding ratio of 0.2 at up to 100x gain differs by up to 2.4e-5 relative
+  (about 5e-6 of the log gain), inside the tolerance; probably Native's pow. Knee 50 and Ratio 10
+  differ by under 1.4e-5.
+- Unmeasured: other releases, surround output, parameter changes and snapshot transitions while
+  the detector runs, a Send level above 0 dB, sends between mixers, a send into its own group,
+  wet mixing on these units (fails loudly), and sample rates other than 48000 and 44100 Hz.
+- Compressor and the other mixer effects still fail loudly.

@@ -57,4 +57,6 @@ cache.
 
 ## Result
 
-See docs/AUDIO.md for the measured model and the result.
+Gate: 6684776/6684776 values at 48000 Hz and at 44100 Hz. The strict comparison keeps one-step
+device PCM flips (883 at 48 kHz, 885 at 44.1 kHz) whose master floats pass; they are listed in
+docs/COMPATIBILITY_GAPS.md. The measured model and its limits are in docs/AUDIO.md.
