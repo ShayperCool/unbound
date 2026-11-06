@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Unbound.Runtime;
 using UnityEngine.Rendering;
+using UnityEngine.Experimental.Rendering;
 
 namespace Unbound.Runtime
 {
@@ -531,19 +532,61 @@ namespace UnityEngine
             GfxStream.CopyTexture(source, srcElement, srcMip, new RectInt(srcX, srcY, srcWidth, srcHeight), destination, dstElement, dstMip, dstX, dstY);
         }
 
-        /// <summary>A blit that converts between formats and sizes.</summary>
-        public static bool ConvertTexture(Texture src, Texture dst)
+        /// <summary>Graphics.ConvertTexture (measured, tests/projects/cmdbuffers convert.*): a 2D
+        /// source (a render texture too) blitted into a temporary of the destination's size and
+        /// format, which is copied into the destination's element (an array slice or cube face).
+        /// A cubemap converts (its first face) into a cubemap's face only. A render texture or non-renderable
+        /// destination is refused with the Editor's errors.</summary>
+        public static bool ConvertTexture(Texture src, Texture dst) => ConvertTexture(src, 0, dst, 0);
+
+        public static bool ConvertTexture(Texture src, int srcElement, Texture dst, int dstElement)
         {
-            if (dst is RenderTexture rt)
+            if (src == null) { Debug.LogError("Graphics.ConvertTexture called with null source texture"); return false; }
+            if (dst == null) { Debug.LogError("Graphics.ConvertTexture called with null destination texture"); return false; }
+            if (dst is RenderTexture)
             {
-                Immediate.Blit(src, rt, null, -1, Vector2.one, Vector2.zero);
+                Debug.LogError("Graphics.ConvertTexture called with a render target destination.  Please use Graphics.Blit instead.");
+                return false;
+            }
+            // A cubemap face converts into a cubemap only (cube into 2D or array is refused).
+            bool face = src.dimension == TextureDimension.Cube;
+            if (!(face ? dst.dimension == TextureDimension.Cube
+                    : src.dimension == TextureDimension.Tex2D && dst.dimension is TextureDimension.Tex2D or TextureDimension.Tex2DArray
+                        or TextureDimension.Cube or TextureDimension.CubeArray))
+            {
+                Debug.LogError($"Graphics.ConvertTexture called with unsupported source and destination texture types (src={(int)src.dimension} dst={(int)dst.dimension})");
+                return false;
+            }
+            var format = dst.graphicsFormat;
+            if (!SystemInfo.IsFormatSupported(format, GraphicsFormatUsage.Render))
+            {
+                Debug.LogError($"Unsupported destination format in Graphics.ConvertTexture ({(int)format}). This is likely because the device does not support this format as a rendertarget format.");
+                return false;
+            }
+            int layers = Immediate.GpuLayers(dst);
+            if (dstElement < 0 || dstElement >= layers)
+            {
+                Debug.LogError($"Graphics.CopyTexture called with invalid destination element index (got {dstElement}, have {layers} elements/layers)");
                 return true;
             }
-            CopyTexture(src, dst);
+            var active = RenderTexture.ActiveTarget;
+            // The face is copied out first (blits read 2D sources): the first face, whatever
+            // srcElement says (measured, convert.cubetocube*).
+            RenderTexture faceCopy = null;
+            if (face)
+            {
+                faceCopy = RenderTexture.GetTemporary(new RenderTextureDescriptor(src.width, src.height, src.graphicsFormat, 0));
+                faceCopy.filterMode = src.filterMode;
+                GfxStream.CopyTexture(TextureHandles.Of(src), 0, 0, new RectInt(0, 0, -1, -1), faceCopy.EnsureCreated(), 0, 0, 0, 0);
+            }
+            var temporary = RenderTexture.GetTemporary(new RenderTextureDescriptor(dst.width, dst.height, format, 0));
+            Immediate.Blit(faceCopy != null ? faceCopy : src, temporary, null, -1, Vector2.one, Vector2.zero);
+            GfxStream.CopyTexture(temporary.EnsureCreated(), 0, 0, new RectInt(0, 0, -1, -1), TextureHandles.Of(dst), dstElement, 0, 0, 0);
+            RenderTexture.SetActiveQuietly(active);
+            RenderTexture.ReleaseTemporary(temporary);
+            if (faceCopy != null) RenderTexture.ReleaseTemporary(faceCopy);
             return true;
         }
-
-        public static bool ConvertTexture(Texture src, int srcElement, Texture dst, int dstElement) => ConvertTexture(src, dst);
     }
 
     public sealed partial class GL

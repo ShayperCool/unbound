@@ -548,6 +548,10 @@ namespace UnityEngine.Rendering
             GfxStream.CopyTexture(source, srcElement, srcMip, new RectInt(srcX, srcY, srcWidth, srcHeight), destination, dstElement, dstMip, dstX, dstY);
         });
 
+        public void ConvertTexture(RenderTargetIdentifier src, RenderTargetIdentifier dst) => ConvertTexture(src, 0, dst, 0);
+        public void ConvertTexture(RenderTargetIdentifier src, int srcElement, RenderTargetIdentifier dst, int dstElement) =>
+            Add(c => Graphics.ConvertTexture(Resolve(src, c), srcElement, Resolve(dst, c), dstElement));
+
         // ------------------------------------------------------------ random write targets
 
         public void SetRandomWriteTarget(int index, ComputeBuffer buffer) => SetRandomWriteTarget(index, buffer, false);
