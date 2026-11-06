@@ -777,7 +777,12 @@ fn texture_property(name: &str, sampler: bool) -> Option<String> {
     Some(name.to_string())
 }
 
-pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
+/// `uav_registers`: the UAV registers the fragment source declares, by buffer name.
+pub fn fit(
+    vertex: &[u32],
+    fragment: &[u32],
+    uav_registers: &HashMap<String, u32>,
+) -> Result<Compiled> {
     let vertex = unify_int_signedness(&pad_array_elements(&align_uniform_members(
         &strip_relaxed_precision(vertex),
     )?)?)?;
@@ -869,11 +874,33 @@ pub fn fit(vertex: &[u32], fragment: &[u32]) -> Result<Compiled> {
                     "buffer `{name}` is written by the vertex program, which wgpu does not allow"
                 );
             }
+            let register = (!read_only)
+                .then(|| uav_registers.get(&name).copied())
+                .flatten();
             match buffers.iter_mut().find(|b| b.name == name) {
-                Some(b) => b.read_only &= read_only,
-                None => buffers.push(BufferSlot { name, read_only }),
+                Some(b) => {
+                    b.read_only &= read_only;
+                    b.register = b.register.or(register);
+                }
+                None => buffers.push(BufferSlot {
+                    name,
+                    read_only,
+                    register,
+                }),
             }
         }
+    }
+    // A written buffer without a register takes the next free one after the render targets,
+    // as FXC assigns it (measured: with one target, Unity binds the random write target at 1).
+    let mut next = fragment_targets(&fragment);
+    for k in 0..buffers.len() {
+        if buffers[k].read_only || buffers[k].register.is_some() {
+            continue;
+        }
+        while buffers.iter().any(|b| b.register == Some(next)) {
+            next += 1;
+        }
+        buffers[k].register = Some(next);
     }
     for b in buffers.iter().filter(|b| !b.read_only) {
         if vertex.global_variables.iter().any(|(_, g)| {
@@ -1926,6 +1953,24 @@ fn flat_integer_varyings(module: &mut Module, stage: naga::ShaderStage) {
             );
         }
     }
+}
+
+/// How many render targets the fragment program writes (its outputs at locations).
+fn fragment_targets(module: &Module) -> u32 {
+    let location = |b: &Option<Binding>| matches!(b, Some(Binding::Location { .. }));
+    module
+        .entry_points
+        .iter()
+        .filter(|e| e.stage == naga::ShaderStage::Fragment)
+        .filter_map(|e| e.function.result.as_ref())
+        .map(|r| match &module.types[r.ty].inner {
+            TypeInner::Struct { members, .. } => {
+                members.iter().filter(|m| location(&m.binding)).count() as u32
+            }
+            _ => u32::from(location(&r.binding)),
+        })
+        .max()
+        .unwrap_or(0)
 }
 
 fn pad_fragment_outputs(module: &mut Module) {

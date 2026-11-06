@@ -548,6 +548,43 @@ namespace UnityEngine.Rendering
             GfxStream.CopyTexture(source, srcElement, srcMip, new RectInt(srcX, srcY, srcWidth, srcHeight), destination, dstElement, dstMip, dstX, dstY);
         });
 
+        // ------------------------------------------------------------ random write targets
+
+        public void SetRandomWriteTarget(int index, ComputeBuffer buffer) => SetRandomWriteTarget(index, buffer, false);
+        public void SetRandomWriteTarget(int index, ComputeBuffer buffer, bool preserveCounterValue) =>
+            RandomWriteTarget(index, buffer, buffer?.Storage, preserveCounterValue);
+        public void SetRandomWriteTarget(int index, GraphicsBuffer buffer) => SetRandomWriteTarget(index, buffer, false);
+        public void SetRandomWriteTarget(int index, GraphicsBuffer buffer, bool preserveCounterValue) =>
+            RandomWriteTarget(index, buffer, buffer?.Storage, preserveCounterValue);
+
+        // Checked when recorded (measured, tests/projects/cmdbuffers cmd.uav.arg.*); set when run,
+        // and left set after the buffer as Graphics' are (cmd.uav.left).
+        void RandomWriteTarget(int index, object buffer, GpuBufferStorage storage, bool preserveCounterValue)
+        {
+            RandomWriteTargets.CheckCommandIndex(index);
+            if (buffer == null) throw new ArgumentNullException("uav");
+            Add(c =>
+            {
+                if (storage.Released) return;
+                if (!preserveCounterValue) GpuBufferOps.SetCounter(storage, 0);
+                RandomWriteTargets.Set(index, storage.Handle);
+            });
+        }
+
+        /// <summary>A render texture is checked when the command runs and not bound (see
+        /// <see cref="RandomWriteTargets"/>).</summary>
+        public void SetRandomWriteTarget(int index, RenderTargetIdentifier rt)
+        {
+            RandomWriteTargets.CheckCommandIndex(index);
+            Add(c =>
+            {
+                if (Resolve(rt, c) is RenderTexture texture && !texture.enableRandomWrite)
+                    Debug.LogError($"CommandBuffer: RenderTexture '{texture.name}' cannot be used with SetRandomWriteTarget because it does not have random write enabled");
+            });
+        }
+
+        public void ClearRandomWriteTargets() => Add(c => RandomWriteTargets.Clear());
+
         // ------------------------------------------------------------ compute
 
         public void SetComputeFloatParam(ComputeShader computeShader, int nameID, float val) => Add(c => computeShader.SetFloat(nameID, val));
@@ -801,8 +838,6 @@ namespace UnityEngine.Rendering
         [Unbound.EditorFaithful("no-op is equivalent: the flags only restrict which commands a buffer may hold (async compute validation)")]
         public void SetExecutionFlags(CommandBufferExecutionFlags flags) { }
         public void SetInstanceMultiplier(uint multiplier) => Stubs.Ignored("CommandBuffer.SetInstanceMultiplier", "is not honoured yet: instanced draws keep their instance count");
-        [Unbound.EditorFaithful("no-op is equivalent: random write targets are never bound (SetRandomWriteTarget is not implemented and warns)")]
-        public void ClearRandomWriteTargets() { }
         [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]
         public void BeginSample(string name) { }
         [Unbound.EditorFaithful("profiler sample: nothing a game observes (no profiler is attached)")]

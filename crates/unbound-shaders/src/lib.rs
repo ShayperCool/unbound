@@ -26,7 +26,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 16;
+pub const FORMAT_VERSION: u32 = 17;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -132,6 +132,10 @@ pub struct Compiled {
 pub struct BufferSlot {
     pub name: String,
     pub read_only: bool,
+    /// The UAV register (`register(uN)`) of a buffer the fragment program writes: a random
+    /// write target set at that index (`Graphics.SetRandomWriteTarget`) binds there.
+    #[serde(default)]
+    pub register: Option<u32>,
 }
 
 /// A cbuffer's byte range in the program's uniform block.
@@ -574,7 +578,7 @@ impl ShaderCompiler {
             &fragment_entry,
             &program.file,
         )?;
-        let mut compiled = fit::fit(&vertex_spv, &fragment_spv)?;
+        let mut compiled = fit::fit(&vertex_spv, &fragment_spv, &uav_registers(&fragment_source))?;
         compiled.keywords = selected;
         if let Some(path) = &cached {
             if let Some(dir) = path.parent() {
@@ -717,6 +721,37 @@ impl ShaderCompiler {
         };
         Ok(artifact.as_binary().to_vec())
     }
+}
+
+/// The UAV registers a program declares (`name : register(uN)`), by name: glslang's bindings do
+/// not tell a declared register from one it assigned.
+fn uav_registers(source: &str) -> HashMap<String, u32> {
+    let mut found = HashMap::new();
+    for (at, _) in source.match_indices("register") {
+        let before = source[..at].trim_end();
+        let Some(before) = before.strip_suffix(':') else {
+            continue;
+        };
+        let before = before.trim_end();
+        let start = before
+            .rfind(|c: char| !(c.is_ascii_alphanumeric() || c == '_'))
+            .map_or(0, |i| i + 1);
+        let name = &before[start..];
+        let after = source[at + "register".len()..].trim_start();
+        let Some(after) = after.strip_prefix('(') else {
+            continue;
+        };
+        let Some(digits) = after.trim_start().strip_prefix('u') else {
+            continue;
+        };
+        let end = digits
+            .find(|c: char| !c.is_ascii_digit())
+            .unwrap_or(digits.len());
+        if let (false, Ok(register)) = (name.is_empty(), digits[..end].parse()) {
+            found.insert(name.to_string(), register);
+        }
+    }
+    found
 }
 
 /// With `UNBOUND_SHADER_DUMP` set to a directory, writes a program glslang rejected there (the
@@ -1839,6 +1874,43 @@ float4 frag(V i) : SV_Target { _Hits[0] = 1; return i.color + _Positions[0]; }
             c.fragment.contains("@group(3) @binding(2)"),
             "{}",
             c.fragment
+        );
+    }
+
+    #[test]
+    fn written_buffers_keep_their_uav_register() {
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let registers = |decl: &str, compiler: &mut ShaderCompiler| {
+            let source = format!(
+                "#pragma vertex vert\n#pragma fragment frag\nStructuredBuffer<float4> _In;\n{decl}\n\
+                 float4 vert(uint id : SV_VertexID) : SV_POSITION {{ return _In[id]; }}\n\
+                 float4 frag(float4 p : SV_POSITION) : SV_Target {{ _Out[(uint)p.x] = 1; return 1; }}\n"
+            );
+            let c = compiler
+                .compile(&program(&source, false), &[], false)
+                .unwrap();
+            c.buffers
+                .iter()
+                .map(|b| (b.name.clone(), b.register))
+                .collect::<Vec<_>>()
+        };
+        assert_eq!(
+            registers(
+                "RWStructuredBuffer<uint> _Out : register(u3);",
+                &mut compiler
+            ),
+            [("_In".to_string(), None), ("_Out".to_string(), Some(3))]
+        );
+        // Without a register, FXC places it after the render target: u1.
+        assert_eq!(
+            registers("RWStructuredBuffer<uint> _Out;", &mut compiler),
+            [("_In".to_string(), None), ("_Out".to_string(), Some(1))]
+        );
+        assert_eq!(
+            uav_registers(
+                "RWStructuredBuffer<uint> _A : register( u2 );\nTexture2D _T : register(t1);\nRWByteAddressBuffer _B:register(u5, space0);"
+            ),
+            HashMap::from([("_A".to_string(), 2), ("_B".to_string(), 5)])
         );
     }
 

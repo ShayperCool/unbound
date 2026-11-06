@@ -504,9 +504,6 @@ namespace UnityEngine
             GfxStream.SetTarget(rt != null ? rt.EnsureCreated() : 0, 0, mipLevel, face == CubemapFace.Unknown ? depthSlice : (int)face, GfxStream.LayersOf(rt));
         }
 
-        [Unbound.EditorFaithful("no-op is equivalent: random write targets are never bound (SetRandomWriteTarget is not implemented and warns)")]
-        public static void ClearRandomWriteTargets() { }
-
         public static void CopyTexture(Texture src, Texture dst) => CopyTexture(src, 0, 0, -1, -1, -1, -1, dst, 0, 0, 0, 0);
         public static void CopyTexture(Texture src, int srcElement, Texture dst, int dstElement) => CopyTexture(src, srcElement, 0, -1, -1, -1, -1, dst, dstElement, 0, 0, 0);
         public static void CopyTexture(Texture src, int srcElement, int srcMip, Texture dst, int dstElement, int dstMip) =>

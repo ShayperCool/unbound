@@ -96,6 +96,9 @@ impl ScreenTarget {
 }
 
 const SCREEN_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Rgba8Unorm;
+/// The global buffer that holds the random write target at a UAV register (its number follows;
+/// the managed `Graphics.SetRandomWriteTarget` sets it).
+const RANDOM_WRITE_TARGET: &str = "<RandomWriteTarget>";
 
 /// The latest complete frame, for the window.
 #[derive(Clone)]
@@ -985,15 +988,30 @@ impl UnityRenderer {
             .buffers
             .iter()
             .map(|b| {
-                let handle = overrides
-                    .iter()
-                    .rev()
-                    .chain(material.properties.iter())
-                    .chain(globals.iter())
-                    .find_map(|(n, v)| match v {
-                        owned::PropertyValue::Buffer(h) if *n == b.name => Some(*h),
+                // A random write target at the buffer's UAV register (a global the managed
+                // Graphics.SetRandomWriteTarget sets; cleared to no buffer) binds first.
+                let target = b.register.and_then(|r| {
+                    let key = format!("{RANDOM_WRITE_TARGET}{r}");
+                    globals.iter().find_map(|(n, v)| match v {
+                        owned::PropertyValue::Buffer(h)
+                            if *n == key && self.buffers.contains_key(h) =>
+                        {
+                            Some(*h)
+                        }
                         _ => None,
-                    });
+                    })
+                });
+                let handle = target.or_else(|| {
+                    overrides
+                        .iter()
+                        .rev()
+                        .chain(material.properties.iter())
+                        .chain(globals.iter())
+                        .find_map(|(n, v)| match v {
+                            owned::PropertyValue::Buffer(h) if *n == b.name => Some(*h),
+                            _ => None,
+                        })
+                });
                 match handle.and_then(|h| self.buffers.get(&h)) {
                     Some(g) => &g.buffer,
                     None => {
