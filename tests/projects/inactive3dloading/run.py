@@ -19,14 +19,30 @@ UNITY = editor_path()
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument('mode', choices=['create', 'prepare', 'native', 'engine'])
+    p.add_argument('mode', choices=['create', 'checkout', 'prepare', 'native', 'engine'])
     p.add_argument('--order', choices=['transform-first', 'rigidbody-first'], default='transform-first')
     p.add_argument('--label', default='native1')
     a = p.parse_args()
     w = Path(os.environ.get('LOADING_WORK', run_root(ROOT, 'loading'))).resolve()
-    project = w / ('created' if a.mode == 'create' else a.order + '-' + a.label)
+    project = w / ('created' if a.mode in ('create', 'checkout') else a.order + '-' + a.label)
     log = w / 'logs' / (a.mode + '-' + a.order + '-' + a.label + '.log')
     log.parent.mkdir(parents=True, exist_ok=True)
+    if a.mode == 'checkout':
+        # The checked-in Assets are what `create` authors (Sources plus the scene and prefabs
+        # LoadingEditor.Create made); Packages and ProjectSettings are the base project's.
+        if project.exists(): raise SystemExit(f'refusing to overwrite {project}')
+        base = REPO/'tests/projects/physicsscenesettings'
+        tree = lambda root, folder: {f.relative_to(root): f.read_bytes() for f in (root/folder).rglob('*') if f.is_file()}
+        for folder in ['Packages','ProjectSettings']:
+            if tree(ROOT, folder) != tree(base, folder):
+                raise SystemExit(f'{folder} differs from the base project: run create in the Editor')
+        for name in ['LoadingProbe.cs', 'LoadingEditor.cs']:
+            copy = ROOT/'Assets'/('Editor' if 'Editor' in name else 'Scripts')/name
+            if copy.read_bytes() != (ROOT/'Sources'/name).read_bytes():
+                raise SystemExit(f'{copy} differs from Sources/{name}: run create in the Editor')
+        for folder in ['Assets','Packages','ProjectSettings']:
+            shutil.copytree(ROOT/folder,project/folder)
+        return
     if a.mode == 'prepare':
         if project.exists(): raise SystemExit(f'refusing to overwrite {project}')
         for folder in ['Assets','Packages','ProjectSettings']:

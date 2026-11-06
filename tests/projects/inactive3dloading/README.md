@@ -50,6 +50,11 @@ done
 python3 "$fixture/verify.py" --record-reference "$LOADING_WORK"
 ```
 
+An engine run needs no Editor: `run.py checkout` copies the checked-in project (the
+Assets that `create` authored, with the base project's Packages and ProjectSettings, which it
+checks) to `created/`; then `prepare` and `engine` (with `SCENE_SETTINGS_CLI`) per order, and
+`verify.py --captures "$LOADING_WORK" --label <label>`.
+
 Set `UNBOUND_PROBE_UNITY_VERSION` before preparing a new release. Recording wraps
 Unity and engine execution in `~/.cache/compat/with-heavy-job`. Native run state
 stays in the private projects, including deliberate runtime prefab edits.
