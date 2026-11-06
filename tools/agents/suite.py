@@ -358,7 +358,7 @@ def recipes(release):
                               '--json', '{work}/full-union.json')]
     R['textureraw'] = [driver('run.py', 'engine', '--release', '{release}', '--label', '{label}',
                               '--runtime', '{runtime}', '--manifest', '{runtime}/runtime-manifest.json'),
-                       py('compare.py', single_ref(), '{runs}/engine.jsonl')]
+                       py('compare.py', single_ref(), '{runs}/engine.jsonl', '--report', '{work}/report.json')]
 
     # prepare/engine/verify drivers with an explicit work directory.
     for name in ('particleemission', 'particlelifetime', 'particleseedaxis', 'particletrigger',
@@ -385,12 +385,12 @@ def recipes(release):
         R[name] = [driver('run.py', 'prepare', '--release', '{release}', '--work', '{work}', '--label', 'engine'),
                    driver('run.py', 'engine', '--release', '{release}', '--work', '{work}', '--label', 'engine',
                           '--project', 'engine', '--runtime', '{runtime}'),
-                   py('verify.py', '--release', '{release}', '--candidate', '{work}/engine.json',
-                      '--output', '{work}/report.json')]
+                   py('verify.py' if name == 'solverbodyorder' else 'public.py', '--release', '{release}',
+                      '--candidate', '{work}/engine.json', '--output', '{work}/report.json')]
     R['quaternioneuler'] = [
         driver('run.py', 'prepare', '--release', '{release}', '--work', '{work}', '--label', 'engine'),
         driver('run.py', 'engine', '--release', '{release}', '--work', '{work}', '--label', 'engine',
-               '--project', '{work}/project-engine', '--runtime', '{runtime}'),
+               '--project', 'engine', '--runtime', '{runtime}'),
         py('run.py', 'compare', '--release', '{release}', '--work', '{work}', '--label', 'compare',
            '--candidate', '{work}/engine.json', '--output', '{work}/report.json')]
     R['captureclock'] = [
@@ -401,7 +401,7 @@ def recipes(release):
     R['trailautodestruct'] = [
         driver('run.py', 'engine', '--release', '{release}', '--work', '{work}', '--label', 'candidate',
                '--cli', '{cli}', '--runtime', '{managed}'),
-        py('compare.py', single_ref(), '{work}/candidate/events.jsonl')]
+        py('compare.py', single_ref(), '{work}/candidate/engine/events.jsonl', '--report', '{work}/report.json')]
     for name, capture in [('uitextmetrics', 'metrics.jsonl'), ('uitkpixels', ''), ('samplerbias', 'values.jsonl'),
                           ('uitransitioncallbacks', 'callbacks.jsonl'), ('uitransitioninline', 'inline.jsonl')]:
         candidate = '{work}/engine/capture' + ('/'+capture if capture else '')
@@ -564,7 +564,9 @@ def run_probe(name, recipe, context):
                   'command': shlex.join(substitute(step.argv, values))[:400]}
         steps.append(record)
         if step.kind in ('compare', 'identical'):
-            summary = last_lines(text, 2 if step.verdict == 'none' else 1)
+            # A comparator without a verdict prints its measurement first (image difference).
+            summary = (next((line.strip() for line in text.splitlines() if line.strip()), '')[:300]
+                       if step.verdict == 'none' else last_lines(text))
             summaries.append(summary)
             if code not in step.ok:
                 verdicts.append(False)
