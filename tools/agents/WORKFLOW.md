@@ -148,6 +148,9 @@ spend Editor captures or research just to close such a residual.
   wrapper; `Application.logMessageReceived` never sees them.
 - After a hand-written managed API change, run `$UNBOUND gen-stubs -p tests/projects/packages`.
   Otherwise the build ships an engine WITHOUT compatibility stubs, which the gate refuses.
+- Hand-written code must build without stubs (`-p:UnboundNoStubs=true`, what gen-stubs builds first):
+  declare by hand every type or member it names or overrides, then regenerate; never hand-edit
+  `Generated/`, or gen-stubs stops running for everyone.
 - Run every build, Editor and engine through `tools/build.py` or `~/.cache/compat/with-heavy-job`;
   never nest the launcher around a driver that already uses it.
 - Keep long outputs in log files and print only summaries; context fills up quickly.
