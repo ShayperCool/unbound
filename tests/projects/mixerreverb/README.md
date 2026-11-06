@@ -38,14 +38,31 @@ done
 python3 tests/projects/mixerreverb/run.py --release 6000.0.71f1 --unbound "$UNBOUND"
 ```
 
-`run.py` is the gate. It creates fresh private Native projects, copies `$UNBOUND` and its `managed/`
-outputs into a runtime directory, and captures the engine at both rates. It writes the strict
+`run.py` is the gate. It assembles the committed Editor-authored project (below), copies `$UNBOUND`
+and its `managed/` outputs into a runtime directory, and captures the engine at both rates. It writes the strict
 all-case reports and exits with the `gate` profile result. That profile covers every steady case,
 plus the `startup*` cases before the first reverb arrival of their in-block impulses: frame
 `floor(0.02 * rate)`, 960 or 882. `engine.py` and `compare.py` run single
 steps. `compare.py --profile {all,steady,startup,gate}` selects cases. `--before` produces a
 before/after union. Reports stream every missing, extra and failing value into gzip JSON lines,
 followed by a summary that counts failures per case.
+
+## Engine runs without the Editor
+
+`Authored/unity-6000.0.71f1/default/` holds every file a Native run authored in the Editor: mixer
+assets, the scene, `.meta` GUIDs, the Editor's ProjectSettings and `packages-lock.json`.
+`authored.json` records the authoring command and the hash of every fixture file it started from.
+The set was recorded with `tests/authored_project.py record` from the 48 kHz Native project of a
+gate run whose captures passed at both rates; the authoring reads no rate, and the two rates'
+projects differ only in random GUIDs. `run.py` assembles it and starts no Editor; `run.py --native`
+authors a fresh private Native project per rate in the Editor instead, as before. A set is refused
+once any fixture file under Assets/, Packages/ or ProjectSettings/, or `native.py`, has changed:
+run `run.py --native` and record its `native-48000/project` again:
+
+```bash
+python3 tests/authored_project.py record mixerreverb default --release 6000.0.71f1 --project "$work/native-48000/project" \
+  --command 'python3 tests/projects/mixerreverb/native.py --rate 48000 --release 6000.0.71f1 --work <new cache directory>'
+```
 
 The tolerances are ATOL `2e-5` and RTOL `2e-4` on floats, as in the other mixer probes, and exact
 on metadata. Independent Native repeats compare float bits exactly, and they agree at both rates
