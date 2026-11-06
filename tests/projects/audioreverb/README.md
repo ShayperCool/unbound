@@ -1,0 +1,81 @@
+# AudioReverbFilter and AudioReverbZone probe
+
+The fixture measures `AudioReverbFilter` (on an AudioSource and on the AudioListener) and
+`AudioReverbZone` in Unity 6000.0.71f1 on Linux through the production AudioRenderer API. It
+generates its signals in C#: impulses on the left (frame 2048), the right (3072) and both channels
+(5120) of a 12288-frame clip. The Editor authors one effect-free mixer, `Probe`, and a prefab of
+serialized filters and zones. No recorded audio, external project or default audio device is used.
+Each case records 24 complete 1024-frame stereo DSP blocks at two points: the Probe mixer's
+master sink floats (`<case>.master.f32`) and the returned device PCM (`<case>.f32`). Filter cases
+play into the mixer's Child group. Zone cases play to the default output, so their master sink is
+silent. No samples are shifted, trimmed or discarded.
+
+`capture.json` also holds the property tables. Enums and ints are recorded as integers, floats as
+their IEEE bits:
+
+- the defaults of a new filter and zone;
+- every preset in enum order;
+- a set while a preset is selected, followed by switching to User;
+- custom values followed by a preset;
+- out-of-range sets on fresh components;
+- the serialized prefab as the engine reads it back;
+- each case's component values.
+
+Cases: no filter, a new filter, six presets and Off, User with every parameter, User extremes,
+sets on a preset, a preset then User, a mono clip, a disabled filter, `bypassEffects`, volume 0.5,
+a clip that ends mid-block (the tail cut), a listener filter with and without
+`bypassListenerEffects`. Zone cases: the listener at 0, 11, 12.5, 14 and 20 from a Generic zone
+(10/15), `reverbZoneMix` 0.5 and 0, User and Cave zones, and two overlapping zones.
+
+## Reproduce
+
+```bash
+work="${XDG_CACHE_HOME:-$HOME/.cache}/unbound/validation/runs/audio-reverb"
+for rate in 48000 44100; do
+  python3 tests/projects/audioreverb/native.py --release 6000.0.71f1 --rate $rate --work "$work/native-$rate-a"
+  python3 tests/projects/audioreverb/native.py --release 6000.0.71f1 --rate $rate --work "$work/native-$rate-b"
+  python3 tests/projects/audioreverb/compare.py --release 6000.0.71f1 --rate $rate --exact \
+    --reference "$work/native-$rate-a/capture" --candidate "$work/native-$rate-b/capture" \
+    --report "$work/agreement-$rate.jsonl.gz"
+  # Only for a new canonical reference: publish.py refuses to overwrite one.
+  # python3 tests/projects/audioreverb/publish.py --release 6000.0.71f1 --rate $rate --capture "$work/native-$rate-a/capture"
+done
+python3 tests/projects/audioreverb/run.py --release 6000.0.71f1 --unbound "$UNBOUND"
+```
+
+`run.py` is the gate. It assembles the committed Editor-authored set
+`Authored/unity-6000.0.71f1/default/` (`tests/authored_project.py`), so no Editor starts. It
+captures the engine at both rates and writes the strict `all` reports. Its exit status is the
+`gate` profile's result. `compare.py --profile` picks what is compared:
+
+- `filter`: every case without a zone, plus the filter property tables;
+- `zone`: the zone cases and zone tables;
+- `gate`: `filter` plus the zone cases listed in `common.GATE_ZONE` (none yet);
+- `all`: everything.
+
+The set was recorded from the 48 kHz Native project of the published capture. The authoring reads
+no rate. When a fixture file or `native.py` changes, record a fresh Native project again:
+
+```bash
+python3 tests/authored_project.py record audioreverb default --release 6000.0.71f1 --project "$work/native-48000-a/project" \
+  --command 'python3 tests/projects/audioreverb/native.py --rate 48000 --release 6000.0.71f1 --work <new cache directory>'
+```
+
+Tolerances are as in mixerreverb: ATOL `2e-5` and RTOL `2e-4` on floats, exact on metadata, and
+`--pcm-steps 1` admits one 1/32768 step on device PCM only. The independent Native repeats agree
+bit for bit at both rates (3047646/3047646 values each). The canonical reference is one capture
+per rate in `Reference/unity-6000.0.71f1/rate-<rate>/`, with gzip sample files.
+
+## Result
+
+Gate: 1966203/1966203 values at 48 kHz and 1966203/1966203 at 44.1 kHz. The strict all-case
+report keeps:
+
+- 10 (48 kHz) and 11 (44.1 kHz) one-step device PCM flips whose master floats pass (ledgered in
+  docs/COMPATIBILITY_GAPS.md);
+- every zone case and zone table, because `AudioReverbZone` is still a stub.
+
+The measured rules are in docs/AUDIO.md. Unmeasured: other releases, surround output,
+parameter changes while a tail runs, values outside the documented ranges, unrouted sources with
+`bypassListenerEffects`, listener reverb filters next to OnAudioFilterRead scripts, and other
+sample rates.
