@@ -19,9 +19,10 @@ Measures `Physics.ContactModifyEvent`, `Physics.ContactModifyEventCCD`, `Modifia
 - `mass/<case>/...`: two frictionless spheres colliding with edited mass scales.
 - `ccd/<case>/...`: a fast Continuous ball against a thin wall: both events, their data and edits.
 - `order/events`: the event against the same step's collision messages.
+- `clone`: an `Instantiate` copy of a flagged collider: its flag and its reported pairs.
 - `unsubscribed`, `default`: the flag without a subscriber, the default flag.
 
-The canonical Native oracle is `Reference/unity-6000.0.71f1.jsonl` (342 records, Unity 6000.0.71f1
+The canonical Native oracle is `Reference/unity-6000.0.71f1.jsonl` (343 records, Unity 6000.0.71f1
 on Linux, GPU Editor). Two independent captures were byte-identical. Only one copy is kept here.
 
 Measured (6000.0.71f1):
@@ -33,6 +34,7 @@ Measured (6000.0.71f1):
 - The default mass properties are 1; a static body's instance ID is 0; face indices are mesh
   triangles for a MeshCollider and 4294967295 otherwise.
 - The event runs within `Physics.Simulate`, before the step's `OnCollisionEnter`/`Stay`.
+- An `Instantiate` clone starts with `hasModifiableContacts` false.
 - Changing the flag on a live contact applies from the next step only when no collision message
   receiver is involved; with one, the pair keeps its state until it is re-created.
 

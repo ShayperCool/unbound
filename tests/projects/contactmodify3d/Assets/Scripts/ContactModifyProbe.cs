@@ -22,7 +22,6 @@ public static class ContactModifyProbe
     static Action<ModifiableContactPair> editPair;
     static int calls, pairs, ccdCalls, ccdPairs;
     static readonly List<string> seen = new List<string>();
-    static readonly List<ModifiableContactPair> firstPairs = new List<ModifiableContactPair>();
     static bool dump, dumpCcd;
     static string dumpKey;
     static int mainThread;
@@ -466,6 +465,26 @@ public static class ContactModifyProbe
         Clean();
     }
 
+    /// <summary>Whether Instantiate keeps the flag, and whether the clone's pairs are reported.</summary>
+    static void Clone()
+    {
+        Ground();
+        var template = Make("template", PrimitiveType.Cube, new Vector3(0, 50, 0), Vector3.one);
+        Body(template).isKinematic = true;
+        template.GetComponent<Collider>().hasModifiableContacts = true;
+        var clone = UnityEngine.Object.Instantiate(template, new Vector3(0, 1, 0), Quaternion.identity);
+        made.Add(clone);
+        clone.name = "clone";
+        names[clone.GetComponent<Collider>().GetInstanceID()] = "clone";
+        clone.GetComponent<Rigidbody>().isKinematic = false;
+        Physics.SyncTransforms();
+        ResetCounts();
+        for (int s = 0; s < 3; s++) Physics.Simulate(Dt);
+        seen.Sort(string.CompareOrdinal);
+        Record("clone", clone.GetComponent<Collider>().hasModifiableContacts, pairs, string.Join(";", seen));
+        Clean();
+    }
+
     /// <summary>No subscriber: the flag alone changes nothing.</summary>
     static void Unsubscribed()
     {
@@ -502,6 +521,7 @@ public static class ContactModifyProbe
             Masses();
             Ccd();
             Order();
+            Clone();
             Unsubscribed();
             var probe = new GameObject("probe");
             made.Add(probe);
