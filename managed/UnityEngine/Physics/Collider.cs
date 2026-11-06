@@ -347,7 +347,8 @@ namespace UnityEngine
             m_ExcludeLayers = s.m_ExcludeLayers;
             m_LayerOverridePriority = s.m_LayerOverridePriority;
             m_ProvidesContacts = s.m_ProvidesContacts;
-            m_HasModifiableContacts = s.m_HasModifiableContacts;
+            // hasModifiableContacts is not copied: an Instantiate clone starts without it
+            // (measured, 6000.0.71f1: tests/projects/contactmodify3d).
         }
 
         internal override void ReadSerialized(YNode body, IReferenceResolver resolver) => ReadColliderData(body, resolver);
