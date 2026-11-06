@@ -351,8 +351,14 @@ namespace UnityEngine.Tests
         public void AControllerlessOutputReplaysItsLastVisibleMotionAfterSkippedUpdates()
         {
             var camera = MakeCamera();
-            var (animator, text, renderer) = Rig(AnimatorCullingMode.CullCompletely);
-            animator.runtimeAnimatorController = null;
+            // Root movement is measured on a generic Transform rig, as in animculling p/*.
+            var root = new GameObject("PlayableActor");
+            m_Objects.Add(root);
+            var text = new GameObject("ContinueText").transform;
+            text.SetParent(root.transform, false);
+            var renderer = AddRenderer(root);
+            var animator = root.AddComponent<Animator>();
+            animator.cullingMode = AnimatorCullingMode.CullCompletely;
             animator.applyRootMotion = true;
             var graph = PlayableRig(animator, out var playable);
             try
