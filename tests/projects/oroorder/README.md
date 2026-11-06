@@ -139,3 +139,17 @@ above. Both original captures pass it without any output change. Eight unit cont
 incomplete/duplicate groups while accepting a different handler order; order is evidence,
 never a publication condition. Run them with
 `python3 -m unittest tests/projects/oroorder/test_analyze.py`.
+
+## Engine comparison
+
+```
+python3 tests/projects/oroorder/run.py unbound --release 6000.0.71f1 --label <new>
+python3 tests/projects/oroorder/compare.py tests/projects/oroorder/Reference/unity-6000.0.71f1.jsonl \
+    "${XDG_CACHE_HOME:-$HOME/.cache}/unbound/validation/runs/oroorder/<new>/unbound/values.jsonl" --report <cache>.json
+```
+
+`compare.py` reads the reference unchanged. It compares the record line by line, in order and
+with no tolerance, as the core API probe does, and prints every missing and extra line. It also
+compares the camera and handler list of every order-window render (o0..o16) with the
+reference's, and applies analyze.py's structural guards to the capture. Any difference exits 1.
+
