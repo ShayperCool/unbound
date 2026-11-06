@@ -26,7 +26,11 @@ imported without keyframe reduction.
   (retargeting), and HumanA's clip on a layer with an IK pass whose `OnAnimatorIK` sets hand, foot,
   hint and look-at goals and moves the body, on both rigs: `Animator.Update(0)`, 24 steps of 1/30 s
   and four of 0.1 s, every transform's locals, the human pose, body/root/pivot and what
-  `OnAnimatorIK` read (goals, weights, hint, body) at every call.
+  `OnAnimatorIK` read (goals, weights, hint, body) at every call;
+- blended root motion on HumanA, HumanA's clip (A) with HumanB's (B): a transition from A to B
+  (exit time 0.25, 0.3 s), B on an override layer of weight 0.5, B on an additive layer of weight 0.6,
+  and a 1D blend tree of A and B at 0.35 (also on HumanB), with `deltaPosition`, `deltaRotation`,
+  `velocity`, `angularVelocity` and each layer's state time, transition and clip weights per step.
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:
