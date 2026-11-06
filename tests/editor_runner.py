@@ -591,7 +591,8 @@ def run(job):
     if (job.out/RESULT).exists():
         raise SystemExit(f'refusing to overwrite an Editor result: {job.out/RESULT}')
     queued = time.time()
-    env = dict(os.environ, PWD=str(job.project), **job.env)
+    # A job env built from os.environ carries its own PWD: the project still wins.
+    env = {**os.environ, **job.env, 'PWD': str(job.project)}
     env.pop('XAUTHORITY', None)
     owner = read_proc(os.getpid())
     spec = {'label': job.label, 'kind': job.kind, 'command': job.command(), 'project': str(job.project),
