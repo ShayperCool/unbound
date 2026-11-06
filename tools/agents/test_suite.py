@@ -343,6 +343,34 @@ class EditorGuardTests(unittest.TestCase):
                 self.assertNotRegex(command, r'\bnative\.py\b|--native(?![-\w])', f'{name}: {command}')
 
 
+class ReleaseTests(unittest.TestCase):
+    """land.py gives every --probe command $UNBOUND_PROBE_UNITY_VERSION."""
+
+    def test_the_named_probe_or_the_default_gives_the_release(self):
+        root = Path(__file__).resolve().parents[2]
+        with unittest.mock.patch.dict(os.environ):
+            os.environ.pop(land.RELEASE_VARIABLE, None)
+            self.assertEqual(land.default_release(), '6000.0.71f1')
+            self.assertEqual(land.probe_release('python3 tests/projects/mixerduck/run.py --release '
+                                                '"$UNBOUND_PROBE_UNITY_VERSION"', root), '6000.0.71f1')
+            self.assertEqual(land.probe_release('true', root), land.default_release())
+            os.environ[land.RELEASE_VARIABLE] = '2022.3.10f1'
+            self.assertEqual(land.probe_release('python3 tests/projects/mixerduck/run.py', root), '2022.3.10f1')
+
+    def test_the_probe_step_gets_the_release(self):
+        with tempfile.TemporaryDirectory() as temp:
+            gate = land.Gate(Path(temp), 'HEAD', [], False, Path(temp)/'gate.log')
+            seen = []
+            gate.step = lambda name, command, shell=False, env=None: seen.append(env) or 0
+            with unittest.mock.patch.dict(os.environ):
+                os.environ.pop(land.RELEASE_VARIABLE, None)
+                gate.probes = ['echo']
+                for index, probe in enumerate(gate.probes, 1):  # the loop of Gate.run, after the build
+                    release = land.probe_release(probe, gate.worktree)
+                    gate.step(f'probe {index}', probe, shell=True, env=dict(gate.env, **{land.RELEASE_VARIABLE: release}))
+            self.assertEqual(seen[0][land.RELEASE_VARIABLE], '6000.0.71f1')
+
+
 class StubGateTests(unittest.TestCase):
     """land.py's generated-stubs step, with a stand-in CLI whose gen-stubs is a shell script."""
 

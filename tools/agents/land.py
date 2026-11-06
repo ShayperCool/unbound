@@ -22,7 +22,10 @@ Gate:
     generator's output differs from the committed managed/UnityEngine/Generated/ (restored after);
   - managed unit tests, where only failures not listed in known-test-failures.txt count;
   - Rust tests of the touched crates;
-  - each --probe command, which must exit 0. $UNBOUND names the built CLI.
+  - each --probe command, which must exit 0. $UNBOUND names the built CLI and
+    $UNBOUND_PROBE_UNITY_VERSION the release: the exported value, else the release of the probe
+    projects the command names (their ProjectSettings/ProjectVersion.txt), else the default of
+    tests/probe_paths.py (6000.0.71f1).
 Changes that touch only Markdown/docs skip the build and tests. --full forces every step
 (all Rust crates).
 
@@ -59,6 +62,32 @@ GENERATED = 'managed/UnityEngine/Generated'
 STUB_INPUTS = re.compile(r'^(managed/|crates/unbound-compat/)')
 STUB_PROJECT = 'tests/projects/packages'
 HERE = Path(__file__).resolve().parent
+RELEASE_VARIABLE = 'UNBOUND_PROBE_UNITY_VERSION'
+PROBE_DIR = re.compile(r'tests/projects/([A-Za-z0-9_.-]+)')
+
+
+def default_release():
+    """tests/probe_paths.py's DEFAULT_UNITY_VERSION, the release the probes' references are named by."""
+    text = (HERE.parents[1]/'tests/probe_paths.py').read_text()
+    return re.search(r"^DEFAULT_UNITY_VERSION = '([^']+)'", text, re.M).group(1)
+
+
+def probe_release(command, root):
+    """The release a --probe command runs for: $UNBOUND_PROBE_UNITY_VERSION when exported, else the
+    one release of the probe projects it names, else the default."""
+    if os.environ.get(RELEASE_VARIABLE):
+        return os.environ[RELEASE_VARIABLE]
+    releases = set()
+    for name in PROBE_DIR.findall(command):
+        version = root/'tests/projects'/name/'ProjectSettings/ProjectVersion.txt'
+        if version.is_file():
+            match = re.match(r'm_EditorVersion: (\S+)', version.read_text())
+            if match:
+                releases.add(match.group(1))
+    if len(releases) > 1:
+        die(2, f'--probe {command!r} names probes of releases {", ".join(sorted(releases))}: '
+               f'export {RELEASE_VARIABLE}')
+    return releases.pop() if releases else default_release()
 
 
 def die(code, message):
@@ -156,7 +185,9 @@ class Gate:
                 self.fail('rust tests')
 
         for index, probe in enumerate(self.probes, 1):
-            if self.step(f'probe {index}: {probe[:80]}', probe, shell=True):
+            release = probe_release(probe, self.worktree)
+            if self.step(f'probe {index} ({release}): {probe[:80]}', probe, shell=True,
+                         env=dict(self.env, **{RELEASE_VARIABLE: release})):
                 self.fail(f'probe {index}')
 
     def stubs(self, cli):
@@ -235,14 +266,15 @@ class Gate:
         return sorted(names)
 
 
-def stamp_path(tree, probes, full):
-    key = hashlib.sha256('\n'.join([GATE_VERSION, tree, str(full), *probes]).encode()).hexdigest()
+def stamp_path(tree, probes, full, root):
+    releases = [probe_release(probe, root) for probe in probes]
+    key = hashlib.sha256('\n'.join([GATE_VERSION, tree, str(full), *probes, *releases]).encode()).hexdigest()
     return STATE/'gate-pass'/key
 
 
 def run_gate(worktree, base, probes, full, branch):
     tree = git('rev-parse', 'HEAD^{tree}', cwd=worktree)
-    stamp = stamp_path(tree, probes, full)
+    stamp = stamp_path(tree, probes, full, worktree)
     if stamp.is_file():
         print(f'land: gate already passed for tree {tree[:12]} ({stamp.read_text().strip()})', flush=True)
         return
