@@ -139,6 +139,39 @@ namespace UnityEngine.Tests
             Assert.True(clearance >= -1e-4f, $"agent penetrated the box footprint by {-clearance} m at {position}");
         }
 
+        static NavMeshPath SearchOnRealizedSurface(NavMeshAgent agent)
+        {
+            // A new A* query for each control, with fixed endpoints and the real agent filter.
+            // Does not replace the agent's active corridor or take another simulation step.
+            var search = NavMesh.PathSearch.Begin(agent.m_Surface, Start, Goal, agent.Filter, agent.agentTypeID);
+            Assert.NotNull(search);
+            int budget = int.MaxValue;
+            Assert.True(search.Step(ref budget));
+            Assert.NotNull(search.Result);
+            return search.Result;
+        }
+
+        static string RoutingSnapshot(NavMeshAgent agent)
+        {
+            var surface = agent.m_Surface;
+            var tiles = new List<object>();
+            for (int i = 0; i < surface.Mesh.GetMaxTiles(); i++)
+            {
+                var tile = surface.Mesh.GetTile(i);
+                if (tile?.data == null) continue;
+                // data includes polygon flags, neighbours, firstLink, geometry, BV tree,
+                // detail triangles and off-mesh endpoints. links includes refs and next/side.
+                tiles.Add(new { tile.index, tile.salt, tile.flags, tile.linksFreeList, tile.data, tile.links });
+            }
+            var costs = new float[32];
+            for (int i = 0; i < costs.Length; i++) costs[i] = agent.GetAreaCost(i);
+            return System.Text.Json.JsonSerializer.Serialize(new
+            {
+                NavWorld.Version, NavWorld.PathStaleVersion, surface.AgentTypeID,
+                surface.DataOfTile, surface.LinkOfPoly, areaMask = agent.areaMask, costs, tiles
+            }, new System.Text.Json.JsonSerializerOptions { IncludeFields = true });
+        }
+
         /// <summary>Two agents' walks: the closest they came to each other (centre to centre).</summary>
         static float Closest(NavMeshAgent a, NavMeshAgent b, int steps = 400)
         {
@@ -429,11 +462,14 @@ namespace UnityEngine.Tests
                 // 6000.0 corners API supplies waypoints, not a fixed count for this bake.
                 var originalPath = agent.path;
                 var originalMesh = NavMesh.CalculateTriangulation();
+                var originalRouting = RoutingSnapshot(agent);
                 int version = NavWorld.Version;
                 obstacle.carving = false;
-                var withoutCarving = agent.path;
+                var withoutCarving = SearchOnRealizedSurface(agent);
+                var routingWithoutCarving = RoutingSnapshot(agent);
                 obstacle.carving = true;
-                var withCarving = agent.path;
+                var withCarving = SearchOnRealizedSurface(agent);
+                var routingWithCarving = RoutingSnapshot(agent);
                 var finalMesh = NavMesh.CalculateTriangulation();
                 Assert.Equal(version, NavWorld.Version);
                 Assert.Equal(NavMeshPathStatus.PathComplete, originalPath.status);
@@ -441,6 +477,11 @@ namespace UnityEngine.Tests
                 Assert.Equal(originalPath.status, withCarving.status);
                 Assert.Equal(originalPath.corners, withoutCarving.corners);
                 Assert.Equal(originalPath.corners, withCarving.corners);
+                Assert.Equal(originalPath.m_Polygons, withoutCarving.m_Polygons);
+                Assert.Equal(originalPath.m_Polygons, withCarving.m_Polygons);
+                Assert.Equal(originalRouting, routingWithoutCarving);
+                Assert.Equal(originalRouting, routingWithCarving);
+                Assert.Single(warnings);
                 Assert.Equal(originalMesh.vertices, finalMesh.vertices);
                 Assert.Equal(originalMesh.indices, finalMesh.indices);
                 Assert.Equal(originalMesh.areas, finalMesh.areas);
