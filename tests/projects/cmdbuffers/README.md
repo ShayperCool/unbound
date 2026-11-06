@@ -148,9 +148,9 @@ The shader cache format changes with this translation.
 `Graphics.RenderMeshInstanced` through camera frame rendering and full RGBA readbacks.
 `MeshInstanceProbe.cs` and `MeshInstanceIds.shader` derive geometry and color from both raw
 `SV_InstanceID` and logical `unity_InstanceID`, including vertex-to-fragment transfer/setup.
-The canonical release reference includes 36 new records from two byte-identical GPU Editor
+The canonical release reference includes 38 new records from two byte-identical GPU Editor
 captures. Every older record is unchanged. The engine-only `run.py check` gate compares all
-274 records with the original exact comparator, retaining exactly the two required invalid
+276 records with the original exact comparator, retaining exactly the two required invalid
 Append differences and its sentinel/warning guard.
 
 | Official 6000.0 source | Applied contract or limitation |
@@ -158,6 +158,7 @@ Append differences and its sentinel/warning guard.
 | [Graphics.DrawMeshInstanced](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.DrawMeshInstanced.html) | Per-instance values use float/vector/matrix arrays on a MaterialPropertyBlock. Instancing must be supported and enabled on the material. At most 1023 instances per API call. Group culling/sorting remains unchanged. |
 | [Graphics.RenderMeshInstanced](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.RenderMeshInstanced.html) | `startInstance` selects the first transform record; count -1 selects the remainder. Arrays, lists and NativeArrays are supported. Custom records use the mandatory `Matrix4x4 objectToWorld`; optional named `renderingLayerMask` and `prevObjectToWorld` members and arbitrary member order are documented. This probe covers only a first `objectToWorld` followed by ignored custom data. General struct offsets, rendering masks and motion vectors remain separate gaps. Capacity depends on per-instance data; the default transform limit is 511, and `assumeuniformscaling` can raise it. |
 | [GPU instancing shader reference](https://docs.unity3d.com/6000.0/Documentation/Manual/gpu-instancing-shader.html) and [macro reference](https://docs.unity.com/en-us/engine/6000.0/manual/analysis/graphics-performance-profiling/birp/gpu-instancing-shader/birp-shader-modifications) | `multi_compile_instancing` provides variants; SETUP initializes the logical ID, TRANSFER carries it to fragments, and ACCESS indexes per-instance data. `forcemaxcount` fixes the buffer array size on all platforms; `maxcount` is ignored on platforms with flexible sizes. These custom shader macros target the built-in pipeline. Multi-pass and additional-light instancing have documented limitations and are not newly measured here. |
+| [SetFloatArray](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MaterialPropertyBlock.SetFloatArray.html), [SetVectorArray](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MaterialPropertyBlock.SetVectorArray.html), [SetMatrixArray](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MaterialPropertyBlock.SetMatrixArray.html) | A block retains the first array length. Longer updates truncate; shorter updates retain the old tail. Snapshot cases replace values at the same length, so they do not depend on resizing. |
 | [Per-instance properties](https://docs.unity.com/en-us/engine/6000.0/manual/analysis/graphics-performance-profiling/birp/gpu-instancing-shader/per-instance-properties) | Missing instance properties use the material default, otherwise zero. The automatic GameObject batching warning about ordinary properties is not an explicit-Graphics-call contract. |
 | [HLSL semantics](https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics), shipped `UnityInstancing.cginc` | SV_InstanceID is a runtime-generated per-instance input. The release include computes the logical ID from raw input and base instance; backend details do not establish a portable raw-ID sequence. |
 
@@ -185,3 +186,12 @@ and passes logical IDs through the standard instancing macros. Non-mesh procedur
 calls and CommandBuffer instancing keep their existing paths. No new culling, sorting,
 lighting or probe order is asserted. Other graphics backends/releases are not claimed by this
 capture, and this result does not generalize the procedural-indirect raw-ID observations.
+
+
+Additional Native recordings during this task also observed existing CPU-fence timing
+variation: `fence.frame2.cpu.passed`, `fence.frames.cpu.executed` and
+`fence.frames.cpu.immediate` were false in some complete repeats, and true in others.
+All mesh-instancing records agreed. The prior fence oracle values and assertions remain
+unchanged; raw complete captures and strict comparisons retain these differences outside Git.
+This is a separate follow-up about Native fence progress in batchmode frames, not an
+additional exception to the engine gate.
