@@ -28,6 +28,26 @@ namespace Unbound.Runtime
         /// <summary>The summed weight of the motions sampled, whatever channels they animate.</summary>
         internal float Total;
 
+        /// <summary>Bindings may append channels during an animation callback after sampling.
+        /// Keep the sampled values, held values and root-motion exclusions; new channels have
+        /// no contribution in this sample.</summary>
+        internal void Grow(int floats, int objects)
+        {
+            if (Value.Length < floats)
+            {
+                Array.Resize(ref Value, floats);
+                Array.Resize(ref Weight, floats);
+                Array.Resize(ref Keep, floats);
+                Array.Resize(ref Fill, floats);
+                Array.Resize(ref Rest, floats);
+            }
+            if (Objects.Length < objects)
+            {
+                Array.Resize(ref Objects, objects);
+                Array.Resize(ref ObjectWeight, objects);
+            }
+        }
+
         internal void Reset(int floats, int objects)
         {
             Total = 0f;

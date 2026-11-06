@@ -140,3 +140,13 @@ including defaults, held values and root-motion exclusions. A managed regression
 checks that adding an output on another child cannot make a half-weight controller
 layer accumulate the previous frame's scene value, and that a no-defaults state
 continues holding its layer value after a game write.
+
+An animation event can append stream bindings after a controller sampled its pose.
+Managed regressions bind an animated child from that callback, with write defaults
+on and off, and check the pose, event count and root movement. Pose buffers grow
+without resampling, so previously removed root channels and retained layer values
+stay removed or retained. Newly appended channels have no contribution in that
+sample. This is an implementation invariant, not a new guarantee about callback
+binding timing. The 6000.0
+[BindStreamTransform API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimatorJobExtensions.BindStreamTransform.html)
+describes creating a handle for a Transform already bound to the Animator.

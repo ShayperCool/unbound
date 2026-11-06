@@ -444,6 +444,65 @@ namespace UnityEngine.Tests
             finally { graph.Destroy(); }
         }
 
+        public class BindDuringAnimationEvent : MonoBehaviour
+        {
+            public Transform Target;
+            public int Calls;
+            void BindNow()
+            {
+                Calls++;
+                GetComponent<Animator>().BindStreamTransform(Target);
+            }
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void EventBindingsPreserveTheSampledPoseAndRootMotion(bool writeDefaults)
+        {
+            var controller = (RuntimeAnimatorController)Load(AnimationFixtures.PopupButton).Objects[9100000];
+            controller.m_Layers.Clear();
+            var clip = new AnimationClip { legacy = true };
+            clip.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Constant(0f, 1f, 0f));
+            clip.SetCurve("", typeof(Transform), "localPosition.y", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+            clip.SetCurve("", typeof(Transform), "localPosition.z", AnimationCurve.Constant(0f, 1f, 0f));
+            clip.SetCurve("ContinueText", typeof(Transform), "localPosition.y", AnimationCurve.Constant(0f, 1f, 4f));
+            clip.legacy = false;
+            clip.AddEvent(new AnimationEvent { time = 0.05f, functionName = "BindNow" });
+            var state = new ControllerStateAsset { name = "Moving", Motion = clip, WriteDefaults = writeDefaults };
+            var machine = new ControllerStateMachineAsset { name = "Base", DefaultState = state };
+            machine.States.Add(state);
+            controller.m_Layers.Add(new ControllerLayerData { Name = "Base", StateMachine = machine });
+            foreach (var asset in new Object[] { controller, clip, state, machine }) m_Objects.Add(asset);
+            var root = new GameObject("EventBindings");
+            m_Objects.Add(root);
+            root.transform.localPosition = new Vector3(0f, 5f, 0f);
+            var child = new GameObject("ContinueText").transform;
+            child.SetParent(root.transform, false);
+            var animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = controller;
+            animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+            animator.applyRootMotion = true;
+            var receiver = root.AddComponent<BindDuringAnimationEvent>();
+            receiver.Target = child;
+            int before = animator.StreamBindings.FloatCount;
+            var graph = PlayableRig(animator, out _);
+            try
+            {
+                PlayableStep(graph, animator, 0.1f);
+                Assert.Equal(1, receiver.Calls);
+                Assert.True(animator.StreamBindings.FloatCount > before);
+                Near.Equal(new Vector3(0.2f, 4f, 0f), child.localPosition);
+                Near.Equal(5.1f, root.transform.localPosition.y);
+                Near.Equal(0.1f, animator.deltaPosition.y);
+                PlayableStep(graph, animator, 0.1f);
+                Assert.Equal(1, receiver.Calls);
+                Near.Equal(new Vector3(0.4f, 4f, 0f), child.localPosition);
+                Near.Equal(5.2f, root.transform.localPosition.y);
+            }
+            finally { graph.Destroy(); }
+        }
+
         public class PlayableMoveState : StateMachineBehaviour
         {
             public static int Calls;

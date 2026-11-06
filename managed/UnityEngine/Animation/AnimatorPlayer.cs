@@ -1001,6 +1001,12 @@ namespace Unbound.Runtime
 
         void WritePose(int count, bool skipTransforms = false, Unbound.Runtime.Playables.AnimStream stream = null)
         {
+            // Events and movement callbacks may bind additional stream channels after sampling.
+            // Grow in place so the current pose and root-motion exclusions are not recomputed.
+            for (int i = 0; i < count; i++)
+                m_LayerPoses[i].AnimationPose.Grow(Bindings.FloatCount, Bindings.ObjectCount);
+            m_PosedFloats = Bindings.FloatCount;
+            m_PosedObjects = Bindings.ObjectCount;
             if (m_Written.Length < Bindings.FloatCount)
             {
                 Array.Resize(ref m_Written, Bindings.FloatCount);
