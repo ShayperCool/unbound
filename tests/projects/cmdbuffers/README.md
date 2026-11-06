@@ -115,6 +115,7 @@ helpers. These cases do not establish any order between overlapping draws.
 | [RenderPrimitivesIndexedIndirect](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.RenderPrimitivesIndexedIndirect.html) | GPU arguments control indexed draws and instances, with command count and first command. Compute shader support is required. World bounds cull and sort the call as one entity. |
 | [IndirectDrawIndexedArgs](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GraphicsBuffer.IndirectDrawIndexedArgs.html) | Use the platform's struct and `size`, rather than assuming a portable layout of raw ints. Fields specify count, instances, first index, base vertex and first instance. |
 | [GraphicsBuffer.Target](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GraphicsBuffer.Target.html) | Targets depend on the device. DX11 cannot combine Index and Structured; OpenGLCore acceptance of Structured as indices is measured here, not promised on every backend. |
+| [GraphicsBuffer.Target.Structured](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GraphicsBuffer.Target.Structured.html) | Buffer stride must match the HLSL element, be a multiple of four and below 2048. Multiples of 16 are recommended for portability; mixed-size layouts can vary by graphics API. The 12-byte float3 case here is a GLCore observation from the documented drawing example. |
 | [RenderMeshIndirect shader example](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.RenderMeshIndirect.html), shipped `Editor/Data/CGIncludes/UnityIndirect.cginc` | Define `UNITY_INDIRECT_DRAW_ARGS` and call `InitIndirectDrawArgs` before the command/vertex/instance helpers. The include implements backend-dependent instance IDs. |
 
 The measured release is 6000.0.71f1, OpenGLCore on RTX 4060. Shader vertex inputs with 32-bit
@@ -134,3 +135,9 @@ instance on this device. Null index/command buffers throw ArgumentNullException;
 draws nothing; an argument buffer missing IndirectArguments logs an error and draws nothing.
 Unbound retains its existing explicit range checks for unsafe direct/command ranges. These
 checks are defensive restrictions, not claimed as measured Unity exception contracts.
+
+The documented float3 position buffer exposed a shader-layout defect: WGSL vec3 arrays
+advanced 16 bytes through 12-byte elements. Runtime arrays of three 32-bit scalars now use
+scalar struct elements, with vector loads/stores reconstructed by the compiler. Dynamic
+component pointers into those packed elements fail explicitly; that case is not measured here.
+The shader cache format changes with this translation.
