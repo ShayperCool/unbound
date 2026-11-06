@@ -134,6 +134,63 @@ at 975/1321 with all 58 random count controls exact, seed/axis at 48 failing val
 at 1520/1560 with four of 94 scenarios differing. The 17 particle images are byte-identical to
 the before capture; their worst reference mean remains 0.92.
 
+## Birth origin and age controls
+
+The P6 extension adds 318 records, each recorded in two independent, identical Unity
+6000.0.71f1 Editor captures. All 2149 pre-task values are retained. The new systems explicitly
+enable zero rotation over lifetime to isolate their histories from the angular-velocity context
+of the earlier rotation scenarios. The fixture covers one and five parent births from bursts,
+time rate and scripted Emit, successive small calls and one larger call, restart and withChildren,
+zero and nonzero child speed and gravity, expiry, Local/World parent and child spaces, translation
+and rotation, child time rate and multiple bursts, and fixed intervals of 0.01, 0.02 and 0.03 s.
+
+| Unity 6000.0 contract | Applicable guarantee and limits |
+| --- | --- |
+| [Sub Emitters module](https://docs.unity3d.com/6000.0/Documentation/Manual/PartSysSubEmitModule.html), [Birth](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystemSubEmitterType.Birth.html) | Sub-emitters spawn at the parent particle. Birth supports rates and multiple bursts throughout its lifetime. The single-burst restriction applies to the other event types. Neither page specifies an intra-step schedule or a particle buffer order. |
+| [ParticleSystemSubEmitterProperties](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystemSubEmitterProperties.html) | InheritNothing leaves child start properties independent. InheritLifetime shortens lifetime towards the parent's death; no numeric formula is promised. These new controls use InheritNothing. |
+| [Simulate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.Simulate.html) | Advances by the requested period and pauses; restart resets time, withChildren includes child systems, and fixedTimeStep uses the configured fixed interval. The child newborn catch-up schedule is unspecified. |
+| [simulationSpace](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.MainModule-simulationSpace.html) | Selects Local, World or Custom simulation. The new transformed controls measure Local and World only; Custom remains unmeasured here. |
+
+Measured in this release: a Birth burst at age zero starts at the parent's position before
+movement, including particles emitted from script. Scripted Emit does not immediately create
+the child. The newborn integrates its share of the parent step, then catches up through whole
+fixed intervals for the remaining Simulate call. A burst child in a 0.05 s call with maximum
+particle delta 0.03 and fixed interval 0.02 integrates 0.025, 0.02 and 0.02 s, reaching age
+0.065 s. Five separate 0.02 s calls reach age 0.12 s; one 0.1 s call reaches age 0.125 s.
+These histories affect positions, gravity, remaining lifetime and the call in which the child
+disappears. They are measurements of these contexts, not a general callback or particle-order
+contract. Other event types retain their existing paths.
+
+The captured histories advance existing Birth child particles before new parent emissions.
+New children therefore do not replace expired old children during the old-particle update.
+Time-rate initialization assigns ages from youngest to oldest, retaining each seed's position
+and eventual expiry. An emission whose remaining call time reaches the constant lifetime bound
+is skipped before drawing start samples. The implementation uses the exact maximum of constant lifetime modes for this bound.
+The early-skip capture uses a constant; ranged lifetime variants, lifetime curves, lifetime by
+emitter speed and inherited lifetime remain unmeasured here. No callback-order guarantee follows from these particle histories.
+
+For the measured moving-parent transforms, the Birth frame faces along the parent's world
+velocity. Its up vector blends the child's world forward and up axes by the absolute dot product
+of travel direction and child forward; the child's rotation relative to the parent is then
+applied inside that frame. The world spawn point is converted to the child's simulation space,
+including its transform's translation. This is a release-specific frame measurement. It does
+not certify the unresolved rotated-child frames for Death or Manual.
+
+All 318 new records match strictly. The combined result is 2318/2467 matching records,
+149 known differences and zero unexpected differences. Only the six original `subemit/child`
+runtime records change; every original count and seed half is unchanged. Their position and
+remaining lifetime now compare without an allowance. Their angular field retains its separate
+raw residual, so the number of known records stays at 149.
+
+Regression results retain emission's 18 failing records/54 values, gravity's 568/639 matches,
+sub-emitters' 975/1321 with all 58 random counts exact, and seed/axis's 48 failing values.
+Particles improves from 1520/1560 to 1522/1560, with four of 94 scenarios still differing.
+All 17 images are byte-identical to the before capture and worst mean remains 0.92.
+The broader particle probe retains eight Birth time-rate records, including boundary counts
+and subsequent histories. Those raw failures remain open separately from these origin/age
+controls. Lifetime curves, inherited lifetime, nested Birth systems and other releases are not
+certified by this extension.
+
 ## Retained differences
 
 All raw values, missing/extra keys and failing indices remain in comparator output. The residual
@@ -153,9 +210,6 @@ registry names only the following fields; it does not change numeric tolerances.
 - `start/gradients`, `color/gradients`, `color/randomcolor`: packed color interpolation differs by
   byte values after the random draw. Public MinMaxGradient evaluation and particle packed colors
   need separate measurement before changing their arithmetic.
-- `subemit/child`: Birth child origin and first-step age in Simulate remain different. Counts and
-  particle seed halves still compare exactly. These timing differences are separate from the
-  stable sub-emitter selection roll.
 - Color, custom, played, sub-emitter and the later speed-modifier records report nonzero reference
   angular velocity after the rotation scenarios, although they enable no rotation module. The
   cause is unresolved. Only the recorded nonzero-reference/zero-candidate angular Z field is

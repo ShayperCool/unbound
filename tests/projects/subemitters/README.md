@@ -91,9 +91,14 @@ Known differences (the comparator lists each one and keeps it out of the verdict
   order (the first four in order, then from the end), so other parents get the last children.
 - The time of a `Simulate`-stepped parent whose `Emit`ted particles all died: Unity's clock keeps
   running, Unbound's stops.
-- `random/*`: Unbound's per-particle random stream is its own; counts compare within
-  max(30%, 4·sqrt(3·count)).
 
-Unmeasured: other releases; Birth, Collision and Trigger sub-emitters (Collision and Trigger use the
+All 58 `random/*` count records compare exactly. Selection uses a stable roll from the parent
+particle seed; burst probability and count use the parent particle seed plus the parent system
+seed. The comparator has no statistical count allowance.
+
+Birth origin and Simulate age controls are in [particlerandom](../particlerandom/README.md).
+They extend that probe's fixed-seed Birth histories; this probe retains its Death and Manual scope.
+
+Unmeasured here: other releases; Birth, Collision and Trigger sub-emitters (Collision and Trigger use the
 same count rule, unmeasured); a paused parent; the up axis of the frame for a rotated parent; Inherit
 Duration.
