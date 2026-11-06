@@ -173,6 +173,47 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SendsTargetADuckWithMeasuredDefaultsAndIgnoreBypass()
+        {
+            var (mixer, master, duck) = Fixture();
+            duck.m_EffectName = "Duck Volume"; duck.m_EffectId = "duck";
+            duck.m_ParameterGuids.Clear(); mixer.m_Exposed.Clear();
+            foreach (var name in AudioMixerEffectController.DuckParameters) duck.m_ParameterGuids[name] = name;
+            var send = new AudioMixerEffectController { m_EffectName = "Send", m_EffectId = "send", m_MixLevelGuid = "level", m_SendTarget = duck };
+            var voice = new AudioMixerGroup { m_Mixer = mixer, m_Name = "Voice", m_VolumeGuid = "voice" };
+            voice.m_Effects.Add(send);
+            master.m_Children.Add(voice);
+            mixer.m_Exposed["Release"] = "Release Time";
+            mixer.m_Exposed["Send"] = "level";
+            // Native's unset Release Time is 0.3 s (the Editor shows 0.1); a new Send is at -80 dB.
+            Assert.True(mixer.GetFloat("Release", out float release));
+            Assert.Equal(0.3f, release);
+            Assert.True(mixer.GetFloat("Send", out float level));
+            Assert.Equal(-80f, level);
+            using (var payload = JsonDocument.Parse(JsonSerializer.Serialize(voice.DspConfiguration())))
+            {
+                var dsp = payload.RootElement.GetProperty("effects")[0];
+                Assert.Equal("duck", dsp.GetProperty("sendTarget").GetString());
+                Assert.Equal(0f, dsp.GetProperty("sendLevel").GetSingle());
+            }
+            Assert.NotEqual(0UL, master.m_Handle); // the target's group is registered
+            Assert.True(mixer.SetFloat("Send", -6f));
+            send.m_Bypass = true; voice.m_BypassEffects = true;
+            using (var payload = JsonDocument.Parse(JsonSerializer.Serialize(voice.DspConfiguration())))
+                Assert.Equal(AudioMixer.DspGain(-6f), payload.RootElement.GetProperty("effects")[0].GetProperty("sendLevel").GetSingle());
+            duck.m_Bypass = true;
+            using (var payload = JsonDocument.Parse(JsonSerializer.Serialize(master.DspConfiguration())))
+            {
+                var config = payload.RootElement.GetProperty("effects")[0].GetProperty("duck");
+                Assert.Equal(-10f, config.GetProperty("threshold").GetSingle());
+                Assert.Equal(0.3f, config.GetProperty("releaseTime").GetSingle());
+                Assert.Equal(1f, config.GetProperty("sidechainMix").GetSingle());
+            }
+            duck.m_EnableWetMix = true;
+            Assert.Throws<NotSupportedException>(() => master.DspConfiguration());
+        }
+
+        [Fact]
         public void ActiveUnsupportedEffectsAndWetMixFailLoudly()
         {
             var (_, group, effect) = Fixture();
