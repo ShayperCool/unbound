@@ -53,7 +53,10 @@ impl UnwrapParams {
                 1.0 / (settings.min_object_scale * settings.min_lightmap_resolution * size);
             let margin = if 0.0001 <= margin { margin } else { 0.0001 } * 3.0;
             if !margin.is_finite() {
-                return Err("the mesh has no area to calculate the pack margin from".into());
+                return Err(
+                    "the calculated pack margin is not finite (zero area, resolution or scale)"
+                        .into(),
+                );
             }
             margin
         } else {
@@ -71,7 +74,11 @@ impl UnwrapParams {
 /// UV2 per triangle corner.
 pub fn unwrap(input: &UnwrapInput, params: &UnwrapParams) -> Result<Vec<[[f32; 2]; 3]>, String> {
     debug_assert!(input.polygons.len() == input.triangles.len());
-    debug_assert!(input.uvs.is_none_or(|uvs| uvs.len() == input.triangles.len()));
+    debug_assert!(
+        input
+            .uvs
+            .is_none_or(|uvs| uvs.len() == input.triangles.len())
+    );
     let _ = params;
     Err("Unity's lightmap unwrap is not reproduced yet".into())
 }
@@ -95,7 +102,12 @@ mod tests {
     #[test]
     fn margin_is_manual_pixels_or_calculated_from_the_area() {
         // A unit square: area 1.
-        let positions = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]];
+        let positions = [
+            [0.0, 0.0, 0.0],
+            [1.0, 0.0, 0.0],
+            [1.0, 1.0, 0.0],
+            [0.0, 1.0, 0.0],
+        ];
         let triangles = [[0, 1, 2], [0, 2, 3]];
         let input = UnwrapInput {
             positions: &positions,
