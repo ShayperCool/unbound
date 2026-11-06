@@ -482,6 +482,8 @@ the existing component chain. NativeApi 23 adds kind 5 with its level in the des
 `Cutoff` field, without changing the layout. Stubs are regenerated. Validation is
 tests/projects/audiodistortion, Unity 6000.0.71f1 Linux Editor, 48000 and 44100 Hz. Two independent
 Native captures per rate agree bit for bit across 5,767,292 values; one release reference is kept.
+The engine passes all 5,767,292 values at each rate under the unchanged strict float/PCM
+comparison, without invoking the one-step PCM allowance or adding residual bounds.
 
 The [Distortion Effect Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioDistortionEffect.html),
 [Distortion Filter Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioDistortionFilter.html)

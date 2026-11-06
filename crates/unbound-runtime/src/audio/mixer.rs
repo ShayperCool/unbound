@@ -3496,9 +3496,11 @@ mod tests {
         let mut misaligned = packet(1, 0, &valid[..1]);
         misaligned.filters = unsafe { (storage.as_ptr() as *const u8).add(4) } as *const AudioFilterDescriptor;
         assert!(refused(&misaligned).contains("misaligned"));
-        for kind in [0, 5, -1] {
+        for kind in [0, filter_kind::DISTORTION + 1, -1] {
             assert!(refused(&packet(1, 0, &[component(1, kind, 0)])).contains("kind"));
         }
+        let distortion = [component(1, filter_kind::DISTORTION, 0)];
+        assert_eq!(unsafe { SourceParams::from_packet(&packet(1, 0, &distortion)) }.filters.len(), 1);
         assert!(refused(&packet(1, 0, &[component(1, filter_kind::ECHO, 2)])).contains("stage"));
         let mut reverb = component(1, filter_kind::REVERB, 0);
         reverb.reverb[3] = f32::NAN;
