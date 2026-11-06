@@ -22,7 +22,8 @@ public static class StubDefaults
     {
         // Outside OnDrawGizmos the color is white; the matrix is the zero matrix (the default).
         ["UnityEngine.Gizmos.color"] = "global::UnityEngine.Color.white",
-        ["UnityEngine.Gizmos.probeSize"] = "0.3f",
+        // 0.29999998f, one ulp under 0.3f.
+        ["UnityEngine.Gizmos.probeSize"] = "0.29999998f",
         // Without realtime GI: nothing to converge.
         ["UnityEngine.DynamicGI.indirectScale"] = "1f",
         ["UnityEngine.DynamicGI.updateThreshold"] = "1f",
