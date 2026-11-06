@@ -530,11 +530,73 @@ public class ParticleRandomProbe : MonoBehaviour
         Time.maximumParticleDeltaTime = previousMax;
     }
 
+    // Each amount alone, each pair and all three, with zero/intermediate/full controls.
+    // Repeated updates and separate Emit calls also check subsequent shape stream draws.
+    static void ShapeModifiers()
+    {
+        float previousMax = Time.maximumParticleDeltaTime;
+        Time.maximumParticleDeltaTime = 1f;
+        var types = new[] { ParticleSystemShapeType.Sphere, ParticleSystemShapeType.Cone, ParticleSystemShapeType.Box };
+        foreach (var type in types)
+            for (int p = 0; p < 3; p++)
+                for (int d = 0; d < 3; d++)
+                    for (int s = 0; s < 3; s++)
+                        ShapeModifierCase(type, p, d, s, "burst");
+        foreach (var type in types)
+            foreach (string path in new[] { "rate", "emit", "local", "world" })
+                for (int mask = 0; mask < 8; mask++)
+                    ShapeModifierCase(type, (mask & 1) != 0 ? 1 : 0,
+                        (mask & 2) != 0 ? 1 : 0, (mask & 4) != 0 ? 1 : 0, path);
+        foreach (var type in new[] { ParticleSystemShapeType.Circle, ParticleSystemShapeType.SingleSidedEdge })
+            for (int mask = 0; mask < 8; mask++)
+                ShapeModifierCase(type, (mask & 1) != 0 ? 1 : 0,
+                    (mask & 2) != 0 ? 1 : 0, (mask & 4) != 0 ? 1 : 0, "burst");
+        Time.maximumParticleDeltaTime = previousMax;
+    }
+
+    static void ShapeModifierCase(ParticleSystemShapeType type, int p, int d, int s, string path)
+    {
+        string scenario = "shapemod/" + type + "/" + p + d + s + "/" + path;
+        foreach (uint seed in Seeds)
+        {
+            var ps = Make(scenario, seed, system =>
+            {
+                Shape(system, type, shape =>
+                {
+                    shape.randomPositionAmount = p == 2 ? 1f : p * 0.3f;
+                    shape.randomDirectionAmount = d == 2 ? 1f : d * 0.5f;
+                    shape.sphericalDirectionAmount = s == 2 ? 1f : s * 0.25f;
+                    shape.radius = 1.2f; shape.radiusThickness = 0.6f;
+                    shape.angle = 25f;
+                    if (path == "local" || path == "world")
+                    {
+                        shape.position = new Vector3(0.4f, -0.7f, 0.2f);
+                        shape.rotation = new Vector3(21f, -33f, 17f);
+                        shape.scale = new Vector3(2f, 0.7f, 1.3f);
+                        system.transform.position = new Vector3(3f, -2f, 1f);
+                        system.transform.rotation = Quaternion.Euler(-12f, 47f, 8f);
+                        var main = system.main;
+                        main.simulationSpace = path == "world" ? ParticleSystemSimulationSpace.World : ParticleSystemSimulationSpace.Local;
+                    }
+                });
+                if (path == "rate") { var e = system.emission; e.rateOverTime = 262.5f; }
+            }, path == "rate" || path == "emit" ? 0 : 9);
+            for (int step = 0; step < 2; step++)
+            {
+                if (path == "emit") ps.Emit(step == 0 ? 9 : 5);
+                ps.Simulate(0.02f, true, path != "emit" && step == 0, false);
+                RecordParticles(Key(scenario, seed, step), ps);
+            }
+            DestroyImmediate(ps.gameObject);
+        }
+    }
+
     void Start() => StartCoroutine(Probe());
 
     IEnumerator Probe()
     {
         yield return RateBatches();
+        ShapeModifiers();
         Scenarios();
         SubEmitters();
         Meshes();
