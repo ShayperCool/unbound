@@ -43,6 +43,15 @@ mod tests {
         assert_eq!(reset, x);
     }
     #[test]
+    fn rounding_at_the_history_boundary_keeps_both_indices_in_bounds() {
+        let chorus = Chorus::new(48000, 1024).unwrap();
+        for read in [-f32::EPSILON, -0.001, 0.0, 5119.9995, 5120.0, 5121.0] {
+            let read = chorus.wrap(read);
+            assert!((read as usize) < chorus.history.len());
+            assert!((chorus.wrap(read + 1.0) as usize) < chorus.history.len());
+        }
+    }
+    #[test]
     fn smaller_mixer_chunks_keep_the_dsp_buffer_coordinates() {
         let mut seed = 12345u32;
         let mut whole: Vec<_> = (0..262144 * 2).map(|_| {
@@ -110,7 +119,9 @@ impl Chorus {
     }
     fn wrap(&self, value: f32) -> f32 {
         let frames = self.history.len() as f32;
-        if value < 0.0 { value + frames } else if value >= frames { value - frames } else { value }
+        let value = if value < 0.0 { value + frames } else { value };
+        // Adding a tiny negative coordinate can round to exactly `frames`.
+        if value >= frames { value - frames } else { value }
     }
     pub fn process(&mut self, samples: &mut [f32], spec: &ChorusSpec) {
         let target = (((spec.delay * spec.depth) * self.rate as f32 / 1000.0) * spec.depth).max(4.0);
