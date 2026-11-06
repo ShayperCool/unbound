@@ -11,6 +11,10 @@ from common import FIXTURE, RESIDUALS, SUFFIXES, header, profile, samples
 ATOL = 2e-5
 RTOL = 2e-4
 MISSING = '<missing>'
+try:
+    import numpy as np
+except ImportError:
+    np = None
 
 
 def bad(a, b, sample, exact, pcm_steps=0, residual=0):
@@ -64,8 +68,23 @@ def compare(reference, candidate, report, keys, exact=False, before=None, pcm_st
             frames = limits.get(key)
             channels = values[0].get('channels', 2) if isinstance(values[0], dict) else 2
             count = max(map(len, data)) if frames is None else min(max(map(len, data)), channels*frames)
-            for i in range(count):
-                record(key, [v[i] if i < len(v) else MISSING for v in data], i)
+            indices = range(count)
+            if np is not None and before is None and all(len(v) >= count for v in data):
+                # Same double arithmetic as bad(); only skip known passing samples. Every bad,
+                # nonfinite, missing and extra value still goes through the report writer.
+                arrays = [np.frombuffer(v, dtype=np.float32, count=count) for v in data]
+                if exact:
+                    wrong = arrays[0].view(np.uint32) != arrays[1].view(np.uint32)
+                else:
+                    first, second = (v.astype(np.float64) for v in arrays)
+                    slack = max((0 if key.endswith('.master') else pcm_steps)/32768,
+                                RESIDUALS.get(key, 0) if residuals else 0)
+                    wrong = np.abs(first-second) > np.maximum(ATOL+RTOL*np.abs(first), slack)
+                wrong |= ~np.isfinite(arrays[0]) | ~np.isfinite(arrays[1])
+                indices = np.flatnonzero(wrong)
+                tested += count - len(indices)
+            for i in indices:
+                record(key, [v[i] if i < len(v) else MISSING for v in data], int(i))
         result = dict(tested=tested, failed=failed, exact=exact, atol=0 if exact else ATOL,
                       rtol=0 if exact else RTOL, pcm_steps=pcm_steps,
                       residual_atol=RESIDUALS if residuals else {},
