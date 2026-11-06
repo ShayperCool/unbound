@@ -806,6 +806,7 @@ namespace Unbound.Runtime.Playables
             if (!s_Culled.Remove(animator, out var frame)) return false;
             try
             {
+                if (move) animator.m_RootMotionApplied = false;
                 if (move && frame.Mode == RootMotionMode.Compute)
                     AnimationEvaluation.ApplyRootMotion(animator, frame.Pose, frame.Motion, frame.DeltaTime);
                 else if (move) animator.m_Player?.ProcessRootMotion();
