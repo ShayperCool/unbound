@@ -13,6 +13,8 @@ public partial class CmdBuffersProbe
         while (indexed.MoveNext()) yield return indexed.Current;
         var fences = Fences();
         while (fences.MoveNext()) yield return fences.Current;
+        var meshInstances = MeshInstanceFrames();
+        while (meshInstances.MoveNext()) yield return meshInstances.Current;
     }
 
     IEnumerator RenderIndexedFrames()
