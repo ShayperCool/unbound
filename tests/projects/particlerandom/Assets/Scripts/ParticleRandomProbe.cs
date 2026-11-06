@@ -448,10 +448,68 @@ public class ParticleRandomProbe : MonoBehaviour
         }
     }
 
+    static ParticleSystem RateSystem(string name, uint seed, float rate, bool ranged, bool shape)
+    {
+        return Make(name, seed, ps =>
+        {
+            var m = ps.main;
+            m.duration = 0.05f;
+            m.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+            m.startLifetime = Two(1f, 3f);
+            m.startSpeed = Two(1f, 4f);
+            m.startSize = Two(0.5f, 2f);
+            var e = ps.emission;
+            e.rateOverTime = ranged ? Two(rate * 0.75f, rate * 1.25f) : new ParticleSystem.MinMaxCurve(rate);
+            if (shape) Shape(ps, ParticleSystemShapeType.Sphere);
+        }, 0);
+    }
+
+    // Isolate rate batches around four-lane boundaries, including a loop crossing.
+    // Position and lifetime retain each seed's observable age, without sorting particles.
+    static IEnumerator RateBatches()
+    {
+        float previousMax = Time.maximumParticleDeltaTime;
+        Time.maximumParticleDeltaTime = 1f;
+        foreach (uint seed in Seeds)
+            foreach (int count in new[] { 1, 2, 3, 4, 5, 7, 8, 9, 15, 16, 17 })
+                foreach (bool ranged in new[] { false, true })
+                    foreach (bool shape in new[] { false, true })
+                    {
+                        string scenario = "ratebatch/" + count + (ranged ? "/ranged" : "/constant") + (shape ? "/sphere" : "/plain");
+                        var ps = RateSystem(scenario, seed, (count + 0.25f) / 0.02f, ranged, shape);
+                        for (int step = 0; step < 4; step++)
+                        {
+                            ps.Simulate(0.02f, true, step == 0, false);
+                            RecordParticles(Key(scenario, seed, step), ps);
+                        }
+                        DestroyImmediate(ps.gameObject);
+                    }
+        Time.captureDeltaTime = 0.02f;
+        yield return null;
+        var playing = new List<(string, uint, ParticleSystem)>();
+        foreach (uint seed in Seeds)
+            foreach (bool ranged in new[] { false, true })
+            {
+                string scenario = "ratebatch/play/" + (ranged ? "ranged" : "constant");
+                var ps = RateSystem(scenario, seed, 262.5f, ranged, false);
+                ps.Play();
+                playing.Add((scenario, seed, ps));
+            }
+        for (int frame = 0; frame < 4; frame++)
+        {
+            yield return null;
+            foreach (var (scenario, seed, ps) in playing) RecordParticles(Key(scenario, seed, frame), ps);
+        }
+        foreach (var entry in playing) DestroyImmediate(entry.Item3.gameObject);
+        Time.captureDeltaTime = 0f;
+        Time.maximumParticleDeltaTime = previousMax;
+    }
+
     void Start() => StartCoroutine(Probe());
 
     IEnumerator Probe()
     {
+        yield return RateBatches();
         Scenarios();
         SubEmitters();
         Meshes();
