@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Unbound.Runtime.Humanoid;
 using Xunit;
 
@@ -217,6 +218,27 @@ namespace UnityEngine.Tests
             HumanRootMotion.CombineLayer(ref below, ref any, ReadOnlySpan<HumanRootMotionSample>.Empty, new[] { X(0f, 1f, 30f) },
                 new[] { 1f }, true, 1f, noRoot);
             Assert.Equal(0f, below.Body.t.z);
+        }
+
+        [Fact]
+        public void ALayerMaskWithoutRootOverNoHumanoidClipWarns()
+        {
+            const string member = "Animator humanoid layer mask without Root over no humanoid clip";
+            int Hits() => Unbound.Runtime.Stubs.HitReport().FirstOrDefault(h => h.Key == member).Value;
+            int before = Hits();
+            var below = default(HumanRootMotionSample);
+            bool any = false;
+            HumanRootMotion.CombineLayer(ref below, ref any, new[] { Sample(3f, 0f, 0f) }, ReadOnlySpan<Trs>.Empty, new[] { 1f }, false, 1f,
+                Parts(AvatarMaskBodyPart.Root));
+            Assert.False(any);
+            Assert.False(below.HasMotion);
+            Assert.Equal(before + 1, Hits());
+            // Over a humanoid clip below it is measured: no warning.
+            below = Sample(1f, 0f, 0f);
+            any = true;
+            HumanRootMotion.CombineLayer(ref below, ref any, new[] { Sample(3f, 0f, 0f) }, ReadOnlySpan<Trs>.Empty, new[] { 1f }, false, 1f,
+                Parts(AvatarMaskBodyPart.Root));
+            Assert.Equal(before + 1, Hits());
         }
 
         [Fact]

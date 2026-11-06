@@ -110,11 +110,11 @@ namespace Unbound.Runtime.Humanoid
         // ---------------------------------------------------------------- per-update steps
 
         /// <summary>The retarget step: the animated human pose to the world IK pose and the human
-        /// skeleton pose, then the IK weights cleared. With <paramref name="rootFromPose"/> (the
-        /// Animator's layersAffectMassCenter, or a single controller with at most one layer) the base
-        /// pose takes all of <paramref name="pose"/> and places the body; otherwise the base pose places
-        /// the body and <paramref name="pose"/> gives the goals and muscles.</summary>
-        /// <param name="basePose">In/out: the base layer's human pose (avatar space, unscaled);
+        /// skeleton pose, then the IK weights cleared. With <paramref name="rootFromPose"/> (every
+        /// weighted layer places the body) the base pose takes all of <paramref name="pose"/> and places
+        /// the body; otherwise the base pose (the layers whose mask keeps Root) places the body and
+        /// <paramref name="pose"/> gives the goals and muscles.</summary>
+        /// <param name="basePose">In/out: the mass center pose (avatar space, unscaled);
         /// overwritten by <paramref name="pose"/> with <paramref name="rootFromPose"/>.</param>
         /// <param name="pose">Input: the blended human pose (avatar space, unscaled).</param>
         /// <param name="avatarX">Input: the avatar root's world transform (position, rotation, lossy scale).</param>

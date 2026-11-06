@@ -949,7 +949,9 @@ namespace Unbound.Runtime
         /// <summary>A humanoid Animator's mass center pose, which places the body (hips) before the
         /// muscles of every layer apply: the layers whose avatar mask leaves out Root do not take part
         /// (measured, tests/projects/humanoid: the hips stay where the layers below put them). Only
-        /// set when such a layer has weight; otherwise the whole pose places the body.</summary>
+        /// set when such a layer has weight; otherwise the whole pose places the body. Curves only
+        /// excluded layers animate keep the animated pose's values, and states without write defaults
+        /// keep the animated values (not measured).</summary>
         void WriteMassCenterPose(int count)
         {
             var human = m_Animator.Human;
