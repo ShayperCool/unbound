@@ -1,8 +1,6 @@
 {
  "command": "python3 tests/projects/animstartup/run.py create --release 6000.0.71f1 --label create",
  "files": {
-  "Assets/Scripts/AnimStartupHumanProbe.cs.meta": "03a37b6523694bc5930a4fbee28c7695fa2b09babaf09a54d6a044ca0c61cdae",
-  "Assets/Scripts/StartupHumanReceiver.cs.meta": "219deb4602703fa036b94d291d21721db943f95721108e6d3fb7dccf69bfa10e",
   "ProjectSettings/PackageManagerSettings.asset": "5214d891199041a6d249235ff980991c2adfa978a1e44045020e48def6ddd731"
  },
  "fixture": {
@@ -25,9 +23,11 @@
   "Assets/Scenes/Probe.unity.meta": "ed8dfcceceb491f1a6be87ff08a751df6d1a89af08fdfb3cddba8d0ec62836bd",
   "Assets/Scripts.meta": "e74c35c03972ee7edd8b723e8261d7b02720db32fc4ce57ef42ab366e484dde9",
   "Assets/Scripts/AnimStartupHumanProbe.cs": "dd4dfd94cba663cf71d77a9d6f450376e72e3885c7a919c61acdbd423b1d4d15",
-  "Assets/Scripts/AnimStartupProbe.cs": "daf840689ac467538b9fd2ba8a052be14a4ee9ee694974c373f04c01d47929f5",
+  "Assets/Scripts/AnimStartupHumanProbe.cs.meta": "eb9f7d9c93443708178c6e3f80218f84672364955b24e5f05b2743a8ca882bc3",
+  "Assets/Scripts/AnimStartupProbe.cs": "4c67315da14a47136e111bee1622a20017b36bb03cde0303c1aba0a5f0d6d17f",
   "Assets/Scripts/AnimStartupProbe.cs.meta": "928134bc85b1ab6e4787d91bd17b05122dc4692a3f7852c324c922f73b526c94",
   "Assets/Scripts/StartupHumanReceiver.cs": "b36387295ce932bf09eb041deeab6a83a0f5cb84718668eb2945f66b95cafc68",
+  "Assets/Scripts/StartupHumanReceiver.cs.meta": "025efbe3e0da6bc454e9f41c1a723f0862cab6677b3dbfed1840d4220f5631e8",
   "Assets/Scripts/StartupReceiver.cs": "ebe3b4cefa99950f5e94a0ab6898e12bd2d992d7173dd34fa18a7b3be275ddfe",
   "Assets/Scripts/StartupReceiver.cs.meta": "6e216830692cf3b3767bb526cb29cb5155198fb45b0c56ae629222b3a32b2b6a",
   "Packages/manifest.json": "0e21d38f7775ac89835fa50ba3afad082ff156b590d64ca8410d49513d76384a",
@@ -53,7 +53,7 @@
   "ProjectSettings/UnityConnectSettings.asset": "11251dae0356b6f43dd2c67bb511f6b7ecda4e5de425186bba3297e6f3dc1c6f",
   "ProjectSettings/VFXManager.asset": "9378043da38a17f2198d52a10c17789161d30e3285a387ca3687a71551c32448",
   "ProjectSettings/VersionControlSettings.asset": "e199cdfa6a8f2bf33cfd47e549198f13e3eb2a5099e908fdb4e0f14d939ccc6b",
-  "tests/projects/animstartup/run.py": "6d171532493c490667f8452e53ac84ec0d7f14351b30abce20b502b243ac7f9c"
+  "tests/projects/animstartup/run.py": "c3aca94efa8af622cb7f7e1630f645896dc103a5f61a896b937c2f0d7300afef"
  },
  "format": 1,
  "probe": "animstartup",

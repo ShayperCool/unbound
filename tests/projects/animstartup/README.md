@@ -78,8 +78,27 @@ leaves 60 raw records different in that profile. Run it explicitly with
 `run.py check --profiles humanMotion --release 6000.0.71f1`; every differing root,
 delta and callback count stays visible. Its poses, IK and clocks match. This is the
 separate A12 follow-up named in Q76, not part of the startup gate. No comparator
-ignores fields or tolerances. The default gate strictly checks `entry`, `delayed`
-and `human`.
+ignores fields or tolerances. The default gate strictly checks `entry`, `delayed`,
+`human` and `initialization`.
+
+## Initialization review controls
+
+The separate `initialization` profile records scene-script lookup before and after
+scene initialization, plus the combination of component disabling, GameObject
+deactivation/reactivation and later component enabling with state retention off
+and on. The scene lookup records `[loaded, active, activeSelf, activeInHierarchy]`.
+In the two Native captures it is `[1,0,true,false]` in BeforeSceneLoad and
+`[1,1,true,true]` in AfterSceneLoad. Runtime-created objects still activate normally
+inside BeforeSceneLoad. Scene-authored roots remain pending activation until the
+callback returns; their authored activeSelf flags do not change.
+
+A disabled controller clears on hierarchy deactivation when retention is off,
+even though it receives no second component-disable notification. Reactivation
+makes its initial state queryable while the component is still disabled; enabling
+later advances that fresh state. With retention on, its previous time survives.
+These are 31 additional Native records. The earlier 2,192 startup records, the
+193 humanoid-motion follow-up records, all culling references and every comparator
+tolerance remain unchanged.
 
 ## Reproduce
 

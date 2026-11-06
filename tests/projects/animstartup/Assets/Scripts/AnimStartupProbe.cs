@@ -27,6 +27,7 @@ public class AnimStartupProbe : MonoBehaviour
     static bool Recording => Output != null && Application.isPlaying
         && Environment.GetEnvironmentVariable("ANIMSTARTUP_HUMAN") != "1";
     int updates;
+    static bool Review => Environment.GetEnvironmentVariable("ANIMSTARTUP_REVIEW") == "1";
     static bool Delayed => Environment.GetEnvironmentVariable("ANIMSTARTUP_DELAYED") == "1";
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
@@ -36,14 +37,23 @@ public class AnimStartupProbe : MonoBehaviour
         cases.Clear();
         records.Clear();
         Time.captureDeltaTime = 0.02f;
+        if (Review) InitialScene("beforeScene");
         if (!Delayed) Group("beforeScene");
     }
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void AfterScene() { if (Recording && !Delayed) Group("afterScene"); }
+    static void AfterScene() { if (Recording) { if (Review) InitialScene("afterScene"); if (!Delayed) Group("afterScene"); } }
+
+    static void InitialScene(string phase)
+    {
+        var loaded = Resources.FindObjectsOfTypeAll<AnimStartupProbe>();
+        var active = UnityEngine.Object.FindObjectsByType<AnimStartupProbe>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+        var go = loaded[0].gameObject;
+        Put("initialScene/" + phase, "[" + loaded.Length + "," + active.Length + "," + (go.activeSelf ? "true" : "false") + "," + (go.activeInHierarchy ? "true" : "false") + "]");
+    }
 
     void Awake()
     {
-        if (!Recording || Delayed) return;
+        if (!Recording || Delayed || Review) return;
         Add("scene/enabled", sceneEnabled);
         Add("scene/disabled", sceneDisabled);
         Group("awake");
@@ -127,7 +137,10 @@ public class AnimStartupProbe : MonoBehaviour
             sceneDisabled.enabled = true;
         }
         if (updates == 1 && !Delayed) { Group("secondUpdate"); EnableGroup("secondUpdate"); }
-        if (updates == 3) { Group("laterUpdate"); EnableGroup("laterUpdate"); }
+        if (updates == 3 && !Review) { Group("laterUpdate"); EnableGroup("laterUpdate"); }
+        if (updates == 2 && Review)
+            foreach (bool keep in new[] { false, true })
+                Create("reenable/" + keep + "/disabledActive").animator.keepAnimatorStateOnDisable = keep;
         if (updates == 2 && !Delayed)
         {
             foreach (bool keep in new[] { false, true })
@@ -137,12 +150,21 @@ public class AnimStartupProbe : MonoBehaviour
                 c.animator.keepAnimatorStateOnDisable = keep;
             }
         }
-        if (updates == 4 || updates == 5)
+        if (updates == 4 || updates == 5 || (Review && updates == 6))
             foreach (var c in cases)
                 if (c.name.StartsWith("reenable/"))
                 {
-                    if (c.name.EndsWith("active")) c.animator.gameObject.SetActive(updates == 5);
-                    else c.animator.enabled = updates == 5;
+                    if (c.name.EndsWith("disabledActive"))
+                    {
+                        if (updates == 4) { c.animator.enabled = false; c.animator.gameObject.SetActive(false); }
+                        if (updates == 5) c.animator.gameObject.SetActive(true);
+                        if (updates == 6) c.animator.enabled = true;
+                    }
+                    else
+                    {
+                        if (c.name.EndsWith("active")) c.animator.gameObject.SetActive(updates == 5);
+                        else c.animator.enabled = updates == 5;
+                    }
                 }
         foreach (var c in cases)
         {
