@@ -69,6 +69,10 @@ Its full instructions are in [ORCHESTRATOR.md](ORCHESTRATOR.md).
    - Exit 3 is a conflict: run `git rebase main`, resolve (see Conflicts), re-run the affected tests,
      land again.
    - Exit 5 is a failed gate: fix it, land again.
+   - When `managed/` or `crates/unbound-compat/` changed, the gate also runs the build's
+     `gen-stubs -p tests/projects/packages` (about a minute). It fails when the hand-written code
+     does not build without stubs or when `managed/UnityEngine/Generated/` differs from what the
+     generator writes, and restores `Generated/` afterwards. Regenerate, commit, land again.
    - Never force-push and never bypass the gate.
 9. Report to the orchestrator in at most 10 lines: the landed commit (or the blocker), what
    changed, the probe result, residuals, follow-ups.
@@ -108,9 +112,14 @@ A worker with this task, in its own worktree from current `main`:
    without a verdict, `no recipe` with the reason) and writes
    `~/.cache/unbound/agents/suite/<label>/summary.json`; step logs are in the run's work directory.
 2. The suite compares itself with `~/.cache/unbound/agents/baseline/` and lists every probe whose
-   status or summary changed; it exits 1 on a new failure or when a failing probe got worse (an
-   earlier failing step, fewer passing or more failing checks, more counted failures). Either is a
-   regression; rerun it once with `--only <probe>` to rule out flakiness.
+   status or summary changed; it exits 1 on a new failure, when a failing probe got worse (an
+   earlier failing step, fewer passing or more failing checks, more counted failures), or when an
+   image measurement of any probe got worse (`images` lines). Image comparators (`report` probes,
+   display's screenshot) have no verdict, so the rule is the baseline's own numbers with no
+   tolerance: a higher mean as printed (two decimals) or more pixels over the comparator's bound
+   of 8. Each is a regression; rerun it once with `--only <probe>` to rule out flakiness. A
+   deliberate image change (an accepted residual, a fix that moves a mean up) is promoted with the
+   next baseline and named in the report.
 3. Find the landing that caused it: bisect within `landed.jsonl`. Then either land a `git revert`
    with the reason, or, if a small fix is obvious, land the fix. Add a queue item for the owner
    subsystem either way.
