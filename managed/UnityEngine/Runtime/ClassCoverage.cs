@@ -23,6 +23,8 @@ namespace Unbound.Runtime
         Unread,
         /// <summary>No engine class: its objects are skipped (references to them are null).</summary>
         Unknown,
+        /// <summary>A reader exists, but the project's documents contain a rejected representation.</summary>
+        Unsupported,
     }
 
     /// <summary>
@@ -146,6 +148,9 @@ namespace Unbound.Runtime
             /// <summary>The keys of <see cref="s_IgnoredWithoutData"/> that reference an object in
             /// any of its documents.</summary>
             public List<string> Referenced { get; set; }
+            /// <summary>ClassId213 documents by file, for the same layout checks used at load.
+            /// The doctor does not resolve textures or evaluate their imported dimensions.</summary>
+            public Dictionary<string, string> SpriteDocuments { get; set; }
         }
 
         internal sealed class Entry
@@ -188,6 +193,23 @@ namespace Unbound.Runtime
                     return false;
                 }
                 var (reading, detail) = Classify(f.ClassId, HasData);
+                if (f.ClassId == 213 && f.SpriteDocuments != null)
+                {
+                    var problems = new List<string>();
+                    foreach (var pair in f.SpriteDocuments)
+                    {
+                        try
+                        {
+                            foreach (var doc in UnityYaml.Parse(pair.Value))
+                            {
+                                try { Sprite.ValidateSerialized(doc.Body); }
+                                catch (Exception e) { problems.Add($"{pair.Key} fileID {doc.FileId}: {e.Message}"); }
+                            }
+                        }
+                        catch (Exception e) { problems.Add($"{pair.Key}: {e.Message}"); }
+                    }
+                    if (problems.Count != 0) (reading, detail) = (ClassReading.Unsupported, string.Join("; ", problems));
+                }
                 report.Classes.Add(new Entry
                 {
                     ClassId = f.ClassId, TypeName = f.TypeName, Reading = reading.ToString(), Detail = detail,

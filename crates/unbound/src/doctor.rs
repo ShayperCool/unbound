@@ -23,6 +23,7 @@ struct Found {
     files: BTreeSet<String>,
     keys: BTreeSet<String>,
     referenced: BTreeSet<String>,
+    sprite_documents: BTreeMap<String, String>,
 }
 
 #[derive(Serialize)]
@@ -32,6 +33,7 @@ struct FoundRequest<'a> {
     type_name: &'a str,
     keys: &'a BTreeSet<String>,
     referenced: &'a BTreeSet<String>,
+    sprite_documents: &'a BTreeMap<String, String>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -69,10 +71,27 @@ fn scan(text: &str, path: &str, found: &mut BTreeMap<i32, Found>) {
                 let entry = found.entry(id).or_default();
                 entry.objects += 1;
                 entry.files.insert(path.to_string());
+                if id == 213 {
+                    entry
+                        .sprite_documents
+                        .entry(path.to_string())
+                        .or_default()
+                        .push_str(&format!("--- !u!{header}\n"));
+                }
             }
             continue;
         }
         let Some(id) = current else { continue };
+        if id == 213 {
+            let document = found
+                .get_mut(&id)
+                .unwrap()
+                .sprite_documents
+                .get_mut(path)
+                .unwrap();
+            document.push_str(line);
+            document.push('\n');
+        }
         if expect_name {
             if let Some(name) = line.strip_suffix(':').filter(|n| !n.starts_with(' ')) {
                 let entry = found.entry(id).or_default();
@@ -155,6 +174,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             type_name: &f.type_name,
             keys: &f.keys,
             referenced: &f.referenced,
+            sprite_documents: &f.sprite_documents,
         })
         .collect();
     let release = project.version.to_string();
@@ -203,6 +223,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
         }
     };
     for (reading, title) in [
+        ("Unsupported", "with rejected serialized representations"),
         ("Unread", "not read: they load with default settings"),
         ("Unknown", "no engine class: their objects are skipped"),
         ("Ignored", "ignored on purpose"),
@@ -271,5 +292,21 @@ mod tests {
         assert_eq!((rt.objects, rt.type_name.as_str()), (1, "RenderTexture"));
         assert_eq!(rt.keys, BTreeSet::from(["m_Name".into(), "m_Width".into()]));
         assert_eq!(rt.files, BTreeSet::from(["Assets/a.unity".into()]));
+    }
+
+    #[test]
+    fn keeps_only_non_stripped_sprite_documents_for_layout_validation() {
+        let first = "--- !u!213 &12\nSprite:\n  m_RD:\n    settingsRaw: 64\n";
+        let second = "--- !u!213 &14\nSprite:\n  m_RD:\n    settingsRaw: 1\n";
+        let text = format!(
+            "%YAML 1.1\n{first}--- !u!28 &13\nTexture2D:\n  m_Width: 64\n{second}--- !u!213 &15 stripped\nSprite:\n  m_Name: ignored\n"
+        );
+        let mut found = BTreeMap::new();
+        scan(&text, "Assets/sprites.asset", &mut found);
+        assert_eq!(found[&213].objects, 2);
+        assert_eq!(
+            found[&213].sprite_documents["Assets/sprites.asset"],
+            format!("{first}{second}")
+        );
     }
 }

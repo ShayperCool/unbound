@@ -283,41 +283,8 @@ namespace Unbound.Runtime
                 var channels = new List<(int Stream, int Offset, int Format, int Dimension)>();
                 foreach (var c in Field(vertexData, "m_Channels").EnumerateArray())
                     channels.Add((Int(c, "stream"), Int(c, "offset"), Int(c, "format"), Int(c, "dimension") & 0xF));
-                if (channels.Count == 0 || channels[0].Dimension < 2)
-                    throw new FormatException("the sprite mesh has no positions");
-                if (channels[0].Format != 0)
-                    throw new NotSupportedException($"the sprite mesh's positions have vertex format {channels[0].Format}, not 32-bit floats");
-                var strides = new int[8];
-                foreach (var c in channels)
-                {
-                    if (c.Dimension == 0) continue;
-                    if (c.Stream < 0 || c.Stream >= strides.Length) throw new FormatException($"vertex stream {c.Stream}");
-                    strides[c.Stream] = Math.Max(strides[c.Stream], c.Offset + FormatSize(c.Format) * c.Dimension);
-                }
-                int start = 0;
-                for (int s = 0; s < channels[0].Stream; s++)
-                    if (strides[s] > 0) start = (start + strides[s] * count + 15) & ~15;
-                var position = channels[0];
-                int stride = strides[position.Stream];
-                if (start + (count - 1) * stride + position.Offset + 8 > data.Length)
-                    throw new FormatException($"the vertex data ({data.Length} bytes) is shorter than {count} positions");
-                var vertices = new Vector2[count];
-                for (int v = 0; v < count; v++)
-                {
-                    int at = start + v * stride + position.Offset;
-                    vertices[v] = new Vector2(BitConverter.ToSingle(data, at), BitConverter.ToSingle(data, at + 4));
-                }
-                return vertices;
+                return SpriteRenderGeometry.Positions(count, data, channels);
             }
-
-            static int FormatSize(int format) => format switch
-            {
-                0 => 4,
-                1 => 2,
-                2 or 3 or 6 or 7 => 1,
-                4 or 5 or 8 or 9 => 2,
-                _ => 4,
-            };
 
             /// <summary>The triangles of the record's one submesh (16-bit indices).</summary>
             static ushort[] Indices(JsonElement rd, int vertexCount)
@@ -331,15 +298,7 @@ namespace Unbound.Runtime
                 if (Int(sub, "baseVertex") != 0) throw new NotSupportedException("the sprite mesh has a base vertex");
                 int first = Int(sub, "firstByte"), count = Int(sub, "indexCount");
                 var bytes = Bytes(rd, "m_IndexBuffer");
-                if (count <= 0 || count % 3 != 0 || first < 0 || first + count * 2 > bytes.Length)
-                    throw new FormatException($"{count} indices from byte {first} of a {bytes.Length}-byte index buffer");
-                var indices = new ushort[count];
-                for (int i = 0; i < count; i++)
-                {
-                    indices[i] = BitConverter.ToUInt16(bytes, first + i * 2);
-                    if (indices[i] >= vertexCount) throw new FormatException($"index {indices[i]} of {vertexCount} vertices");
-                }
-                return indices;
+                return SpriteRenderGeometry.Indices(bytes, first, count, vertexCount);
             }
         }
 

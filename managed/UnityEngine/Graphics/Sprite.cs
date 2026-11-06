@@ -231,7 +231,7 @@ namespace UnityEngine
         /// <summary>The rect, or a Tight mesh's traced bounds (measured: tests/projects/spriteimport).</summary>
         public Rect textureRect => m_TextureRect ?? m_Rect;
         [Unbound.EditorFaithful("sprites are not packed in the Editor's Play mode by default (atlases are built for players; see U2D/SpriteAtlas.cs): the texture rect is the sprite's rect or its Tight mesh's bounds")]
-        public Vector2 textureRectOffset => m_TextureRect is Rect t ? new Vector2(t.x - m_Rect.x, t.y - m_Rect.y) : Vector2.zero;
+        public Vector2 textureRectOffset => m_SerializedTextureRectOffset ?? (m_TextureRect is Rect t ? new Vector2(t.x - m_Rect.x, t.y - m_Rect.y) : Vector2.zero);
         public Texture2D texture => m_Texture;
         [Unbound.EditorFaithful("alpha-split textures are made for ETC1 Android builds only, never in the Editor")]
         public Texture2D associatedAlphaSplitTexture => null;

@@ -69,8 +69,8 @@ namespace Unbound.Tests
             var unknown = Listed(Unread, "UnreadThing", new[] { "m_Name", "m_Payload" });
             Assert.Equal("Unknown", unknown.Reading);
             Assert.Null(unknown.UnityName);
-            // Registered, no reader: unread once a document has data beyond the common keys.
-            Assert.Equal("Unread", Listed(213, "Sprite", new[] { "m_Name", "m_Rect" }).Reading);
+            // ClassId213 now reads its serialized render data through ISerializedAsset.
+            Assert.Equal("Read", Listed(213, "Sprite", new[] { "m_Name", "m_Rect" }).Reading);
             Assert.Equal("Read", Listed(213, "Sprite", new[] { "m_ObjectHideFlags", "m_Name" }).Reading);
             Assert.Equal("Read", Listed(23, "MeshRenderer", new[] { "m_Materials" }).Reading);
             Assert.Equal("Read", Listed(84, "RenderTexture", new[] { "m_Width" }).Reading);

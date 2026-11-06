@@ -245,9 +245,16 @@ namespace Unbound.Runtime
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"Unbound: reading {doc.TypeName} {doc.FileId} in {path}: {e}");
+                    if (asset is Sprite)
+                    {
+                        Debug.LogError($"Unbound: cannot load Sprite '{asset.m_Name}' (class 213, fileID {doc.FileId}) in {path}: {e.Message}");
+                        file.Objects.Remove(doc.FileId);
+                        Object.DestroyImmediate(asset, true);
+                    }
+                    else Debug.LogWarning($"Unbound: reading {doc.TypeName} {doc.FileId} in {path}: {e}");
                 }
             }
+            assets.RemoveAll(entry => entry.Asset is Sprite && entry.Asset == null);
             foreach (var (go, _) in gameObjects.Values)
                 go.m_Transform.MarkChanged();
 
