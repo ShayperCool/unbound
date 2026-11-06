@@ -14,7 +14,7 @@ using UnityEngine;
 /// several fixed seeds, through Simulate and through Play. Each record is one JSON line
 /// {"key", "value": [numbers]} in <c>PARTICLE_RANDOM_OUT</c>.
 /// </summary>
-public class ParticleRandomProbe : MonoBehaviour
+public partial class ParticleRandomProbe : MonoBehaviour
 {
     const float Dt = 0.05f;
     static readonly uint[] Seeds = { 12345u, 987654321u, 4242u };
@@ -626,6 +626,7 @@ public class ParticleRandomProbe : MonoBehaviour
             foreach (var (seed, ps) in played) RecordParticles(Key("played", seed, frame), ps);
         }
         Time.captureDeltaTime = 0f;
+        BirthControls();
         var done = new List<float> { 1f };
         Record("complete", done);
         File.WriteAllText(s_Path, s_Out.ToString());
