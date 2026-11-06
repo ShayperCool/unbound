@@ -213,7 +213,7 @@ namespace UnityEngine.Tests
             filter.delay = -1; filter.rate = 200; filter.depth = 0.37f; filter.wetMix3 = 200;
             var d = Assert.Single(Collected(source));
             Assert.Equal(AudioFilterKind.Chorus, d.Kind);
-            Assert.Equal((0f, 20f, 0.37f, 1f), (d.Reverb[4], d.Reverb[5], d.Reverb[6], d.Reverb[3]));
+            Assert.Equal((-1f, 20f, 0.37f, 1f), (d.Reverb[4], d.Reverb[5], d.Reverb[6], d.Reverb[3]));
             var clone = Object.Instantiate(source.gameObject); m_Objects.Add(clone);
             var copied = clone.GetComponent<AudioChorusFilter>();
             Assert.Equal((-1f, 200f, 0.37f, 200f), (copied.delay, copied.rate, copied.depth, copied.wetMix3));

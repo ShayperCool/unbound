@@ -230,7 +230,7 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         distortion: (d.kind == filter_kind::DISTORTION).then(|| d.cutoff.clamp(0.0, 1.0)),
         chorus: (d.kind == filter_kind::CHORUS).then(|| super::chorus::ChorusSpec {
             dry: r[0].clamp(0.0, 1.0), wet1: r[1].clamp(0.0, 1.0), wet2: r[2].clamp(0.0, 1.0),
-            wet3: r[3].clamp(0.0, 1.0), delay: r[4].clamp(0.0, 100.0),
+            wet3: r[3].clamp(0.0, 1.0), delay: (0.0..=100.0).contains(&r[4]).then_some(r[4]),
             rate: r[5].clamp(0.0, 20.0), depth: r[6].clamp(0.0, 1.0),
         }),
     }

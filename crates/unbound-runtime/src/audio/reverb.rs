@@ -472,6 +472,7 @@ mod tests {
         let mut effect = Effect::new(
             serde_json::from_value::<EffectSpec>(json.clone()).unwrap(),
             48000,
+            1024,
         )
         .unwrap();
         let mut x = vec![1.0f32; 2 * 128];

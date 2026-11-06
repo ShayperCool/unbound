@@ -12,7 +12,7 @@ pub struct ChorusSpec {
     pub wet1: f32,
     pub wet2: f32,
     pub wet3: f32,
-    pub delay: f32,
+    pub delay: Option<f32>,
     pub rate: f32,
     pub depth: f32,
 }
@@ -22,7 +22,7 @@ mod tests {
     use super::*;
     fn spec() -> ChorusSpec {
         ChorusSpec { dry: 0.0, wet1: 1.0, wet2: 1.0, wet3: 1.0,
-            delay: 40.0, rate: 0.8, depth: 0.03 }
+            delay: Some(40.0), rate: 0.8, depth: 0.03 }
     }
     #[test]
     fn native_impulses_constrain_interpolation_and_channel_phase() {
@@ -43,12 +43,13 @@ mod tests {
         assert_eq!(reset, x);
     }
     #[test]
-    fn rounding_at_the_history_boundary_keeps_both_indices_in_bounds() {
+    fn rounded_history_endpoint_is_zero_extended() {
         let chorus = Chorus::new(48000, 1024).unwrap();
         for read in [-f32::EPSILON, -0.001, 0.0, 5119.9995, 5120.0, 5121.0] {
             let read = chorus.wrap(read);
-            assert!((read as usize) < chorus.history.len());
-            assert!((chorus.wrap(read + 1.0) as usize) < chorus.history.len());
+            assert!((read as usize) <= chorus.history.len());
+            assert!((chorus.wrap(read + 1.0) as usize) <= chorus.history.len());
+            if read as usize == chorus.history.len() { assert_eq!(chorus.sample(read as usize, 0), 0.0); }
         }
     }
     #[test]
@@ -70,7 +71,7 @@ impl ChorusSpec {
     pub fn validate(&self) -> anyhow::Result<()> {
         anyhow::ensure!([self.dry, self.wet1, self.wet2, self.wet3, self.depth].iter()
             .all(|v| v.is_finite() && (0.0..=1.0).contains(v))
-            && self.delay.is_finite() && (0.0..=100.0).contains(&self.delay)
+            && self.delay.is_none_or(|v| v.is_finite() && (0.0..=100.0).contains(&v))
             && self.rate.is_finite() && (0.0..=20.0).contains(&self.rate),
             "AudioMixer Chorus has invalid parameters");
         Ok(())
@@ -85,6 +86,7 @@ pub struct Chorus {
     rate: u32,
     phase: f32,
     span: f32,
+    delay: f32,
 }
 impl Chorus {
     pub fn new(rate: u32, buffer: u32) -> anyhow::Result<Self> {
@@ -95,7 +97,7 @@ impl Chorus {
         let mut history = Vec::new();
         history.try_reserve_exact(frames)?;
         history.resize(frames, [0; 2]);
-        Ok(Self { history, position: 0, offset: 0, buffer, rate, phase: 0.0, span: 0.0 })
+        Ok(Self { history, position: 0, offset: 0, buffer, rate, phase: 0.0, span: 0.0, delay: 40.0 })
     }
     pub fn configuration(&self) -> (u32, u32) { (self.rate, self.buffer as u32) }
     pub fn clear(&mut self) {
@@ -119,12 +121,18 @@ impl Chorus {
     }
     fn wrap(&self, value: f32) -> f32 {
         let frames = self.history.len() as f32;
-        let value = if value < 0.0 { value + frames } else { value };
-        // Adding a tiny negative coordinate can round to exactly `frames`.
-        if value >= frames { value - frames } else { value }
+        if value < 0.0 { value + frames } else if value >= frames { value - frames } else { value }
+    }
+    fn sample(&self, index: usize, channel: usize) -> f32 {
+        // A tiny negative coordinate plus the buffer length can round to the end. Native's
+        // rate20 capture reads zero there, rather than wrapping to the current input frame.
+        if index == self.history.len() { 0.0 }
+        else { self.history[index][channel] as f32 * (1.0 / 16384.0) }
     }
     pub fn process(&mut self, samples: &mut [f32], spec: &ChorusSpec) {
-        let target = (((spec.delay * spec.depth) * self.rate as f32 / 1000.0) * spec.depth).max(4.0);
+        // Out-of-range delay setters retain their API value, but do not retune the DSP.
+        if let Some(delay) = spec.delay { self.delay = delay; }
+        let target = (((self.delay * spec.depth) * self.rate as f32 / 1000.0) * spec.depth).max(4.0);
         let increment = spec.rate / self.rate as f32;
         let mut done = 0;
         while done < samples.len() / 2 {
@@ -149,8 +157,8 @@ impl Chorus {
                     // Replacing this with `index + 1` changes measured near-zero-delay samples.
                     let next = self.wrap(read + 1.0);
                     let fraction = read - read as usize as f32;
-                    let a = self.history[read as usize][c] as f32 * (1.0 / 16384.0);
-                    let b = self.history[next as usize][c] as f32 * (1.0 / 16384.0);
+                    let a = self.sample(read as usize, c);
+                    let b = self.sample(next as usize, c);
                     let wet = if c == 0 { spec.wet1 } else { spec.wet2 };
                     let x = &mut samples[(done + f) * 2 + c];
                     *x = *x * spec.dry + (a * (1.0 - fraction) + b * fraction) * wet;

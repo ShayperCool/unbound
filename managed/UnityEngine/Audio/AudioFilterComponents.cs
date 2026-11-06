@@ -239,7 +239,7 @@ namespace UnityEngine
             bool finite = Array.TrueForAll(m_Values, float.IsFinite);
             if (!AudioFilterChain.Finite(this, ref m_ReportedInvalid, finite ? 0f : float.NaN, 0f)) return false;
             for (int i = 0; i < m_Values.Length; i++)
-                d.Reverb[i] = Mathf.Clamp(m_Values[i], 0f, i == 4 ? 100f : i == 5 ? 20f : 1f);
+                d.Reverb[i] = i == 4 ? m_Values[i] : Mathf.Clamp(m_Values[i], 0f, i == 5 ? 20f : 1f);
             return true;
         }
         internal override void CopyFrom(Component source, Func<Object, Object> remap) =>

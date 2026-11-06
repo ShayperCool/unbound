@@ -309,7 +309,7 @@ namespace UnityEngine.Tests
             Assert.True(mixer.GetFloat("Delay", out float delay)); Assert.Equal(-1f, delay);
             using var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration()));
             var chorus = payload.RootElement.GetProperty("effects")[0].GetProperty("chorus");
-            Assert.Equal(0f, chorus.GetProperty("delay").GetSingle());
+            Assert.Equal(JsonValueKind.Null, chorus.GetProperty("delay").ValueKind);
             Assert.Equal(20f, chorus.GetProperty("rate").GetSingle());
             Assert.Equal(1f, chorus.GetProperty("wet3").GetSingle());
             effect.m_EnableWetMix = true;
