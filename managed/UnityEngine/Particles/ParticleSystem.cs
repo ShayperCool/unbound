@@ -28,6 +28,9 @@ namespace UnityEngine
         internal bool m_IsPlaying;
         internal bool m_IsPaused;
         internal bool m_StopEmitting;
+        /// <summary>Stopped in the frame's update while its sub-emitters may still have particles: its
+        /// stop callback and action wait for them (see ParticleSystemManager.UpdateAll).</summary>
+        internal bool m_StopPending;
         bool m_PlaybackRestored;
         internal float m_Time;
         internal float m_TotalTime;
@@ -405,16 +408,18 @@ namespace UnityEngine
 
         public void TriggerSubEmitter(int subEmitterIndex)
         {
-            var sub = CheckSubEmitter(subEmitterIndex);
+            if (!ScriptSubEmitter(subEmitterIndex, out var sub)) return;
             for (int i = 0; i < m_Count; i++) TriggerSubEmitterAt(sub, ref m_Particles[i]);
         }
 
-        public void TriggerSubEmitter(int subEmitterIndex, ref Particle particle) => TriggerSubEmitterAt(CheckSubEmitter(subEmitterIndex), ref particle);
+        public void TriggerSubEmitter(int subEmitterIndex, ref Particle particle)
+        {
+            if (ScriptSubEmitter(subEmitterIndex, out var sub)) TriggerSubEmitterAt(sub, ref particle);
+        }
 
         public void TriggerSubEmitter(int subEmitterIndex, List<Particle> particles)
         {
-            var sub = CheckSubEmitter(subEmitterIndex);
-            if (particles == null) return;
+            if (particles == null || !ScriptSubEmitter(subEmitterIndex, out var sub)) return;
             for (int i = 0; i < particles.Count; i++)
             {
                 var p = particles[i];
@@ -422,11 +427,16 @@ namespace UnityEngine
             }
         }
 
-        SubEmitter CheckSubEmitter(int index)
+        /// <summary>The slot TriggerSubEmitter names. Measured in 6000.0.71f1 (subemitters probe): a
+        /// disabled Sub Emitters module emits nothing, and an index past the last slot does nothing,
+        /// without an exception or a logged error (a negative index is treated the same, unmeasured).
+        /// Any slot type can be triggered (a Death slot emits as a Manual one).</summary>
+        bool ScriptSubEmitter(int index, out SubEmitter sub)
         {
-            if (index < 0 || index >= m_SubEmitters.emitters.Count)
-                throw new ArgumentOutOfRangeException(nameof(index), "Sub-emitter index out of range.");
-            return m_SubEmitters.emitters[index];
+            sub = default;
+            if (!m_SubEmitters.enabled || index < 0 || index >= m_SubEmitters.emitters.Count) return false;
+            sub = m_SubEmitters.emitters[index];
+            return true;
         }
 
         [Unbound.EditorFaithful("no-op is equivalent: a GPU buffer memory hint; nothing a game observes")]
@@ -784,6 +794,7 @@ namespace UnityEngine
 
         void PlaySelf()
         {
+            m_StopPending = false;
             if (m_IsPaused)
             {
                 m_IsPaused = false;
@@ -819,6 +830,7 @@ namespace UnityEngine
             Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
             m_IsPlaying = true;
             m_StopEmitting = false;
+            m_StopPending = false;
             m_PlaybackRestored = false;
             bool doPrewarm = prewarm && m_Main.prewarm && m_Main.loop;
             m_DelayRemaining = doPrewarm ? 0f : Mathf.Max(0f, m_Main.startDelay.Evaluate(0f, NextFloat()));
@@ -911,12 +923,15 @@ namespace UnityEngine
             }
         }
 
-        /// <summary>Marks the systems this one drives as its sub-emitters.</summary>
+        /// <summary>Marks the systems this one drives as its sub-emitters, also while the module is
+        /// disabled: such a child still does not emit on its own (6000.0.71f1 subemitters
+        /// manual/module_disabled: a child with a burst at time 0 under a parent whose module was
+        /// disabled stays empty through Simulate with children).</summary>
         internal void SubEmittersChanged()
         {
             foreach (var e in m_SubEmitters.emitters)
                 if (e.system != null && e.system != this)
-                    e.system.m_SubEmitterParent = m_SubEmitters.enabled ? this : (e.system.m_SubEmitterParent == this ? null : e.system.m_SubEmitterParent);
+                    e.system.m_SubEmitterParent = this;
         }
 
         internal override void OnEngineEnable()
@@ -943,6 +958,7 @@ namespace UnityEngine
             m_IsPlaying = false;
             m_IsPaused = false;
             m_StopEmitting = false;
+            m_StopPending = false;
             m_CullingMissed = 0f;
         }
 
@@ -1277,6 +1293,14 @@ namespace Unbound.Runtime
                 }
             }
             finally { s_Deferring = false; }
+            FlushEventEmissions();
+            for (int i = 0; i < n; i++)
+            {
+                var ps = s_Snapshot[i];
+                if (ps == null || !ps.m_StopPending || ps.SubEmittersHaveParticles()) continue;
+                ps.m_StopPending = false;
+                s_Stopped.Add(ps);
+            }
             for (int i = 0; i < n; i++)
             {
                 var ps = s_Snapshot[i];
@@ -1307,6 +1331,46 @@ namespace Unbound.Runtime
 
         static bool s_Deferring;
         static readonly List<ParticleSystem> s_Stopped = new List<ParticleSystem>();
+
+        /// <summary>Whether the frame's particle update is running (Simulate and script calls are
+        /// outside it).</summary>
+        internal static bool Updating => s_Deferring;
+
+        /// <summary>A Death sub-emitter's emission that the frame's update holds until every system
+        /// has updated.</summary>
+        internal struct EventEmission
+        {
+            public ParticleSystem child, parentSystem;
+            public ParticleSystem.Particle parent;
+            public ParticleSystemSubEmitterProperties properties;
+            public int count;
+        }
+
+        static readonly List<EventEmission> s_EventEmissions = new List<EventEmission>();
+
+        internal static void HoldEventEmission(EventEmission emission) => s_EventEmissions.Add(emission);
+
+        /// <summary>Emits what the frame's Death sub-emitters held, after every system has updated:
+        /// the children are not aged in the frame they are born in, at any update order, and a child
+        /// that receives particles starts playing (6000.0.71f1 subemitters played/death and
+        /// played/finish: remaining lifetime equal to the start lifetime at the end of the frame,
+        /// isPlaying true).</summary>
+        static void FlushEventEmissions()
+        {
+            if (s_EventEmissions.Count == 0) return;
+            var held = s_EventEmissions.ToArray();
+            s_EventEmissions.Clear();
+            foreach (var e in held)
+            {
+                if (e.child == null || e.child.m_Destroyed || e.child.m_GameObject == null) continue;
+                try
+                {
+                    var parent = e.parent;
+                    e.child.EmitEventNow(e.parentSystem, ref parent, e.properties, e.count);
+                }
+                catch (Exception ex) { Debug.LogException(ex, e.child); }
+            }
+        }
 
         /// <summary>Whether a stop action waits for the end of the frame's particle update.</summary>
         internal static bool Defer(ParticleSystem ps)

@@ -45,6 +45,7 @@ namespace UnityEngine
             TrackEmitter(raw);
             if (m_IsPaused) return false;
             if (!m_IsPlaying && m_Count == 0 && !HasAliveTrails) return false;
+            if (WaitsForSubEmitterParent()) return false;
             float dt = raw * m_Main.simulationSpeed;
             if (dt <= 0f) return false;
             m_CollisionEvents.Clear();
@@ -61,6 +62,43 @@ namespace UnityEngine
             }
             finally { m_CollectTriggers = false; }
             return true;
+        }
+
+        /// <summary>A sub-emitter that is not playing itself moves its particles only while the system
+        /// emitting into it plays or has particles. Measured in 6000.0.71f1 (subemitters probe,
+        /// played/stopped): particles that TriggerSubEmitter emits from OnParticleSystemStopped stay
+        /// where they are, at their full lifetime, until the parent plays again, and then move on
+        /// with it. A paused parent and the frame its last particle dies in are unmeasured.</summary>
+        bool WaitsForSubEmitterParent()
+        {
+            var parent = m_SubEmitterParent;
+            if (m_IsPlaying || parent == null || parent.m_Destroyed || parent.m_GameObject == null) return false;
+            if (parent.m_IsPaused || !parent.m_IsPlaying && parent.m_Count == 0) return true;
+            // Updated with its parent, it plays its particles from now on without emitting more
+            // (played/update: TriggerSubEmitter in Update, isPlaying true from the next frame).
+            m_IsPlaying = true;
+            m_StopEmitting = true;
+            return false;
+        }
+
+        bool HasSubEmitterSystems()
+        {
+            if (!m_SubEmitters.enabled) return false;
+            foreach (var e in m_SubEmitters.emitters)
+                if (e.system != null && e.system != this) return true;
+            return false;
+        }
+
+        /// <summary>Whether a sub-emitter of this system still has particles (or waits for its own).</summary>
+        internal bool SubEmittersHaveParticles()
+        {
+            foreach (var e in m_SubEmitters.emitters)
+            {
+                var child = e.system;
+                if (child == null || child == this || child.m_Destroyed) continue;
+                if (child.m_Count > 0 || child.m_StopPending) return true;
+            }
+            return false;
         }
 
         void TrackEmitter(float dt)
@@ -157,7 +195,12 @@ namespace UnityEngine
             {
                 m_IsPlaying = false;
                 m_StopEmitting = false;
-                OnStopped();
+                // In the frame's update a system with sub-emitters reports itself stopped only once
+                // their particles are gone too (6000.0.71f1 subemitters played/finish: isPlaying
+                // false at once, IsAlive true, OnParticleSystemStopped in the frame the Death
+                // children's last particles die). Simulate keeps the immediate stop (unmeasured).
+                if (ParticleSystemManager.Updating && HasSubEmitterSystems()) m_StopPending = true;
+                else OnStopped();
             }
         }
 
@@ -556,7 +599,7 @@ namespace UnityEngine
         /// <summary>A new particle with the main and shape modules' start values. `origin` (world)
         /// replaces the emitter's position (sub-emitters emit from their parent particle).</summary>
         bool InitParticle(ref Particle p, Matrix4x4 emitter, float nt, bool hasOverrides, ref EmitParams o, int spreadIndex, int spreadCount, Vector3? origin,
-            int initializationIndex, int initializationCount, Vector3? inheritedAxis = null)
+            int initializationIndex, int initializationCount, Vector3? inheritedAxis = null, Quaternion? originRotation = null)
         {
             var samples = InitialSamplesAt(initializationIndex, initializationCount, hasOverrides, ref o);
             uint seed = samples.seed;
@@ -611,7 +654,7 @@ namespace UnityEngine
             {
                 // Emitting from a world point with this system's orientation and scale.
                 var t = m_GameObject.m_Transform;
-                var frame = Matrix4x4.TRS(origin.Value, t.rotation, EmitterScale());
+                var frame = Matrix4x4.TRS(origin.Value, originRotation ?? t.rotation, EmitterScale());
                 var worldPos = frame.MultiplyPoint3x4(pos);
                 var worldVel = frame.MultiplyVector(velocity);
                 FromWorld(simSpace, emitter, worldPos, worldVel, out pos, out velocity);
@@ -1623,32 +1666,73 @@ namespace UnityEngine
 
         void TriggerSubEmitters(ParticleSystemSubEmitterType type, ref Particle parent)
         {
-            foreach (var e in m_SubEmitters.emitters)
-                if (e.type == type) TriggerSubEmitterAt(e, ref parent);
+            var emitters = m_SubEmitters.emitters;
+            for (int i = 0; i < emitters.Count; i++)
+            {
+                var e = emitters[i];
+                if (e.type != type || FiredEarlier(emitters, i)) continue;
+                TriggerSubEmitterAt(e, ref parent);
+            }
+        }
+
+        /// <summary>Whether an earlier slot of the same type already emits from the same child: a
+        /// child in two Death slots emits once, from the first slot (6000.0.71f1 subemitters
+        /// death/two_slots; different children both emit, death/two_children).</summary>
+        static bool FiredEarlier(System.Collections.Generic.List<SubEmitter> emitters, int index)
+        {
+            var e = emitters[index];
+            if (e.system == null) return false;
+            for (int j = 0; j < index; j++)
+                if (emitters[j].type == e.type && emitters[j].system == e.system) return true;
+            return false;
         }
 
         /// <summary>A Death sub-emitter, or one triggered from script (Manual): the child emits its
-        /// first burst at the particle.</summary>
+        /// first burst at the particle, along the particle's direction of travel.</summary>
         void TriggerSubEmitterAt(SubEmitter sub, ref Particle parent)
         {
             var child = sub.system;
             if (child == null || child == this || child.m_GameObject == null) return;
             if (sub.emitProbability < 1f && NextFloat() >= sub.emitProbability) return;
-            // SubEmittersModule.death0 (6000.0): the sub-emitter "uses the first set of emission
-            // burst properties ... If the system does not contain burst properties, then the system
-            // emits nothing; if the system contains more than one set of burst properties, then it
-            // ignores the additional properties." TriggerSubEmitter and the Manual type say nothing
-            // about bursts; the Manual lists Manual with Death among the conditions that "support
-            // only a single burst". Unbound's choice (unmeasured): script-triggered sub-emitters
-            // follow the Death rule, and say so once.
-            var bursts = child.m_Emission.bursts;
-            if (bursts.Count == 0) return;
-            if (bursts.Count > 1 && sub.type != ParticleSystemSubEmitterType.Death)
-                ReportUnsupported("script-triggered sub-emitter bursts after the first (Unbound emits only the first, the rule Unity documents for Death)");
-            // One burst's cycles all at once (unmeasured).
+            int count = child.EventBurstCount();
+            if (count <= 0) return;
+            if (ParticleSystemManager.Updating)
+                ParticleSystemManager.HoldEventEmission(new ParticleSystemManager.EventEmission
+                {
+                    child = child, parentSystem = this, parent = parent, properties = sub.properties, count = count,
+                });
+            else child.EmitFromParent(this, ref parent, sub.properties, count, 0f, eventEmission: true);
+        }
+
+        /// <summary>A Death emission the frame's update held (see ParticleSystemManager): emitted now,
+        /// and the child plays the particles it received.</summary>
+        internal void EmitEventNow(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count)
+        {
+            EmitFromParent(parentSystem, ref parent, properties, count, 0f, eventEmission: true);
+            if (m_Count > 0 && !m_IsPlaying)
+            {
+                m_IsPlaying = true;
+                m_StopEmitting = true;
+            }
+        }
+
+        /// <summary>How many particles a Death, Manual, Collision or Trigger sub-emitter's child
+        /// emits for one parent particle. SubEmittersModule.death0 and collision0 (6000.0): the
+        /// sub-emitter "uses the first set of emission burst properties ... If the system does not
+        /// contain burst properties, then the system emits nothing; if the system contains more than
+        /// one set of burst properties, then it ignores the additional properties." Measured in
+        /// 6000.0.71f1 (subemitters probe) for Death and for TriggerSubEmitter on Manual and Death
+        /// slots: the first burst in the list (not the earliest), at once, whatever its time; its count
+        /// once (cycles, also infinite ones, and the interval are ignored); its probability applies;
+        /// the child's Emission module may be disabled. Collision and Trigger follow the same rule
+        /// (unmeasured).</summary>
+        int EventBurstCount()
+        {
+            var bursts = m_Emission.bursts;
+            if (bursts.Count == 0) return 0;
             var burst = bursts[0];
-            int count = child.BurstCount(burst.m_Count, 0f) * Math.Max(1, burst.cycleCount);
-            if (count > 0) child.EmitFromParent(this, ref parent, sub.properties, count, 0f);
+            if (burst.probability < 1f && NextFloat() >= burst.probability) return 0;
+            return BurstCount(burst.m_Count, 0f);
         }
 
         /// <summary>Birth sub-emitters emit with their own rate and bursts over the parent particle's life.</summary>
@@ -1692,15 +1776,46 @@ namespace UnityEngine
         }
 
         /// <summary>Emits `count` particles at a parent system's particle, inheriting what the
-        /// sub-emitter's properties ask for.</summary>
-        void EmitFromParent(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count, float preAge)
+        /// sub-emitter's properties ask for.
+        /// <para><paramref name="eventEmission"/> (Death and Manual) follows what 6000.0.71f1 shows for
+        /// those (subemitters probe): the child's emission frame turns its +Z to the parent
+        /// particle's world direction of travel and its +Y towards +Z as far as that direction
+        /// allows (Quaternion.LookRotation(direction, Vector3.forward)), measured for an unrotated
+        /// parent and child with axis-aligned and oblique directions and a shifted shape; a still
+        /// particle leaves the child's own frame; under a rotated parent the child's rotation that it
+        /// inherits from the parent does not turn the direction (direction/rotated_parent). Unbound's
+        /// choices (unmeasured): the up axis is the parent's simulation-space +Z, travel along it keeps
+        /// those axes and travel against it turns 180° about Y. A child rotated against its parent
+        /// combines that rotation with the frame in a way not reproduced here (Unbound applies it
+        /// inside the frame); its emission direction stays a known difference. InheritLifetime
+        /// multiplies the start lifetime by the parent's remaining lifetime in seconds, not its
+        /// fraction (2.013 × 3.863 s left gives 7.776; a dying parent leaves none, so the children
+        /// are not emitted).</para></summary>
+        void EmitFromParent(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count, float preAge, bool eventEmission = false)
         {
             var origin = parentSystem.SimulationToWorld().MultiplyPoint3x4(parent.m_Position);
+            Quaternion? frame = null;
+            if (eventEmission)
+            {
+                var travel = parentSystem.SimulationToWorld().MultiplyVector(parent.m_Velocity + parent.m_AnimatedVelocity);
+                if (travel.sqrMagnitude > 1e-12f)
+                {
+                    var simRotation = Quaternion.Inverse(parentSystem.WorldToSimulationRotation());
+                    var forward = travel.normalized;
+                    var up = simRotation * Vector3.forward;
+                    float along = Vector3.Dot(forward, up);
+                    var align = Mathf.Abs(along) < 1f - 1e-6f ? Quaternion.LookRotation(forward, up)
+                        : along > 0f ? simRotation : simRotation * Quaternion.AngleAxis(180f, Vector3.up);
+                    var parentTransform = parentSystem.m_GameObject.m_Transform.rotation;
+                    frame = align * (Quaternion.Inverse(parentTransform) * m_GameObject.m_Transform.rotation);
+                }
+            }
             var emitter = EmitterMatrix();
             Color parentColor = parentSystem.CurrentColor(ref parent);
             var parentSize = parentSystem.CurrentSize3D(ref parent);
             var parentRotation = parent.m_Rotation;
-            float parentLife = parent.m_StartLifetime > 0f ? parent.m_Lifetime / parent.m_StartLifetime : 0f;
+            float parentLife = eventEmission ? Mathf.Max(parent.m_Lifetime, 0f)
+                : parent.m_StartLifetime > 0f ? parent.m_Lifetime / parent.m_StartLifetime : 0f;
             EmitParams none = default;
             var context = MakeContext();
             for (int k = 0; k < count; k++)
@@ -1709,7 +1824,7 @@ namespace UnityEngine
                 if (index < 0) return;
                 ref var p = ref m_Particles[index];
                 if (!InitParticle(ref p, emitter, Mathf.Clamp01(m_Time / Mathf.Max(m_Main.duration, 0.0001f)), false, ref none, k, count, origin,
-                    k, count, (properties & ParticleSystemSubEmitterProperties.InheritRotation) != 0 ? parent.m_AxisOfRotation : null))
+                    k, count, (properties & ParticleSystemSubEmitterProperties.InheritRotation) != 0 ? parent.m_AxisOfRotation : null, frame))
                 {
                     RemoveAt(index);
                     continue;

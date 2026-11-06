@@ -169,20 +169,14 @@ namespace UnityEngine
                     // emitProbability roll on this system's random sequence.
                     if (child == this || child.m_GameObject == null) continue;
                     if (e.emitProbability < 1f && NextFloat() >= e.emitProbability) continue;
-                    // SubEmittersModule.collision0/1 (6000.0): the sub-emitter "uses the first set
-                    // of emission burst properties ... If the system does not contain burst
-                    // properties, then the system emits nothing; if the system contains more than
-                    // one set of burst properties, then it ignores the additional properties."
-                    // The Manual lists Trigger among the conditions that "support only a single
-                    // burst" without saying what happens with more; Unbound's choice (unmeasured):
-                    // Trigger follows the Collision rule, and says so once.
-                    var bursts = child.m_Emission.bursts;
-                    if (bursts.Count == 0) continue;
-                    if (type == ParticleSystemSubEmitterType.Trigger && bursts.Count > 1)
+                    // SubEmittersModule.collision0/1 (6000.0): only the first burst (see
+                    // EventBurstCount, whose count rule is measured for Death and Manual). The Manual
+                    // lists Trigger among the conditions that "support only a single burst" without
+                    // saying what happens with more; Unbound's choice (unmeasured): Trigger follows the
+                    // Collision rule, and says so once.
+                    if (type == ParticleSystemSubEmitterType.Trigger && child.m_Emission.bursts.Count > 1)
                         ReportUnsupported("trigger sub-emitter bursts after the first (Unbound emits only the first, the rule Unity documents for Collision)");
-                    // One burst's cycles all at once, as the Death path counts them (unmeasured).
-                    var burst = bursts[0];
-                    int count = child.BurstCount(burst.m_Count, 0f) * System.Math.Max(1, burst.cycleCount);
+                    int count = child.EventBurstCount();
                     if (count > 0) child.EmitFromParent(this, ref at, e.properties, count, 0f);
                 }
             }
