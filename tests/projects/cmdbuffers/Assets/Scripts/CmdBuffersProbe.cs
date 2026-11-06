@@ -141,8 +141,30 @@ public class CmdBuffersProbe : MonoBehaviour
         RenderTexture.active = previous;
     }
 
+    Material append;
+
+    /// <summary>An Append buffer of 48 sentinels given to <paramref name="draw"/>, then its
+    /// count (CopyCount) and its words in order (what was appended, sorted: the GPU's order).</summary>
+    void AppendCase(string key, int tag, Action<ComputeBuffer> draw)
+    {
+        var b = new ComputeBuffer(48, 4, ComputeBufferType.Append);
+        disposables.Add(b);
+        b.SetData(Enumerable.Repeat(Sentinel, 48).ToArray());
+        var count = new ComputeBuffer(1, 4, ComputeBufferType.Raw);
+        disposables.Add(count);
+        Try(key, () => { draw(b); Graphics.ClearRandomWriteTargets(); });
+        ComputeBuffer.CopyCount(b, count, 0);
+        var n = new uint[1];
+        count.GetData(n);
+        var words = new uint[48];
+        b.GetData(words);
+        Value(key + ".count", n[0].ToString());
+        Value(key, U(words.OrderBy(w => w)));
+    }
+
     void RandomWriteTargets()
     {
+        append = Keep(new Material(Resources.Load<Shader>("UavAppend")));
         // The register the shader declares (u1).
         var a = Fresh();
         Try("uav.slot1", () => { Graphics.SetRandomWriteTarget(1, a); DrawNow(uav, 1); Graphics.ClearRandomWriteTargets(); });
@@ -192,6 +214,22 @@ public class CmdBuffersProbe : MonoBehaviour
         var auto1 = Fresh();
         Try("uav.auto1", () => { Graphics.SetRandomWriteTarget(1, auto1); DrawNow(uavAuto, 12); Graphics.ClearRandomWriteTargets(); });
         Value("uav.auto1", Words(auto1));
+
+        // Append buffers: the counter restarts from 0 unless preserved, and keeps counting
+        // over draws while the target stays set; a material's buffer of the name counts too.
+        AppendCase("uav.append.reset", 13, b2 => { b2.SetCounterValue(5); Graphics.SetRandomWriteTarget(1, b2, false); DrawNow(append, 13); });
+        AppendCase("uav.append.preserve", 14, b2 => { b2.SetCounterValue(5); Graphics.SetRandomWriteTarget(1, b2, true); DrawNow(append, 14); });
+        AppendCase("uav.append.twice", 15, b2 => { Graphics.SetRandomWriteTarget(1, b2); DrawNow(append, 15); DrawNow(append, 15); });
+        AppendCase("uav.append.material", 16, b2 => { var m = Keep(new Material(append)); m.SetBuffer("_App", b2); DrawNow(m, 16); });
+        AppendCase("cmd.uav.append", 17, b2 => Execute(cmd => { cmd.SetRandomWriteTarget(1, b2, false); DrawCmd(cmd, append, 17); }));
+        AppendCase("cmd.uav.append.preserve", 18, b2 => { b2.SetCounterValue(3); Execute(cmd => { cmd.SetRandomWriteTarget(1, b2, true); DrawCmd(cmd, append, 18); }); });
+
+        // A texture set at an index takes the place of a buffer there.
+        var t1 = Fresh();
+        var rwTexture = Keep(new RenderTexture(4, 4, 0, RenderTextureFormat.ARGB32) { enableRandomWrite = true });
+        rwTexture.Create();
+        Try("uav.texturereplaces", () => { Graphics.SetRandomWriteTarget(1, t1); Graphics.SetRandomWriteTarget(1, rwTexture); DrawNow(plain, 19); Graphics.ClearRandomWriteTargets(); });
+        Value("uav.texturereplaces", Words(t1));
 
         // Arguments.
         var x = Fresh();

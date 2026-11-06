@@ -9,7 +9,8 @@ fragment programs in `Assets/Resources/UavWrite*.shader`). Every case records it
   `CommandBuffer.SetRandomWriteTarget` of compute and graphics buffers into a fragment program that
   writes a `RWStructuredBuffer` at `register(u1)` (and at no register), at other indices, with a
   material's or property block's buffer of the same name, cleared before the draw, kept over draws and
-  across command buffers, replaced; argument errors (indices, null, released buffers, render textures
+  across command buffers, replaced (also by a render texture); Append buffers' counters reset or
+  preserved and counting over draws; argument errors (indices, null, released buffers, render textures
   with and without random writes).
 * **ConvertTexture** (`convert.*`, `graphics.convert.*`): formats (half, float, R8, linear and sRGB,
   RGB24, BGRA32, compressed), an upscale, slices of arrays, cubemap faces and cubemap arrays, refused
@@ -37,7 +38,9 @@ byte-identical. `check` (the landing gate) runs Unbound and compares every value
 
 * A random write target binds at the program's UAV register; a buffer without a register is at u1
   (after its one render target). It wins over a material's or draw's buffer of the same name, which
-  binds again once the targets are cleared. Targets stay set until `ClearRandomWriteTargets`, also
+  binds again once the targets are cleared. A buffer target restarts its counter from 0 unless
+  `preserveCounterValue` (then the count goes on from `SetCounterValue`'s); a render texture set at
+  the index takes the buffer's place. Targets stay set until `ClearRandomWriteTargets`, also
   after a command buffer that set them. `Graphics` checks indices (0..7 accepted), null and released
   buffers and render textures without random writes (null textures are accepted) when called;
   `CommandBuffer` checks indices and null buffers when recorded (other exception types and messages)
