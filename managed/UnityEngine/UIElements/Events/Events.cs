@@ -1208,7 +1208,7 @@ namespace UnityEngine.UIElements
 
         internal static T UaGetPooled(NavigationDeviceType deviceType, EventModifiers modifiers = EventModifiers.None)
         {
-            T e = GetPooled();
+            T e = EventBase<T>.GetPooled();
             e.deviceType = deviceType;
             e.modifiers = modifiers;
             return e;
