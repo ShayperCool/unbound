@@ -97,7 +97,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void PacketAndDescriptorLayoutsAreNativeApi18()
         {
-            Assert.Equal(18u, NativeApi.CurrentVersion);
+            // Unchanged in 19 (render protocol 9).
+            Assert.Equal(19u, NativeApi.CurrentVersion);
             var p = default(AudioSourcePacket);
             byte* b = (byte*)&p;
             Assert.Equal(40, (int)((byte*)&p.Volume - b));

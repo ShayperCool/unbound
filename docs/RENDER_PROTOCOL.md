@@ -16,6 +16,16 @@ Meshes, textures and materials are identified by `u64` handles the managed side 
 is destroyed. Imported textures are uploaded by the native side itself (`import_texture`), which
 knows the asset pipeline and its cache.
 
+### Render protocol 9: depth copies (NativeApi 19)
+
+`CopyDepth` (opcode 29: source `u64`, destination `u64`) draws the whole depth buffer of one
+render texture into another's of the same size; handle 0 is the screen's. Between sample counts
+each destination sample takes the source's sample of its index (equal counts) or its only or first
+one. The destination's stencil is cleared; a texture without a depth buffer, or a size mismatch,
+skips the copy with a logged message. The screen's depth buffer is one for the whole ring of
+screen targets, so it lasts from frame to frame, and the frame's screen starts as the previous
+frame left it (a new size starts black). A 18 side and a 19 side refuse each other at startup.
+
 ### Render protocol 8: indexed draws from a buffer (NativeApi 17 alone; 18 with audio filters)
 
 `DrawIndices` (opcode 28) follows a `DrawSetup` when the next `Draw` reads indices from a

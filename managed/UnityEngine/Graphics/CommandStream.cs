@@ -22,7 +22,9 @@ namespace Unbound.Runtime
             // Render protocol 7.
             CopyBufferOp = 24, SetCounterOp = 25, CopyCounterOp = 26, DispatchIndirectOp = 27,
             // Render protocol 8 (NativeApi 17).
-            DrawIndicesOp = 28;
+            DrawIndicesOp = 28,
+            // Render protocol 9 (NativeApi 19).
+            CopyDepthOp = 29;
 
         /// <summary>The size of a DrawIndices index: 16-bit indices, the only ones drawn.</summary>
         internal const byte DrawIndexSize = 2;
@@ -770,6 +772,15 @@ namespace Unbound.Runtime
             I32(destinationMip);
             I32(destinationX);
             I32(destinationY);
+        }
+
+        /// <summary>Copies the whole depth buffer of a render texture (0: the screen) into another
+        /// of its size (0: the screen's); the destination's stencil is cleared.</summary>
+        internal static void CopyDepth(ulong source, ulong destination)
+        {
+            U8(CopyDepthOp);
+            U64(source);
+            U64(destination);
         }
     }
 }

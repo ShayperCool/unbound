@@ -258,11 +258,11 @@ mod tests {
     }
 
     /// The source packet's filter descriptors are NativeApi 18's (added at 16, with render
-    /// protocol 8 at 18); the managed side pins the same value and refuses 14 to 17 and 19
-    /// (NativeApiVersionTests).
+    /// protocol 8 at 18), unchanged in 19 (render protocol 9); the managed side pins the same
+    /// value and refuses 14 to 18 and 20 (NativeApiVersionTests).
     #[test]
     fn the_filter_descriptor_layout_is_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 18);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 19);
         assert_eq!(
             [
                 filter_kind::LOWPASS,

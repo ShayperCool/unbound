@@ -255,6 +255,13 @@ pub enum Command {
         destination_x: i32,
         destination_y: i32,
     },
+    /// Copies the whole depth buffer of `source` into `destination`'s (0: the screen's), of the
+    /// same size; between sample counts each destination sample takes the source's sample of its
+    /// index, or its only one (render protocol 9). The destination's stencil is cleared.
+    CopyDepth {
+        source: u64,
+        destination: u64,
+    },
 }
 
 mod op {
@@ -288,15 +295,17 @@ mod op {
     pub const DISPATCH_INDIRECT: u8 = 27;
     // Render protocol 8 (NativeApi 17).
     pub const DRAW_INDICES: u8 = 28;
+    // Render protocol 9 (NativeApi 19).
+    pub const COPY_DEPTH: u8 = 29;
 }
 
 /// The size of a `DrawIndices` index on the wire: 16-bit indices, the only ones drawn.
 pub const DRAW_INDEX_SIZE: u8 = 2;
 
-/// Render protocol 8 is NativeApi 18's (17's alone, 18 with the audio filter descriptors of 16):
-/// `DrawIndices` is decoded only under that version, checked before any of its bytes are read. The
-/// stream itself carries no version.
-const INDEXED_DRAWS: bool = crate::native_api::NATIVE_API_VERSION == 18;
+/// Render protocol 8 is NativeApi 18's (17's alone, 18 with the audio filter descriptors of 16) and
+/// later ones': `DrawIndices` is decoded only under those versions, checked before any of its bytes
+/// are read. The stream itself carries no version.
+const INDEXED_DRAWS: bool = crate::native_api::NATIVE_API_VERSION >= 18;
 
 /// Property kinds in the stream.
 mod kind {
@@ -651,6 +660,10 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 destination_x: r.i32()?,
                 destination_y: r.i32()?,
             },
+            op::COPY_DEPTH => Command::CopyDepth {
+                source: r.texture("CopyDepth source")?,
+                destination: r.texture("CopyDepth destination")?,
+            },
             other => return Err(format!("unknown command {other} at byte {}", r.at - 1)),
         };
         out.push(command);
@@ -965,6 +978,14 @@ impl Writer {
                 self.u32(*destination_x as u32);
                 self.u32(*destination_y as u32);
             }
+            Command::CopyDepth {
+                source,
+                destination,
+            } => {
+                self.bytes.push(op::COPY_DEPTH);
+                self.u64(*source);
+                self.u64(*destination);
+            }
             Command::Draw(d) => {
                 self.bytes.push(op::DRAW);
                 self.u64(d.mesh);
@@ -1084,6 +1105,10 @@ mod tests {
                 destination_mip: 0,
                 destination_x: 5,
                 destination_y: 6,
+            },
+            Command::CopyDepth {
+                source: 0,
+                destination: 4,
             },
             Command::CreateBuffer {
                 handle: 8,
@@ -1274,11 +1299,12 @@ mod tests {
         }
     }
 
-    /// `DrawIndices` is decoded only under NativeApi 18, the version render protocol 8 has with the
-    /// audio filter descriptors (17 was render protocol 8 alone, 16 the audio descriptors alone).
+    /// `DrawIndices` is decoded from NativeApi 18 on, the version render protocol 8 has with the
+    /// audio filter descriptors (17 was render protocol 8 alone, 16 the audio descriptors alone);
+    /// 19 adds render protocol 9's `CopyDepth`.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 18);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 19);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
     }
 

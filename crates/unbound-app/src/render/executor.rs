@@ -78,7 +78,11 @@ struct ScreenTarget {
     color: wgpu::TextureView,
     /// The bytes as sRGB-encoded colors (Linear color space).
     srgb: wgpu::TextureView,
+    /// The screen's depth: one buffer for every slot of the ring, so it lasts from frame to frame
+    /// as the color does.
     depth: wgpu::TextureView,
+    /// Its depth, as `CopyDepth` samples it.
+    depth_sample: wgpu::TextureView,
 }
 
 impl ScreenTarget {
@@ -231,14 +235,28 @@ enum Op {
     Pass(Pass),
     Copy(Copy),
     DepthCopy(DepthCopy),
+    DepthBlit(DepthBlit),
     Dispatch(compute::DispatchOp),
     BufferCopy(compute::BufferCopyOp),
     Mips(wgpu::Texture, wgpu::TextureFormat, u32),
 }
 
+/// A depth buffer drawn into another of its size (`CopyDepth`): each destination sample takes the
+/// source's sample of its index (equal sample counts) or its only or first one.
+struct DepthBlit {
+    source: wgpu::TextureView,
+    /// The source's sample count (1: not multisampled).
+    source_samples: u32,
+    destination: wgpu::TextureView,
+    samples: u32,
+}
+
 /// A render pass being built: consecutive commands on one target.
 struct Pass {
     target: Target,
+    /// The previous frame's screen, copied into the frame's screen before the pass when it loads
+    /// its color (the frame's first use of the screen).
+    seed: Option<wgpu::Texture>,
     color_load: wgpu::LoadOp<wgpu::Color>,
     /// Depth and stencil clear values; `None` loads them.
     depth_clear: Option<(f32, u32)>,
@@ -296,6 +314,8 @@ pub struct UnityRenderer {
     /// The pipelines (and their layouts) that copy a depth buffer into a float color texture:
     /// single-sample and multisampled.
     depth_copy_pipelines: [Option<(wgpu::RenderPipeline, wgpu::BindGroupLayout)>; 4],
+    /// The `CopyDepth` pipelines, by (source multisampled, destination samples, per sample).
+    depth_blit_pipelines: HashMap<(bool, u32, bool), (wgpu::RenderPipeline, wgpu::BindGroupLayout)>,
     /// Integer copies of float textures that integer slots read, by texture and signedness.
     bit_views: HashMap<(u64, bool), (u32, u32, wgpu::TextureView)>,
     /// Main-texture bind groups of render targets' depth elements, by texture and color space,
@@ -382,6 +402,7 @@ impl UnityRenderer {
             depth_default: [None, None],
             depth_target: None,
             depth_copy_pipelines: [None, None, None, None],
+            depth_blit_pipelines: HashMap::default(),
             bit_views: HashMap::default(),
             depth_main_groups: HashMap::default(),
             pre_draw: Vec::new(),
@@ -1398,6 +1419,122 @@ impl UnityRenderer {
         self.depth_copy_pipelines[kind.index()].clone().unwrap()
     }
 
+    /// A `CopyDepth`: the source's sampled depth and the destination's depth attachment (0: the
+    /// screen's), of one size. None, with a message, when either has no depth or the sizes differ.
+    fn plan_depth_blit(&mut self, source: u64, destination: u64) -> Option<DepthBlit> {
+        let end = |this: &mut Self, handle: u64| -> Option<(wgpu::TextureView, u32, (u32, u32))> {
+            if handle == 0 {
+                let s = this.ensure_screen(this.screen_slot);
+                return Some((s.depth_sample.clone(), 1, (s.width, s.height)));
+            }
+            let t = this.textures.get(&handle)?;
+            let view = t.depth_sample.clone().or_else(|| t.depth_msaa.clone())?;
+            Some((view, t.samples.max(1), (t.width, t.height)))
+        };
+        let from = end(self, source);
+        let to_view = if destination == 0 {
+            Some(self.ensure_screen(self.screen_slot).depth.clone())
+        } else {
+            self.textures
+                .get(&destination)
+                .and_then(|t| t.depth.clone())
+        };
+        let to = end(self, destination);
+        match (from, to, to_view) {
+            (
+                Some((source, source_samples, size)),
+                Some((_, samples, to_size)),
+                Some(destination),
+            ) if size == to_size => Some(DepthBlit {
+                source,
+                source_samples,
+                destination,
+                samples,
+            }),
+            _ => {
+                self.warn_once(format!("copy-depth{source}/{destination}"), || {
+                    format!("CopyDepth from {source} to {destination}: both need a depth buffer of one size; skipped")
+                });
+                None
+            }
+        }
+    }
+
+    /// The pipeline that draws a depth buffer into another (`CopyDepth`).
+    fn depth_blit_pipeline(
+        &mut self,
+        multisampled: bool,
+        samples: u32,
+        per_sample: bool,
+    ) -> (wgpu::RenderPipeline, wgpu::BindGroupLayout) {
+        let key = (multisampled, samples, per_sample);
+        if let Some(p) = self.depth_blit_pipelines.get(&key) {
+            return p.clone();
+        }
+        let source = if per_sample {
+            DEPTH_BLIT_PER_SAMPLE_WGSL.to_string()
+        } else if multisampled {
+            DEPTH_BLIT_WGSL.replace("texture_depth_2d", "texture_depth_multisampled_2d")
+        } else {
+            DEPTH_BLIT_WGSL.to_string()
+        };
+        let device = &self.device;
+        let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("unbound depth blit"),
+            source: wgpu::ShaderSource::Wgsl(source.into()),
+        });
+        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("unbound depth blit"),
+            entries: &[wgpu::BindGroupLayoutEntry {
+                binding: 0,
+                visibility: wgpu::ShaderStages::FRAGMENT,
+                ty: wgpu::BindingType::Texture {
+                    sample_type: wgpu::TextureSampleType::Depth,
+                    view_dimension: wgpu::TextureViewDimension::D2,
+                    multisampled,
+                },
+                count: None,
+            }],
+        });
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("unbound depth blit"),
+            bind_group_layouts: &[Some(&layout)],
+            immediate_size: 0,
+        });
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("unbound depth blit"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &module,
+                entry_point: Some("vs"),
+                compilation_options: Default::default(),
+                buffers: &[],
+            },
+            fragment: Some(wgpu::FragmentState {
+                module: &module,
+                entry_point: Some("fs"),
+                compilation_options: Default::default(),
+                targets: &[],
+            }),
+            primitive: wgpu::PrimitiveState::default(),
+            depth_stencil: Some(wgpu::DepthStencilState {
+                format: DEPTH_FORMAT,
+                depth_write_enabled: Some(true),
+                depth_compare: Some(wgpu::CompareFunction::Always),
+                stencil: wgpu::StencilState::default(),
+                bias: wgpu::DepthBiasState::default(),
+            }),
+            multisample: wgpu::MultisampleState {
+                count: samples,
+                ..Default::default()
+            },
+            multiview_mask: None,
+            cache: None,
+        });
+        self.depth_blit_pipelines.insert(key, (pipeline, layout));
+        self.depth_blit_pipelines[&key].clone()
+    }
+
     /// A 1x1 depth texture at the far plane (1): what an unbound depth texture reads, so that
     /// comparisons against it pass (an absent shadow map shadows nothing).
     fn depth_default(&mut self, cube: bool) -> wgpu::TextureView {
@@ -1514,19 +1651,31 @@ impl UnityRenderer {
                 format: Some(wgpu::TextureFormat::Rgba8UnormSrgb),
                 ..Default::default()
             });
-            let depth = self
-                .device
-                .create_texture(&wgpu::TextureDescriptor {
+            // The other slots' depth when it has this size: the screen keeps its depth.
+            let shared = self
+                .screens
+                .iter()
+                .flatten()
+                .find(|s| s.width == width && s.height == height)
+                .map(|s| (s.depth.clone(), s.depth_sample.clone()));
+            let (depth, depth_sample) = shared.unwrap_or_else(|| {
+                let texture = self.device.create_texture(&wgpu::TextureDescriptor {
                     label: Some("unbound screen depth"),
                     size,
                     mip_level_count: 1,
                     sample_count: 1,
                     dimension: wgpu::TextureDimension::D2,
                     format: DEPTH_FORMAT,
-                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                    usage: wgpu::TextureUsages::RENDER_ATTACHMENT
+                        | wgpu::TextureUsages::TEXTURE_BINDING,
                     view_formats: &[],
-                })
-                .create_view(&Default::default());
+                });
+                let sample = texture.create_view(&wgpu::TextureViewDescriptor {
+                    aspect: wgpu::TextureAspect::DepthOnly,
+                    ..Default::default()
+                });
+                (texture.create_view(&Default::default()), sample)
+            });
             self.screens[slot] = Some(ScreenTarget {
                 width,
                 height,
@@ -1534,6 +1683,7 @@ impl UnityRenderer {
                 color,
                 srgb,
                 depth,
+                depth_sample,
             });
         }
         self.screens[slot].as_ref().unwrap()
@@ -1641,19 +1791,37 @@ impl UnityRenderer {
     fn new_pass(&mut self, target: Target) -> Pass {
         let mut pass = Pass {
             target,
+            seed: None,
             color_load: wgpu::LoadOp::Load,
             depth_clear: None,
             items: Vec::new(),
         };
         if pass.target.screen {
             if !self.screen_touched {
-                // The screen's previous content is undefined in Unity; start from black.
-                pass.color_load = wgpu::LoadOp::Clear(wgpu::Color::BLACK);
-                pass.depth_clear = Some((1.0, 0));
+                // The frame's screen starts as the previous frame left it, color and depth (the
+                // depth buffer is the ring's): the Editor's Game view keeps them, so a first camera
+                // that clears only depth, or nothing, draws over the last frame (Manual, Camera:
+                // Don't Clear; measured: tests/projects/camerastack *.first.*). A new size starts
+                // black.
+                pass.seed = self.previous_screen();
+                if pass.seed.is_none() {
+                    pass.color_load = wgpu::LoadOp::Clear(wgpu::Color::BLACK);
+                    pass.depth_clear = Some((1.0, 0));
+                }
             }
             self.screen_touched = true;
         }
         pass
+    }
+
+    /// The previous frame's screen texture, when it has the current screen's size.
+    fn previous_screen(&self) -> Option<wgpu::Texture> {
+        let previous = (self.screen_slot + self.screens.len() - 1) % self.screens.len();
+        let (width, height) = self.screen_size;
+        self.screens[previous]
+            .as_ref()
+            .filter(|s| s.width == width && s.height == height && self.frame_number > 1)
+            .map(|s| s.texture.clone())
     }
 
     /// Executes commands: plans them, then encodes and queues the work.
@@ -1708,7 +1876,10 @@ impl UnityRenderer {
                     if !self.screen_touched {
                         // Nothing drew on the screen: it shows black.
                         let target = self.screen_target(self.color_space);
-                        let pass = self.new_pass(target);
+                        let mut pass = self.new_pass(target);
+                        pass.seed = None;
+                        pass.color_load = wgpu::LoadOp::Clear(wgpu::Color::BLACK);
+                        pass.depth_clear = Some((1.0, 0));
                         passes.push(Op::Pass(pass));
                     }
                     open = false;
@@ -2106,8 +2277,8 @@ impl UnityRenderer {
                 } => {
                     open = false;
                     if (source == 0 || destination == 0) && !self.screen_touched {
-                        // The frame's screen starts black at its first use, a copy too: the slot
-                        // still holds an older frame's image.
+                        // The frame's screen starts at its first use, a copy too: the slot still
+                        // holds an older frame's image.
                         let target = self.screen_target(self.color_space);
                         let pass = self.new_pass(target);
                         passes.push(Op::Pass(pass));
@@ -2121,6 +2292,26 @@ impl UnityRenderer {
                         [destination_x, destination_y],
                     ) {
                         passes.push(Op::Copy(copy));
+                    }
+                }
+                Command::CopyDepth {
+                    source,
+                    destination,
+                } => {
+                    open = false;
+                    self.copy_depth(&mut passes, depth_mark);
+                    depth_mark = passes.len();
+                    if (source == 0 || destination == 0) && !self.screen_touched {
+                        let target = self.screen_target(self.color_space);
+                        let pass = self.new_pass(target);
+                        passes.push(Op::Pass(pass));
+                    }
+                    if let Some(blit) = self.plan_depth_blit(source, destination) {
+                        passes.push(Op::DepthBlit(blit));
+                        // What sampling the destination's depth element reads follows.
+                        if let Some(copy) = self.depth_copy_op(destination) {
+                            passes.push(Op::DepthCopy(copy));
+                        }
                     }
                 }
             }
@@ -2808,6 +2999,43 @@ impl UnityRenderer {
                     compute::encode_copy(&mut encoder, c);
                     continue;
                 }
+                Op::DepthBlit(b) => {
+                    let (pipeline, layout) = self.depth_blit_pipeline(
+                        b.source_samples > 1,
+                        b.samples,
+                        b.samples > 1 && b.samples == b.source_samples,
+                    );
+                    let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("unbound depth blit"),
+                        layout: &layout,
+                        entries: &[wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: wgpu::BindingResource::TextureView(&b.source),
+                        }],
+                    });
+                    let mut rp = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                        label: Some("unbound depth blit"),
+                        color_attachments: &[],
+                        depth_stencil_attachment: Some(wgpu::RenderPassDepthStencilAttachment {
+                            view: &b.destination,
+                            depth_ops: Some(wgpu::Operations {
+                                load: wgpu::LoadOp::Load,
+                                store: wgpu::StoreOp::Store,
+                            }),
+                            stencil_ops: Some(wgpu::Operations {
+                                load: wgpu::LoadOp::Clear(0),
+                                store: wgpu::StoreOp::Store,
+                            }),
+                        }),
+                        timestamp_writes: None,
+                        occlusion_query_set: None,
+                        multiview_mask: None,
+                    });
+                    rp.set_pipeline(&pipeline);
+                    rp.set_bind_group(0, &group, &[]);
+                    rp.draw(0..3, 0..1);
+                    continue;
+                }
                 Op::DepthCopy(c) => {
                     let (pipeline, layout) = self.depth_copy_pipeline(c.kind);
                     let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
@@ -2858,6 +3086,16 @@ impl UnityRenderer {
                     continue;
                 }
             };
+            if let (Some(seed), wgpu::LoadOp::Load) = (&pass.seed, pass.color_load)
+                && let Some((texture, ..)) = &pass.target.texture
+                && seed.size() == texture.size()
+            {
+                encoder.copy_texture_to_texture(
+                    seed.as_image_copy(),
+                    texture.as_image_copy(),
+                    texture.size(),
+                );
+            }
             // The first color, then the further ones (cleared or loaded alike).
             let colors: Vec<_> = std::iter::once(Some(wgpu::RenderPassColorAttachment {
                 view: &pass.target.color,
@@ -3203,6 +3441,38 @@ fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
 @fragment
 fn fs(@builtin(position) p: vec4<f32>) -> @location(0) vec4<f32> {
     return vec4<f32>(textureLoad(depth, vec2<i32>(p.xy), 0), 0.0, 0.0, 1.0);
+}
+"#;
+
+/// `CopyDepth` from one sample: the source's only (or first) one into every destination sample.
+const DEPTH_BLIT_WGSL: &str = r#"
+@group(0) @binding(0) var depth: texture_depth_2d;
+
+@vertex
+fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
+    let uv = vec2<f32>(f32((i << 1u) & 2u), f32(i & 2u));
+    return vec4<f32>(uv * 2.0 - 1.0, 0.0, 1.0);
+}
+
+@fragment
+fn fs(@builtin(position) p: vec4<f32>) -> @builtin(frag_depth) f32 {
+    return textureLoad(depth, vec2<i32>(p.xy), 0);
+}
+"#;
+
+/// `CopyDepth` between equal sample counts: each sample from the source's of its index.
+const DEPTH_BLIT_PER_SAMPLE_WGSL: &str = r#"
+@group(0) @binding(0) var depth: texture_depth_multisampled_2d;
+
+@vertex
+fn vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
+    let uv = vec2<f32>(f32((i << 1u) & 2u), f32(i & 2u));
+    return vec4<f32>(uv * 2.0 - 1.0, 0.0, 1.0);
+}
+
+@fragment
+fn fs(@builtin(position) p: vec4<f32>, @builtin(sample_index) s: u32) -> @builtin(frag_depth) f32 {
+    return textureLoad(depth, vec2<i32>(p.xy), i32(s));
 }
 "#;
 

@@ -20,7 +20,8 @@ use crate::{
 /// 16: filter component descriptors at the end of `AudioSourcePacket`.
 /// 17: render protocol 8 (`DrawIndices`, opcode 28), without the filter descriptors of 16.
 /// 18: both: the filter descriptors of 16 and render protocol 8 of 17.
-pub const NATIVE_API_VERSION: u32 = 18;
+/// 19: render protocol 9 (`CopyDepth`, opcode 29).
+pub const NATIVE_API_VERSION: u32 = 19;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]

@@ -5,8 +5,9 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
-    /// <summary>NativeApi 18 (filter component descriptors at the end of AudioSourcePacket, and
-    /// render protocol 8: draws that read a GraphicsBuffer's 16-bit indices): the managed side
+    /// <summary>NativeApi 19 (filter component descriptors at the end of AudioSourcePacket, render
+    /// protocol 8: draws that read a GraphicsBuffer's 16-bit indices, and render protocol 9: depth
+    /// copies): the managed side
     /// refuses a native side of any other version at startup, older or newer, before anything is
     /// installed.</summary>
     public unsafe class NativeApiVersionTests
@@ -15,9 +16,9 @@ namespace UnityEngine.Tests
         static readonly FieldInfo Ready = typeof(Native).GetField("s_Ready", BindingFlags.Static | BindingFlags.NonPublic);
 
         [Fact]
-        public void TheVersionIsAudioFilterDescriptorsAndRenderProtocolEight()
+        public void TheVersionIsAudioFilterDescriptorsAndRenderProtocolNine()
         {
-            Assert.Equal(18u, NativeApi.CurrentVersion);
+            Assert.Equal(19u, NativeApi.CurrentVersion);
             Assert.Equal(1UL << 62, TextureElements.DepthElement);
         }
 
@@ -26,7 +27,8 @@ namespace UnityEngine.Tests
         [InlineData(15u)]
         [InlineData(16u)]
         [InlineData(17u)]
-        [InlineData(19u)]
+        [InlineData(18u)]
+        [InlineData(20u)]
         public void AnotherNativeVersionIsRejectedBeforeInstalling(uint version)
         {
             var before = (NativeApi)Api.GetValue(null);
@@ -36,7 +38,7 @@ namespace UnityEngine.Tests
             try { Native.Initialize(&api); }
             catch (InvalidOperationException e) { error = e; }
             Assert.NotNull(error);
-            Assert.Equal($"native API version {version}, managed expects 18", error.Message);
+            Assert.Equal($"native API version {version}, managed expects 19", error.Message);
             Assert.Equal(before.Version, ((NativeApi)Api.GetValue(null)).Version);
             Assert.Equal(ready, (bool)Ready.GetValue(null));
         }
