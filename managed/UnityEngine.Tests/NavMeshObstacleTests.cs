@@ -10,8 +10,8 @@ namespace UnityEngine.Tests
     /// Documented (Scripting API 6000.0 NavMeshObstacle, Manual "NavMesh Obstacle", AI Navigation
     /// 2.0): an obstacle for agents to avoid; without carving it affects only their avoidance, not
     /// their paths (they plot paths ignoring it and sidestep it as they move); a carving obstacle
-    /// cuts a hole in the NavMesh. Unbound does not carve: a carving obstacle is reported and stays
-    /// an avoidance obstacle (Unbound's choice, unmeasured). The obstacles' shapes in avoidance
+    /// cuts a hole in the NavMesh (NavMeshCarvingTests); once its hole is cut it is no longer an
+    /// avoidance obstacle (Unbound's choice, unmeasured). The obstacles' shapes in avoidance
     /// (circles covering a box's outline, a capsule's radius), the scripted velocity as the
     /// obstacle's motion and the height-span test are Unbound's choices (unmeasured); the bounds the
     /// tests check include per-step box clearance, without guaranteeing progress round long walls;
@@ -29,7 +29,6 @@ namespace UnityEngine.Tests
 
         readonly float m_DeltaTime = Time.s_DeltaTime;
         readonly bool m_InFixedTimeStep = Time.s_InFixedTimeStep;
-        readonly bool m_Warned = ObstacleSystem.s_Warned;
         readonly bool m_WarnedLongBox = ObstacleSystem.s_WarnedLongBox;
         readonly bool m_WarnedCandidates = ObstacleSystem.s_WarnedCandidates;
         readonly NavMeshDataInstance m_Data;
@@ -56,7 +55,7 @@ namespace UnityEngine.Tests
             foreach (var go in m_Objects)
                 if (go != null) Object.DestroyImmediate(go);
             NavMesh.RemoveNavMeshData(m_Data);
-            ObstacleSystem.s_Warned = m_Warned;
+            ObstacleSystem.ResetCarving();
             ObstacleSystem.s_WarnedLongBox = m_WarnedLongBox;
             ObstacleSystem.s_WarnedCandidates = m_WarnedCandidates;
             Time.s_DeltaTime = m_DeltaTime;
@@ -137,39 +136,6 @@ namespace UnityEngine.Tests
             float outside = Mathf.Sqrt(Mathf.Max(qx, 0f) * Mathf.Max(qx, 0f) + Mathf.Max(qz, 0f) * Mathf.Max(qz, 0f));
             float clearance = outside + Mathf.Min(Mathf.Max(qx, qz), 0f) - agent.radius;
             Assert.True(clearance >= -1e-4f, $"agent penetrated the box footprint by {-clearance} m at {position}");
-        }
-
-        static NavMeshPath SearchOnRealizedSurface(NavMeshAgent agent, Vector3 start, Vector3 goal)
-        {
-            // A new A* query for each control, with the same captured active-route endpoints.
-            // Does not replace the agent's active corridor or take another simulation step.
-            var search = NavMesh.PathSearch.Begin(agent.m_Surface, start, goal, agent.Filter, agent.agentTypeID);
-            Assert.NotNull(search);
-            int budget = int.MaxValue;
-            Assert.True(search.Step(ref budget));
-            Assert.NotNull(search.Result);
-            return search.Result;
-        }
-
-        static string RoutingSnapshot(NavMeshAgent agent)
-        {
-            var surface = agent.m_Surface;
-            var tiles = new List<object>();
-            for (int i = 0; i < surface.Mesh.GetMaxTiles(); i++)
-            {
-                var tile = surface.Mesh.GetTile(i);
-                if (tile?.data == null) continue;
-                // data includes polygon flags, neighbours, firstLink, geometry, BV tree,
-                // detail triangles and off-mesh endpoints. links includes refs and next/side.
-                tiles.Add(new { tile.index, tile.salt, tile.flags, tile.linksFreeList, tile.data, tile.links });
-            }
-            var costs = new float[32];
-            for (int i = 0; i < costs.Length; i++) costs[i] = agent.GetAreaCost(i);
-            return System.Text.Json.JsonSerializer.Serialize(new
-            {
-                NavWorld.Version, NavWorld.PathStaleVersion, surface.AgentTypeID,
-                surface.DataOfTile, surface.LinkOfPoly, areaMask = agent.areaMask, costs, tiles
-            }, new System.Text.Json.JsonSerializerOptions { IncludeFields = true });
         }
 
         /// <summary>Two agents' walks: the closest they came to each other (centre to centre).</summary>
@@ -429,88 +395,28 @@ namespace UnityEngine.Tests
         // ------------------------------------------------------------------ carving
 
         [Fact]
-        public void ACarvingObstacleIsReportedAndAvoided()
+        public void ACarvingObstacleIsCarvedInsteadOfAvoided()
         {
-            // Carving is not supported: reported once, the NavMesh is unchanged (the path goes
-            // straight through and its staleness stays), and the obstacle stays an avoidance
-            // obstacle (Unbound's choice, unmeasured).
-            var logger = Debug.unityLogger;
-            var previous = logger.logHandler;
-            bool previousEnabled = logger.logEnabled;
-            var previousFilter = logger.filterLogType;
-            var warnings = new List<string>();
-            // Unbound diagnostics bypass the game's Application log callbacks: observe them at the
-            // handler, forwarding every call.
-            logger.logHandler = new Capture(previous, warnings);
-            logger.logEnabled = true;
-            logger.filterLogType = LogType.Log;
-            try
-            {
-                ObstacleSystem.s_Warned = false;
-                var obstacle = Box(new Vector3(0f, 0.5f, 0.2f), Vector3.one);
-                obstacle.carving = true;
-                Assert.Single(warnings);
-                Assert.Contains("carving is not supported", warnings[0]);
-                obstacle.carving = false;
-                obstacle.carving = true;
-                Assert.Single(warnings);
-
-                var agent = Agent();
-                Step();
-                // Unbound's reported, uncarved fallback must leave the complete route and
-                // actual topology unchanged. A collinear tile-seam waypoint is allowed: the
-                // 6000.0 corners API supplies waypoints, not a fixed count for this bake.
-                var originalPath = agent.path;
-                var queryCorners = originalPath.corners;
-                Assert.True(queryCorners.Length >= 2);
-                var queryStart = queryCorners[0];
-                var queryGoal = queryCorners[queryCorners.Length - 1];
-                var originalMesh = NavMesh.CalculateTriangulation();
-                var originalRouting = RoutingSnapshot(agent);
-                int version = NavWorld.Version;
-                obstacle.carving = false;
-                var withoutCarving = SearchOnRealizedSurface(agent, queryStart, queryGoal);
-                var routingWithoutCarving = RoutingSnapshot(agent);
-                obstacle.carving = true;
-                var withCarving = SearchOnRealizedSurface(agent, queryStart, queryGoal);
-                var routingWithCarving = RoutingSnapshot(agent);
-                var finalMesh = NavMesh.CalculateTriangulation();
-                Assert.Equal(version, NavWorld.Version);
-                Assert.Equal(NavMeshPathStatus.PathComplete, originalPath.status);
-                Assert.Equal(originalPath.status, withoutCarving.status);
-                Assert.Equal(originalPath.status, withCarving.status);
-                Assert.Equal(originalPath.corners, withoutCarving.corners);
-                Assert.Equal(originalPath.corners, withCarving.corners);
-                Assert.Equal(originalPath.m_Polygons, withoutCarving.m_Polygons);
-                Assert.Equal(originalPath.m_Polygons, withCarving.m_Polygons);
-                Assert.Equal(originalRouting, routingWithoutCarving);
-                Assert.Equal(originalRouting, routingWithCarving);
-                Assert.Single(warnings);
-                Assert.Equal(originalMesh.vertices, finalMesh.vertices);
-                Assert.Equal(originalMesh.indices, finalMesh.indices);
-                Assert.Equal(originalMesh.areas, finalMesh.areas);
-                Assert.Equal(agent.nextPosition, originalPath.corners[0]);
-                Assert.Equal(Goal.x, originalPath.corners[originalPath.corners.Length - 1].x);
-                Assert.Equal(Goal.z, originalPath.corners[originalPath.corners.Length - 1].z);
-                float previousX = Start.x;
-                foreach (var corner in originalPath.corners)
-                {
-                    Assert.InRange(corner.x, previousX, Goal.x);
-                    Assert.True(Mathf.Abs(corner.z) < 1e-4f, $"uncarved route bent away from the straight platform: {corner}");
-                    previousX = corner.x;
-                }
-                Assert.False(agent.isPathStale);
-                var walk = Walk(agent, clearanceObstacle: obstacle);
-                Assert.True(walk.Deviation > 0.75f, $"went through the carving obstacle, {walk.Deviation} m from the line");
-                Assert.True(walk.Arrived, $"stopped at {agent.nextPosition}");
-                Assert.False(agent.isPathStale);
-            }
-            finally
-            {
-                logger.logHandler = previous;
-                logger.logEnabled = previousEnabled;
-                logger.filterLogType = previousFilter;
-            }
+            // Documented: a carving obstacle's hole is recognised by the pathfinding, so paths are
+            // plotted around it. Once cut, the obstacle is no longer among the avoidance
+            // obstacles (Unbound's choice, unmeasured).
+            var obstacle = Box(new Vector3(0f, 0.5f, 0.2f), Vector3.one);
+            obstacle.carving = true;
+            var agent = Agent();
+            Step();
+            foreach (var corner in agent.path.corners) Assert.True(Mathf.Abs(corner.z) < 1e-4f);
+            ObstacleSystem.UpdateCarving();
+            ObstacleSystem.UpdateCarving();
+            Assert.True(ObstacleSystem.IsCarved(obstacle));
+            Step();
+            Assert.Contains(agent.path.corners, c => Mathf.Abs(c.z) > 0.5f);
+            Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
+            Assert.False(agent.isPathStale);
+            Assert.Equal(1, CrowdMembers(agent));
+            var walk = Walk(agent, clearanceObstacle: obstacle);
+            Assert.True(walk.Deviation > 0.75f, $"went through the carving obstacle, {walk.Deviation} m from the line");
+            Assert.True(walk.Arrived, $"stopped at {agent.nextPosition}");
+            Assert.Equal(1, CrowdMembers(agent));
         }
 
         sealed class Capture : ILogHandler

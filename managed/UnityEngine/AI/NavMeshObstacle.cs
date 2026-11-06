@@ -4,8 +4,8 @@ using Unbound.Runtime;
 namespace UnityEngine.AI
 {
     /// <summary>
-    /// An obstacle agents avoid in their local avoidance. Unity's carving obstacle cuts a hole in
-    /// the NavMesh; Unbound does not carve yet and reports it (see ObstacleSystem).
+    /// An obstacle agents avoid in their local avoidance; a carving obstacle cuts a hole in the
+    /// NavMesh (see ObstacleSystem and NavMeshCarving).
     /// </summary>
     [ClassId(208)]
     public sealed partial class NavMeshObstacle : Behaviour
@@ -23,16 +23,16 @@ namespace UnityEngine.AI
 
         public NavMeshObstacle() { }
 
-        public float height { get => m_Height; set { m_Height = Mathf.Max(0f, value); ObstacleSystem.Changed(this); } }
-        public float radius { get => m_Radius; set { m_Radius = Mathf.Max(0f, value); ObstacleSystem.Changed(this); } }
+        public float height { get => m_Height; set { m_Height = Mathf.Max(0f, value); } }
+        public float radius { get => m_Radius; set { m_Radius = Mathf.Max(0f, value); } }
         public Vector3 velocity { get => m_Velocity; set => m_Velocity = value; }
-        public bool carving { get => m_Carving; set { m_Carving = value; ObstacleSystem.Changed(this); } }
+        public bool carving { get => m_Carving; set { m_Carving = value; } }
         public bool carveOnlyStationary { get => m_CarveOnlyStationary; set => m_CarveOnlyStationary = value; }
         public float carvingMoveThreshold { get => m_CarvingMoveThreshold; set => m_CarvingMoveThreshold = Mathf.Max(0f, value); }
         public float carvingTimeToStationary { get => m_CarvingTimeToStationary; set => m_CarvingTimeToStationary = Mathf.Max(0f, value); }
-        public NavMeshObstacleShape shape { get => m_Shape; set { m_Shape = value; ObstacleSystem.Changed(this); } }
-        public Vector3 center { get => m_Center; set { m_Center = value; ObstacleSystem.Changed(this); } }
-        public Vector3 size { get => m_Size; set { m_Size = Vector3.Max(value, Vector3.zero); ObstacleSystem.Changed(this); } }
+        public NavMeshObstacleShape shape { get => m_Shape; set { m_Shape = value; } }
+        public Vector3 center { get => m_Center; set { m_Center = value; } }
+        public Vector3 size { get => m_Size; set { m_Size = Vector3.Max(value, Vector3.zero); } }
 
         /// <summary>Fits the obstacle to the GameObject's mesh, as Unity does when it is added.</summary>
         internal void FitExtents()
@@ -208,11 +208,12 @@ namespace Unbound.Runtime
     // while it moves without carving it is an obstruction for avoidance; the hole takes effect in
     // the next frame.
     //
-    // C1: carving is not supported: Unbound's NavMesh tiles are the baked polygons, with no source
-    // geometry or tile cache to rebuild them from, so a hole cannot be cut without approximating
-    // the polygons around it. A carving obstacle is reported once and leaves the NavMesh (and
-    // isPathStale) as it is; Unbound's choice (unmeasured): it stays an avoidance obstacle, moving
-    // or not, so agents sidestep it instead of planning around it.
+    // C1: carving (see UpdateCarving for the timing, NavMeshCarving for the hole's shape). The hole
+    // is cut into the tiles when Unbound next refreshes its NavMesh, and the agents following a path
+    // plan it again as for any NavMesh change (AgentSystem.Rebuild); isPathStale is not set
+    // (carving is not among its documented causes). Unbound's choice (unmeasured): an obstacle
+    // whose hole is in the NavMesh is not an avoidance obstacle as well; one moving without a hole
+    // (carveOnlyStationary) is.
     //
     // Avoidance: each enabled obstacle is one or more circles that the agents of every agent type
     // avoid in their crowd as they avoid other agents, moving at the obstacle's velocity. The
@@ -261,8 +262,6 @@ namespace Unbound.Runtime
     internal static class ObstacleSystem
     {
         static readonly List<NavMeshObstacle> s_Obstacles = new List<NavMeshObstacle>();
-        /// <summary>The carving warning was given (once per run).</summary>
-        internal static bool s_Warned;
         /// <summary>A box was covered by fewer circles than its length needs (C5; once per run).</summary>
         internal static bool s_WarnedLongBox;
         /// <summary>An agent's neighbour candidates exceeded the crowd's cap with obstacle circles
@@ -271,20 +270,178 @@ namespace Unbound.Runtime
 
         internal static void Add(NavMeshObstacle obstacle)
         {
+            if (!s_Registered)
+            {
+                s_Registered = true;
+                PlayerLoopDriver.Register(typeof(UnityEngine.PlayerLoop.PreUpdate.AIUpdate), UpdateCarving);
+            }
             if (!s_Obstacles.Contains(obstacle)) s_Obstacles.Add(obstacle);
-            Changed(obstacle);
         }
 
         internal static void Remove(NavMeshObstacle obstacle) => s_Obstacles.Remove(obstacle);
 
-        internal static void Changed(NavMeshObstacle obstacle)
+        static bool s_Registered;
+
+        // ------------------------------------------------------------------ carving
+
+        /// <summary>A carving obstacle's hole: where it was when last counted as moving, when that
+        /// was, the hole in the NavMesh and the one decided for the next update.</summary>
+        sealed class Carve
         {
-            if (obstacle.carving && obstacle.isActiveAndEnabled && !s_Warned)
+            internal NavMeshCarving.Footprint Reference;
+            internal float MovedAt;
+            internal NavMeshCarving.Footprint Applied;
+            internal bool Pending;
+            internal NavMeshCarving.Footprint Next;
+            /// <summary>The hole as it will be once the pending change is taken in.</summary>
+            internal NavMeshCarving.Footprint Target => Pending ? Next : Applied;
+
+            internal void Schedule(NavMeshCarving.Footprint hole)
             {
-                s_Warned = true;
-                Debug.LogWarning("Unbound: NavMeshObstacle carving is not supported yet; carving obstacles leave the NavMesh unchanged "
-                    + "and agents only avoid them locally.", obstacle);
+                Pending = true;
+                Next = hole;
             }
+        }
+
+        static readonly Dictionary<NavMeshObstacle, Carve> s_Carves = new Dictionary<NavMeshObstacle, Carve>(ReferenceEqualityComparer.Instance);
+        static readonly List<NavMeshCarving.Footprint> s_Holes = new List<NavMeshCarving.Footprint>();
+        static readonly List<NavMeshObstacle> s_Gone = new List<NavMeshObstacle>();
+
+        /// <summary>The holes in the NavMesh now.</summary>
+        internal static IReadOnlyList<NavMeshCarving.Footprint> Holes => s_Holes;
+
+        static bool Carving(NavMeshObstacle obstacle) => obstacle != null && obstacle.carving && obstacle.isActiveAndEnabled;
+
+        /// <summary>Forgets every hole at once (tests between cases).</summary>
+        internal static void ResetCarving()
+        {
+            s_Carves.Clear();
+            if (s_Holes.Count == 0) return;
+            s_Holes.Clear();
+            NavWorld.MarkDirty();
+        }
+
+        /// <summary>The obstacle's hole is in the NavMesh.</summary>
+        internal static bool IsCarved(NavMeshObstacle obstacle) => s_Carves.TryGetValue(obstacle, out var c) && c.Applied != null;
+
+        /// <summary>The frame's carving update (PreUpdate's AIUpdate): the holes decided by the last
+        /// update take effect, then each carving obstacle's hole is decided for the next one.</summary>
+        // Documented (AI Navigation 2.0 Manual, NavMesh Obstacle; Scripting API 6000.0
+        // NavMeshObstacle): with carveOnlyStationary (the default) the hole is removed when the
+        // obstacle moves (more than carvingMoveThreshold) and comes back once it has stood still for
+        // more than carvingTimeToStationary; without it the hole moves whenever the obstacle has
+        // moved more than carvingMoveThreshold; the result is available in the next frame.
+        // Measured (tests/projects/navmesh, agents.f*.holes, 0.02 s frames): an obstacle added or a
+        // change made in LateUpdate of frame N shows in the NavMesh from Update of frame N + 2, and
+        // agents replan in that frame; a new obstacle is carved at once (no wait to be stationary);
+        // a move of 0.05 m (threshold 0.1) leaves the hole; after a move of 1.25 m in frame 180 the
+        // hole is gone from frame 182 and back at the new place from frame 208 (0.5 s: carved once
+        // more than that has passed); turning carving off removes the hole in the same two frames.
+        // Unbound's choices (unmeasured): "moved" compares the obstacle's outline with where it
+        // was last counted as moving (a turn or a change of size counts by how far its corners
+        // move); the time is Time.time.
+        internal static void UpdateCarving()
+        {
+            if (s_Carves.Count == 0 && s_Obstacles.Count == 0) return;
+            bool changed = false;
+            s_Gone.Clear();
+            foreach (var pair in s_Carves)
+            {
+                var c = pair.Value;
+                if (c.Pending)
+                {
+                    changed |= !ReferenceEquals(c.Applied, c.Next);
+                    c.Applied = c.Next;
+                    c.Pending = false;
+                }
+                if (c.Applied == null && !Carving(pair.Key)) s_Gone.Add(pair.Key);
+            }
+            foreach (var gone in s_Gone) s_Carves.Remove(gone);
+            if (changed)
+            {
+                s_Holes.Clear();
+                foreach (var c in s_Carves.Values)
+                    if (c.Applied != null) s_Holes.Add(c.Applied);
+                // Cut now, so the agents replan in this frame's update (measured).
+                NavWorld.MarkDirty();
+                NavWorld.RefreshNow();
+            }
+
+            float now = Time.time;
+            foreach (var obstacle in s_Obstacles)
+            {
+                if (!Carving(obstacle)) continue;
+                var footprint = FootprintOf(obstacle);
+                if (!s_Carves.TryGetValue(obstacle, out var c))
+                {
+                    c = new Carve { Reference = footprint, MovedAt = float.NegativeInfinity };
+                    s_Carves[obstacle] = c;
+                    c.Schedule(footprint);
+                    continue;
+                }
+                bool moved = Moved(c.Reference, footprint, obstacle.carvingMoveThreshold);
+                if (moved)
+                {
+                    c.Reference = footprint;
+                    c.MovedAt = now;
+                }
+                if (obstacle.carveOnlyStationary)
+                {
+                    if (moved) { if (c.Target != null) c.Schedule(null); }
+                    else if (c.Target == null && now - c.MovedAt > obstacle.carvingTimeToStationary) c.Schedule(footprint);
+                }
+                else if (moved || c.Target == null) c.Schedule(footprint);
+            }
+            foreach (var pair in s_Carves)
+                if (!Carving(pair.Key) && pair.Value.Target != null) pair.Value.Schedule(null);
+        }
+
+        static bool Moved(NavMeshCarving.Footprint a, NavMeshCarving.Footprint b, float threshold)
+        {
+            if (a.Outline.Length != b.Outline.Length) return true;
+            if (Mathf.Abs(a.Bottom - b.Bottom) > threshold || Mathf.Abs(a.Top - b.Top) > threshold) return true;
+            for (int i = 0; i < a.Outline.Length; i++)
+                if ((a.Outline[i] - b.Outline[i]).sqrMagnitude > threshold * threshold) return true;
+            return false;
+        }
+
+        /// <summary>The obstacle's outline on the ground and its height span, where it stands now.</summary>
+        internal static NavMeshCarving.Footprint FootprintOf(NavMeshObstacle obstacle)
+        {
+            var t = obstacle.transform;
+            var points = new List<Vector2>();
+            float bottom, top;
+            if (obstacle.shape == NavMeshObstacleShape.Capsule)
+            {
+                var center = t.TransformPoint(obstacle.center);
+                var scale = t.lossyScale;
+                float radius = obstacle.radius * Mathf.Max(Mathf.Abs(scale.x), Mathf.Abs(scale.z));
+                float half = obstacle.height * Mathf.Abs(scale.y) * 0.5f;
+                // Around the circle: its sides touch it.
+                float r = radius / Mathf.Cos(Mathf.PI / NavMeshCarving.CapsuleSides);
+                for (int i = 0; i < NavMeshCarving.CapsuleSides; i++)
+                {
+                    float a = (i + 0.5f) * 2f * Mathf.PI / NavMeshCarving.CapsuleSides;
+                    points.Add(new Vector2(center.x + Mathf.Cos(a) * r, center.z + Mathf.Sin(a) * r));
+                }
+                bottom = center.y - half;
+                top = center.y + half;
+            }
+            else
+            {
+                bottom = float.MaxValue;
+                top = float.MinValue;
+                var half = obstacle.size * 0.5f;
+                for (int i = 0; i < 8; i++)
+                {
+                    var corner = t.TransformPoint(obstacle.center + new Vector3((i & 1) != 0 ? half.x : -half.x,
+                        (i & 2) != 0 ? half.y : -half.y, (i & 4) != 0 ? half.z : -half.z));
+                    points.Add(new Vector2(corner.x, corner.z));
+                    bottom = Mathf.Min(bottom, corner.y);
+                    top = Mathf.Max(top, corner.y);
+                }
+            }
+            return new NavMeshCarving.Footprint { Outline = NavMeshCarving.Hull(points), Bottom = bottom, Top = top };
         }
 
         // ------------------------------------------------------------------ avoidance
@@ -338,7 +495,7 @@ namespace Unbound.Runtime
             }
             s_Circles.Clear();
             foreach (var obstacle in s_Obstacles)
-                if (obstacle != null && obstacle.isActiveAndEnabled) AddCircles(obstacle, s_Circles);
+                if (obstacle != null && obstacle.isActiveAndEnabled && !IsCarved(obstacle)) AddCircles(obstacle, s_Circles);
             // The agents' neighbour test compares their feet with the circle's position over half
             // their heights together: placed half the agent type's height under the obstacle's
             // middle, it passes when the height spans overlap (C6).

@@ -106,6 +106,9 @@ namespace Unbound.Runtime
 
         internal static void MarkDirty() => s_Dirty = true;
 
+        /// <summary>Rebuilds the NavMesh now if it changed (instead of at the next query).</summary>
+        internal static void RefreshNow() => Refresh();
+
         /// <summary>A data instance's tiles changed (rebuilt or updated in place).</summary>
         internal static void DataChanged(NavMeshData data)
         {
@@ -156,7 +159,7 @@ namespace Unbound.Runtime
                 }
                 foreach (var tile in instance.Data.m_Tiles)
                 {
-                    var placed = Place(tile, instance.Position, instance.Rotation);
+                    var placed = NavMeshCarving.Carve(Place(tile, instance.Position, instance.Rotation), instance.Data.m_Settings, ObstacleSystem.Holes);
                     AddLinks(surface, placed);
                     // Tiles of different data at the same place go on further layers.
                     surface.Mesh.CalcTileLoc(Center(placed.header), out int tx, out int ty);
