@@ -431,7 +431,8 @@ namespace Unbound.Runtime
             var data = resolver?.Resolve(reference, typeof(NavMeshData)) as NavMeshData;
             if (data == null)
             {
-                Debug.LogError($"Unbound: the baked NavMesh of scene {scene?.Path} (guid {reference.Guid}, fileID {reference.FileId}) could not be loaded; the scene has no NavMesh.");
+                // A deleted NavMesh asset leaves the reference behind (no error measured in Unity).
+                Debug.LogWarning($"Unbound: the baked NavMesh of scene {scene?.Path} (guid {reference.Guid}, fileID {reference.FileId}) was not found; the scene has no NavMesh.");
                 return;
             }
             s_ByScene[handle] = NavWorld.AddData(data, data.position, data.rotation);

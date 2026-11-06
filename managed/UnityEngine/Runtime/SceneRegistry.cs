@@ -105,6 +105,8 @@ namespace Unbound.Runtime
             s_Scenes.Remove(scene.Handle.Value);
             Loaded.Remove(scene);
             LightProbes.SceneForgotten(scene.Handle.Value);
+            // Also for scenes closed without an unload (leaving Play mode).
+            SceneNavMesh.SceneUnloaded(scene.Handle.Value);
         }
 
         internal static bool IsDontDestroyOnLoad(SceneData scene) => scene != null && scene == s_DontDestroyOnLoad;
