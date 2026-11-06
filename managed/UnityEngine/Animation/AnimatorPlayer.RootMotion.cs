@@ -349,13 +349,15 @@ namespace Unbound.Runtime
 
         readonly List<Unbound.Runtime.Humanoid.HumanRootMotionSample> m_HumanSamples = new List<Unbound.Runtime.Humanoid.HumanRootMotionSample>();
         readonly List<float> m_HumanWeights = new List<float>();
+        readonly List<Unbound.Runtime.Humanoid.Trs> m_HumanBodyDifferences = new List<Unbound.Runtime.Humanoid.Trs>();
 
         /// <summary>A humanoid Animator's root motion: each humanoid clip's body motion between its
         /// state's previous and current times, blended by the clips' weights in each layer (the
         /// states of a transition, a blend tree's clips); override layers move it towards theirs by
-        /// the layer weight, additive layers leave it (measured, tests/projects/humanoid). It
-        /// becomes a delta of the root (applied like generic root motion) and places the body
-        /// relative to it for the pose. False when no humanoid clip plays.</summary>
+        /// the layer weight, additive layers leave it (measured, tests/projects/humanoid) and compose
+        /// their body differences onto the body below instead. It becomes a delta of the root
+        /// (applied like generic root motion) and places the body relative to it for the pose.
+        /// False when no humanoid clip plays.</summary>
         bool HumanRootMotion(Animator animator, Unbound.Runtime.Humanoid.AnimatorHuman human)
         {
             human.ClearMotion();
@@ -365,15 +367,11 @@ namespace Unbound.Runtime
             {
                 m_HumanSamples.Clear();
                 m_HumanWeights.Clear();
+                m_HumanBodyDifferences.Clear();
+                bool additive = Layers[i].Def.Additive;
                 foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions)
                 {
                     if (layerIndex != i || weight <= 0f || !clip.HasHumanCurves) continue;
-                    if (layer.Def.Additive)
-                    {
-                        Unbound.Runtime.Stubs.Ignored("Animator additive humanoid layers' body",
-                            "an additive layer's humanoid clips add their body (RootT, RootQ) curves to the body's values, not as the Editor composes them");
-                        continue;
-                    }
                     var def = run.Def;
                     var source = layer.Def.SyncedLayerIndex >= 0 && layer.Def.SyncedLayerIndex < Layers.Length ? Layers[layer.Def.SyncedLayerIndex] : layer;
                     var input = new Unbound.Runtime.Humanoid.HumanClipMotionInput
@@ -385,11 +383,37 @@ namespace Unbound.Runtime
                         Speed = SpeedOf(def),
                         CycleOffset = def.CycleOffset,
                     };
+                    if (additive)
+                    {
+                        // Additive layers leave the root motion alone; only their body differences apply.
+                        if (!Unbound.Runtime.Humanoid.HumanRootMotion.HasRoot(clip.HumanPresent)) continue;
+                        m_HumanBodyDifferences.Add(human.AdditiveBodyDifference(clip, clip.HumanClipMotion, input));
+                        m_HumanWeights.Add(weight);
+                        continue;
+                    }
                     human.SampleMotion(clip, clip.HumanClipMotion, input, out var sample);
                     m_HumanSamples.Add(sample);
                     m_HumanWeights.Add(weight);
                 }
                 float layerWeight = i == 0 ? 1f : Layers[i].Evaluated;
+                if (additive)
+                {
+                    if (m_HumanBodyDifferences.Count == 0 || layerWeight <= 0f) continue;
+                    if (!any)
+                    {
+                        Unbound.Runtime.Stubs.Ignored("Animator additive humanoid body over no humanoid clip",
+                            "an additive layer's humanoid body differences over no humanoid clip below are left out (not measured)");
+                        continue;
+                    }
+                    if (Layers[i].Def.Mask != null)
+                        Unbound.Runtime.Stubs.Ignored("Animator additive humanoid body with layer masks",
+                            "a masked additive layer's humanoid body differences apply as if the layer had no mask");
+                    var difference = Unbound.Runtime.Humanoid.HumanRootMotion.AdditiveBody(
+                        System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanBodyDifferences),
+                        System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanWeights), layerWeight);
+                    Unbound.Runtime.Humanoid.HumanRootMotion.AddBody(ref blended, difference);
+                    continue;
+                }
                 if (m_HumanSamples.Count == 0 || layerWeight <= 0f) continue;
                 layerSample = Unbound.Runtime.Humanoid.HumanRootMotion.Blend(
                     System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanSamples),

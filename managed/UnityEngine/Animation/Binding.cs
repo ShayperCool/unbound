@@ -23,6 +23,9 @@ namespace Unbound.Runtime
         internal bool IsQuaternion;
         /// <summary>A Transform's scale (an additive reference without it subtracts one).</summary>
         internal bool IsScale;
+        /// <summary>A humanoid body curve (RootT, RootQ): additive layers leave it to the root
+        /// motion pass, which composes their body differences (<see cref="AnimatorPlayer"/>).</summary>
+        internal bool HumanBody;
 
         /// <summary>A script whose fields this writes: it gets OnDidApplyAnimationProperties.</summary>
         internal MonoBehaviour Script;
@@ -890,7 +893,11 @@ namespace Unbound.Runtime
                         if (!animator.isHuman) break;
                         return Make(animator, "human:" + name, 0, () => new AccessorGroup(animator, 1,
                             () => new Vector4(Unbound.Runtime.Humanoid.AnimatorHuman.DefaultValue(human), 0),
-                            v => animator.Human.Set(human, v.x)) { AlwaysWrite = true });
+                            v => animator.Human.Set(human, v.x))
+                        {
+                            AlwaysWrite = true,
+                            HumanBody = human >= Unbound.Runtime.Humanoid.HumanClipImport.RootFirst && human < Unbound.Runtime.Humanoid.HumanClipImport.GoalFirst,
+                        });
                     }
                     // Clip curves drive float parameters only; int and bool ones keep their
                     // values (measured, tests/projects/modelclips).

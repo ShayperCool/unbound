@@ -130,11 +130,40 @@ namespace UnityEngine.Tests
             pose.RootX = X(1f, 1f, 0f);
             HumanRootMotion.ApplyToPose(pose, sample);
             Assert.Equal(0.5f, pose.RootX.t.z);
-            // An additive layer's offset on the RootX values moves the body by as much.
+            // An offset of the RootX values beyond the clips' moves the body by as much.
             pose.RootX = X(1.25f, 1f, 0f);
             HumanRootMotion.ApplyToPose(pose, sample);
             Near(0.25f, pose.RootX.t.x);
             Near(0.5f, pose.RootX.t.z);
+        }
+
+        [Fact]
+        public void AnAdditiveBodyDifferenceScalesByTheLayerWeight()
+        {
+            var r = HumanRootMotion.AdditiveBody(new[] { X(0f, 1f, 20f) }, new[] { 1f }, 0.5f);
+            Near(0.5f, r.t.z);
+            // The rotation's vector part scales by the weight: 2·atan(0.5·tan 10°).
+            float expected = 2f * MathF.Atan(0.5f * MathF.Tan(10f * MathF.PI / 180f)) * 180f / MathF.PI;
+            Near(expected, 2f * MathF.Atan2(r.q.y, r.q.w) * 180f / MathF.PI);
+            // Clips sum by their weights; a full layer of one clip is the clip's difference.
+            r = HumanRootMotion.AdditiveBody(new[] { X(0f, 1f, 0f), X(0f, 3f, 0f) }, new[] { 0.75f, 0.25f }, 1f);
+            Near(1.5f, r.t.z);
+            r = HumanRootMotion.AdditiveBody(new[] { X(0f, 1f, 20f) }, new[] { 1f }, 1f);
+            Near(20f, 2f * MathF.Atan2(r.q.y, r.q.w) * 180f / MathF.PI);
+        }
+
+        [Fact]
+        public void AnAdditiveBodyDifferenceComposesInTheBodysSpace()
+        {
+            var sample = Sample(1f, 90f, 0f);
+            var delta = sample.Delta;
+            HumanRootMotion.AddBody(ref sample, X(0f, 1f, 30f));
+            // Forward in the body's frame, turned 90 degrees: along x.
+            Near(1f, sample.Body.t.x);
+            Near(0f, sample.Body.t.z);
+            Near(120f, 2f * MathF.Atan2(sample.Body.q.y, sample.Body.q.w) * 180f / MathF.PI);
+            // The root motion stays.
+            Assert.Equal(delta.t.z, sample.Delta.t.z);
         }
     }
 }

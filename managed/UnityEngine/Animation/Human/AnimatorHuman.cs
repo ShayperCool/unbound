@@ -70,6 +70,28 @@ namespace Unbound.Runtime.Humanoid
             HumanRootMotion.Evaluate(motion, input, m_Previous, m_Current, clip.HumanPresent, out sample);
         }
 
+        /// <summary>An additive layer clip's body difference at a state's time: its body (RootX)
+        /// relative to the body of its additive reference pose (the reference clip at the reference
+        /// time, else the clip's first frame), reference⁻¹ · body.</summary>
+        internal Trs AdditiveBodyDifference(AnimationClip clip, HumanClipMotion motion, in HumanClipMotionInput input)
+        {
+            if (input.Mirror)
+                throw new NotSupportedException("mirrored humanoid states are not supported");
+            float time = HumanRootMotion.ClipTime(motion, input.Time, input.Speed, input.CycleOffset, out _);
+            clip.SampleHuman(time, m_Current);
+            var body = HumanRootMotion.ReadRoot(m_Current, clip.HumanPresent);
+            bool referenced = clip.m_HasAdditiveReferencePose && clip.m_AdditiveReferencePoseClip != null;
+            var source = referenced ? clip.m_AdditiveReferencePoseClip : clip;
+            float referenceTime = source.StartTime + (clip.m_HasAdditiveReferencePose ? clip.m_AdditiveReferencePoseTime : 0f);
+            source.SampleHuman(referenceTime, m_Previous);
+            var present = source.HumanPresent;
+            if (!HumanRootMotion.HasRoot(present))
+                Unbound.Runtime.Stubs.Ignored("Animator additive humanoid reference without a body",
+                    "an additive reference clip without body curves (RootT, RootQ) counts as the identity body (not measured)");
+            var reference = HumanRootMotion.ReadRoot(m_Previous, present);
+            return M.InvMul(reference, body);
+        }
+
         /// <summary>The update's (blended) root motion: the root's delta, the feet pivot, and the
         /// body relative to the motion for this update's pose.</summary>
         internal void ApplyMotion(in HumanRootMotionSample sample, float deltaTime, out AnimatorRootMotion result)

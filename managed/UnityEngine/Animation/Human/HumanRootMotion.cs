@@ -204,6 +204,14 @@ namespace Unbound.Runtime.Humanoid
     {
         const int RootFirst = HumanClipImport.RootFirst, GoalFirst = HumanClipImport.GoalFirst;
 
+        /// <summary>Whether a clip has a body curve (RootT, RootQ).</summary>
+        public static bool HasRoot(bool[] present)
+        {
+            for (int c = RootFirst; c < GoalFirst; c++)
+                if (present[c]) return true;
+            return false;
+        }
+
         /// <summary>The body of a clip's curve values: RootT (missing 0), the normalized RootQ (missing
         /// components 0, w 1), scale 1.</summary>
         public static Trs ReadRoot(float[] v, bool[] present)
@@ -454,6 +462,42 @@ namespace Unbound.Runtime.Humanoid
             Span<float> weights = stackalloc float[] { 1f - weight, weight };
             return Blend(pair, weights);
         }
+
+        /// <summary>An additive layer's body difference: each clip's body (RootX) relative to its
+        /// additive reference body, reference⁻¹ · body, summed by the clips' weights (rotations
+        /// aligned); the position is scaled by the layer weight, the rotation is normalized and its
+        /// vector part scaled by the layer weight times the clips' total weight, then normalized, as
+        /// generic additive rotations are (measured for one clip, tests/projects/humanoid; the sum of
+        /// several clips is Unbound's choice).</summary>
+        public static Trs AdditiveBody(ReadOnlySpan<Trs> differences, ReadOnlySpan<float> weights, float layerWeight)
+        {
+            F4 t = F4.Zero, q = F4.Zero;
+            float total = 0f;
+            for (int i = 0; i < differences.Length; i++)
+            {
+                float w = weights[i];
+                var d = differences[i];
+                var dq = d.q.w < 0f ? -d.q : d.q;
+                t = t + d.t * w;
+                q = q + dq * w;
+                total += w;
+            }
+            float m = MathF.Sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
+            var r = F4.QIdentity;
+            if (m >= 1e-6f)
+            {
+                float s = layerWeight * total / m;
+                r = M.QNormalize(new F4(q.x * s, q.y * s, q.z * s, q.w / m));
+            }
+            return new Trs(t * layerWeight, r, F4.One3);
+        }
+
+        /// <summary>The body of the layers below with an additive layer's
+        /// <see cref="AdditiveBody"/> difference composed in the clip's body space: body · difference
+        /// (measured, tests/projects/humanoid). The motion, step and feet stay as they were (additive
+        /// layers leave root motion alone).</summary>
+        public static void AddBody(ref HumanRootMotionSample sample, in Trs difference) =>
+            sample.Body = M.Mul(sample.Body, difference);
 
         static bool Same(F4 a, F4 b) => a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
 

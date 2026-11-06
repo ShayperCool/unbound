@@ -937,7 +937,7 @@ namespace Unbound.Runtime
                 Array.Resize(ref m_Written, Bindings.FloatCount);
                 Array.Resize(ref m_WrittenHeld, Bindings.FloatCount);
             }
-            PoseWriter.WriteLayers(Bindings, m_LayerPoses, count, m_Written, m_WrittenHeld);
+            PoseWriter.WriteLayers(Bindings, m_LayerPoses, count, m_Written, m_WrittenHeld, humanBodyInRootMotion: Attached);
             if (Attached) m_Animator.ApplyHumanPose();
             if (Attached) m_Animator.CaptureRootMotionPose();
         }

@@ -271,8 +271,11 @@ namespace Unbound.Runtime
         /// </summary>
         /// <summary>Writes the layers over the current values. With <paramref name="written"/>, what
         /// states without write defaults keep is the value it holds (where <paramref name="held"/>)
-        /// instead of the current one, and it receives what is written.</summary>
-        internal static void WriteLayers(AnimationBindings b, LayerPose[] layers, int count, float[] written = null, bool[] held = null)
+        /// instead of the current one, and it receives what is written. With
+        /// <paramref name="humanBodyInRootMotion"/>, additive layers leave a humanoid body's curves to
+        /// the root motion pass (see <see cref="CombineLayers"/>).</summary>
+        internal static void WriteLayers(AnimationBindings b, LayerPose[] layers, int count, float[] written = null, bool[] held = null,
+            bool humanBodyInRootMotion = false)
         {
             var s = Rent(b);
             try
@@ -301,7 +304,7 @@ namespace Unbound.Runtime
                     kept = s.Kept;
                     for (int c = 0; c < n; c++) kept[c] = c < held.Length && held[c] ? written[c] : s.Current[c];
                 }
-                CombineLayers(b, layers, count, s.Result, null, overDefaults: true, kept);
+                CombineLayers(b, layers, count, s.Result, null, overDefaults: true, kept, humanBodyInRootMotion);
                 if (written != null)
                 {
                     for (int c = 0; c < n && c < written.Length; c++)
@@ -349,10 +352,13 @@ namespace Unbound.Runtime
         /// does not animate counts as no difference (a zero quaternion for rotations, so that their
         /// normalized sum leaves it out). Positions, scales and floats add weight × difference,
         /// rotations multiply by the normalized difference whose vector part is scaled by the layer
-        /// weight times the weight of the motions sampled (<see cref="AdditiveRotation"/>).
+        /// weight times the weight of the motions sampled (<see cref="AdditiveRotation"/>). With
+        /// <paramref name="humanBodyInRootMotion"/>, a humanoid body's curves (RootT, RootQ) take no
+        /// additive differences here: the Animator's root motion pass composes them onto the body
+        /// (<see cref="Unbound.Runtime.Humanoid.HumanRootMotion.AdditiveBody"/>).
         /// </summary>
         internal static void CombineLayers(AnimationBindings b, LayerPose[] layers, int count, float[] values, bool[] animated, bool overDefaults,
-            float[] kept = null)
+            float[] kept = null, bool humanBodyInRootMotion = false)
         {
             int n = Math.Min(b.FloatCount, values.Length);
             for (int c = 0; c < n; c++)
@@ -378,6 +384,8 @@ namespace Unbound.Runtime
                     float v = pose.Value[c];
                     if (layer.Additive)
                     {
+                        // A humanoid body's differences compose in the root motion pass.
+                        if (humanBodyInRootMotion && owner != null && owner.HumanBody) continue;
                         r += lw * v;
                         written = true;
                         continue;
