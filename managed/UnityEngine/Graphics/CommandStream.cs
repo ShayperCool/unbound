@@ -30,6 +30,10 @@ namespace Unbound.Runtime
         internal const byte DrawIndexSize = 2;
 
         internal const ulong NoTexture = ulong.MaxValue;
+
+        /// <summary>How many times the screen has been bound as the target: what drew on it since
+        /// a given point (FrameBuilder's screen stack).</summary>
+        internal static long ScreenBindings;
         internal const byte ClearColor = 1, ClearDepth = 2, ClearStencil = 4;
         internal const uint CameraOverlay = 1;
         /// <summary>The camera's draws cull the other faces (a view that mirrors, GL.invertCulling).</summary>
@@ -220,6 +224,7 @@ namespace Unbound.Runtime
         /// first, as on GL when the shader picks no layer.</para></summary>
         internal static void SetTarget(ulong color, ulong depth = 0, int mip = 0, int slice = 0, int layers = 1)
         {
+            if (color == 0) ScreenBindings++;
             s_State.Color = color;
             s_State.Colors = null;
             s_State.Depth = depth;

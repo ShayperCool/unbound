@@ -28,7 +28,9 @@ Measured in 6000.0.71f1 (Linear and Gamma; both repeats byte-identical):
 - A partial camera with HDR, or with MSAA under quality AA, renders into an intermediate of its
   pixel size, antialiased. A Don't Clear one starts with cleared depth and leaves the screen's
   depth alone.
-- A partial deferred camera matches pixel for pixel.
+- Deferred B (quality AA 0 only, A in LDR): full screen, a Don't Clear one starts from the
+  screen's depth; a partial one is drawn as Unbound draws it (full size into its rect) and matches
+  pixel for pixel.
 
 These are observations of this release and context (Linux Editor, OpenGL Core, NVIDIA), not
 documented guarantees.

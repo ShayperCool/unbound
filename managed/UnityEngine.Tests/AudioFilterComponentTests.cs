@@ -95,9 +95,9 @@ namespace UnityEngine.Tests
         static ulong Id(Component c) => unchecked((ulong)(long)c.GetInstanceID());
 
         [Fact]
-        public void PacketAndDescriptorLayoutsAreNativeApi18()
+        public void PacketAndDescriptorLayoutsAreNativeApi18sInNineteen()
         {
-            // Unchanged in 19 (render protocol 9).
+            // Added at 16, unchanged in 19 (render protocol 9).
             Assert.Equal(19u, NativeApi.CurrentVersion);
             var p = default(AudioSourcePacket);
             byte* b = (byte*)&p;
