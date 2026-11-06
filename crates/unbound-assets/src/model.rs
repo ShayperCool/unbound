@@ -139,6 +139,47 @@ pub struct ModelSettings {
     pub is_readable: bool,
     /// `meshes.fileIdsGeneration`: how the IDs of objects the meta does not list are derived.
     pub file_ids_generation: i64,
+    /// `meshes.generateSecondaryUV` with its unwrap settings; `None` when off.
+    #[serde(default)]
+    pub secondary_uv: Option<SecondaryUvSettings>,
+}
+
+/// `meshes.secondaryUV*`: the lightmap UV unwrap settings (`ModelImporter.secondaryUV*`).
+#[derive(Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
+pub struct SecondaryUvSettings {
+    /// Degrees: edges whose faces meet at a larger angle are always cut.
+    pub hard_angle: f32,
+    /// Percent of allowed angle distortion.
+    pub angle_distortion: f32,
+    /// Percent of allowed area distortion.
+    pub area_distortion: f32,
+    /// `secondaryUVMarginMethod`: 0 Manual (`pack_margin`), 1 Calculate (from the resolution and
+    /// object scale below).
+    pub margin_method: i64,
+    /// Manual margin, in pixels of a 1024 texel map.
+    pub pack_margin: f32,
+    pub min_lightmap_resolution: f32,
+    pub min_object_scale: f32,
+}
+
+impl SecondaryUvSettings {
+    fn read(imp: &Value) -> Option<Self> {
+        if !boolean(imp, "meshes.generateSecondaryUV").unwrap_or(false) {
+            return None;
+        }
+        Some(Self {
+            hard_angle: float(imp, "meshes.secondaryUVHardAngle").unwrap_or(88.0),
+            angle_distortion: float(imp, "meshes.secondaryUVAngleDistortion").unwrap_or(8.0),
+            area_distortion: float(imp, "meshes.secondaryUVAreaDistortion").unwrap_or(15.0),
+            // Metas from before the margin method existed have only the manual margin
+            // (unmeasured: the current default, Calculate, applies to metas that name it).
+            margin_method: int(imp, "meshes.secondaryUVMarginMethod").unwrap_or(0),
+            pack_margin: float(imp, "meshes.secondaryUVPackMargin").unwrap_or(4.0),
+            min_lightmap_resolution: float(imp, "meshes.secondaryUVMinLightmapResolution")
+                .unwrap_or(40.0),
+            min_object_scale: float(imp, "meshes.secondaryUVMinObjectScale").unwrap_or(1.0),
+        })
+    }
 }
 
 impl ModelSettings {
@@ -205,6 +246,7 @@ impl ModelSettings {
                 .or_else(|| boolean(imp, "animations.isReadable"))
                 .unwrap_or(false),
             file_ids_generation: int(imp, "meshes.fileIdsGeneration").unwrap_or(2),
+            secondary_uv: SecondaryUvSettings::read(imp),
         }
     }
 }
@@ -578,7 +620,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 11;
+    const VERSION: u32 = 12;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -710,6 +752,13 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         model
             .warnings
             .push("material animation is not imported (the clips do not animate materials)".into());
+    }
+    if settings.secondary_uv.is_some() && !model.meshes.is_empty() {
+        model.warnings.push(
+            "generateSecondaryUV: lightmap UVs are not generated; the meshes keep the file's UV2, \
+             so baked lightmaps do not land on them (not supported)"
+                .into(),
+        );
     }
     if !scene.cameras.is_empty() || !scene.lights.is_empty() {
         model
