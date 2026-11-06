@@ -304,8 +304,9 @@ profile and the strict report).
 - Unmeasured: an unrouted source with `bypassListenerEffects` or `bypassEffects` (it bypasses
   the listener components, as documented). Also unmeasured, and failing loudly on the listener: a
   listener reverb filter next to OnAudioFilterRead scripts, one on a GameObject that also has an
-  AudioSource (it runs on the source only), and other component kinds there. Parameter changes
-  while a tail runs are unmeasured too.
+  AudioSource (it runs only in the source's chain), and other component kinds there. Parameter
+  changes while a tail runs, and a mixer-routed source with `bypassEffects` (the engine still
+  applies the listener components to it), are unmeasured too.
 - Residuals: one-step device PCM flips only (10 at 48 kHz, 11 at 44.1 kHz in the strict report;
   the gate admits one step on device PCM, never on floats).
 

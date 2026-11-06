@@ -476,7 +476,7 @@ namespace Unbound.Runtime
                 }
                 if (go.GetComponent<AudioSource>() != null)
                 {
-                    error ??= "AudioReverbFilter on the AudioListener '" + go.m_Name + "', which also has an AudioSource, is not supported on the listener; it runs on the source only";
+                    error ??= "AudioReverbFilter on the AudioListener '" + go.m_Name + "', which also has an AudioSource, is not supported on the listener; it runs only in that source's chain (while the source plays)";
                     count = 0;
                     break;
                 }

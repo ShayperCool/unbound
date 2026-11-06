@@ -378,7 +378,7 @@ namespace UnityEngine.Tests
             shared.AddComponent<AudioSource>();
             shared.AddComponent<AudioReverbFilter>();
             Assert.Equal(0, AudioFilterChain.CollectListener(third, false, ref table));
-            Assert.Contains("runs on the source only", Assert.Single(Errors("AudioListener 'source ears'")));
+            Assert.Contains("runs only in that source's chain", Assert.Single(Errors("AudioListener 'source ears'")));
         }
 
         // Measured in tests/projects/audioreverb (6000.0.71f1).
