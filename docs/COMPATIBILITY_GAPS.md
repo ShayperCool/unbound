@@ -105,10 +105,11 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       runtime classes without a reader. Ignored on purpose, with the reason:
       EditorExtensionImpl, and OcclusionCullingSettings while it references no baked data
       (NavMeshSettings loads the scene's baked NavMesh: `navbaked`). Found in real content
-      without a reader (follow-ups): `LightingSettings` (850595691, in most scenes' lighting), `ShaderVariantCollection` (200), YAML `Sprite`
-      documents (213, default-constructed), VFX Graph (`VisualEffect` 2083052967, `VFXRenderer`
+      without a reader (follow-ups): `LightingSettings` (850595691, in most scenes' lighting), `ShaderVariantCollection` (200), VFX Graph (`VisualEffect` 2083052967, `VFXRenderer`
       73398921, `VisualEffectResource` 2058629511), `Preset` (181963792; editor scripts can apply
-      one), and legacy `GUILayer` (92, not a class of 6000.0).
+      one), and legacy `GUILayer` (92, not a class of 6000.0). YAML `Sprite` documents (213)
+      now read ordinary un-atlased geometry and references (`spriteassets`); rejected layouts
+      are errors at load and listed by `unbound doctor`.
 - [ ] `SystemInfo` answers follow what the renderer does.
 - [ ] `api-gaps` noise: trivial attributes (`JetBrains.Annotations.*`, `ResourcePathAttribute`,
       `CategoryInfoAttribute`, `ShaderKeywordFilter.*`) implemented, so the coverage line counts
@@ -218,6 +219,7 @@ AsyncGPUReadback, SRP culling/renderer lists, URP and URP 2D matching the Editor
 
 | Gap | Where | | Impact |
 |---|---|---|---|
+| YAML Sprite documents (ClassId213) default-constructed | `Graphics/Sprite.Serialized.cs`, `SpriteRenderGeometry.cs`, `Runtime/ClassCoverage.cs`, `crates/unbound/src/doctor.rs` | S | done for measured ordinary un-atlased 6000.0.71f1 assets (tests/projects/spriteassets, 46,318 API/image values, zero differences within fixed tolerances; independent Native repeats identical). Authored GUID/fileID textures, subrectangles, pivot, pixels per unit, borders, Tight render mesh/UV transform and physics shapes; scene and Resources loading; imported Sprite control unchanged. Packed/rotated/atlas, downscale, split alpha, secondary textures, skinning, nonempty stored UV streams and unfamiliar layouts are rejected with asset/fileID errors and doctor layout diagnostics. Those representations remain follow-ups; doctor checks layout without resolving imported texture dimensions. No cache output format or release difference changed. |
 | SpriteMask stencil masking; `maskInteraction` | `Graphics/SpriteMask.cs` | W once | done for measured stencil ranges, sorting groups, alpha cutoffs and URP 2D (tests/projects/resources and urp2d). Imported Tight sprites now supply their render mesh to the stencil pass; runtime `Sprite.Create` Tight geometry still uses a quad. |
 | SpriteRenderer Tiled mode drawn as Sliced | `Graphics/Renderer.cs` | S | done (Continuous/Adaptive, borders, thresholds, sizes and flips: tests/projects/resources) |
 | `spriteChangeEvent` / `RegisterSpriteChangeCallback` never raised | `Graphics/Renderer.cs` | S | done (raised on a sprite change through the setter; no probe yet) |

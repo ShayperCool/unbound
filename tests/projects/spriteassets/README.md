@@ -35,7 +35,8 @@ and failing values are retained in `differences.json`.
 | Native repeats, 6000.0.71f1 | Observed: RD v3, vertex data v3, rect/submesh v2, Float32 positions in aligned streams, UInt16 triangle indices, normalized stored pivot, physics points in units. Stored UV channels contain zeros; uvTransform maps positions to texture pixels. | Use serialized mesh positions/indices and the UV transform, with strict version/layout checks. Share the binary built-in Sprite mesh decoder. |
 | Native repeats, 6000.0.71f1 | Observed: Sprite.Create plus OverrideGeometry does not persist its overridden runtime mesh in this asset form. Cloning the imported Tight Sprite does persist its mesh. | Author through the Editor; capture saved assets in independent sessions. No claim about other releases or representations. |
 
-Unsupported packed/rotated/atlas, downscaled, split-alpha, secondary-texture, skinned
-and unfamiliar render-data representations fail with an error naming the asset and
+Unsupported packed/rotated/atlas, downscaled, split-alpha, secondary-texture, skinned,
+nonempty stored UV streams and unfamiliar render-data representations fail with an error naming the asset and
 fileID. They produce no default Sprite. Their support is a follow-up. No release
 differences were established here; an actual release difference must use Compat.
+The doctor's layout check uses the same decoder, without resolving texture dimensions.
