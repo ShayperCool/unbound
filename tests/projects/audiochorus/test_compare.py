@@ -27,6 +27,7 @@ class FastComparisonTests(unittest.TestCase):
                     array.array('f', data).tofile((root/(name+'.f32')).open('wb'))
                     meta[name] = dict(file=name+'.f32', frames=3, channels=2)
                 meta['missing' if root == roots[0] else 'extra'] = dict(file='case.f32', frames=3, channels=2)
+                if root == roots[1]: meta['unexpected_scalar'] = 123
                 (root/'capture.json').write_text(json.dumps(meta))
             numpy = compare.np
             try:
