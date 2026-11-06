@@ -1321,7 +1321,7 @@ mod tests {
     /// `DrawIndices` is decoded from NativeApi 18 on, the version render protocol 8 has with the
     /// audio filter descriptors (17 was render protocol 8 alone, 16 the audio descriptors alone);
     /// 19 adds render protocol 9's `CopyDepth`, 20 the AudioReverbFilter descriptors, 21 the reverb
-    /// zone.
+    /// zone, and 22 render protocols 10/11's 32-bit indices and logical instance IDs.
     #[test]
     fn draw_indices_need_native_api_18() {
         assert_eq!(crate::native_api::NATIVE_API_VERSION, 22);

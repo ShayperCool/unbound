@@ -297,7 +297,7 @@ mod tests {
 
     /// The source packet's filter descriptors were added at NativeApi 16; 20 adds the reverb
     /// kind and parameters, 21 the frame packet's reverb zone. The managed side pins the same
-    /// value and refuses 14 to 20 and 22 (NativeApiVersionTests).
+    /// value and refuses 14 to 21 and 23 (NativeApiVersionTests).
     #[test]
     fn the_filter_descriptor_layout_is_native_api_21() {
         assert_eq!(crate::native_api::NATIVE_API_VERSION, 22);
