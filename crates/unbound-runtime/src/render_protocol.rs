@@ -169,11 +169,15 @@ pub mod texture_format {
     /// Normalized 10-bit RGB and 2-bit alpha packed in 32 bits, red in the low bits (Unity's
     /// `A2B10G10R10_UNormPack32`: RenderTextureFormat.ARGB2101010); data: four f32 per texel.
     pub const RGB10A2_UNORM: i32 = 15;
+    /// One normalized 16-bit channel (Unity's `R16_UNorm`: RenderTextureFormat.R16,
+    /// TextureFormat.R16). Needs the device's 16-bit normalized formats; data: four f32 per
+    /// texel, of which the first is kept.
+    pub const R16_UNORM: i32 = 16;
 
     /// The packet's code, or why the renderer cannot take it: codes outside the table are
     /// rejected rather than drawn as some other format.
     pub fn validate(code: i32) -> Result<i32, String> {
-        if (SRGB_RGBA8..=RGB10A2_UNORM).contains(&code) {
+        if (SRGB_RGBA8..=R16_UNORM).contains(&code) {
             Ok(code)
         } else {
             Err(format!(
@@ -186,7 +190,7 @@ pub mod texture_format {
     pub fn float_data(code: i32) -> bool {
         matches!(
             code,
-            RGBA_HALF | R32_FLOAT | RGBA32_FLOAT..=RG16_FLOAT | RG16_UNORM..=RGB10A2_UNORM
+            RGBA_HALF | R32_FLOAT | RGBA32_FLOAT..=RG16_FLOAT | RG16_UNORM..=R16_UNORM
         )
     }
 }
@@ -199,8 +203,8 @@ pub struct TexturePacket {
     /// 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBA floats (kept as half floats), 3 Alpha8, 4 packed
     /// 11/11/10 floats (render targets only, no data), 5 none: a depth-only render target, which
     /// reads as its depth when sampled; 6 R32F, 9 RGBA32F, 10 RG32F, 11 R16F, 12 RG16F,
-    /// 13 RG16 unorm, 14 RGBA16 unorm, 15 RGB10A2 unorm (see [`texture_format`]).
-    /// Float upload data is always four f32 channels (13..=15 included). 7/8 are BC7 color/data
+    /// 13 RG16 unorm, 14 RGBA16 unorm, 15 RGB10A2 unorm, 16 R16 unorm (see [`texture_format`]).
+    /// Float upload data is always four f32 channels (13..=16 included). 7/8 are BC7 color/data
     /// imported textures, passed only by native producers.
     pub format: i32,
     pub mip_count: i32,
@@ -671,18 +675,21 @@ mod tests {
     #[test]
     fn texture_format_codes() {
         use texture_format::*;
-        assert_eq!((RG16_UNORM, RGBA16_UNORM, RGB10A2_UNORM), (13, 14, 15));
-        for code in 0..=15 {
+        assert_eq!(
+            (RG16_UNORM, RGBA16_UNORM, RGB10A2_UNORM, R16_UNORM),
+            (13, 14, 15, 16)
+        );
+        for code in 0..=16 {
             assert_eq!(validate(code), Ok(code));
         }
-        for code in [-1, 16, 17, i32::MAX, i32::MIN] {
+        for code in [-1, 17, 18, i32::MAX, i32::MIN] {
             assert!(validate(code).is_err(), "{code} is accepted");
         }
-        for code in [RG16_UNORM, RGBA16_UNORM, RGB10A2_UNORM] {
+        for code in [RG16_UNORM, RGBA16_UNORM, RGB10A2_UNORM, R16_UNORM] {
             assert!(float_data(code), "{code} data is not four floats");
         }
-        let floats: Vec<i32> = (0..=15).filter(|&c| float_data(c)).collect();
-        assert_eq!(floats, [2, 6, 9, 10, 11, 12, 13, 14, 15]);
+        let floats: Vec<i32> = (0..=16).filter(|&c| float_data(c)).collect();
+        assert_eq!(floats, [2, 6, 9, 10, 11, 12, 13, 14, 15, 16]);
         // The packet itself does not change (NativeApi layout).
         assert_eq!(offset_of!(TexturePacket, format), 8);
         assert_eq!(offset_of!(TexturePacket, wrap_w), 64);

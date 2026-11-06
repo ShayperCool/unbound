@@ -452,12 +452,13 @@ fn f32_to_f16(value: f32) -> u16 {
 }
 
 /// What the device does with the formats only some devices have: those of the normalized 16-bit
-/// and packed 10-10-10-2 codes ([`texture_format::RG16_UNORM`] ..). Each is the format's features
+/// and packed 10-10-10-2 codes ([`texture_format::RG16_UNORM`] ..= [`texture_format::R16_UNORM`]). Each is the format's features
 /// as wgpu checks them (the adapter's when the device has
 /// `TEXTURE_ADAPTER_SPECIFIC_FORMAT_FEATURES`, else WebGPU's guaranteed ones), or none where the
 /// device lacks the feature the format needs (`TEXTURE_FORMAT_16BIT_NORM`).
 #[derive(Debug, Clone, Copy, Default, PartialEq, Eq)]
 pub struct NormFormatCaps {
+    pub r16: Option<wgpu::TextureFormatFeatures>,
     pub rg16: Option<wgpu::TextureFormatFeatures>,
     pub rgba16: Option<wgpu::TextureFormatFeatures>,
     pub rgb10a2: Option<wgpu::TextureFormatFeatures>,
@@ -466,6 +467,7 @@ pub struct NormFormatCaps {
 impl NormFormatCaps {
     /// Nothing known: every such texture falls back.
     pub const NONE: Self = Self {
+        r16: None,
         rg16: None,
         rgba16: None,
         rgb10a2: None,
@@ -483,6 +485,7 @@ impl NormFormatCaps {
         };
         let norm16 = device_features.contains(wgpu::Features::TEXTURE_FORMAT_16BIT_NORM);
         Self {
+            r16: norm16.then(|| features(wgpu::TextureFormat::R16Unorm)),
             rg16: norm16.then(|| features(wgpu::TextureFormat::Rg16Unorm)),
             rgba16: norm16.then(|| features(wgpu::TextureFormat::Rgba16Unorm)),
             rgb10a2: Some(features(wgpu::TextureFormat::Rgb10a2Unorm)),
@@ -519,6 +522,7 @@ pub fn norm_format(
         texture_format::RG16_UNORM => (F::Rg16Unorm, caps.rg16),
         texture_format::RGBA16_UNORM => (F::Rgba16Unorm, caps.rgba16),
         texture_format::RGB10A2_UNORM => (F::Rgb10a2Unorm, caps.rgb10a2),
+        texture_format::R16_UNORM => (F::R16Unorm, caps.r16),
         _ => {
             return Err(format!(
                 "format code {code} is not a normalized 16-bit or 10-10-10-2 code"
@@ -617,7 +621,7 @@ pub fn texture_storage(
         12 => stored(wgpu::TextureFormat::Rg16Float, 4),
         4 if packed && !t.random_write => stored(wgpu::TextureFormat::Rg11b10Ufloat, 4),
         4 => stored(wgpu::TextureFormat::Rgba16Float, 8),
-        texture_format::RG16_UNORM..=texture_format::RGB10A2_UNORM => {
+        texture_format::RG16_UNORM..=texture_format::R16_UNORM => {
             // Where the device cannot keep them, linear RGBA8: what they were before they had
             // codes of their own.
             match norm_format(t.format, caps, t.render_target, t.random_write, samples) {
@@ -671,6 +675,9 @@ pub fn norm_texels(format: wgpu::TextureFormat, data: &[u8]) -> Vec<u8> {
             f32::from_le_bytes(chunk[i * 4..i * 4 + 4].try_into().unwrap())
         });
         match format {
+            wgpu::TextureFormat::R16Unorm => {
+                out.extend_from_slice(&(unorm(c[0], 0xffff) as u16).to_le_bytes());
+            }
             wgpu::TextureFormat::Rg16Unorm => {
                 for v in &c[..2] {
                     out.extend_from_slice(&(unorm(*v, 0xffff) as u16).to_le_bytes());
@@ -695,12 +702,14 @@ pub fn norm_texels(format: wgpu::TextureFormat, data: &[u8]) -> Vec<u8> {
     out
 }
 
-/// A texel of a normalized 16-bit or 10-10-10-2 format as RGBA floats (a two-channel one reads
-/// (r, g, 0, 1), as the float formats do); none for other formats or a short texel.
+/// A texel of a normalized 16-bit or 10-10-10-2 format as RGBA floats (a one- or two-channel one
+/// reads (r, 0, 0, 1) or (r, g, 0, 1), as the float formats do); none for other formats or a
+/// short texel.
 pub fn norm_texel_to_f32(format: wgpu::TextureFormat, texel: &[u8]) -> Option<[f32; 4]> {
     let u16_at =
         |i: usize| f32::from(u16::from_le_bytes([texel[i * 2], texel[i * 2 + 1]])) / 65535.0;
     Some(match format {
+        wgpu::TextureFormat::R16Unorm if texel.len() >= 2 => [u16_at(0), 0.0, 0.0, 1.0],
         wgpu::TextureFormat::Rg16Unorm if texel.len() >= 4 => [u16_at(0), u16_at(1), 0.0, 1.0],
         wgpu::TextureFormat::Rgba16Unorm if texel.len() >= 8 => {
             [u16_at(0), u16_at(1), u16_at(2), u16_at(3)]
@@ -1014,7 +1023,7 @@ pub fn upload_texture(
                         &converted
                     }
                     // Normalized integers from floats, in the format the texture is stored in.
-                    texture_format::RG16_UNORM..=texture_format::RGB10A2_UNORM => {
+                    texture_format::RG16_UNORM..=texture_format::R16_UNORM => {
                         converted = norm_texels(format, src);
                         &converted
                     }
@@ -1209,6 +1218,7 @@ mod tests {
 
     fn full_caps() -> NormFormatCaps {
         NormFormatCaps {
+            r16: full(),
             rg16: full(),
             rgba16: full(),
             rgb10a2: full(),
@@ -1249,6 +1259,7 @@ mod tests {
                 (13, F::Rg16Unorm, 4),
                 (14, F::Rgba16Unorm, 8),
                 (15, F::Rgb10a2Unorm, 4),
+                (16, F::R16Unorm, 2),
             ] {
                 assert_eq!(
                     stored(code, rt, false, if rt { 4 } else { 1 }, &caps),
@@ -1280,7 +1291,7 @@ mod tests {
 
     #[test]
     fn unknown_codes_are_rejected() {
-        for code in [-1, 16, 99, i32::MAX] {
+        for code in [-1, 17, 99, i32::MAX] {
             let s = stored(code, true, false, 1, &full_caps());
             assert_eq!(s.format, wgpu::TextureFormat::Rgba8Unorm);
             assert!(
@@ -1295,11 +1306,12 @@ mod tests {
     #[test]
     fn norm16_without_the_device_feature_falls_back_to_rgba8() {
         let caps = NormFormatCaps {
+            r16: None,
             rg16: None,
             rgba16: None,
             rgb10a2: full(),
         };
-        for code in [13, 14] {
+        for code in [13, 14, 16] {
             let s = stored(code, true, false, 1, &caps);
             assert_eq!(s.format, wgpu::TextureFormat::Rgba8Unorm, "code {code}");
             assert_eq!(s.bytes_per_pixel, 4);
@@ -1314,7 +1326,7 @@ mod tests {
             wgpu::TextureFormat::Rgb10a2Unorm
         );
         // Before the renderer reads the device, every one of them falls back.
-        for code in [13, 14, 15] {
+        for code in [13, 14, 15, 16] {
             assert!(
                 stored(code, false, false, 1, &NormFormatCaps::NONE)
                     .fallback
@@ -1331,11 +1343,12 @@ mod tests {
         use wgpu::{Features, TextureFormat as F};
         let guaranteed = |f: F, features: Features| Some(f.guaranteed_format_features(features));
         let caps = NormFormatCaps {
+            r16: guaranteed(F::R16Unorm, Features::TEXTURE_FORMAT_16BIT_NORM),
             rg16: guaranteed(F::Rg16Unorm, Features::TEXTURE_FORMAT_16BIT_NORM),
             rgba16: guaranteed(F::Rgba16Unorm, Features::TEXTURE_FORMAT_16BIT_NORM),
             rgb10a2: guaranteed(F::Rgb10a2Unorm, Features::empty()),
         };
-        for code in [13, 14] {
+        for code in [13, 14, 16] {
             for rt in [false, true] {
                 assert_eq!(stored(code, rt, false, 1, &caps).format, F::Rgba8Unorm);
             }
@@ -1356,6 +1369,7 @@ mod tests {
             (13, F::Rg16Unorm, 4),
             (14, F::Rgba16Unorm, 8),
             (15, F::Rgb10a2Unorm, 4),
+            (16, F::R16Unorm, 2),
         ] {
             assert_eq!(
                 stored(code, true, true, 1, &caps),
@@ -1387,11 +1401,12 @@ mod tests {
             without(U::empty(), Flags::STORAGE_WRITE_ONLY),
         ] {
             let caps = NormFormatCaps {
+                r16: features,
                 rg16: features,
                 rgba16: features,
                 rgb10a2: features,
             };
-            for code in [13, 14, 15] {
+            for code in [13, 14, 15, 16] {
                 let s = stored(code, true, true, 1, &caps);
                 assert_eq!(s.format, wgpu::TextureFormat::Rgba8Unorm, "code {code}");
                 assert!(
@@ -1404,11 +1419,12 @@ mod tests {
         }
         // Without TEXTURE_FORMAT_16BIT_NORM, kernels cannot write the 16-bit formats either.
         let caps = NormFormatCaps {
+            r16: None,
             rg16: None,
             rgba16: None,
             rgb10a2: full(),
         };
-        for code in [13, 14] {
+        for code in [13, 14, 16] {
             assert!(
                 matches!(&stored(code, true, true, 1, &caps).fallback, Some(FormatFallback::Unsupported(why)) if why.contains("TEXTURE_FORMAT_16BIT_NORM")),
                 "code {code}"
@@ -1420,11 +1436,12 @@ mod tests {
             Some(f.guaranteed_format_features(wgpu::Features::TEXTURE_FORMAT_16BIT_NORM))
         };
         let caps = NormFormatCaps {
+            r16: guaranteed(wgpu::TextureFormat::R16Unorm),
             rg16: guaranteed(wgpu::TextureFormat::Rg16Unorm),
             rgba16: guaranteed(wgpu::TextureFormat::Rgba16Unorm),
             rgb10a2: full(),
         };
-        for code in [13, 14] {
+        for code in [13, 14, 16] {
             assert_eq!(
                 stored(code, true, true, 1, &caps).format,
                 wgpu::TextureFormat::Rgba8Unorm
@@ -1455,6 +1472,7 @@ mod tests {
             [0, 32768, 65535, 65535, 0, 65535, 0, 16384]
         );
         assert_eq!(u16s(norm_texels(F::Rg16Unorm, &data)), [0, 32768, 0, 65535]);
+        assert_eq!(u16s(norm_texels(F::R16Unorm, &data)), [0, 0]);
         let packed: Vec<u32> = norm_texels(F::Rgb10a2Unorm, &data)
             .chunks_exact(4)
             .map(|b| u32::from_le_bytes(b.try_into().unwrap()))
@@ -1479,6 +1497,10 @@ mod tests {
         assert_eq!(
             read(F::Rg16Unorm, &[[1.0, 0.0, 0.7, 0.2]]),
             [1.0, 0.0, 0.0, 1.0]
+        );
+        assert_eq!(
+            read(F::R16Unorm, &[[0.5, 0.7, 0.7, 0.2]]),
+            [32768.0 / 65535.0, 0.0, 0.0, 1.0]
         );
         assert_eq!(
             read(F::Rgba16Unorm, &[[1.0, 0.0, 1.0, 0.0]]),

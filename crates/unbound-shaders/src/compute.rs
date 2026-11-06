@@ -230,6 +230,7 @@ fn storage_format(name: &str) -> Option<naga::StorageFormat> {
     use naga::StorageFormat as F;
     Some(match name {
         "R8Unorm" => F::R8Unorm,
+        "R16Unorm" => F::R16Unorm,
         "R16Float" => F::R16Float,
         "R32Float" => F::R32Float,
         "R32Uint" => F::R32Uint,
@@ -599,8 +600,13 @@ RWStructuredBuffer<uint> _Out;
         use naga::StorageFormat as F;
         assert_eq!(storage_format("Rg16Unorm"), Some(F::Rg16Unorm));
         assert_eq!(storage_format("Rgba16Unorm"), Some(F::Rgba16Unorm));
+        assert_eq!(storage_format("R16Unorm"), Some(F::R16Unorm));
         let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
-        for (name, wgsl) in [("Rg16Unorm", "rg16unorm"), ("Rgba16Unorm", "rgba16unorm")] {
+        for (name, wgsl) in [
+            ("R16Unorm", "r16unorm"),
+            ("Rg16Unorm", "rg16unorm"),
+            ("Rgba16Unorm", "rgba16unorm"),
+        ] {
             let k = compiler
                 .compile_kernel(&program(), "Fill", &[], &[("_Result".into(), name.into())])
                 .unwrap();

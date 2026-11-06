@@ -2766,6 +2766,7 @@ impl UnityRenderer {
             wgpu::TextureFormat::Rg16Unorm => texture_format::RG16_UNORM,
             wgpu::TextureFormat::Rgba16Unorm => texture_format::RGBA16_UNORM,
             wgpu::TextureFormat::Rgb10a2Unorm => texture_format::RGB10A2_UNORM,
+            wgpu::TextureFormat::R16Unorm => texture_format::R16_UNORM,
             _ => 0,
         };
         let next = handle::PLAIN_MAX - self.grabs.len() as u64;
@@ -3354,7 +3355,8 @@ impl UnityRenderer {
                         }
                     }
                 }
-                wgpu::TextureFormat::Rg16Unorm
+                wgpu::TextureFormat::R16Unorm
+                | wgpu::TextureFormat::Rg16Unorm
                 | wgpu::TextureFormat::Rgba16Unorm
                 | wgpu::TextureFormat::Rgb10a2Unorm => {
                     for pixel in line.chunks_exact(texel as usize) {

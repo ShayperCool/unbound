@@ -62,6 +62,7 @@ fn storage_format_name(format: wgpu::TextureFormat) -> Option<&'static str> {
     use wgpu::TextureFormat as F;
     Some(match format.remove_srgb_suffix() {
         F::R8Unorm => "R8Unorm",
+        F::R16Unorm => "R16Unorm",
         F::R16Float => "R16Float",
         F::R32Float => "R32Float",
         F::R32Uint => "R32Uint",
@@ -83,6 +84,7 @@ fn wgpu_storage_format(name: &str) -> wgpu::TextureFormat {
     use wgpu::TextureFormat as F;
     match name {
         "R8Unorm" => F::R8Unorm,
+        "R16Unorm" => F::R16Unorm,
         "R16Float" => F::R16Float,
         "R32Float" => F::R32Float,
         "R32Uint" => F::R32Uint,
@@ -952,7 +954,11 @@ mod tests {
     #[test]
     fn normalized_16_bit_storage_formats_round_trip() {
         use wgpu::TextureFormat as F;
-        for (format, name) in [(F::Rg16Unorm, "Rg16Unorm"), (F::Rgba16Unorm, "Rgba16Unorm")] {
+        for (format, name) in [
+            (F::R16Unorm, "R16Unorm"),
+            (F::Rg16Unorm, "Rg16Unorm"),
+            (F::Rgba16Unorm, "Rgba16Unorm"),
+        ] {
             assert_eq!(storage_format_name(format), Some(name));
             assert_eq!(wgpu_storage_format(name), format);
         }
