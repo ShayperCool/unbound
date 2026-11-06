@@ -14,7 +14,9 @@ using UnityEngine;
 /// </summary>
 public class LightmapUvProbe : MonoBehaviour
 {
-    static readonly string[] Variants = { "Default", "Hard30", "Distort", "Manual", "Calc", "Off", "Raw", "RawOff" };
+    static readonly string[] Variants = { "Default", "Hard30", "Distort", "Manual", "Calc", "Off", "Raw", "RawOff",
+        "NormImport", "NormCalc", "NormCalc30", "NormCalc180", "NormLegacy", "NormUnweighted", "NormArea", "NormAngle",
+        "NormGroups", "NormFromAngle", "NormNoSplit", "NormNone" };
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run() => new GameObject("LightmapUvProbe").AddComponent<LightmapUvProbe>();
@@ -25,17 +27,38 @@ public class LightmapUvProbe : MonoBehaviour
     static string V2(Vector2 v) => $"[{F(v.x)},{F(v.y)}]";
     static string V3(Vector3 v) => $"[{F(v.x)},{F(v.y)},{F(v.z)}]";
 
+    static IEnumerable<Tuple<string, Mesh>> Entries(string variant)
+    {
+        if (!variant.StartsWith("Norm", StringComparison.Ordinal))
+        {
+            foreach (var mesh in Resources.LoadAll<Mesh>(variant).OrderBy(m => m.name, StringComparer.Ordinal))
+                yield return Tuple.Create(mesh.name, mesh);
+            yield break;
+        }
+        // Asset identity keeps separate OBJ files distinct even when their meshes share a name.
+        var assets = new[] { "Authored", "Bare", "Cube", "Cylinder", "Edges", "Faces", "Grid", "Groups", "Ico",
+            "Kite", "Multi", "Organic", "Pieces", "Polys", "Prism", "Sphere", "Star", "StarObj", "Tent",
+            "Torus", "Triangle", "TwoUV" };
+        foreach (var asset in assets)
+        {
+            var meshes = Resources.LoadAll<Mesh>(variant + "/" + asset);
+            for (int i = 0; i < meshes.Length; ++i)
+                yield return Tuple.Create(asset + "/" + i, meshes[i]);
+        }
+    }
+
     void Start()
     {
         var output = new StringBuilder();
         foreach (var variant in Variants)
         {
-            foreach (var mesh in Resources.LoadAll<Mesh>(variant).OrderBy(m => m.name, StringComparer.Ordinal))
+            foreach (var entry in Entries(variant))
             {
+                var mesh = entry.Item2;
                 var uv2 = new List<Vector2>();
                 mesh.GetUVs(1, uv2);
                 output.Append("{\"variant\":").Append(Q(variant))
-                    .Append(",\"mesh\":").Append(Q(mesh.name))
+                    .Append(",\"mesh\":").Append(Q(entry.Item1))
                     .Append(",\"vertexCount\":").Append(mesh.vertexCount)
                     .Append(",\"subMeshes\":").Append(L(Enumerable.Range(0, mesh.subMeshCount), i => L(mesh.GetTriangles(i), t => t.ToString(CultureInfo.InvariantCulture))))
                     .Append(",\"vertices\":").Append(L(mesh.vertices, V3))

@@ -1838,6 +1838,23 @@ impl<'a> Builder<'a> {
         (out, materials, warning)
     }
 
+    /// The control points in the importer's order: the file's, an OBJ's in the order the faces'
+    /// corners first use them.
+    fn control_point_order(&self, mesh: &ufbx::Mesh) -> Vec<u32> {
+        if !self.obj {
+            return (0..mesh.vertices.len() as u32).collect();
+        }
+        let mut seen = vec![false; mesh.vertices.len()];
+        let mut order = Vec::with_capacity(mesh.vertices.len());
+        for &v in mesh.vertex_indices.iter() {
+            if !std::mem::replace(&mut seen[v as usize], true) {
+                order.push(v);
+            }
+        }
+        order.extend((0..mesh.vertices.len() as u32).filter(|&v| !seen[v as usize]));
+        order
+    }
+
     /// UV2 per triangle corner from the lightmap unwrap of the whole mesh. Unity unwraps the
     /// mesh as it holds it after triangulation and welding: the control points in file order (an
     /// OBJ's in the order the faces' corners first use them) with each position kept once, the
@@ -1859,19 +1876,7 @@ impl<'a> Builder<'a> {
                     .into(),
             );
         }
-        let order: Vec<u32> = if self.obj {
-            let mut seen = vec![false; mesh.vertices.len()];
-            let mut order = Vec::with_capacity(mesh.vertices.len());
-            for &v in mesh.vertex_indices.iter() {
-                if !std::mem::replace(&mut seen[v as usize], true) {
-                    order.push(v);
-                }
-            }
-            order.extend((0..mesh.vertices.len() as u32).filter(|&v| !seen[v as usize]));
-            order
-        } else {
-            (0..mesh.vertices.len() as u32).collect()
-        };
+        let order = self.control_point_order(mesh);
         // Equal positions weld to the first (compared as floats: -0 and 0 weld).
         let mut index = vec![0u32; mesh.vertices.len()];
         let mut positions: Vec<[f32; 3]> = Vec::with_capacity(order.len());
@@ -2492,6 +2497,9 @@ fn bone_weight(skin: &ufbx::SkinDeformer, vertex: usize) -> BoneWeight {
 mod lightmap_uv;
 mod materials;
 mod tangent_space;
+
+#[cfg(test)]
+mod normals;
 
 #[cfg(test)]
 mod tests;

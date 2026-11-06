@@ -57,3 +57,24 @@ the Editor welds). The Torus is unwrapped as the Editor does, but its mesh is na
 object, not "default", so the comparison cannot pair it. Meshes Unbound does not reproduce yet
 warn and keep the file's UV2: the Cylinder (its 16-gon caps are triangulated differently than by
 the Editor's FBX reader) and Organic (non-manifold vertices after welding).
+
+## Imported normals
+
+The `Norm*` variants disable mesh optimization and generated UV2. They cover Import, Calculate,
+None, smoothing angles 30/60/180, all five weighting modes, and each smoothing source. The
+additional sources in `Sources/Normals` cover irregular faces, authored normals, FBX face/group/edge
+smoothing, missing OBJ normals, convex and concave n-gons, and the triangle/quad numbering fixtures.
+New records use the source asset and mesh index as their key, so independent OBJ files remain
+separate even when Unity calls every mesh `default`. Existing unwrap records retain their keys.
+
+Unity 6000.0's [Model tab](https://docs.unity3d.com/6000.0/Documentation/Manual/FBXImporter-Model.html)
+documents the Import fallback when normals are absent, the five calculation modes, smoothing
+sources, and None's empty normals. Its API describes
+[normalCalculationMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ModelImporter-normalCalculationMode.html),
+[normalSmoothingSource](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ModelImporter-normalSmoothingSource.html),
+[normalSmoothingAngle](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ModelImporter-normalSmoothingAngle.html),
+and [importNormals](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ModelImporter-importNormals.html).
+The Manual describes Smoothness Source None as avoiding hard-edge splits; the captured meshes
+instead have separate flat face normals. The reference records the measured result. Corner
+numbering, normal arithmetic, split thresholds, and n-gon triangle order are measured details of
+6000.0.71f1, not documented guarantees for other releases.

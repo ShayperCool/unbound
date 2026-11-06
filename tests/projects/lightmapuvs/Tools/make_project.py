@@ -12,6 +12,22 @@ turns on generateSecondaryUV with the variant's unwrap settings:
     Raw       mesh optimization off (vertices and triangles in import order), defaults otherwise
     RawOff    mesh optimization and generateSecondaryUV off
 
+The normals variants hold the smaller models and Sources/Normals, with mesh optimization and
+generateSecondaryUV off, under each normals setting (`tangentSpace`):
+
+    NormImport      normals imported (the default: Area and Angle Weighted, Prefer Smoothing Groups)
+    NormCalc        normals calculated, smoothing angle 60
+    NormCalc30      ... smoothing angle 30
+    NormCalc180     ... smoothing angle 180
+    NormLegacy      ... Normals Mode Unweighted (Legacy)
+    NormUnweighted  ... Normals Mode Unweighted
+    NormArea        ... Normals Mode Area Weighted
+    NormAngle       ... Normals Mode Angle Weighted
+    NormGroups      ... Smoothness Source From Smoothing Groups
+    NormFromAngle   ... Smoothness Source From Angle
+    NormNoSplit     ... Smoothness Source None
+    NormNone        normals None
+
 GUIDs are derived from the asset path, so a rerun rewrites the same project.
 """
 import hashlib
@@ -21,7 +37,8 @@ import shutil
 PROBE = Path(__file__).resolve().parents[1]
 DEFAULTS = dict(generateSecondaryUV=1, secondaryUVAngleDistortion=8, secondaryUVAreaDistortion=15.000001,
                 secondaryUVHardAngle=88, secondaryUVMarginMethod=1, secondaryUVMinLightmapResolution=40,
-                secondaryUVMinObjectScale=1, secondaryUVPackMargin=4, meshOptimizationFlags=-1)
+                secondaryUVMinObjectScale=1, secondaryUVPackMargin=4, meshOptimizationFlags=-1,
+                normalSmoothAngle=60, normalImportMode=0, normalCalculationMode=4, normalSmoothingSource=0)
 VARIANTS = {
     'Default': {},
     'Hard30': dict(secondaryUVHardAngle=30),
@@ -31,6 +48,23 @@ VARIANTS = {
     'Off': dict(generateSecondaryUV=0),
     'Raw': dict(meshOptimizationFlags=0),
     'RawOff': dict(meshOptimizationFlags=0, generateSecondaryUV=0),
+}
+NORMAL_MODELS = ('Cube', 'Cylinder', 'Grid', 'Ico', 'Multi', 'Organic', 'Pieces', 'Sphere', 'Torus', 'TwoUV')
+RAW = dict(meshOptimizationFlags=0, generateSecondaryUV=0)
+CALCULATE = dict(RAW, normalImportMode=1)
+NORMAL_VARIANTS = {
+    'NormImport': RAW,
+    'NormCalc': CALCULATE,
+    'NormCalc30': dict(CALCULATE, normalSmoothAngle=30),
+    'NormCalc180': dict(CALCULATE, normalSmoothAngle=180),
+    'NormLegacy': dict(CALCULATE, normalCalculationMode=0),
+    'NormUnweighted': dict(CALCULATE, normalCalculationMode=1),
+    'NormArea': dict(CALCULATE, normalCalculationMode=2),
+    'NormAngle': dict(CALCULATE, normalCalculationMode=3),
+    'NormGroups': dict(CALCULATE, normalSmoothingSource=1),
+    'NormFromAngle': dict(CALCULATE, normalSmoothingSource=2),
+    'NormNoSplit': dict(CALCULATE, normalSmoothingSource=3),
+    'NormNone': dict(RAW, normalImportMode=2),
 }
 
 META = '''fileFormatVersion: 2
@@ -103,13 +137,13 @@ ModelImporter:
     useFileScale: 1
     strictVertexDataChecks: 0
   tangentSpace:
-    normalSmoothAngle: 60
-    normalImportMode: 0
+    normalSmoothAngle: {normalSmoothAngle}
+    normalImportMode: {normalImportMode}
     tangentImportMode: 3
-    normalCalculationMode: 4
+    normalCalculationMode: {normalCalculationMode}
     legacyComputeAllNormalsFromSmoothingGroupsWhenMeshHasBlendShapes: 0
     blendShapeNormalImportMode: 1
-    normalSmoothingSource: 0
+    normalSmoothingSource: {normalSmoothingSource}
   referencedClips: []
   importAnimation: 0
   humanDescription:
@@ -163,8 +197,12 @@ def main():
         shutil.rmtree(resources)
     resources.mkdir(parents=True)
     (PROBE/'Assets/Resources.meta').write_text(FOLDER.format(guid=guid('Assets/Resources')))
-    sources = sorted(p for p in (PROBE/'Sources').iterdir() if p.suffix in ('.fbx', '.obj'))
-    for variant, overrides in VARIANTS.items():
+    models = sorted(p for p in (PROBE/'Sources').iterdir() if p.suffix in ('.fbx', '.obj'))
+    normal_models = [p for p in models if p.stem in NORMAL_MODELS]
+    normal_models += sorted(p for p in (PROBE/'Sources/Normals').iterdir() if p.suffix in ('.fbx', '.obj'))
+    variants = [(v, o, models) for v, o in VARIANTS.items()]
+    variants += [(v, o, normal_models) for v, o in NORMAL_VARIANTS.items()]
+    for variant, overrides, sources in variants:
         folder = resources/variant
         folder.mkdir()
         rel = f'Assets/Resources/{variant}'

@@ -108,41 +108,49 @@ pub fn shape_corner_normals(
         .collect()
 }
 
-struct Triangles<'a> {
+/// Faces over indexed vertices: face `f` uses `indices[start[f]..start[f + 1]]`.
+struct Polygons<'a> {
     positions: &'a [[f32; 3]],
     normals: &'a [[f32; 3]],
     uvs: &'a [[f32; 2]],
     indices: &'a [u32],
+    start: &'a [u32],
     tangents: Vec<[f32; 4]>,
     found: Vec<bool>,
 }
 
-impl Geometry for Triangles<'_> {
+impl Polygons<'_> {
+    fn index(&self, face: usize, vert: usize) -> usize {
+        self.indices[self.start[face] as usize + vert] as usize
+    }
+}
+
+impl Geometry for Polygons<'_> {
     fn num_faces(&self) -> usize {
-        self.indices.len() / 3
+        self.start.len() - 1
     }
 
-    fn num_vertices_of_face(&self, _face: usize) -> usize {
-        3
+    fn num_vertices_of_face(&self, face: usize) -> usize {
+        (self.start[face + 1] - self.start[face]) as usize
     }
 
     fn position(&self, face: usize, vert: usize) -> [f32; 3] {
-        self.positions[self.indices[face * 3 + vert] as usize]
+        self.positions[self.index(face, vert)]
     }
 
     fn normal(&self, face: usize, vert: usize) -> [f32; 3] {
-        self.normals[self.indices[face * 3 + vert] as usize]
+        self.normals[self.index(face, vert)]
     }
 
     fn tex_coord(&self, face: usize, vert: usize) -> [f32; 2] {
         self.uvs
-            .get(self.indices[face * 3 + vert] as usize)
+            .get(self.index(face, vert))
             .copied()
             .unwrap_or([0.0, 0.0])
     }
 
     fn set_tangent(&mut self, tangent_space: Option<TangentSpace>, face: usize, vert: usize) {
-        let vertex = self.indices[face * 3 + vert] as usize;
+        let vertex = self.index(face, vert);
         if let Some(space) = tangent_space
             && !self.found[vertex]
         {
@@ -161,11 +169,36 @@ pub fn mikk_tangents(
     triangles: &[Vec<u32>],
 ) -> Vec<[f32; 4]> {
     let indices: Vec<u32> = triangles.iter().flatten().copied().collect();
-    let mut geometry = Triangles {
+    let start: Vec<u32> = (0..=indices.len() as u32 / 3).map(|f| 3 * f).collect();
+    tangents(positions, normals, uvs, &indices, &start)
+}
+
+/// MikkTSpace tangents per corner of faces of three or four corners, the corners listed in face
+/// order with `start` their first corner per face (and the count at the end): the importer's
+/// tangents before it makes vertices.
+pub fn face_tangents(
+    positions: &[[f32; 3]],
+    normals: &[[f32; 3]],
+    uvs: &[[f32; 2]],
+    start: &[u32],
+) -> Vec<[f32; 4]> {
+    let indices: Vec<u32> = (0..positions.len() as u32).collect();
+    tangents(positions, normals, uvs, &indices, start)
+}
+
+fn tangents(
+    positions: &[[f32; 3]],
+    normals: &[[f32; 3]],
+    uvs: &[[f32; 2]],
+    indices: &[u32],
+    start: &[u32],
+) -> Vec<[f32; 4]> {
+    let mut geometry = Polygons {
         positions,
         normals,
         uvs,
-        indices: &indices,
+        indices,
+        start,
         tangents: vec![[1.0, 0.0, 0.0, 1.0]; positions.len()],
         found: vec![false; positions.len()],
     };
