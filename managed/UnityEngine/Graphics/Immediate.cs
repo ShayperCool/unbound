@@ -160,14 +160,29 @@ namespace Unbound.Runtime
             UnityEngine.RenderTexture.SetActiveQuietly(destination);
         }
 
-        /// <summary>A unit quad over a target (its slice <paramref name="slice"/>) with a material.
-        /// The destination stays active; the current view and projection are restored after.</summary>
-        internal static void BlitWith(ulong target, UnityEngine.Material material, int pass, Dictionary<int, object> properties, int slice = 0)
+        /// <summary>A copy of <paramref name="source"/> stretched over <paramref name="viewport"/>
+        /// (pixels) of the destination (the screen when null) instead of all of it; the
+        /// destination becomes the active render texture.</summary>
+        internal static void BlitInto(UnityEngine.Texture source, UnityEngine.RenderTexture destination, UnityEngine.Rect viewport)
+        {
+            destination ??= UnityEngine.RenderTexture.ScreenStandIn;
+            var material = BlitCopy;
+            material.SetTexture(s_MainTex, source);
+            BlitWith(destination != null ? destination.EnsureCreated() : 0, material, -1, null, 0, viewport);
+            UnityEngine.RenderTexture.SetActiveQuietly(destination);
+        }
+
+        /// <summary>A unit quad over a target (its slice <paramref name="slice"/>; only
+        /// <paramref name="viewport"/>, in pixels, when given) with a material. The destination
+        /// stays active; the current view and projection are restored after.</summary>
+        internal static void BlitWith(ulong target, UnityEngine.Material material, int pass, Dictionary<int, object> properties, int slice = 0,
+            UnityEngine.Rect? viewport = null)
         {
             ulong mesh = BlitQuad.Sync();
             ulong handle = material.Sync();
             var saved = GfxStream.Current;
             GfxStream.SetTarget(target, 0, 0, slice);
+            if (viewport is { } pixels) GfxStream.Viewport(pixels);
             GfxStream.Camera(UnityEngine.Matrix4x4.identity, Ortho);
             GfxStream.Draw(mesh, 0, handle, pass < 0 ? GfxStream.AllPasses : pass, UnityEngine.Matrix4x4.identity, UnityEngine.Color.white,
                 properties: properties != null && properties.Count > 0 ? properties : null);

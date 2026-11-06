@@ -1183,7 +1183,12 @@ namespace Unbound.Runtime
                     // The resolve is the device's, not a draw: GL.wireframe leaves it alone.
                     bool wireframe = GL.wireframe;
                     if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, false);
-                    Graphics.Blit(msaaTarget, resolveTarget);
+                    // An explicit target takes the stretched resolve (above); on the screen a
+                    // partial camera only covers its own rect (measured: tests/projects/display).
+                    if (resolveTarget == null && camera.rect != new Rect(0f, 0f, 1f, 1f))
+                        Immediate.BlitInto(msaaTarget, null, camera.pixelRect);
+                    else
+                        Graphics.Blit(msaaTarget, resolveTarget);
                     if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, true);
                     RenderTexture.ReleaseTemporary(msaaTarget);
                     sceneTarget = resolveTarget;
