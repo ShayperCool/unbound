@@ -28,9 +28,16 @@ with an earlier summary (default: agents/baseline/ when it exists) and lists eve
 status or summary changed. --update-baseline copies this run's summary to agents/baseline/;
 --promote LABEL does that for an earlier run without running anything.
 
-Exit codes: 0 when no probe has a new failure against the baseline and no failing probe got worse
-(fewer passing or more failing checks or counted failures, or an earlier failing step), or, without
-a baseline, when none failed; 1 otherwise; 2 for usage errors.
+Image comparators print measurements, not verdicts. Each run records them (`images` in the
+summary: every printed image mean, worst channel difference and count of pixels over 8, by step,
+comparator and image); a probe with any status regresses when one of them gets worse against the
+baseline: a higher mean as printed (two decimals) or more pixels over the comparator's own bound
+of 8. There is no other tolerance. Summaries written before images were recorded give the
+measurements their stored summary still shows.
+
+Exit codes: 0 when no probe has a new failure against the baseline, no failing probe got worse
+(fewer passing or more failing checks or counted failures, or an earlier failing step) and no image
+measurement got worse, or, without a baseline, when none failed; 1 otherwise; 2 for usage errors.
 """
 import argparse
 import concurrent.futures
@@ -579,6 +586,78 @@ def differences_verdict(text):
     return bool(counts) and all(n == 0 for n in counts)
 
 
+IMAGE_LINES = [
+    # particles/compare_images.py: one line per image, then its worst mean.
+    re.compile(r'^(?P<name>[^:\n]+): mean (?P<mean>\d+(?:\.\d+)?), worst (?P<worst>\d+), over 8: (?P<over>\d+)',
+               re.M),
+    re.compile(r'^(?P<name>worst mean) (?P<mean>\d+(?:\.\d+)?)\s*$', re.M),
+    # urp/compare.py (also baked, shadergraph, urp2d).
+    re.compile(r'(?P<name>)mean max-channel difference (?P<mean>\d+(?:\.\d+)?), worst (?P<worst>\d+), '
+               r'pixels over 8: (?P<over>\d+)'),
+    # display/compare.py.
+    re.compile(r'(?P<name>)image mean (?P<mean>\d+(?:\.\d+)?), worst (?P<worst>\d+)'),
+]
+
+
+def image_measures(text):
+    """{image name: {'mean', 'worst', 'over'}} of the image comparators' printed measurements
+    ('' names the single image of urp/ and display/ comparators)."""
+    found = {}
+    for pattern in IMAGE_LINES:
+        for match in pattern.finditer(text or ''):
+            values = match.groupdict()
+            found.setdefault(values['name'].strip(), {
+                'mean': float(values['mean']),
+                'worst': int(values['worst']) if values.get('worst') else None,
+                'over': int(values['over']) if values.get('over') else None})
+    return found
+
+
+def comparator_name(command):
+    """'urp/compare.py' for a compare step's command: its script's probe directory and name."""
+    for token in command.split()[:3]:
+        if token.endswith('.py'):
+            return '/'.join(Path(token).parts[-2:])
+    return command.split()[0] if command.split() else ''
+
+
+def image_key(index, command, name):
+    return f'step {index} {comparator_name(command)} {name}'.rstrip()
+
+
+def recorded_images(result):
+    """A result's image measurements by key. Summaries written before they were recorded: read
+    from each compare step's part of the stored summary, leaving out parts the truncation cut."""
+    if 'images' in result:
+        return result['images']
+    summary = result.get('summary') or ''
+    parts = summary.split(' || ')
+    if len(summary) >= 1000:
+        parts = parts[:-1]
+    compares = [(index, step) for index, step in enumerate(result.get('steps') or [], 1)
+                if step.get('kind') in ('compare', 'identical')]
+    images = {}
+    for (index, step), part in zip(compares, parts):
+        if len(part) < 300:
+            for name, values in image_measures(part).items():
+                images[image_key(index, step.get('command', ''), name)] = values
+    return images
+
+
+def images_worse(old, new):
+    """What got worse in the image measurements that both results have: a higher printed mean or
+    more pixels over the comparator's own bound of 8. No tolerance: the numbers as printed."""
+    before, after = recorded_images(old), recorded_images(new)
+    changes = []
+    for key in sorted(set(before) & set(after)):
+        a, b = before[key], after[key]
+        if b['mean'] > a['mean']:
+            changes.append(f'{key}: mean {a["mean"]:.2f} -> {b["mean"]:.2f}')
+        elif a.get('over') is not None and b.get('over') is not None and b['over'] > a['over']:
+            changes.append(f'{key}: pixels over 8 {a["over"]} -> {b["over"]}')
+    return changes
+
+
 def last_lines(text, count=1):
     # A comparator that ends with an indented JSON report: summarize it on one line.
     start = text.rfind('\n{')
@@ -752,7 +831,7 @@ def run_probe(name, recipe, context):
     work.mkdir(parents=True)
     values = dict(context['values'], probe=str(PROJECTS/name), work=str(work),
                   runs=str(CACHE/'validation/runs'/name/context['values']['label']))
-    steps, summaries, verdicts, status, stopped = [], [], [], None, None
+    steps, summaries, verdicts, status, stopped, images = [], [], [], None, None, {}
     for index, step in enumerate(recipe, 1):
         log = work/f'step{index:02d}-{step.kind}.log'
         code, text = run_step(step, values, log, context['env'])
@@ -762,6 +841,8 @@ def run_probe(name, recipe, context):
         if step.kind in ('compare', 'identical'):
             summary = measurement(text) if step.verdict == 'none' else last_lines(text)
             summaries.append(summary)
+            for image, values in image_measures(text).items():
+                images[image_key(index, record['command'], image)] = values
             if code not in step.ok or missing_capture(text):
                 verdicts.append(False)
             elif step.verdict == 'summary':
@@ -791,7 +872,7 @@ def run_probe(name, recipe, context):
                   seconds=round(time.time() - started, 1), summary=' || '.join(summaries)[:1000],
                   checks={'passed': sum(v is True for v in verdicts), 'failed': sum(v is False for v in verdicts),
                           'report': sum(v is None for v in verdicts), 'total': len(verdicts)},
-                  steps=steps)
+                  images=images, steps=steps)
     return result
 
 
@@ -912,6 +993,11 @@ def compare_runs(current, previous):
         elif old.get('summary') != result.get('summary') and result['status'] != 'no recipe':
             lines.append(f'summary   {name}: {old.get("summary", "")[:150]}\n'
                          f'       ->  {result.get("summary", "")[:150]}')
+        images = images_worse(old, result) if old is not None else []
+        if images:
+            lines.append(f'images    {name}: ' + '; '.join(images[:8])
+                         + (f'; and {len(images) - 8} more' if len(images) > 8 else ''))
+            regressed = True
     for name in sorted(set(before) - set(current['probes'])):
         lines.append(f'gone      {name} (was {before[name]["status"]})')
     return lines, regressed
