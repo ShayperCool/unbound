@@ -99,3 +99,21 @@ measured. Other releases, surround output and timed snapshot transitions are unm
 existing tolerances and every failing field, including lossy-asset samples. `--reuse-before` reads
 an immutable baseline gate directory. Complete current reports and artifact hashes are required
 for a delivery; these profiles do not establish full-engine parity.
+
+## Engine runs without the Editor
+
+`Authored/unity-6000.0.71f1/<set>/` holds every file a Native run authored in the Editor:
+mixer assets, scenes, `.meta` GUIDs, the Editor's ProjectSettings and `packages-lock.json`.
+`authored.json` records the authoring command and the hash of every fixture file it started
+from. Each set was recorded with `tests/authored_project.py record` from a Native run whose
+capture matched the canonical reference exactly. Sets: `default` (`rate-48000`, `rate-44100`, `renderer-api`: the same case list), `startup`, `pcm`, `gain`, `callbacks`.
+
+```bash
+python3 tests/authored_project.py assemble mixerfilters default --release 6000.0.71f1 --out "$work/native"
+```
+
+The assembled project is the `--native-project` of `engine.py`. A set is refused once any fixture
+file under Assets/, Packages/ or ProjectSettings/ has changed: re-run its recorded command in a
+fresh cache directory and record that project again. `tools/agents/suite.py` runs every profile
+this way.
+

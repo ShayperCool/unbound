@@ -39,3 +39,21 @@ The runner owns its heavy-job wrapping. The comparator reuses the original full
 missing/extra/failing audio union, with ATOL 2e-5 and RTOL 2e-4. All repeated captures,
 engine captures, logs, rejections and unions belong outside Git. This control makes
 no claim about reset or snapshot parity, scheduled generators, or other DSP layouts.
+
+## Engine runs without the Editor
+
+`Authored/unity-6000.0.71f1/<set>/` holds every file a Native run authored in the Editor:
+mixer assets, scenes, `.meta` GUIDs, the Editor's ProjectSettings and `packages-lock.json`.
+`authored.json` records the authoring command and the hash of every fixture file it started
+from. Each set was recorded with `tests/authored_project.py record` from a Native run whose
+capture matched the canonical reference exactly. Sets: `default`.
+
+```bash
+python3 tests/authored_project.py assemble audiogeneratorlifecycle default --release 6000.0.71f1 --out "$work/native"
+```
+
+The assembled project is the `--native-project` of `run.py engine`. A set is refused once any fixture
+file under Assets/, Packages/ or ProjectSettings/ has changed: re-run its recorded command in a
+fresh cache directory and record that project again. `tools/agents/suite.py` runs every profile
+this way.
+

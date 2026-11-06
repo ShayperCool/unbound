@@ -140,3 +140,21 @@ kept in the full original matrix. The lifecycle profile explicitly initializes i
 snapshot through public calls. No engine behavior infers an Editor selection state.
 Engine resource-limit rejection preserves managed paused state, pending sink
 registrations and notifications; its safety tests do not certify reset delivery parity.
+
+## Engine runs without the Editor
+
+`Authored/unity-6000.0.71f1/<set>/` holds every file a Native run authored in the Editor:
+mixer assets, scenes, `.meta` GUIDs, the Editor's ProjectSettings and `packages-lock.json`.
+`authored.json` records the authoring command and the hash of every fixture file it started
+from. Each set was recorded with `tests/authored_project.py record` from a Native run whose
+capture matched the canonical reference exactly. Sets: `default` (both rates), `submission`, `lifecycle`, `generators`; the reset diagnostics have none.
+
+```bash
+python3 tests/authored_project.py assemble mixersuspend default --release 6000.0.71f1 --out "$work/native"
+```
+
+The assembled project is the `--native-project` of `engine.py`. A set is refused once any fixture
+file under Assets/, Packages/ or ProjectSettings/ has changed: re-run its recorded command in a
+fresh cache directory and record that project again. `tools/agents/suite.py` runs every profile
+this way.
+

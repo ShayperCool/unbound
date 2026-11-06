@@ -49,3 +49,21 @@ The structural verifier checks completeness without requiring a particular
 scheduling or mixing result. Publish one canonical release reference only after
 two complete, independent Native captures agree exactly. Keep repeats, engine
 outputs, full unions, failures and runtime manifests outside Git.
+
+## Engine runs without the Editor
+
+`Authored/unity-6000.0.71f1/<set>/` holds every file a Native run authored in the Editor:
+mixer assets, scenes, `.meta` GUIDs, the Editor's ProjectSettings and `packages-lock.json`.
+`authored.json` records the authoring command and the hash of every fixture file it started
+from. Each set was recorded with `tests/authored_project.py record` from a Native run whose
+capture matched the canonical reference exactly. Sets: `default` (the full, non-`--focused` matrix).
+
+```bash
+python3 tests/authored_project.py assemble audiogeneratorboundaries default --release 6000.0.71f1 --out "$work/native"
+```
+
+The assembled project is the `--native-project` of `run.py engine`. A set is refused once any fixture
+file under Assets/, Packages/ or ProjectSettings/ has changed: re-run its recorded command in a
+fresh cache directory and record that project again. `tools/agents/suite.py` runs every profile
+this way.
+
