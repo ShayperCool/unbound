@@ -139,11 +139,11 @@ namespace UnityEngine.Tests
             Assert.True(clearance >= -1e-4f, $"agent penetrated the box footprint by {-clearance} m at {position}");
         }
 
-        static NavMeshPath SearchOnRealizedSurface(NavMeshAgent agent)
+        static NavMeshPath SearchOnRealizedSurface(NavMeshAgent agent, Vector3 start, Vector3 goal)
         {
-            // A new A* query for each control, with fixed endpoints and the real agent filter.
+            // A new A* query for each control, with the same captured active-route endpoints.
             // Does not replace the agent's active corridor or take another simulation step.
-            var search = NavMesh.PathSearch.Begin(agent.m_Surface, Start, Goal, agent.Filter, agent.agentTypeID);
+            var search = NavMesh.PathSearch.Begin(agent.m_Surface, start, goal, agent.Filter, agent.agentTypeID);
             Assert.NotNull(search);
             int budget = int.MaxValue;
             Assert.True(search.Step(ref budget));
@@ -461,14 +461,18 @@ namespace UnityEngine.Tests
                 // actual topology unchanged. A collinear tile-seam waypoint is allowed: the
                 // 6000.0 corners API supplies waypoints, not a fixed count for this bake.
                 var originalPath = agent.path;
+                var queryCorners = originalPath.corners;
+                Assert.True(queryCorners.Length >= 2);
+                var queryStart = queryCorners[0];
+                var queryGoal = queryCorners[queryCorners.Length - 1];
                 var originalMesh = NavMesh.CalculateTriangulation();
                 var originalRouting = RoutingSnapshot(agent);
                 int version = NavWorld.Version;
                 obstacle.carving = false;
-                var withoutCarving = SearchOnRealizedSurface(agent);
+                var withoutCarving = SearchOnRealizedSurface(agent, queryStart, queryGoal);
                 var routingWithoutCarving = RoutingSnapshot(agent);
                 obstacle.carving = true;
-                var withCarving = SearchOnRealizedSurface(agent);
+                var withCarving = SearchOnRealizedSurface(agent, queryStart, queryGoal);
                 var routingWithCarving = RoutingSnapshot(agent);
                 var finalMesh = NavMesh.CalculateTriangulation();
                 Assert.Equal(version, NavWorld.Version);
@@ -485,7 +489,6 @@ namespace UnityEngine.Tests
                 Assert.Equal(originalMesh.vertices, finalMesh.vertices);
                 Assert.Equal(originalMesh.indices, finalMesh.indices);
                 Assert.Equal(originalMesh.areas, finalMesh.areas);
-                Assert.True(originalPath.corners.Length >= 2);
                 Assert.Equal(agent.nextPosition, originalPath.corners[0]);
                 Assert.Equal(Goal.x, originalPath.corners[originalPath.corners.Length - 1].x);
                 Assert.Equal(Goal.z, originalPath.corners[originalPath.corners.Length - 1].z);
