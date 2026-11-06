@@ -44,6 +44,10 @@ pub struct BufferCopyOp {
     size: u64,
 }
 
+/// The suffix of the int property holding the byte offset a constant buffer bound by a cbuffer's
+/// name is read from (`ComputeShader.SetConstantBuffer`).
+const CONSTANT_OFFSET_SUFFIX: &str = "@offset";
+
 /// The suffix glslang gives the block holding a buffer's hidden counter.
 pub(super) const COUNTER_SUFFIX: &str = "@count";
 
@@ -736,11 +740,21 @@ fn main() {
         for block in &gpu.kernel.blocks {
             let mut data = vec![0u8; block.size.max(16) as usize];
             // A constant buffer bound by the cbuffer's name (`SetConstantBuffer`) is the block:
-            // its bytes as written, from its start.
+            // its bytes as written, from the byte offset in `<name>@offset` (else its start).
+            let offset = match Self::dispatch_value(
+                &d.properties,
+                &globals,
+                &format!("{}{CONSTANT_OFFSET_SUFFIX}", block.name),
+            ) {
+                Some(PropertyValue::Int(o)) => (*o).max(0) as usize,
+                _ => 0,
+            };
             let constant = match Self::dispatch_value(&d.properties, &globals, &block.name) {
-                Some(PropertyValue::Buffer(h)) if !block.name.is_empty() => {
-                    self.buffers.get(h).and_then(|b| b.shadow.as_deref())
-                }
+                Some(PropertyValue::Buffer(h)) if !block.name.is_empty() => self
+                    .buffers
+                    .get(h)
+                    .and_then(|b| b.shadow.as_deref())
+                    .map(|bytes| &bytes[offset.min(bytes.len())..]),
                 _ => None,
             };
             if let Some(bytes) = constant {

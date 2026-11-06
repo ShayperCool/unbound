@@ -19,6 +19,20 @@ fragment programs in `Assets/Resources/UavWrite*.shader`). Every case records it
 * **Temporary arrays** (`tarray.*`): `GetTemporaryRTArray` descriptors for every overload, zero and
   one slice, replaced and released temporaries, slices cleared and blitted into, and sizes relative to
   a camera's (-1, -2, -3).
+* **Instanced draws** (`cmd.instanced.*`): `CommandBuffer.DrawMeshInstanced` of a quad into an 8x2
+  target (identity view and projection), every overload, per-instance and single block values,
+  matrices and block changed after recording, 1023 and 1024 instances, and its argument errors.
+* **Indexed procedural draws** (`cmd.indexed.*`, `cmd.indirect.indexed.*`, `graphics.*indexed.now`):
+  a program that places vertex `v % 81` on an 8x8 grid draws cells picked by 16- and 32-bit index
+  buffers, instanced, indirect with a start index and base vertex (graphics and compute argument
+  buffers), through `Graphics.DrawProceduralNow`/`DrawProceduralIndirectNow` too, and the argument
+  errors.
+* **Compute parameters** (`cmd.cbuffer.*`, `handle.*`, `cmd.handle.*`): `SetComputeConstantBufferParam`
+  of graphics and compute constant buffers, at the device's offset alignment, written after
+  recording; `SetComputeBufferParam` of a `GraphicsBufferHandle`.
+* **Graphics fences** (`fence.*`): support flags, async queue and CPU synchronisation fences from
+  command buffers and `Graphics`, `passed` before and after they run, after the GPU finished and
+  three frames later, waits and their argument errors.
 * **Readbacks into slices** (`slice.*`, `cmd.slice.*`): `AsyncGPUReadback.RequestIntoNativeSlice` and
   `CommandBuffer.RequestAsyncReadbackIntoNativeSlice` of buffers (ranges), textures (regions, formats),
   too small, larger and strided slices.
@@ -51,3 +65,18 @@ byte-identical. `check` (the landing gate) runs Unbound and compares every value
   face whatever `srcElement` says.
 * `GetTemporaryRTArray` makes a `Tex2DArray` of at least one slice; -N sizes divide the camera's.
 * Readbacks into a slice write contiguously from its first element, also into a strided slice.
+* `CommandBuffer.DrawMeshInstanced` checks when recorded: a material without instancing throws
+  (the Scripting API says it logs when run), null matrices throw a NullReferenceException, a count
+  past the matrices' length throws, 1024 instances are drawn; an invalid pass logs when run. A
+  block's single value of an instanced property reaches instance 0 only (the others keep the
+  material's).
+* Indexed procedural draws read 16- and 32-bit indices; `SV_VertexID` includes the indirect base
+  vertex. A Structured buffer draws as an index buffer; a count past the buffer draws without an
+  error.
+* A constant buffer is read from its offset (alignment 256) and with what it holds when run.
+* `supportsGraphicsFence` is true, `supportsAsyncCompute` false: `passed` of an async queue fence
+  throws NotSupportedException. A CPU synchronisation fence answers false in the frame it runs,
+  even after the GPU finished, true three frames later, never when not run. Waiting on a CPU fence
+  or an unmade one throws.
+* An Append program whose buffer has no counter warns and appends through some other counter
+  (a GPU race); Unbound skips such a draw with a warning.

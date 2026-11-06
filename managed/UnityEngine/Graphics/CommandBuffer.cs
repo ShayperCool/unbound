@@ -691,6 +691,12 @@ namespace UnityEngine.Rendering
         public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, string name, ComputeBuffer buffer) => SetComputeBufferParam(computeShader, kernelIndex, Shader.PropertyToID(name), buffer);
         public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, int nameID, GraphicsBuffer buffer) => Add(c => computeShader.SetBuffer(kernelIndex, nameID, buffer));
         public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, string name, GraphicsBuffer buffer) => SetComputeBufferParam(computeShader, kernelIndex, Shader.PropertyToID(name), buffer);
+        public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, int nameID, GraphicsBufferHandle bufferHandle) => Add(c => computeShader.SetBuffer(kernelIndex, nameID, bufferHandle));
+        public void SetComputeBufferParam(ComputeShader computeShader, int kernelIndex, string name, GraphicsBufferHandle bufferHandle) => SetComputeBufferParam(computeShader, kernelIndex, Shader.PropertyToID(name), bufferHandle);
+        public void SetComputeConstantBufferParam(ComputeShader computeShader, int nameID, ComputeBuffer buffer, int offset, int size) => Add(c => computeShader.SetConstantBuffer(nameID, buffer, offset, size));
+        public void SetComputeConstantBufferParam(ComputeShader computeShader, string name, ComputeBuffer buffer, int offset, int size) => SetComputeConstantBufferParam(computeShader, Shader.PropertyToID(name), buffer, offset, size);
+        public void SetComputeConstantBufferParam(ComputeShader computeShader, int nameID, GraphicsBuffer buffer, int offset, int size) => Add(c => computeShader.SetConstantBuffer(nameID, buffer, offset, size));
+        public void SetComputeConstantBufferParam(ComputeShader computeShader, string name, GraphicsBuffer buffer, int offset, int size) => SetComputeConstantBufferParam(computeShader, Shader.PropertyToID(name), buffer, offset, size);
 
         public void DispatchCompute(ComputeShader computeShader, int kernelIndex, int threadGroupsX, int threadGroupsY, int threadGroupsZ) =>
             Add(c => computeShader.Dispatch(kernelIndex, threadGroupsX, threadGroupsY, threadGroupsZ));

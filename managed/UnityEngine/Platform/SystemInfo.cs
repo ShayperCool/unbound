@@ -312,7 +312,10 @@ namespace UnityEngine
         public static bool supportsMultiview => false;
         [Unbound.EditorFaithful("measured: tests/projects/urp CapsProbe; indirect draws run (Graphics.DrawMeshInstancedIndirect, DrawProceduralIndirect)")]
         public static bool supportsIndirectArgumentsBuffer => true;
-        public static bool supportsGraphicsFence { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsGraphicsFence", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }
+        /// <summary>The Editor's OpenGL Core answer (measured: cmdbuffers fence.supported); its async
+        /// queue fences cannot be asked whether they passed (supportsAsyncCompute is false).</summary>
+        [Unbound.EditorFaithful("measured: tests/projects/cmdbuffers fence.supported")]
+        public static bool supportsGraphicsFence => true;
         public static bool supportsRenderTargetArrayIndexFromVertexShader { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsRenderTargetArrayIndexFromVertexShader", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }
         public static bool supportsMultisampled2DArrayTextures { get { Unbound.Runtime.Stubs.Ignored("SystemInfo.supportsMultisampled2DArrayTextures", "answers false, what Unbound's renderer does (the Editor answers true): games take their fallback path"); return false; } }
     }

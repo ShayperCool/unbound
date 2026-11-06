@@ -26,8 +26,8 @@ namespace Unbound.Runtime
             // Render protocol 9 (NativeApi 19).
             CopyDepthOp = 29;
 
-        /// <summary>The size of a DrawIndices index: 16-bit indices, the only ones drawn.</summary>
-        internal const byte DrawIndexSize = 2;
+        /// <summary>The sizes of a DrawIndices index: 16-bit, and 32-bit from render protocol 10.</summary>
+        internal const byte DrawIndexSize = 2, DrawIndex32Size = 4;
 
         internal const ulong NoTexture = ulong.MaxValue;
 
@@ -279,7 +279,7 @@ namespace Unbound.Runtime
 
         /// <summary>How the next draw runs: instances, or counts read on the GPU from an arguments
         /// buffer (indexed: DrawMeshInstancedIndirect's layout; not: DrawProceduralIndirect's);
-        /// then, when it has them, the 16-bit indices from a buffer it reads instead of its mesh's
+        /// then, when it has them, the indices from a buffer it reads instead of its mesh's
         /// (DrawIndices: buffer, index size, first index, index count).</summary>
         internal static void DrawSetup(in Unbound.Runtime.DrawSetup setup)
         {
@@ -291,7 +291,7 @@ namespace Unbound.Runtime
             if (setup.Indices == 0) return;
             U8(DrawIndicesOp);
             U64(setup.Indices);
-            U8(DrawIndexSize);
+            U8(setup.IndexSize == DrawIndex32Size ? DrawIndex32Size : DrawIndexSize);
             U32(setup.FirstIndex);
             U32(setup.IndexCount);
         }

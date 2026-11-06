@@ -57,7 +57,7 @@ namespace UnityEngine
         internal static readonly int kMaxDrawMeshInstanceCount = 1023;
 
         /// <summary>The block's values for one instance: each array's element, the rest as set.</summary>
-        static MaterialPropertyBlock Instance(MaterialPropertyBlock block, int index)
+        internal static MaterialPropertyBlock Instance(MaterialPropertyBlock block, int index)
         {
             if (block == null || block.isEmpty) return null;
             var one = new MaterialPropertyBlock();
@@ -354,20 +354,15 @@ namespace UnityEngine
 
         // ------------------------------------------------------------------ RenderPrimitivesIndexed, RenderPrimitivesIndexedIndirect
 
-        /// <summary>The vertices of the stand-in an indexed procedural draw binds (zeroed: the shader
-        /// builds its vertices from SV_VertexID, which the indices set): one for each of the 2^16
-        /// values a 16-bit index takes, so with base vertex 0 every index has its vertex.</summary>
-        const int k_IndexedVertices = 1 << 16;
-
         const string k_Indexed = "UnityEngine.Graphics.RenderPrimitivesIndexed";
 
         /// <summary>Primitives whose vertex ids are read from <paramref name="indexBuffer"/>:
         /// <paramref name="indexCount"/> indices from <paramref name="startIndex"/>, per instance
         /// (RenderPrimitivesIndexed 6000.0: the shader fetches or calculates vertex data from
-        /// SV_VertexID, "set with values in the indexBuffer"). Drawn from 16-bit index buffers
-        /// (stride 2) of triangles, lines or points: every index value has a vertex in the
-        /// 65536-vertex stand-in. Not drawn, each case counted and warned once: 32-bit indices (the
-        /// documented example's), whose values Unbound cannot bound, quads, line strips and other
+        /// SV_VertexID, "set with values in the indexBuffer"), drawn as
+        /// <see cref="IndexedDraws"/> draws them from 16-bit indices of triangles, lines or
+        /// points. Not drawn, each case counted and warned once: 32-bit indices (the documented
+        /// example's; not yet measured through this call), quads, line strips and other
         /// strides.</summary>
         public static void RenderPrimitivesIndexed(in RenderParams rparams, MeshTopology topology, GraphicsBuffer indexBuffer, int indexCount, int startIndex = 0, int instanceCount = 1)
         {
@@ -383,22 +378,11 @@ namespace UnityEngine
             if (indexCount <= 0 || instanceCount <= 0) return;
             if (stride == 4)
             {
-                Stubs.Ignored(k_Indexed, "with 32-bit indices is not drawn yet: Unbound draws indexed primitives only from 16-bit index buffers, whose every index value it gives a vertex");
+                Stubs.Ignored(k_Indexed, "with 32-bit indices is not drawn yet (unmeasured here; the command buffer's indexed draws read them)");
                 return;
             }
-            if (stride != 2)
-            {
-                Stubs.Ignored(k_Indexed + " index stride", "other than 2 or 4 bytes is not drawn");
-                return;
-            }
-            if (topology != MeshTopology.Triangles && topology != MeshTopology.Lines && topology != MeshTopology.Points)
-            {
-                string name = topology == MeshTopology.Quads || topology == MeshTopology.LineStrip ? topology.ToString() : "other";
-                Stubs.Ignored(k_Indexed + " MeshTopology." + name, "is not drawn yet from an index buffer");
-                return;
-            }
-            Render(rparams, ProceduralMeshes.Get(topology, k_IndexedVertices), 0, Matrix4x4.identity,
-                new DrawSetup { Instances = (uint)instanceCount, Indices = indexBuffer.Handle, FirstIndex = (uint)startIndex, IndexCount = (uint)indexCount });
+            if (!IndexedDraws.Supported(indexBuffer, topology, k_Indexed)) return;
+            Render(rparams, IndexedDraws.StandIn(topology), 0, Matrix4x4.identity, IndexedDraws.Direct(indexBuffer, startIndex, indexCount, instanceCount));
         }
 
         /// <summary>Indexed primitives whose counts, first index and base vertex the GPU reads

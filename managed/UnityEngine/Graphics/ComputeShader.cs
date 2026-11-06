@@ -131,6 +131,32 @@ namespace UnityEngine
         }
 
         public void SetBuffer(int kernelIndex, string name, ComputeBuffer buffer) => SetBuffer(kernelIndex, Shader.PropertyToID(name), buffer);
+
+        /// <summary>A buffer by its handle (CommandBuffer.SetComputeBufferParam).</summary>
+        internal void SetBuffer(int kernelIndex, int nameID, GraphicsBufferHandle bufferHandle)
+        {
+            Kernel(kernelIndex);
+            m_Bound[(kernelIndex, nameID)] = bufferHandle;
+        }
+
+        /// <summary>The suffix of the int property a constant buffer's byte offset goes in: the
+        /// renderer fills the cbuffer of the name from the buffer at that offset.</summary>
+        internal const string ConstantOffsetSuffix = "@offset";
+
+        /// <summary>A constant buffer bound to the cbuffer of the name in every kernel, read from
+        /// <paramref name="offset"/> bytes (measured: cmdbuffers cmd.cbuffer.*). A buffer's bytes are
+        /// those written to it: what kernels write into it is not seen.</summary>
+        public void SetConstantBuffer(int nameID, ComputeBuffer buffer, int offset, int size) => SetConstantBuffer(nameID, (object)buffer, offset);
+        public void SetConstantBuffer(string name, ComputeBuffer buffer, int offset, int size) => SetConstantBuffer(Shader.PropertyToID(name), (object)buffer, offset);
+        public void SetConstantBuffer(int nameID, GraphicsBuffer buffer, int offset, int size) => SetConstantBuffer(nameID, (object)buffer, offset);
+        public void SetConstantBuffer(string name, GraphicsBuffer buffer, int offset, int size) => SetConstantBuffer(Shader.PropertyToID(name), (object)buffer, offset);
+
+        void SetConstantBuffer(int nameID, object buffer, int offset)
+        {
+            m_Values[nameID] = buffer;
+            var name = Shader.IdToName(nameID);
+            if (name != null) m_Values[Shader.PropertyToID(name + ConstantOffsetSuffix)] = offset;
+        }
         public void SetBuffer(int kernelIndex, string name, GraphicsBuffer buffer) => SetBuffer(kernelIndex, Shader.PropertyToID(name), buffer);
 
         // ------------------------------------------------------------ keywords
@@ -273,6 +299,7 @@ namespace UnityEngine
                         break;
                     case ComputeBuffer cb: p.Kind = GfxStream.BufferKind; p.Handle = cb.Handle; break;
                     case GraphicsBuffer gb: p.Kind = GfxStream.BufferKind; p.Handle = gb.Handle; break;
+                    case GraphicsBufferHandle h: p.Kind = GfxStream.BufferKind; p.Handle = h.value; break;
                     default: return;
                 }
                 s_Properties.Add(p);

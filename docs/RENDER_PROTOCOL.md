@@ -56,6 +56,11 @@ block (`<name>@count`, as glslang compiles `Append`, `Consume` and `IncrementCou
 renderer copies a counter only after a dispatch has bound it, as Unity does. A 14 side and a 15
 side refuse each other at startup in either pairing.
 
+A `Dispatch` buffer property named after one of the kernel's cbuffers (a constant buffer, usage
+bit 512) fills that cbuffer with the buffer's written bytes, from the byte offset in the int
+property `<name>@offset` when there is one (`ComputeShader.SetConstantBuffer`); the cbuffer's
+own uniform properties are then not used.
+
 ### Render protocol 6: texture handle element bits (NativeApi 13)
 
 NativeApi 14 appends `wrap_w` to `TexturePacket` and `ImportedTextureInfo`, and the
