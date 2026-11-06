@@ -1267,13 +1267,18 @@ namespace UnityEngine.Tests
             Assert.InRange(ps.particleCount, 8, 10);
             var particles = new ParticleSystem.Particle[16];
             int n = ps.GetParticles(particles);
+            // Gravity (modifier 2) pulls every particle down; over 0.1 s it falls at most g·t², so a
+            // particle emitted near 0° can sit just below the x axis. Lift it by that bound and the
+            // emission direction must lie in the 90° arc (the auto random seed picks the directions).
+            // g is the particle simulation's own gravity, not Physics.gravity, which other tests change.
+            float maxFall = main.gravityModifier.constant * ParticleSystem.s_Gravity3D.magnitude * 0.1f * 0.1f;
             for (int i = 0; i < n; i++)
             {
                 Assert.InRange(particles[i].startLifetime, 0.35f, 0.45f);
                 Assert.InRange(particles[i].startSize, 20f, 30f);
                 float distance = new Vector2(particles[i].position.x, particles[i].position.y).magnitude;
                 Assert.True(distance > 40f, distance.ToString()); // on the circle, then moving outward
-                float angle = Mathf.Atan2(particles[i].position.y, particles[i].position.x) * Mathf.Rad2Deg;
+                float angle = Mathf.Atan2(particles[i].position.y + maxFall, particles[i].position.x) * Mathf.Rad2Deg;
                 Assert.InRange(angle, -0.01f, 90.01f);
             }
             Run(ps, 0.5f);
