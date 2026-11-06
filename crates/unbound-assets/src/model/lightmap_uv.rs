@@ -1,12 +1,27 @@
-//! Lightmap UVs (`ModelImporter.generateSecondaryUV`): the unwrap Unity's model importer runs on
-//! a mesh's triangles before they become vertices, so that its seams split vertices like any
-//! other attribute (measured: tests/projects/lightmapuvs).
+//! Lightmap UVs (`ModelImporter.generateSecondaryUV`): UV2 is generated per triangle corner,
+//! before the corners become vertices, so that its seams split vertices like any other attribute
+//! (measured: tests/projects/lightmapuvs).
 //!
 //! The input is the mesh as the importer holds it after triangulation: the control points in
 //! Unity's space, the triangles in polygon order (each quad split into two), the polygon each
 //! triangle comes from, and UV0 per triangle corner. The output is UV2 per triangle corner.
+//!
+//! The unwrap fits the mesh into a unit cube and welds it ([`cleanup`]), builds a half-edge map
+//! ([`mesh`]), segments each connected part into charts ([`segment`]), lays each chart flat from
+//! corrected angles by least squares and checks it ([`param`]), and packs the charts ([`pack`]).
+//! Not reproduced yet (the mesh warns and keeps the file's UV2): parts of more than 100
+//! triangles, degenerate and non-manifold triangles, charts touching themselves at a vertex and
+//! charts overlapping themselves.
 
 use super::SecondaryUvSettings;
+
+mod cleanup;
+mod math;
+mod mesh;
+mod pack;
+mod param;
+mod segment;
+mod sort;
 
 /// The mesh the unwrap works on.
 pub struct UnwrapInput<'a> {
@@ -34,8 +49,8 @@ pub struct UnwrapParams {
 impl UnwrapParams {
     /// The parameters for `input`: the distortions in percent become fractions; the margin is
     /// the manual one in pixels of a 1024 map, or calculated from the mesh's area so that charts
-    /// stay apart at the minimum lightmap resolution and object scale. The unwrap scales down a
-    /// margin too large for its charts (small meshes get margins above 1).
+    /// stay apart at the minimum lightmap resolution and object scale. Small meshes get margins
+    /// above 1, which the packer halves until the charts fit.
     pub fn new(settings: &SecondaryUvSettings, input: &UnwrapInput) -> Result<Self, String> {
         let pack_margin = if settings.margin_method == 1 {
             let mut area = 0f32;
@@ -71,20 +86,82 @@ impl UnwrapParams {
     }
 }
 
-/// UV2 per triangle corner.
+/// UV2 per triangle corner: the mesh is cut into charts, each laid flat, and the charts are
+/// packed into the unit square.
 pub fn unwrap(input: &UnwrapInput, params: &UnwrapParams) -> Result<Vec<[[f32; 2]; 3]>, String> {
-    debug_assert!(input.polygons.len() == input.triangles.len());
-    debug_assert!(
-        input
-            .uvs
-            .is_none_or(|uvs| uvs.len() == input.triangles.len())
-    );
-    let _ = params;
-    Err("Unity's lightmap unwrap is not reproduced yet".into())
+    let geometry = cleanup::prepare(input.positions, input.triangles)?;
+    let desc = mesh::Triangles {
+        positions: &geometry.positions,
+        triangles: &geometry.triangles,
+        sources: Some(input.polygons),
+        uvs: input.uvs,
+    };
+    let map = mesh::HalfEdgeMesh::create(&desc, params.hard_angle)?;
+    let mut charts = Vec::new();
+    for component in map.connected_components() {
+        parametrize(&map, component, params, &mut charts)?;
+    }
+    let (fit, _) = pack::pack(&mut charts, params.pack_margin);
+    if !fit {
+        return Err("the charts do not fit into the lightmap UV square".into());
+    }
+    let mut out = vec![[[0f32; 2]; 3]; input.triangles.len()];
+    for chart in &charts {
+        for (i, &facet) in chart.component.facets.iter().enumerate() {
+            out[facet as usize] = [0, 1, 2].map(|k| chart.uvs[3 * i + k].map(|c| c as f32));
+        }
+    }
+    Ok(out)
+}
+
+/// The charts of one connected component: its segments laid flat, those too distorted
+/// segmented further.
+fn parametrize(
+    map: &mesh::HalfEdgeMesh,
+    component: mesh::Component,
+    params: &UnwrapParams,
+    charts: &mut Vec<param::Chart>,
+) -> Result<(), String> {
+    if component.facets.len() > 100 {
+        return Err("a connected part has more than 100 triangles (not supported yet)".into());
+    }
+    let mut work = segment::segment(map, &component)?;
+    let mut accepted = Vec::new();
+    let mut i = 0;
+    while i < work.len() {
+        let piece = work[i].clone();
+        i += 1;
+        let mut p = param::Parametrization::new(map, &piece)?;
+        p.angle_system();
+        p.solve_angles();
+        let (angular, _) = p.angular_metrics();
+        if params.angle_error <= angular {
+            work.extend(segment::Segmentation::force(map, &piece)?);
+            continue;
+        }
+        p.lay_flat();
+        let chart = p.chart();
+        param::validate(&chart)?;
+        if chart.component.facets.len() == 1 {
+            accepted.push(chart);
+            continue;
+        }
+        let m = chart.metrics(map);
+        if params.angle_error <= m.0[0] || params.area_error <= m.0[2] {
+            work.extend(segment::Segmentation::force(map, &piece)?);
+        } else {
+            accepted.push(chart);
+        }
+    }
+    charts.extend(accepted);
+    Ok(())
 }
 
 #[cfg(test)]
-mod tests {
+mod tests;
+
+#[cfg(test)]
+mod margin_tests {
     use super::*;
 
     fn settings(margin_method: i64) -> SecondaryUvSettings {

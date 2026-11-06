@@ -29,10 +29,12 @@
 //! keyframes the frames (full weight × 100); a mesh with shapes gets a SkinnedMeshRenderer, whose
 //! weights start at the channels' DeformPercent (`importBlendShapeDeformPercent`).
 //!
+//! **Lightmap UVs.** With `generateSecondaryUV`, UV2 comes from Unity's unwrap reproduced in
+//! [`lightmap_uv`]; meshes it does not reproduce yet warn and keep the file's UV2.
+//!
 //! Not imported yet (reported in [`ImportedModel::warnings`] when the file uses them): cameras and
-//! lights (imported as plain nodes), lightmap UV generation, and
-//! normal recalculation by smoothing angle (file normals, or ufbx-generated smooth normals, are
-//! used).
+//! lights (imported as plain nodes), and normal recalculation by smoothing angle (file normals,
+//! or ufbx-generated smooth normals, are used).
 use crate::{
     Importer, asset_name,
     meta::{FileIdAllocator, FileIdSource, FileIdTable, boolean, class, float, importer, int},
@@ -624,7 +626,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 13;
+    const VERSION: u32 = 14;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -1847,6 +1849,13 @@ impl<'a> Builder<'a> {
         uv0: Option<&ufbx::VertexVec2>,
         settings: &SecondaryUvSettings,
     ) -> Result<LightmapUvs, String> {
+        // Unity's FBX reader triangulates polygons of more than four corners differently.
+        if mesh.faces.iter().any(|f| f.num_indices > 4) {
+            return Err(
+                "polygons of more than four corners are triangulated unlike Unity's FBX reader"
+                    .into(),
+            );
+        }
         let order: Vec<u32> = if self.obj {
             let mut seen = vec![false; mesh.vertices.len()];
             let mut order = Vec::with_capacity(mesh.vertices.len());

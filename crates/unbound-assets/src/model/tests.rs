@@ -441,31 +441,88 @@ fn triangles_and_quads_split_like_unity() {
 }
 
 #[test]
-fn lightmap_uvs_read_their_settings_and_warn_until_unwrapped() {
+fn lightmap_uvs_read_their_settings_and_replace_uv2() {
     let obj = "o Quad\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nvt 0 0\nvt 1 0\nvt 1 1\nvt 0 1\nf 1/1 2/2 3/3 4/4\n";
     let on = meta(
         "ModelImporter:\n  serializedVersion: 22200\n  meshes:\n    generateSecondaryUV: 1\n    secondaryUVHardAngle: 30\n    secondaryUVMarginMethod: 1\n    secondaryUVMinLightmapResolution: 10\n",
     );
     let settings = ModelSettings::read(&on).secondary_uv.unwrap();
     assert_eq!(settings.hard_angle, 30.0);
-    assert_eq!((settings.angle_distortion, settings.area_distortion), (8.0, 15.0));
+    assert_eq!(
+        (settings.angle_distortion, settings.area_distortion),
+        (8.0, 15.0)
+    );
     assert_eq!(settings.margin_method, 1);
     assert_eq!(settings.min_lightmap_resolution, 10.0);
     let model = ModelImporter
         .import(Path::new("Quad.obj"), obj.as_bytes(), &on)
         .unwrap();
-    assert!(
-        model
-            .warnings
-            .iter()
-            .any(|w| w.contains("lightmap UVs are not generated")),
-        "{:?}",
-        model.warnings
-    );
+    assert!(model.warnings.is_empty(), "{:?}", model.warnings);
+    let mesh = &model.meshes[0];
+    assert_eq!(mesh.uvs.len(), 2);
+    assert_eq!(mesh.uvs[1].len(), mesh.positions.len());
+    // One chart filling the square up to the margin.
+    for uv in &mesh.uvs[1] {
+        assert!(
+            (0.0..=1.0).contains(&uv[0]) && (0.0..=1.0).contains(&uv[1]),
+            "{uv:?}"
+        );
+    }
     let off = meta("ModelImporter:\n  meshes:\n    generateSecondaryUV: 0\n");
     assert!(ModelSettings::read(&off).secondary_uv.is_none());
     let model = ModelImporter
         .import(Path::new("Quad.obj"), obj.as_bytes(), &off)
         .unwrap();
-    assert!(!model.warnings.iter().any(|w| w.contains("lightmap")));
+    assert_eq!(model.meshes[0].uvs.len(), 1);
+}
+
+#[test]
+fn lightmap_uvs_warn_for_polygons_of_more_than_four_corners() {
+    let obj = "o Pentagon\nv 0 0 0\nv 1 0 0\nv 1.3 1 0\nv 0.5 1.6 0\nv -0.3 1 0\nf 1 2 3 4 5\n";
+    let on =
+        meta("ModelImporter:\n  serializedVersion: 22200\n  meshes:\n    generateSecondaryUV: 1\n");
+    let model = ModelImporter
+        .import(Path::new("Pentagon.obj"), obj.as_bytes(), &on)
+        .unwrap();
+    assert!(
+        model
+            .warnings
+            .iter()
+            .any(|w| w.contains("lightmap UVs are not generated")
+                && w.contains("more than four corners")),
+        "{:?}",
+        model.warnings
+    );
+    assert_eq!(model.meshes[0].uvs.len(), 0);
+}
+
+#[test]
+fn lightmap_uvs_warn_for_parts_they_do_not_reproduce() {
+    // A connected part of more than a hundred triangles (a 10×6 grid of quads).
+    let mut obj = String::from("o Grid\n");
+    for y in 0..7 {
+        for x in 0..11 {
+            obj += &format!("v {x} {y} 0\n");
+        }
+    }
+    for y in 0..6 {
+        for x in 0..10 {
+            let a = y * 11 + x + 1;
+            obj += &format!("f {} {} {} {}\n", a, a + 1, a + 12, a + 11);
+        }
+    }
+    let on =
+        meta("ModelImporter:\n  serializedVersion: 22200\n  meshes:\n    generateSecondaryUV: 1\n");
+    let model = ModelImporter
+        .import(Path::new("Grid.obj"), obj.as_bytes(), &on)
+        .unwrap();
+    assert!(
+        model
+            .warnings
+            .iter()
+            .any(|w| w.contains("lightmap UVs are not generated")
+                && w.contains("more than 100 triangles")),
+        "{:?}",
+        model.warnings
+    );
 }
