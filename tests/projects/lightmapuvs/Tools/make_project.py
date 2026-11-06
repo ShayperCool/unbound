@@ -9,6 +9,8 @@ turns on generateSecondaryUV with the variant's unwrap settings:
     Manual    margin method Manual, pack margin 10
     Calc      margin method Calculate, min lightmap resolution 10, min object scale 0.5
     Off       generateSecondaryUV off (the file's own UV2, if any)
+    Raw       mesh optimization off (vertices and triangles in import order), defaults otherwise
+    RawOff    mesh optimization and generateSecondaryUV off
 
 GUIDs are derived from the asset path, so a rerun rewrites the same project.
 """
@@ -19,7 +21,7 @@ import shutil
 PROBE = Path(__file__).resolve().parents[1]
 DEFAULTS = dict(generateSecondaryUV=1, secondaryUVAngleDistortion=8, secondaryUVAreaDistortion=15.000001,
                 secondaryUVHardAngle=88, secondaryUVMarginMethod=1, secondaryUVMinLightmapResolution=40,
-                secondaryUVMinObjectScale=1, secondaryUVPackMargin=4)
+                secondaryUVMinObjectScale=1, secondaryUVPackMargin=4, meshOptimizationFlags=-1)
 VARIANTS = {
     'Default': {},
     'Hard30': dict(secondaryUVHardAngle=30),
@@ -27,6 +29,8 @@ VARIANTS = {
     'Manual': dict(secondaryUVMarginMethod=0, secondaryUVPackMargin=10),
     'Calc': dict(secondaryUVMinLightmapResolution=10, secondaryUVMinObjectScale=0.5),
     'Off': dict(generateSecondaryUV=0),
+    'Raw': dict(meshOptimizationFlags=0),
+    'RawOff': dict(meshOptimizationFlags=0, generateSecondaryUV=0),
 }
 
 META = '''fileFormatVersion: 2
@@ -87,7 +91,7 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
-    meshOptimizationFlags: -1
+    meshOptimizationFlags: {meshOptimizationFlags}
     indexFormat: 0
     secondaryUVAngleDistortion: {secondaryUVAngleDistortion}
     secondaryUVAreaDistortion: {secondaryUVAreaDistortion}

@@ -16,6 +16,8 @@ with the variant's unwrap settings:
 | Manual | margin method Manual, pack margin 10 |
 | Calc | margin Calculate, min lightmap resolution 10, min object scale 0.5 |
 | Off | generateSecondaryUV off (the file's own UV2) |
+| Raw | mesh optimization off (triangles and vertices in import order), defaults otherwise |
+| RawOff | mesh optimization and generateSecondaryUV off |
 
 `LightmapUvProbe` records every mesh of every variant (vertex count, sub-mesh triangles,
 vertices, normals, UV, UV2) as one JSON line per mesh and quits. The Editor records in Play mode

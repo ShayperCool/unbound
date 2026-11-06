@@ -14,7 +14,7 @@ using UnityEngine;
 /// </summary>
 public class LightmapUvProbe : MonoBehaviour
 {
-    static readonly string[] Variants = { "Default", "Hard30", "Distort", "Manual", "Calc", "Off" };
+    static readonly string[] Variants = { "Default", "Hard30", "Distort", "Manual", "Calc", "Off", "Raw", "RawOff" };
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
     static void Run() => new GameObject("LightmapUvProbe").AddComponent<LightmapUvProbe>();
