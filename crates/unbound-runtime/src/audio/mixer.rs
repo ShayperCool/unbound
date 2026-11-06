@@ -185,6 +185,9 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         max_channels: 0.0,
         dry_mix: d.dry_mix,
         wet_mix: d.wet_mix,
+        sfx: None,
+        mix_level: None,
+        mix_audible: true,
     }
 }
 
@@ -730,7 +733,8 @@ impl Mixer {
         for effect in &spec.effects {
             effect.validate(self.config.sample_rate)?;
             anyhow::ensure!(
-                matches!(effect.kind.as_str(), "Attenuation" | "Lowpass" | "Highpass" | "Echo")
+                matches!(effect.kind.as_str(),
+                    "Attenuation" | "Lowpass" | "Highpass" | "Echo" | "SFX Reverb")
                     || effect.bypass
                     || spec.bypass,
                 "unsupported AudioMixer effect '{}'",
@@ -1389,8 +1393,8 @@ impl Mixer {
                 continue;
             }
             let node = self.group_nodes.get_mut(&handle).unwrap();
-            // Echo retains the measured group input fade even when bypassed.
-            let active = node.effects.iter().any(|e| e.spec.kind == "Echo")
+            // Echo and SFX Reverb retain the measured group input fade even when bypassed.
+            let active = node.effects.iter().any(|e| matches!(e.spec.kind.as_str(), "Echo" | "SFX Reverb"))
                 || (!node.spec.bypass
                     && node.effects.iter().any(|e| {
                         !e.spec.bypass && matches!(e.spec.kind.as_str(), "Lowpass" | "Highpass")

@@ -135,6 +135,42 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SfxReverbSendsEditorDefaultsOverridesAndItsWetMix()
+        {
+            var (mixer, group, effect) = Fixture();
+            effect.m_EffectName = "SFX Reverb";
+            effect.m_ParameterGuids.Clear(); mixer.m_Exposed.Clear();
+            foreach (var name in AudioMixerEffectController.SfxReverbParameters) effect.m_ParameterGuids[name] = name;
+            mixer.m_Exposed["Room"] = "Room";
+            Assert.True(mixer.GetFloat("Room", out float room));
+            Assert.Equal(-10000f, room);
+            Assert.True(mixer.SetFloat("Room", -600f));
+            using (var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration())))
+            {
+                var dsp = payload.RootElement.GetProperty("effects")[0];
+                Assert.Equal("SFX Reverb", dsp.GetProperty("kind").GetString());
+                var sfx = dsp.GetProperty("sfx");
+                Assert.Equal(-600f, sfx.GetProperty("room").GetSingle());
+                Assert.Equal(0f, sfx.GetProperty("roomLf").GetSingle());
+                Assert.Equal(0.02f, sfx.GetProperty("reflectDelay").GetSingle());
+                Assert.Equal(250f, sfx.GetProperty("lfReference").GetSingle());
+                Assert.Equal(JsonValueKind.Null, dsp.GetProperty("mixLevel").ValueKind);
+            }
+            effect.m_EnableWetMix = true; effect.m_MixLevelGuid = "wet";
+            mixer.m_Exposed["Wet"] = "wet";
+            Assert.True(mixer.SetFloat("Wet", -6f));
+            using (var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration())))
+            {
+                var dsp = payload.RootElement.GetProperty("effects")[0];
+                Assert.Equal(AudioMixer.DspGain(-6f), dsp.GetProperty("mixLevel").GetSingle());
+                Assert.True(dsp.GetProperty("mixAudible").GetBoolean());
+            }
+            Assert.True(mixer.SetFloat("Wet", -70f));
+            using (var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration())))
+                Assert.False(payload.RootElement.GetProperty("effects")[0].GetProperty("mixAudible").GetBoolean());
+        }
+
+        [Fact]
         public void ActiveUnsupportedEffectsAndWetMixFailLoudly()
         {
             var (_, group, effect) = Fixture();

@@ -1,6 +1,7 @@
 //! Persistent DSP on summed mixer groups. Native captures establish a fourth-order Butterworth
 //! response for Lowpass and a second-order response for Highpass. The independently measured
 //! startup kernels also constrain parameter-dependent delay-history normalization.
+use super::reverb::{SfxReverb, SfxReverbSpec};
 use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -27,14 +28,41 @@ pub struct EffectSpec {
     pub dry_mix: f32,
     #[serde(default = "one")]
     pub wet_mix: f32,
+    /// SFX Reverb parameters; required for that kind.
+    #[serde(default)]
+    pub sfx: Option<SfxReverbSpec>,
+    /// The effect slot's linear wet level when wet mixing is enabled (measured for SFX Reverb).
+    #[serde(default)]
+    pub mix_level: Option<f32>,
+    /// False when the wet level is low enough that Native drops the effect's output.
+    #[serde(default = "yes")]
+    pub mix_audible: bool,
 }
 impl EffectSpec {
     pub(crate) fn validate(&self, rate: u32) -> anyhow::Result<()> {
         if self.kind == "Echo" {
             Echo::frames(self.delay, rate)?;
         }
+        anyhow::ensure!(self.kind != "SFX Reverb" || self.sfx.is_some(),
+            "AudioMixer SFX Reverb '{}' has no parameters", self.id);
+        if let Some(sfx) = &self.sfx {
+            let values = [sfx.dry_level, sfx.room, sfx.room_hf, sfx.decay_time, sfx.decay_hf_ratio,
+                sfx.reflections, sfx.reflect_delay, sfx.reverb, sfx.reverb_delay, sfx.diffusion,
+                sfx.density, sfx.hf_reference, sfx.room_lf, sfx.lf_reference];
+            anyhow::ensure!(values.iter().all(|v| v.is_finite()),
+                "AudioMixer SFX Reverb '{}' has a non-finite parameter", self.id);
+        }
+        if let Some(level) = self.mix_level {
+            anyhow::ensure!(self.kind == "SFX Reverb",
+                "AudioMixer wet mixing is unsupported for effect '{}'", self.kind);
+            anyhow::ensure!(level.is_finite() && (0.0..=1.0).contains(&level),
+                "invalid AudioMixer wet level {level}");
+        }
         Ok(())
     }
+}
+fn yes() -> bool {
+    true
 }
 fn echo_delay() -> f32 {
     500.0
@@ -200,6 +228,10 @@ pub struct Effect {
     stages: [Biquad; 2],
     lowpass: Lowpass,
     echo: Echo,
+    reverb: Option<Box<SfxReverb>>,
+    /// Frames since the effect started, for the wet-mix slot's startup ramp.
+    frames: u32,
+    scratch: Vec<f32>,
     cutoff: f32,
     resonance: f32,
     rate: u32,
@@ -212,6 +244,9 @@ impl Effect {
             stages: Default::default(),
             lowpass: Default::default(),
             echo: Default::default(),
+            reverb: None,
+            frames: 0,
+            scratch: Vec::new(),
             cutoff: 5000.0,
             resonance: 1.0,
             rate,
@@ -223,6 +258,12 @@ impl Effect {
     pub fn update(&mut self, spec: EffectSpec, rate: u32) -> anyhow::Result<()> {
         if spec.kind == "Echo" {
             self.echo.tune(spec.delay, rate)?;
+        }
+        if let Some(sfx) = &spec.sfx {
+            if self.reverb.as_ref().is_none_or(|r| r.rate() != rate) {
+                self.reverb = Some(Box::new(SfxReverb::new(rate)?));
+            }
+            self.reverb.as_mut().unwrap().tune(sfx);
         }
         self.rate = rate;
         self.spec = spec;
@@ -236,6 +277,10 @@ impl Effect {
         self.lowpass = Default::default();
         self.echo.history.fill([0; 2]);
         self.echo.position = 0;
+        if let Some(reverb) = &mut self.reverb {
+            reverb.clear();
+        }
+        self.frames = 0;
         self.cutoff = 5000.0;
         self.resonance = 1.0;
         self.gain = self.spec.gain;
@@ -267,6 +312,31 @@ impl Effect {
         } else if self.spec.kind == "Echo" {
             if !bypass && !self.spec.bypass {
                 self.echo.process(samples, &self.spec);
+            }
+        } else if let Some(reverb) = &mut self.reverb {
+            if !bypass && !self.spec.bypass {
+                match self.spec.mix_level {
+                    None => reverb.process(samples),
+                    Some(wet) => {
+                        // Native: wet * effect + (1 - wet) * input, the slot ramping in over
+                        // its first 64 frames; an inaudible wet level drops the effect output.
+                        let processed = &mut self.scratch;
+                        processed.clear();
+                        processed.extend_from_slice(samples);
+                        reverb.process(processed);
+                        let wet = if self.spec.mix_audible { wet } else { 0.0 };
+                        let dry = 1.0 - self.spec.mix_level.unwrap_or(0.0);
+                        for (frame, (out, effect)) in samples.chunks_exact_mut(2)
+                            .zip(processed.chunks_exact(2)).enumerate()
+                        {
+                            let ramp = ((self.frames as usize + frame) as f32 / 64.0).min(1.0);
+                            for (x, e) in out.iter_mut().zip(effect) {
+                                *x = (wet * e + dry * *x) * ramp;
+                            }
+                        }
+                    }
+                }
+                self.frames = self.frames.saturating_add((samples.len() / 2) as u32);
             }
         } else if !bypass && !self.spec.bypass {
             for stereo in samples.chunks_exact_mut(2) {

@@ -12,6 +12,7 @@ pub mod effects;
 pub mod fft;
 pub mod mixer;
 pub mod protocol;
+pub mod reverb;
 pub mod spatial;
 
 use anyhow::Result;

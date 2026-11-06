@@ -9,7 +9,7 @@ namespace UnityEngine.Audio
     /// volumes (dB) and pitches are parameters. A parameter's value comes from the current snapshot
     /// (blended during a transition), unless an exposed parameter is set by <c>SetFloat</c>.
     /// Each frame the audio update sends the group graph and current parameters to the native
-    /// mixer. Lowpass, Highpass and Echo process the summed group signal in serialized effect order.
+    /// mixer. Lowpass, Highpass, Echo and SFX Reverb process the summed group signal in serialized effect order.
     /// </summary>
     [ClassId(241)]
     public partial class AudioMixer : Object, ISerializedAsset
@@ -306,6 +306,11 @@ namespace UnityEngine.Audio
                     if (effect.Parameter("Drymix") is string dry) m_Defaults[dry] = 1f;
                     if (effect.Parameter("Wetmix") is string wet) m_Defaults[wet] = 1f;
                 }
+                if (effect.m_EffectName == AudioMixerEffectController.SfxReverb)
+                    for (int i = 0; i < AudioMixerEffectController.SfxReverbParameters.Length; i++)
+                        if (effect.Parameter(AudioMixerEffectController.SfxReverbParameters[i]) is string guid)
+                            m_Defaults[guid] = AudioMixerEffectController.SfxReverbDefaults[i];
+                if (effect.m_MixLevelGuid != null) m_Defaults[effect.m_MixLevelGuid] = 0f;
             }
             foreach (var guid in group.m_EffectParameters) if (!m_Defaults.ContainsKey(guid)) m_Defaults[guid] = 0f;
             foreach (var child in group.m_Children) if (child != null) Collect(child, group);
@@ -389,10 +394,13 @@ namespace UnityEngine.Audio
             foreach (var effect in m_Effects)
             {
                 bool bypass = m_BypassEffects || effect.m_Bypass;
-                if (!bypass && effect.m_EffectName != "Attenuation" && effect.m_EffectName != "Lowpass" && effect.m_EffectName != "Highpass" && effect.m_EffectName != "Echo")
+                bool reverb = effect.m_EffectName == AudioMixerEffectController.SfxReverb;
+                if (!bypass && !reverb && effect.m_EffectName != "Attenuation" && effect.m_EffectName != "Lowpass" && effect.m_EffectName != "Highpass" && effect.m_EffectName != "Echo")
                     throw new NotSupportedException("Unsupported AudioMixer effect '" + effect.m_EffectName + "' in group '" + Path + "'");
-                if (!bypass && effect.m_EnableWetMix)
+                // Wet mixing is measured only on SFX Reverb (tests/projects/mixerreverb).
+                if (!bypass && !reverb && effect.m_EnableWetMix)
                     throw new NotSupportedException("AudioMixer wet mixing is unsupported for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
+                float wetDb = effect.m_MixLevelGuid != null ? m_Mixer.Value(effect.m_MixLevelGuid) : 0f;
                 effects.Add(new {
                     id = effect.m_EffectId, kind = effect.m_EffectName, bypass = effect.m_Bypass,
                     gain = AudioMixer.DspGain(m_Mixer.Value(m_VolumeGuid)),
@@ -403,6 +411,11 @@ namespace UnityEngine.Audio
                     maxChannels = effect.Parameter("Max channels") is string channels ? m_Mixer.Value(channels) : 0f,
                     dryMix = effect.Parameter("Drymix") is string dry ? m_Mixer.Value(dry) : 1f,
                     wetMix = effect.Parameter("Wetmix") is string wet ? m_Mixer.Value(wet) : 1f,
+                    sfx = reverb ? effect.SfxReverbConfiguration(m_Mixer) : null,
+                    // The slot uses the mixer's gain approximation; Native keeps -68 dB and drops the
+                    // effect output at -70 dB (the boundary between them is unmeasured).
+                    mixLevel = reverb && effect.m_EnableWetMix ? AudioMixer.DspGain(wetDb) : (float?)null,
+                    mixAudible = wetDb > -69f,
                 });
             }
             var parent = m_Parent ?? m_Mixer?.m_OutputGroup;
@@ -512,6 +525,24 @@ namespace Unbound.Runtime
         internal string m_EffectName;
         internal string m_EffectId;
         internal bool m_Bypass, m_EnableWetMix;
+        internal string m_MixLevelGuid;
+        internal const string SfxReverb = "SFX Reverb";
+        // Editor parameter definitions of 6000.0.71f1 (the Manual's Room LF default of -10000 differs).
+        internal static readonly string[] SfxReverbParameters = {
+            "Dry Level", "Room", "Room HF", "Decay Time", "Decay HF Ratio", "Reflections", "Reflect Delay",
+            "Reverb", "Reverb Delay", "Diffusion", "Density", "HF Reference", "Room LF", "LF Reference" };
+        internal static readonly float[] SfxReverbDefaults = {
+            0f, -10000f, 0f, 1f, 0.5f, -10000f, 0.02f, 0f, 0.04f, 100f, 100f, 5000f, 0f, 250f };
+        internal object SfxReverbConfiguration(UnityEngine.Audio.AudioMixer mixer)
+        {
+            var v = new float[SfxReverbParameters.Length];
+            for (int i = 0; i < v.Length; i++)
+                v[i] = Parameter(SfxReverbParameters[i]) is string guid ? mixer.Value(guid) : SfxReverbDefaults[i];
+            return new {
+                dryLevel = v[0], room = v[1], roomHf = v[2], decayTime = v[3], decayHfRatio = v[4],
+                reflections = v[5], reflectDelay = v[6], reverb = v[7], reverbDelay = v[8], diffusion = v[9],
+                density = v[10], hfReference = v[11], roomLf = v[12], lfReference = v[13] };
+        }
         internal readonly Dictionary<string, string> m_ParameterGuids = new Dictionary<string, string>(StringComparer.Ordinal);
         internal string Parameter(string name) => m_ParameterGuids.TryGetValue(name, out var guid) ? guid : null;
         internal readonly List<string> m_Parameters = new List<string>();
@@ -525,6 +556,7 @@ namespace Unbound.Runtime
             m_ParameterGuids.Clear();
             m_Parameters.Clear();
             var mix = UnityEngine.Audio.AudioMixerGroup.NullIfZero(body.Str("m_MixLevel"));
+            m_MixLevelGuid = mix;
             if (mix != null) m_Parameters.Add(mix);
             foreach (var item in body.Get("m_Parameters")?.Seq() ?? Array.Empty<YNode>())
             {
