@@ -228,7 +228,12 @@ namespace UnityEngine
         public int layerOverridePriority
         {
             get => m_LayerOverridePriority;
-            set => m_LayerOverridePriority = value;
+            set
+            {
+                if (m_LayerOverridePriority == value) return;
+                m_LayerOverridePriority = value;
+                W.Refilter(this);
+            }
         }
 
         public LayerMask includeLayers

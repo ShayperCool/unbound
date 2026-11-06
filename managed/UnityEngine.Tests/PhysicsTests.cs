@@ -876,6 +876,98 @@ namespace UnityEngine.Tests
             Assert.True(ball.transform.position.y < -1f);
         }
 
+        // Collider.layerOverridePriority (6000.0 Scripting API): when two colliders disagree, the
+        // one with include/exclude layers decides, or of two such the higher priority; equal
+        // priorities create no contact. Cases from the layeroverrides3d Editor capture.
+
+        /// <summary>A ball on layer 10 above ground on layer 9; true if it is still above the ground.</summary>
+        bool Lands(Action<Collider, Rigidbody, Collider> setup, bool matrixCollides = true)
+        {
+            var ground = Ground();
+            ground.layer = 9;
+            var ball = Ball("ball", new Vector3(0f, 2f, 0f));
+            ball.layer = 10;
+            Physics.IgnoreLayerCollision(9, 10, !matrixCollides);
+            setup(ball.GetComponent<Collider>(), ball.GetComponent<Rigidbody>(), ground.GetComponent<Collider>());
+            Run(60);
+            bool landed = ball.transform.position.y > 0f;
+            Object.DestroyImmediate(ball);
+            Object.DestroyImmediate(ground);
+            Physics.IgnoreLayerCollision(9, 10, false);
+            return landed;
+        }
+
+        [Fact]
+        public void AnIncludeOverrideWinsOverAColliderWithout()
+        {
+            Assert.True(Lands((ball, rb, ground) => ball.includeLayers = 1 << 9, matrixCollides: false));
+            Assert.True(Lands((ball, rb, ground) => rb.includeLayers = 1 << 9, matrixCollides: false));
+            Assert.False(Lands((ball, rb, ground) => ground.excludeLayers = 1 << 10));
+        }
+
+        [Fact]
+        public void DisagreeingOverridesFollowTheHigherPriorityAndATieCreatesNoContact()
+        {
+            Assert.False(Lands((ball, rb, ground) => { ball.includeLayers = 1 << 9; ground.excludeLayers = 1 << 10; }));
+            Assert.True(Lands((ball, rb, ground) => { ball.includeLayers = 1 << 9; ground.excludeLayers = 1 << 10; ball.layerOverridePriority = 1; }));
+            Assert.False(Lands((ball, rb, ground) => { ball.includeLayers = 1 << 9; ground.excludeLayers = 1 << 10; ground.layerOverridePriority = 1; }));
+            Assert.True(Lands((ball, rb, ground) => { ball.includeLayers = 1 << 9; ground.excludeLayers = 1 << 10; ball.layerOverridePriority = 0; ground.layerOverridePriority = -1; }));
+        }
+
+        [Fact]
+        public void IncludeOrExcludeLayersThatChangeNothingStillCountAsAnOverride()
+        {
+            // The ball includes an unrelated layer: an override that agrees with the matrix,
+            // against the ground's exclude, at equal priority.
+            Assert.False(Lands((ball, rb, ground) => { ball.includeLayers = 1 << 20; ground.excludeLayers = 1 << 10; }));
+            Assert.True(Lands((ball, rb, ground) => { rb.excludeLayers = 1 << 20; ball.layerOverridePriority = 1; ground.excludeLayers = 1 << 10; }));
+        }
+
+        [Fact]
+        public void ABodyThatDoesNotDetectCollisionsContactsNothingWhateverTheOverrides()
+        {
+            Assert.False(Lands((ball, rb, ground) => { rb.detectCollisions = false; ground.includeLayers = 1 << 10; ground.layerOverridePriority = 5; }));
+        }
+
+        [Fact]
+        public void ChangingThePriorityRefiltersALiveContact()
+        {
+            var ground = Ground();
+            ground.layer = 9;
+            var ball = Ball("ball", new Vector3(0f, 1f, 0f));
+            ball.layer = 10;
+            var collider = ball.GetComponent<Collider>();
+            collider.includeLayers = 1 << 9;
+            collider.layerOverridePriority = 1;
+            ground.GetComponent<Collider>().excludeLayers = 1 << 10;
+            Run(30);
+            Assert.True(ball.transform.position.y > 0f);
+            collider.layerOverridePriority = 0;
+            Run(60);
+            Assert.True(ball.transform.position.y < -1f);
+        }
+
+        [Fact]
+        public void ControllerMovesCountATieAsAHit()
+        {
+            // Measured in the Editor: Move stops at a wall whose override disagrees at equal priority.
+            var go = Make("controller", new Vector3(0f, 0f, 0f));
+            go.layer = 9;
+            var controller = go.AddComponent<CharacterController>();
+            controller.includeLayers = 1 << 10;
+            var wall = Make("wall", new Vector3(2f, 0f, 0f));
+            wall.layer = 10;
+            wall.AddComponent<BoxCollider>().size = new Vector3(1f, 4f, 1f);
+            wall.GetComponent<Collider>().excludeLayers = 1 << 9;
+            controller.Move(new Vector3(3f, 0f, 0f));
+            Assert.True(go.transform.position.x < 2f);
+            wall.GetComponent<Collider>().layerOverridePriority = 1;
+            go.transform.position = Vector3.zero;
+            Physics.SyncTransforms();
+            controller.Move(new Vector3(3f, 0f, 0f));
+            Assert.True(go.transform.position.x > 2f);
+        }
+
         [Fact]
         public void ImpulsesChangeVelocityByTheirMass()
         {

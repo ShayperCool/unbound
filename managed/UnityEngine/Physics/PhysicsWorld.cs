@@ -882,7 +882,7 @@ namespace Unbound.Runtime
             c.m_UsedMaterial = material;
             c.m_MaterialVersion = material != null ? material.m_ChangeVersion : 0;
             Physics.MaterialValues(material, out float friction, out float staticFriction, out float bounciness, out ulong modes);
-            FilterOf(c, rb, out ulong category, out ulong mask);
+            FilterOf(c, rb, out ulong category, out ulong mask, out int layerFlags);
             return new B3.ShapeDef
             {
                 Density = 1f,
@@ -897,35 +897,41 @@ namespace Unbound.Runtime
                 UpdateBodyMass = 0,
                 StaticFriction = staticFriction,
                 ContactOffset = c.contactOffset,
+                LayerFlags = layerFlags,
+                LayerPriority = c.m_LayerOverridePriority,
             };
         }
 
-        /// <summary>A collider's filter: its layer, and the layers its layer collides with as its
-        /// own and its rigidbody's include/exclude layers adjust them. A rigidbody that does not
-        /// detect collisions collides with nothing.</summary>
-        static void FilterOf(Collider c, Rigidbody rb, out ulong category, out ulong mask)
+        /// <summary>A collider's filter: its layer, and the layers it decides to contact: its layer's
+        /// row of the collision matrix, plus its own and its rigidbody's include layers, minus both
+        /// exclude layers (6000.0 Collider.excludeLayers: includes first, then excludes). Any
+        /// include/exclude layer makes it an override for <see cref="Collider.layerOverridePriority"/>
+        /// (measured, 6000.0.71f1: also layers that do not change the decision). A rigidbody that
+        /// does not detect collisions contacts nothing.</summary>
+        static void FilterOf(Collider c, Rigidbody rb, out ulong category, out ulong mask, out int layerFlags)
         {
             int layer = c.m_GameObject.m_Layer & 31;
             category = 1UL << layer;
             uint bits = unchecked((uint)Physics.s_LayerCollisionMatrix[layer]);
             int include = c.m_IncludeLayers | (rb != null ? rb.m_IncludeLayers : 0);
             int exclude = c.m_ExcludeLayers | (rb != null ? rb.m_ExcludeLayers : 0);
-            bits = (bits | unchecked((uint)include)) & ~unchecked((uint)exclude);
-            if (rb != null && !rb.m_DetectCollisions) bits = 0;
-            mask = bits;
+            mask = (bits | unchecked((uint)include)) & ~unchecked((uint)exclude);
+            layerFlags = (include | exclude) != 0 ? B3.LayerOverride : 0;
+            if (rb != null && !rb.m_DetectCollisions) layerFlags |= B3.LayerNoContacts;
         }
 
-        /// <summary>The filter of a collider changed (layer, include/exclude layers, detectCollisions).</summary>
+        /// <summary>The filter of a collider changed (layer, include/exclude layers, layer override
+        /// priority, detectCollisions).</summary>
         internal static void Refilter(Collider c)
         {
             if (c.m_Shape == 0) return;
-            FilterOf(c, c.m_AttachedBody, out var category, out var mask);
+            FilterOf(c, c.m_AttachedBody, out var category, out var mask, out int layerFlags);
             if (c is CharacterController controller)
             {
-                controller.SetFilter(category, mask);
+                controller.SetFilter(category, mask, layerFlags);
                 return;
             }
-            B3.ua3_shape_set_filter(c.m_Shape, category, mask);
+            B3.ua3_shape_set_filter(c.m_Shape, category, mask, layerFlags, c.m_LayerOverridePriority);
         }
 
         internal static void RefilterAll()

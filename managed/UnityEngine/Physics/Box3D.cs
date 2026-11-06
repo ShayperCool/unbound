@@ -15,7 +15,7 @@ namespace Unbound.Box3D
         const string Library = "unbound_physx";
 
         /// <summary>The shim version this binding was written for.</summary>
-        internal const int Version = 12;
+        internal const int Version = 13;
 
         // The per-body accessors called every step are constant time, never block and never call
         // back into managed code: they skip the GC transition ([SuppressGCTransition]).
@@ -125,7 +125,16 @@ namespace Unbound.Box3D
             internal float StaticFriction;
             /// <summary>The collider's contact offset; 0 for the default.</summary>
             internal float ContactOffset;
+            /// <summary><see cref="LayerOverride"/> | <see cref="LayerNoContacts"/>.</summary>
+            internal int LayerFlags;
+            /// <summary>The collider's layerOverridePriority.</summary>
+            internal int LayerPriority;
         }
+
+        /// <summary>Layer flags: the collider has include/exclude layers (its own or its body's).</summary>
+        internal const int LayerOverride = 1;
+        /// <summary>Layer flags: the collider contacts nothing (its body does not detect collisions).</summary>
+        internal const int LayerNoContacts = 2;
 
         [StructLayout(LayoutKind.Sequential)]
         internal struct Pair
@@ -183,6 +192,9 @@ namespace Unbound.Box3D
             internal ulong Material;
             internal float StaticFriction;
             internal int DetectCollisions;
+            /// <summary><see cref="LayerOverride"/> or 0 (detectCollisions gives the rest).</summary>
+            internal int LayerFlags;
+            internal int LayerPriority;
         }
 
         [StructLayout(LayoutKind.Sequential)]
@@ -285,7 +297,7 @@ namespace Unbound.Box3D
         [LibraryImport(Library), SuppressGCTransition] internal static partial ulong ua3_shape_body(ulong shape);
         [LibraryImport(Library)] internal static partial void ua3_shape_set_material(ulong shape, float friction, float restitution, ulong material, float staticFriction);
         [LibraryImport(Library)] internal static partial void ua3_shape_set_contact_offset(ulong shape, float contactOffset);
-        [LibraryImport(Library)] internal static partial void ua3_shape_set_filter(ulong shape, ulong categoryBits, ulong maskBits);
+        [LibraryImport(Library)] internal static partial void ua3_shape_set_filter(ulong shape, ulong categoryBits, ulong maskBits, int layerFlags, int layerPriority);
         [LibraryImport(Library)] internal static partial void ua3_shape_set_density(ulong shape, float density);
         [LibraryImport(Library)] internal static partial void ua3_shape_aabb(ulong shape, out Bounds3 bounds);
         [LibraryImport(Library)] internal static partial Vector3 ua3_shape_closest_point(ulong shape, Vector3 target);
@@ -314,7 +326,7 @@ namespace Unbound.Box3D
         [LibraryImport(Library)] internal static partial ulong ua3_cct_create(uint world, in ControllerDef def);
         [LibraryImport(Library)] internal static partial void ua3_cct_destroy(ulong controller);
         [LibraryImport(Library)] internal static partial ulong ua3_cct_shape(ulong controller);
-        [LibraryImport(Library)] internal static partial void ua3_cct_set_filter(ulong controller, ulong categoryBits, ulong maskBits, int detectCollisions);
+        [LibraryImport(Library)] internal static partial void ua3_cct_set_filter(ulong controller, ulong categoryBits, ulong maskBits, int detectCollisions, int layerFlags, int layerPriority);
         [LibraryImport(Library)] internal static partial void ua3_cct_configure(ulong controller, float radius, float height, float contactOffset, float stepOffset, float slopeLimit);
         [LibraryImport(Library)] internal static partial void ua3_cct_set_position(ulong controller, Vector3 position);
         [LibraryImport(Library), SuppressGCTransition] internal static partial Vector3 ua3_cct_position(ulong controller);

@@ -46,7 +46,7 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 12
+#define UA3_VERSION 13
 
 struct ua3_scene_def
 {
@@ -172,12 +172,22 @@ struct ShapeInfo
 	bool contactEvents;
 	bool sensorEvents;
 	int ignores; // how many ignored pairs it is in
+	int layers = 0; // LayerOverride | LayerNoContacts, as the filter calls pass them
 };
 
-// Simulation filter data: word0 the category (the layer's bit), word1 the mask, word2 flags.
+// ua3_shape_def.layerFlags, ua3_shape_set_filter and the controller calls: the collider has
+// include/exclude layers (its own or its body's), or contacts nothing (detectCollisions off).
+enum : int
+{
+	LayerOverride = 1,
+	LayerNoContacts = 2,
+};
+
+// Simulation filter data: word0 the category (the layer's bit), word1 the mask (the layers this
+// collider decides to contact), word2 flags, word3 the collider's layerOverridePriority.
 // word2 bits 3-4 carry the body's collision detection mode, so the filter shader can decide
 // which pairs get sweep CCD; bit 5 marks a collider of an actor that has no mode (a character
-// controller's).
+// controller's); bits 6-7 carry the ShapeInfo layer flags.
 enum : PxU32
 {
 	FlagContactEvents = 1,
@@ -186,7 +196,33 @@ enum : PxU32
 	FlagCcdShift = 3,
 	FlagCcdMask = 3u << FlagCcdShift,
 	FlagCcdModeless = 32,
+	FlagLayerOverride = 64,
+	FlagNoContacts = 128,
 };
+
+// Whether two colliders' layers let them meet (Collider.layerOverridePriority, 6000.0 Scripting
+// API): each decides from its mask; when they disagree, the one with include/exclude layers
+// decides, or of two such the higher priority. Equal priorities create no contact (documented);
+// controller moves count them as a hit (measured, 6000.0.71f1).
+bool layers_meet( const PxFilterData& a, const PxFilterData& b, bool tie )
+{
+	bool da = ( a.word1 & b.word0 ) != 0, db = ( b.word1 & a.word0 ) != 0;
+	if ( da == db )
+	{
+		return da;
+	}
+	bool oa = ( a.word2 & FlagLayerOverride ) != 0, ob = ( b.word2 & FlagLayerOverride ) != 0;
+	if ( oa != ob )
+	{
+		return oa ? da : db;
+	}
+	if ( !oa )
+	{
+		return false;
+	}
+	PxI32 pa = static_cast<PxI32>( a.word3 ), pb = static_cast<PxI32>( b.word3 );
+	return pa == pb ? tie : pa > pb ? da : db;
+}
 
 // Unity's CollisionDetectionMode values, as ua3_body_set_bullet and ua3_body_def.isBullet carry them.
 enum : PxU32
@@ -576,13 +612,13 @@ bool sweeps( bool moving, PxU32 flags, PxFilterObjectAttributes other, PxU32 oth
 	return mode == CcdContinuousDynamic && ( otherMode != CcdDiscrete || ( otherFlags & FlagCcdModeless ) );
 }
 
-// Layers collide when each one's category is in the other's mask. Trigger pairs include
+// Layers collide as layers_meet decides, unless either side contacts nothing. Trigger pairs include
 // trigger/trigger overlaps. The scene's kinematic pair filtering modes decide which non-dynamic
 // pairs reach this shader. Those pairs generate contacts and reports, without solver response.
 PxFilterFlags shader( PxFilterObjectAttributes attributes0, PxFilterData data0, PxFilterObjectAttributes attributes1,
 					  PxFilterData data1, PxPairFlags& pairFlags, const void*, PxU32 )
 {
-	if ( ( data0.word0 & data1.word1 ) == 0 || ( data1.word0 & data0.word1 ) == 0 )
+	if ( ( ( data0.word2 | data1.word2 ) & FlagNoContacts ) != 0 || !layers_meet( data0, data1, false ) )
 	{
 		return PxFilterFlag::eSUPPRESS;
 	}
@@ -653,6 +689,7 @@ PxU32 filter_flags( const PxShape* shape, const PxRigidActor* actor )
 {
 	ShapeInfo* i = info( shape );
 	return ( i->contactEvents ? FlagContactEvents : 0u ) | ( i->sensorEvents ? FlagSensorEvents : 0u ) | ( i->ignores > 0 ? FlagIgnores : 0u ) |
+		   ( i->layers & LayerOverride ? FlagLayerOverride : 0u ) | ( i->layers & LayerNoContacts ? FlagNoContacts : 0u ) |
 		   ccd_bits( actor != nullptr ? actor : shape->getActor() );
 }
 
@@ -897,16 +934,20 @@ struct Character : public PxUserControllerHitReport, public PxQueryFilterCallbac
 		return !world->ignores.empty() && world->ignores.count( ordered( shape, const_cast<PxShape*>( other ) ) ) != 0;
 	}
 
+	// A move meets the shapes whose layers meet the controller's, whether or not either detects
+	// collisions (detectCollisions keeps bodies and other controllers out, not the move itself).
 	PxQueryHitType::Enum preFilter( const PxFilterData&, const PxShape* other, const PxRigidActor*, PxHitFlags& ) override
 	{
-		return ignores( other ) ? PxQueryHitType::eNONE : PxQueryHitType::eBLOCK;
+		PxFilterData self = shape->getSimulationFilterData();
+		self.word1 = mask;
+		return ignores( other ) || !layers_meet( self, other->getSimulationFilterData(), true ) ? PxQueryHitType::eNONE : PxQueryHitType::eBLOCK;
 	}
 	PxQueryHitType::Enum postFilter( const PxFilterData&, const PxQueryHit& ) override
 	{
 		return PxQueryHitType::eBLOCK;
 	}
 
-	// Two controllers collide as their layers do.
+	// Two controllers collide as their layers do, unless either does not detect collisions.
 	bool filter( const PxController& a, const PxController& b ) override
 	{
 		const Character* ca = static_cast<const Character*>( a.getUserData() );
@@ -916,11 +957,24 @@ struct Character : public PxUserControllerHitReport, public PxQueryFilterCallbac
 			return true;
 		}
 		PxFilterData da = ca->shape->getSimulationFilterData(), db = cb->shape->getSimulationFilterData();
-		return ( da.word0 & db.word1 ) != 0 && ( db.word0 & da.word1 ) != 0 && !ca->ignores( cb->shape );
+		return ( ( da.word2 | db.word2 ) & FlagNoContacts ) == 0 && layers_meet( da, db, true ) && !ca->ignores( cb->shape );
 	}
 };
 
 std::unordered_set<Character*> s_characters;
+
+// Controllers keep the shapes their last query found, filtered then: a filter change must reach
+// them before their next move.
+void invalidate_controllers( const World* world )
+{
+	for ( Character* c : s_characters )
+	{
+		if ( c->world == world )
+		{
+			c->controller->invalidateCache();
+		}
+	}
+}
 
 void Character::onControllerHit( const PxControllersHit& hit )
 {
@@ -1696,6 +1750,8 @@ struct ua3_shape_def
 	int updateBodyMass;
 	float staticFriction;
 	float contactOffset;
+	int layerFlags; // LayerOverride | LayerNoContacts
+	int layerPriority; // Collider.layerOverridePriority
 };
 
 namespace
@@ -1726,9 +1782,9 @@ uint64_t attach( uint64_t bodyId, const ua3_shape_def* def, const PxGeometry& ge
 	shape->setLocalPose( local );
 	shape->setContactOffset( def->contactOffset > 0.0f ? def->contactOffset : s_contactOffset );
 	shape->setRestOffset( 0.0f );
-	ShapeInfo* i = new ShapeInfo{ def->density, def->enableContactEvents != 0, def->enableSensorEvents != 0, 0 };
+	ShapeInfo* i = new ShapeInfo{ def->density, def->enableContactEvents != 0, def->enableSensorEvents != 0, 0, def->layerFlags };
 	shape->userData = i;
-	PxFilterData simulation( static_cast<PxU32>( def->categoryBits ), static_cast<PxU32>( def->maskBits ), 0, 0 );
+	PxFilterData simulation( static_cast<PxU32>( def->categoryBits ), static_cast<PxU32>( def->maskBits ), 0, static_cast<PxU32>( def->layerPriority ) );
 	shape->setSimulationFilterData( simulation );
 	set_filter_flags( shape, actor );
 	shape->setQueryFilterData( query_data( static_cast<PxU32>( def->categoryBits ), actor, def->isSensor != 0 ) );
@@ -1975,15 +2031,21 @@ UA3_API void ua3_shape_update_box( uint64_t id, const ua3_shape_def* def, ua3_ve
 	i->density = def->density;
 	i->contactEvents = def->enableContactEvents != 0;
 	i->sensorEvents = def->enableSensorEvents != 0;
+	i->layers = def->layerFlags;
 	PxFilterData before = shape->getSimulationFilterData();
 	PxFilterData after = before;
 	after.word0 = static_cast<PxU32>( def->categoryBits );
 	after.word1 = static_cast<PxU32>( def->maskBits );
+	after.word3 = static_cast<PxU32>( def->layerPriority );
 	shape->setSimulationFilterData( after );
 	set_filter_flags( shape );
 	shape->setQueryFilterData( query_data( after.word0, shape->getActor(), def->isSensor != 0 ) );
 	after = shape->getSimulationFilterData();
-	if ( before.word0 != after.word0 || before.word1 != after.word1 || before.word2 != after.word2 ) refilter( shape );
+	if ( before.word0 != after.word0 || before.word1 != after.word1 || before.word2 != after.word2 || before.word3 != after.word3 )
+	{
+		refilter( shape );
+		invalidate_controllers( world_of_actor( shape->getActor() ) );
+	}
 }
 
 UA3_API void ua3_shape_destroy( uint64_t id, int updateBodyMass )
@@ -2036,19 +2098,23 @@ UA3_API void ua3_shape_set_contact_offset( uint64_t id, float contactOffset )
 	}
 }
 
-UA3_API void ua3_shape_set_filter( uint64_t id, uint64_t categoryBits, uint64_t maskBits )
+UA3_API void ua3_shape_set_filter( uint64_t id, uint64_t categoryBits, uint64_t maskBits, int layerFlags, int layerPriority )
 {
 	PxShape* shape = shape_of( id );
 	if ( shape == nullptr )
 	{
 		return;
 	}
+	info( shape )->layers = layerFlags;
 	PxFilterData data = shape->getSimulationFilterData();
 	data.word0 = static_cast<PxU32>( categoryBits );
 	data.word1 = static_cast<PxU32>( maskBits );
+	data.word3 = static_cast<PxU32>( layerPriority );
 	shape->setSimulationFilterData( data );
+	set_filter_flags( shape );
 	shape->setQueryFilterData( query_data( static_cast<PxU32>( categoryBits ), shape->getActor(), ( shape->getFlags() & PxShapeFlag::eTRIGGER_SHAPE ) ) );
 	refilter( shape );
+	invalidate_controllers( world_of_actor( shape->getActor() ) );
 }
 
 UA3_API void ua3_shape_set_density( uint64_t id, float density )
@@ -2924,6 +2990,8 @@ struct ua3_cct_def
 	uint64_t material;
 	float staticFriction;
 	int detectCollisions; // 0: bodies and other controllers pass through it
+	int layerFlags; // LayerOverride
+	int layerPriority; // Collider.layerOverridePriority
 };
 
 // A capsule controller in a world's controller manager; its kinematic actor's shape carries the
@@ -2972,9 +3040,9 @@ UA3_API uint64_t ua3_cct_create( uint32_t id, const ua3_cct_def* def )
 	c->controller = static_cast<PxCapsuleController*>( controller );
 	PxRigidDynamic* actor = controller->getActor();
 	actor->getShapes( &c->shape, 1 );
-	ShapeInfo* i = new ShapeInfo{ 1.0f, true, true, 0 };
+	ShapeInfo* i = new ShapeInfo{ 1.0f, true, true, 0, ( def->layerFlags & LayerOverride ) | ( def->detectCollisions ? 0 : LayerNoContacts ) };
 	c->shape->userData = i;
-	c->shape->setSimulationFilterData( PxFilterData( static_cast<PxU32>( def->categoryBits ), def->detectCollisions ? c->mask : 0u, 0, 0 ) );
+	c->shape->setSimulationFilterData( PxFilterData( static_cast<PxU32>( def->categoryBits ), c->mask, 0, static_cast<PxU32>( def->layerPriority ) ) );
 	set_filter_flags( c->shape );
 	c->shape->setQueryFilterData( query_data( static_cast<PxU32>( def->categoryBits ), actor, false ) );
 	refilter( c->shape );
@@ -2998,7 +3066,7 @@ UA3_API uint64_t ua3_cct_shape( uint64_t id )
 	return c != nullptr ? pack( c->shape ) : 0;
 }
 
-UA3_API void ua3_cct_set_filter( uint64_t id, uint64_t categoryBits, uint64_t maskBits, int detectCollisions )
+UA3_API void ua3_cct_set_filter( uint64_t id, uint64_t categoryBits, uint64_t maskBits, int detectCollisions, int layerFlags, int layerPriority )
 {
 	Character* c = character_of( id );
 	if ( c == nullptr )
@@ -3006,12 +3074,16 @@ UA3_API void ua3_cct_set_filter( uint64_t id, uint64_t categoryBits, uint64_t ma
 		return;
 	}
 	c->mask = static_cast<PxU32>( maskBits );
+	info( c->shape )->layers = ( layerFlags & LayerOverride ) | ( detectCollisions ? 0 : LayerNoContacts );
 	PxFilterData data = c->shape->getSimulationFilterData();
 	data.word0 = static_cast<PxU32>( categoryBits );
-	data.word1 = detectCollisions ? c->mask : 0u;
+	data.word1 = c->mask;
+	data.word3 = static_cast<PxU32>( layerPriority );
 	c->shape->setSimulationFilterData( data );
+	set_filter_flags( c->shape );
 	c->shape->setQueryFilterData( query_data( static_cast<PxU32>( categoryBits ), c->controller->getActor(), false ) );
 	refilter( c->shape );
+	invalidate_controllers( c->world );
 }
 
 // The capsule's dimensions and walking settings (PhysX keeps the centre where it is).
@@ -3069,7 +3141,8 @@ UA3_API int ua3_cct_move( uint64_t id, ua3_vec3 displacementIn, float minDistanc
 	PxVec3 displacement = displacementIn;
 	c->hits.clear();
 	c->world->controllers->setOverlapRecoveryModule( overlapRecovery != 0 );
-	PxFilterData data( c->mask, 0, 0, 0 );
+	// Every layer passes the query mask; the pre-filter applies the layer rule.
+	PxFilterData data( ~0u, 0, 0, 0 );
 	PxControllerFilters filters( &data, c, c );
 	filters.mFilterFlags = PxQueryFlag::eSTATIC | PxQueryFlag::eDYNAMIC | PxQueryFlag::ePREFILTER;
 	PxControllerCollisionFlags flags = c->controller->move( displacement, minDistance, elapsedTime, filters );
