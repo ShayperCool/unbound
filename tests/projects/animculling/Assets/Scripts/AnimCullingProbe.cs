@@ -62,6 +62,7 @@ public class AnimCullingProbe : MonoBehaviour
 
     static string F(float f) => f.ToString("R", CultureInfo.InvariantCulture);
     static string B(bool b) => b ? "true" : "false";
+    static string Q(Quaternion q) => "[" + F(q.x) + "," + F(q.y) + "," + F(q.z) + "," + F(q.w) + "]";
     static string V(Vector3 v) => "[" + F(v.x) + "," + F(v.y) + "," + F(v.z) + "]";
     static string S(string s) => "\"" + s.Replace("\\", "\\\\").Replace("\"", "\\\"") + "\"";
     void Put(string k, string json) => records.Append("{\"k\":").Append(S(k)).Append(",\"v\":").Append(json).Append("}\n");
@@ -364,6 +365,10 @@ public class AnimCullingProbe : MonoBehaviour
             json.Append(",\"nt\":").Append(F(info.normalizedTime)).Append(",\"ik\":").Append(c.ik.calls)
                 .Append(",\"hips\":").Append(B(c.hips.localRotation != c.lastHips))
                 .Append(",\"arm\":").Append(B(c.arm.localRotation != c.lastArm));
+            if (c.graph.IsValid())
+                Put(c.name + "/pose/" + frame, "{\"hips\":" + Q(c.hips.localRotation) + ",\"arm\":" + Q(c.arm.localRotation)
+                    + ",\"hipsDot\":" + F(Quaternion.Dot(c.lastHips, c.hips.localRotation))
+                    + ",\"armDot\":" + F(Quaternion.Dot(c.lastArm, c.arm.localRotation)) + "}");
             c.lastHips = c.hips.localRotation;
             c.lastArm = c.arm.localRotation;
         }
