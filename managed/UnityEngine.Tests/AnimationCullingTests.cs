@@ -386,6 +386,64 @@ namespace UnityEngine.Tests
             finally { graph.Destroy(); }
         }
 
+        [Fact]
+        public void AnUnrelatedOutputPreservesPartialControllerLayersAndTheirHeldValues()
+        {
+            var controller = (RuntimeAnimatorController)Load(AnimationFixtures.PopupButton).Objects[9100000];
+            controller.m_Layers.Clear();
+            var clip = new AnimationClip { legacy = true };
+            clip.SetCurve("Held", typeof(Transform), "localPosition.y", AnimationCurve.Constant(0f, 1f, 4f));
+            clip.legacy = false;
+            var empty = new ControllerStateAsset { name = "Empty", WriteDefaults = false };
+            var moving = new ControllerStateAsset { name = "Moving", Motion = clip };
+            var holding = new ControllerStateAsset { name = "Hold", WriteDefaults = false };
+            var basis = new ControllerStateMachineAsset { name = "Base", DefaultState = empty };
+            basis.States.Add(empty);
+            var partial = new ControllerStateMachineAsset { name = "Partial", DefaultState = moving };
+            partial.States.Add(moving);
+            partial.States.Add(holding);
+            controller.m_Layers.Add(new ControllerLayerData { Name = "Base", StateMachine = basis });
+            controller.m_Layers.Add(new ControllerLayerData { Name = "Partial", StateMachine = partial, DefaultWeight = 0.5f });
+            foreach (var asset in new Object[] { controller, clip, empty, moving, holding, basis, partial }) m_Objects.Add(asset);
+
+            (Animator Animator, Transform Held) Actor(string name)
+            {
+                var root = new GameObject(name);
+                m_Objects.Add(root);
+                var held = new GameObject("Held").transform;
+                held.SetParent(root.transform, false);
+                new GameObject("ContinueText").transform.SetParent(root.transform, false);
+                var animator = root.AddComponent<Animator>();
+                animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
+                animator.runtimeAnimatorController = controller;
+                animator.Tick(0f);
+                return (animator, held);
+            }
+            var control = Actor("ControllerOnly");
+            var output = Actor("ControllerAndOutput");
+            // This output adds bindings for another child after the controller already evaluated.
+            var graph = PlayableRig(output.Animator, out _);
+            try
+            {
+                for (int frame = 0; frame < 4; frame++)
+                {
+                    if (frame == 2)
+                    {
+                        control.Animator.Play("Hold", 1, 0f);
+                        output.Animator.Play("Hold", 1, 0f);
+                        // A no-defaults state retains the controller's value despite game writes.
+                        control.Held.localPosition = output.Held.localPosition = new Vector3(0f, 9f, 0f);
+                    }
+                    control.Animator.Tick(0.1f);
+                    PlayableStep(graph, output.Animator, 0.1f);
+                    Near.Equal(2f, control.Held.localPosition.y);
+                    Near.Equal(control.Held.localPosition.y, output.Held.localPosition.y);
+                    Near.Equal(0.2f * (frame + 1), output.Animator.transform.Find("ContinueText").localPosition.x);
+                }
+            }
+            finally { graph.Destroy(); }
+        }
+
         public class PlayableMoveState : StateMachineBehaviour
         {
             public static int Calls;

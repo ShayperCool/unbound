@@ -275,9 +275,10 @@ namespace Unbound.Runtime
         /// <paramref name="humanBodyInRootMotion"/>, additive layers leave a humanoid body's curves to
         /// the root motion pass (see <see cref="CombineLayers"/>). With
         /// <paramref name="skipTransforms"/>, Transforms and humanoid curves are left as they are
-        /// (an Animator culled by CullUpdateTransforms).</summary>
+        /// (an Animator culled by CullUpdateTransforms). With <paramref name="stream"/>, captures
+        /// the same composed result and bookkeeping without writing the scene.</summary>
         internal static void WriteLayers(AnimationBindings b, LayerPose[] layers, int count, float[] written = null, bool[] held = null,
-            bool humanBodyInRootMotion = false, bool skipTransforms = false)
+            bool humanBodyInRootMotion = false, bool skipTransforms = false, Unbound.Runtime.Playables.AnimStream stream = null)
         {
             var s = Rent(b);
             try
@@ -328,7 +329,14 @@ namespace Unbound.Runtime
                         }
                     }
                 }
-                Write(b, s, skipTransforms);
+                if (stream == null) Write(b, s, skipTransforms);
+                else
+                {
+                    Array.Copy(s.Result, stream.Values, n);
+                    Array.Copy(s.Touched, stream.Animated, n);
+                    Array.Copy(s.Objects, stream.Objects, b.ObjectCount);
+                    Array.Copy(s.ObjectTouched, stream.ObjectAnimated, b.ObjectCount);
+                }
             }
             finally
             {

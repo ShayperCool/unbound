@@ -134,3 +134,9 @@ callbacks through its existing dispatcher. The 6000.0
 places these after OnAnimatorMove. Managed regression tests check that deferring the
 controller does not drop them, including under CullUpdateTransforms without requested
 root motion. The probe does not claim an ordering between different Animators.
+
+The deferred controller base uses the same layer composition as its scene write,
+including defaults, held values and root-motion exclusions. A managed regression
+checks that adding an output on another child cannot make a half-weight controller
+layer accumulate the previous frame's scene value, and that a no-defaults state
+continues holding its layer value after a game write.

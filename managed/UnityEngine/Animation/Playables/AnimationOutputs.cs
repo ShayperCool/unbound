@@ -541,7 +541,7 @@ namespace Unbound.Runtime.Playables
                     else g.Read(result.Values, g.First);
                 }
                 if (animator.m_Player.DeferOutput)
-                    animator.m_Player.EvaluateInto(result.Values, result.Animated, result.Objects, result.ObjectAnimated);
+                    animator.m_Player.CopyDeferredInto(result.Values, result.Animated, result.Objects, result.ObjectAnimated);
                 if (e.MotionMode == RootMotionMode.Compute)
                     motion = RootMotionStep.FromVelocities(animator, motionDeltaTime, animator.velocity, animator.angularVelocity);
             }

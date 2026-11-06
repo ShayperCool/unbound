@@ -304,6 +304,20 @@ namespace Unbound.Runtime
         /// <summary>The pending playable outputs combine the controller's pose and motion before
         /// writing and delivering movement once for the Animator.</summary>
         internal bool DeferOutput;
+        Unbound.Runtime.Playables.AnimStream m_DeferredPose;
+
+        /// <summary>The attached controller's already-composed pose. Its defaults, retained values
+        /// and root-motion exclusions are the same as for a direct WritePose; output-only bindings
+        /// added afterwards leave the stream's current values alone.</summary>
+        internal void CopyDeferredInto(float[] values, bool[] animated, UnityEngine.Object[] objects, bool[] objectAnimated)
+        {
+            var pose = m_DeferredPose;
+            if (pose == null) return;
+            for (int c = 0; c < Math.Min(values.Length, pose.FloatCount); c++)
+                if (pose.Animated[c]) { values[c] = pose.Values[c]; animated[c] = true; }
+            for (int c = 0; c < Math.Min(objects.Length, pose.ObjectCount); c++)
+                if (pose.ObjectAnimated[c]) { objects[c] = pose.Objects[c]; objectAnimated[c] = true; }
+        }
 
         int m_PosedFloats = -1, m_PosedObjects = -1;
 
@@ -974,12 +988,18 @@ namespace Unbound.Runtime
             int count = BuildLayerPoses();
             ComputeRootMotion(count);
             AfterEvaluate();
-            if (DeferOutput) return;
+            if (DeferOutput)
+            {
+                m_DeferredPose ??= new Unbound.Runtime.Playables.AnimStream();
+                m_DeferredPose.Reset(Bindings);
+                WritePose(count, stream: m_DeferredPose);
+                return;
+            }
             ProcessRootMotion();
             WritePose(count, SkipWrites);
         }
 
-        void WritePose(int count, bool skipTransforms = false)
+        void WritePose(int count, bool skipTransforms = false, Unbound.Runtime.Playables.AnimStream stream = null)
         {
             if (m_Written.Length < Bindings.FloatCount)
             {
@@ -987,8 +1007,8 @@ namespace Unbound.Runtime
                 Array.Resize(ref m_WrittenHeld, Bindings.FloatCount);
             }
             PoseWriter.WriteLayers(Bindings, m_LayerPoses, count, m_Written, m_WrittenHeld, humanBodyInRootMotion: Attached,
-                skipTransforms: skipTransforms);
-            if (skipTransforms) return;
+                skipTransforms: skipTransforms, stream: stream);
+            if (skipTransforms || stream != null) return;
             if (Attached) WriteMassCenterPose(count);
             if (Attached) m_Animator.ApplyHumanPose();
             if (Attached) m_Animator.CaptureRootMotionPose();
