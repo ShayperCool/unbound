@@ -1,10 +1,10 @@
 # Validation job limits
 
-Parity integration and new child briefs also follow [PARITY_WORKFLOW.md](PARITY_WORKFLOW.md).
+The multi-agent workflow (workers, review, landing on `main`) is in
+[../agents/WORKFLOW.md](../agents/WORKFLOW.md). This file covers only the machine's job pool.
 
-Run validation with the existing build, test and probe commands through this
-installed pool. The [plan runner](PLAN_RUNNER.md) is optional. Do not delay a
-package to adopt it or create another per-package launch framework.
+Run builds, Editors and engines with the existing build, test and probe commands
+through this installed pool.
 
 Use tests/editor_runner.py for supervised Native captures; see
 [../../tests/EDITOR_RUNNER.md](../../tests/EDITOR_RUNNER.md).

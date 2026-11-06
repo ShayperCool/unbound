@@ -27,8 +27,8 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
 - Probe scripts select the release explicitly, read Native oracles from `Reference/`,
   and work in clean checkouts without machine-specific archived artifacts. Reports
   must keep every missing/extra/failing value and preserve comparator tolerances.
-- Do not rewrite parity-branch history or force-push. The user handles history cleanup
-  before the final PR.
+- Work reaches `main` only through `tools/agents/land.py` (rebase, gate, fast-forward).
+  Never rewrite `main`'s history or force-push.
 
 ## Rules of the codebase
 
@@ -67,42 +67,22 @@ Unity Editor and without building a player. See `docs/ARCHITECTURE.md` for the d
   sequences stay visible; do not change an oracle, comparator, tolerance or ordering to make
   an unspecified difference disappear. Review observable game effects before changing code.
 
-## Parallel parity delivery
+## Multi-agent work
 
-- Keep several independent feature implementations moving when explicitly authorized, unowned
-  work is ready. Audits and reviews are separate from implementation. A finished package waiting
-  for Root must not stop unrelated ready work; never create filler tasks or duplicate a writer.
-- The coordinator advances the authorized queue and starts a new independent review for each
-  prepared source head without requiring a separate acknowledgement of every checkpoint.
-  Validation still needs an applicable explicit release; integration and runtime admission
-  remain Root's decisions.
-- Consolidate routine receipts into review-ready packages with exact source/artifact links,
-  findings, proposed commands and spending. Report material blockers promptly. Preserve the
-  full raw evidence outside Git, and keep pins, ownership and spent budgets in compact state.
-  Do not poll running agents or revive retired owners.
-- Root dispatches independent completed packages to its own parallel reviewers for source,
-  artifact and validation checks. They return short decision-ready findings and concrete drafts;
-  Root handles corrections, finite releases, composition and admission instead of repeating each
-  audit serially. Reviewers do not mutate shared source or spend a validator's budget.
-- Routine launch notices go to the saved state/index, not a separate queued message per launch.
-  Keep one consolidated pending receipt digest plus genuinely new material blockers. Deduplicate
-  superseded notices only after archiving their complete text and routing unresolved work; never
-  discard human instructions or failure witnesses. Do not repeat stale requests after Root has
-  already supplied the applicable decision or grant.
-- Before spending a validation build, suite or capture, complete the short readiness check in
-  `tools/validation/PARITY_WORKFLOW.md`. Reuse exact-bound preparation evidence; extra compilation,
-  smoke tests or captures require an explicit allowance and count toward the finite budget.
-- Fix cosmetic review nits directly without another full review. Behavioral, assertion, fixture,
-  dependency or composition changes get a new independent review focused on the delta and its
-  affected consumers, carrying forward exact-bound prior findings and evidence. No retired owner
-  is resumed and no spent gate is silently repeated.
-- Root may release an exact candidate's finite validation conditionally on a clean independent
-  review and readiness check, so the coordinator can advance it without another acknowledgement.
-  Any unallowed source/input change or stop condition returns to Root; final admission stays Root's.
-- Maintain one authoritative package index with current source/baseline pins, owner, next action,
-  consumed budget and decision links. Close superseded requests when the applicable decision is
-  recorded, keeping their full history and unresolved findings. Refill only authorized, unowned
-  implementation work; a fixed count of waiting packages alone does not stop independent work.
+The full workflow is in [tools/agents/WORKFLOW.md](tools/agents/WORKFLOW.md). In short:
+
+- An orchestrator keeps about 5 workers busy, one per subsystem, each in its own worktree from
+  `main`. It writes no engine code and does not re-check workers.
+- A worker owns its task end to end. It probes against the Unity Editor, implements, builds,
+  tests and runs the engine and the Editor as often as it needs (no budgets; the job pool bounds
+  the machine). It gets one independent reviewer subagent and fixes P1/P2 findings itself, then
+  lands with `tools/agents/land.py` and reports in at most 10 lines.
+- `land.py` serializes landings with a lock. It rebases onto `main` and runs the gate on the
+  rebased tree: oracle guard, release build, managed tests, Rust tests of touched crates and the
+  worker's probes. Then it fast-forwards `main`. A conflict or a failed gate goes back to the
+  worker.
+- A sheriff periodically runs the full suite on `main`, bisects new failures and reverts or fixes
+  them.
 
 ## Code search
 

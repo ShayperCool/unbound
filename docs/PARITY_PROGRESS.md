@@ -1,5 +1,9 @@
 # Parity continuation, 2026-10-30
 
+> Historical log, closed on 2026-11-06. Do not add entries: work since then is recorded in Git
+> history and in the rows of [COMPATIBILITY_GAPS.md](COMPATIBILITY_GAPS.md). See
+> [tools/agents/WORKFLOW.md](../tools/agents/WORKFLOW.md).
+
 The interrupted Claude work lives on `compat/close-gaps`, originally checked out in
 `.claude/worktrees/compat-gaps`. Its last commit was `982c93b2`. The root checkout was still on
 `main` at `4724b839`, so continuing from that checkout alone would have missed 58 commits.
