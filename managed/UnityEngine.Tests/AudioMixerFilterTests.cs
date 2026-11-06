@@ -209,6 +209,12 @@ namespace UnityEngine.Tests
                 Assert.Equal(0.3f, config.GetProperty("releaseTime").GetSingle());
                 Assert.Equal(1f, config.GetProperty("sidechainMix").GetSingle());
             }
+            mixer.m_Exposed["Mix"] = "Sidechain Mix";
+            Assert.True(mixer.SetFloat("Mix", 1.5f));
+            Assert.Throws<NotSupportedException>(() => master.DspConfiguration());
+            Assert.True(mixer.SetFloat("Mix", 0.5f));
+            Assert.True(mixer.SetFloat("Send", 3f));
+            Assert.Throws<NotSupportedException>(() => voice.DspConfiguration());
             duck.m_EnableWetMix = true;
             Assert.Throws<NotSupportedException>(() => master.DspConfiguration());
         }

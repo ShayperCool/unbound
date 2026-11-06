@@ -286,7 +286,8 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
   group) fails loudly as unmeasured.
 - **Bypass.** Native ignores effect bypass and group bypass on all three units (the Editor
   disallows bypassing them).
-- **Startup.** During the mixer's first DSP block nothing reaches a Receive or Duck Volume. A
+- **Startup.** During the mixer's first DSP block nothing reaches a Receive or Duck Volume. The
+  engine times this from the mixer's start, also for a sending group registered later (unmeasured). A
   group with Duck Volume has the 1024-frame group input fade (as Echo and SFX Reverb); groups with
   only Send or Receive do not. Signals there otherwise show only the voices' 64-frame start fade.
 
@@ -295,7 +296,9 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
 - `ramp_ratio02`: an expanding ratio of 0.2 at up to 100x gain differs by up to 2.4e-5 relative
   (about 5e-6 of the log gain), inside the tolerance; probably Native's pow. Knee 50 and Ratio 10
   differ by under 1.4e-5.
+- A Send level above 0 dB and Duck Volume values outside the Editor's ranges (through exposed
+  parameters) fail loudly as unmeasured.
 - Unmeasured: other releases, surround output, parameter changes and snapshot transitions while
-  the detector runs, a Send level above 0 dB, sends between mixers, a send into its own group,
+  the detector runs, sending groups that start after their mixer, sends between mixers, a send into its own group,
   wet mixing on these units (fails loudly), and sample rates other than 48000 and 44100 Hz.
 - Compressor and the other mixer effects still fail loudly.
