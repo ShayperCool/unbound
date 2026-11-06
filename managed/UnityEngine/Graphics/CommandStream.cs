@@ -289,7 +289,7 @@ namespace Unbound.Runtime
 
         internal static void DrawSetup(in Unbound.Runtime.DrawSetup setup)
         {
-            FirstInstance(setup.FirstInstance);
+            if (setup.FirstInstance != 0) FirstInstance(setup.FirstInstance);
             U8(DrawSetupOp);
             U32(setup.Instances);
             U64(setup.Args);
