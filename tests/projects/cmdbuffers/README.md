@@ -121,8 +121,7 @@ helpers. These cases do not establish any order between overlapping draws.
 The measured release is 6000.0.71f1, OpenGLCore on RTX 4060. Shader vertex inputs with 32-bit
 indices or GPU base vertices remain refused by R6's renderer guard; procedural shaders bind no
 vertex buffer. Topologies beyond triangles, lines and points and strides beyond 2/4 bytes remain
-separate scope and fail loudly. Standalone mesh-instancing logical IDs and XR/plugin stubs are
-separate tasks.
+separate scope and fail loudly. XR/plugin stubs remain separate tasks. Standalone mesh instancing is measured below.
 
 6000.0.71f1 observations for `render.indexed.*`: both final Native repeats are byte-identical.
 Direct 16/32-bit and Structured int buffers draw the selected cells, including IDs over 65535.
@@ -141,3 +140,48 @@ advanced 16 bytes through 12-byte elements. Runtime arrays of three 32-bit scala
 scalar struct elements, with vector loads/stores reconstructed by the compiler. Dynamic
 component pointers into those packed elements fail explicitly; that case is not measured here.
 The shader cache format changes with this translation.
+
+
+## Standalone mesh instancing, Unity 6000.0
+
+`graphics.meshinstances.*` runs `Graphics.DrawMeshInstanced` and
+`Graphics.RenderMeshInstanced` through camera frame rendering and full RGBA readbacks.
+`MeshInstanceProbe.cs` and `MeshInstanceIds.shader` derive geometry and color from both raw
+`SV_InstanceID` and logical `unity_InstanceID`, including vertex-to-fragment transfer/setup.
+The canonical release reference includes 36 new records from two byte-identical GPU Editor
+captures. Every older record is unchanged. The engine-only `run.py check` gate compares all
+274 records with the original exact comparator, retaining exactly the two required invalid
+Append differences and its sentinel/warning guard.
+
+| Official 6000.0 source | Applied contract or limitation |
+|---|---|
+| [Graphics.DrawMeshInstanced](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.DrawMeshInstanced.html) | Per-instance values use float/vector/matrix arrays on a MaterialPropertyBlock. Instancing must be supported and enabled on the material. At most 1023 instances per API call. Group culling/sorting remains unchanged. |
+| [Graphics.RenderMeshInstanced](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.RenderMeshInstanced.html) | `startInstance` selects the first transform record; count -1 selects the remainder. Arrays, lists and NativeArrays are supported. Custom records use the mandatory `Matrix4x4 objectToWorld`; optional named `renderingLayerMask` and `prevObjectToWorld` members and arbitrary member order are documented. This probe covers only a first `objectToWorld` followed by ignored custom data. General struct offsets, rendering masks and motion vectors remain separate gaps. Capacity depends on per-instance data; the default transform limit is 511, and `assumeuniformscaling` can raise it. |
+| [GPU instancing shader reference](https://docs.unity3d.com/6000.0/Documentation/Manual/gpu-instancing-shader.html) and [macro reference](https://docs.unity.com/en-us/engine/6000.0/manual/analysis/graphics-performance-profiling/birp/gpu-instancing-shader/birp-shader-modifications) | `multi_compile_instancing` provides variants; SETUP initializes the logical ID, TRANSFER carries it to fragments, and ACCESS indexes per-instance data. `forcemaxcount` fixes the buffer array size on all platforms; `maxcount` is ignored on platforms with flexible sizes. These custom shader macros target the built-in pipeline. Multi-pass and additional-light instancing have documented limitations and are not newly measured here. |
+| [Per-instance properties](https://docs.unity.com/en-us/engine/6000.0/manual/analysis/graphics-performance-profiling/birp/gpu-instancing-shader/per-instance-properties) | Missing instance properties use the material default, otherwise zero. The automatic GameObject batching warning about ordinary properties is not an explicit-Graphics-call contract. |
+| [HLSL semantics](https://learn.microsoft.com/en-us/windows/win32/direct3dhlsl/dx-graphics-hlsl-semantics), shipped `UnityInstancing.cginc` | SV_InstanceID is a runtime-generated per-instance input. The release include computes the logical ID from raw input and base instance; backend details do not establish a portable raw-ID sequence. |
+
+Measured on 6000.0.71f1 OpenGLCore, RTX 4060: IDs start at zero for each call and for the
+selected RenderMeshInstanced range. Counts 2/3/7, separate groups, list/NativeArray/struct
+inputs, start/count and count -1 agree. Property indices start at zero regardless of
+`startInstance`. Ordinary scalar uniforms apply to all instances; instanced scalars affect
+submission element zero only. Float/vector/matrix property arrays and ordinary arrays are
+copied at submission, as are transform records. The snapshot cases mutate all of them before
+camera execution.
+
+Counts 513/1023 expose internal batch boundaries. The default shader restarts raw and logical
+IDs after 511 instances, while property arrays continue at the submission index and an
+instanced scalar is not repeated at a batch boundary. `forcemaxcount:4` restarts at four.
+The uniform-scaling shader in this probe restarts at 682: its property struct contains a
+vector, scalar and matrix. A 64 KiB property-buffer limit with a 96-byte struct explains that
+observation; this size calculation is an implementation inference, not a documented universal
+Unity allocation rule. Only the measured release receives these batch limits through Compat.
+Unknown property types fail loudly during replay rather than guessing their batch capacity.
+Other releases retain sequential IDs with an explicit unmeasured-limit warning.
+
+The implementation reuses the existing logical first-instance dispatch and per-instance
+property snapshots. A private shader replay variant keeps transform/property values per draw
+and passes logical IDs through the standard instancing macros. Non-mesh procedural/indirect
+calls and CommandBuffer instancing keep their existing paths. No new culling, sorting,
+lighting or probe order is asserted. Other graphics backends/releases are not claimed by this
+capture, and this result does not generalize the procedural-indirect raw-ID observations.
