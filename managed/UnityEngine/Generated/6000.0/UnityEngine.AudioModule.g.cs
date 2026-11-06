@@ -37,13 +37,6 @@ namespace UnityEngine
         public float depth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.depth"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.depth"); } }
         [global::System.Obsolete("Warning! Feedback is deprecated. This property does nothing.")] public float feedback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.feedback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.feedback"); } }
     }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.AudioBehaviour))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AudioDistortionFilter : global::UnityEngine.Behaviour
-    {
-        [global::Unbound.Stub] public AudioDistortionFilter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioDistortionFilter.ctor"); }
-        public float distortionLevel { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioDistortionFilter.distortionLevel"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioDistortionFilter.distortionLevel"); } }
-    }
     unsafe partial class AudioReverbFilter
     {
         [global::System.Obsolete("Warning! roomRolloffFactor is no longer supported.")] public float roomRolloffFactor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioReverbFilter.roomRolloffFactor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioReverbFilter.roomRolloffFactor"); } }
