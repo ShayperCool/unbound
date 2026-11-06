@@ -932,6 +932,8 @@ namespace Unbound.Runtime
                 return;
             }
             B3.ua3_shape_set_filter(c.m_Shape, category, mask, layerFlags, c.m_LayerOverridePriority);
+            // A terrain collider's tree shapes carry its filter too.
+            foreach (var extra in c.m_ExtraShapes) B3.ua3_shape_set_filter(extra, category, mask, layerFlags, c.m_LayerOverridePriority);
         }
 
         internal static void RefilterAll()

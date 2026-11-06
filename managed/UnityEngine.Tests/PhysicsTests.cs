@@ -923,6 +923,8 @@ namespace UnityEngine.Tests
             Assert.True(Lands((ball, rb, ground) => { rb.excludeLayers = 1 << 20; ball.layerOverridePriority = 1; ground.excludeLayers = 1 << 10; }));
         }
 
+        // Unbound's choice, unmeasured: detectCollisions off keeps the body out of every contact,
+        // even against a winning override on the other side.
         [Fact]
         public void ABodyThatDoesNotDetectCollisionsContactsNothingWhateverTheOverrides()
         {

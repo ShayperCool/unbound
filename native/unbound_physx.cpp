@@ -901,8 +901,8 @@ struct ua3_cct_hit
 	float length;
 };
 
-// A PxCapsuleController with its move's hits and filter: the layers it collides with (as a query
-// mask over the shapes' categories), never shapes in an ignored pair with its own.
+// A PxCapsuleController with its move's hits and filter: the shapes whose layers meet its own
+// (layers_meet, in the query pre-filter), never shapes in an ignored pair with its own.
 struct Character : public PxUserControllerHitReport, public PxQueryFilterCallback, public PxControllerFilterCallback
 {
 	World* world = nullptr;
@@ -938,9 +938,7 @@ struct Character : public PxUserControllerHitReport, public PxQueryFilterCallbac
 	// collisions (detectCollisions keeps bodies and other controllers out, not the move itself).
 	PxQueryHitType::Enum preFilter( const PxFilterData&, const PxShape* other, const PxRigidActor*, PxHitFlags& ) override
 	{
-		PxFilterData self = shape->getSimulationFilterData();
-		self.word1 = mask;
-		return ignores( other ) || !layers_meet( self, other->getSimulationFilterData(), true ) ? PxQueryHitType::eNONE : PxQueryHitType::eBLOCK;
+		return ignores( other ) || !layers_meet( shape->getSimulationFilterData(), other->getSimulationFilterData(), true ) ? PxQueryHitType::eNONE : PxQueryHitType::eBLOCK;
 	}
 	PxQueryHitType::Enum postFilter( const PxFilterData&, const PxQueryHit& ) override
 	{
