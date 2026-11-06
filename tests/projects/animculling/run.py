@@ -5,7 +5,9 @@
                                               and copies them back here
     run.py editor  [--release R] --label L    two independent windowed GPU Editor captures (native1, native2)
     run.py publish [--release R] --label L    checks both captures, publishes one to Reference/unity-R.jsonl
-    run.py check   [--release R] [--label L]  an Unbound capture compared with Reference/ (the landing gate)
+    run.py check   [--release R] [--label L]  an Unbound capture strictly compared with Reference/
+
+    run.py gate    [--release R] [--label L]  check, then verify only the documented numeric predicate residuals
 
 R defaults to $UNBOUND_PROBE_UNITY_VERSION, else tests/probe_paths.py's default. Every capture
 runs on a fresh copy of Assets/Packages/ProjectSettings under
@@ -140,7 +142,7 @@ def publish(work):
                            complete=[capture_problem], gpu=True)
 
 
-def check(work):
+def check(work, allow_residuals=False):
     cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     project = copy_project(work/'project')
     out = fresh_output(work/'unbound')
@@ -155,22 +157,27 @@ def check(work):
         return 1
     compared = subprocess.run([sys.executable, str(PROBE/'compare.py'), str(reference_file(PROBE, 'jsonl')),
                                str(out/OUT)]).returncode
-    return compared or int(code != 0)
+    if not allow_residuals:
+        return compared or int(code != 0)
+    if code != 0 or capture_problem(out):
+        return 1
+    return subprocess.run([sys.executable, str(PROBE/'verify_gate.py'), str(reference_file(PROBE, 'jsonl')),
+                           str(out/OUT)]).returncode
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'check'))
+    parser.add_argument('mode', choices=('create', 'editor', 'publish', 'check', 'gate'))
     parser.add_argument('--label')
     parser.add_argument('--release')
     args = parser.parse_args()
     if args.release:
         os.environ['UNBOUND_PROBE_UNITY_VERSION'] = args.release
-    label = args.label or (time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid()) if args.mode in ('check', 'create') else None)
+    label = args.label or (time.strftime('check-%Y%m%d-%H%M%S-')+str(os.getpid()) if args.mode in ('check', 'gate', 'create') else None)
     if not label or Path(label).name != label or label in ('.', '..'):
         parser.error('--label must be a single directory name')
     work = run_root(PROBE, label)
-    return {'create': create, 'editor': editor, 'publish': publish, 'check': check}[args.mode](work)
+    return {'create': create, 'editor': editor, 'publish': publish, 'check': check, 'gate': lambda work: check(work, allow_residuals=True)}[args.mode](work)
 
 
 if __name__ == '__main__':

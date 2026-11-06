@@ -1,4 +1,6 @@
 {
- "commands": ["python3 tests/projects/animculling/run.py check"],
+ "commands": [
+  "python3 tests/projects/animculling/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\""
+ ],
  "summary": "\\d+/\\d+ records match.*"
 }
