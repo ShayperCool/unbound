@@ -49,6 +49,9 @@ Its full instructions are in [ORCHESTRATOR.md](ORCHESTRATOR.md).
    - Record it twice; publish one copy if both captures are identical, and keep the repeat outside
      Git.
    - Run the Editor on the GPU through `~/.cache/compat/with-heavy-job` (or `tests/editor_runner.py`).
+   - A new probe declares its land-gate command (the one you pass to `land.py --probe`) in
+     `tests/projects/<probe>/gate.json`, with the release as `$UNBOUND_PROBE_UNITY_VERSION`, so the
+     sheriff's suite runs it (format: `tools/agents/suite.py`'s docstring); `suite.py --list` shows it.
 4. Implement:
    - Build with `python3 tools/build.py -- build --release --locked -p unbound`.
    - Run the managed tests and the probe against the reference. Iterate until it matches.
@@ -109,7 +112,8 @@ A worker with this task, in its own worktree from current `main`:
    `python3 tools/agents/suite.py > ~/.cache/unbound/agents/logs/suite-$(date +%Y%m%d-%H%M).log 2>&1`.
    It runs every `tests/projects/<probe>` with a `Reference/` (this checkout's release build, or
    `--cli`/`$UNBOUND`), prints one line per probe (`pass`, `fail`, `report` for comparators
-   without a verdict, `no recipe` with the reason) and writes
+   without a verdict, `no recipe` with the reason: neither a recipe in `suite.py` nor a valid
+   `gate.json` in the probe) and writes
    `~/.cache/unbound/agents/suite/<label>/summary.json`; step logs are in the run's work directory.
 2. The suite compares itself with `~/.cache/unbound/agents/baseline/` and lists every probe whose
    status or summary changed; it exits 1 on a new failure, when a failing probe got worse (an
