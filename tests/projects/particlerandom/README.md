@@ -95,14 +95,56 @@ matches and 81 known differences. The 600 added controls have 598 matches and th
 particle permutations described below, for 860/943 matching records, 83 known and zero
 unexpected differences. All rate birth seed halves, start values, positions and ages match.
 
+## Shape modifier controls
+
+The P5 extensions add 1206 keys, each recorded in two independent, identical Editor captures. They retain all
+943 existing reference values. Sphere, cone and box cover every combination of zero,
+intermediate and full position, random-direction and spherical-direction amounts under three
+fixed seeds. Additional burst, rate, separate Emit calls, and transformed Local/World controls
+check continued stream consumption. Circle, edge and cone-volume controls discriminate the shared modifier
+path. The shape transform includes translation, rotation and nonuniform scale.
+
+| Contract or measurement | Applicable scope |
+| --- | --- |
+| [Shape module manual](https://docs.unity3d.com/6000.0/Documentation/Manual/PartSysShapeModule.html), [ShapeModule API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.ShapeModule.html) | Shape controls initial position and direction. Direction amounts blend from the shape direction at zero to random or outward direction at one. Position randomization moves the spawning position by up to the amount. The manual's Hemisphere/Circle spherical-direction description does not specify numeric samples. |
+| [randomDirectionAmount](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.ShapeModule-randomDirectionAmount.html), [sphericalDirectionAmount](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.ShapeModule-sphericalDirectionAmount.html), [randomPositionAmount](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.ShapeModule-randomPositionAmount.html) | Direction amounts accept 0 to 1; intermediate values blend directions. A higher position amount increases displacement. No generator, draw order, normalization order or cross-release numeric sequence is promised. |
+| [randomSeed](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem-randomSeed.html), [useAutoRandomSeed](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem-useAutoRandomSeed.html) | Assigning a seed disables automatic seeding. Disabling automatic seeding reuses that seed for repeatable playback. This does not specify sample order or guarantee these numeric sequences across releases. |
+
+Measured in 6000.0.71f1: random direction consumes azimuth then height from the existing shape
+stream. Blend that unit direction with the basic shape direction, then blend toward the
+normalized basic shape position. Normalize after both blends, rather than between them.
+Cone base emission instead blends two disc samples before applying the cone angle and normalizing;
+the direction-only disc uses a minimum squared radius of 0.001, independent of radius thickness.
+Cone volume emission retains its basic direction and along-cone position, then uses the shared
+sphere-direction blend. Position randomization consumes another azimuth/height pair and adds a fixed-length offset.
+It does not affect the outward direction used by the spherical blend. All modifiers operate
+before the shape transform; the transformed direction is normalized. Zero amounts consume no
+extra draws. Packed shape lanes retain their existing advancement, independent of initialization
+and emission. Other releases retain the previous modifier path through the compatibility profile.
+These are measurements of the captured contexts, not a general ordering contract for particles.
+
+All six original `shape/randomize` records now match, and their previous residual allowance is
+removed. The original 943-record window improves from 860 matches/83 known differences to
+866/77; the original 343-record window improves from 262 to 268 matches. All 1206 new controls
+agree in particle identities and every per-seed value. The combined report has 2000/2149 matching
+records, 149 known differences and zero unexpected differences. The 149 comprise the 77 retained
+original residuals and 72 scripted Emit buffer permutations described below. Numeric tolerances
+are unchanged. Emission remains at 18 failing records/54 values, gravity at 568/639, sub-emitters
+at 975/1321 with all 58 random count controls exact, seed/axis at 48 failing values, and particles
+at 1520/1560 with four of 94 scenarios differing. The 17 particle images are byte-identical to
+the before capture; their worst reference mean remains 0.92.
+
 ## Retained differences
 
 All raw values, missing/extra keys and failing indices remain in comparator output. The residual
 registry names only the following fields; it does not change numeric tolerances.
 
-- `shape/randomize`: position and velocity with random position/direction and spherical direction
-  combined. The combined shape sampling order remains unresolved. Sphere, hemisphere, cone,
-  cone volume, box, circle, edge, donut and rectangle controls match without those modifiers.
+- `shapemod/(Box|Cone|Sphere)/[01]{3}/emit/<seed>/1`: the second scripted Emit call, five
+  newborns after nine existing particles, has a buffer permutation even with zero modifiers.
+  All 33 fields agree by particle seed. Only the measured permutation of that newborn tail is
+  classified as known, after checking every field of the entire record. The nine old particles
+  must remain in place. Every raw failure stays printed; no particle sorting or stronger order
+  guarantee is imposed. These 72 newly exposed control records are outside modifier sampling.
 - `ratebatch/edge/expiry/987654321/2` and `ratebatch/edge/expiry/4242/2`: two particles
   surviving from the preceding step occupy opposite buffer slots after other old particles die.
   All 33 fields agree by particle seed. The registry accepts only that exact pair permutation;

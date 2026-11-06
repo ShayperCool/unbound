@@ -547,7 +547,8 @@ public class ParticleRandomProbe : MonoBehaviour
                 for (int mask = 0; mask < 8; mask++)
                     ShapeModifierCase(type, (mask & 1) != 0 ? 1 : 0,
                         (mask & 2) != 0 ? 1 : 0, (mask & 4) != 0 ? 1 : 0, path);
-        foreach (var type in new[] { ParticleSystemShapeType.Circle, ParticleSystemShapeType.SingleSidedEdge })
+        foreach (var type in new[] { ParticleSystemShapeType.Circle, ParticleSystemShapeType.SingleSidedEdge,
+            ParticleSystemShapeType.ConeVolume })
             for (int mask = 0; mask < 8; mask++)
                 ShapeModifierCase(type, (mask & 1) != 0 ? 1 : 0,
                     (mask & 2) != 0 ? 1 : 0, (mask & 4) != 0 ? 1 : 0, "burst");

@@ -29,6 +29,10 @@ namespace Unbound.Runtime
         /// keep the existing emission path until measured.</summary>
         internal static bool ParticleRateBatchesMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Combined shape modifiers measured by tests/projects/particlerandom.
+        /// Other releases retain their existing sampling until measured.</summary>
+        internal static bool ParticleShapeModifiersMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>6000.0's BakeTrailsMesh joins ribbon strips in its index count and rejects
         /// the resulting out-of-bounds indices. Regular ribbon rendering is unaffected.</summary>
         internal static bool ParticleRibbonBakeRejectsMultipleStrips => Major >= 6000;

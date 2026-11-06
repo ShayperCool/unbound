@@ -14,7 +14,6 @@ PARTICLE_FIELDS = 33
 # Local field indices include the two seed halves. These are unresolved measurements, not
 # alternative tolerances. See README.md for their scope and observable effects.
 RESIDUALS = [
-    (r'^shape/randomize/', set(range(2, 8)), 'shape position/direction randomization'),
     (r'^start/gradients/', set(range(23, 31)), 'packed gradient interpolation'),
     (r'^color/(gradients|randomcolor)/', set(range(27, 31)), 'packed gradient interpolation'),
     (r'^subemit/child/', {2, 3, 4, 32}, 'Birth child origin and first-step age in Simulate'),
@@ -67,6 +66,21 @@ def retained_existing_pair(key, reference, candidate):
                for field in range(PARTICLE_FIELDS))
 
 
+def retained_emit_prefix(key, reference, candidate):
+    # A separate scripted-Emit control: nine existing particles, then five new ones.
+    # Every field agrees by seed, including with all modifiers disabled. Preserve
+    # each raw differing index without imposing this observed buffer permutation.
+    if not re.fullmatch(r'shapemod/(Box|Cone|Sphere)/[01]{3}/emit/(12345|987654321|4242)/1', key):
+        return False
+    if reference[0] != 14 or candidate[0] != 14:
+        return False
+    slots = list(range(9)) + [11, 12, 13, 9, 10]
+    return all(near(key, 1 + particle * PARTICLE_FIELDS + field,
+                    reference[1 + particle * PARTICLE_FIELDS + field],
+                    candidate[1 + source * PARTICLE_FIELDS + field])
+               for particle, source in enumerate(slots) for field in range(PARTICLE_FIELDS))
+
+
 def main():
     a, b = map(read, sys.argv[1:3])
     keys = sorted(a.keys() | b.keys())
@@ -81,8 +95,11 @@ def main():
         if not failures:
             continue
         retained_pair = retained_existing_pair(key, ra, rb)
+        emit_prefix = retained_emit_prefix(key, ra, rb)
         reasons = {i: ('existing-particle death compaction order; values agree by seed'
-                       if retained_pair and 1 <= i <= 66 else residual(key, i, ra[i], rb[i]))
+                       if retained_pair and 1 <= i <= 66 else
+                       'scripted Emit newborn prefix permutation; all fields agree by seed'
+                       if emit_prefix and i >= 1 + 9 * PARTICLE_FIELDS else residual(key, i, ra[i], rb[i]))
                    for i in failures}
         if all(reasons.values()):
             known.append(key)

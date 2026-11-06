@@ -39,6 +39,15 @@ namespace UnityEngine
             return InitialValue(m_ShapeRandom[0].S3);
         }
 
+        // A fixed-length offset; azimuth precedes height in the shared shape stream.
+        Vector3 ShapeModifierDirection()
+        {
+            float angle = ShapeValue() * (Mathf.PI * 2f);
+            float z = ShapeValue() * 2f - 1f;
+            float ring = Mathf.Sqrt(Mathf.Max(0f, 1f - z * z));
+            return new Vector3(ring * Mathf.Cos(angle), ring * Mathf.Sin(angle), z);
+        }
+
         // The radial sampler evaluates a polynomial log2/exp2 approximation.
         // Replacing it with Pow changes sphere positions beyond the probe tolerance.
         static float ShapeCubeRoot(float value)

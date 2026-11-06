@@ -942,6 +942,9 @@ namespace UnityEngine
                 dir = Vector3.forward;
                 return;
             }
+            bool measuredModifiers = (S.randomDirectionAmount > 0f || S.sphericalDirectionAmount > 0f || S.randomPositionAmount > 0f)
+                && Compat.ParticleShapeModifiersMeasured;
+            bool coneDirectionSampled = false;
             float radius = S.radius;
             float thickness = Mathf.Clamp01(S.radiusThickness);
             switch (S.shapeType)
@@ -975,7 +978,19 @@ namespace UnityEngine
                     float r01 = Mathf.Sqrt((1f - sample) + Mathf.Max(0.001f, shell ? 1f : 1f - thickness) * sample);
                     float angle = Mathf.Clamp(S.angle, 0f, 90f) * Mathf.Deg2Rad;
                     float cos = Mathf.Cos(phi), sin = Mathf.Sin(phi);
-                    dir = new Vector3(cos * r01 * Mathf.Sin(angle), sin * r01 * Mathf.Sin(angle), Mathf.Cos(angle)).normalized;
+                    float directionX = cos * r01, directionY = sin * r01;
+                    if (measuredModifiers && S.shapeType == ParticleSystemShapeType.Cone && S.randomDirectionAmount > 0f)
+                    {
+                        // Cone direction randomization blends a second disc sample
+                        // before applying the cone angle, independently of thickness.
+                        float randomPhi = ShapeValue() * (Mathf.PI * 2f);
+                        float randomRadius = ShapeValue();
+                        randomRadius = Mathf.Sqrt((1f - randomRadius) + 0.001f * randomRadius);
+                        directionX = Mathf.Lerp(directionX, Mathf.Cos(randomPhi) * randomRadius, S.randomDirectionAmount);
+                        directionY = Mathf.Lerp(directionY, Mathf.Sin(randomPhi) * randomRadius, S.randomDirectionAmount);
+                        coneDirectionSampled = true;
+                    }
+                    dir = new Vector3(directionX * Mathf.Sin(angle), directionY * Mathf.Sin(angle), Mathf.Cos(angle)).normalized;
                     pos = new Vector3(cos * radius * r01, sin * radius * r01, 0f);
                     if (S.shapeType == ParticleSystemShapeType.ConeVolume || S.shapeType == ParticleSystemShapeType.ConeVolumeShell)
                     {
@@ -1050,7 +1065,20 @@ namespace UnityEngine
                     break;
             }
 
-            if (S.randomPositionAmount > 0f) pos += RandomUnitVector() * (S.randomPositionAmount * Mathf.Pow(ShapeValue(), 1f / 3f));
+            if (measuredModifiers)
+            {
+                // Unity 6000.0.71f1, tests/projects/particlerandom: both blends use
+                // shape coordinates, without normalizing between them. The outward
+                // direction uses the basic position, before the separate jitter draw.
+                if (!coneDirectionSampled && S.randomDirectionAmount > 0f)
+                    dir = Vector3.Lerp(dir, ShapeModifierDirection(), S.randomDirectionAmount);
+                if (S.sphericalDirectionAmount > 0f)
+                    dir = Vector3.Lerp(dir, pos.normalized, S.sphericalDirectionAmount);
+                if (S.randomPositionAmount > 0f)
+                    pos += ShapeModifierDirection() * S.randomPositionAmount;
+            }
+            else if (S.randomPositionAmount > 0f)
+                pos += RandomUnitVector() * (S.randomPositionAmount * Mathf.Pow(ShapeValue(), 1f / 3f));
 
             var rot = Quaternion.Euler(S.rotation);
             var shapeMatrix = Matrix4x4.TRS(S.position, rot, S.scale);
@@ -1058,12 +1086,12 @@ namespace UnityEngine
             var d = shapeMatrix.MultiplyVector(dir);
             dir = d.sqrMagnitude > 1e-12f ? d.normalized : rot * dir;
 
-            if (S.sphericalDirectionAmount > 0f)
+            if (!measuredModifiers && S.sphericalDirectionAmount > 0f)
             {
                 var outward = (pos - S.position).sqrMagnitude > 1e-12f ? (pos - S.position).normalized : dir;
                 dir = Vector3.Lerp(dir, outward, S.sphericalDirectionAmount).normalized;
             }
-            if (S.randomDirectionAmount > 0f)
+            if (!measuredModifiers && S.randomDirectionAmount > 0f)
             {
                 var random = Vector3.Lerp(dir, RandomUnitVector(), S.randomDirectionAmount);
                 dir = random.sqrMagnitude > 1e-12f ? random.normalized : dir;
