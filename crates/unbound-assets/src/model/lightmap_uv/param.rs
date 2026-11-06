@@ -162,22 +162,11 @@ impl Sparse {
     }
 }
 
-/// A dot product, its terms grouped by fours.
+/// A dot product, summed in order.
 fn dot(a: &[f64], b: &[f64]) -> f64 {
-    let n = a.len();
     let mut acc = 0.0;
-    let mut i = 0;
-    if n > 3 {
-        let end = n - (n & 3);
-        while i < end {
-            acc =
-                a[i + 3] * b[i + 3] + a[i + 2] * b[i + 2] + a[i + 1] * b[i + 1] + a[i] * b[i] + acc;
-            i += 4;
-        }
-    }
-    while i < n {
-        acc += a[i] * b[i];
-        i += 1;
+    for (x, y) in a.iter().zip(b) {
+        acc += x * y;
     }
     acc
 }
@@ -240,8 +229,8 @@ pub fn corner_angle(map: &HalfEdgeMesh, edge: u32) -> f64 {
     let e = map.edge(edge);
     let a = sub(map.target(edge), map.target(e.prev));
     let b = sub(map.target(e.next), map.target(edge));
-    let la = sqrt_pos(a[2] * a[2] + a[0] * a[0] + a[1] * a[1]);
-    let lb = sqrt_pos(b[2] * b[2] + b[0] * b[0] + b[1] * b[1]);
+    let la = sqrt_pos(a[0] * a[0] + a[1] * a[1] + a[2] * a[2]);
+    let lb = sqrt_pos(b[0] * b[0] + b[1] * b[1] + b[2] * b[2]);
     PI - math::acos((a[1] * b[1] + a[0] * b[0] + a[2] * b[2]) / (la * lb))
 }
 
