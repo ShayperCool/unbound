@@ -300,7 +300,7 @@ mod tests {
     /// value and refuses 14 to 20 and 22 (NativeApiVersionTests).
     #[test]
     fn the_filter_descriptor_layout_is_native_api_21() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 21);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 22);
         assert_eq!(
             [
                 filter_kind::LOWPASS,

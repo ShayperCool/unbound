@@ -152,10 +152,12 @@ pub enum Command {
         indexed: bool,
     },
     /// The indices the next `Draw` reads instead of its mesh's (`Graphics.RenderPrimitivesIndexed`,
-    /// render protocol 8, NativeApi 17): `count` 16-bit indices from index `first` of a buffer
-    /// (its handle), drawn with base vertex 0.
+    /// render protocol 8, NativeApi 17): `count` indices of `size` bytes (2; 4 from render
+    /// protocol 10, NativeApi 21) from index `first` of a buffer (its handle), drawn with base
+    /// vertex 0, or the draw's arguments' when indirect.
     DrawIndices {
         buffer: u64,
+        size: u8,
         first: u32,
         count: u32,
     },
@@ -299,13 +301,18 @@ mod op {
     pub const COPY_DEPTH: u8 = 29;
 }
 
-/// The size of a `DrawIndices` index on the wire: 16-bit indices, the only ones drawn.
+/// The sizes of a `DrawIndices` index on the wire: 16-bit indices, and 32-bit ones from render
+/// protocol 10 ([`INDEX32_DRAWS`]).
 pub const DRAW_INDEX_SIZE: u8 = 2;
+pub const DRAW_INDEX32_SIZE: u8 = 4;
 
 /// Render protocol 8 is NativeApi 18's (17's alone, 18 with the audio filter descriptors of 16) and
 /// later ones': `DrawIndices` is decoded only under those versions, checked before any of its bytes
 /// are read. The stream itself carries no version.
 const INDEXED_DRAWS: bool = crate::native_api::NATIVE_API_VERSION >= 18;
+
+/// Render protocol 10 (NativeApi 21): `DrawIndices` of 32-bit indices.
+const INDEX32_DRAWS: bool = crate::native_api::NATIVE_API_VERSION >= 21;
 
 /// Property kinds in the stream.
 mod kind {
@@ -479,7 +486,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 if buffer == 0 {
                     return Err("DrawIndices without a buffer".into());
                 }
-                if size != DRAW_INDEX_SIZE {
+                if size != DRAW_INDEX_SIZE && !(INDEX32_DRAWS && size == DRAW_INDEX32_SIZE) {
                     return Err(format!("DrawIndices of {size}-byte indices"));
                 }
                 if count == 0 || first.checked_add(count).is_none() {
@@ -487,6 +494,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                 }
                 Command::DrawIndices {
                     buffer,
+                    size,
                     first,
                     count,
                 }
@@ -787,12 +795,13 @@ impl Writer {
             }
             Command::DrawIndices {
                 buffer,
+                size,
                 first,
                 count,
             } => {
                 self.bytes.push(op::DRAW_INDICES);
                 self.u64(*buffer);
-                self.bytes.push(DRAW_INDEX_SIZE);
+                self.bytes.push(*size);
                 self.u32(*first);
                 self.u32(*count);
             }
@@ -1259,7 +1268,7 @@ mod tests {
         assert_eq!(commands.len(), 3);
         assert_eq!(
             format!("{:?}", commands[1]),
-            "DrawIndices { buffer: 7, first: 6, count: 12 }"
+            "DrawIndices { buffer: 7, size: 2, first: 6, count: 12 }"
         );
         let mut again = Writer::default();
         for c in &commands {
@@ -1272,7 +1281,7 @@ mod tests {
         assert_eq!(
             format!("{:?}", parse(&last).unwrap()),
             format!(
-                "[DrawIndices {{ buffer: 1, first: {}, count: 1 }}]",
+                "[DrawIndices {{ buffer: 1, size: 2, first: {}, count: 1 }}]",
                 u32::MAX - 1
             )
         );
@@ -1284,7 +1293,8 @@ mod tests {
     fn malformed_draw_indices_are_rejected() {
         for bad in [
             draw_indices_bytes(0, 2, 0, 3),
-            draw_indices_bytes(7, 4, 0, 3),
+            draw_indices_bytes(7, 8, 0, 3),
+            draw_indices_bytes(7, 3, 0, 3),
             draw_indices_bytes(7, 1, 0, 3),
             draw_indices_bytes(7, 0, 0, 3),
             draw_indices_bytes(7, 2, 0, 0),
@@ -1305,8 +1315,17 @@ mod tests {
     /// zone.
     #[test]
     fn draw_indices_need_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 21);
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 22);
         assert!(parse(&draw_indices_bytes(7, 2, 0, 3)).is_ok());
+        let wide = draw_indices_bytes(7, 4, 2, 3);
+        let commands = parse(&wide).unwrap();
+        assert_eq!(
+            format!("{commands:?}"),
+            "[DrawIndices { buffer: 7, size: 4, first: 2, count: 3 }]"
+        );
+        let mut w = Writer::default();
+        w.write(&commands[0]);
+        assert_eq!(w.bytes, wide);
     }
 
     /// Render protocol 7's commands keep their bytes: a draw setup is still opcode 22 and its

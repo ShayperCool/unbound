@@ -22,6 +22,9 @@ struct ProgramGpu {
     buffer_layout: Option<wgpu::BindGroupLayout>,
     layout: wgpu::PipelineLayout,
     pipelines: HashMap<PipelineKey, wgpu::RenderPipeline>,
+    /// Whether the vertex program reads vertex inputs: one that reads none (built from its
+    /// vertex and instance ids) draws without vertex buffers.
+    vertex_inputs: bool,
 }
 
 /// Compiled programs and this frame's uniform blocks.
@@ -268,6 +271,7 @@ impl CompiledPrograms {
                 .enumerate()
                 .map(|(i, u)| (u.name.clone(), i as u32))
                 .collect(),
+            vertex_inputs: program.vertex_inputs,
             vertex: module(&format!("{shader} (vertex)"), &program.vertex),
             fragment: module(&format!("{shader} (fragment)"), &program.fragment),
             program,
@@ -291,6 +295,12 @@ impl CompiledPrograms {
 
     pub fn program(&self, id: u32) -> &Arc<Compiled> {
         &self.programs[id as usize].program
+    }
+
+    /// Whether program `id`'s vertex program reads vertex inputs (its pipelines bind vertex
+    /// buffers).
+    pub fn reads_vertex_inputs(&self, id: u32) -> bool {
+        self.programs[id as usize].vertex_inputs
     }
 
     pub fn texture_layout(&self, id: u32) -> &wgpu::BindGroupLayout {
@@ -330,7 +340,11 @@ impl CompiledPrograms {
             (&gpu.vertex, &gpu.program.vertex_entry),
             (&gpu.fragment, &gpu.program.fragment_entry),
             key,
-            gpu.program.extra_vertex_inputs,
+            match (gpu.vertex_inputs, gpu.program.extra_vertex_inputs) {
+                (false, _) => 0,
+                (true, false) => 1,
+                (true, true) => 2,
+            },
             super::pipelines::fragment_outputs(&gpu.program.fragment),
         );
         gpu.pipelines.insert(key, pipeline.clone());
@@ -1133,6 +1147,7 @@ mod tests {
                 size: 16,
             }],
             extra_vertex_inputs: false,
+            vertex_inputs: true,
         };
         let size = |name: &str| (name == "_MainTex").then_some((64, 32));
         let globals_index = Default::default();

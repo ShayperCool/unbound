@@ -288,8 +288,8 @@ struct State {
     state_override: Option<commands::StateOverride>,
     /// How the next draw runs (`DrawSetup`): instances, arguments buffer, offset, indexed.
     draw_setup: Option<(u32, u64, u32, bool)>,
-    /// The next draw's 16-bit indices from a buffer (`DrawIndices`): buffer, first, count.
-    draw_indices: Option<(u64, u32, u32)>,
+    /// The next draw's indices from a buffer (`DrawIndices`): buffer, index size, first, count.
+    draw_indices: Option<(u64, u8, u32, u32)>,
 }
 
 pub struct UnityRenderer {
@@ -491,13 +491,15 @@ impl UnityRenderer {
         }
     }
 
-    /// The buffer a draw's external indices are read from (`DrawIndices`, render protocol 8):
-    /// `count` 16-bit indices from `first`, drawn with base vertex 0. None, warned once, when the
-    /// planned draws cannot read them safely ([`external_index_refusal`]): the draw is skipped.
+    /// The buffer a draw's external indices are read from (`DrawIndices`, render protocols 8 and
+    /// 10): `count` indices of `size` bytes from `first`, drawn with base vertex 0 (or the
+    /// arguments' of an indirect draw). None, warned once, when the planned draws cannot read them
+    /// safely ([`external_index_refusal`]): the draw is skipped.
     fn external_indices(
         &mut self,
         draw: &commands::Draw,
         handle: u64,
+        size: u8,
         first: u32,
         count: u32,
         planned: &[Planned],
@@ -515,6 +517,7 @@ impl UnityRenderer {
             .iter()
             .filter_map(|p| match p {
                 Planned::Draw(d) => Some(DrawInputs {
+                    vertex_inputs: self.compiled.reads_vertex_inputs(d.program.0),
                     indirect: d.indirect.is_some(),
                     vertex_bytes: d.vertex.size(),
                     extra_bytes: d.extra.as_ref().map(wgpu::Buffer::size),
@@ -525,9 +528,12 @@ impl UnityRenderer {
         let source = buffer
             .as_ref()
             .map(|(b, size)| (*size, b.usage().contains(wgpu::BufferUsages::INDEX)));
-        if let Some(why) = external_index_refusal(source, first, count, strip, &draws) {
+        if let Some(why) = external_index_refusal(source, size, first, count, strip, &draws) {
             self.warn_once(format!("indices{handle}:{why}"), || {
-                format!("a draw's 16-bit indices from buffer {handle}: {why}; skipped")
+                format!(
+                    "a draw's {}-bit indices from buffer {handle}: {why}; skipped",
+                    size * 8
+                )
             });
             return None;
         }
@@ -2163,9 +2169,10 @@ impl UnityRenderer {
                 } => self.state.draw_setup = Some((instances, args, offset, indexed)),
                 Command::DrawIndices {
                     buffer,
+                    size,
                     first,
                     count,
-                } => self.state.draw_indices = Some((buffer, first, count)),
+                } => self.state.draw_indices = Some((buffer, size, first, count)),
                 Command::Camera {
                     view,
                     projection,
@@ -2379,16 +2386,20 @@ impl UnityRenderer {
                             }
                         }
                     }
-                    if let Some((handle, first, count)) = indices {
+                    if let Some((handle, size, first, count)) = indices {
                         let Some(index) =
-                            self.external_indices(&draw, handle, first, count, &planned)
+                            self.external_indices(&draw, handle, size, first, count, &planned)
                         else {
                             continue;
                         };
                         for p in &mut planned {
                             if let Planned::Draw(p) = p {
                                 p.index = index.clone();
-                                p.index_format = wgpu::IndexFormat::Uint16;
+                                p.index_format = if size == commands::DRAW_INDEX32_SIZE {
+                                    wgpu::IndexFormat::Uint32
+                                } else {
+                                    wgpu::IndexFormat::Uint16
+                                };
                                 p.range = first..first + count;
                                 p.base_vertex = 0;
                             }
@@ -3847,9 +3858,11 @@ fn determinant3(m: &[f32; 16]) -> f32 {
         + m[8] * (m[1] * m[6] - m[5] * m[2])
 }
 
-/// What a planned draw binds, for [`external_index_refusal`]: whether its counts are read on the
-/// GPU, and the sizes of its vertex buffers (channels 0..3, and 4..7 when bound).
+/// What a planned draw binds, for [`external_index_refusal`]: whether its program reads vertex
+/// inputs, whether its counts are read on the GPU, and the sizes of its vertex buffers (channels
+/// 0..3, and 4..7 when bound).
 struct DrawInputs {
+    vertex_inputs: bool,
     indirect: bool,
     vertex_bytes: u64,
     extra_bytes: Option<u64>,
@@ -3859,15 +3872,18 @@ struct DrawInputs {
 /// 0..=0xFFFF.
 const INDEXED_VERTICES: u64 = 1 << 16;
 
-/// Why draws cannot read `count` 16-bit indices from index `first` of a buffer (its size in bytes
-/// and whether it can be read as indices; none: it does not exist), if they cannot. They can when
-/// the buffer holds the range, the topology is a list one (the pipelines set no strip index
-/// format, which an indexed strip draw needs), each draw is direct (an indirect draw's base vertex
-/// is read on the GPU) and every vertex buffer it binds holds a vertex for each of the 2^16 index
-/// values (the procedural stand-in's 65536): with base vertex 0, no index fetches past vertex
-/// 0xFFFF.
+/// Why draws cannot read `count` indices of `size` bytes from index `first` of a buffer (its size
+/// in bytes and whether it can be read as indices; none: it does not exist), if they cannot. They
+/// can when the buffer holds the range, the topology is a list one (the pipelines set no strip
+/// index format, which an indexed strip draw needs), and each draw either reads no vertex inputs
+/// (its pipeline binds no vertex buffer: "a draw call on the GPU, without a vertex buffer", the
+/// indexed DrawProcedural 6000.0, so any index, base vertex or indirect count is safe) or is a
+/// direct draw of 16-bit indices whose every vertex buffer holds a vertex for each of the 2^16
+/// index values (the procedural stand-in's 65536): with base vertex 0, no index fetches past
+/// vertex 0xFFFF.
 fn external_index_refusal(
     buffer: Option<(u64, bool)>,
+    size: u8,
     first: u32,
     count: u32,
     strip: bool,
@@ -3879,7 +3895,7 @@ fn external_index_refusal(
     if !index_usage {
         return Some("the buffer cannot be read as indices");
     }
-    if (u64::from(first) + u64::from(count)) * u64::from(commands::DRAW_INDEX_SIZE) > bytes {
+    if (u64::from(first) + u64::from(count)) * u64::from(size) > bytes {
         return Some("the indices pass the end of the buffer");
     }
     if strip {
@@ -3887,7 +3903,10 @@ fn external_index_refusal(
     }
     let vertex = size_of::<resources::Vertex>() as u64;
     let extra = size_of::<resources::ExtraVertex>() as u64;
-    for d in draws {
+    for d in draws.iter().filter(|d| d.vertex_inputs) {
+        if size != commands::DRAW_INDEX_SIZE {
+            return Some("the program reads vertex inputs, which 32-bit indices can pass");
+        }
         if d.indirect {
             return Some("an indirect draw's base vertex is read on the GPU");
         }
@@ -3906,6 +3925,7 @@ mod tests {
 
     fn stand_in(extra: bool) -> DrawInputs {
         DrawInputs {
+            vertex_inputs: true,
             indirect: false,
             vertex_bytes: INDEXED_VERTICES * size_of::<resources::Vertex>() as u64,
             extra_bytes: extra
@@ -3920,15 +3940,15 @@ mod tests {
         let index = Some((12, true));
         assert_eq!(INDEXED_VERTICES, u64::from(u16::MAX) + 1);
         assert_eq!(
-            external_index_refusal(index, 0, 6, false, &[stand_in(false)]),
+            external_index_refusal(index, 2, 0, 6, false, &[stand_in(false)]),
             None
         );
         assert_eq!(
-            external_index_refusal(index, 3, 3, false, &[stand_in(true)]),
+            external_index_refusal(index, 2, 3, 3, false, &[stand_in(true)]),
             None
         );
         assert_eq!(
-            external_index_refusal(index, 0, 6, false, &[stand_in(false), stand_in(true)]),
+            external_index_refusal(index, 2, 0, 6, false, &[stand_in(false), stand_in(true)]),
             None
         );
     }
@@ -3951,13 +3971,39 @@ mod tests {
             vec![short_extra],
             vec![stand_in(false), indirect],
         ] {
-            assert!(external_index_refusal(index, 0, 6, false, &draws).is_some());
+            assert!(external_index_refusal(index, 2, 0, 6, false, &draws).is_some());
         }
         let covered = [stand_in(false)];
-        assert!(external_index_refusal(index, 0, 6, true, &covered).is_some());
-        assert!(external_index_refusal(None, 0, 6, false, &covered).is_some());
-        assert!(external_index_refusal(Some((12, false)), 0, 6, false, &covered).is_some());
-        assert!(external_index_refusal(index, 4, 3, false, &covered).is_some());
-        assert!(external_index_refusal(index, 0, 7, false, &covered).is_some());
+        assert!(external_index_refusal(index, 2, 0, 6, true, &covered).is_some());
+        assert!(external_index_refusal(None, 2, 0, 6, false, &covered).is_some());
+        assert!(external_index_refusal(Some((12, false)), 2, 0, 6, false, &covered).is_some());
+        assert!(external_index_refusal(index, 2, 4, 3, false, &covered).is_some());
+        assert!(external_index_refusal(index, 2, 0, 7, false, &covered).is_some());
+    }
+
+    /// A draw whose program reads no vertex inputs binds no vertex buffer: it reads 32-bit
+    /// indices, indirect counts and base vertices whatever its stand-in holds. 32-bit indices
+    /// still need the buffer to hold them, and a program reading inputs refuses them.
+    #[test]
+    fn draws_without_vertex_inputs_read_any_indices() {
+        let index = Some((24, true));
+        let mut procedural = stand_in(false);
+        procedural.vertex_inputs = false;
+        procedural.vertex_bytes = 4;
+        let mut indirect = DrawInputs { ..procedural };
+        indirect.indirect = true;
+        for draws in [vec![procedural], vec![indirect]] {
+            for size in [2, 4] {
+                assert_eq!(
+                    external_index_refusal(index, size, 0, 6, false, &draws),
+                    None
+                );
+            }
+        }
+        let mut procedural = stand_in(false);
+        procedural.vertex_inputs = false;
+        assert!(external_index_refusal(index, 4, 1, 6, false, &[procedural]).is_some());
+        assert!(external_index_refusal(index, 4, 0, 6, true, &[stand_in(false)]).is_some());
+        assert!(external_index_refusal(index, 4, 0, 6, false, &[stand_in(false)]).is_some());
     }
 }

@@ -940,6 +940,12 @@ pub fn fit(
             matches!(a.binding, Some(Binding::Location { location, .. }) if location >= FIRST_EXTRA_LOCATION)
         })
     });
+    let vertex_inputs = vertex.entry_points.iter().any(|e| {
+        e.function
+            .arguments
+            .iter()
+            .any(|a| matches!(a.binding, Some(Binding::Location { .. })))
+    });
 
     let mut uniforms = vertex_uniforms.clone();
     for u in &fragment_uniforms {
@@ -997,6 +1003,7 @@ pub fn fit(
             })
             .collect(),
         extra_vertex_inputs,
+        vertex_inputs,
     })
 }
 

@@ -16,6 +16,16 @@ Meshes, textures and materials are identified by `u64` handles the managed side 
 is destroyed. Imported textures are uploaded by the native side itself (`import_texture`), which
 knows the asset pipeline and its cache.
 
+### Render protocol 10: 32-bit indices (NativeApi 21)
+
+`DrawIndices` takes an index size of 2 or 4. A draw reads 32-bit indices, and an indirect draw
+(whose `DrawSetup` names an arguments buffer, `indexed` set) reads a buffer's indices with the
+arguments' first index and base vertex, only when its program reads no vertex inputs: such a
+program's pipeline binds no vertex buffer ("without a vertex buffer", the indexed
+`CommandBuffer.DrawProcedural`), so no index can fetch past one. A program that reads vertex
+inputs keeps protocol 8's limits; refused draws are skipped with a warning. A 20 side and a 21
+side refuse each other at startup.
+
 ### Render protocol 9: depth copies (NativeApi 19)
 
 `CopyDepth` (opcode 29: source `u64`, destination `u64`) draws the whole depth buffer of one
@@ -212,7 +222,7 @@ before and after it, as on Unity's render thread) and a read back.
 26 CopyCounter  u64 src, u64 dst, u32 offset         // the counter (a u32) into dst at a byte offset;
                                                 // nothing before a dispatch has bound the counter
 27 DispatchIndirect u64 args, u32 offset, then Dispatch's fields   // group counts: 3 u32s of args
-28 DrawIndices  u64 buffer, u8 index_size (2), u32 first, u32 count   // next Draw's 16-bit indices, base vertex 0 (protocol 8)
+28 DrawIndices  u64 buffer, u8 index_size (2; 4 from protocol 10), u32 first, u32 count   // next Draw's indices, base vertex 0 or the indirect arguments' (protocol 8)
 property := str name, u8 kind (0 float f32, 1 vector f32x4, 2 texture u64 (element bits in Draw and Global
             only, see render protocol 6) + f32x4 st, 3 int i32, 4 matrix,
             5 buffer u64, 6 array u32 components (0: consecutive values) u32 n f32[n], 7 image u64 texture i32 mip)

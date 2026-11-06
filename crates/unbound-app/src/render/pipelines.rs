@@ -309,14 +309,15 @@ impl Pipelines {
 }
 
 /// A pipeline drawing with Unity render state `key.state` (blend, depth, stencil, culling, color
-/// mask) through the given layout and entry points.
+/// mask) through the given layout and entry points, reading `vertex_buffers` vertex buffers (the
+/// channels 0..3, then 4..7; none for a program that reads no vertex inputs).
 pub fn create_pipeline(
     device: &wgpu::Device,
     layout: &wgpu::PipelineLayout,
     vertex: (&wgpu::ShaderModule, &str),
     fragment: (&wgpu::ShaderModule, &str),
     key: PipelineKey,
-    extra_vertex_inputs: bool,
+    vertex_buffers: usize,
     outputs: u8,
 ) -> wgpu::RenderPipeline {
     let s = key.state;
@@ -385,7 +386,7 @@ pub fn create_pipeline(
             module: vertex.0,
             entry_point: Some(vertex.1),
             compilation_options: Default::default(),
-            buffers: &buffers[..if extra_vertex_inputs { 2 } else { 1 }],
+            buffers: &buffers[..vertex_buffers],
         },
         primitive: wgpu::PrimitiveState {
             topology: key.topology.wgpu(),

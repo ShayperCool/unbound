@@ -26,7 +26,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 17;
+pub const FORMAT_VERSION: u32 = 18;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -125,6 +125,9 @@ pub struct Compiled {
     /// Whether the vertex program reads `TEXCOORD4..7` (the second vertex buffer).
     #[serde(default)]
     pub extra_vertex_inputs: bool,
+    /// Whether the vertex program reads any vertex input: one that reads none (built from its
+    /// vertex and instance ids) draws without vertex buffers, so any index it is given is safe.
+    pub vertex_inputs: bool,
 }
 
 /// A buffer a program reads (or, in the fragment program, writes) by name.
@@ -1411,6 +1414,33 @@ float4 frag(v2f i) : SV_Target { return float4(i.id, i.pair, i.uv.x); }
             "{}",
             compiled.fragment
         );
+    }
+
+    /// Shader cache 18: a program built from its vertex and instance ids reads no vertex inputs
+    /// (it draws without vertex buffers); one with an attribute does.
+    #[test]
+    fn procedural_programs_read_no_vertex_inputs() {
+        let procedural = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4 vert(uint id : SV_VertexID, uint inst : SV_InstanceID) : SV_POSITION { return float4(id, inst, 0, 1); }
+float4 frag() : SV_Target { return 1; }
+"#;
+        let attribute = r#"
+#pragma vertex vert
+#pragma fragment frag
+float4 vert(float4 v : POSITION, uint id : SV_VertexID) : SV_POSITION { return v + id; }
+float4 frag() : SV_Target { return 1; }
+"#;
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let reads = |compiler: &mut ShaderCompiler, source| {
+            compiler
+                .compile(&program(source, false), &[], false)
+                .unwrap()
+                .vertex_inputs
+        };
+        assert!(!reads(&mut compiler, procedural));
+        assert!(reads(&mut compiler, attribute));
     }
 
     #[test]
