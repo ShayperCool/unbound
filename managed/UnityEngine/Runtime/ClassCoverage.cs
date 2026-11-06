@@ -53,6 +53,7 @@ namespace Unbound.Runtime
             [1660057539] = "SceneRoots: the scene's root order",
             [104] = "RenderSettings: applied by the scene",
             [157] = "LightmapSettings: the scene's baked lighting",
+            [196] = "NavMeshSettings: the scene's baked NavMesh (m_NavMeshData)",
             [142] = "AssetBundle: a bundle's own object",
             [115] = "MonoScript: a bundle's scripts",
             [150] = "PreloadData: a bundle's own object",
@@ -72,7 +73,6 @@ namespace Unbound.Runtime
         static readonly Dictionary<int, (string Key, string Data)> s_IgnoredWithoutData = new Dictionary<int, (string, string)>
         {
             [29] = ("m_OcclusionCullingData", "the scene's baked occlusion data"),
-            [196] = ("m_NavMeshData", "the scene's baked NavMesh"),
         };
 
         static readonly HashSet<int> s_Warned = new HashSet<int>();

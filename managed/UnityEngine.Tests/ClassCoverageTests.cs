@@ -76,10 +76,14 @@ namespace Unbound.Tests
             Assert.Equal("Read", Listed(84, "RenderTexture", new[] { "m_Width" }).Reading);
             Assert.Equal("Loader", Listed(104, "RenderSettings", new[] { "m_Fog" }).Reading);
             // Scene settings: ignored with only bake inputs, unread with baked data.
-            Assert.Equal("Ignored", Listed(196, "NavMeshSettings", new[] { "m_BuildSettings", "m_NavMeshData" }).Reading);
-            var baked = Listed(196, "NavMeshSettings", new[] { "m_NavMeshData" }, new[] { "m_NavMeshData" });
+            Assert.Equal("Ignored", Listed(29, "OcclusionCullingSettings", new[] { "m_SceneGUID", "m_OcclusionCullingData" }).Reading);
+            var baked = Listed(29, "OcclusionCullingSettings", new[] { "m_OcclusionCullingData" }, new[] { "m_OcclusionCullingData" });
             Assert.Equal("Unread", baked.Reading);
-            Assert.Equal("NavMeshSettings", baked.UnityName);
+            Assert.Equal("OcclusionCullingSettings", baked.UnityName);
+            // A scene's baked NavMesh is loaded with it.
+            var navMesh = Listed(196, "NavMeshSettings", new[] { "m_NavMeshData" }, new[] { "m_NavMeshData" });
+            Assert.Equal("Loader", navMesh.Reading);
+            Assert.Equal("NavMeshSettings", navMesh.UnityName);
             Assert.Equal("Ignored", Listed(1002, "EditorExtensionImpl", new[] { "m_Object" }).Reading);
             // Editor scripts can apply a preset: it stays loud.
             Assert.Equal("Unknown", Listed(181963792, "Preset", new[] { "m_Properties" }).Reading);

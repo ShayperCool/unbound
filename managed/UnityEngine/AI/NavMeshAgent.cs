@@ -495,6 +495,7 @@ namespace UnityEngine.AI
             data.m_StartPos = NavMesh.V(anim.startPos);
             data.m_EndPos = CurrentLinkEnd();
             data.m_InstanceID = link?.Owner ?? 0;
+            data.m_LinkType = link?.Type ?? OffMeshLinkType.LinkTypeManual;
             return data;
         }
 
@@ -511,6 +512,7 @@ namespace UnityEngine.AI
             {
                 data.m_EndPos = (data.m_StartPos - link.Start).sqrMagnitude < (data.m_StartPos - link.End).sqrMagnitude ? link.End : link.Start;
                 data.m_InstanceID = link.Owner;
+                data.m_LinkType = link.Type;
             }
             return data;
         }

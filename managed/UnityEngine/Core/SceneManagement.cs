@@ -766,6 +766,8 @@ namespace UnityEngine.SceneManagement
             // Its local physics scene goes with it, once its objects have gone (when within the
             // unload is not documented or measured).
             Unbound.Runtime.PhysicsWorld.ReleaseLocal(data.Handle.Value);
+            // So does its baked NavMesh (measured after the unload completes: tests/projects/navbaked).
+            Unbound.Runtime.SceneNavMesh.SceneUnloaded(data.Handle.Value);
             data.IsLoaded = false;
             data.LoadingState = Scene.LoadingState.NotLoaded;
             SceneRegistry.Loaded.Remove(data);

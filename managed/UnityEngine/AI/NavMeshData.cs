@@ -19,6 +19,9 @@ namespace UnityEngine.AI
         internal Bounds m_SourceBounds;
         internal Vector3 m_Position;
         internal Quaternion m_Rotation = Quaternion.identity;
+        /// <summary>The off-mesh links the Editor's bake generated (drop-downs, jumps across), in the
+        /// data's own space: they come and go with each instance of the data.</summary>
+        internal readonly List<BakedLink> m_Links = new List<BakedLink>();
         /// <summary>Bumped when the tiles change (instances of the data rebuild their world).</summary>
         internal int m_Version;
 
@@ -70,8 +73,21 @@ namespace UnityEngine.AI
                     Debug.LogError($"Unbound: NavMeshData '{m_Name}': a tile could not be read ({e.Message}); it is left out.");
                 }
             }
-            if ((body.Get("m_OffMeshLinks")?.Seq() is IEnumerable<YNode> links) && links.GetEnumerator().MoveNext())
-                Debug.LogWarning($"Unbound: NavMeshData '{m_Name}' has baked off-mesh links, which are not supported yet; they are left out.");
+            m_Links.Clear();
+            foreach (var link in body.Get("m_OffMeshLinks")?.Seq() ?? Array.Empty<YNode>())
+                m_Links.Add(new BakedLink
+                {
+                    Start = link.Vector3("m_Start"),
+                    End = link.Vector3("m_End"),
+                    Radius = link.Float("m_Radius", 0f),
+                    Type = (OffMeshLinkType)link.Int("m_LinkType", 0),
+                    Area = link.Int("m_Area", 0),
+                    // 0: one way (the bake's drop-down links, measured: tests/projects/navbaked);
+                    // otherwise both ways (jump-across links; inferred, not measured).
+                    Bidirectional = link.Int("m_LinkDirection", 0) != 0,
+                });
+            if (body.Get("m_HeightMeshes")?.Seq() is IEnumerable<YNode> heights && heights.GetEnumerator().MoveNext())
+                Debug.LogWarning($"Unbound: NavMeshData '{m_Name}' has a baked height mesh, which is not supported yet: agents stand on the NavMesh's polygons instead.");
             m_Version++;
         }
     }
@@ -81,6 +97,16 @@ namespace Unbound.Runtime
 {
     using UnityEngine;
     using UnityEngine.AI;
+
+    /// <summary>One of Unity's AutoOffMeshLinkData: a link the bake generated.</summary>
+    internal struct BakedLink
+    {
+        internal Vector3 Start, End;
+        internal float Radius;
+        internal OffMeshLinkType Type;
+        internal int Area;
+        internal bool Bidirectional;
+    }
 
     /// <summary>
     /// Unity's NavMesh tile format (version 16, as the 6000.0 Editor bakes it), read into Detour

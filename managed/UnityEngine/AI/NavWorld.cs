@@ -31,6 +31,11 @@ namespace Unbound.Runtime
             internal Vector3 Position;
             internal Quaternion Rotation;
             internal int Owner;
+            /// <summary>The data instance whose bake generated the link (0: added by itself).</summary>
+            internal int Data;
+            /// <summary>How far its ends may lie from the NavMesh and still connect.</summary>
+            internal float Radius = LinkSnapRadius;
+            internal OffMeshLinkType Type;
             internal bool Active = true;
             internal Vector3 Start => Position + Rotation * Link.startPosition;
             internal Vector3 End => Position + Rotation * Link.endPosition;
@@ -72,6 +77,23 @@ namespace Unbound.Runtime
         {
             var instance = new DataInstance { Id = s_NextId++, Data = data, Position = position, Rotation = rotation };
             s_Data.Add(instance);
+            // The links the bake generated come with the data, placed by its pose.
+            foreach (var baked in data.m_Links)
+            {
+                var link = new NavMeshLinkData
+                {
+                    startPosition = baked.Start,
+                    endPosition = baked.End,
+                    bidirectional = baked.Bidirectional,
+                    area = baked.Area,
+                    agentTypeID = data.m_Settings.agentTypeID,
+                };
+                s_Links.Add(new LinkInstance
+                {
+                    Id = s_NextId++, Link = link, Position = position, Rotation = rotation,
+                    Data = instance.Id, Radius = baked.Radius, Type = baked.Type,
+                });
+            }
             s_Dirty = true;
             return instance.Id;
         }
@@ -79,11 +101,13 @@ namespace Unbound.Runtime
         internal static void RemoveData(int id)
         {
             if (s_Data.RemoveAll(d => d.Id == id) > 0) s_Dirty = true;
+            s_Links.RemoveAll(l => l.Data == id);
         }
 
         internal static void RemoveAllData()
         {
             s_Data.Clear();
+            s_Links.RemoveAll(l => l.Data != 0);
             s_Dirty = true;
         }
 
@@ -318,7 +342,7 @@ namespace Unbound.Runtime
                 var end = link.End;
                 // Over the tile or within the snap radius of it: Detour lands an end on a polygon of
                 // the tile up to the snap radius away (DtNavMesh.ConnectExtOffMeshLinks).
-                float snap = LinkSnapRadius;
+                float snap = link.Radius;
                 if (!(end.x < h.bmin.X - snap || end.x > h.bmax.X + snap || end.z < h.bmin.Z - snap || end.z > h.bmax.Z + snap)) ends++;
                 var start = link.Start;
                 if (start.x < h.bmin.X || start.x > h.bmax.X || start.z < h.bmin.Z || start.z > h.bmax.Z) continue;
@@ -358,7 +382,7 @@ namespace Unbound.Runtime
                 var con = new DtOffMeshConnection
                 {
                     pos = new[] { new RcVec3f(start.x, start.y, start.z), endPos },
-                    rad = LinkSnapRadius,
+                    rad = link.Radius,
                     poly = basePoly + i,
                     flags = link.Link.bidirectional ? DtDetour.DT_OFFMESH_CON_BIDIR : 0,
                     // Where the end lies from this tile: 0xff over it, else the neighbour (0..7)
@@ -385,6 +409,38 @@ namespace Unbound.Runtime
 
         /// <summary>How far a link's end may lie from the NavMesh and still connect.</summary>
         internal const float LinkSnapRadius = 0.1f;
+    }
+
+    /// <summary>
+    /// The NavMesh each loaded scene was baked with the legacy way (the Navigation window: the
+    /// scene's NavMeshSettings.m_NavMeshData, usually <c>&lt;Scene&gt;/NavMesh.asset</c>). It is added
+    /// when the scene loads, before its objects wake (an agent in the scene is on it in Awake), and
+    /// removed when the scene unloads; additively loaded scenes add theirs beside the others'
+    /// (measured, Unity 6000.0.71f1: tests/projects/navbaked).
+    /// </summary>
+    internal static class SceneNavMesh
+    {
+        static readonly Dictionary<int, int> s_ByScene = new Dictionary<int, int>();
+
+        internal static void SceneLoaded(SceneData scene, YNode body, IReferenceResolver resolver)
+        {
+            int handle = scene?.Handle.Value ?? 0;
+            SceneUnloaded(handle);
+            var reference = body.Ref("m_NavMeshData");
+            if (reference.IsNull) return;
+            var data = resolver?.Resolve(reference, typeof(NavMeshData)) as NavMeshData;
+            if (data == null)
+            {
+                Debug.LogError($"Unbound: the baked NavMesh of scene {scene?.Path} (guid {reference.Guid}, fileID {reference.FileId}) could not be loaded; the scene has no NavMesh.");
+                return;
+            }
+            s_ByScene[handle] = NavWorld.AddData(data, data.position, data.rotation);
+        }
+
+        internal static void SceneUnloaded(int handle)
+        {
+            if (s_ByScene.Remove(handle, out int id)) NavWorld.RemoveData(id);
+        }
     }
 
     /// <summary>Unity's area mask and costs as a Detour filter.</summary>
