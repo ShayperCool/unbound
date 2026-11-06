@@ -270,6 +270,32 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AHoleCutElsewhereLetsAnArrivingAgentFinish()
+        {
+            // The rebuild after a cut must not stop an agent in its last centimetre (hasPath
+            // already false, still moving to the end).
+            var go = new GameObject("agent");
+            m_Objects.Add(go);
+            go.transform.position = new Vector3(4f, 0f, 0f);
+            var agent = go.AddComponent<NavMeshAgent>();
+            var goal = new Vector3(8f, 0f, 0f);
+            Assert.True(agent.SetDestination(goal));
+            bool finishing = false;
+            for (int i = 0; i < 400 && !finishing; i++)
+            {
+                Frame();
+                var p = agent.nextPosition;
+                finishing = !agent.hasPath && new Vector2(p.x - goal.x, p.z - goal.z).magnitude > 1e-4f;
+            }
+            Assert.True(finishing, "no frame within the last centimetre");
+            Box(new Vector3(-8f, 0.5f, 3f), Vector3.one);
+            for (int i = 0; i < 20; i++) Frame();
+            var end = agent.nextPosition;
+            Assert.True(new Vector2(end.x - goal.x, end.z - goal.z).magnitude <= 1e-4f, $"stopped at {end}");
+            Assert.False(agent.hasPath);
+        }
+
+        [Fact]
         public void AnAgentReplansAroundANewHole()
         {
             var go = new GameObject("agent");

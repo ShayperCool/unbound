@@ -768,7 +768,8 @@ namespace Unbound.Runtime
         // path that cannot be planned leaves the agent without a path (PathInvalid, its destination
         // kept), as a failed request does; an agent the new NavMesh cannot place loses its pending
         // request; an agent that had arrived, whose request had failed, or that has no destination
-        // is given no path; a path given by SetPath is planned again to its last corner. The rebuild
+        // is given no path (one within its last centimetre of a path still finishes it); a path given
+        // by SetPath is planned again to its last corner. The rebuild
         // is taken in when Unbound next refreshes its NavMesh (a NavMesh query or an agent
         // placement), which can be later than the change. An agent on an off-mesh link, or
         // completing one, rejoins as before.
@@ -784,6 +785,9 @@ namespace Unbound.Runtime
                 var old = agent.isOnOffMeshLink ? agent.m_Crowd : null;
                 bool onLink = old != null || agent.m_LinkCompleting;
                 bool following = !onLink && destination.HasValue && agent.hasPath;
+                // Within its last centimetre (hasPath already false) and still moving to the end.
+                bool finishing = !onLink && destination.HasValue && !following && !agent.pathPending
+                    && agent.m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID;
                 var moving = agent.m_Crowd;
                 agent.m_Crowd = null;
                 agent.m_Surface = null;
@@ -807,6 +811,11 @@ namespace Unbound.Runtime
                 }
                 if (agent.pathPending) RequestPath(agent);
                 else if (following) PlanAgain(agent, moving);
+                else if (finishing)
+                {
+                    PlanAgain(agent, moving);
+                    agent.SetArrived(true);
+                }
             }
         }
 
