@@ -257,6 +257,8 @@ def recipes(release):
     R['lifecycle'] = [run('--headless', '12', '--no-watch', env={'LIFECYCLE_PROBE_OUT': '{work}/out.jsonl'}),
                       Step('identical', [single_ref(), '{work}/out.jsonl'])]
     # The regress script's normalisation of one exception text, kept as it was.
+    R['mainthread'] = [run('--headless', '30', '--no-watch', env={'MAINTHREAD_PROBE_OUT': '{work}/out.jsonl'}),
+                       py('compare.py', single_ref(), '{work}/out.jsonl')]
     R['platform'] = [run('--headless', '5', '--no-watch', env={'PLATFORM_PROBE_OUT': '{work}/out.jsonl'}),
                      Step('identical', [single_ref(), '{work}/out.jsonl'],
                           replace=[('instance of an object.', 'instance of an object')])]
