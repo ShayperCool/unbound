@@ -632,7 +632,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 20;
+    const VERSION: u32 = 21;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -1551,6 +1551,17 @@ impl<'a> Builder<'a> {
         if let Some(&index) = self.material_index.get(&material.element.element_id) {
             return index;
         }
+        // Same-name source materials bind the first used embedded material, including
+        // its properties (6000.0.71f1 SharedNames and SharedNamesReverse captures).
+        if let Some(index) = self.model.materials.iter().position(|m| {
+            m.name == material.element.name.as_ref()
+                && m.description != MaterialDescription::default()
+        }) {
+            let index = index as u32;
+            self.material_index
+                .insert(material.element.element_id, index);
+            return index;
+        }
         let index = self.model.materials.len() as u32;
         self.material_index
             .insert(material.element.element_id, index);
@@ -1785,14 +1796,21 @@ impl<'a> Builder<'a> {
             }
         }
 
-        // One submesh per material part with triangles, in material order.
+        // One submesh per used material, in first face-use order (measured on Unity
+        // 6000.0.71f1: modelimport/material_slots.py, including per-instance bindings).
+        // Keep this permutation shared by the face assignments and renderer slots;
+        // sorting material names or traversing faces by material changes API answers.
         let mut part_of = vec![None; mesh.faces.len()];
         let mut materials = Vec::new();
         if mesh.material_parts.is_empty() {
             part_of.fill(Some(0));
             materials.push(None);
         } else {
-            for p in mesh.material_parts.iter().filter(|p| p.num_triangles > 0) {
+            for &part in mesh.material_part_usage_order.iter() {
+                let p = &mesh.material_parts[part as usize];
+                if p.num_triangles == 0 {
+                    continue;
+                }
                 for &f in p.face_indices.iter() {
                     part_of[f as usize] = Some(materials.len());
                 }
