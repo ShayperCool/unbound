@@ -8,7 +8,9 @@ namespace Unbound
     /// <summary>
     /// Marks a generated compatibility stub (Generated/&lt;release&gt;/*.g.cs): a type or member that
     /// exists so game code binds, but has no implementation yet. The API gap report counts stubs as
-    /// missing.
+    /// missing. A few stubs are declared in hand-written sources, written as the generator writes
+    /// them, only because hand-written code names or overrides them and must build without the
+    /// generated files; gen-stubs does not refresh those.
     /// </summary>
     [AttributeUsage(AttributeTargets.All, Inherited = false)]
     internal sealed class StubAttribute : Attribute
