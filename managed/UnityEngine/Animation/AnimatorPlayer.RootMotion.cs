@@ -347,37 +347,61 @@ namespace Unbound.Runtime
         }
 
 
-        /// <summary>A humanoid Animator's root motion: the clip's body motion between the state's
-        /// previous and current times, as a delta of the root (applied like generic root motion) and
-        /// the body placed relative to it for the pose. False when no humanoid clip plays.</summary>
+        readonly List<Unbound.Runtime.Humanoid.HumanRootMotionSample> m_HumanSamples = new List<Unbound.Runtime.Humanoid.HumanRootMotionSample>();
+        readonly List<float> m_HumanWeights = new List<float>();
+
+        /// <summary>A humanoid Animator's root motion: each humanoid clip's body motion between its
+        /// state's previous and current times, blended by the clips' weights in each layer (the
+        /// states of a transition, a blend tree's clips); override layers move it towards theirs by
+        /// the layer weight, additive layers leave it (measured, tests/projects/humanoid). It
+        /// becomes a delta of the root (applied like generic root motion) and places the body
+        /// relative to it for the pose. False when no humanoid clip plays.</summary>
         bool HumanRootMotion(Animator animator, Unbound.Runtime.Humanoid.AnimatorHuman human)
         {
-            (StateRun Run, AnimationClip Clip, float Weight) found = default;
-            int count = 0;
-            foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions)
-            {
-                float w = weight * (layerIndex == 0 ? 1f : layer.Evaluated);
-                if (w <= 0f || !clip.HasHumanCurves) continue;
-                count++;
-                if (found.Clip == null || w > found.Weight) found = (run, clip, w);
-            }
             human.ClearMotion();
-            if (found.Clip == null) return false;
-            if (count > 1 || found.Weight < 1f)
-                Unbound.Runtime.Stubs.Ignored("Animator humanoid root motion blending",
-                    "blended humanoid clips (transitions, several layers or blend trees) move the root with the strongest clip only");
-            var motion = found.Clip.HumanClipMotion;
-            var def = found.Run.Def;
-            var input = new Unbound.Runtime.Humanoid.HumanClipMotionInput
+            Unbound.Runtime.Humanoid.HumanRootMotionSample blended = default, layerSample;
+            bool any = false;
+            for (int i = 0; i < Layers.Length; i++)
             {
-                Time = (float)found.Run.Normalized,
-                PreviousTime = (float)found.Run.Previous,
-                Speed = SpeedOf(def),
-                CycleOffset = def.CycleOffset,
-            };
-            human.EvaluateMotion(found.Clip, motion, input, m_RootDeltaTime,
-                animator.m_ApplyRootMotion || m_HasMonoMove, out var rm, out bool applied);
-            if (!applied) return true;
+                m_HumanSamples.Clear();
+                m_HumanWeights.Clear();
+                foreach (var (layer, layerIndex, run, clip, weight) in m_Contributions)
+                {
+                    if (layerIndex != i || weight <= 0f || !clip.HasHumanCurves) continue;
+                    if (layer.Def.Additive)
+                    {
+                        Unbound.Runtime.Stubs.Ignored("Animator additive humanoid layers' body",
+                            "an additive layer's humanoid clips add their body (RootT, RootQ) curves to the body's values, not as the Editor composes them");
+                        continue;
+                    }
+                    var def = run.Def;
+                    var source = layer.Def.SyncedLayerIndex >= 0 && layer.Def.SyncedLayerIndex < Layers.Length ? Layers[layer.Def.SyncedLayerIndex] : layer;
+                    var input = new Unbound.Runtime.Humanoid.HumanClipMotionInput
+                    {
+                        Time = (float)run.Normalized,
+                        // A transition's destination adds no step in the update it starts (measured
+                        // for an exit time's overshoot; applied to cross-fades too).
+                        PreviousTime = (float)(run.Fresh && source.Next == run ? run.Normalized : run.Previous),
+                        Speed = SpeedOf(def),
+                        CycleOffset = def.CycleOffset,
+                    };
+                    human.SampleMotion(clip, clip.HumanClipMotion, input, out var sample);
+                    m_HumanSamples.Add(sample);
+                    m_HumanWeights.Add(weight);
+                }
+                if (m_HumanSamples.Count == 0) continue;
+                layerSample = Unbound.Runtime.Humanoid.HumanRootMotion.Blend(
+                    System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanSamples),
+                    System.Runtime.InteropServices.CollectionsMarshal.AsSpan(m_HumanWeights));
+                if (i > 0 && Layers[i].Def.Mask != null)
+                    Unbound.Runtime.Stubs.Ignored("Animator humanoid root motion with layer masks",
+                        "a masked layer's humanoid clips move the root as if the layer had no mask");
+                blended = !any ? layerSample : Unbound.Runtime.Humanoid.HumanRootMotion.Override(blended, layerSample, Layers[i].Evaluated);
+                any = true;
+            }
+            if (!any) return false;
+            human.ApplyMotion(blended, m_RootDeltaTime, out var rm);
+            if (!animator.m_ApplyRootMotion && !m_HasMonoMove) return true;
             animator.m_DeltaPosition = new Vector3(rm.DeltaPosition.x, rm.DeltaPosition.y, rm.DeltaPosition.z);
             animator.m_DeltaRotation = new Quaternion(rm.DeltaRotation.x, rm.DeltaRotation.y, rm.DeltaRotation.z, rm.DeltaRotation.w);
             animator.m_RootVelocity = new Vector3(rm.Velocity.x, rm.Velocity.y, rm.Velocity.z);

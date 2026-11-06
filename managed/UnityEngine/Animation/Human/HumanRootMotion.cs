@@ -152,6 +152,8 @@ namespace Unbound.Runtime.Humanoid
         public Trs Motion;
         /// <summary>The body (the pose's RootX) relative to the current motion, scale 1.</summary>
         public Trs Body;
+        /// <summary>The body in clip space (the clip's RootX), scale 1.</summary>
+        public Trs Root;
         /// <summary>The feet goals relative to the current motion (scale 1).</summary>
         public Trs LeftFoot, RightFoot;
         /// <summary>How far each foot goal moved during the step, in the foot's previous frame
@@ -313,7 +315,7 @@ namespace Unbound.Runtime.Humanoid
                 throw new NotSupportedException("mirrored humanoid states are not supported");
             result = new HumanRootMotionSample
             {
-                Delta = Trs.Identity, Motion = Trs.Identity, Body = Trs.Identity, LeftFoot = Trs.Identity, RightFoot = Trs.Identity,
+                Delta = Trs.Identity, Motion = Trs.Identity, Body = Trs.Identity, Root = Trs.Identity, LeftFoot = Trs.Identity, RightFoot = Trs.Identity,
                 LeftFootSlip = Trs.Identity, RightFootSlip = Trs.Identity,
                 GravityWeight = clip.Settings.LoopBlendPositionXZ ? 0f : 1f,
             };
@@ -358,6 +360,7 @@ namespace Unbound.Runtime.Humanoid
             result.Delta = delta;
             result.Motion = curX;
             result.Body = body;
+            result.Root = cur;
             result.ClipDeltaTime = clipDt;
             result.LeftFoot = M.Mul(body, ReadGoal(current, present, 0));
             result.RightFoot = M.Mul(body, ReadGoal(current, present, 1));
@@ -368,6 +371,78 @@ namespace Unbound.Runtime.Humanoid
             }
         }
 
+        /// <summary>The root motion of several clip evaluations blended by weight (the states of a
+        /// transition, a blend tree's clips): every part (step, motion, body, feet, feet slips)
+        /// summed by weight, rotations by their weighted sum (aligned), normalized (measured,
+        /// tests/projects/humanoid). Weights summing to less than 1 (a transition from a state
+        /// without a motion) leave the rest of the step still; the other parts are normalized by
+        /// the total weight (not measured).</summary>
+        public static HumanRootMotionSample Blend(ReadOnlySpan<HumanRootMotionSample> samples, ReadOnlySpan<float> weights)
+        {
+            if (samples.Length == 1 && weights[0] >= 1f) return samples[0];
+            float total = 0f;
+            for (int i = 0; i < samples.Length; i++)
+                if (samples[i].HasMotion) total += weights[i];
+            var r = new HumanRootMotionSample { Delta = Trs.Identity, Motion = Trs.Identity, Body = Trs.Identity, Root = Trs.Identity,
+                LeftFoot = Trs.Identity, RightFoot = Trs.Identity, LeftFootSlip = Trs.Identity, RightFootSlip = Trs.Identity };
+            if (total <= 0f) return r;
+            r.HasMotion = true;
+            Span<Trs> parts = stackalloc Trs[8];
+            var zero = new Trs(F4.Zero, F4.Zero, F4.One3);
+            for (int k = 0; k < parts.Length; k++) parts[k] = zero;
+            for (int i = 0; i < samples.Length; i++)
+            {
+                ref readonly var s = ref samples[i];
+                if (!s.HasMotion) continue;
+                float w = weights[i], n = w / total;
+                Add(ref parts[0], s.Delta, w);
+                Add(ref parts[1], s.Motion, n);
+                Add(ref parts[2], s.LeftFoot, n);
+                Add(ref parts[3], s.RightFoot, n);
+                Add(ref parts[4], s.LeftFootSlip, n);
+                Add(ref parts[5], s.RightFootSlip, n);
+                Add(ref parts[6], s.Body, n);
+                Add(ref parts[7], s.Root, n);
+                r.ClipDeltaTime += s.ClipDeltaTime * w;
+                r.GravityWeight += s.GravityWeight * n;
+            }
+            if (total < 1f) parts[0].q.w += parts[0].q.w < 0f ? total - 1f : 1f - total;
+            for (int k = 0; k < parts.Length; k++) parts[k].q = M.QNormalize(parts[k].q);
+            r.Delta = parts[0];
+            r.Motion = parts[1];
+            r.LeftFoot = parts[2];
+            r.RightFoot = parts[3];
+            r.Body = parts[6];
+            r.Root = parts[7];
+            if (r.ClipDeltaTime != 0f)
+            {
+                r.LeftFootSlip = parts[4];
+                r.RightFootSlip = parts[5];
+            }
+            return r;
+        }
+
+        /// <summary>An override layer's root motion over the layers below it: each part moved
+        /// towards the layer's by its weight (positions lerped, rotations by the normalized lerp).</summary>
+        public static HumanRootMotionSample Override(in HumanRootMotionSample below, in HumanRootMotionSample layer, float weight)
+        {
+            if (!layer.HasMotion || weight <= 0f) return below;
+            if (!below.HasMotion || weight >= 1f) return layer;
+            Span<HumanRootMotionSample> pair = stackalloc HumanRootMotionSample[] { below, layer };
+            Span<float> weights = stackalloc float[] { 1f - weight, weight };
+            return Blend(pair, weights);
+        }
+
+        static bool Same(F4 a, F4 b) => a.x == b.x && a.y == b.y && a.z == b.z && a.w == b.w;
+
+        static void Add(ref Trs sum, in Trs x, float w)
+        {
+            var q = x.q;
+            if (sum.q.x * q.x + sum.q.y * q.y + sum.q.z * q.z + sum.q.w * q.w < 0f) q = -q;
+            sum.t = sum.t + x.t * w;
+            sum.q = sum.q + q * w;
+        }
+
         /// <summary>A foot goal's move during a step, in its previous frame: prev⁻¹ · delta · cur.</summary>
         static Trs Slip(in Trs delta, in Trs cur, in Trs prev)
         {
@@ -376,19 +451,27 @@ namespace Unbound.Runtime.Humanoid
             return new Trs(M.QRotate(c, moved.t - prev.t), M.QMul(c, moved.q), F4.One3);
         }
 
-        /// <summary>The human pose of a clip evaluation placed by the root motion: after
-        /// <see cref="HumanClipImport.PoseFromCurves"/> of the current values, the body becomes
-        /// <see cref="HumanRootMotionSample.Body"/> and the goals (relative to the clip's body) move
-        /// with it.</summary>
+        /// <summary>The human pose placed by the root motion: after
+        /// <see cref="HumanClipImport.PoseFromCurves"/> of the layers' blended values, the body
+        /// becomes the clips' bodies relative to their motions, blended, plus what the layers'
+        /// values hold beyond the clips' blended RootX (additive layers); the goals (relative to the
+        /// body) move with it.</summary>
         public static void ApplyToPose(HumanPose pose, in HumanRootMotionSample sample)
         {
-            pose.RootX = sample.Body;
-            for (int g = 0; g < pose.Goals.Length; g++) pose.Goals[g].X = M.Mul(sample.Body, pose.Goals[g].X);
+            var body = sample.Body;
+            if (!Same(pose.RootX.t, sample.Root.t) || !Same(pose.RootX.q, sample.Root.q))
+            {
+                var extra = M.QRotate(M.QConj(sample.Motion.q), pose.RootX.t - sample.Root.t);
+                var turn = M.QMul(M.QConj(sample.Root.q), pose.RootX.q);
+                body = new Trs(sample.Body.t + extra, M.QNormalize(M.QMul(sample.Body.q, turn)), F4.One3);
+            }
+            pose.RootX = body;
+            for (int g = 0; g < pose.Goals.Length; g++) pose.Goals[g].X = M.Mul(body, pose.Goals[g].X);
         }
 
         /// <summary>The Animator's root motion pass for a humanoid avatar: the feet pivot, the
         /// Animator's deltas and velocities, the root moved by the motion and the pivot position.</summary>
-        /// <param name="sample">The root motion of the Animator's (single, full weight) clip.</param>
+        /// <param name="sample">The Animator's (blended) root motion.</param>
         /// <param name="root">The Animator transform's global position, rotation and scale before the
         /// pass.</param>
         /// <param name="deltaTime">The update's delta time.</param>

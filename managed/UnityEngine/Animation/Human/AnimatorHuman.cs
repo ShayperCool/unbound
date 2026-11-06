@@ -60,22 +60,25 @@ namespace Unbound.Runtime.Humanoid
 
         internal void ClearMotion() => m_HasSample = false;
 
-        /// <summary>The playing clip's root motion between the state's previous and current times:
-        /// the root's delta (given back when <paramref name="wantDelta"/>), the feet pivot, and the
-        /// body relative to the motion for this update's pose.</summary>
-        internal void EvaluateMotion(AnimationClip clip, HumanClipMotion motion, in HumanClipMotionInput input, float deltaTime,
-            bool wantDelta, out AnimatorRootMotion result, out bool applied)
+        /// <summary>A clip's root motion between a state's previous and current times.</summary>
+        internal void SampleMotion(AnimationClip clip, HumanClipMotion motion, in HumanClipMotionInput input, out HumanRootMotionSample sample)
         {
             float previous = HumanRootMotion.ClipTime(motion, input.PreviousTime, input.Speed, input.CycleOffset, out _);
             float current = HumanRootMotion.ClipTime(motion, input.Time, input.Speed, input.CycleOffset, out _);
             clip.SampleHuman(previous, m_Previous);
             clip.SampleHuman(current, m_Current);
-            HumanRootMotion.Evaluate(motion, input, m_Previous, m_Current, clip.HumanPresent, out m_Sample);
+            HumanRootMotion.Evaluate(motion, input, m_Previous, m_Current, clip.HumanPresent, out sample);
+        }
+
+        /// <summary>The update's (blended) root motion: the root's delta, the feet pivot, and the
+        /// body relative to the motion for this update's pose.</summary>
+        internal void ApplyMotion(in HumanRootMotionSample sample, float deltaTime, out AnimatorRootMotion result)
+        {
+            m_Sample = sample;
             m_HasSample = true;
             HumanRootMotion.ApplyToAnimator(m_Sample, AvatarX(), deltaTime, m_Constant.Human.Scale, 1f, m_Memory, out result);
             PivotPosition = result.PivotPosition;
             HumanRootMotion.EndUpdate(m_Memory, deltaTime);
-            applied = wantDelta;
         }
 
         /// <summary>Set while OnAnimatorIK runs (the IK API is meant for it).</summary>
