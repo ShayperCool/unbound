@@ -25,6 +25,11 @@ The engine is --cli, else $UNBOUND, else this checkout's release build (the targ
 drivers that already use the launcher are not wrapped again. Probes run in parallel (--jobs,
 default: the pool's engine slots + 2); the launcher's pools bound the machine.
 
+No step may start the Unity Editor: a suite run compares the engine with the committed Reference/
+and never records one. Every step gets UNBOUND_SUITE_NO_EDITOR=1, which tests/editor_runner.py
+honours by refusing, and a watcher stops any step whose processes start an Editor or queue an Editor
+job at the launcher; that probe fails with "step N (kind) launched the Unity Editor: ...".
+
 Statuses:
   pass       every step exited 0 and the comparator accepted the capture
   fail       a step failed (the line names it) or the comparator rejected the capture
@@ -74,6 +79,9 @@ LIMITS = Path.home()/'.cache/compat/job-limits.json'
 ENGINE_TIMEOUT = 1200
 DRIVER_TIMEOUT = 5400
 TOOL_TIMEOUT = 1800
+NO_EDITOR = 'UNBOUND_SUITE_NO_EDITOR'
+EDITOR_EXIT = 126
+EDITOR_POLL = 1.0
 
 
 class Step:
@@ -804,6 +812,7 @@ def run_step(step, values, log, base_env):
                                        stdin=subprocess.DEVNULL, start_new_session=True)
             with RUNNING_LOCK:
                 RUNNING.add(process.pid)
+            EDITOR_WATCH.add(process.pid)
             try:
                 code = process.wait(timeout=step.timeout + 600)
             except subprocess.TimeoutExpired:
@@ -813,6 +822,10 @@ def run_step(step, values, log, base_env):
             finally:
                 with RUNNING_LOCK:
                     RUNNING.discard(process.pid)
+                editor = EDITOR_WATCH.remove(process.pid)
+            if editor:
+                out.write(f'\nsuite: {EDITOR_MARK}: {editor}\n')
+                code = EDITOR_EXIT
         except OSError as error:
             out.write(f'\nsuite: {error}\n')
             code = 127
@@ -824,6 +837,18 @@ RUNNING = set()
 RUNNING_LOCK = threading.Lock()
 
 
+def children():
+    """{parent pid: [child pids]} of every process."""
+    parents = {}
+    for stat in Path('/proc').glob('[0-9]*/stat'):
+        try:
+            fields = stat.read_text().rsplit(')', 1)[1].split()
+        except (OSError, IndexError):
+            continue
+        parents.setdefault(int(fields[1]), []).append(int(stat.parent.name))
+    return parents
+
+
 class Tree:
     """A step's process group and every descendant, held by pidfd so that a process that leaves
     the group (`timeout` makes its own) or is reparented when its parent dies is still reached."""
@@ -831,23 +856,32 @@ class Tree:
     def __init__(self, root):
         self.root, self.fds = root, {}
 
-    def collect(self):
-        parents = {}
-        for stat in Path('/proc').glob('[0-9]*/stat'):
-            try:
-                fields = stat.read_text().rsplit(')', 1)[1].split()
-            except (OSError, IndexError):
-                continue
-            parents.setdefault(int(fields[1]), []).append(int(stat.parent.name))
-        pending = [self.root]
+    def collect(self, parents=None):
+        parents = children() if parents is None else parents
+        pending, seen = [self.root, *self.fds], set()
         while pending:
             pid = pending.pop()
+            if pid in seen:
+                continue
+            seen.add(pid)
             if pid not in self.fds:
+                if licensing(pid):
+                    continue  # the shared Unity licensing client is never signalled
                 try:
                     self.fds[pid] = os.pidfd_open(pid)
                 except OSError:
                     continue
             pending += parents.get(pid, [])
+
+    def prune(self):
+        """Forget the processes that have exited."""
+        for pid, fd in list(self.fds.items()):
+            if pid != self.root:
+                try:
+                    signal.pidfd_send_signal(fd, 0)
+                except OSError:
+                    os.close(fd)
+                    del self.fds[pid]
 
     def signal(self, number):
         self.collect()
@@ -893,6 +927,105 @@ def stop_tree(process, grace=30):
         tree.close()
 
 
+def cmdline(pid):
+    try:
+        argv = (Path('/proc')/str(pid)/'cmdline').read_bytes().split(b'\0')
+    except OSError:
+        return []
+    return [arg.decode(errors='replace') for arg in argv if arg]
+
+
+def licensing(pid):
+    joined = ' '.join(cmdline(pid))
+    return 'Licensing' in joined or 'LicenseClient' in joined
+
+
+def is_editor_path(arg):
+    """The Unity Editor executable: <release>/Editor/Unity, or Unity.app/Contents/MacOS/Unity."""
+    path = Path(arg)
+    return path.name == 'Unity' and (path.parent.name == 'Editor' or path.parent.parent.parent.name == 'Unity.app')
+
+
+def editor_process(pid):
+    """What makes process pid an Editor launch: the Editor itself, or a heavy-job launcher holding
+    or queueing an Editor job (an editor kind, or the Editor as its command). None otherwise."""
+    argv = cmdline(pid)
+    try:
+        executable = os.readlink(f'/proc/{pid}/exe')
+    except OSError:
+        executable = ''
+    if (argv and is_editor_path(argv[0])) or is_editor_path(executable.removesuffix(' (deleted)')):
+        return shlex.join(argv)[:300] or executable
+    launcher = any(Path(arg).name in ('with-heavy-job', 'job_runner.py') for arg in argv)
+    kinds = [argv[i+1] for i, arg in enumerate(argv[:-1]) if arg in ('--kind', '--pool-worker')]
+    if launcher and (any(kind.startswith('editor-') for kind in kinds) or any(map(is_editor_path, argv))):
+        return shlex.join(argv)[:300]
+    return None
+
+
+EDITOR_MARK = 'step launched the Unity Editor'
+
+
+class EditorWatch:
+    """Polls the process tree of every running step and stops a step that starts the Unity Editor.
+
+    A suite (or gate) run compares the engine with the committed Reference/; Editor runs only record
+    references. The step's process is told by remove(), which returns what was found."""
+
+    def __init__(self):
+        self.lock, self.trees, self.found, self.thread = threading.Lock(), {}, {}, None
+
+    def add(self, pid):
+        if not Path('/proc/self').exists():
+            return
+        with self.lock:
+            self.trees[pid] = Tree(pid)
+            if self.thread is None:
+                self.thread = threading.Thread(target=self.loop, daemon=True)
+                self.thread.start()
+
+    def remove(self, pid):
+        with self.lock:
+            tree = self.trees.pop(pid, None)
+            found = self.found.pop(pid, None)
+        if tree is not None:
+            tree.close()
+        return found
+
+    def loop(self):
+        while True:
+            time.sleep(EDITOR_POLL)
+            self.scan()
+
+    def scan(self):
+        with self.lock:
+            trees = [(pid, tree) for pid, tree in self.trees.items() if pid not in self.found]
+            parents = children() if trees else {}
+            for pid, tree in trees:
+                tree.collect(parents)
+                tree.prune()
+                found = next(filter(None, map(editor_process, tree.fds)), None)
+                if found:
+                    self.found[pid] = found
+                    threading.Thread(target=stop_root, args=(pid,), daemon=True).start()
+
+
+def stop_root(pid, grace=30):
+    """SIGTERM to a step's tree, SIGKILL to what is left after the grace period."""
+    tree = Tree(pid)
+    try:
+        tree.signal(signal.SIGTERM)
+        deadline = time.time() + grace
+        while time.time() < deadline and tree.alive():
+            time.sleep(0.5)
+        tree.signal(signal.SIGKILL)
+    finally:
+        tree.close()
+
+
+EDITOR_WATCH = EditorWatch()
+
+
 def stop_children(*_):
     """Steps run in their own process groups; stop them all when the suite itself is stopped."""
     with RUNNING_LOCK:
@@ -923,6 +1056,12 @@ def run_probe(name, recipe, context):
         record = {'kind': step.kind, 'exit': code, 'log': str(log),
                   'command': shlex.join(step_argv(step, values))[:400]}
         steps.append(record)
+        if code == EDITOR_EXIT and EDITOR_MARK in text:
+            status, stopped = 'fail', index
+            record['editor'] = True
+            summaries.append(f'step {index} ({step.kind}) launched the Unity Editor: '
+                             + text.rsplit(EDITOR_MARK+': ', 1)[-1].strip()[:200])
+            break
         if step.kind in ('compare', 'identical'):
             summary = (measurement(text) if step.verdict == 'none' else
                        matched_summary(text, step.summary) if step.summary else last_lines(text))
@@ -961,6 +1100,12 @@ def run_probe(name, recipe, context):
                           'report': sum(v is None for v in verdicts), 'total': len(verdicts)},
                   images=collect_images(steps), steps=steps)
     return result
+
+
+def default_release():
+    """tests/probe_paths.py's DEFAULT_UNITY_VERSION."""
+    text = (REPO/'tests/probe_paths.py').read_text()
+    return re.search(r"^DEFAULT_UNITY_VERSION = '([^']+)'", text, re.M).group(1)
 
 
 def discover():
@@ -1095,7 +1240,8 @@ def main():
     parser.add_argument('--cli', type=Path, help='the unbound executable (default: $UNBOUND, else this '
                         "checkout's release build)")
     parser.add_argument('--label', help='run name (default: date-time and short commit)')
-    parser.add_argument('--release', default=os.environ.get('UNBOUND_PROBE_UNITY_VERSION', '6000.0.71f1'))
+    parser.add_argument('--release', default=os.environ.get('UNBOUND_PROBE_UNITY_VERSION') or default_release(),
+                        help='the Unity release (default: $UNBOUND_PROBE_UNITY_VERSION, else tests/probe_paths.py\'s)')
     parser.add_argument('--only', help='comma-separated probe names')
     parser.add_argument('--jobs', type=int, default=default_jobs())
     parser.add_argument('--against', type=Path, help='earlier summary.json or its directory '
@@ -1153,7 +1299,8 @@ def main():
     work_root.mkdir(parents=True)
     summary_dir.mkdir(parents=True)
     runtime = make_runtime(work_root, cli, managed)
-    env = dict(os.environ, UNBOUND=str(cli), UNBOUND_PROBE_UNITY_VERSION=args.release, PYTHONDONTWRITEBYTECODE='1')
+    env = dict(os.environ, UNBOUND=str(cli), UNBOUND_PROBE_UNITY_VERSION=args.release, PYTHONDONTWRITEBYTECODE='1',
+               **{NO_EDITOR: '1'})
     env.setdefault('DISPLAY', ':0')
     context = {'work_root': work_root, 'env': env,
                'values': {'cli': str(cli), 'managed': str(managed), 'runtime': str(runtime), 'repo': str(REPO),

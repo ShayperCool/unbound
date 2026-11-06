@@ -10,7 +10,9 @@ from pathlib import Path
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
+import unittest.mock
 
 spec = importlib.util.spec_from_file_location('suite', Path(__file__).resolve().parent/'suite.py')
 suite = importlib.util.module_from_spec(spec)
@@ -261,6 +263,84 @@ class DeclaredGateTests(unittest.TestCase):
         for path in sorted(self.projects.glob('*/' + suite.GATE_FILE)):
             recipe = suite.declared(path.parent.name, '6000.0.71f1')
             self.assertNotIsInstance(recipe, suite.NoRecipe, f'{path}: {getattr(recipe, "reason", "")}')
+
+
+class EditorGuardTests(unittest.TestCase):
+    """A suite step that starts the Unity Editor, or queues an Editor job, is stopped and fails."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.poll, suite.EDITOR_POLL = suite.EDITOR_POLL, 0.1
+
+    def tearDown(self):
+        suite.EDITOR_POLL = self.poll
+        self.temp.cleanup()
+
+    def run_recipe(self, recipe):
+        context = {'work_root': self.root/'work', 'env': dict(os.environ),
+                   'values': {'python': sys.executable, 'label': 'test', 'cli': '/x/unbound', 'managed': '/x/managed'}}
+        started = time.time()
+        result = suite.run_probe('p', recipe, context)
+        self.assertLess(time.time() - started, 20, 'the step must be stopped, not waited for')
+        return result
+
+    def fake_editor(self):
+        """The path of an Editor executable, <release>/Editor/Unity (the fake runs `sleep` under it)."""
+        return self.root/'Hub/Editor/6000.0.71f1/Editor/Unity'
+
+    def test_a_step_that_starts_the_editor_fails_and_stops(self):
+        editor = self.fake_editor()
+        marker = self.root/'after'
+        recipe = [suite.Step('driver', ['bash', '-c', f'(exec -a {editor} sleep 60); touch {marker}']),
+                  suite.Step('compare', ['true'])]
+        result = self.run_recipe(recipe)
+        self.assertEqual(result['status'], 'fail')
+        self.assertEqual(result['failed_step'], 1)
+        self.assertIn('step 1 (driver) launched the Unity Editor', result['summary'])
+        self.assertIn(str(editor), result['summary'])
+        self.assertEqual(len(result['steps']), 1, 'later steps do not run')
+        self.assertTrue(result['steps'][0]['editor'])
+        self.assertFalse(marker.exists())
+
+    def test_a_queued_editor_job_fails(self):
+        recipe = [suite.Step('compare', ['bash', '-c', 'sleep 60; true', 'with-heavy-job', '--kind', 'editor-cpu'])]
+        result = self.run_recipe(recipe)
+        self.assertEqual(result['status'], 'fail')
+        self.assertIn('launched the Unity Editor', result['summary'])
+
+    def test_an_engine_job_or_an_editor_path_argument_is_not_an_editor(self):
+        editor = self.fake_editor()
+        recipe = [suite.Step('compare', ['bash', '-c', 'sleep 1; echo "1/1 records match"', 'with-heavy-job',
+                                         '--kind', 'engine-cpu', '--unity', str(editor.parent)])]
+        result = self.run_recipe(recipe)
+        self.assertEqual(result['status'], 'pass', result['summary'])
+
+    def test_editor_runner_refuses_in_a_suite_run(self):
+        sys.path.insert(0, str(Path(__file__).resolve().parents[2]/'tests'))
+        try:
+            import editor_runner
+        finally:
+            sys.path.pop(0)
+        job = editor_runner.EditorJob(self.root/'project', self.root/'editor.log', self.root/'out',
+                                      editor=self.root/'none')
+        with unittest.mock.patch.dict(os.environ, {suite.NO_EDITOR: '1'}):
+            with self.assertRaises(SystemExit) as stop:
+                editor_runner.run(job)
+        self.assertIn('refusing to start the Unity Editor', str(stop.exception))
+        self.assertFalse((self.root/'out').exists())
+
+    def test_no_recipe_or_declared_gate_runs_a_native_driver(self):
+        """Native drivers author in the Editor; suite recipes use the committed Authored/ sets."""
+        release = '6000.0.71f1'
+        table = suite.recipes(release)
+        for name in suite.discover():
+            recipe = suite.recipe_for(name, table, release)
+            if isinstance(recipe, suite.NoRecipe):
+                continue
+            for step in recipe:
+                command = ' '.join(step.argv)
+                self.assertNotRegex(command, r'\bnative\.py\b|--native(?![-\w])', f'{name}: {command}')
 
 
 class StubGateTests(unittest.TestCase):

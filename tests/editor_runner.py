@@ -586,7 +586,12 @@ def write_launch_inputs(spec, env):
 
 
 def run(job):
-    """Runs `job` through the heavy-job launcher and returns the supervisor's result."""
+    """Runs `job` through the heavy-job launcher and returns the supervisor's result.
+    Refuses under $UNBOUND_SUITE_NO_EDITOR: suite and gate runs compare the engine with the
+    committed Reference/ and never start an Editor."""
+    if os.environ.get('UNBOUND_SUITE_NO_EDITOR'):
+        raise SystemExit(f'editor_runner: refusing to start the Unity Editor ({job.label}) in a suite run '
+                         '(UNBOUND_SUITE_NO_EDITOR is set): compare the engine with the committed Reference/')
     job.out.mkdir(parents=True, exist_ok=True)
     if (job.out/RESULT).exists():
         raise SystemExit(f'refusing to overwrite an Editor result: {job.out/RESULT}')
