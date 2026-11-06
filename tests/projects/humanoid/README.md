@@ -36,6 +36,8 @@ imported without keyframe reduction.
   only the upper body (Body, Head, arms, fingers, hand IK: `MaskUpper`) and the upper body with Root
   (`MaskUpperRoot`), each mask's body parts read back; and a 1D blend tree of A and B (0.35) on an
   additive layer of weight 0.6 (`additiveTree`), recorded like the blends above.
+- the feet on override layers (0.5): `MaskUpperFootIK` (the upper body, Root and the foot IK parts,
+  legs off) and `MaskNoFootIK` (every part but the foot IK ones).
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:

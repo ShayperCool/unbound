@@ -128,7 +128,8 @@ public static class ProbeRunner
     /// <summary>The humanoid masks (no transforms): MaskNoRoot (every body part but Root), MaskUpper
     /// (Body, Head, arms, fingers and hand IK) and MaskUpperRoot (MaskUpper and Root). For each mask,
     /// HumanMask{Override,Additive}{mask} plays A with B on a layer of weight 0.5 (override) or 0.6
-    /// (additive) with the mask; HumanAdditiveTree plays A with a 1D blend tree of A at 0 and B at 1
+    /// (additive) with the mask; MaskUpperFootIK (MaskUpperRoot and the foot IK parts) and MaskNoFootIK
+    /// (every part but the foot IK ones) on an override layer of weight 0.5; HumanAdditiveTree plays A with a 1D blend tree of A at 0 and B at 1
     /// (blend 0.35) on an additive layer of weight 0.6.</summary>
     static void Masks(AnimationClip a, AnimationClip b)
     {
@@ -151,6 +152,27 @@ public static class ProbeRunner
             ("Upper", Mask("MaskUpper", p => System.Array.IndexOf(upper, p) >= 0)),
             ("UpperRoot", Mask("MaskUpperRoot", p => p == AvatarMaskBodyPart.Root || System.Array.IndexOf(upper, p) >= 0)),
         };
+        // The feet: legs off with the foot IK parts on, and the reverse (override layers).
+        var feet = new[]
+        {
+            ("UpperFootIK", Mask("MaskUpperFootIK", p => p == AvatarMaskBodyPart.Root || p == AvatarMaskBodyPart.LeftFootIK
+                || p == AvatarMaskBodyPart.RightFootIK || System.Array.IndexOf(upper, p) >= 0)),
+            ("NoFootIK", Mask("MaskNoFootIK", p => p != AvatarMaskBodyPart.LeftFootIK && p != AvatarMaskBodyPart.RightFootIK)),
+        };
+        foreach (var (maskName, mask) in feet)
+        {
+            var path = Dir + "HumanMaskOverride" + maskName + ".controller";
+            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(path) != null) continue;
+            var controller = AnimatorController.CreateAnimatorControllerAtPath(path);
+            controller.layers[0].stateMachine.AddState("A").motion = a;
+            controller.AddLayer("B");
+            var layers = controller.layers;
+            layers[1].defaultWeight = 0.5f;
+            layers[1].avatarMask = mask;
+            controller.layers = layers;
+            controller.layers[1].stateMachine.AddState("B").motion = b;
+            EditorUtility.SetDirty(controller);
+        }
         foreach (var (maskName, mask) in masks)
             foreach (var (kind, mode, weight) in new[] { ("Override", AnimatorLayerBlendingMode.Override, 0.5f),
                          ("Additive", AnimatorLayerBlendingMode.Additive, 0.6f) })

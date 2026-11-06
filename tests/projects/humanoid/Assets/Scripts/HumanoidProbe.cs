@@ -283,6 +283,15 @@ public class HumanoidProbe : MonoBehaviour
                 Play("maskAdditive" + mask, "HumanA", "HumanMaskAdditive" + mask, motion: true);
             }
             Play("additiveTree", "HumanA", "HumanAdditiveTree", motion: true);
+            foreach (var mask in new[] { "UpperFootIK", "NoFootIK" })
+            {
+                var asset = Resources.Load<AvatarMask>("Mask" + mask);
+                var parts = new List<string>();
+                for (var part = AvatarMaskBodyPart.Root; part < AvatarMaskBodyPart.LastBodyPart; part++)
+                    parts.Add(B(asset.GetHumanoidBodyPartActive(part)));
+                Put("mask" + mask, "{\"parts\":[" + string.Join(",", parts) + "],\"transformCount\":" + asset.transformCount + "}");
+                Play("maskOverride" + mask, "HumanA", "HumanMaskOverride" + mask, motion: true);
+            }
         }
         catch (Exception e)
         {
