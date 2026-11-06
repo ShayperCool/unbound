@@ -10,6 +10,9 @@ from pathlib import Path
 import struct
 
 FIELDS = ('vertexCount', 'subMeshes', 'vertices', 'normals', 'uv', 'uv2')
+RESIDUAL_ASSETS = {'Faces', 'Grid', 'Ico', 'Organic', 'Sphere', 'Torus'}
+RESIDUAL_VARIANTS = {'NormAngle', 'NormArea', 'NormCalc', 'NormCalc30', 'NormCalc180',
+                     'NormFromAngle', 'NormGroups', 'NormNoSplit', 'NormUnweighted'}
 
 
 def f32(x):
@@ -26,6 +29,8 @@ def load(path):
         if key in rows:
             raise ValueError(f'duplicate key {key} in {path}')
         rows[key] = row
+    if not rows:
+        raise ValueError(f'no Norm* records in {path}')
     return rows
 
 
@@ -41,7 +46,7 @@ def differences(a, b, path=()):
             else:
                 out.extend(differences(a[i], b[i], p))
         return out
-    if f32(a) == f32(b):
+    if (a == b if isinstance(a, int) and isinstance(b, int) else f32(a) == f32(b)):
         return []
     return [{'index': path, 'expected': a, 'actual': b}]
 
@@ -70,7 +75,8 @@ def main():
         if not entry:
             exact += 1
             status = 'exact'
-        elif set(entry) == {'normals'} and key[0] not in ('NormImport', 'NormNone') and all(
+        elif (set(entry) == {'normals'} and key[0] in RESIDUAL_VARIANTS
+              and key[1].split('/')[0] in RESIDUAL_ASSETS) and all(
                 'expected' in d and 'actual' in d and abs(f32(d['expected']) - f32(d['actual'])) <= 1.8e-7
                 for d in entry['normals']):
             residuals += 1
