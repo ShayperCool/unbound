@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-"""Unit checks of the suite's regression rules and the land gate's stub check:
+"""Unit checks of the suite's regression rules, declared probe gates and the land gate's stub check:
 python3 -m unittest tools/agents/test_suite.py"""
 import contextlib
 import importlib.util
 import io
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -179,6 +180,88 @@ class ImageTests(unittest.TestCase):
         cut = {'summary': ' || '.join(parts)[:1000], 'steps': steps}
         self.assertTrue(cut['summary'].endswith('worst mean 9.9'))
         self.assertEqual(suite.recorded_images(cut), {})
+
+class DeclaredGateTests(unittest.TestCase):
+    """A probe without a recipe in suite.py runs the commands its gate.json declares."""
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.projects, suite.PROJECTS = suite.PROJECTS, self.root/'projects'
+        self.runs = 0
+
+    def tearDown(self):
+        suite.PROJECTS = self.projects
+        self.temp.cleanup()
+
+    def probe(self, name, gate=None):
+        (suite.PROJECTS/name/'Reference').mkdir(parents=True)
+        if gate is not None:
+            (suite.PROJECTS/name/suite.GATE_FILE).write_text(gate if isinstance(gate, str) else json.dumps(gate))
+        return suite.recipe_for(name, {}, '6000.0.71f1')
+
+    def run_recipe(self, recipe):
+        self.runs += 1
+        context = {'work_root': self.root/f'work{self.runs}', 'env': dict(os.environ),
+                   'values': {'python': sys.executable, 'label': 'test', 'cli': '/x/unbound', 'managed': '/x/managed'}}
+        return suite.run_probe('p', recipe, context)
+
+    def test_nothing_declared_is_no_recipe(self):
+        recipe = self.probe('quiet')
+        self.assertIsInstance(recipe, suite.NoRecipe)
+        self.assertIn('no gate.json', recipe.reason)
+        self.assertEqual(self.run_recipe(recipe)['status'], 'no recipe')
+
+    def test_an_explicit_recipe_wins(self):
+        self.probe('both', {'commands': ['exit 1']})
+        explicit = [suite.Step('compare', ['true'])]
+        self.assertIs(suite.recipe_for('both', {'both': explicit}, '6000.0.71f1'), explicit)
+
+    def test_a_wrong_declaration_is_no_recipe(self):
+        for name, gate, reason in [('notjson', '{', 'not JSON'), ('list', '[]', 'not a JSON object'),
+                                   ('empty', {'commands': []}, 'non-empty list'),
+                                   ('blank', {'commands': [' ']}, 'non-empty list'),
+                                   ('typo', {'command': ['true']}, 'unknown keys: command'),
+                                   ('regex', {'commands': ['true'], 'summary': '('}, 'not a regex'),
+                                   ('release', {'commands': ['run.py --release 2022.3.10f1']}, '2022.3.10f1')]:
+            recipe = self.probe(name, gate)
+            self.assertIsInstance(recipe, suite.NoRecipe, name)
+            self.assertIn(reason, recipe.reason, name)
+        self.assertNotIsInstance(self.probe('same', {'commands': ['run.py --release 6000.0.71f1']}), suite.NoRecipe)
+
+    def test_commands_run_in_order_from_the_repository_with_the_engine_set(self):
+        recipe = self.probe('ok', {'commands': [
+            'test "$UNBOUND_CLI" = /x/unbound && test "$UNBOUND_MANAGED_DIR" = /x/managed && test -d tools/agents',
+            # Braces reach the shell untouched: no {placeholder} substitution.
+            'echo "${NOT_SET:-3}/3 records match; 0 differ {}"; echo trailing noise'],
+            'summary': r'\d+/\d+ records match.*'})
+        result = self.run_recipe(recipe)
+        self.assertEqual(result['status'], 'pass', result['summary'])
+        self.assertEqual(result['checks']['passed'], 2)
+        self.assertTrue(result['summary'].endswith('3/3 records match; 0 differ {}'), result['summary'])
+        self.assertIn("bash -c 'echo", result['steps'][1]['command'])
+
+    def test_a_failing_command_fails_and_the_last_line_is_the_default_summary(self):
+        recipe = self.probe('bad', {'commands': ['echo "1/2 records match"; exit 1', 'echo after']})
+        result = self.run_recipe(recipe)
+        self.assertEqual(result['status'], 'fail')
+        self.assertEqual(result['checks'], {'passed': 1, 'failed': 1, 'report': 0, 'total': 2})
+        self.assertEqual(result['summary'], '1/2 records match || after')
+
+    def test_summary_regex_takes_every_match(self):
+        text = ('{"tested": 9, "failed": 3, "pcm_steps": 0, "roots": ["/a"]}\n'
+                '{"tested": 8, "failed": 0, "pcm_steps": 1, "roots": ["/a"]}\nreports: /tmp/x\n') * 2
+        pattern = json.loads((Path(__file__).resolve().parents[2]/'tests/projects/mixerreverb/gate.json')
+                             .read_text())['summary']
+        self.assertEqual(suite.matched_summary(text, pattern), '"tested": 8, "failed": 0 | "tested": 8, "failed": 0')
+        self.assertEqual(suite.matched_summary('a\nb\n', 'nothing'), 'b')
+
+    def test_committed_declarations_are_valid(self):
+        suite.PROJECTS = self.projects
+        for path in sorted(self.projects.glob('*/' + suite.GATE_FILE)):
+            recipe = suite.declared(path.parent.name, '6000.0.71f1')
+            self.assertNotIsInstance(recipe, suite.NoRecipe, f'{path}: {getattr(recipe, "reason", "")}')
+
 
 class StubGateTests(unittest.TestCase):
     """land.py's generated-stubs step, with a stand-in CLI whose gen-stubs is a shell script."""

@@ -5,10 +5,18 @@
                                   [--against DIR|none] [--update-baseline]
     python3 tools/agents/suite.py --promote LABEL      make an earlier run the baseline
 
-Every directory tests/projects/<probe> with a Reference/ is a probe. Each one has a recipe below,
+Every directory tests/projects/<probe> with a Reference/ is a probe. Most have a recipe below,
 taken from its README, its run.py modes (unbound/engine, then its comparator or verifier) and the
-old regress script. A probe without a working recipe is listed as "no recipe" with the reason;
-none is skipped silently. Comparators, references and tolerances are used as they are.
+old regress script. A probe without one runs what it declares in tests/projects/<probe>/gate.json:
+
+    {"commands": ["python3 tests/projects/<probe>/run.py check"], "summary": "\\\\d+/\\\\d+ records match.*"}
+
+commands are the shell commands it gives `land.py --probe`, run in order from the repository root
+with $UNBOUND, $UNBOUND_CLI, $UNBOUND_MANAGED_DIR and $UNBOUND_PROBE_UNITY_VERSION (the release;
+a command names no other) set; each must exit 0 and admits its own heavy jobs. summary (optional) is a
+regex: the step's summary is every match in its output, else its last line. A probe that declares
+nothing, or declares it wrongly, is listed as "no recipe" with the reason; none is skipped
+silently. Comparators, references and tolerances are used as they are.
 
 The engine is --cli, else $UNBOUND, else this checkout's release build (the target that
 `tools/build.py --print-env` selects). Its managed directory is $UNBOUND_MANAGED_DIR, else the
@@ -79,11 +87,13 @@ class Step:
     printed `'differences': N` to be 0; 'none' records a measurement. With any verdict, output
     naming a MISSING capture fails the step.
     args_from: a command whose output (split on whitespace) is appended to argv.
+    literal: argv is used as it is, without {placeholder} substitution (declared shell commands).
+    summary (compare steps): a regex; the summary is every match in the output, else its last line.
     """
 
     def __init__(self, kind, argv, env=None, verdict='exit', ok=(0,), args_from=None, launcher_kind=None,
-                 timeout=None, replace=()):
-        self.replace = list(replace)
+                 timeout=None, replace=(), literal=False, summary=None):
+        self.replace, self.literal, self.summary = list(replace), literal, summary
         self.kind, self.argv, self.env, self.verdict = kind, list(argv), dict(env or {}), verdict
         self.ok, self.args_from, self.launcher_kind = tuple(ok), args_from, launcher_kind
         self.timeout = timeout or {'engine': ENGINE_TIMEOUT, 'driver': DRIVER_TIMEOUT}.get(kind, TOOL_TIMEOUT)
@@ -172,6 +182,47 @@ def trigger2d(probes):
 
 
 NOTES = {}
+GATE_FILE = 'gate.json'
+RELEASE_NAME = re.compile(r'\b\d{4}\.\d+\.\d+[abfp]\d+\b')
+
+
+def declared(name, release):
+    """The recipe tests/projects/<name>/gate.json declares: each command a compare step with the
+    exit code as its verdict. None without the file; NoRecipe with the reason when it is wrong."""
+    path = PROJECTS/name/GATE_FILE
+    if not path.is_file():
+        return None
+    try:
+        spec = json.loads(path.read_text())
+    except ValueError as error:
+        return NoRecipe(f'{GATE_FILE} is not JSON: {error}')
+    if not isinstance(spec, dict):
+        return NoRecipe(f'{GATE_FILE} is not a JSON object')
+    unknown = sorted(set(spec) - {'commands', 'summary'})
+    if unknown:
+        return NoRecipe(f'{GATE_FILE} has unknown keys: {", ".join(unknown)}')
+    commands, summary = spec.get('commands'), spec.get('summary')
+    if not (isinstance(commands, list) and commands and all(isinstance(c, str) and c.strip() for c in commands)):
+        return NoRecipe(f'{GATE_FILE} needs "commands": a non-empty list of shell commands')
+    if summary is not None:
+        try:
+            re.compile(summary)
+        except (re.error, TypeError) as error:
+            return NoRecipe(f'{GATE_FILE} "summary" is not a regex: {error}')
+    others = sorted(set(RELEASE_NAME.findall(' '.join(commands))) - {release})
+    if others:
+        return NoRecipe(f'{GATE_FILE} names release {", ".join(others)}, this run is {release}: '
+                        'use $UNBOUND_PROBE_UNITY_VERSION')
+    env = {'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}', 'PYTHONUNBUFFERED': '1'}
+    return [Step('compare', ['bash', '-c', command], env, timeout=DRIVER_TIMEOUT, literal=True, summary=summary)
+            for command in commands]
+
+
+def recipe_for(name, table, release):
+    """The probe's recipe here, else the one it declares, else NoRecipe with the reason."""
+    if name in table:
+        return table[name]
+    return declared(name, release) or NoRecipe(f'no recipe in tools/agents/suite.py and no {GATE_FILE}')
 
 
 def recipes(release):
@@ -334,6 +385,7 @@ def recipes(release):
         R[name] = guarded(jsonl('values.jsonl'))
     R['droppedparams'] = guarded(jsonl('capture.jsonl'))
     R['spriteimport'] = guarded(jsonl('sprites.jsonl'))
+    R['lightmapuvs'] = guarded(jsonl('lightmapuvs.jsonl'))
     for name in ('appfacts', 'customrt', 'flares', 'gpubuffers', 'lines', 'rtdepth'):
         R[name] = guarded(folder)
     R['assetclones'] = guarded(lambda runs: ['{probe}/Reference/unity-{release}/Main.jsonl', f'{runs}/values.jsonl',
@@ -678,6 +730,12 @@ def images_worse(old, new):
     return changes
 
 
+def matched_summary(text, pattern):
+    """Every match of a declared summary regex in text, else its last line."""
+    found = [match.group(0).strip() for match in re.finditer(pattern, text, re.M)]
+    return ' | '.join(found)[:300] if found else last_lines(text)
+
+
 def last_lines(text, count=1):
     # A comparator that ends with an indented JSON report: summarize it on one line.
     start = text.rfind('\n{')
@@ -702,9 +760,13 @@ def substitute(value, values):
     return value.format_map(values) if isinstance(value, str) else value
 
 
+def step_argv(step, values):
+    return list(step.argv) if step.literal else substitute(step.argv, values)
+
+
 def run_step(step, values, log, base_env):
     """Exit code and output text of one step; the output also goes to log."""
-    argv = substitute(step.argv, values)
+    argv = step_argv(step, values)
     env = dict(base_env, **substitute(step.env, values))
     log.parent.mkdir(parents=True, exist_ok=True)
     if step.kind == 'identical':
@@ -856,10 +918,11 @@ def run_probe(name, recipe, context):
         log = work/f'step{index:02d}-{step.kind}.log'
         code, text = run_step(step, values, log, context['env'])
         record = {'kind': step.kind, 'exit': code, 'log': str(log),
-                  'command': shlex.join(substitute(step.argv, values))[:400]}
+                  'command': shlex.join(step_argv(step, values))[:400]}
         steps.append(record)
         if step.kind in ('compare', 'identical'):
-            summary = measurement(text) if step.verdict == 'none' else last_lines(text)
+            summary = (measurement(text) if step.verdict == 'none' else
+                       matched_summary(text, step.summary) if step.summary else last_lines(text))
             summaries.append(summary)
             measures = image_measures(text)
             if measures:
@@ -1055,14 +1118,14 @@ def main():
         if unknown:
             parser.error('not a probe with a Reference/: ' + ', '.join(unknown))
         probes = [name for name in probes if name in wanted]
-    missing = NoRecipe('no recipe in tools/agents/suite.py yet')
+    table = {name: recipe_for(name, table, args.release) for name in probes}
     if args.list:
         for name in probes:
-            recipe = table.get(name, missing)
+            recipe = table[name]
             if isinstance(recipe, NoRecipe):
                 print(f'{name}: no recipe: {recipe.reason}')
             else:
-                print(f'{name}:')
+                print(f'{name}:' + (f' ({GATE_FILE})' if recipe and recipe[0].literal else ''))
                 for step in recipe:
                     print(f'    {step.kind:8} {shlex.join(step.argv)[:200]}')
         return 0
@@ -1101,7 +1164,7 @@ def main():
     results = {}
     lock = threading.Lock()
     with concurrent.futures.ThreadPoolExecutor(max_workers=max(1, args.jobs)) as pool:
-        futures = {pool.submit(run_probe, name, table.get(name, missing), context): name for name in probes}
+        futures = {pool.submit(run_probe, name, table[name], context): name for name in probes}
         for future in concurrent.futures.as_completed(futures):
             name = futures[future]
             try:
