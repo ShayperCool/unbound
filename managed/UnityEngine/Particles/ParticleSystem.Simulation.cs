@@ -11,9 +11,11 @@ namespace UnityEngine
     // simulation keeps them in world space; custom keeps them in the custom transform's space.
     public sealed partial class ParticleSystem
     {
-        /// <summary>World gravity (Physics.gravity / Physics2D.gravity defaults).</summary>
-        internal static Vector3 s_Gravity3D = new Vector3(0f, -9.81f, 0f);
-        internal static Vector3 s_Gravity2D = new Vector3(0f, -9.81f, 0f);
+        /// <summary>The world gravity a gravity source names: Physics.gravity or Physics2D.gravity
+        /// (z = 0), so the project's DynamicsManager / Physics2DSettings and runtime changes, which
+        /// a running system uses from its next step (measured).</summary>
+        internal static Vector3 SourceGravity(ParticleSystemGravitySource source) =>
+            source == ParticleSystemGravitySource.Physics2D ? (Vector3)Physics2D.gravity : Physics.gravity;
 
         Vector3 m_LastPosition;
         bool m_HasLastPosition;
@@ -139,7 +141,7 @@ namespace UnityEngine
                 if (m_Main.loop) endTime %= duration;
                 m_NoiseScroll += m_Noise.scrollSpeed.Evaluate(Mathf.Clamp01(endTime / duration), 1f) * dt;
             }
-            m_Context = MakeContext();
+            m_Context = MakeContext(dt);
             m_HasContext = true;
             m_LoggedNewbornError = false;
             m_LoggedUpdateError = false;
@@ -1307,16 +1309,25 @@ namespace UnityEngine
             public bool BirthSubs;
         }
 
-        StepContext MakeContext()
+        /// <param name="dt">The step's length: system-time curves are read where it ends (measured
+        /// for the gravity modifier, as for the noise scroll speed).</param>
+        StepContext MakeContext(float dt = 0f)
         {
             var c = new StepContext();
             float duration = Mathf.Max(m_Main.duration, 0.0001f);
-            c.Nt = Mathf.Clamp01(m_Time / duration);
+            float endTime = m_Time + dt;
+            if (m_Main.loop) endTime %= duration;
+            c.Nt = Mathf.Clamp01(endTime / duration);
             c.WorldToSim = WorldToSimulationRotation();
-            var gravityWorld = m_Main.gravitySource == ParticleSystemGravitySource.Physics2D ? s_Gravity2D : s_Gravity3D;
             c.HasGravity = m_Main.gravityModifier.mode != ParticleSystemCurveMode.Constant || m_Main.gravityModifier.constant != 0f;
             bool simWorld = m_Main.simulationSpace == ParticleSystemSimulationSpace.World;
-            c.Gravity = simWorld ? gravityWorld : c.WorldToSim * gravityWorld;
+            if (c.HasGravity)
+            {
+                // Into simulation space with its scale: local space divides by the scaling mode's
+                // emitter scale, custom space by the custom transform's (measured).
+                var gravityWorld = SourceGravity(m_Main.gravitySource);
+                c.Gravity = simWorld ? gravityWorld : SimulationToWorld().inverse.MultiplyVector(gravityWorld);
+            }
             c.Center = simWorld ? m_GameObject.m_Transform.position : Vector3.zero;
             if (m_Main.simulationSpace == ParticleSystemSimulationSpace.Custom && m_Main.customSimulationSpace != null)
                 c.Center = m_Main.customSimulationSpace.InverseTransformPoint(m_GameObject.m_Transform.position);
