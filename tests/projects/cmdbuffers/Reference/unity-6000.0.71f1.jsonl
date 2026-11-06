@@ -127,6 +127,8 @@
 {"k":"cmd.instanced.count","v":["ff1428ffff1428ffff1428ffff1428ff00000000000000000000000000000000ff1428ffff1428ffff1428ffff1428ff00000000000000000000000000000000"]}
 {"k":"cmd.instanced.block","v":["32c80aff32c80aff64c80bff64c80bff96c80cff96c80cffc8c80dffc8c80dff32c80aff32c80aff64c80bff64c80bff96c80cff96c80cffc8c80dffc8c80dff"]}
 {"k":"cmd.instanced.blockscalar","v":["074db1ff074db1ffff1428ffff1428ffff1428ffff1428ffff1428ffff1428ff074db1ff074db1ffff1428ffff1428ffff1428ffff1428ffff1428ffff1428ff"]}
+{"k":"cmd.instanced.rawid","v":["200000ff200000ff400000ff400000ff600000ff600000ff7f0000ff7f0000ff200000ff200000ff400000ff400000ff600000ff600000ff7f0000ff7f0000ff"]}
+{"k":"cmd.instanced.uniformarray","v":["32c80aff32c80aff64c80bff64c80bff96c80cff96c80cffc8c80dffc8c80dff32c80aff32c80aff64c80bff64c80bff96c80cff96c80cffc8c80dffc8c80dff"]}
 {"k":"cmd.instanced.allpasses","v":["32c80aff32c80aff64c80bff64c80bff96c80cff96c80cff000000000000000032c80aff32c80aff64c80bff64c80bff96c80cff96c80cff0000000000000000"]}
 {"k":"cmd.instanced.recorded","v":["32c80aff32c80aff64c80bff64c80bff96c80cff96c80cffc8c80dffc8c80dff32c80aff32c80aff64c80bff64c80bff96c80cff96c80cffc8c80dffc8c80dff"]}
 {"k":"cmd.instanced.max","v":["0000000000000000ff1428ffff1428ff000000000000000000000000000000000000000000000000ff1428ffff1428ff00000000000000000000000000000000"]}
@@ -175,6 +177,7 @@
 {"k":"cmd.cbuffer.compute","v":[5,6,7,8]}
 {"k":"cmd.cbuffer.offset","v":[1064,1065,1066,1067]}
 {"k":"cmd.cbuffer.recorded","v":[9,10,11,12]}
+{"k":"cmd.cbuffer.gpucopy","v":[3300,3301,3302,3303]}
 {"k":"handle.same","v":true}
 {"k":"handle.differs","v":true}
 {"k":"handle.notdefault","v":true}
@@ -193,6 +196,8 @@
 {"k":"fence.cpu.wait.error","v":"ArgumentException: Attempting to call WaitOnAsyncGPUFence on a fence that is not of GraphicsFenceType.AsyncQueueSynchronization"}
 {"k":"fence.wait.default.error","v":"InvalidOperationException: This GraphicsFence object has not been correctly constructed see Graphics.CreateGraphicsFence() or CommandBuffer.CreateGraphicsFence()"}
 {"k":"fence.graphics.cpu.completed","v":false}
+{"k":"fence.frame1.cpu.passed","v":false}
+{"k":"fence.frame2.cpu.passed","v":true}
 {"k":"fence.frames.error","v":"NotSupportedException: Cannot determine if this AsyncQueueSynchronisation GraphicsFence has passed as this platform does not support async compute."}
 {"k":"fence.frames.cpu.executed","v":true}
 {"k":"fence.frames.cpu.immediate","v":true}

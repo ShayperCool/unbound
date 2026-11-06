@@ -7,8 +7,8 @@ namespace UnityEngine.Tests
 {
     /// <summary>NativeApi 22 (filter component descriptors at the end of AudioSourcePacket, with
     /// AudioReverbFilter's since 20, and the reverb zone of AudioFramePacket since 21; render
-    /// protocol 8: draws that read a GraphicsBuffer's 16-bit
-    /// indices, and render protocol 9: depth copies): the managed side
+    /// protocol 8: external 16-bit indices, protocol 9: depth copies, protocol 10: 32-bit indices,
+    /// and protocol 11: logical instance IDs. The managed side
     /// refuses a native side of any other version at startup, older or newer, before anything is
     /// installed.</summary>
     public unsafe class NativeApiVersionTests
@@ -17,7 +17,7 @@ namespace UnityEngine.Tests
         static readonly FieldInfo Ready = typeof(Native).GetField("s_Ready", BindingFlags.Static | BindingFlags.NonPublic);
 
         [Fact]
-        public void TheVersionIsAudioFilterDescriptorsAndRenderProtocolTen()
+        public void TheVersionIsAudioFilterDescriptorsAndRenderProtocolEleven()
         {
             Assert.Equal(22u, NativeApi.CurrentVersion);
             Assert.Equal(1UL << 62, TextureElements.DepthElement);

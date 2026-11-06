@@ -16,6 +16,17 @@ Meshes, textures and materials are identified by `u64` handles the managed side 
 is destroyed. Imported textures are uploaded by the native side itself (`import_texture`), which
 knows the asset pipeline and its cache.
 
+### Render protocol 11: logical instance IDs (NativeApi 22)
+
+`FirstInstance` (opcode 30, `u32 first`) sets the first logical instance of the next draw and is
+consumed even if that draw is skipped. Command-buffer mesh instancing emits each matrix through
+the ordinary draw path with its original instance ID. `DrawSetup` keeps its existing bytes.
+Property-block arrays retain their full value, with an internal `<InstanceElement><name>`
+property carrying the selected value; shader cache format 19 identifies the declared instanced
+properties that use that element. Ordinary uniform arrays keep every element. A scalar marked
+`<InstanceScalar><name>` falls back to the material after instance zero only when the compiled
+variant declares that property as instanced. NativeApi 21 and 22 refuse each other at startup.
+
 ### Render protocol 10: 32-bit indices (NativeApi 21)
 
 `DrawIndices` takes an index size of 2 or 4. A draw reads 32-bit indices, and an indirect draw

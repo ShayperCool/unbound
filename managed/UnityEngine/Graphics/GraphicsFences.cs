@@ -7,7 +7,7 @@ using UnityEngine.Rendering;
 namespace Unbound.Runtime
 {
     /// <summary>Fences share a state across struct copies and command-buffer replays. GPU
-    /// completion comes from the queue; CPU visibility is delayed until a later frame as measured
+    /// completion comes from the queue; CPU visibility is delayed until two frames later as measured
     /// on the 6000.0.71f1 OpenGLCore Editor.</summary>
     internal static class GraphicsFences
     {
@@ -31,7 +31,7 @@ namespace Unbound.Runtime
         }
 
         internal static bool Passed(GraphicsFence fence) =>
-            fence.m_State.Frame >= 0 && Time.frameCount > fence.m_State.Frame
+            fence.m_State.Frame >= 0 && Time.frameCount - fence.m_State.Frame >= 2
             && ulong.Parse(Native.Call("graphics-fence", "poll"), System.Globalization.CultureInfo.InvariantCulture) >= fence.m_State.Sequence;
 
         /// <summary>The Editor's checks of a fence waited on (measured: fence.wait.default, fence.cpu.wait).</summary>
@@ -57,7 +57,7 @@ namespace UnityEngine.Rendering
         internal GraphicsFences.State m_State;
         internal GraphicsFenceType m_FenceType;
 
-        /// <summary>Whether the GPU has passed the fence: a CPU synchronisation fence from the frame
+        /// <summary>Whether the GPU has passed the fence: a CPU synchronisation fence from two frames
         /// after its command ran (see GraphicsFences). Without async compute an async queue
         /// fence cannot answer (the Editor's exception, measured: fence.recorded, fence.frames);
         /// a fence not made by CreateGraphicsFence throws (fence.default).</summary>

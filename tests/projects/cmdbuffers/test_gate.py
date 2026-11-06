@@ -1,6 +1,4 @@
 """The landing gate admits only the task-required invalid Append skip."""
-import contextlib
-import io
 import json
 from pathlib import Path
 import tempfile
@@ -26,6 +24,11 @@ class SafeAppendGateTests(unittest.TestCase):
     def test_safe_skip_is_separate_from_strict_verdict(self):
         self.assertNotEqual(self.verify(allow=False), 0)
         self.assertEqual(self.verify(), 0)
+
+    def test_exact_editor_candidate_still_fails_safe_gate(self):
+        self.rows = [json.loads(line) for line in run.reference_file(run.ROOT, 'jsonl').read_text().splitlines()]
+        self.assertEqual(self.verify(allow=False), 0)
+        self.assertNotEqual(self.verify(), 0)
 
     def test_payload_write_still_fails(self):
         next(row for row in self.rows if row['k'] == 'uav.append.nocounter')['v'][0] = 1

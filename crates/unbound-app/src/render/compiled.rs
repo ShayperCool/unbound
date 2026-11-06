@@ -948,16 +948,24 @@ fn write_uniform(program: &Compiled, plan: &[Source], i: usize, v: &DrawValues, 
     if u.count != 1 {
         return;
     }
-    let material_values = DrawValues {
-        overrides: &[],
+    let element = v
+        .overrides
+        .iter()
+        .find(|(name, _)| name.strip_prefix("<InstanceElement>") == Some(u.name.as_str()));
+    let element_override: Vec<_> = element
+        .map(|(_, value)| vec![(u.name.clone(), value.clone())])
+        .unwrap_or_default();
+    let instance_values = DrawValues {
+        overrides: &element_override,
         ..*v
     };
     let v = if program.instanced_properties.contains(&u.name)
-        && v.overrides
-            .iter()
-            .any(|(name, _)| name.strip_prefix("<InstanceScalar>") == Some(u.name.as_str()))
-    {
-        &material_values
+        && (element.is_some()
+            || v.overrides.iter().any(|(name, value)| {
+                name.strip_prefix("<InstanceScalar>") == Some(u.name.as_str())
+                    || (name == &u.name && matches!(value, PropertyValue::Array { .. }))
+            })) {
+        &instance_values
     } else {
         v
     };
@@ -1223,6 +1231,46 @@ mod tests {
             f32::from_le_bytes(out[80..84].try_into().unwrap()),
             0.75,
             "ordinary scalar uniforms apply to every instance"
+        );
+        let array = PropertyValue::Array {
+            components: 4,
+            data: vec![0.25; 8],
+        };
+        instanced.uniforms.push(Uniform {
+            count: 2,
+            stride: 16,
+            ..uniform("_Palette", 176, 4, 1)
+        });
+        instanced.uniform_size = 208;
+        let overrides = [
+            ("_Palette".into(), array.clone()),
+            (
+                "<InstanceElement>_Palette".into(),
+                PropertyValue::Vector([1.0; 4]),
+            ),
+            ("_Color".into(), array),
+            (
+                "<InstanceElement>_Color".into(),
+                PropertyValue::Vector([0.75; 4]),
+            ),
+        ];
+        let instance = DrawValues {
+            overrides: &overrides,
+            ..values
+        };
+        let mut plan = plan.clone();
+        plan.push(Source::Named);
+        out.resize(208, 0);
+        fill(&instanced, &plan, &instance, &mut out, None);
+        assert_eq!(
+            f32::from_le_bytes(out[64..68].try_into().unwrap()),
+            0.75,
+            "declared instanced arrays select their element"
+        );
+        assert_eq!(
+            f32::from_le_bytes(out[192..196].try_into().unwrap()),
+            0.25,
+            "ordinary uniform arrays retain every element"
         );
     }
 

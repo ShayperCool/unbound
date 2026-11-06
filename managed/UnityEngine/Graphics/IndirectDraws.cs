@@ -228,7 +228,10 @@ namespace UnityEngine.Rendering
                 ulong meshHandle = mesh.Sync(), materialHandle = material.Sync();
                 int pass = shaderPass < 0 ? GfxStream.AllPasses : shaderPass;
                 for (int i = 0; i < count; i++)
+                {
+                    GfxStream.FirstInstance((uint)i);
                     GfxStream.Draw(meshHandle, submeshIndex, materialHandle, pass, copies[i], Color.white, properties: values[i]);
+                }
             });
         }
 

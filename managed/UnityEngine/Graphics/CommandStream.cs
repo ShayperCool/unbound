@@ -281,6 +281,12 @@ namespace Unbound.Runtime
         /// buffer (indexed: DrawMeshInstancedIndirect's layout; not: DrawProceduralIndirect's);
         /// then, when it has them, the indices from a buffer it reads instead of its mesh's
         /// (DrawIndices: buffer, index size, first index, index count).</summary>
+        internal static void FirstInstance(uint first)
+        {
+            U8(30);
+            U32(first);
+        }
+
         internal static void DrawSetup(in Unbound.Runtime.DrawSetup setup)
         {
             U8(DrawSetupOp);

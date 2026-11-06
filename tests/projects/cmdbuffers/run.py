@@ -75,7 +75,7 @@ def publish(labels):
 
 def verify(candidate, safe_append_skip=False):
     code = subprocess.run([sys.executable, str(ROOT/'compare.py'), str(reference_file(ROOT, 'jsonl')), str(candidate)]).returncode
-    if not code or not safe_append_skip:
+    if not safe_append_skip:
         return code
     # The task explicitly requires skipping an Append draw without a counter, rather than
     # reproducing the Editor's unrelated-counter writes. Keep the strict report above intact.
@@ -90,7 +90,7 @@ def verify(candidate, safe_append_skip=False):
             and warning in (candidate.parent/'engine.log').read_text()):
         print('gate: required safe Append skip verified; both raw differences remain above')
         return 0
-    return code
+    return code or 1
 
 
 def main():

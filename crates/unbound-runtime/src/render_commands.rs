@@ -145,6 +145,8 @@ pub enum Command {
     /// `args` (a buffer handle; 0: none) at `offset` — indexed (index count, instance count, first
     /// index, base vertex, first instance: DrawMeshInstancedIndirect) or not (vertex count,
     /// instance count, first vertex, first instance: DrawProceduralIndirect).
+    /// First logical instance of the next draw (render protocol 11).
+    FirstInstance(u32),
     DrawSetup {
         instances: u32,
         args: u64,
@@ -299,6 +301,7 @@ mod op {
     pub const DRAW_INDICES: u8 = 28;
     // Render protocol 9 (NativeApi 19).
     pub const COPY_DEPTH: u8 = 29;
+    pub const FIRST_INSTANCE: u8 = 30;
 }
 
 /// The sizes of a `DrawIndices` index on the wire: 16-bit indices, and 32-bit ones from render
@@ -472,6 +475,7 @@ pub fn parse(bytes: &[u8]) -> Result<Vec<Command>, String> {
                     extra: colors,
                 }
             }
+            op::FIRST_INSTANCE => Command::FirstInstance(r.u32()?),
             op::DRAW_SETUP => Command::DrawSetup {
                 instances: r.u32()?,
                 args: r.u64()?,
@@ -781,6 +785,10 @@ impl Writer {
                 self.u32(*mip as u32);
                 self.u32(*slice as u32);
             }
+            Command::FirstInstance(first) => {
+                self.bytes.push(op::FIRST_INSTANCE);
+                self.u32(*first);
+            }
             Command::DrawSetup {
                 instances,
                 args,
@@ -1056,6 +1064,7 @@ mod tests {
             },
             Command::Global("_Tint".into(), PropertyValue::Vector([1.0, 0.5, 0.25, 1.0])),
             Command::Keyword("FOG_LINEAR".into(), true),
+            Command::FirstInstance(7),
             Command::RenderPipeline("UniversalPipeline".into()),
             Command::PassTags(vec!["UniversalForward".into(), "SRPDefaultUnlit".into()]),
             Command::DepthBias {

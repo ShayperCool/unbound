@@ -174,6 +174,7 @@ struct PlannedDraw {
     program: (u32, u32),
     /// Instances drawn (SV_InstanceID 0..n).
     instances: u32,
+    first_instance: u32,
     /// Counts read on the GPU: the arguments buffer, its offset, whether indexed.
     indirect: Option<(wgpu::Buffer, u64, bool)>,
 }
@@ -288,6 +289,7 @@ struct State {
     state_override: Option<commands::StateOverride>,
     /// How the next draw runs (`DrawSetup`): instances, arguments buffer, offset, indexed.
     draw_setup: Option<(u32, u64, u32, bool)>,
+    first_instance: u32,
     /// The next draw's indices from a buffer (`DrawIndices`): buffer, index size, first, count.
     draw_indices: Option<(u64, u8, u32, u32)>,
 }
@@ -459,6 +461,7 @@ impl UnityRenderer {
                 depth_bias: [0.0; 2],
                 state_override: None,
                 draw_setup: None,
+                first_instance: 0,
                 draw_indices: None,
             },
             presented,
@@ -2165,6 +2168,7 @@ impl UnityRenderer {
                     open = false;
                 }
                 Command::Viewport(v) => self.state.viewport = v,
+                Command::FirstInstance(first) => self.state.first_instance = first,
                 Command::DrawSetup {
                     instances,
                     args,
@@ -2342,6 +2346,7 @@ impl UnityRenderer {
                     }
                 }
                 Command::Draw(draw) => {
+                    let first_instance = std::mem::take(&mut self.state.first_instance);
                     // Taken first: a draw's indices never pass to a later draw.
                     let indices = self.state.draw_indices.take();
                     let Some(target) = self.state.target.clone() else {
@@ -2411,7 +2416,8 @@ impl UnityRenderer {
                     }
                     for item in planned {
                         match item {
-                            Planned::Draw(d) => {
+                            Planned::Draw(mut d) => {
+                                d.first_instance = first_instance;
                                 if !open {
                                     let pass = self.new_pass(target.clone());
                                     passes.push(Op::Pass(pass));
@@ -3004,6 +3010,7 @@ impl UnityRenderer {
                 scissor,
                 program: (id, program_offset),
                 instances: 1,
+                first_instance: 0,
                 indirect: None,
             }));
         }
@@ -3464,7 +3471,11 @@ impl UnityRenderer {
                         match &d.indirect {
                             Some((args, offset, true)) => rp.draw_indexed_indirect(args, *offset),
                             Some((args, offset, false)) => rp.draw_indirect(args, *offset),
-                            None => rp.draw_indexed(d.range.clone(), d.base_vertex, 0..d.instances),
+                            None => rp.draw_indexed(
+                                d.range.clone(),
+                                d.base_vertex,
+                                d.first_instance..d.first_instance.saturating_add(d.instances),
+                            ),
                         }
                     }
                 }

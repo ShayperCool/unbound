@@ -396,6 +396,13 @@ public class CmdBuffersProbe : MonoBehaviour
         var scalar = new MaterialPropertyBlock();
         scalar.SetVector("_Color", Rgb(7, 77, 177));
         Inst("cmd.instanced.blockscalar", cmd => cmd.DrawMeshInstanced(quad, 0, m, 0, mats, 4, scalar));
+        var ids = Keep(new Material(Resources.Load<Shader>("InstancedIds")) { enableInstancing = true });
+        Inst("cmd.instanced.rawid", cmd => cmd.DrawMeshInstanced(quad, 0, ids, 0, mats, 4));
+        var palette = new MaterialPropertyBlock();
+        palette.SetFloat("_UseArray", 1);
+        palette.SetVectorArray("_Palette", colors);
+        palette.SetVectorArray("_Tint", new[] { Vector4.one, Vector4.one, Vector4.one, Vector4.one });
+        Inst("cmd.instanced.uniformarray", cmd => cmd.DrawMeshInstanced(quad, 0, ids, 0, mats, 4, palette));
         Inst("cmd.instanced.allpasses", cmd => cmd.DrawMeshInstanced(quad, 0, m, -1, mats, 3, block));
         // Matrices and block changed after recording, before the buffer runs.
         var later = (Matrix4x4[])mats.Clone();
@@ -525,6 +532,20 @@ public class CmdBuffersProbe : MonoBehaviour
         var changed = Constant(1, 1, 1, 1);
         Const("cmd.cbuffer.recorded", cmd => { cmd.SetComputeConstantBufferParam(cs, "Params", changed, 0, 16); changed.SetData(new uint[] { 9, 10, 11, 12 }); });
 
+        // GPU-generated words copied into a constant buffer before the next kernel reads it.
+        var gpuSource = new GraphicsBuffer(GraphicsBuffer.Target.Structured | GraphicsBuffer.Target.CopySource, 4, 4);
+        var gpuConstant = new GraphicsBuffer(GraphicsBuffer.Target.Constant | GraphicsBuffer.Target.CopyDestination, 4, 4);
+        disposables.Add(gpuSource);
+        disposables.Add(gpuConstant);
+        Const("cmd.cbuffer.gpucopy", cmd =>
+        {
+            cmd.SetComputeIntParam(cs, "_Tag", 33);
+            cmd.SetComputeBufferParam(cs, fill, "_Out", gpuSource);
+            cmd.DispatchCompute(cs, fill, 1, 1, 1);
+            cmd.CopyBuffer(gpuSource, gpuConstant);
+            cmd.SetComputeConstantBufferParam(cs, "Params", gpuConstant, 0, 16);
+        });
+
         var h1 = FreshGraphics(4);
         var h2 = FreshGraphics(4);
         Value("handle.same", B(h1.bufferHandle == h1.bufferHandle));
@@ -623,7 +644,9 @@ public class CmdBuffersProbe : MonoBehaviour
         });
         Try("fence.unexecuted", () => unexecuted = unexecutedBuffer.CreateGraphicsFence(GraphicsFenceType.AsyncQueueSynchronisation, SynchronisationStageFlags.PixelProcessing));
         yield return null;
+        Try("fence.frame1.cpu", () => Value("fence.frame1.cpu.passed", B(cpu.passed)));
         yield return null;
+        Try("fence.frame2.cpu", () => Value("fence.frame2.cpu.passed", B(cpu.passed)));
         yield return null;
         Try("fence.frames", () =>
         {
