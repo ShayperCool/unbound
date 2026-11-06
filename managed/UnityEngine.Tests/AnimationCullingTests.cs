@@ -96,26 +96,23 @@ namespace UnityEngine.Tests
             Near.Equal(0f, text.anchoredPosition.y);
         }
 
-        // [choice] A skinned renderer's culling bounds are approximate in Unbound, so it counts as
-        // visible while enabled: a CullCompletely animator over only a SkinnedMeshRenderer keeps
-        // animating (never frozen on screen), and the approximation is reported. Red at 8f6c1e01:
-        // the skinned renderer is not visible (no camera), so the update is skipped
-        // (normalizedTime stays 0) and nothing is reported.
-        [Fact]
-        public void CullCompletelyCountsAnApproximateSkinnedRendererAsVisible()
+        /// <summary>A skinned renderer no camera took culls a CullCompletely Animator like any other,
+        /// whatever its updateWhenOffscreen (measured, tests/projects/animculling s/*).</summary>
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void CullCompletelyCullsByASkinnedRendererVisibility(bool updateWhenOffscreen)
         {
-            static int Hits() => Stubs.HitReport().FirstOrDefault(h => h.Key == "Animation culling with approximate renderer bounds").Value;
-            var (animator, text, _) = Rig(AnimatorCullingMode.CullCompletely, withRenderer: false);
+            var (animator, _, _) = Rig(AnimatorCullingMode.CullCompletely, withRenderer: false);
             var body = new GameObject("SkinnedBody");
             body.layer = kLayer;
             body.transform.SetParent(animator.transform, false);
             var skinned = body.AddComponent<SkinnedMeshRenderer>();
+            skinned.updateWhenOffscreen = updateWhenOffscreen;
             Assert.False(skinned.isVisible);
-            int before = Hits();
             animator.Tick(0f);
             animator.Tick(0.15f);
-            Assert.True(animator.GetCurrentAnimatorStateInfo(0).normalizedTime > 0f);
-            Assert.True(Hits() > before);
+            Near.Equal(0f, animator.GetCurrentAnimatorStateInfo(0).normalizedTime);
         }
 
         [Fact]
@@ -155,18 +152,23 @@ namespace UnityEngine.Tests
             Near.Equal(new Vector3(1.0884f, 1.0884f, 1.0884f), text.localScale, 1e-4f);
         }
 
-        /// <summary>CullUpdateTransforms is not applied yet (the transform write is inside the
-        /// player's evaluation): the documented half, the state machine keeps updating, holds; the
-        /// missing half is reported. The transforms are deliberately not asserted.</summary>
+        /// <summary>CullUpdateTransforms keeps the state machine updating and writes nothing while
+        /// no renderer is visible; the renderer becoming visible in a camera's culling writes the
+        /// current pose (measured, tests/projects/animculling a/transforms, h/transforms).</summary>
         [Fact]
-        public void CullUpdateTransformsKeepsTheStateMachineAndReportsTheMissingTransformCulling()
+        public void CullUpdateTransformsAdvancesWithoutWritingUntilARendererBecomesVisible()
         {
-            var (animator, _, renderer) = Rig(AnimatorCullingMode.CullUpdateTransforms);
+            var camera = MakeCamera();
+            var (animator, text, renderer) = Rig(AnimatorCullingMode.CullUpdateTransforms);
             Assert.False(renderer.isVisible);
             animator.Tick(0f);
             animator.Tick(0.25f);
             Near.Equal(0.25f / 0.3f, animator.GetCurrentAnimatorStateInfo(0).normalizedTime, 1e-4f);
-            Assert.Contains(Stubs.HitReport(), h => h.Key == "Animator.cullingMode CullUpdateTransforms" && h.Value > 0);
+            Near.Equal(Vector3.one, text.localScale);
+            Near.Equal(0f, text.anchoredPosition.y);
+            MakeVisible(camera, renderer);
+            Near.Equal(new Vector3(1.0884f, 1.0884f, 1.0884f), text.localScale, 1e-4f);
+            Near.Equal(30f, text.anchoredPosition.y, 1e-3f);
         }
 
         static AnimationClip LegacyLoop()
@@ -202,21 +204,22 @@ namespace UnityEngine.Tests
             Assert.Equal(0f, animation.transform.localPosition.x);
         }
 
+        /// <summary>The first update that runs again catches up the culled updates' time, and the
+        /// skipped span's events fire then; the state's first update (sampling its start) is spent
+        /// while culled (measured, tests/projects/animculling l/based/*).</summary>
         [Fact]
-        public void BasedOnRenderersResumesWithoutCatchingUpWhenARendererBecomesVisible()
+        public void BasedOnRenderersCatchesUpWhenARendererBecomesVisible()
         {
             var camera = MakeCamera();
             var (animation, receiver, renderer) = LegacyRig();
             for (int i = 0; i < 5; i++) animation.Step(0.1f);
+            Assert.Equal(0f, animation["loop"].time);
+            Assert.Empty(receiver.Calls);
             MakeVisible(camera, renderer);
 
-            animation.Step(0.1f); // the state's first update samples its start (measured)
-            Near.Equal(5f, animation.transform.localPosition.x, 1e-4f);
-            animation.Step(0.2f);
-            Near.Equal(0.2f, animation["loop"].time, 1e-4f);
-            Near.Equal(5.2f, animation.transform.localPosition.x, 1e-4f);
-            Assert.Empty(receiver.Calls);
-            animation.Step(0.1f); // crosses the event at 0.25
+            animation.Step(0.1f);
+            Near.Equal(0.5f, animation["loop"].time, 1e-4f);
+            Near.Equal(5.5f, animation.transform.localPosition.x, 1e-4f);
             Assert.Equal(new[] { "OnHit(3)" }, receiver.Calls);
         }
     }
