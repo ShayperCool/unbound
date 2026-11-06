@@ -41,6 +41,7 @@ from pathlib import Path
 import re
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 import threading
@@ -65,7 +66,9 @@ class Step:
     'identical' compares two files byte for byte (args: reference, capture), after replacing each
     (old, new) pair of `replace` in the capture.
     verdict (compare steps): 'exit' uses the exit code; 'summary' derives pass/fail from the
-    comparator's own counts (for comparators that always exit 0); 'none' records a measurement.
+    comparator's own counts (for comparators that always exit 0); 'differences' requires every
+    printed `'differences': N` to be 0; 'none' records a measurement. With any verdict, output
+    naming a MISSING capture or an infinite difference fails the step.
     args_from: a command whose output (split on whitespace) is appended to argv.
     """
 
@@ -108,7 +111,9 @@ def classic(variable, out, run_args, compare=None, images=None, verdict='summary
     steps = [run(*run_args, env={variable: target, **(extra_env or {})})]
     steps.append(py('compare.py', *(compare or [ref(), target]), verdict=verdict))
     if images:
-        steps.append(py('particles/compare_images.py', ref(images if images is not True else ''), target))
+        # compare_images.py prints means but always exits 0: a measurement, not a verdict.
+        steps.append(py('particles/compare_images.py', ref(images if images is not True else ''), target,
+                        verdict='none'))
     return steps
 
 
@@ -157,6 +162,9 @@ def trigger2d(probes):
     return steps
 
 
+NOTES = {}
+
+
 def recipes(release):
     """Recipe per probe name. Built per run, as some expand over the probe's reference files."""
     R = {}
@@ -194,9 +202,9 @@ def recipes(release):
     R['particles'] = [run('--frames', '60', '--size', '320x180', '--no-watch',
                           env={'PARTICLES_PROBE_OUT': '{work}/out.jsonl', 'PARTICLES_IMAGE_DIR': '{work}/images'}),
                       py('compare.py', single_ref(), '{work}/out.jsonl', verdict='summary'),
-                      py('compare_images.py', ref('images'), '{work}/images')]
+                      py('compare_images.py', ref('images'), '{work}/images', verdict='none')]
     R['lighting'] = [run('--frames', '10', '--size', '320x180', '--no-watch', env={'LIGHTING_PROBE_OUT': '{work}/out'}),
-                     py('particles/compare_images.py', ref('images'), '{work}/out')]
+                     py('particles/compare_images.py', ref('images'), '{work}/out', verdict='none')]
     R['materials'] = classic('MATERIALS_PROBE_OUT', 'out.json', ['--no-watch', '--frames', '10'],
                              [single_ref('json'), '{work}/out.json'], verdict='exit')
     R['builtinrp'] = classic('BUILTIN_PROBE_OUT', 'out', ['--frames', '30', '--size', '640x480', '--no-watch'],
@@ -207,7 +215,8 @@ def recipes(release):
                              [ref(), '{work}/out', '-q'], verdict='exit')
     R['display'] = [run('--no-watch', '--size', '320x180', '--snapshot', '4:{work}/display.png',
                         env={'DISPLAY_PROBE_OUT': '{work}/out'}),
-                    py('compare.py', ref(), '{work}/out', '{work}/display.png')]
+                    # display/compare.py always exits 0; its records and image are a measurement.
+                    py('compare.py', ref(), '{work}/out', '{work}/display.png', verdict='none')]
     R['baked'] = [run('--no-watch', '--frames', '20', '--size', '320x180', env={'BAKED_PROBE_OUT': '{work}/out.png'}),
                   py('urp/compare.py', single_ref('png'), '{work}/out.png', verdict='none')]
     R['shadergraph'] = [run('--no-watch', '--frames', '30', '--size', '320x180',
@@ -393,11 +402,16 @@ def recipes(release):
                '--project', 'engine', '--runtime', '{runtime}'),
         py('run.py', 'compare', '--release', '{release}', '--work', '{work}', '--label', 'compare',
            '--candidate', '{work}/engine.json', '--output', '{work}/report.json')]
-    R['captureclock'] = [
-        driver('run.py', 'engine', '--release', '{release}', '--work', '{work}', '--label', 'slow-engine',
-               '--duration', '3', '--cli', '{cli}', '--runtime', '{managed}'),
-        py('verify.py', '--release', '{release}', '--profile', 'slow', '--candidate', '{work}/slow-engine/capture.jsonl',
-           '--report', '{work}/slow-comparison.json')]
+    R['captureclock'] = []
+    for profile, duration, scale in [('slow', '3', '1'), ('fps60', '0.01666666753590107', '1'),
+                                     ('fps60-half', '0.01666666753590107', '0.5'),
+                                     ('dsp48000', '0.02133333310484886', '1'),
+                                     ('dsp48000-scaled', '0.02133333310484886', '1.5')]:
+        R['captureclock'] += [
+            driver('run.py', 'engine', '--release', '{release}', '--work', '{work}', '--label', profile+'-engine',
+                   '--duration', duration, '--scale', scale, '--cli', '{cli}', '--runtime', '{managed}'),
+            py('verify.py', '--release', '{release}', '--profile', profile,
+               '--candidate', f'{{work}}/{profile}-engine/capture.jsonl', '--report', f'{{work}}/{profile}.json')]
     R['trailautodestruct'] = [
         driver('run.py', 'engine', '--release', '{release}', '--work', '{work}', '--label', 'candidate',
                '--cli', '{cli}', '--runtime', '{managed}'),
@@ -411,9 +425,16 @@ def recipes(release):
     R['uitransitions'] = [driver('run.py', 'engine', '--release', '{release}', '--output', '{work}/engine',
                                  '--cli', '{cli}', '--managed', '{managed}'),
                           py('compare.py', single_ref(), '{work}/engine/capture/transitions.jsonl')]
-    R['modules'] = [driver('run.py', 'engine', 'compile', '--release', '{release}', '--label', 'engine-compile',
-                           '--work', '{work}', '--cli', '{cli}', '--runtime', '{managed}'),
-                    py('compare.py', '{work}/engine-compile/result.json')]
+    R['modules'] = []
+    for scenario in ('compile', 'play'):
+        R['modules'] += [driver('run.py', 'engine', scenario, '--release', '{release}', '--label', 'engine-'+scenario,
+                                '--work', '{work}', '--cli', '{cli}', '--runtime', '{managed}'),
+                         py('compare.py', f'{{work}}/engine-{scenario}/result.json')]
+
+    # Profiles with a reference that the recipe does not run; listed with the result.
+    NOTES['uicolors'] = 'Gamma reference not run: it needs the project switched to Gamma in the Editor'
+    NOTES['uirectclipping'] = 'Gamma and LinearMSAA references not run: they need Editor-side project settings'
+    NOTES['modules'] = 'editor-play not run: it has no reference of its own'
 
     # No runnable engine recipe.
     mixer = NoRecipe('engine.py needs --native-project, the mixer assets that native.py creates in the Editor')
@@ -432,7 +453,7 @@ def recipes(release):
                        '--label', 'engine', '--profile', str(profile), '--cli', '{cli}',
                        env={'UNBOUND_MANAGED_DIR': '{managed}'}),
                 py('compare.py', reference+'.jsonl', f'{{work}}/{suite}-engine-p{profile}.jsonl',
-                   '--output', f'{{work}}/{suite}-p{profile}.json')]
+                   '--output', f'{{work}}/{suite}-p{profile}.json', verdict='differences')]
     # report.py reads <probe>-<label>.json for each query suite from QUERY_WORK.
     env = {'QUERY_WORK': '{work}', 'SCENE_SETTINGS_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'}
     R['query2dparity'] = []
@@ -463,8 +484,10 @@ def summary_verdict(text):
     """pass/fail from a print-only comparator's own counts, clause by clause; None without counts.
 
     A clause with 'N differ' passes when every such N is 0. Otherwise 'A/B ... match|within' passes
-    when A plus the clause's 'K expected' reaches B.
+    when A equals B (comparators that accept expected differences count them as matched).
     """
+    if missing_capture(text):
+        return False
     verdicts = []
     for clause in re.split(r'[;\n]', text):
         differ = [int(n) for n in re.findall(r'\b(\d+) (?:record\(s\) )?differ\b', clause)]
@@ -472,9 +495,17 @@ def summary_verdict(text):
             verdicts.append(all(n == 0 for n in differ))
             continue
         ratios = re.findall(r'\b(\d+)/(\d+)\b[^,;()]*?\b(?:match|within)', clause)
-        expected = sum(int(n) for n in re.findall(r'\b(\d+) expected', clause))
-        verdicts += [int(a) + expected >= int(b) for a, b in ratios]
+        verdicts += [int(a) >= int(b) for a, b in ratios]
     return all(verdicts) if verdicts else None
+
+
+def missing_capture(text):
+    return bool(re.search(r'\bMISSING\b|\binf\b', text))
+
+
+def differences_verdict(text):
+    counts = [int(n) for n in re.findall(r"['\"]differences['\"]: (\d+)", text)]
+    return bool(counts) and all(n == 0 for n in counts)
 
 
 def last_lines(text, count=1):
@@ -486,7 +517,8 @@ def last_lines(text, count=1):
         except ValueError:
             pass
     # Lines of only JSON brackets carry no information (comparators that print a JSON report).
-    lines = [line.strip() for line in text.splitlines() if line.strip(' \t[]{},')]
+    lines = [line.strip() for line in text.splitlines() if line.strip(' \t[]{},')
+             and not re.fullmatch(r'/\S+', line.strip())]
     return ' | '.join(lines[-count:])[:300]
 
 
@@ -532,11 +564,20 @@ def run_step(step, values, log, base_env):
         out.write('$ ' + shlex.join(argv) + '\n')
         out.flush()
         try:
-            code = subprocess.run(argv, cwd=REPO, env=env, stdout=out, stderr=subprocess.STDOUT,
-                                  stdin=subprocess.DEVNULL, timeout=step.timeout + 600).returncode
-        except subprocess.TimeoutExpired:
-            out.write('\nsuite: step timed out\n')
-            code = 124
+            # Own process group: a timeout stops the launcher, the engine and a driver's children.
+            process = subprocess.Popen(argv, cwd=REPO, env=env, stdout=out, stderr=subprocess.STDOUT,
+                                       stdin=subprocess.DEVNULL, start_new_session=True)
+            try:
+                code = process.wait(timeout=step.timeout + 600)
+            except subprocess.TimeoutExpired:
+                os.killpg(process.pid, signal.SIGTERM)
+                try:
+                    process.wait(timeout=30)
+                except subprocess.TimeoutExpired:
+                    os.killpg(process.pid, signal.SIGKILL)
+                    process.wait()
+                out.write('\nsuite: step timed out\n')
+                code = 124
         except OSError as error:
             out.write(f'\nsuite: {error}\n')
             code = 127
@@ -568,10 +609,12 @@ def run_probe(name, recipe, context):
             summary = (next((line.strip() for line in text.splitlines() if line.strip()), '')[:300]
                        if step.verdict == 'none' else last_lines(text))
             summaries.append(summary)
-            if code not in step.ok:
+            if code not in step.ok or missing_capture(text):
                 verdicts.append(False)
             elif step.verdict == 'summary':
                 verdicts.append(summary_verdict(text))
+            elif step.verdict == 'differences':
+                verdicts.append(differences_verdict(text))
             elif step.verdict == 'none':
                 verdicts.append(None)
             else:
@@ -588,6 +631,9 @@ def run_probe(name, recipe, context):
             status = 'report'
         else:
             status = 'pass'
+    if name in NOTES:
+        summaries.append('partial: ' + NOTES[name])
+        result['note'] = NOTES[name]
     result.update(status=status, seconds=round(time.time() - started, 1), summary=' || '.join(summaries)[:1000],
                   checks={'passed': sum(v is True for v in verdicts), 'failed': sum(v is False for v in verdicts),
                           'report': sum(v is None for v in verdicts), 'total': len(verdicts)},
@@ -690,6 +736,8 @@ def main():
         summary = AGENTS/'suite'/args.promote/'summary.json'
         if not summary.is_file():
             parser.error(f'no summary for run {args.promote}: {summary}')
+        if json.loads(summary.read_text()).get('only'):
+            parser.error(f'run {args.promote} ran only some probes (--only); promote a full run')
         promote(summary)
         return 0
 
@@ -712,6 +760,8 @@ def main():
                 for step in recipe:
                     print(f'    {step.kind:8} {shlex.join(step.argv)[:200]}')
         return 0
+    if args.update_baseline and args.only:
+        parser.error('--update-baseline needs a full run, not --only')
     cli = args.cli or default_cli()
     if not cli:
         parser.error('give --cli or set UNBOUND')
@@ -757,7 +807,7 @@ def main():
 
     counts = {status: sum(r['status'] == status for r in results.values())
               for status in ('pass', 'fail', 'report', 'no recipe')}
-    summary = {'label': label, 'release': args.release, 'commit': commit, 'cli': str(cli), 'managed': str(managed),
+    summary = {'label': label, 'release': args.release, 'only': args.only, 'commit': commit, 'cli': str(cli), 'managed': str(managed),
                'work': str(work_root), 'started': datetime.datetime.fromtimestamp(started).isoformat(timespec='seconds'),
                'seconds': round(time.time() - started), 'counts': counts,
                'probes': {name: results[name] for name in sorted(results)}}
@@ -771,7 +821,10 @@ def main():
     regressed = counts['fail'] > 0
     if against:
         path = against/'summary.json' if against.is_dir() else against
-        changes, regressed = compare_runs(summary, json.loads(path.read_text()))
+        previous = json.loads(path.read_text())
+        if args.only:
+            previous['probes'] = {k: v for k, v in previous.get('probes', {}).items() if k in results}
+        changes, regressed = compare_runs(summary, previous)
         print(f'suite: against {path}: ' + (f'{len(changes)} change(s)' if changes else 'no changes'))
         for line in changes:
             print('  ' + line)
