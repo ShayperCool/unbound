@@ -32,7 +32,11 @@ pub struct SfxReverbSpec {
 const EARLY_MS: [[f32; 4]; 2] = [[0.0, 7.926, 20.075, 50.781], [4.984, 12.616, 31.932, 80.76]];
 const EARLY_ALLPASS_MS: [f32; 2] = [5.885, 7.676];
 const EARLY_ALLPASS_GAIN: f32 = 0.63;
-const LINE_INPUT_MS: [f32; 8] = [1.488, 20.152, 25.57, 32.573, 41.596, 53.236, 68.252, 87.633];
+// Line 2's offset lies in [1127.8, 1127.9) frames at 44.1 kHz: Reverb Delay 0.022 s (970.2
+// frames) reaches it 2098 frames on, 0.011 s (485.1 frames) 1612 (tests/projects/audioreverb).
+const LINE_INPUT_MS: [f32; 8] = [
+    1.488, 20.152, 25.575, 32.573, 41.596, 53.236, 68.252, 87.633,
+];
 const FAN_OUT_MS: [f32; 8] = [0.0, 0.717, 1.759, 3.279, 5.515, 8.805, 13.648, 20.76];
 /// The nominal length of line k is 61 ms * 1.32^k at Density 100.
 const LINE_MS: f32 = 61.0;
@@ -175,11 +179,12 @@ impl SfxReverb {
             * 0.5
             * level(room + p.reflections.clamp(-10000.0, 1000.0));
         // Measured onsets: line 0 reads max(floor(f32 delay sum) - 1, 0) frames plus its offset,
-        // the other lines the separately rounded delays (0.007 s + 0.011 s: 933 and 864 + offset
-        // at 48 kHz, 857 and 794 + offset at 44.1 kHz).
+        // the other lines floor(f32 delay sum + offset), one sum (0.007 s + 0.011 s: 933 and 864
+        // + offset at 48 kHz, 857 and 794 + offset at 44.1 kHz; Reverb Delay 0.011 s alone gives
+        // 485.1 + 3009.9 = 3495 for line 6 at 44.1 kHz).
         let reverb_delay = p.reverb_delay.clamp(0.0, 0.1);
         let line0_base = (((reflect + reverb_delay) * rate) as usize).saturating_sub(1);
-        let late_base = (reflect * rate).round() as usize + (reverb_delay * rate).round() as usize;
+        let late_base = ((reflect + reverb_delay) * rate) as f64;
         let density = p.density.clamp(0.0, 100.0) / 100.0;
         let scale = 0.1 + 0.9 * density * density * density;
         let decay = p.decay_time.clamp(0.1, 20.0);
@@ -188,8 +193,11 @@ impl SfxReverb {
         let mut energy = 0.0;
         for k in 0..8 {
             let m = LINE_MS * rate / 1000.0 * scale * LINE_RATIO.powi(k as i32);
-            c.late[k] =
-                if k == 0 { line0_base } else { late_base } + frames(LINE_INPUT_MS[k], self.rate);
+            c.late[k] = if k == 0 {
+                line0_base + frames(LINE_INPUT_MS[k], self.rate)
+            } else {
+                (late_base + LINE_INPUT_MS[k] as f64 * self.rate as f64 / 1000.0) as usize
+            };
             c.feedback[k] = (m.round() as usize).saturating_sub(1).max(1);
             let c1 = 10f32.powf(m / rate * -60.0 / decay / 20.0);
             c.decay[k] = c1;
@@ -282,6 +290,12 @@ impl SfxReverb {
 /// DMO-style high-frequency damping pole for a line whose broadband gain per pass is `c1`.
 fn damping(c1: f32, ratio: f32, w: f32) -> f32 {
     let c21 = (c1.powf(2.0 - 2.0 / ratio) - 1.0) / (1.0 - w.cos());
+    // A short decay with a low ratio overflows the power: the pole is then at its limit, as it
+    // already is for every finite c21 large enough to overflow c22 * c22 (Native PaddedCell,
+    // tests/projects/audioreverb).
+    if c21 == f32::INFINITY {
+        return 1.0;
+    }
     if c21 == 0.0 || !c21.is_finite() {
         return 0.0;
     }
