@@ -95,7 +95,10 @@ pub struct SfxReverb {
 impl SfxReverb {
     pub fn new(rate: u32) -> anyhow::Result<Self> {
         // The longest input read is the late network at maximal Reflect and Reverb Delay.
-        let input = frames(400.0 + LATE_TAP_S * 1000.0 * LATE_TAP_RATIO.powi(6) + LINE0_MS, rate) + 3;
+        let input = frames(
+            400.0 + LATE_TAP_S * 1000.0 * LATE_TAP_RATIO.powi(6) + LINE0_MS,
+            rate,
+        ) + 3;
         let line_len = (LINE_MS * LINE_RATIO.powi(7) * rate as f32 / 1000.0).round() as usize + 2;
         let line_len = line_len.max(frames(FAN_OUT_MS[7], rate) + 1);
         let bytes = (input + 8 * line_len) * std::mem::size_of::<f32>();
@@ -424,9 +427,24 @@ mod tests {
     #[test]
     fn late_lines_truncate_the_delay_and_tap_sum() {
         let cases: [(u32, f32, f32, [usize; 8]); 3] = [
-            (48000, 0.007 * 0.8, 0.011 * 0.8, [761, 1658, 1919, 2254, 2688, 3246, 3967, 4897]),
-            (48000, 0.007, 0.011, [933, 1831, 2091, 2427, 2860, 3419, 4140, 5070]),
-            (44100, 0.0, 0.011, [549, 1373, 1612, 1921, 2319, 2832, 3495, 4349]),
+            (
+                48000,
+                0.007 * 0.8,
+                0.011 * 0.8,
+                [761, 1658, 1919, 2254, 2688, 3246, 3967, 4897],
+            ),
+            (
+                48000,
+                0.007,
+                0.011,
+                [933, 1831, 2091, 2427, 2860, 3419, 4140, 5070],
+            ),
+            (
+                44100,
+                0.0,
+                0.011,
+                [549, 1373, 1612, 1921, 2319, 2832, 3495, 4349],
+            ),
         ];
         for (rate, reflect, delay, late) in cases {
             let mut reverb = SfxReverb::new(rate).unwrap();
