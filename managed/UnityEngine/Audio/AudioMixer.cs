@@ -297,7 +297,7 @@ namespace UnityEngine.Audio
             if (group.m_PitchGuid != null) m_Defaults[group.m_PitchGuid] = 1f;
             foreach (var effect in group.m_Effects)
             {
-                if (effect.Parameter("Cutoff freq") is string cutoff) m_Defaults[cutoff] = 5000f;
+                if (effect.Parameter("Cutoff freq") is string cutoff) m_Defaults[cutoff] = AudioMixerEffectController.CutoffDefault(effect.m_EffectName);
                 if (effect.Parameter("Resonance") is string resonance) m_Defaults[resonance] = 1f;
                 if (effect.m_EffectName == "Echo")
                 {
@@ -315,6 +315,9 @@ namespace UnityEngine.Audio
                     for (int i = 0; i < AudioMixerEffectController.DuckParameters.Length; i++)
                         if (effect.Parameter(AudioMixerEffectController.DuckParameters[i]) is string guid)
                             m_Defaults[guid] = AudioMixerEffectController.DuckDefaults[i];
+                var (names, defaults, _, _) = AudioMixerEffectController.Ranges(effect.m_EffectName);
+                for (int i = 0; names != null && i < names.Length; i++)
+                    if (effect.Parameter(names[i]) is string guid) m_Defaults[guid] = defaults[i];
                 // A Send's level is its mix level, -80 dB until a snapshot sets it.
                 if (effect.m_MixLevelGuid != null) m_Defaults[effect.m_MixLevelGuid] = effect.m_EffectName == "Send" ? MinVolume : 0f;
             }
@@ -403,7 +406,8 @@ namespace UnityEngine.Audio
                 bool routed = effect.m_EffectName == "Send" || effect.m_EffectName == "Receive" || effect.m_EffectName == AudioMixerEffectController.DuckVolume;
                 bool bypass = !routed && (m_BypassEffects || effect.m_Bypass);
                 bool reverb = effect.m_EffectName == AudioMixerEffectController.SfxReverb;
-                if (!bypass && !reverb && !routed && effect.m_EffectName != "Attenuation" && effect.m_EffectName != "Lowpass" && effect.m_EffectName != "Highpass" && effect.m_EffectName != "Echo")
+                bool measured = Array.IndexOf(AudioMixerEffectController.MeasuredEffects, effect.m_EffectName) >= 0;
+                if (!bypass && !reverb && !routed && !measured)
                     throw new NotSupportedException("Unsupported AudioMixer effect '" + effect.m_EffectName + "' in group '" + Path + "'");
                 // A send's target registers its group, which may have no source of its own.
                 var target = effect.m_EffectName == "Send" ? effect.m_SendTarget : null;
@@ -422,7 +426,7 @@ namespace UnityEngine.Audio
                 effects.Add(new {
                     id = effect.m_EffectId, kind = effect.m_EffectName, bypass = effect.m_Bypass,
                     gain = AudioMixer.DspGain(m_Mixer.Value(m_VolumeGuid)),
-                    cutoff = effect.Parameter("Cutoff freq") is string cutoff ? m_Mixer.Value(cutoff) : 5000f,
+                    cutoff = effect.Parameter("Cutoff freq") is string cutoff ? m_Mixer.Value(cutoff) : AudioMixerEffectController.CutoffDefault(effect.m_EffectName),
                     resonance = effect.Parameter("Resonance") is string resonance ? m_Mixer.Value(resonance) : 1f,
                     delay = effect.Parameter("Delay") is string delay ? m_Mixer.Value(delay) : 500f,
                     decay = effect.Parameter("Decay") is string decay ? m_Mixer.Value(decay) : 0f,
@@ -435,6 +439,8 @@ namespace UnityEngine.Audio
                     mixLevel = reverb && effect.m_EnableWetMix ? AudioMixer.DspGain(wetDb) : (float?)null,
                     mixAudible = wetDb > -69f,
                     duck = effect.m_EffectName == AudioMixerEffectController.DuckVolume ? effect.DuckConfiguration(m_Mixer) : null,
+                    compressor = effect.m_EffectName == AudioMixerEffectController.Compressor && !bypass ? effect.CompressorConfiguration(m_Mixer) : null,
+                    eq = effect.m_EffectName == AudioMixerEffectController.ParamEq && !bypass ? effect.ParamEqConfiguration(m_Mixer) : null,
                     sendTarget = targetGroup != null ? target.m_EffectId : null,
                     sendLevel = targetGroup != null ? AudioMixer.DspGain(wetDb) : 0f,
                 });
@@ -562,6 +568,50 @@ namespace Unbound.Runtime
         internal static readonly float[] DuckDefaults = { -10f, 2f, 0.1f, 0.3f, 0f, 10f, 1f };
         static readonly float[] DuckMinimums = { -80f, 0.2f, 0f, 0f, -80f, 0f, 0f };
         static readonly float[] DuckMaximums = { 0f, 10f, 10f, 10f, 40f, 50f, 1f };
+        internal const string Compressor = "Compressor";
+        internal const string ParamEq = "ParamEQ";
+        // Editor parameter definitions of 6000.0.71f1; tests/projects/mixercompressor measures the
+        // same values as Native's defaults for unset parameters.
+        internal static readonly string[] CompressorParameters = { "Threshold", "Attack", "Release", "Make up gain" };
+        static readonly float[] CompressorDefaults = { 0f, 50f, 50f, 0f };
+        static readonly float[] CompressorMinimums = { -60f, 10f, 20f, 0f };
+        static readonly float[] CompressorMaximums = { 0f, 200f, 1000f, 30f };
+        internal static readonly string[] ParamEqParameters = { "Center freq", "Octave range", "Frequency gain" };
+        static readonly float[] ParamEqDefaults = { 8000f, 1f, 1f };
+        static readonly float[] ParamEqMinimums = { 20f, 0.2f, 0.05f };
+        static readonly float[] ParamEqMaximums = { 22000f, 5f, 3f };
+        /// <summary>Kinds the DSP runs besides SFX Reverb and the routed units.</summary>
+        internal static readonly string[] MeasuredEffects = {
+            "Attenuation", "Lowpass", "Highpass", "Echo", Compressor, ParamEq, "Lowpass Simple", "Highpass Simple" };
+        internal static float CutoffDefault(string effect) => effect == "Highpass Simple" ? 1000f : 5000f;
+        internal static (string[], float[], float[], float[]) Ranges(string effect) =>
+            effect == Compressor ? (CompressorParameters, CompressorDefaults, CompressorMinimums, CompressorMaximums)
+            : effect == ParamEq ? (ParamEqParameters, ParamEqDefaults, ParamEqMinimums, ParamEqMaximums)
+            : (null, null, null, null);
+        /// <summary>The effect's parameters; values outside the Editor's ranges (reachable through
+        /// exposed parameters) are unmeasured and fail.</summary>
+        float[] Values(UnityEngine.Audio.AudioMixer mixer)
+        {
+            var (names, defaults, minimums, maximums) = Ranges(m_EffectName);
+            var v = new float[names.Length];
+            for (int i = 0; i < v.Length; i++)
+            {
+                v[i] = Parameter(names[i]) is string guid ? mixer.Value(guid) : defaults[i];
+                if (!(v[i] >= minimums[i] && v[i] <= maximums[i]))
+                    throw new NotSupportedException("AudioMixer " + m_EffectName + " " + names[i] + " " + v[i] + " is outside the Editor's range " + minimums[i] + " to " + maximums[i]);
+            }
+            return v;
+        }
+        internal object CompressorConfiguration(UnityEngine.Audio.AudioMixer mixer)
+        {
+            var v = Values(mixer);
+            return new { threshold = v[0], attack = v[1], release = v[2], makeupGain = v[3] };
+        }
+        internal object ParamEqConfiguration(UnityEngine.Audio.AudioMixer mixer)
+        {
+            var v = Values(mixer);
+            return new { center = v[0], octaves = v[1], gain = v[2] };
+        }
         internal AudioMixerEffectController m_SendTarget;
         internal object DuckConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {

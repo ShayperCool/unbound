@@ -220,6 +220,52 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void CompressorParamEqAndSimpleFiltersSendMeasuredDefaults()
+        {
+            var (mixer, group, compressor) = Fixture();
+            compressor.m_EffectName = "Compressor"; compressor.m_EffectId = "comp";
+            compressor.m_ParameterGuids.Clear(); mixer.m_Exposed.Clear();
+            foreach (var name in AudioMixerEffectController.CompressorParameters) compressor.m_ParameterGuids[name] = name;
+            var eq = new AudioMixerEffectController { m_EffectName = "ParamEQ", m_EffectId = "eq" };
+            eq.m_ParameterGuids["Frequency gain"] = "eqgain";
+            var high = new AudioMixerEffectController { m_EffectName = "Highpass Simple", m_EffectId = "high" };
+            high.m_ParameterGuids["Cutoff freq"] = "highcut";
+            var low = new AudioMixerEffectController { m_EffectName = "Lowpass Simple", m_EffectId = "low" };
+            group.m_Effects.Add(eq); group.m_Effects.Add(high); group.m_Effects.Add(low);
+            mixer.m_Exposed["Threshold"] = "Threshold";
+            mixer.m_Exposed["HighCut"] = "highcut";
+            Assert.True(mixer.GetFloat("Threshold", out float threshold));
+            Assert.Equal(0f, threshold);
+            Assert.True(mixer.GetFloat("HighCut", out float highCut));
+            Assert.Equal(1000f, highCut);
+            Assert.True(mixer.SetFloat("Threshold", -20f));
+            using (var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration())))
+            {
+                var effects = payload.RootElement.GetProperty("effects");
+                var config = effects[0].GetProperty("compressor");
+                Assert.Equal(-20f, config.GetProperty("threshold").GetSingle());
+                Assert.Equal(50f, config.GetProperty("attack").GetSingle());
+                Assert.Equal(50f, config.GetProperty("release").GetSingle());
+                Assert.Equal(0f, config.GetProperty("makeupGain").GetSingle());
+                var peak = effects[1].GetProperty("eq");
+                Assert.Equal(8000f, peak.GetProperty("center").GetSingle());
+                Assert.Equal(1f, peak.GetProperty("octaves").GetSingle());
+                Assert.Equal(1f, peak.GetProperty("gain").GetSingle());
+                Assert.Equal(1000f, effects[2].GetProperty("cutoff").GetSingle());
+                Assert.Equal(5000f, effects[3].GetProperty("cutoff").GetSingle());
+            }
+            // Values outside the Editor's ranges are unmeasured, unless the unit is bypassed.
+            Assert.True(mixer.SetFloat("Threshold", -70f));
+            Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+            compressor.m_Bypass = true;
+            using (var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration())))
+                Assert.Equal(JsonValueKind.Null, payload.RootElement.GetProperty("effects")[0].GetProperty("compressor").ValueKind);
+            compressor.m_EnableWetMix = true; compressor.m_Bypass = false;
+            Assert.True(mixer.SetFloat("Threshold", -10f));
+            Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+        }
+
+        [Fact]
         public void ActiveUnsupportedEffectsAndWetMixFailLoudly()
         {
             var (_, group, effect) = Fixture();
