@@ -62,7 +62,7 @@ residuals, both listed in docs/COMPATIBILITY_GAPS.md:
 - One-step device PCM flips: 165 values at 48 kHz and 234 at 44.1 kHz. The master floats of these
   samples pass; the largest float error is `4.54e-7`.
 - `startup`/`startup_wet`: reverb arrivals of impulses inside the first block, up to `3.66e-4` at
-  48 kHz and `7.02e-4` at 44.1 kHz. Native spreads each
+  48 kHz and, at 44.1 kHz, `6.77e-4` in the master floats and `7.02e-4` in device PCM. Native spreads each
   over two frames by a fraction that shrinks towards frame 1024. The engine has no such smoothing.
 
 The model and its measured rules are in docs/AUDIO.md. Unmeasured: other releases, surround

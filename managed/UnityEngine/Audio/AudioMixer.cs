@@ -401,7 +401,7 @@ namespace UnityEngine.Audio
                 if (!bypass && !reverb && effect.m_EnableWetMix)
                     throw new NotSupportedException("AudioMixer wet mixing is unsupported for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
                 float wetDb = effect.m_MixLevelGuid != null ? m_Mixer.Value(effect.m_MixLevelGuid) : 0f;
-                // The Editor's Wet ends at 0 dB; a louder level (via an exposed parameter) is unmeasured.
+                // The Editor's Wet ends at 0 dB; a louder level (e.g. via an exposed parameter) is unmeasured.
                 if (!bypass && reverb && effect.m_EnableWetMix && wetDb > 0f)
                     throw new NotSupportedException("AudioMixer wet level " + wetDb + " dB above 0 dB is unmeasured for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
                 effects.Add(new {

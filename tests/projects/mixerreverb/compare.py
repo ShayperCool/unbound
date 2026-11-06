@@ -61,7 +61,8 @@ def compare(reference, candidate, report, keys, exact=False, before=None, pcm_st
             record(key, values)
             data = [samples(root, meta) for root, meta in zip(roots, values)]
             frames = limits.get(key)
-            count = max(map(len, data)) if frames is None else min(max(map(len, data)), 2*frames)
+            channels = values[0].get('channels', 2) if isinstance(values[0], dict) else 2
+            count = max(map(len, data)) if frames is None else min(max(map(len, data)), channels*frames)
             for i in range(count):
                 record(key, [v[i] if i < len(v) else MISSING for v in data], i)
         result = dict(tested=tested, failed=failed, exact=exact, atol=0 if exact else ATOL,
