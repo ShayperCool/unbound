@@ -210,6 +210,43 @@ namespace UnityEngine
         }
     }
 
+    /// <summary>AudioSource Chorus, measured with the mixer kernel on 6000.0.71f1.
+    /// Setters retain their arguments; the DSP clamps them to the measured ranges.</summary>
+    [ClassId(166)]
+    [RequireComponent(typeof(AudioBehaviour))]
+    public sealed partial class AudioChorusFilter : Behaviour
+    {
+        static readonly string[] s_Fields = { "m_DryMix", "m_WetMix1", "m_WetMix2", "m_WetMix3", "m_Delay", "m_Rate", "m_Depth" };
+        static readonly float[] s_Defaults = { 0.5f, 0.5f, 0.5f, 0.5f, 40f, 0.8f, 0.03f };
+        readonly float[] m_Values = (float[])s_Defaults.Clone();
+        bool m_ReportedInvalid;
+        public float dryMix { get => m_Values[0]; set => m_Values[0] = value; }
+        public float wetMix1 { get => m_Values[1]; set => m_Values[1] = value; }
+        public float wetMix2 { get => m_Values[2]; set => m_Values[2] = value; }
+        public float wetMix3 { get => m_Values[3]; set => m_Values[3] = value; }
+        public float delay { get => m_Values[4]; set => m_Values[4] = value; }
+        public float rate { get => m_Values[5]; set => m_Values[5] = value; }
+        public float depth { get => m_Values[6]; set => m_Values[6] = value; }
+        [Obsolete("Warning! Feedback is deprecated. This property does nothing.")]
+        public float feedback { get => 0f; set { } }
+        internal unsafe bool Describe(out AudioFilterDescriptor d)
+        {
+            d = new AudioFilterDescriptor { Kind = AudioFilterKind.Chorus };
+            bool finite = Array.TrueForAll(m_Values, float.IsFinite);
+            if (!AudioFilterChain.Finite(this, ref m_ReportedInvalid, finite ? 0f : float.NaN, 0f)) return false;
+            for (int i = 0; i < m_Values.Length; i++)
+                d.Reverb[i] = Mathf.Clamp(m_Values[i], 0f, i == 4 ? 100f : i == 5 ? 20f : 1f);
+            return true;
+        }
+        internal override void CopyFrom(Component source, Func<Object, Object> remap) =>
+            Array.Copy(((AudioChorusFilter)source).m_Values, m_Values, m_Values.Length);
+        internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
+        {
+            for (int i = 0; i < m_Values.Length; i++) m_Values[i] = body.Float(s_Fields[i], s_Defaults[i]);
+            AudioFilterChain.CheckSerialized(this, body, s_Fields);
+        }
+    }
+
     /// <summary>The measured AudioMixer Distortion kernel on an AudioSource. Native keeps setter
     /// values verbatim and clamps the DSP amount to 0..1 (6000.0.71f1, audiodistortion).</summary>
     [ClassId(170)]
@@ -391,7 +428,7 @@ namespace Unbound.Runtime
         internal static NotSupportedException CustomCutoffCurve() =>
             new NotSupportedException("AudioLowPassFilter.customCutoffCurve is not supported by Unbound: the cutoff does not follow a distance curve");
 
-        static bool IsFilterComponent(Component c) => c is AudioLowPassFilter || c is AudioHighPassFilter || c is AudioEchoFilter || c is AudioReverbFilter || c is AudioDistortionFilter;
+        static bool IsFilterComponent(Component c) => c is AudioLowPassFilter || c is AudioHighPassFilter || c is AudioEchoFilter || c is AudioReverbFilter || c is AudioDistortionFilter || c is AudioChorusFilter;
 
         /// <summary>False (with one error per component) when a parameter is not a number.</summary>
         internal static bool Finite(Behaviour component, ref bool reported, float a, float b, float c = 0f, float d = 0f)
@@ -451,6 +488,7 @@ namespace Unbound.Runtime
                 if (c is AudioLowPassFilter lowPass) ok = lowPass.Describe(out d);
                 else if (c is AudioHighPassFilter highPass) ok = highPass.Describe(out d);
                 else if (c is AudioDistortionFilter distortion) ok = distortion.Describe(out d);
+                else if (c is AudioChorusFilter chorus) ok = chorus.Describe(out d);
                 else if (c is AudioReverbFilter reverb) ok = reverb.Describe(out d);
                 else ok = ((AudioEchoFilter)c).Describe(out d);
                 if (!ok) continue;

@@ -1,6 +1,7 @@
 //! Persistent DSP on summed mixer groups. Native captures establish a fourth-order Butterworth
 //! response for Lowpass and a second-order response for Highpass. The independently measured
 //! startup kernels also constrain parameter-dependent delay-history normalization.
+use super::chorus::{Chorus, ChorusSpec};
 use super::compressor::{Compressor, CompressorSpec};
 use super::duck::{Duck, DuckSpec};
 use super::reverb::{SfxReverb, SfxReverbSpec};
@@ -58,6 +59,8 @@ pub struct EffectSpec {
     /// Distortion Level, clamped for DSP while the managed API keeps the exposed value.
     #[serde(default)]
     pub distortion: Option<f32>,
+    #[serde(default)]
+    pub chorus: Option<ChorusSpec>,
 }
 
 /// ParamEQ parameters as the mixer stores them: Hz, octaves and a linear gain.
@@ -90,6 +93,7 @@ impl EffectSpec {
         if let Some(compressor) = &self.compressor {
             compressor.validate(&self.id)?;
         }
+        if let Some(chorus) = &self.chorus { chorus.validate()?; }
         if let Some(level) = self.distortion {
             anyhow::ensure!(level.is_finite() && (0.0..=1.0).contains(&level),
                 "AudioMixer Distortion has an invalid Level {level}");
@@ -359,6 +363,7 @@ pub struct Effect {
     reverb: Option<Box<SfxReverb>>,
     duck: Duck,
     compressor: Compressor,
+    chorus: Option<Chorus>,
     simple: SimpleFilter,
     eq: ParamEq,
     /// Frames since the effect started, for the slot's startup ramp.
@@ -370,7 +375,7 @@ pub struct Effect {
     gain: f32,
 }
 impl Effect {
-    pub fn new(spec: EffectSpec, rate: u32) -> anyhow::Result<Self> {
+    pub fn new(spec: EffectSpec, rate: u32, buffer: u32) -> anyhow::Result<Self> {
         let mut effect = Self {
             spec: spec.clone(),
             stages: Default::default(),
@@ -379,6 +384,7 @@ impl Effect {
             reverb: None,
             duck: Duck::default(),
             compressor: Compressor::default(),
+            chorus: None,
             simple: SimpleFilter::default(),
             eq: ParamEq::default(),
             frames: 0,
@@ -388,10 +394,13 @@ impl Effect {
             rate,
             gain: spec.gain,
         };
-        effect.update(spec, rate)?;
+        effect.update(spec, rate, buffer)?;
         Ok(effect)
     }
-    pub fn update(&mut self, spec: EffectSpec, rate: u32) -> anyhow::Result<()> {
+    pub fn update(&mut self, spec: EffectSpec, rate: u32, buffer: u32) -> anyhow::Result<()> {
+        if spec.chorus.is_some() && self.chorus.as_ref().is_none_or(|c| c.configuration() != (rate, buffer.max(1))) {
+            self.chorus = Some(Chorus::new(rate, buffer)?);
+        }
         if spec.kind == "Echo" {
             self.echo.tune(spec.delay, rate)?;
         }
@@ -418,6 +427,7 @@ impl Effect {
         }
         self.duck = Duck::default();
         self.compressor = Compressor::default();
+        if let Some(chorus) = &mut self.chorus { chorus.clear(); }
         self.simple = SimpleFilter::default();
         self.eq.h = Default::default();
         self.frames = 0;
@@ -490,7 +500,7 @@ impl Effect {
             if !bypass && !self.spec.bypass {
                 self.echo.process(samples, &self.spec);
             }
-        } else if matches!(self.spec.kind.as_str(), "Compressor" | "ParamEQ" | "Distortion" | "Lowpass Simple" | "Highpass Simple") {
+        } else if matches!(self.spec.kind.as_str(), "Compressor" | "ParamEQ" | "Distortion" | "Chorus" | "Lowpass Simple" | "Highpass Simple") {
             // A bypassed unit keeps its state; resuming after bypass is unmeasured.
             if bypass || self.spec.bypass {
                 return;
@@ -503,6 +513,7 @@ impl Effect {
                 }
                 "ParamEQ" => self.eq.process(samples),
                 "Distortion" => distortion(samples, self.spec.distortion.unwrap()),
+                "Chorus" => self.chorus.as_mut().unwrap().process(samples, self.spec.chorus.as_ref().unwrap()),
                 kind => self.simple.process(samples, kind == "Highpass Simple", self.spec.cutoff, self.rate),
             }
         } else if let Some(reverb) = &mut self.reverb {
@@ -561,7 +572,7 @@ pub struct GroupNode {
     pub energy: f64,
 }
 impl GroupNode {
-    pub fn update(&mut self, spec: GroupSpec, rate: u32) -> anyhow::Result<()> {
+    pub fn update(&mut self, spec: GroupSpec, rate: u32, buffer: u32) -> anyhow::Result<()> {
         for effect in &spec.effects {
             effect.validate(rate)?;
         }
@@ -575,10 +586,10 @@ impl GroupNode {
                     .position(|e| e.spec.id == s.id && e.spec.kind == s.kind)
                 {
                     let mut effect = old.remove(index);
-                    effect.update(s.clone(), rate)?;
+                    effect.update(s.clone(), rate, buffer)?;
                     Ok(effect)
                 } else {
-                    Effect::new(s.clone(), rate)
+                    Effect::new(s.clone(), rate, buffer)
                 }
             })
             .collect::<anyhow::Result<_>>()?;

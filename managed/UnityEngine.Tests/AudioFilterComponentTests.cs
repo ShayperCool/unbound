@@ -95,11 +95,11 @@ namespace UnityEngine.Tests
         static ulong Id(Component c) => unchecked((ulong)(long)c.GetInstanceID());
 
         [Fact]
-        public void PacketAndDescriptorLayoutsUnchangedInNativeApi23()
+        public void PacketAndDescriptorLayoutsUnchangedInNativeApi24()
         {
             // Added at 16; 20 adds reverb parameters, 21 the frame zone; 22 adds render commands,
-            // 23 adds Distortion without changing the audio descriptor layout.
-            Assert.Equal(23u, NativeApi.CurrentVersion);
+            // 23 adds Distortion and 24 adds Chorus without changing the audio descriptor layout.
+            Assert.Equal(24u, NativeApi.CurrentVersion);
             var frame = default(AudioFramePacket);
             byte* f = (byte*)&frame;
             Assert.Equal((64, 72, 80, 176), ((int)((byte*)&frame.FilterCount - f), (int)((byte*)&frame.Filters - f),
@@ -122,7 +122,7 @@ namespace UnityEngine.Tests
                 (int)((byte*)&d.Delay - e), (int)((byte*)&d.Decay - e), (int)((byte*)&d.DryMix - e), (int)((byte*)&d.WetMix - e),
                 (int)((byte*)d.Reverb - e),
             });
-            Assert.Equal(new[] { 1, 2, 3, 4, 5 }, new[] { AudioFilterKind.LowPass, AudioFilterKind.HighPass, AudioFilterKind.Echo, AudioFilterKind.Reverb, AudioFilterKind.Distortion });
+            Assert.Equal(new[] { 1, 2, 3, 4, 5, 6 }, new[] { AudioFilterKind.LowPass, AudioFilterKind.HighPass, AudioFilterKind.Echo, AudioFilterKind.Reverb, AudioFilterKind.Distortion, AudioFilterKind.Chorus });
             Assert.Equal(new[] { 0, 1 }, new[] { AudioFilterStage.BeforeScripts, AudioFilterStage.AfterScripts });
             Assert.Equal(64, AudioFilterDescriptor.MaxPerSource);
         }
@@ -199,6 +199,30 @@ namespace UnityEngine.Tests
             Assert.Empty(Collected(source));
             Assert.Single(Errors("AudioDistortionFilter"));
             Assert.Empty(m_Backend.FilterRejections);
+        }
+
+        [Fact]
+        public void ChorusKeepsRawSettersClonesValuesAndReportsInvalidParametersOnce()
+        {
+            var source = Source("chorus");
+            var filter = source.gameObject.AddComponent<AudioChorusFilter>();
+            Assert.Equal((0.5f, 0.5f, 0.5f, 0.5f, 40f, 0.8f, 0.03f),
+                (filter.dryMix, filter.wetMix1, filter.wetMix2, filter.wetMix3, filter.delay, filter.rate, filter.depth));
+            filter.delay = -1; filter.rate = 200; filter.depth = 0.37f; filter.wetMix3 = 200;
+            var d = Assert.Single(Collected(source));
+            Assert.Equal(AudioFilterKind.Chorus, d.Kind);
+            Assert.Equal((0f, 20f, 0.37f, 1f), (d.Reverb[4], d.Reverb[5], d.Reverb[6], d.Reverb[3]));
+            var clone = Object.Instantiate(source.gameObject); m_Objects.Add(clone);
+            var copied = clone.GetComponent<AudioChorusFilter>();
+            Assert.Equal((-1f, 200f, 0.37f, 200f), (copied.delay, copied.rate, copied.depth, copied.wetMix3));
+            copied.delay = 10; Assert.Equal(-1f, filter.delay);
+#pragma warning disable CS0618
+            filter.feedback = 1; Assert.Equal(0, filter.feedback);
+#pragma warning restore CS0618
+            filter.enabled = false; Assert.Empty(Collected(source)); filter.enabled = true;
+            filter.depth = float.NaN;
+            Assert.Empty(Collected(source)); Assert.Empty(Collected(source));
+            Assert.Single(Errors("AudioChorusFilter"));
         }
 
         [Fact]

@@ -166,7 +166,7 @@ unsafe fn decode_descriptors(
     let filters = unsafe { std::slice::from_raw_parts(pointer, count as usize) }.to_vec();
     for (i, f) in filters.iter().enumerate() {
         anyhow::ensure!(
-            matches!(f.kind, filter_kind::LOWPASS | filter_kind::HIGHPASS | filter_kind::ECHO | filter_kind::REVERB | filter_kind::DISTORTION),
+            matches!(f.kind, filter_kind::LOWPASS | filter_kind::HIGHPASS | filter_kind::ECHO | filter_kind::REVERB | filter_kind::DISTORTION | filter_kind::CHORUS),
             "unsupported AudioSource filter kind {}",
             f.kind
         );
@@ -206,6 +206,7 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
             filter_kind::HIGHPASS => "Highpass",
             filter_kind::REVERB => "SFX Reverb",
             filter_kind::DISTORTION => "Distortion",
+            filter_kind::CHORUS => "Chorus",
             _ => "Echo",
         }
         .into(),
@@ -227,6 +228,11 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         compressor: None,
         eq: None,
         distortion: (d.kind == filter_kind::DISTORTION).then(|| d.cutoff.clamp(0.0, 1.0)),
+        chorus: (d.kind == filter_kind::CHORUS).then(|| super::chorus::ChorusSpec {
+            dry: r[0].clamp(0.0, 1.0), wet1: r[1].clamp(0.0, 1.0), wet2: r[2].clamp(0.0, 1.0),
+            wet3: r[3].clamp(0.0, 1.0), delay: r[4].clamp(0.0, 100.0),
+            rate: r[5].clamp(0.0, 20.0), depth: r[6].clamp(0.0, 1.0),
+        }),
     }
 }
 
@@ -294,7 +300,7 @@ impl FilterChain {
     /// Matches the components by identity and kind: an unchanged one keeps its histories, a
     /// changed one keeps them and ramps to its new parameters, a new one starts empty. Call
     /// after [`FilterChain::validate`]; a failed allocation then leaves the chain empty.
-    fn apply(&mut self, filters: &[AudioFilterDescriptor], rate: u32) -> anyhow::Result<()> {
+    fn apply(&mut self, filters: &[AudioFilterDescriptor], rate: u32, buffer: u32) -> anyhow::Result<()> {
         let mut old = std::mem::take(&mut self.filters);
         let mut chain = Vec::with_capacity(filters.len());
         for d in filters {
@@ -302,10 +308,10 @@ impl FilterChain {
             let effect = match old.iter().position(|f| f.id == d.id && f.kind == d.kind) {
                 Some(index) => {
                     let mut effect = old.remove(index).effect;
-                    effect.update(spec, rate)?;
+                    effect.update(spec, rate, buffer)?;
                     effect
                 }
-                None => Effect::new(spec, rate)?,
+                None => Effect::new(spec, rate, buffer)?,
             };
             chain.push(SourceFilter { id: d.id, kind: d.kind, stage: d.stage, effect });
         }
@@ -333,10 +339,10 @@ impl FilterChain {
     }
 
     /// A new output rate (`AudioSettings.Reset`): the components restart empty at it.
-    fn reconfigure(&mut self, rate: u32) -> anyhow::Result<()> {
+    fn reconfigure(&mut self, rate: u32, buffer: u32) -> anyhow::Result<()> {
         for filter in &mut self.filters {
             let spec = filter.effect.spec.clone();
-            filter.effect.update(spec, rate)?;
+            filter.effect.update(spec, rate, buffer)?;
             filter.effect.reset();
         }
         self.primed = false;
@@ -762,9 +768,9 @@ impl Mixer {
             node.last_active = self.frames;
             node.energy = 0.0;
             node.effects.clear();
-            node.update(node.spec.clone(), config.sample_rate)?;
+            node.update(node.spec.clone(), config.sample_rate, config.buffer_size)?;
         }
-        self.listener_chain.reconfigure(config.sample_rate)?;
+        self.listener_chain.reconfigure(config.sample_rate, config.buffer_size)?;
         // The next frame packet sets the zone up again at the new rate.
         self.zone = None;
         for source in self.sources.values_mut() {
@@ -779,7 +785,7 @@ impl Mixer {
             source.filtered_offset = 0;
             source.filter_started = false;
             source.filter_paused = false;
-            source.chain.reconfigure(config.sample_rate)?;
+            source.chain.reconfigure(config.sample_rate, config.buffer_size)?;
         }
         Ok(())
     }
@@ -851,7 +857,7 @@ impl Mixer {
             if let Err(error) = FilterChain::validate(&params.filters, rate) {
                 tracing::error!("AudioSource {handle}: filter components rejected: {error:#}");
                 params.filters = source.params.filters.clone();
-            } else if let Err(error) = source.chain.apply(&params.filters, rate) {
+            } else if let Err(error) = source.chain.apply(&params.filters, rate, self.config.buffer_size) {
                 tracing::error!("AudioSource {handle}: filter components dropped: {error:#}");
                 params.filters = Vec::new();
             }
@@ -880,7 +886,7 @@ impl Mixer {
         }
         let rate = self.config.sample_rate;
         if let Err(error) = FilterChain::validate(&filters, rate)
-            .and_then(|()| self.listener_chain.apply(&filters, rate))
+            .and_then(|()| self.listener_chain.apply(&filters, rate, self.config.buffer_size))
         {
             tracing::error!("AudioListener filter components dropped: {error:#}");
             self.listener_chain = FilterChain::default();
@@ -950,7 +956,7 @@ impl Mixer {
                 matches!(effect.kind.as_str(),
                     "Attenuation" | "Lowpass" | "Highpass" | "Echo" | "SFX Reverb"
                         | "Send" | "Receive" | "Duck Volume" | "Compressor" | "ParamEQ"
-                        | "Lowpass Simple" | "Highpass Simple" | "Distortion")
+                        | "Lowpass Simple" | "Highpass Simple" | "Distortion" | "Chorus")
                     || effect.bypass
                     || spec.bypass,
                 "unsupported AudioMixer effect '{}'",
@@ -961,7 +967,8 @@ impl Mixer {
                 !active
                     || (effect.kind != "Compressor" || effect.compressor.is_some())
                         && (effect.kind != "ParamEQ" || effect.eq.is_some())
-                        && (effect.kind != "Distortion" || effect.distortion.is_some()),
+                        && (effect.kind != "Distortion" || effect.distortion.is_some())
+                        && (effect.kind != "Chorus" || effect.chorus.is_some()),
                 "AudioMixer {} '{}' has no parameters",
                 effect.kind,
                 effect.id
@@ -1006,7 +1013,7 @@ impl Mixer {
             last_active: self.frames,
             energy: 0.0,
         });
-        node.update(spec, self.config.sample_rate)?;
+        node.update(spec, self.config.sample_rate, self.config.buffer_size)?;
         for target in targets {
             self.sidechains.entry(target).or_insert_with(|| vec![0.0; BLOCK * 2]);
         }
@@ -1675,7 +1682,7 @@ impl Mixer {
             // (tests/projects/mixerduck, tests/projects/mixercompressor).
             let active = node.effects.iter()
                 .any(|e| matches!(e.spec.kind.as_str(), "Echo" | "SFX Reverb" | "Duck Volume"
-                    | "Compressor" | "ParamEQ" | "Lowpass Simple" | "Highpass Simple" | "Distortion"))
+                    | "Compressor" | "ParamEQ" | "Lowpass Simple" | "Highpass Simple" | "Distortion" | "Chorus"))
                 || (!node.spec.bypass
                     && node.effects.iter().any(|e| {
                         !e.spec.bypass && matches!(e.spec.kind.as_str(), "Lowpass" | "Highpass")
@@ -2878,7 +2885,7 @@ mod tests {
         let mut m = Mixer::new(MixerConfig::default());
         m.configure_group(filter_group(3, 4, "Lowpass")).unwrap();
         assert!(m.configure_group(filter_group(4, 3, "Highpass")).is_err());
-        assert!(m.configure_group(filter_group(3, 0, "Chorus")).is_err());
+        assert!(m.configure_group(filter_group(3, 0, "Flange")).is_err());
         assert_eq!(m.group_nodes[&3].spec.parent, 4);
         assert_eq!(m.group_nodes[&3].spec.effects[0].kind, "Lowpass");
     }
@@ -3146,7 +3153,7 @@ mod tests {
     fn through(input: &[f32], filters: &[AudioFilterDescriptor], rate: u32) -> Vec<f32> {
         let mut out = input.to_vec();
         for d in filters {
-            Effect::new(effect_spec(d), rate).unwrap().process(&mut out, false);
+            Effect::new(effect_spec(d), rate, 1024).unwrap().process(&mut out, false);
         }
         out
     }
@@ -3496,7 +3503,7 @@ mod tests {
         let mut misaligned = packet(1, 0, &valid[..1]);
         misaligned.filters = unsafe { (storage.as_ptr() as *const u8).add(4) } as *const AudioFilterDescriptor;
         assert!(refused(&misaligned).contains("misaligned"));
-        for kind in [0, filter_kind::DISTORTION + 1, -1] {
+        for kind in [0, filter_kind::CHORUS + 1, -1] {
             assert!(refused(&packet(1, 0, &[component(1, kind, 0)])).contains("kind"));
         }
         let distortion = [component(1, filter_kind::DISTORTION, 0)];

@@ -9,6 +9,7 @@
 //! scheduling behave the same, deterministically, without opening a device.
 pub mod capture;
 pub mod compressor;
+pub mod chorus;
 pub mod duck;
 pub mod effects;
 pub mod fft;

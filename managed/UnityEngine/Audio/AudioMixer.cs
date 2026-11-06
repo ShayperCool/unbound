@@ -448,6 +448,7 @@ namespace UnityEngine.Audio
                     mixAudible = wetDb > -69f,
                     duck = effect.m_EffectName == AudioMixerEffectController.DuckVolume ? effect.DuckConfiguration(m_Mixer) : null,
                     compressor = effect.m_EffectName == AudioMixerEffectController.Compressor && !bypass ? effect.CompressorConfiguration(m_Mixer) : null,
+                    chorus = effect.m_EffectName == AudioMixerEffectController.Chorus && !bypass ? effect.ChorusConfiguration(m_Mixer) : null,
                     distortion = effect.m_EffectName == AudioMixerEffectController.Distortion && !bypass ? effect.DistortionConfiguration(m_Mixer) : (float?)null,
                     eq = effect.m_EffectName == AudioMixerEffectController.ParamEq && !bypass ? effect.ParamEqConfiguration(m_Mixer) : null,
                     sendTarget = targetGroup != null ? target.m_EffectId : null,
@@ -579,6 +580,11 @@ namespace Unbound.Runtime
         static readonly float[] DuckMaximums = { 0f, 10f, 10f, 10f, 40f, 50f, 1f };
         internal const string Compressor = "Compressor";
         internal const string ParamEq = "ParamEQ";
+        internal const string Chorus = "Chorus";
+        internal static readonly string[] ChorusParameters = { "Dry mix", "Wet mix tap 1", "Wet mix tap 2", "Wet mix tap 3", "Delay", "Rate", "Depth", "Feedback" };
+        static readonly float[] ChorusDefaults = { 0.5f, 0.5f, 0.5f, 0.5f, 40f, 0.8f, 0.03f, 0f };
+        static readonly float[] ChorusMinimums = { 0f, 0f, 0f, 0f, 0f, 0f, 0f, -1f };
+        static readonly float[] ChorusMaximums = { 1f, 1f, 1f, 1f, 100f, 20f, 1f, 1f };
         internal const string Distortion = "Distortion";
         static readonly string[] DistortionParameters = { "Level" };
         static readonly float[] DistortionDefaults = { 0.5f }, DistortionMinimums = { 0f }, DistortionMaximums = { 1f };
@@ -594,11 +600,12 @@ namespace Unbound.Runtime
         static readonly float[] ParamEqMaximums = { 22000f, 5f, 3f };
         /// <summary>Kinds the DSP runs besides SFX Reverb and the routed units.</summary>
         internal static readonly string[] MeasuredEffects = {
-            "Attenuation", "Lowpass", "Highpass", "Echo", Compressor, ParamEq, Distortion, "Lowpass Simple", "Highpass Simple" };
+            "Attenuation", "Lowpass", "Highpass", "Echo", Compressor, ParamEq, Distortion, Chorus, "Lowpass Simple", "Highpass Simple" };
         internal static float CutoffDefault(string effect) => effect == "Highpass Simple" ? 1000f : 5000f;
         internal static (string[], float[], float[], float[]) Ranges(string effect) =>
             effect == Compressor ? (CompressorParameters, CompressorDefaults, CompressorMinimums, CompressorMaximums)
             : effect == ParamEq ? (ParamEqParameters, ParamEqDefaults, ParamEqMinimums, ParamEqMaximums)
+            : effect == Chorus ? (ChorusParameters, ChorusDefaults, ChorusMinimums, ChorusMaximums)
             : effect == Distortion ? (DistortionParameters, DistortionDefaults, DistortionMinimums, DistortionMaximums)
             : (null, null, null, null);
         /// <summary>The effect's parameters; values outside the Editor's ranges (reachable through
@@ -626,6 +633,18 @@ namespace Unbound.Runtime
             float value = Parameter("Level") is string guid ? mixer.Value(guid) : 0.5f;
             if (!float.IsFinite(value)) throw new NotSupportedException("AudioMixer Distortion Level must be finite");
             return Mathf.Clamp01(value);
+        }
+        internal object ChorusConfiguration(UnityEngine.Audio.AudioMixer mixer)
+        {
+            var v = new float[7];
+            for (int i = 0; i < v.Length; i++)
+            {
+                float value = Parameter(ChorusParameters[i]) is string guid ? mixer.Value(guid) : ChorusDefaults[i];
+                if (!float.IsFinite(value)) throw new NotSupportedException("AudioMixer Chorus " + ChorusParameters[i] + " must be finite");
+                v[i] = Mathf.Clamp(value, ChorusMinimums[i], ChorusMaximums[i]);
+            }
+            // Feedback is obsolete and has no measured effect, including the mixer's signed range.
+            return new { dry = v[0], wet1 = v[1], wet2 = v[2], wet3 = v[3], delay = v[4], rate = v[5], depth = v[6] };
         }
         internal object ParamEqConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {

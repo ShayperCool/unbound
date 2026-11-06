@@ -294,10 +294,37 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ChorusClampsDspKeepsExposedValuesAndRefusesSlotWetMixing()
+        {
+            var (mixer, group, effect) = Fixture();
+            effect.m_EffectName = "Chorus"; effect.m_ParameterGuids.Clear();
+            for (int i = 0; i < AudioMixerEffectController.ChorusParameters.Length; i++)
+            {
+                string name = AudioMixerEffectController.ChorusParameters[i];
+                effect.m_ParameterGuids[name] = name; mixer.m_Exposed[name] = name;
+            }
+            Assert.True(mixer.GetFloat("Depth", out float depth)); Assert.Equal(0.03f, depth);
+            Assert.True(mixer.SetFloat("Delay", -1f)); Assert.True(mixer.SetFloat("Rate", 200f));
+            Assert.True(mixer.SetFloat("Wet mix tap 3", 200f));
+            Assert.True(mixer.GetFloat("Delay", out float delay)); Assert.Equal(-1f, delay);
+            using var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration()));
+            var chorus = payload.RootElement.GetProperty("effects")[0].GetProperty("chorus");
+            Assert.Equal(0f, chorus.GetProperty("delay").GetSingle());
+            Assert.Equal(20f, chorus.GetProperty("rate").GetSingle());
+            Assert.Equal(1f, chorus.GetProperty("wet3").GetSingle());
+            effect.m_EnableWetMix = true;
+            Assert.Contains("wet mixing", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+            effect.m_Bypass = true; group.DspConfiguration();
+            effect.m_Bypass = false; effect.m_EnableWetMix = false;
+            mixer.SetFloat("Depth", float.NaN);
+            Assert.Contains("finite", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+        }
+
+        [Fact]
         public void ActiveUnsupportedEffectsAndWetMixFailLoudly()
         {
             var (_, group, effect) = Fixture();
-            effect.m_EffectName = "Chorus";
+            effect.m_EffectName = "Flange";
             Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
             effect.m_Bypass = true;
             group.DspConfiguration();

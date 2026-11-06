@@ -76,6 +76,8 @@ namespace Unbound.Runtime
         internal const int Reverb = 4;
         /// <summary>AudioDistortionFilter (NativeApi 23): Level in Cutoff; layout unchanged.</summary>
         internal const int Distortion = 5;
+        /// <summary>AudioChorusFilter (NativeApi 24): first seven Reverb entries, dry, wet1..3, delay, rate, depth.</summary>
+        internal const int Chorus = 6;
     }
 
     /// <summary>Where a component sits relative to the scripts with OnAudioFilterRead on its
@@ -101,7 +103,8 @@ namespace Unbound.Runtime
         internal float WetMix;
         /// <summary>Reverb: the AudioMixer SFX Reverb parameters in the mixer's order (Dry Level,
         /// Room, Room HF, Decay Time, Decay HF Ratio, Reflections, Reflect Delay, Reverb, Reverb
-        /// Delay, Diffusion, Density, HF Reference, Room LF, LF Reference).</summary>
+        /// Delay, Diffusion, Density, HF Reference, Room LF, LF Reference). Chorus uses the first
+        /// seven entries for dry, wet1..3, delay, rate and depth.</summary>
         internal fixed float Reverb[14];
 
         /// <summary>The most descriptors one source sends (a resource bound, not a Unity limit).</summary>
