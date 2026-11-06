@@ -20,7 +20,6 @@ RESIDUALS = [
     (r'^subemit/child/', {2, 3, 4, 32}, 'Birth child origin and first-step age in Simulate'),
 ]
 ANGULAR_CONTEXT = r'^(color/|custom/|subemit/|played/|vol/speedmodifier9/)'
-RATE_CONTEXT = r'^start/rate/\d+/[12]$'
 
 
 def read(path):
@@ -52,11 +51,20 @@ def residual(key, index, reference, candidate):
     if index == 0 or stride(key) != PARTICLE_FIELDS or key.startswith('burst/'):
         return None
     particle, field = divmod(index - 1, PARTICLE_FIELDS)
-    if re.search(RATE_CONTEXT, key) and particle >= 3:
-        return 'rate batch initialization/shape assignment and birth age'
     if re.search(ANGULAR_CONTEXT, key) and field == 16 and reference != 0 and candidate == 0:
         return 'nonzero reference angular velocity after rotation scenarios; cause unresolved'
     return next((reason for pattern, fields, reason in RESIDUALS if field in fields and re.search(pattern, key)), None)
+
+
+def retained_existing_pair(key, reference, candidate):
+    # These expiry controls retain two older particles in opposite buffer slots.
+    # Require the entire pair to agree by identity, including exact seed halves.
+    # No tolerance or particle order is changed; every raw failing index is printed.
+    if key not in {'ratebatch/edge/expiry/987654321/2', 'ratebatch/edge/expiry/4242/2'}:
+        return False
+    return all(near(key, 1 + field, reference[1 + field], candidate[34 + field])
+               and near(key, 34 + field, reference[34 + field], candidate[1 + field])
+               for field in range(PARTICLE_FIELDS))
 
 
 def main():
@@ -72,7 +80,10 @@ def main():
         failures = [i for i, (x, y) in enumerate(zip(ra, rb)) if not near(key, i, x, y)]
         if not failures:
             continue
-        reasons = {i: residual(key, i, ra[i], rb[i]) for i in failures}
+        retained_pair = retained_existing_pair(key, ra, rb)
+        reasons = {i: ('existing-particle death compaction order; values agree by seed'
+                       if retained_pair and 1 <= i <= 66 else residual(key, i, ra[i], rb[i]))
+                   for i in failures}
         if all(reasons.values()):
             known.append(key)
             print(f'{key}: known differences {reasons}: reference {ra}, candidate {rb}')

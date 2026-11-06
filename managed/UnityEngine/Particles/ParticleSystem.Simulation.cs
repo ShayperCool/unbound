@@ -269,6 +269,17 @@ namespace UnityEngine
         /// emitting (their parent emits for them).</summary>
         void AdvanceEmission(float dt, float distance)
         {
+            m_EmissionRequests.Clear();
+            try { AdvanceEmissionStep(dt, distance); }
+            finally
+            {
+                m_CollectRateBatch = false;
+                FlushRateBatch();
+            }
+        }
+
+        void AdvanceEmissionStep(float dt, float distance)
+        {
             if (m_DelayRemaining > 0f)
             {
                 float d = Mathf.Min(dt, m_DelayRemaining);
@@ -287,7 +298,10 @@ namespace UnityEngine
             float t0 = m_Time;
             float t1 = t0 + dt;
             m_TotalTime += dt;
-            bool planned = emit && PlanConstantRate(t0, dt, duration);
+            m_RateBatchStartLoop = m_Loop;
+            m_UseRateBatch = Compat.ParticleRateBatchesMeasured && m_Main.ringBufferMode == ParticleSystemRingBufferMode.Disabled;
+            bool planned = emit && (m_UseRateBatch ? PlanRate(t0, dt, duration, rateRandom) : PlanConstantRate(t0, dt, duration));
+            m_CollectRateBatch = m_UseRateBatch && m_StepRateBirths > 0;
             int guard = 0;
             while (t1 >= duration && guard++ < 10000)
             {
@@ -324,70 +338,64 @@ namespace UnityEngine
             m_Time = t1;
         }
 
-        /// <summary>The constant-rate births of the current step: how many are still to be emitted,
-        /// the accumulator they leave, the reciprocal of the step's gain and the step's length.</summary>
         int m_StepRateBirths;
         float m_StepRateRemainder, m_StepRateInvGain, m_StepRateDt;
+        bool m_RateBatchEmitted, m_UseRateBatch;
 
-        /// <summary>Counts the constant-rate births of the step that starts at playback time
-        /// <paramref name="t0"/> and lasts <paramref name="dt"/>, over the same segments, counts and
-        /// loop phases as <see cref="AdvanceEmission"/>, before any of them is emitted. A birth's age
-        /// is its share of the step: the step's whole gain (rate × time over all its segments, also
-        /// across a loop's end) is accumulated before the step's births are subtracted once, and a
-        /// birth that is followed by j others in the step has lived
-        /// dt × max((remainder + j) / gain, 1e-6). A float32 model of this rule matches the saved
-        /// Native rate, fractional-rate, big-step, fixed-step, delay, loop-wrap, one-shot,
-        /// simulation-speed and maximum-particle controls bit for bit; newborns born exactly at
-        /// a step's end have lived 1e-6 of it.</summary>
-        bool PlanConstantRate(float t0, float dt, float duration)
+        // Count with the established float arithmetic, sharing the step's emission draw
+        // across loops. Start curves use the final playback time of the whole batch.
+        bool PlanRate(float t0, float dt, float duration, float rateRandom)
         {
             var curve = m_Emission.rateOverTime;
+            m_RateBatchEmitted = false;
             m_StepRateBirths = 0;
-            if (curve.mode != ParticleSystemCurveMode.Constant || !(curve.constant > 0f)) return false;
-            float rate = curve.constant;
-            float counted = m_RateAccumulator, whole = m_RateAccumulator, gain = 0f, phase = m_EmitPhase;
-            int births = 0;
+            float counted = m_RateAccumulator, whole = counted, gain = 0f, phase = m_EmitPhase;
             float t1 = t0 + dt;
-            bool ended = false;
             int guard = 0;
             while (t1 >= duration && guard++ < 10000)
             {
-                births += PlanRateSegment(rate, t0, duration, false, phase, ref counted, ref whole, ref gain);
-                if (!m_Main.loop)
-                {
-                    ended = true;
-                    break;
-                }
+                AddRateSegment(curve, rateRandom, t0, duration, false, duration, phase, ref counted, ref whole, ref gain);
+                if (!m_Main.loop) break;
                 float rest = t1 - duration;
-                float due = rate * duration + phase;
-                phase = due - ((float)Math.Ceiling(due) - 1f);
+                if (curve.mode == ParticleSystemCurveMode.Constant && curve.constant > 0f)
+                {
+                    float due = curve.constant * duration + phase;
+                    phase = due - ((float)Math.Ceiling(due) - 1f);
+                }
+                else phase = 0f;
                 t0 = 0f;
                 t1 = rest;
             }
-            if (!ended) births += PlanRateSegment(rate, t0, t1, true, phase, ref counted, ref whole, ref gain);
-            m_StepRateBirths = births;
-            m_StepRateRemainder = whole - births;
+            if (t1 < duration)
+                AddRateSegment(curve, rateRandom, t0, t1, true, duration, phase, ref counted, ref whole, ref gain);
+            m_StepRateRemainder = whole - m_StepRateBirths;
             m_StepRateInvGain = gain > 0f ? 1f / gain : 0f;
             m_StepRateDt = dt;
             return true;
         }
 
-        static int PlanRateSegment(float rate, float a, float b, bool endIncluded, float phase, ref float counted, ref float whole, ref float gain)
+        void AddRateSegment(MinMaxCurve curve, float random, float a, float b, bool included, float duration,
+            float phase, ref float counted, ref float whole, ref float gain)
         {
-            if (!(b > a)) return 0;
+            if (!(b > a)) return;
+            float rate = curve.Evaluate(Mathf.Clamp01(a / duration), random);
+            if (!(rate > 0f)) return;
             float segment = rate * (b - a);
             whole += segment;
             gain += segment;
-            return ConstantRateBirths(rate, a, b, endIncluded, phase, ref counted, out _, out _);
-        }
-
-        /// <summary>The age of the next constant-rate birth of the current step (see
-        /// <see cref="PlanConstantRate"/>); births are emitted oldest first.</summary>
-        float NextStepRateAge()
-        {
-            System.Diagnostics.Debug.Assert(m_StepRateBirths > 0, "a constant-rate birth the step did not plan");
-            int later = Math.Max(0, --m_StepRateBirths);
-            return m_StepRateDt * Mathf.Max((m_StepRateRemainder + later) * m_StepRateInvGain, 1e-6f);
+            int count;
+            if (curve.mode == ParticleSystemCurveMode.Constant)
+            {
+                count = ConstantRateBirths(rate, a, b, included, phase, ref counted, out _, out _);
+            }
+            else
+            {
+                counted += segment;
+                count = (int)counted;
+                counted -= count;
+            }
+            if (count <= 0) return;
+            m_StepRateBirths += count;
         }
 
         /// <summary>The constant-rate births due in the playback time (a, b] (b excluded at a loop's
@@ -453,12 +461,58 @@ namespace UnityEngine
             m_LoopStart = false;
         }
 
-        /// <summary>Rate emission for the playback time (a, b] (b excluded at a loop's end). A
-        /// particle is due when rate × time + phase reaches a whole number; its start speed is taken
-        /// at its birth, the other start values at b (measured). A constant rate's births are aged by
-        /// their share of the whole step (see <see cref="PlanConstantRate"/>); a curve's from its
-        /// due time to b, plus <paramref name="extraAge"/> (the step's time after b).</summary>
-        void EmitRate(float a, float b, bool endIncluded, float extraAge, float duration, float rateRandom)
+        bool PlanConstantRate(float t0, float dt, float duration)
+        {
+            var curve = m_Emission.rateOverTime;
+            m_StepRateBirths = 0;
+            if (curve.mode != ParticleSystemCurveMode.Constant || !(curve.constant > 0f)) return false;
+            float rate = curve.constant;
+            float counted = m_RateAccumulator, whole = m_RateAccumulator, gain = 0f, phase = m_EmitPhase;
+            int births = 0;
+            float t1 = t0 + dt;
+            bool ended = false;
+            int guard = 0;
+            while (t1 >= duration && guard++ < 10000)
+            {
+                births += PlanRateSegment(rate, t0, duration, false, phase, ref counted, ref whole, ref gain);
+                if (!m_Main.loop)
+                {
+                    ended = true;
+                    break;
+                }
+                float rest = t1 - duration;
+                float due = rate * duration + phase;
+                phase = due - ((float)Math.Ceiling(due) - 1f);
+                t0 = 0f;
+                t1 = rest;
+            }
+            if (!ended) births += PlanRateSegment(rate, t0, t1, true, phase, ref counted, ref whole, ref gain);
+            m_StepRateBirths = births;
+            m_StepRateRemainder = whole - births;
+            m_StepRateInvGain = gain > 0f ? 1f / gain : 0f;
+            m_StepRateDt = dt;
+            return true;
+        }
+
+        static int PlanRateSegment(float rate, float a, float b, bool endIncluded, float phase, ref float counted, ref float whole, ref float gain)
+        {
+            if (!(b > a)) return 0;
+            float segment = rate * (b - a);
+            whole += segment;
+            gain += segment;
+            return ConstantRateBirths(rate, a, b, endIncluded, phase, ref counted, out _, out _);
+        }
+
+        /// <summary>The age of the next constant-rate birth of the current step (see
+        /// <see cref="PlanConstantRate"/>); births are emitted oldest first.</summary>
+        float NextStepRateAge()
+        {
+            System.Diagnostics.Debug.Assert(m_StepRateBirths > 0, "a constant-rate birth the step did not plan");
+            int later = Math.Max(0, --m_StepRateBirths);
+            return m_StepRateDt * Mathf.Max((m_StepRateRemainder + later) * m_StepRateInvGain, 1e-6f);
+        }
+
+        void EmitLegacyRate(float a, float b, bool endIncluded, float extraAge, float duration, float rateRandom)
         {
             var rateCurve = m_Emission.rateOverTime;
             if (!(b > a)) return;
@@ -493,6 +547,121 @@ namespace UnityEngine
             m_SpeedNt = -1f;
         }
 
+        struct EmissionRequest
+        {
+            internal int count, spreadIndex, spreadCount;
+            internal float preAge, birthTime, speedNt;
+            internal bool rate;
+        }
+        readonly System.Collections.Generic.List<EmissionRequest> m_EmissionRequests = new();
+        bool m_CollectRateBatch;
+        int m_RateBatchStartLoop;
+
+        void EmitRate(float a, float b, bool endIncluded, float extraAge, float duration, float rateRandom)
+        {
+            if (!m_UseRateBatch)
+            {
+                EmitLegacyRate(a, b, endIncluded, extraAge, duration, rateRandom);
+                return;
+            }
+            m_LoopStart = false;
+            if (m_RateBatchEmitted) return;
+            m_RateBatchEmitted = true;
+            if (m_StepRateBirths > 0)
+                m_EmissionRequests.Add(new EmissionRequest { count = m_StepRateBirths, rate = true, spreadIndex = -1 });
+        }
+
+        // Unity 6000.0.71f1, tests/projects/particlerandom: initialize the aligned
+        // portion first, then the leading partial group. Rate ages increase in
+        // sample order. Bursts in that step share the initialization batch.
+        void FlushRateBatch()
+        {
+            if (m_EmissionRequests.Count == 0) return;
+            int requested = 0;
+            foreach (var request in m_EmissionRequests) requested = checked(requested + request.count);
+            int start = m_Count;
+            int count = Math.Min(requested, Math.Max(0, m_Main.maxParticles - start));
+            if (count <= 0) return;
+            int aligned = checked((start + 3) & ~3);
+            int lanes = checked((count + 3) & ~3);
+            Reserve(checked(aligned + lanes));
+            m_Count = aligned + lanes;
+            for (int i = aligned; i < m_Count; i++) ClearCustom(i);
+            var dead = new bool[lanes];
+            var origins = new Vector3[lanes];
+            var overrides = default(EmitParams);
+            var t = m_GameObject.m_Transform;
+            float duration = Mathf.Max(m_Main.duration, 0.0001f);
+            int requestIndex = 0, requestStart = 0;
+            m_Newborn = true;
+            for (int j = 0; j < lanes; j++)
+            {
+                while (requestIndex + 1 < m_EmissionRequests.Count && j >= requestStart + m_EmissionRequests[requestIndex].count)
+                    requestStart += m_EmissionRequests[requestIndex++].count;
+                var request = m_EmissionRequests[requestIndex];
+                int local = j - requestStart;
+                float age = request.preAge, birthTime = request.birthTime;
+                m_SpeedNt = request.speedNt;
+                if (request.rate)
+                {
+                    age = m_StepRateDt * Mathf.Max((m_StepRateRemainder + local) * m_StepRateInvGain, 1e-6f);
+                    birthTime = m_Time;
+                    m_SpeedNt = Mathf.Clamp01((birthTime - age) / duration);
+                }
+                if (j >= count)
+                {
+                    age = m_StepRateDt * 1e-6f;
+                    birthTime = m_Time;
+                    m_SpeedNt = Mathf.Clamp01((birthTime - age) / duration);
+                }
+                int index = aligned + j;
+                var emitter = Matrix4x4.TRS(EmitterPositionAt(age), t.rotation, EmitterScale());
+                m_ShapeTime = m_TotalTime - age;
+                int spread = request.spreadIndex >= 0 ? request.spreadIndex : local;
+                int spreadCount = request.spreadIndex >= 0 ? request.spreadCount : request.count;
+                if (!InitParticle(ref m_Particles[index], emitter, Mathf.Clamp01(birthTime / duration),
+                    false, ref overrides, spread, spreadCount, null, j, requested))
+                { dead[j] = true; continue; }
+                origins[j] = m_Particles[index].m_Position;
+                BeginModuleSample(j, m_Particles[index].m_RandomSeed);
+                var context = m_Context;
+                if (j >= count)
+                {
+                    context.BirthSubs = false;
+                    context.TemporaryLane = true;
+                }
+                dead[j] = !Integrate(ref m_Particles[index], age, ref context);
+            }
+            // Initialize complete groups before removing expired births. The unused
+            // final lanes take the minimum age and participate in local compaction.
+            // Only the admitted count is retained, including any promoted lanes.
+            for (int i = aligned; i < m_Count;)
+            {
+                int local = i - aligned;
+                if (!dead[local]) { i++; continue; }
+                RemoveAt(i);
+                if (count > 0) count--;
+                int last = m_Count - aligned;
+                if (local < last) { dead[local] = dead[last]; origins[local] = origins[last]; }
+            }
+            int prefix = Math.Min(count, aligned - start);
+            for (int i = 0; i < prefix; i++)
+            {
+                int source = aligned + count - prefix + i;
+                m_Particles[start + i] = m_Particles[source];
+                for (int stream = 0; stream < 2; stream++)
+                    if (m_Custom[stream] != null) m_Custom[stream][start + i] = m_Custom[stream][source];
+            }
+            m_Count = start + count;
+            for (int i = start; i < m_Count; i++)
+            {
+                int origin = i < aligned ? count - prefix + i - start : i - aligned;
+                StartTrail(ref m_Particles[i], origins[origin]);
+            }
+            m_Newborn = false;
+            m_SpeedNt = -1f;
+        }
+
         /// <summary>Distance and burst emission for the playback time (a, b), plus
         /// <paramref name="extraAge"/> (the step's time after b). A burst fires in the step its time
         /// falls in, its first cycle aged from that time, its repeats aged the whole step (measured).</summary>
@@ -516,7 +685,7 @@ namespace UnityEngine
                         if (burst.probability >= 1f || burst.probability > 0f && NextEmissionValue() < burst.probability)
                         {
                             int count = BurstCount(burst.m_Count, at / duration);
-                            float age = (c == 0 ? b - at : step) + extraAge;
+                            float age = (c == 0 && !(m_CollectRateBatch && m_Loop > m_RateBatchStartLoop) ? b - at : step) + extraAge;
                             m_SpeedNt = Mathf.Clamp01(at / duration);
                             if (count > 0) EmitParticles(count, age, b, default, false);
                         }
@@ -576,6 +745,12 @@ namespace UnityEngine
         internal void EmitParticles(int count, float preAge, float birthTime, EmitParams overrides, bool hasOverrides, int spreadIndex = -1, int spreadCount = 0, bool simulate = true)
         {
             if (m_GameObject == null) return;
+            if (m_CollectRateBatch && count > 0)
+            {
+                m_EmissionRequests.Add(new EmissionRequest { count = count, preAge = preAge, birthTime = birthTime,
+                    speedNt = m_SpeedNt, spreadIndex = spreadIndex, spreadCount = spreadCount });
+                return;
+            }
             var t = m_GameObject.m_Transform;
             var emitter = Matrix4x4.TRS(EmitterPositionAt(preAge), t.rotation, EmitterScale());
             float nt = Mathf.Clamp01(birthTime / Mathf.Max(m_Main.duration, 0.0001f));
@@ -647,6 +822,7 @@ namespace UnityEngine
             }
             var color = M.startColor.Evaluate(nt, samples.color);
 
+            BeginShapeSample(initializationIndex);
             SampleShape(spreadIndex, spreadCount, out var pos, out var dir);
             // Use Mesh Colors modulates the start colour with the sampled mesh colour.
             if (m_ShapeColorSet) color *= m_ShapeColor;
@@ -766,7 +942,6 @@ namespace UnityEngine
                 dir = Vector3.forward;
                 return;
             }
-            BeginShapeSample(spreadIndex);
             float radius = S.radius;
             float thickness = Mathf.Clamp01(S.radiusThickness);
             switch (S.shapeType)
@@ -1362,6 +1537,7 @@ namespace UnityEngine
             public float NoiseTime;
             public bool InheritCurrent;
             public bool BirthSubs;
+            public bool TemporaryLane;
         }
 
         /// <param name="dt">The step's length: system-time curves are read where it ends (measured
@@ -1485,8 +1661,8 @@ namespace UnityEngine
             }
             var before = p.m_Position;
             float speedModifier = Move(ref p, dt, ref c, age, out var moving);
-            if (m_Collision.enabled && !Collide(ref p, before, age, dt, speedModifier)) return false;
-            if (m_Trigger.enabled && !Trigger(ref p))
+            if (!c.TemporaryLane && m_Collision.enabled && !Collide(ref p, before, age, dt, speedModifier)) return false;
+            if (!c.TemporaryLane && m_Trigger.enabled && !Trigger(ref p))
             {
                 // A newborn killed while it is emitted is never added (measured: none is
                 // reported, even in a call's last step). An existing particle's life ends
