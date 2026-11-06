@@ -293,6 +293,8 @@ struct State {
 }
 
 pub struct UnityRenderer {
+    fence_issued: u64,
+    fence_completed: Arc<std::sync::atomic::AtomicU64>,
     device: wgpu::Device,
     queue: wgpu::Queue,
     resolver: Resolver,
@@ -398,6 +400,8 @@ impl UnityRenderer {
             queue,
             resolver,
             pipelines,
+            fence_issued: 0,
+            fence_completed: Arc::new(std::sync::atomic::AtomicU64::new(0)),
             mipmaps: Default::default(),
             meshes: HashMap::default(),
             zero_extra: None,

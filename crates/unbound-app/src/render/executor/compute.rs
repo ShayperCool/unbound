@@ -542,6 +542,26 @@ fn main() {
         Some(data[skip..skip + take].to_vec())
     }
 
+    /// Marker callbacks track GPU completion without retaining one allocation per fence.
+    pub fn graphics_fence(&mut self, insert: bool) -> Result<u64, String> {
+        use std::sync::atomic::Ordering;
+        if insert {
+            self.fence_issued += 1;
+            let sequence = self.fence_issued;
+            let completed = self.fence_completed.clone();
+            self.queue.submit([]);
+            self.queue.on_submitted_work_done(move || {
+                completed.fetch_max(sequence, Ordering::Release);
+            });
+            Ok(sequence)
+        } else {
+            self.device
+                .poll(wgpu::PollType::Poll)
+                .map_err(|e| e.to_string())?;
+            Ok(self.fence_completed.load(Ordering::Acquire))
+        }
+    }
+
     /// A shader's passes under the active pipeline (see [`crate::materials::Resolver::describe`]).
     pub fn shader_passes(&mut self, shader: &str) -> String {
         self.resolver.describe(shader)
@@ -739,32 +759,38 @@ fn main() {
         let mut uniform_buffers = Vec::new();
         for block in &gpu.kernel.blocks {
             let mut data = vec![0u8; block.size.max(16) as usize];
-            // A constant buffer bound by the cbuffer's name (`SetConstantBuffer`) is the block:
-            // its bytes as written, from the byte offset in `<name>@offset` (else its start).
-            let offset = match Self::dispatch_value(
-                &d.properties,
-                &globals,
-                &format!("{}{CONSTANT_OFFSET_SUFFIX}", block.name),
-            ) {
-                Some(PropertyValue::Int(o)) => (*o).max(0) as usize,
-                _ => 0,
-            };
-            let constant = match Self::dispatch_value(&d.properties, &globals, &block.name) {
-                Some(PropertyValue::Buffer(h)) if !block.name.is_empty() => self
-                    .buffers
-                    .get(h)
-                    .and_then(|b| b.shadow.as_deref())
-                    .map(|bytes| &bytes[offset.min(bytes.len())..]),
-                _ => None,
-            };
-            if let Some(bytes) = constant {
-                let n = bytes.len().min(data.len());
-                data[..n].copy_from_slice(&bytes[..n]);
-            } else {
-                for u in &block.uniforms {
-                    if let Some(v) = Self::dispatch_value(&d.properties, &globals, &u.name) {
-                        write_uniform(u, v, &mut data);
-                    }
+            // Bind the original GPU buffer so earlier GPU writes remain ordered and visible.
+            if let Some(PropertyValue::Buffer(handle)) =
+                Self::dispatch_value(&d.properties, &globals, &block.name)
+            {
+                let integer = |suffix: &str| match Self::dispatch_value(
+                    &d.properties,
+                    &globals,
+                    &format!("{}{suffix}", block.name),
+                ) {
+                    Some(PropertyValue::Int(value)) => (*value).max(0) as u64,
+                    _ => 0,
+                };
+                let offset = integer(CONSTANT_OFFSET_SUFFIX);
+                let size = integer("@size");
+                let valid = self.buffers.get(handle).filter(|b| {
+                    b.buffer.usage().contains(wgpu::BufferUsages::UNIFORM)
+                        && offset.is_multiple_of(
+                            self.device.limits().min_uniform_buffer_offset_alignment as u64,
+                        )
+                        && size >= block.size.max(16) as u64
+                        && offset.checked_add(size).is_some_and(|end| end <= b.size)
+                });
+                let Some(buffer) = valid else {
+                    self.warn_once(format!("kconstant{}{}", d.kernel, block.name), || format!("kernel `{}`: constant buffer `{}` is missing, too small, unaligned or lacks Constant usage: the dispatch is skipped", d.kernel, block.name));
+                    return None;
+                };
+                uniform_buffers.push((block.binding, buffer.buffer.clone(), offset, size));
+                continue;
+            }
+            for u in &block.uniforms {
+                if let Some(v) = Self::dispatch_value(&d.properties, &globals, &u.name) {
+                    write_uniform(u, v, &mut data);
                 }
             }
             let buffer = self
@@ -774,7 +800,7 @@ fn main() {
                     contents: &data,
                     usage: wgpu::BufferUsages::UNIFORM,
                 });
-            uniform_buffers.push((block.binding, buffer));
+            uniform_buffers.push((block.binding, buffer, 0, data.len() as u64));
         }
         enum Bound {
             Buffer(wgpu::Buffer),
@@ -922,10 +948,14 @@ fn main() {
             }
         }
         let mut entries: Vec<wgpu::BindGroupEntry> = Vec::new();
-        for (binding, buffer) in &uniform_buffers {
+        for (binding, buffer, offset, size) in &uniform_buffers {
             entries.push(wgpu::BindGroupEntry {
                 binding: *binding,
-                resource: buffer.as_entire_binding(),
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer,
+                    offset: *offset,
+                    size: wgpu::BufferSize::new(*size),
+                }),
             });
         }
         for (binding, b) in &bound {

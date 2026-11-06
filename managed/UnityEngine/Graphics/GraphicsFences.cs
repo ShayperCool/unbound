@@ -6,29 +6,33 @@ using UnityEngine.Rendering;
 
 namespace Unbound.Runtime
 {
-    /// <summary>Graphics fences on Unbound's one GPU queue: the frame each fence's command ran in
-    /// (-1 until it runs; one int per fence ever made). A CPU synchronisation fence has passed
-    /// from the frame after it ran on: the Editor answers false in the frame its buffer runs, even
-    /// once the GPU has finished it, true three frames later and never for a fence that never runs
-    /// (measured, OpenGL Core: cmdbuffers fence.cpu.*, fence.frames.cpu.*; one or two frames
-    /// later is unmeasured). Waits are no-ops: nothing runs on another queue.</summary>
+    /// <summary>Fences share a state across struct copies and command-buffer replays. GPU
+    /// completion comes from the queue; CPU visibility is delayed until a later frame as measured
+    /// on the 6000.0.71f1 OpenGLCore Editor.</summary>
     internal static class GraphicsFences
     {
-        static readonly List<int> s_Ran = new List<int> { -1 };
-
-        internal static GraphicsFence Create(GraphicsFenceType type)
+        internal sealed class State
         {
-            s_Ran.Add(-1);
-            return new GraphicsFence { m_Ptr = (IntPtr)(s_Ran.Count - 1), m_Version = 1, m_FenceType = type };
+            internal int Frame = -1;
+            internal ulong Sequence;
         }
 
-        internal static void Ran(GraphicsFence fence) => s_Ran[(int)fence.m_Ptr] = Time.frameCount;
+        internal static GraphicsFence Create(GraphicsFenceType type) =>
+            new GraphicsFence { m_State = new State(), m_FenceType = type };
 
-        internal static bool Passed(GraphicsFence fence)
+        internal static void Ran(GraphicsFence fence)
         {
-            int ran = s_Ran[(int)fence.m_Ptr];
-            return ran >= 0 && Time.frameCount > ran;
+            if (fence.m_FenceType == GraphicsFenceType.CPUSynchronisation)
+            {
+                GfxStream.Flush();
+                fence.m_State.Sequence = ulong.Parse(Native.Call("graphics-fence", "insert"), System.Globalization.CultureInfo.InvariantCulture);
+            }
+            fence.m_State.Frame = Time.frameCount;
         }
+
+        internal static bool Passed(GraphicsFence fence) =>
+            fence.m_State.Frame >= 0 && Time.frameCount > fence.m_State.Frame
+            && ulong.Parse(Native.Call("graphics-fence", "poll"), System.Globalization.CultureInfo.InvariantCulture) >= fence.m_State.Sequence;
 
         /// <summary>The Editor's checks of a fence waited on (measured: fence.wait.default, fence.cpu.wait).</summary>
         internal static void CheckWait(GraphicsFence fence)
@@ -50,8 +54,7 @@ namespace UnityEngine.Rendering
 
     public partial struct GraphicsFence
     {
-        internal IntPtr m_Ptr;
-        internal int m_Version;
+        internal GraphicsFences.State m_State;
         internal GraphicsFenceType m_FenceType;
 
         /// <summary>Whether the GPU has passed the fence: a CPU synchronisation fence from the frame
@@ -71,7 +74,7 @@ namespace UnityEngine.Rendering
 
         internal void Validate()
         {
-            if (m_Ptr == IntPtr.Zero || m_Version == 0)
+            if (m_State == null)
                 throw new InvalidOperationException("This GraphicsFence object has not been correctly constructed see Graphics.CreateGraphicsFence() or CommandBuffer.CreateGraphicsFence()");
         }
     }

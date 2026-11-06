@@ -390,6 +390,10 @@ pub fn dispatch(method: &str, request: &str) -> Result<String> {
         // What shaders declare, from the host's provider (with or without a renderer).
         "shader-declarations" => crate::shader_declarations::shader_request(request),
         "compute-declarations" => crate::shader_declarations::compute_request(request),
+        "graphics-fence" => backend()
+            .graphics_fence(request == "insert")
+            .map(|sequence| sequence.to_string())
+            .map_err(|e| anyhow::anyhow!("{e}")),
         "shader-passes" => backend()
             .shader_passes(request)
             .map_err(|e| anyhow::anyhow!("{e}")),
@@ -1099,9 +1103,7 @@ pub fn import_texture(handle: u64, guid: &str) -> Result<ImportedTextureInfo> {
     let asset = s.db.by_guid(guid).context("no such asset")?;
     let meta = PathBuf::from(format!("{}.meta", asset.file.display()));
     let importer = texture_importer(s);
-    let texture = s
-        .imports
-        .get_or_import(&importer, &asset.file, &meta)?;
+    let texture = s.imports.get_or_import(&importer, &asset.file, &meta)?;
     // The import is ours alone (the cache is on disk): take its data instead of copying it.
     let mut texture = Arc::try_unwrap(texture).unwrap_or_else(|shared| (*shared).clone());
     s.textures.write().unwrap().insert(

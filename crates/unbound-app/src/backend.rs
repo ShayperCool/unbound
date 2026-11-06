@@ -97,6 +97,16 @@ impl RenderBackend for GpuBackend {
             .read_buffer(buffer, offset, size)
     }
 
+    fn graphics_fence(&self, insert: bool) -> Result<u64, String> {
+        self.inner
+            .lock()
+            .unwrap()
+            .renderer
+            .as_mut()
+            .ok_or_else(|| "the renderer is not up yet".to_string())?
+            .graphics_fence(insert)
+    }
+
     fn shader_passes(&self, shader: &str) -> Result<String, String> {
         match self.inner.lock().unwrap().renderer.as_mut() {
             Some(r) => Ok(r.shader_passes(shader)),

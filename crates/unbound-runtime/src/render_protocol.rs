@@ -647,6 +647,10 @@ pub trait RenderBackend: Send + Sync {
     fn read_buffer(&self, _buffer: u64, _offset: u64, _size: u64) -> Option<Vec<u8>> {
         None
     }
+    /// Insert a marker after submitted GPU work, or poll the completed marker sequence.
+    fn graphics_fence(&self, _insert: bool) -> Result<u64, String> {
+        Err("no renderer".into())
+    }
     /// A shader's SubShader for the active render pipeline (after its fallbacks) as JSON:
     /// `{ shader, tags, passes: [{ name, tags }] }`.
     fn shader_passes(&self, _shader: &str) -> Result<String, String> {

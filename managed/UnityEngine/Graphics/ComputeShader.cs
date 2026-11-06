@@ -144,18 +144,22 @@ namespace UnityEngine
         internal const string ConstantOffsetSuffix = "@offset";
 
         /// <summary>A constant buffer bound to the cbuffer of the name in every kernel, read from
-        /// <paramref name="offset"/> bytes (measured: cmdbuffers cmd.cbuffer.*). A buffer's bytes are
-        /// those written to it: what kernels write into it is not seen.</summary>
-        public void SetConstantBuffer(int nameID, ComputeBuffer buffer, int offset, int size) => SetConstantBuffer(nameID, (object)buffer, offset);
-        public void SetConstantBuffer(string name, ComputeBuffer buffer, int offset, int size) => SetConstantBuffer(Shader.PropertyToID(name), (object)buffer, offset);
-        public void SetConstantBuffer(int nameID, GraphicsBuffer buffer, int offset, int size) => SetConstantBuffer(nameID, (object)buffer, offset);
-        public void SetConstantBuffer(string name, GraphicsBuffer buffer, int offset, int size) => SetConstantBuffer(Shader.PropertyToID(name), (object)buffer, offset);
+        /// <paramref name="offset"/> bytes (measured: cmdbuffers cmd.cbuffer.*), retaining the GPU
+        /// buffer so preceding dispatches and copies are observed.</summary>
+        public void SetConstantBuffer(int nameID, ComputeBuffer buffer, int offset, int size) => SetConstantBuffer(nameID, (object)buffer, offset, size);
+        public void SetConstantBuffer(string name, ComputeBuffer buffer, int offset, int size) => SetConstantBuffer(Shader.PropertyToID(name), (object)buffer, offset, size);
+        public void SetConstantBuffer(int nameID, GraphicsBuffer buffer, int offset, int size) => SetConstantBuffer(nameID, (object)buffer, offset, size);
+        public void SetConstantBuffer(string name, GraphicsBuffer buffer, int offset, int size) => SetConstantBuffer(Shader.PropertyToID(name), (object)buffer, offset, size);
 
-        void SetConstantBuffer(int nameID, object buffer, int offset)
+        void SetConstantBuffer(int nameID, object buffer, int offset, int size)
         {
             m_Values[nameID] = buffer;
             var name = Shader.IdToName(nameID);
-            if (name != null) m_Values[Shader.PropertyToID(name + ConstantOffsetSuffix)] = offset;
+            if (name != null)
+            {
+                m_Values[Shader.PropertyToID(name + ConstantOffsetSuffix)] = offset;
+                m_Values[Shader.PropertyToID(name + "@size")] = size;
+            }
         }
         public void SetBuffer(int kernelIndex, string name, GraphicsBuffer buffer) => SetBuffer(kernelIndex, Shader.PropertyToID(name), buffer);
 
