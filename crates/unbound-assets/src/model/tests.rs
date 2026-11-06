@@ -168,6 +168,7 @@ fn bind_pose_conversion_mirrors_and_scales() {
     let builder = Builder {
         settings: &builder_settings,
         scale: 2.0,
+        obj: false,
         name: String::new(),
         legacy: false,
         model: ImportedModel {

@@ -74,3 +74,44 @@ pub fn unwrap(input: &UnwrapInput, params: &UnwrapParams) -> Result<Vec<[[f32; 2
     let _ = params;
     Err("Unity's lightmap unwrap is not reproduced yet".into())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn settings(margin_method: i64) -> SecondaryUvSettings {
+        SecondaryUvSettings {
+            hard_angle: 88.0,
+            angle_distortion: 8.0,
+            area_distortion: 15.0,
+            margin_method,
+            pack_margin: 4.0,
+            min_lightmap_resolution: 40.0,
+            min_object_scale: 1.0,
+        }
+    }
+
+    #[test]
+    fn margin_is_manual_pixels_or_calculated_from_the_area() {
+        // A unit square: area 1.
+        let positions = [[0.0, 0.0, 0.0], [1.0, 0.0, 0.0], [1.0, 1.0, 0.0], [0.0, 1.0, 0.0]];
+        let triangles = [[0, 1, 2], [0, 2, 3]];
+        let input = UnwrapInput {
+            positions: &positions,
+            triangles: &triangles,
+            polygons: &[0, 1],
+            uvs: None,
+        };
+        let manual = UnwrapParams::new(&settings(0), &input).unwrap();
+        assert_eq!(manual.pack_margin, 4.0 / 1024.0);
+        assert_eq!((manual.angle_error, manual.area_error), (0.08, 0.15));
+        assert_eq!(manual.hard_angle, 88.0);
+        // 3 / (scale × resolution × √area), at least 3e-4.
+        let calculated = UnwrapParams::new(&settings(1), &input).unwrap();
+        assert_eq!(calculated.pack_margin, 1.0 / 40.0 * 3.0);
+        let mut large = settings(1);
+        large.min_lightmap_resolution = 1e6;
+        let floor = UnwrapParams::new(&large, &input).unwrap();
+        assert_eq!(floor.pack_margin, 0.0001 * 3.0);
+    }
+}
