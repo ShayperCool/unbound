@@ -246,6 +246,30 @@ public class ParticleRandomProbe : MonoBehaviour
             var v = ps.velocityOverLifetime; v.enabled = true;
             v.orbitalX = Two(0f, 1f); v.orbitalY = Two(0f, 1f); v.orbitalZ = Two(0f, 2f);
         });
+        for (int axis = 0; axis < 3; axis++)
+        {
+            int a = axis;
+            Simulated("vol/orbitalaxis" + axis, ps =>
+            {
+                Shape(ps, ParticleSystemShapeType.Circle, s => s.radiusThickness = 0f);
+                var v = ps.velocityOverLifetime; v.enabled = true;
+                if (a == 0) v.orbitalX = Two(0f, 1f);
+                if (a == 1) v.orbitalY = Two(0f, 1f);
+                if (a == 2) v.orbitalZ = Two(0f, 1f);
+            });
+        }
+        for (int axis = 0; axis < 3; axis++)
+        {
+            int a = axis;
+            Simulated("vol/orbitalmatched" + axis, ps =>
+            {
+                Shape(ps, ParticleSystemShapeType.Circle, s => s.radiusThickness = 0f);
+                var v = ps.velocityOverLifetime; v.enabled = true;
+                v.orbitalX = Two(0f, a == 0 ? 1f : 0f);
+                v.orbitalY = Two(0f, a == 1 ? 1f : 0f);
+                v.orbitalZ = Two(0f, a == 2 ? 1f : 0f);
+            });
+        }
         Simulated("vol/radial", ps =>
         {
             Shape(ps, ParticleSystemShapeType.Circle, s => s.radiusThickness = 0f);
@@ -328,6 +352,16 @@ public class ParticleRandomProbe : MonoBehaviour
             c.color = new ParticleSystem.MinMaxGradient(new Color(0f, 0f, 0f, 0f), new Color(1f, 1f, 1f, 1f));
         });
 
+        Simulated("color/speed64", ps =>
+        {
+            var c = ps.colorBySpeed; c.enabled = true; c.range = new Vector2(0f, 10f);
+            c.color = new ParticleSystem.MinMaxGradient(new Color(0f, 0f, 0f, 0f), new Color(1f, 1f, 1f, 1f));
+        }, burst: 64);
+        Simulated("vol/speedmodifier9", ps =>
+        {
+            var v = ps.velocityOverLifetime; v.enabled = true; v.speedModifier = Two(0.5f, 1.5f);
+        }, burst: 9);
+
         // Custom data.
         Simulated("custom/two", ps =>
         {
@@ -337,6 +371,16 @@ public class ParticleRandomProbe : MonoBehaviour
             for (int k = 0; k < 4; k++) c.SetVector(ParticleSystemCustomData.Custom1, k, Two(0f, 1f));
             c.SetMode(ParticleSystemCustomData.Custom2, ParticleSystemCustomDataMode.Color);
             c.SetColor(ParticleSystemCustomData.Custom2, new ParticleSystem.MinMaxGradient(new Color(0f, 0f, 0f, 0f), new Color(1f, 1f, 1f, 1f)));
+        }, custom: true);
+
+        Simulated("custom/reversed", ps =>
+        {
+            var c = ps.customData; c.enabled = true;
+            c.SetMode(ParticleSystemCustomData.Custom1, ParticleSystemCustomDataMode.Color);
+            c.SetColor(ParticleSystemCustomData.Custom1, new ParticleSystem.MinMaxGradient(new Color(0f, 0f, 0f, 0f), new Color(1f, 1f, 1f, 1f)));
+            c.SetMode(ParticleSystemCustomData.Custom2, ParticleSystemCustomDataMode.Vector);
+            c.SetVectorComponentCount(ParticleSystemCustomData.Custom2, 4);
+            for (int k = 0; k < 4; k++) c.SetVector(ParticleSystemCustomData.Custom2, k, Two(0f, 1f));
         }, custom: true);
 
         // Bursts: probability and a count range, one cycle every 0.1 s.

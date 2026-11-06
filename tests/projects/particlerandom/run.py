@@ -10,6 +10,7 @@
 Run output stays under $XDG_CACHE_HOME/unbound/validation/runs/particlerandom/.
 """
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -60,14 +61,30 @@ def engine(label):
     return 0 if code == 0 and (out/OUT).exists() else 1
 
 
-def publish(labels):
-    target = reference_file(ROOT, 'jsonl')
+def publish(labels, extend=False):
+    canonical = reference_file(ROOT, 'jsonl')
+    target = WORK/('extension-' + str(time.time_ns()) + '.jsonl') if extend else canonical
 
     def write(path, first):
         path.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(first/OUT, path)
-    return editor_runner.publish([WORK/label for label in labels], target, lambda d: [OUT], write,
+    code = editor_runner.publish([WORK/label for label in labels], target, lambda d: [OUT], write,
                                  complete=[editor_runner.jsonl_complete(OUT, {'key': 'complete', 'value': [1]})])
+    if code or not extend:
+        return code
+    from compare import read
+    old, new = read(canonical), read(target)
+    changed = [key for key, value in old.items() if new.get(key) != value]
+    if changed:
+        raise SystemExit('extension changes existing keys: ' + ', '.join(changed))
+    lines = canonical.read_text().splitlines()
+    complete = lines.pop()
+    if json.loads(complete)['key'] != 'complete':
+        raise SystemExit('completion must be the final record')
+    added = [line for line in target.read_text().splitlines() if json.loads(line)['key'] not in old]
+    canonical.write_text('\n'.join(lines + added + [complete]) + '\n')
+    print('extended reference by', len(added), 'keys; retained', len(old))
+    return 0
 
 
 def verify(candidate):
@@ -77,7 +94,7 @@ def verify(candidate):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=['native', 'engine', 'publish', 'verify', 'check'])
+    parser.add_argument('mode', choices=['native', 'engine', 'publish', 'extend', 'verify', 'check'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
     parser.add_argument('--candidate', type=Path)
@@ -86,8 +103,8 @@ def main():
         return native(args.label)
     if args.mode == 'engine':
         return engine(args.label)
-    if args.mode == 'publish':
-        return publish(args.labels)
+    if args.mode in ('publish', 'extend'):
+        return publish(args.labels, extend=args.mode == 'extend')
     if args.mode == 'check':
         label = time.strftime('check-%Y%m%d-%H%M%S-') + str(os.getpid())
         return engine(label) or verify(WORK/label/OUT)
