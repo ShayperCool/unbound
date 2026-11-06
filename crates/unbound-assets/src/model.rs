@@ -1849,6 +1849,9 @@ impl<'a> Builder<'a> {
         uv0: Option<&ufbx::VertexVec2>,
         settings: &SecondaryUvSettings,
     ) -> Result<LightmapUvs, String> {
+        if !self.settings.weld_vertices {
+            return Err("meshes without weldVertices are not measured".into());
+        }
         // Unity's FBX reader triangulates polygons of more than four corners differently.
         if mesh.faces.iter().any(|f| f.num_indices > 4) {
             return Err(
@@ -1869,22 +1872,18 @@ impl<'a> Builder<'a> {
         } else {
             (0..mesh.vertices.len() as u32).collect()
         };
-        // With `weldVertices`, equal positions weld to the first (the setting off is unmeasured).
+        // Equal positions weld to the first (compared as floats: -0 and 0 weld).
         let mut index = vec![0u32; mesh.vertices.len()];
         let mut positions: Vec<[f32; 3]> = Vec::with_capacity(order.len());
         let mut first: HashMap<[u32; 3], u32> = HashMap::new();
         for &v in &order {
             let p = self.position(mesh.vertices[v as usize]);
-            let mut add = || {
-                positions.push(p);
-                positions.len() as u32 - 1
-            };
-            index[v as usize] = if self.settings.weld_vertices {
-                // Compared as floats: -0 and 0 weld.
-                *first.entry(p.map(|c| (c + 0.0).to_bits())).or_insert_with(add)
-            } else {
-                add()
-            };
+            index[v as usize] = *first
+                .entry(p.map(|c| (c + 0.0).to_bits()))
+                .or_insert_with(|| {
+                    positions.push(p);
+                    positions.len() as u32 - 1
+                });
         }
         let mut triangles = Vec::new();
         let mut uvs = Vec::new();

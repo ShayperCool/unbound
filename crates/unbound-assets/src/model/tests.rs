@@ -468,6 +468,11 @@ fn lightmap_uvs_read_their_settings_and_replace_uv2() {
             "{uv:?}"
         );
     }
+    let unwelded = meta("ModelImporter:\n  meshes:\n    generateSecondaryUV: 1\n    weldVertices: 0\n");
+    let model = ModelImporter
+        .import(Path::new("Quad.obj"), obj.as_bytes(), &unwelded)
+        .unwrap();
+    assert!(model.warnings.iter().any(|w| w.contains("weldVertices")), "{:?}", model.warnings);
     let off = meta("ModelImporter:\n  meshes:\n    generateSecondaryUV: 0\n");
     assert!(ModelSettings::read(&off).secondary_uv.is_none());
     let model = ModelImporter
