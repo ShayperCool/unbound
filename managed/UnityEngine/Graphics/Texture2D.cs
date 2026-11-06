@@ -304,12 +304,14 @@ namespace UnityEngine
 
         public bool Reinitialize(int width, int height, TextureFormat format, bool hasMipMap)
         {
+            MainThreadCheck.Check("Reinitialize");
             Init(width, height, format, hasMipMap ? -1 : 1, m_Linear);
             return true;
         }
 
         public bool Reinitialize(int width, int height, GraphicsFormat format, bool hasMipMap)
         {
+            MainThreadCheck.Check("Reinitialize");
             Init(width, height, TextureFormatOf(format), hasMipMap ? -1 : 1, !GraphicsFormatUtility.IsSRGBFormat(format));
             return true;
         }

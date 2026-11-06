@@ -90,7 +90,11 @@ namespace UnityEngine
                 MainThreadCheck.Check("get_seed");
                 return s_Seed;
             }
-            set => InitState(value);
+            set
+            {
+                MainThreadCheck.Check("set_seed");
+                Seed(value);
+            }
         }
 
         public static State state

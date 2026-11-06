@@ -286,9 +286,13 @@ namespace UnityEngine
                 m_Out.Append(']');
             }
 
+            /// <summary>JsonUtility works on any thread (documented), so references are read
+            /// without the main-thread checks of Object's comparison and GetInstanceID.</summary>
+            static bool Alive(Object o) => (object)o != null && !o.m_Destroyed;
+
             void WriteReference(Object o, int id)
             {
-                if (m_Editor && o != null && o.IsPersistentAsset && AssetDatabaseRuntime.TryGetLocation(o, out var guid, out var fileId))
+                if (m_Editor && Alive(o) && o.IsPersistentAsset && AssetDatabaseRuntime.TryGetLocation(o, out var guid, out var fileId))
                 {
                     Fields(("fileID", fileId), ("guid", guid), ("type", AssetReferenceType(guid)));
                     return;
@@ -321,7 +325,7 @@ namespace UnityEngine
                     case Shape.UnityObject:
                     {
                         var o = value as Object;
-                        WriteReference(o, o != null ? o.GetInstanceID() : 0);
+                        WriteReference(o, Alive(o) ? o.m_InstanceID : 0);
                         break;
                     }
                     case Shape.LazyReference:

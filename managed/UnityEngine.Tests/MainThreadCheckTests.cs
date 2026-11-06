@@ -76,6 +76,51 @@ namespace UnityEngine.Tests
             Assert.Equal(before, Object.FindObjectsByType<Transform>(FindObjectsSortMode.None).Length);
         }
 
+        [Serializable]
+        class WithReference
+        {
+            public GameObject target;
+        }
+
+        [Fact]
+        public void JsonUtilityWritesObjectReferencesOnAnotherThread()
+        {
+            var go = new GameObject("referenced");
+            var dead = new GameObject("dead");
+            Object.DestroyImmediate(dead);
+            try
+            {
+                string live = null, destroyed = null;
+                Assert.Null(OnOtherThread(() =>
+                {
+                    live = JsonUtility.ToJson(new WithReference { target = go });
+                    destroyed = JsonUtility.ToJson(new WithReference { target = dead });
+                }));
+                Assert.Equal(JsonUtility.ToJson(new WithReference { target = go }), live);
+                Assert.Equal("{\"target\":{\"instanceID\":0}}", destroyed);
+            }
+            finally
+            {
+                Object.DestroyImmediate(go);
+            }
+        }
+
+        [Fact]
+        public void ReinitializeOffTheMainThreadLeavesTheTextureAlive()
+        {
+            var texture = new Texture2D(2, 2);
+            try
+            {
+                Assert.Equal("Reinitialize" + Tail, Assert.IsType<UnityException>(OnOtherThread(() => texture.Reinitialize(4, 4))).Message);
+                Assert.True(texture != null);
+                Assert.Equal(2, texture.width);
+            }
+            finally
+            {
+                Object.DestroyImmediate(texture);
+            }
+        }
+
         struct ReadTimeJob : IJob
         {
             public NativeArray<int> Outcome;
