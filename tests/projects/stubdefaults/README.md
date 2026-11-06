@@ -1,0 +1,50 @@
+# Stub defaults probe
+
+Records what the Editor answers in Play mode for members whose generated stub would otherwise
+return its type's default (0, false, null, an enum's 0). `Assets/Scripts/StubDefaultsProbe.cs`
+reads each member five frames after the scene loads and writes one JSON line per value: floats as
+G9 (identical on Mono and CoreCLR), colors and matrices as comma-separated floats, enums as
+`Name=value`. The members' answers feed the stub generator's table
+(`managed/Unbound.ApiTools/StubDefaults.cs`). The probe also guards members that hand-written code
+already answers (`ScalableBufferManager` scale factors, `Microphone.devices` being an array,
+`Camera.CalculateObliqueMatrix`).
+
+The canonical Native oracle is `Reference/unity-6000.0.71f1.jsonl` (26 records, Unity 6000.0.71f1
+on Linux, GPU Editor in batchmode with graphics). Two independent captures were byte-identical.
+
+## Running
+
+From the repository root, with the release in `UNBOUND_PROBE_UNITY_VERSION`:
+
+```sh
+python3 tests/projects/stubdefaults/run.py native --label native1   # and native2
+python3 tests/projects/stubdefaults/run.py publish native1 native2
+python3 tests/projects/stubdefaults/run.py check                    # the land gate (gate.json)
+```
+
+`check` runs the engine (`UNBOUND_CLI`, else `$UNBOUND`, else `target/release/unbound`) and
+compares the run with the reference. Run output goes to
+`$XDG_CACHE_HOME/unbound/validation/runs/stubdefaults/runs/<label>/`.
+
+## Comparison
+
+`compare.py` compares every key exactly, except `Camera.CalculateObliqueMatrix`, a computed
+matrix. Its floats may differ by 1e-6 relative (1e-6 absolute near zero). The engine differs there
+by at most 4.5e-7 relative (float rounding of a different evaluation order). Matches within that
+tolerance are printed.
+
+## Measured (6000.0.71f1)
+
+- `Gizmos.color` is white and `Gizmos.matrix` is the zero matrix outside `OnDrawGizmos`.
+  `Gizmos.probeSize` is 0.29999998f, one ulp under 0.3f.
+- `DynamicGI`: indirectScale 1, updateThreshold 1, materialUpdateTimeSlice 8, synchronousMode
+  false, isConverged true (no realtime GI in the scene).
+- `GarbageCollector.GCMode` Enabled, incrementalTimeSliceNanoseconds 3000000.
+- `ReflectionProbe` baked cubemap resolution range 16..2048; `SplashScreen.isFinished` true;
+  `MuscleHandle.muscleHandleCount` 95; `Caching.compressionEnabled` true;
+  `QualitySettings.maxQueuedFrames` 2; `Graphics.activeTier` Tier3, `activeColorGamut` sRGB;
+  `PixelPerfectRendering.pixelSnapSpacing` 0; `RenderTexture.GetTexelOffset` (0, 0).
+
+Not recorded, because the answer is not a constant: `GarbageCollector.isIncremental` follows the
+project's `gcIncremental` player setting, and `Caching.cacheCount` (1 in the Editor) would claim a
+cache that the stubbed `Caching` API cannot hand out.
