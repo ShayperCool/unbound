@@ -5,6 +5,7 @@
     run.py publish native1 native2         # two agreeing captures become Reference/unity-<version>.jsonl
     run.py engine --label final            # Unbound (UNBOUND_CLI or target/release/unbound)
     run.py verify [--candidate PATH]       # compare against the reference (default: the engine run 'final')
+    run.py check                           # engine run into a new directory, then verify (the landing gate)
 
 Run output stays under $XDG_CACHE_HOME/unbound/validation/runs/layeroverrides3d/.
 """
@@ -13,6 +14,7 @@ import os
 import shutil
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -49,7 +51,7 @@ def engine(label):
     if out.exists():
         raise SystemExit(f'refusing to overwrite {out}')
     out.mkdir(parents=True)
-    cli = os.environ.get('UNBOUND_CLI', str(REPO/'target/release/unbound'))
+    cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(REPO/'target/release/unbound')
     env = dict(os.environ, LAYER_OVERRIDES_OUT=str(out/OUT))
     command = [str(HEAVY), '--kind', 'engine-cpu', 'timeout', '900', cli, 'run', '-p', str(ROOT), '--headless', '30000', '--no-watch']
     with (out/'engine.log').open('w') as log:
@@ -75,7 +77,7 @@ def verify(candidate):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('mode', choices=['native', 'engine', 'publish', 'verify'])
+    parser.add_argument('mode', choices=['native', 'engine', 'publish', 'verify', 'check'])
     parser.add_argument('labels', nargs='*')
     parser.add_argument('--label')
     parser.add_argument('--candidate', type=Path)
@@ -86,6 +88,9 @@ def main():
         return engine(args.label)
     if args.mode == 'publish':
         return publish(args.labels)
+    if args.mode == 'check':
+        label = time.strftime('check-%Y%m%d-%H%M%S-') + str(os.getpid())
+        return engine(label) or verify(WORK/label/OUT)
     return verify(args.candidate or WORK/'final'/OUT)
 
 
