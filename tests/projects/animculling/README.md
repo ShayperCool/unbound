@@ -95,7 +95,8 @@ byte across all 6293 records. Every original A11 value is unchanged. Observation
   and runs requested humanoid IK. Playback resumes without catch-up.
 * CullUpdateTransforms advances graph and controller clocks, events, root motion
   and movement callbacks. Child transforms, humanoid pose and script fields hold.
-  Curves on the Animator's own root still write, including with root motion off.
+  The sampled position curves on the Animator's own root still write, including
+  with root motion off.
   Visibility return writes the current combined pose and requests IK without another
   clock step, event dispatch or movement callback.
 * The generic rigs do not receive IK callbacks. A humanoid clip or mixer requesting
