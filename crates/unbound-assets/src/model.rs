@@ -139,6 +139,9 @@ pub struct ModelSettings {
     pub is_readable: bool,
     /// `meshes.fileIdsGeneration`: how the IDs of objects the meta does not list are derived.
     pub file_ids_generation: i64,
+    /// `meshes.weldVertices`: control points at equal positions are merged (Unity's unwrap input).
+    #[serde(default)]
+    pub weld_vertices: bool,
     /// `meshes.generateSecondaryUV` with its unwrap settings; `None` when off.
     #[serde(default)]
     pub secondary_uv: Option<SecondaryUvSettings>,
@@ -246,6 +249,7 @@ impl ModelSettings {
                 .or_else(|| boolean(imp, "animations.isReadable"))
                 .unwrap_or(false),
             file_ids_generation: int(imp, "meshes.fileIdsGeneration").unwrap_or(2),
+            weld_vertices: boolean(imp, "meshes.weldVertices").unwrap_or(true),
             secondary_uv: SecondaryUvSettings::read(imp),
         }
     }
@@ -620,7 +624,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 12;
+    const VERSION: u32 = 13;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -665,6 +669,7 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     let mut builder = Builder {
         settings: &settings,
         scale,
+        obj: scene.metadata.file_format == ufbx::FileFormat::Obj,
         name: asset_name(source),
         legacy: table.legacy,
         model: ImportedModel {
@@ -753,13 +758,6 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
             .warnings
             .push("material animation is not imported (the clips do not animate materials)".into());
     }
-    if settings.secondary_uv.is_some() && !model.meshes.is_empty() {
-        model.warnings.push(
-            "generateSecondaryUV: lightmap UVs are not generated; the meshes keep the file's UV2, \
-             so baked lightmaps do not land on them (not supported)"
-                .into(),
-        );
-    }
     if !scene.cameras.is_empty() || !scene.lights.is_empty() {
         model
             .warnings
@@ -771,6 +769,8 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
 struct Builder<'a> {
     settings: &'a ModelSettings,
     scale: f32,
+    /// The file is OBJ.
+    obj: bool,
     name: String,
     legacy: bool,
     model: ImportedModel,
@@ -1356,12 +1356,17 @@ impl<'a> Builder<'a> {
                 .iter()
                 .find(|s| !s.clusters.is_empty())
                 .map(|s| s.as_ref());
-            let (built, slots) = self.build_mesh(mesh, node, skin);
+            let (built, slots, warning) = self.build_mesh(mesh, node, skin);
             let mesh_name = if is_root {
                 node.element.name.to_string()
             } else {
                 key.clone()
             };
+            if let Some(warning) = warning {
+                self.model
+                    .warnings
+                    .push(format!("mesh '{mesh_name}': {warning}"));
+            }
             let mesh_id = self.asset_id(ids, class::MESH, "Mesh", &mesh_name);
             let mesh_index = self.model.meshes.len() as u32;
             self.model.meshes.push(ModelMesh {
@@ -1626,7 +1631,7 @@ impl<'a> Builder<'a> {
         mesh: &'a ufbx::Mesh,
         node: &'a ufbx::Node,
         skin: Option<&ufbx::SkinDeformer>,
-    ) -> (ModelMesh, Vec<Option<&'a ufbx::Material>>) {
+    ) -> (ModelMesh, Vec<Option<&'a ufbx::Material>>, Option<String>) {
         let settings = self.settings;
         let with_normals = settings.normals != NormalMode::None && mesh.vertex_normal.exists;
         let with_tangents = settings.tangents == TangentMode::Import
@@ -1658,6 +1663,23 @@ impl<'a> Builder<'a> {
             bounds_max: [0.0; 3],
             blend_shapes: Vec::new(),
         };
+        // Lightmap UVs replace UV2 (measured: tests/projects/lightmapuvs).
+        let mut warning = None;
+        let lightmap = settings.secondary_uv.as_ref().and_then(|unwrap| {
+            match self.lightmap_uvs(mesh, uv_sets.first().copied(), unwrap) {
+                Ok(lightmap) => Some(lightmap),
+                Err(error) => {
+                    warning = Some(format!(
+                        "lightmap UVs are not generated: {error}; the mesh keeps the file's UV2, \
+                         so baked lightmaps do not land on it (not supported)"
+                    ));
+                    None
+                }
+            }
+        });
+        if lightmap.is_some() && out.uvs.len() < 2 {
+            out.uvs.resize(2, Vec::new());
+        }
         let channels = self.blend_channels(mesh);
         // Each vertex's control point (shapes move control points), each corner's vertex.
         let mut control_points: Vec<u32> = Vec::new();
@@ -1700,29 +1722,12 @@ impl<'a> Builder<'a> {
                     corners.iter().map(|&c| mesh.vertex_indices[c]).collect(),
                     corners,
                 ));
-                // Mirroring X flips the handedness: the polygon's corners are reversed (the
-                // first stays first). Triangles and quads are then split as Unity does, quads
-                // into (0, 1, 2) and (0, 2, 3) of the reversed corners; larger polygons are
-                // triangulated by ufbx (measured: tests/projects/lightmapuvs).
-                let count = if face.num_indices == 3 || face.num_indices == 4 {
-                    let b = face.index_begin;
-                    let reversed: Vec<u32> = std::iter::once(b)
-                        .chain((1..face.num_indices).rev().map(|i| b + i))
-                        .collect();
-                    triangle[..3].copy_from_slice(&reversed[..3]);
-                    if face.num_indices == 4 {
-                        triangle[3..6].copy_from_slice(&[reversed[0], reversed[2], reversed[3]]);
-                    }
-                    face.num_indices as usize - 2
-                } else {
-                    let count = mesh.triangulate_face(&mut triangle, face) as usize;
-                    for t in triangle[..3 * count].chunks_mut(3) {
-                        t.swap(1, 2);
-                    }
-                    count
-                };
+                let count = unity_triangles(mesh, face, &mut triangle);
                 for t in 0..count {
-                    for corner in [triangle[3 * t], triangle[3 * t + 1], triangle[3 * t + 2]] {
+                    for (k, corner) in [triangle[3 * t], triangle[3 * t + 1], triangle[3 * t + 2]]
+                        .into_iter()
+                        .enumerate()
+                    {
                         let c = corner as usize;
                         let p = mesh.vertex_position[c];
                         let mut vertex = Vertex {
@@ -1749,6 +1754,9 @@ impl<'a> Builder<'a> {
                         for (set, uv) in uv_sets.iter().enumerate() {
                             let v = uv[c];
                             vertex.uv[set] = [v.x as f32, v.y as f32];
+                        }
+                        if let Some(lightmap) = &lightmap {
+                            vertex.uv[1] = lightmap.uvs[lightmap.first[face_index as usize] + t][k];
                         }
                         if with_colors {
                             let v = mesh.vertex_color[c];
@@ -1825,7 +1833,95 @@ impl<'a> Builder<'a> {
             out.bounds_min = min;
             out.bounds_max = max;
         }
-        (out, materials)
+        (out, materials, warning)
+    }
+
+    /// UV2 per triangle corner from the lightmap unwrap of the whole mesh. Unity unwraps the
+    /// mesh as it holds it after triangulation and welding: the control points in file order (an
+    /// OBJ's in the order the faces' corners first use them) with each position kept once, the
+    /// triangles in face order, each its own source polygon (measured:
+    /// tests/projects/lightmapuvs).
+    fn lightmap_uvs(
+        &self,
+        mesh: &ufbx::Mesh,
+        uv0: Option<&ufbx::VertexVec2>,
+        settings: &SecondaryUvSettings,
+    ) -> Result<LightmapUvs, String> {
+        let order: Vec<u32> = if self.obj {
+            let mut seen = vec![false; mesh.vertices.len()];
+            let mut order = Vec::with_capacity(mesh.vertices.len());
+            for &v in mesh.vertex_indices.iter() {
+                if !std::mem::replace(&mut seen[v as usize], true) {
+                    order.push(v);
+                }
+            }
+            order.extend((0..mesh.vertices.len() as u32).filter(|&v| !seen[v as usize]));
+            order
+        } else {
+            (0..mesh.vertices.len() as u32).collect()
+        };
+        // With `weldVertices`, equal positions weld to the first (the setting off is unmeasured).
+        let mut index = vec![0u32; mesh.vertices.len()];
+        let mut positions: Vec<[f32; 3]> = Vec::with_capacity(order.len());
+        let mut first: HashMap<[u32; 3], u32> = HashMap::new();
+        for &v in &order {
+            let p = self.position(mesh.vertices[v as usize]);
+            let mut add = || {
+                positions.push(p);
+                positions.len() as u32 - 1
+            };
+            index[v as usize] = if self.settings.weld_vertices {
+                *first.entry(p.map(f32::to_bits)).or_insert_with(add)
+            } else {
+                add()
+            };
+        }
+        let mut triangles = Vec::new();
+        let mut uvs = Vec::new();
+        let mut first = Vec::with_capacity(mesh.faces.len());
+        let mut triangle = vec![0u32; mesh.max_face_triangles.max(1) * 3];
+        for &face in mesh.faces.iter() {
+            first.push(triangles.len());
+            let count = unity_triangles(mesh, face, &mut triangle);
+            for t in triangle[..3 * count].chunks(3) {
+                triangles
+                    .push([0, 1, 2].map(|k| index[mesh.vertex_indices[t[k] as usize] as usize]));
+                if let Some(uv) = uv0 {
+                    uvs.push([0, 1, 2].map(|k| {
+                        let v = uv[t[k] as usize];
+                        [v.x as f32, v.y as f32]
+                    }));
+                }
+            }
+        }
+        // Unused control points are dropped, in order.
+        let mut used = vec![u32::MAX; positions.len()];
+        let mut kept = Vec::with_capacity(positions.len());
+        for t in &triangles {
+            for &v in t {
+                used[v as usize] = 0;
+            }
+        }
+        for (v, slot) in used.iter_mut().enumerate() {
+            if *slot == 0 {
+                *slot = kept.len() as u32;
+                kept.push(positions[v]);
+            }
+        }
+        for t in &mut triangles {
+            *t = t.map(|v| used[v as usize]);
+        }
+        let positions = kept;
+        let polygons: Vec<u32> = (0..triangles.len() as u32).collect();
+        let input = lightmap_uv::UnwrapInput {
+            positions: &positions,
+            triangles: &triangles,
+            polygons: &polygons,
+            uvs: uv0.map(|_| &uvs[..]),
+        };
+        let params = lightmap_uv::UnwrapParams::new(settings, &input)?;
+        let uvs = lightmap_uv::unwrap(&input, &params)?;
+        Ok(LightmapUvs { first, uvs })
     }
 
     /// The mesh's blend shapes: per frame the control points' offsets for each vertex, the
@@ -2304,6 +2400,35 @@ fn rotate(q: [f32; 4], v: [f32; 3]) -> [f32; 3] {
     [0, 1, 2].map(|a| v[a] + q[3] * t[a] + c[a])
 }
 
+/// A mesh's lightmap UVs: per face its first triangle, per triangle UV2 at its corners.
+struct LightmapUvs {
+    first: Vec<usize>,
+    uvs: Vec<[[f32; 2]; 3]>,
+}
+
+/// The corners (indices into the mesh's index space) of a face's triangles, in Unity's winding:
+/// mirroring X flips the handedness, so the polygon's corners are reversed with the first kept.
+/// Triangles and quads are split as Unity does, a quad into (0, 1, 2) and (0, 2, 3) of the
+/// reversed corners; larger polygons are triangulated by ufbx (measured:
+/// tests/projects/lightmapuvs). Returns the triangle count.
+fn unity_triangles(mesh: &ufbx::Mesh, face: ufbx::Face, out: &mut [u32]) -> usize {
+    if face.num_indices == 3 || face.num_indices == 4 {
+        let b = face.index_begin;
+        let n = face.num_indices;
+        out[..3].copy_from_slice(&[b, b + n - 1, b + n - 2]);
+        if n == 4 {
+            out[3..6].copy_from_slice(&[b, b + 2, b + 1]);
+        }
+        n as usize - 2
+    } else {
+        let count = mesh.triangulate_face(out, face) as usize;
+        for t in out[..3 * count].chunks_mut(3) {
+            t.swap(1, 2);
+        }
+        count
+    }
+}
+
 /// One corner's attributes, before welding.
 #[derive(Default)]
 struct Vertex {
@@ -2355,6 +2480,7 @@ fn bone_weight(skin: &ufbx::SkinDeformer, vertex: usize) -> BoneWeight {
     out
 }
 
+mod lightmap_uv;
 mod materials;
 mod tangent_space;
 
