@@ -622,7 +622,7 @@ sealed partial class StubBuilder
                     {
                         var ret = property.ReturnsByRef || property.ReturnsByRefReadonly
                             ? $"return ref global::Unbound.Runtime.Stubs.Ref<{Render(property.Type)}>();"
-                            : ReturnDefault(property.Type);
+                            : ReturnDefault(property.Type, id);
                         accessors.Add($"{Stub} get {{ {NotImplemented}({Quote(id)}); {ret} }}");
                     }
                     if (property.SetMethod != null)
@@ -789,7 +789,7 @@ sealed partial class StubBuilder
             {
                 var ret = property.ReturnsByRef || property.ReturnsByRefReadonly
                     ? $"return ref global::Unbound.Runtime.Stubs.Ref<{Render(property.Type)}>();"
-                    : ReturnDefault(property.Type);
+                    : ReturnDefault(property.Type, id);
                 body = $"{{ {NotImplemented}({Quote(id)}); {ret} }}";
             }
             else
@@ -875,14 +875,17 @@ sealed partial class StubBuilder
         if (method.ReturnsByRef || method.ReturnsByRefReadonly)
             statements.Add($"return ref global::Unbound.Runtime.Stubs.Ref<{Render(method.ReturnType)}>();");
         else if (!method.ReturnsVoid && method.MethodKind != MethodKind.Constructor)
-            statements.Add(ReturnDefault(method.ReturnType));
+            statements.Add(ReturnDefault(method.ReturnType, id));
         return "{ " + string.Join(" ", statements) + " }";
     }
 
-    /// <summary>What a stub returns: an empty collection where Unity returns one (callers iterate
+    /// <summary>What a stub returns: the Editor's answer where the table has one (see
+    /// <see cref="StubDefaults"/>), an empty collection where Unity returns one (callers iterate
     /// them without a null check), the type's default otherwise.</summary>
-    string ReturnDefault(ITypeSymbol type)
+    string ReturnDefault(ITypeSymbol type, string id)
     {
+        if (_returns.TryGetValue(id, out var value))
+            return $"return {value};";
         if (type is IArrayTypeSymbol array && array.Rank == 1 && array.ElementType is not IPointerTypeSymbol && array.ElementType is not IFunctionPointerTypeSymbol)
             return $"return global::System.Array.Empty<{Render(array.ElementType)}>();";
         if (type is INamedTypeSymbol named && named.IsGenericType && named.ContainingNamespace?.ToDisplayString() == "System.Collections.Generic")

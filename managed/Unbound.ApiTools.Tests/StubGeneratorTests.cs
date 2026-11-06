@@ -115,6 +115,9 @@ public class StubGeneratorTests
         }
         """;
 
+    /// <summary>No release table: the synthetic modules have none of its members.</summary>
+    static readonly Dictionary<string, string> NoReturns = new();
+
     static readonly MetadataReference[] Framework =
         ((string)AppContext.GetData("TRUSTED_PLATFORM_ASSEMBLIES")!)
         .Split(Path.PathSeparator)
@@ -164,7 +167,7 @@ public class StubGeneratorTests
             var impl = Write(Path.Combine(root, "nostubs"), "UnityEngine.CoreModule", implImage);
 
             var output = Path.Combine(sourceDir, "Generated", "6000.0");
-            var report = StubGenerator.Generate(unity, impl, output, sourceDir);
+            var report = StubGenerator.Generate(unity, impl, output, sourceDir, returns: NoReturns);
             Assert.Empty(report.Conflicts);
             Assert.Contains(report.Modules, m => m.Name == "UnityEngine.PhysicsModule" && m.NewTypes == 3);
             Assert.Equal(3, report.ExtendedTypes); // Object, Component and Vector3 got members
@@ -176,7 +179,7 @@ public class StubGeneratorTests
             Assert.True(errors.Count == 0, string.Join("\n", errors));
 
             // A second run with the same inputs changes nothing.
-            Assert.Equal(0, StubGenerator.Generate(unity, impl, output, sourceDir).ChangedFiles);
+            Assert.Equal(0, StubGenerator.Generate(unity, impl, output, sourceDir, returns: NoReturns).ChangedFiles);
 
             var context = new AssemblyLoadContext("stubs", isCollectible: true);
             try
@@ -249,5 +252,64 @@ public class StubGeneratorTests
         {
             Directory.Delete(root, recursive: true);
         }
+    }
+    [Fact]
+    public void TableEntriesReplaceTheDefaultAndStaleEntriesAreReported()
+    {
+        var root = TestAssemblies.TempDir();
+        try
+        {
+            var unity = Path.Combine(root, "Managed", "UnityEngine");
+            var (coreImage, coreErrors) = Compile("UnityEngine.CoreModule", new[] { """
+                namespace UnityEngine
+                {
+                    public static class Scale
+                    {
+                        public static float factor => 1;
+                        public static float other => 1;
+                        public static int Count(int a) => 1;
+                    }
+                }
+                """ });
+            Assert.Empty(coreErrors);
+            Write(unity, "UnityEngine.CoreModule", coreImage);
+            var sourceDir = Path.Combine(root, "impl");
+            Directory.CreateDirectory(sourceDir);
+            var (implImage, implErrors) = Compile("UnityEngine.CoreModule", new[] { StubSupport });
+            Assert.Empty(implErrors);
+            var impl = Write(Path.Combine(root, "nostubs"), "UnityEngine.CoreModule", implImage);
+
+            var output = Path.Combine(sourceDir, "Generated", "6000.0");
+            var returns = new Dictionary<string, string>
+            {
+                ["UnityEngine.Scale.factor"] = "1f",
+                ["UnityEngine.Scale.Count"] = "1",
+                ["UnityEngine.Gone.value"] = "2",
+            };
+            var report = StubGenerator.Generate(unity, impl, output, sourceDir, returns: returns);
+            var text = File.ReadAllText(Path.Combine(output, "UnityEngine.CoreModule.g.cs"));
+            // Still a stub that warns, now returning the table's value.
+            Assert.Contains("NotImplemented(\"UnityEngine.Scale.factor\"); return 1f; }", text);
+            Assert.Contains("NotImplemented(\"UnityEngine.Scale.Count\"); return 1; }", text);
+            Assert.Contains("NotImplemented(\"UnityEngine.Scale.other\"); return default; }", text);
+            Assert.Equal(new[] { "UnityEngine.Gone.value" }, report.Conflicts.Where(c => c.StartsWith("stub default ")).Select(c => c.Split(' ')[2].TrimEnd(':')));
+            var (_, errors) = Compile("UnityEngine.CoreModule", Directory.GetFiles(output, "*.g.cs").Select(File.ReadAllText).Append(StubSupport));
+            Assert.True(errors.Count == 0, string.Join("\n", errors));
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void EveryReleaseTableEntryIsAnExpression()
+    {
+        foreach (var (id, value) in StubDefaults.For("6000.0"))
+        {
+            Assert.StartsWith("UnityEngine.", id);
+            Assert.Empty(SyntaxFactory.ParseExpression(value).GetDiagnostics());
+        }
+        Assert.Empty(StubDefaults.For("no-such-family"));
     }
 }

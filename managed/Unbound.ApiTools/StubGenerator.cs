@@ -34,11 +34,15 @@ public static class StubGenerator
     /// generator reads which hand-written types are partial and declare constructors.</param>
     /// <param name="platformModules">The install's platform modules (see <see cref="UnityModules"/>),
     /// stubbed like the others.</param>
+    /// <param name="returns">What value-returning stubs return instead of the type's default, by
+    /// member id (see <see cref="StubDefaults"/>); by default the table of the release family that
+    /// <paramref name="outputDir"/> is named after (<c>Generated/&lt;family&gt;</c>).</param>
     public static StubReport Generate(string unityManagedEngineDir, string implAssembly, string outputDir, string? implSourceDir = null,
-        IEnumerable<string>? platformModules = null)
+        IEnumerable<string>? platformModules = null, IReadOnlyDictionary<string, string>? returns = null)
     {
         var watch = Stopwatch.StartNew();
-        var builder = new StubBuilder(unityManagedEngineDir, platformModules, implAssembly, new HandWrittenSources(implSourceDir));
+        returns ??= StubDefaults.For(Path.GetFileName(Path.GetFullPath(outputDir).TrimEnd(Path.DirectorySeparatorChar)));
+        var builder = new StubBuilder(unityManagedEngineDir, platformModules, implAssembly, new HandWrittenSources(implSourceDir), returns);
         var files = builder.Build();
 
         Directory.CreateDirectory(outputDir);
@@ -112,10 +116,14 @@ sealed partial class StubBuilder
     public StubReport Report { get; } = new();
 
     readonly HandWrittenSources _sources;
+    /// <summary>Return expressions that replace the type's default, by member id.</summary>
+    readonly IReadOnlyDictionary<string, string> _returns;
 
-    public StubBuilder(string unityManagedEngineDir, IEnumerable<string>? platformModules, string implAssembly, HandWrittenSources sources)
+    public StubBuilder(string unityManagedEngineDir, IEnumerable<string>? platformModules, string implAssembly, HandWrittenSources sources,
+        IReadOnlyDictionary<string, string>? returns = null)
     {
         _sources = sources;
+        _returns = returns ?? new Dictionary<string, string>();
         var moduleFiles = UnityModules.Files(unityManagedEngineDir, platformModules)
             .OrderBy(f => Path.GetFileNameWithoutExtension(f) is "UnityEngine" or "UnityEditor" ? 1 : 0)
             .ThenBy(f => Path.GetFileName(f), StringComparer.Ordinal)
@@ -251,6 +259,13 @@ sealed partial class StubBuilder
             files.Add((moduleReport.File, Header($"the API of {module}") + body));
         }
         files.Add(("Unbound.Assembly.g.cs", Header("assembly-level attributes of the modules") + AssemblyAttributes()));
+        // An entry no stub returns (the member is hand-written now, or renamed) is stale.
+        foreach (var (id, value) in _returns.OrderBy(r => r.Key, StringComparer.Ordinal))
+        {
+            var emitted = $"{NotImplemented}({Quote(id)}); return {value};";
+            if (!files.Any(f => f.Item2.Contains(emitted, StringComparison.Ordinal)))
+                Report.Conflicts.Add($"stub default {id}: no generated stub returns it (implemented by hand or renamed: remove it from StubDefaults)");
+        }
         return files;
     }
 
