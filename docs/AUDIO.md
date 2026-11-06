@@ -524,7 +524,9 @@ Flange, Normalize and Pitch Shifter remain separate work.
 existing fixed array. The probe is tests/projects/audiochorus, Unity 6000.0.71f1 Linux Editor,
 48000 and 44100 Hz, stereo output with 1024-frame DSP buffers. Two independent Native captures
 per rate agree bit for bit across 49,022,046 values. One canonical reference per rate is committed,
-with the Editor-authored inputs needed by the engine-only gate.
+with the Editor-authored inputs needed by the engine-only gate. The engine passes all
+49,022,046 strict values at each rate with zero failures, no phase exclusions and no added
+residual bounds; it does not need the separate one-step PCM allowance.
 
 The [Chorus Effect Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioChorusEffect.html),
 [Chorus Filter Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioChorusFilter.html)
