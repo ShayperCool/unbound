@@ -44,9 +44,15 @@ namespace Unbound.Runtime
 
         internal static void Register(int classId, Type type) => s_ByClassId[classId] = type;
 
-        internal static Type ForClassId(int classId, string typeName)
+        /// <summary>The class ids that have an engine class.</summary>
+        internal static IEnumerable<int> RegisteredIds => s_ByClassId.Keys;
+
+        /// <param name="warn">Warn once per class when it has no engine class (the loader warns
+        /// through <see cref="ClassCoverage.Note"/> instead, naming the file).</param>
+        internal static Type ForClassId(int classId, string typeName, bool warn = true)
         {
             if (s_ByClassId.TryGetValue(classId, out var type)) return type;
+            if (!warn) return null;
             lock (s_Warned)
             {
                 if (s_Warned.Add(classId))
@@ -128,6 +134,7 @@ namespace Unbound.Runtime
                 foreach (var doc in documents)
                 {
                     if (doc.Stripped || doc.ClassId == EngineTypes.GameObjectId) continue;
+                    ClassCoverage.Note(doc, path);
                     if (doc.ClassId == EngineTypes.PrefabInstanceId) continue;
                     if (doc.ClassId == 1660057539) { sceneRoots = doc; continue; } // SceneRoots
                     if (SceneSettings.IsSettingsClass(doc.ClassId)) continue;
@@ -284,7 +291,7 @@ namespace Unbound.Runtime
                 }
                 return typeof(Component).IsAssignableFrom(type) ? type : null;
             }
-            var engine = EngineTypes.ForClassId(doc.ClassId, doc.TypeName);
+            var engine = EngineTypes.ForClassId(doc.ClassId, doc.TypeName, warn: false);
             return engine != null && typeof(Component).IsAssignableFrom(engine) ? engine : null;
         }
 
@@ -308,7 +315,7 @@ namespace Unbound.Runtime
                 if (so != null) so.m_Name = doc.Body.Str("m_Name");
                 return so;
             }
-            var engine = EngineTypes.ForClassId(doc.ClassId, doc.TypeName);
+            var engine = EngineTypes.ForClassId(doc.ClassId, doc.TypeName, warn: false);
             if (engine == null || typeof(Component).IsAssignableFrom(engine)) return null;
             var asset = (Object)Activator.CreateInstance(engine, nonPublic: true);
             asset.m_Name = doc.Body.Str("m_Name");
@@ -336,9 +343,8 @@ namespace Unbound.Runtime
                 serialized.ReadSerialized(doc.Body, file);
                 Trace.NoteUnread(asset.GetType().Name, doc.Body);
             }
-            else
-                // A class Unbound knows but cannot read: it would load with default settings.
-                Stubs.Ignored(asset.GetType().FullName + " assets", "are not read yet: they load with default settings");
+            // Otherwise a class Unbound knows but cannot read: it loads with default settings
+            // (ClassCoverage.Note warned).
         }
 
         static void BuildHierarchy(LoadedFile file, List<(Component Component, YDocument Doc)> components,
@@ -767,7 +773,7 @@ namespace Unbound.Runtime
                 Debug.LogWarning($"Unbound: reading mesh '{mesh.m_Name}' again: {e.Message}");
                 return false;
             }
-            if (document == null || !typeof(Mesh).IsAssignableFrom(EngineTypes.ForClassId(document.ClassId, document.TypeName))) return false;
+            if (document == null || !typeof(Mesh).IsAssignableFrom(EngineTypes.ForClassId(document.ClassId, document.TypeName, warn: false))) return false;
             var saved = new Mesh { m_Name = document.Body.Str("m_Name") };
             try
             {
