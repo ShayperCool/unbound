@@ -1700,10 +1700,29 @@ impl<'a> Builder<'a> {
                     corners.iter().map(|&c| mesh.vertex_indices[c]).collect(),
                     corners,
                 ));
-                let count = mesh.triangulate_face(&mut triangle, face) as usize;
+                // Mirroring X flips the handedness: the polygon's corners are reversed (the
+                // first stays first). Triangles and quads are then split as Unity does, quads
+                // into (0, 1, 2) and (0, 2, 3) of the reversed corners; larger polygons are
+                // triangulated by ufbx (measured: tests/projects/lightmapuvs).
+                let count = if face.num_indices == 3 || face.num_indices == 4 {
+                    let b = face.index_begin;
+                    let reversed: Vec<u32> = std::iter::once(b)
+                        .chain((1..face.num_indices).rev().map(|i| b + i))
+                        .collect();
+                    triangle[..3].copy_from_slice(&reversed[..3]);
+                    if face.num_indices == 4 {
+                        triangle[3..6].copy_from_slice(&[reversed[0], reversed[2], reversed[3]]);
+                    }
+                    face.num_indices as usize - 2
+                } else {
+                    let count = mesh.triangulate_face(&mut triangle, face) as usize;
+                    for t in triangle[..3 * count].chunks_mut(3) {
+                        t.swap(1, 2);
+                    }
+                    count
+                };
                 for t in 0..count {
-                    // Mirroring X flips the handedness: reverse the winding.
-                    for corner in [triangle[3 * t], triangle[3 * t + 2], triangle[3 * t + 1]] {
+                    for corner in [triangle[3 * t], triangle[3 * t + 1], triangle[3 * t + 2]] {
                         let c = corner as usize;
                         let p = mesh.vertex_position[c];
                         let mut vertex = Vertex {
