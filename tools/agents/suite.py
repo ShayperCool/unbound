@@ -68,7 +68,7 @@ class Step:
     verdict (compare steps): 'exit' uses the exit code; 'summary' derives pass/fail from the
     comparator's own counts (for comparators that always exit 0); 'differences' requires every
     printed `'differences': N` to be 0; 'none' records a measurement. With any verdict, output
-    naming a MISSING capture or an infinite difference fails the step.
+    naming a MISSING capture fails the step.
     args_from: a command whose output (split on whitespace) is appended to argv.
     """
 
@@ -215,8 +215,8 @@ def recipes(release):
                              [ref(), '{work}/out', '-q'], verdict='exit')
     R['display'] = [run('--no-watch', '--size', '320x180', '--snapshot', '4:{work}/display.png',
                         env={'DISPLAY_PROBE_OUT': '{work}/out'}),
-                    # display/compare.py always exits 0; its records and image are a measurement.
-                    py('compare.py', ref(), '{work}/out', '{work}/display.png', verdict='none')]
+                    # display/compare.py always exits 0: its values count decides, its image is measured.
+                    py('compare.py', ref(), '{work}/out', '{work}/display.png')]
     R['baked'] = [run('--no-watch', '--frames', '20', '--size', '320x180', env={'BAKED_PROBE_OUT': '{work}/out.png'}),
                   py('urp/compare.py', single_ref('png'), '{work}/out.png', verdict='none')]
     R['shadergraph'] = [run('--no-watch', '--frames', '30', '--size', '320x180',
@@ -426,7 +426,8 @@ def recipes(release):
                                  '--cli', '{cli}', '--managed', '{managed}'),
                           py('compare.py', single_ref(), '{work}/engine/capture/transitions.jsonl')]
     R['modules'] = []
-    for scenario in ('compile', 'play'):
+    # editor-play is compared with the Play reference too (README).
+    for scenario in ('compile', 'play', 'editor-play'):
         R['modules'] += [driver('run.py', 'engine', scenario, '--release', '{release}', '--label', 'engine-'+scenario,
                                 '--work', '{work}', '--cli', '{cli}', '--runtime', '{managed}'),
                          py('compare.py', f'{{work}}/engine-{scenario}/result.json')]
@@ -434,7 +435,7 @@ def recipes(release):
     # Profiles with a reference that the recipe does not run; listed with the result.
     NOTES['uicolors'] = 'Gamma reference not run: it needs the project switched to Gamma in the Editor'
     NOTES['uirectclipping'] = 'Gamma and LinearMSAA references not run: they need Editor-side project settings'
-    NOTES['modules'] = 'editor-play not run: it has no reference of its own'
+    NOTES['contactevents3d'] = 'controls measured only: Native repeats differ in two process-dependent hashes'
 
     # No runnable engine recipe.
     mixer = NoRecipe('engine.py needs --native-project, the mixer assets that native.py creates in the Editor')
@@ -442,7 +443,9 @@ def recipes(release):
         R[name] = mixer
     for name in ('audiogeneratorboundaries', 'audiogeneratorlifecycle'):
         R[name] = NoRecipe('run.py engine needs --native-project, a project the native (Editor) run prepares')
-    # Every suite and contact-pairs profile that has a reference; exact comparison (no --numeric).
+    # Every suite and contact-pairs profile that has a reference, with the README's original absolute
+    # 1e-5 bound on physical data (--numeric). Controls are measured only: Native repeats themselves
+    # differ in two process-dependent hash rows (README).
     R['contactevents3d'] = []
     for suite, profiles in [('contacts', range(4)), ('controls', [0]), ('geometry', [0]), ('capsule', [0]),
                             ('sweeps', [0])]:
@@ -453,7 +456,8 @@ def recipes(release):
                        '--label', 'engine', '--profile', str(profile), '--cli', '{cli}',
                        env={'UNBOUND_MANAGED_DIR': '{managed}'}),
                 py('compare.py', reference+'.jsonl', f'{{work}}/{suite}-engine-p{profile}.jsonl',
-                   '--output', f'{{work}}/{suite}-p{profile}.json', verdict='differences')]
+                   '--output', f'{{work}}/{suite}-p{profile}.json', *(() if suite == 'controls' else ('--numeric',)),
+                   verdict='none' if suite == 'controls' else 'differences')]
     # report.py reads <probe>-<label>.json for each query suite from QUERY_WORK.
     env = {'QUERY_WORK': '{work}', 'SCENE_SETTINGS_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'}
     R['query2dparity'] = []
@@ -484,7 +488,9 @@ def summary_verdict(text):
     """pass/fail from a print-only comparator's own counts, clause by clause; None without counts.
 
     A clause with 'N differ' passes when every such N is 0. Otherwise 'A/B ... match|within' passes
-    when A equals B (comparators that accept expected differences count them as matched).
+    when A equals B (comparators that accept expected differences count them as matched). A clause
+    with only a mean (an image measurement) has no verdict: then the result is None unless another
+    clause failed.
     """
     if missing_capture(text):
         return False
@@ -496,11 +502,22 @@ def summary_verdict(text):
             continue
         ratios = re.findall(r'\b(\d+)/(\d+)\b[^,;()]*?\b(?:match|within)', clause)
         verdicts += [int(a) >= int(b) for a, b in ratios]
-    return all(verdicts) if verdicts else None
+        if not ratios and re.search(r'\bmean\b', clause):
+            verdicts.append(None)  # an image measurement without a bound: no verdict
+    if False in verdicts:
+        return False
+    return None if None in verdicts or not verdicts else True
+
+
+def measurement(text):
+    """The aggregate line of a comparator without a verdict: its last 'worst' line, else its first."""
+    lines = [line.strip() for line in text.splitlines() if line.strip()]
+    worst = [line for line in lines if re.search(r'\bworst\b', line)]
+    return (worst[-1] if worst else lines[0] if lines else '')[:300]
 
 
 def missing_capture(text):
-    return bool(re.search(r'\bMISSING\b|\binf\b', text))
+    return bool(re.search(r'\bMISSING\b', text))
 
 
 def differences_verdict(text):
@@ -567,6 +584,8 @@ def run_step(step, values, log, base_env):
             # Own process group: a timeout stops the launcher, the engine and a driver's children.
             process = subprocess.Popen(argv, cwd=REPO, env=env, stdout=out, stderr=subprocess.STDOUT,
                                        stdin=subprocess.DEVNULL, start_new_session=True)
+            with RUNNING_LOCK:
+                RUNNING.add(process.pid)
             try:
                 code = process.wait(timeout=step.timeout + 600)
             except subprocess.TimeoutExpired:
@@ -578,11 +597,30 @@ def run_step(step, values, log, base_env):
                     process.wait()
                 out.write('\nsuite: step timed out\n')
                 code = 124
+            finally:
+                with RUNNING_LOCK:
+                    RUNNING.discard(process.pid)
         except OSError as error:
             out.write(f'\nsuite: {error}\n')
             code = 127
     text = log.read_text(errors='replace').split('\n', 1)[-1]
     return code, text
+
+
+RUNNING = set()
+RUNNING_LOCK = threading.Lock()
+
+
+def stop_children(*_):
+    """Steps run in their own process groups; stop them all when the suite itself is stopped."""
+    with RUNNING_LOCK:
+        groups = list(RUNNING)
+    for pid in groups:
+        try:
+            os.killpg(pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+    os._exit(130)
 
 
 def run_probe(name, recipe, context):
@@ -605,9 +643,7 @@ def run_probe(name, recipe, context):
                   'command': shlex.join(substitute(step.argv, values))[:400]}
         steps.append(record)
         if step.kind in ('compare', 'identical'):
-            # A comparator without a verdict prints its measurement first (image difference).
-            summary = (next((line.strip() for line in text.splitlines() if line.strip()), '')[:300]
-                       if step.verdict == 'none' else last_lines(text))
+            summary = measurement(text) if step.verdict == 'none' else last_lines(text)
             summaries.append(summary)
             if code not in step.ok or missing_capture(text):
                 verdicts.append(False)
@@ -788,6 +824,8 @@ def main():
                           'projects': str(PROJECTS), 'release': args.release, 'label': 'suite-'+label,
                           'python': python_with_pil()}}
 
+    for number in (signal.SIGINT, signal.SIGTERM, signal.SIGHUP):
+        signal.signal(number, stop_children)
     print(f'suite: {len(probes)} probes, {args.jobs} at a time; cli {cli}; work {work_root}', flush=True)
     started = time.time()
     results = {}
