@@ -1,6 +1,7 @@
 //! Persistent DSP on summed mixer groups. Native captures establish a fourth-order Butterworth
 //! response for Lowpass and a second-order response for Highpass. The independently measured
 //! startup kernels also constrain parameter-dependent delay-history normalization.
+use super::compressor::{Compressor, CompressorSpec};
 use super::duck::{Duck, DuckSpec};
 use super::reverb::{SfxReverb, SfxReverbSpec};
 use serde::Deserialize;
@@ -48,6 +49,21 @@ pub struct EffectSpec {
     /// A Send's linear level (the mixer's gain approximation of its dB setting).
     #[serde(default)]
     pub send_level: f32,
+    /// Compressor parameters; required for that kind unless bypassed.
+    #[serde(default)]
+    pub compressor: Option<CompressorSpec>,
+    /// ParamEQ parameters; required for that kind unless bypassed.
+    #[serde(default)]
+    pub eq: Option<ParamEqSpec>,
+}
+
+/// ParamEQ parameters as the mixer stores them: Hz, octaves and a linear gain.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ParamEqSpec {
+    pub center: f32,
+    pub octaves: f32,
+    pub gain: f32,
 }
 impl EffectSpec {
     pub(crate) fn validate(&self, rate: u32) -> anyhow::Result<()> {
@@ -67,6 +83,19 @@ impl EffectSpec {
             "AudioMixer Duck Volume '{}' has no parameters", self.id);
         if let Some(duck) = &self.duck {
             duck.validate(&self.id)?;
+        }
+        if let Some(compressor) = &self.compressor {
+            compressor.validate(&self.id)?;
+        }
+        if let Some(eq) = &self.eq {
+            // The Editor's ranges; outside them the response is unmeasured.
+            anyhow::ensure!(eq.center.is_finite() && eq.center > 0.0 && eq.octaves > 0.0
+                && eq.octaves.is_finite() && eq.gain > 0.0 && eq.gain.is_finite(),
+                "AudioMixer ParamEQ '{}' has unsupported parameters", self.id);
+        }
+        if matches!(self.kind.as_str(), "Lowpass Simple" | "Highpass Simple") {
+            anyhow::ensure!(self.cutoff.is_finite() && (10.0..=22000.0).contains(&self.cutoff),
+                "AudioMixer {} '{}' cutoff {} is outside the measured 10 to 22000 Hz", self.kind, self.id, self.cutoff);
         }
         anyhow::ensure!(self.send_level.is_finite() && self.send_level >= 0.0,
             "invalid AudioMixer send level {}", self.send_level);
@@ -194,6 +223,74 @@ impl Biquad {
     }
 }
 
+/// Lowpass Simple and Highpass Simple (tests/projects/mixercompressor): the low pass is two
+/// identical one-pole stages, the high pass the input minus one such stage. The coefficient is
+/// `w / (w + rate)` with `w = 2 pi cutoff` up to `rate / pi` (where it is 2/3), then rises
+/// linearly to 1 at the 22000 Hz maximum (pass-through, and silence for the high pass).
+#[derive(Default)]
+struct SimpleFilter {
+    z: [[f64; 2]; 2],
+}
+impl SimpleFilter {
+    fn coefficient(cutoff: f32, rate: u32) -> f64 {
+        let (cutoff, rate) = (cutoff as f64, rate as f64);
+        let knee = rate / std::f64::consts::PI;
+        if cutoff <= knee {
+            let w = 2.0 * std::f64::consts::PI * cutoff;
+            w / (w + rate)
+        } else {
+            (2.0 + (cutoff - knee) / (22000.0 - knee)).min(3.0) / 3.0
+        }
+    }
+    fn process(&mut self, samples: &mut [f32], high: bool, cutoff: f32, rate: u32) {
+        let a = Self::coefficient(cutoff, rate);
+        for stereo in samples.chunks_exact_mut(2) {
+            for (x, z) in stereo.iter_mut().zip(&mut self.z) {
+                let input = *x as f64;
+                z[0] += a * (input - z[0]);
+                *x = if high {
+                    input - z[0]
+                } else {
+                    z[1] += a * (z[0] - z[1]);
+                    z[1]
+                } as f32;
+            }
+        }
+    }
+}
+
+/// ParamEQ (tests/projects/mixercompressor): a peaking biquad with `A = gain` (so the center
+/// gain is `gain^2`), `alpha = sin(w0) * octaves / 2` and the center limited to
+/// `rate / 2 - 100` Hz. Native's single-precision arithmetic is not reproduced.
+#[derive(Default)]
+struct ParamEq {
+    b: [f64; 3],
+    a: [f64; 2],
+    h: [[f64; 4]; 2],
+}
+impl ParamEq {
+    fn tune(&mut self, spec: &ParamEqSpec, rate: u32) {
+        let center = (spec.center as f64).min(rate as f64 / 2.0 - 100.0);
+        let w0 = 2.0 * std::f64::consts::PI * center / rate as f64;
+        let alpha = w0.sin() * spec.octaves as f64 / 2.0;
+        let (gain, c) = (spec.gain as f64, w0.cos());
+        let a0 = 1.0 + alpha / gain;
+        self.b = [(1.0 + alpha * gain) / a0, -2.0 * c / a0, (1.0 - alpha * gain) / a0];
+        self.a = [-2.0 * c / a0, (1.0 - alpha / gain) / a0];
+    }
+    fn process(&mut self, samples: &mut [f32]) {
+        let (b, a) = (self.b, self.a);
+        for stereo in samples.chunks_exact_mut(2) {
+            for (x, h) in stereo.iter_mut().zip(&mut self.h) {
+                let input = *x as f64;
+                let y = b[0] * input + b[1] * h[0] + b[2] * h[1] - a[0] * h[2] - a[1] * h[3];
+                *h = [input, h[0], y, h[2]];
+                *x = y as f32;
+            }
+        }
+    }
+}
+
 /// Unity 6000.0.71f1 Echo kernels, independently captured at both output rates.
 #[derive(Default)]
 struct Echo {
@@ -248,6 +345,9 @@ pub struct Effect {
     echo: Echo,
     reverb: Option<Box<SfxReverb>>,
     duck: Duck,
+    compressor: Compressor,
+    simple: SimpleFilter,
+    eq: ParamEq,
     /// Frames since the effect started, for the slot's startup ramp.
     frames: u32,
     scratch: Vec<f32>,
@@ -265,6 +365,9 @@ impl Effect {
             echo: Default::default(),
             reverb: None,
             duck: Duck::default(),
+            compressor: Compressor::default(),
+            simple: SimpleFilter::default(),
+            eq: ParamEq::default(),
             frames: 0,
             scratch: Vec::new(),
             cutoff: 5000.0,
@@ -301,6 +404,9 @@ impl Effect {
             reverb.clear();
         }
         self.duck = Duck::default();
+        self.compressor = Compressor::default();
+        self.simple = SimpleFilter::default();
+        self.eq.h = Default::default();
         self.frames = 0;
         self.cutoff = 5000.0;
         self.resonance = 1.0;
@@ -311,6 +417,11 @@ impl Effect {
         match self.spec.kind.as_str() {
             "Lowpass" => self.lowpass.tune(self.cutoff, self.resonance, self.rate),
             "Highpass" => self.stages[0].tune(true, self.cutoff, self.resonance, self.rate),
+            "ParamEQ" => {
+                if let Some(eq) = &self.spec.eq {
+                    self.eq.tune(eq, self.rate);
+                }
+            }
             _ => {}
         }
     }
@@ -365,6 +476,20 @@ impl Effect {
         } else if self.spec.kind == "Echo" {
             if !bypass && !self.spec.bypass {
                 self.echo.process(samples, &self.spec);
+            }
+        } else if matches!(self.spec.kind.as_str(), "Compressor" | "ParamEQ" | "Lowpass Simple" | "Highpass Simple") {
+            // A bypassed unit keeps its state; resuming after bypass is unmeasured.
+            if bypass || self.spec.bypass {
+                return;
+            }
+            match self.spec.kind.as_str() {
+                "Compressor" => {
+                    if let Some(spec) = &self.spec.compressor {
+                        self.compressor.process(samples, spec, self.rate);
+                    }
+                }
+                "ParamEQ" => self.eq.process(samples),
+                kind => self.simple.process(samples, kind == "Highpass Simple", self.spec.cutoff, self.rate),
             }
         } else if let Some(reverb) = &mut self.reverb {
             if !bypass && !self.spec.bypass {
@@ -445,5 +570,44 @@ impl GroupNode {
             .collect::<anyhow::Result<_>>()?;
         self.spec = spec;
         Ok(())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn simple_filter_coefficients_follow_the_measured_two_segment_curve() {
+        // Native impulse responses (tests/projects/mixercompressor): first sample a^2.
+        for (cutoff, rate, expected) in [(5000.0, 48000, 0.3955872), (14000.0, 44100, 0.6660725),
+            (17000.0, 48000, 0.7520257), (21999.0, 44100, 0.9999582)]
+        {
+            assert!((SimpleFilter::coefficient(cutoff, rate) - expected).abs() < 2e-7, "{cutoff} {rate}");
+        }
+        assert_eq!(SimpleFilter::coefficient(22000.0, 48000), 1.0);
+        let mut high = SimpleFilter::default();
+        let mut x = [0.5_f32, -0.5, 0.0, 0.0];
+        high.process(&mut x, true, 22000.0, 44100);
+        assert_eq!(x, [0.0; 4]);
+    }
+
+    #[test]
+    fn param_eq_boosts_its_center_by_the_squared_gain_and_passes_dc() {
+        let mut eq = ParamEq::default();
+        eq.tune(&ParamEqSpec { center: 1000.0, octaves: 1.0, gain: 3.0 }, 48000);
+        // Native's first impulse sample for this setting (eq_boost).
+        assert!((eq.b[0] - 1.1703296).abs() < 1e-6);
+        let dc: f64 = eq.b.iter().sum::<f64>() / (1.0 + eq.a[0] + eq.a[1]);
+        assert!((dc - 1.0).abs() < 1e-12);
+        // |H(e^jw0)| = gain^2 at the center.
+        let w = 2.0 * std::f64::consts::PI * 1000.0 / 48000.0;
+        let response = |c: [f64; 3]| {
+            let re: f64 = (0..3).map(|i| c[i] * (i as f64 * w).cos()).sum();
+            let im: f64 = (0..3).map(|i| -c[i] * (i as f64 * w).sin()).sum();
+            re.hypot(im)
+        };
+        let gain = response(eq.b) / response([1.0, eq.a[0], eq.a[1]]);
+        assert!((gain - 9.0).abs() < 1e-9);
     }
 }

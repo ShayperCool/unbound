@@ -191,6 +191,8 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         duck: None,
         send_target: None,
         send_level: 0.0,
+        compressor: None,
+        eq: None,
     }
 }
 
@@ -789,11 +791,21 @@ impl Mixer {
             anyhow::ensure!(
                 matches!(effect.kind.as_str(),
                     "Attenuation" | "Lowpass" | "Highpass" | "Echo" | "SFX Reverb"
-                        | "Send" | "Receive" | "Duck Volume")
+                        | "Send" | "Receive" | "Duck Volume" | "Compressor" | "ParamEQ"
+                        | "Lowpass Simple" | "Highpass Simple")
                     || effect.bypass
                     || spec.bypass,
                 "unsupported AudioMixer effect '{}'",
                 effect.kind
+            );
+            let active = !effect.bypass && !spec.bypass;
+            anyhow::ensure!(
+                !active
+                    || (effect.kind != "Compressor" || effect.compressor.is_some())
+                        && (effect.kind != "ParamEQ" || effect.eq.is_some()),
+                "AudioMixer {} '{}' has no parameters",
+                effect.kind,
+                effect.id
             );
         }
         let mut parent = spec.parent;
@@ -1449,10 +1461,12 @@ impl Mixer {
             let mixer_start = self.group_nodes.get(&root).map_or(self.group_nodes[&handle].rendered, |r| r.rendered);
             let muted = (config.buffer_size as usize).saturating_sub(mixer_start);
             let node = self.group_nodes.get_mut(&handle).unwrap();
-            // Echo, SFX Reverb and Duck Volume retain the measured group input fade even when
-            // bypassed. Send and Receive have none (tests/projects/mixerduck).
+            // Echo, SFX Reverb, Duck Volume, Compressor, ParamEQ and the simple filters retain the
+            // measured group input fade even when bypassed. Send and Receive have none
+            // (tests/projects/mixerduck, tests/projects/mixercompressor).
             let active = node.effects.iter()
-                .any(|e| matches!(e.spec.kind.as_str(), "Echo" | "SFX Reverb" | "Duck Volume"))
+                .any(|e| matches!(e.spec.kind.as_str(), "Echo" | "SFX Reverb" | "Duck Volume"
+                    | "Compressor" | "ParamEQ" | "Lowpass Simple" | "Highpass Simple"))
                 || (!node.spec.bypass
                     && node.effects.iter().any(|e| {
                         !e.spec.bypass && matches!(e.spec.kind.as_str(), "Lowpass" | "Highpass")
