@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.Json;
@@ -83,8 +84,19 @@ public static unsafe class Entry
                 var stubs = JsonSerializer.Deserialize<StubsRequest>(body, Json)
                     ?? throw new ArgumentException("empty gen-stubs request");
                 return JsonSerializer.Serialize(StubGenerator.Generate(stubs.UnityManagedEngineDir, stubs.ImplAssembly, stubs.OutputDir, stubs.ImplSourceDir, stubs.PlatformModules), Json);
+            case "class-coverage":
+                var coverage = JsonSerializer.Deserialize<ClassCoverageRequest>(body, Json)
+                    ?? throw new ArgumentException("empty class-coverage request");
+                return JsonSerializer.Serialize(Unbound.Runtime.ClassCoverage.Report(coverage.Release, coverage.Classes), Json);
             default:
                 throw new ArgumentException($"unknown method `{method}`");
         }
     }
+}
+
+/// <summary>The classes `unbound doctor` found in a project's files, for the project's release.</summary>
+internal sealed class ClassCoverageRequest
+{
+    public string? Release { get; set; }
+    public List<Unbound.Runtime.ClassCoverage.Found> Classes { get; set; } = new();
 }

@@ -1,6 +1,7 @@
 //! `unbound`: run a Unity project from its sources.
 mod commands;
 mod declarations;
+mod doctor;
 
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
@@ -220,6 +221,18 @@ enum Command {
         #[arg(last = true)]
         unity_args: Vec<String>,
     },
+    /// List what in the project Unbound does not support: the Unity classes of objects in its
+    /// scenes, prefabs and assets that the engine does not read, with the files holding them.
+    Doctor {
+        #[command(flatten)]
+        project: ProjectArgs,
+        /// Also list every concrete runtime class of the release without a reader.
+        #[arg(long)]
+        all: bool,
+        /// Print the report as JSON.
+        #[arg(long)]
+        json: bool,
+    },
     /// List the Unity API the project's runtime assemblies use that Unbound does not implement.
     ApiGaps {
         #[command(flatten)]
@@ -349,6 +362,7 @@ fn main() -> anyhow::Result<()> {
         Command::Facades { project } => commands::facades(&project),
         Command::GenStubs { project } => commands::gen_stubs(&project),
         Command::ApiCheck { project } => commands::api_check(&project),
+        Command::Doctor { project, all, json } => doctor::doctor(&project, all, json),
         Command::ApiGaps { project, top, json } => commands::api_gaps(&project, top, json),
         Command::Test {
             project,
