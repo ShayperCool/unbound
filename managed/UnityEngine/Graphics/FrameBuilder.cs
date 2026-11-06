@@ -389,10 +389,16 @@ namespace Unbound.Runtime
                 srp = RenderPipelineManager.Render(cameras);
             }
             if (srp) s_CameraCount += cameras.Count;
-            else foreach (var camera in cameras) RenderCamera(camera, true);
+            else
+            {
+                PlanScreenStacks(cameras);
+                foreach (var camera in cameras) RenderCamera(camera, true);
+                s_StackNeeds.Clear();
+            }
 
             // Overlay canvases: a pixel-space camera over the whole screen, drawn last (unless the
             // pipeline draws them).
+            EndScreenStack();
             if (screen && (!srp || !SupportedRenderingFeatures.active.rendersUIOverlay || s_CameraCount == 0))
                 DrawOverlayCanvases(null);
             TraceFrame();
@@ -1015,6 +1021,7 @@ namespace Unbound.Runtime
                 // bound after the camera's setup).
                 var buffers = camera.targetTexture == null ? camera.TargetBufferHandles() : null;
                 var cameraTarget = camera.targetTexture ?? camera.BufferTarget;
+                bool screenCamera = cameraTarget == null && buffers == null;
                 // Measured in cameramsaa: an explicit target supplies its samples, including HDR
                 // float targets. Quality AA belongs to the screen or to the camera's HDR
                 // intermediate when converting into an LDR target. Buffer bindings bypass that
@@ -1058,7 +1065,41 @@ namespace Unbound.Runtime
                 // Resolve the selected camera samples before image effects. Their temporary
                 // texture must not replace an explicit target's sample policy with quality AA.
                 RenderTexture msaaTarget = null, resolveTarget = sceneTarget;
-                if (deferred)
+                // A screen camera keeps its intermediate for the full-screen cameras after it
+                // that keep the color (Depth only, Don't Clear): they render into it, with its
+                // depth and samples, HDR when either camera is (measured in the Editor:
+                // tests/projects/camerastack *.full.*). Any other drawing on the screen ends it.
+                bool onScreen = sceneTarget == null && buffers == null;
+                bool fullScreen = camera.rect == new Rect(0f, 0f, 1f, 1f);
+                bool keepsColor = camera.clearFlags is CameraClearFlags.Depth or CameraClearFlags.Nothing;
+                var stack = s_ScreenStack;
+                bool joins = onScreen && fullScreen && keepsColor && !deferred && stack != null;
+                // Where a Don't Clear camera's intermediate takes its depth: the camera's before it.
+                ulong depthSource = stack != null ? TextureHandles.Of(stack) : 0;
+                // A deferred camera takes its depth into the G-buffer's (below) before it ends it.
+                bool deferredSeed = deferred && onScreen && fullScreen && camera.clearFlags == CameraClearFlags.Nothing;
+                if (screenCamera && !joins && !deferredSeed) EndScreenStack();
+                // The stack's first camera takes what any camera of the stack asks for.
+                var needs = (Hdr: hdrIntermediate, Samples: cameraSamples);
+                if (onScreen && fullScreen && !joins && !deferred && s_StackNeeds.TryGetValue(camera, out var group))
+                    needs = (hdrIntermediate || group.Hdr, Math.Max(cameraSamples, group.Samples));
+                if (joins && (!hdrIntermediate || GraphicsFormatUtility.IsHDRFormat(stack.graphicsFormat)))
+                {
+                    msaaTarget = stack;
+                    sceneTarget = msaaTarget;
+                    viewport = new Rect(0, 0, stack.width, stack.height);
+                }
+                else if (joins)
+                {
+                    msaaTarget = RenderTexture.GetTemporary(stack.width, stack.height, 24, RenderTextureFormat.DefaultHDR,
+                        RenderTextureReadWrite.Linear, stack.antiAliasing);
+                    if (camera.clearFlags == CameraClearFlags.Nothing) GfxStream.CopyDepth(depthSource, TextureHandles.Of(msaaTarget));
+                    EndScreenStack();
+                    s_ScreenStack = msaaTarget;
+                    sceneTarget = msaaTarget;
+                    viewport = new Rect(0, 0, stack.width, stack.height);
+                }
+                else if (deferred)
                 {
                     // Deferred: the light buffer is the intermediate (no MSAA), copied to the
                     // target where the MSAA one is resolved.
@@ -1069,24 +1110,39 @@ namespace Unbound.Runtime
                     viewport = new Rect(0, 0, w, h);
                 }
                 else if (buffers == null
-                    && ((hdrIntermediate && (sceneTarget == null || !GraphicsFormatUtility.IsHDRFormat(sceneTarget.graphicsFormat)))
-                        || (cameraSamples > 1 && camera.rect == new Rect(0f, 0f, 1f, 1f)
-                            && (sceneTarget == null || sceneTarget.antiAliasing != cameraSamples))))
+                    && ((needs.Hdr && (sceneTarget == null || !GraphicsFormatUtility.IsHDRFormat(sceneTarget.graphicsFormat)))
+                        || (needs.Samples > 1 && (fullScreen || onScreen)
+                            && (sceneTarget == null || sceneTarget.antiAliasing != needs.Samples))))
                 {
                     // Native renders HDR at the camera's pixel size, even for a partial rect,
                     // then stretches the resolve across an explicit target. Buffer bindings
                     // bypass this path. The intermediate is needed at one sample too: LDR
                     // blending would clamp each HDR layer before it reaches the next layer.
-                    int w = hdrIntermediate ? Math.Max(1, camera.pixelWidth) : sceneTarget != null ? sceneTarget.width : Math.Max(1, Screen.width);
-                    int h = hdrIntermediate ? Math.Max(1, camera.pixelHeight) : sceneTarget != null ? sceneTarget.height : Math.Max(1, Screen.height);
+                    // A partial screen camera's samples too (its edges are antialiased in the Editor).
+                    bool pixelSize = needs.Hdr || (onScreen && !fullScreen);
+                    int w = pixelSize ? Math.Max(1, camera.pixelWidth) : sceneTarget != null ? sceneTarget.width : Math.Max(1, Screen.width);
+                    int h = pixelSize ? Math.Max(1, camera.pixelHeight) : sceneTarget != null ? sceneTarget.height : Math.Max(1, Screen.height);
                     // The HDR intermediate can also reduce explicit target samples to one when
                     // quality AA or allowMSAA is off. Resolve before LDR quantization, including
                     // alpha; quantizing each sample first loses a byte at partial coverage.
-                    var format = hdrIntermediate ? RenderTextureFormat.DefaultHDR : sceneTarget != null ? sceneTarget.format : RenderTextureFormat.Default;
-                    var readWrite = !hdrIntermediate && (sceneTarget == null || sceneTarget.sRGB) ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear;
-                    msaaTarget = temporaries.Own(RenderTexture.GetTemporary(w, h, 24, format, readWrite, cameraSamples));
+                    var format = needs.Hdr ? RenderTextureFormat.DefaultHDR : sceneTarget != null ? sceneTarget.format : RenderTextureFormat.Default;
+                    var readWrite = !needs.Hdr && (sceneTarget == null || sceneTarget.sRGB) ? RenderTextureReadWrite.sRGB : RenderTextureReadWrite.Linear;
+                    msaaTarget = RenderTexture.GetTemporary(w, h, 24, format, readWrite, needs.Samples);
+                    // A full-screen one is the screen's stack (above) until another camera draws.
+                    if (onScreen && fullScreen && effects.Count == 0 && opaqueEffects.Count == 0) s_ScreenStack = msaaTarget;
+                    else temporaries.Own(msaaTarget);
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
+                    // Don't Clear: a full-screen intermediate starts with the depth of the screen
+                    // or of the stack before it; a partial one's starts cleared (measured).
+                    if (camera.clearFlags == CameraClearFlags.Nothing && onScreen && fullScreen)
+                        GfxStream.CopyDepth(depthSource, TextureHandles.Of(msaaTarget));
+                    else if (camera.clearFlags == CameraClearFlags.Nothing && onScreen)
+                    {
+                        GfxStream.SetTarget(TextureHandles.Of(msaaTarget));
+                        GfxStream.Viewport(viewport);
+                        GfxStream.Clear((byte)(GfxStream.ClearDepth | GfxStream.ClearStencil), Color.black);
+                    }
                 }
                 // With no color clear, Native seeds the HDR intermediate from the existing
                 // explicit target before blending. A pooled temporary's old color is unrelated.
@@ -1095,8 +1151,7 @@ namespace Unbound.Runtime
                     Graphics.Blit(cameraTarget, sceneTarget);
                 // On the screen the intermediate starts as the screen under the camera's rect:
                 // Depth only and Don't Clear keep the color earlier cameras drew there.
-                else if (!deferred && msaaTarget != null && resolveTarget == null
-                    && camera.clearFlags is CameraClearFlags.Depth or CameraClearFlags.Nothing)
+                else if (!deferred && msaaTarget != null && msaaTarget != stack && resolveTarget == null && keepsColor)
                     SeedFromScreen(msaaTarget, camera.pixelRect);
                 int width = (int)viewport.width, height = (int)viewport.height;
                 // The camera's textures, as the camera asks and as directional shadows need
@@ -1138,6 +1193,15 @@ namespace Unbound.Runtime
                 if (deferred)
                 {
                     var gbufferDepth = Temporary(new RenderTextureDescriptor(width, height, GraphicsFormat.None, GraphicsFormat.D24_UNorm_S8_UInt));
+                    // Don't Clear on the screen: the G-buffer's depth as an intermediate's (above).
+                    if (deferredSeed) GfxStream.CopyDepth(depthSource, TextureHandles.Of(gbufferDepth));
+                    else if (onScreen && camera.clearFlags == CameraClearFlags.Nothing)
+                    {
+                        GfxStream.SetTarget(TextureHandles.Of(gbufferDepth));
+                        GfxStream.Viewport(viewport);
+                        GfxStream.Clear((byte)(GfxStream.ClearDepth | GfxStream.ClearStencil), Color.black);
+                    }
+                    if (deferredSeed) EndScreenStack();
                     forwardOpaque = RenderDeferredOpaque(camera, context, sceneTarget, gbufferDepth, viewport, transparent);
                 }
                 // The forward opaque objects (in deferred, those without a Deferred pass; their
@@ -1194,8 +1258,16 @@ namespace Unbound.Runtime
                         Immediate.BlitInto(msaaTarget, null, camera.pixelRect);
                     else
                         Graphics.Blit(msaaTarget, resolveTarget);
+                    if (resolveTarget == null && fullScreen)
+                    {
+                        // The full-screen resolve leaves the screen without depth: a later camera
+                        // that draws on the screen itself sees none (measured, the Editor).
+                        GfxStream.SetTarget(0);
+                        GfxStream.Viewport(new Rect(0, 0, Math.Max(1, Screen.width), Math.Max(1, Screen.height)));
+                        GfxStream.Clear((byte)(GfxStream.ClearDepth | GfxStream.ClearStencil), Color.black);
+                    }
                     if (wireframe) GfxStream.SetGlFlag(GfxStream.CameraWireframe, true);
-                    RenderTexture.ReleaseTemporary(msaaTarget);
+                    if (msaaTarget != s_ScreenStack) RenderTexture.ReleaseTemporary(msaaTarget);
                     sceneTarget = resolveTarget;
                     msaaTarget = null;
                 }
@@ -1422,6 +1494,56 @@ namespace Unbound.Runtime
             var y = new Vector3(Mathf.Abs(m.m01), Mathf.Abs(m.m11), Mathf.Abs(m.m21)) * e.y;
             var z = new Vector3(Mathf.Abs(m.m02), Mathf.Abs(m.m12), Mathf.Abs(m.m22)) * e.z;
             return new Bounds(center, 2f * (x + y + z));
+        }
+
+        /// <summary>The intermediate of the last full-screen camera on the screen this frame, kept
+        /// for the full-screen cameras after it that keep the color (see RenderCamera).</summary>
+        static RenderTexture s_ScreenStack;
+
+        /// <summary>What each full-screen camera that starts a stack this frame renders with: HDR
+        /// when any camera of its stack does, the most samples one asks for (measured: a camera
+        /// without MSAA is antialiased under a later one with it, tests/projects/camerastack
+        /// q4.aLn.*, q4.aHn.*).</summary>
+        static readonly Dictionary<Camera, (bool Hdr, int Samples)> s_StackNeeds = new Dictionary<Camera, (bool, int)>();
+
+        /// <summary>The screen's stacks: a full-screen camera, then the full-screen ones right after
+        /// it that keep the color.</summary>
+        static void PlanScreenStacks(List<Camera> cameras)
+        {
+            s_StackNeeds.Clear();
+            Camera first = null;
+            bool hdr = false;
+            int samples = 1;
+            foreach (var c in cameras)
+            {
+                bool member = StacksOnScreen(c);
+                if (first == null || !member || c.clearFlags is not (CameraClearFlags.Depth or CameraClearFlags.Nothing))
+                {
+                    if (first != null) s_StackNeeds[first] = (hdr, samples);
+                    first = member ? c : null;
+                    hdr = false;
+                    samples = 1;
+                }
+                if (first == null) continue;
+                hdr |= c.allowHDR;
+                samples = Math.Max(samples, c.allowMSAA ? Math.Max(1, QualitySettings.antiAliasing) : 1);
+            }
+            if (first != null) s_StackNeeds[first] = (hdr, samples);
+        }
+
+        /// <summary>Whether a camera renders on the whole screen with nothing between it and the
+        /// screen (RenderCamera's own intermediate aside): no target, image effects, deferred path
+        /// or command-buffer stand-in.</summary>
+        static bool StacksOnScreen(Camera c) =>
+            c.targetTexture == null && c.BufferTarget == null && c.rect == new Rect(0f, 0f, 1f, 1f)
+            && c.actualRenderingPath != RenderingPath.DeferredShading
+            && ImageEffects(c, false).Count == 0 && ImageEffects(c, true).Count == 0
+            && !(c.commandBufferCount > 0 && c.clearFlags is CameraClearFlags.Skybox or CameraClearFlags.SolidColor);
+
+        static void EndScreenStack()
+        {
+            if (s_ScreenStack != null) RenderTexture.ReleaseTemporary(s_ScreenStack);
+            s_ScreenStack = null;
         }
 
         /// <summary>The screen's pixels under <paramref name="pixelRect"/>, stretched over the
