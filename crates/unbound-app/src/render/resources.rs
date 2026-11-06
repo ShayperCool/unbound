@@ -396,6 +396,17 @@ impl GpuTexture {
     }
 }
 
+/// The usages of a view of `texture` in `format`: an sRGB view of a random-write texture (stored
+/// linear, written by kernels) cannot be a storage binding, which wgpu refuses for sRGB.
+pub fn view_usage(
+    texture: &wgpu::Texture,
+    format: Option<wgpu::TextureFormat>,
+) -> Option<wgpu::TextureUsages> {
+    format
+        .filter(|f| f.is_srgb())
+        .map(|_| texture.usage() - wgpu::TextureUsages::STORAGE_BINDING)
+}
+
 /// The RGB values of a packed 11/11/10 float texel (`Rg11b10Ufloat`).
 pub fn rg11b10_to_f32(texel: u32) -> [f32; 3] {
     // Unsigned floats: 5 exponent bits (bias 15) over 6 (red, green) or 5 (blue) mantissa bits.
@@ -975,6 +986,7 @@ pub fn upload_texture(
                 texture.create_view(&wgpu::TextureViewDescriptor {
                     format: Some(srgb_format),
                     dimension: view_dimension,
+                    usage: view_usage(&texture, Some(srgb_format)),
                     ..Default::default()
                 })
             });

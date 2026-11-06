@@ -1348,9 +1348,11 @@ impl UnityRenderer {
                     TextureDim::D3 if t.volume => Some(t.view_for(space).clone()),
                     TextureDim::D2Array if !t.cube && !t.volume && t.samples == 1 => {
                         let srgb = space == 1 && t.srgb_view.is_some();
+                        let format = srgb.then_some(wgpu::TextureFormat::Rgba8UnormSrgb);
                         Some(t.texture.create_view(&wgpu::TextureViewDescriptor {
-                            format: srgb.then_some(wgpu::TextureFormat::Rgba8UnormSrgb),
+                            format,
                             dimension: Some(wgpu::TextureViewDimension::D2Array),
+                            usage: resources::view_usage(&t.texture, format),
                             ..Default::default()
                         }))
                     }
@@ -1904,6 +1906,7 @@ impl UnityRenderer {
             let layer = slice as u32;
             let view = t.texture.create_view(&wgpu::TextureViewDescriptor {
                 format: Some(t.target_format(space)),
+                usage: resources::view_usage(&t.texture, Some(t.target_format(space))),
                 dimension: Some(wgpu::TextureViewDimension::D2),
                 base_mip_level: mip,
                 mip_level_count: Some(1),
