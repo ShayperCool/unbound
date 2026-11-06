@@ -405,17 +405,20 @@ namespace UnityEngine.Audio
                 bool reverb = effect.m_EffectName == AudioMixerEffectController.SfxReverb;
                 if (!bypass && !reverb && !routed && effect.m_EffectName != "Attenuation" && effect.m_EffectName != "Lowpass" && effect.m_EffectName != "Highpass" && effect.m_EffectName != "Echo")
                     throw new NotSupportedException("Unsupported AudioMixer effect '" + effect.m_EffectName + "' in group '" + Path + "'");
-                // Wet mixing is measured only on SFX Reverb (tests/projects/mixerreverb).
                 // A send's target registers its group, which may have no source of its own.
                 var target = effect.m_EffectName == "Send" ? effect.m_SendTarget : null;
                 var targetGroup = target == null ? null : m_Mixer?.m_Groups.Find(g => g.m_Effects.Contains(target));
                 if (targetGroup != null) _ = targetGroup.Handle;
+                // Wet mixing is measured only on SFX Reverb (tests/projects/mixerreverb).
                 if (!bypass && !reverb && effect.m_EnableWetMix)
                     throw new NotSupportedException("AudioMixer wet mixing is unsupported for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
                 float wetDb = effect.m_MixLevelGuid != null ? m_Mixer.Value(effect.m_MixLevelGuid) : 0f;
                 // The Editor's Wet ends at 0 dB; a louder level (e.g. via an exposed parameter) is unmeasured.
                 if (!bypass && reverb && effect.m_EnableWetMix && wetDb > 0f)
                     throw new NotSupportedException("AudioMixer wet level " + wetDb + " dB above 0 dB is unmeasured for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
+                // tests/projects/mixerduck measures Send levels up to 0 dB.
+                if (targetGroup != null && wetDb > 0f)
+                    throw new NotSupportedException("AudioMixer send level " + wetDb + " dB above 0 dB is unmeasured in group '" + Path + "'");
                 effects.Add(new {
                     id = effect.m_EffectId, kind = effect.m_EffectName, bypass = effect.m_Bypass,
                     gain = AudioMixer.DspGain(m_Mixer.Value(m_VolumeGuid)),
@@ -557,12 +560,19 @@ namespace Unbound.Runtime
         internal static readonly string[] DuckParameters = {
             "Threshold", "Ratio", "Attack Time", "Release Time", "Make-up Gain", "Knee", "Sidechain Mix" };
         internal static readonly float[] DuckDefaults = { -10f, 2f, 0.1f, 0.3f, 0f, 10f, 1f };
+        static readonly float[] DuckMinimums = { -80f, 0.2f, 0f, 0f, -80f, 0f, 0f };
+        static readonly float[] DuckMaximums = { 0f, 10f, 10f, 10f, 40f, 50f, 1f };
         internal AudioMixerEffectController m_SendTarget;
         internal object DuckConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {
             var v = new float[DuckParameters.Length];
             for (int i = 0; i < v.Length; i++)
+            {
                 v[i] = Parameter(DuckParameters[i]) is string guid ? mixer.Value(guid) : DuckDefaults[i];
+                // Values outside the Editor's ranges (reachable through exposed parameters) are unmeasured.
+                if (!(v[i] >= DuckMinimums[i] && v[i] <= DuckMaximums[i]))
+                    throw new NotSupportedException("AudioMixer Duck Volume " + DuckParameters[i] + " " + v[i] + " is outside the Editor's range " + DuckMinimums[i] + " to " + DuckMaximums[i]);
+            }
             return new {
                 threshold = v[0], ratio = v[1], attackTime = v[2], releaseTime = v[3],
                 makeupGain = v[4], knee = v[5], sidechainMix = v[6] };

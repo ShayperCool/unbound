@@ -1443,6 +1443,11 @@ impl Mixer {
                 // its previous block, while the device stream and listener receive silence.
                 continue;
             }
+            // Frames since the mixer started: its root renders last, so its count is still the
+            // block's start. Sidechains stay silent through the mixer's first DSP block, also for
+            // groups registered later (unmeasured for those).
+            let mixer_start = self.group_nodes.get(&root).map_or(self.group_nodes[&handle].rendered, |r| r.rendered);
+            let muted = (config.buffer_size as usize).saturating_sub(mixer_start);
             let node = self.group_nodes.get_mut(&handle).unwrap();
             // Echo, SFX Reverb and Duck Volume retain the measured group input fade even when
             // bypassed. Send and Receive have none (tests/projects/mixerduck).
@@ -1464,7 +1469,7 @@ impl Mixer {
             node.rendered += n;
             for effect in &mut node.effects {
                 let samples = &mut node.buffer[..n * 2];
-                if !effect.process_routed(samples, &mut self.sidechains, config.buffer_size as usize) {
+                if !effect.process_routed(samples, &mut self.sidechains, muted) {
                     effect.process(samples, node.spec.bypass);
                 }
             }
@@ -2598,6 +2603,21 @@ mod tests {
         assert_eq!(out[100 * 2], 0.0);
         assert_eq!(out[2000 * 2], 0.5);
         assert_eq!(out.iter().filter(|x| **x != 0.0).count(), 1);
+        // A sending group registered while the mixer runs reaches its target at once.
+        m.configure_group(group(6, 1, serde_json::json!([
+            { "id": "late", "kind": "Send", "sendTarget": "recv", "sendLevel": 0.25 },
+            { "id": "a6", "kind": "Attenuation", "gain": 0.0 }]))).unwrap();
+        let mut input = vec![0.0; 1024 * 2];
+        input[10 * 2] = 1.0;
+        m.add_clip(2, Clip::new(2, 48000, input));
+        source_with(&mut m, 8, 2, |p| p.group = 6);
+        play(&mut m, 8, command::PLAY, 0.0);
+        m.update_suspension();
+        let mut late = vec![0.0; 1024 * 2];
+        m.render(&mut late, 2);
+        assert_eq!(late.iter().filter(|x| **x != 0.0).count(), 1);
+        // 0.25 times the voice's 64-frame start fade at frame 10.
+        assert!(late.chunks_exact(2).any(|f| (0.03..0.05).contains(&f[0])));
         // A send into its own group, or one closing a loop, is refused and keeps the graph.
         assert!(m.configure_group(group(3, 1, serde_json::json!([{ "id": "recv", "kind": "Receive" },
             { "id": "loop", "kind": "Send", "sendTarget": "recv", "sendLevel": 1.0 }]))).is_err());

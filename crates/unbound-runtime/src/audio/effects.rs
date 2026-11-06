@@ -322,14 +322,14 @@ impl Effect {
     /// Units that exchange signal between groups, in chain order: a Send adds a copy at its
     /// level to its target's sidechain, a Receive mixes its sidechain in and a Duck Volume
     /// ducks by it. Native ignores bypass on them (the Editor disallows it), and nothing reaches
-    /// a sidechain during the mixer's first DSP block (`dsp_block` frames). False for any
-    /// other kind.
-    pub fn process_routed(&mut self, samples: &mut [f32], sidechains: &mut HashMap<String, Vec<f32>>, dsp_block: usize) -> bool {
+    /// a sidechain during the mixer's first DSP block: `muted` leading frames of this chunk still
+    /// belong to it. False for any other kind.
+    pub fn process_routed(&mut self, samples: &mut [f32], sidechains: &mut HashMap<String, Vec<f32>>, muted: usize) -> bool {
         match self.spec.kind.as_str() {
             "Send" => {
                 let target = self.spec.send_target.as_ref().and_then(|t| sidechains.get_mut(t));
                 if let Some(sidechain) = target {
-                    let skip = dsp_block.saturating_sub(self.frames as usize).min(samples.len() / 2);
+                    let skip = muted.min(samples.len() / 2);
                     for (s, x) in sidechain[skip * 2..samples.len()].iter_mut().zip(&samples[skip * 2..]) {
                         *s += x * self.spec.send_level;
                     }
