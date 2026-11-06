@@ -1,9 +1,9 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 
-/// <summary>`Unity -batchmode -projectPath tests/projects/particles -executeMethod ProbeRunner.Record`
-/// with <c>PARTICLES_PROBE_OUT</c> set: a new empty scene in Play mode, where
-/// <see cref="ParticlesProbe"/> records the simulations and exits the Editor.</summary>
+/// <summary>`Unity -batchmode -projectPath tests/projects/particlegravity -executeMethod ProbeRunner.Record`
+/// with <c>PARTICLE_GRAVITY_OUT</c> set (see run.py): the empty scene in Play mode, where
+/// <see cref="ParticleGravityProbe"/> records the simulations and exits the Editor.</summary>
 public static class ProbeRunner
 {
     public static void Create()
