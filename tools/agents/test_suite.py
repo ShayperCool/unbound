@@ -4,8 +4,10 @@ python3 -m unittest tools/agents/test_suite.py"""
 import contextlib
 import importlib.util
 import io
+import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -75,65 +77,108 @@ class WorseTests(unittest.TestCase):
         self.assertFalse(regressed)
 
 
-def imaged(text, status='report', command='/usr/bin/python3 /x/tests/projects/particles/compare_images.py a b'):
-    """A result as run_probe records it for an engine step and one image comparator step."""
-    images = {suite.image_key(2, command, name): values for name, values in suite.image_measures(text).items()}
-    return {'status': status, 'summary': suite.measurement(text), 'checks': {'passed': 0, 'failed': 0},
-            'failed_step': None, 'images': images,
-            'steps': [{'kind': 'engine', 'command': 'unbound run'}, {'kind': 'compare', 'command': command}]}
-
 
 class ImageTests(unittest.TestCase):
+    """Image measurements as run_probe records them, from stand-in comparator scripts."""
     PARTICLES = 'a: mean 0.20, worst 1, over 8: 0\nb: mean 1.46, worst 48, over 8: 49\nworst mean 1.46\n'
+    URP = 'mean max-channel difference {}, worst 3, pixels over 8: {} of 57600\n  center unity (1, 2, 3)\n'
+    DISPLAY = 'display: 6/6 values match; image mean {}, worst 0\n'
+
+    def setUp(self):
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.runs = 0
+
+    def tearDown(self):
+        self.temp.cleanup()
+
+    def probe(self, outputs, verdict='none'):
+        """run_probe on one compare step per (comparator, reference, printed text)."""
+        self.runs += 1
+        recipe = []
+        for index, (comparator, reference, text) in enumerate(outputs):
+            script = self.root/f'run{self.runs}-{index}'/comparator
+            script.parent.mkdir(parents=True, exist_ok=True)
+            script.write_text(f'print({text!r}, end="")\n')
+            recipe.append(suite.Step('compare', ['{python}', str(script), str(self.root/reference), '{work}/out'],
+                                     verdict=verdict))
+        context = {'work_root': self.root/f'work{self.runs}', 'env': dict(os.environ),
+                   'values': {'python': sys.executable, 'label': 'test'}}
+        result = suite.run_probe('p', recipe, context)
+        self.assertNotIn('suite error', result['summary'])
+        return result
+
+    def urp(self, *scenarios):
+        return self.probe([('urp/compare.py', f'scenarios/{name}.png', self.URP.format(mean, over))
+                           for name, mean, over in scenarios])
+
+    def display(self, text):
+        return self.probe([('display/compare.py', 'display/Reference', text)], verdict='exit')
 
     def test_measures_of_each_comparator(self):
         self.assertEqual(suite.image_measures(self.PARTICLES)['b'], {'mean': 1.46, 'worst': 48, 'over': 49})
         self.assertEqual(suite.image_measures(self.PARTICLES)['worst mean']['mean'], 1.46)
-        urp = 'mean max-channel difference 0.06, worst 19, pixels over 8: 101 of 57600\n  center unity (1, 2, 3)'
-        self.assertEqual(suite.image_measures(urp), {'': {'mean': 0.06, 'worst': 19, 'over': 101}})
-        display = 'display: 6/6 values match; image mean 175.31, worst 255'
-        self.assertEqual(suite.image_measures(display), {'': {'mean': 175.31, 'worst': 255, 'over': None}})
+        self.assertEqual(suite.image_measures(self.URP.format('0.06', 101)), {'': {'mean': 0.06, 'worst': 3, 'over': 101}})
+        self.assertEqual(suite.image_measures(self.DISPLAY.format('175.31')),
+                         {'': {'mean': 175.31, 'worst': 0, 'over': None}})
         self.assertEqual(suite.image_measures('5/5 records match'), {})
 
+    def test_every_step_of_a_recipe_is_measured(self):
+        result = self.urp(('lit', '0.00', 0), ('unlit', '0.01', 2))
+        self.assertEqual(result['status'], 'report')
+        self.assertEqual(sorted(result['images']), ['urp/compare.py scenarios/lit.png',
+                                                    'urp/compare.py scenarios/unlit.png'])
+
     def test_higher_mean_or_more_pixels_over_8_is_worse(self):
-        old = imaged(self.PARTICLES)
-        self.assertEqual(suite.images_worse(old, old), [])
-        mean = imaged(self.PARTICLES.replace('mean 0.20', 'mean 0.21'))
-        self.assertEqual(len(suite.images_worse(old, mean)), 1)
-        self.assertEqual(suite.images_worse(mean, old), [])
-        over = imaged(self.PARTICLES.replace('over 8: 49', 'over 8: 50'))
-        self.assertIn('pixels over 8 49 -> 50', suite.images_worse(old, over)[0])
+        old = self.urp(('lit', '0.00', 0), ('unlit', '0.01', 2))
+        self.assertEqual(suite.images_worse(old, self.urp(('lit', '0.00', 0), ('unlit', '0.01', 2))), [])
+        self.assertEqual(suite.images_worse(old, self.urp(('lit', '0.00', 0), ('unlit', '0.00', 2))), [])
+        self.assertEqual(suite.images_worse(old, self.urp(('lit', '0.01', 0), ('unlit', '0.01', 2))),
+                         ['urp/compare.py scenarios/lit.png: mean 0.00 -> 0.01'])
+        self.assertEqual(suite.images_worse(old, self.urp(('lit', '0.00', 0), ('unlit', '0.01', 3))),
+                         ['urp/compare.py scenarios/unlit.png: pixels over 8 2 -> 3'])
+
+    def test_steps_are_matched_by_reference_not_position(self):
+        old = self.urp(('lit', '0.00', 0), ('unlit', '0.50', 0))
+        added = self.urp(('extra', '0.40', 0), ('lit', '0.00', 0), ('unlit', '0.50', 0))
+        self.assertEqual(suite.images_worse(old, added), [])
 
     def test_passing_display_that_gets_worse_regresses(self):
-        command = '/usr/bin/python3 /x/tests/projects/display/compare.py ref out out.png'
-        good = imaged('display: 6/6 values match; image mean 0.00, worst 0', 'pass', command)
-        bad = imaged('display: 6/6 values match; image mean 175.31, worst 255', 'pass', command)
+        good, bad = self.display(self.DISPLAY.format('0.00')), self.display(self.DISPLAY.format('175.31'))
+        self.assertEqual((good['status'], bad['status']), ('pass', 'pass'))
         lines, regressed = suite.compare_runs({'probes': {'display': bad}}, {'probes': {'display': good}})
         self.assertTrue(regressed)
-        self.assertIn('display/compare.py: mean 0.00 -> 175.31', lines[-1])
+        self.assertIn('display/compare.py display/Reference: mean 0.00 -> 175.31', lines[-1])
         lines, regressed = suite.compare_runs({'probes': {'display': good}}, {'probes': {'display': bad}})
         self.assertFalse(regressed)
 
+    def test_a_measurement_the_step_no_longer_prints_is_worse(self):
+        good = self.display(self.DISPLAY.format('0.00'))
+        resized = self.display('display: 6/6 values match; screenshot 10x10, not 320x180\n')
+        self.assertEqual(resized['status'], 'pass')
+        self.assertIn('no longer measured', suite.images_worse(good, resized)[0])
+        # A step that did not run this time (an earlier failure, a removed profile) is not judged here.
+        self.assertEqual(suite.images_worse(good, dict(resized, steps=[])), [])
+
     def test_older_summaries_give_their_stored_measurements(self):
-        new = imaged(self.PARTICLES.replace('worst mean 1.46', 'worst mean 1.50'), 'fail')
-        old = dict(new, summary='terrain: 214/216 records match || worst mean 1.46',
-                   steps=[{'kind': 'engine', 'command': 'unbound run'},
-                          {'kind': 'compare', 'command': '/usr/bin/python3 /old/tests/projects/terrain/compare.py'},
-                          {'kind': 'compare', 'command': '/usr/bin/python3 /old/tests/projects/particles/compare_images.py'}])
+        old = self.probe([('terrain/compare.py', 'terrain/Reference', '214/216 records match\n'),
+                          ('particles/compare_images.py', 'Reference/images', self.PARTICLES)])
         del old['images']
-        new['steps'] = old['steps']
-        new['images'] = {suite.image_key(3, old['steps'][2]['command'], k): v
-                         for k, v in suite.image_measures(self.PARTICLES.replace('worst mean 1.46', 'worst mean 1.50')).items()}
-        self.assertEqual(suite.recorded_images(old),
-                         {'step 3 particles/compare_images.py worst mean': {'mean': 1.46, 'worst': None, 'over': None}})
+        self.assertEqual(old['summary'], '214/216 records match || worst mean 1.46')
+        self.assertEqual(suite.recorded_images(old), {'particles/compare_images.py Reference/images': {
+            'worst mean': {'mean': 1.46, 'worst': None, 'over': None}}})
+        new = self.probe([('terrain/compare.py', 'terrain/Reference', '214/216 records match\n'),
+                          ('particles/compare_images.py', 'Reference/images',
+                           self.PARTICLES.replace('worst mean 1.46', 'worst mean 1.50'))])
         self.assertEqual(suite.images_worse(old, new),
-                         ['step 3 particles/compare_images.py worst mean: mean 1.46 -> 1.50'])
+                         ['particles/compare_images.py Reference/images worst mean: mean 1.46 -> 1.50'])
+        self.assertEqual(suite.images_worse(old, old), [])
         # A summary cut at its 1000-character limit: its last part is not read.
         parts = ['a: 1/1 match'] + ['x' * 240] * 3 + ['y' * 234, 'worst mean 9.91']
-        cut = dict(old, summary=' || '.join(parts)[:1000], steps=[{'kind': 'compare', 'command': 'c.py'}] * 6)
+        steps = [{'kind': 'compare', 'command': f'python3 /x/c.py ref{i}'} for i in range(6)]
+        cut = {'summary': ' || '.join(parts)[:1000], 'steps': steps}
         self.assertTrue(cut['summary'].endswith('worst mean 9.9'))
         self.assertEqual(suite.recorded_images(cut), {})
-
 
 class StubGateTests(unittest.TestCase):
     """land.py's generated-stubs step, with a stand-in CLI whose gen-stubs is a shell script."""

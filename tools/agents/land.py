@@ -165,7 +165,7 @@ class Gate:
         the CLI was compiled from, so it runs only when that is this worktree; Generated/ is
         restored afterwards either way."""
         # The CLI finds managed/UnityEngine from its crate's compile-time CARGO_MANIFEST_DIR.
-        manifest = re.escape(str(self.worktree/'crates/unbound').encode()) + rb'(?![\w-])'
+        manifest = re.escape(str(self.worktree/'crates/unbound').encode()) + rb'(?!-)'  # not crates/unbound-host etc.
         with open(cli, 'rb') as binary, mmap.mmap(binary.fileno(), 0, access=mmap.ACCESS_READ) as image:
             if not re.search(manifest, image):
                 die(5, f'{cli} was not compiled from this worktree ({self.worktree}): its gen-stubs would '

@@ -29,10 +29,11 @@ status or summary changed. --update-baseline copies this run's summary to agents
 --promote LABEL does that for an earlier run without running anything.
 
 Image comparators print measurements, not verdicts. Each run records them (`images` in the
-summary: every printed image mean, worst channel difference and count of pixels over 8, by step,
-comparator and image); a probe with any status regresses when one of them gets worse against the
-baseline: a higher mean as printed (two decimals) or more pixels over the comparator's own bound
-of 8. There is no other tolerance. Summaries written before images were recorded give the
+summary: every printed image mean, worst channel difference and count of pixels over 8, by
+comparator step (its script and first argument) and image); a probe with any status regresses when
+one of them gets worse against the baseline: a higher mean as printed (two decimals), more pixels
+over the comparator's own bound of 8, or a measurement its step ran but no longer printed. There
+is no other tolerance. Summaries written before images were recorded give the
 measurements their stored summary still shows.
 
 Exit codes: 0 when no probe has a new failure against the baseline, no failing probe got worse
@@ -613,48 +614,67 @@ def image_measures(text):
     return found
 
 
-def comparator_name(command):
-    """'urp/compare.py' for a compare step's command: its script's probe directory and name."""
-    for token in command.split()[:3]:
+def step_id(command):
+    """A compare step's identity across runs and checkouts: its script and first argument, each as
+    their last two path parts ('urp/compare.py scenarios/lit.png')."""
+    tokens = command.split()
+    for index, token in enumerate(tokens[:3]):
         if token.endswith('.py'):
-            return '/'.join(Path(token).parts[-2:])
-    return command.split()[0] if command.split() else ''
+            argument = next((t for t in tokens[index+1:] if not t.startswith('-')), '')
+            return ' '.join(part for part in ('/'.join(Path(token).parts[-2:]),
+                                              '/'.join(Path(argument).parts[-2:]) if argument else '') if part)
+    return ' '.join('/'.join(Path(token).parts[-2:]) for token in tokens[:1])
 
 
-def image_key(index, command, name):
-    return f'step {index} {comparator_name(command)} {name}'.rstrip()
+def step_ids(steps):
+    """(step record, identity) of each compare step that ran, a repeated identity numbered."""
+    seen, out = {}, []
+    for step in steps or []:
+        if step.get('kind') in ('compare', 'identical'):
+            base = step_id(step.get('command', ''))
+            seen[base] = seen.get(base, 0) + 1
+            out.append((step, base if seen[base] == 1 else f'{base} #{seen[base]}'))
+    return out
+
+
+def collect_images(steps):
+    """{step identity: {image name: measures}} from the steps' recorded measurements."""
+    return {sid: step['images'] for step, sid in step_ids(steps) if step.get('images')}
 
 
 def recorded_images(result):
-    """A result's image measurements by key. Summaries written before they were recorded: read
-    from each compare step's part of the stored summary, leaving out parts the truncation cut."""
+    """A result's image measurements. Summaries written before they were recorded: read from each
+    compare step's part of the stored summary, leaving out parts the truncation may have cut."""
     if 'images' in result:
         return result['images']
     summary = result.get('summary') or ''
     parts = summary.split(' || ')
     if len(summary) >= 1000:
         parts = parts[:-1]
-    compares = [(index, step) for index, step in enumerate(result.get('steps') or [], 1)
-                if step.get('kind') in ('compare', 'identical')]
     images = {}
-    for (index, step), part in zip(compares, parts):
-        if len(part) < 300:
-            for name, values in image_measures(part).items():
-                images[image_key(index, step.get('command', ''), name)] = values
+    for (step, sid), part in zip(step_ids(result.get('steps')), parts):
+        measures = image_measures(part) if len(part) < 300 else {}
+        if measures:
+            images[sid] = measures
     return images
 
 
 def images_worse(old, new):
-    """What got worse in the image measurements that both results have: a higher printed mean or
-    more pixels over the comparator's own bound of 8. No tolerance: the numbers as printed."""
+    """What got worse in the baseline's image measurements, for each compare step that ran again:
+    a higher printed mean, more pixels over the comparator's own bound of 8, or a measurement the
+    step no longer prints. No tolerance: the numbers as printed."""
     before, after = recorded_images(old), recorded_images(new)
+    ran = {sid for _, sid in step_ids(new.get('steps'))}
     changes = []
-    for key in sorted(set(before) & set(after)):
-        a, b = before[key], after[key]
-        if b['mean'] > a['mean']:
-            changes.append(f'{key}: mean {a["mean"]:.2f} -> {b["mean"]:.2f}')
-        elif a.get('over') is not None and b.get('over') is not None and b['over'] > a['over']:
-            changes.append(f'{key}: pixels over 8 {a["over"]} -> {b["over"]}')
+    for sid in sorted(set(before) & ran):
+        for name, a in sorted(before[sid].items()):
+            b, label = after.get(sid, {}).get(name), f'{sid} {name}'.rstrip()
+            if b is None:
+                changes.append(f'{label}: no longer measured (mean was {a["mean"]:.2f})')
+            elif b['mean'] > a['mean']:
+                changes.append(f'{label}: mean {a["mean"]:.2f} -> {b["mean"]:.2f}')
+            elif a.get('over') is not None and b.get('over') is not None and b['over'] > a['over']:
+                changes.append(f'{label}: pixels over 8 {a["over"]} -> {b["over"]}')
     return changes
 
 
@@ -831,7 +851,7 @@ def run_probe(name, recipe, context):
     work.mkdir(parents=True)
     values = dict(context['values'], probe=str(PROJECTS/name), work=str(work),
                   runs=str(CACHE/'validation/runs'/name/context['values']['label']))
-    steps, summaries, verdicts, status, stopped, images = [], [], [], None, None, {}
+    steps, summaries, verdicts, status, stopped = [], [], [], None, None
     for index, step in enumerate(recipe, 1):
         log = work/f'step{index:02d}-{step.kind}.log'
         code, text = run_step(step, values, log, context['env'])
@@ -841,8 +861,9 @@ def run_probe(name, recipe, context):
         if step.kind in ('compare', 'identical'):
             summary = measurement(text) if step.verdict == 'none' else last_lines(text)
             summaries.append(summary)
-            for image, values in image_measures(text).items():
-                images[image_key(index, record['command'], image)] = values
+            measures = image_measures(text)
+            if measures:
+                record['images'] = measures
             if code not in step.ok or missing_capture(text):
                 verdicts.append(False)
             elif step.verdict == 'summary':
@@ -872,7 +893,7 @@ def run_probe(name, recipe, context):
                   seconds=round(time.time() - started, 1), summary=' || '.join(summaries)[:1000],
                   checks={'passed': sum(v is True for v in verdicts), 'failed': sum(v is False for v in verdicts),
                           'report': sum(v is None for v in verdicts), 'total': len(verdicts)},
-                  images=images, steps=steps)
+                  images=collect_images(steps), steps=steps)
     return result
 
 
