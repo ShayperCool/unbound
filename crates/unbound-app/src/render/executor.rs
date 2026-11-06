@@ -2105,6 +2105,13 @@ impl UnityRenderer {
                     destination_y,
                 } => {
                     open = false;
+                    if (source == 0 || destination == 0) && !self.screen_touched {
+                        // The frame's screen starts black at its first use, a copy too: the slot
+                        // still holds an older frame's image.
+                        let target = self.screen_target(self.color_space);
+                        let pass = self.new_pass(target);
+                        passes.push(Op::Pass(pass));
+                    }
                     if let Some(copy) = self.plan_copy(
                         source,
                         [source_slice, source_mip],
