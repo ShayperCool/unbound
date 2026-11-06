@@ -31,6 +31,7 @@ public static class ProbeRunner
                 }
                 var clips = importer.clipAnimations.Length > 0 ? importer.clipAnimations : importer.defaultClipAnimations;
                 foreach (var clip in clips) clip.loopTime = true;
+                if (name == "HumanA") clips = WithSettings(clips);
                 importer.clipAnimations = clips;
                 importer.animationCompression = ModelImporterAnimationCompression.Off;
                 importer.SaveAndReimport();
@@ -39,7 +40,7 @@ public static class ProbeRunner
                 Debug.Log("PROBE " + name + " avatar " + (avatar != null ? avatar.name + " valid " + avatar.isValid + " human " + avatar.isHuman : "none")
                     + " human bones " + importer.humanDescription.human.Length);
                 if (avatar == null || !avatar.isValid || !avatar.isHuman) code = 1;
-                var motion = assets.OfType<AnimationClip>().First(c => !c.name.StartsWith("__preview__"));
+                var motion = assets.OfType<AnimationClip>().First(c => c.name == "Scene");
                 if (AssetDatabase.LoadAssetAtPath<AnimatorController>(Dir + name + ".controller") == null)
                     AnimatorController.CreateAnimatorControllerAtPathWithClip(Dir + name + ".controller", motion);
                 if (name == "HumanA" && AssetDatabase.LoadAssetAtPath<AnimatorController>(Dir + "HumanAIK.controller") == null)
@@ -52,6 +53,7 @@ public static class ProbeRunner
                 }
             }
             Blends();
+            SettingsControllers();
             AssetDatabase.SaveAssets();
         }
         catch (System.Exception e)
@@ -62,8 +64,63 @@ public static class ProbeRunner
         EditorApplication.Exit(code);
     }
 
-    static AnimationClip ClipOf(string name) =>
-        AssetDatabase.LoadAllAssetsAtPath(Dir + name + ".fbx").OfType<AnimationClip>().First(c => !c.name.StartsWith("__preview__"));
+    static AnimationClip ClipOf(string name, string clip = "Scene") =>
+        AssetDatabase.LoadAllAssetsAtPath(Dir + name + ".fbx").OfType<AnimationClip>().First(c => c.name == clip);
+
+    /// <summary>HumanA's clip again with non-default root settings (the take's whole range, loop
+    /// time on unless named Once): bake into pose of the rotation, Y and XZ; based upon the original
+    /// (rotation, XZ), the center of mass and the feet (Y); offsets; loop pose; mirror; cycle
+    /// offset; and a few combinations.</summary>
+    internal static readonly (string name, System.Action<ModelImporterClipAnimation> set)[] Settings =
+    {
+        ("BakeRot", c => c.lockRootRotation = true),
+        ("BakeY", c => c.lockRootHeightY = true),
+        ("BakeXZ", c => c.lockRootPositionXZ = true),
+        ("OrigRot", c => c.keepOriginalOrientation = true),
+        ("OrigXZ", c => c.keepOriginalPositionXZ = true),
+        ("CoM", c => c.keepOriginalPositionY = false),
+        ("Feet", c => { c.keepOriginalPositionY = false; c.heightFromFeet = true; }),
+        ("Offset", c => { c.rotationOffset = 30f; c.heightOffset = 0.1f; }),
+        ("LoopPose", c => c.loopPose = true),
+        ("Mirror", c => c.mirror = true),
+        ("Cycle", c => c.cycleOffset = 0.25f),
+        ("BakeAll", c => { c.lockRootRotation = true; c.lockRootHeightY = true; c.lockRootPositionXZ = true; }),
+        ("BakeOrig", c => { c.lockRootRotation = true; c.keepOriginalOrientation = true; c.lockRootHeightY = true;
+            c.keepOriginalPositionY = false; c.heightFromFeet = true; c.keepOriginalPositionXZ = true; }),
+        ("BakeOffset", c => { c.lockRootRotation = true; c.rotationOffset = -20f; c.lockRootHeightY = true; c.heightOffset = -0.05f; }),
+        ("BakeLoopPose", c => { c.lockRootRotation = true; c.lockRootHeightY = true; c.loopPose = true; }),
+        ("OrigOnce", c => { c.loopTime = false; c.keepOriginalOrientation = true; c.keepOriginalPositionXZ = true; c.rotationOffset = 15f; }),
+        ("BakeOnce", c => { c.loopTime = false; c.lockRootRotation = true; c.lockRootPositionXZ = true; }),
+    };
+
+    static ModelImporterClipAnimation[] WithSettings(ModelImporterClipAnimation[] clips)
+    {
+        var list = clips.ToList();
+        var source = list.First(c => c.name == "Scene");
+        foreach (var (name, set) in Settings)
+        {
+            if (list.Any(c => c.name == name)) continue;
+            var clip = new ModelImporterClipAnimation
+            {
+                name = name, takeName = source.takeName, firstFrame = source.firstFrame, lastFrame = source.lastFrame,
+                loopTime = true, keepOriginalPositionY = true,
+            };
+            set(clip);
+            list.Add(clip);
+        }
+        return list.ToArray();
+    }
+
+    /// <summary>HumanSet{name}: one state playing HumanA's clip with the settings of that name.</summary>
+    static void SettingsControllers()
+    {
+        foreach (var (name, _) in Settings)
+        {
+            var path = Dir + "HumanSet" + name + ".controller";
+            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(path) != null) continue;
+            AnimatorController.CreateAnimatorControllerAtPathWithClip(path, ClipOf("HumanA", name));
+        }
+    }
 
     /// <summary>The blended root motion controllers, HumanA's clip (A) and HumanB's (B):
     /// HumanBlendTransition (A, then B after an exit time of 0.25 over 0.3 s), HumanBlendOverride

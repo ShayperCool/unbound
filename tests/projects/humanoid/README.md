@@ -38,6 +38,13 @@ imported without keyframe reduction.
   additive layer of weight 0.6 (`additiveTree`), recorded like the blends above.
 - the feet on override layers (0.5): `MaskUpperFootIK` (the upper body, Root and the foot IK parts,
   legs off) and `MaskNoFootIK` (every part but the foot IK ones).
+- HumanA's clip imported again with non-default root settings (`ProbeRunner.Settings`), each on
+  its own controller (`HumanSet<name>`), recorded like the blends without the transforms' locals:
+  bake into pose of the rotation, Y and XZ (`BakeRot`, `BakeY`, `BakeXZ`), based upon the original
+  (`OrigRot`, `OrigXZ`), the center of mass and the feet (`CoM`, `Feet`), offsets (`Offset`), loop
+  pose, mirror and cycle offset (`LoopPose`, `Mirror`, `Cycle`), combinations (`BakeAll`,
+  `BakeOrig`, `BakeOffset`, `BakeLoopPose`) and two clips without loop time (`OrigOnce`,
+  `BakeOnce`); the clips' properties are recorded with the others.
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:

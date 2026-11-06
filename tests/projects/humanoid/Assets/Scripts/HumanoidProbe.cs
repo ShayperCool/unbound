@@ -196,9 +196,9 @@ public class HumanoidProbe : MonoBehaviour
     }
 
     /// <summary>The Animator's body, root and human pose after a step.</summary>
-    static void Step(string key, Animator animator, HumanPoseHandler handler)
+    static void Step(string key, Animator animator, HumanPoseHandler handler, bool locals = true)
     {
-        Locals(key + ".locals", animator.transform);
+        if (locals) Locals(key + ".locals", animator.transform);
         var pose = new HumanPose();
         handler.GetHumanPose(ref pose);
         Pose(key + ".pose", pose);
@@ -210,7 +210,7 @@ public class HumanoidProbe : MonoBehaviour
 
     /// <summary>Plays a controller on a fresh instance of a rig: Update(0), then 24 steps of 1/30 s
     /// and four of 0.1 s.</summary>
-    static void Play(string key, string rig, string controller, Action<Animator> setup = null, bool motion = false)
+    static void Play(string key, string rig, string controller, Action<Animator> setup = null, bool motion = false, bool locals = true)
     {
         var instance = Instantiate(Resources.Load<GameObject>(rig));
         var animator = instance.GetComponent<Animator>();
@@ -221,7 +221,7 @@ public class HumanoidProbe : MonoBehaviour
         {
             s_IKKey = key + ".step" + step;
             animator.Update(step == 0 ? 0f : step <= 24 ? 1f / 30f : 0.1f);
-            Step(key + ".step" + step, animator, handler);
+            Step(key + ".step" + step, animator, handler, locals);
             if (motion) Motion(key + ".step" + step, animator);
         }
         s_IKKey = null;
@@ -292,6 +292,10 @@ public class HumanoidProbe : MonoBehaviour
                 Put("mask" + mask, "{\"parts\":[" + string.Join(",", parts) + "],\"transformCount\":" + asset.transformCount + "}");
                 Play("maskOverride" + mask, "HumanA", "HumanMaskOverride" + mask, motion: true);
             }
+            // HumanA's clip with non-default root settings (ProbeRunner.Settings).
+            foreach (var name in new[] { "BakeRot", "BakeY", "BakeXZ", "OrigRot", "OrigXZ", "CoM", "Feet", "Offset", "LoopPose",
+                         "Mirror", "Cycle", "BakeAll", "BakeOrig", "BakeOffset", "BakeLoopPose", "OrigOnce", "BakeOnce" })
+                Play("settings" + name, "HumanA", "HumanSet" + name, motion: true, locals: false);
         }
         catch (Exception e)
         {
