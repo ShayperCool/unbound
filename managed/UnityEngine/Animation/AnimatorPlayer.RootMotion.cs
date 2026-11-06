@@ -198,7 +198,7 @@ namespace Unbound.Runtime
             return false;
         }
 
-        void ProcessRootMotion()
+        internal void ProcessRootMotion()
         {
             if (!Attached) return;
             var animator = m_Animator;

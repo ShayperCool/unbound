@@ -383,6 +383,37 @@ namespace UnityEngine.Tests
             finally { graph.Destroy(); }
         }
 
+        public class PlayableMoveState : StateMachineBehaviour
+        {
+            public static int Calls;
+            public override void OnStateMove(Animator animator, AnimatorStateInfo state, int layer) => Calls++;
+        }
+
+        [Theory]
+        [InlineData(AnimatorCullingMode.AlwaysAnimate)]
+        [InlineData(AnimatorCullingMode.CullUpdateTransforms)]
+        public void PendingOutputsPreserveTheAttachedControllersStateMovementCallbacks(AnimatorCullingMode mode)
+        {
+            var file = Load(AnimationFixtures.PopupButton);
+            var prototype = ScriptableObject.CreateInstance<PlayableMoveState>();
+            m_Objects.Add(prototype);
+            foreach (var state in file.Objects.Values.OfType<ControllerStateAsset>()) state.Behaviours.Add(prototype);
+            var root = new GameObject("PlayableController");
+            m_Objects.Add(root);
+            new GameObject("ContinueText").transform.SetParent(root.transform, false);
+            var animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = (RuntimeAnimatorController)file.Objects[9100000];
+            animator.cullingMode = mode;
+            var graph = PlayableRig(animator, out _);
+            try
+            {
+                PlayableMoveState.Calls = 0;
+                PlayableStep(graph, animator, 0.1f);
+                Assert.Equal(1, PlayableMoveState.Calls);
+            }
+            finally { graph.Destroy(); }
+        }
+
         [Fact]
         public void ASharedPlayableStillAdvancesForAnUnculledOutput()
         {

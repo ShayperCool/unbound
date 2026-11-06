@@ -582,6 +582,7 @@ namespace Unbound.Runtime.Playables
                 AnimStream.Return(s);
             }
             if (e.MotionMode == RootMotionMode.Compute) ApplyRootMotion(animator, result, motion, motionDeltaTime);
+            else if (withController && animator.m_Player.DeferOutput) animator.m_Player.ProcessRootMotion();
             bool culled = outputs.Exists(o => (o.Output.Engine as AnimationOutputState)?.Automatic == true)
                 && animator.cullingMode != AnimatorCullingMode.AlwaysAnimate && !Animator.AnyRendererVisible(animator.gameObject);
             WriteOutput(animator, result, culled, e.PlayableIK);
@@ -665,6 +666,7 @@ namespace Unbound.Runtime.Playables
             {
                 Stubs.Ignored("Animator root motion of this playable graph output",
                     "is not computed (only animation clips, mixers, layer mixers, controller playables and animation jobs carry it; offset, motion-to-delta, remove-scale and pose playables, mixers and layer mixers without inputs, and controller playables playing humanoid clips do not): the root keeps the graph's root curves and the Animator reports no motion");
+                if (animator.m_Player != null) animator.m_Player.ProcessRootMotion();
                 return;
             }
             var t = animator.transform;
@@ -677,6 +679,11 @@ namespace Unbound.Runtime.Playables
             animator.m_DeltaRotation = motion.Turn;
             RootMotionStep.Velocities(animator.m_DeltaPosition, animator.m_DeltaRotation, animator.m_MotionRootRotation, deltaTime,
                 out animator.m_RootVelocity, out animator.m_RootAngularVelocity);
+            if (animator.m_Player != null)
+            {
+                animator.m_Player.ProcessRootMotion();
+                return;
+            }
             animator.m_RootMotionApplied = false;
             animator.m_RootMotionReady = true;
             try
@@ -801,6 +808,7 @@ namespace Unbound.Runtime.Playables
             {
                 if (move && frame.Mode == RootMotionMode.Compute)
                     AnimationEvaluation.ApplyRootMotion(animator, frame.Pose, frame.Motion, frame.DeltaTime);
+                else if (move) animator.m_Player?.ProcessRootMotion();
                 AnimationEvaluation.WriteOutput(animator, frame.Pose, false, frame.IK);
             }
             finally { AnimStream.Return(frame.Pose); }

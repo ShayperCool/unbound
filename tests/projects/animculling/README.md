@@ -127,3 +127,10 @@ these exact keys and boolean directions, both raw rotations within 5e-7, and the
 measured near-boundary dots. Every other value stays strict. `compare.py` still
 reports all four failures and exits nonzero; no oracle, assertion or comparator
 tolerance was changed to remove them.
+
+The combined movement dispatch preserves the attached controller's state movement
+callbacks through its existing dispatcher. The 6000.0
+[OnStateMove API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/StateMachineBehaviour.OnStateMove.html)
+places these after OnAnimatorMove. Managed regression tests check that deferring the
+controller does not drop them, including under CullUpdateTransforms without requested
+root motion. The probe does not claim an ordering between different Animators.
