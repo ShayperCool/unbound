@@ -417,7 +417,7 @@ namespace UnityEngine.Audio
                 if (!bypass && reverb && effect.m_EnableWetMix && wetDb > 0f)
                     throw new NotSupportedException("AudioMixer wet level " + wetDb + " dB above 0 dB is unmeasured for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
                 // tests/projects/mixerduck measures Send levels up to 0 dB.
-                if (targetGroup != null && wetDb > 0f)
+                if (targetGroup != null && !(wetDb <= 0f))
                     throw new NotSupportedException("AudioMixer send level " + wetDb + " dB above 0 dB is unmeasured in group '" + Path + "'");
                 effects.Add(new {
                     id = effect.m_EffectId, kind = effect.m_EffectName, bypass = effect.m_Bypass,
