@@ -344,6 +344,12 @@ def recipes(release):
                    env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'}),
             py('compare.py', '{probe}/Reference/unity-{release}/'+space, f'{{runs}}-{space}/unbound',
                '--report', f'{{work}}/report-{space}.json')]
+    R['camerastack'] = []
+    for space in ('Linear', 'Gamma'):
+        R['camerastack'] += [
+            driver('run.py', 'unbound', '--release', '{release}', '--space', space, '--label', '{label}-'+space,
+                   env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'}),
+            py('compare.py', '{probe}/Reference/unity-{release}/'+space, f'{{runs}}-{space}/unbound')]
     R['indirectspec'] = []
     for profile in ('linear', 'gamma'):
         R['indirectspec'] += [
