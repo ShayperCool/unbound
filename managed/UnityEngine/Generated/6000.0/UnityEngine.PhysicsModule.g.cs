@@ -231,93 +231,6 @@ namespace UnityEngine
         [global::System.Obsolete("MeshCollider.skinWidth is no longer used.")] public float skinWidth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MeshCollider.skinWidth"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MeshCollider.skinWidth"); } }
         [global::System.Obsolete("MeshCollider.inflateMesh is no longer supported. The new cooking algorithm doesn't need inflation to be used.")] public bool inflateMesh { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MeshCollider.inflateMesh"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.MeshCollider.inflateMesh"); } }
     }
-    [global::Unbound.Stub]
-    internal unsafe partial struct ModifiableContact
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 contact;
-        [global::Unbound.Stub] public float separation;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 targetVelocity;
-        [global::Unbound.Stub] public float maxImpulse;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 normal;
-        [global::Unbound.Stub] public float restitution;
-        [global::Unbound.Stub] public uint materialFlags;
-        [global::Unbound.Stub] public ushort materialIndex;
-        [global::Unbound.Stub] public ushort otherMaterialIndex;
-        [global::Unbound.Stub] public float staticFriction;
-        [global::Unbound.Stub] public float dynamicFriction;
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct ModifiableContactPair
-    {
-        [global::Unbound.Stub] public global::UnityEngine.Quaternion rotation;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 position;
-        [global::Unbound.Stub] public global::UnityEngine.Quaternion otherRotation;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 otherPosition;
-        [global::Unbound.Stub] internal static uint TranslateTriangleIndex(global::System.IntPtr shapePtr, uint rawIndex) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.TranslateTriangleIndex"); return default; }
-        [global::Unbound.Stub] internal static int ResolveShapeToInstanceID(global::System.IntPtr shapePtr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.ResolveShapeToInstanceID"); return default; }
-        [global::Unbound.Stub] internal static int ResolveActorToInstanceID(global::System.IntPtr actorPtr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.ResolveActorToInstanceID"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Vector3 GetActorLinearVelocity(global::System.IntPtr actorPtr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.GetActorLinearVelocity"); return default; }
-        [global::Unbound.Stub] internal static global::UnityEngine.Vector3 GetActorAngularVelocity(global::System.IntPtr actorPtr) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.GetActorAngularVelocity"); return default; }
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 GetPoint(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.GetPoint"); return default; }
-        [global::Unbound.Stub] public void SetPoint(int i, global::UnityEngine.Vector3 v) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.SetPoint"); }
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 GetNormal(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.GetNormal"); return default; }
-        [global::Unbound.Stub] public void SetNormal(int i, global::UnityEngine.Vector3 normal) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.SetNormal"); }
-        [global::Unbound.Stub] public float GetSeparation(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.GetSeparation"); return default; }
-        [global::Unbound.Stub] public void SetSeparation(int i, float separation) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.SetSeparation"); }
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 GetTargetVelocity(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.GetTargetVelocity"); return default; }
-        [global::Unbound.Stub] public void SetTargetVelocity(int i, global::UnityEngine.Vector3 velocity) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.SetTargetVelocity"); }
-        [global::Unbound.Stub] public float GetBounciness(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.GetBounciness"); return default; }
-        [global::Unbound.Stub] public void SetBounciness(int i, float bounciness) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.SetBounciness"); }
-        [global::Unbound.Stub] public float GetStaticFriction(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.GetStaticFriction"); return default; }
-        [global::Unbound.Stub] public void SetStaticFriction(int i, float staticFriction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.SetStaticFriction"); }
-        [global::Unbound.Stub] public float GetDynamicFriction(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.GetDynamicFriction"); return default; }
-        [global::Unbound.Stub] public void SetDynamicFriction(int i, float dynamicFriction) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.SetDynamicFriction"); }
-        [global::Unbound.Stub] public float GetMaxImpulse(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.GetMaxImpulse"); return default; }
-        [global::Unbound.Stub] public void SetMaxImpulse(int i, float value) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.SetMaxImpulse"); }
-        [global::Unbound.Stub] public void IgnoreContact(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.IgnoreContact"); }
-        [global::Unbound.Stub] public uint GetFaceIndex(int i) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.GetFaceIndex"); return default; }
-        public int colliderInstanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.colliderInstanceID"); return default; } }
-        public int otherColliderInstanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.otherColliderInstanceID"); return default; } }
-        public int bodyInstanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.bodyInstanceID"); return default; } }
-        public int otherBodyInstanceID { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.otherBodyInstanceID"); return default; } }
-        public global::UnityEngine.Vector3 bodyVelocity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.bodyVelocity"); return default; } }
-        public global::UnityEngine.Vector3 bodyAngularVelocity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.bodyAngularVelocity"); return default; } }
-        public global::UnityEngine.Vector3 otherBodyVelocity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.otherBodyVelocity"); return default; } }
-        public global::UnityEngine.Vector3 otherBodyAngularVelocity { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.otherBodyAngularVelocity"); return default; } }
-        public int contactCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.contactCount"); return default; } }
-        public global::UnityEngine.ModifiableMassProperties massProperties { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.massProperties"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ModifiableContactPair.massProperties"); } }
-    }
-    [global::Unbound.Stub]
-    internal unsafe partial struct ModifiableContactPatch
-    {
-        [global::Unbound.Stub] public global::UnityEngine.ModifiableMassProperties massProperties;
-        [global::Unbound.Stub] public global::UnityEngine.Vector3 normal;
-        [global::Unbound.Stub] public float restitution;
-        [global::Unbound.Stub] public float dynamicFriction;
-        [global::Unbound.Stub] public float staticFriction;
-        [global::Unbound.Stub] public byte startContactIndex;
-        [global::Unbound.Stub] public byte contactCount;
-        [global::Unbound.Stub] public byte materialFlags;
-        [global::Unbound.Stub] public byte internalFlags;
-        [global::Unbound.Stub] public ushort materialIndex;
-        [global::Unbound.Stub] public ushort otherMaterialIndex;
-        public enum Flags
-        {
-            HasFaceIndices = 1,
-            HasModifiedMassRatios = 8,
-            HasTargetVelocity = 16,
-            HasMaxImpulse = 32,
-            RegeneratePatches = 64,
-        }
-    }
-    [global::Unbound.Stub]
-    public unsafe partial struct ModifiableMassProperties
-    {
-        [global::Unbound.Stub] public float inverseMassScale;
-        [global::Unbound.Stub] public float inverseInertiaScale;
-        [global::Unbound.Stub] public float otherInverseMassScale;
-        [global::Unbound.Stub] public float otherInverseInertiaScale;
-    }
     [global::System.Obsolete("PhysicMaterial has been renamed to PhysicsMaterial. Please use PhysicsMaterial instead. (UnityUpgradable) -> PhysicsMaterial")]
     [global::Unbound.Stub]
     public unsafe partial class PhysicMaterial : global::UnityEngine.Object
@@ -367,8 +280,6 @@ namespace UnityEngine
         [global::System.Obsolete("Please use Physics.defaultSolverIterations instead. (UnityUpgradable) -> defaultSolverIterations")] public static int solverIterationCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.solverIterationCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.solverIterationCount"); } }
         [global::System.Obsolete("Please use Physics.defaultSolverVelocityIterations instead. (UnityUpgradable) -> defaultSolverVelocityIterations")] public static int solverVelocityIterationCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.solverVelocityIterationCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.solverVelocityIterationCount"); } }
         [global::System.Obsolete("penetrationPenaltyForce has no effect.")] public static float penetrationPenaltyForce { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.penetrationPenaltyForce"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.penetrationPenaltyForce"); } }
-        public static event global::System.Action<global::UnityEngine.PhysicsScene, global::Unity.Collections.NativeArray<global::UnityEngine.ModifiableContactPair>> ContactModifyEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.ContactModifyEvent"); } [global::Unbound.Stub] remove { } }
-        public static event global::System.Action<global::UnityEngine.PhysicsScene, global::Unity.Collections.NativeArray<global::UnityEngine.ModifiableContactPair>> ContactModifyEventCCD { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.ContactModifyEventCCD"); } [global::Unbound.Stub] remove { } }
         internal static event global::System.Action<global::UnityEngine.PhysicsScene, global::System.IntPtr, int, bool> GenericContactModifyEvent { [global::Unbound.Stub] add { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Physics.GenericContactModifyEvent"); } [global::Unbound.Stub] remove { } }
     }
     unsafe partial struct PhysicsScene

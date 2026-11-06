@@ -23,7 +23,7 @@ namespace UnityEngine
         internal int m_ExcludeLayers;
         internal int m_LayerOverridePriority;
         internal bool m_ProvidesContacts;
-        bool m_HasModifiableContacts;
+        internal bool m_HasModifiableContacts;
 
         // Runtime tuning is not serialized or copied into clones. Keep the creation-time
         // project default even while disabled or before the native shape is allocated.
@@ -216,7 +216,12 @@ namespace UnityEngine
         public bool hasModifiableContacts
         {
             get => m_HasModifiableContacts;
-            set => m_HasModifiableContacts = value;
+            set
+            {
+                if (m_HasModifiableContacts == value) return;
+                m_HasModifiableContacts = value;
+                W.Refilter(this);
+            }
         }
 
         public bool providesContacts

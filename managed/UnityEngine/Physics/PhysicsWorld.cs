@@ -280,10 +280,40 @@ namespace Unbound.Runtime
                 EnablePcm = Physics.s_EnablePcm ? 1 : 0,
                 ImprovedPatchFriction = Physics.s_ImprovedPatchFriction ? 1 : 0,
             };
+            if (!s_ContactModifyRegistered)
+            {
+                B3.ua3_set_contact_modify_callback(&OnContactModify);
+                s_ContactModifyRegistered = true;
+            }
             s_World = B3.ua3_world_create(Physics.s_Gravity, Mathf.Max(0f, Physics.s_BounceThreshold), 1f, 1, settings);
             if (s_World == 0)
                 throw new InvalidOperationException($"Unbound: could not create the PhysX scene for DynamicsManager (solver type {settings.SolverType}, friction type {settings.FrictionType}, contact pairs mode {settings.ContactPairsMode})");
             EnsureRegistered();
+        }
+
+        static bool s_ContactModifyRegistered;
+
+        /// <summary>PhysX's contact modification buffers of a world, during its step.</summary>
+        [System.Runtime.InteropServices.UnmanagedCallersOnly(CallConvs = new[] { typeof(System.Runtime.CompilerServices.CallConvCdecl) })]
+        static void OnContactModify(uint world, IntPtr pairs, uint count, int ccd)
+        {
+            try
+            {
+                var space = ReferenceEquals(s_Space, null) || s_Space.World != world ? SpaceOfWorld(world) : s_Space;
+                if (space != null) Physics.SendContactModify(SceneOf(space), pairs, (int)count, ccd != 0);
+            }
+            catch (Exception exception)
+            {
+                Debug.LogException(exception);
+            }
+        }
+
+        static Space SpaceOfWorld(uint world)
+        {
+            if (s_Default.World == world) return s_Default;
+            foreach (var space in s_Locals)
+                if (space.World == world) return space;
+            return null;
         }
 
         internal static void SetImprovedPatchFriction(bool value)
@@ -918,10 +948,11 @@ namespace Unbound.Runtime
             mask = (bits | unchecked((uint)include)) & ~unchecked((uint)exclude);
             layerFlags = (include | exclude) != 0 ? B3.LayerOverride : 0;
             if (rb != null && !rb.m_DetectCollisions) layerFlags |= B3.LayerNoContacts;
+            if (c.m_HasModifiableContacts) layerFlags |= B3.LayerModifiable;
         }
 
         /// <summary>The filter of a collider changed (layer, include/exclude layers, layer override
-        /// priority, detectCollisions).</summary>
+        /// priority, detectCollisions, hasModifiableContacts).</summary>
         internal static void Refilter(Collider c)
         {
             if (c.m_Shape == 0) return;
@@ -1277,7 +1308,7 @@ namespace Unbound.Runtime
 
         static int ShapeInstanceId(ulong shape, bool removed) =>
             !removed && s_ByShape.TryGetValue(shape, out var c) && c != null ? c.GetInstanceID() : 0;
-        static int BodyInstanceId(ulong actor, bool removed)
+        internal static int BodyInstanceId(ulong actor, bool removed)
         {
             if (removed) return 0;
             foreach (var rb in s_Rigidbodies)

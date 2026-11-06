@@ -46,7 +46,7 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 13
+#define UA3_VERSION 14
 
 struct ua3_scene_def
 {
@@ -172,22 +172,24 @@ struct ShapeInfo
 	bool contactEvents;
 	bool sensorEvents;
 	int ignores; // how many ignored pairs it is in
-	int layers = 0; // LayerOverride | LayerNoContacts, as the filter calls pass them
+	int layers = 0; // LayerOverride | LayerNoContacts | LayerModifiable, as the filter calls pass them
 };
 
 // ua3_shape_def.layerFlags, ua3_shape_set_filter and the controller calls: the collider has
-// include/exclude layers (its own or its body's), or contacts nothing (detectCollisions off).
+// include/exclude layers (its own or its body's), contacts nothing (detectCollisions off), or
+// has modifiable contacts (Collider.hasModifiableContacts).
 enum : int
 {
 	LayerOverride = 1,
 	LayerNoContacts = 2,
+	LayerModifiable = 4,
 };
 
 // Simulation filter data: word0 the category (the layer's bit), word1 the mask (the layers this
 // collider decides to contact), word2 flags, word3 the collider's layerOverridePriority.
 // word2 bits 3-4 carry the body's collision detection mode, so the filter shader can decide
 // which pairs get sweep CCD; bit 5 marks a collider of an actor that has no mode (a character
-// controller's); bits 6-7 carry the ShapeInfo layer flags.
+// controller's); bits 6-8 carry the ShapeInfo layer flags.
 enum : PxU32
 {
 	FlagContactEvents = 1,
@@ -198,6 +200,7 @@ enum : PxU32
 	FlagCcdModeless = 32,
 	FlagLayerOverride = 64,
 	FlagNoContacts = 128,
+	FlagModifiable = 256,
 };
 
 // Whether two colliders' layers let them meet (Collider.layerOverridePriority, 6000.0 Scripting
@@ -419,6 +422,34 @@ public:
 	void onTrigger( PxTriggerPair* pairs, PxU32 count ) override;
 };
 
+// Physics.ContactModifyEvent / ContactModifyEventCCD: PhysX's pair buffers go to managed code as
+// they are (ModifiableContactPair mirrors PxContactModifyPair), on the thread that runs the
+// narrow phase or CCD task. Discrete pairs come in PhysX's batches, CCD pairs one at a time.
+typedef void ( *ua3_contact_modify_fn )( uint32_t world, PxContactModifyPair* pairs, uint32_t count, int ccd );
+static_assert( sizeof( PxContactModifyPair ) == 104, "ModifiableContactPair layout" );
+static_assert( sizeof( PxModifiableContact ) == 64 && sizeof( PxContactPatch ) == 48, "ModifiableContact layout" );
+ua3_contact_modify_fn s_contactModify = nullptr;
+
+class Modify : public PxContactModifyCallback, public PxCCDContactModifyCallback
+{
+public:
+	uint32_t world = 0;
+	void onContactModify( PxContactModifyPair* const pairs, PxU32 count ) override
+	{
+		if ( s_contactModify != nullptr && count != 0 )
+		{
+			s_contactModify( world, pairs, count, 0 );
+		}
+	}
+	void onCCDContactModify( PxContactModifyPair* const pairs, PxU32 count ) override
+	{
+		if ( s_contactModify != nullptr && count != 0 )
+		{
+			s_contactModify( world, pairs, count, 1 );
+		}
+	}
+};
+
 class Filter : public PxSimulationFilterCallback
 {
 public:
@@ -441,6 +472,7 @@ struct World
 	std::vector<ua3_contact_pair> contactPairs;
 	std::vector<ua3_contact_point> contactPoints;
 	Filter filter;
+	Modify modify;
 	std::vector<ua3_pair> lists[5]; // contact begin, contact end, sensor begin, sensor end, contact persist
 	std::set<std::pair<PxShape*, PxShape*>> ignores;
 	// The contact points of touching pairs this step.
@@ -615,6 +647,8 @@ bool sweeps( bool moving, PxU32 flags, PxFilterObjectAttributes other, PxU32 oth
 // Layers collide as layers_meet decides, unless either side contacts nothing. Trigger pairs include
 // trigger/trigger overlaps. The scene's kinematic pair filtering modes decide which non-dynamic
 // pairs reach this shader. Those pairs generate contacts and reports, without solver response.
+// A contact pair with a modifiable collider on either side goes to the contact modification
+// callbacks (Collider.hasModifiableContacts, 6000.0 Scripting API; trigger pairs have no contacts).
 PxFilterFlags shader( PxFilterObjectAttributes attributes0, PxFilterData data0, PxFilterObjectAttributes attributes1,
 					  PxFilterData data1, PxPairFlags& pairFlags, const void*, PxU32 )
 {
@@ -632,6 +666,10 @@ PxFilterFlags shader( PxFilterObjectAttributes attributes0, PxFilterData data0, 
 	bool moving1 = PxGetFilterObjectType( attributes1 ) == PxFilterObjectType::eRIGID_DYNAMIC && !PxFilterObjectIsKinematic( attributes1 );
 	pairFlags = PxPairFlag::eDETECT_DISCRETE_CONTACT | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_LOST |
 				PxPairFlag::eNOTIFY_TOUCH_PERSISTS | PxPairFlag::eNOTIFY_CONTACT_POINTS;
+	if ( ( data0.word2 | data1.word2 ) & FlagModifiable )
+	{
+		pairFlags |= PxPairFlag::eMODIFY_CONTACTS;
+	}
 	if ( moving0 || moving1 )
 	{
 		pairFlags |= PxPairFlag::eSOLVE_CONTACT;
@@ -690,7 +728,7 @@ PxU32 filter_flags( const PxShape* shape, const PxRigidActor* actor )
 	ShapeInfo* i = info( shape );
 	return ( i->contactEvents ? FlagContactEvents : 0u ) | ( i->sensorEvents ? FlagSensorEvents : 0u ) | ( i->ignores > 0 ? FlagIgnores : 0u ) |
 		   ( i->layers & LayerOverride ? FlagLayerOverride : 0u ) | ( i->layers & LayerNoContacts ? FlagNoContacts : 0u ) |
-		   ccd_bits( actor != nullptr ? actor : shape->getActor() );
+		   ( i->layers & LayerModifiable ? FlagModifiable : 0u ) | ccd_bits( actor != nullptr ? actor : shape->getActor() );
 }
 
 void set_filter_flags( PxShape* shape, const PxRigidActor* actor = nullptr )
@@ -1091,16 +1129,35 @@ UA3_API uint32_t ua3_world_create( ua3_vec3 gravityIn, float restitutionThreshol
 		return 0;
 	}
 	world->scene->userData = world;
+	world->scene->setContactModifyCallback( &world->modify );
+	world->scene->setCCDContactModifyCallback( &world->modify );
 	for ( size_t i = 0; i < s_worlds.size(); ++i )
 	{
 		if ( s_worlds[i] == nullptr )
 		{
 			s_worlds[i] = world;
-			return static_cast<uint32_t>( i + 1 );
+			world->modify.world = static_cast<uint32_t>( i + 1 );
+			return world->modify.world;
 		}
 	}
 	s_worlds.push_back( world );
-	return static_cast<uint32_t>( s_worlds.size() );
+	world->modify.world = static_cast<uint32_t>( s_worlds.size() );
+	return world->modify.world;
+}
+
+// The managed receiver of contact modification pairs (none: pairs pass unmodified).
+UA3_API void ua3_set_contact_modify_callback( ua3_contact_modify_fn callback )
+{
+	s_contactModify = callback;
+}
+
+// The velocities of a pair's actor during contact modification (ModifiableContactPair.bodyVelocity):
+// a static actor's are zero.
+UA3_API void ua3_actor_velocity( const PxRigidActor* actor, ua3_vec3* linear, ua3_vec3* angular )
+{
+	const PxRigidBody* body = actor != nullptr ? actor->is<PxRigidBody>() : nullptr;
+	*linear = ua3_vec3( body != nullptr ? body->getLinearVelocity() : PxVec3( 0.0f ) );
+	*angular = ua3_vec3( body != nullptr ? body->getAngularVelocity() : PxVec3( 0.0f ) );
 }
 
 UA3_API void ua3_world_destroy( uint32_t id )

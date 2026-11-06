@@ -15,7 +15,7 @@ namespace Unbound.Box3D
         const string Library = "unbound_physx";
 
         /// <summary>The shim version this binding was written for.</summary>
-        internal const int Version = 13;
+        internal const int Version = 14;
 
         // The per-body accessors called every step are constant time, never block and never call
         // back into managed code: they skip the GC transition ([SuppressGCTransition]).
@@ -125,7 +125,7 @@ namespace Unbound.Box3D
             internal float StaticFriction;
             /// <summary>The collider's contact offset; 0 for the default.</summary>
             internal float ContactOffset;
-            /// <summary><see cref="LayerOverride"/> | <see cref="LayerNoContacts"/>.</summary>
+            /// <summary><see cref="LayerOverride"/> | <see cref="LayerNoContacts"/> | <see cref="LayerModifiable"/>.</summary>
             internal int LayerFlags;
             /// <summary>The collider's layerOverridePriority.</summary>
             internal int LayerPriority;
@@ -135,6 +135,9 @@ namespace Unbound.Box3D
         internal const int LayerOverride = 1;
         /// <summary>Layer flags: the collider contacts nothing (its body does not detect collisions).</summary>
         internal const int LayerNoContacts = 2;
+        /// <summary>Layer flags: the collider's contact pairs go to contact modification
+        /// (Collider.hasModifiableContacts).</summary>
+        internal const int LayerModifiable = 4;
 
         [StructLayout(LayoutKind.Sequential)]
         internal struct Pair
@@ -235,6 +238,9 @@ namespace Unbound.Box3D
         // World.
         [LibraryImport(Library)] internal static partial uint ua3_world_create(Vector3 gravity, float restitutionThreshold, float hitEventThreshold, int enableSleep, in SceneDef settings);
         [LibraryImport(Library)] internal static partial void ua3_set_improved_patch_friction(int enabled);
+        // Contact modification: the receiver of PhysX's pair buffers (world, pairs, count, ccd).
+        [LibraryImport(Library)] internal static partial void ua3_set_contact_modify_callback(delegate* unmanaged[Cdecl]<uint, IntPtr, uint, int, void> callback);
+        [LibraryImport(Library)] internal static partial void ua3_actor_velocity(ulong actor, out Vector3 linear, out Vector3 angular);
         [LibraryImport(Library)] internal static partial void ua3_world_destroy(uint world);
         [LibraryImport(Library)] internal static partial void ua3_world_step(uint world, float timeStep, int subStepCount);
         [LibraryImport(Library)] internal static partial void ua3_world_set_gravity(uint world, Vector3 gravity);
