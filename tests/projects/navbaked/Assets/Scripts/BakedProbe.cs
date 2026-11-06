@@ -1,0 +1,196 @@
+using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
+using UnityEngine;
+using UnityEngine.AI;
+using UnityEngine.SceneManagement;
+
+/// <summary>
+/// A scene's legacy-baked NavMesh (NavMeshSettings.m_NavMeshData), measured identically in the
+/// Unity Editor (the reference) and in Unbound when <c>NAVBAKED_OUT</c> names the JSON file to
+/// write: whether it is there in Awake, its triangulation, samples, raycasts and paths (area cost
+/// and mask, a step, a one-way OffMeshLink up and the bake's drop links down), an agent walked
+/// up and back down at a fixed 0.02 s step, then the additive load of a second baked scene and
+/// its unload.
+/// </summary>
+public class BakedProbe : MonoBehaviour
+{
+    static string Out => Environment.GetEnvironmentVariable("NAVBAKED_OUT");
+    static readonly Vector3 Home = new Vector3(-6f, 0f, -3f);
+    static readonly Vector3 Top = new Vector3(-7f, 1.5f, 4f);
+    const int Mud = 4;
+    NavMeshAgent m_Agent;
+
+    static string F(float v) => v.ToString("0.###", CultureInfo.InvariantCulture);
+    static string V(Vector3 v) => F(v.x) + "," + F(v.y) + "," + F(v.z);
+
+    static void Scenario(string name, Action body)
+    {
+        ProbeLog.Begin(name);
+        try { body(); }
+        catch (Exception e)
+        {
+            ProbeLog.Error(e);
+            Debug.LogException(e);
+        }
+    }
+
+    void Awake()
+    {
+        if (string.IsNullOrEmpty(Out))
+        {
+            enabled = false;
+            return;
+        }
+        Time.captureDeltaTime = 0.02f;
+        m_Agent = GameObject.Find("Agent").GetComponent<NavMeshAgent>();
+        Scenario("awake", () =>
+        {
+            ProbeLog.Value("agent.isOnNavMesh", m_Agent.isOnNavMesh);
+            Sample("home", Home);
+        });
+    }
+
+    IEnumerator Start()
+    {
+        if (string.IsNullOrEmpty(Out)) yield break;
+        Scenario("areas", () =>
+        {
+            ProbeLog.Value("mud", NavMesh.GetAreaFromName("Mud"));
+            ProbeLog.Value("mud.cost", NavMesh.GetAreaCost(Mud));
+            ProbeLog.Value("settings", NavMesh.GetSettingsCount());
+        });
+        Scenario("baked", () => Triangulation("baked"));
+        Scenario("sample", () => Grid(-10f, 10f));
+        Scenario("raycast", Raycasts);
+        Scenario("paths", Paths);
+
+        ProbeLog.Begin("agent");
+        ProbeLog.Value("start", m_Agent.transform.position);
+        m_Agent.SetDestination(Top);
+        for (int frame = 1; frame <= 500; frame++)
+        {
+            if (frame == 250) m_Agent.SetDestination(Home);
+            yield return null;
+            if (frame % 5 != 0) continue;
+            var key = "f" + frame;
+            ProbeLog.Value(key, m_Agent.transform.position);
+            ProbeLog.Value(key + ".link", m_Agent.isOnOffMeshLink);
+            if (m_Agent.isOnOffMeshLink) ProbeLog.Value(key + ".linkType", m_Agent.currentOffMeshLinkData.linkType.ToString());
+            if (frame == 5 || frame == 255)
+            {
+                ProbeLog.Value(key + ".status", m_Agent.pathStatus.ToString());
+                Corners(key + ".corners", m_Agent.path);
+            }
+        }
+
+        yield return SceneManager.LoadSceneAsync("Second", LoadSceneMode.Additive);
+        Scenario("additive", () =>
+        {
+            Triangulation("both");
+            Grid(10f, 22f);
+            var agent = GameObject.Find("Agent2").GetComponent<NavMeshAgent>();
+            ProbeLog.Value("agent2.isOnNavMesh", agent.isOnNavMesh);
+            ProbeLog.Value("agent2", agent.transform.position);
+            Path("across", Home, new Vector3(17f, 0f, 0f), NavMesh.AllAreas);
+            Path("second", new Vector3(13f, 0f, -3f), new Vector3(21f, 0f, 3f), NavMesh.AllAreas);
+        });
+        yield return SceneManager.UnloadSceneAsync("Second");
+        Scenario("unloaded", () =>
+        {
+            Triangulation("left");
+            Sample("second", new Vector3(17f, 0f, 0f));
+            Sample("home", Home);
+            Path("across", Home, new Vector3(17f, 0f, 0f), NavMesh.AllAreas);
+        });
+
+        File.WriteAllText(Out, ProbeLog.Json());
+        Debug.Log("NavMesh baked probe written");
+#if UNITY_EDITOR
+        UnityEditor.EditorApplication.Exit(0);
+#else
+        Application.Quit();
+#endif
+    }
+
+    static void Triangulation(string key)
+    {
+        var t = NavMesh.CalculateTriangulation();
+        ProbeLog.Value(key + ".vertices", t.vertices.Length);
+        ProbeLog.Value(key + ".indices", t.indices.Length);
+        var triangles = new List<string>();
+        float area = 0f;
+        for (int i = 0; i + 2 < t.indices.Length; i += 3)
+        {
+            var a = t.vertices[t.indices[i]];
+            var b = t.vertices[t.indices[i + 1]];
+            var c = t.vertices[t.indices[i + 2]];
+            var corners = new[] { V(a), V(b), V(c) }.ToList();
+            corners.Sort(string.CompareOrdinal);
+            triangles.Add(string.Join(" ", corners) + " a" + t.areas[i / 3]);
+            area += Vector3.Cross(b - a, c - a).magnitude * 0.5f;
+        }
+        triangles.Sort(string.CompareOrdinal);
+        for (int i = 0; i < triangles.Count; i++) ProbeLog.Value(key + ".tri" + i, triangles[i]);
+        ProbeLog.Value(key + ".area", area);
+    }
+
+    static void Sample(string key, Vector3 at)
+    {
+        bool ok = NavMesh.SamplePosition(at + Vector3.up * 2f, out var hit, 2.5f, NavMesh.AllAreas);
+        ProbeLog.Value(key + ".hit", ok);
+        if (!ok) return;
+        ProbeLog.Value(key, hit.position);
+        ProbeLog.Value(key + ".mask", hit.mask);
+    }
+
+    static void Grid(float fromX, float toX)
+    {
+        for (float z = -6f; z <= 6f; z += 2f)
+        for (float x = fromX; x <= toX; x += 2f)
+            Sample("s" + F(x) + "," + F(z), new Vector3(x, 0f, z));
+    }
+
+    static void Raycasts()
+    {
+        void Ray(string key, Vector3 from, Vector3 to, int mask)
+        {
+            bool hit = NavMesh.Raycast(from, to, out var h, mask);
+            ProbeLog.Value(key + ".hit", hit);
+            ProbeLog.Value(key, h.position);
+            ProbeLog.Value(key + ".mask", h.mask);
+        }
+        Ray("mud", Home, new Vector3(6f, 0f, -3f), NavMesh.AllAreas);
+        Ray("mud.masked", Home, new Vector3(6f, 0f, -3f), NavMesh.AllAreas & ~(1 << Mud));
+        Ray("wall", Home, new Vector3(-7f, 0f, 4f), NavMesh.AllAreas);
+        Ray("step", new Vector3(3f, 0f, 3.5f), new Vector3(8f, 0.3f, 3.5f), NavMesh.AllAreas);
+    }
+
+    static void Corners(string key, NavMeshPath path)
+    {
+        var corners = path.corners;
+        ProbeLog.Value(key, corners.Length);
+        for (int i = 0; i < corners.Length; i++) ProbeLog.Value(key + i, corners[i]);
+    }
+
+    static void Path(string key, Vector3 from, Vector3 to, int mask)
+    {
+        var path = new NavMeshPath();
+        ProbeLog.Value(key + ".found", NavMesh.CalculatePath(from, to, mask, path));
+        ProbeLog.Value(key + ".status", path.status.ToString());
+        Corners(key + ".corners", path);
+    }
+
+    static void Paths()
+    {
+        Path("mud", Home, new Vector3(6f, 0f, -3f), NavMesh.AllAreas);
+        Path("mud.masked", Home, new Vector3(6f, 0f, -3f), NavMesh.AllAreas & ~(1 << Mud));
+        Path("step", new Vector3(-2f, 0f, 4.5f), new Vector3(7f, 0.3f, 3.5f), NavMesh.AllAreas);
+        Path("up", Home, Top, NavMesh.AllAreas);
+        Path("down", Top, Home, NavMesh.AllAreas);
+        Path("second", Home, new Vector3(17f, 0f, 0f), NavMesh.AllAreas);
+    }
+}
