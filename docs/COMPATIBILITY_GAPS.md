@@ -55,7 +55,7 @@ Game runs keep hitting features that are missing *without a warning* (physical c
 | Serialized field or import setting not read | `m_DisabledShaderPasses`, `m_RenderingPath`, terrain lightmap, ModelImporter clip masks/root motion, `m_ContactPairsMode` | `ReadSerialized` / the importers read a subset of keys and drop the rest |
 | Message looked up, never sent | `OnParticleUpdateJobScheduled` (`Messages.cs` `s_NotSent` lists them) | Messages are not API calls: `api-gaps` cannot see them |
 | Overload drops a parameter | `Graphics.ConvertTexture(src, srcElement, dst, dstElement)`, `Mesh.Set*(..., flags)`, stereo-eye overloads (Blit slices, `LogOption`, `SetPropertyBlock` index done) | Forwarded to the simpler overload |
-| Asset class with a ClassId but no reader | `.renderTexture` (always 256×256 RGBA8, no depth) | `Loading.ReadAsset` default-constructs it |
+| Asset class with a ClassId but no reader | done (`classids`): a class without a reader warns once at load, naming the class and the file, and `unbound doctor` lists the project's files holding one | Ignored classes (`ClassCoverage.s_Ignored`, with a reason) stay silent |
 | Stub default not neutral | done (`stubdefaults`): value-returning stubs take the Editor's answer from `StubDefaults.cs` where it is a constant; `ScalableBufferManager` and `CalculateObliqueMatrix` are hand-written, `Microphone.devices` takes the generator's empty-array rule | Members whose answer is not a constant still return the default after their warning (see the tooling item) |
 | Generated stub events | done: subscribing warns that the event is never raised | |
 | Claimed capability | `SystemInfo.supportsTextureWrapMirrorOnce` (MirrorOnce samples as Mirror; `supports3DRenderTextures` now answers false) | Packages enable a path that then draws nothing |
@@ -95,8 +95,18 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
 - [ ] Unread serialized data: diff each class's native type tree (already dumped for settings
       assets) against the keys its reader consumes; `unbound doctor` lists non-default values of
       unread keys in the project's scenes, prefabs, assets and `.meta` import settings.
-- [ ] ClassId coverage: Unity's class-ID table against registered readers; a ClassId without a
-      reader fails loudly instead of default-constructing.
+- [x] ClassId coverage: Unity's class-ID table against registered readers; a ClassId without a
+      reader fails loudly instead of default-constructing. Done (`classids`: Unity 6000.0.71f1's
+      own class table; `Runtime/ClassCoverage.cs`): a document whose class has no engine class, or
+      a registered class that does not read data the document has, warns once per class naming
+      the file; `unbound doctor` lists them per project, and `--all` the release's concrete
+      runtime classes without a reader. Ignored on purpose, with the reason: Preset,
+      EditorExtensionImpl, and OcclusionCullingSettings/NavMeshSettings while they reference no
+      baked data. Found in real content without a reader (follow-ups): `LightingSettings`
+      (850595691, in most scenes' lighting), `ShaderVariantCollection` (200), YAML `Sprite`
+      documents (213, default-constructed), a scene's baked legacy NavMesh
+      (`NavMeshSettings.m_NavMeshData`), VFX Graph (`VisualEffect` 2083052967, `VFXRenderer`
+      73398921, `VisualEffectResource` 2058629511), and legacy `GUILayer` (92, not a class of 6000.0).
 - [ ] `SystemInfo` answers follow what the renderer does.
 - [ ] `api-gaps` noise: trivial attributes (`JetBrains.Annotations.*`, `ResourcePathAttribute`,
       `CategoryInfoAttribute`, `ShaderKeywordFilter.*`) implemented, so the coverage line counts
