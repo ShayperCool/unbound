@@ -485,7 +485,7 @@ namespace UnityEngine
             if (m_HeightFieldData == IntPtr.Zero) return 0;
             var shape = B3.ua3_shape_height_field_scaled(body, def, m_HeightFieldData, size.y / TerrainData.MaxHeight,
                 data.heightmapScale.x, data.heightmapScale.z, Vector3.zero);
-            if (m_EnableTreeColliders) CreateTreeShapes(body, def, data);
+            if (shape != 0 && m_EnableTreeColliders) CreateTreeShapes(body, def, data);
             return shape;
         }
 

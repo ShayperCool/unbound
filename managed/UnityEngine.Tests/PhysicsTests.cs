@@ -949,6 +949,33 @@ namespace UnityEngine.Tests
             Assert.True(ball.transform.position.y < -1f);
         }
 
+        // Unbound's choice, unmeasured: a terrain collider's tree capsules take its layer filter,
+        // also when it changes at runtime.
+        [Fact]
+        public void TerrainTreeShapesFollowTheirTerrainColliderFilter()
+        {
+            var prefab = Make("tree", new Vector3(0f, -1000f, 0f));
+            var capsule = prefab.AddComponent<CapsuleCollider>();
+            capsule.height = 4f;
+            capsule.center = new Vector3(0f, 2f, 0f);
+            prefab.SetActive(false);
+            var data = new TerrainData { heightmapResolution = 33 };
+            data.size = new Vector3(20f, 10f, 20f);
+            data.treePrototypes = new[] { new TreePrototype { prefab = prefab } };
+            data.SetTreeInstances(new[] { new TreeInstance { position = new Vector3(0.5f, 0f, 0.5f), widthScale = 1f, heightScale = 1f } }, false);
+            var terrain = Make("terrain", new Vector3(-10f, 0f, -10f));
+            terrain.layer = 9;
+            var collider = terrain.AddComponent<TerrainCollider>();
+            collider.terrainData = data;
+            var ball = Ball("ball", new Vector3(0f, 6f, 0f), 0.25f);
+            ball.layer = 10;
+            Run(60);
+            Assert.True(ball.transform.position.y > 3f);
+            collider.excludeLayers = 1 << 10;
+            Run(60);
+            Assert.True(ball.transform.position.y < -1f);
+        }
+
         [Fact]
         public void ControllerMovesCountATieAsAHit()
         {
