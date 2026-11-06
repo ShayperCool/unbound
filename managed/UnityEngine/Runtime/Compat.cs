@@ -44,6 +44,10 @@ namespace Unbound.Runtime
         /// retain the existing behavior until measured.</summary>
         internal static bool AnimatorStartupMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Birth sub-emitter origins and Simulate ages measured by
+        /// tests/projects/particlerandom. Other releases retain their previous path.</summary>
+        internal static bool ParticleBirthStepsMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>6000.0's BakeTrailsMesh joins ribbon strips in its index count and rejects
         /// the resulting out-of-bounds indices. Regular ribbon rendering is unaffected.</summary>
         internal static bool ParticleRibbonBakeRejectsMultipleStrips => Major >= 6000;

@@ -323,47 +323,82 @@ namespace UnityEngine
                     startedSystems[index] = true;
                 }
             }
-            for (int index = 0; index < systems.Count; index++)
+            foreach (var ps in systems) ps.m_SimulatingBirths = Compat.ParticleBirthStepsMeasured;
+            try
             {
-                var ps = systems[index];
-                bool referenced = index >= hierarchyCount;
-                bool started = startedSystems[index];
-                bool stopped = stoppedSystems[index];
-                ps.m_IsPaused = false;
-                ps.m_CollisionEvents.Clear();
-                ps.TrackEmitter(t);
-                // A sub-emitter that a restarting call starts with its parent keeps its time
-                // until the next call (measured with children). One that only its parent's
-                // reference brings in runs from the call that starts it (measured without children:
-                // a stopped Death sub-emitter's time advances by each call and it ends paused).
-                if (started && (referenced ? restart : ps.m_SubEmitterParent != null))
+                foreach (int index in BirthSimulationOrder(systems))
                 {
-                    ps.m_IsPaused = true;
-                    continue;
-                }
-                float total = Mathf.Max(0f, t) * ps.m_Main.simulationSpeed;
-                if (fixedTimeStep)
-                {
-                    float step = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
-                    ps.m_FixedRemainder += total;
-                    int count = (int)Math.Min(ps.m_FixedRemainder / step, 100000f);
-                    float distance = ps.m_FrameDistance / Math.Max(count, 1);
-                    for (int guard = 0; ps.m_FixedRemainder >= step && guard < 100000; guard++)
+                    var ps = systems[index];
+                    bool referenced = index >= hierarchyCount;
+                    bool started = startedSystems[index];
+                    bool stopped = stoppedSystems[index];
+                    ps.m_IsPaused = false;
+                    ps.m_CollisionEvents.Clear();
+                    ps.TrackEmitter(t);
+                    // A sub-emitter that a restarting call starts with its parent keeps its time
+                    // until the next call (measured with children). One that only its parent's
+                    // reference brings in runs from the call that starts it (measured without children:
+                    // a stopped Death sub-emitter's time advances by each call and it ends paused).
+                    if (started && (referenced ? restart : ps.m_SubEmitterParent != null))
                     {
-                        if (stopped) ps.AdvanceStoppedClock(step, distance);
-                        else ps.Advance(step, distance, false, (float)guard / Math.Max(count, 1), (float)(guard + 1) / Math.Max(count, 1));
-                        ps.m_FixedRemainder -= step;
+                        ps.m_IsPaused = true;
+                        continue;
                     }
+                    float total = Mathf.Max(0f, t) * ps.m_Main.simulationSpeed;
+                    ps.m_BirthCallRemaining = total;
+                    if (fixedTimeStep)
+                    {
+                        float step = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
+                        ps.m_FixedRemainder += total;
+                        int count = (int)Math.Min(ps.m_FixedRemainder / step, 100000f);
+                        float distance = ps.m_FrameDistance / Math.Max(count, 1);
+                        for (int guard = 0; ps.m_FixedRemainder >= step && guard < 100000; guard++)
+                        {
+                            if (stopped) ps.AdvanceStoppedClock(step, distance);
+                            else ps.Advance(step, distance, false, (float)guard / Math.Max(count, 1), (float)(guard + 1) / Math.Max(count, 1));
+                            ps.m_FixedRemainder -= step;
+                        }
+                    }
+                    // Native's non-fixed Simulate ignores calls below ten microseconds;
+                    // this call boundary is distinct from Advance's subdivision remainder.
+                    else if (total >= 1e-5f)
+                    {
+                        if (stopped) ps.AdvanceStoppedClock(total, ps.m_FrameDistance);
+                        else ps.Advance(total, ps.m_FrameDistance, false);
+                    }
+                    ps.m_IsPaused = true;
                 }
-                // Native's non-fixed Simulate ignores calls below ten microseconds;
-                // this call boundary is distinct from Advance's subdivision remainder.
-                else if (total >= 1e-5f)
-                {
-                    if (stopped) ps.AdvanceStoppedClock(total, ps.m_FrameDistance);
-                    else ps.Advance(total, ps.m_FrameDistance, false);
-                }
-                ps.m_IsPaused = true;
             }
+            finally
+            {
+                foreach (var ps in systems)
+                    ps.m_SimulatingBirths = false;
+            }
+        }
+
+        // Measured Simulate histories: Birth children advance their existing particles
+        // before their parents emit newborns with their own catch-up time. Other links
+        // retain the selected systems' order. This does not order particle buffers.
+        static List<int> BirthSimulationOrder(List<ParticleSystem> systems)
+        {
+            var order = new List<int>(systems.Count);
+            var visited = new bool[systems.Count];
+            void Visit(int index)
+            {
+                if (visited[index]) return;
+                visited[index] = true;
+                var ps = systems[index];
+                if (ps.m_SimulatingBirths && ps.m_SubEmitters.enabled)
+                    foreach (var sub in ps.m_SubEmitters.emitters)
+                        if (sub.type == ParticleSystemSubEmitterType.Birth)
+                        {
+                            int child = systems.IndexOf(sub.system);
+                            if (child >= 0) Visit(child);
+                        }
+                order.Add(index);
+            }
+            for (int i = 0; i < systems.Count; i++) Visit(i);
+            return order;
         }
 
         void AdvanceStoppedClock(float dt, float distance)

@@ -16,7 +16,6 @@ PARTICLE_FIELDS = 33
 RESIDUALS = [
     (r'^start/gradients/', set(range(23, 31)), 'packed gradient interpolation'),
     (r'^color/(gradients|randomcolor)/', set(range(27, 31)), 'packed gradient interpolation'),
-    (r'^subemit/child/', {2, 3, 4, 32}, 'Birth child origin and first-step age in Simulate'),
 ]
 ANGULAR_CONTEXT = r'^(color/|custom/|subemit/|played/|vol/speedmodifier9/)'
 
