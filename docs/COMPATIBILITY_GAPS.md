@@ -55,7 +55,7 @@ Game runs keep hitting features that are missing *without a warning* (physical c
 | Message looked up, never sent | `OnParticleUpdateJobScheduled` (`Messages.cs` `s_NotSent` lists them) | Messages are not API calls: `api-gaps` cannot see them |
 | Overload drops a parameter | `Graphics.ConvertTexture(src, srcElement, dst, dstElement)`, `Mesh.Set*(..., flags)`, stereo-eye overloads (Blit slices, `LogOption`, `SetPropertyBlock` index done) | Forwarded to the simpler overload |
 | Asset class with a ClassId but no reader | `.renderTexture` (always 256×256 RGBA8, no depth) | `Loading.ReadAsset` default-constructs it |
-| Stub default not neutral | done (`stubdefaults`): value-returning stubs take the Editor's answer from `StubDefaults.cs` where it is a constant; the named examples are hand-written | Members whose answer is not a constant still return the default after their warning (see the tooling item) |
+| Stub default not neutral | done (`stubdefaults`): value-returning stubs take the Editor's answer from `StubDefaults.cs` where it is a constant; `ScalableBufferManager` and `CalculateObliqueMatrix` are hand-written, `Microphone.devices` takes the generator's empty-array rule | Members whose answer is not a constant still return the default after their warning (see the tooling item) |
 | Generated stub events | done: subscribing warns that the event is never raised | |
 | Claimed capability | `SystemInfo.supportsTextureWrapMirrorOnce` (MirrorOnce samples as Mirror; `supports3DRenderTextures` now answers false) | Packages enable a path that then draws nothing |
 | Warn once, then silent | SpriteMask, reflection probes | A second scene shows nothing in the log |
