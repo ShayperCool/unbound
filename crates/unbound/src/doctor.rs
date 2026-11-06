@@ -230,7 +230,8 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             }
         }
     }
-    let read = by_reading.get("Read").map_or(0, Vec::len) + by_reading.get("Loader").map_or(0, Vec::len);
+    let read =
+        by_reading.get("Read").map_or(0, Vec::len) + by_reading.get("Loader").map_or(0, Vec::len);
     println!("\n{read} classes read");
     if !coverage.has_table {
         println!("no class table for Unity {release} (tests/projects/classids records one)");

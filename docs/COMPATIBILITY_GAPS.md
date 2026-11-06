@@ -100,13 +100,14 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       own class table; `Runtime/ClassCoverage.cs`): a document whose class has no engine class, or
       a registered class that does not read data the document has, warns once per class naming
       the file; `unbound doctor` lists them per project, and `--all` the release's concrete
-      runtime classes without a reader. Ignored on purpose, with the reason: Preset,
+      runtime classes without a reader. Ignored on purpose, with the reason:
       EditorExtensionImpl, and OcclusionCullingSettings/NavMeshSettings while they reference no
       baked data. Found in real content without a reader (follow-ups): `LightingSettings`
       (850595691, in most scenes' lighting), `ShaderVariantCollection` (200), YAML `Sprite`
       documents (213, default-constructed), a scene's baked legacy NavMesh
       (`NavMeshSettings.m_NavMeshData`), VFX Graph (`VisualEffect` 2083052967, `VFXRenderer`
-      73398921, `VisualEffectResource` 2058629511), and legacy `GUILayer` (92, not a class of 6000.0).
+      73398921, `VisualEffectResource` 2058629511), `Preset` (181963792; editor scripts can apply
+      one), and legacy `GUILayer` (92, not a class of 6000.0).
 - [ ] `SystemInfo` answers follow what the renderer does.
 - [ ] `api-gaps` noise: trivial attributes (`JetBrains.Annotations.*`, `ResourcePathAttribute`,
       `CategoryInfoAttribute`, `ShaderKeywordFilter.*`) implemented, so the coverage line counts
