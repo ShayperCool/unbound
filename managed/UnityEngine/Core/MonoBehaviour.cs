@@ -56,8 +56,12 @@ namespace UnityEngine
                 Debug.LogError($"Coroutine couldn't be started because the the game object '{name}' is inactive!", this);
                 return null;
             }
-            return Coroutines.Start(this, routine, null);
+            return Started(Coroutines.Start(this, routine, null));
         }
+
+        /// <summary>A coroutine that ended in its first step gives null, as in Unity (measured for
+        /// the IEnumerator overload: tests/projects/mainthread), so yielding it waits a frame.</summary>
+        static Coroutine Started(Coroutine coroutine) => coroutine.Done ? null : coroutine;
 
         public Coroutine StartCoroutine(string methodName, [UnityEngine.Internal.DefaultValue("null")] object value)
         {
@@ -75,7 +79,7 @@ namespace UnityEngine
                 Debug.LogError($"Coroutine '{methodName}' couldn't be started!", this);
                 return null;
             }
-            return Coroutines.Start(this, routine, methodName);
+            return Started(Coroutines.Start(this, routine, methodName));
         }
 
         public Coroutine StartCoroutine(string methodName) => StartCoroutine(methodName, null);

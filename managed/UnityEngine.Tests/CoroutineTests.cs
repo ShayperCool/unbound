@@ -24,6 +24,11 @@ namespace UnityEngine.Tests
             Log.Add("outer done");
         }
 
+        internal static IEnumerator EndsAtOnce()
+        {
+            yield break;
+        }
+
         IEnumerator Inner()
         {
             Log.Add("inner");
@@ -62,6 +67,14 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { "inner" }, runner.Log);
             NextFrame();
             Assert.Equal(new[] { "inner", "inner done", "outer done" }, runner.Log);
+        }
+
+        [Fact]
+        public void ACoroutineThatEndsInItsFirstStepGivesNull()
+        {
+            var runner = new GameObject("Runner").AddComponent<CoroutineRunner>();
+            Assert.Null(runner.StartCoroutine(CoroutineRunner.EndsAtOnce()));
+            Assert.NotNull(runner.StartCoroutine(runner.Outer()));
         }
     }
 }
