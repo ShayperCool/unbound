@@ -553,7 +553,7 @@ namespace UnityEngine.Animations
         public global::UnityEngine.HumanPartDof humanPartDof { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.MuscleHandle.humanPartDof"); return default; } }
         public int dof { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.MuscleHandle.dof"); return default; } }
         public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.MuscleHandle.name"); return default; } }
-        public static int muscleHandleCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.MuscleHandle.muscleHandleCount"); return default; } }
+        public static int muscleHandleCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Animations.MuscleHandle.muscleHandleCount"); return 95; } }
     }
     [global::System.Runtime.InteropServices.StructLayout(global::System.Runtime.InteropServices.LayoutKind.Sequential, Size = 1)]
     [global::Unbound.Stub]
