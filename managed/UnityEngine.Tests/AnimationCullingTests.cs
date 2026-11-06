@@ -309,7 +309,10 @@ namespace UnityEngine.Tests
         static PlayableGraph PlayableRig(Animator animator, out AnimationClipPlayable playable)
         {
             var clip = new AnimationClip { legacy = true };
+            // Imported position curves carry the whole vector, as the authored probe clips do.
+            clip.SetCurve("", typeof(Transform), "localPosition.x", AnimationCurve.Constant(0f, 1f, 0f));
             clip.SetCurve("", typeof(Transform), "localPosition.y", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+            clip.SetCurve("", typeof(Transform), "localPosition.z", AnimationCurve.Constant(0f, 1f, 0f));
             clip.SetCurve("ContinueText", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 2f));
             clip.legacy = false;
             var graph = PlayableGraph.Create("culled-output");
