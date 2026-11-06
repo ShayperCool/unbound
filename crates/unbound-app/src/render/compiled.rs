@@ -41,7 +41,7 @@ pub struct CompiledPrograms {
 
 /// What a draw's uniform block is filled from.
 #[derive(Clone, Copy)]
-pub struct DrawValues<'a> {
+pub struct DrawValues<'a, 'buffers> {
     pub model: [f32; 16],
     pub view: [f32; 16],
     pub proj: [f32; 16],
@@ -67,10 +67,10 @@ pub struct DrawValues<'a> {
     /// A texture property's texture size (width, height), when one is bound.
     pub texture_size: &'a dyn Fn(&str) -> Option<(u32, u32)>,
     /// The bytes of the constant buffer bound to a cbuffer's name, when one is.
-    pub constant_buffer: &'a dyn Fn(&str) -> Option<&'a [u8]>,
+    pub constant_buffer: &'buffers dyn Fn(&str) -> Option<&'buffers [u8]>,
 }
 
-impl DrawValues<'_> {
+impl DrawValues<'_, '_> {
     /// A property of the draw, else of its material.
     pub fn get(&self, name: &str) -> Option<&PropertyValue> {
         self.overrides
