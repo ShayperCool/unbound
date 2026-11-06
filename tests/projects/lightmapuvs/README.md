@@ -51,9 +51,9 @@ on the hard angle and the distortion settings only where the mesh has charts to 
 State in Unbound: the unwrap is reproduced, for connected parts of up to 100 triangles and for
 larger ones (simplified first, segmented on the simplified copy and refined back), including
 charts that touch or overlap themselves. Cube, Multi, Pieces, Sphere, Ico, Barrel, Rock, Compound
-and Twins match in every variant (vertex count and UV2 per corner). Grid's and TwoUV's UV2 match, their vertex
-counts do not, also without generated UV2 (Unbound keeps the file's normals, which split vertices
-the Editor welds). The Torus is unwrapped as the Editor does, but its mesh is named after the OBJ
+and Twins match in every variant (vertex count and UV2 per corner). Grid and TwoUV now match both UV2 and vertex counts in every unwrap variant, including imports
+without generated UV2. Their imported normals are normalized and their attributes split with the
+measured thresholds. The Torus is unwrapped as the Editor does, but its mesh is named after the OBJ
 object, not "default", so the comparison cannot pair it. Meshes Unbound does not reproduce yet
 warn and keep the file's UV2: the Cylinder (its 16-gon caps are triangulated differently than by
 the Editor's FBX reader) and Organic (non-manifold vertices after welding).
@@ -78,3 +78,10 @@ The Manual describes Smoothness Source None as avoiding hard-edge splits; the ca
 instead have separate flat face normals. The reference records the measured result. Corner
 numbering, normal arithmetic, split thresholds, and n-gon triangle order are measured details of
 6000.0.71f1, not documented guarantees for other releases.
+
+`compare_normals.py <reference> <candidate> --expect Authored,Bare,Cube,Faces,Grid,Ico,Kite,Organic,Pieces,Sphere,Tent,Torus,Triangle,TwoUV`
+gates the 168 cases whose topology is reproduced. It writes every differing value, including
+ungated cases, to `normal-comparison.json` beside the candidate. The original exact comparator is
+unchanged in tolerance. Forty-seven calculated-normal cases differ only by at most 1.8e-7 per
+component; these are marked as recorded residuals, never as exact matches. Remaining n-gon,
+FBX edge-smoothing and existing material-slot ordering failures stay visible in the report.

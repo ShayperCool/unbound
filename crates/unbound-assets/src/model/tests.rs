@@ -119,12 +119,12 @@ fn imports_an_obj_in_unity_space() {
     let mesh = &model.meshes[renderer.mesh as usize];
     assert_eq!(mesh.name, "Box");
     assert_eq!(mesh.file_id.id, 4300000);
-    // Mirrored on X and scaled by 100; winding reversed: (0, 2, 1).
+    // Mirrored on X and scaled by 100, vertices in control point order; winding reversed.
     assert_eq!(
         mesh.positions,
-        [[0.0, 0.0, 0.0], [0.0, 100.0, 0.0], [-100.0, 0.0, 0.0]]
+        [[0.0, 0.0, 0.0], [-100.0, 0.0, 0.0], [0.0, 100.0, 0.0]]
     );
-    assert_eq!(mesh.submeshes, [vec![0, 1, 2]]);
+    assert_eq!(mesh.submeshes, [vec![0, 2, 1]]);
     assert_eq!(mesh.normals[0], [-0.0, 0.0, 1.0]);
     assert_eq!(mesh.bounds_min, [-100.0, 0.0, 0.0]);
     assert_eq!(mesh.bounds_max, [0.0, 100.0, 0.0]);
@@ -189,6 +189,7 @@ fn bind_pose_conversion_mirrors_and_scales() {
         node_index: HashMap::new(),
         sources: Vec::new(),
         material_index: HashMap::new(),
+        obj_smoothing: Vec::new(),
         rest_pose: None,
     };
     // A translation by (1, 2, 3) and a rotation of 90° about Z (x → y).
@@ -424,20 +425,20 @@ fn triangles_and_quads_split_like_unity() {
         .import(Path::new("Kite.obj"), obj.as_bytes(), &Value::Null)
         .unwrap();
     let mesh = &model.meshes[0];
-    // Mirrored on X; vertices in the order the corners first appear.
+    // Mirrored on X; vertices in control point order (an OBJ's first-use order).
     assert_eq!(
         mesh.positions,
         vec![
             [-0.0, 0.0, 0.0],
-            [-0.0, 1.0, 0.0],
-            [-3.0, 3.0, 0.0],
             [-1.0, 0.0, 0.0],
+            [-3.0, 3.0, 0.0],
+            [-0.0, 1.0, 0.0],
             [-5.0, 0.0, 0.0],
-            [-5.0, 1.0, 0.0],
             [-6.0, 0.0, 0.0],
+            [-5.0, 1.0, 0.0],
         ]
     );
-    assert_eq!(mesh.submeshes, vec![vec![0, 1, 2, 0, 2, 3, 4, 5, 6]]);
+    assert_eq!(mesh.submeshes, vec![vec![0, 3, 2, 0, 2, 1, 4, 6, 5]]);
 }
 
 #[test]
@@ -534,4 +535,22 @@ fn lightmap_uvs_unwrap_parts_of_more_than_a_hundred_triangles() {
             "{uv:?}"
         );
     }
+}
+
+#[test]
+fn weld_vertices_can_preserve_coincident_authored_points() {
+    // The Model tab documents that disabling welding preserves distinct source vertices.
+    let obj = b"o Doubled\nv 0 0 0\nv 1 0 0\nv 0 1 0\nv 0 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3\nf 4 5 6\n";
+    let settings = |enabled| meta(&format!("ModelImporter:\n  meshes:\n    weldVertices: {enabled}\n"));
+    let welded = ModelImporter.import(Path::new("Doubled.obj"), obj, &settings(1)).unwrap();
+    let separate = ModelImporter.import(Path::new("Doubled.obj"), obj, &settings(0)).unwrap();
+    assert_eq!(welded.meshes[0].positions.len(), 3);
+    assert_eq!(separate.meshes[0].positions.len(), 6);
+}
+
+#[test]
+fn a_collapsed_quad_is_reported_instead_of_losing_its_valid_triangle() {
+    let obj = b"o Collapsed\nv 0 0 0\nv 1 0 0\nv 1 0 0\nv 0 1 0\nf 1 2 3 4\n";
+    let error = ModelImporter.import(Path::new("Collapsed.obj"), obj, &Value::Null).unwrap_err();
+    assert!(error.to_string().contains("degenerate imported quads"), "{error}");
 }

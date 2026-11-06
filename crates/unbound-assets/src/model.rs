@@ -117,6 +117,10 @@ pub struct ModelSettings {
     pub swap_uv_channels: bool,
     pub normals: NormalMode,
     pub normal_smoothing_angle: f32,
+    /// `tangentSpace.normalCalculationMode` (`ModelImporterNormalCalculationMode`).
+    pub normal_calculation: i64,
+    /// `tangentSpace.normalSmoothingSource` (`ModelImporterNormalSmoothingSource`).
+    pub normal_smoothing_source: i64,
     /// `tangentSpace.blendShapeNormalImportMode`: the shapes' normals from the file, calculated
     /// (the default), or none.
     pub blend_shape_normals: NormalMode,
@@ -206,6 +210,8 @@ impl ModelSettings {
                 _ => NormalMode::Import,
             },
             normal_smoothing_angle: float(imp, "tangentSpace.normalSmoothAngle").unwrap_or(60.0),
+            normal_calculation: int(imp, "tangentSpace.normalCalculationMode").unwrap_or(4),
+            normal_smoothing_source: int(imp, "tangentSpace.normalSmoothingSource").unwrap_or(0),
             blend_shape_normals: match int(imp, "tangentSpace.blendShapeNormalImportMode")
                 .unwrap_or(1)
             {
@@ -626,7 +632,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 15;
+    const VERSION: u32 = 16;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -648,7 +654,8 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         // node with its pivot away from its origin imports at local zero with its mesh centred
         // on the pivot), so a prefab or clip setting the node's position keeps the mesh in place.
         pivot_handling: ufbx::PivotHandling::AdjustToPivot,
-        generate_missing_normals: settings.normals != NormalMode::None,
+        // Missing normals are calculated as the importer does (see `normals`).
+        generate_missing_normals: false,
         filename: filename.as_ref().into(),
         ..Default::default()
     };
@@ -696,6 +703,11 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
             .flatten()
             .map(|stack| (stack.anim.as_ref(), stack.time_begin)),
         material_index: HashMap::new(),
+        obj_smoothing: if is_obj {
+            obj_smoothing_groups(bytes, &scene)
+        } else {
+            Vec::new()
+        },
     };
 
     // The root: the single top-level node, or the scene root.
@@ -707,7 +719,7 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     };
     builder.assign_unique_names(root);
     builder.add_node(root, None, &mut ids);
-    builder.add_renderers(&mut ids);
+    builder.add_renderers(&mut ids)?;
     builder.assign_material_ids(imp, &mut ids);
 
     let (clips, clip_warnings) = if settings.import_animation && settings.animation_type != 0 {
@@ -784,6 +796,8 @@ struct Builder<'a> {
     sources: Vec<&'a ufbx::Node>,
     /// ufbx material element id → index in `model.materials`.
     material_index: HashMap<u32, u32>,
+    /// An OBJ's smoothing group per face of each mesh (ufbx keeps only smooth or not).
+    obj_smoothing: Vec<Vec<u32>>,
     /// With animation import, nodes rest in the first take's pose at its start, not in the file's
     /// static transforms, which can hold another frame's pose (measured, tests/projects/modelclips
     /// and tests/projects/humanoid).
@@ -951,7 +965,11 @@ impl<'a> Builder<'a> {
         if ranges.is_empty() {
             for stack in &takes {
                 let name = stack.element.name.to_string();
-                ranges.push(ClipRange::take(&name, stack.time_begin * fps, stack.time_end * fps));
+                ranges.push(ClipRange::take(
+                    &name,
+                    stack.time_begin * fps,
+                    stack.time_end * fps,
+                ));
             }
         }
         // IDs the meta gives clips (`internalID`) are taken first, so a hashed ID never collides.
@@ -1068,7 +1086,8 @@ impl<'a> Builder<'a> {
                 // every animation compression).
                 if every_frame {
                     let source = self.sources[index as usize];
-                    let (mut positions, mut rotations, mut scales) = (Vec::new(), Vec::new(), Vec::new());
+                    let (mut positions, mut rotations, mut scales) =
+                        (Vec::new(), Vec::new(), Vec::new());
                     for time in frame_times(start, end, fps) {
                         let t = ufbx::evaluate_transform(&stack.anim, source, time);
                         let time = (time - start) as f32;
@@ -1159,9 +1178,15 @@ impl<'a> Builder<'a> {
                             .into_iter()
                             .map(|time| Key {
                                 time: (time - start) as f32,
-                                value: [ufbx::evaluate_prop_flags(&stack.anim, source, "DeformPercent", time, 0)
-                                    .value_vec4
-                                    .x as f32],
+                                value: [ufbx::evaluate_prop_flags(
+                                    &stack.anim,
+                                    source,
+                                    "DeformPercent",
+                                    time,
+                                    0,
+                                )
+                                .value_vec4
+                                .x as f32],
                             })
                             .collect()
                     } else {
@@ -1251,8 +1276,16 @@ impl<'a> Builder<'a> {
                             .iter()
                             .map(|k| CurveKey {
                                 time: k.time * length,
-                                in_slope: if length > 0.0 { k.in_slope / length } else { 0.0 },
-                                out_slope: if length > 0.0 { k.out_slope / length } else { 0.0 },
+                                in_slope: if length > 0.0 {
+                                    k.in_slope / length
+                                } else {
+                                    0.0
+                                },
+                                out_slope: if length > 0.0 {
+                                    k.out_slope / length
+                                } else {
+                                    0.0
+                                },
                                 ..*k
                             })
                             .collect(),
@@ -1271,7 +1304,14 @@ impl<'a> Builder<'a> {
 
     /// The MotionT (position) and MotionQ (rotation) curves of a root node: its pose relative to
     /// the model's root, at the clip's frames.
-    fn motion_curves(&self, node: u32, anim: &ufbx::Anim, start: f64, end: f64, fps: f64) -> Vec<FloatCurve> {
+    fn motion_curves(
+        &self,
+        node: u32,
+        anim: &ufbx::Anim,
+        start: f64,
+        end: f64,
+        fps: f64,
+    ) -> Vec<FloatCurve> {
         let mut chain = Vec::new();
         let mut at = Some(node);
         while let Some(i) = at {
@@ -1290,11 +1330,20 @@ impl<'a> Builder<'a> {
             for &i in &chain {
                 let t = ufbx::evaluate_transform(anim, self.sources[i as usize], time);
                 let lp = self.position(t.translation);
-                let lq = [t.rotation.x as f32, -t.rotation.y as f32, -t.rotation.z as f32, t.rotation.w as f32];
+                let lq = [
+                    t.rotation.x as f32,
+                    -t.rotation.y as f32,
+                    -t.rotation.z as f32,
+                    t.rotation.w as f32,
+                ];
                 let moved = rotate(q, [lp[0] * s[0], lp[1] * s[1], lp[2] * s[2]]);
                 p = [p[0] + moved[0], p[1] + moved[1], p[2] + moved[2]];
                 q = quat_mul(q, lq);
-                s = [s[0] * t.scale.x as f32, s[1] * t.scale.y as f32, s[2] * t.scale.z as f32];
+                s = [
+                    s[0] * t.scale.x as f32,
+                    s[1] * t.scale.y as f32,
+                    s[2] * t.scale.z as f32,
+                ];
             }
             // In one hemisphere from key to key.
             if last.is_some_and(|l| (0..4).map(|c| l[c] * q[c]).sum::<f32>() < 0.0) {
@@ -1303,10 +1352,16 @@ impl<'a> Builder<'a> {
             last = Some(q);
             let time = (time - start) as f32;
             for c in 0..3 {
-                position[c].push(Key { time, value: [p[c]] });
+                position[c].push(Key {
+                    time,
+                    value: [p[c]],
+                });
             }
             for c in 0..4 {
-                rotation[c].push(Key { time, value: [q[c]] });
+                rotation[c].push(Key {
+                    time,
+                    value: [q[c]],
+                });
             }
         }
         let curve = |attribute: String, keys: Vec<Key<1>>| FloatCurve {
@@ -1338,7 +1393,7 @@ impl<'a> Builder<'a> {
     }
 
     /// Renderers and meshes, once all nodes exist (bones may come after the mesh node).
-    fn add_renderers(&mut self, ids: &mut FileIdAllocator) {
+    fn add_renderers(&mut self, ids: &mut FileIdAllocator) -> Result<()> {
         for index in 0..self.sources.len() {
             let node = self.sources[index];
             let Some(mesh) = node.mesh.as_ref() else {
@@ -1358,7 +1413,7 @@ impl<'a> Builder<'a> {
                 .iter()
                 .find(|s| !s.clusters.is_empty())
                 .map(|s| s.as_ref());
-            let (built, slots, warning) = self.build_mesh(mesh, node, skin);
+            let (built, slots, warning) = self.build_mesh(mesh, node, skin)?;
             let mesh_name = if is_root {
                 node.element.name.to_string()
             } else {
@@ -1471,6 +1526,7 @@ impl<'a> Builder<'a> {
             };
             self.model.nodes[index].renderer = Some(renderer);
         }
+        Ok(())
     }
 
     /// The model material for a ufbx material, added on first use.
@@ -1576,9 +1632,12 @@ impl<'a> Builder<'a> {
     /// The legacy importer's material for slots the file assigns none.
     fn no_name_material(&mut self) -> u32 {
         const NO_NAME: &str = "No Name";
-        if let Some(index) = self.model.materials.iter().position(|m| {
-            m.name == NO_NAME && m.description == MaterialDescription::default()
-        }) {
+        if let Some(index) = self
+            .model
+            .materials
+            .iter()
+            .position(|m| m.name == NO_NAME && m.description == MaterialDescription::default())
+        {
             return index as u32;
         }
         self.model.materials.push(ModelMaterial {
@@ -1633,13 +1692,9 @@ impl<'a> Builder<'a> {
         mesh: &'a ufbx::Mesh,
         node: &'a ufbx::Node,
         skin: Option<&ufbx::SkinDeformer>,
-    ) -> (ModelMesh, Vec<Option<&'a ufbx::Material>>, Option<String>) {
+    ) -> Result<(ModelMesh, Vec<Option<&'a ufbx::Material>>, Option<String>)> {
         let settings = self.settings;
-        let with_normals = settings.normals != NormalMode::None && mesh.vertex_normal.exists;
-        let with_tangents = settings.tangents == TangentMode::Import
-            && with_normals
-            && mesh.vertex_tangent.exists
-            && mesh.vertex_bitangent.exists;
+        let with_normals = settings.normals != NormalMode::None;
         let mut uv_sets: Vec<&ufbx::VertexVec2> =
             mesh.uv_sets.iter().take(4).map(|s| &s.vertex_uv).collect();
         if settings.swap_uv_channels && uv_sets.len() >= 2 {
@@ -1683,128 +1738,346 @@ impl<'a> Builder<'a> {
             out.uvs.resize(2, Vec::new());
         }
         let channels = self.blend_channels(mesh);
-        // Each vertex's control point (shapes move control points), each corner's vertex.
-        let mut control_points: Vec<u32> = Vec::new();
-        let mut corner_vertex = vec![u32::MAX; mesh.num_indices];
-        let mut polygons: Vec<(Vec<u32>, Vec<usize>)> = Vec::new();
-        // Vertices are welded on their exact attribute bits (and control point, with shapes).
-        let mut welded: HashMap<Vec<u32>, u32> = HashMap::new();
-        let mut key: Vec<u32> = Vec::new();
-        let mut triangle = vec![0u32; mesh.max_face_triangles.max(1) * 3];
+        // Control points as the importer welds them: in file order (an OBJ's in first-use order),
+        // equal positions with equal skin weights made one (with blend shapes, only the same point).
+        let mut welded = vec![0u32; mesh.vertices.len()];
+        let mut points: Vec<u32> = Vec::new();
+        let mut file_positions: Vec<[f32; 3]> = Vec::new();
+        {
+            let mut first: HashMap<Vec<u32>, u32> = HashMap::new();
+            let mut key = Vec::new();
+            for v in self.control_point_order(mesh) {
+                // Mirrored into Unity's handedness, unscaled.
+                let p = mesh.vertices[v as usize];
+                let p = [-p.x as f32, p.y as f32, p.z as f32];
+                key.clear();
+                key.extend(p.map(|c| (c + 0.0).to_bits()));
+                if let Some(skin) = skin {
+                    let w = bone_weight(skin, v as usize);
+                    key.extend(w.weights.map(f32::to_bits));
+                    key.extend(w.bones.map(u32::from));
+                }
+                if !channels.is_empty() || !settings.weld_vertices {
+                    key.push(v);
+                }
+                welded[v as usize] = *first.entry(key.clone()).or_insert_with(|| {
+                    points.push(v);
+                    file_positions.push(p);
+                    points.len() as u32 - 1
+                });
+            }
+        }
 
         // One submesh per material part with triangles, in material order.
-        let all_faces: Vec<u32>;
-        let parts: Vec<(Option<u32>, &[u32])> = if mesh.material_parts.is_empty() {
-            all_faces = (0..mesh.faces.len() as u32).collect();
-            vec![(None, &all_faces[..])]
-        } else {
-            mesh.material_parts
-                .iter()
-                .filter(|p| p.num_triangles > 0)
-                .map(|p| (Some(p.index), p.face_indices.as_ref()))
-                .collect()
-        };
+        let mut part_of = vec![None; mesh.faces.len()];
         let mut materials = Vec::new();
-        for (material, faces) in parts {
-            // The node's material for the slot (instances may override the mesh's).
-            let material = material.and_then(|i| {
-                node.materials
-                    .get(i as usize)
-                    .or_else(|| mesh.materials.get(i as usize))
-                    .map(|m| m.as_ref())
-            });
-            materials.push(material);
-            let mut indices = Vec::new();
-            for &face_index in faces {
-                let face = mesh.faces[face_index as usize];
-                let corners: Vec<usize> = (face.index_begin as usize
-                    ..(face.index_begin + face.num_indices) as usize)
+        if mesh.material_parts.is_empty() {
+            part_of.fill(Some(0));
+            materials.push(None);
+        } else {
+            for p in mesh.material_parts.iter().filter(|p| p.num_triangles > 0) {
+                for &f in p.face_indices.iter() {
+                    part_of[f as usize] = Some(materials.len());
+                }
+                // The node's material for the slot (instances may override the mesh's).
+                materials.push(
+                    node.materials
+                        .get(p.index as usize)
+                        .or_else(|| mesh.materials.get(p.index as usize))
+                        .map(|m| m.as_ref()),
+                );
+            }
+        }
+        out.submeshes = vec![Vec::new(); materials.len()];
+
+        // The faces' corners ("wedges") in face order: triangles and quads as they are (in Unity's
+        // winding), larger polygons as triangles; faces repeating a point are left out.
+        let mut polygons: Vec<(Vec<u32>, Vec<usize>)> = Vec::new();
+        let mut wedges: Vec<Wedge> = Vec::new();
+        let mut face_start: Vec<u32> = vec![0];
+        let mut triangles: Vec<TriangleCorners> = Vec::new();
+        let mut triangle = vec![0u32; mesh.max_face_triangles.max(1) * 3];
+        for (face_index, face) in mesh.faces.iter().enumerate() {
+            let Some(part) = part_of[face_index] else {
+                continue;
+            };
+            let range = face.index_begin as usize..(face.index_begin + face.num_indices) as usize;
+            polygons.push((
+                range.clone().map(|c| mesh.vertex_indices[c]).collect(),
+                range.clone().collect(),
+            ));
+            let count = unity_triangles(mesh, *face, &mut triangle);
+            let pieces: Vec<Vec<u32>> = if face.num_indices == 4 {
+                vec![vec![triangle[0], triangle[1], triangle[2], triangle[5]]]
+            } else {
+                triangle[..3 * count]
+                    .chunks(3)
+                    .map(<[u32]>::to_vec)
+                    .collect()
+            };
+            for (t, piece) in pieces.iter().enumerate() {
+                let p: Vec<u32> = piece
+                    .iter()
+                    .map(|&c| welded[mesh.vertex_indices[c as usize] as usize])
                     .collect();
-                polygons.push((
-                    corners.iter().map(|&c| mesh.vertex_indices[c]).collect(),
-                    corners,
-                ));
-                let count = unity_triangles(mesh, face, &mut triangle);
-                for t in 0..count {
-                    for (k, corner) in [triangle[3 * t], triangle[3 * t + 1], triangle[3 * t + 2]]
-                        .into_iter()
-                        .enumerate()
-                    {
-                        let c = corner as usize;
-                        let p = mesh.vertex_position[c];
-                        let mut vertex = Vertex {
-                            position: self.position(p),
-                            ..Default::default()
-                        };
-                        if with_normals {
-                            let n = mesh.vertex_normal[c];
-                            vertex.normal = [-n.x as f32, n.y as f32, n.z as f32];
-                            if with_tangents {
-                                let t = mesh.vertex_tangent[c];
-                                let b = mesh.vertex_bitangent[c];
-                                // Handedness of the source frame, flipped by the mirror.
-                                let cross = [
-                                    n.y * t.z - n.z * t.y,
-                                    n.z * t.x - n.x * t.z,
-                                    n.x * t.y - n.y * t.x,
-                                ];
-                                let dot = cross[0] * b.x + cross[1] * b.y + cross[2] * b.z;
-                                let w = if dot < 0.0 { 1.0 } else { -1.0 };
-                                vertex.tangent = [-t.x as f32, t.y as f32, t.z as f32, w];
-                            }
-                        }
-                        for (set, uv) in uv_sets.iter().enumerate() {
-                            let v = uv[c];
-                            vertex.uv[set] = [v.x as f32, v.y as f32];
-                        }
-                        if let Some(lightmap) = &lightmap {
-                            vertex.uv[1] = lightmap.uvs[lightmap.first[face_index as usize] + t][k];
-                        }
-                        if with_colors {
-                            let v = mesh.vertex_color[c];
-                            vertex.color = [v.x as f32, v.y as f32, v.z as f32, v.w as f32];
-                        }
-                        if let Some(skin) = skin {
-                            vertex.weights = bone_weight(skin, mesh.vertex_indices[c] as usize);
-                        }
-                        vertex.key(&mut key);
-                        let control_point = mesh.vertex_indices[c];
-                        if !channels.is_empty() {
-                            key.push(control_point);
-                        }
-                        let next = out.positions.len() as u32;
-                        let index = *welded.entry(key.clone()).or_insert_with(|| {
-                            control_points.push(control_point);
-                            out.positions.push(vertex.position);
-                            if with_normals {
-                                out.normals.push(vertex.normal);
-                            }
-                            if with_tangents {
-                                out.tangents.push(vertex.tangent);
-                            }
-                            for (set, uvs) in out.uvs.iter_mut().enumerate() {
-                                uvs.push(vertex.uv[set]);
-                            }
-                            if with_colors {
-                                out.colors.push(vertex.color);
-                            }
-                            if skin.is_some() {
-                                out.bone_weights.push(vertex.weights);
-                            }
-                            next
-                        });
-                        corner_vertex[c] = index;
-                        indices.push(index);
-                    }
+                if (0..p.len()).any(|i| p[i + 1..].contains(&p[i])) {
+                    anyhow::ensure!(
+                        piece.len() == 3,
+                        "degenerate imported quads after position welding are not supported"
+                    );
+                    continue;
+                }
+                let first = wedges.len();
+                for (&c, &point) in piece.iter().zip(&p) {
+                    wedges.push(Wedge {
+                        corner: c as usize,
+                        face: face_index,
+                        point,
+                    });
+                }
+                face_start.push(wedges.len() as u32);
+                // A quad becomes the triangles (0, 1, 2) and (0, 2, 3) after the normals.
+                let split: &[[usize; 3]] = if piece.len() == 4 {
+                    &[[0, 1, 2], [0, 2, 3]]
+                } else {
+                    &[[0, 1, 2]]
+                };
+                for (i, tri) in split.iter().enumerate() {
+                    let t = t + i;
+                    triangles.push(TriangleCorners {
+                        part,
+                        wedges: tri.map(|k| first + k),
+                        uv2: lightmap.as_ref().map(|l| l.uvs[l.first[face_index] + t]),
+                    });
                 }
             }
-            out.submeshes.push(indices);
         }
-        // Tangents: MikkTSpace on the final vertices.
-        if settings.tangents == TangentMode::Calculate && with_normals {
-            let uv0 = out.uvs.first().cloned().unwrap_or_default();
-            out.tangents =
-                tangent_space::mikk_tangents(&out.positions, &out.normals, &uv0, &out.submeshes);
+        let corners: Vec<u32> = wedges.iter().map(|w| w.point).collect();
+
+        // Normals per wedge (mirrored): the file's, or calculated (also when the file has none);
+        // then scaled as the mesh is and renormalized.
+        let normals: Vec<[f32; 3]> = if !with_normals {
+            Vec::new()
+        } else if settings.normals == NormalMode::Import && mesh.vertex_normal.exists {
+            let n = |c: usize| mesh.vertex_normal[c];
+            wedges
+                .iter()
+                .map(|w| {
+                    [
+                        -n(w.corner).x as f32,
+                        n(w.corner).y as f32,
+                        n(w.corner).z as f32,
+                    ]
+                })
+                .collect()
+        } else {
+            // Smoothing groups per wedge: an OBJ's `s` groups, an FBX's per-polygon smoothing.
+            let obj = self.obj_smoothing.get(mesh.element.typed_id as usize);
+            let smoothing = match obj {
+                Some(groups) if !groups.is_empty() => {
+                    Some(wedges.iter().map(|w| groups[w.face]).collect::<Vec<u32>>())
+                }
+                _ if self.obj => None,
+                _ if !mesh.face_smoothing.is_empty() => Some(
+                    wedges
+                        .iter()
+                        .map(|w| mesh.face_smoothing[w.face] as u32)
+                        .collect(),
+                ),
+                _ => None,
+            };
+            if smoothing.is_none()
+                && !mesh.edge_smoothing.is_empty()
+                && settings.normal_smoothing_source < 2
+                && settings.normal_calculation != 0
+            {
+                warning.get_or_insert_with(|| {
+                    "per-edge smoothing is not converted to smoothing groups; calculated normals \
+                     do not reproduce this smoothing source (not supported)"
+                        .into()
+                });
+            }
+            normals::calculate(
+                &file_positions,
+                &normals::Faces {
+                    corners: &corners,
+                    start: &face_start,
+                },
+                normals::Weighting::from_mode(settings.normal_calculation),
+                normals::SmoothingSource::from_mode(settings.normal_smoothing_source),
+                settings.normal_smoothing_angle,
+                smoothing.as_deref(),
+            )
+        };
+        let inverse_scale = [1.0 / self.scale; 3];
+        let normals: Vec<[f32; 3]> = normals
+            .into_iter()
+            .map(|n| normals::transform_normal(n, inverse_scale))
+            .collect();
+        let uv = |set: usize, w: &Wedge| -> [f32; 2] {
+            uv_sets.get(set).map_or([0.0; 2], |s| {
+                let v = s[w.corner];
+                [v.x as f32, v.y as f32]
+            })
+        };
+        let positions: Vec<[f32; 3]> = points
+            .iter()
+            .map(|&v| self.position(mesh.vertices[v as usize]))
+            .collect();
+        // Tangents per wedge: the file's (with imported normals), or MikkTSpace on the wedges.
+        let tangents: Vec<[f32; 4]> = match settings.tangents {
+            _ if !with_normals => Vec::new(),
+            TangentMode::Import
+                if settings.normals == NormalMode::Import
+                    && mesh.vertex_normal.exists
+                    && mesh.vertex_tangent.exists
+                    && mesh.vertex_bitangent.exists =>
+            {
+                wedges
+                    .iter()
+                    .map(|w| {
+                        let n = mesh.vertex_normal[w.corner];
+                        let t = mesh.vertex_tangent[w.corner];
+                        let b = mesh.vertex_bitangent[w.corner];
+                        // Handedness of the source frame, flipped by the mirror.
+                        let cross = [
+                            n.y * t.z - n.z * t.y,
+                            n.z * t.x - n.x * t.z,
+                            n.x * t.y - n.y * t.x,
+                        ];
+                        let dot = cross[0] * b.x + cross[1] * b.y + cross[2] * b.z;
+                        let w = if dot < 0.0 { 1.0 } else { -1.0 };
+                        [-t.x as f32, t.y as f32, t.z as f32, w]
+                    })
+                    .collect()
+            }
+            TangentMode::Calculate => {
+                let wedge_positions: Vec<[f32; 3]> =
+                    corners.iter().map(|&p| positions[p as usize]).collect();
+                let uv0: Vec<[f32; 2]> = wedges.iter().map(|w| uv(0, w)).collect();
+                tangent_space::face_tangents(&wedge_positions, &normals, &uv0, &face_start)
+            }
+            _ => Vec::new(),
+        };
+        let with_tangents = !tangents.is_empty();
+
+        // Vertices: each control point's first wedge makes its vertex; a later wedge reuses the
+        // newest vertex of its control point with the same attributes, or makes one after them.
+        let mut used = vec![u32::MAX; points.len()];
+        let mut used_points = Vec::new();
+        for &p in &corners {
+            if used[p as usize] == u32::MAX {
+                used[p as usize] = 0;
+            }
+        }
+        for (p, slot) in used.iter_mut().enumerate() {
+            if *slot == 0 {
+                *slot = used_points.len() as u32;
+                used_points.push(p);
+            }
+        }
+        let count = used_points.len();
+        // Each vertex's control point (shapes move control points), each corner's vertex.
+        let mut control_points: Vec<u32> = used_points.iter().map(|&p| points[p]).collect();
+        out.positions = used_points.iter().map(|&p| positions[p]).collect();
+        if with_normals {
+            out.normals = vec![[0.0; 3]; count];
+        }
+        if with_tangents {
+            out.tangents = vec![[0.0; 4]; count];
+        }
+        for uvs in &mut out.uvs {
+            *uvs = vec![[0.0; 2]; count];
+        }
+        if with_colors {
+            out.colors = vec![[0.0; 4]; count];
+        }
+        if let Some(skin) = skin {
+            out.bone_weights = control_points
+                .iter()
+                .map(|&v| bone_weight(skin, v as usize))
+                .collect();
+        }
+        let color = |w: &Wedge| {
+            let v = mesh.vertex_color[w.corner];
+            [v.x as f32, v.y as f32, v.z as f32, v.w as f32]
+        };
+        let threshold = normals::split_threshold();
+        let mut splitter = normals::Splitter::new(count);
+        let mut corner_vertex = vec![u32::MAX; mesh.num_indices];
+        for triangle in &triangles {
+            for (k, &i) in triangle.wedges.iter().enumerate() {
+                let w = &wedges[i];
+                let uv = |set: usize, w: &Wedge| match (set, triangle.uv2) {
+                    (1, Some(uv2)) => uv2[k],
+                    _ => uv(set, w),
+                };
+                let p = used[w.point as usize];
+                let fill = |out: &mut ModelMesh, v: usize| {
+                    if with_normals {
+                        out.normals[v] = normals[i];
+                    }
+                    if with_tangents {
+                        out.tangents[v] = tangents[i];
+                    }
+                    for (set, uvs) in out.uvs.iter_mut().enumerate() {
+                        uvs[v] = uv(set, w);
+                    }
+                    if with_colors {
+                        out.colors[v] = color(w);
+                    }
+                };
+                let same = |v: u32| {
+                    let v = v as usize;
+                    let close = |a: [f32; 2], b: [f32; 2]| {
+                        let d = [a[0] - b[0], a[1] - b[1]];
+                        d[1] * d[1] + d[0] * d[0] <= normals::UV_WELD
+                    };
+                    (!with_normals || normals::dot(out.normals[v], normals[i]) >= threshold)
+                        && (!with_colors || out.colors[v] == color(w))
+                        && out
+                            .uvs
+                            .iter()
+                            .enumerate()
+                            .all(|(set, uvs)| close(uvs[v], uv(set, w)))
+                        && (!with_tangents || {
+                            let (a, b) = (out.tangents[v], tangents[i]);
+                            normals::dot([a[0], a[1], a[2]], [b[0], b[1], b[2]]) >= threshold
+                                && (b[3] - a[3]).abs() <= normals::W_WELD
+                        })
+                };
+                let vertex = if splitter.is_new(p) {
+                    fill(&mut out, p as usize);
+                    splitter.add(p, p);
+                    p
+                } else if let Some(v) = splitter.find(p, same) {
+                    v
+                } else {
+                    let v = out.positions.len() as u32;
+                    out.positions.push(out.positions[p as usize]);
+                    control_points.push(control_points[p as usize]);
+                    if with_normals {
+                        out.normals.push([0.0; 3]);
+                    }
+                    if with_tangents {
+                        out.tangents.push([0.0; 4]);
+                    }
+                    for uvs in &mut out.uvs {
+                        uvs.push([0.0; 2]);
+                    }
+                    if with_colors {
+                        out.colors.push([0.0; 4]);
+                    }
+                    if skin.is_some() {
+                        out.bone_weights.push(out.bone_weights[p as usize]);
+                    }
+                    fill(&mut out, v as usize);
+                    splitter.add(p, v);
+                    v
+                };
+                corner_vertex[w.corner] = vertex;
+                out.submeshes[triangle.part].push(vertex);
+            }
         }
         if !channels.is_empty() {
             self.add_blend_shapes(
@@ -1835,7 +2108,7 @@ impl<'a> Builder<'a> {
             out.bounds_min = min;
             out.bounds_max = max;
         }
-        (out, materials, warning)
+        Ok((out, materials, warning))
     }
 
     /// The control points in the importer's order: the file's, an OBJ's in the order the faces'
@@ -1956,6 +2229,12 @@ impl<'a> Builder<'a> {
         let base: Vec<[f64; 3]> = mesh.vertices.iter().map(|v| [v.x, v.y, v.z]).collect();
         let cp_polygons: Vec<Vec<u32>> = polygons.iter().map(|(cps, _)| cps.clone()).collect();
         let uv0 = out.uvs.first().cloned().unwrap_or_default();
+        // Tangent deltas compare MikkTSpace on the final vertices, shaped and not.
+        let base_tangents = if out.tangents.is_empty() {
+            Vec::new()
+        } else {
+            tangent_space::mikk_tangents(&out.positions, &out.normals, &uv0, &out.submeshes)
+        };
         for channel in channels {
             let mut frames = Vec::new();
             for key in channel.keyframes.iter() {
@@ -2056,7 +2335,7 @@ impl<'a> Builder<'a> {
                     );
                     shaped
                         .iter()
-                        .zip(&out.tangents)
+                        .zip(&base_tangents)
                         .map(|(t, b)| [t[0] - b[0], t[1] - b[1], t[2] - b[2]])
                         .collect()
                 };
@@ -2174,7 +2453,10 @@ impl ClipRange {
                     .iter()
                     .map(|e| {
                         (
-                            e.get("path").and_then(Value::as_str).unwrap_or_default().to_string(),
+                            e.get("path")
+                                .and_then(Value::as_str)
+                                .unwrap_or_default()
+                                .to_string(),
                             float(e, "weight").unwrap_or(1.0),
                         )
                     })
@@ -2219,7 +2501,11 @@ impl ClipRange {
                         .and_then(Value::as_str)
                         .unwrap_or_default()
                         .to_string(),
-                    data: e.get("data").and_then(Value::as_str).unwrap_or_default().to_string(),
+                    data: e
+                        .get("data")
+                        .and_then(Value::as_str)
+                        .unwrap_or_default()
+                        .to_string(),
                     float_parameter: float(e, "floatParameter").unwrap_or(0.0),
                     int_parameter: int(e, "intParameter").unwrap_or(0) as i32,
                     message_options: int(e, "messageOptions").unwrap_or(0) as i32,
@@ -2237,7 +2523,11 @@ impl ClipRange {
                         .and_then(Value::as_seq)
                         .unwrap_or_default();
                     ParameterCurve {
-                        name: c.get("name").and_then(Value::as_str).unwrap_or_default().to_string(),
+                        name: c
+                            .get("name")
+                            .and_then(Value::as_str)
+                            .unwrap_or_default()
+                            .to_string(),
                         keys: keys
                             .iter()
                             .map(|k| CurveKey {
@@ -2252,7 +2542,8 @@ impl ClipRange {
                             })
                             .collect(),
                         pre_infinity: curve.and_then(|v| int(v, "preInfinity")).unwrap_or(2) as i32,
-                        post_infinity: curve.and_then(|v| int(v, "postInfinity")).unwrap_or(2) as i32,
+                        post_infinity: curve.and_then(|v| int(v, "postInfinity")).unwrap_or(2)
+                            as i32,
                     }
                 })
                 .collect(),
@@ -2316,8 +2607,12 @@ fn clip_range<const N: usize>(
         let t = k.time as f64;
         t >= start - EPSILON && t <= end + EPSILON
     };
-    if keys.first().is_some_and(|k| (k.time as f64) < start - EPSILON)
-        && !keys.iter().any(|k| ((k.time as f64) - start).abs() <= EPSILON)
+    if keys
+        .first()
+        .is_some_and(|k| (k.time as f64) < start - EPSILON)
+        && !keys
+            .iter()
+            .any(|k| ((k.time as f64) - start).abs() <= EPSILON)
         && let Some(value) = at(start)
     {
         out.push(Key { time: 0.0, value });
@@ -2327,7 +2622,9 @@ fn clip_range<const N: usize>(
         value: k.value,
     }));
     if keys.last().is_some_and(|k| (k.time as f64) > end + EPSILON)
-        && !keys.iter().any(|k| ((k.time as f64) - end).abs() <= EPSILON)
+        && !keys
+            .iter()
+            .any(|k| ((k.time as f64) - end).abs() <= EPSILON)
         && let Some(value) = at(end)
     {
         out.push(Key {
@@ -2443,29 +2740,50 @@ fn unity_triangles(mesh: &ufbx::Mesh, face: ufbx::Face, out: &mut [u32]) -> usiz
     }
 }
 
-/// One corner's attributes, before welding.
-#[derive(Default)]
-struct Vertex {
-    position: [f32; 3],
-    normal: [f32; 3],
-    tangent: [f32; 4],
-    uv: [[f32; 2]; 4],
-    color: [f32; 4],
-    weights: BoneWeight,
+/// A face corner: its file corner, face and welded control point.
+struct Wedge {
+    corner: usize,
+    face: usize,
+    point: u32,
 }
 
-impl Vertex {
-    /// The exact bits of every attribute: equal keys weld.
-    fn key(&self, key: &mut Vec<u32>) {
-        key.clear();
-        key.extend(self.position.iter().map(|v| v.to_bits()));
-        key.extend(self.normal.iter().map(|v| v.to_bits()));
-        key.extend(self.tangent.iter().map(|v| v.to_bits()));
-        key.extend(self.uv.iter().flatten().map(|v| v.to_bits()));
-        key.extend(self.color.iter().map(|v| v.to_bits()));
-        key.extend(self.weights.weights.iter().map(|v| v.to_bits()));
-        key.extend(self.weights.bones.iter().map(|&b| b as u32));
+/// A triangle of the final mesh: its submesh, its face corners and generated UV2.
+struct TriangleCorners {
+    part: usize,
+    wedges: [usize; 3],
+    uv2: Option<[[f32; 2]; 3]>,
+}
+
+/// An OBJ file's smoothing group per face, per mesh in ufbx's order (`s off` and `s 0` are no
+/// group); empty when no face has a group (the file has no smoothing then, as measured) or the
+/// faces do not add up to the meshes'.
+fn obj_smoothing_groups(bytes: &[u8], scene: &ufbx::Scene) -> Vec<Vec<u32>> {
+    let mut group = 0;
+    let mut faces = Vec::new();
+    for line in bytes.split(|&b| b == b'\n') {
+        let line = String::from_utf8_lossy(line);
+        let mut words = line.split_whitespace();
+        match words.next() {
+            Some("s") => group = words.next().and_then(|w| w.parse().ok()).unwrap_or(0),
+            Some("f") => faces.push(group),
+            _ => {}
+        }
     }
+    if faces.iter().all(|&g| g == 0)
+        || faces.len() != scene.meshes.iter().map(|m| m.faces.len()).sum::<usize>()
+    {
+        return Vec::new();
+    }
+    let mut rest = &faces[..];
+    scene
+        .meshes
+        .iter()
+        .map(|m| {
+            let (mine, others) = rest.split_at(m.faces.len());
+            rest = others;
+            mine.to_vec()
+        })
+        .collect()
 }
 
 /// The four heaviest influences on a skin vertex, renormalized.
@@ -2496,10 +2814,8 @@ fn bone_weight(skin: &ufbx::SkinDeformer, vertex: usize) -> BoneWeight {
 
 mod lightmap_uv;
 mod materials;
-mod tangent_space;
-
-#[cfg(test)]
 mod normals;
+mod tangent_space;
 
 #[cfg(test)]
 mod tests;

@@ -9,7 +9,7 @@
 //! normals are then scaled into the mesh's space and renormalized. Vertices come from the wedges:
 //! each control point's first wedge makes its vertex, and a later wedge makes a new vertex unless
 //! its attributes match one of the control point's vertices so far (normals and tangents within
-//! about 1°, UVs within 0.001, equal colours).
+//! the split threshold, UVs within 0.001, equal colours).
 
 pub type V3 = [f32; 3];
 
@@ -416,6 +416,37 @@ pub fn calculate(
         }
     }
     sums.into_iter().map(normalize_robust).collect()
+}
+
+/// The vertices made so far for each control point, tried newest first.
+pub struct Splitter {
+    made: Vec<Vec<u32>>,
+}
+
+impl Splitter {
+    pub fn new(control_points: usize) -> Self {
+        Self {
+            made: vec![Vec::new(); control_points],
+        }
+    }
+
+    /// Whether `control_point` has no vertex yet (its first wedge makes the control point's own).
+    pub fn is_new(&self, control_point: u32) -> bool {
+        self.made[control_point as usize].is_empty()
+    }
+
+    /// The newest of `control_point`'s vertices that `same` accepts.
+    pub fn find(&self, control_point: u32, same: impl Fn(u32) -> bool) -> Option<u32> {
+        self.made[control_point as usize]
+            .iter()
+            .rev()
+            .copied()
+            .find(|&v| same(v))
+    }
+
+    pub fn add(&mut self, control_point: u32, vertex: u32) {
+        self.made[control_point as usize].push(vertex);
+    }
 }
 
 #[cfg(test)]
