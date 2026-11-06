@@ -301,4 +301,65 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
 - Unmeasured: other releases, surround output, parameter changes and snapshot transitions while
   the detector runs, sending groups that start after their mixer, sends between mixers, a send into its own group,
   wet mixing on these units (fails loudly), and sample rates other than 48000 and 44100 Hz.
-- Compressor and the other mixer effects still fail loudly.
+- Compressor, ParamEQ and the simple filters are in the next section; the other mixer effects
+  still fail loudly.
+
+# AudioMixer: Compressor, ParamEQ, Lowpass Simple and Highpass Simple
+
+`crates/unbound-runtime/src/audio/compressor.rs` runs the Compressor; `effects.rs` runs ParamEQ
+(`ParamEq`) and the two simple filters (`SimpleFilter`). The managed mixer sends `compressor` and
+`eq` in the group configuration (JSON; NativeApi unchanged) and the simple filters' `cutoff`.
+Validation: tests/projects/mixercompressor (Unity 6000.0.71f1, Linux, 48000 and 44100 Hz).
+
+## Unity contract (6000.0)
+
+Documented, Manual *Audio effects* (https://docs.unity.com/en-us/engine/6000.0/manual/audio/reference/effects):
+
+- *Audio Compressor Effect* (`.../effects/class-audio-compressor`): "a limiter with a fixed ratio
+  of ∞:1 ... the compressor clamps the signal output when it reaches the threshold". Threshold 0
+  to -60 dB (default 0), Attack 10 to 200 ms (50), Release 20 to 1000 ms (50), Make up gain 0 to
+  30 dB (0).
+- *Audio Parametric Equalizer Effect* (`.../effects/class-audio-param-eqeffect`): Center freq 20
+  to 22000 Hz (8000), Octave Range 0.2 to 5 (1), Frequency Gain 0.05 to 3 (1, no gain).
+- *Audio Low Pass Simple Effect* and *Audio High Pass Simple Effect*
+  (`.../effects/class-audio-low-pass-simple-effect`, `class-audio-high-pass-simple-effect`):
+  Cutoff freq 10 to 22000 Hz, default 5000 for both, no resonance.
+- The Manual states nothing about the detector, the filter shapes, bypass or startup.
+
+Editor definitions of 6000.0.71f1 (`MixerEffectDefinitions`) match these ranges and defaults except
+Highpass Simple's Cutoff freq default, 1000 Hz; Native also uses 1000 Hz for an unset cutoff
+(`hps_default`). Unset Compressor and ParamEQ parameters act as their defaults (`comp_unset_times`,
+`comp_step_thr20`, `eq_gain_only`).
+
+## Measured model
+
+Measured from the captures, not documented:
+
+- **Compressor.** A linked peak limiter. Per frame the peak `p = max(p - 10/rate, max(|L|, |R|))`
+  (it decays linearly by 10 per second) drives an envelope `env = env * c + p * (1 - c)` with
+  `c = exp(-1000 / (T * rate))`, `T` the Attack while `p` is above the threshold and the Release
+  otherwise. The gain is `min(1, threshold / env)` times Make up gain. The envelope starts at the
+  threshold and the peak at zero. All of this runs in single precision, with `c` rounded from
+  double precision: that rounding fixes the measured attack curve of 200 ms and the 2e-5 offset
+  of the settled level.
+- **ParamEQ.** A peaking biquad: `w0 = 2 pi center / rate` with the center limited to
+  `rate / 2 - 100` Hz (22000 Hz becomes 21950 Hz at 44100 Hz), `alpha = sin(w0) * octaves / 2`
+  and `A = gain` in the cookbook form, so the gain at the center is `gain^2` (9 at the maximum of
+  3) and DC passes. The engine computes it in double precision.
+- **Lowpass Simple / Highpass Simple.** One-pole stages `y += a (x - y)`: the low pass cascades two
+  identical stages, the high pass is the input minus one stage. `a = w / (w + rate)` with
+  `w = 2 pi cutoff` up to `cutoff = rate / pi` (where `a = 2/3`); above it `a` rises linearly to
+  1 at 22000 Hz, so the low pass passes everything and the high pass is silent at the maximum.
+- **Bypass.** Effect bypass and group bypass pass the signal unchanged for all four effects.
+- **Startup.** A group with any of them has the 1024-frame group input fade, also when bypassed
+  (`*_startup_bypass`), as Echo, SFX Reverb and Duck Volume.
+
+## Limits
+
+- ParamEQ: Native's single-precision arithmetic is not reproduced. A 100 Hz peak with gain 3
+  changes the DC level by up to 3.4e-4 (`eq_startup`, about 2e-4 relative); see the residual
+  ledger in docs/COMPATIBILITY_GAPS.md.
+- Values outside the Editor's ranges (through exposed parameters) fail loudly as unmeasured, as do
+  wet mixing on these effects.
+- Unmeasured: other releases, surround output, parameter changes and snapshot transitions while
+  the effects run, resuming after a bypass, and sample rates other than 48000 and 44100 Hz.
