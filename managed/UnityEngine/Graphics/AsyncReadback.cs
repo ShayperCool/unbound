@@ -233,6 +233,12 @@ namespace Unbound.Runtime
             && GraphicsFormatUtility.GetComponentCount(format) > 0
             && GraphicsFormatUtility.GetBlockSize(format) == GraphicsFormatUtility.GetComponentCount(format);
 
+        /// <summary>Sources whose missing channels read as 1 when converted (measured: R16 and RG32
+        /// targets and textures into RGBAFloat read (r, 1, 1, 1) and (r, g, 1, 1),
+        /// tests/projects/textureformats .asyncfloat).</summary>
+        static bool MissingChannelsReadAsOne(GraphicsFormat format) =>
+            format is GraphicsFormat.R16_UNorm or GraphicsFormat.R16G16_UNorm;
+
         internal static Result Texture(Texture src, int mip, int x, int width, int y, int height, int z, int depth, ReadbackFormat format,
             Action<UnityEngine.Rendering.AsyncGPUReadbackRequest> callback, bool reportUnsupported = false)
         {
@@ -263,6 +269,15 @@ namespace Unbound.Runtime
                 result.HasError = true;
                 return result;
             }
+            // A render texture whose format the device cannot read pixels from (measured for
+            // A2B10G10R10_UNormPack32 and the integer formats: tests/projects/textureformats).
+            if (src is RenderTexture && src.graphicsFormat != GraphicsFormat.None
+                && !SystemInfo.IsFormatSupported(src.graphicsFormat, GraphicsFormatUsage.ReadPixels))
+            {
+                Debug.LogError($"'{src.graphicsFormat}' doesn't support ReadPixels usage on this platform. Async GPU readback failed.");
+                result.HasError = true;
+                return result;
+            }
             if (format == null || GraphicsFormatUtility.IsCompressedFormat(src.graphicsFormat))
             {
                 Debug.LogError("Unbound: AsyncGPUReadback into this format is not supported; the request fails.");
@@ -272,12 +287,13 @@ namespace Unbound.Runtime
             ulong handle = TextureHandles.Of(src);
             bool floats = !EightBit(src.graphicsFormat);
             bool alpha = src is Texture2D a8 && a8.format == TextureFormat.Alpha8;
+            int channels = MissingChannelsReadAsOne(src.graphicsFormat) ? (int)GraphicsFormatUtility.GetComponentCount(src.graphicsFormat) : 4;
             result.Layers = new byte[depth][];
             for (int layer = 0; layer < depth; layer++)
             {
                 var texels = handle == 0 ? null : Native.ReadTexture(handle, mip, z + layer, x, y, width, height, floats);
                 if (texels == null) return Unavailable(result);
-                result.Layers[layer] = format.Encode(texels, width * height, floats, alpha);
+                result.Layers[layer] = format.Encode(texels, width * height, floats, alpha, channels);
             }
             result.Width = width;
             result.Height = height;
@@ -293,17 +309,21 @@ namespace Unbound.Runtime
     {
         /// <summary>Source channel (0 r, 1 g, 2 b, 3 a) of each output channel.</summary>
         readonly int[] m_Channels;
-        /// <summary>1 byte, 2 half, 4 float per channel.</summary>
+        /// <summary>1 byte, 2 half (or a normalized 16-bit value), 4 float per channel.</summary>
         readonly int m_Size;
+        /// <summary>Normalized 16-bit channels (with <see cref="m_Size"/> 2).</summary>
+        readonly bool m_Unorm16;
 
         internal bool IsAlpha8 => ReferenceEquals(this, A8);
 
         ReadbackFormat(int size, params int[] channels) { m_Size = size; m_Channels = channels; }
+        ReadbackFormat(bool unorm16, params int[] channels) : this(2, channels) { m_Unorm16 = unorm16; }
 
         static readonly ReadbackFormat Rgba8 = new ReadbackFormat(1, 0, 1, 2, 3), Bgra8 = new ReadbackFormat(1, 2, 1, 0, 3),
             Argb8 = new ReadbackFormat(1, 3, 0, 1, 2), R8 = new ReadbackFormat(1, 0), Rg8 = new ReadbackFormat(1, 0, 1), Rgb8 = new ReadbackFormat(1, 0, 1, 2),
             A8 = new ReadbackFormat(1, 3), RgbaHalf = new ReadbackFormat(2, 0, 1, 2, 3), RHalf = new ReadbackFormat(2, 0), RgHalf = new ReadbackFormat(2, 0, 1),
-            RgbaFloat = new ReadbackFormat(4, 0, 1, 2, 3), RFloat = new ReadbackFormat(4, 0), RgFloat = new ReadbackFormat(4, 0, 1);
+            RgbaFloat = new ReadbackFormat(4, 0, 1, 2, 3), RFloat = new ReadbackFormat(4, 0), RgFloat = new ReadbackFormat(4, 0, 1),
+            R16 = new ReadbackFormat(true, 0), Rg16 = new ReadbackFormat(true, 0, 1), Rgba16 = new ReadbackFormat(true, 0, 1, 2, 3);
 
         internal static ReadbackFormat Of(TextureFormat format) => format switch
         {
@@ -320,6 +340,9 @@ namespace Unbound.Runtime
             TextureFormat.RGBAFloat => RgbaFloat,
             TextureFormat.RFloat => RFloat,
             TextureFormat.RGFloat => RgFloat,
+            TextureFormat.R16 => R16,
+            TextureFormat.RG32 => Rg16,
+            TextureFormat.RGBA64 => Rgba16,
             _ => null,
         };
 
@@ -337,12 +360,16 @@ namespace Unbound.Runtime
             GraphicsFormat.R32G32B32A32_SFloat => RgbaFloat,
             GraphicsFormat.R32_SFloat => RFloat,
             GraphicsFormat.R32G32_SFloat => RgFloat,
+            GraphicsFormat.R16_UNorm => R16,
+            GraphicsFormat.R16G16_UNorm => Rg16,
+            GraphicsFormat.R16G16B16A16_UNorm => Rgba16,
             _ => null,
         };
 
         /// <summary><paramref name="texels"/> as the renderer reads them: 4 bytes per texel of an
-        /// 8-bit RGBA texture (1 of a one-channel one), 4 floats when <paramref name="floats"/>.</summary>
-        internal byte[] Encode(byte[] texels, int count, bool floats, bool alpha = false)
+        /// 8-bit RGBA texture (1 of a one-channel one), 4 floats when <paramref name="floats"/>, of
+        /// which those from <paramref name="sourceChannels"/> on read as 1.</summary>
+        internal byte[] Encode(byte[] texels, int count, bool floats, bool alpha = false, int sourceChannels = 4)
         {
             int inChannels = floats ? 4 : Math.Max(1, texels.Length / Math.Max(1, count));
             var output = new byte[count * m_Channels.Length * m_Size];
@@ -355,7 +382,7 @@ namespace Unbound.Runtime
                     byte b;
                     if (floats)
                     {
-                        f = BitConverter.ToSingle(texels, (i * 4 + c) * 4);
+                        f = c < sourceChannels ? BitConverter.ToSingle(texels, (i * 4 + c) * 4) : 1f;
                         b = (byte)Math.Round(Math.Clamp(f, 0f, 1f) * 255f, MidpointRounding.AwayFromZero);
                     }
                     else
@@ -369,6 +396,9 @@ namespace Unbound.Runtime
                     switch (m_Size)
                     {
                         case 1: output[o] = b; break;
+                        case 2 when m_Unorm16:
+                            BitConverter.TryWriteBytes(new Span<byte>(output, o, 2), (ushort)Math.Round(Math.Clamp(f, 0f, 1f) * 65535.0));
+                            break;
                         case 2: BitConverter.TryWriteBytes(new Span<byte>(output, o, 2), (Half)f); break;
                         default: BitConverter.TryWriteBytes(new Span<byte>(output, o, 4), f); break;
                     }
