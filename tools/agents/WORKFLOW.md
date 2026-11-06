@@ -108,8 +108,9 @@ A worker with this task, in its own worktree from current `main`:
    without a verdict, `no recipe` with the reason) and writes
    `~/.cache/unbound/agents/suite/<label>/summary.json`; step logs are in the run's work directory.
 2. The suite compares itself with `~/.cache/unbound/agents/baseline/` and lists every probe whose
-   status or summary changed; it exits 1 on a new failure. A new failure is a regression; rerun it
-   once with `--only <probe>` to rule out flakiness.
+   status or summary changed; it exits 1 on a new failure or when a failing probe got worse (an
+   earlier failing step, fewer passing or more failing checks, more counted failures). Either is a
+   regression; rerun it once with `--only <probe>` to rule out flakiness.
 3. Find the landing that caused it: bisect within `landed.jsonl`. Then either land a `git revert`
    with the reason, or, if a small fix is obvious, land the fix. Add a queue item for the owner
    subsystem either way.
