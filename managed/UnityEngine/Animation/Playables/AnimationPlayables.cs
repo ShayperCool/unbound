@@ -58,7 +58,13 @@ namespace Unbound.Runtime.Playables
         internal override void Evaluate(AnimationEvaluation e, PlayableNode node, int viaPort, float weight, AnimStream into)
         {
             if (Clip == null || Clip.m_Legacy) return;
+            if (!e.ReferencePose && weight > 0f && ApplyPlayableIK) e.PlayableIK = true;
             var bound = e.Bindings.Bind(Clip);
+            if (!e.ReferencePose && e.Animator.Human is { } human && Clip.HasHumanCurves && Clip.length > 0f)
+                human.SampleMotion(Clip, Clip.HumanClipMotion, new Unbound.Runtime.Humanoid.HumanClipMotionInput
+                {
+                    Time = (float)(node.Time / Clip.length), PreviousTime = (float)(node.PreviousTime / Clip.length), Speed = 1f,
+                }, out into.BodyMotion);
             double t = e.ReferencePose ? 0.0 : node.Time;
             m_Pose.Reset(e.Bindings.FloatCount, e.Bindings.ObjectCount);
             ClipSampling.Sample(bound, (float)ClipTime(t), 1f, m_Pose);

@@ -77,6 +77,14 @@ namespace Unbound.Runtime.Humanoid
 
         internal void ClearMotion() => m_HasSample = false;
 
+        /// <summary>A playable's body relative to its motion, retained for visibility replay.
+        /// Does not apply root movement or step the feet-pivot memory.</summary>
+        internal void SetPoseMotion(in HumanRootMotionSample sample)
+        {
+            m_Sample = sample;
+            m_HasSample = true;
+        }
+
         /// <summary>A clip's root motion between a state's previous and current times.</summary>
         internal void SampleMotion(AnimationClip clip, HumanClipMotion motion, in HumanClipMotionInput input, out HumanRootMotionSample sample)
         {
@@ -254,6 +262,18 @@ namespace UnityEngine
             if (h == null) return;
             h.Apply(layer => player != null && layer < player.Layers.Length && player.Layers[layer].Def.IKPass,
                 player?.Layers.Length ?? 0);
+        }
+
+        /// <summary>Applies the combined playable pose and its requested IK pass. Measured in
+        /// Unity 6000.0.71f1: clip and mixer outputs request one pass on a humanoid Animator,
+        /// including when its attached controller also requests IK.</summary>
+        internal void ApplyPlayableHumanPose(bool playableIK)
+        {
+            var h = m_Human;
+            var player = m_Player;
+            if (h == null) return;
+            h.Apply(layer => layer == 0 && playableIK || player != null && layer < player.Layers.Length && player.Layers[layer].Def.IKPass,
+                Math.Max(playableIK ? 1 : 0, player?.Layers.Length ?? 0));
         }
     }
 }

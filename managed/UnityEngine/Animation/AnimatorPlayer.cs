@@ -301,6 +301,9 @@ namespace Unbound.Runtime
         /// not written and the IK pass does not run; other properties (parameter curves, materials,
         /// script fields) are written.</summary>
         internal bool SkipWrites;
+        /// <summary>The pending playable outputs combine the controller's pose and motion before
+        /// writing and delivering movement once for the Animator.</summary>
+        internal bool DeferOutput;
 
         int m_PosedFloats = -1, m_PosedObjects = -1;
 
@@ -971,6 +974,7 @@ namespace Unbound.Runtime
             int count = BuildLayerPoses();
             ComputeRootMotion(count);
             AfterEvaluate();
+            if (DeferOutput) return;
             ProcessRootMotion();
             WritePose(count, SkipWrites);
         }

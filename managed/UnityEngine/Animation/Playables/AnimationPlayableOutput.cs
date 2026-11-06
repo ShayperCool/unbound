@@ -18,6 +18,7 @@ namespace Unbound.Runtime.Playables
         }
 
         internal UnityEngine.Animator Target;
+        internal bool Ticked, Automatic, SkipEvaluation;
         internal ushort SortingOrder = 100;
         internal AnimationStreamSource StreamSource = AnimationStreamSource.DefaultValues;
         /// <summary>The channels the output animates since its source was set (AnimationEvaluation.KeepBound).</summary>

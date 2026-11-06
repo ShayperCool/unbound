@@ -2,6 +2,9 @@ using System.Collections.Generic;
 using System.Linq;
 using Unbound.Runtime;
 using Unbound.Tests;
+using Unbound.Runtime.Playables;
+using UnityEngine.Animations;
+using UnityEngine.Playables;
 using UnityEngine;
 using Xunit;
 
@@ -291,5 +294,102 @@ namespace UnityEngine.Tests
             Near.Equal(5.5f, animation.transform.localPosition.x, 1e-4f);
             Assert.Equal(new[] { "OnHit(3)" }, receiver.Calls);
         }
+        // Automatic animation passes, using the same prepare/output/controller sequence as the
+        // player loop, with an explicit delta so these tests do not depend on a running clock.
+        static void PlayableStep(PlayableGraph graph, Animator animator, float dt)
+        {
+            var data = PlayableGraphData.Get(graph);
+            data.PreparePass(dt, evaluate: false);
+            data.FrameId++;
+            foreach (var output in data.Outputs.ToArray()) OutputSystems.Process(output, dt, false);
+            animator.Tick(dt);
+            AnimationOutputs.RunPending(animator);
+        }
+
+        static PlayableGraph PlayableRig(Animator animator, out AnimationClipPlayable playable)
+        {
+            var clip = new AnimationClip { legacy = true };
+            clip.SetCurve("", typeof(Transform), "localPosition.y", AnimationCurve.Linear(0f, 0f, 1f, 1f));
+            clip.SetCurve("ContinueText", typeof(Transform), "localPosition.x", AnimationCurve.Linear(0f, 0f, 1f, 2f));
+            clip.legacy = false;
+            var graph = PlayableGraph.Create("culled-output");
+            var output = AnimationPlayableOutput.Create(graph, "Animation", animator);
+            playable = AnimationClipPlayable.Create(graph, clip);
+            output.SetSourcePlayable(playable);
+            graph.Play();
+            return graph;
+        }
+
+        [Theory]
+        [InlineData(AnimatorCullingMode.CullCompletely)]
+        [InlineData(AnimatorCullingMode.CullUpdateTransforms)]
+        public void PlayableCullingControlsTimeAndWritesAndRestoresTheCombinedPose(AnimatorCullingMode mode)
+        {
+            var camera = MakeCamera();
+            var (animator, text, renderer) = Rig(mode);
+            animator.runtimeAnimatorController = null;
+            var graph = PlayableRig(animator, out var playable);
+            try
+            {
+                PlayableStep(graph, animator, 0.1f);
+                PlayableStep(graph, animator, 0.1f);
+                float time = mode == AnimatorCullingMode.CullCompletely ? 0f : 0.2f;
+                Near.Equal(time, (float)playable.GetTime());
+                Near.Equal(0f, text.localPosition.x);
+                // The Animator's own root curves still write with CullUpdateTransforms.
+                Near.Equal(time, animator.transform.localPosition.y);
+                MakeVisible(camera, renderer);
+                Near.Equal(time * 2f, text.localPosition.x);
+                PlayableStep(graph, animator, 0.1f);
+                Near.Equal(time + 0.1f, (float)playable.GetTime());
+                Near.Equal((time + 0.1f) * 2f, text.localPosition.x);
+            }
+            finally { graph.Destroy(); }
+        }
+
+        [Fact]
+        public void AControllerlessOutputReplaysItsLastVisibleMotionAfterSkippedUpdates()
+        {
+            var camera = MakeCamera();
+            var (animator, text, renderer) = Rig(AnimatorCullingMode.CullCompletely);
+            animator.runtimeAnimatorController = null;
+            animator.applyRootMotion = true;
+            var graph = PlayableRig(animator, out var playable);
+            try
+            {
+                PlayableStep(graph, animator, 0.1f);
+                MakeVisible(camera, renderer);
+                PlayableStep(graph, animator, 0.1f);
+                Near.Equal(0.1f, animator.transform.localPosition.y);
+                renderer.SetVisible(false);
+                PlayableStep(graph, animator, 0.1f);
+                PlayableStep(graph, animator, 0.1f);
+                Near.Equal(0.1f, (float)playable.GetTime());
+                Near.Equal(0.1f, animator.transform.localPosition.y);
+                MakeVisible(camera, renderer);
+                Near.Equal(0.2f, animator.transform.localPosition.y);
+                Near.Equal(0.2f, text.localPosition.x);
+                Near.Equal(0.1f, (float)playable.GetTime());
+            }
+            finally { graph.Destroy(); }
+        }
+
+        [Fact]
+        public void ASharedPlayableStillAdvancesForAnUnculledOutput()
+        {
+            var (animator, _, _) = Rig(AnimatorCullingMode.CullCompletely);
+            animator.runtimeAnimatorController = null;
+            var graph = PlayableRig(animator, out var playable);
+            try
+            {
+                var script = ScriptPlayableOutput.Create(graph, "Script");
+                script.SetSourcePlayable(playable);
+                PlayableStep(graph, animator, 0.1f);
+                PlayableStep(graph, animator, 0.1f);
+                Near.Equal(0.2f, (float)playable.GetTime());
+            }
+            finally { graph.Destroy(); }
+        }
+
     }
 }

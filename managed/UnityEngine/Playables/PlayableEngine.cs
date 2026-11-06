@@ -607,13 +607,36 @@ namespace Unbound.Runtime.Playables
         internal void PreparePass(double dt, bool evaluate, Func<PlayableOutputData, bool> which = null)
         {
             ulong frame = FrameId;
+            var steps = new Dictionary<PlayableOutputData, double>();
+            var advancing = new HashSet<PlayableNode>();
             foreach (var o in Outputs.ToArray())
             {
                 if (o.Destroyed || o.Source == null || (which != null && !which(o))) continue;
+                double step = dt;
+                if (o.Engine is AnimationOutputState animation)
+                {
+                    animation.Automatic = !evaluate;
+                    bool culled = !evaluate && animation.Target != null && animation.Target.isActiveAndEnabled
+                        && animation.Target.cullingMode == AnimatorCullingMode.CullCompletely
+                        && !Animator.AnyRendererVisible(animation.Target.gameObject);
+                    animation.SkipEvaluation = culled && animation.Ticked;
+                    if (animation.SkipEvaluation) continue;
+                    if (culled) step = 0;
+                    animation.Ticked = true;
+                }
+                steps[o] = step;
+                if (step != 0)
+                    Walk(o.Source, o.SourcePort, 1f, 1f, 1.0, true, (n, w, ew, ps, s, playing) => advancing.Add(n));
+            }
+            foreach (var entry in steps)
+            {
+                var o = entry.Key;
+                double step = entry.Value;
                 Walk(o.Source, o.SourcePort, 1f, 1f, 1.0, true, (n, w, ew, ps, s, playing) =>
                 {
                     if (n.Destroyed || n.PreparedFrame == frame) return;
                     n.PreparedFrame = frame;
+                    double nodeStep = step == 0 && advancing.Contains(n) ? dt : step;
                     var flags = (FrameData.Flags)0;
                     var b = n.Behaviour;
 
@@ -625,10 +648,10 @@ namespace Unbound.Runtime.Playables
                             flags |= FrameData.Flags.SeekOccured;
                             n.TimeSet = false;
                         }
-                        else Advance(n, dt * s, ref flags);
+                        else Advance(n, nodeStep * s, ref flags);
                     }
                     n.FrameFlags = flags;
-                    var info = MakeInfo(n, dt, w, ew, ps, s, flags, playing, o, evaluate);
+                    var info = MakeInfo(n, nodeStep, w, ew, ps, s, flags, playing, o, evaluate);
                     var p = n.ToPlayable();
                     if (b != null)
                     {

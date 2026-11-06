@@ -241,6 +241,7 @@ namespace UnityEngine
 
         internal override void OnEngineDisable()
         {
+            Unbound.Runtime.Playables.AnimationOutputs.ForgetCulled(this);
             if (m_Registered)
             {
                 m_Registered = false;
@@ -256,6 +257,7 @@ namespace UnityEngine
 
         internal override void OnEngineDestroy()
         {
+            Unbound.Runtime.Playables.AnimationOutputs.ForgetCulled(this);
             if (m_Registered)
             {
                 m_Registered = false;
@@ -294,11 +296,13 @@ namespace UnityEngine
             if (m_CullingMode == AnimatorCullingMode.AlwaysAnimate || AnyRendererVisible(m_GameObject))
             {
                 m_Culled = CulledUpdate.None;
-                Advance(deltaTime);
+                Advance(deltaTime, deferOutput: true);
                 return;
             }
+            m_Culled = m_CullingMode == AnimatorCullingMode.CullCompletely ? CulledUpdate.Skipped : CulledUpdate.NotWritten;
             var player = EnsurePlayer();
             if (player == null) return;
+            player.DeferOutput = Unbound.Runtime.Playables.AnimationOutputs.HasPending(this);
             if (m_CullingMode == AnimatorCullingMode.CullCompletely)
             {
                 bool first = !player.Ticked;
@@ -335,10 +339,11 @@ namespace UnityEngine
                     if (!(components[i] is Animator animator) || animator.m_Culled == CulledUpdate.None) continue;
                     var culled = animator.m_Culled;
                     animator.m_Culled = CulledUpdate.None;
-                    if (!animator.isActiveAndEnabled || animator.m_Player == null) continue;
+                    if (!animator.isActiveAndEnabled) continue;
                     try
                     {
-                        animator.m_Player.EvaluateOnVisible(move: culled == CulledUpdate.Skipped);
+                        if (!Unbound.Runtime.Playables.AnimationOutputs.EvaluateOnVisible(animator, culled == CulledUpdate.Skipped))
+                            animator.m_Player?.EvaluateOnVisible(move: culled == CulledUpdate.Skipped);
                     }
                     catch (Exception e)
                     {
@@ -348,9 +353,10 @@ namespace UnityEngine
             }
         }
 
-        void Advance(float deltaTime)
+        void Advance(float deltaTime, bool deferOutput = false)
         {
             var player = EnsurePlayer();
+            if (player != null) player.DeferOutput = deferOutput && Unbound.Runtime.Playables.AnimationOutputs.HasPending(this);
             player?.Tick(deltaTime);
         }
 
@@ -441,6 +447,7 @@ namespace UnityEngine
 
         void ResetBindings()
         {
+            Unbound.Runtime.Playables.AnimationOutputs.ForgetCulled(this);
             if (m_Player == null) return;
             var root = transform;
             var position = root.localPosition;

@@ -548,7 +548,8 @@ namespace Unbound.Runtime
 
         /// <summary>Writes the channels an animation stream animates (playable outputs): their
         /// values as they are, the other channels of their properties as they were.</summary>
-        internal static void WriteStream(AnimationBindings b, float[] values, bool[] animated, Object[] objects, bool[] objectAnimated)
+        internal static void WriteStream(AnimationBindings b, float[] values, bool[] animated, Object[] objects, bool[] objectAnimated,
+            Transform onlyRoot = null)
         {
             var s = Rent(b);
             try
@@ -565,6 +566,13 @@ namespace Unbound.Runtime
                     s.ObjectTouched[c] = objectAnimated[c];
                     s.Objects[c] = objects[c];
                 }
+                if (onlyRoot != null)
+                    foreach (var group in b.Groups)
+                    {
+                        if (ReferenceEquals(group.Target, onlyRoot)) continue;
+                        if (group.IsObject) s.ObjectTouched[group.First] = false;
+                        else for (int c = group.First; c < group.First + group.Width; c++) s.Touched[c] = false;
+                    }
                 ReadCurrent(b, s);
                 Write(b, s);
             }
