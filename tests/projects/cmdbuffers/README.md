@@ -98,3 +98,27 @@ difference for invalid Append bindings, not an insignificant visual residual.
 The two independent final Editor captures are byte-identical to the committed reference. The
 reference retains the invalid Append case's unrelated-counter writes and warning. Unbound's
 skip is required by the task and changes invalid-input behavior; it is not claimed as Unity parity.
+
+## Indexed RenderParams contract, Unity 6000.0
+
+`render.indexed.*` uses a camera render in each frame, not a CommandBuffer draw into a
+standalone target. `RenderIndexedProbe.cs`, `IndexedGrid.shader`, `IndirectGrid.shader` and
+`IndexedFill.compute` cover 16/32-bit indices, the documented Structured `sizeof(int)` buffer,
+index offsets, commands and `startCommand`, vertex/instance IDs, and CPU/GPU buffer writes
+between the API call and camera execution. The shader reads vertices above 65535. The indirect
+shader uses the release's `UnityIndirect.cginc`, including its instance-count and base-instance
+helpers. These cases do not establish any order between overlapping draws.
+
+| Official 6000.0 source | Guarantee or limitation applied |
+|---|---|
+| [RenderPrimitivesIndexed](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.RenderPrimitivesIndexed.html) | The shader generates or fetches vertices using the supplied indices. The example uses a Structured buffer with `sizeof(int)` stride. |
+| [RenderPrimitivesIndexedIndirect](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.RenderPrimitivesIndexedIndirect.html) | GPU arguments control indexed draws and instances, with command count and first command. Compute shader support is required. World bounds cull and sort the call as one entity. |
+| [IndirectDrawIndexedArgs](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GraphicsBuffer.IndirectDrawIndexedArgs.html) | Use the platform's struct and `size`, rather than assuming a portable layout of raw ints. Fields specify count, instances, first index, base vertex and first instance. |
+| [GraphicsBuffer.Target](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GraphicsBuffer.Target.html) | Targets depend on the device. DX11 cannot combine Index and Structured; OpenGLCore acceptance of Structured as indices is measured here, not promised on every backend. |
+| [RenderMeshIndirect shader example](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Graphics.RenderMeshIndirect.html), shipped `Editor/Data/CGIncludes/UnityIndirect.cginc` | Define `UNITY_INDIRECT_DRAW_ARGS` and call `InitIndirectDrawArgs` before the command/vertex/instance helpers. The include implements backend-dependent instance IDs. |
+
+The measured release is 6000.0.71f1, OpenGLCore on RTX 4060. Shader vertex inputs with 32-bit
+indices or GPU base vertices remain refused by R6's renderer guard; procedural shaders bind no
+vertex buffer. Topologies beyond triangles, lines and points and strides beyond 2/4 bytes remain
+separate scope and fail loudly. Standalone mesh-instancing logical IDs and XR/plugin stubs are
+separate tasks.

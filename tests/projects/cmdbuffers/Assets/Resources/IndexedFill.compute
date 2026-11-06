@@ -1,0 +1,11 @@
+#pragma kernel Fill
+RWStructuredBuffer<uint> _Indices;
+RWByteAddressBuffer _Args;
+[numthreads(1, 1, 1)]
+void Fill(uint3 id : SV_DispatchThreadID)
+{
+    _Indices[0] = 11; _Indices[1] = 12; _Indices[2] = 21;
+    _Indices[3] = 11; _Indices[4] = 21; _Indices[5] = 20;
+    _Args.Store(0, 6); _Args.Store(4, 2); _Args.Store(8, 0);
+    _Args.Store(12, 9); _Args.Store(16, 3);
+}

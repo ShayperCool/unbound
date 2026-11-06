@@ -16,7 +16,7 @@ using UnityEngine.Rendering;
 /// GetTemporaryRTArray (descriptors, slices, camera-relative sizes) and readbacks into native
 /// slices. Every case records its values, exceptions (<c>.error</c>) and log messages (<c>.log</c>).
 /// </summary>
-public class CmdBuffersProbe : MonoBehaviour
+public partial class CmdBuffersProbe : MonoBehaviour
 {
     const uint Sentinel = 0xAAAA0000u;
 
@@ -101,7 +101,7 @@ public class CmdBuffersProbe : MonoBehaviour
             code = 1;
         }
         // Fences span frames: run step by step, a failure recorded as fatal.
-        var fences = Fences();
+        var fences = FrameProbes();
         while (code == 0)
         {
             bool more;
