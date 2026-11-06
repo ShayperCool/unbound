@@ -790,20 +790,20 @@ namespace Unbound.Runtime
                 // agent stopped within its stoppingDistance stays stopped.
                 bool finishing = !onLink && destination.HasValue && !following && !agent.pathPending
                     && agent.m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID
-                    && agent.remainingDistance < 0.01f;
+                    && FlatRemaining(agent.m_Crowd) < 0.01f;
                 var moving = agent.m_Crowd;
                 agent.m_Crowd = null;
                 agent.m_Surface = null;
                 if (old != null && RejoinOnLink(agent, old))
                 {
-                    if (agent.pathPending) RequestPath(agent);
+                    if (agent.pathPending) RestartRequest(agent);
                     else if (destination.HasValue) PlanFromLinkEnd(agent);
                     continue;
                 }
                 Place(agent, agent.m_NextPosition);
                 if (onLink)
                 {
-                    if (destination.HasValue && agent.m_Crowd != null) RequestPath(agent);
+                    if (destination.HasValue && agent.m_Crowd != null) RestartRequest(agent);
                     continue;
                 }
                 if (agent.m_Crowd == null)
@@ -812,14 +812,7 @@ namespace Unbound.Runtime
                     agent.SetPathPending(false);
                     continue;
                 }
-                if (agent.pathPending)
-                {
-                    // A search under way starts again on the new NavMesh and is then finished at
-                    // once, so a NavMesh changing every frame (a moving carving obstacle) cannot
-                    // keep a request pending forever (Unbound's choice, unmeasured).
-                    if (s_Searches.ContainsKey(agent)) s_Restarted.Add(agent);
-                    RequestPath(agent);
-                }
+                if (agent.pathPending) RestartRequest(agent);
                 else if (following) PlanAgain(agent, moving);
                 else if (finishing)
                 {
@@ -827,6 +820,30 @@ namespace Unbound.Runtime
                     agent.SetArrived(true);
                 }
             }
+        }
+
+        /// <summary>A request again on the rebuilt NavMesh. A search that was under way starts again
+        /// and is then finished at once, so a NavMesh changing every frame (a moving carving
+        /// obstacle) cannot keep a request pending forever (Unbound's choice, unmeasured).</summary>
+        static void RestartRequest(NavMeshAgent agent)
+        {
+            bool underWay = s_Searches.ContainsKey(agent);
+            RequestPath(agent);
+            if (underWay) s_Restarted.Add(agent);
+        }
+
+        /// <summary>The distance left along the agent's corners in the ground plane, as arrival
+        /// measures it (StopAtDestination).</summary>
+        static float FlatRemaining(DtCrowdAgent ag)
+        {
+            float left = 0f;
+            var p = ag.npos;
+            for (int i = 0; i < ag.ncorners; i++)
+            {
+                left += RcVec.Dist2D(p, ag.corners[i].pos);
+                p = ag.corners[i].pos;
+            }
+            return left;
         }
 
         /// <summary>The path of an agent that was following one, planned again on the rebuilt
@@ -929,6 +946,7 @@ namespace Unbound.Runtime
         internal static void RequestPath(NavMeshAgent agent)
         {
             s_Searches.Remove(agent);
+            s_Restarted.Remove(agent);
             if (!s_PathRequests.Contains(agent)) s_PathRequests.Add(agent);
         }
 
@@ -994,7 +1012,11 @@ namespace Unbound.Runtime
 
         /// <summary>A path search under way began on the other side of a link the agent now waits
         /// on, or no longer waits on: it begins again from where the agent's paths now start.</summary>
-        static void RestartSearch(NavMeshAgent agent) => s_Searches.Remove(agent);
+        static void RestartSearch(NavMeshAgent agent)
+        {
+            s_Searches.Remove(agent);
+            s_Restarted.Remove(agent);
+        }
 
         internal static void ApplyPath(NavMeshAgent agent, NavMeshPath path) => ApplyPath(agent, path, null);
 

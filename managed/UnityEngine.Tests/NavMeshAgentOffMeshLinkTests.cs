@@ -203,6 +203,55 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ARequestOnALinkIsFoundWhileACarvedHoleMovesEveryFrame()
+        {
+            // Each move of a carving obstacle rebuilds the NavMesh; the waiting agent's search,
+            // restarted by each rebuild, must still finish (see AgentSystem.RestartRequest).
+            int iterations = NavMesh.pathfindingIterationsPerFrame;
+            try
+            {
+                var agent = Agent(autoTraverse: false);
+                StepOntoLink(agent);
+                NavMesh.pathfindingIterationsPerFrame = 1;
+                // Small holes on the far platform make the search need many iterations.
+                for (int k = 0; k < 4; k++)
+                {
+                    var hole = new GameObject("hole");
+                    m_Objects.Add(hole);
+                    hole.transform.position = new Vector3(3.8f + k * 0.9f, 0.5f, k % 2 == 0 ? 0.6f : -0.6f);
+                    var o = hole.AddComponent<NavMeshObstacle>();
+                    o.size = new Vector3(0.2f, 1f, 0.2f);
+                    o.carving = true;
+                }
+                var go = new GameObject("carver");
+                m_Objects.Add(go);
+                go.transform.position = new Vector3(-7f, 0.5f, 1.2f);
+                var carver = go.AddComponent<NavMeshObstacle>();
+                carver.size = new Vector3(0.2f, 1f, 0.2f);
+                carver.carveOnlyStationary = false;
+                carver.carving = true;
+                ObstacleSystem.UpdateCarving();
+                ObstacleSystem.UpdateCarving();
+                Assert.True(agent.SetDestination(new Vector3(7f, 0f, 1f)));
+                int frames = 0;
+                while (agent.pathPending && frames < 300)
+                {
+                    go.transform.position += new Vector3(0.15f, 0f, 0f);
+                    ObstacleSystem.UpdateCarving();
+                    Step();
+                    frames++;
+                }
+                Assert.False(agent.pathPending, $"still pending after {frames} frames");
+                Assert.True(agent.isOnOffMeshLink);
+            }
+            finally
+            {
+                NavMesh.pathfindingIterationsPerFrame = iterations;
+                ObstacleSystem.ResetCarving();
+            }
+        }
+
+        [Fact]
         public void TurningAutoTraverseOffStopsATraversalWhereItIs()
         {
             var agent = Agent(autoTraverse: true);
