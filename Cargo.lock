@@ -6451,6 +6451,7 @@ dependencies = [
  "libc",
  "lz4_flex",
  "lzma-rs",
+ "miniz_oxide 0.8.9",
  "postcard",
  "psd",
  "rayon",

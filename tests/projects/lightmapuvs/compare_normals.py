@@ -10,7 +10,7 @@ from pathlib import Path
 import struct
 
 FIELDS = ('vertexCount', 'subMeshes', 'vertices', 'normals', 'uv', 'uv2')
-RESIDUAL_ASSETS = {'Faces', 'Grid', 'Ico', 'Organic', 'Sphere', 'Torus'}
+RESIDUAL_ASSETS = {'Faces', 'Grid', 'Ico', 'Organic', 'Polys', 'Sphere', 'Torus'}
 RESIDUAL_VARIANTS = {'NormAngle', 'NormArea', 'NormCalc', 'NormCalc30', 'NormCalc180',
                      'NormFromAngle', 'NormGroups', 'NormNoSplit', 'NormUnweighted'}
 

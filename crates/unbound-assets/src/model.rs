@@ -632,7 +632,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 18;
+    const VERSION: u32 = 19;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
@@ -656,6 +656,10 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         pivot_handling: ufbx::PivotHandling::AdjustToPivot,
         // Missing normals are calculated as the importer does (see `normals`).
         generate_missing_normals: false,
+        retain_dom: !is_obj
+            && settings.normals != NormalMode::None
+            && settings.normal_calculation != 0
+            && settings.normal_smoothing_source < 2,
         filename: filename.as_ref().into(),
         ..Default::default()
     };
@@ -705,6 +709,17 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         material_index: HashMap::new(),
         obj_smoothing: if is_obj {
             obj_smoothing_groups(bytes, &scene)
+        } else {
+            Vec::new()
+        },
+        fbx_smoothing: if !is_obj
+            && settings.normals != NormalMode::None
+            && settings.normal_calculation != 0
+            && settings.normal_smoothing_source < 2
+            && (settings.normals == NormalMode::Calculate
+                || scene.meshes.iter().any(|m| !m.vertex_normal.exists))
+        {
+            fbx_smoothing::per_mesh(bytes, &scene, settings.normals == NormalMode::Import)?
         } else {
             Vec::new()
         },
@@ -798,6 +813,8 @@ struct Builder<'a> {
     material_index: HashMap<u32, u32>,
     /// An OBJ's smoothing group per face of each mesh (ufbx keeps only smooth or not).
     obj_smoothing: Vec<Vec<u32>>,
+    /// Preserved FBX smoothing masks per face, indexed by the mesh's typed ID.
+    fbx_smoothing: Vec<Option<Vec<u32>>>,
     /// With animation import, nodes rest in the first take's pose at its start, not in the file's
     /// static transforms, which can hold another frame's pose (measured, tests/projects/modelclips
     /// and tests/projects/humanoid).
@@ -1806,7 +1823,7 @@ impl<'a> Builder<'a> {
                 range.clone().map(|c| mesh.vertex_indices[c]).collect(),
                 range.clone().collect(),
             ));
-            let count = unity_triangles(mesh, *face, &mut triangle);
+            let count = unity_triangles(mesh, *face, &mut triangle)?;
             let pieces: Vec<Vec<u32>> = if face.num_indices == 4 {
                 vec![vec![triangle[0], triangle[1], triangle[2], triangle[5]]]
             } else {
@@ -1878,25 +1895,12 @@ impl<'a> Builder<'a> {
                     Some(wedges.iter().map(|w| groups[w.face]).collect::<Vec<u32>>())
                 }
                 _ if self.obj => None,
-                _ if !mesh.face_smoothing.is_empty() => {
-                    if settings.normal_calculation != 0 && settings.normal_smoothing_source < 2 {
-                        append_warning(&mut warning,
-                            "FBX polygon smoothing masks are reduced to smooth/hard flags; \
-                             group-based calculated normals are not supported");
-                    }
-                    Some(wedges.iter().map(|w| mesh.face_smoothing[w.face] as u32).collect())
-                }
-                _ => None,
+                _ => self
+                    .fbx_smoothing
+                    .get(mesh.element.typed_id as usize)
+                    .and_then(Option::as_ref)
+                    .map(|groups| wedges.iter().map(|w| groups[w.face]).collect()),
             };
-            if smoothing.is_none()
-                && !mesh.edge_smoothing.is_empty()
-                && settings.normal_smoothing_source < 2
-                && settings.normal_calculation != 0
-            {
-                append_warning(&mut warning,
-                    "per-edge smoothing is not converted to smoothing groups; calculated normals \
-                     do not reproduce this smoothing source (not supported)");
-            }
             normals::calculate(
                 &file_positions,
                 &normals::Faces {
@@ -2142,13 +2146,6 @@ impl<'a> Builder<'a> {
         if !self.settings.weld_vertices {
             return Err("meshes without weldVertices are not measured".into());
         }
-        // Unity's FBX reader triangulates polygons of more than four corners differently.
-        if mesh.faces.iter().any(|f| f.num_indices > 4) {
-            return Err(
-                "polygons of more than four corners are triangulated unlike Unity's FBX reader"
-                    .into(),
-            );
-        }
         let order = self.control_point_order(mesh);
         // Equal positions weld to the first (compared as floats: -0 and 0 weld).
         let mut index = vec![0u32; mesh.vertices.len()];
@@ -2169,7 +2166,7 @@ impl<'a> Builder<'a> {
         let mut triangle = vec![0u32; mesh.max_face_triangles.max(1) * 3];
         for &face in mesh.faces.iter() {
             first.push(triangles.len());
-            let count = unity_triangles(mesh, face, &mut triangle);
+            let count = unity_triangles(mesh, face, &mut triangle).map_err(|e| e.to_string())?;
             for t in triangle[..3 * count].chunks(3) {
                 triangles
                     .push([0, 1, 2].map(|k| index[mesh.vertex_indices[t[k] as usize] as usize]));
@@ -2717,12 +2714,12 @@ struct LightmapUvs {
     uvs: Vec<[[f32; 2]; 3]>,
 }
 
-/// The corners (indices into the mesh's index space) of a face's triangles, in Unity's winding:
-/// mirroring X flips the handedness, so the polygon's corners are reversed with the first kept.
-/// Triangles and quads are split as Unity does, a quad into (0, 1, 2) and (0, 2, 3) of the
-/// reversed corners (measured with convex quads: tests/projects/lightmapuvs); larger polygons are
-/// triangulated by ufbx, unlike Unity's FBX reader. Returns the triangle count.
-fn unity_triangles(mesh: &ufbx::Mesh, face: ufbx::Face, out: &mut [u32]) -> usize {
+/// Triangle corners in Unity's winding, measured in tests/projects/lightmapuvs. Quads keep
+/// their reversed 0-2 diagonal; larger polygons use a sweep over mirrored float32 positions.
+fn unity_triangles(mesh: &ufbx::Mesh, face: ufbx::Face, out: &mut [u32]) -> Result<usize> {
+    if face.num_indices < 3 {
+        return Ok(0);
+    }
     if face.num_indices == 3 || face.num_indices == 4 {
         let b = face.index_begin;
         let n = face.num_indices;
@@ -2730,23 +2727,21 @@ fn unity_triangles(mesh: &ufbx::Mesh, face: ufbx::Face, out: &mut [u32]) -> usiz
         if n == 4 {
             out[3..6].copy_from_slice(&[b, b + 2, b + 1]);
         }
-        n as usize - 2
+        Ok(n as usize - 2)
     } else {
-        let count = mesh.triangulate_face(out, face) as usize;
-        for t in out[..3 * count].chunks_mut(3) {
-            t.swap(1, 2);
+        let positions: Vec<[f32; 3]> = (face.index_begin..face.index_begin + face.num_indices)
+            .map(|c| mesh.vertices[mesh.vertex_indices[c as usize] as usize])
+            .map(|p| [-p.x as f32, p.y as f32, p.z as f32])
+            .collect();
+        let indices = triangulation::polygon(&positions)?;
+        anyhow::ensure!(
+            indices.len() <= out.len(),
+            "model tessellation exceeds its index buffer"
+        );
+        for (dst, corner) in out.iter_mut().zip(&indices) {
+            *dst = face.index_begin + corner;
         }
-        count
-    }
-}
-
-/// Keep each unsupported import condition visible, including simultaneous UV and normal gaps.
-fn append_warning(warning: &mut Option<String>, message: &str) {
-    if let Some(warning) = warning {
-        warning.push_str("; ");
-        warning.push_str(message);
-    } else {
-        *warning = Some(message.into());
+        Ok(indices.len() / 3)
     }
 }
 
@@ -2822,10 +2817,12 @@ fn bone_weight(skin: &ufbx::SkinDeformer, vertex: usize) -> BoneWeight {
     out
 }
 
+mod fbx_smoothing;
 mod lightmap_uv;
 mod materials;
 mod normals;
 mod tangent_space;
+mod triangulation;
 
 #[cfg(test)]
 mod tests;

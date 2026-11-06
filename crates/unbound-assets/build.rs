@@ -1,7 +1,8 @@
 //! Compiles libvorbis and libogg (`native/vorbis`) into the crate: FSB5 Vorbis clips need their
 //! setup headers made again by libvorbis' encoder (see `src/fsb5.rs`), through
 //! `native/unbound_vorbis.c`. Also libtess2 (`native/libtess2`), which triangulates Tight sprite
-//! meshes as the Editor does (see `src/sprite_mesh.rs`).
+//! meshes as the Editor does (see `src/sprite_mesh.rs`), and the GLU polygon tessellator for
+//! model n-gons (`native/glu_tess`, `src/model/triangulation.rs`).
 use std::path::{Path, PathBuf};
 
 fn main() {
@@ -51,6 +52,28 @@ fn main() {
         .flag_if_supported("-ffp-contract=off")
         .warnings(false)
         .compile("unbound_tess2");
+    let glu = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../native/glu_tess");
+    let adapter = glu.join("../unbound_model_tess.c");
+    println!("cargo:rerun-if-changed={}", glu.display());
+    println!("cargo:rerun-if-changed={}", adapter.display());
+    let mut sources: Vec<_> = std::fs::read_dir(glu.join("Source"))
+        .unwrap()
+        .map(|e| e.unwrap().path())
+        // This implementation file is included by priorityq.c.
+        .filter(|p| {
+            p.extension().is_some_and(|e| e == "c") && p.file_name().unwrap() != "priorityq-heap.c"
+        })
+        .collect();
+    sources.sort();
+    cc::Build::new()
+        .files(sources)
+        .file(adapter)
+        .include(glu.join("Include"))
+        .define("NDEBUG", None)
+        .opt_level(2)
+        .flag_if_supported("-ffp-contract=off")
+        .warnings(false)
+        .compile("unbound_model_tess");
     // intel_tex_2's ISPC kernels come with C++ glue (exception personality): the platform's C++
     // runtime, libc++ on Apple systems.
     let cxx = match std::env::var("CARGO_CFG_TARGET_VENDOR").as_deref() {

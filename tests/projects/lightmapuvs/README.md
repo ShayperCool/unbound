@@ -51,12 +51,12 @@ on the hard angle and the distortion settings only where the mesh has charts to 
 State in Unbound: the unwrap is reproduced, for connected parts of up to 100 triangles and for
 larger ones (simplified first, segmented on the simplified copy and refined back), including
 charts that touch or overlap themselves. Cube, Multi, Pieces, Sphere, Ico, Barrel, Rock, Compound
-and Twins match in every variant (vertex count and UV2 per corner). Grid and TwoUV now match both UV2 and vertex counts in every unwrap variant, including imports
-without generated UV2. Their imported normals are normalized and their attributes split with the
+and Twins, plus Cylinder after n-gon triangulation, match in every variant (vertex count and UV2
+per corner). Grid and TwoUV now match both UV2 and vertex counts in every unwrap variant,
+including imports without generated UV2. Their imported normals are normalized and their attributes split with the
 measured thresholds. The Torus is unwrapped as the Editor does, but its mesh is named after the OBJ
 object, not "default", so the comparison cannot pair it. Meshes Unbound does not reproduce yet
-warn and keep the file's UV2: the Cylinder (its 16-gon caps are triangulated differently than by
-the Editor's FBX reader) and Organic (non-manifold vertices after welding).
+warn and keep the file's UV2: Organic has non-manifold vertices after welding.
 
 ## Imported normals
 
@@ -79,9 +79,19 @@ instead have separate flat face normals. The reference records the measured resu
 numbering, normal arithmetic, split thresholds, and n-gon triangle order are measured details of
 6000.0.71f1, not documented guarantees for other releases.
 
-`compare_normals.py <reference> <candidate> --expect Authored,Bare,Cube,Faces,Grid,Ico,Kite,Organic,Pieces,Sphere,Tent,Torus,Triangle,TwoUV`
-gates the 168 cases whose topology is reproduced. It writes every differing value, including
-ungated cases, to `normal-comparison.json` beside the candidate. The original exact comparator is
-unchanged in tolerance. Forty-seven calculated-normal cases differ only by at most 1.8e-7 per
-component; these are marked as recorded residuals, never as exact matches. Remaining n-gon,
-FBX edge-smoothing and existing material-slot ordering failures stay visible in the report.
+`compare_normals.py <reference> <candidate> --expect Authored,Bare,Cube,Cylinder,Edges,Faces,Grid,Groups,Ico,Kite,Organic,Pieces,Polys,Prism,Sphere,Star,StarObj,Tent,Torus,Triangle,TwoUV`
+gates 252 cases. It writes every differing value, including ungated cases, to
+`normal-comparison.json` beside the candidate. The original exact comparator retains tolerance 0.
+The result is 196 exact cases and 56 calculated-normal cases with residuals of at most 1.8e-7 per
+float32 component. The added non-planar polygon contributes nine of these, at most 1.2e-7. Residuals
+are marked separately from exact matches. Multi's 12 material-slot ordering failures remain visible.
+
+The SGI GLU sweep over mirrored float32 positions reproduces the convex, concave and non-planar
+n-gon triangle sequences in the reference. Mesh building and UV unwrapping share these triangles.
+Binary FBX 7.x polygon masks keep their original bits; edge smoothing is converted for face regions
+that do not need overlapping masks. Group masks in ASCII/legacy FBX, indexed smoothing layers,
+overlapping edge regions and intersecting polygons needing new attributes fail explicitly. These
+cases, mesh optimization order, OBJ naming and material-slot order remain follow-ups.
+
+The sheriff's `lightmapuvs` suite recipe checks both UV2 and this normal/topology matrix, without
+starting the Editor. Its UV2 expected set includes Grid, TwoUV and Cylinder.

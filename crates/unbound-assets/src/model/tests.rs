@@ -190,6 +190,7 @@ fn bind_pose_conversion_mirrors_and_scales() {
         sources: Vec::new(),
         material_index: HashMap::new(),
         obj_smoothing: Vec::new(),
+        fbx_smoothing: Vec::new(),
         rest_pose: None,
     };
     // A translation by (1, 2, 3) and a rotation of 90° about Z (x → y).
@@ -483,23 +484,15 @@ fn lightmap_uvs_read_their_settings_and_replace_uv2() {
 }
 
 #[test]
-fn lightmap_uvs_warn_for_polygons_of_more_than_four_corners() {
+fn lightmap_uvs_unwrap_polygons_of_more_than_four_corners() {
     let obj = "o Pentagon\nv 0 0 0\nv 1 0 0\nv 1.3 1 0\nv 0.5 1.6 0\nv -0.3 1 0\nf 1 2 3 4 5\n";
-    let on =
-        meta("ModelImporter:\n  serializedVersion: 22200\n  meshes:\n    generateSecondaryUV: 1\n");
-    let model = ModelImporter
-        .import(Path::new("Pentagon.obj"), obj.as_bytes(), &on)
-        .unwrap();
-    assert!(
-        model
-            .warnings
-            .iter()
-            .any(|w| w.contains("lightmap UVs are not generated")
-                && w.contains("more than four corners")),
-        "{:?}",
-        model.warnings
-    );
-    assert_eq!(model.meshes[0].uvs.len(), 0);
+    let on = meta("ModelImporter:\n  serializedVersion: 22200\n  meshes:\n    generateSecondaryUV: 1\n");
+    let model = ModelImporter.import(Path::new("Pentagon.obj"), obj.as_bytes(), &on).unwrap();
+    assert!(model.warnings.is_empty(), "{:?}", model.warnings);
+    let mesh = &model.meshes[0];
+    assert_eq!(mesh.submeshes[0].len(), 9);
+    assert_eq!(mesh.uvs[1].len(), mesh.positions.len());
+    assert!(mesh.uvs[1].iter().flatten().all(|v| v.is_finite() && (0.0..=1.0).contains(v)));
 }
 
 #[test]
@@ -555,24 +548,39 @@ fn a_collapsed_quad_is_reported_instead_of_losing_its_valid_triangle() {
     assert!(error.to_string().contains("degenerate imported quads"), "{error}");
 }
 
-#[test]
-fn reduced_fbx_smoothing_masks_are_diagnosed() {
-    let source = Path::new(env!("CARGO_MANIFEST_DIR"))
-        .join("../../tests/projects/lightmapuvs/Sources/Normals/Groups.fbx");
-    let settings = meta("ModelImporter:\n  tangentSpace:\n    normalImportMode: 1\n    normalSmoothingSource: 1\n");
-    let imported = ModelImporter.import(&source, &std::fs::read(&source).unwrap(), &settings).unwrap();
-    assert!(imported.warnings.iter().any(|w| w.contains("polygon smoothing masks")),
-            "{:?}", imported.warnings);
+fn assert_group_normals_match_reference(imported: &ImportedModel) {
+    let reference = std::fs::read_to_string(Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/lightmapuvs/Reference/unity-6000.0.71f1.jsonl")).unwrap();
+    let row: serde_json::Value = reference.lines().map(|l| serde_json::from_str::<serde_json::Value>(l).unwrap())
+        .find(|r| r["variant"] == "NormGroups" && r["mesh"] == "Groups/0").unwrap();
+    let mesh = &imported.meshes[0];
+    let positions: Vec<[f32; 3]> = serde_json::from_value(row["vertices"].clone()).unwrap();
+    let normals: Vec<[f32; 3]> = serde_json::from_value(row["normals"].clone()).unwrap();
+    let indices: Vec<Vec<u32>> = serde_json::from_value(row["subMeshes"].clone()).unwrap();
+    assert_eq!(mesh.positions, positions);
+    assert_eq!(mesh.submeshes, indices);
+    assert_eq!(mesh.normals.len(), normals.len());
+    for (actual, expected) in mesh.normals.iter().zip(normals) {
+        for i in 0..3 { assert!((actual[i] - expected[i]).abs() <= 1.8e-7, "{actual:?} != {expected:?}"); }
+    }
 }
 
 #[test]
-fn smoothing_and_lightmap_diagnostics_are_both_retained() {
+fn fbx_group_normals_match_the_editor_reference() {
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/projects/lightmapuvs/Sources/Normals/Groups.fbx");
-    let settings = meta("ModelImporter:\n  meshes:\n    generateSecondaryUV: 1\n    weldVertices: 0\n  tangentSpace:\n    normalImportMode: 1\n    normalSmoothingSource: 1\n");
+    let settings = meta("ModelImporter:\n  meshes:\n    meshOptimizationFlags: 0\n  tangentSpace:\n    normalImportMode: 1\n    normalSmoothingSource: 1\n");
     let imported = ModelImporter.import(&source, &std::fs::read(&source).unwrap(), &settings).unwrap();
-    for diagnostic in ["weldVertices", "polygon smoothing masks"] {
-        assert!(imported.warnings.iter().any(|w| w.contains(diagnostic)),
-                "missing {diagnostic}: {:?}", imported.warnings);
-    }
+    assert_group_normals_match_reference(&imported);
+    assert!(!imported.warnings.iter().any(|w| w.contains("smoothing")), "{:?}", imported.warnings);
+}
+
+#[test]
+fn unsupported_lightmap_settings_keep_the_supported_group_normals() {
+    let source = Path::new(env!("CARGO_MANIFEST_DIR"))
+        .join("../../tests/projects/lightmapuvs/Sources/Normals/Groups.fbx");
+    let settings = meta("ModelImporter:\n  meshes:\n    meshOptimizationFlags: 0\n    generateSecondaryUV: 1\n    weldVertices: 0\n  tangentSpace:\n    normalImportMode: 1\n    normalSmoothingSource: 1\n");
+    let imported = ModelImporter.import(&source, &std::fs::read(&source).unwrap(), &settings).unwrap();
+    assert!(imported.warnings.iter().any(|w| w.contains("weldVertices")), "{:?}", imported.warnings);
+    assert_group_normals_match_reference(&imported);
 }
