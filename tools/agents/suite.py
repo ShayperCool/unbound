@@ -437,12 +437,51 @@ def recipes(release):
     NOTES['uirectclipping'] = 'Gamma and LinearMSAA references not run: they need Editor-side project settings'
     NOTES['contactevents3d'] = 'controls measured only: Native repeats differ in two process-dependent hashes'
 
-    # No runnable engine recipe.
-    mixer = NoRecipe('engine.py needs --native-project, the mixer assets that native.py creates in the Editor')
-    for name in ('mixerecho', 'mixerfilters', 'mixersuspend'):
-        R[name] = mixer
+    # Audio probes whose engine run needs the project their Native run authors in the Editor: the
+    # committed authored set (tests/authored_project.py) assembled into the work directory.
+    def native_project(name, sets):
+        return [Step('driver', ['{python}', '{repo}/tests/authored_project.py', 'assemble', name, item,
+                                '--release', '{release}', '--out', '{work}/native-'+item]) for item in sets]
+    R['mixerecho'] = native_project('mixerecho', ['default'])
+    for rate in ('48000', '44100'):
+        R['mixerecho'] += [
+            driver('engine.py', '--release', '{release}', '--rate', rate, '--native-project', '{work}/native-default',
+                   '--runtime', '{runtime}', '--work', '{work}/engine-'+rate),
+            py('compare.py', '--release', '{release}', '--rate', rate, '--candidate', f'{{work}}/engine-{rate}/capture',
+               '--report', f'{{work}}/report-{rate}.jsonl.gz')]
+    # Reference profile, authored set, engine.py flags, compare.py selection (README's profile table).
+    filters = [('rate-48000', 'default', ['--rate', '48000', '--renderer', '--listener'], ['--rate', '48000']),
+               ('rate-44100', 'default', ['--rate', '44100', '--renderer', '--listener'], ['--rate', '44100']),
+               ('renderer-api', 'default', ['--api', '--renderer'], ['--profile', 'renderer-api']),
+               ('startup', 'startup', ['--startup', '--renderer'], ['--profile', 'startup']),
+               ('renderer-pcm', 'pcm', ['--pcm', '--listener', '--renderer'], ['--profile', 'renderer-pcm']),
+               ('gain', 'gain', ['--gain', '--listener', '--renderer'], ['--profile', 'gain']),
+               ('callbacks', 'callbacks', ['--callbacks', '--listener', '--renderer'], ['--profile', 'callbacks'])]
+    R['mixerfilters'] = native_project('mixerfilters', sorted({item for _, item, _, _ in filters}))
+    for profile, item, flags, select in filters:
+        R['mixerfilters'] += [
+            driver('engine.py', '--release', '{release}', *flags, '--native-project', '{work}/native-'+item,
+                   '--runtime', '{runtime}', '--work', '{work}/engine-'+profile),
+            py('compare.py', '--release', '{release}', *select, '--candidate', f'{{work}}/engine-{profile}/capture',
+               '--report', f'{{work}}/report-{profile}.json')]
+    suspend = [('suspension', 'default', [], rates) for rates in ('48000', '44100')]
+    suspend += [(profile, profile, ['--'+profile], rate) for profile in ('submission', 'lifecycle')
+                for rate in ('48000', '44100')]
+    suspend.append(('generators', 'generators', ['--generators'], '48000'))
+    R['mixersuspend'] = native_project('mixersuspend', sorted({item for _, item, _, _ in suspend}))
+    for profile, item, flags, rate in suspend:
+        label = f'{profile}-{rate}'
+        R['mixersuspend'] += [
+            driver('engine.py', '--release', '{release}', *flags, '--rate', rate, '--native-project',
+                   '{work}/native-'+item, '--runtime', '{runtime}', '--work', '{work}/engine-'+label),
+            py('compare.py', '--release', '{release}', '--rate', rate, '--profile', profile,
+               '--candidate', f'{{work}}/engine-{label}/capture', '--report', f'{{work}}/report-{label}.jsonl.gz')]
     for name in ('audiogeneratorboundaries', 'audiogeneratorlifecycle'):
-        R[name] = NoRecipe('run.py engine needs --native-project, a project the native (Editor) run prepares')
+        R[name] = native_project(name, ['default']) + [
+            driver('run.py', 'engine', '--release', '{release}', '--work', '{work}/engine', '--runtime', '{runtime}',
+                   '--native-project', '{work}/native-default'),
+            py('compare.py', '--release', '{release}', '--candidate', '{work}/engine/capture',
+               '--report', '{work}/report.jsonl.gz')]
     # Every suite and contact-pairs profile that has a reference, with the README's original absolute
     # 1e-5 bound on physical data (--numeric). Controls are measured only: Native repeats themselves
     # differ in two process-dependent hash rows (README).
@@ -477,8 +516,16 @@ def recipes(release):
                                  driver('contactpairs.py', 'final', env=env),
                                  driver('contactpairs.py', 'final', '--noise', env=env),
                                  py('verify.py', '--matrix-output', '{work}', env=env)]
-    R['inactive3dloading'] = NoRecipe('run.py prepare starts from the project that `create` makes in the Editor')
-    R['oroorder'] = NoRecipe('no engine comparator: analyze.py only fits hypotheses to the Editor reference')
+    # The checked-in Assets are the project that `create` authors in the Editor: `checkout` copies them.
+    env = {'LOADING_WORK': '{work}', 'SCENE_SETTINGS_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'}
+    R['inactive3dloading'] = [driver('run.py', 'checkout', env=env)]
+    for order in ('transform-first', 'rigidbody-first'):
+        R['inactive3dloading'] += [driver('run.py', 'prepare', '--order', order, '--label', 'final', env=env),
+                                   driver('run.py', 'engine', '--order', order, '--label', 'final', env=env)]
+    R['inactive3dloading'].append(py('verify.py', '--captures', '{work}', '--label', 'final'))
+    R['oroorder'] = [driver('run.py', 'unbound', '--release', '{release}', '--label', '{label}',
+                            env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'}),
+                     py('compare.py', single_ref(), '{runs}/unbound/values.jsonl', '--report', '{work}/report.json')]
     return R
 
 
