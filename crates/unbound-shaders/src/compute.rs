@@ -319,7 +319,12 @@ fn fit_kernel(spv: &[u32], storage_formats: &[(String, String)]) -> Result<Compi
                     .filter_map(|m| uniform(&module, m.name.as_deref()?, m.ty, m.offset))
                     .collect();
                 blocks.push(UniformBlock {
-                    name: name.clone(),
+                    // glslang's cbuffer variables are anonymous; their struct type has the
+                    // cbuffer's name (a constant buffer binds to the cbuffer by it).
+                    name: Some(name.clone())
+                        .filter(|n| !n.is_empty())
+                        .or_else(|| module.types[g.ty].name.clone())
+                        .unwrap_or_default(),
                     binding: next,
                     size: *span,
                     uniforms,
@@ -605,6 +610,31 @@ RWStructuredBuffer<uint> _Out;
             assert!(names.contains(&counter.as_str()), "{kernel}: {names:?}");
             naga::front::wgsl::parse_str(&k.wgsl).unwrap();
         }
+    }
+
+    /// A cbuffer's block carries the cbuffer's name, which a constant buffer binds it by
+    /// (`ComputeShader.SetConstantBuffer`); loose uniforms stay in `$Global`.
+    #[test]
+    fn cbuffer_blocks_are_named_after_their_cbuffers() {
+        let program = ComputeProgram {
+            file: PathBuf::from("Constants.compute"),
+            source: "#pragma kernel Read\ncbuffer Params { uint4 _Values; };\nuint _Tag;\nRWStructuredBuffer<uint> _Out;\n[numthreads(4, 1, 1)] void Read(uint id : SV_DispatchThreadID) { _Out[id] = _Values[id] + _Tag; }".into(),
+        };
+        let mut compiler = ShaderCompiler::new(Settings::default()).unwrap();
+        let k = compiler.compile_kernel(&program, "Read", &[], &[]).unwrap();
+        let block = |member: &str| {
+            k.blocks
+                .iter()
+                .find(|b| b.uniforms.iter().any(|u| u.name == member))
+                .map(|b| b.name.clone())
+        };
+        assert_eq!(
+            block("_Values").as_deref(),
+            Some("Params"),
+            "{:?}",
+            k.blocks
+        );
+        assert_eq!(block("_Tag").as_deref(), Some("$Global"), "{:?}", k.blocks);
     }
 
     /// Render textures of the normalized 16-bit formats are written in them (where the device

@@ -735,9 +735,22 @@ fn main() {
         let mut uniform_buffers = Vec::new();
         for block in &gpu.kernel.blocks {
             let mut data = vec![0u8; block.size.max(16) as usize];
-            for u in &block.uniforms {
-                if let Some(v) = Self::dispatch_value(&d.properties, &globals, &u.name) {
-                    write_uniform(u, v, &mut data);
+            // A constant buffer bound by the cbuffer's name (`SetConstantBuffer`) is the block:
+            // its bytes as written, from its start.
+            let constant = match Self::dispatch_value(&d.properties, &globals, &block.name) {
+                Some(PropertyValue::Buffer(h)) if !block.name.is_empty() => {
+                    self.buffers.get(h).and_then(|b| b.shadow.as_deref())
+                }
+                _ => None,
+            };
+            if let Some(bytes) = constant {
+                let n = bytes.len().min(data.len());
+                data[..n].copy_from_slice(&bytes[..n]);
+            } else {
+                for u in &block.uniforms {
+                    if let Some(v) = Self::dispatch_value(&d.properties, &globals, &u.name) {
+                        write_uniform(u, v, &mut data);
+                    }
                 }
             }
             let buffer = self
