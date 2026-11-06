@@ -84,9 +84,15 @@ namespace UnityEngine.Tests
         {
             // Leaving Play mode forgets the scenes without unloading them (SceneRegistry.ResetToUntitled).
             var scene = SceneRegistry.Create("Level", "Assets/Level.unity", -1);
-            SceneSettings.Apply(UnityYaml.Parse(Settings)[0], new Resolver { Data = Ledge() }, scene);
-            Assert.True(NavMesh.SamplePosition(new Vector3(7f, 0f, 0f), out _, 0.5f, NavMesh.AllAreas));
-            SceneRegistry.Forget(scene);
+            try
+            {
+                SceneSettings.Apply(UnityYaml.Parse(Settings)[0], new Resolver { Data = Ledge() }, scene);
+                Assert.True(NavMesh.SamplePosition(new Vector3(7f, 0f, 0f), out _, 0.5f, NavMesh.AllAreas));
+            }
+            finally
+            {
+                SceneRegistry.Forget(scene);
+            }
             Assert.False(NavMesh.SamplePosition(new Vector3(7f, 0f, 0f), out _, 0.5f, NavMesh.AllAreas));
             Assert.DoesNotContain(NavWorld.Links, l => l.Data != 0);
         }
