@@ -383,6 +383,7 @@ namespace Unbound.Runtime
                         PreviousTime = (float)(run.Fresh && source.Next == run ? run.Normalized : run.Previous),
                         Speed = SpeedOf(def),
                         CycleOffset = def.CycleOffset,
+                        Mirror = def.Mirror,
                     };
                     if (additive)
                     {

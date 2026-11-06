@@ -190,6 +190,29 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void AMirroredClipStaysMirroredWhenCopiedAndUnmirrorsWhenTheSettingIsCleared()
+        {
+            var clip = new AnimationClip();
+            Add(clip, "Left Arm Down-Up", AnimationCurve.Linear(0f, 0.2f, 1f, -0.4f));
+            clip.m_Mirror = true;
+            int left = HumanClipImport.CurveIndex("Left Arm Down-Up"), right = HumanClipImport.CurveIndex("Right Arm Down-Up");
+            Assert.NotNull(clip.HumanCurves[right]);
+            var copy = clip.Clone();
+            Assert.Null(copy.HumanCurves[left]);
+            Near(-0.1f, copy.HumanCurves[right].Evaluate(0.5f));
+            clip.m_Mirror = false;
+            Assert.Null(clip.HumanCurves[right]);
+            Near(-0.1f, clip.HumanCurves[left].Evaluate(0.5f));
+        }
+
+        [Fact]
+        public void AMirroredClipTurnsItsRotationOffsetTheOtherWay()
+        {
+            var clip = Build(s => { s.Mirror = true; s.OrientationOffsetY = 30f; return s; });
+            Near(10f - 30f, YawOf(MotionAt(clip, 0f).q), 1e-3f);
+        }
+
+        [Fact]
         public void LoopPoseLeavesTheBodyCurvesToTheRootMotion()
         {
             var clip = new AnimationClip();

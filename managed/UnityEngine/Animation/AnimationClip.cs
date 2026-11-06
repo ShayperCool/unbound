@@ -577,6 +577,7 @@ namespace UnityEngine
                 m_AdditiveReferencePoseClip = m_AdditiveReferencePoseClip,
                 m_AdditiveReferencePoseTime = m_AdditiveReferencePoseTime,
                 m_Mirror = m_Mirror,
+                m_HumanMirrored = m_HumanMirrored,
                 m_OrientationOffsetY = m_OrientationOffsetY,
                 m_Level = m_Level,
                 m_LoopBlendOrientation = m_LoopBlendOrientation,

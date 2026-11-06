@@ -142,6 +142,7 @@ namespace Unbound.Runtime
                         TagHash = Animator.StringToHash(s.Tag ?? ""),
                         Speed = s.Speed,
                         CycleOffset = s.CycleOffset,
+                        Mirror = s.Mirror,
                         WriteDefaults = s.WriteDefaults,
                         Motion = s.Motion,
                         SpeedParameter = m_Graph.ParameterIndex(s.SpeedParameter),
@@ -279,6 +280,8 @@ namespace Unbound.Runtime
         internal int TagHash;
         internal float Speed = 1f;
         internal float CycleOffset;
+        /// <summary>AnimatorState.mirror (humanoid root motion throws for it: not supported).</summary>
+        internal bool Mirror;
         internal bool WriteDefaults = true;
         internal Motion Motion;
         internal int SpeedParameter = -1;

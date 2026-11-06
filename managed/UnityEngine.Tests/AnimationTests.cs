@@ -1,3 +1,4 @@
+using System.Linq;
 using System.Collections.Generic;
 using Unbound.Runtime;
 using Unbound.Tests;
@@ -571,6 +572,20 @@ namespace UnityEngine.Tests
             animator.Update(0.1f);
             Near.Equal(new Vector3(2.5f, 4f, 0f), body.localPosition, 1e-4f);
             Object.DestroyImmediate(root);
+        }
+
+        [Fact]
+        public void AStatesMirrorReachesItsDefinition()
+        {
+            // Humanoid root motion throws for mirrored states (not supported): the flag must get there.
+            var file = Load(AnimationFixtures.Locomotion);
+            var controller = (RuntimeAnimatorController)file.Objects[9100000];
+            var state = file.Objects.Values.OfType<ControllerStateAsset>().First();
+            state.Mirror = true;
+            var graph = ControllerGraph.Build(controller);
+            var def = graph.Layers.SelectMany(l => l.States).Single(s => s.Name == state.m_Name);
+            Assert.True(def.Mirror);
+            Assert.All(graph.Layers.SelectMany(l => l.States).Where(s => s != def), s => Assert.False(s.Mirror));
         }
 
         [Fact]

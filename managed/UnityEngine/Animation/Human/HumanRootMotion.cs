@@ -81,6 +81,9 @@ namespace Unbound.Runtime.Humanoid
             var values = new float[HumanClipImport.CurveCount];
 
             m.HeightFromFeet = settings.HeightFromFeet && !settings.KeepOriginalPositionY;
+            if (m.HeightFromFeet && !(present[HumanClipImport.GoalFirst + 1] && present[HumanClipImport.GoalFirst + 8]))
+                Unbound.Runtime.Stubs.Ignored("AnimationClip humanoid height from feet without foot goals",
+                    "a humanoid clip based upon the feet without foot goal curves takes the body's height (not measured)");
             sample(start, values);
             m.StartRootX = HumanRootMotion.ReadRoot(values, present);
             float startFeet = HumanRootMotion.FeetY(values, present, m.StartRootX);
@@ -95,7 +98,8 @@ namespace Unbound.Runtime.Humanoid
             float level = settings.Level;
             m.Offset = new F4(settings.KeepOriginalPositionXZ ? -startX.t.x : 0f, settings.KeepOriginalPositionY ? level - startX.t.y : level,
                 settings.KeepOriginalPositionXZ ? -startX.t.z : 0f, 0f);
-            float half = settings.OrientationOffsetY * (MathF.PI / 360f);
+            // Mirrored, the clip turns the other way, the rotation offset too (measured).
+            float half = (settings.Mirror ? -settings.OrientationOffsetY : settings.OrientationOffsetY) * (MathF.PI / 360f);
             m.OrientationReference = new F4(0f, MathF.Sin(half), 0f, MathF.Cos(half));
             if (settings.KeepOriginalOrientation) m.OrientationReference = M.QNormalize(M.QMul(m.OrientationReference, M.QConj(HumanRootMotion.Yaw(startX.q))));
             // Bake into pose: the motion keeps the start's value of that part.

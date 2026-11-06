@@ -119,15 +119,17 @@ namespace UnityEngine
 
         internal override bool GetIsHumanMotion() => HasHumanCurves;
 
-        bool m_HumanMirrored;
+        /// <summary>The humanoid curves in m_Curves are mirrored.</summary>
+        internal bool m_HumanMirrored;
 
         /// <summary>Converts a Humanoid model's transform curves into muscle curves (once), then
-        /// mirrors the humanoid curves of a mirrored clip.</summary>
+        /// mirrors the humanoid curves of a mirrored clip (again when the setting changes back:
+        /// mirroring twice gives the curves back).</summary>
         internal void EnsureHumanCurves()
         {
             ConvertHumanCurves();
-            if (m_HumanMirrored || !m_Mirror || (m_HumanAvatar != null && !m_HumanConverted)) return;
-            m_HumanMirrored = true;
+            if (m_HumanMirrored == m_Mirror || (m_HumanAvatar != null && !m_HumanConverted)) return;
+            m_HumanMirrored = m_Mirror;
             MirrorHumanCurves();
         }
 

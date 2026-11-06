@@ -94,6 +94,9 @@ namespace Unbound.Runtime.Humanoid
         {
             if (input.Mirror)
                 throw new NotSupportedException("mirrored humanoid states are not supported");
+            if (motion.Settings.LoopBlend && motion.LoopTime)
+                Unbound.Runtime.Stubs.Ignored("Animator additive humanoid clip with loop pose",
+                    "an additive layer's humanoid clip with loop pose adds its body without the loop pose (not measured)");
             float time = HumanRootMotion.ClipTime(motion, input.Time, input.Speed, input.CycleOffset, out float cycle);
             clip.SampleHuman(time, m_Current);
             var body = HumanRootMotion.ReadRoot(m_Current, clip.HumanPresent);
