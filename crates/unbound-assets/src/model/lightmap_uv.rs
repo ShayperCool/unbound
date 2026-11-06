@@ -8,10 +8,9 @@
 //!
 //! The unwrap fits the mesh into a unit cube and welds it ([`cleanup`]), builds a half-edge map
 //! ([`mesh`]), segments each connected part into charts ([`segment`]), lays each chart flat from
-//! corrected angles by least squares and checks it ([`param`]), and packs the charts ([`pack`]).
-//! Not reproduced yet (the mesh warns and keeps the file's UV2): parts of more than 100
-//! triangles, degenerate and non-manifold triangles, charts touching themselves at a vertex and
-//! charts overlapping themselves.
+//! corrected angles by least squares and checks it ([`param`]), cuts a chart that overlaps
+//! itself, and packs the charts ([`pack`]). Not reproduced yet (the mesh warns and keeps the
+//! file's UV2): parts of more than 100 triangles, degenerate and non-manifold triangles.
 
 use super::SecondaryUvSettings;
 
@@ -125,30 +124,44 @@ fn parametrize(
     if component.facets.len() > 100 {
         return Err("a connected part has more than 100 triangles (not supported yet)".into());
     }
-    let mut work = segment::segment(map, &component)?;
+    let segments = segment::segment(map, &component)?;
+    // Pieces cut from a chart that overlapped itself are marked: one that overlaps itself again
+    // is segmented further instead.
+    let mut work: Vec<(mesh::Component, bool)> = segments.into_iter().map(|c| (c, false)).collect();
     let mut accepted = Vec::new();
     let mut i = 0;
     while i < work.len() {
-        let piece = work[i].clone();
+        let (piece, cut) = work[i].clone();
         i += 1;
         let mut p = param::Parametrization::new(map, &piece)?;
         p.angle_system();
         p.solve_angles();
         let (angular, _) = p.angular_metrics();
         if params.angle_error <= angular {
-            work.extend(segment::Segmentation::force(map, &piece)?);
+            let pieces = segment::Segmentation::force(map, &piece)?;
+            work.extend(pieces.into_iter().map(|c| (c, false)));
             continue;
         }
         p.lay_flat();
         let chart = p.chart();
-        param::validate(&chart)?;
         if chart.component.facets.len() == 1 {
             accepted.push(chart);
             continue;
         }
+        let overlapping = param::overlapping(&chart);
+        if !overlapping.is_empty() && !cut {
+            let facets: Vec<u32> = overlapping.iter().map(|&k| piece.facets[k]).collect();
+            let mut rest = piece.facets.clone();
+            rest.retain(|f| facets.binary_search(f).is_err());
+            let pieces = map.components_of(&facets);
+            work.extend(pieces.into_iter().map(|c| (c, true)));
+            work.extend(map.components_of(&rest).into_iter().map(|c| (c, true)));
+            continue;
+        }
         let m = chart.metrics(map);
-        if params.angle_error <= m.0[0] || params.area_error <= m.0[2] {
-            work.extend(segment::Segmentation::force(map, &piece)?);
+        if !overlapping.is_empty() || params.angle_error <= m.0[0] || params.area_error <= m.0[2] {
+            let pieces = segment::Segmentation::force(map, &piece)?;
+            work.extend(pieces.into_iter().map(|c| (c, false)));
         } else {
             accepted.push(chart);
         }

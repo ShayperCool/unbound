@@ -217,7 +217,9 @@ impl HalfEdgeMesh {
             map.edges[i].next = next;
             map.edges[i].prev = prev;
         }
-        // A vertex whose half-edges form more than one fan is not supported.
+        // A vertex whose half-edges form more than one fan keeps the first and gets a copy
+        // for each other (appended after all vertices), in the order of their lowest
+        // half-edge.
         for v in 0..map.vertices.len() {
             let first = map.vertices[v].edge;
             if first == NONE {
@@ -232,8 +234,16 @@ impl HalfEdgeMesh {
                     break;
                 }
             }
-            if count != outgoing[v].len() {
-                return Err("a vertex joins separate fans of triangles".into());
+            if count == outgoing[v].len() {
+                continue;
+            }
+            let mut rest: std::collections::BTreeSet<u32> = outgoing[v].iter().copied().collect();
+            let start = map.edges[first as usize].twin;
+            map.take_fan(v as u32, start, &mut rest);
+            while let Some(&start) = rest.first() {
+                let copy = map.vertices[v];
+                map.vertices.push(copy);
+                map.take_fan(map.vertices.len() as u32 - 1, start, &mut rest);
             }
         }
         for (t, tri) in desc.triangles.iter().enumerate() {
@@ -282,6 +292,44 @@ impl HalfEdgeMesh {
             map.edge_infos[i].length = sqrt_pos(d[2] * d[2] + d[1] * d[1] + d[0] * d[0]);
         }
         Ok(map)
+    }
+
+    /// Gives `vertex` the fan of half-edges leaving it around `start` (removed from `rest`),
+    /// closing the border around the fan.
+    fn take_fan(&mut self, vertex: u32, start: u32, rest: &mut std::collections::BTreeSet<u32>) {
+        let mut first = start;
+        loop {
+            if self.edges[first as usize].facet == NONE {
+                break;
+            }
+            first = self.edges[self.edges[first as usize].prev as usize].twin;
+            if first == start {
+                break;
+            }
+        }
+        let twin = self.edges[first as usize].twin;
+        self.vertices[vertex as usize].edge = twin;
+        self.edges[twin as usize].target = vertex;
+        rest.remove(&first);
+        let mut h = first;
+        loop {
+            let t = self.edges[h as usize].twin;
+            if self.edges[t as usize].facet == NONE {
+                break;
+            }
+            h = self.edges[t as usize].next;
+            if h == first {
+                break;
+            }
+            let t = self.edges[h as usize].twin;
+            self.edges[t as usize].target = vertex;
+            rest.remove(&h);
+        }
+        if self.edges[first as usize].facet == NONE {
+            let t = self.edges[h as usize].twin;
+            self.edges[t as usize].next = first;
+            self.edges[first as usize].prev = t;
+        }
     }
 
     fn facet_data(&self, facet: u32, sources: Option<&[u32]>, corners: [u32; 3]) -> FacetData {
@@ -333,21 +381,33 @@ impl HalfEdgeMesh {
     /// Facets connected through edges, each component's facets in increasing order, components
     /// in the order of their first facet.
     pub fn connected_components(&self) -> Vec<Component> {
-        let mut label = vec![-1i32; self.facets.len()];
+        let all: Vec<u32> = (0..self.facets.len() as u32).collect();
+        self.components_of(&all)
+    }
+
+    /// The facets of `facets` connected through edges among themselves, as
+    /// [`Self::connected_components`].
+    pub fn components_of(&self, facets: &[u32]) -> Vec<Component> {
+        const OUT: i32 = -2;
+        const IN: i32 = -1;
+        let mut label = vec![OUT; self.facets.len()];
+        for &f in facets {
+            label[f as usize] = IN;
+        }
         let mut count = 0;
         for start in 0..self.facets.len() {
-            if label[start] != -1 {
+            if label[start] != IN {
                 continue;
             }
             let mut stack = vec![start as u32];
             while let Some(f) = stack.pop() {
-                if label[f as usize] != -1 {
+                if label[f as usize] != IN {
                     continue;
                 }
                 label[f as usize] = count;
                 for e in self.facet_edges(f) {
                     let g = self.across(e);
-                    if g != NONE && label[g as usize] == -1 {
+                    if g != NONE && label[g as usize] == IN {
                         stack.push(g);
                     }
                 }
@@ -356,7 +416,9 @@ impl HalfEdgeMesh {
         }
         let mut components = vec![Component { facets: Vec::new() }; count as usize];
         for (f, &l) in label.iter().enumerate() {
-            components[l as usize].facets.push(f as u32);
+            if l >= 0 {
+                components[l as usize].facets.push(f as u32);
+            }
         }
         components
     }

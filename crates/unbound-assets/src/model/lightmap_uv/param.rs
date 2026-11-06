@@ -476,6 +476,8 @@ pub struct Parametrization<'a> {
 
 impl<'a> Parametrization<'a> {
     pub fn new(parent: &'a HalfEdgeMesh, component: &'a Component) -> Result<Self, String> {
+        // A vertex where the chart touches itself is split into one per fan; the corners take
+        // the UV of the first.
         let (mut map, parents) = parent.sub_map(component)?;
         let mut vertex_of = vec![NONE; parent.vertices.len()];
         for (i, &p) in parents.iter().enumerate() {
@@ -859,9 +861,9 @@ impl<'a> Parametrization<'a> {
     }
 }
 
-/// Whether the chart's triangles overlap when rasterized at 512²: such charts are not supported
-/// yet.
-pub fn validate(chart: &Chart) -> Result<(), String> {
+/// The positions (in the chart's component) of the triangles that overlap another when the chart
+/// is rasterized at 512²; none when the chart is valid.
+pub fn overlapping(chart: &Chart) -> Vec<usize> {
     const SIZE: i32 = 512;
     let mut grid = vec![0i32; (SIZE * SIZE) as usize];
     let n = chart.component.facets.len();
@@ -875,7 +877,7 @@ pub fn validate(chart: &Chart) -> Result<(), String> {
             ((uv[1] - chart.min[1]) * scale) as u32 as i32,
         ]
     };
-    let mut overlap = false;
+    let mut overlap = vec![false; n];
     for i in 0..n {
         let [xa, ya] = cell(chart.uvs[3 * i]);
         let [mut xb, mut yb] = cell(chart.uvs[3 * i + 1]);
@@ -910,7 +912,8 @@ pub fn validate(chart: &Chart) -> Result<(), String> {
                 if (e2 | e0 | e1) >= 0 {
                     let previous = grid[at as usize];
                     if previous != 0 {
-                        overlap = true;
+                        overlap[i] = true;
+                        overlap[previous as usize - 1] = true;
                     }
                     grid[at as usize] = i as i32 + 1;
                 }
@@ -925,9 +928,5 @@ pub fn validate(chart: &Chart) -> Result<(), String> {
             w1 = w1.wrapping_add(xc - xb);
         }
     }
-    if overlap {
-        Err("a chart overlaps itself (not supported yet)".into())
-    } else {
-        Ok(())
-    }
+    (0..n).filter(|&i| overlap[i]).collect()
 }
