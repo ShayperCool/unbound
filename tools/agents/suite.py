@@ -28,8 +28,9 @@ with an earlier summary (default: agents/baseline/ when it exists) and lists eve
 status or summary changed. --update-baseline copies this run's summary to agents/baseline/;
 --promote LABEL does that for an earlier run without running anything.
 
-Exit codes: 0 when no probe has a new failure against the baseline (or, without a baseline, when
-none failed), 1 otherwise, 2 for usage errors.
+Exit codes: 0 when no probe has a new failure against the baseline and no failing probe got worse
+(fewer passing or more failing checks or counted failures, or an earlier failing step), or, without
+a baseline, when none failed; 1 otherwise; 2 for usage errors.
 """
 import argparse
 import concurrent.futures
@@ -636,12 +637,7 @@ def run_step(step, values, log, base_env):
             try:
                 code = process.wait(timeout=step.timeout + 600)
             except subprocess.TimeoutExpired:
-                os.killpg(process.pid, signal.SIGTERM)
-                try:
-                    process.wait(timeout=30)
-                except subprocess.TimeoutExpired:
-                    os.killpg(process.pid, signal.SIGKILL)
-                    process.wait()
+                stop_tree(process)
                 out.write('\nsuite: step timed out\n')
                 code = 124
             finally:
@@ -658,15 +654,83 @@ RUNNING = set()
 RUNNING_LOCK = threading.Lock()
 
 
+class Tree:
+    """A step's process group and every descendant, held by pidfd so that a process that leaves
+    the group (`timeout` makes its own) or is reparented when its parent dies is still reached."""
+
+    def __init__(self, root):
+        self.root, self.fds = root, {}
+
+    def collect(self):
+        parents = {}
+        for stat in Path('/proc').glob('[0-9]*/stat'):
+            try:
+                fields = stat.read_text().rsplit(')', 1)[1].split()
+            except (OSError, IndexError):
+                continue
+            parents.setdefault(int(fields[1]), []).append(int(stat.parent.name))
+        pending = [self.root]
+        while pending:
+            pid = pending.pop()
+            if pid not in self.fds:
+                try:
+                    self.fds[pid] = os.pidfd_open(pid)
+                except OSError:
+                    continue
+            pending += parents.get(pid, [])
+
+    def signal(self, number):
+        self.collect()
+        try:
+            os.killpg(self.root, number)
+        except OSError:
+            pass
+        for fd in self.fds.values():
+            try:
+                signal.pidfd_send_signal(fd, number)
+            except OSError:
+                pass
+
+    def alive(self):
+        alive = False
+        for fd in self.fds.values():
+            try:
+                signal.pidfd_send_signal(fd, 0)
+                alive = True
+            except OSError:
+                pass
+        return alive
+
+    def close(self):
+        for fd in self.fds.values():
+            os.close(fd)
+        self.fds = {}
+
+
+def stop_tree(process, grace=30):
+    """SIGTERM to the step's whole tree; SIGKILL to whatever of it is left after the grace period."""
+    tree = Tree(process.pid)
+    try:
+        tree.signal(signal.SIGTERM)
+        deadline = time.time() + grace
+        while time.time() < deadline:
+            if process.poll() is not None and not tree.alive():
+                break
+            time.sleep(0.5)
+        tree.signal(signal.SIGKILL)
+        process.wait()
+    finally:
+        tree.close()
+
+
 def stop_children(*_):
     """Steps run in their own process groups; stop them all when the suite itself is stopped."""
     with RUNNING_LOCK:
         groups = list(RUNNING)
     for pid in groups:
-        try:
-            os.killpg(pid, signal.SIGTERM)
-        except ProcessLookupError:
-            pass
+        tree = Tree(pid)
+        tree.signal(signal.SIGTERM)
+        tree.close()
     os._exit(130)
 
 
@@ -781,8 +845,31 @@ def default_jobs():
         return 4
 
 
+FAILURE_COUNT = re.compile(r'''\b(\d+) (?:record\(s\) )?(?:differences|differ|failures|failed|missing|extra)\b'''
+                           r'''|["']?(?:differences|failures|failed|missing|extra)["']?: (\d+)''')
+
+
+def worse(old, new):
+    """Why a probe that failed before fails worse now (None if it does not): a step that ran before
+    fails now, fewer checks pass or more fail, or its comparators count more failures."""
+    step = re.compile(r'^step (\d+) \(')
+    old_step, new_step = step.match(old.get('summary', '')), step.match(new.get('summary', ''))
+    if new_step and (not old_step or int(new_step[1]) < int(old_step[1])):
+        return f'now fails at step {new_step[1]}'
+    old_checks, new_checks = old.get('checks') or {}, new.get('checks') or {}
+    if new_checks.get('failed', 0) > old_checks.get('failed', 0):
+        return f'{new_checks["failed"]} failing checks, was {old_checks.get("failed", 0)}'
+    if new_checks.get('passed', 0) < old_checks.get('passed', 0):
+        return f'{new_checks["passed"]} passing checks, was {old_checks["passed"]}'
+    count = lambda text: sum(int(a or b) for a, b in FAILURE_COUNT.findall(text or ''))
+    if count(new.get('summary')) > count(old.get('summary')):
+        return f'{count(new.get("summary"))} counted failures, was {count(old.get("summary"))}'
+    return None
+
+
 def compare_runs(current, previous):
-    """Lines describing what changed since the previous summary; and whether a failure is new."""
+    """Lines describing what changed since the previous summary; and whether a failure is new or
+    an earlier failure got worse."""
     lines, regressed = [], False
     before = previous.get('probes', {})
     for name, result in sorted(current['probes'].items()):
@@ -793,6 +880,11 @@ def compare_runs(current, previous):
         elif old['status'] != result['status']:
             lines.append(f'changed   {name}: {old["status"]} -> {result["status"]}')
             regressed |= result['status'] == 'fail'
+        elif result['status'] == 'fail' and worse(old, result):
+            lines.append(f'worse     {name}: {worse(old, result)}\n'
+                         f'       was {old.get("summary", "")[:150]}\n'
+                         f'       ->  {result.get("summary", "")[:150]}')
+            regressed = True
         elif old.get('summary') != result.get('summary') and result['status'] != 'no recipe':
             lines.append(f'summary   {name}: {old.get("summary", "")[:150]}\n'
                          f'       ->  {result.get("summary", "")[:150]}')
