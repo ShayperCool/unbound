@@ -429,16 +429,17 @@ pub fn create_pipeline(
             compilation_options: Default::default(),
             // Further colors take the outputs after the first; one the program does not write
             // keeps its pixels (a write mask of nothing, as WebGPU requires).
+            // Integer targets do not blend (OpenGL ignores blending for them).
             targets: &std::iter::once(Some(wgpu::ColorTargetState {
                 format: key.format,
-                blend,
+                blend: blend.filter(|_| !super::resources::is_integer(key.format)),
                 write_mask: color_writes(s.color_mask),
             }))
             .chain(key.extra.iter().flatten().enumerate().map(|(i, &format)| {
                 let written = outputs & (1 << (i + 1)) != 0;
                 Some(wgpu::ColorTargetState {
                     format,
-                    blend: if written { blend } else { None },
+                    blend: blend.filter(|_| written && !super::resources::is_integer(format)),
                     write_mask: if written {
                         color_writes(s.color_mask)
                     } else {
@@ -456,41 +457,93 @@ pub fn create_pipeline(
 /// The color outputs a compiled fragment program writes, as a mask of locations: the members of
 /// the struct its `@fragment` entry returns (a single output is location 0).
 pub fn fragment_outputs(wgsl: &str) -> u8 {
+    fragment_output_kinds(wgsl)
+        .iter()
+        .enumerate()
+        .filter(|(_, k)| k.is_some())
+        .fold(0, |mask, (i, _)| mask | 1 << i)
+}
+
+/// The scalar type of a fragment output.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum OutputKind {
+    Float,
+    Sint,
+    Uint,
+}
+
+/// The scalar each color location a compiled fragment program writes holds (see
+/// [`fragment_outputs`]); location 0 as floats where the entry's result cannot be read.
+pub fn fragment_output_kinds(wgsl: &str) -> [Option<OutputKind>; 8] {
+    let kind = |ty: &str| {
+        Some(if ty.contains("i32") {
+            OutputKind::Sint
+        } else if ty.contains("u32") {
+            OutputKind::Uint
+        } else {
+            OutputKind::Float
+        })
+    };
+    let mut kinds = [None; 8];
+    let fallback = {
+        let mut k = [None; 8];
+        k[0] = Some(OutputKind::Float);
+        k
+    };
     let Some(at) = wgsl.find("@fragment") else {
-        return 1;
+        return fallback;
     };
     let rest = &wgsl[at..];
     let (Some(arrow), Some(open)) = (rest.find("->"), rest.find('{')) else {
-        return 1;
+        return fallback;
     };
     if arrow > open {
-        return 1;
+        return fallback;
     }
     let result = rest[arrow + 2..open].trim();
+    if let Some(single) = result.strip_prefix("@location(0)") {
+        kinds[0] = kind(single);
+        return kinds;
+    }
     if result.starts_with('@') {
-        return 1;
+        return fallback;
     }
     let name = result
         .split(|c: char| !(c.is_alphanumeric() || c == '_'))
         .next()
         .unwrap_or("");
     let Some(start) = wgsl.find(&format!("struct {name} {{")) else {
-        return 1;
+        return fallback;
     };
     let Some(close) = wgsl[start..].find('}') else {
-        return 1;
+        return fallback;
     };
     let body = &wgsl[start..start + close];
-    let mut mask = 0u8;
     for part in body.split("@location(").skip(1) {
         if let Some(end) = part.find(')')
-            && let Ok(n) = part[..end].trim().parse::<u8>()
+            && let Ok(n) = part[..end].trim().parse::<usize>()
             && n < 8
         {
-            mask |= 1 << n;
+            let ty = part[end + 1..].split([',', '\n']).next().unwrap_or("");
+            kinds[n] = kind(ty.split(':').nth(1).unwrap_or(ty));
         }
     }
-    if mask == 0 { 1 } else { mask }
+    if kinds.iter().all(Option::is_none) {
+        fallback
+    } else {
+        kinds
+    }
+}
+
+/// Whether a target format takes outputs of a scalar kind (integer formats integers of their
+/// signedness, every other format floats).
+pub fn takes_output(format: wgpu::TextureFormat, kind: OutputKind) -> bool {
+    let wanted = match format.sample_type(None, None) {
+        Some(wgpu::TextureSampleType::Sint) => OutputKind::Sint,
+        Some(wgpu::TextureSampleType::Uint) => OutputKind::Uint,
+        _ => OutputKind::Float,
+    };
+    kind == wanted
 }
 
 #[cfg(test)]
@@ -503,6 +556,22 @@ mod tests {
         );
         let two = "struct targets {\n @location(0) a: vec4<f32>,\n @location(2) b: vec4<f32>,\n}\n@fragment fn main(x: f32) -> targets { }";
         assert_eq!(super::fragment_outputs(two), 0b101);
+        use super::OutputKind as K;
+        let ints = "struct targets {\n @location(0) a: vec4<i32>,\n @location(1) b: vec4<u32>,\n @location(2) c: vec4<f32>,\n}\n@fragment fn main(x: f32) -> targets { }";
+        assert_eq!(
+            super::fragment_output_kinds(ints)[..3],
+            [Some(K::Sint), Some(K::Uint), Some(K::Float)]
+        );
+        assert_eq!(
+            super::fragment_output_kinds("@fragment fn f() -> @location(0) vec4<u32> {}")[0],
+            Some(K::Uint)
+        );
+        assert!(super::takes_output(wgpu::TextureFormat::R8Sint, K::Sint));
+        assert!(!super::takes_output(wgpu::TextureFormat::R8Sint, K::Float));
+        assert!(!super::takes_output(
+            wgpu::TextureFormat::Rgba8Unorm,
+            K::Uint
+        ));
     }
 
     fn validate(source: &str) {

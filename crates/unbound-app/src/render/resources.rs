@@ -462,6 +462,82 @@ pub struct NormFormatCaps {
     pub rg16: Option<wgpu::TextureFormatFeatures>,
     pub rgba16: Option<wgpu::TextureFormatFeatures>,
     pub rgb10a2: Option<wgpu::TextureFormatFeatures>,
+    /// The [`INTEGER_FORMATS`] kernels may write (bit `i` for the `i`th).
+    pub integer_storage: u32,
+}
+
+/// The formats of the integer codes, in code order ([`texture_format::integer`]).
+const INTEGER_FORMATS: [wgpu::TextureFormat; 18] = {
+    use wgpu::TextureFormat as F;
+    [
+        F::R8Uint,
+        F::R8Sint,
+        F::R16Uint,
+        F::R16Sint,
+        F::R32Uint,
+        F::R32Sint,
+        F::Rg8Uint,
+        F::Rg8Sint,
+        F::Rg16Uint,
+        F::Rg16Sint,
+        F::Rg32Uint,
+        F::Rg32Sint,
+        F::Rgba8Uint,
+        F::Rgba8Sint,
+        F::Rgba16Uint,
+        F::Rgba16Sint,
+        F::Rgba32Uint,
+        F::Rgba32Sint,
+    ]
+};
+
+/// The format of an integer code; none for other codes.
+pub fn integer_format(code: i32) -> Option<wgpu::TextureFormat> {
+    let i = usize::try_from(code.checked_sub(texture_format::INTEGER_FIRST)?).ok()?;
+    INTEGER_FORMATS.get(i).copied()
+}
+
+/// The integer code of a format; none for other formats.
+pub fn integer_code(format: wgpu::TextureFormat) -> Option<i32> {
+    let i = INTEGER_FORMATS.iter().position(|f| *f == format)?;
+    Some(texture_format::INTEGER_FIRST + i as i32)
+}
+
+/// Whether a format's texels are integers (signed or unsigned).
+pub fn is_integer(format: wgpu::TextureFormat) -> bool {
+    matches!(
+        format.sample_type(None, None),
+        Some(wgpu::TextureSampleType::Sint | wgpu::TextureSampleType::Uint)
+    )
+}
+
+/// A clear color as an integer target stores it: each channel's float bits as a signed or
+/// unsigned integer, clamped to the channel's range (measured on the Editor's OpenGLCore device:
+/// 3.0 clears R32_SInt to 0x40400000 and R8_SInt to 127, tests/projects/textureformats
+/// `rt.*.clear.load`). Other formats keep the color.
+pub fn integer_clear(format: wgpu::TextureFormat, color: wgpu::Color) -> wgpu::Color {
+    let signed = match format.sample_type(None, None) {
+        Some(wgpu::TextureSampleType::Sint) => true,
+        Some(wgpu::TextureSampleType::Uint) => false,
+        _ => return color,
+    };
+    let channels = format.components() as u32;
+    let bits = format.block_copy_size(None).unwrap_or(4) * 8 / channels.max(1);
+    let store = |v: f64| {
+        let raw = (v as f32).to_bits();
+        if signed {
+            let max = (1i64 << (bits - 1)) - 1;
+            (raw as i32 as i64).clamp(-max - 1, max) as f64
+        } else {
+            (raw as u64).min((1u64 << bits) - 1) as f64
+        }
+    };
+    wgpu::Color {
+        r: store(color.r),
+        g: store(color.g),
+        b: store(color.b),
+        a: store(color.a),
+    }
 }
 
 impl NormFormatCaps {
@@ -471,6 +547,7 @@ impl NormFormatCaps {
         rg16: None,
         rgba16: None,
         rgb10a2: None,
+        integer_storage: 0,
     };
 
     /// The device's, from its adapter. The device asks for the adapter's features when it is
@@ -489,6 +566,17 @@ impl NormFormatCaps {
             rg16: norm16.then(|| features(wgpu::TextureFormat::Rg16Unorm)),
             rgba16: norm16.then(|| features(wgpu::TextureFormat::Rgba16Unorm)),
             rgb10a2: Some(features(wgpu::TextureFormat::Rgb10a2Unorm)),
+            integer_storage: INTEGER_FORMATS
+                .iter()
+                .enumerate()
+                .filter(|(_, f)| {
+                    let f = features(**f);
+                    f.allowed_usages
+                        .contains(wgpu::TextureUsages::STORAGE_BINDING)
+                        && f.flags
+                            .contains(wgpu::TextureFormatFeatureFlags::STORAGE_WRITE_ONLY)
+                })
+                .fold(0, |bits, (i, _)| bits | 1 << i),
         }
     }
 }
@@ -629,6 +717,24 @@ pub fn texture_storage(
                 Err(why) => rgba8(FormatFallback::Unsupported(why)),
             }
         }
+        texture_format::INTEGER_FIRST..=texture_format::INTEGER_LAST => {
+            let i = (t.format - texture_format::INTEGER_FIRST) as usize;
+            let format = INTEGER_FORMATS[i];
+            if !t.random_write || caps.integer_storage & 1 << i != 0 {
+                stored(format, format.block_copy_size(None).unwrap_or(4))
+            } else {
+                // Four 32-bit channels of the same signedness, which every device lets kernels
+                // write.
+                let wide = INTEGER_FORMATS[16 + i % 2];
+                TextureStorage {
+                    format: wide,
+                    bytes_per_pixel: 16,
+                    fallback: Some(FormatFallback::Unsupported(format!(
+                        "this device cannot let kernels write {format:?}: kept as {wide:?}"
+                    ))),
+                }
+            }
+        }
         _ if compressed => stored(wgpu::TextureFormat::Bc7RgbaUnorm, 0),
         _ => stored(wgpu::TextureFormat::Rgba8Unorm, 4),
     }
@@ -649,6 +755,9 @@ fn report_fallback(code: i32, fallback: &FormatFallback) {
         FormatFallback::Unknown(why) => tracing::error!(
             "texture upload rejected ({why}): the texture is made as linear RGBA8 instead"
         ),
+        FormatFallback::Unsupported(why) if integer_format(code).is_some() => {
+            tracing::warn!("Unbound: a render texture of format code {code}: {why}")
+        }
         FormatFallback::Unsupported(why) => tracing::warn!(
             "Unbound: a texture of format code {code} is kept as linear RGBA8 (8 bits per channel, not its own precision): {why}"
         ),
@@ -755,6 +864,18 @@ pub fn upload_texture(
         t.samples.clamp(1, 8).next_power_of_two().min(8)
     } else {
         1
+    };
+    // Integer targets cannot be resolved: they are drawn with one sample.
+    let samples = if samples > 1 && integer_format(t.format).is_some() {
+        report_fallback(
+            t.format,
+            &FormatFallback::Unsupported(format!(
+                "integer targets cannot be resolved, so its {samples} samples are drawn as one"
+            )),
+        );
+        1
+    } else {
+        samples
     };
     let cube = t.dimension == 4 && layers == 6;
     // A CubemapArray: six faces per cube, sampled as a cube array.
@@ -1222,6 +1343,7 @@ mod tests {
             rg16: full(),
             rgba16: full(),
             rgb10a2: full(),
+            integer_storage: (1 << 18) - 1,
         }
     }
 
@@ -1291,7 +1413,7 @@ mod tests {
 
     #[test]
     fn unknown_codes_are_rejected() {
-        for code in [-1, 17, 99, i32::MAX] {
+        for code in [-1, 35, 99, i32::MAX] {
             let s = stored(code, true, false, 1, &full_caps());
             assert_eq!(s.format, wgpu::TextureFormat::Rgba8Unorm);
             assert!(
@@ -1310,6 +1432,7 @@ mod tests {
             rg16: None,
             rgba16: None,
             rgb10a2: full(),
+            integer_storage: 0,
         };
         for code in [13, 14, 16] {
             let s = stored(code, true, false, 1, &caps);
@@ -1347,6 +1470,7 @@ mod tests {
             rg16: guaranteed(F::Rg16Unorm, Features::TEXTURE_FORMAT_16BIT_NORM),
             rgba16: guaranteed(F::Rgba16Unorm, Features::TEXTURE_FORMAT_16BIT_NORM),
             rgb10a2: guaranteed(F::Rgb10a2Unorm, Features::empty()),
+            integer_storage: 0,
         };
         for code in [13, 14, 16] {
             for rt in [false, true] {
@@ -1405,6 +1529,7 @@ mod tests {
                 rg16: features,
                 rgba16: features,
                 rgb10a2: features,
+                integer_storage: 0,
             };
             for code in [13, 14, 15, 16] {
                 let s = stored(code, true, true, 1, &caps);
@@ -1423,6 +1548,7 @@ mod tests {
             rg16: None,
             rgba16: None,
             rgb10a2: full(),
+            integer_storage: 0,
         };
         for code in [13, 14, 16] {
             assert!(
@@ -1440,6 +1566,7 @@ mod tests {
             rg16: guaranteed(wgpu::TextureFormat::Rg16Unorm),
             rgba16: guaranteed(wgpu::TextureFormat::Rgba16Unorm),
             rgb10a2: full(),
+            integer_storage: 0,
         };
         for code in [13, 14, 16] {
             assert_eq!(
@@ -1519,5 +1646,63 @@ mod tests {
         );
         assert_eq!(norm_texel_to_f32(F::Rgba8Unorm, &[0; 4]), None);
         assert_eq!(norm_texel_to_f32(F::Rgba16Unorm, &[0; 4]), None);
+    }
+
+    #[test]
+    fn integer_codes_are_stored_in_their_own_format() {
+        use wgpu::TextureFormat as F;
+        for (channels, bits, signed, format) in [
+            (1, 8, false, F::R8Uint),
+            (1, 8, true, F::R8Sint),
+            (1, 32, true, F::R32Sint),
+            (2, 16, true, F::Rg16Sint),
+            (4, 16, false, F::Rgba16Uint),
+            (4, 32, false, F::Rgba32Uint),
+            (4, 32, true, F::Rgba32Sint),
+        ] {
+            let code = texture_format::integer(channels, bits, signed);
+            assert_eq!(integer_format(code), Some(format));
+            assert_eq!(integer_code(format), Some(code));
+            assert!(is_integer(format));
+            let s = stored(code, true, true, 1, &full_caps());
+            assert_eq!((s.format, s.fallback), (format, None), "code {code}");
+            assert_eq!(s.bytes_per_pixel, format.block_copy_size(None).unwrap());
+        }
+        assert_eq!(
+            texture_format::integer(4, 32, true),
+            texture_format::INTEGER_LAST
+        );
+        assert!(!is_integer(F::Rgba8Unorm) && integer_code(F::Rgba8Unorm).is_none());
+        // Kernels write a format the device cannot store into as four 32-bit channels.
+        let code = texture_format::integer(1, 8, true);
+        let s = stored(code, true, true, 1, &NormFormatCaps::NONE);
+        assert_eq!(s.format, F::Rgba32Sint);
+        assert!(matches!(s.fallback, Some(FormatFallback::Unsupported(_))));
+        assert_eq!(
+            stored(code, true, false, 1, &NormFormatCaps::NONE).format,
+            F::R8Sint
+        );
+    }
+
+    #[test]
+    fn integer_clears_store_the_floats_bits_clamped() {
+        use wgpu::TextureFormat as F;
+        let color = wgpu::Color {
+            r: 3.0,
+            g: -2.0,
+            b: 1000.5,
+            a: 0.5,
+        };
+        let c = integer_clear(F::R32Sint, color);
+        assert_eq!(
+            (c.r, c.g),
+            (0x4040_0000 as f64, (0xc000_0000u32 as i32) as f64)
+        );
+        assert_eq!(integer_clear(F::R8Sint, color).r, 127.0);
+        assert_eq!(integer_clear(F::Rg16Sint, color).g, -32768.0);
+        let c = integer_clear(F::Rgba32Uint, color);
+        assert_eq!((c.g, c.b), (0xc000_0000u32 as f64, 0x447a_2000 as f64));
+        assert_eq!(integer_clear(F::Rgba8Uint, color).a, 255.0);
+        assert_eq!(integer_clear(F::Rgba8Unorm, color), color);
     }
 }

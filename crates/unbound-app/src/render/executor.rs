@@ -323,6 +323,11 @@ pub struct UnityRenderer {
     depth_main_groups: HashMap<(u64, usize), (u64, wgpu::BindGroup)>,
     /// Copies the pass being planned needs before it (integer copies of its textures).
     pre_draw: Vec<DepthCopy>,
+    /// Copies of the textures the draw being planned samples while it draws into them
+    /// ([`Self::feedback_view`]), made before it.
+    pre_copies: Vec<Copy>,
+    /// The copy each such texture is sampled through, by handle.
+    feedback_copies: HashMap<u64, wgpu::Texture>,
     /// Render targets whose depth element the draw being planned samples, and whether their depth
     /// copy must be brought up to date before it (made just now, or the current target's).
     depth_reads: Vec<(u64, bool)>,
@@ -406,6 +411,8 @@ impl UnityRenderer {
             bit_views: HashMap::default(),
             depth_main_groups: HashMap::default(),
             pre_draw: Vec::new(),
+            pre_copies: Vec::new(),
+            feedback_copies: HashMap::default(),
             depth_reads: Vec::new(),
             target_handles: (0, 0),
             integer_defaults: [None, None],
@@ -588,6 +595,7 @@ impl UnityRenderer {
                 self.texture_mip_biases.remove(&handle);
                 self.bit_views.retain(|(h, _), _| *h != handle);
                 self.depth_main_groups.retain(|(h, _), _| *h != handle);
+                self.feedback_copies.remove(&handle);
             }
             Upload::TextureMipBias(handle, bias) => {
                 self.texture_mip_biases.insert(handle, bias);
@@ -676,6 +684,91 @@ impl UnityRenderer {
     }
 
     /// A texture by handle, or the named default.
+    /// Whether the current target draws into a texture (its color or a further color).
+    fn drawn_into(&self, handle: u64) -> bool {
+        let (Some(t), Some(target)) = (self.textures.get(&handle), &self.state.target) else {
+            return false;
+        };
+        std::iter::once(&target.texture)
+            .chain(target.extra.iter().map(|e| &e.texture))
+            .any(|x| {
+                x.as_ref()
+                    .is_some_and(|(texture, ..)| *texture == t.texture)
+            })
+    }
+
+    /// The view a draw samples a texture it draws into through: a copy made right before the
+    /// draw (sampling the texture itself would read and write it in one pass, which the device
+    /// refuses), so the draw reads what the texture held before it, as the Editor does
+    /// (OpenGLCore, 6000.0.71f1: tests/projects/textureformats `feedback.*`). None, warned
+    /// once, for a layered or depth-only texture, whose slot then reads its default.
+    fn feedback_view(&mut self, handle: u64, space: i32) -> Option<wgpu::TextureView> {
+        let t = self.textures.get(&handle)?;
+        if t.layers > 1 || t.volume || t.format == 5 {
+            self.warn_once(format!("feedback{handle}"), || {
+                format!("a draw samples the layered or depth-only render texture {handle} it draws into: the slot reads its default")
+            });
+            return None;
+        }
+        let (source, srgb) = (t.texture.clone(), t.srgb_view.is_some());
+        let fits = self.feedback_copies.get(&handle).is_some_and(|c| {
+            c.size() == source.size()
+                && c.format() == source.format()
+                && c.mip_level_count() == source.mip_level_count()
+        });
+        if !fits {
+            let copy = self.device.create_texture(&wgpu::TextureDescriptor {
+                label: Some("unbound feedback copy"),
+                size: source.size(),
+                mip_level_count: source.mip_level_count(),
+                sample_count: 1,
+                dimension: wgpu::TextureDimension::D2,
+                format: source.format(),
+                usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+                view_formats: if srgb {
+                    &[wgpu::TextureFormat::Rgba8UnormSrgb]
+                } else {
+                    &[]
+                },
+            });
+            self.feedback_copies.insert(handle, copy);
+        }
+        let copy = self.feedback_copies[&handle].clone();
+        for mip in 0..source.mip_level_count() {
+            self.pre_copies.push(Copy {
+                source: source.clone(),
+                source_mip: mip,
+                source_origin: wgpu::Origin3d::ZERO,
+                destination: copy.clone(),
+                destination_mip: mip,
+                destination_origin: wgpu::Origin3d::ZERO,
+                size: source
+                    .size()
+                    .mip_level_size(mip, wgpu::TextureDimension::D2),
+            });
+        }
+        Some(copy.create_view(&wgpu::TextureViewDescriptor {
+            format: (srgb && space == 1).then_some(wgpu::TextureFormat::Rgba8UnormSrgb),
+            ..Default::default()
+        }))
+    }
+
+    /// Whether a float slot cannot read a texture: an integer one, which it reads as its default
+    /// (warned once; Unity leaves what it reads undefined).
+    fn unreadable_as_float(&mut self, handle: u64, name: &str) -> bool {
+        let integer = self
+            .textures
+            .get(&handle)
+            .is_some_and(|t| resources::is_integer(t.texture.format()));
+        if integer {
+            let name = name.to_string();
+            self.warn_once(format!("int-as-float{handle}{name}"), || {
+                format!("texture `{name}` samples floats from the integer render texture {handle}: it reads its default")
+            });
+        }
+        integer
+    }
+
     fn texture_or_default(&self, handle: u64, default: &str) -> &GpuTexture {
         self.textures.get(&handle).unwrap_or_else(|| {
             self.defaults
@@ -728,6 +821,33 @@ impl UnityRenderer {
             self.depth_main_groups
                 .insert((base, slot), (generation, bg.clone()));
             return (bg, false);
+        }
+        if self.unreadable_as_float(handle, "_MainTex") {
+            return self.main_bind_group(0, default, space);
+        }
+        if self.drawn_into(handle) {
+            let Some(view) = self.feedback_view(handle, space) else {
+                return self.main_bind_group(0, default, space);
+            };
+            let t = &self.textures[&handle];
+            let (mut key, alpha_only) = (t.sampler_key, t.alpha_only);
+            key.lod_bias_bits = self.sampler_lod_bias(handle, key, true);
+            let sampler = self.sampler(key);
+            let bg = self.device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("unbound main texture feedback copy"),
+                layout: &self.pipelines.texture_layout,
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: wgpu::BindingResource::TextureView(&view),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::Sampler(&sampler),
+                    },
+                ],
+            });
+            return (bg, alpha_only);
         }
         let mut key = {
             let t = self.texture_or_default(handle, default);
@@ -924,7 +1044,7 @@ impl UnityRenderer {
             })
         };
         // Per-draw textures make a bind group of their own, not cached on the material.
-        let cached = !overrides
+        let mut cached = !overrides
             .iter()
             .any(|(_, v)| matches!(v, owned::PropertyValue::Texture { .. }));
         let slots: Vec<(
@@ -988,10 +1108,16 @@ impl UnityRenderer {
                 None
             });
         }
-        let slots: Vec<_> = slots
+        let mut slots: Vec<_> = slots
             .into_iter()
             .map(|(h, d, dim, slot)| (handle::split(h).0, d, dim, slot))
             .collect();
+        for k in 0..slots.len() {
+            let (h, slot) = (slots[k].0, slots[k].3);
+            if !slot.integer() && self.unreadable_as_float(h, &program.textures[k]) {
+                slots[k].0 = 0;
+            }
+        }
         // Integer slots read a float texture's values as their bits, within its size, and zeros
         // where nothing is bound (as Unity does on OpenGL Core: tests/projects/rtdepth
         // fmt.*.stencil.uint, fmt.*.globalStencil.uint). The bits are copied before every draw.
@@ -1021,8 +1147,33 @@ impl UnityRenderer {
                 integer_views.push(None);
                 continue;
             };
-            let (width, height, source) = (t.width, t.height, t.view_for(space).clone());
             let signed = slot.sample == SampleKind::Sint;
+            // An integer texture is read as it is, by a slot of its signedness (a slot of the
+            // other one reads zeros).
+            let format = t.texture.format();
+            if resources::is_integer(format) {
+                let same = format.sample_type(None, None)
+                    == Some(if signed {
+                        wgpu::TextureSampleType::Sint
+                    } else {
+                        wgpu::TextureSampleType::Uint
+                    });
+                let view = (same && !self.drawn_into(*h)).then(|| t.view.clone());
+                let view = match view {
+                    Some(view) => Some(view),
+                    None if same => self.feedback_view(*h, space),
+                    None => {
+                        let (name, h) = (name.clone(), *h);
+                        self.warn_once(format!("int-sign{id}{name}{h}"), || {
+                            format!("integer texture `{name}` reads the {format:?} render texture {h} of the other signedness: it reads zeros")
+                        });
+                        None
+                    }
+                };
+                integer_views.push(view);
+                continue;
+            }
+            let (width, height, source) = (t.width, t.height, t.view_for(space).clone());
             let fits = self
                 .bit_views
                 .get(&(*h, signed))
@@ -1078,6 +1229,10 @@ impl UnityRenderer {
             })
             .collect();
         let stamp = (id, space, generations);
+        // A texture the target draws into is read through a copy made for this draw.
+        if slots.iter().any(|(h, ..)| self.drawn_into(*h)) {
+            cached = false;
+        }
         if cached
             && let Some(Some((bg, built))) = self.materials[&handle].pass_textures.get(pass)
             && *built == stamp
@@ -1165,9 +1320,23 @@ impl UnityRenderer {
                     .and_then(|t| t.depth_sample.clone())
                     .unwrap_or_else(|| self.depth_default(cube_slot));
                 views.push(view);
+            } else if is_2d(*dim) && self.drawn_into(*h) {
+                samplers.push(self.sampler(key));
+                let view = match self.feedback_view(*h, space) {
+                    Some(view) => view,
+                    None => self.texture_or_default(0, d).view_for(space).clone(),
+                };
+                views.push(view);
             } else if is_2d(*dim) {
                 samplers.push(self.sampler(key));
                 views.push(self.texture_or_default(*h, d).view_for(space).clone());
+            } else if self.drawn_into(*h) {
+                samplers.push(self.sampler(key));
+                let (name, h) = (program.textures[k].clone(), *h);
+                self.warn_once(format!("feedback-dim{id}{name}{h}"), || {
+                    format!("texture `{name}` ({dim:?}) samples render texture {h} while drawing into it: it reads its default")
+                });
+                views.push(self.dim_default(*dim, d));
             } else {
                 samplers.push(self.sampler(key));
                 // A cubemap bound to a cube slot, a 3D texture to a 3D slot, a 2D texture (of
@@ -1777,7 +1946,11 @@ impl UnityRenderer {
                 screen: false,
                 extra: Vec::new(),
                 texture: Some((t.texture.clone(), layer, mip)),
-                auto_mips: t.auto_generate_mips && mip == 0 && t.mip_count > 1,
+                // Integer texels cannot be filtered into mips.
+                auto_mips: t.auto_generate_mips
+                    && mip == 0
+                    && t.mip_count > 1
+                    && !resources::is_integer(t.texture.format()),
             }
         };
         if depth == commands::NO_TEXTURE {
@@ -1858,7 +2031,9 @@ impl UnityRenderer {
                 }
                 Command::GenerateMips { texture } => {
                     if let Some(t) = self.textures.get(&texture) {
-                        if t.render_target && !t.volume {
+                        if resources::is_integer(t.texture.format()) {
+                            self.warn_once(format!("mips{texture}"), || format!("GenerateMips cannot filter the integer render texture {texture}: skipped"));
+                        } else if t.render_target && !t.volume {
                             passes.push(Op::Mips(
                                 t.texture.clone(),
                                 t.target_format(self.color_space),
@@ -2075,6 +2250,10 @@ impl UnityRenderer {
                         if clear_depth {
                             pass.depth_clear = Some((depth, stencil));
                         }
+                    } else if clear_color && resources::is_integer(target.format) {
+                        self.warn_once(format!("int-clear{:?}", target.format), || {
+                            format!("a clear of part of an integer target ({:?}) is not supported: skipped", target.format)
+                        });
                     } else if clear_color || clear_depth {
                         let pipeline = self.pipelines.clear(
                             &device,
@@ -2112,6 +2291,7 @@ impl UnityRenderer {
                     }
                     self.depth_reads.clear();
                     self.pre_draw.clear();
+                    self.pre_copies.clear();
                     let mut planned = self.plan_draw(&draw, &target, time);
                     // Depth elements the draw samples whose copies lag (made just now, or the
                     // current target's): copied here, between what was drawn and this draw.
@@ -2608,7 +2788,17 @@ impl UnityRenderer {
                     determinant3(&draw.model) < 0.0
                 );
             }
-            let pipeline = self.compiled.pipeline(&device, id, key);
+            let pipeline = match self.compiled.pipeline(&device, id, key) {
+                Ok(pipeline) => pipeline,
+                Err(why) => {
+                    let shader = resolved.shader.clone();
+                    self.warn_once(
+                        format!("outputs{shader}#{pass_index}{:?}", key.format),
+                        || format!("shader `{shader}` pass {pass_index} is not drawn: {why}"),
+                    );
+                    continue;
+                }
+            };
             let extra = if self.compiled.program(id).extra_vertex_inputs {
                 Some(match &mesh_extra {
                     Some(e) => e.clone(),
@@ -2629,7 +2819,11 @@ impl UnityRenderer {
                 self.pre_draw.clear();
                 continue;
             };
-            // The conversions this pass reads run right before it, after the grabs before it.
+            // The copies of textures it draws into and the conversions this pass reads run right
+            // before it, after the grabs before it.
+            for copy in std::mem::take(&mut self.pre_copies) {
+                planned.push(Planned::Grab(copy));
+            }
             for copy in std::mem::take(&mut self.pre_draw) {
                 planned.push(Planned::Convert(copy));
             }
@@ -2767,7 +2961,7 @@ impl UnityRenderer {
             wgpu::TextureFormat::Rgba16Unorm => texture_format::RGBA16_UNORM,
             wgpu::TextureFormat::Rgb10a2Unorm => texture_format::RGB10A2_UNORM,
             wgpu::TextureFormat::R16Unorm => texture_format::R16_UNORM,
-            _ => 0,
+            f => resources::integer_code(f).unwrap_or(0),
         };
         let next = handle::PLAIN_MAX - self.grabs.len() as u64;
         let handle = *self.grabs.entry(name.to_string()).or_insert(next);
@@ -3097,13 +3291,18 @@ impl UnityRenderer {
                     texture.size(),
                 );
             }
-            // The first color, then the further ones (cleared or loaded alike).
+            // The first color, then the further ones (cleared or loaded alike; integer ones
+            // store the clear color's bits).
+            let load = |format| match pass.color_load {
+                wgpu::LoadOp::Clear(c) => wgpu::LoadOp::Clear(resources::integer_clear(format, c)),
+                load => load,
+            };
             let colors: Vec<_> = std::iter::once(Some(wgpu::RenderPassColorAttachment {
                 view: &pass.target.color,
                 depth_slice: None,
                 resolve_target: pass.target.resolve.as_ref(),
                 ops: wgpu::Operations {
-                    load: pass.color_load,
+                    load: load(pass.target.format),
                     store: wgpu::StoreOp::Store,
                 },
             }))
@@ -3113,7 +3312,7 @@ impl UnityRenderer {
                     depth_slice: None,
                     resolve_target: e.resolve.as_ref(),
                     ops: wgpu::Operations {
-                        load: pass.color_load,
+                        load: load(e.format),
                         store: wgpu::StoreOp::Store,
                     },
                 })
@@ -3257,6 +3456,10 @@ impl UnityRenderer {
             return None;
         }
         let format = source.format();
+        // Integer texels have no colors to read (ReadPixels refuses those targets).
+        if resources::is_integer(format) {
+            return None;
+        }
         let (tw, th) = (level.width as i32, level.height as i32);
         let x0 = rect[0].clamp(0, tw);
         let y0 = rect[1].clamp(0, th);

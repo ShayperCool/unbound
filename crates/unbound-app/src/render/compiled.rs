@@ -307,10 +307,22 @@ impl CompiledPrograms {
         device: &wgpu::Device,
         id: u32,
         key: PipelineKey,
-    ) -> wgpu::RenderPipeline {
+    ) -> Result<wgpu::RenderPipeline, String> {
         let gpu = &mut self.programs[id as usize];
         if let Some(p) = gpu.pipelines.get(&key) {
-            return p.clone();
+            return Ok(p.clone());
+        }
+        // Each output a target takes must be of its scalar type (an integer target integers).
+        let kinds = super::pipelines::fragment_output_kinds(&gpu.program.fragment);
+        let formats = std::iter::once(Some(key.format)).chain(key.extra.iter().copied());
+        for (location, (format, kind)) in formats.zip(kinds).enumerate() {
+            if let (Some(format), Some(kind)) = (format, kind)
+                && !super::pipelines::takes_output(format, kind)
+            {
+                return Err(format!(
+                    "its output {location} ({kind:?}) cannot be written into a {format:?} target"
+                ));
+            }
         }
         let pipeline = create_pipeline(
             device,
@@ -322,7 +334,7 @@ impl CompiledPrograms {
             super::pipelines::fragment_outputs(&gpu.program.fragment),
         );
         gpu.pipelines.insert(key, pipeline.clone());
-        pipeline
+        Ok(pipeline)
     }
 
     pub fn begin_frame(&mut self) {

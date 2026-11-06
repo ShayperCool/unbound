@@ -173,11 +173,31 @@ pub mod texture_format {
     /// TextureFormat.R16). Needs the device's 16-bit normalized formats; data: four f32 per
     /// texel, of which the first is kept.
     pub const R16_UNORM: i32 = 16;
+    /// The first integer code ([`integer`]): render targets only, no upload data.
+    pub const INTEGER_FIRST: i32 = 17;
+    pub const INTEGER_LAST: i32 = 34;
+
+    /// The integer code of `channels` (1, 2 or 4) channels of `bits` (8, 16 or 32) each, signed
+    /// or unsigned (Unity's R/RG/RGBA 8/16/32 SInt/UInt): 17 + (channel index × 3 + bit index)
+    /// × 2 + signed.
+    pub const fn integer(channels: u32, bits: u32, signed: bool) -> i32 {
+        let c = match channels {
+            1 => 0,
+            2 => 1,
+            _ => 2,
+        };
+        let b = match bits {
+            8 => 0,
+            16 => 1,
+            _ => 2,
+        };
+        INTEGER_FIRST + (c * 3 + b) * 2 + signed as i32
+    }
 
     /// The packet's code, or why the renderer cannot take it: codes outside the table are
     /// rejected rather than drawn as some other format.
     pub fn validate(code: i32) -> Result<i32, String> {
-        if (SRGB_RGBA8..=R16_UNORM).contains(&code) {
+        if (SRGB_RGBA8..=INTEGER_LAST).contains(&code) {
             Ok(code)
         } else {
             Err(format!(
@@ -203,7 +223,8 @@ pub struct TexturePacket {
     /// 0 sRGB RGBA8, 1 linear RGBA8, 2 RGBA floats (kept as half floats), 3 Alpha8, 4 packed
     /// 11/11/10 floats (render targets only, no data), 5 none: a depth-only render target, which
     /// reads as its depth when sampled; 6 R32F, 9 RGBA32F, 10 RG32F, 11 R16F, 12 RG16F,
-    /// 13 RG16 unorm, 14 RGBA16 unorm, 15 RGB10A2 unorm, 16 R16 unorm (see [`texture_format`]).
+    /// 13 RG16 unorm, 14 RGBA16 unorm, 15 RGB10A2 unorm, 16 R16 unorm, 17..=34 integer render
+    /// targets (see [`texture_format`]).
     /// Float upload data is always four f32 channels (13..=16 included). 7/8 are BC7 color/data
     /// imported textures, passed only by native producers.
     pub format: i32,

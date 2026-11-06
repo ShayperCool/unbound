@@ -261,8 +261,8 @@ namespace UnityEngine
 
         /// <summary>The native target format: packed 11/11/10 floats as themselves, half floats for
         /// other HDR formats, normalized 16-bit R/RG/RGBA and packed 10-10-10-2 as themselves (as
-        /// linear RGBA8, with a warning, where the device cannot keep them), RGBA8 otherwise (an
-        /// sRGB view for sRGB ones).</summary>
+        /// linear RGBA8, with a warning, where the device cannot keep them), 8/16/32-bit integer
+        /// formats as themselves, RGBA8 otherwise (an sRGB view for sRGB ones).</summary>
         internal int PacketFormat()
         {
             var f = m_Descriptor.graphicsFormat;
@@ -276,9 +276,25 @@ namespace UnityEngine
             int norm = PixelFormats.GpuNormFormat(f);
             if (norm >= 0) return norm;
             if (GraphicsFormatUtility.IsHDRFormat(f) || GraphicsFormatUtility.IsIEEE754Format(f)) return 2;
+            int integer = IntegerPacketFormat(f);
+            if (integer >= 0) return integer;
             if (GraphicsFormatUtility.IsIntegerFormat(f) && s_WarnedIntegerFormats.Add(f))
-                Debug.LogWarning($"Unbound: render texture '{name}' has the integer format {f}, which Unbound does not store yet: it is kept as 8-bit RGBA (values beyond 8 bits per channel are lost).");
+                Debug.LogWarning($"Unbound: render texture '{name}' has the packed integer format {f}, which Unbound does not store yet: it is kept as 8-bit RGBA (values beyond 8 bits per channel are lost).");
             return GraphicsFormatUtility.IsSRGBFormat(f) ? 0 : 1;
+        }
+
+        /// <summary>The render protocol's code (17..=34) of an R, RG, RGB or RGBA integer format of
+        /// 8-, 16- or 32-bit channels (RGB as RGBA): 17 + (channel index × 3 + bit index) × 2 +
+        /// signed; -1 for any other format.</summary>
+        internal static int IntegerPacketFormat(GraphicsFormat f)
+        {
+            if (!GraphicsFormatUtility.IsIntegerFormat(f) || GraphicsFormatUtility.IsPackedFormat(f)) return -1;
+            uint n = GraphicsFormatUtility.GetComponentCount(f), size = GraphicsFormatUtility.GetBlockSize(f);
+            if (n == 0 || n > 4 || size % n != 0) return -1;
+            uint bits = size / n * 8;
+            if (bits != 8 && bits != 16 && bits != 32) return -1;
+            int c = n == 1 ? 0 : n == 2 ? 1 : 2, b = bits == 8 ? 0 : bits == 16 ? 1 : 2;
+            return 17 + (c * 3 + b) * 2 + (GraphicsFormatUtility.IsSIntFormat(f) ? 1 : 0);
         }
 
         /// <summary>Integer formats warned about (once each).</summary>

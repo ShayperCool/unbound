@@ -76,6 +76,22 @@ fn storage_format_name(format: wgpu::TextureFormat) -> Option<&'static str> {
         F::Rgba32Float => "Rgba32Float",
         F::Rgb10a2Unorm => "Rgb10a2Unorm",
         F::Rg11b10Ufloat => "Rg11b10Ufloat",
+        F::Rgba32Uint => "Rgba32Uint",
+        F::Rgba32Sint => "Rgba32Sint",
+        F::R8Uint => "R8Uint",
+        F::R8Sint => "R8Sint",
+        F::R16Uint => "R16Uint",
+        F::R16Sint => "R16Sint",
+        F::Rg8Uint => "Rg8Uint",
+        F::Rg8Sint => "Rg8Sint",
+        F::Rg16Uint => "Rg16Uint",
+        F::Rg16Sint => "Rg16Sint",
+        F::Rg32Uint => "Rg32Uint",
+        F::Rg32Sint => "Rg32Sint",
+        F::Rgba8Uint => "Rgba8Uint",
+        F::Rgba8Sint => "Rgba8Sint",
+        F::Rgba16Uint => "Rgba16Uint",
+        F::Rgba16Sint => "Rgba16Sint",
         _ => return None,
     })
 }
@@ -99,6 +115,20 @@ fn wgpu_storage_format(name: &str) -> wgpu::TextureFormat {
         "Rgba32Sint" => F::Rgba32Sint,
         "Rgb10a2Unorm" => F::Rgb10a2Unorm,
         "Rg11b10Ufloat" => F::Rg11b10Ufloat,
+        "R8Uint" => F::R8Uint,
+        "R8Sint" => F::R8Sint,
+        "R16Uint" => F::R16Uint,
+        "R16Sint" => F::R16Sint,
+        "Rg8Uint" => F::Rg8Uint,
+        "Rg8Sint" => F::Rg8Sint,
+        "Rg16Uint" => F::Rg16Uint,
+        "Rg16Sint" => F::Rg16Sint,
+        "Rg32Uint" => F::Rg32Uint,
+        "Rg32Sint" => F::Rg32Sint,
+        "Rgba8Uint" => F::Rgba8Uint,
+        "Rgba8Sint" => F::Rgba8Sint,
+        "Rgba16Uint" => F::Rgba16Uint,
+        "Rgba16Sint" => F::Rgba16Sint,
         _ => F::Rgba8Unorm,
     }
 }
@@ -767,13 +797,44 @@ fn main() {
                     };
                     bound.push((r.binding, Bound::Buffer(b.buffer.clone())));
                 }
-                ResourceKind::Texture { dim, .. } => {
+                ResourceKind::Texture { dim, sample } => {
                     let handle = match value {
                         Some(PropertyValue::Texture { handle, .. }) => *handle,
                         Some(PropertyValue::Image { handle, .. }) => *handle,
                         _ => 0,
                     };
-                    let view = if *dim == TextureDim::D2 {
+                    // Integer textures are read by 2D integer slots of their signedness; any
+                    // other pairing with an integer slot or texture reads the slot's default.
+                    let wanted = match sample.as_str() {
+                        "sint" => Some(wgpu::TextureSampleType::Sint),
+                        "uint" => Some(wgpu::TextureSampleType::Uint),
+                        _ => None,
+                    };
+                    let has = self
+                        .textures
+                        .get(&handle)
+                        .and_then(|t| t.texture.format().sample_type(None, None))
+                        .filter(|t| {
+                            matches!(
+                                t,
+                                wgpu::TextureSampleType::Sint | wgpu::TextureSampleType::Uint
+                            )
+                        });
+                    let view = if *dim == TextureDim::D2 && (wanted.is_some() || has.is_some()) {
+                        if wanted.is_some() && has == wanted {
+                            self.textures[&handle].view.clone()
+                        } else {
+                            if handle != 0 {
+                                self.warn_once(format!("kint{}{}{handle}", d.kernel, r.name), || {
+                                    format!("kernel `{}`: texture `{}` ({sample}) cannot read render texture {handle} of another texel type: it reads its default", d.kernel, r.name)
+                                });
+                            }
+                            match wanted {
+                                Some(w) => self.integer_default(w == wgpu::TextureSampleType::Sint),
+                                None => self.texture_or_default(0, "white").view_for(space).clone(),
+                            }
+                        }
+                    } else if *dim == TextureDim::D2 {
                         self.texture_or_default(handle, "white")
                             .view_for(space)
                             .clone()

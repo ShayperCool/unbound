@@ -358,7 +358,14 @@ namespace UnityEngine
             // Update: tests/projects/screencapture read.update), with an error.
             if (active == null && Camera.current == null && !FrameBuilder.InDrawingFrame)
                 Debug.LogError("ReadPixels was called to read pixels from system frame buffer, while not inside drawing frame.");
-            var bytes = Native.ReadPixels(active != null ? active.EnsureCreated() : 0, x0, y0, w, h, true);
+            // The Editor's OpenGLCore device cannot read an integer target (a GL error; the texels
+            // stay as they were: tests/projects/textureformats).
+            if (active != null && RenderTexture.IntegerPacketFormat(active.graphicsFormat) >= 0)
+            {
+                Debug.LogError($"Unbound: ReadPixels cannot read the integer render texture '{active.name}' ({active.graphicsFormat}); the texture is left unchanged.");
+                return;
+            }
+            var bytes =Native.ReadPixels(active != null ? active.EnsureCreated() : 0, x0, y0, w, h, true);
             if (bytes == null)
             {
                 Debug.LogWarning("Unbound: Texture2D.ReadPixels has no GPU to read from (headless run); the texture is left unchanged.");
