@@ -152,7 +152,7 @@ namespace UnityEngine.Tests
             Near.Equal(new Vector3(1.0884f, 1.0884f, 1.0884f), text.localScale, 1e-4f);
         }
 
-        /// <summary>CullUpdateTransforms keeps the state machine updating and writes nothing while
+        /// <summary>CullUpdateTransforms keeps the state machine updating and skips transform writes while
         /// no renderer is visible; the renderer becoming visible in a camera's culling writes the
         /// current pose (measured, tests/projects/animculling a/transforms, h/transforms).</summary>
         [Fact]

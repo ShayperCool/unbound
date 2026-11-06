@@ -43,6 +43,19 @@ closed so that the Game view's camera is the only one; a Scene view camera would
   that runs again advances by all the culled updates' time and fires the skipped events. A state's
   first update (sampling its start) is spent even while culled.
 
+The Unity 6000.0 contract is documented in
+[AnimatorCullingMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AnimatorCullingMode.html),
+[Animator.cullingMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-cullingMode.html)
+and the [Animator component Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-Animator.html).
+CullUpdateTransforms disables retargeting, IK and transform writes; CullCompletely disables
+animation while renderers are invisible. The timing, callbacks and visibility replay above are
+observations of this release and probe, not guarantees about other contexts.
+[AnimationCullingType](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AnimationCullingType.html)
+and [Animation.cullingType](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animation-cullingType.html)
+describe legacy culling: states, events and sampling stop while culled. Its catch-up is measured here.
+[Renderer.isVisible](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer-isVisible.html)
+also counts shadow rendering and Editor Scene view cameras. This capture excludes Scene views.
+
 Not part of the probe: Animators created in the first frame of Play mode are evaluated without
 advancing in their first update (measured while designing the probe; it is outside culling, so the
 rigs are built in frame 1).
