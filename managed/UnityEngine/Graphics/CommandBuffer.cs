@@ -408,6 +408,49 @@ namespace UnityEngine.Rendering
         public void GetTemporaryRT(int nameID, int width, int height, int depthBuffer, FilterMode filter, GraphicsFormat format) =>
             GetTemporaryRT(nameID, width, height, depthBuffer, filter, format, 1, false, RenderTextureMemoryless.None, false);
 
+        /// <summary>A temporary 2D array of <paramref name="slices"/> slices (at least one), sized
+        /// and kept as GetTemporaryRT's (measured, tests/projects/cmdbuffers tarray.*).</summary>
+        public void GetTemporaryRTArray(int nameID, int width, int height, int slices, int depthBuffer, FilterMode filter, GraphicsFormat format,
+            int antiAliasing, bool enableRandomWrite, bool useDynamicScale) =>
+            GetTemporaryRT(nameID, new RenderTextureDescriptor(width, height, format, depthBuffer)
+            {
+                dimension = TextureDimension.Tex2DArray,
+                volumeDepth = Math.Max(1, slices),
+                msaaSamples = Math.Max(1, antiAliasing),
+                enableRandomWrite = enableRandomWrite,
+                useDynamicScale = useDynamicScale,
+            }, filter);
+        public void GetTemporaryRTArray(int nameID, int width, int height, int slices, int depthBuffer, FilterMode filter, GraphicsFormat format, int antiAliasing, bool enableRandomWrite) =>
+            GetTemporaryRTArray(nameID, width, height, slices, depthBuffer, filter, format, antiAliasing, enableRandomWrite, false);
+        public void GetTemporaryRTArray(int nameID, int width, int height, int slices, int depthBuffer, FilterMode filter, GraphicsFormat format, int antiAliasing) =>
+            GetTemporaryRTArray(nameID, width, height, slices, depthBuffer, filter, format, antiAliasing, false, false);
+        public void GetTemporaryRTArray(int nameID, int width, int height, int slices, int depthBuffer, FilterMode filter, GraphicsFormat format) =>
+            GetTemporaryRTArray(nameID, width, height, slices, depthBuffer, filter, format, 1, false, false);
+
+        public void GetTemporaryRTArray(int nameID, int width, int height, int slices, int depthBuffer, FilterMode filter, RenderTextureFormat format,
+            RenderTextureReadWrite readWrite, int antiAliasing, bool enableRandomWrite)
+        {
+            var desc = new RenderTextureDescriptor(width, height, format, depthBuffer, 1, readWrite)
+            {
+                dimension = TextureDimension.Tex2DArray,
+                volumeDepth = Math.Max(1, slices),
+                msaaSamples = Math.Max(1, antiAliasing),
+                enableRandomWrite = enableRandomWrite,
+            };
+            GetTemporaryRT(nameID, desc, filter);
+        }
+        public void GetTemporaryRTArray(int nameID, int width, int height, int slices, int depthBuffer, FilterMode filter, RenderTextureFormat format, RenderTextureReadWrite readWrite, int antiAliasing) =>
+            GetTemporaryRTArray(nameID, width, height, slices, depthBuffer, filter, format, readWrite, antiAliasing, false);
+        public void GetTemporaryRTArray(int nameID, int width, int height, int slices, int depthBuffer, FilterMode filter, RenderTextureFormat format, RenderTextureReadWrite readWrite) =>
+            GetTemporaryRTArray(nameID, width, height, slices, depthBuffer, filter, format, readWrite, 1, false);
+        public void GetTemporaryRTArray(int nameID, int width, int height, int slices, int depthBuffer, FilterMode filter, RenderTextureFormat format) =>
+            GetTemporaryRTArray(nameID, width, height, slices, depthBuffer, filter, format, RenderTextureReadWrite.Default, 1, false);
+        public void GetTemporaryRTArray(int nameID, int width, int height, int slices, int depthBuffer, FilterMode filter) =>
+            GetTemporaryRTArray(nameID, width, height, slices, depthBuffer, filter, RenderTextureFormat.Default, RenderTextureReadWrite.Default, 1, false);
+        public void GetTemporaryRTArray(int nameID, int width, int height, int slices, int depthBuffer) =>
+            GetTemporaryRTArray(nameID, width, height, slices, depthBuffer, FilterMode.Point);
+        public void GetTemporaryRTArray(int nameID, int width, int height, int slices) => GetTemporaryRTArray(nameID, width, height, slices, 0, FilterMode.Point);
+
         public void ReleaseTemporaryRT(int nameID) => Add(c =>
         {
             if (NamedTemporaries.TryGetValue(nameID, out var rt))
@@ -761,6 +804,36 @@ namespace UnityEngine.Rendering
             Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
         public void RequestAsyncReadbackIntoNativeArray<T>(ref NativeArray<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
             Into(ref output, a => AsyncGPUReadback.RequestIntoNativeArray(ref a, src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
+
+        /// <summary>The native slice a command fills, captured when recorded as an array's is.</summary>
+        void IntoSlice<T>(ref NativeSlice<T> output, Func<NativeSlice<T>, AsyncGPUReadbackRequest> request) where T : struct
+        {
+            var slice = output;
+            Add(c => request(slice));
+        }
+
+        public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, ComputeBuffer src, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, callback));
+        public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, ComputeBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, size, offset, callback));
+        public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, GraphicsBuffer src, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, callback));
+        public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, GraphicsBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, size, offset, callback));
+        public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, 0, callback));
+        public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, mipIndex, callback));
+        public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, mipIndex, dstFormat, callback));
+        public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, mipIndex, dstFormat, callback));
+        public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, mipIndex, x, width, y, height, z, depth, src?.graphicsFormat ?? GraphicsFormat.R8G8B8A8_SRGB, callback));
+        public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
+        public void RequestAsyncReadbackIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback) where T : struct =>
+            IntoSlice(ref output, s => AsyncGPUReadback.RequestIntoNativeSlice(ref s, src, mipIndex, x, width, y, height, z, depth, dstFormat, callback));
 
         // ------------------------------------------------------------ global state
 

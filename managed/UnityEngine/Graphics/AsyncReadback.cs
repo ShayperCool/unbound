@@ -174,6 +174,26 @@ namespace Unbound.Runtime
             return Start(result);
         }
 
+        /// <summary>As <see cref="Into{T}(ref NativeArray{T}, Result)"/>, into a slice: the data
+        /// goes contiguously from the slice's first element, a strided slice's too (measured,
+        /// tests/projects/cmdbuffers slice.strided), and fits in its length in elements.</summary>
+        internal static unsafe UnityEngine.Rendering.AsyncGPUReadbackRequest Into<T>(ref NativeSlice<T> output, Result result) where T : struct
+        {
+            long length = (long)output.Length * UnsafeUtility.SizeOf<T>();
+            if (!result.HasError)
+            {
+                long size = 0;
+                foreach (var layer in result.Layers) size += layer.Length;
+                if (size > length)
+                    return Fail($"Size of source buffer data ({size} bytes) is larger than the destination nativeArray ({length} bytes).", result.Callback);
+                result.OutputReservation = Safety.ReserveExternalWrite(output.m_Safety);
+                result.Output = output.m_Buffer;
+                result.OutputLength = length;
+                result.HasOutput = true;
+            }
+            return Start(result);
+        }
+
         // ------------------------------------------------------------ sources
 
         internal static Result Buffer(GpuBufferStorage buffer, int size, int offset, Action<UnityEngine.Rendering.AsyncGPUReadbackRequest> callback)
@@ -491,6 +511,25 @@ namespace UnityEngine.Rendering
             AsyncReadbacks.Start(AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
         public static AsyncGPUReadbackRequest Request(Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) =>
             AsyncReadbacks.Start(AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
+
+        public static AsyncGPUReadbackRequest RequestIntoNativeSlice<T>(ref NativeSlice<T> output, ComputeBuffer src, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            AsyncReadbacks.Into(ref output, Buffer(src?.Storage, (int)(src?.Storage?.Size ?? 0), 0, callback));
+        public static AsyncGPUReadbackRequest RequestIntoNativeSlice<T>(ref NativeSlice<T> output, ComputeBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            AsyncReadbacks.Into(ref output, Buffer(src?.Storage, size, offset, callback));
+        public static AsyncGPUReadbackRequest RequestIntoNativeSlice<T>(ref NativeSlice<T> output, GraphicsBuffer src, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            AsyncReadbacks.Into(ref output, Buffer(src?.Storage, (int)(src?.Storage?.Size ?? 0), 0, callback));
+        public static AsyncGPUReadbackRequest RequestIntoNativeSlice<T>(ref NativeSlice<T> output, GraphicsBuffer src, int size, int offset, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            AsyncReadbacks.Into(ref output, Buffer(src?.Storage, size, offset, callback));
+        public static AsyncGPUReadbackRequest RequestIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex = 0, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            AsyncReadbacks.Into(ref output, Texture(src, mipIndex, Own(src), callback));
+        public static AsyncGPUReadbackRequest RequestIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            AsyncReadbacks.Into(ref output, Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
+        public static AsyncGPUReadbackRequest RequestIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            AsyncReadbacks.Into(ref output, Texture(src, mipIndex, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
+        public static AsyncGPUReadbackRequest RequestIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, TextureFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            AsyncReadbacks.Into(ref output, AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
+        public static AsyncGPUReadbackRequest RequestIntoNativeSlice<T>(ref NativeSlice<T> output, Texture src, int mipIndex, int x, int width, int y, int height, int z, int depth, GraphicsFormat dstFormat, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
+            AsyncReadbacks.Into(ref output, AsyncReadbacks.Texture(src, mipIndex, x, width, y, height, z, depth, ReadbackFormat.Of(dstFormat), callback, reportUnsupported: true));
 
         public static AsyncGPUReadbackRequest RequestIntoNativeArray<T>(ref NativeArray<T> output, ComputeBuffer src, Action<AsyncGPUReadbackRequest> callback = null) where T : struct =>
             AsyncReadbacks.Into(ref output, Buffer(src?.Storage, (int)(src?.Storage?.Size ?? 0), 0, callback));
