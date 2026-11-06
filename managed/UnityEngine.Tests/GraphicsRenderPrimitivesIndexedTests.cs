@@ -301,6 +301,15 @@ namespace Unbound.Tests
         // ---------------------------------------------------------------- guards (green before and after)
 
         [Fact]
+        public void MeshReplayDrawSetupCarriesItsLogicalFirstInstance()
+        {
+            var expected = new List<byte> { 30 }; // FirstInstance, render protocol 11.
+            expected.AddRange(BitConverter.GetBytes(7u));
+            expected.AddRange(SetupBytes(1, 0, 0, false));
+            Assert.Equal(expected.ToArray(), Encoded(new DrawSetup { Instances = 1, FirstInstance = 7 }));
+        }
+
+        [Fact]
         public void NonIndexedDrawSetupsRecordNoIndices()
         {
             Assert.Equal(SetupBytes(4, 0, 0, false), Encoded(new DrawSetup { Instances = 4 }));
