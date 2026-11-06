@@ -38,6 +38,9 @@ pub fn polygon(points: &[[f32; 3]]) -> Result<Vec<u32>> {
             indices.len(),
         )
     };
+    if count == -2 {
+        bail!("model polygon tessellator allocation failed");
+    }
     if count < 0 {
         bail!(
             "model polygon tessellation failed: intersecting or invalid polygons are not supported ({count})"

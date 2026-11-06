@@ -12,17 +12,23 @@ struct output {
 
 static void emit(void *vertex, void *data) {
     struct output *out = data;
-    if (out->count >= out->capacity || !vertex) { out->failed = 1; return; }
+    if (out->failed) return;
+    if (out->count >= out->capacity || !vertex) { out->failed = -1; return; }
     out->indices[out->count++] = (uint32_t)((uintptr_t)vertex - 1);
 }
 
 static void edge(GLboolean boundary) { (void)boundary; }
-static void error(GLenum code, void *data) { (void)code; ((struct output *)data)->failed = 1; }
+static void error(GLenum code, void *data) {
+    struct output *out = data;
+    if (code == GLU_OUT_OF_MEMORY) out->failed = -2;
+    else if (!out->failed) out->failed = -1;
+}
 static void combine(GLdouble coords[3], void *vertices[4], GLfloat weights[4],
                     void **result, void *data) {
     (void)coords; (void)vertices; (void)weights;
     /* Intersections would need new authored attributes. Refuse them explicitly. */
-    ((struct output *)data)->failed = 1;
+    struct output *out = data;
+    if (!out->failed) out->failed = -1;
     *result = NULL;
 }
 
@@ -45,5 +51,5 @@ int unbound_model_tess(const float *positions, uint32_t count, uint32_t *indices
     gluTessEndContour(tess);
     gluTessEndPolygon(tess);
     gluDeleteTess(tess);
-    return out.failed || out.count % 3 ? -1 : (int)out.count;
+    return out.failed ? out.failed : out.count % 3 ? -1 : (int)out.count;
 }

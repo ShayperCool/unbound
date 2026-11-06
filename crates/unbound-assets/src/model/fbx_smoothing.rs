@@ -258,6 +258,17 @@ fn edge_groups(mesh: &ufbx::Mesh, values: &[u32]) -> Result<Vec<u32>> {
         .collect())
 }
 
+fn has_smoothing_layer(node: &ufbx::DomNode) -> bool {
+    let mut pending = vec![node];
+    while let Some(node) = pending.pop() {
+        if node.name == "LayerElementSmoothing" {
+            return true;
+        }
+        pending.extend(node.children.iter().map(|child| child.as_ref()));
+    }
+    false
+}
+
 pub fn per_mesh(
     bytes: &[u8],
     scene: &ufbx::Scene,
@@ -293,7 +304,13 @@ pub fn per_mesh(
                 .map(|v| v.value_int);
             let Some(group) = id.and_then(|id| raw.get(&id)) else {
                 ensure!(
-                    mesh.face_smoothing.is_empty() && mesh.edge_smoothing.is_empty(),
+                    mesh.face_smoothing.is_empty()
+                        && mesh.edge_smoothing.is_empty()
+                        && !mesh
+                            .element
+                            .dom_node
+                            .as_ref()
+                            .is_some_and(|node| has_smoothing_layer(node)),
                     "this FBX smoothing representation is not supported for calculated normals"
                 );
                 return Ok(None);
@@ -371,6 +388,41 @@ mod tests {
             error
                 .to_string()
                 .contains("overlapping FBX edge smoothing regions are not supported"),
+            "{error}"
+        );
+    }
+    #[test]
+    fn unsupported_ascii_smoothing_cannot_disappear_from_the_normalized_arrays() {
+        let bytes = br#"; FBX 7.4.0 project file
+FBXHeaderExtension: { FBXVersion: 7400 }
+Objects: {
+ Geometry: 1, "Geometry::Mesh", "Mesh" {
+  Vertices: *12 { a: 0,0,0,1,0,0,0,1,0,0,0,1 }
+  PolygonVertexIndex: *6 { a: 0,1,-3,0,2,-4 }
+  LayerElementSmoothing: 0 {
+   Version: 102
+   MappingInformationType: "AllSame"
+   ReferenceInformationType: "Direct"
+   Smoothing: *1 { a: 0 }
+  }
+ }
+ Model: 2, "Model::Mesh", "Mesh" { }
+}
+Connections: { C: "OO",1,2 }
+"#;
+        let scene = ufbx::load_memory(
+            bytes,
+            ufbx::LoadOpts {
+                retain_dom: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let error = per_mesh(bytes, &scene, false).unwrap_err();
+        assert!(
+            error
+                .to_string()
+                .contains("smoothing representation is not supported"),
             "{error}"
         );
     }

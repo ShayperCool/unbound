@@ -632,7 +632,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 19;
+    const VERSION: u32 = 20;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedModel> {
         import_model(source, bytes, meta)
