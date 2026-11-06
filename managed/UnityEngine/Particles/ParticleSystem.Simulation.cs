@@ -1963,6 +1963,15 @@ namespace UnityEngine
             return BurstCount(burst.m_Count, 0f, ref random);
         }
 
+        // Rates precede bursts in one measured Birth initialization batch. Each part
+        // keeps its own age and origin while sharing the start-sample advancement.
+        struct BirthEmission
+        {
+            internal int count;
+            internal float age, spacing;
+            internal Vector3 position, velocity;
+        }
+
         /// <summary>Birth sub-emitters emit with their own rate and bursts over the parent particle's life.</summary>
         void BirthSubEmitters(ref Particle parent, float ageBefore, float ageAfter, float dt, Vector3 positionBefore)
         {
@@ -1977,6 +1986,9 @@ namespace UnityEngine
                 float age01 = parent.Age01;
                 int n = 0;
                 float birthAge = 0f, spacing = 0f;
+                BirthEmission firstEmission = default;
+                System.Collections.Generic.List<BirthEmission> combined = null;
+                var travel = dt > 0f ? (parent.m_Position - positionBefore) / dt : Vector3.zero;
                 if (child.m_Emission.enabled)
                 {
                     var emissionRandom = ModuleRandom(parent.m_RandomSeed, m_Main.randomSeed);
@@ -1998,6 +2010,8 @@ namespace UnityEngine
                         float remainder = slot == 0 ? parent.m_EmitAccumulator0 : parent.m_EmitAccumulator1;
                         birthAge = remainder / rate;
                         spacing = -1f / rate;
+                        firstEmission = new BirthEmission { count = n, age = birthAge, spacing = spacing, velocity = travel,
+                            position = Vector3.LerpUnclamped(positionBefore, parent.m_Position, dt > 0f ? 1f - birthAge / dt : 0f) };
                     }
                     foreach (var burst in child.m_Emission.bursts)
                     {
@@ -2009,14 +2023,18 @@ namespace UnityEngine
                             int burstCount = BurstCount(burst.m_Count, age01, ref emissionRandom);
                             if (burstCount > 0 && m_SimulatingBirths)
                             {
-                                var birth = parent;
                                 float preAge = first ? dt : Mathf.Max(0f, ageAfter - at);
-                                birth.m_Position = Vector3.LerpUnclamped(positionBefore, parent.m_Position,
-                                    dt > 0f ? 1f - preAge / dt : 0f);
-                                child.EmitFromParent(this, ref birth, e.properties, burstCount, preAge,
-                                    birthCatchup: m_BirthCallRemaining);
+                                var emission = new BirthEmission { count = burstCount, age = preAge,
+                                    position = Vector3.LerpUnclamped(positionBefore, parent.m_Position,
+                                        dt > 0f ? 1f - preAge / dt : 0f) };
+                                if (firstEmission.count == 0) firstEmission = emission;
+                                else
+                                {
+                                    combined ??= new System.Collections.Generic.List<BirthEmission> { firstEmission };
+                                    combined.Add(emission);
+                                }
                             }
-                            else n += burstCount;
+                            n += burstCount;
                         }
                     }
                 }
@@ -2025,11 +2043,10 @@ namespace UnityEngine
                     if (m_SimulatingBirths)
                     {
                         var birth = parent;
-                        birth.m_Position = Vector3.LerpUnclamped(positionBefore, parent.m_Position,
-                            dt > 0f ? 1f - birthAge / dt : 0f);
-                        child.EmitFromParent(this, ref birth, e.properties, n, birthAge,
-                            birthCatchup: m_BirthCallRemaining, birthSpacing: spacing,
-                            birthVelocity: dt > 0f ? (parent.m_Position - positionBefore) / dt : Vector3.zero);
+                        birth.m_Position = firstEmission.position;
+                        child.EmitFromParent(this, ref birth, e.properties, n, firstEmission.age,
+                            birthCatchup: m_BirthCallRemaining, birthSpacing: firstEmission.spacing,
+                            birthVelocity: firstEmission.velocity, birthRequests: combined);
                     }
                     else child.EmitFromParent(this, ref parent, e.properties, n, 0f);
                 }
@@ -2054,7 +2071,7 @@ namespace UnityEngine
         /// multiplies the start lifetime by the parent's remaining lifetime in seconds, not its
         /// fraction (2.013 × 3.863 s left gives 7.776; a dying parent leaves none, so the children
         /// are not emitted).</para></summary>
-        void EmitFromParent(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count, float preAge, bool eventEmission = false, float birthCatchup = -1f, float birthSpacing = 0f, Vector3 birthVelocity = default)
+        void EmitFromParent(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count, float preAge, bool eventEmission = false, float birthCatchup = -1f, float birthSpacing = 0f, Vector3 birthVelocity = default, System.Collections.Generic.List<BirthEmission> birthRequests = null)
         {
             // The measured constant-lifetime Birth controls skip an emission whose
             // remaining call time reaches its lifetime bound, without consuming start samples.
@@ -2096,12 +2113,23 @@ namespace UnityEngine
                 : parent.m_StartLifetime > 0f ? parent.m_Lifetime / parent.m_StartLifetime : 0f;
             EmitParams none = default;
             var context = MakeContext();
+            int requestIndex = 0, requestStart = 0;
             for (int k = 0; k < count; k++)
             {
                 int index = Allocate();
                 if (index < 0) return;
                 ref var p = ref m_Particles[index];
                 var birthOrigin = origin + parentSystem.SimulationToWorld().MultiplyVector(birthVelocity) * (birthSpacing * k);
+                float particleAge = Mathf.Max(0f, preAge - birthSpacing * k);
+                if (birthRequests != null)
+                {
+                    while (requestIndex + 1 < birthRequests.Count && k >= requestStart + birthRequests[requestIndex].count)
+                        requestStart += birthRequests[requestIndex++].count;
+                    var request = birthRequests[requestIndex];
+                    int local = k - requestStart;
+                    particleAge = Mathf.Max(0f, request.age - request.spacing * local);
+                    birthOrigin = parentSystem.SimulationToWorld().MultiplyPoint3x4(request.position + request.velocity * (request.spacing * local));
+                }
                 if (!InitParticle(ref p, emitter, Mathf.Clamp01(m_Time / Mathf.Max(m_Main.duration, 0.0001f)), false, ref none, k, count, birthOrigin,
                     k, count, (properties & ParticleSystemSubEmitterProperties.InheritRotation) != 0 ? parent.m_AxisOfRotation : null, frame))
                 {
@@ -2128,7 +2156,7 @@ namespace UnityEngine
                     }
                 }
                 BeginModuleSample(k, p.m_RandomSeed);
-                if (!Integrate(ref p, Mathf.Max(0f, preAge - birthSpacing * k), ref context)) RemoveAt(index);
+                if (!Integrate(ref p, particleAge, ref context)) RemoveAt(index);
                 else
                 {
                     bool alive = true;

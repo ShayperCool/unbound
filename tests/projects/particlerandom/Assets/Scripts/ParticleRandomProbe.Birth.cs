@@ -30,6 +30,9 @@ public partial class ParticleRandomProbe
         BirthControl("fixed_001", "burst", 1, 0.05f, speed: 2f, gravity: 1f, fixedDelta: 0.01f);
         BirthControl("fixed_003", "burst", 1, 0.1f, speed: 2f, gravity: 1f, fixedDelta: 0.03f);
         BirthControl("fixed_parent", "burst", 1, 0.05f, speed: 2f, fixedTimeStep: true);
+        BirthControl("combined", "burst", 1, 0.05f, childRate: true, childBursts: true);
+        BirthControl("ring_pause", "burst", 1, 0.1f, ring: ParticleSystemRingBufferMode.PauseUntilReplaced);
+        BirthControl("ring_loop", "burst", 1, 0.1f, ring: ParticleSystemRingBufferMode.LoopUntilReplaced);
         Time.maximumParticleDeltaTime = previousMax;
         Time.fixedDeltaTime = previousFixed;
     }
@@ -38,7 +41,8 @@ public partial class ParticleRandomProbe
         float maximum = 0.03f, float speed = 0f, float gravity = 0f, bool withChildren = true,
         bool restartAgain = false, bool transformed = false, bool parentWorld = false,
         bool childWorld = false, bool rotateChild = false, bool childRate = false, bool childBursts = false,
-        float fixedDelta = 0.02f, bool fixedTimeStep = false)
+        float fixedDelta = 0.02f, bool fixedTimeStep = false,
+        ParticleSystemRingBufferMode ring = ParticleSystemRingBufferMode.Disabled)
     {
         Time.maximumParticleDeltaTime = maximum;
         Time.fixedDeltaTime = fixedDelta;
@@ -63,13 +67,14 @@ public partial class ParticleRandomProbe
         var child = childObject.AddComponent<ParticleSystem>();
         child.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         child.randomSeed = 12346;
-        var cm = child.main; cm.playOnAwake = false; cm.startLifetime = 0.18f;
+        var cm = child.main; cm.playOnAwake = false; cm.startLifetime = ring == ParticleSystemRingBufferMode.Disabled ? 0.18f : 0.05f;
+        cm.ringBufferMode = ring;
         cm.startSpeed = speed; cm.gravityModifier = gravity; cm.maxParticles = 256;
         cm.simulationSpace = childWorld ? ParticleSystemSimulationSpace.World : ParticleSystemSimulationSpace.Local;
         var cs = child.shape; cs.enabled = false;
         var cr = child.rotationOverLifetime; cr.enabled = true; cr.z = 0f;
         var ce = child.emission; ce.rateOverTime = childRate ? 40f : 0f;
-        ce.SetBursts(childRate ? new ParticleSystem.Burst[0] : childBursts
+        ce.SetBursts(childRate && !childBursts ? new ParticleSystem.Burst[0] : childBursts
             ? new[] { new ParticleSystem.Burst(0f, (short)1), new ParticleSystem.Burst(0.04f, (short)1) }
             : new[] { new ParticleSystem.Burst(0f, (short)1) });
         var sub = parent.subEmitters; sub.enabled = true;

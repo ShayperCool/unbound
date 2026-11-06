@@ -136,13 +136,14 @@ the before capture; their worst reference mean remains 0.92.
 
 ## Birth origin and age controls
 
-The P6 extension adds 318 records, each recorded in two independent, identical Unity
+The P6 extension adds 342 records, each recorded in two independent, identical Unity
 6000.0.71f1 Editor captures. All 2149 pre-task values are retained. The new systems explicitly
 enable zero rotation over lifetime to isolate their histories from the angular-velocity context
 of the earlier rotation scenarios. The fixture covers one and five parent births from bursts,
 time rate and scripted Emit, successive small calls and one larger call, restart and withChildren,
 zero and nonzero child speed and gravity, expiry, Local/World parent and child spaces, translation
-and rotation, child time rate and multiple bursts, and fixed intervals of 0.01, 0.02 and 0.03 s.
+and rotation, child time rate and multiple bursts, combined child rate/bursts, both retaining ring
+modes, and fixed intervals of 0.01, 0.02 and 0.03 s.
 
 | Unity 6000.0 contract | Applicable guarantee and limits |
 | --- | --- |
@@ -150,6 +151,7 @@ and rotation, child time rate and multiple bursts, and fixed intervals of 0.01, 
 | [ParticleSystemSubEmitterProperties](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystemSubEmitterProperties.html) | InheritNothing leaves child start properties independent. InheritLifetime shortens lifetime towards the parent's death; no numeric formula is promised. These new controls use InheritNothing. |
 | [Simulate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.Simulate.html) | Advances by the requested period and pauses; restart resets time, withChildren includes child systems, and fixedTimeStep uses the configured fixed interval. The child newborn catch-up schedule is unspecified. |
 | [simulationSpace](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.MainModule-simulationSpace.html) | Selects Local, World or Custom simulation. The new transformed controls measure Local and World only; Custom remains unmeasured here. |
+| [ringBufferMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.MainModule-ringBufferMode.html), [Main module](https://docs.unity3d.com/6000.0/Documentation/Manual/PartSysMainModule.html) | Retaining modes preserve existing particles beyond their lifetime and recycle them at capacity. This does not specify whether to initialize a Birth emission already expired by its catch-up time. |
 
 Measured in this release: a Birth burst at age zero starts at the parent's position before
 movement, including particles emitted from script. Scripted Emit does not immediately create
@@ -167,7 +169,16 @@ Time-rate initialization assigns ages from youngest to oldest, retaining each se
 and eventual expiry. An emission whose remaining call time reaches the constant lifetime bound
 is skipped before drawing start samples. The implementation uses the exact maximum of constant lifetime modes for this bound.
 The early-skip capture uses a constant; ranged lifetime variants, lifetime curves, lifetime by
-emitter speed and inherited lifetime remain unmeasured here. No callback-order guarantee follows from these particle histories.
+emitter speed and inherited lifetime remain unmeasured here. No callback-order guarantee follows
+from these particle histories.
+
+The combined controls retain the previously matched seed identities by initializing child rate
+and burst particles together. Rate particles take start samples before bursts, with each part
+keeping its own origin and age. Two independent ring-mode captures report zero new Birth children
+for lifetime 0.05 and a 0.1 s call, in both PauseUntilReplaced and LoopUntilReplaced. The early skip
+therefore also applies in these measured ring contexts. Separate unit controls retain already
+existing ring particles beyond their lifetime, as the documented contract requires. The skip
+does not remove existing particles.
 
 For the measured moving-parent transforms, the Birth frame faces along the parent's world
 velocity. Its up vector blends the child's world forward and up axes by the absolute dot product
@@ -176,7 +187,7 @@ applied inside that frame. The world spawn point is converted to the child's sim
 including its transform's translation. This is a release-specific frame measurement. It does
 not certify the unresolved rotated-child frames for Death or Manual.
 
-All 318 new records match strictly. The combined result is 2318/2467 matching records,
+All 342 new records match strictly. The combined result is 2342/2491 matching records,
 149 known differences and zero unexpected differences. Only the six original `subemit/child`
 runtime records change; every original count and seed half is unchanged. Their position and
 remaining lifetime now compare without an allowance. Their angular field retains its separate

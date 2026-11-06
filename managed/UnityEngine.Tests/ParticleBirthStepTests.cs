@@ -70,6 +70,48 @@ namespace UnityEngine.Tests
             });
         }
 
+        [Theory]
+        [InlineData(ParticleSystemRingBufferMode.PauseUntilReplaced)]
+        [InlineData(ParticleSystemRingBufferMode.LoopUntilReplaced)]
+        public void ExpiredBirthSkipDoesNotRemoveExistingRingParticles(ParticleSystemRingBufferMode mode)
+        {
+            WithSystems((parent, child) =>
+            {
+                var m = child.main; m.startLifetime = 0.05f; m.ringBufferMode = mode;
+                var e = parent.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+                parent.Simulate(0.1f, true, true, false);
+                Assert.Equal(0, child.particleCount);
+                child.Emit(1);
+                parent.Simulate(0.2f, true, false, false);
+                Assert.Equal(1, child.particleCount);
+            });
+        }
+
+        [Fact]
+        public void RateAndBurstBirthsShareStartSamplesAndKeepDistinctOriginsAndAges()
+        {
+            WithSystems((parent, child) =>
+            {
+                var e = parent.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+                e = child.emission; e.rateOverTime = 40f;
+                e.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1), new ParticleSystem.Burst(0.04f, (short)1) });
+                parent.Simulate(0.05f, true, true, false);
+                var particles = new ParticleSystem.Particle[4];
+                Assert.Equal(4, child.GetParticles(particles));
+                var bySeed = new Dictionary<uint, ParticleSystem.Particle>();
+                foreach (var p in particles) bySeed.Add(p.randomSeed, p);
+                var seeds = new uint[] { 2449477499u, 2360342416u, 896934279u, 326708070u };
+                var positions = new float[] { 0.125f, 0f, 0.25f, 0.2f };
+                var lifetimes = new float[] { 0.14f, 0.115f, 0.16f, 0.15f };
+                for (int i = 0; i < seeds.Length; i++)
+                {
+                    Assert.True(bySeed.ContainsKey(seeds[i]));
+                    Near(positions[i], bySeed[seeds[i]].position.z);
+                    Near(lifetimes[i], bySeed[seeds[i]].remainingLifetime);
+                }
+            });
+        }
+
         static ParticleSystem.Particle Read(ParticleSystem ps)
         {
             var particles = new ParticleSystem.Particle[1];
