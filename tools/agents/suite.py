@@ -400,7 +400,7 @@ def recipes(release):
     R['lightmapuvs'] = guarded(lambda runs: [single_ref(), f'{runs}/lightmapuvs.jsonl', '--uv2', '--expect',
                                              'Cube,Multi,Pieces,Sphere,Ico,Barrel,Rock,Compound,Twins,Grid,TwoUV,Cylinder'])
     R['lightmapuvs'] += [py('compare_normals.py', single_ref(), '{runs}/unbound/lightmapuvs.jsonl', '--expect',
-                              'Authored,Bare,Cube,Cylinder,Edges,Faces,Grid,Groups,Ico,Kite,Organic,Pieces,Polys,Prism,Sphere,Star,StarObj,Tent,Torus,Triangle,TwoUV')]
+                              'Authored,Bare,Cube,Cylinder,Edges,Faces,Grid,Groups,Ico,Kite,Multi,Organic,Pieces,Polys,Prism,Sphere,Star,StarObj,Tent,Torus,Triangle,TwoUV')]
     for name in ('appfacts', 'customrt', 'flares', 'gpubuffers', 'lines', 'rtdepth'):
         R[name] = guarded(folder)
     R['assetclones'] = guarded(lambda runs: ['{probe}/Reference/unity-{release}/Main.jsonl', f'{runs}/values.jsonl',
@@ -447,6 +447,10 @@ def recipes(release):
                     for p in profiles]
     R['modelimport'].append(py('compare.py', '{probe}/Reference/unity-{release}/descriptions.txt',
                                '{runs}/unbound/Gamma.descriptions.txt'))
+    slots = driver('material_slots.py', 'unbound', '--release', '{release}', '--label', '{label}',
+                   env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'})
+    slots.kind = 'compare'
+    R['modelimport'].append(slots)
     R['humanfirstpose'] = [driver('run.py', 'unbound', '--release', '{release}', '--label', '{label}',
                                   '--frozen-runtime', '{runtime}'),
                            py('compare.py', single_ref(), '{runs}/unbound/values.jsonl',

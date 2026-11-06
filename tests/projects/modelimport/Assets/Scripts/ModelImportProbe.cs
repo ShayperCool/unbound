@@ -69,6 +69,7 @@ public class ModelImportProbe : MonoBehaviour
 
     void Start()
     {
+        if (!string.IsNullOrEmpty(Environment.GetEnvironmentVariable("MATERIAL_SLOTS_OUT"))) return;
         foreach (var model in models)
         {
             var instance = Instantiate(model);

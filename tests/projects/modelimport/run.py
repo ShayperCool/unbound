@@ -33,11 +33,14 @@ URP_FILES = ['Assets/Settings/ProbeURP.asset', 'Assets/Settings/ProbeRenderer.as
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 
 
-def copy_project(dest, space):
+def copy_project(dest, space, material_slots=False):
     if dest.exists():
         shutil.rmtree(dest)
     for part in ('Assets', 'Packages', 'ProjectSettings'):
         shutil.copytree(PROBE/part, dest/part)
+    if not material_slots:
+        shutil.rmtree(dest/'Assets/Resources/Slots')
+        (dest/'Assets/Resources/Slots.meta').unlink()
     (dest/'ProjectSettings/ProjectVersion.txt').write_text(
         'm_EditorVersion: '+os.environ['UNBOUND_PROBE_UNITY_VERSION']+'\n')
     if space == 'URP':

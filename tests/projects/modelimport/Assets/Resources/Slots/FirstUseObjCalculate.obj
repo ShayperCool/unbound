@@ -1,0 +1,28 @@
+mtllib Slots.mtl
+o Panels0
+g Panels0
+v 0.0 0 0
+v 1.0 0 0
+v 1.0 1 0
+v 0.0 1 0
+v 1.5 0 0
+v 2.5 0 0
+v 2.5 1 0
+v 1.5 1 0
+v 3.0 0 0
+v 4.0 0 0
+v 4.0 1 0
+v 3.0 1 0
+v 4.5 0 0
+v 5.5 0 0
+v 5.5 1 0
+v 4.5 1 0
+s off
+usemtl Blue
+f 1 2 3 4
+usemtl Red
+f 5 6 7 8
+usemtl Green
+f 9 10 11 12
+usemtl Blue
+f 13 14 15 16

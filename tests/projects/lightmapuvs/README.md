@@ -79,19 +79,20 @@ instead have separate flat face normals. The reference records the measured resu
 numbering, normal arithmetic, split thresholds, and n-gon triangle order are measured details of
 6000.0.71f1, not documented guarantees for other releases.
 
-`compare_normals.py <reference> <candidate> --expect Authored,Bare,Cube,Cylinder,Edges,Faces,Grid,Groups,Ico,Kite,Organic,Pieces,Polys,Prism,Sphere,Star,StarObj,Tent,Torus,Triangle,TwoUV`
-gates 252 cases. It writes every differing value, including ungated cases, to
+`compare_normals.py <reference> <candidate> --expect Authored,Bare,Cube,Cylinder,Edges,Faces,Grid,Groups,Ico,Kite,Multi,Organic,Pieces,Polys,Prism,Sphere,Star,StarObj,Tent,Torus,Triangle,TwoUV`
+gates 264 cases. It writes every differing value, including ungated cases, to
 `normal-comparison.json` beside the candidate. The original exact comparator retains tolerance 0.
-The result is 196 exact cases and 56 calculated-normal cases with residuals of at most 1.8e-7 per
+The result is 208 exact cases and 56 calculated-normal cases with residuals of at most 1.8e-7 per
 float32 component. The added non-planar polygon contributes nine of these, at most 1.2e-7. Residuals
-are marked separately from exact matches. Multi's 12 material-slot ordering failures remain visible.
+are marked separately from exact matches. Multi's 12 material-slot ordering cases now match after the imported binding fix.
 
 The SGI GLU sweep over mirrored float32 positions reproduces the convex, concave and non-planar
 n-gon triangle sequences in the reference. Mesh building and UV unwrapping share these triangles.
 Binary FBX 7.x polygon masks keep their original bits; edge smoothing is converted for face regions
 that do not need overlapping masks. Group masks in ASCII/legacy FBX, indexed smoothing layers,
 overlapping edge regions and intersecting polygons needing new attributes fail explicitly. These
-cases, mesh optimization order, OBJ naming and material-slot order remain follow-ups.
+cases, mesh optimization order and OBJ naming remain follow-ups. Imported material-slot order and
+face bindings are also gated by `modelimport/material_slots.py`, including rendered slot overrides.
 
 The sheriff's `lightmapuvs` suite recipe checks both UV2 and this normal/topology matrix, without
 starting the Editor. Its UV2 expected set includes Grid, TwoUV and Cylinder.
