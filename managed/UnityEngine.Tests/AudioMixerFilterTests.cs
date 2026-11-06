@@ -63,7 +63,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ClearFloatAndImmediateSnapshotBecomeVisibleOnTheNextAudioUpdate()
+        public void ClearFloatGetterRestoresTheSnapshotWhileDspChangesOnTheNextAudioUpdate()
         {
             var (mixer, _, _) = Fixture();
             var snapshot = new AudioMixerSnapshot { m_Mixer = mixer };
@@ -77,7 +77,9 @@ namespace UnityEngine.Tests
             mixer.SetFloat("Cutoff", 4000);
             Assert.True(mixer.ClearFloat("Cutoff"));
             mixer.GetFloat("Cutoff", out value);
-            Assert.Equal(4000, value);
+            // Unity 6000.0 GetFloat contract and audiodistortion's independent captures.
+            Assert.Equal(1000, value);
+            Assert.Equal(4000, mixer.Value("cutoff"));
             mixer.Tick(0, 0);
             mixer.GetFloat("Cutoff", out value);
             Assert.Equal(1000, value);
@@ -267,6 +269,28 @@ namespace UnityEngine.Tests
             compressor.m_EnableWetMix = true; compressor.m_Bypass = false;
             Assert.True(mixer.SetFloat("Threshold", -10f));
             Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
+        }
+
+        [Fact]
+        public void DistortionExposedLevelKeepsRawValuesWhileDspClampsAndWetMixFails()
+        {
+            var (mixer, group, effect) = Fixture();
+            effect.m_EffectName = "Distortion"; effect.m_ParameterGuids.Clear();
+            effect.m_ParameterGuids["Level"] = "level"; mixer.m_Exposed["Level"] = "level";
+            Assert.True(mixer.GetFloat("Level", out float initial)); Assert.Equal(0.5f, initial);
+            foreach (float value in new[] { -1f, 0f, 0.37f, 1f, 2f })
+            {
+                Assert.True(mixer.SetFloat("Level", value));
+                Assert.True(mixer.GetFloat("Level", out float raw)); Assert.Equal(value, raw);
+                using var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration()));
+                Assert.Equal(Mathf.Clamp01(value), payload.RootElement.GetProperty("effects")[0].GetProperty("distortion").GetSingle());
+            }
+            effect.m_EnableWetMix = true;
+            Assert.Contains("wet mixing", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+            effect.m_Bypass = true; group.DspConfiguration();
+            effect.m_EnableWetMix = false; effect.m_Bypass = false;
+            mixer.SetFloat("Level", float.NaN);
+            Assert.Contains("finite", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
         }
 
         [Fact]

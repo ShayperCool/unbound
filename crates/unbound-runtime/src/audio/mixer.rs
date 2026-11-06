@@ -166,7 +166,7 @@ unsafe fn decode_descriptors(
     let filters = unsafe { std::slice::from_raw_parts(pointer, count as usize) }.to_vec();
     for (i, f) in filters.iter().enumerate() {
         anyhow::ensure!(
-            matches!(f.kind, filter_kind::LOWPASS | filter_kind::HIGHPASS | filter_kind::ECHO | filter_kind::REVERB),
+            matches!(f.kind, filter_kind::LOWPASS | filter_kind::HIGHPASS | filter_kind::ECHO | filter_kind::REVERB | filter_kind::DISTORTION),
             "unsupported AudioSource filter kind {}",
             f.kind
         );
@@ -205,6 +205,7 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
             filter_kind::LOWPASS => "Lowpass",
             filter_kind::HIGHPASS => "Highpass",
             filter_kind::REVERB => "SFX Reverb",
+            filter_kind::DISTORTION => "Distortion",
             _ => "Echo",
         }
         .into(),
@@ -225,6 +226,7 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         send_level: 0.0,
         compressor: None,
         eq: None,
+        distortion: (d.kind == filter_kind::DISTORTION).then(|| d.cutoff.clamp(0.0, 1.0)),
     }
 }
 
@@ -948,7 +950,7 @@ impl Mixer {
                 matches!(effect.kind.as_str(),
                     "Attenuation" | "Lowpass" | "Highpass" | "Echo" | "SFX Reverb"
                         | "Send" | "Receive" | "Duck Volume" | "Compressor" | "ParamEQ"
-                        | "Lowpass Simple" | "Highpass Simple")
+                        | "Lowpass Simple" | "Highpass Simple" | "Distortion")
                     || effect.bypass
                     || spec.bypass,
                 "unsupported AudioMixer effect '{}'",
@@ -958,7 +960,8 @@ impl Mixer {
             anyhow::ensure!(
                 !active
                     || (effect.kind != "Compressor" || effect.compressor.is_some())
-                        && (effect.kind != "ParamEQ" || effect.eq.is_some()),
+                        && (effect.kind != "ParamEQ" || effect.eq.is_some())
+                        && (effect.kind != "Distortion" || effect.distortion.is_some()),
                 "AudioMixer {} '{}' has no parameters",
                 effect.kind,
                 effect.id
@@ -1672,7 +1675,7 @@ impl Mixer {
             // (tests/projects/mixerduck, tests/projects/mixercompressor).
             let active = node.effects.iter()
                 .any(|e| matches!(e.spec.kind.as_str(), "Echo" | "SFX Reverb" | "Duck Volume"
-                    | "Compressor" | "ParamEQ" | "Lowpass Simple" | "Highpass Simple"))
+                    | "Compressor" | "ParamEQ" | "Lowpass Simple" | "Highpass Simple" | "Distortion"))
                 || (!node.spec.bypass
                     && node.effects.iter().any(|e| {
                         !e.spec.bypass && matches!(e.spec.kind.as_str(), "Lowpass" | "Highpass")

@@ -210,6 +210,30 @@ namespace UnityEngine
         }
     }
 
+    /// <summary>The measured AudioMixer Distortion kernel on an AudioSource. Native keeps setter
+    /// values verbatim and clamps the DSP amount to 0..1 (6000.0.71f1, audiodistortion).</summary>
+    [ClassId(170)]
+    [RequireComponent(typeof(AudioBehaviour))]
+    public sealed partial class AudioDistortionFilter : Behaviour
+    {
+        internal float m_DistortionLevel = 0.5f;
+        bool m_ReportedInvalid;
+        public float distortionLevel { get => m_DistortionLevel; set => m_DistortionLevel = value; }
+
+        internal bool Describe(out AudioFilterDescriptor d)
+        {
+            d = new AudioFilterDescriptor { Kind = AudioFilterKind.Distortion, Cutoff = Mathf.Clamp01(m_DistortionLevel) };
+            return AudioFilterChain.Finite(this, ref m_ReportedInvalid, m_DistortionLevel, 0f);
+        }
+        internal override void CopyFrom(Component source, Func<Object, Object> remap) =>
+            m_DistortionLevel = ((AudioDistortionFilter)source).m_DistortionLevel;
+        internal override void ReadSerialized(YNode body, IReferenceResolver resolver)
+        {
+            m_DistortionLevel = body.Float("m_DistortionLevel", 0.5f);
+            AudioFilterChain.CheckSerialized(this, body, "m_DistortionLevel");
+        }
+    }
+
     /// <summary>
     /// The AudioMixer SFX Reverb on one AudioSource (tests/projects/audioreverb, 6000.0.71f1). A
     /// new component is <see cref="AudioReverbPreset.User"/> with the values the Editor gives it.
@@ -367,7 +391,7 @@ namespace Unbound.Runtime
         internal static NotSupportedException CustomCutoffCurve() =>
             new NotSupportedException("AudioLowPassFilter.customCutoffCurve is not supported by Unbound: the cutoff does not follow a distance curve");
 
-        static bool IsFilterComponent(Component c) => c is AudioLowPassFilter || c is AudioHighPassFilter || c is AudioEchoFilter || c is AudioReverbFilter;
+        static bool IsFilterComponent(Component c) => c is AudioLowPassFilter || c is AudioHighPassFilter || c is AudioEchoFilter || c is AudioReverbFilter || c is AudioDistortionFilter;
 
         /// <summary>False (with one error per component) when a parameter is not a number.</summary>
         internal static bool Finite(Behaviour component, ref bool reported, float a, float b, float c = 0f, float d = 0f)
@@ -426,6 +450,7 @@ namespace Unbound.Runtime
                 bool ok;
                 if (c is AudioLowPassFilter lowPass) ok = lowPass.Describe(out d);
                 else if (c is AudioHighPassFilter highPass) ok = highPass.Describe(out d);
+                else if (c is AudioDistortionFilter distortion) ok = distortion.Describe(out d);
                 else if (c is AudioReverbFilter reverb) ok = reverb.Describe(out d);
                 else ok = ((AudioEchoFilter)c).Describe(out d);
                 if (!ok) continue;

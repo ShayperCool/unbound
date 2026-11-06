@@ -25,7 +25,8 @@ use crate::{
 /// 21: the reverb zone descriptor at the end of `AudioFramePacket`; `reverb_zone_mix` is the
 /// source's send gain.
 /// 22: render protocols 10 and 11 (32-bit indices and logical instance IDs).
-pub const NATIVE_API_VERSION: u32 = 22;
+/// 23: AudioDistortionFilter kind 5, Level in the existing cutoff field.
+pub const NATIVE_API_VERSION: u32 = 23;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]

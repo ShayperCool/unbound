@@ -171,7 +171,11 @@ namespace UnityEngine.Audio
                 value = 0f;
                 return false;
             }
-            value = Value(guid);
+            // 6000.0 GetFloat promises the snapshot value after ClearFloat. Native's
+            // audiodistortion mix_clear capture reports it before the next render too.
+            value = m_PendingClears.Contains(guid)
+                ? (m_Values.TryGetValue(guid, out var snapshot) ? snapshot : m_Defaults.TryGetValue(guid, out var fallback) ? fallback : 0f)
+                : Value(guid);
             return true;
         }
 
@@ -444,6 +448,7 @@ namespace UnityEngine.Audio
                     mixAudible = wetDb > -69f,
                     duck = effect.m_EffectName == AudioMixerEffectController.DuckVolume ? effect.DuckConfiguration(m_Mixer) : null,
                     compressor = effect.m_EffectName == AudioMixerEffectController.Compressor && !bypass ? effect.CompressorConfiguration(m_Mixer) : null,
+                    distortion = effect.m_EffectName == AudioMixerEffectController.Distortion && !bypass ? effect.DistortionConfiguration(m_Mixer) : (float?)null,
                     eq = effect.m_EffectName == AudioMixerEffectController.ParamEq && !bypass ? effect.ParamEqConfiguration(m_Mixer) : null,
                     sendTarget = targetGroup != null ? target.m_EffectId : null,
                     sendLevel = targetGroup != null ? AudioMixer.DspGain(wetDb) : 0f,
@@ -574,6 +579,9 @@ namespace Unbound.Runtime
         static readonly float[] DuckMaximums = { 0f, 10f, 10f, 10f, 40f, 50f, 1f };
         internal const string Compressor = "Compressor";
         internal const string ParamEq = "ParamEQ";
+        internal const string Distortion = "Distortion";
+        static readonly string[] DistortionParameters = { "Level" };
+        static readonly float[] DistortionDefaults = { 0.5f }, DistortionMinimums = { 0f }, DistortionMaximums = { 1f };
         // Editor parameter definitions of 6000.0.71f1; tests/projects/mixercompressor measures the
         // same values as Native's defaults for unset parameters.
         internal static readonly string[] CompressorParameters = { "Threshold", "Attack", "Release", "Make up gain" };
@@ -586,11 +594,12 @@ namespace Unbound.Runtime
         static readonly float[] ParamEqMaximums = { 22000f, 5f, 3f };
         /// <summary>Kinds the DSP runs besides SFX Reverb and the routed units.</summary>
         internal static readonly string[] MeasuredEffects = {
-            "Attenuation", "Lowpass", "Highpass", "Echo", Compressor, ParamEq, "Lowpass Simple", "Highpass Simple" };
+            "Attenuation", "Lowpass", "Highpass", "Echo", Compressor, ParamEq, Distortion, "Lowpass Simple", "Highpass Simple" };
         internal static float CutoffDefault(string effect) => effect == "Highpass Simple" ? 1000f : 5000f;
         internal static (string[], float[], float[], float[]) Ranges(string effect) =>
             effect == Compressor ? (CompressorParameters, CompressorDefaults, CompressorMinimums, CompressorMaximums)
             : effect == ParamEq ? (ParamEqParameters, ParamEqDefaults, ParamEqMinimums, ParamEqMaximums)
+            : effect == Distortion ? (DistortionParameters, DistortionDefaults, DistortionMinimums, DistortionMaximums)
             : (null, null, null, null);
         /// <summary>The effect's parameters; values outside the Editor's ranges (reachable through
         /// exposed parameters) are unmeasured and fail.</summary>
@@ -610,6 +619,13 @@ namespace Unbound.Runtime
         {
             var v = Values(mixer);
             return new { threshold = v[0], attack = v[1], release = v[2], makeupGain = v[3] };
+        }
+        // Native 6000.0.71f1 keeps exposed values verbatim but clamps the DSP amount.
+        internal float DistortionConfiguration(UnityEngine.Audio.AudioMixer mixer)
+        {
+            float value = Parameter("Level") is string guid ? mixer.Value(guid) : 0.5f;
+            if (!float.IsFinite(value)) throw new NotSupportedException("AudioMixer Distortion Level must be finite");
+            return Mathf.Clamp01(value);
         }
         internal object ParamEqConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {

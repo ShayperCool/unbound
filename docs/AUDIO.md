@@ -412,7 +412,7 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
 - Unmeasured: other releases, surround output, parameter changes and snapshot transitions while
   the detector runs, sending groups that start after their mixer, sends between mixers, a send into its own group,
   wet mixing on these units (fails loudly), and sample rates other than 48000 and 44100 Hz.
-- Compressor, ParamEQ and the simple filters are in the next section; the other mixer effects
+- Compressor, ParamEQ, the simple filters and Distortion are below; the other mixer effects
   still fail loudly.
 
 # AudioMixer: Compressor, ParamEQ, Lowpass Simple and Highpass Simple
@@ -474,3 +474,40 @@ Measured from the captures, not documented:
   wet mixing on these effects.
 - Unmeasured: other releases, surround output, parameter changes and snapshot transitions while
   the effects run, resuming after a bypass, and sample rates other than 48000 and 44100 Hz.
+
+# Mixer and source Distortion
+
+`effects.rs` runs Distortion on mixer groups and `AudioDistortionFilter` on AudioSources through
+the existing component chain. NativeApi 23 adds kind 5 with its level in the descriptor's existing
+`Cutoff` field, without changing the layout. Stubs are regenerated. Validation is
+tests/projects/audiodistortion, Unity 6000.0.71f1 Linux Editor, 48000 and 44100 Hz. Two independent
+Native captures per rate agree bit for bit across 5,767,292 values; one release reference is kept.
+
+The [Distortion Effect Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioDistortionEffect.html),
+[Distortion Filter Manual](https://docs.unity3d.com/6000.0/Documentation/Manual/class-AudioDistortionFilter.html)
+and [distortionLevel API](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/audiodistortionfilter/distortionlevel)
+document the range 0..1 and default 0.5. The Manual allows the component on a source or listener;
+the listener case is unmeasured here and reports an error. The documented component order,
+enabled state and OnAudioFilterRead placement apply, including the callback's audio-thread and
+Web limitations. The full contract/cause table is in the probe's README.
+
+Measured in this release/context, both forms follow the single-precision rational curve
+`y = ((1+k)*x)/(1+k*abs(x))`, `k = 2*d/(1-d)`, with
+`d = min(clamp(Level,0,1),0.9999)`. The Editor's parameter name is `Level`, the component's stored
+field is `m_DistortionLevel`. Their setters preserve -1 and 2 but their processing clamps, and
+level 1 uses the finite 0.9999 endpoint. Channels are independent and the captured response has
+no history or rate dependence. These equations fit the captures; they are not an assertion about
+Unity's internal implementation or other releases.
+
+The 44 cases cover defaults/endpoints/intermediate levels, small/large/DC/impulse and bipolar
+input, tone/noise, mono/stereo sources, serialized 0.37, exposed setters, component disable,
+source bypassEffects/bypassListenerEffects, effect/group bypass, parent/prefader routing and a
+halving callback on either side of the component. Startup uses the existing 64-frame source
+input fade and 1024-frame mixer group input fade. `mix_clear` confirms the
+[GetFloat contract](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/audio/audiomixer/getfloat)
+that after ClearFloat the getter reports the snapshot value; the DSP still changes on its next
+audio update.
+
+Wet mixing is unmeasured and fails clearly when enabled. Listener Distortion, 3D sources,
+surround output, live level/bypass transitions and other sample rates remain unmeasured.
+Chorus, Flange, Normalize and Pitch Shifter remain separate work.

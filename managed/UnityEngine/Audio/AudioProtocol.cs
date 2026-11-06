@@ -74,6 +74,8 @@ namespace Unbound.Runtime
         internal const int Echo = 3;
         /// <summary>AudioReverbFilter (NativeApi 20): <see cref="AudioFilterDescriptor.Reverb"/>.</summary>
         internal const int Reverb = 4;
+        /// <summary>AudioDistortionFilter (NativeApi 23): Level in Cutoff; layout unchanged.</summary>
+        internal const int Distortion = 5;
     }
 
     /// <summary>Where a component sits relative to the scripts with OnAudioFilterRead on its

@@ -95,10 +95,11 @@ namespace UnityEngine.Tests
         static ulong Id(Component c) => unchecked((ulong)(long)c.GetInstanceID());
 
         [Fact]
-        public void PacketAndDescriptorLayoutsUnchangedInNativeApi21()
+        public void PacketAndDescriptorLayoutsUnchangedInNativeApi23()
         {
-            // Added at 16; 20 adds reverb parameters, 21 the frame zone; 22 adds render commands.
-            Assert.Equal(22u, NativeApi.CurrentVersion);
+            // Added at 16; 20 adds reverb parameters, 21 the frame zone; 22 adds render commands,
+            // 23 adds Distortion without changing the audio descriptor layout.
+            Assert.Equal(23u, NativeApi.CurrentVersion);
             var frame = default(AudioFramePacket);
             byte* f = (byte*)&frame;
             Assert.Equal((64, 72, 80, 176), ((int)((byte*)&frame.FilterCount - f), (int)((byte*)&frame.Filters - f),
@@ -121,7 +122,7 @@ namespace UnityEngine.Tests
                 (int)((byte*)&d.Delay - e), (int)((byte*)&d.Decay - e), (int)((byte*)&d.DryMix - e), (int)((byte*)&d.WetMix - e),
                 (int)((byte*)d.Reverb - e),
             });
-            Assert.Equal(new[] { 1, 2, 3, 4 }, new[] { AudioFilterKind.LowPass, AudioFilterKind.HighPass, AudioFilterKind.Echo, AudioFilterKind.Reverb });
+            Assert.Equal(new[] { 1, 2, 3, 4, 5 }, new[] { AudioFilterKind.LowPass, AudioFilterKind.HighPass, AudioFilterKind.Echo, AudioFilterKind.Reverb, AudioFilterKind.Distortion });
             Assert.Equal(new[] { 0, 1 }, new[] { AudioFilterStage.BeforeScripts, AudioFilterStage.AfterScripts });
             Assert.Equal(64, AudioFilterDescriptor.MaxPerSource);
         }
@@ -172,6 +173,32 @@ namespace UnityEngine.Tests
             Assert.Equal(22000f, lowPass.cutoffFrequency);
             lowPass.cutoffFrequency = 4000f;
             Assert.Equal(4000f, lowPass.cutoffFrequency);
+        }
+
+        [Fact]
+        public void DistortionKeepsSetValuesButClampsItsDescriptorAndClonesSerializedValues()
+        {
+            var source = Source("distortion");
+            var filter = source.gameObject.AddComponent<AudioDistortionFilter>();
+            Assert.Equal(0.5f, filter.distortionLevel);
+            foreach (float value in new[] { -1f, 0f, 0.37f, 1f, 2f })
+            {
+                filter.distortionLevel = value;
+                source.Flush(always: true);
+                var d = Assert.Single(m_Backend.FiltersOf(source.m_Handle));
+                Assert.Equal(AudioFilterKind.Distortion, d.Kind);
+                Assert.Equal(Mathf.Clamp01(value), d.Cutoff);
+                Assert.Equal(value, filter.distortionLevel);
+            }
+            filter.distortionLevel = 0.37f;
+            var clone = Object.Instantiate(source.gameObject); m_Objects.Add(clone);
+            Assert.Equal(0.37f, clone.GetComponent<AudioDistortionFilter>().distortionLevel);
+            filter.enabled = false;
+            Assert.Empty(Collected(source));
+            filter.enabled = true; filter.distortionLevel = float.NaN;
+            Assert.Empty(Collected(source));
+            Assert.Single(Errors("AudioDistortionFilter"));
+            Assert.Empty(m_Backend.FilterRejections);
         }
 
         [Fact]

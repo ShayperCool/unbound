@@ -330,7 +330,7 @@ namespace Unbound.Runtime
             for (int i = 0; i < copy.Length; i++)
             {
                 var f = copy[i];
-                if (f.Kind < AudioFilterKind.LowPass || f.Kind > AudioFilterKind.Echo) return "unsupported filter kind " + f.Kind;
+                if ((f.Kind < AudioFilterKind.LowPass || f.Kind > AudioFilterKind.Echo) && f.Kind != AudioFilterKind.Distortion) return "unsupported filter kind " + f.Kind;
                 if (f.Stage != AudioFilterStage.BeforeScripts && f.Stage != AudioFilterStage.AfterScripts) return "invalid filter stage " + f.Stage;
                 if (generator && f.Stage == AudioFilterStage.BeforeScripts) return "a filter component above a clipless OnAudioFilterRead generator is unsupported";
                 if (!float.IsFinite(f.Cutoff) || !float.IsFinite(f.Resonance) || !float.IsFinite(f.Delay)

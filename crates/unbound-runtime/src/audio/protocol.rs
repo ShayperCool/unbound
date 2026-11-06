@@ -87,6 +87,8 @@ pub mod filter_kind {
     pub const ECHO: i32 = 3;
     /// `AudioReverbFilter` (NativeApi 20): [`AudioFilterDescriptor::reverb`].
     pub const REVERB: i32 = 4;
+    /// `AudioDistortionFilter` (NativeApi 23): Level in `cutoff`; layout unchanged.
+    pub const DISTORTION: i32 = 5;
 }
 
 /// `AudioFilterDescriptor.stage`: where a component sits relative to the scripts with
@@ -296,19 +298,20 @@ mod tests {
     }
 
     /// The source packet's filter descriptors were added at NativeApi 16; 20 adds the reverb
-    /// kind and parameters, 21 the frame packet's reverb zone. The managed side pins the same
-    /// value and refuses 14 to 21 and 23 (NativeApiVersionTests).
+    /// kind and parameters, 21 the frame packet's reverb zone, 23 Distortion kind 5.
+    /// The managed side pins the same value and refuses 14 to 22 and 24 (NativeApiVersionTests).
     #[test]
-    fn the_filter_descriptor_layout_is_native_api_21() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 22);
+    fn the_filter_descriptor_layout_is_native_api_23() {
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 23);
         assert_eq!(
             [
                 filter_kind::LOWPASS,
                 filter_kind::HIGHPASS,
                 filter_kind::ECHO,
-                filter_kind::REVERB
+                filter_kind::REVERB,
+                filter_kind::DISTORTION
             ],
-            [1, 2, 3, 4]
+            [1, 2, 3, 4, 5]
         );
         assert_eq!(
             [filter_stage::BEFORE_SCRIPTS, filter_stage::AFTER_SCRIPTS],

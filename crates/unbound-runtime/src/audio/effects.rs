@@ -55,6 +55,9 @@ pub struct EffectSpec {
     /// ParamEQ parameters; required for that kind unless bypassed.
     #[serde(default)]
     pub eq: Option<ParamEqSpec>,
+    /// Distortion Level, clamped for DSP while the managed API keeps the exposed value.
+    #[serde(default)]
+    pub distortion: Option<f32>,
 }
 
 /// ParamEQ parameters as the mixer stores them: Hz, octaves and a linear gain.
@@ -86,6 +89,10 @@ impl EffectSpec {
         }
         if let Some(compressor) = &self.compressor {
             compressor.validate(&self.id)?;
+        }
+        if let Some(level) = self.distortion {
+            anyhow::ensure!(level.is_finite() && (0.0..=1.0).contains(&level),
+                "AudioMixer Distortion has an invalid Level {level}");
         }
         if let Some(eq) = &self.eq {
             // The Editor's ranges; outside them the response is unmeasured.
@@ -334,6 +341,16 @@ impl Echo {
     }
 }
 
+/// Unity 6000.0.71f1 static waveshaper (tests/projects/audiodistortion). The endpoint
+/// stops at 0.9999 to keep the rational curve finite; channels and rates are independent.
+fn distortion(samples: &mut [f32], level: f32) {
+    let level = level.min(0.9999);
+    let k = 2.0 * level / (1.0 - level);
+    for x in samples {
+        *x = ((1.0 + k) * *x) / (1.0 + k * x.abs());
+    }
+}
+
 pub struct Effect {
     pub spec: EffectSpec,
     stages: [Biquad; 2],
@@ -473,7 +490,7 @@ impl Effect {
             if !bypass && !self.spec.bypass {
                 self.echo.process(samples, &self.spec);
             }
-        } else if matches!(self.spec.kind.as_str(), "Compressor" | "ParamEQ" | "Lowpass Simple" | "Highpass Simple") {
+        } else if matches!(self.spec.kind.as_str(), "Compressor" | "ParamEQ" | "Distortion" | "Lowpass Simple" | "Highpass Simple") {
             // A bypassed unit keeps its state; resuming after bypass is unmeasured.
             if bypass || self.spec.bypass {
                 return;
@@ -485,6 +502,7 @@ impl Effect {
                     }
                 }
                 "ParamEQ" => self.eq.process(samples),
+                "Distortion" => distortion(samples, self.spec.distortion.unwrap()),
                 kind => self.simple.process(samples, kind == "Highpass Simple", self.spec.cutoff, self.rate),
             }
         } else if let Some(reverb) = &mut self.reverb {
@@ -572,6 +590,23 @@ impl GroupNode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn distortion_matches_native_dc_and_large_bipolar_samples() {
+        let mut x = [0.0, 0.00001, -0.000005, 0.5, -0.25, 4.0, -2.0];
+        distortion(&mut x, 0.5);
+        let native = [0.0, 0.000029999399, -0.0000149998496, 0.75, -0.5, 1.3333334, -1.2];
+        for (actual, expected) in x.into_iter().zip(native) {
+            assert!((actual - expected).abs() < 1e-7);
+        }
+        let mut endpoint = [0.06451613, -0.032258064];
+        distortion(&mut endpoint, 1.0);
+        assert!((endpoint[0] - 0.9992754).abs() < 1e-7);
+        assert!((endpoint[1] + 0.99850196).abs() < 1e-7);
+        let mut dry = [0.5, -2.0];
+        distortion(&mut dry, 0.0);
+        assert_eq!(dry, [0.5, -2.0]);
+    }
 
     #[test]
     fn simple_filter_coefficients_follow_the_measured_two_segment_curve() {
