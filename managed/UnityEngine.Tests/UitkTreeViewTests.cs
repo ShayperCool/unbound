@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using UnityEngine.UIElements;
+using Unbound.UIElements;
 using Xunit;
 
 // TreeView, BaseTreeView and TreeViewItemData<T>. Each test names its source:
@@ -305,7 +306,7 @@ namespace UnityEngine.Tests
             Assert.Equal(0, view.selectedIndex);
         }
 
-        // Red on b6ee73db: a stale report of the moved id 2 at row 3 comes first (Assert.Equal(1, reports.Count)
+        // Red on b6ee73db: a stale report of the moved id 2 at row 3 comes first (Assert.Single(reports)
         // fails with 2).
         [Fact]
         public void SetSelectionByIdReportsOnlyTheNewSelection()
@@ -315,7 +316,7 @@ namespace UnityEngine.Tests
             var reports = new List<int[]>();
             view.selectedIndicesChanged += indices => reports.Add(indices.ToArray());
             view.SetSelectionById(1);
-            Assert.Equal(1, reports.Count);
+            Assert.Single(reports);
             Assert.Equal(new[] { 0 }, reports[0]);
             Assert.Equal(new[] { 1 }, view.selectedIds);
         }

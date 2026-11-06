@@ -402,10 +402,10 @@ Mesh:
                 File.WriteAllText(tablePath, "table 1");
 
                 var reached = AssetDatabaseRuntime.Reachability.Walk();
-                Assert.True(reached.Contains(highlight));
-                Assert.True(reached.Contains(table));
-                Assert.True(reached.Contains(sky));
-                Assert.False(reached.Contains(held));
+                Assert.Contains<object>(highlight, reached, reached.Comparer);
+                Assert.Contains<object>(table, reached, reached.Comparer);
+                Assert.Contains<object>(sky, reached, reached.Comparer);
+                Assert.DoesNotContain<object>(held, reached, reached.Comparer);
 
                 Assert.Empty(Errors(() => Resources.UnloadUnusedAssets()));
 
