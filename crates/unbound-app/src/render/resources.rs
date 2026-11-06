@@ -725,8 +725,8 @@ pub fn texture_storage(
             if !t.random_write || caps.integer_storage & 1 << i != 0 {
                 stored(format, format.block_copy_size(None).unwrap_or(4))
             } else {
-                // Four 32-bit channels of the same signedness, which every device lets kernels
-                // write.
+                // Four 32-bit channels of the same signedness, which kernels read and write on
+                // every device Unbound runs on (Vulkan; Metal's read-write tier 2).
                 let wide = INTEGER_FORMATS[16 + i % 2];
                 TextureStorage {
                     format: wide,

@@ -239,6 +239,27 @@ public static class TexFormatsProbe
         new IntCase { Key = "R32G32B32A32_UInt", Format = GraphicsFormat.R32G32B32A32_UInt, Signed = false, Bits = 32 },
     };
 
+    /// A full-target quad drawn with <paramref name="pass"/> of the probe's shader into the active
+    /// <paramref name="rt"/>, then a clear of its color (to the integer clear color) or of its
+    /// depth only, with no change of target in between.
+    static void DrawThenClear(RenderTexture rt, int pass, bool color)
+    {
+        var active = RenderTexture.active;
+        RenderTexture.active = rt;
+        GL.PushMatrix();
+        GL.LoadOrtho();
+        s_Mat.SetPass(pass);
+        GL.Begin(GL.QUADS);
+        GL.TexCoord2(0, 0); GL.Vertex3(0, 0, 0);
+        GL.TexCoord2(0, 1); GL.Vertex3(0, 1, 0);
+        GL.TexCoord2(1, 1); GL.Vertex3(1, 1, 0);
+        GL.TexCoord2(1, 0); GL.Vertex3(1, 0, 0);
+        GL.End();
+        GL.PopMatrix();
+        GL.Clear(!color, color, new Color(3f, -2f, 1000.5f, 0.5f));
+        RenderTexture.active = active;
+    }
+
     static int WritePass(IntCase c) => 6 + (c.Bits == 8 ? 0 : c.Bits == 16 ? 2 : 4) + (c.Signed ? 0 : 1);
     static string Kernel(IntCase c) => "Write" + (c.Signed ? "Int" : "UInt") + c.Bits;
 
@@ -272,6 +293,21 @@ public static class TexFormatsProbe
         Graphics.Blit(null, rt, s_Mat, WritePass(c));
         ReadBack(key + ".draw", rt);
         Try(key + ".load", () => Loaded(rt, c.Signed));
+        // A target with depth: drawn into, then cleared in color, then drawn into and cleared in
+        // depth only, while it stays the active target.
+        var deep = rt.descriptor;
+        deep.depthBufferBits = 24;
+        var withDepth = Target(deep);
+        Try(key + ".redraw.clear.load", () =>
+        {
+            DrawThenClear(withDepth, WritePass(c), true);
+            return Loaded(withDepth, c.Signed);
+        });
+        Try(key + ".redraw.depthclear.load", () =>
+        {
+            DrawThenClear(withDepth, WritePass(c), false);
+            return Loaded(withDepth, c.Signed);
+        });
 
         var d = rt.descriptor;
         d.enableRandomWrite = true;

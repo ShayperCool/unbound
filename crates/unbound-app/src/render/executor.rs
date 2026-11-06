@@ -2240,7 +2240,11 @@ impl UnityRenderer {
                     // Integer targets are cleared by a pass's load (the clear pipeline writes
                     // floats): a whole-target clear after draws starts a pass of its own.
                     let integer = resources::is_integer(target.format);
-                    if full && integer && !last_pass(&mut passes).items.is_empty() {
+                    if full
+                        && integer
+                        && (clear_color || clear_depth)
+                        && !last_pass(&mut passes).items.is_empty()
+                    {
                         let pass = self.new_pass(target.clone());
                         passes.push(Op::Pass(pass));
                     }

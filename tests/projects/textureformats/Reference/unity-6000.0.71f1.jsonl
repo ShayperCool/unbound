@@ -187,6 +187,8 @@
 {"k":"rt.RInt.draw.async","v":"error"}
 {"k":"rt.RInt.draw.asyncfloat","v":"error"}
 {"k":"rt.RInt.load","v":"80000000,00000000,00000000,00000001;00000001,00000000,00000000,00000001"}
+{"k":"rt.RInt.redraw.clear.load","v":"40400000,00000000,00000000,00000001;40400000,00000000,00000000,00000001"}
+{"k":"rt.RInt.redraw.depthclear.load","v":"80000000,00000000,00000000,00000001;00000001,00000000,00000000,00000001"}
 {"k":"rt.RInt.kernel.create","v":true}
 {"k":"rt.RInt.kernel.dispatch","v":true}
 {"k":"rt.RInt.kernel.async","v":"error"}
@@ -206,6 +208,8 @@
 {"k":"rt.RGInt.draw.async","v":"error"}
 {"k":"rt.RGInt.draw.asyncfloat","v":"error"}
 {"k":"rt.RGInt.load","v":"80000000,7fffffff,00000000,00000001;00000001,fffffffe,00000000,00000001"}
+{"k":"rt.RGInt.redraw.clear.load","v":"40400000,c0000000,00000000,00000001;40400000,c0000000,00000000,00000001"}
+{"k":"rt.RGInt.redraw.depthclear.load","v":"80000000,7fffffff,00000000,00000001;00000001,fffffffe,00000000,00000001"}
 {"k":"rt.RGInt.kernel.create","v":true}
 {"k":"rt.RGInt.kernel.dispatch","v":true}
 {"k":"rt.RGInt.kernel.async","v":"error"}
@@ -225,6 +229,8 @@
 {"k":"rt.ARGBInt.draw.async","v":"error"}
 {"k":"rt.ARGBInt.draw.asyncfloat","v":"error"}
 {"k":"rt.ARGBInt.load","v":"80000000,7fffffff,fffffffd,00011170;00000001,fffffffe,00000003,fffffffc"}
+{"k":"rt.ARGBInt.redraw.clear.load","v":"40400000,c0000000,447a2000,3f000000;40400000,c0000000,447a2000,3f000000"}
+{"k":"rt.ARGBInt.redraw.depthclear.load","v":"80000000,7fffffff,fffffffd,00011170;00000001,fffffffe,00000003,fffffffc"}
 {"k":"rt.ARGBInt.kernel.create","v":true}
 {"k":"rt.ARGBInt.kernel.dispatch","v":true}
 {"k":"rt.ARGBInt.kernel.async","v":"error"}
@@ -244,6 +250,8 @@
 {"k":"rt.RGBAUShort.draw.async","v":"error"}
 {"k":"rt.RGBAUShort.draw.asyncfloat","v":"error"}
 {"k":"rt.RGBAUShort.load","v":"0000ffff,00000000,00008000,000004d2;00000001,00000002,00000003,00000004"}
+{"k":"rt.RGBAUShort.redraw.clear.load","v":"0000ffff,0000ffff,0000ffff,0000ffff;0000ffff,0000ffff,0000ffff,0000ffff"}
+{"k":"rt.RGBAUShort.redraw.depthclear.load","v":"0000ffff,00000000,00008000,000004d2;00000001,00000002,00000003,00000004"}
 {"k":"rt.RGBAUShort.kernel.create","v":true}
 {"k":"rt.RGBAUShort.kernel.dispatch","v":true}
 {"k":"rt.RGBAUShort.kernel.async","v":"error"}
@@ -260,6 +268,8 @@
 {"k":"rt.R8_UInt.draw.async","v":"error"}
 {"k":"rt.R8_UInt.draw.asyncfloat","v":"error"}
 {"k":"rt.R8_UInt.load","v":"000000ff,00000000,00000000,00000001;00000001,00000000,00000000,00000001"}
+{"k":"rt.R8_UInt.redraw.clear.load","v":"000000ff,00000000,00000000,00000001;000000ff,00000000,00000000,00000001"}
+{"k":"rt.R8_UInt.redraw.depthclear.load","v":"000000ff,00000000,00000000,00000001;00000001,00000000,00000000,00000001"}
 {"k":"rt.R8_UInt.kernel.create","v":true}
 {"k":"rt.R8_UInt.kernel.dispatch","v":true}
 {"k":"rt.R8_UInt.kernel.async","v":"error"}
@@ -276,6 +286,8 @@
 {"k":"rt.R8_SInt.draw.async","v":"error"}
 {"k":"rt.R8_SInt.draw.asyncfloat","v":"error"}
 {"k":"rt.R8_SInt.load","v":"ffffff80,00000000,00000000,00000001;00000001,00000000,00000000,00000001"}
+{"k":"rt.R8_SInt.redraw.clear.load","v":"0000007f,00000000,00000000,00000001;0000007f,00000000,00000000,00000001"}
+{"k":"rt.R8_SInt.redraw.depthclear.load","v":"ffffff80,00000000,00000000,00000001;00000001,00000000,00000000,00000001"}
 {"k":"rt.R8_SInt.kernel.create","v":true}
 {"k":"rt.R8_SInt.kernel.dispatch","v":true}
 {"k":"rt.R8_SInt.kernel.async","v":"error"}
@@ -292,6 +304,8 @@
 {"k":"rt.R8G8B8A8_UInt.draw.async","v":"error"}
 {"k":"rt.R8G8B8A8_UInt.draw.asyncfloat","v":"error"}
 {"k":"rt.R8G8B8A8_UInt.load","v":"000000ff,00000000,00000080,00000007;00000001,00000002,00000003,00000004"}
+{"k":"rt.R8G8B8A8_UInt.redraw.clear.load","v":"000000ff,000000ff,000000ff,000000ff;000000ff,000000ff,000000ff,000000ff"}
+{"k":"rt.R8G8B8A8_UInt.redraw.depthclear.load","v":"000000ff,00000000,00000080,00000007;00000001,00000002,00000003,00000004"}
 {"k":"rt.R8G8B8A8_UInt.kernel.create","v":true}
 {"k":"rt.R8G8B8A8_UInt.kernel.dispatch","v":true}
 {"k":"rt.R8G8B8A8_UInt.kernel.async","v":"error"}
@@ -308,6 +322,8 @@
 {"k":"rt.R8G8B8A8_SInt.draw.async","v":"error"}
 {"k":"rt.R8G8B8A8_SInt.draw.asyncfloat","v":"error"}
 {"k":"rt.R8G8B8A8_SInt.load","v":"ffffff80,0000007f,ffffffff,00000005;00000001,fffffffe,00000003,fffffffc"}
+{"k":"rt.R8G8B8A8_SInt.redraw.clear.load","v":"0000007f,ffffff80,0000007f,0000007f;0000007f,ffffff80,0000007f,0000007f"}
+{"k":"rt.R8G8B8A8_SInt.redraw.depthclear.load","v":"ffffff80,0000007f,ffffffff,00000005;00000001,fffffffe,00000003,fffffffc"}
 {"k":"rt.R8G8B8A8_SInt.kernel.create","v":true}
 {"k":"rt.R8G8B8A8_SInt.kernel.dispatch","v":true}
 {"k":"rt.R8G8B8A8_SInt.kernel.async","v":"error"}
@@ -324,6 +340,8 @@
 {"k":"rt.R16_UInt.draw.async","v":"error"}
 {"k":"rt.R16_UInt.draw.asyncfloat","v":"error"}
 {"k":"rt.R16_UInt.load","v":"0000ffff,00000000,00000000,00000001;00000001,00000000,00000000,00000001"}
+{"k":"rt.R16_UInt.redraw.clear.load","v":"0000ffff,00000000,00000000,00000001;0000ffff,00000000,00000000,00000001"}
+{"k":"rt.R16_UInt.redraw.depthclear.load","v":"0000ffff,00000000,00000000,00000001;00000001,00000000,00000000,00000001"}
 {"k":"rt.R16_UInt.kernel.create","v":true}
 {"k":"rt.R16_UInt.kernel.dispatch","v":true}
 {"k":"rt.R16_UInt.kernel.async","v":"error"}
@@ -340,6 +358,8 @@
 {"k":"rt.R16_SInt.draw.async","v":"error"}
 {"k":"rt.R16_SInt.draw.asyncfloat","v":"error"}
 {"k":"rt.R16_SInt.load","v":"ffff8000,00000000,00000000,00000001;00000001,00000000,00000000,00000001"}
+{"k":"rt.R16_SInt.redraw.clear.load","v":"00007fff,00000000,00000000,00000001;00007fff,00000000,00000000,00000001"}
+{"k":"rt.R16_SInt.redraw.depthclear.load","v":"ffff8000,00000000,00000000,00000001;00000001,00000000,00000000,00000001"}
 {"k":"rt.R16_SInt.kernel.create","v":true}
 {"k":"rt.R16_SInt.kernel.dispatch","v":true}
 {"k":"rt.R16_SInt.kernel.async","v":"error"}
@@ -356,6 +376,8 @@
 {"k":"rt.R16G16_SInt.draw.async","v":"error"}
 {"k":"rt.R16G16_SInt.draw.asyncfloat","v":"error"}
 {"k":"rt.R16G16_SInt.load","v":"ffff8000,00007fff,00000000,00000001;00000001,fffffffe,00000000,00000001"}
+{"k":"rt.R16G16_SInt.redraw.clear.load","v":"00007fff,ffff8000,00000000,00000001;00007fff,ffff8000,00000000,00000001"}
+{"k":"rt.R16G16_SInt.redraw.depthclear.load","v":"ffff8000,00007fff,00000000,00000001;00000001,fffffffe,00000000,00000001"}
 {"k":"rt.R16G16_SInt.kernel.create","v":true}
 {"k":"rt.R16G16_SInt.kernel.dispatch","v":true}
 {"k":"rt.R16G16_SInt.kernel.async","v":"error"}
@@ -372,6 +394,8 @@
 {"k":"rt.R16G16B16A16_SInt.draw.async","v":"error"}
 {"k":"rt.R16G16B16A16_SInt.draw.asyncfloat","v":"error"}
 {"k":"rt.R16G16B16A16_SInt.load","v":"ffff8000,00007fff,fffffffe,0000012c;00000001,fffffffe,00000003,fffffffc"}
+{"k":"rt.R16G16B16A16_SInt.redraw.clear.load","v":"00007fff,ffff8000,00007fff,00007fff;00007fff,ffff8000,00007fff,00007fff"}
+{"k":"rt.R16G16B16A16_SInt.redraw.depthclear.load","v":"ffff8000,00007fff,fffffffe,0000012c;00000001,fffffffe,00000003,fffffffc"}
 {"k":"rt.R16G16B16A16_SInt.kernel.create","v":true}
 {"k":"rt.R16G16B16A16_SInt.kernel.dispatch","v":true}
 {"k":"rt.R16G16B16A16_SInt.kernel.async","v":"error"}
@@ -388,6 +412,8 @@
 {"k":"rt.R32_UInt.draw.async","v":"error"}
 {"k":"rt.R32_UInt.draw.asyncfloat","v":"error"}
 {"k":"rt.R32_UInt.load","v":"ffffffff,00000000,00000000,00000001;00000001,00000000,00000000,00000001"}
+{"k":"rt.R32_UInt.redraw.clear.load","v":"40400000,00000000,00000000,00000001;40400000,00000000,00000000,00000001"}
+{"k":"rt.R32_UInt.redraw.depthclear.load","v":"ffffffff,00000000,00000000,00000001;00000001,00000000,00000000,00000001"}
 {"k":"rt.R32_UInt.kernel.create","v":true}
 {"k":"rt.R32_UInt.kernel.dispatch","v":true}
 {"k":"rt.R32_UInt.kernel.async","v":"error"}
@@ -404,6 +430,8 @@
 {"k":"rt.R32G32B32A32_UInt.draw.async","v":"error"}
 {"k":"rt.R32G32B32A32_UInt.draw.asyncfloat","v":"error"}
 {"k":"rt.R32G32B32A32_UInt.load","v":"ffffffff,00000000,80000000,0001e240;00000001,00000002,00000003,00000004"}
+{"k":"rt.R32G32B32A32_UInt.redraw.clear.load","v":"40400000,c0000000,447a2000,3f000000;40400000,c0000000,447a2000,3f000000"}
+{"k":"rt.R32G32B32A32_UInt.redraw.depthclear.load","v":"ffffffff,00000000,80000000,0001e240;00000001,00000002,00000003,00000004"}
 {"k":"rt.R32G32B32A32_UInt.kernel.create","v":true}
 {"k":"rt.R32G32B32A32_UInt.kernel.dispatch","v":true}
 {"k":"rt.R32G32B32A32_UInt.kernel.async","v":"error"}
