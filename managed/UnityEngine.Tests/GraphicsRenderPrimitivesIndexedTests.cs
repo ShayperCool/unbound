@@ -8,18 +8,9 @@ using Xunit;
 
 namespace Unbound.Tests
 {
-    /// <summary>
-    /// Graphics.RenderPrimitivesIndexed and RenderPrimitivesIndexedIndirect (Scripting API 6000.0:
-    /// the shader reads SV_VertexID, "set with values in the indexBuffer"). Unbound draws the
-    /// direct call from a 16-bit index buffer (stride 2) of triangles, lines or points: one draw of
-    /// the 65536-vertex procedural stand-in whose setup carries the buffer's indices (render
-    /// protocol 8, DrawIndices after DrawSetup), so every index value has a vertex. It refuses the
-    /// rest loudly, counted (Stubs.HitReport) and warned once, before anything is queued or
-    /// recorded: 32-bit indices (the documented example's), every indirect call, quads, line
-    /// strips and other strides. Arguments are checked as the neighbouring RenderPrimitives*
-    /// methods check theirs. Unbound's warnings never reach Application's log callbacks, so they
-    /// are observed at the logger's handler (installed here, restored in <see cref="Dispose"/>).
-    /// </summary>
+    /// <summary>Indexed RenderParams draws retain external GPU indices and indirect arguments.
+    /// Camera-frame parity is checked by cmdbuffers against Unity 6000.0.71f1. Unsupported
+    /// topologies and strides remain counted and warned at the logger's handler.</summary>
     public class GraphicsRenderPrimitivesIndexedTests : IDisposable
     {
         const string Indexed = "UnityEngine.Graphics.RenderPrimitivesIndexed";
@@ -138,11 +129,11 @@ namespace Unbound.Tests
         }
 
         /// <summary>Render protocol 8's DrawIndices: buffer, index size 2, first index, count.</summary>
-        static byte[] IndicesBytes(ulong buffer, uint first, uint count)
+        static byte[] IndicesBytes(ulong buffer, uint first, uint count, byte size = 2)
         {
             var bytes = new List<byte> { DrawIndicesOp };
             bytes.AddRange(BitConverter.GetBytes(buffer));
-            bytes.Add(2);
+            bytes.Add(size);
             bytes.AddRange(BitConverter.GetBytes(first));
             bytes.AddRange(BitConverter.GetBytes(count));
             return bytes.ToArray();
@@ -196,6 +187,14 @@ namespace Unbound.Tests
             Assert.Equal(IndicesBytes(index.Handle, 3, 1), Encoded(queued[1].Setup.Value).Skip(18).ToArray());
         }
 
+        [Fact]
+        public void ZeroDirectInstanceCountUsesOneInstanceOnMeasuredGlCore()
+        {
+            var index = NewBuffer(GraphicsBuffer.Target.Index, 6, 2);
+            Graphics.RenderPrimitivesIndexed(new RenderParams(NewMaterial()), MeshTopology.Triangles, index, 6, 0, 0);
+            Assert.Equal(1u, Assert.Single(TakeQueued()).Setup.Value.Instances);
+        }
+
         // ---------------------------------------------------------------- argument checks
 
         [Fact]
@@ -205,7 +204,7 @@ namespace Unbound.Tests
             var rp = new RenderParams(NewMaterial());
             var index16 = NewBuffer(GraphicsBuffer.Target.Index, 6, 2);
             var index32 = NewBuffer(GraphicsBuffer.Target.Structured, 6, 4);
-            Assert.Equal("rparams.material", Assert.Throws<ArgumentNullException>(() => Graphics.RenderPrimitivesIndexed(none, MeshTopology.Triangles, index16, 3)).ParamName);
+            Graphics.RenderPrimitivesIndexed(none, MeshTopology.Triangles, index16, 3);
             Assert.Equal("indexBuffer", Assert.Throws<ArgumentNullException>(() => Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, null, 3)).ParamName);
             Assert.Equal("startIndex", Assert.Throws<ArgumentOutOfRangeException>(() => Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, index16, 3, -1)).ParamName);
             Assert.Equal("indexCount", Assert.Throws<ArgumentOutOfRangeException>(() => Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, index16, 3, 4)).ParamName);
@@ -216,7 +215,7 @@ namespace Unbound.Tests
             Assert.Single(TakeQueued());
             int warned = Hits(Indexed);
             Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, index16, 0);
-            Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, index16, 3, 0, 0);
+
             Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, index32, 0);
             Assert.Empty(TakeQueued());
             Assert.Equal(warned, Hits(Indexed));
@@ -230,10 +229,10 @@ namespace Unbound.Tests
             var index = NewBuffer(GraphicsBuffer.Target.Index, 6, 2);
             var args = NewBuffer(GraphicsBuffer.Target.IndirectArguments, 2, GraphicsBuffer.IndirectDrawIndexedArgs.size);
             var structured = NewBuffer(GraphicsBuffer.Target.Structured, 2, GraphicsBuffer.IndirectDrawIndexedArgs.size);
-            Assert.Equal("rparams.material", Assert.Throws<ArgumentNullException>(() => Graphics.RenderPrimitivesIndexedIndirect(none, MeshTopology.Triangles, index, args)).ParamName);
+            Graphics.RenderPrimitivesIndexedIndirect(none, MeshTopology.Triangles, index, args);
             Assert.Equal("indexBuffer", Assert.Throws<ArgumentNullException>(() => Graphics.RenderPrimitivesIndexedIndirect(rp, MeshTopology.Triangles, null, args)).ParamName);
             Assert.Equal("commandBuffer", Assert.Throws<ArgumentNullException>(() => Graphics.RenderPrimitivesIndexedIndirect(rp, MeshTopology.Triangles, index, null)).ParamName);
-            Assert.Equal("commandBuffer", Assert.Throws<ArgumentException>(() => Graphics.RenderPrimitivesIndexedIndirect(rp, MeshTopology.Triangles, index, structured)).ParamName);
+            Graphics.RenderPrimitivesIndexedIndirect(rp, MeshTopology.Triangles, index, structured);
             Assert.Equal("commandCount", Assert.Throws<ArgumentOutOfRangeException>(() => Graphics.RenderPrimitivesIndexedIndirect(rp, MeshTopology.Triangles, index, args, -1)).ParamName);
             Assert.Equal("startCommand", Assert.Throws<ArgumentOutOfRangeException>(() => Graphics.RenderPrimitivesIndexedIndirect(rp, MeshTopology.Triangles, index, args, 1, -1)).ParamName);
             Assert.Equal("commandCount", Assert.Throws<ArgumentOutOfRangeException>(() => Graphics.RenderPrimitivesIndexedIndirect(rp, MeshTopology.Triangles, index, args, 2, 1)).ParamName);
@@ -243,39 +242,45 @@ namespace Unbound.Tests
         // ---------------------------------------------------------------- refused loudly
 
         [Fact]
-        public void ThirtyTwoBitIndicesAreCountedWarnedOnceAndNothingIsQueuedOrRecorded()
+        public void ThirtyTwoBitAndStructuredIndicesQueueExternalIndicesWithoutRefusal()
         {
-            // The documented example's index buffer: Structured, sizeof(int).
             var structured = NewBuffer(GraphicsBuffer.Target.Structured, 6, 4);
             var index = NewBuffer(GraphicsBuffer.Target.Index, 6, 4);
             var rp = new RenderParams(NewMaterial());
-            const string text = Indexed + " with 32-bit indices is not drawn";
             int hits = Hits(Indexed);
-            bool first = hits == 0;
-            Assert.Equal(0, RecordedBy(() => Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, structured, 6)));
-            Assert.Equal(0, RecordedBy(() => Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, index, 3, 3, 2)));
-            Assert.Empty(TakeQueued());
-            Assert.Equal(hits + 2, Hits(Indexed));
-            Assert.Equal(first ? 1 : 0, Warned(text));
+            Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, structured, 6);
+            Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, index, 3, 3, 2);
+            var queued = TakeQueued();
+            Assert.Equal(2, queued.Length);
+            Assert.Equal(SetupBytes(1, 0, 0, false).Concat(IndicesBytes(structured.Handle, 0, 6, 4)), Encoded(queued[0].Setup.Value));
+            Assert.Equal(SetupBytes(2, 0, 0, false).Concat(IndicesBytes(index.Handle, 3, 3, 4)), Encoded(queued[1].Setup.Value));
+            Assert.Equal(hits, Hits(Indexed));
         }
 
         [Fact]
-        public void IndirectCallsAreCountedWarnedOnceAndNothingIsQueuedOrRecorded()
+        public void IndirectCommandsKeepGpuBuffersOffsetsAndCopiedProperties()
         {
-            var index = NewBuffer(GraphicsBuffer.Target.Index, 6, 2);
+            var index = NewBuffer(GraphicsBuffer.Target.Structured, 6, 4);
             var args = NewBuffer(GraphicsBuffer.Target.IndirectArguments, 3, GraphicsBuffer.IndirectDrawIndexedArgs.size);
-            var rp = new RenderParams(NewMaterial());
-            const string text = Indirect + " is not drawn";
+            var block = new MaterialPropertyBlock();
+            block.SetFloat("_Tag", 7);
+            var rp = new RenderParams(NewMaterial()) { matProps = block, worldBounds = new Bounds(Vector3.zero, Vector3.one * 100) };
             int hits = Hits(Indirect);
-            bool first = hits == 0;
-            Assert.Equal(0, RecordedBy(() => Graphics.RenderPrimitivesIndexedIndirect(rp, MeshTopology.Triangles, index, args)));
-            Assert.Equal(0, RecordedBy(() => Graphics.RenderPrimitivesIndexedIndirect(rp, MeshTopology.Points, index, args, 2, 1)));
-            Assert.Empty(TakeQueued());
-            Assert.Equal(hits + 2, Hits(Indirect));
-            Assert.Equal(first ? 1 : 0, Warned(text));
-            // No commands: nothing to refuse.
+            Graphics.RenderPrimitivesIndexedIndirect(rp, MeshTopology.Triangles, index, args, 2, 1);
+            block.SetFloat("_Tag", 9);
+            var queued = TakeQueued();
+            Assert.Equal(2, queued.Length);
+            for (int i = 0; i < 2; i++)
+            {
+                Assert.Equal(SetupBytes(1, args.Handle, (uint)((i + 1) * 20), true).Concat(IndicesBytes(index.Handle, 0, 6, 4)), Encoded(queued[i].Setup.Value));
+                Assert.Equal(rp.worldBounds, queued[i].WorldBounds);
+                Assert.Same(args, queued[i].Properties[Shader.PropertyToID("unity_IndirectDrawArgs")]);
+                Assert.Equal(i + 1, queued[i].Properties[Shader.PropertyToID("unity_BaseCommandID")]);
+                Assert.Equal(7f, queued[i].Properties[Shader.PropertyToID("_Tag")]);
+            }
             Graphics.RenderPrimitivesIndexedIndirect(rp, MeshTopology.Triangles, index, args, 0);
-            Assert.Equal(hits + 2, Hits(Indirect));
+            Assert.Empty(TakeQueued());
+            Assert.Equal(hits, Hits(Indirect));
         }
 
         [Fact]

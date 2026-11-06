@@ -382,49 +382,40 @@ namespace UnityEngine
 
         const string k_Indexed = "UnityEngine.Graphics.RenderPrimitivesIndexed";
 
-        /// <summary>Primitives whose vertex ids are read from <paramref name="indexBuffer"/>:
-        /// <paramref name="indexCount"/> indices from <paramref name="startIndex"/>, per instance
-        /// (RenderPrimitivesIndexed 6000.0: the shader fetches or calculates vertex data from
-        /// SV_VertexID, "set with values in the indexBuffer"), drawn as
-        /// <see cref="IndexedDraws"/> draws them from 16-bit indices of triangles, lines or
-        /// points. Not drawn, each case counted and warned once: 32-bit indices (the documented
-        /// example's; not yet measured through this call), quads, line strips and other
-        /// strides.</summary>
+        /// <summary>Primitives whose SV_VertexID comes from 16- or 32-bit GPU indices.
+        /// The indexed dispatch binds no vertex buffer for procedural shaders, so indices are
+        /// not limited by the metadata mesh's vertex count.</summary>
         public static void RenderPrimitivesIndexed(in RenderParams rparams, MeshTopology topology, GraphicsBuffer indexBuffer, int indexCount, int startIndex = 0, int instanceCount = 1)
         {
             const string method = "Graphics.RenderPrimitivesIndexed";
-            if (rparams.material == null) throw new ArgumentNullException("rparams.material");
             if (indexBuffer == null) throw new ArgumentNullException(nameof(indexBuffer));
             if (startIndex < 0) throw new ArgumentOutOfRangeException(nameof(startIndex), $"{method}: startIndex must not be negative.");
             int stride = indexBuffer.stride;
             if ((stride == 2 || stride == 4) && indexCount > 0 && (long)startIndex + indexCount > indexBuffer.count)
                 throw new ArgumentOutOfRangeException(nameof(indexCount),
                     $"{method}: indices {startIndex} to {(long)startIndex + indexCount - 1} do not fit the index buffer's {indexBuffer.count} indices.");
+            if (rparams.material == null) return;
             WarnUnhonoured(rparams, nameof(RenderPrimitivesIndexed));
-            if (indexCount <= 0 || instanceCount <= 0) return;
-            if (stride == 4)
-            {
-                Stubs.Ignored(k_Indexed, "with 32-bit indices is not drawn yet (unmeasured here; the command buffer's indexed draws read them)");
-                return;
-            }
+            if (indexCount <= 0 || instanceCount < 0) return;
+            // 6000.0.71f1 OpenGLCore renders one instance for a zero direct instance count.
+            instanceCount = Math.Max(1, instanceCount);
             if (!IndexedDraws.Supported(indexBuffer, topology, k_Indexed)) return;
             Render(rparams, IndexedDraws.StandIn(topology), 0, Matrix4x4.identity, IndexedDraws.Direct(indexBuffer, startIndex, indexCount, instanceCount));
         }
 
-        /// <summary>Indexed primitives whose counts, first index and base vertex the GPU reads
-        /// from <paramref name="commandBuffer"/>'s GraphicsBuffer.IndirectDrawIndexedArgs
-        /// (RenderPrimitivesIndexedIndirect 6000.0). The arguments are checked as
-        /// RenderPrimitivesIndirect's are; the call is then not drawn, counted and warned once:
-        /// with a base vertex read on the GPU, Unbound cannot prove every index has a
-        /// vertex.</summary>
+        /// <summary>Indexed GPU draws using IndirectDrawIndexedArgs and UnityIndirect.cginc.
+        /// Each command reads both GPU buffers when the frame's camera executes the draw.</summary>
         public static void RenderPrimitivesIndexedIndirect(in RenderParams rparams, MeshTopology topology, GraphicsBuffer indexBuffer, GraphicsBuffer commandBuffer, int commandCount = 1, int startCommand = 0)
         {
             const string method = "Graphics.RenderPrimitivesIndexedIndirect";
-            if (rparams.material == null) throw new ArgumentNullException("rparams.material");
             if (indexBuffer == null) throw new ArgumentNullException(nameof(indexBuffer));
             if (commandBuffer == null) throw new ArgumentNullException(nameof(commandBuffer));
             if ((commandBuffer.target & GraphicsBuffer.Target.IndirectArguments) == 0)
-                throw new ArgumentException($"{method}: the command buffer must be created with GraphicsBuffer.Target.IndirectArguments.", nameof(commandBuffer));
+            {
+                Debug.LogError("RenderPrimitivesIndexedIndirect: GraphicsBuffer argument is missing IndirectArguments flag at creation time");
+                return;
+            }
+            if (rparams.material == null) return;
             if (commandCount < 0) throw new ArgumentOutOfRangeException(nameof(commandCount), $"{method}: commandCount must not be negative.");
             if (startCommand < 0) throw new ArgumentOutOfRangeException(nameof(startCommand), $"{method}: startCommand must not be negative.");
             int size = GraphicsBuffer.IndirectDrawIndexedArgs.size;
@@ -434,7 +425,18 @@ namespace UnityEngine
                     $"{method}: commands {startCommand} to {(long)startCommand + commandCount - 1} of {size} bytes each do not fit the command buffer's {bytes} bytes.");
             WarnUnhonoured(rparams, nameof(RenderPrimitivesIndexedIndirect));
             if (commandCount == 0) return;
-            Stubs.Ignored(k_Indexed + "Indirect", "is not drawn yet: each command's base vertex and counts are read on the GPU, so Unbound cannot prove every index has a vertex");
+            if (!IndexedDraws.Supported(indexBuffer, topology, k_Indexed + "Indirect")) return;
+            int argsId = Shader.PropertyToID("unity_IndirectDrawArgs"), commandId = Shader.PropertyToID("unity_BaseCommandID");
+            for (int i = 0; i < commandCount; i++)
+            {
+                int command = startCommand + i;
+                var properties = new MaterialPropertyBlock();
+                if (rparams.matProps != null) properties.CopyFrom(rparams.matProps);
+                properties.m_Values[argsId] = commandBuffer;
+                properties.m_Values[commandId] = command;
+                Render(rparams, IndexedDraws.StandIn(topology), 0, Matrix4x4.identity,
+                    IndexedDraws.Indirect(indexBuffer, commandBuffer.Handle, checked(command * size)), properties);
+            }
         }
 
         // ------------------------------------------------------------------ procedural

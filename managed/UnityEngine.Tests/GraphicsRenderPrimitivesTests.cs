@@ -437,7 +437,7 @@ namespace Unbound.Tests
         }
 
         [Fact]
-        public void TheIndexedVariantsStayLoudStubs()
+        public void TheIndexedVariantsQueueDrawsWithoutStubHits()
         {
             var index = NewBuffer(GraphicsBuffer.Target.Index, 3, 4);
             var args = NewBuffer(GraphicsBuffer.Target.IndirectArguments, 1, GraphicsBuffer.IndirectDrawIndexedArgs.size);
@@ -445,9 +445,9 @@ namespace Unbound.Tests
             int indexed = Hits("UnityEngine.Graphics.RenderPrimitivesIndexed"), indirect = Hits("UnityEngine.Graphics.RenderPrimitivesIndexedIndirect");
             Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, index, 3);
             Graphics.RenderPrimitivesIndexedIndirect(rp, MeshTopology.Triangles, index, args);
-            Assert.Equal(indexed + 1, Hits("UnityEngine.Graphics.RenderPrimitivesIndexed"));
-            Assert.Equal(indirect + 1, Hits("UnityEngine.Graphics.RenderPrimitivesIndexedIndirect"));
-            Assert.Empty(TakeQueued());
+            Assert.Equal(indexed, Hits("UnityEngine.Graphics.RenderPrimitivesIndexed"));
+            Assert.Equal(indirect, Hits("UnityEngine.Graphics.RenderPrimitivesIndexedIndirect"));
+            Assert.Equal(2, TakeQueued().Length);
         }
     }
 }

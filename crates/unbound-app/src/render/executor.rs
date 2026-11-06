@@ -242,6 +242,12 @@ enum Op {
     DepthBlit(DepthBlit),
     Dispatch(compute::DispatchOp),
     BufferCopy(compute::BufferCopyOp),
+    /// GLCore raw instance IDs exclude startInstance. The original args remain shader-visible.
+    IndexedIndirectArgs {
+        source: wgpu::Buffer,
+        offset: u64,
+        arguments: wgpu::Buffer,
+    },
     Mips(wgpu::Texture, wgpu::TextureFormat, u32),
 }
 
@@ -2379,7 +2385,7 @@ impl UnityRenderer {
                         }
                     }
                     if let Some((instances, args, offset, indexed)) = self.state.draw_setup.take() {
-                        let buffer = (args != 0)
+                        let mut buffer = (args != 0)
                             .then(|| self.buffers.get(&args).map(|b| b.buffer.clone()))
                             .flatten();
                         if args != 0 && buffer.is_none() {
@@ -2388,10 +2394,34 @@ impl UnityRenderer {
                             });
                             continue;
                         }
+                        let mut draw_offset = u64::from(offset);
+                        if indexed
+                            && indices.is_some()
+                            && let Some(source) = buffer.as_ref()
+                        {
+                            // Unity's measured GLCore SV_InstanceID starts at zero, and
+                            // UnityIndirect.cginc adds startInstance only in its _Base helper.
+                            // Copy counts/startIndex/baseVertex on the GPU after earlier work;
+                            // keep the caller's unmodified args bound for shader helper reads.
+                            let arguments = self.device.create_buffer(&wgpu::BufferDescriptor {
+                                label: Some("unbound indexed indirect GLCore args"),
+                                size: 20,
+                                usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::INDIRECT,
+                                mapped_at_creation: false,
+                            });
+                            open = false;
+                            passes.push(Op::IndexedIndirectArgs {
+                                source: source.clone(),
+                                offset: draw_offset,
+                                arguments: arguments.clone(),
+                            });
+                            buffer = Some(arguments);
+                            draw_offset = 0;
+                        }
                         for p in &mut planned {
                             if let Planned::Draw(p) = p {
                                 p.instances = instances.max(1);
-                                p.indirect = buffer.clone().map(|b| (b, offset as u64, indexed));
+                                p.indirect = buffer.clone().map(|b| (b, draw_offset, indexed));
                             }
                         }
                     }
@@ -3268,6 +3298,15 @@ impl UnityRenderer {
                 }
                 Op::Dispatch(d) => {
                     compute::encode(&mut encoder, d);
+                    continue;
+                }
+                Op::IndexedIndirectArgs {
+                    source,
+                    offset,
+                    arguments,
+                } => {
+                    encoder.copy_buffer_to_buffer(source, *offset, arguments, 0, 16);
+                    encoder.clear_buffer(arguments, 16, Some(4));
                     continue;
                 }
                 Op::BufferCopy(c) => {
