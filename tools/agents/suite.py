@@ -746,7 +746,7 @@ def run_probe(name, recipe, context):
     work.mkdir(parents=True)
     values = dict(context['values'], probe=str(PROJECTS/name), work=str(work),
                   runs=str(CACHE/'validation/runs'/name/context['values']['label']))
-    steps, summaries, verdicts, status = [], [], [], None
+    steps, summaries, verdicts, status, stopped = [], [], [], None, None
     for index, step in enumerate(recipe, 1):
         log = work/f'step{index:02d}-{step.kind}.log'
         code, text = run_step(step, values, log, context['env'])
@@ -768,7 +768,7 @@ def run_probe(name, recipe, context):
                 verdicts.append(True)
             record['verdict'] = verdicts[-1]
         elif code not in step.ok:
-            status = 'fail'
+            status, stopped = 'fail', index
             summaries.append(f'step {index} ({step.kind}) exited {code}: {last_lines(text)}')
             break
     if status is None:
@@ -781,7 +781,7 @@ def run_probe(name, recipe, context):
     if name in NOTES:
         summaries.append('partial: ' + NOTES[name])
         result['note'] = NOTES[name]
-    result.update(status=status, seconds=round(time.time() - started, 1), summary=' || '.join(summaries)[:1000],
+    result.update(status=status, failed_step=stopped, seconds=round(time.time() - started, 1), summary=' || '.join(summaries)[:1000],
                   checks={'passed': sum(v is True for v in verdicts), 'failed': sum(v is False for v in verdicts),
                           'report': sum(v is None for v in verdicts), 'total': len(verdicts)},
                   steps=steps)
@@ -846,16 +846,24 @@ def default_jobs():
 
 
 FAILURE_COUNT = re.compile(r'''\b(\d+) (?:record\(s\) )?(?:differences|differ|failures|failed|missing|extra)\b'''
-                           r'''|["']?(?:differences|failures|failed|missing|extra)["']?: (\d+)''')
+                           r'''|["']?(?:differences|failures|failed|missing|extra)["']?:\s*(\d+)''')
+FAILED_STEP = re.compile(r'(?:^|\|\| )step (\d+) \(')
+
+
+def failed_step(result):
+    """The index of the step that stopped a probe, or None (older summaries: from the text)."""
+    if 'failed_step' in result:
+        return result['failed_step']
+    found = FAILED_STEP.search(result.get('summary', ''))
+    return int(found[1]) if found else None
 
 
 def worse(old, new):
     """Why a probe that failed before fails worse now (None if it does not): a step that ran before
     fails now, fewer checks pass or more fail, or its comparators count more failures."""
-    step = re.compile(r'^step (\d+) \(')
-    old_step, new_step = step.match(old.get('summary', '')), step.match(new.get('summary', ''))
-    if new_step and (not old_step or int(new_step[1]) < int(old_step[1])):
-        return f'now fails at step {new_step[1]}'
+    old_step, new_step = failed_step(old), failed_step(new)
+    if new_step is not None and (old_step is None or new_step < old_step):
+        return f'now fails at step {new_step}'
     old_checks, new_checks = old.get('checks') or {}, new.get('checks') or {}
     if new_checks.get('failed', 0) > old_checks.get('failed', 0):
         return f'{new_checks["failed"]} failing checks, was {old_checks.get("failed", 0)}'
