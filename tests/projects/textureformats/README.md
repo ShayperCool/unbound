@@ -38,6 +38,10 @@ These are observations of this release and device, not documented guarantees:
   it reads as zeros; once sampled, the drawn texels.
 - `GL.Clear` on an integer target stores the clear color's float bits, clamped to the channel's
   range (3.0 in R32_SInt reads 0x40400000, in R8_SInt 127).
+- A draw whose material samples the target it draws into (`Graphics.Blit(rt, rt, ...)`, or another
+  property bound to it) reads the target's contents from before the draw (`feedback.*`, ARGB32 and
+  ARGBFloat, a full-target draw reading its own texel). Unbound samples a copy made before the
+  draw.
 
 ## Run
 
@@ -57,8 +61,5 @@ key. `residuals.json` lists the differences recorded as open: each still has to 
 
 ## Open in Unbound
 
-- The integer cases (`rt.R*Int`, `rt.*_UInt`/`_SInt`, `rt.RGBAUShort`, `tex.*Int`): integer
-  render textures are still stored as RGBA8, and drawing integer shader outputs into them fails
-  validation and quits. They are not part of `SUPPORTED`.
 - The MSAA readback values in `residuals.json`: Unbound resolves a multisampled target at the end
   of every pass, so its readback reads the drawn texels.

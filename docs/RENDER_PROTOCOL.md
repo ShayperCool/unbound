@@ -127,8 +127,10 @@ TexturePacket {
   i32 format;          // 0 RGBA8 color, 1 RGBA8 linear, 2 float RGBA stored as half, 3 Alpha8,
                        // 4 packed 11/11/10 float, 5 depth-only RT, 6 R32F,
                        // 7/8 native BC7 color/data, 9 RGBA32F, 10 RG32F, 11 R16F, 12 RG16F,
-                       // 13 RG16 unorm, 14 RGBA16 unorm, 15 RGB10A2 unorm (float RGBA wire data;
-                       // RGBA8 with a warning where the device cannot keep them)
+                       // 13 RG16 unorm, 14 RGBA16 unorm, 15 RGB10A2 unorm, 16 R16 unorm (float
+                       // RGBA wire data; RGBA8 with a warning where the device cannot keep them),
+                       // 17..=34 integer render targets: 17 + (channel index (R, RG, RGBA) × 3 +
+                       // bit index (8, 16, 32)) × 2 + signed; no data, single-sampled
   i32 mip_count;       // levels present in data, largest first
   *const u8 data; i64 data_length;   // null: uninitialized (render targets); float formats: RGBA f32 wire data
   i32 filter_mode, wrap_u, wrap_v, aniso_level;

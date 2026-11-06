@@ -36,9 +36,8 @@ HELLO = PROBE.parent/'hello'
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
 REPEATS = ('native1', 'native2')
 OUTPUT = 'values.jsonl'
-# The cases Unbound matches (TEXTURE_FORMATS_PROBE_ONLY prefixes); the integer ones are open.
-SUPPORTED = ('rt.ARGB32,rt.R16,rt.RG32,rt.ARGB64,rt.ARGB2101010,'
-             'tex.R16,tex.RG32,tex.RGBA64,tex.A2B10G10R10_UNormPack32')
+# The cases Unbound matches (TEXTURE_FORMATS_PROBE_ONLY prefixes): every one.
+SUPPORTED = 'rt,tex,feedback'
 
 
 def copy_project(dest, release):
