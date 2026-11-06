@@ -16,7 +16,9 @@ run output; the capture made in the same Editor session stays in the cache.
 `assemble` copies the fixture's Assets/, Packages/ and ProjectSettings/ to a new directory and
 overlays the set: the project the Editor would have authored. It refuses a set whose fixture or
 driver hashes no longer match (a stale set is never used): re-run the recorded command in a fresh cache
-directory and `record` its project again. `check` verifies every set (or those of PROBE).
+directory and `record` its project again. Helpers the driver imports (verifiers, packers,
+the Editor runner) are not hashed: they check or run a capture but do not choose what is authored;
+the C# runners that author are fixture files. `check` verifies every set (or those of PROBE).
 """
 import argparse
 import hashlib
