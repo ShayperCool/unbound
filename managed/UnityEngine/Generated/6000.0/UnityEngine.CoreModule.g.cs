@@ -1392,7 +1392,7 @@ namespace UnityEngine
         public static global::UnityEngine.Color color { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.color"); return global::UnityEngine.Color.white; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.color"); } }
         public static global::UnityEngine.Matrix4x4 matrix { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.matrix"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.matrix"); } }
         public static global::UnityEngine.Texture exposure { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.exposure"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.exposure"); } }
-        public static float probeSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.probeSize"); return 0.3f; } }
+        public static float probeSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Gizmos.probeSize"); return 0.29999998f; } }
     }
     unsafe partial class Gradient
     {
