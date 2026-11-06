@@ -138,3 +138,87 @@ Unbound's choices (unmeasured):
 - These need a fresh, matching NativeApi-18 CLI and Core. Current API-15 binaries cannot run
   this source.
 - A Native capture of the component chains is unfunded.
+
+# AudioMixer: SFX Reverb
+
+`crates/unbound-runtime/src/audio/reverb.rs` runs the SFX Reverb mixer effect; the managed mixer
+(`managed/UnityEngine/Audio/AudioMixer.cs`) sends its parameters in the group configuration (JSON:
+`sfx`, `mixLevel`, `mixAudible`; NativeApi unchanged). Validation: tests/projects/mixerreverb
+(Unity 6000.0.71f1, Linux, 48000 and 44100 Hz).
+
+## Unity contract (6000.0)
+
+Documented, Manual *Audio SFX Reverb Effect*
+(https://docs.unity.com/en-us/engine/6000.0/manual/audio/reference/effects/class-audio-reverb-effect):
+the effect reverberates a group's output. Its parameters are Dry Level, Room, Room HF, Decay Time,
+Decay HF Ratio, Reflections, Reflect Delay, Reverb, Reverb Delay, Diffusion, Density, HF Reference,
+Room LF and LF Reference. Wet appears only when wet mixing is enabled ("Allow Wet Mixing"), in mB,
+default 0. The Manual names no limitations.
+
+Editor definitions of 6000.0.71f1 (`MixerEffectDefinitions`) differ from the Manual in two places.
+They are used, and the reference measures them:
+
+| Parameter | Range | Default |
+| --- | --- | --- |
+| Dry Level, Room, Room HF, Room LF | -10000 to 0 mB | 0, -10000, 0, **0** (Manual: Room LF -10000) |
+| Decay Time | 0.1 to 20 s | 1 |
+| Decay HF Ratio | 0.1 to 2 | 0.5 |
+| Reflections | -10000 to 1000 mB | -10000 |
+| Reflect Delay | **0 to 0.3 s** (Manual: -10000 to 2000) | 0.02 |
+| Reverb | -10000 to 2000 mB | 0 |
+| Reverb Delay | 0 to 0.1 s | 0.04 |
+| Diffusion, Density | 0 to 100 % | 100 |
+| HF Reference | 20 to 20000 Hz | 5000 |
+| LF Reference | 20 to 1000 Hz | 250 |
+
+## Measured model
+
+The tables below are measured, not documented. They were identified from Native impulse responses,
+and the engine reproduces every steady-state float of the reference within ATOL `2e-5`/RTOL `2e-4`.
+A level `L` in mB is `10^(L/2000)`. Delays use float32 arithmetic, and the tap tables hold
+milliseconds converted with `floor(ms * rate / 1000)`. The constants are in `reverb.rs`.
+
+- **Input.** L+R (mono). Dry Level scales each original channel.
+- **Room HF.** Two identical one-poles `y = (y - x) a + x`. Their combined gain at HF Reference is
+  `G = level(Room HF)`, which gives `a = ((1 - Gc) - sqrt((1 - Gc)^2 - (1 - G)^2)) / (1 - G)` with
+  `c = cos(2 pi HFRef / rate)`.
+- **Room LF.** `G (s^2 + sqrt2 s + 1) / (G s^2 + sqrt(2G) s + 1)`, bilinear with the prewarp at LF
+  Reference.
+- **Early reflections.**
+  - Four taps per channel at `max(floor(f32 ReflectDelay * rate) - 1, 0)` plus fixed offsets.
+  - The taps pass two allpasses (5.885 and 7.676 ms, g 0.63).
+  - Gain `level(Room + Reflections) / (2 sqrt2)`.
+  - Reverb Delay, Density, Diffusion and Decay Time do not change them.
+- **Late reverb.**
+  - **Lines.** Eight lines `k` with nominal length `m_k = 61 ms * rate * f * 1.32^k`, where
+    `f = 0.1 + 0.9 (Density/100)^3`. Each line is fed the input at its own tap. Line 0's tap is at
+    `max(floor(f32 (ReflectDelay + ReverbDelay) * rate) - 1, 0)` plus its offset. The other lines
+    take the separately rounded delays plus their offsets.
+  - **Feedback.** Line `k` also receives `c1_k` times its successor's transformed output, delayed
+    by `round(m_k) - 1`.
+  - **Damping.** Each line has a one-pole with the DMO I3DL2 coefficients: `c1 = 10^(-3 m / (rate
+    T))`, and `c2` from Decay HF Ratio at HF Reference. A ratio above 1 acts as 1, and `c2` is
+    clamped to 0.99.
+  - **Butterfly.** The transform has three stages of `[[cos, -sin], [sin, cos]]` with angle
+    `pi/4 * Diffusion/100`.
+  - **Output.** Transformed output `u` reaches channel `(u-1) mod 2` after the fan-out offset
+    `(u-1) mod 8`.
+  - **Gain.** `sqrt(mean_k(1 - c1_k^2) / 8) * level(Room + Reverb)`.
+- **Wet mixing** (SFX Reverb only).
+  - Output is `wet * effect + (1 - wet) * input`, where `wet` is the mixer's gain approximation
+    (`AudioMixer.DspGain`) of the Wet level.
+  - The slot output ramps in linearly over its first 64 frames.
+  - At -70 dB and below, the effect output is dropped while `1 - wet` still applies. -68 dB keeps
+    it; the boundary in between is unmeasured, and the engine uses -69 dB.
+- **Group fade.** The group keeps its 1024-frame input fade even when the effect or the group is
+  bypassed, as for Echo.
+
+## Limits
+
+- Startup: Native spreads reverb arrivals of signals within the first DSP block across two frames,
+  which is not modelled (a residual).
+- Parameter changes take effect at once, keeping the histories. Smoothing while a tail runs and
+  timed snapshot transitions are unmeasured.
+- Measured only for stereo output at 48000 and 44100 Hz.
+- Wet mixing on other effects, the other mixer effects, `AudioReverbFilter` and `AudioReverbZone`
+  still fail loudly or remain stubs.
