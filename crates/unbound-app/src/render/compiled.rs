@@ -40,6 +40,7 @@ pub struct CompiledPrograms {
 }
 
 /// What a draw's uniform block is filled from.
+#[derive(Clone, Copy)]
 pub struct DrawValues<'a> {
     pub model: [f32; 16],
     pub view: [f32; 16],
@@ -947,6 +948,19 @@ fn write_uniform(program: &Compiled, plan: &[Source], i: usize, v: &DrawValues, 
     if u.count != 1 {
         return;
     }
+    let material_values = DrawValues {
+        overrides: &[],
+        ..*v
+    };
+    let v = if program.instanced_properties.contains(&u.name)
+        && v.overrides
+            .iter()
+            .any(|(name, _)| name.strip_prefix("<InstanceScalar>") == Some(u.name.as_str()))
+    {
+        &material_values
+    } else {
+        v
+    };
     if let Some(value) = value(&u.name, plan[i], v, &program.textures) {
         write_value(u, &value, out);
     }
@@ -1125,6 +1139,7 @@ mod tests {
             fragment: String::new(),
             vertex_entry: String::new(),
             fragment_entry: String::new(),
+            instanced_properties: Vec::new(),
             uniforms: vec![
                 uniform("unity_ObjectToWorld", 0, 4, 4),
                 uniform("_Color", 64, 4, 1),
@@ -1186,6 +1201,29 @@ mod tests {
         assert_eq!(f(128), -2e10);
         assert_eq!(f(144), 3.0, "a global property");
         assert_eq!([f(160), f(172)], [7.0, 8.0], "a bound constant buffer");
+
+        let mut instanced = program.clone();
+        instanced.instanced_properties.push("_Color".into());
+        let overrides = [
+            ("_Color".into(), PropertyValue::Vector([1.0; 4])),
+            ("<InstanceScalar>_Color".into(), PropertyValue::Int(1)),
+            ("_Cut".into(), PropertyValue::Float(0.75)),
+            ("<InstanceScalar>_Cut".into(), PropertyValue::Int(1)),
+        ];
+        let later_instance = DrawValues {
+            overrides: &overrides,
+            ..values
+        };
+        fill(&instanced, &plan, &later_instance, &mut out, None);
+        assert!(
+            (f32::from_le_bytes(out[64..68].try_into().unwrap()) - 0.214).abs() < 0.001,
+            "a scalar instanced property falls back to the material after instance zero"
+        );
+        assert_eq!(
+            f32::from_le_bytes(out[80..84].try_into().unwrap()),
+            0.75,
+            "ordinary scalar uniforms apply to every instance"
+        );
     }
 
     /// Typed slots: only float slots are filterable; integer and depth slots bind their types.

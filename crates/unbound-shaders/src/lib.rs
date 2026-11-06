@@ -26,7 +26,7 @@ use std::{
 
 /// Bumped whenever the output for a given source changes (cache entries of other versions are
 /// never used).
-pub const FORMAT_VERSION: u32 = 18;
+pub const FORMAT_VERSION: u32 = 19;
 
 /// One pass's program.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -104,6 +104,8 @@ pub struct Compiled {
     pub vertex_entry: String,
     pub fragment_entry: String,
     pub uniforms: Vec<Uniform>,
+    /// Properties declared through UNITY_DEFINE_INSTANCED_PROP in this variant.
+    pub instanced_properties: Vec<String>,
     /// The uniform block's size (0 without one).
     pub uniform_size: u32,
     pub textures: Vec<String>,
@@ -536,8 +538,16 @@ impl ShaderCompiler {
             linear,
             "SHADER_STAGE_FRAGMENT",
         );
-        let vertex_source = self.preprocess(program, &vertex_defines)?.text;
-        let fragment_source = self.preprocess(program, &fragment_defines)?.text;
+        let vertex = self.preprocess(program, &vertex_defines)?;
+        let fragment = self.preprocess(program, &fragment_defines)?;
+        let mut instanced_properties: Vec<_> = vertex
+            .instanced_properties
+            .union(&fragment.instanced_properties)
+            .cloned()
+            .collect();
+        instanced_properties.sort();
+        let vertex_source = vertex.text;
+        let fragment_source = fragment.text;
 
         let hash = {
             let mut h = blake3::Hasher::new();
@@ -553,6 +563,7 @@ impl ShaderCompiler {
                 h.update(part.as_bytes());
             }
             h.update(selected.join(" ").as_bytes());
+            h.update(instanced_properties.join(" ").as_bytes());
             h.finalize().to_hex().to_string()
         };
         let cached = self
@@ -583,6 +594,7 @@ impl ShaderCompiler {
         )?;
         let mut compiled = fit::fit(&vertex_spv, &fragment_spv, &uav_registers(&fragment_source))?;
         compiled.keywords = selected;
+        compiled.instanced_properties = instanced_properties;
         if let Some(path) = &cached {
             if let Some(dir) = path.parent() {
                 let _ = std::fs::create_dir_all(dir);

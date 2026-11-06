@@ -71,6 +71,8 @@ pub struct Output {
     pub text: String,
     /// `#pragma` lines of the top-level source, in order (active branches only).
     pub pragmas: Vec<Pragma>,
+    /// Active instanced-property declarations, including those in included files.
+    pub instanced_properties: HashSet<String>,
 }
 
 pub struct Preprocessor<'a> {
@@ -78,6 +80,7 @@ pub struct Preprocessor<'a> {
     resolve: &'a Resolve<'a>,
     once: HashSet<PathBuf>,
     pragmas: Vec<Pragma>,
+    instanced_properties: HashSet<String>,
     depth: usize,
     /// Expanding an `#if` expression: `defined` that macros produce is answered too (as GCC and
     /// Unity's compilers do; Unity's includes rely on it).
@@ -93,6 +96,7 @@ impl<'a> Preprocessor<'a> {
             resolve,
             once: HashSet::new(),
             pragmas: Vec::new(),
+            instanced_properties: HashSet::new(),
             depth: 0,
             in_condition: false,
         }
@@ -116,6 +120,7 @@ impl<'a> Preprocessor<'a> {
         Ok(Output {
             text: out,
             pragmas: self.pragmas,
+            instanced_properties: self.instanced_properties,
         })
     }
 
@@ -457,6 +462,18 @@ impl<'a> Preprocessor<'a> {
                     newlines += consumed_newlines;
                     let args = fit_args(args, params.len(), m.variadic)
                         .ok_or_else(|| anyhow!("macro {name} takes {} arguments", params.len()))?;
+                    if &*name == "UNITY_DEFINE_INSTANCED_PROP"
+                        && !self.in_condition
+                        && args.len() == 2
+                    {
+                        let property = self.expand(args[1].clone().into())?;
+                        let property: String = property
+                            .iter()
+                            .filter(|t| !t.blank())
+                            .map(|t| &*t.text)
+                            .collect();
+                        self.instanced_properties.insert(property);
+                    }
                     let mut hide: Vec<Rc<str>> = t
                         .hide
                         .iter()
@@ -1002,6 +1019,19 @@ fn number(text: &str) -> Result<i64> {
 mod tests {
     use super::*;
 
+    #[test]
+    fn instanced_properties_follow_active_macro_calls_in_includes() {
+        let resolve = |_: Option<&Path>, _: &str| {
+            Some((PathBuf::from("props.hlsl"),
+            "#define UNITY_DEFINE_INSTANCED_PROP(T, N) T N;\n#define NAME _Tint\nUNITY_DEFINE_INSTANCED_PROP(float4, NAME)\n#if 0\nUNITY_DEFINE_INSTANCED_PROP(float, _Inactive)\n#endif\n".into()))
+        };
+        let out = Preprocessor::new(&resolve)
+            .run("#include \"props.hlsl\"\n", None)
+            .unwrap();
+        assert_eq!(out.instanced_properties, HashSet::from(["_Tint".into()]));
+        assert!(out.text.contains("float4 _Tint;"));
+    }
+
     fn run(source: &str, files: &[(&str, &str)]) -> Result<Output> {
         let files: HashMap<String, String> = files
             .iter()
@@ -1095,7 +1125,12 @@ mod tests {
                 words: vec!["multi_compile".into(), "USE_A".into(), "__".into()]
             }]
         );
-        assert!(run("#include \"lights.hlsl\"\n", &[file]).unwrap().pragmas.is_empty());
+        assert!(
+            run("#include \"lights.hlsl\"\n", &[file])
+                .unwrap()
+                .pragmas
+                .is_empty()
+        );
     }
 
     #[test]

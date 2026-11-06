@@ -985,6 +985,7 @@ pub fn fit(
         vertex_entry,
         fragment_entry,
         uniforms,
+        instanced_properties: Vec::new(),
         uniform_size,
         textures,
         texture_dims,

@@ -68,7 +68,12 @@ namespace UnityEngine
                     case float[] fs: if (index < fs.Length) one.m_Values[p.Key] = fs[index]; break;
                     case Vector4[] vs: if (index < vs.Length) one.m_Values[p.Key] = vs[index]; break;
                     case Matrix4x4[] ms: if (index < ms.Length) one.m_Values[p.Key] = ms[index]; break;
-                    default: one.m_Values[p.Key] = p.Value; break;
+                    default:
+                        one.m_Values[p.Key] = p.Value;
+                        // Only an instanced property's scalar is limited to instance zero. The
+                        // compiled variant identifies it; ordinary uniforms still reach all instances.
+                        if (index > 0) one.m_Values[Shader.PropertyToID("<InstanceScalar>" + Shader.IdToName(p.Key))] = 1;
+                        break;
                 }
             }
             return one;

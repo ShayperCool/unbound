@@ -203,7 +203,7 @@ namespace UnityEngine.Rendering
         /// it logs when run), a count past the matrices too (up to their length: 1024 of 1100 is
         /// drawn), null matrices throw a NullReferenceException; an invalid pass logs when run. A
         /// block's single value of an instanced property sets only instance 0 in the Editor
-        /// (cmd.instanced.blockscalar); Unbound gives it to every instance.</summary>
+        /// (cmd.instanced.blockscalar); the compiled variant distinguishes it from ordinary uniforms.</summary>
         public void DrawMeshInstanced(Mesh mesh, int submeshIndex, Material material, int shaderPass, Matrix4x4[] matrices, int count, MaterialPropertyBlock properties)
         {
             if (!SystemInfo.supportsInstancing) throw new InvalidOperationException("DrawMeshInstanced is not supported.");
