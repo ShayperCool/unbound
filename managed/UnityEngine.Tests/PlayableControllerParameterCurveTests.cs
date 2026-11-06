@@ -180,6 +180,37 @@ namespace UnityEngine.Tests
             Assert.False(animator.IsParameterControlledByCurve("Speed"));
         }
 
+        /// <summary>As above with the curve's clip also humanoid (a muscle curve) and played by a
+        /// mirrored state, which plays a mirrored copy of it: the curve still controls and drives
+        /// the playable's Speed (Unbound's choice of value, unmeasured). The copy's parameter curve
+        /// is the clip's own (PlayableParameters.Plays sees the clip itself).</summary>
+        [Fact]
+        public void AMirroredStatesHumanoidClipCurveDrivesThePlayablesFloat()
+        {
+            // The muscle curve itself is not played on this generic Animator.
+            m_Expected.Add("Arm Down-Up is not supported yet (clip 'IdleClip')");
+            var animator = Character(NoParameters());
+            var file = Load(AnimationFixtures.Locomotion);
+            var idle = (AnimationClip)file.Objects[7400001];
+            idle.m_Curves.Add(new ClipCurve
+            {
+                Binding = new CurveBinding { Path = "", Attribute = "Speed", ClassId = 95 },
+                Curve = AnimationCurve.Constant(0f, 1f, 0.8f),
+            });
+            idle.m_Curves.Add(new ClipCurve
+            {
+                Binding = new CurveBinding { Path = "", Attribute = "Left Arm Down-Up", ClassId = 95 },
+                Curve = AnimationCurve.Constant(0f, 1f, 0.3f),
+            });
+            idle.m_Version++;
+            foreach (var state in file.Objects.Values.OfType<ControllerStateAsset>()) state.Mirror = true;
+            var playable = Play(animator, (RuntimeAnimatorController)file.Objects[9100000], out var g);
+            g.Evaluate(0f);
+            Assert.NotNull(idle.StateMirroredIfMade);
+            Assert.True(playable.IsParameterControlledByCurve("Speed"));
+            Near.Equal(0.8f, playable.GetFloat("Speed"));
+        }
+
         /// <summary>As above, on an Animator with no controller of its own (documented contract;
         /// value Unbound's choice, unmeasured). RED at 0f003eed: false, and Speed stays 0.5.</summary>
         [Fact]

@@ -616,7 +616,6 @@ namespace UnityEngine.Tests
             clip.AddEvent(new AnimationEvent { time = 0.1f, functionName = "OnStep" });
             file.Objects.Values.OfType<ControllerStateAsset>().Single().Mirror = true;
             Assert.True(clip.HasHumanCurves);
-            int clipsBefore = Resources.FindObjectsOfTypeAll<AnimationClip>().Length;
 
             var root = new GameObject("Button", typeof(RectTransform));
             var text = new GameObject("ContinueText", typeof(RectTransform));
@@ -629,10 +628,13 @@ namespace UnityEngine.Tests
             Assert.Single(receiver.Clips);
             Assert.Same(clip, receiver.Clips[0]);
             Assert.Same(clip, animator.GetCurrentAnimatorClipInfo(0).Single().clip);
-            Assert.Equal(clipsBefore, Resources.FindObjectsOfTypeAll<AnimationClip>().Length);
-            Assert.NotNull(clip.StateMirrored);
-            Assert.NotSame(clip, clip.StateMirrored);
-            Assert.Same(clip, clip.StateMirrored.Asset);
+            var copy = clip.StateMirroredIfMade;
+            Assert.NotNull(copy);
+            Assert.NotSame(clip, copy);
+            Assert.Same(clip, copy.Asset);
+            var listed = Resources.FindObjectsOfTypeAll<AnimationClip>();
+            Assert.Contains(clip, listed);
+            Assert.DoesNotContain(copy, listed);
             Object.DestroyImmediate(root);
         }
 

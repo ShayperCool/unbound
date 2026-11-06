@@ -142,6 +142,9 @@ namespace UnityEngine
         /// clip it was made from (events, clip infos, parameter curves).</summary>
         internal AnimationClip Asset => m_StateMirrorSource ?? this;
 
+        /// <summary>The <see cref="StateMirrored"/> copy if one was made, else null (without making one).</summary>
+        internal AnimationClip StateMirroredIfMade => m_StateMirrored;
+
         /// <summary>The humanoid clip as a mirrored Animator state or blend tree child plays it: its
         /// Mirror setting toggled, so a mirrored clip plays unmirrored (measured,
         /// tests/projects/humanoid).</summary>
