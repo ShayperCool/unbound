@@ -48,6 +48,7 @@ public static class ProbeRunner
         var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
         EditorSceneManager.SaveScene(scene, "Assets/Scenes/Probe.unity");
         EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene("Assets/Scenes/Probe.unity", true) };
+        CreatePlayables();
         AssetDatabase.SaveAssets();
     }
 

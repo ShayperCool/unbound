@@ -289,7 +289,8 @@ namespace UnityEngine
         /// </list>
         /// Following the documentation (unmeasured): under CullUpdateTransforms only the
         /// Transforms and the humanoid pose are not written; parameter curves, materials and script
-        /// fields are.
+        /// fields are for controller-only updates. Pending playable outputs defer the final write and
+        /// movement to their combined evaluation, which holds script fields while culled (measured).
         /// </summary>
         internal void Tick(float deltaTime)
         {

@@ -70,6 +70,48 @@ Check the engine (the landing gate, `gate.json`): `python3 tests/projects/animcu
 `compare.py` compares every record (numbers within 1e-4) and lists missing, extra and differing ones.
 Run output stays under `$XDG_CACHE_HOME/unbound/validation/runs/animculling/`.
 
-Unmeasured: other releases, particle/line/trail renderers, non-transform properties under
-CullUpdateTransforms, the Physics update mode, playable outputs on a culled Animator, and the Scene
-view camera.
+Unmeasured: other releases, particle/line/trail renderers, controller-only non-transform
+properties under CullUpdateTransforms, the Physics update mode, and the Scene view camera.
+
+## Playable outputs
+
+The `p/` cases add a GameTime graph to an Animator created in frame 1. They cover
+clip and mixer outputs, each culling mode, with and without the `Culling` controller,
+with root motion off, builtin root motion, and `OnAnimatorMove` applying builtin
+root motion. `PlayablePose` and `PlayableSecond` have root and child position curves,
+`CullReceiver.value` curves, and events. `gt` and `ct` record source and clip times.
+The `ph/` cases use the humanoid clip, with and without a controller, clip and mixer
+outputs with requested playable IK. `pose/` records keep raw rotations and successive
+rotation dot products beside the existing pose-change predicates.
+
+Two independent Unity 6000.0.71f1 GPU Editor captures, Game view only, match byte for
+byte across all 6293 records. Every original A11 value is unchanged. Observations:
+
+* CullCompletely stops the animation source and clip clocks as well as the attached
+  controller. The initial zero-time evaluation still delivers movement. Returning
+  visibility writes the last combined pose, replays movement with the last deltas,
+  and runs requested humanoid IK. Playback resumes without catch-up.
+* CullUpdateTransforms advances graph and controller clocks, events, root motion
+  and movement callbacks. Child transforms, humanoid pose and script fields hold.
+  Curves on the Animator's own root still write, including with root motion off.
+  Visibility return writes the current combined pose and requests IK without another
+  clock step, event dispatch or movement callback.
+* The generic rigs do not receive IK callbacks. A humanoid clip or mixer requesting
+  playable IK runs one pass, including with an IK-enabled attached controller.
+
+The official 6000.0 [AnimationPlayableOutput API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationPlayableOutput.html)
+connects a graph to an Animator. [AnimationPlayableUtilities](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.AnimationPlayableUtilities.html)
+provides clip and mixer graph helpers; it does not define separate culling semantics.
+The [Playables manual](https://docs.unity3d.com/6000.0/Documentation/Manual/Playables.html)
+allows animation without a controller. [SetApplyPlayableIK](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationClipPlayable.SetApplyPlayableIK.html)
+requests OnAnimatorIK. These pages and the culling contract above do not specify
+clock suspension, the root/script write distinction or visibility replay. Those are
+observations of this release and these cases. No callback ordering between different
+Animators is asserted.
+
+Unmeasured playable contexts include explicit Graph.Evaluate/Animator.Update,
+controller playables, multiple outputs sharing nodes, humanoid output root motion,
+output weights other than one, and other releases. The engine keeps explicit
+Graph.Evaluate unculled as before, an implementation choice. Culled consumers do not
+stop a shared node another unculled output needs, an implementation invariant rather
+than a measured Unity guarantee.

@@ -69,7 +69,7 @@ namespace Unbound.Runtime
                 {
                     Debug.LogException(e, a);
                 }
-                // Playable outputs targeting the Animator blend over what its controller wrote.
+                // Playable outputs combine with the Animator controller's deferred pose and motion.
                 if (!fixedStep) Unbound.Runtime.Playables.AnimationOutputs.RunPending(a);
             }
             if (!fixedStep) Unbound.Runtime.Playables.AnimationOutputs.RunAllPending();

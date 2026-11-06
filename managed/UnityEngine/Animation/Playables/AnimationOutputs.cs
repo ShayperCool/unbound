@@ -533,7 +533,7 @@ namespace Unbound.Runtime.Playables
             float motionDeltaTime = (float)outputs[0].Dt;
             if (withController)
             {
-                // Base on what the controller wrote this frame.
+                // Start from the scene, then combine the controller pose it deferred this frame.
                 foreach (var g in bindings.Groups)
                 {
                     if (!g.Alive) continue;
@@ -618,12 +618,12 @@ namespace Unbound.Runtime.Playables
             return false;
         }
 
-        /// <summary>Root motion of a graph's outputs is computed for a generic Animator without a
-        /// playing controller of its own, when it requests root motion (applyRootMotion, or an
+        /// <summary>Root motion of a graph's outputs is computed for a generic Animator when it
+        /// requests root motion (applyRootMotion, or an
         /// OnAnimatorMove script, as for its own root motion). A humanoid Animator's is not (its
-        /// body motion is not implemented for streams): requesting it warns once and the graph's
-        /// root curves keep posing the root. An Animator whose own controller plays has already
-        /// applied that controller's root motion: its outputs blend over the result as before.
+        /// root movement is not implemented for streams): requesting it warns once and the graph's
+        /// root curves keep posing the root. During automatic evaluation the attached controller defers movement to this
+        /// combined output. Explicit graph evaluation keeps its independent behavior.
         /// Unbound's choice (unmeasured): the OnAnimatorMove gate, as for the Animator's own root
         /// motion; the docs name applyRootMotion only.</summary>
         static RootMotionMode MotionModeOf(Animator animator, bool withController)
