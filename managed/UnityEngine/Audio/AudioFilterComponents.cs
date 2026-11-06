@@ -228,7 +228,11 @@ namespace UnityEngine
         public float rate { get => m_Values[5]; set => m_Values[5] = value; }
         public float depth { get => m_Values[6]; set => m_Values[6] = value; }
         [Obsolete("Warning! Feedback is deprecated. This property does nothing.")]
-        public float feedback { get => 0f; set { } }
+        public float feedback
+        {
+            get { Debug.LogWarning("Warning! Feedback is deprecated. This property does nothing."); return 0f; }
+            set { Debug.LogWarning("Warning! Feedback is deprecated. This property does nothing."); }
+        }
         internal unsafe bool Describe(out AudioFilterDescriptor d)
         {
             d = new AudioFilterDescriptor { Kind = AudioFilterKind.Chorus };

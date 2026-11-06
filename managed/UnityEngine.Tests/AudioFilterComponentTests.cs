@@ -22,6 +22,7 @@ namespace UnityEngine.Tests
     {
         readonly List<GameObject> m_Objects = new List<GameObject>();
         readonly List<string> m_Errors = new List<string>();
+        readonly List<string> m_Warnings = new List<string>();
         readonly ILogger m_Logger = Debug.unityLogger;
         readonly ILogHandler m_PreviousHandler;
         readonly VirtualAudioBackend m_Backend = new VirtualAudioBackend();
@@ -31,7 +32,7 @@ namespace UnityEngine.Tests
             AudioSystem.ResetForTests();
             AudioBackend.Use(m_Backend);
             m_PreviousHandler = m_Logger.logHandler;
-            m_Logger.logHandler = new CaptureHandler(m_PreviousHandler, m_Errors);
+            m_Logger.logHandler = new CaptureHandler(m_PreviousHandler, m_Errors, m_Warnings);
         }
 
         public void Dispose()
@@ -45,12 +46,12 @@ namespace UnityEngine.Tests
         sealed class CaptureHandler : ILogHandler
         {
             readonly ILogHandler m_Inner;
-            readonly List<string> m_Errors;
+            readonly List<string> m_Errors, m_Warnings;
 
-            internal CaptureHandler(ILogHandler inner, List<string> errors)
+            internal CaptureHandler(ILogHandler inner, List<string> errors, List<string> warnings)
             {
                 m_Inner = inner;
-                m_Errors = errors;
+                m_Errors = errors; m_Warnings = warnings;
             }
 
             public void LogFormat(LogType type, Object context, string format, params object[] args)
@@ -61,6 +62,7 @@ namespace UnityEngine.Tests
                         : string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args);
                     lock (m_Errors) m_Errors.Add(message);
                 }
+                if (type == LogType.Warning) m_Warnings.Add(string.Format(format, args));
                 m_Inner.LogFormat(type, context, format, args);
             }
 
@@ -218,6 +220,7 @@ namespace UnityEngine.Tests
             copied.delay = 10; Assert.Equal(-1f, filter.delay);
 #pragma warning disable CS0618
             filter.feedback = 1; Assert.Equal(0, filter.feedback);
+            Assert.Equal(2, m_Warnings.FindAll(w => w == "Warning! Feedback is deprecated. This property does nothing.").Count);
 #pragma warning restore CS0618
             filter.enabled = false; Assert.Empty(Collected(source)); filter.enabled = true;
             filter.depth = float.NaN;
