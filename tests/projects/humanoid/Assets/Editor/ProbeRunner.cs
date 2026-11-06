@@ -30,7 +30,8 @@ public static class ProbeRunner
                     importer.SaveAndReimport();
                 }
                 var clips = importer.clipAnimations.Length > 0 ? importer.clipAnimations : importer.defaultClipAnimations;
-                foreach (var clip in clips) clip.loopTime = true;
+                foreach (var clip in clips)
+                    if (!Settings.Any(setting => setting.name == clip.name)) clip.loopTime = true;
                 if (name == "HumanA") clips = WithSettings(clips);
                 importer.clipAnimations = clips;
                 importer.animationCompression = ModelImporterAnimationCompression.Off;
@@ -54,6 +55,7 @@ public static class ProbeRunner
             }
             Blends();
             SettingsControllers();
+            MuscleClips();
             AssetDatabase.SaveAssets();
         }
         catch (System.Exception e)
@@ -109,6 +111,49 @@ public static class ProbeRunner
             list.Add(clip);
         }
         return list.ToArray();
+    }
+
+    /// <summary>Humanoid .anim clips (muscle curves) whose start and stop differ, each with a
+    /// controller Human{name}: LoopMuscles (loop pose), LoopMusclesBake (loop pose, rotation and Y
+    /// baked into the pose) and MirrorMuscles (mirror).</summary>
+    static void MuscleClips()
+    {
+        foreach (var name in new[] { "LoopMuscles", "LoopMusclesBake", "MirrorMuscles" })
+        {
+            var path = Dir + name + ".anim";
+            if (AssetDatabase.LoadAssetAtPath<AnimationClip>(path) != null) continue;
+            var clip = new AnimationClip();
+            void Set(string attribute, params float[] keys)
+            {
+                var curve = new AnimationCurve();
+                for (int i = 0; i < keys.Length; i += 2) curve.AddKey(keys[i], keys[i + 1]);
+                clip.SetCurve("", typeof(Animator), attribute, curve);
+            }
+            var q = Quaternion.Euler(10f, 20f, 5f);
+            Set("RootT.x", 0f, 0.02f, 1f, 0.3f);
+            Set("RootT.y", 0f, 1f, 0.5f, 0.95f, 1f, 1.1f);
+            Set("RootT.z", 0f, 0f, 1f, 0.5f);
+            Set("RootQ.x", 0f, 0f, 1f, q.x);
+            Set("RootQ.y", 0f, 0f, 1f, q.y);
+            Set("RootQ.z", 0f, 0f, 1f, q.z);
+            Set("RootQ.w", 0f, 1f, 1f, q.w);
+            Set("Spine Front-Back", 0f, 0f, 0.5f, 0.3f, 1f, 0.6f);
+            Set("Spine Left-Right", 0f, 0.2f, 1f, -0.1f);
+            Set("Head Turn Left-Right", 0f, 0.3f, 1f, -0.2f);
+            Set("Left Arm Down-Up", 0f, 0.2f, 1f, -0.4f);
+            Set("Right Arm Front-Back", 0f, 0.1f, 1f, 0.5f);
+            Set("Right Upper Leg Front-Back", 0f, -0.1f, 1f, 0.3f);
+            Set("Left Lower Leg Stretch", 0f, 0.4f, 1f, 0.1f);
+            Set("LeftHand.Index.1 Stretched", 0f, 0.5f, 1f, -0.5f);
+            var settings = AnimationUtility.GetAnimationClipSettings(clip);
+            settings.loopTime = true;
+            settings.loopBlend = name != "MirrorMuscles";
+            settings.loopBlendOrientation = settings.loopBlendPositionY = name == "LoopMusclesBake";
+            settings.mirror = name == "MirrorMuscles";
+            AnimationUtility.SetAnimationClipSettings(clip, settings);
+            AssetDatabase.CreateAsset(clip, path);
+            AnimatorController.CreateAnimatorControllerAtPathWithClip(Dir + "Human" + name + ".controller", clip);
+        }
     }
 
     /// <summary>HumanSet{name}: one state playing HumanA's clip with the settings of that name.</summary>

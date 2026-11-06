@@ -246,6 +246,14 @@ public class HumanoidProbe : MonoBehaviour
         Put(key + ".states", "[" + string.Join(",", states) + "]");
     }
 
+    /// <summary>Runs a part of the probe; an exception is recorded under its key and the probe goes
+    /// on with the next part.</summary>
+    static void Guarded(string key, Action part)
+    {
+        try { part(); }
+        catch (Exception e) { Put(key + ".exception", S(e.GetType().Name + ": " + e.Message)); }
+    }
+
     internal static string s_IKKey;
 
     internal static void PutIK(string key, string json) => Put(key, json);
@@ -259,7 +267,7 @@ public class HumanoidProbe : MonoBehaviour
             Traits();
             Model("HumanA");
             Model("HumanB");
-            foreach (var clip in Resources.LoadAll<AnimationClip>("HumanA")) Clip("HumanA.clip." + clip.name, clip);
+            foreach (var clip in Resources.LoadAll<AnimationClip>("HumanA")) Guarded("HumanA.clip." + clip.name, () => Clip("HumanA.clip." + clip.name, clip));
             foreach (var clip in Resources.LoadAll<AnimationClip>("HumanB")) Clip("HumanB.clip." + clip.name, clip);
             Play("playA", "HumanA", "HumanA");
             Play("playB", "HumanB", "HumanB");
@@ -295,7 +303,13 @@ public class HumanoidProbe : MonoBehaviour
             // HumanA's clip with non-default root settings (ProbeRunner.Settings).
             foreach (var name in new[] { "BakeRot", "BakeY", "BakeXZ", "OrigRot", "OrigXZ", "CoM", "Feet", "Offset", "LoopPose",
                          "Mirror", "Cycle", "BakeAll", "BakeOrig", "BakeOffset", "BakeLoopPose", "OrigOnce", "BakeOnce" })
-                Play("settings" + name, "HumanA", "HumanSet" + name, motion: true, locals: false);
+                Guarded("settings" + name, () => Play("settings" + name, "HumanA", "HumanSet" + name, motion: true, locals: false));
+            // Humanoid .anim clips whose start and stop differ (ProbeRunner.MuscleClips).
+            foreach (var name in new[] { "LoopMuscles", "LoopMusclesBake", "MirrorMuscles" })
+            {
+                Guarded("anim." + name, () => Clip("anim." + name, Resources.Load<AnimationClip>(name)));
+                Guarded("settings" + name, () => Play("settings" + name, "HumanA", "Human" + name, motion: true, locals: false));
+            }
         }
         catch (Exception e)
         {

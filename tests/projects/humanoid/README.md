@@ -44,7 +44,11 @@ imported without keyframe reduction.
   (`OrigRot`, `OrigXZ`), the center of mass and the feet (`CoM`, `Feet`), offsets (`Offset`), loop
   pose, mirror and cycle offset (`LoopPose`, `Mirror`, `Cycle`), combinations (`BakeAll`,
   `BakeOrig`, `BakeOffset`, `BakeLoopPose`) and two clips without loop time (`OrigOnce`,
-  `BakeOnce`); the clips' properties are recorded with the others.
+  `BakeOnce`); the clips' properties are recorded with the others. Three humanoid `.anim` clips
+  (`ProbeRunner.MuscleClips`) whose body and muscles differ at the start and the stop:
+  `LoopMuscles` (loop pose), `LoopMusclesBake` (loop pose, rotation and Y baked) and `MirrorMuscles`
+  (mirror). An exception in one of these clips or plays is recorded as `<key>.exception` and the
+  probe goes on.
 
 Record two independent Editor captures (GPU, private Xvfb), publish after they agree, run Unbound,
 compare:
