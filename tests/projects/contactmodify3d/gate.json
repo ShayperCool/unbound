@@ -1,0 +1,4 @@
+{
+ "commands": ["python3 tests/projects/contactmodify3d/run.py check"],
+ "summary": "\\d+/\\d+ records match.*"
+}

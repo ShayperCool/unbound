@@ -1,0 +1,4 @@
+{
+ "commands": ["python3 tests/projects/layeroverrides3d/run.py check"],
+ "summary": "\\d+/\\d+ records match.*"
+}
