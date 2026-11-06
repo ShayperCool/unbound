@@ -281,6 +281,8 @@ namespace UnityEngine
             float duration = Mathf.Max(m_Main.duration, 0.0001f);
             // The time keeps running after Stop (measured); only emission ends.
             bool emit = m_SubEmitterParent == null && !m_StopEmitting && m_Emission.enabled;
+            // One time-rate draw per step, shared across the loop boundary's segments.
+            float rateRandom = emit ? NextEmissionValue() : 0f;
             float step = dt;
             float t0 = m_Time;
             float t1 = t0 + dt;
@@ -293,7 +295,7 @@ namespace UnityEngine
                 {
                     if (emit)
                     {
-                        EmitRate(t0, duration, false, 0f, duration);
+                        EmitRate(t0, duration, false, 0f, duration, rateRandom);
                         EmitOver(t0, duration, 0f, step, distance * ((duration - t0) / step));
                     }
                     if (planned) m_RateAccumulator = m_StepRateRemainder;
@@ -304,7 +306,7 @@ namespace UnityEngine
                 float rest = t1 - duration;
                 if (emit)
                 {
-                    EmitRate(t0, duration, false, rest, duration);
+                    EmitRate(t0, duration, false, rest, duration, rateRandom);
                     EmitOver(t0, duration, rest, step, distance * ((duration - t0) / step));
                 }
                 m_Loop++;
@@ -315,7 +317,7 @@ namespace UnityEngine
             }
             if (emit)
             {
-                EmitRate(t0, t1, true, 0f, duration);
+                EmitRate(t0, t1, true, 0f, duration, rateRandom);
                 EmitOver(t0, t1, 0f, step, distance * ((t1 - t0) / step));
             }
             if (planned) m_RateAccumulator = m_StepRateRemainder;
@@ -456,7 +458,7 @@ namespace UnityEngine
         /// at its birth, the other start values at b (measured). A constant rate's births are aged by
         /// their share of the whole step (see <see cref="PlanConstantRate"/>); a curve's from its
         /// due time to b, plus <paramref name="extraAge"/> (the step's time after b).</summary>
-        void EmitRate(float a, float b, bool endIncluded, float extraAge, float duration)
+        void EmitRate(float a, float b, bool endIncluded, float extraAge, float duration, float rateRandom)
         {
             var rateCurve = m_Emission.rateOverTime;
             if (!(b > a)) return;
@@ -476,7 +478,7 @@ namespace UnityEngine
             }
             else
             {
-                float rate = rateCurve.Evaluate(Mathf.Clamp01(a / duration), NextFloat());
+                float rate = rateCurve.Evaluate(Mathf.Clamp01(a / duration), rateRandom);
                 if (!(rate > 0f)) return;
                 m_RateAccumulator += rate * (b - a);
                 int n = (int)m_RateAccumulator;
@@ -497,7 +499,34 @@ namespace UnityEngine
         void EmitOver(float a, float b, float extraAge, float step, float distance)
         {
             float duration = Mathf.Max(m_Main.duration, 0.0001f);
-            float perDistance = m_Emission.rateOverDistance.Evaluate(Mathf.Clamp01(a / duration), NextFloat());
+            var bursts = m_Emission.bursts;
+            if (bursts.Count > 0)
+            {
+                if (m_BurstCycles.Length != bursts.Count) Array.Resize(ref m_BurstCycles, bursts.Count);
+                for (int i = 0; i < bursts.Count; i++)
+                {
+                    var burst = bursts[i];
+                    int cycles = burst.cycleCount; // 0: forever
+                    float interval = Mathf.Max(burst.m_RepeatInterval, 0.0001f);
+                    int c = m_BurstCycles[i];
+                    while (cycles == 0 || c < cycles)
+                    {
+                        float at = burst.m_Time + c * interval;
+                        if (at > b || c == 0 && at >= b || at >= duration) break;
+                        if (burst.probability >= 1f || burst.probability > 0f && NextEmissionValue() < burst.probability)
+                        {
+                            int count = BurstCount(burst.m_Count, at / duration);
+                            float age = (c == 0 ? b - at : step) + extraAge;
+                            m_SpeedNt = Mathf.Clamp01(at / duration);
+                            if (count > 0) EmitParticles(count, age, b, default, false);
+                        }
+                        c++;
+                        if (cycles == 0 && c > 100000) break;
+                    }
+                    m_BurstCycles[i] = c;
+                }
+            }
+            float perDistance = distance > 0f ? m_Emission.rateOverDistance.Evaluate(Mathf.Clamp01(a / duration), NextEmissionValue()) : 0f;
             if (perDistance > 0f && distance > 0f)
             {
                 // Particles are due along the path, aged from where the emitter passed them.
@@ -516,45 +545,27 @@ namespace UnityEngine
                 m_DistanceAccumulator -= n;
             }
 
-            var bursts = m_Emission.bursts;
-            if (bursts.Count > 0)
-            {
-                if (m_BurstCycles.Length != bursts.Count) Array.Resize(ref m_BurstCycles, bursts.Count);
-                for (int i = 0; i < bursts.Count; i++)
-                {
-                    var burst = bursts[i];
-                    int cycles = burst.cycleCount; // 0: forever
-                    float interval = Mathf.Max(burst.m_RepeatInterval, 0.0001f);
-                    int c = m_BurstCycles[i];
-                    while (cycles == 0 || c < cycles)
-                    {
-                        float at = burst.m_Time + c * interval;
-                        if (at >= b || at >= duration) break;
-                        if (burst.probability >= 1f || NextFloat() < burst.probability)
-                        {
-                            int count = BurstCount(burst.m_Count, at / duration);
-                            float age = (c == 0 ? b - at : step) + extraAge;
-                            m_SpeedNt = Mathf.Clamp01(at / duration);
-                            if (count > 0) EmitParticles(count, age, b, default, false);
-                        }
-                        c++;
-                        if (cycles == 0 && c > 100000) break;
-                    }
-                    m_BurstCycles[i] = c;
-                }
-            }
             m_SpeedNt = -1f;
         }
 
         int BurstCount(MinMaxCurve count, float nt)
         {
-            float r = NextFloat();
+            EnsureModuleRandom();
+            return BurstCount(count, nt, ref m_EmissionRandom);
+        }
+
+        static int BurstCount(MinMaxCurve count, float nt, ref Random.State random)
+        {
+            if (count.mode == ParticleSystemCurveMode.Constant)
+                return Mathf.Max(0, (int)count.constant);
             if (count.mode == ParticleSystemCurveMode.TwoConstants)
             {
-                float min = Mathf.Min(count.constantMin, count.constantMax), max = Mathf.Max(count.constantMin, count.constantMax);
-                return Mathf.Clamp((int)Math.Floor(Mathf.Lerp(min, max + 1f, r)), (int)min, (int)max);
+                int min = (int)Mathf.Min(count.constantMin, count.constantMax);
+                int max = (int)Mathf.Max(count.constantMin, count.constantMax);
+                random.NextValue();
+                return Mathf.Max(0, min + (int)(random.S3 % ((uint)(max - min) + 1u)));
             }
-            return Mathf.Max(0, Mathf.RoundToInt(count.Evaluate(nt, r)));
+            return Mathf.Max(0, (int)count.Evaluate(nt, random.NextValue()));
         }
 
         // ------------------------------------------------------------------ emitting particles
@@ -577,9 +588,10 @@ namespace UnityEngine
                 if (index < 0) break;
                 int si = spreadIndex >= 0 ? spreadIndex : k;
                 int sn = spreadIndex >= 0 ? spreadCount : count;
-                if (!InitParticle(ref m_Particles[index], emitter, nt, hasOverrides, ref overrides, si, sn, null, k, count))
+                if (!InitParticle(ref m_Particles[index], emitter, nt, hasOverrides, ref overrides, si, sn, null, si, sn))
                 { RemoveAt(index); continue; }
                 var trailBirthPosition = m_Particles[index].m_Position;
+                if (simulate) BeginModuleSample(si, m_Particles[index].m_RandomSeed);
                 if (simulate && !Integrate(ref m_Particles[index], preAge, ref m_Context))
                     RemoveAt(index);
                 else StartTrail(ref m_Particles[index], simulate ? trailBirthPosition : null);
@@ -821,7 +833,8 @@ namespace UnityEngine
                 case ParticleSystemShapeType.CircleEdge:
                 {
                     float phi = ArcAngle(spreadIndex, spreadCount) * Mathf.Deg2Rad;
-                    float r01 = S.shapeType == ParticleSystemShapeType.CircleEdge ? 1f : Mathf.Lerp(1f - thickness, 1f, Mathf.Sqrt(ShapeValue()));
+                    float inner = 1f - thickness;
+                    float r01 = S.shapeType == ParticleSystemShapeType.CircleEdge ? 1f : Mathf.Sqrt(inner * inner + (1f - inner * inner) * ShapeValue());
                     dir = new Vector3(Mathf.Cos(phi), Mathf.Sin(phi), 0f);
                     pos = dir * (radius * r01);
                     break;
@@ -1346,7 +1359,6 @@ namespace UnityEngine
             public Vector3 Gravity;
             public bool HasGravity;
             public Vector3 Center;
-            public float ForceRandom;
             public float NoiseTime;
             public bool InheritCurrent;
             public bool BirthSubs;
@@ -1375,7 +1387,6 @@ namespace UnityEngine
             if (m_Main.simulationSpace == ParticleSystemSimulationSpace.Custom && m_Main.customSimulationSpace != null)
                 c.Center = m_Main.customSimulationSpace.InverseTransformPoint(m_GameObject.m_Transform.position);
             c.InheritCurrent = m_InheritVelocity.enabled && m_InheritVelocity.mode == ParticleSystemInheritVelocityMode.Current && simWorld;
-            c.ForceRandom = m_Force.enabled && m_Force.randomized ? NextFloat() : 0f;
             c.NoiseTime = m_NoiseScroll;
             c.BirthSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Birth);
             return c;
@@ -1402,6 +1413,7 @@ namespace UnityEngine
                     ageBefore = m_Particles[i].Age01;
                 }
                 bool agedOut = false;
+                BeginModuleSample(i, m_Particles[i].m_RandomSeed);
                 if (!killed && Integrate(ref m_Particles[i], dt, ref m_Context, true, out agedOut))
                 {
                     i++;
@@ -1498,13 +1510,13 @@ namespace UnityEngine
                 var w = Vector3.zero;
                 if (RO.enabled)
                 {
-                    float r = R.Value(seed, R.RotLife);
+                    float r = ModuleValue(seed, 1793934638u);
                     w += RO.separateAxes ? new Vector3(RO.x.Evaluate(age, r), RO.y.Evaluate(age, r), RO.z.Evaluate(age, r)) : new Vector3(0f, 0f, RO.z.Evaluate(age, r));
                 }
                 if (RS.enabled)
                 {
                     float s = Mathf.InverseLerp(RS.range.x, RS.range.y, moving.magnitude);
-                    float r = R.Value(seed, R.RotSpeed);
+                    float r = ModuleValue(seed, 3737431713u);
                     w += RS.separateAxes ? new Vector3(RS.x.Evaluate(s, r), RS.y.Evaluate(s, r), RS.z.Evaluate(s, r)) : new Vector3(0f, 0f, RS.z.Evaluate(s, r));
                 }
                 if ((p.m_Flags & Particle.FlagFlipRotation) != 0) w = -w;
@@ -1527,7 +1539,7 @@ namespace UnityEngine
             var F = m_Force;
 
             if (c.HasGravity)
-                v += c.Gravity * (m_Main.gravityModifier.Evaluate(c.Nt, R.Value(seed, R.Gravity)) * dt);
+                v += c.Gravity * (m_Main.gravityModifier.Evaluate(c.Nt, ModuleValue(seed, 3803694019u)) * dt);
 
             if (m_ExternalForces.enabled)
                 ApplyForceFields(ref p, ref v, age, c.WorldToSim, dt);
@@ -1536,9 +1548,9 @@ namespace UnityEngine
             {
                 // The axes are evaluated in the first axis' mode: a constant reads a curve's
                 // multiplier (Unity shares one scalar between them).
-                float r = F.randomized ? c.ForceRandom : R.Value(seed, R.Force);
+                var random = F.randomized ? m_ForceSamples[m_ModuleLane] : ModuleVector(seed, 306581307u);
                 var mode = F.x.mode;
-                var f = new Vector3(InMode(F.x, mode).Evaluate(age, r), InMode(F.y, mode).Evaluate(age, r), InMode(F.z, mode).Evaluate(age, r));
+                var f = new Vector3(InMode(F.x, mode).Evaluate(age, random.x), InMode(F.y, mode).Evaluate(age, random.y), InMode(F.z, mode).Evaluate(age, random.z));
                 v += ModuleToSimulation(f, F.space, c.WorldToSim) * dt;
             }
 
@@ -1548,20 +1560,24 @@ namespace UnityEngine
             {
                 if (V.x.mode == V.y.mode && V.y.mode == V.z.mode)
                 {
-                    var lin = new Vector3(V.x.Evaluate(age, R.Value(seed, R.VelX)), V.y.Evaluate(age, R.Value(seed, R.VelY)), V.z.Evaluate(age, R.Value(seed, R.VelZ)));
+                    var random = ModuleVector(seed, 3774601268u);
+                    var lin = new Vector3(V.x.Evaluate(age, random.x), V.y.Evaluate(age, random.y), V.z.Evaluate(age, random.z));
                     if (lin != Vector3.zero) animated += ModuleToSimulation(lin, V.space, c.WorldToSim);
                 }
                 else ReportOncePerPass("Particle Velocity curves must all be in the same mode");
-                speedModifier = V.speedModifier.Evaluate(age, R.Value(seed, R.SpeedMod));
-                float ro = R.Value(seed, R.Orbital);
-                var orbital = new Vector3(V.orbitalX.Evaluate(age, ro), V.orbitalY.Evaluate(age, ro), V.orbitalZ.Evaluate(age, ro));
-                float radial = V.radial.Evaluate(age, R.Value(seed, R.Radial));
+                speedModifier = V.speedModifier.Evaluate(age, ModuleValue(m_ModuleGroupSeed, 3129089844u));
+                var orbitRandom = ModuleVector(seed, 3509140396u);
+                var orbital = Vector3.zero;
+                if (V.orbitalX.mode == V.orbitalY.mode && V.orbitalY.mode == V.orbitalZ.mode)
+                    orbital = new Vector3(V.orbitalX.Evaluate(age, orbitRandom.x), V.orbitalY.Evaluate(age, orbitRandom.y), V.orbitalZ.Evaluate(age, orbitRandom.z));
+                else ReportOncePerPass("Particle Orbital Velocity curves must all be in the same mode");
+                float radial = V.radial.Evaluate(age, ModuleValue(seed, 3400765981u));
                 if ((orbital != Vector3.zero || radial != 0f) && dt > 1e-5f)
                 {
                     // The offset from the center turns by orbital × dt and moves out by radial × dt
                     // (both times the speed modifier); the velocity reported is that movement over
                     // the step without the modifier (measured exactly).
-                    var offset = new Vector3(V.orbitalOffsetX.Evaluate(age, ro), V.orbitalOffsetY.Evaluate(age, ro), V.orbitalOffsetZ.Evaluate(age, ro));
+                    var offset = new Vector3(V.orbitalOffsetX.Evaluate(age, orbitRandom.x), V.orbitalOffsetY.Evaluate(age, orbitRandom.y), V.orbitalOffsetZ.Evaluate(age, orbitRandom.z));
                     var rel = p.m_Position - (c.Center + offset);
                     float scaled = dt * speedModifier;
                     var turned = orbital != Vector3.zero ? Quaternion.Euler(orbital * (scaled * Mathf.Rad2Deg)) * rel : rel;
@@ -1613,13 +1629,14 @@ namespace UnityEngine
         {
             var L = m_LimitVelocity;
             uint seed = p.m_RandomSeed;
-            float r = R.Value(seed, R.Limit);
+            float r = ModuleValue(seed, 322376503u);
             float dampen = Mathf.Clamp01(L.dampen);
             float keep = dampen >= 1f ? 0f : Mathf.Pow(1f - dampen, dt * 30f);
             var total = v + animated;
             if (L.separateAxes)
             {
-                var limits = new Vector3(L.limitX.Evaluate(age, r), L.limitY.Evaluate(age, r), L.limitZ.Evaluate(age, r));
+                var random = ModuleVector(seed, 322376503u);
+                var limits = new Vector3(L.limitX.Evaluate(age, random.x), L.limitY.Evaluate(age, random.y), L.limitZ.Evaluate(age, random.z));
                 // Limits are given in the module's space.
                 bool convert = L.space == ParticleSystemSimulationSpace.World != (m_Main.simulationSpace == ParticleSystemSimulationSpace.World);
                 var toModule = L.space == ParticleSystemSimulationSpace.World ? Quaternion.Inverse(worldToSim) : worldToSim;
@@ -1638,7 +1655,7 @@ namespace UnityEngine
                 float speed = total.magnitude;
                 if (speed > lim && speed > 0f) total *= (lim + (speed - lim) * keep) / speed;
             }
-            float drag = L.drag.Evaluate(age, R.Value(seed, R.Drag));
+            float drag = L.drag.Evaluate(age, ModuleValue(seed, 2792948374u));
             if (drag > 0f)
             {
                 if (L.multiplyDragByParticleSize)
@@ -1693,8 +1710,8 @@ namespace UnityEngine
         {
             var child = sub.system;
             if (child == null || child == this || child.m_GameObject == null) return;
-            if (sub.emitProbability < 1f && NextFloat() >= sub.emitProbability) return;
-            int count = child.EventBurstCount();
+            if (sub.emitProbability <= 0f || sub.emitProbability < 1f && ModuleValue(parent.m_RandomSeed, 1520730008u) > sub.emitProbability) return;
+            int count = child.EventBurstCount(parent.m_RandomSeed, m_Main.randomSeed);
             if (count <= 0) return;
             if (ParticleSystemManager.Updating)
                 ParticleSystemManager.HoldEventEmission(new ParticleSystemManager.EventEmission
@@ -1726,13 +1743,14 @@ namespace UnityEngine
         /// once (cycles, also infinite ones, and the interval are ignored); its probability applies;
         /// the child's Emission module may be disabled. Collision and Trigger follow the same rule
         /// (unmeasured).</summary>
-        int EventBurstCount()
+        int EventBurstCount(uint parentSeed, uint systemSeed)
         {
             var bursts = m_Emission.bursts;
             if (bursts.Count == 0) return 0;
             var burst = bursts[0];
-            if (burst.probability < 1f && NextFloat() >= burst.probability) return 0;
-            return BurstCount(burst.m_Count, 0f);
+            var random = ModuleRandom(parentSeed, systemSeed);
+            if (burst.probability <= 0f || burst.probability < 1f && random.NextValue() >= burst.probability) return 0;
+            return BurstCount(burst.m_Count, 0f, ref random);
         }
 
         /// <summary>Birth sub-emitters emit with their own rate and bursts over the parent particle's life.</summary>
@@ -1744,12 +1762,13 @@ namespace UnityEngine
                 if (e.type != ParticleSystemSubEmitterType.Birth) continue;
                 var child = e.system;
                 if (child == null || child == this || child.m_GameObject == null) { slot++; continue; }
-                if (e.emitProbability < 1f && ParticleRandom.Value(parent.m_RandomSeed, R.SubEmit + (uint)slot) >= e.emitProbability) { slot++; continue; }
+                if (e.emitProbability <= 0f || e.emitProbability < 1f && ModuleValue(parent.m_RandomSeed, 1520730008u) > e.emitProbability) { slot++; continue; }
                 float age01 = parent.Age01;
                 int n = 0;
                 if (child.m_Emission.enabled)
                 {
-                    float rate = child.m_Emission.rateOverTime.Evaluate(age01, child.NextFloat());
+                    var emissionRandom = ModuleRandom(parent.m_RandomSeed, m_Main.randomSeed);
+                    float rate = child.m_Emission.rateOverTime.Evaluate(age01, emissionRandom.NextValue());
                     if (slot == 0)
                     {
                         parent.m_EmitAccumulator0 += rate * dt;
@@ -1766,8 +1785,9 @@ namespace UnityEngine
                     {
                         float at = burst.m_Time;
                         bool first = ageBefore <= 0f && at <= 0f;
-                        if (first || (at > ageBefore && at <= ageAfter))
-                            n += child.BurstCount(burst.m_Count, age01);
+                        if ((first || (at > ageBefore && at <= ageAfter)) &&
+                            (burst.probability >= 1f || burst.probability > 0f && emissionRandom.NextValue() < burst.probability))
+                            n += BurstCount(burst.m_Count, age01, ref emissionRandom);
                     }
                 }
                 if (n > 0) child.EmitFromParent(this, ref parent, e.properties, n, 0f);
@@ -1848,6 +1868,7 @@ namespace UnityEngine
                         continue;
                     }
                 }
+                BeginModuleSample(k, p.m_RandomSeed);
                 if (!Integrate(ref p, preAge, ref context)) RemoveAt(index);
                 else StartTrail(ref p);
             }
@@ -1863,7 +1884,7 @@ namespace UnityEngine
             if (m_Size.enabled)
             {
                 float age = p.Age01;
-                float r = R.Value(seed, R.SizeLife);
+                float r = ModuleValue(seed, 2368504881u);
                 if (m_Size.separateAxes)
                     size = Vector3.Scale(size, new Vector3(m_Size.x.Evaluate(age, r), m_Size.y.Evaluate(age, r), m_Size.z.Evaluate(age, r)));
                 else
@@ -1873,7 +1894,7 @@ namespace UnityEngine
             {
                 var range = m_SizeBySpeed.range;
                 float s = Mathf.InverseLerp(range.x, range.y, (p.m_Velocity + p.m_AnimatedVelocity).magnitude);
-                float r = R.Value(seed, R.SizeSpeed);
+                float r = ModuleValue(seed, 4085612399u);
                 if (m_SizeBySpeed.separateAxes)
                     size = Vector3.Scale(size, new Vector3(m_SizeBySpeed.x.Evaluate(s, r), m_SizeBySpeed.y.Evaluate(s, r), m_SizeBySpeed.z.Evaluate(s, r)));
                 else
@@ -1889,12 +1910,12 @@ namespace UnityEngine
             Color c = p.m_StartColor;
             uint seed = p.m_RandomSeed;
             if (m_Color.enabled)
-                c *= m_Color.color.Evaluate(p.Age01, R.Value(seed, R.ColorLife));
+                c *= m_Color.color.Evaluate(p.Age01, ModuleValue(seed, 1494990940u));
             if (m_ColorBySpeed.enabled)
             {
                 var range = m_ColorBySpeed.range;
                 float s = Mathf.InverseLerp(range.x, range.y, (p.m_Velocity + p.m_AnimatedVelocity).magnitude);
-                c *= m_ColorBySpeed.color.Evaluate(s, R.Value(seed, R.ColorSpeed));
+                c *= m_ColorBySpeed.color.Evaluate(s, ModuleValue(seed, 1089181156u));
             }
             return c;
         }
@@ -1905,7 +1926,7 @@ namespace UnityEngine
             var renderer = m_GameObject != null ? m_GameObject.GetComponent<ParticleSystemRenderer>() : null;
             int count = renderer != null ? renderer.meshCount : 1;
             if (count <= 1) return 0;
-            return Math.Min((int)(R.Value(p.m_RandomSeed, R.MeshIndex) * count), count - 1);
+            return (int)(ModuleWord(p.m_RandomSeed, 3159510623u) % (uint)count);
         }
     }
 }

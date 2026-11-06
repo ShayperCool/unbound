@@ -81,6 +81,7 @@ namespace UnityEngine
                     return;
                 }
                 m_Main.randomSeed = value;
+                m_Main.autoRandomSeed = false;
                 m_InitialRandomReady = false;
                 m_ShapeRandomReady = false;
             }
@@ -296,11 +297,10 @@ namespace UnityEngine
         public void Simulate(float t, [Internal.DefaultValue("true")] bool withChildren, [Internal.DefaultValue("true")] bool restart, [Internal.DefaultValue("true")] bool fixedTimeStep)
         {
             var systems = SimulatedSystems(withChildren, out int hierarchyCount);
-            for (int index = 0; index < systems.Count; index++)
-            {
-                var ps = systems[index];
-                bool referenced = index >= hierarchyCount;
-                if (restart)
+            // Reset every selected system before a parent can emit into its children.
+            // Otherwise the child's later reset erases that emission and its random cursors.
+            if (restart)
+                foreach (var ps in systems)
                 {
                     ps.m_Count = 0;
                     ps.ClearTrails();
@@ -308,17 +308,27 @@ namespace UnityEngine
                     ps.m_StopEmitting = false;
                     ps.m_FixedRemainder = 0f;
                 }
-                // A system Simulate left paused continues where it was, even when it has finished.
+            var startedSystems = new bool[systems.Count];
+            var stoppedSystems = new bool[systems.Count];
+            for (int index = 0; index < systems.Count; index++)
+            {
+                var ps = systems[index];
+                // Paused systems continue where they were; an empty stopped system
+                // advances its clock without restarting its delay or emission.
                 bool resume = !restart && ps.m_IsPaused;
-                // Stop on an empty system ends public playback immediately. Simulate can
-                // still advance its clock, but must not restart its delay or emission.
-                bool stopped = !restart && !ps.m_IsPlaying && ps.m_StopEmitting;
-                bool started = false;
-                if (!ps.m_IsPlaying && !resume && !stopped)
+                stoppedSystems[index] = !restart && !ps.m_IsPlaying && ps.m_StopEmitting;
+                if (!ps.m_IsPlaying && !resume && !stoppedSystems[index])
                 {
                     ps.Restart(prewarm: restart);
-                    started = true;
+                    startedSystems[index] = true;
                 }
+            }
+            for (int index = 0; index < systems.Count; index++)
+            {
+                var ps = systems[index];
+                bool referenced = index >= hierarchyCount;
+                bool started = startedSystems[index];
+                bool stopped = stoppedSystems[index];
                 ps.m_IsPaused = false;
                 ps.m_CollisionEvents.Clear();
                 ps.TrackEmitter(t);
@@ -642,14 +652,14 @@ namespace UnityEngine
             uint seed = p.m_RandomSeed;
             if (mode == ParticleSystemCustomDataMode.Color)
             {
-                Color c = m_CustomData.colors[stream].Evaluate(age, Unbound.Runtime.ParticleRandom.Value(seed, Unbound.Runtime.ParticleRandom.Custom * 100u + (uint)stream * 8u));
+                Color c = m_CustomData.colors[stream].Evaluate(age, ModuleValue(seed, 1940387770u - (uint)stream));
                 return new Vector4(c.r, c.g, c.b, c.a);
             }
             // The vector is written by the last update, at the age before it (measured).
             if (p.m_StartLifetime > 0f) age = Mathf.Max(0f, age - m_LastStepDt / p.m_StartLifetime);
             int count = Mathf.Clamp(m_CustomData.componentCounts[stream], 0, 4);
             for (int k = 0; k < count; k++)
-                stored[k] = m_CustomData.vectors[stream, k].Evaluate(age, Unbound.Runtime.ParticleRandom.Value(seed, Unbound.Runtime.ParticleRandom.Custom * 100u + (uint)(stream * 8 + 1 + k)));
+                stored[k] = m_CustomData.vectors[stream, k].Evaluate(age, ModuleValue(seed, 1940387771u + (uint)(stream * 4 + k)));
             return stored;
         }
 
@@ -662,6 +672,9 @@ namespace UnityEngine
             m_Loop = m_Loop,
             m_BurstCycles = (int[])m_BurstCycles.Clone(),
             m_RandomState = m_RandomState,
+            m_EmissionRandom = m_EmissionRandom,
+            m_ForceRandom0 = m_ForceRandom[0], m_ForceRandom1 = m_ForceRandom[1],
+            m_ForceRandom2 = m_ForceRandom[2], m_ForceRandom3 = m_ForceRandom[3],
             m_InitialRandom0 = m_InitialRandom[0],
             m_InitialRandom1 = m_InitialRandom[1],
             m_InitialRandom2 = m_InitialRandom[2],
@@ -686,6 +699,9 @@ namespace UnityEngine
             m_PlaybackRestored = true;
             m_BurstCycles = (int[])playbackState.m_BurstCycles?.Clone() ?? Array.Empty<int>();
             m_RandomState = playbackState.m_RandomState;
+            m_EmissionRandom = playbackState.m_EmissionRandom;
+            m_ForceRandom[0] = playbackState.m_ForceRandom0; m_ForceRandom[1] = playbackState.m_ForceRandom1;
+            m_ForceRandom[2] = playbackState.m_ForceRandom2; m_ForceRandom[3] = playbackState.m_ForceRandom3;
             m_InitialRandom[0] = playbackState.m_InitialRandom0;
             m_InitialRandom[1] = playbackState.m_InitialRandom1;
             m_InitialRandom[2] = playbackState.m_InitialRandom2;
@@ -833,7 +849,7 @@ namespace UnityEngine
             m_StopPending = false;
             m_PlaybackRestored = false;
             bool doPrewarm = prewarm && m_Main.prewarm && m_Main.loop;
-            m_DelayRemaining = doPrewarm ? 0f : Mathf.Max(0f, m_Main.startDelay.Evaluate(0f, NextFloat()));
+            m_DelayRemaining = doPrewarm ? 0f : Mathf.Max(0f, m_Main.startDelay.Evaluate(0f, ModuleValue(seed, 0u)));
             if (doPrewarm) Prewarm();
         }
 

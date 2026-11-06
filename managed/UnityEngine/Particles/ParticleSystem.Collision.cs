@@ -166,9 +166,9 @@ namespace UnityEngine
                         ReportUnsupported("sub-emitter Inherit Duration");
                     var child = e.system;
                     // As TriggerSubEmitterAt: never itself or a destroyed object, and the same
-                    // emitProbability roll on this system's random sequence.
+                    // stable emitProbability roll owned by the parent particle.
                     if (child == this || child.m_GameObject == null) continue;
-                    if (e.emitProbability < 1f && NextFloat() >= e.emitProbability) continue;
+                    if (e.emitProbability <= 0f || e.emitProbability < 1f && ModuleValue(parent.m_RandomSeed, 1520730008u) > e.emitProbability) continue;
                     // SubEmittersModule.collision0/1 (6000.0): only the first burst (see
                     // EventBurstCount, whose count rule is measured for Death and Manual). The Manual
                     // lists Trigger among the conditions that "support only a single burst" without
@@ -176,7 +176,7 @@ namespace UnityEngine
                     // Collision rule, and says so once.
                     if (type == ParticleSystemSubEmitterType.Trigger && child.m_Emission.bursts.Count > 1)
                         ReportUnsupported("trigger sub-emitter bursts after the first (Unbound emits only the first, the rule Unity documents for Collision)");
-                    int count = child.EventBurstCount();
+                    int count = child.EventBurstCount(parent.m_RandomSeed, m_Main.randomSeed);
                     if (count > 0) child.EmitFromParent(this, ref at, e.properties, count, 0f);
                 }
             }

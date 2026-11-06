@@ -242,8 +242,7 @@ public class SubEmittersProbe : MonoBehaviour
             child.transform.localRotation = Quaternion.Euler(0f, 90f, 0f);
         });
 
-        // Randomness: only the counts are compared against a range (Unbound's per-particle random
-        // stream is its own).
+        // Seeded probability and count-range cases compare parent and child counts exactly.
         Func<int, float> spread = k => 0.123f + 0.1f * (k % 4);
         var burstProbability = B(0f, 3); burstProbability.probability = 0.5f;
         Death("random/death_burst_probability", new[] { burstProbability }, parents: 120, life: spread);

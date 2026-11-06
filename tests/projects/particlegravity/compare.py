@@ -12,7 +12,6 @@ import sys
 
 TOLERANCE = 2e-4
 KNOWN = [
-    (r'^random/', 1, 'per-particle random values are Unbound\'s own stream, not Unity\'s'),
     (r'^custom/rotated_scaled/\d+$', 1,
      'start velocity in a scaled custom space: Unity keeps the start speed along the '
      'inverse-transformed direction, Unbound scales it'),

@@ -2,10 +2,8 @@
 """Compare two sub-emitter recordings: every key on both sides, the same number of values, and
 each value within 2e-4 absolute plus 2e-4 relative (counts, colors and settings therefore exactly).
 
-`random/` records are [parent count, child count]: the parent count compares as above; the child
-count depends on the per-particle random stream (Unbound's own, not Unity's), so it compares within
-max(30% of the reference, 4 * sqrt(3 * reference)) (four standard deviations of a sum of 3-particle
-bursts), zero only where the reference is zero.
+`random/` records are [parent count, child count], both compared exactly within the same numeric
+bound as the other records. Seeded probability and count-range cases no longer use a count range.
 
 KNOWN rules name records (by regex) with fields that differ for a cause this probe does not fix;
 the other values of those records (always the count) still compare as above, the known fields are
@@ -14,7 +12,6 @@ count, then 18 values per particle: position 0-2, velocity 3-5, remaining lifeti
 7, start size 8-10, start color 11-14, rotation 15-17.
 """
 import json
-import math
 import re
 import sys
 
@@ -59,14 +56,6 @@ def close(a, b, skip=frozenset()):
         i in skip or near(x, y) for i, (x, y) in enumerate(zip(a, b)))
 
 
-def random_close(a, b):
-    if a is None or b is None or len(a) != 2 or len(b) != 2 or not near(a[0], b[0]):
-        return False
-    if a[1] == 0:
-        return b[1] == 0
-    return abs(a[1] - b[1]) <= max(0.3 * a[1], 4 * math.sqrt(3 * a[1]))
-
-
 def aged_along_velocity(a, b):
     """Whether every particle's position differs from the reference's only by its velocity times
     the difference of their remaining lifetimes (the same origin, an other age)."""
@@ -100,16 +89,13 @@ def main():
     known_keys, bad = [], []
     for key in keys:
         ra, rb = a.get(key), b.get(key)
-        if key.startswith('random/'):
-            ok = random_close(ra, rb)
-        else:
-            ok = close(ra, rb)
-            if not ok:
-                rule = known(key, ra, rb)
-                if rule and close(ra, rb, rule[1]):
-                    known_keys.append(key)
-                    print(f'{key}: known difference ({rule[0]}): reference {ra}, candidate {rb}')
-                    continue
+        ok = close(ra, rb)
+        if not ok:
+            rule = known(key, ra, rb)
+            if rule and close(ra, rb, rule[1]):
+                known_keys.append(key)
+                print(f'{key}: known difference ({rule[0]}): reference {ra}, candidate {rb}')
+                continue
         if not ok:
             bad.append(key)
             print(f'{key}: reference {ra}, candidate {rb}')
