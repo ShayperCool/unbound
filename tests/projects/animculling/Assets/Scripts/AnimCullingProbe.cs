@@ -124,6 +124,34 @@ public class AnimCullingProbe : MonoBehaviour
                 Animated("s/" + name + "/" + (offscreen ? "on" : "off"), culling, mode, ScheduleA, body: false, skinned: true, updateWhenOffscreen: offscreen);
         }
         PlayableCases(modes);
+        foreach (var (name, mode) in modes)
+        foreach (bool controller in new[] { false, true })
+        foreach (bool mixer in new[] { false, true })
+        {
+            var c = Humanoid("ph/" + name + "/" + (controller ? "controller" : "bare") + "/" + (mixer ? "mixer" : "clip"), mode);
+            var clip = c.animator.runtimeAnimatorController.animationClips[0];
+            if (!controller) c.animator.runtimeAnimatorController = null;
+            c.animator.applyRootMotion = false;
+            c.graph = PlayableGraph.Create(c.name);
+            c.graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+            var output = AnimationPlayableOutput.Create(c.graph, "Animation", c.animator);
+            c.clip = AnimationClipPlayable.Create(c.graph, clip);
+            c.clip.SetApplyPlayableIK(true);
+            c.clip.SetApplyFootIK(false);
+            c.source = c.clip;
+            if (mixer)
+            {
+                var mix = AnimationMixerPlayable.Create(c.graph, 2);
+                mix.ConnectInput(0, c.clip, 0, 0.25f);
+                var second = AnimationClipPlayable.Create(c.graph, clip);
+                second.SetApplyPlayableIK(true);
+                second.SetApplyFootIK(false);
+                mix.ConnectInput(1, second, 0, 0.75f);
+                c.source = mix;
+            }
+            output.SetSourcePlayable(c.source);
+            c.graph.Play();
+        }
         Legacy("l/always/A", AnimationCullingType.AlwaysAnimate, ScheduleA);
         Legacy("l/based/A", AnimationCullingType.BasedOnRenderers, ScheduleA);
         Legacy("l/based/B", AnimationCullingType.BasedOnRenderers, ScheduleB);
@@ -222,7 +250,7 @@ public class AnimCullingProbe : MonoBehaviour
         return c;
     }
 
-    void Humanoid(string name, AnimatorCullingMode mode)
+    Case Humanoid(string name, AnimatorCullingMode mode)
     {
         var c = new Case { name = name, visible = ScheduleA };
         c.holder = new GameObject(name).transform;
@@ -243,6 +271,7 @@ public class AnimCullingProbe : MonoBehaviour
         Put(name + "/info", "{\"rigScale\":" + V(c.rig.lossyScale) + ",\"body\":" + V(body.transform.position) + ",\"bodyScale\":" + V(body.transform.lossyScale)
             + ",\"bounds\":" + V(body.bounds.center) + ",\"extents\":" + V(body.bounds.extents) + ",\"renderers\":" + model.GetComponentsInChildren<Renderer>(true).Length + "}");
         cases.Add(c);
+        return c;
     }
 
     Renderer Body(string name, Transform parent, Vector3 position)
@@ -326,6 +355,9 @@ public class AnimCullingProbe : MonoBehaviour
         var json = new StringBuilder("{\"vis\":[");
         for (int i = 0; i < c.renderers.Count; i++) json.Append(i > 0 ? "," : "").Append(B(c.renderers[i].isVisible));
         json.Append("]");
+        if (c.graph.IsValid())
+            json.Append(",\"gt\":").Append(c.source.GetTime().ToString("R", CultureInfo.InvariantCulture))
+                .Append(",\"ct\":").Append(c.clip.GetTime().ToString("R", CultureInfo.InvariantCulture));
         if (c.ik != null)
         {
             var info = c.animator.GetCurrentAnimatorStateInfo(0);
@@ -340,9 +372,7 @@ public class AnimCullingProbe : MonoBehaviour
             json.Append(",\"m\":[").Append(F(c.marker.localPosition.x)).Append(",").Append(F(c.marker.localPosition.y)).Append("]")
                 .Append(",\"root\":").Append(V(c.rig.localPosition)).Append(",\"ev\":").Append(c.receiver.events);
             if (c.graph.IsValid())
-                json.Append(",\"gt\":").Append(c.source.GetTime().ToString("R", CultureInfo.InvariantCulture))
-                    .Append(",\"ct\":").Append(c.clip.GetTime().ToString("R", CultureInfo.InvariantCulture))
-                    .Append(",\"ik\":").Append(c.receiver.ik).Append(",\"value\":").Append(F(c.receiver.value)).Append(",\"delta\":").Append(V(c.animator.deltaPosition));
+                json.Append(",\"ik\":").Append(c.receiver.ik).Append(",\"value\":").Append(F(c.receiver.value)).Append(",\"delta\":").Append(V(c.animator.deltaPosition));
             if (c.animator != null)
             {
                 var info = c.animator.GetCurrentAnimatorStateInfo(0);
