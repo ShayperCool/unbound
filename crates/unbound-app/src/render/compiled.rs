@@ -963,6 +963,7 @@ fn write_uniform(program: &Compiled, plan: &[Source], i: usize, v: &DrawValues, 
         && (element.is_some()
             || v.overrides.iter().any(|(name, value)| {
                 name.strip_prefix("<InstanceScalar>") == Some(u.name.as_str())
+                    || name.strip_prefix("<InstanceArray>") == Some(u.name.as_str())
                     || (name == &u.name && matches!(value, PropertyValue::Array { .. }))
             })) {
         &instance_values
@@ -1002,7 +1003,12 @@ fn write_value(u: &unbound_shaders::Uniform, value: &Value, out: &mut [u8]) {
 fn fill(program: &Compiled, plan: &[Source], v: &DrawValues, out: &mut [u8], only: Option<&[u32]>) {
     // Arrays: the draw's or material's array property, else the global one.
     for u in program.uniforms.iter().filter(|u| u.stride > 0) {
-        let value = match v.get(&u.name) {
+        let preserved = v
+            .overrides
+            .iter()
+            .find(|(name, _)| name.strip_prefix("<InstanceArray>") == Some(u.name.as_str()))
+            .map(|(_, value)| value);
+        let value = match preserved.or_else(|| v.get(&u.name)) {
             Some(value @ PropertyValue::Array { .. }) => Some(value),
             _ => v
                 .globals_index
@@ -1279,13 +1285,20 @@ mod tests {
         });
         instanced.uniform_size = 224;
         plan.push(Source::Named);
-        let overrides = [(
-            "_Single".into(),
-            PropertyValue::Array {
-                components: 4,
-                data: vec![0.5; 4],
-            },
-        )];
+        let overrides = [
+            ("_Single".into(), PropertyValue::Vector([0.75; 4])),
+            (
+                "<InstanceArray>_Single".into(),
+                PropertyValue::Array {
+                    components: 4,
+                    data: vec![0.5; 4],
+                },
+            ),
+            (
+                "<InstanceElement>_Single".into(),
+                PropertyValue::Vector([0.75; 4]),
+            ),
+        ];
         let instance = DrawValues {
             overrides: &overrides,
             ..values

@@ -97,8 +97,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void PacketAndDescriptorLayoutsUnchangedInNativeApi21()
         {
-            // Added at 16; 20 adds the reverb kind and its parameters, 21 the frame's reverb zone.
-            Assert.Equal(21u, NativeApi.CurrentVersion);
+            // Added at 16; 20 adds reverb parameters, 21 the frame zone; 22 adds render commands.
+            Assert.Equal(22u, NativeApi.CurrentVersion);
             var frame = default(AudioFramePacket);
             byte* f = (byte*)&frame;
             Assert.Equal((64, 72, 80, 176), ((int)((byte*)&frame.FilterCount - f), (int)((byte*)&frame.Filters - f),

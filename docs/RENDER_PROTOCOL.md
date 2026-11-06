@@ -21,8 +21,9 @@ knows the asset pipeline and its cache.
 `FirstInstance` (opcode 30, `u32 first`) sets the first logical instance of the next draw and is
 consumed even if that draw is skipped. Command-buffer mesh instancing emits each matrix through
 the ordinary draw path with its original instance ID. `DrawSetup` keeps its existing bytes.
-Property-block arrays retain their full value, with an internal `<InstanceElement><name>`
-property carrying the selected value; shader cache format 19 identifies the declared instanced
+Property-block arrays retain their full value in an internal `<InstanceArray><name>` property,
+with `<InstanceElement><name>` carrying the selected value and the ordinary queued property still
+holding that selected value; shader cache format 19 identifies the declared instanced
 properties that use that element. Ordinary uniform arrays keep every element. A scalar marked
 `<InstanceScalar><name>` falls back to the material after instance zero only when the compiled
 variant declares that property as instanced. NativeApi 21 and 22 refuse each other at startup.

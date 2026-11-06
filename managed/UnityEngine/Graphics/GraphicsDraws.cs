@@ -66,16 +66,28 @@ namespace UnityEngine
                 switch (p.Value)
                 {
                     case float[] fs:
-                        one.m_Values[p.Key] = (float[])fs.Clone();
-                        if (index < fs.Length) one.m_Values[Shader.PropertyToID("<InstanceElement>" + Shader.IdToName(p.Key))] = fs[index];
+                        one.m_Values[Shader.PropertyToID("<InstanceArray>" + Shader.IdToName(p.Key))] = (float[])fs.Clone();
+                        if (index < fs.Length)
+                        {
+                            one.m_Values[p.Key] = fs[index];
+                            one.m_Values[Shader.PropertyToID("<InstanceElement>" + Shader.IdToName(p.Key))] = fs[index];
+                        }
                         break;
                     case Vector4[] vs:
-                        one.m_Values[p.Key] = (Vector4[])vs.Clone();
-                        if (index < vs.Length) one.m_Values[Shader.PropertyToID("<InstanceElement>" + Shader.IdToName(p.Key))] = vs[index];
+                        one.m_Values[Shader.PropertyToID("<InstanceArray>" + Shader.IdToName(p.Key))] = (Vector4[])vs.Clone();
+                        if (index < vs.Length)
+                        {
+                            one.m_Values[p.Key] = vs[index];
+                            one.m_Values[Shader.PropertyToID("<InstanceElement>" + Shader.IdToName(p.Key))] = vs[index];
+                        }
                         break;
                     case Matrix4x4[] ms:
-                        one.m_Values[p.Key] = (Matrix4x4[])ms.Clone();
-                        if (index < ms.Length) one.m_Values[Shader.PropertyToID("<InstanceElement>" + Shader.IdToName(p.Key))] = ms[index];
+                        one.m_Values[Shader.PropertyToID("<InstanceArray>" + Shader.IdToName(p.Key))] = (Matrix4x4[])ms.Clone();
+                        if (index < ms.Length)
+                        {
+                            one.m_Values[p.Key] = ms[index];
+                            one.m_Values[Shader.PropertyToID("<InstanceElement>" + Shader.IdToName(p.Key))] = ms[index];
+                        }
                         break;
                     default:
                         one.m_Values[p.Key] = p.Value;
