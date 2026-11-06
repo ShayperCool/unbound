@@ -16,8 +16,9 @@ namespace Unbound.Runtime
     /// real time). The doppler velocity of a source or listener whose <c>velocityUpdateMode</c>
     /// picks the fixed loop is sampled in FixedUpdate.AudioFixedUpdate instead (<see cref="FixedUpdate"/>).
     /// </summary>
-    internal static class AudioSystem
+    internal static unsafe class AudioSystem
     {
+        static AudioFilterDescriptor[] s_ListenerFilters;
         static readonly List<AudioSource> s_Sources = new List<AudioSource>();
         static readonly List<AudioListener> s_Listeners = new List<AudioListener>();
         static readonly List<AudioMixer> s_Mixers = new List<AudioMixer>();
@@ -330,8 +331,9 @@ namespace Unbound.Runtime
                 frame.ListenerUp = t.up;
                 frame.ListenerVelocity = listener.m_Velocity;
                 frame.Flags |= AudioFrameFlags.HasListener;
-                if (AudioFilters.Update(AudioFilters.ListenerKey, listener.m_GameObject)) frame.Flags |= AudioFrameFlags.ListenerFilter;
-                AudioFilterChain.CheckListener(listener);
+                bool scripts = AudioFilters.Update(AudioFilters.ListenerKey, listener.m_GameObject);
+                if (scripts) frame.Flags |= AudioFrameFlags.ListenerFilter;
+                frame.FilterCount = AudioFilterChain.CollectListener(listener, scripts, ref s_ListenerFilters);
                 s_WarnedNoListener = false;
             }
             else
@@ -347,7 +349,11 @@ namespace Unbound.Runtime
                 Debug.LogWarning($"There are {listeners} audio listeners in the scene. Please ensure there is always exactly one audio listener in the scene.");
             s_WarnedListeners = Math.Max(1, listeners);
 
-            s_Status = backend.Frame(frame);
+            fixed (AudioFilterDescriptor* filters = s_ListenerFilters)
+            {
+                if (frame.FilterCount > 0) frame.Filters = filters;
+                s_Status = backend.Frame(frame);
+            }
         }
 
         /// <summary>Forgets everything (tests).</summary>

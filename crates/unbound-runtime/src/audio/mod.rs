@@ -392,6 +392,8 @@ impl Engine {
         mixer.has_listener = packet.flags & frame_flags::HAS_LISTENER != 0;
         mixer.listener_paused = packet.flags & frame_flags::PAUSED != 0;
         mixer.listener_filter = packet.flags & frame_flags::LISTENER_FILTER != 0;
+        // SAFETY: native_api passes a packet whose pointers are valid for this call.
+        mixer.update_listener_filters(unsafe { mixer::decode_listener_filters(packet) });
         mixer.update_suspension();
         if virtual_device && !self.capturing.load(Ordering::Acquire) {
             let rate = mixer.config.sample_rate as f64;

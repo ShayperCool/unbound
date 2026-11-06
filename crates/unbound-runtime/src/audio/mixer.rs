@@ -11,10 +11,12 @@ use super::{
     effects::{Effect, EffectSpec, GroupNode, GroupSpec},
     fft,
     protocol::{
-        AudioFilterDescriptor, AudioSourceCommand, AudioSourcePacket, AudioSourceState, Callback,
+        AudioFilterDescriptor, AudioFramePacket, AudioSourceCommand, AudioSourcePacket,
+        AudioSourceState, Callback,
         MAX_SOURCE_FILTERS, callback, command, filter_kind, filter_stage, source_flags,
         voice_state,
     },
+    reverb::SfxReverbSpec,
     spatial::{self, Listener, SourceSpatial},
 };
 use crate::render_protocol::Vector3;
@@ -121,24 +123,47 @@ impl Default for SourceParams {
 /// # Safety
 /// With a count in range, `filters` must be null or point at `filter_count` descriptors.
 unsafe fn decode_filters(p: &AudioSourcePacket) -> anyhow::Result<Vec<AudioFilterDescriptor>> {
-    anyhow::ensure!(
-        (0..=MAX_SOURCE_FILTERS).contains(&p.filter_count),
-        "AudioSource filter count {} is outside 0..={MAX_SOURCE_FILTERS}",
-        p.filter_count
-    );
-    if p.filter_count == 0 {
-        return Ok(Vec::new());
-    }
-    anyhow::ensure!(!p.filters.is_null(), "AudioSource filter descriptors are null");
-    anyhow::ensure!(p.filters.is_aligned(), "AudioSource filter descriptors are misaligned");
-    // Copied before returning: the managed array is pinned for this call only.
-    let filters = unsafe { std::slice::from_raw_parts(p.filters, p.filter_count as usize) }.to_vec();
     // A clipless OnAudioFilterRead source plays its first script as the clip; what a component
     // above that script receives is unmeasured.
     let generator = p.clip == 0 && p.flags & source_flags::FILTER != 0;
+    unsafe { decode_descriptors(p.filter_count, p.filters, generator) }
+}
+
+/// The listener's filter components: only `AudioReverbFilter` is measured there
+/// (tests/projects/audioreverb); the managed side reports the other kinds.
+///
+/// # Safety
+/// As [`decode_filters`], for the frame packet's `filters`.
+pub unsafe fn decode_listener_filters(
+    p: &AudioFramePacket,
+) -> anyhow::Result<Vec<AudioFilterDescriptor>> {
+    let filters = unsafe { decode_descriptors(p.filter_count, p.filters, false) }?;
+    anyhow::ensure!(
+        filters.iter().all(|f| f.kind == filter_kind::REVERB),
+        "only AudioReverbFilter is supported on the AudioListener"
+    );
+    Ok(filters)
+}
+
+unsafe fn decode_descriptors(
+    count: i32,
+    pointer: *const AudioFilterDescriptor,
+    generator: bool,
+) -> anyhow::Result<Vec<AudioFilterDescriptor>> {
+    anyhow::ensure!(
+        (0..=MAX_SOURCE_FILTERS).contains(&count),
+        "AudioSource filter count {count} is outside 0..={MAX_SOURCE_FILTERS}"
+    );
+    if count == 0 {
+        return Ok(Vec::new());
+    }
+    anyhow::ensure!(!pointer.is_null(), "AudioSource filter descriptors are null");
+    anyhow::ensure!(pointer.is_aligned(), "AudioSource filter descriptors are misaligned");
+    // Copied before returning: the managed array is pinned for this call only.
+    let filters = unsafe { std::slice::from_raw_parts(pointer, count as usize) }.to_vec();
     for (i, f) in filters.iter().enumerate() {
         anyhow::ensure!(
-            matches!(f.kind, filter_kind::LOWPASS | filter_kind::HIGHPASS | filter_kind::ECHO),
+            matches!(f.kind, filter_kind::LOWPASS | filter_kind::HIGHPASS | filter_kind::ECHO | filter_kind::REVERB),
             "unsupported AudioSource filter kind {}",
             f.kind
         );
@@ -154,6 +179,7 @@ unsafe fn decode_filters(p: &AudioSourcePacket) -> anyhow::Result<Vec<AudioFilte
         anyhow::ensure!(
             [f.cutoff, f.resonance, f.delay, f.decay, f.dry_mix, f.wet_mix]
                 .iter()
+                .chain(&f.reverb)
                 .all(|v| v.is_finite()),
             "AudioSource filter parameters must be finite"
         );
@@ -166,13 +192,16 @@ unsafe fn decode_filters(p: &AudioSourcePacket) -> anyhow::Result<Vec<AudioFilte
     Ok(filters)
 }
 
-/// The mixer kernel a filter component reuses: the AudioMixer effect of the same kind.
+/// The mixer kernel a filter component reuses: the AudioMixer effect of the same kind. The
+/// reverb filter is the SFX Reverb without wet mixing (tests/projects/audioreverb).
 fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
+    let r = d.reverb;
     EffectSpec {
         id: d.id.to_string(),
         kind: match d.kind {
             filter_kind::LOWPASS => "Lowpass",
             filter_kind::HIGHPASS => "Highpass",
+            filter_kind::REVERB => "SFX Reverb",
             _ => "Echo",
         }
         .into(),
@@ -185,7 +214,22 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         max_channels: 0.0,
         dry_mix: d.dry_mix,
         wet_mix: d.wet_mix,
-        sfx: None,
+        sfx: (d.kind == filter_kind::REVERB).then(|| SfxReverbSpec {
+            dry_level: r[0],
+            room: r[1],
+            room_hf: r[2],
+            decay_time: r[3],
+            decay_hf_ratio: r[4],
+            reflections: r[5],
+            reflect_delay: r[6],
+            reverb: r[7],
+            reverb_delay: r[8],
+            diffusion: r[9],
+            density: r[10],
+            hf_reference: r[11],
+            room_lf: r[12],
+            lf_reference: r[13],
+        }),
         mix_level: None,
         mix_audible: true,
         duck: None,
@@ -444,6 +488,8 @@ pub struct Source {
     completion_frontier: u64,
     /// Its filter components (`params.filters`), with this source's own state.
     chain: FilterChain,
+    /// The mixer frame up to which the components still run after the last voice ended.
+    chain_tail: Option<u64>,
 }
 
 impl Source {
@@ -551,6 +597,13 @@ pub struct Mixer {
     pub listener_paused: bool,
     pub has_listener: bool,
     pub listener_filter: bool,
+    /// The listener's filter components as last sent, and their state; they run on the final
+    /// mix before the listener's OnAudioFilterRead scripts.
+    listener_filters: Vec<AudioFilterDescriptor>,
+    listener_chain: FilterChain,
+    listener_rejected: bool,
+    /// Unrouted sources with `bypassListenerEffects`, added after `listener_chain`.
+    listener_bypass: Vec<f32>,
     listener_output: Ring,
     callback: Option<Callback>,
     capture_listener_batch: bool,
@@ -633,6 +686,10 @@ impl Mixer {
             listener_paused: false,
             has_listener: true,
             listener_filter: false,
+            listener_filters: Vec::new(),
+            listener_chain: FilterChain::default(),
+            listener_rejected: false,
+            listener_bypass: Vec::new(),
             listener_output: Ring::new(),
             callback: None,
             capture_listener_batch: false,
@@ -679,6 +736,7 @@ impl Mixer {
             node.effects.clear();
             node.update(node.spec.clone(), config.sample_rate)?;
         }
+        self.listener_chain.reconfigure(config.sample_rate)?;
         for source in self.sources.values_mut() {
             source.main = None;
             source.one_shots.clear();
@@ -768,6 +826,35 @@ impl Mixer {
             }
         }
         source.params = params;
+    }
+
+    /// The listener's components from the frame packet: an unchanged list keeps the chain and
+    /// its state; a refused one (reported once) runs none.
+    pub fn update_listener_filters(&mut self, filters: anyhow::Result<Vec<AudioFilterDescriptor>>) {
+        let filters = match filters {
+            Ok(filters) => filters,
+            Err(error) => {
+                if !self.listener_rejected {
+                    tracing::error!("AudioListener filter components rejected: {error:#}");
+                }
+                self.listener_rejected = true;
+                self.listener_filters.clear();
+                self.listener_chain = FilterChain::default();
+                return;
+            }
+        };
+        self.listener_rejected = false;
+        if filters == self.listener_filters {
+            return;
+        }
+        let rate = self.config.sample_rate;
+        if let Err(error) = FilterChain::validate(&filters, rate)
+            .and_then(|()| self.listener_chain.apply(&filters, rate))
+        {
+            tracing::error!("AudioListener filter components dropped: {error:#}");
+            self.listener_chain = FilterChain::default();
+        }
+        self.listener_filters = filters;
     }
 
     pub fn release_source(&mut self, handle: u64) {
@@ -987,6 +1074,7 @@ impl Mixer {
                 source.played = true;
                 // Unbound's choice (unmeasured): Stop cuts the components' tails.
                 source.chain.reset();
+                source.chain_tail = None;
             }
             command::STOP_MAIN => {
                 source.completed_main = None;
@@ -1270,6 +1358,7 @@ impl Mixer {
         }
         let need_mix = !self.discard_output
             || self.listener_filter
+            || !self.listener_chain.filters.is_empty()
             || self.listener_output_wanted
             || !self.group_nodes.is_empty();
         self.mix[..n * 2].fill(0.0);
@@ -1320,6 +1409,11 @@ impl Mixer {
                 .collect();
         }
 
+        let listener_components = !self.listener_chain.filters.is_empty();
+        if listener_components {
+            self.listener_bypass.resize(n * 2, 0.0);
+            self.listener_bypass.fill(0.0);
+        }
         let Self {
             sources,
             clips,
@@ -1327,6 +1421,7 @@ impl Mixer {
             group_nodes,
             mix,
             source_buffer,
+            listener_bypass,
             ..
         } = self;
         for (&handle, source) in sources.iter_mut() {
@@ -1335,9 +1430,12 @@ impl Mixer {
             let filter = flags & source_flags::FILTER != 0;
             let has_voices = source.main.is_some() || !source.one_shots.is_empty();
             let filter_only = source.filter_only();
-            if !has_voices && !(filter && source.filter_started) {
-                // Unbound's choice (unmeasured): the components' tails end with the source's
-                // last voice, and its next playback starts them empty.
+            // Native (tests/projects/audioreverb, AudioReverbFilter): after the last voice ends,
+            // the components run on to the end of the next DSP buffer, then their tail is cut
+            // and the next playback starts them empty.
+            let tail = !has_voices && source.chain_tail.is_some_and(|end| t0 < end);
+            if !has_voices && !tail && !(filter && source.filter_started) {
+                source.chain_tail = None;
                 source.chain.reset();
                 continue;
             }
@@ -1438,19 +1536,34 @@ impl Mixer {
             } else {
                 render_source_voices(source, clips, buffer, n, t0, pitch, out_rate,
                     target, mono_pan, looping, audible, callback);
+                if voices_running && source.main.is_none() && source.one_shots.is_empty()
+                    && !source.chain.filters.is_empty()
+                {
+                    source.chain_tail = Some(source.completion_frontier + dsp_frames);
+                }
                 // Unbound's choice (unmeasured): components see the source's voices after its
                 // volume, mute and panning, the signal OnAudioFilterRead receives here.
-                if voices_running {
+                if voices_running || tail {
                     source.chain.process(buffer, None, bypass);
+                }
+                if let Some(end) = source.chain_tail.filter(|_| tail) {
+                    let keep = (end.saturating_sub(t0) as usize).min(n);
+                    buffer[keep * 2..].fill(0.0);
                 }
             }
             if let Some(ring) = &mut source.output {
                 ring.push(buffer);
             }
             if need_mix || filter {
+                // `bypassListenerEffects`: "It also does'nt apply, if the AudioSource is playing
+                // into a mixer group" (6000.0 Scripting API); measured so for AudioReverbFilter.
+                // Unrouted bypassing sources are unmeasured and follow the documentation.
+                let bypass_listener = listener_components
+                    && flags & source_flags::BYPASS_LISTENER_EFFECTS != 0;
+                let unrouted = if bypass_listener { &mut listener_bypass[..n * 2] } else { &mut mix[..n * 2] };
                 let target = group_nodes
                     .get_mut(&source.params.group)
-                    .map_or(&mut mix[..n * 2], |node| &mut node.buffer[..n * 2]);
+                    .map_or(unrouted, |node| &mut node.buffer[..n * 2]);
                 for (m, b) in target.iter_mut().zip(buffer.iter()) {
                     *m += *b;
                 }
@@ -1548,6 +1661,14 @@ impl Mixer {
                 *m += *b;
             }
             self.group_nodes.get_mut(&handle).unwrap().buffer = buffer;
+        }
+        if listener_components {
+            if has_listener {
+                self.listener_chain.process(&mut self.mix[..n * 2], None, false);
+            }
+            for (m, b) in self.mix.iter_mut().zip(&self.listener_bypass) {
+                *m += *b;
+            }
         }
         if self.listener_filter
             && !self.capture_listener_batch
@@ -2907,6 +3028,10 @@ mod tests {
             decay: 0.5,
             dry_mix: 1.0,
             wet_mix: 1.0,
+            // The AudioReverbFilter defaults (6000.0.71f1, tests/projects/audioreverb).
+            reverb: [
+                0.0, 0.0, 0.0, 1.0, 0.5, -10000.0, 0.0, 0.0, 0.04, 100.0, 100.0, 5000.0, 0.0, 250.0,
+            ],
         }
     }
 
@@ -3117,6 +3242,57 @@ mod tests {
         assert_eq!(out, first);
     }
 
+    fn impulse_clip(frames: usize) -> Clip {
+        // After the voice's start ramp.
+        let mut samples = vec![0.0; frames * 2];
+        samples[2 * 200] = 0.5;
+        Clip::new(2, 48000, samples)
+    }
+
+    /// Native (tests/projects/audioreverb): after the last voice ends the chain runs to the end
+    /// of the next DSP buffer, then its tail is cut.
+    #[test]
+    fn components_run_one_dsp_buffer_past_the_last_voice() {
+        // Reverb Delay 0: the late reverb rings through the whole next buffer.
+        let mut reverb = component(1, filter_kind::REVERB, filter_stage::BEFORE_SCRIPTS);
+        reverb.reverb[8] = 0.0;
+        // The 300-frame clip ends in the first 1024-frame buffer: the tail stops at 2048.
+        let mut m = Mixer::new(MixerConfig::default());
+        m.add_clip(1, impulse_clip(300));
+        source_with(&mut m, 7, 1, |p| p.filters = vec![reverb]);
+        play(&mut m, 7, command::PLAY, 0.0);
+        m.update_suspension();
+        let mut out = vec![0.0; 2 * 4096];
+        m.render(&mut out, 2);
+        assert!(out[2 * 200] != 0.0);
+        assert!(out[2 * 2040..2 * 2048].iter().any(|v| v.abs() > 1e-6));
+        assert!(out[2 * 2048..].iter().all(|v| *v == 0.0));
+    }
+
+    #[test]
+    fn listener_reverb_runs_on_the_mix_except_bypassing_unrouted_sources() {
+        let listen = |bypass: bool| {
+            let mut m = Mixer::new(MixerConfig::default());
+            m.add_clip(1, impulse_clip(300));
+            m.update_listener_filters(Ok(vec![component(5, filter_kind::REVERB, 0)]));
+            source_with(&mut m, 7, 1, |p| {
+                p.flags = if bypass { source_flags::BYPASS_LISTENER_EFFECTS } else { 0 };
+            });
+            play(&mut m, 7, command::PLAY, 0.0);
+            m.update_suspension();
+            let mut out = vec![0.0; 2 * 4096];
+            m.render(&mut out, 2);
+            assert!(out[2 * 200] != 0.0);
+            out
+        };
+        // The listener's tail outlives the source.
+        assert!(listen(false)[2 * 2048..].iter().any(|v| v.abs() > 1e-6));
+        assert!(listen(true)[2 * 201..].iter().all(|v| *v == 0.0));
+        let mut m = Mixer::new(MixerConfig::default());
+        m.update_listener_filters(Err(anyhow::anyhow!("refused")));
+        assert!(m.listener_chain.filters.is_empty());
+    }
+
     #[test]
     fn components_sit_above_or_below_the_on_audio_filter_read_scripts() {
         use std::cell::RefCell;
@@ -3186,10 +3362,13 @@ mod tests {
         let mut misaligned = packet(1, 0, &valid[..1]);
         misaligned.filters = unsafe { (storage.as_ptr() as *const u8).add(4) } as *const AudioFilterDescriptor;
         assert!(refused(&misaligned).contains("misaligned"));
-        for kind in [0, 4, -1] {
+        for kind in [0, 5, -1] {
             assert!(refused(&packet(1, 0, &[component(1, kind, 0)])).contains("kind"));
         }
         assert!(refused(&packet(1, 0, &[component(1, filter_kind::ECHO, 2)])).contains("stage"));
+        let mut reverb = component(1, filter_kind::REVERB, 0);
+        reverb.reverb[3] = f32::NAN;
+        assert!(refused(&packet(1, 0, &[reverb])).contains("finite"));
         for bad in [f32::NAN, f32::INFINITY] {
             let lowpass = AudioFilterDescriptor { cutoff: bad, ..component(1, filter_kind::LOWPASS, 0) };
             assert!(refused(&packet(1, 0, &[lowpass])).contains("finite"));

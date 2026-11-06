@@ -83,6 +83,8 @@ pub mod filter_kind {
     pub const HIGHPASS: i32 = 2;
     /// `AudioEchoFilter`.
     pub const ECHO: i32 = 3;
+    /// `AudioReverbFilter` (NativeApi 20): [`AudioFilterDescriptor::reverb`].
+    pub const REVERB: i32 = 4;
 }
 
 /// `AudioFilterDescriptor.stage`: where a component sits relative to the scripts with
@@ -117,6 +119,9 @@ pub struct AudioFilterDescriptor {
     pub decay: f32,
     pub dry_mix: f32,
     pub wet_mix: f32,
+    /// Reverb: the AudioMixer SFX Reverb parameters in the order of
+    /// [`crate::audio::reverb::SfxReverbSpec`]'s fields (mB, seconds, percent, Hz).
+    pub reverb: [f32; 14],
 }
 
 /// `AudioSourceCommand.kind`.
@@ -181,7 +186,7 @@ pub mod frame_flags {
 
 /// Sent once per frame from `PostLateUpdate.UpdateAudio`.
 #[repr(C)]
-#[derive(Debug, Clone, Copy, Default)]
+#[derive(Debug, Clone, Copy)]
 pub struct AudioFramePacket {
     /// The frame's unscaled time; the virtual output device advances by it.
     pub delta_time: f64,
@@ -192,6 +197,28 @@ pub struct AudioFramePacket {
     /// `AudioListener.volume`.
     pub listener_volume: f32,
     pub flags: i32,
+    /// The listener's filter components (NativeApi 20), in component order; null when none.
+    pub filter_count: i32,
+    pub _pad: i32,
+    /// Valid during the call only: the mixer copies them before it returns.
+    pub filters: *const AudioFilterDescriptor,
+}
+
+impl Default for AudioFramePacket {
+    fn default() -> Self {
+        Self {
+            delta_time: 0.0,
+            listener_position: Vector3::default(),
+            listener_forward: Vector3::default(),
+            listener_up: Vector3::default(),
+            listener_velocity: Vector3::default(),
+            listener_volume: 0.0,
+            flags: 0,
+            filter_count: 0,
+            _pad: 0,
+            filters: std::ptr::null(),
+        }
+    }
 }
 
 #[repr(C)]
@@ -241,7 +268,7 @@ mod tests {
         assert_eq!(offset_of!(AudioSourcePacket, filter_count), 120);
         assert_eq!(offset_of!(AudioSourcePacket, filters), 128);
         assert_eq!(size_of::<AudioSourcePacket>(), 136);
-        assert_eq!(size_of::<AudioFilterDescriptor>(), 40);
+        assert_eq!(size_of::<AudioFilterDescriptor>(), 96);
         assert_eq!(std::mem::align_of::<AudioFilterDescriptor>(), 8);
         assert_eq!(offset_of!(AudioFilterDescriptor, kind), 8);
         assert_eq!(offset_of!(AudioFilterDescriptor, stage), 12);
@@ -251,25 +278,29 @@ mod tests {
         assert_eq!(offset_of!(AudioFilterDescriptor, decay), 28);
         assert_eq!(offset_of!(AudioFilterDescriptor, dry_mix), 32);
         assert_eq!(offset_of!(AudioFilterDescriptor, wet_mix), 36);
+        assert_eq!(offset_of!(AudioFilterDescriptor, reverb), 40);
         assert_eq!(size_of::<AudioSourceCommand>(), 32);
         assert_eq!(size_of::<AudioSourceState>(), 24);
-        assert_eq!(size_of::<AudioFramePacket>(), 64);
+        assert_eq!(size_of::<AudioFramePacket>(), 80);
+        assert_eq!(offset_of!(AudioFramePacket, filter_count), 64);
+        assert_eq!(offset_of!(AudioFramePacket, filters), 72);
         assert_eq!(size_of::<AudioStatus>(), 32);
     }
 
-    /// The source packet's filter descriptors are NativeApi 18's (added at 16, with render
-    /// protocol 8 at 18), unchanged in 19 (render protocol 9); the managed side pins the same
-    /// value and refuses 14 to 18 and 20 (NativeApiVersionTests).
+    /// The source packet's filter descriptors were added at NativeApi 16; 20 adds the reverb
+    /// kind and parameters. The managed side pins the same value and refuses 14 to 19 and 21
+    /// (NativeApiVersionTests).
     #[test]
-    fn the_filter_descriptor_layout_is_native_api_18() {
-        assert_eq!(crate::native_api::NATIVE_API_VERSION, 19);
+    fn the_filter_descriptor_layout_is_native_api_20() {
+        assert_eq!(crate::native_api::NATIVE_API_VERSION, 20);
         assert_eq!(
             [
                 filter_kind::LOWPASS,
                 filter_kind::HIGHPASS,
-                filter_kind::ECHO
+                filter_kind::ECHO,
+                filter_kind::REVERB
             ],
-            [1, 2, 3]
+            [1, 2, 3, 4]
         );
         assert_eq!(
             [filter_stage::BEFORE_SCRIPTS, filter_stage::AFTER_SCRIPTS],

@@ -71,6 +71,8 @@ namespace Unbound.Runtime
         internal const int LowPass = 1;
         internal const int HighPass = 2;
         internal const int Echo = 3;
+        /// <summary>AudioReverbFilter (NativeApi 20): <see cref="AudioFilterDescriptor.Reverb"/>.</summary>
+        internal const int Reverb = 4;
     }
 
     /// <summary>Where a component sits relative to the scripts with OnAudioFilterRead on its
@@ -82,7 +84,7 @@ namespace Unbound.Runtime
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct AudioFilterDescriptor
+    internal unsafe struct AudioFilterDescriptor
     {
         /// <summary>The component's instance ID: the mixer keeps its state while it is the same.</summary>
         internal ulong Id;
@@ -94,6 +96,10 @@ namespace Unbound.Runtime
         internal float Decay;
         internal float DryMix;
         internal float WetMix;
+        /// <summary>Reverb: the AudioMixer SFX Reverb parameters in the mixer's order (Dry Level,
+        /// Room, Room HF, Decay Time, Decay HF Ratio, Reflections, Reflect Delay, Reverb, Reverb
+        /// Delay, Diffusion, Density, HF Reference, Room LF, LF Reference).</summary>
+        internal fixed float Reverb[14];
 
         /// <summary>The most descriptors one source sends (a resource bound, not a Unity limit).</summary>
         internal const int MaxPerSource = 64;
@@ -151,7 +157,7 @@ namespace Unbound.Runtime
     }
 
     [StructLayout(LayoutKind.Sequential)]
-    internal struct AudioFramePacket
+    internal unsafe struct AudioFramePacket
     {
         internal double DeltaTime;
         internal Vector3 ListenerPosition;
@@ -160,6 +166,12 @@ namespace Unbound.Runtime
         internal Vector3 ListenerVelocity;
         internal float ListenerVolume;
         internal int Flags;
+        /// <summary>The listener's AudioReverbFilter components (NativeApi 20); 0 when none.</summary>
+        internal int FilterCount;
+        internal int Pad;
+        /// <summary><see cref="FilterCount"/> descriptors in component order; valid during the
+        /// call only.</summary>
+        internal AudioFilterDescriptor* Filters;
     }
 
     [StructLayout(LayoutKind.Sequential)]

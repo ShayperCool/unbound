@@ -97,8 +97,8 @@ namespace UnityEngine.Tests
         [Fact]
         public void PacketAndDescriptorLayoutsUnchangedInNativeApi19()
         {
-            // Added at 16, unchanged in 19 (render protocol 9).
-            Assert.Equal(19u, NativeApi.CurrentVersion);
+            // Added at 16; 20 adds the reverb kind and its parameters.
+            Assert.Equal(20u, NativeApi.CurrentVersion);
             var p = default(AudioSourcePacket);
             byte* b = (byte*)&p;
             Assert.Equal(40, (int)((byte*)&p.Volume - b));
@@ -110,13 +110,14 @@ namespace UnityEngine.Tests
             Assert.Equal(136, sizeof(AudioSourcePacket));
             var d = default(AudioFilterDescriptor);
             byte* e = (byte*)&d;
-            Assert.Equal(40, sizeof(AudioFilterDescriptor));
-            Assert.Equal(new[] { 8, 12, 16, 20, 24, 28, 32, 36 }, new[]
+            Assert.Equal(96, sizeof(AudioFilterDescriptor));
+            Assert.Equal(new[] { 8, 12, 16, 20, 24, 28, 32, 36, 40 }, new[]
             {
                 (int)((byte*)&d.Kind - e), (int)((byte*)&d.Stage - e), (int)((byte*)&d.Cutoff - e), (int)((byte*)&d.Resonance - e),
                 (int)((byte*)&d.Delay - e), (int)((byte*)&d.Decay - e), (int)((byte*)&d.DryMix - e), (int)((byte*)&d.WetMix - e),
+                (int)((byte*)d.Reverb - e),
             });
-            Assert.Equal(new[] { 1, 2, 3 }, new[] { AudioFilterKind.LowPass, AudioFilterKind.HighPass, AudioFilterKind.Echo });
+            Assert.Equal(new[] { 1, 2, 3, 4 }, new[] { AudioFilterKind.LowPass, AudioFilterKind.HighPass, AudioFilterKind.Echo, AudioFilterKind.Reverb });
             Assert.Equal(new[] { 0, 1 }, new[] { AudioFilterStage.BeforeScripts, AudioFilterStage.AfterScripts });
             Assert.Equal(64, AudioFilterDescriptor.MaxPerSource);
         }
@@ -350,15 +351,59 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ComponentsOnTheListenerFailLoudly()
+        public void OnlyReverbFiltersRunOnTheListener()
         {
             var go = new GameObject("ears");
             m_Objects.Add(go);
             var listener = go.AddComponent<AudioListener>();
             go.AddComponent<AudioLowPassFilter>();
-            AudioFilterChain.CheckListener(listener);
-            AudioFilterChain.CheckListener(listener);
-            Assert.Contains("listener filter components are not applied", Assert.Single(Errors("AudioListener 'ears'")));
+            var reverb = go.AddComponent<AudioReverbFilter>();
+            AudioFilterDescriptor[] table = null;
+            Assert.Equal(1, AudioFilterChain.CollectListener(listener, false, ref table));
+            Assert.Equal(1, AudioFilterChain.CollectListener(listener, false, ref table));
+            Assert.Equal(AudioFilterKind.Reverb, table[0].Kind);
+            Assert.Equal(unchecked((ulong)(long)reverb.GetInstanceID()), table[0].Id);
+            Assert.Contains("AudioLowPassFilter on the AudioListener 'ears' is not supported", Assert.Single(Errors("AudioListener 'ears'")));
+
+            var scripted = new GameObject("scripted ears");
+            m_Objects.Add(scripted);
+            var other = scripted.AddComponent<AudioListener>();
+            scripted.AddComponent<AudioReverbFilter>();
+            Assert.Equal(0, AudioFilterChain.CollectListener(other, true, ref table));
+            Assert.Contains("listener filter components are not applied", Assert.Single(Errors("OnAudioFilterRead scripts on the AudioListener 'scripted ears'")));
+        }
+
+        // Measured in tests/projects/audioreverb (6000.0.71f1).
+        [Fact]
+        public unsafe void ReverbFilterPresetsWriteAllButDryLevelAndReflectionsDelay()
+        {
+            var reverb = Source("reverb").gameObject.AddComponent<AudioReverbFilter>();
+            Assert.Equal(AudioReverbPreset.User, reverb.reverbPreset);
+            Assert.Equal((0f, 0f, 1f, 0.5f, -10000f, 0f, 0.04f), (reverb.room, reverb.reverbLevel, reverb.decayTime,
+                reverb.decayHFRatio, reverb.reflectionsLevel, reverb.reflectionsDelay, reverb.reverbDelay));
+            reverb.dryLevel = -300; reverb.reflectionsDelay = 0.007f; reverb.roomLF = -200; reverb.hfReference = 4000;
+            reverb.room = 1e9f;
+            Assert.Equal(1e9f, reverb.room);
+            reverb.reverbPreset = AudioReverbPreset.Cave;
+            Assert.Equal((-300f, 0.007f, 0f, 5000f, 250f), (reverb.dryLevel, reverb.reflectionsDelay, reverb.roomLF, reverb.hfReference, reverb.lfReference));
+            Assert.Equal((-1000f, 0f, 2.91f, 1.3f, -602f, -302f, 0.022f), (reverb.room, reverb.roomHF, reverb.decayTime,
+                reverb.decayHFRatio, reverb.reflectionsLevel, reverb.reverbLevel, reverb.reverbDelay));
+            // Ignored while a preset is selected; User keeps the preset's values.
+            reverb.room = 0;
+            reverb.reverbPreset = AudioReverbPreset.User;
+            Assert.Equal(-1000f, reverb.room);
+            reverb.room = -500;
+            Assert.True(reverb.Describe(out var d));
+            Assert.Equal(AudioFilterKind.Reverb, d.Kind);
+            var values = new float[14];
+            for (int i = 0; i < 14; i++) values[i] = d.Reverb[i];
+            Assert.Equal(new[] { -300f, -500f, 0f, 2.91f, 1.3f, -602f, 0.007f, -302f, 0.022f, 100f, 100f, 5000f, 0f, 250f }, values);
+            Assert.Contains(AudioFilterKind.Reverb, Array.ConvertAll(Collected(reverb.GetComponent<AudioSource>()), f => f.Kind));
+
+            reverb.ReadSerialized(YNode.MakeMap(("m_Room", YNode.MakeScalar("-700")), ("m_ReverbPreset", YNode.MakeScalar("9")),
+                ("m_LFReference", YNode.MakeScalar("150"))), null);
+            Assert.Equal((AudioReverbPreset.Cave, -700f, 150f, 0f, 1f), (reverb.reverbPreset, reverb.room, reverb.lfReference, reverb.dryLevel, reverb.decayTime));
+            Assert.Empty(Errors("of AudioReverbFilter"));
         }
 
         [Fact]

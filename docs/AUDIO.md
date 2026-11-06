@@ -1,23 +1,26 @@
 # Audio: AudioSource filter components
 
 This page covers the wire and lifecycle of the per-AudioSource filter components
-`AudioLowPassFilter`, `AudioHighPassFilter` and `AudioEchoFilter`. The structures are in
+`AudioLowPassFilter`, `AudioHighPassFilter`, `AudioEchoFilter` and `AudioReverbFilter` (measured:
+see "AudioReverbFilter" below). The structures are in
 `crates/unbound-runtime/src/audio/protocol.rs` and `managed/UnityEngine/Audio/AudioProtocol.cs`.
 The managed components are in `managed/UnityEngine/Audio/AudioFilterComponents.cs`, and the
 per-source chain is in `crates/unbound-runtime/src/audio/mixer.rs`.
 
-Status: source ready, unvalidated. No Unity capture measures these components on an
-AudioSource. The DSP reuses the AudioMixer Lowpass, Highpass and Echo kernels in `effects.rs`.
+Status: source ready, unvalidated for LowPass, HighPass and Echo. No Unity capture measures
+these three on an AudioSource. The DSP reuses the AudioMixer Lowpass, Highpass and Echo kernels in `effects.rs`.
 Those kernels were measured on mixer groups by `tests/projects/mixerfilters` and
 `tests/projects/mixerecho` (Unity 6000.0.71f1, Linux, 48000 and 44100 Hz). Those captures do not
 establish parity for component chains.
 
-## Wire (NativeApi 18)
+## Wire (NativeApi 20)
 
 `AudioSourcePacket` passes through `NativeApi.AudioUpdateSource`. Version 16 appended the filter
 descriptors to it; version 18 carries them together with render protocol 8 (`DrawIndices`,
 opcode 28), which was version 17 alone. No audio operation, table slot or signature changed. The
-managed side refuses any other native version before it installs the table.
+managed side refuses any other native version before it installs the table. Version 20 adds the
+reverb kind (4) with its 14 parameters to the descriptor (96 bytes), and the listener's reverb
+filters to `AudioFramePacket` (`filter_count` at 64, `filters` at 72, 80 bytes).
 
 | `AudioSourcePacket` field | Offset | Size |
 | --- | --- | --- |
@@ -30,10 +33,11 @@ managed side refuses any other native version before it installs the table.
 | `AudioFilterDescriptor` field | Offset |
 | --- | --- |
 | `id: u64`, the component's instance ID | 0 |
-| `kind: i32` (1 LowPass, 2 HighPass, 3 Echo) | 8 |
+| `kind: i32` (1 LowPass, 2 HighPass, 3 Echo, 4 Reverb) | 8 |
 | `stage: i32` (0 above the OnAudioFilterRead scripts, 1 below them) | 12 |
 | `cutoff`, `resonance`, `delay`, `decay`, `dry_mix`, `wet_mix: f32` | 16 to 36 |
-| total (alignment 8) | 40 |
+| `reverb: [f32; 14]`, the SFX Reverb parameters in `SfxReverbSpec` order | 40 |
+| total (alignment 8) | 96 |
 
 ### Validation
 
@@ -103,8 +107,10 @@ Unbound's choices (unmeasured):
     measured slew.
   - A new identity starts empty: re-enabling, re-adding or replacing a component.
   - Stop resets the chain.
-  - So does the end of a source's last voice, when it has no OnAudioFilterRead path. Tails are
-    cut at that point.
+  - Measured with AudioReverbFilter (tests/projects/audioreverb): when a source without an
+    OnAudioFilterRead path ends its last voice, the chain runs on to the end of the next DSP
+    buffer, then the tail is cut and the chain reset (clip end at frame 12288: last sample 13311;
+    at 12800: 14335). The engine applies this to every component kind.
   - `AudioSettings.Reset` (a new output rate) restarts every component empty at the new rate.
 - **No group fade.** The mixer group's startup input fade is not applied to components.
 - **Parameter timing.** Parameters reach the mixer with the source's next packet, at the latest
@@ -122,10 +128,10 @@ Unbound's choices (unmeasured):
   above a clipless generator script, or more than 64 components. Each logs an error once, and
   the source then sends no components.
 - A component with a non-finite parameter logs an error and is skipped.
-- Filter components on the hearing AudioListener log an error once per listener and are not
-  applied.
-- `AudioChorusFilter`, `AudioDistortionFilter`, `AudioReverbFilter` and `AudioReverbZone` remain
-  generated stubs.
+- On the hearing AudioListener only `AudioReverbFilter` runs. Other filter kinds there, and
+  reverb filters next to listener OnAudioFilterRead scripts (an unmeasured order), log an error
+  once per listener and are not applied.
+- `AudioChorusFilter`, `AudioDistortionFilter` and `AudioReverbZone` remain generated stubs.
 
 ## Follow-up (unexecuted)
 
@@ -193,12 +199,15 @@ milliseconds converted with `floor(ms * rate / 1000)`. The constants are in `rev
   - **Lines.** Eight lines `k` with nominal length `m_k = 61 ms * rate * f * 1.32^k`, where
     `f = 0.1 + 0.9 (Density/100)^3`. Each line is fed the input at its own tap. Line 0's tap is at
     `max(floor(f32 (ReflectDelay + ReverbDelay) * rate) - 1, 0)` plus its offset. The other lines
-    take the separately rounded delays plus their offsets.
+    are at `floor(f32 (ReflectDelay + ReverbDelay) * rate + offset)`, one sum. The fractional
+    delays of the reverb filter presets at 44.1 kHz fix this rule and line 2's offset (25.575 ms;
+    tests/projects/audioreverb). It reproduces every mixerreverb onset as before.
   - **Feedback.** Line `k` also receives `c1_k` times its successor's transformed output, delayed
     by `round(m_k) - 1`.
   - **Damping.** Each line has a one-pole with the DMO I3DL2 coefficients: `c1 = 10^(-3 m / (rate
     T))`, and `c2` from Decay HF Ratio at HF Reference. A ratio above 1 acts as 1, and `c2` is
-    clamped to 0.99.
+    clamped to 0.99, also when `c1^(2 - 2/ratio)` overflows float32 (short decays with a low
+    ratio: the PaddedCell preset).
   - **Butterfly.** The transform has three stages of `[[cos, -sin], [sin, cos]]` with angle
     `pi/4 * Diffusion/100`.
   - **Output.** Transformed output `u` reaches channel `(u-1) mod 2` after the fan-out offset
@@ -223,8 +232,77 @@ milliseconds converted with `floor(ms * rate / 1000)`. The constants are in `rev
   and 5000 Hz. The Room HF formula clamps `cos` at 0.9999 like the DMO reference, so values below
   about 108 Hz at 48 kHz rely on an unmeasured guard.
 - A Wet level above 0 dB (for example through an exposed parameter) fails loudly as unmeasured.
-- Wet mixing on other effects, the other mixer effects, `AudioReverbFilter` and `AudioReverbZone`
-  still fail loudly or remain stubs.
+- Wet mixing on other effects, the other mixer effects and `AudioReverbZone` still fail loudly or
+  remain stubs.
+
+# AudioReverbFilter and AudioReverbZone
+
+`AudioReverbFilter` runs the AudioMixer SFX Reverb kernel (above) on an AudioSource's chain or on
+the AudioListener's final mix, without wet mixing. `AudioReverbZone` is still a stub. The probe is
+tests/projects/audioreverb (Unity 6000.0.71f1, Linux, 48000 and 44100 Hz, two Native repeats
+bit-identical). Its gate passes every filter case and every filter property table: 1966203/1966203
+values per rate.
+
+## Unity contract (6000.0)
+
+Documented in the Scripting API (installed 6000.0.71f1 doc XML, `UnityEngine.AudioModule.xml`) and
+the Manual (*Audio Reverb Filter*, *Audio Reverb Zone*):
+
+- The filter "takes an Audio Clip and distorts it to create a custom reverb effect". Defaults:
+  Dry Level 0, Room 0, Room HF 0, Room LF 0, Decay Time 1.0, Decay HF Ratio 0.5, Reflections
+  -10000, Reverb 0, Reverb Delay 0.04, HF Reference 5000, LF Reference 250, Diffusion 100,
+  Density 100. Ranges: levels in mB as for the mixer effect, HF Reference 1000 to 20000 Hz.
+  The `reflectionsDelay` page repeats the Reverb level text (a doc error); 0 is its default.
+- `bypassListenerEffects`: "global effects on the AudioListener doesn't apply to the audio signal
+  generated by the AudioSource. It also does'nt apply, if the AudioSource is playing into a mixer
+  group."
+- Zone: `minDistance` "will have full effect at" (default 10), `maxDistance` "will not have any
+  effect" (default 15). `reverbZoneMix`: "the amount by which the signal from the AudioSource will
+  be mixed into the global reverb associated with the Reverb Zones."
+
+## Measured (filter)
+
+- A new filter is `User` with the documented defaults (Reflections Delay 0).
+- Selecting a preset writes Room, Room HF, Room LF (0), Decay Time, Decay HF Ratio, Reflections,
+  Reverb, Reverb Delay, HF/LF Reference (5000/250), Diffusion and Density. It keeps Dry Level and
+  Reflections Delay. The table is in `AudioFilterComponents.cs`. `Off` is Room -10000, Room HF
+  -10000, so only the dry path sounds.
+- Selecting `User` keeps the current values. While another preset is selected, the parameter
+  setters do nothing. They store any value unclamped (1e9 reads back as 1e9).
+- Serialized fields: `m_DryLevel`, `m_Room`, `m_RoomHF`, `m_DecayTime`, `m_DecayHFRatio`,
+  `m_ReflectionsLevel`, `m_ReverbLevel`, `m_ReverbDelay`, `m_Diffusion`, `m_Density`,
+  `m_HFReference`, `m_RoomLF`, `m_LFReference`, `m_ReflectionsDelay`, `m_ReverbPreset`. They are
+  read as stored.
+- Sound: the SFX Reverb with the same parameters, on the source's signal after volume and
+  panning. A mono clip is processed as its stereo upmix. A disabled component and
+  `bypassEffects` give the dry signal. The tail follows the chain lifetime above: it is cut one
+  DSP buffer after the clip ends.
+- On the AudioListener the filter processes the final mix and its tail runs on.
+  `bypassListenerEffects` has no effect on a source routed into a mixer group, as documented.
+
+## Measured (zone; not implemented)
+
+The probe records these as Native references; the engine does not reproduce them yet (the `zone`
+profile and the strict report).
+
+- Zone presets share the filter's levels and times, but have their own Reflections Delay (for
+  example Generic 0.007, Forest 0.162, Mountains 0.3). Room, Room HF, Room LF, Reflections and
+  Reverb are `int`.
+- Zone setters apply whatever the preset is, and clamp to the documented ranges (`minDistance`
+  at least 0, `maxDistance` at least `minDistance`). A preset keeps minDistance/maxDistance.
+- Audio cases: the listener at distance 0, 11, 12.5, 14 and 20 from a Generic zone (10/15),
+  reverbZoneMix 0.5 and 0, User and Cave zones, and two overlapping zones. The zone reverb is
+  heard on the device output only (not in a mixer sink) and outlives the source.
+
+## Limits
+
+- Parameter values outside the documented ranges reach the kernel clamped to the mixer ranges.
+  Native's response to them is unmeasured, as is HF Reference below 1000 Hz.
+- Unmeasured: an unrouted source with `bypassListenerEffects` (it bypasses the listener
+  components, as documented), a listener reverb filter next to OnAudioFilterRead scripts (fails
+  loudly), parameter changes while a tail runs, and other component kinds on the listener.
+- Residuals: one-step device PCM flips only (10 at 48 kHz, 11 at 44.1 kHz in the strict report;
+  the gate admits one step on device PCM, never on floats).
 
 # AudioMixer: Send, Receive and Duck Volume
 
