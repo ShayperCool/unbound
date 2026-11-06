@@ -13,14 +13,16 @@ Those kernels were measured on mixer groups by `tests/projects/mixerfilters` and
 `tests/projects/mixerecho` (Unity 6000.0.71f1, Linux, 48000 and 44100 Hz). Those captures do not
 establish parity for component chains.
 
-## Wire (NativeApi 20)
+## Wire (NativeApi 21)
 
 `AudioSourcePacket` passes through `NativeApi.AudioUpdateSource`. Version 16 appended the filter
 descriptors to it; version 18 carries them together with render protocol 8 (`DrawIndices`,
 opcode 28), which was version 17 alone. No audio operation, table slot or signature changed. The
 managed side refuses any other native version before it installs the table. Version 20 adds the
 reverb kind (4) with its 14 parameters to the descriptor (96 bytes), and the listener's reverb
-filters to `AudioFramePacket` (`filter_count` at 64, `filters` at 72, 80 bytes).
+filters to `AudioFramePacket` (`filter_count` at 64, `filters` at 72). Version 21 appends the
+reverb zone descriptor (`zone` at 80, 176 bytes) and sends the source's zone send gain in
+`reverb_zone_mix`.
 
 | `AudioSourcePacket` field | Offset | Size |
 | --- | --- | --- |

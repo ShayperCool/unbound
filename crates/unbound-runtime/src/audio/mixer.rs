@@ -622,6 +622,8 @@ pub struct Mixer {
     listener_chain: FilterChain,
     listener_rejected: bool,
     zone: Option<ZoneReverb>,
+    /// The zone id whose non-finite parameters were reported (once).
+    zone_rejected: Option<u64>,
     zone_input: Vec<f32>,
     /// Unrouted sources with `bypassListenerEffects`, added after `listener_chain`.
     listener_bypass: Vec<f32>,
@@ -711,6 +713,7 @@ impl Mixer {
             listener_chain: FilterChain::default(),
             listener_rejected: false,
             zone: None,
+            zone_rejected: None,
             zone_input: Vec::new(),
             listener_bypass: Vec::new(),
             listener_output: Ring::new(),
@@ -891,10 +894,14 @@ impl Mixer {
             return;
         }
         if !d.reverb.iter().all(|v| v.is_finite()) {
-            tracing::error!("AudioReverbZone parameters must be finite; the reverb zones are silent");
+            if self.zone_rejected != Some(d.id) {
+                tracing::error!("AudioReverbZone parameters must be finite; the reverb zones are silent");
+            }
+            self.zone_rejected = Some(d.id);
             self.zone = None;
             return;
         }
+        self.zone_rejected = None;
         let spec = sfx_spec(&d.reverb);
         let rate = self.config.sample_rate;
         if let Some(zone) = &mut self.zone
@@ -3401,7 +3408,7 @@ mod tests {
             assert!(out[2 * 200] != 0.0);
             (m, out)
         };
-        // The tail outlives the source; a zero send leaves the dry signal alone.
+        // The tail outlives the source; no send (bypassReverbZones) leaves the dry signal alone.
         let (mut m, out) = listen(1.0);
         assert!(out[2 * 2048..].iter().any(|v| v.abs() > 1e-6));
         assert!(listen(0.0).1[2 * 201..].iter().all(|v| *v == 0.0));
