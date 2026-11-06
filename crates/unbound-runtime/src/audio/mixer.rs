@@ -2667,6 +2667,24 @@ mod tests {
         assert_eq!(m.group_nodes[&3].spec.effects[0].kind, "Lowpass");
     }
     #[test]
+    fn active_simple_filters_need_a_measured_cutoff_and_compressors_their_parameters() {
+        let spec = |bypass: bool, group_bypass: bool, effect: serde_json::Value| -> GroupSpec {
+            let mut effect = effect;
+            effect["bypass"] = bypass.into();
+            serde_json::from_value(serde_json::json!({ "handle": 1, "parent": 0, "mixer": 1,
+                "muted": false, "bypass": group_bypass, "effects": [effect] })).unwrap()
+        };
+        let high = serde_json::json!({ "id": "h", "kind": "Highpass Simple", "cutoff": 23000.0 });
+        let mut m = Mixer::new(MixerConfig::default());
+        assert!(m.configure_group(spec(false, false, high.clone())).is_err());
+        m.configure_group(spec(true, false, high.clone())).unwrap();
+        m.configure_group(spec(false, true, high)).unwrap();
+        let compressor = serde_json::json!({ "id": "c", "kind": "Compressor" });
+        let mut m = Mixer::new(MixerConfig::default());
+        assert!(m.configure_group(spec(false, false, compressor.clone())).is_err());
+        m.configure_group(spec(true, false, compressor)).unwrap();
+    }
+    #[test]
     fn malformed_echo_rates_fail_before_allocating_or_replacing_groups() {
         for delay in [500.0, 5000.0] {
             let mut mixer = Mixer::new(MixerConfig {

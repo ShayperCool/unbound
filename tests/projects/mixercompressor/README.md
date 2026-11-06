@@ -44,8 +44,9 @@ project per rate instead. When the fixture changes, record such a project again.
 `$UNBOUND` and its `managed/` outputs into a runtime directory, captures the engine at both rates,
 writes a strict report and exits with the result of the gate report. The gate admits one 1/32768
 step of device PCM and, for the keys in `common.RESIDUALS` only, the recorded ParamEQ rounding
-residual (absolute 4e-4 for `eq_startup`, 3e-5 for the sweep's master floats). `engine.py` and `compare.py` run single steps; `--before` produces a
-before/after union. Reports stream every missing, extra and failing value into gzip JSON lines,
+residual: absolute 4e-4 for `eq_startup` (master and PCM) and the PCM of `eq_startup_group_bypass`,
+3e-5 for the master floats of `eq_sweep`. `engine.py` and `compare.py` run single steps;
+`--before` produces a before/after union. Reports stream every missing, extra and failing value into gzip JSON lines,
 followed by a summary that counts failures per case.
 
 The tolerances are ATOL `2e-5` and RTOL `2e-4` on floats, as in the other mixer probes, and exact
