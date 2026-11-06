@@ -74,11 +74,10 @@ fn triangle_normal(p: [[f64; 3]; 3]) -> [f64; 3] {
 }
 
 /// The spatial hash that welds vertices: 512 buckets of chains, newest first.
-struct VertexHash {
+pub struct SpaceHash {
     buckets: Vec<i32>,
     next: Vec<i32>,
-    positions: Vec<[f64; 3]>,
-    normals: Vec<[f64; 3]>,
+    pub positions: Vec<[f64; 3]>,
 }
 
 fn hash_cell(x: i32, y: i32, z: i32) -> u32 {
@@ -89,9 +88,18 @@ fn hash_cell(x: i32, y: i32, z: i32) -> u32 {
     h as u32 % BUCKETS
 }
 
-impl VertexHash {
-    /// The index of the vertex `p` welds to, adding it when none.
-    fn insert(&mut self, p: [f64; 3], normal: [f64; 3]) -> u32 {
+impl SpaceHash {
+    pub fn new() -> Self {
+        Self {
+            buckets: vec![-1; BUCKETS as usize],
+            next: Vec::new(),
+            positions: Vec::new(),
+        }
+    }
+
+    /// The index of the first entry closer than 1e-6 to `p` that `accept`s it, searching the
+    /// cells around `p`; a new entry when none (its index is the old length).
+    pub fn insert(&mut self, p: [f64; 3], mut accept: impl FnMut(usize) -> bool) -> u32 {
         let lo = |c: f64| ((c - RADIUS) / CELL) as i32;
         let hi = |c: f64| ((RADIUS + c) / CELL) as i32;
         let (x0, y0, z0) = (lo(p[0]), lo(p[1]), lo(p[2]));
@@ -116,12 +124,8 @@ impl VertexHash {
             while i >= 0 {
                 let q = self.positions[i as usize];
                 let (dy, dx, dz) = (p[1] - q[1], p[0] - q[0], p[2] - q[2]);
-                if dz * dz + dy * dy + dx * dx < RADIUS * RADIUS {
-                    let n = self.normals[i as usize];
-                    let dot = n[2] * normal[2] + n[0] * normal[0] + n[1] * normal[1];
-                    if WELD_MIN_NORMAL_DOT <= dot && dot != WELD_MIN_NORMAL_DOT {
-                        return i as u32;
-                    }
+                if dz * dz + dy * dy + dx * dx < RADIUS * RADIUS && accept(i as usize) {
+                    return i as u32;
                 }
                 i = self.next[i as usize];
             }
@@ -133,11 +137,33 @@ impl VertexHash {
         );
         let index = self.positions.len() as i32;
         self.positions.push(p);
-        self.normals.push(normal);
         self.next.push(self.buckets[cell as usize]);
         self.buckets[cell as usize] = index;
         index as u32
     }
+}
+
+/// Welds vertices closer than 1e-6 unless their triangles face opposite ways, renumbering them
+/// in the order the triangles' corners first use them.
+pub fn weld(positions: &[[f64; 3]], triangles: &[[u32; 3]]) -> (Vec<[f64; 3]>, Vec<[u32; 3]>) {
+    let mut hash = SpaceHash::new();
+    let mut normals: Vec<[f64; 3]> = Vec::new();
+    let mut welded = Vec::with_capacity(triangles.len());
+    for t in triangles {
+        let normal = triangle_normal(t.map(|v| positions[v as usize]));
+        welded.push(t.map(|v| {
+            let i = hash.insert(positions[v as usize], |i| {
+                let n = normals[i];
+                let dot = n[2] * normal[2] + n[0] * normal[0] + n[1] * normal[1];
+                WELD_MIN_NORMAL_DOT <= dot && dot != WELD_MIN_NORMAL_DOT
+            });
+            if i as usize == normals.len() {
+                normals.push(normal);
+            }
+            i
+        }));
+    }
+    (hash.positions, welded)
 }
 
 fn length(d: [f64; 3]) -> f64 {
@@ -232,32 +258,21 @@ pub fn prepare(positions: &[[f32; 3]], triangles: &[[u32; 3]]) -> Result<Geometr
             return Err("the mesh has degenerate triangles".into());
         }
     }
-    let mut hash = VertexHash {
-        buckets: vec![-1; BUCKETS as usize],
-        next: Vec::new(),
-        positions: Vec::new(),
-        normals: Vec::new(),
-    };
-    let mut welded = Vec::with_capacity(triangles.len());
-    for t in triangles {
-        let p = t.map(|v| doubles[v as usize]);
-        let normal = triangle_normal(p);
-        welded.push(t.map(|v| hash.insert(doubles[v as usize], normal)));
-    }
+    let (positions, welded) = weld(&doubles, triangles);
     for t in &welded {
         if t[0] == t[1]
             || t[1] == t[2]
             || t[2] == t[0]
-            || degenerate(t.map(|v| hash.positions[v as usize]))
+            || degenerate(t.map(|v| positions[v as usize]))
         {
             return Err("the mesh has degenerate triangles".into());
         }
     }
-    if non_manifold(hash.positions.len(), &welded) {
+    if non_manifold(positions.len(), &welded) {
         return Err("after welding, the mesh has non-manifold edges or vertices".into());
     }
     Ok(Geometry {
-        positions: hash.positions.iter().map(|p| p.map(|c| c as f32)).collect(),
+        positions: positions.iter().map(|p| p.map(|c| c as f32)).collect(),
         triangles: welded,
     })
 }

@@ -423,10 +423,10 @@ impl HalfEdgeMesh {
         components
     }
 
-    /// The facets of `component` as a map of their own: the vertices they use in increasing
-    /// order, each triangle's corners in their original order, with the parent's sources, UVs
-    /// and hard angle. Also the parent vertex of each new vertex.
-    pub fn sub_map(&self, component: &Component) -> Result<(HalfEdgeMesh, Vec<u32>), String> {
+    /// The facets of `component` as triangles of their own: the vertices they use in increasing
+    /// order, each triangle's corners in their original order, with the parent's sources and
+    /// UVs. Also the parent vertex of each new vertex.
+    pub fn sub_triangles(&self, component: &Component) -> Result<SubTriangles, String> {
         let mut used = vec![false; self.vertices.len()];
         for &f in &component.facets {
             for e in self.facet_edges(f) {
@@ -471,12 +471,34 @@ impl HalfEdgeMesh {
             triangles.push(tri);
             uvs.push(uv);
         }
-        let desc = Triangles {
-            positions: &positions,
-            triangles: &triangles,
-            sources: Some(&sources),
-            uvs: Some(&uvs),
-        };
-        Ok((HalfEdgeMesh::create(&desc, self.hard_angle)?, parents))
+        Ok(SubTriangles {
+            positions,
+            triangles,
+            uvs,
+            sources,
+            parents,
+        })
     }
+
+    /// The facets of `component` as a map of their own ([`Self::sub_triangles`]) with the
+    /// parent's hard angle, and the parent vertex of each new vertex (vertices split apart as
+    /// separate fans come after these).
+    pub fn sub_map(&self, component: &Component) -> Result<(HalfEdgeMesh, Vec<u32>), String> {
+        let sub = self.sub_triangles(component)?;
+        let desc = Triangles {
+            positions: &sub.positions,
+            triangles: &sub.triangles,
+            sources: Some(&sub.sources),
+            uvs: Some(&sub.uvs),
+        };
+        Ok((HalfEdgeMesh::create(&desc, self.hard_angle)?, sub.parents))
+    }
+}
+
+pub struct SubTriangles {
+    pub positions: Vec<[f32; 3]>,
+    pub triangles: Vec<[u32; 3]>,
+    pub uvs: Vec<[[f32; 2]; 3]>,
+    pub sources: Vec<u32>,
+    pub parents: Vec<u32>,
 }

@@ -7,10 +7,11 @@
 //! triangle comes from, and UV0 per triangle corner. The output is UV2 per triangle corner.
 //!
 //! The unwrap fits the mesh into a unit cube and welds it ([`cleanup`]), builds a half-edge map
-//! ([`mesh`]), segments each connected part into charts ([`segment`]), lays each chart flat from
-//! corrected angles by least squares and checks it ([`param`]), cuts a chart that overlaps
-//! itself, and packs the charts ([`pack`]). Not reproduced yet (the mesh warns and keeps the
-//! file's UV2): parts of more than 100 triangles, degenerate and non-manifold triangles.
+//! ([`mesh`]), segments each connected part into charts ([`segment`]; a part of more than 100
+//! triangles first on a simplified copy, [`simplify`]), lays each chart flat from corrected
+//! angles by least squares and checks it ([`param`]), cuts a chart that overlaps itself, and
+//! packs the charts ([`pack`]). Not reproduced yet (the mesh warns and keeps the file's UV2): degenerate
+//! and non-manifold triangles.
 
 use super::SecondaryUvSettings;
 
@@ -20,6 +21,7 @@ mod mesh;
 mod pack;
 mod param;
 mod segment;
+mod simplify;
 mod sort;
 
 /// The mesh the unwrap works on.
@@ -121,10 +123,11 @@ fn parametrize(
     params: &UnwrapParams,
     charts: &mut Vec<param::Chart>,
 ) -> Result<(), String> {
-    if component.facets.len() > 100 {
-        return Err("a connected part has more than 100 triangles (not supported yet)".into());
-    }
-    let segments = segment::segment(map, &component)?;
+    let segments = if component.facets.len() > 100 {
+        segment_large(map, &component)?
+    } else {
+        segment::segment(map, &component, None)?
+    };
     // Pieces cut from a chart that overlapped itself are marked: one that overlaps itself again
     // is segmented further instead.
     let mut work: Vec<(mesh::Component, bool)> = segments.into_iter().map(|c| (c, false)).collect();
@@ -168,6 +171,57 @@ fn parametrize(
     }
     charts.extend(accepted);
     Ok(())
+}
+
+/// The segmentation of a component of more than 100 facets: the component is simplified to a
+/// tenth of its facets and segmented; the simplification is undone in three steps (two of a
+/// third of the collapses left, the last undoing the rest), each segmented again from the
+/// charts carried over.
+///
+/// The coarse meshes' facets are numbered by their position in the component and, like the
+/// charts carried over, used as facet numbers of the whole mesh: the Editor's UV2 comes out the
+/// same way when the large part is not the mesh's first (measured: Compound and Twins in
+/// tests/projects/lightmapuvs).
+fn segment_large(
+    map: &mesh::HalfEdgeMesh,
+    component: &mesh::Component,
+) -> Result<Vec<mesh::Component>, String> {
+    let n = component.facets.len();
+    let sub = map.sub_triangles(component)?;
+    let mut simplified = simplify::Simplification::new(&sub.positions, &sub.triangles, &sub.uvs)?;
+    let target = (n as f32 * 0.1f32) as i64 as usize;
+    let coarse = if target == 0 {
+        simplified.current()
+    } else {
+        simplified.with_facets(target)
+    };
+    let mut charts = segment::segment(map, &mesh::Component { facets: coarse }, None)?;
+    let step = simplified.applied() / 3;
+    let mut labels = vec![-1i32; n];
+    let mut count;
+    let mut round = 0;
+    loop {
+        count = charts.len();
+        labels.fill(-1);
+        for (i, chart) in charts.iter().enumerate() {
+            for &f in &chart.facets {
+                *labels
+                    .get_mut(f as usize)
+                    .ok_or("a coarse facet is outside the part")? = i as i32;
+            }
+        }
+        if round == 2 {
+            break;
+        }
+        simplified.refine(&mut labels, step);
+        let finer = mesh::Component {
+            facets: simplified.current(),
+        };
+        charts.extend(segment::segment(map, &finer, Some((count, &labels)))?);
+        round += 1;
+    }
+    simplified.refine(&mut labels, usize::MAX);
+    segment::segment(map, component, Some((count, &labels)))
 }
 
 #[cfg(test)]

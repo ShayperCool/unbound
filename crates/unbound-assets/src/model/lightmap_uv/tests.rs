@@ -463,3 +463,42 @@ fn trigonometry_matches_the_reference_points() {
     assert!((math::ln(2.5) - 2.5f64.ln()).abs() < 1e-12);
     assert!((math::exp(-1.3) - (-1.3f64).exp()).abs() < 1e-12);
 }
+
+#[test]
+fn simplifies_a_large_part_as_before() {
+    // A flat 10×10 grid of quads without UVs, simplified to a tenth of its 200 triangles: a
+    // regression check of the collapses Unbound chooses (their effect on UV2 is measured in
+    // tests/projects/lightmapuvs).
+    let mut positions = Vec::new();
+    for j in 0..11 {
+        for i in 0..11 {
+            positions.push([(i as f64 / 10.0) as f32, (j as f64 / 10.0) as f32, 0.0]);
+        }
+    }
+    let mut triangles = Vec::new();
+    for j in 0..10u32 {
+        for i in 0..10u32 {
+            let (a, c) = (j * 11 + i, j * 11 + i + 11);
+            triangles.push([a, a + 1, c + 1]);
+            triangles.push([a, c + 1, c]);
+        }
+    }
+    let uvs = vec![[[0.0f32; 2]; 3]; triangles.len()];
+    let mut simplified = simplify::Simplification::new(&positions, &triangles, &uvs).unwrap();
+    assert_eq!(simplified.applied(), 118);
+    let coarse = simplified.with_facets(20);
+    assert_eq!(
+        coarse,
+        [
+            173, 175, 177, 178, 179, 181, 183, 185, 187, 189, 190, 191, 192, 193, 194, 195, 196,
+            197, 198, 199
+        ]
+    );
+    let mut labels = vec![-1; triangles.len()];
+    for &f in &coarse {
+        labels[f as usize] = (f % 3) as i32;
+    }
+    simplified.refine(&mut labels, usize::MAX);
+    assert_eq!(simplified.current().len(), 200);
+    assert!(labels.iter().all(|&l| (0..3).contains(&l)));
+}

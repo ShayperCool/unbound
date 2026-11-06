@@ -157,6 +157,34 @@ impl<'a> Segmentation<'a> {
         }
     }
 
+    /// `count` charts, facets in the chart `labels` gives them, each chart fitted and seeded
+    /// (charts left empty are dropped).
+    fn start_from(&mut self, count: usize, labels: &[i32]) {
+        let n = self.assign.len();
+        self.assign.copy_from_slice(&labels[..n]);
+        self.prev.copy_from_slice(&labels[..n]);
+        self.prev2.copy_from_slice(&labels[..n]);
+        let first = self.map.infos[0];
+        for _ in 0..count {
+            self.charts.push(Chart {
+                normal: first.normal,
+                centroid: first.centroid,
+                seed: 0,
+                count: 0,
+                area: 0.0,
+                queue: Vec::new(),
+                dirty: false,
+            });
+        }
+        for &label in &labels[..n] {
+            if label >= 0 {
+                self.charts[label as usize].count += 1;
+            }
+        }
+        self.fit_charts();
+        self.reseed();
+    }
+
     fn priority(&self, facet: u32, chart: usize) -> f64 {
         let info = &self.map.infos[facet as usize];
         let c = &self.charts[chart];
@@ -611,13 +639,28 @@ impl<'a> Segmentation<'a> {
     }
 }
 
-/// The segmentation of a component of up to a hundred facets.
-pub fn segment(parent: &HalfEdgeMesh, component: &Component) -> Result<Vec<Component>, String> {
+/// The charts of a component: grown from seeds and refined by Lloyd iterations, or, given the
+/// chart of each facet (by position in the component) from a coarser segmentation, refined from
+/// those by one iteration; then neighbours with similar normals merge.
+pub fn segment(
+    parent: &HalfEdgeMesh,
+    component: &Component,
+    labels: Option<(usize, &[i32])>,
+) -> Result<Vec<Component>, String> {
     let mut s = Segmentation::new(parent, component, 0.02, 0.01)?;
-    s.seed_charts(GROW_ERROR);
-    s.drop_small_charts();
-    for _ in 0..50 {
-        if !s.lloyd(4, LLOYD_ERROR) {
+    let (rounds, iterations) = match labels {
+        None => {
+            s.seed_charts(GROW_ERROR);
+            s.drop_small_charts();
+            (50, 4)
+        }
+        Some((count, labels)) => {
+            s.start_from(count, labels);
+            (1, 1)
+        }
+    };
+    for _ in 0..rounds {
+        if !s.lloyd(iterations, LLOYD_ERROR) {
             break;
         }
     }

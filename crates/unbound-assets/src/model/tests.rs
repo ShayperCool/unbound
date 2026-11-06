@@ -502,7 +502,7 @@ fn lightmap_uvs_warn_for_polygons_of_more_than_four_corners() {
 }
 
 #[test]
-fn lightmap_uvs_warn_for_parts_they_do_not_reproduce() {
+fn lightmap_uvs_unwrap_parts_of_more_than_a_hundred_triangles() {
     // A connected part of more than a hundred triangles (a 10×6 grid of quads).
     let mut obj = String::from("o Grid\n");
     for y in 0..7 {
@@ -522,12 +522,16 @@ fn lightmap_uvs_warn_for_parts_they_do_not_reproduce() {
         .import(Path::new("Grid.obj"), obj.as_bytes(), &on)
         .unwrap();
     assert!(
-        model
-            .warnings
-            .iter()
-            .any(|w| w.contains("lightmap UVs are not generated")
-                && w.contains("more than 100 triangles")),
+        !model.warnings.iter().any(|w| w.contains("lightmap UVs")),
         "{:?}",
         model.warnings
     );
+    let mesh = &model.meshes[0];
+    assert_eq!(mesh.uvs.len(), 2);
+    for uv in &mesh.uvs[1] {
+        assert!(
+            (0.0..=1.0).contains(&uv[0]) && (0.0..=1.0).contains(&uv[1]),
+            "{uv:?}"
+        );
+    }
 }
