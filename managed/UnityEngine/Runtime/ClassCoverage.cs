@@ -65,7 +65,6 @@ namespace Unbound.Runtime
         static readonly Dictionary<int, string> s_Ignored = new Dictionary<int, string>
         {
             [1002] = "EditorExtensionImpl: editor bookkeeping of old prefab data, no runtime object",
-            [181963792] = "Preset: the Editor applies presets when it creates or resets objects, not in Play mode",
         };
 
         /// <summary>Scene settings Unbound does not read, ignored while they hold only the
@@ -96,8 +95,12 @@ namespace Unbound.Runtime
             return (ClassReading.Unread, type.FullName + " does not read its data: it loads with default settings");
         }
 
+        static readonly System.Collections.Concurrent.ConcurrentDictionary<Type, bool> s_Reads = new System.Collections.Concurrent.ConcurrentDictionary<Type, bool>();
+
         /// <summary>Whether a registered class reads its documents' data.</summary>
-        static bool Reads(Type type)
+        static bool Reads(Type type) => s_Reads.GetOrAdd(type, ReadsUncached);
+
+        static bool ReadsUncached(Type type)
         {
             if (typeof(ScriptableObject).IsAssignableFrom(type) || typeof(ISerializedAsset).IsAssignableFrom(type)) return true;
             if (!typeof(Component).IsAssignableFrom(type)) return false;
@@ -127,8 +130,10 @@ namespace Unbound.Runtime
             {
                 if (!s_Warned.Add(doc.ClassId)) return;
             }
-            Debug.LogWarning($"Unbound: {doc.TypeName} (class {doc.ClassId}) in {path} is not read: {detail}. " +
-                "`unbound doctor` lists the project's files with such objects.");
+            // The doctor scans the project's own files (scenes, prefabs, assets), not bundles or settings.
+            bool projectFile = path != null && (path.StartsWith("Assets/", StringComparison.Ordinal) || path.StartsWith("Packages/", StringComparison.Ordinal));
+            Debug.LogWarning($"Unbound: {doc.TypeName} (class {doc.ClassId}) in {path} is not read: {detail}." +
+                (projectFile ? " `unbound doctor` lists the project's files with such objects." : ""));
         }
 
         /// <summary>One class found in the project's files (<c>unbound doctor</c>).</summary>
@@ -216,6 +221,19 @@ namespace Unbound.Runtime
             return true;
         }
 
+        /// <summary>Orders release names by their numbers (6000.0.9f1 before 6000.0.71f1).</summary>
+        static int CompareVersions(string a, string b)
+        {
+            var x = System.Text.RegularExpressions.Regex.Matches(a, "[0-9]+");
+            var y = System.Text.RegularExpressions.Regex.Matches(b, "[0-9]+");
+            for (int i = 0; i < Math.Min(x.Count, y.Count); i++)
+            {
+                int c = long.Parse(x[i].Value).CompareTo(long.Parse(y[i].Value));
+                if (c != 0) return c;
+            }
+            return x.Count.CompareTo(y.Count);
+        }
+
         internal sealed class UnityClass
         {
             public string Name;
@@ -237,7 +255,7 @@ namespace Unbound.Runtime
                 if (!name.StartsWith(prefix, StringComparison.Ordinal)) continue;
                 var version = name.Substring(prefix.Length, name.Length - prefix.Length - ".jsonl".Length);
                 if (version == release) { best = name; break; }
-                if (family != null && version.StartsWith(family, StringComparison.Ordinal) && (best == null || string.CompareOrdinal(name, best) > 0)) best = name;
+                if (family != null && version.StartsWith(family, StringComparison.Ordinal) && (best == null || CompareVersions(version, best.Substring(prefix.Length)) > 0)) best = name;
             }
             if (best == null) return null;
             var table = new SortedDictionary<int, UnityClass>();

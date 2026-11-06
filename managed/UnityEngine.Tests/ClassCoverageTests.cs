@@ -80,7 +80,9 @@ namespace Unbound.Tests
             var baked = Listed(196, "NavMeshSettings", new[] { "m_NavMeshData" }, new[] { "m_NavMeshData" });
             Assert.Equal("Unread", baked.Reading);
             Assert.Equal("NavMeshSettings", baked.UnityName);
-            Assert.Equal("Ignored", Listed(181963792, "Preset", new[] { "m_Properties" }).Reading);
+            Assert.Equal("Ignored", Listed(1002, "EditorExtensionImpl", new[] { "m_Object" }).Reading);
+            // Editor scripts can apply a preset: it stays loud.
+            Assert.Equal("Unknown", Listed(181963792, "Preset", new[] { "m_Properties" }).Reading);
         }
 
         [Fact]
