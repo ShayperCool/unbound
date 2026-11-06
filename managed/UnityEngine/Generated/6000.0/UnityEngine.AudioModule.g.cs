@@ -23,20 +23,6 @@ namespace UnityEngine
         public global::UnityEngine.PlayableSettings settings { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ActivePlayable.settings"); return default; } }
         public global::UnityEngine.Playables.PlayableHandle clipPlayableHandle { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ActivePlayable.clipPlayableHandle"); return default; } }
     }
-    [global::UnityEngine.@RequireComponent(typeof(global::UnityEngine.AudioBehaviour))]
-    [global::Unbound.Stub]
-    public unsafe sealed partial class AudioChorusFilter : global::UnityEngine.Behaviour
-    {
-        [global::Unbound.Stub] public AudioChorusFilter() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.ctor"); }
-        public float dryMix { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.dryMix"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.dryMix"); } }
-        public float wetMix1 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.wetMix1"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.wetMix1"); } }
-        public float wetMix2 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.wetMix2"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.wetMix2"); } }
-        public float wetMix3 { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.wetMix3"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.wetMix3"); } }
-        public float delay { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.delay"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.delay"); } }
-        public float rate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.rate"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.rate"); } }
-        public float depth { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.depth"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.depth"); } }
-        [global::System.Obsolete("Warning! Feedback is deprecated. This property does nothing.")] public float feedback { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.feedback"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioChorusFilter.feedback"); } }
-    }
     unsafe partial class AudioReverbFilter
     {
         [global::System.Obsolete("Warning! roomRolloffFactor is no longer supported.")] public float roomRolloffFactor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioReverbFilter.roomRolloffFactor"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.AudioReverbFilter.roomRolloffFactor"); } }
