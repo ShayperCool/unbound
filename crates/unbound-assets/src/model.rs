@@ -1839,8 +1839,8 @@ impl<'a> Builder<'a> {
     /// UV2 per triangle corner from the lightmap unwrap of the whole mesh. Unity unwraps the
     /// mesh as it holds it after triangulation and welding: the control points in file order (an
     /// OBJ's in the order the faces' corners first use them) with each position kept once, the
-    /// triangles in face order, each its own source polygon (measured:
-    /// tests/projects/lightmapuvs).
+    /// triangles in face order, each its own source polygon (inferred; checked by the unwrap
+    /// against tests/projects/lightmapuvs).
     fn lightmap_uvs(
         &self,
         mesh: &ufbx::Mesh,
@@ -1871,7 +1871,8 @@ impl<'a> Builder<'a> {
                 positions.len() as u32 - 1
             };
             index[v as usize] = if self.settings.weld_vertices {
-                *first.entry(p.map(f32::to_bits)).or_insert_with(add)
+                // Compared as floats: -0 and 0 weld.
+                *first.entry(p.map(|c| (c + 0.0).to_bits())).or_insert_with(add)
             } else {
                 add()
             };
@@ -2409,8 +2410,8 @@ struct LightmapUvs {
 /// The corners (indices into the mesh's index space) of a face's triangles, in Unity's winding:
 /// mirroring X flips the handedness, so the polygon's corners are reversed with the first kept.
 /// Triangles and quads are split as Unity does, a quad into (0, 1, 2) and (0, 2, 3) of the
-/// reversed corners; larger polygons are triangulated by ufbx (measured:
-/// tests/projects/lightmapuvs). Returns the triangle count.
+/// reversed corners (measured with convex quads: tests/projects/lightmapuvs); larger polygons are
+/// triangulated by ufbx, unlike Unity's FBX reader. Returns the triangle count.
 fn unity_triangles(mesh: &ufbx::Mesh, face: ufbx::Face, out: &mut [u32]) -> usize {
     if face.num_indices == 3 || face.num_indices == 4 {
         let b = face.index_begin;

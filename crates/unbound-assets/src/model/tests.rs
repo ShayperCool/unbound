@@ -414,3 +414,58 @@ maskType: 0
     let none = ClipRange::read(&meta("name: A\nmaskType: 3\ntransformMask:\n- path: A\n  weight: 0\n"));
     assert!(none.mask.keeps("A"));
 }
+
+#[test]
+fn triangles_and_quads_split_like_unity() {
+    // A kite whose short diagonal is 1-3: Unity still splits at 0-2 of the reversed corners,
+    // giving (c0, c3, c2) and (c0, c2, c1) (measured: tests/projects/lightmapuvs).
+    let obj = "o Kite\nv 0 0 0\nv 1 0 0\nv 3 3 0\nv 0 1 0\nv 5 0 0\nv 6 0 0\nv 5 1 0\nf 1 2 3 4\nf 5 6 7\n";
+    let model = ModelImporter
+        .import(Path::new("Kite.obj"), obj.as_bytes(), &Value::Null)
+        .unwrap();
+    let mesh = &model.meshes[0];
+    // Mirrored on X; vertices in the order the corners first appear.
+    assert_eq!(
+        mesh.positions,
+        vec![
+            [-0.0, 0.0, 0.0],
+            [-0.0, 1.0, 0.0],
+            [-3.0, 3.0, 0.0],
+            [-1.0, 0.0, 0.0],
+            [-5.0, 0.0, 0.0],
+            [-5.0, 1.0, 0.0],
+            [-6.0, 0.0, 0.0],
+        ]
+    );
+    assert_eq!(mesh.submeshes, vec![vec![0, 1, 2, 0, 2, 3, 4, 5, 6]]);
+}
+
+#[test]
+fn lightmap_uvs_read_their_settings_and_warn_until_unwrapped() {
+    let obj = "o Quad\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nvt 0 0\nvt 1 0\nvt 1 1\nvt 0 1\nf 1/1 2/2 3/3 4/4\n";
+    let on = meta(
+        "ModelImporter:\n  serializedVersion: 22200\n  meshes:\n    generateSecondaryUV: 1\n    secondaryUVHardAngle: 30\n    secondaryUVMarginMethod: 1\n    secondaryUVMinLightmapResolution: 10\n",
+    );
+    let settings = ModelSettings::read(&on).secondary_uv.unwrap();
+    assert_eq!(settings.hard_angle, 30.0);
+    assert_eq!((settings.angle_distortion, settings.area_distortion), (8.0, 15.0));
+    assert_eq!(settings.margin_method, 1);
+    assert_eq!(settings.min_lightmap_resolution, 10.0);
+    let model = ModelImporter
+        .import(Path::new("Quad.obj"), obj.as_bytes(), &on)
+        .unwrap();
+    assert!(
+        model
+            .warnings
+            .iter()
+            .any(|w| w.contains("lightmap UVs are not generated")),
+        "{:?}",
+        model.warnings
+    );
+    let off = meta("ModelImporter:\n  meshes:\n    generateSecondaryUV: 0\n");
+    assert!(ModelSettings::read(&off).secondary_uv.is_none());
+    let model = ModelImporter
+        .import(Path::new("Quad.obj"), obj.as_bytes(), &off)
+        .unwrap();
+    assert!(!model.warnings.iter().any(|w| w.contains("lightmap")));
+}

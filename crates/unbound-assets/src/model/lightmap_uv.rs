@@ -34,7 +34,8 @@ pub struct UnwrapParams {
 impl UnwrapParams {
     /// The parameters for `input`: the distortions in percent become fractions; the margin is
     /// the manual one in pixels of a 1024 map, or calculated from the mesh's area so that charts
-    /// stay apart at the minimum lightmap resolution and object scale.
+    /// stay apart at the minimum lightmap resolution and object scale. The unwrap scales down a
+    /// margin too large for its charts (small meshes get margins above 1).
     pub fn new(settings: &SecondaryUvSettings, input: &UnwrapInput) -> Result<Self, String> {
         let pack_margin = if settings.margin_method == 1 {
             let mut area = 0f32;
@@ -51,8 +52,8 @@ impl UnwrapParams {
             let margin =
                 1.0 / (settings.min_object_scale * settings.min_lightmap_resolution * size);
             let margin = if 0.0001 <= margin { margin } else { 0.0001 } * 3.0;
-            if margin == 0.0 {
-                return Err("the calculated pack margin is zero".into());
+            if !margin.is_finite() {
+                return Err("the mesh has no area to calculate the pack margin from".into());
             }
             margin
         } else {
