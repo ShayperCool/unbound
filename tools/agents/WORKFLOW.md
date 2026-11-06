@@ -52,13 +52,15 @@ Its full instructions are in [ORCHESTRATOR.md](ORCHESTRATOR.md).
    - A new probe declares its land-gate command (the one you pass to `land.py --probe`) in
      `tests/projects/<probe>/gate.json`, with the release as `$UNBOUND_PROBE_UNITY_VERSION`, so
      the sheriff's suite runs it (format: `tools/agents/suite.py`'s docstring); `suite.py --list` shows it.
-     `land.py` and `suite.py` set that variable (the exported value, else the release of the probe
-     named in the command, else `tests/probe_paths.py`'s default, 6000.0.71f1).
+     `land.py` sets that variable for each `--probe` command (the exported value, else the release
+     of the probe named in the command, else `tests/probe_paths.py`'s default, 6000.0.71f1);
+     `suite.py` sets it to the run's `--release` (the exported value, else that default).
    - The gate command runs the engine only and compares it with `Reference/` as committed. The
      Editor is only for recording a reference. When the engine run needs files the Editor authors
      (mixer assets, scenes, GUIDs), commit them once with `tests/authored_project.py record` and
      assemble them in the gate. `suite.py` fails a step that starts the Editor or queues an Editor
-     job, and `tests/editor_runner.py` refuses to start one under `UNBOUND_SUITE_NO_EDITOR`.
+     job (Linux), and `tests/editor_runner.py` refuses to start one under `UNBOUND_SUITE_NO_EDITOR`.
+     `land.py` does not check this itself: the sheriff's suite run does.
 4. Implement:
    - Build with `python3 tools/build.py -- build --release --locked -p unbound`.
    - Run the managed tests and the probe against the reference. Iterate until it matches.

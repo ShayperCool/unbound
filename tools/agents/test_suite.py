@@ -357,18 +357,23 @@ class ReleaseTests(unittest.TestCase):
             os.environ[land.RELEASE_VARIABLE] = '2022.3.10f1'
             self.assertEqual(land.probe_release('python3 tests/projects/mixerduck/run.py', root), '2022.3.10f1')
 
-    def test_the_probe_step_gets_the_release(self):
-        with tempfile.TemporaryDirectory() as temp:
-            gate = land.Gate(Path(temp), 'HEAD', [], False, Path(temp)/'gate.log')
-            seen = []
-            gate.step = lambda name, command, shell=False, env=None: seen.append(env) or 0
-            with unittest.mock.patch.dict(os.environ):
-                os.environ.pop(land.RELEASE_VARIABLE, None)
-                gate.probes = ['echo']
-                for index, probe in enumerate(gate.probes, 1):  # the loop of Gate.run, after the build
-                    release = land.probe_release(probe, gate.worktree)
-                    gate.step(f'probe {index}', probe, shell=True, env=dict(gate.env, **{land.RELEASE_VARIABLE: release}))
-            self.assertEqual(seen[0][land.RELEASE_VARIABLE], '6000.0.71f1')
+    def test_every_probe_command_gets_the_release(self):
+        with tempfile.TemporaryDirectory() as temp, unittest.mock.patch.dict(os.environ):
+            os.environ.pop(land.RELEASE_VARIABLE, None)
+            probes = ['test "$UNBOUND_PROBE_UNITY_VERSION" = 6000.0.71f1',
+                      'python3 -c "import os,sys; sys.exit(os.environ[\'UNBOUND_PROBE_UNITY_VERSION\'] != \'6000.0.71f1\')"']
+            gate = land.Gate(Path(__file__).resolve().parents[2], 'HEAD', probes, False, Path(temp)/'gate.log')
+            with contextlib.redirect_stdout(io.StringIO()):
+                gate.run_probes()  # a probe that exits nonzero ends the gate with exit 5
+            os.environ[land.RELEASE_VARIABLE] = '2022.3.10f1'
+            gate.probes = ['test "$UNBOUND_PROBE_UNITY_VERSION" = 2022.3.10f1']
+            with contextlib.redirect_stdout(io.StringIO()):
+                gate.run_probes()
+            gate.probes = ['test -n "$NOT_THE_RELEASE_${UNBOUND_PROBE_UNITY_VERSION:?}" && exit 1']
+            with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
+                with self.assertRaises(SystemExit) as stop:
+                    gate.run_probes()
+            self.assertEqual(stop.exception.code, 5)
 
 
 class StubGateTests(unittest.TestCase):

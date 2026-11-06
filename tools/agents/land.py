@@ -184,6 +184,10 @@ class Gate:
             if self.step('rust tests', [*build_py, '--', 'test', '--release', '--locked', *args]):
                 self.fail('rust tests')
 
+        self.run_probes()
+
+    def run_probes(self):
+        """Each --probe command, with the release it runs for in $UNBOUND_PROBE_UNITY_VERSION."""
         for index, probe in enumerate(self.probes, 1):
             release = probe_release(probe, self.worktree)
             if self.step(f'probe {index} ({release}): {probe[:80]}', probe, shell=True,

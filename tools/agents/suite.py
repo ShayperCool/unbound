@@ -27,8 +27,9 @@ default: the pool's engine slots + 2); the launcher's pools bound the machine.
 
 No step may start the Unity Editor: a suite run compares the engine with the committed Reference/
 and never records one. Every step gets UNBOUND_SUITE_NO_EDITOR=1, which tests/editor_runner.py
-honours by refusing, and a watcher stops any step whose processes start an Editor or queue an Editor
-job at the launcher; that probe fails with "step N (kind) launched the Unity Editor: ...".
+honours by refusing, and on Linux a watcher (over /proc) stops any step whose processes start an
+Editor or queue an Editor job at the launcher; that probe fails with "step N (kind) launched the
+Unity Editor: ...".
 
 Statuses:
   pass       every step exited 0 and the comparator accepted the capture
