@@ -403,7 +403,7 @@ impl CompiledPrograms {
         let mut bytes = vec![0u8; program.uniform_size as usize];
         let mut dynamic = Vec::new();
         for (i, (u, source)) in program.uniforms.iter().zip(&gpu.plan).enumerate() {
-            if u.count != 1 {
+            if u.count != 1 || u.stride > 0 {
                 continue;
             }
             match static_value(&u.name, *source, material, lab, linear) {
@@ -945,7 +945,7 @@ fn static_value(
 /// Writes one uniform (not an array) for a draw.
 fn write_uniform(program: &Compiled, plan: &[Source], i: usize, v: &DrawValues, out: &mut [u8]) {
     let u = &program.uniforms[i];
-    if u.count != 1 {
+    if u.count != 1 || u.stride > 0 {
         return;
     }
     let element = v
@@ -1001,7 +1001,7 @@ fn write_value(u: &unbound_shaders::Uniform, value: &Value, out: &mut [u8]) {
 /// With `only`, just those uniforms (and the arrays and constant buffers).
 fn fill(program: &Compiled, plan: &[Source], v: &DrawValues, out: &mut [u8], only: Option<&[u32]>) {
     // Arrays: the draw's or material's array property, else the global one.
-    for u in program.uniforms.iter().filter(|u| u.count > 1) {
+    for u in program.uniforms.iter().filter(|u| u.stride > 0) {
         let value = match v.get(&u.name) {
             Some(value @ PropertyValue::Array { .. }) => Some(value),
             _ => v
@@ -1271,6 +1271,31 @@ mod tests {
             f32::from_le_bytes(out[192..196].try_into().unwrap()),
             0.25,
             "ordinary uniform arrays retain every element"
+        );
+        instanced.uniforms.push(Uniform {
+            count: 1,
+            stride: 16,
+            ..uniform("_Single", 208, 4, 1)
+        });
+        instanced.uniform_size = 224;
+        plan.push(Source::Named);
+        let overrides = [(
+            "_Single".into(),
+            PropertyValue::Array {
+                components: 4,
+                data: vec![0.5; 4],
+            },
+        )];
+        let instance = DrawValues {
+            overrides: &overrides,
+            ..values
+        };
+        out.resize(224, 0);
+        fill(&instanced, &plan, &instance, &mut out, None);
+        assert_eq!(
+            f32::from_le_bytes(out[208..212].try_into().unwrap()),
+            0.5,
+            "a one-element uniform array is still an array"
         );
     }
 
