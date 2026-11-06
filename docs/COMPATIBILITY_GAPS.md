@@ -22,6 +22,7 @@ to eliminate a listed insignificant residual.
 
 | Probe / release | Keys or region | Raw difference | Suspected cause and disposition |
 |---|---|---|---|
+| stubdefaults / 6000.0.71f1 | `Camera.CalculateObliqueMatrix` | Elements m00, m12, m22, m23 differ by up to 4.5e-7 relative (`-0.74468708` versus `-0.744687438`) | Float rounding of the inverse projection evaluated in a different order. The comparator accepts this key within 1e-6 relative and prints it; every other key is exact. |
 | humanoid / 6000.0.71f1 | `blendTransition.step18.body` pivotWeight, pivotPosition; `blend*.step5`, `blendTransition.step24`, `blendAdditive.step17`, `mask*.step5`/`step17`, `maskOverride{UpperRoot,NoFootIK}.step16`, `additiveTree.step5`/`step17`, `settings*.step4`/`step5`/`step17`, `settingsFeetRight.step11` `.motion` velocity; `settingsBakeOffset.step15`, `settingsCycle.step23` `.body` pivotPosition[0] (4.6e-4 of 1.86, 4.0e-4 of 0.42, pivotWeight matching) | pivotWeight `0.4642` versus `0.4632` and pivotPosition up to `0.056` (of about 31) at the update where the clip's motion reverses (both feet slips about 1e-7); velocity components up to 3.8e-4 absolute (7e-3 relative on a component of about 0.055 beside one of about 52) where the step is small | Float precision: the pivot weight is the ratio of two near-zero slips there, and the next update matches again; velocity is the small delta over the delta time; the two settings pivotPositions differ by about 4e-4 on their x component, which is small beside the others (about 26), with the pivot weight matching. No effect on the root's path (rootPosition, deltaPosition match). |
 | lightprobes / 6000.0.71f1 | `additive tetrahedralized occlusion 3`; `unloaded occlusion 3` | Candidate `0.99999994` versus Native `1`, one float step below 1, absolute difference `5.960464477539063e-8` per differing component | Cell vertex order and float32 weight accumulation. User-classified nonblocking precision residual; no observed visible or logic effect in the measured controls. The two strict failing keys and raw components remain in the admitted measured package. Evidence: `validation/runs/lightprobes-occlusion/RECEIPT.md`; functional gaps remain in the light-probe row below. |
 | lightprobes / 6000.0.71f1 | `main calculated 3`; `main retetrahedralized calculated 3`; `{additive tetrahedralized, unloaded} {interpolated, calculated, renderer interpolated} 8` (8 retained keys) | Recorded maximum error `7.450580596923828e-9`, previously `3.725290298461914e-9`; one float step | Cell vertex order and float32 accumulation. Nonblocking numeric residuals; the three changed integer query-index tokens are excluded. Raw table: `validation/runs/claude-fresh-20261101b/lp-integration/comparisons/lightprobes-raw.json`. The separate Single-load count and creation-ownership regressions are closed by the measured controls; the other functional gaps remain open. |
@@ -54,8 +55,8 @@ Game runs keep hitting features that are missing *without a warning* (physical c
 | Message looked up, never sent | `OnParticleUpdateJobScheduled` (`Messages.cs` `s_NotSent` lists them) | Messages are not API calls: `api-gaps` cannot see them |
 | Overload drops a parameter | `Graphics.ConvertTexture(src, srcElement, dst, dstElement)`, `Mesh.Set*(..., flags)`, stereo-eye overloads (Blit slices, `LogOption`, `SetPropertyBlock` index done) | Forwarded to the simpler overload |
 | Asset class with a ClassId but no reader | `.renderTexture` (always 256×256 RGBA8, no depth) | `Loading.ReadAsset` default-constructs it |
-| Stub default not neutral | `ScalableBufferManager.widthScaleFactor` = 0 (Unity 1), `CalculateObliqueMatrix` = zero matrix, `Microphone.devices` = null | Warns once, then the wrong value keeps flowing |
-| Generated stub events | `TerrainCallbacks.*` | Generated as `add { } remove { }` without `NotImplemented` |
+| Stub default not neutral | done (`stubdefaults`): value-returning stubs take the Editor's answer from `StubDefaults.cs` where it is a constant; the named examples are hand-written | Members whose answer is not a constant still return the default after their warning (see the tooling item) |
+| Generated stub events | done: subscribing warns that the event is never raised | |
 | Claimed capability | `SystemInfo.supportsTextureWrapMirrorOnce` (MirrorOnce samples as Mirror; `supports3DRenderTextures` now answers false) | Packages enable a path that then draws nothing |
 | Warn once, then silent | SpriteMask, reflection probes | A second scene shows nothing in the log |
 
@@ -67,8 +68,17 @@ Each of these turns a class of silent gaps into a list that keeps itself up to d
       and an `[EditorFaithful("why")]` marker for real no-ops; every hand-written empty body,
       constant answer, dropped setter and never-raised event carries one of the two (or is
       implemented). `unbound api-check` fails (category `silent`) on any that carries neither.
-- [ ] Stub generator: events warn on `add`; value-returning stubs take the Editor's answer from a
-      small table where 0/null is wrong (`ScalableBufferManager`, `Microphone.devices`, ...).
+- [x] Stub generator: events warn on `add`; value-returning stubs take the Editor's answer from a
+      small table where 0/null is wrong (`managed/Unbound.ApiTools/StubDefaults.cs`, measured by
+      `stubdefaults`; gen-stubs reports entries no stub returns any more). Still returning the
+      default because the answer needs a real implementation: `UnityEngine.Device.Screen`/
+      `Application`/`SystemInfo` (forward to the non-Device classes in the Editor),
+      `GarbageCollector.isIncremental` (player setting), `Caching` (`cacheCount` 1 and
+      `defaultCache`), the `QualitySettings` terrain and texture streaming settings, `Physics2D.jobOptions`
+      and `GraphicsSettings` asset values, `Time.captureDeltaTimeRational`, serialized component
+      values (`AudioReverbFilter`/`AudioChorusFilter`/`AudioReverbZone`, physical camera,
+      `ArticulationBody`), and the stubbed `SystemInfo` caps (`maxGraphicsBufferSize`,
+      `maxComputeBufferInputs*`, a rendering decision).
 - [ ] Message coverage: Unity's full MonoBehaviour/UIBehaviour message list against the messages
       the engine sends; `unbound doctor` lists the project's scripts that define one never sent.
       Source ready, unvalidated (`runtime/message-coverage`): the 6000.0 MonoBehaviour,
