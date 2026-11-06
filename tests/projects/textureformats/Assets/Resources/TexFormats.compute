@@ -1,0 +1,30 @@
+// Kernels writing a 2x1 target: texel 0 gets A, texel 1 gets B (as the TexFormats shader's
+// passes do).
+#pragma kernel WriteNorm
+#pragma kernel WriteInt8
+#pragma kernel WriteUInt8
+#pragma kernel WriteInt16
+#pragma kernel WriteUInt16
+#pragma kernel WriteInt32
+#pragma kernel WriteUInt32
+
+RWTexture2D<float4> _Norm;
+RWTexture2D<int4> _Int;
+RWTexture2D<uint4> _UInt;
+
+#define PICK(id, a, b) ((id).x == 0 ? (a) : (b))
+
+[numthreads(2, 1, 1)] void WriteNorm(uint3 id : SV_DispatchThreadID)
+{ _Norm[id.xy] = PICK(id, float4(0.1234567, 0.7654321, 0.5, 0.6789), float4(1.25, -0.25, 0.000004, 0.33333334)); }
+[numthreads(2, 1, 1)] void WriteInt8(uint3 id : SV_DispatchThreadID)
+{ _Int[id.xy] = PICK(id, int4(-128, 127, -1, 5), int4(1, -2, 3, -4)); }
+[numthreads(2, 1, 1)] void WriteUInt8(uint3 id : SV_DispatchThreadID)
+{ _UInt[id.xy] = PICK(id, uint4(255, 0, 128, 7), uint4(1, 2, 3, 4)); }
+[numthreads(2, 1, 1)] void WriteInt16(uint3 id : SV_DispatchThreadID)
+{ _Int[id.xy] = PICK(id, int4(-32768, 32767, -2, 300), int4(1, -2, 3, -4)); }
+[numthreads(2, 1, 1)] void WriteUInt16(uint3 id : SV_DispatchThreadID)
+{ _UInt[id.xy] = PICK(id, uint4(65535, 0, 32768, 1234), uint4(1, 2, 3, 4)); }
+[numthreads(2, 1, 1)] void WriteInt32(uint3 id : SV_DispatchThreadID)
+{ _Int[id.xy] = PICK(id, int4(asint(0x80000000u), 2147483647, -3, 70000), int4(1, -2, 3, -4)); }
+[numthreads(2, 1, 1)] void WriteUInt32(uint3 id : SV_DispatchThreadID)
+{ _UInt[id.xy] = PICK(id, uint4(0xFFFFFFFFu, 0, 0x80000000u, 123456), uint4(1, 2, 3, 4)); }

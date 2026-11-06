@@ -409,6 +409,10 @@ def recipes(release):
                           env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'})]
         R[name][0].kind = 'compare'
         R[name][0].timeout = DRIVER_TIMEOUT
+    R['textureformats'] = [driver('run.py', 'verify', '--release', '{release}', '--label', '{label}',
+                                  env={'UNBOUND_CLI': '{cli}', 'UNBOUND_MANAGED_DIR': '{managed}'})]
+    R['textureformats'][0].kind = 'compare'
+    R['textureformats'][0].timeout = DRIVER_TIMEOUT
     R['screencapture'] = []
     for space in ('Linear', 'Gamma'):
         R['screencapture'] += [
