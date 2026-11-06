@@ -80,6 +80,13 @@ namespace UnityEngine.UIElements
 
         public void SetRootItems<T>(IList<TreeViewItemData<T>> rootItems) => SetRootItemsInternal(rootItems);
 
+        // The typed operations TreeView implements (Unity's signatures), declared here so that the
+        // hand-written code builds alone for `unbound gen-stubs`.
+        internal abstract void SetRootItemsInternal<T>(IList<TreeViewItemData<T>> rootItems);
+        private protected abstract IEnumerable<TreeViewItemData<T>> GetSelectedItemsInternal<T>();
+        private protected abstract T GetItemDataForIndexInternal<T>(int index);
+        private protected abstract T GetItemDataForIdInternal<T>(int id);
+
         public IEnumerable<int> GetRootIds()
         {
             var tree = uaTree;
@@ -478,6 +485,59 @@ namespace UnityEngine.UIElements
         public bool isExpanded { get; set; }
 
         public bool isAppliedToAllChildren { get; set; }
+    }
+
+    // The tree view controllers are still generated stubs. They are declared here with the stub
+    // members UaTreeController overrides, written as the generator writes them (they warn when
+    // called), so that the hand-written code builds alone for `unbound gen-stubs`; the generator adds
+    // the rest of each controller.
+    [global::Unbound.Stub]
+    public abstract partial class BaseTreeViewController : CollectionViewController
+    {
+        const string k_Type = "UnityEngine.UIElements.BaseTreeViewController.";
+
+        [global::Unbound.Stub]
+        public virtual IEnumerable<int> GetAllItemIds(IEnumerable<int> rootIds = null) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetAllItemIds)); return Array.Empty<int>(); }
+        [global::Unbound.Stub]
+        public virtual int GetParentId(int id) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetParentId)); return default; }
+        [global::Unbound.Stub]
+        public virtual IEnumerable<int> GetChildrenIds(int id) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetChildrenIds)); return Array.Empty<int>(); }
+        [global::Unbound.Stub]
+        public virtual int GetTreeItemsCount() { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetTreeItemsCount)); return default; }
+        [global::Unbound.Stub]
+        public virtual bool HasChildren(int id) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(HasChildren)); return default; }
+        [global::Unbound.Stub]
+        public virtual bool CanChangeExpandedState(int id) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(CanChangeExpandedState)); return default; }
+    }
+
+    [global::Unbound.Stub]
+    public abstract partial class TreeViewController : BaseTreeViewController
+    {
+        const string k_Type = "UnityEngine.UIElements.TreeViewController.";
+
+        [global::Unbound.Stub]
+        protected override VisualElement MakeItem() { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(MakeItem)); return default; }
+        [global::Unbound.Stub]
+        protected override void BindItem(VisualElement element, int index) => global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(BindItem));
+        [global::Unbound.Stub]
+        protected override void UnbindItem(VisualElement element, int index) => global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(UnbindItem));
+        [global::Unbound.Stub]
+        protected override void DestroyItem(VisualElement element) => global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(DestroyItem));
+    }
+
+    [global::Unbound.Stub]
+    public partial class DefaultTreeViewController<T> : TreeViewController
+    {
+        const string k_Type = "UnityEngine.UIElements.DefaultTreeViewController<T>.";
+
+        [global::Unbound.Stub]
+        public virtual TreeViewItemData<T> GetTreeViewItemDataForId(int id) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetTreeViewItemDataForId)); return default; }
+        [global::Unbound.Stub]
+        public virtual TreeViewItemData<T> GetTreeViewItemDataForIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetTreeViewItemDataForIndex)); return default; }
+        [global::Unbound.Stub]
+        public virtual T GetDataForId(int id) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetDataForId)); return default; }
+        [global::Unbound.Stub]
+        public virtual T GetDataForIndex(int index) { global::Unbound.Runtime.Stubs.NotImplemented(k_Type + nameof(GetDataForIndex)); return default; }
     }
 }
 

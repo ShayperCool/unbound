@@ -755,8 +755,7 @@ namespace UnityEngine
         [global::Unbound.Stub] public int bytesUsed;
         [global::Unbound.Stub] public int expires;
     }
-    [global::Unbound.Stub]
-    public unsafe partial struct CachedAssetBundle
+    unsafe partial struct CachedAssetBundle
     {
         [global::Unbound.Stub] public CachedAssetBundle(string name, global::UnityEngine.Hash128 hash) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CachedAssetBundle.ctor"); }
         public string name { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CachedAssetBundle.name"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.CachedAssetBundle.name"); } }

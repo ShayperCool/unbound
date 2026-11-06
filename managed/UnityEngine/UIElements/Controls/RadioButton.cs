@@ -289,4 +289,10 @@ namespace UnityEngine.UIElements
             SetValueWithoutNotify(RadioButton.OptionsOf(this).FindIndex(o => o.value));
         }
     }
+
+    // Declared here so that the hand-written code builds alone for `unbound gen-stubs`; their members
+    // and the explicit implementations are generated.
+    internal partial interface IGroupBox { }
+
+    internal partial interface IGroupBoxOption { }
 }

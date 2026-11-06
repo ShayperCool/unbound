@@ -726,3 +726,38 @@ namespace Unbound.UIElements
         }
     }
 }
+
+namespace UnityEngine.UIElements
+{
+    // The enums Painter2D's members use, declared here (not left to the generated stubs) so that the
+    // hand-written code builds alone for `unbound gen-stubs`. Values from the 6000.0 Scripting API.
+
+    /// <summary>Direction to draw an arc.</summary>
+    public enum ArcDirection
+    {
+        Clockwise = 0,
+        CounterClockwise = 1,
+    }
+
+    /// <summary>The fill rule of a filled path.</summary>
+    public enum FillRule
+    {
+        NonZero = 0,
+        OddEven = 1,
+    }
+
+    /// <summary>The shape at the end of a stroked line.</summary>
+    public enum LineCap
+    {
+        Butt = 0,
+        Round = 1,
+    }
+
+    /// <summary>The shape where two stroked segments meet.</summary>
+    public enum LineJoin
+    {
+        Miter = 0,
+        Bevel = 1,
+        Round = 2,
+    }
+}

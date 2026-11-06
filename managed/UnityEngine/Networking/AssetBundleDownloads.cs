@@ -147,3 +147,11 @@ namespace UnityEngine.Networking
             Get(uri, new DownloadHandlerAssetBundle(UrlOf(uri), cachedAssetBundle, crc));
     }
 }
+
+namespace UnityEngine
+{
+    // Declared here so that the hand-written requests taking one build alone for `unbound gen-stubs`;
+    // its members are still generated stubs.
+    [global::Unbound.Stub]
+    public partial struct CachedAssetBundle { }
+}
