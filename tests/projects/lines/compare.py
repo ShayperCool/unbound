@@ -2,7 +2,7 @@
 """Compares a line/trail probe capture with the Unity reference.
 
     compare.py <reference dir> <capture dir> [--report out.json] [--before <capture dir>]
-               [--mode canonical|capcount]
+               [--mode canonical|capcount|miter]
 
 Keeps the whole key union: every missing, extra and differing key is reported. Numbers match
 within an absolute 1e-5 plus a relative 1e-5 (float geometry); strings, booleans, list lengths
@@ -14,6 +14,7 @@ introduced (it passed before) or resolved (failed before, passes now).
 --mode selects the reference records: `canonical` (default) reads values.jsonl alone;
 `capcount` also reads the verified capcount.values.jsonl control file of the same release
 directory (see capcount_layout.py). The capture is always read whole.
+`miter` also includes the disjoint reversal controls and their image.
 """
 import argparse
 import gzip
@@ -81,6 +82,10 @@ def differ(a, b, path=''):
 def load_reference(directory, mode='canonical'):
     if mode == 'canonical':
         return load(directory)
+    if mode == 'miter':
+        sys.path.insert(0, str(Path(__file__).resolve().parent))
+        from miter_reference import load as load_miter
+        return load_miter(directory)
     spec = importlib.util.spec_from_file_location('capcount_layout', Path(__file__).with_name('capcount_layout.py'))
     layout = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(layout)
@@ -119,7 +124,7 @@ def main():
     parser.add_argument('capture')
     parser.add_argument('--before')
     parser.add_argument('--report')
-    parser.add_argument('--mode', choices=('canonical', 'capcount'), default='canonical')
+    parser.add_argument('--mode', choices=('canonical', 'capcount', 'miter'), default='canonical')
     args = parser.parse_args()
     now, union = failures(args.reference, args.capture, args.mode)
     report = {'mode': args.mode, 'keys': union, 'failing': len(now), 'failures': now}

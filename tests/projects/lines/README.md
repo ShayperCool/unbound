@@ -4,6 +4,10 @@ A windowed GPU Editor probe for the meshes `LineRenderer` and `TrailRenderer`
 generate, read back through `BakeMesh`, plus a few renders of them into float
 targets (`Assets/Scripts/LineProbe.cs`).
 
+The later `miterrev.*` controls, immutable reference extension and Unity contract
+are described in [Reversal joints](MITER_REVERSALS.md). `compare.py --mode miter`
+includes those controls and the cap-count controls along with the entire old set.
+
 - Lines, in one frame: sharp, reversed, repeated and degenerate points; corner
   and cap vertex counts; loops; every texture mode and texture scale; width
   curves and multipliers; color gradients; View alignment for orthographic and
