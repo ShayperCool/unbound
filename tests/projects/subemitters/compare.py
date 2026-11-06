@@ -1,0 +1,126 @@
+#!/usr/bin/env python3
+"""Compare two sub-emitter recordings: every key on both sides, the same number of values, and
+each value within 2e-4 absolute plus 2e-4 relative (counts, colors and settings therefore exactly).
+
+`random/` records are [parent count, child count]: the parent count compares as above; the child
+count depends on the per-particle random stream (Unbound's own, not Unity's), so it compares within
+max(30% of the reference, 4 * sqrt(3 * reference)) (four standard deviations of a sum of 3-particle
+bursts), zero only where the reference is zero.
+
+KNOWN rules name records (by regex) with fields that differ for a cause this probe does not fix;
+the other values of those records (always the count) still compare as above, the known fields are
+printed with their values and do not fail. Every difference is listed. Particle records are the
+count, then 18 values per particle: position 0-2, velocity 3-5, remaining lifetime 6, start lifetime
+7, start size 8-10, start color 11-14, rotation 15-17.
+"""
+import json
+import math
+import re
+import sys
+
+TOLERANCE = 2e-4
+FIELDS = 18
+POSITION, VELOCITY, LIFE = {0, 1, 2}, {3, 4, 5}, {6}
+ALL = set(range(FIELDS))
+KNOWN = [
+    (r'^death/many/child/\d+$', ALL,
+     'which parents emit once the child is full: Unity takes the particles dying in one step in another order'),
+    (r'^death/child_rotated/child/\d+$', POSITION | VELOCITY | LIFE,
+     'a child rotated against its parent: Unity combines that rotation with the emission frame differently; '
+     'and the first-step age of Death children in Simulate'),
+    (r'^(death|timing)/[^/]+/(child|second)/\d+$', POSITION | LIFE,
+     'first-step age of Death children in Simulate: Unity ages them by multiples of 0.02 s per internal step'),
+    (r'^direction/\d+/[12]$', VELOCITY,
+     'a child rotated against its parent: Unity combines that rotation with the emission frame differently'),
+]
+# A parent record [count, time] whose count is zero on both sides: Unbound's Simulate stops the
+# clock of a system whose particles all died, Unity's keeps it running.
+EMPTY_PARENT = r'^(death|manual)/[^/]+/parent/\d+$'
+
+
+def read(path):
+    result = {}
+    for line in open(path):
+        row = json.loads(line)
+        if row['key'] in result:
+            raise ValueError('duplicate key: ' + row['key'])
+        result[row['key']] = row['value']
+    if result.get('complete') != [1]:
+        raise ValueError('incomplete recording: ' + str(path))
+    return result
+
+
+def near(x, y):
+    return abs(x - y) <= TOLERANCE + TOLERANCE * abs(x)
+
+
+def close(a, b, skip=frozenset()):
+    return a is not None and b is not None and len(a) == len(b) and all(
+        i in skip or near(x, y) for i, (x, y) in enumerate(zip(a, b)))
+
+
+def random_close(a, b):
+    if a is None or b is None or len(a) != 2 or len(b) != 2 or not near(a[0], b[0]):
+        return False
+    if a[1] == 0:
+        return b[1] == 0
+    return abs(a[1] - b[1]) <= max(0.3 * a[1], 4 * math.sqrt(3 * a[1]))
+
+
+def aged_along_velocity(a, b):
+    """Whether every particle's position differs from the reference's only by its velocity times
+    the difference of their remaining lifetimes (the same origin, an other age)."""
+    for i in range(int(a[0])):
+        pa, pb = a[1 + i * FIELDS:1 + (i + 1) * FIELDS], b[1 + i * FIELDS:1 + (i + 1) * FIELDS]
+        age = pa[6] - pb[6]
+        if any(abs(pb[k] - pa[k] - pa[3 + k] * age) > 1e-3 for k in range(3)):
+            return False
+    return True
+
+
+def known(key, a, b):
+    """The reason and the value indices a KNOWN rule leaves out of the comparison, if any applies.
+    A rule that leaves out position and remaining lifetime but not velocity requires the positions
+    to differ only along the velocity by the age difference."""
+    if a is None or b is None:
+        return None
+    if re.search(EMPTY_PARENT, key) and len(a) == 2 and a[0] == 0 and b[:1] == [0]:
+        return 'the clock of a Simulate-stepped system whose particles all died', {1}
+    for pattern, fields, reason in KNOWN:
+        if re.search(pattern, key) and len(a) == len(b) and len(a) == 1 + int(a[0]) * FIELDS:
+            if fields == POSITION | LIFE and not aged_along_velocity(a, b):
+                return None
+            return reason, {1 + i * FIELDS + f for i in range(int(a[0])) for f in fields}
+    return None
+
+
+def main():
+    a, b = map(read, sys.argv[1:3])
+    keys = sorted(a.keys() | b.keys())
+    known_keys, bad = [], []
+    for key in keys:
+        ra, rb = a.get(key), b.get(key)
+        if key.startswith('random/'):
+            ok = random_close(ra, rb)
+        else:
+            ok = close(ra, rb)
+            if not ok:
+                rule = known(key, ra, rb)
+                if rule and close(ra, rb, rule[1]):
+                    known_keys.append(key)
+                    print(f'{key}: known difference ({rule[0]}): reference {ra}, candidate {rb}')
+                    continue
+        if not ok:
+            bad.append(key)
+            print(f'{key}: reference {ra}, candidate {rb}')
+    groups = {}
+    for key in bad:
+        group = key.rsplit('/', 1)[0]
+        groups[group] = groups.get(group, 0) + 1
+    print(f'{len(keys) - len(known_keys) - len(bad)}/{len(keys)} records match; {len(known_keys)} known difference(s); '
+          f'{len(bad)} differ {groups}')
+    return 1 if bad else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
