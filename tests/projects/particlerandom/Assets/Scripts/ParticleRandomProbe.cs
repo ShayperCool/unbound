@@ -484,6 +484,31 @@ public class ParticleRandomProbe : MonoBehaviour
                         }
                         DestroyImmediate(ps.gameObject);
                     }
+        foreach (uint seed in Seeds)
+            foreach (string mode in new[] { "capacity", "expiry", "curves", "burst" })
+            {
+                string scenario = "ratebatch/edge/" + mode;
+                var ps = RateSystem(scenario, seed, 262.5f, false, false);
+                var m = ps.main;
+                if (mode == "capacity") m.maxParticles = 7;
+                if (mode == "expiry") m.startLifetime = Two(0.005f, 0.035f);
+                if (mode == "curves")
+                {
+                    m.startLifetime = new ParticleSystem.MinMaxCurve(3f, AnimationCurve.Linear(0f, 0.5f, 1f, 1f));
+                    m.startSpeed = new ParticleSystem.MinMaxCurve(4f, AnimationCurve.Linear(0f, 0f, 1f, 1f));
+                }
+                if (mode == "burst")
+                {
+                    var e = ps.emission;
+                    e.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)2), new ParticleSystem.Burst(0.03f, (short)3) });
+                }
+                for (int step = 0; step < 4; step++)
+                {
+                    ps.Simulate(0.02f, true, step == 0, false);
+                    RecordParticles(Key(scenario, seed, step), ps);
+                }
+                DestroyImmediate(ps.gameObject);
+            }
         Time.captureDeltaTime = 0.02f;
         yield return null;
         var playing = new List<(string, uint, ParticleSystem)>();
