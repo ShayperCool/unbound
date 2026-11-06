@@ -25,6 +25,8 @@ namespace Unbound.Runtime.Playables
         // The step of time the last evaluation covered, for events.
         double m_From, m_To;
         float m_Weight;
+        readonly System.Runtime.CompilerServices.ConditionalWeakTable<Animator, object> m_EventTargets = new();
+        bool m_IncludeStart;
 
         bool Loops => OverrideLoopTime ? LoopTime : Clip != null && Clip.isLooping;
 
@@ -93,7 +95,12 @@ namespace Unbound.Runtime.Playables
             }
             if (e.ReferencePose || Clip.m_Events.Count == 0 || weight <= 0f) return;
             // Events fire for the time playback moved through (not for seeks).
-            if ((node.FrameFlags & FrameData.Flags.SeekOccured) != 0 || node.PreviousTime == node.Time) return;
+            if ((node.FrameFlags & FrameData.Flags.SeekOccured) != 0) return;
+            // Startup sampling fires time-zero events once even without advancement. A first
+            // positive automatic sample includes zero too (6000.0.71f1, animstartup).
+            m_IncludeStart = Compat.AnimatorStartupMeasured && e.AutomaticFrame && node.LastPlaying
+                && node.PreviousTime == 0 && !m_EventTargets.TryGetValue(e.Animator, out _);
+            if (node.PreviousTime == node.Time && !m_IncludeStart) return;
             m_From = node.PreviousTime;
             m_To = node.Time;
             m_Weight = weight;
@@ -214,7 +221,8 @@ namespace Unbound.Runtime.Playables
             var go = animator.m_GameObject;
             var clip = Clip;
             var clipInfo = new AnimatorClipInfo { m_Clip = clip, m_Weight = m_Weight };
-            AnimationEvents.FireCrossed(clip, m_From / length, m_To / length, Loops, false, ev =>
+            if (e.AutomaticFrame) m_EventTargets.GetValue(animator, _ => new object());
+            AnimationEvents.FireCrossed(clip, m_From / length, m_To / length, Loops, m_IncludeStart, ev =>
             {
                 var fired = ev.Copy();
                 fired.m_Source = AnimationEventSource.Animator;

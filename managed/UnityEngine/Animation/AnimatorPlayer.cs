@@ -14,6 +14,9 @@ namespace Unbound.Runtime
         /// <summary>Normalized time, unwrapped: the integer part counts loops.</summary>
         internal double Normalized;
         internal double Previous;
+        // Initial automatic Play(offset) samples exactly the offset, but extracts movement
+        // over the interval ending there (6000.0.71f1, animstartup's later Play controls).
+        internal double? MotionPrevious;
         /// <summary>Entered since the last update: events at its start time fire.</summary>
         internal bool Fresh = true;
         /// <summary>Events were fired for the state's first evaluation (an Animator.Update(0) that
@@ -276,10 +279,11 @@ namespace Unbound.Runtime
 
         // ------------------------------------------------------------------ the update
 
-        internal void Tick(float deltaTime)
+        internal void Tick(float deltaTime, bool automatic = false)
         {
             if (m_Ticking) return;
             m_Ticking = true;
+            m_AutomaticUpdate = automatic;
             try
             {
                 TickCore(deltaTime);
@@ -287,10 +291,12 @@ namespace Unbound.Runtime
             finally
             {
                 m_Ticking = false;
+                m_AutomaticUpdate = false;
             }
         }
 
         bool m_Ticking;
+        bool m_AutomaticUpdate;
 
         /// <summary>Whether the player has had an update (Animator culling: a CullCompletely
         /// Animator's first update runs even while culled).</summary>
@@ -355,10 +361,10 @@ namespace Unbound.Runtime
                 m_OverrideVersion = Controller.OverrideVersion;
                 BindClips();
             }
-            Ticked = true;
             m_RootDeltaTime = deltaTime;
             m_CallbacksStarted |= deltaTime != 0f;
             StepLayers(deltaTime * m_Animator.m_Speed);
+            Ticked = true;
             Evaluate();
         }
 
@@ -472,6 +478,8 @@ namespace Unbound.Runtime
         void Step(LayerRun layer, int index, float dt)
         {
             layer.Completed = null;
+            bool initialSeek = Attached && !Ticked && m_AutomaticUpdate && Compat.AnimatorStartupMeasured
+                && layer.Pending != null && !layer.Pending.CrossFade && !float.IsNegativeInfinity(layer.Pending.Time);
             if (layer.Pending != null)
             {
                 var pending = layer.Pending;
@@ -487,7 +495,14 @@ namespace Unbound.Runtime
                 SetCurrent(layer, run);
                 QueueEnter(layer, run);
             }
+            double start = layer.Current.Normalized;
             Advance(layer, layer.Current, dt);
+            if (initialSeek && layer.Current.Def.TimeParameter < 0)
+            {
+                var run = layer.Current;
+                run.MotionPrevious = start - (run.Normalized - run.Previous);
+                run.Normalized = run.Previous = start;
+            }
             if (layer.Next != null) Advance(layer, layer.Next, dt);
             if (layer.Transition != null)
             {
@@ -501,6 +516,7 @@ namespace Unbound.Runtime
 
         void Advance(LayerRun layer, StateRun run, float dt)
         {
+            run.MotionPrevious = null;
             run.Previous = run.Normalized;
             var def = run.Def;
             if (def.TimeParameter >= 0)

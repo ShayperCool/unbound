@@ -550,7 +550,8 @@ namespace UnityEngine.SceneManagement
             var previousActive = SceneRegistry.Active;
             if (parameters.loadSceneMode == LoadSceneMode.Single || previousActive == null)
                 SceneRegistry.Active = data;
-            SceneLoader.LoadInto(data);
+            SceneLoader.LoadInto(data, beforeAwake: reported == PlayModeEntry
+                ? () => Unbound.Runtime.RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSceneLoad) : null);
             // Play mode processes the loaded scene after its objects woke up (measured:
             // tests/projects/editorcallbacks); Edit mode opens scenes unprocessed.
             if (Unbound.Runtime.EditorSession.IsPlaying) UnityEditor.EditorInitialization.ProcessScene(new Scene(data.Handle));

@@ -137,7 +137,7 @@ namespace Unbound.Runtime
                 if (w <= 0f) continue;
                 var bound = Bindings.Bind(clip);
                 double offset = clip.isLooping ? run.Def.CycleOffset + clip.m_CycleOffset : 0.0;
-                var (d, q) = MotionDelta(bound, clip, run.Previous + offset, run.Normalized + offset, pos, rot);
+                var (d, q) = MotionDelta(bound, clip, (run.MotionPrevious ?? run.Previous) + offset, run.Normalized + offset, pos, rot);
                 delta += d * w;
                 // States blend their rotation deltas in a layer; they do not compose them.
                 var sum = m_RootTurns[layerIndex];
@@ -281,7 +281,7 @@ namespace Unbound.Runtime
                 match.Player = this;
                 match.Run = run;
             }
-            double from = run.Previous, to = run.Normalized;
+            double from = run.MotionPrevious ?? run.Previous, to = run.Normalized;
             if (to < match.Start) return;
             if (match.End <= from)
             {
@@ -388,7 +388,7 @@ namespace Unbound.Runtime
                         // A transition's destination steps a whole update in the update it starts,
                         // as if it had played all of it (measured for an exit time's overshoot into a
                         // moving clip; applied to cross-fades too).
-                        PreviousTime = (float)(run.Fresh && source.Next == run ? run.Normalized - DestinationStep(source, run) : run.Previous),
+                        PreviousTime = (float)(run.Fresh && source.Next == run ? run.Normalized - DestinationStep(source, run) : (run.MotionPrevious ?? run.Previous)),
                         Speed = SpeedOf(def),
                         CycleOffset = def.CycleOffset + (Mirrored(def) ? MirrorCycleOffset : 0f),
                     };

@@ -616,6 +616,7 @@ namespace Unbound.Runtime.Playables
                 if (o.Engine is AnimationOutputState animation)
                 {
                     animation.Automatic = !evaluate;
+                    if (!evaluate && UpdateMode == DirectorUpdateMode.GameTime) step = AnimationSystem.AutomaticFrameDelta(step);
                     bool culled = !evaluate && animation.Target != null && animation.Target.isActiveAndEnabled
                         && animation.Target.cullingMode == AnimatorCullingMode.CullCompletely
                         && !Animator.AnyRendererVisible(animation.Target.gameObject);
@@ -898,7 +899,8 @@ namespace Unbound.Runtime.Playables
             {
                 if (g.Destroyed) continue;
                 foreach (var o in g.Outputs.ToArray())
-                    if (o.OutputType != typeof(ScriptPlayableOutput)) OutputSystems.Process(o, dt, false);
+                    if (o.OutputType != typeof(ScriptPlayableOutput))
+                        OutputSystems.Process(o, o.Engine is AnimationOutputState && g.UpdateMode == DirectorUpdateMode.GameTime ? AnimationSystem.AutomaticFrameDelta(dt) : dt, false);
             }
             s_Updated.Clear();
         }

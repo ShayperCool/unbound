@@ -56,9 +56,11 @@ describe legacy culling: states, events and sampling stop while culled. Its catc
 [Renderer.isVisible](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Renderer-isVisible.html)
 also counts shadow rendering and Editor Scene view cameras. This capture excludes Scene views.
 
-Not part of the probe: Animators created in the first frame of Play mode are evaluated without
-advancing in their first update (measured while designing the probe; it is outside culling, so the
-rigs are built in frame 1).
+The first frame of Play mode is covered separately by `tests/projects/animstartup`.
+Its automatic animation interval is zero in measured Unity 6000.0.71f1 entry contexts,
+even for a controller already evaluated explicitly; a new Animator created in a later
+Update advances immediately. The rigs here still start in frame 1 so these culling
+oracles remain unchanged.
 
 Record (two independent windowed GPU Editor captures; publish only byte-identical ones):
 

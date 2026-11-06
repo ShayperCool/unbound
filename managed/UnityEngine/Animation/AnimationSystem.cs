@@ -20,6 +20,20 @@ namespace Unbound.Runtime
         static Animation[] s_AnimationBuffer = Array.Empty<Animation>();
         static bool s_Registered;
 
+        // Set by Play initialization, and ended even if no Animator registered during entry.
+        // This is an animation time-source interval, not a delay attached to a new player:
+        // already explicitly evaluated controllers also receive the zero-time evaluation.
+        static bool s_PlayModeEntry;
+        internal static void BeginPlayMode() => s_PlayModeEntry = true;
+        internal static void EndPlayModeEntry() => s_PlayModeEntry = false;
+
+        /// <summary>Measured in 6000.0.71f1 Editor Play entry (animstartup): the frame's
+        /// automatic animation evaluation samples and delivers events/movement with zero
+        /// elapsed animation time. Fixed and explicit evaluations keep their supplied deltas.
+        /// Other releases and custom loop startup intervals are not measured.</summary>
+        internal static double AutomaticFrameDelta(double delta) =>
+            s_PlayModeEntry && Compat.AnimatorStartupMeasured ? 0.0 : delta;
+
         internal static void EnsureRegistered()
         {
             if (s_Registered) return;
@@ -61,6 +75,7 @@ namespace Unbound.Runtime
                 bool isFixed = a.m_UpdateMode == AnimatorUpdateMode.Fixed;
                 if (isFixed != fixedStep) continue;
                 float dt = a.m_UpdateMode == AnimatorUpdateMode.UnscaledTime ? Time.unscaledDeltaTime : Time.deltaTime;
+                if (!fixedStep) dt = (float)AutomaticFrameDelta(dt);
                 try
                 {
                     a.Tick(dt);

@@ -214,6 +214,9 @@ namespace UnityEngine
         {
             if (m_Player != null) return m_Player;
             if (m_Controller == null || m_GameObject == null) return null;
+            // An inactive hierarchy whose controller was cleared has no current state.
+            // A disabled component on an active hierarchy retains its controller (animstartup).
+            if (Compat.AnimatorStartupMeasured && !m_GameObject.activeInHierarchy) return null;
             var graph = m_Controller.Graph;
             if (graph == null) return null;
             m_Player = new AnimatorPlayer(this, m_Controller, graph);
@@ -250,8 +253,10 @@ namespace UnityEngine
             if (m_Player != null)
             {
                 if (m_WriteDefaultValuesOnDisable) m_Player.Bindings.WriteDefaults();
-                // Unless kept, the controller's state (and the captured defaults) start over on enable.
-                if (!m_KeepAnimatorStateOnDisable) m_Player = null;
+                // 6000.0.71f1 (animstartup): enabled=false only suspends evaluation. The
+                // keep-state setting controls hierarchy deactivation, as its API documents.
+                if (!m_KeepAnimatorStateOnDisable && (!Compat.AnimatorStartupMeasured || !m_GameObject.activeInHierarchy))
+                    m_Player = null;
             }
         }
 
@@ -315,7 +320,7 @@ namespace UnityEngine
             player.SkipWrites = true;
             try
             {
-                player.Tick(deltaTime);
+                player.Tick(deltaTime, automatic: true);
             }
             finally
             {
@@ -358,7 +363,7 @@ namespace UnityEngine
         {
             var player = EnsurePlayer();
             if (player != null) player.DeferOutput = deferOutput && Unbound.Runtime.Playables.AnimationOutputs.HasPending(this);
-            player?.Tick(deltaTime);
+            player?.Tick(deltaTime, automatic: deferOutput);
         }
 
         /// <summary>Evaluates the animator now, advancing it by <paramref name="deltaTime"/>.

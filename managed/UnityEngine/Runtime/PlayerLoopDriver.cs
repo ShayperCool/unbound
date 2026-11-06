@@ -275,11 +275,13 @@ namespace Unbound.Runtime
         internal static void RestartPlayMode()
         {
             s_EnteredPlayMode = false;
+            AnimationSystem.BeginPlayMode();
             UnityEngine.SendMouseEvents.Reset();
         }
 
         static void Boot(string firstScene, bool unused)
         {
+            AnimationSystem.BeginPlayMode();
             s_MainThreadId = Thread.CurrentThread.ManagedThreadId;
             SynchronizationContext.SetSynchronizationContext(MainThreadContext.Instance);
             FrameBuilder.EnsureRegistered();
@@ -292,7 +294,6 @@ namespace Unbound.Runtime
             RuntimeInitializers.Run(RuntimeInitializeLoadType.SubsystemRegistration);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterAssembliesLoaded);
             RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSplashScreen);
-            RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSceneLoad);
             if (!string.IsNullOrEmpty(firstScene))
             {
                 try
@@ -304,6 +305,7 @@ namespace Unbound.Runtime
                     Debug.LogException(e);
                 }
             }
+            else RuntimeInitializers.Run(RuntimeInitializeLoadType.BeforeSceneLoad);
             SendPlayModeStart();
             RuntimeInitializers.Run(RuntimeInitializeLoadType.AfterSceneLoad);
             s_Booted = true;
@@ -361,6 +363,7 @@ namespace Unbound.Runtime
             }
             if (!s_EnteredPlayMode)
             {
+                AnimationSystem.EndPlayModeEntry();
                 s_EnteredPlayMode = true;
                 UnityEditor.EditorInitialization.AfterFirstFrame();
             }

@@ -436,7 +436,7 @@ namespace Unbound.Runtime
     /// <summary>Scenes: builds the scene's objects into the scene and wakes them.</summary>
     internal static class SceneLoader
     {
-        internal static void LoadInto(SceneData scene)
+        internal static void LoadInto(SceneData scene, Action beforeAwake = null)
         {
             List<YDocument> documents;
             try
@@ -454,6 +454,10 @@ namespace Unbound.Runtime
             foreach (var root in file.Roots) scene.Roots.Add(root);
             foreach (var pair in file.Objects) scene.FileIds[pair.Value] = pair.Key;
 
+            // 6000.0 RuntimeInitializeOnLoadMethod: the initial scene is loaded before
+            // BeforeSceneLoad, but its scripts have not awakened. Runtime-created objects
+            // now belong to that scene rather than an outgoing bootstrap scene.
+            beforeAwake?.Invoke();
             var active = new List<Component>();
             foreach (var root in file.Roots) CollectActive(root.m_Transform, active);
             Lifecycle.Activate(active);

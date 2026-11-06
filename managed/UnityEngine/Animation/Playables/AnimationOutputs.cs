@@ -261,6 +261,7 @@ namespace Unbound.Runtime.Playables
         internal AnimationBindings Bindings;
         internal float DeltaTime;
         internal bool Seek;
+        internal bool AutomaticFrame;
         /// <summary>Under a motion-to-delta playable: clips remove their root start offset.</summary>
         internal bool RootMotion;
         /// <summary>Evaluating an additive layer's reference: clips sample their first frame.</summary>
@@ -551,6 +552,8 @@ namespace Unbound.Runtime.Playables
                 if (o.Destroyed || o.Source == null) continue;
                 e.DeltaTime = (float)dt;
                 e.Seek = seek;
+                e.AutomaticFrame = (o.Engine as AnimationOutputState)?.Automatic == true
+                    && o.Graph.UpdateMode == DirectorUpdateMode.GameTime;
                 var source = (o.Engine as AnimationOutputState)?.StreamSource ?? AnimationStreamSource.DefaultValues;
                 AnimStream s;
                 if (source == AnimationStreamSource.PreviousInputs)

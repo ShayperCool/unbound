@@ -39,6 +39,11 @@ namespace Unbound.Runtime
         internal static UnityEngine.Vector4 MeshInstanceBatchLimits => Release == (6000, 0, 71, 'f', 1)
             ? new UnityEngine.Vector4(511, 1023, 65536, 0) : UnityEngine.Vector4.zero;
 
+        /// <summary>Animator automatic Play-entry timing and startup controls measured by
+        /// tests/projects/animstartup in exactly 6000.0.71f1's Linux Editor. Other releases
+        /// retain the existing behavior until measured.</summary>
+        internal static bool AnimatorStartupMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>6000.0's BakeTrailsMesh joins ribbon strips in its index count and rejects
         /// the resulting out-of-bounds indices. Regular ribbon rendering is unaffected.</summary>
         internal static bool ParticleRibbonBakeRejectsMultipleStrips => Major >= 6000;
