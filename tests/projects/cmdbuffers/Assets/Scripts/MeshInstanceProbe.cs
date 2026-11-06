@@ -74,6 +74,12 @@ public partial class CmdBuffersProbe
             string api = render ? "render" : "draw";
             void Submit(Matrix4x4[] data, MaterialPropertyBlock b) { if (render) Render(data, 3, 2, b); else Draw(data, 3, b); }
             Case(api + ".arrays", () => Submit(matrices, Arrays(1)));
+            Case(api + ".floatarray", () =>
+            {
+                var b = Arrays(1);
+                b.SetFloatArray("_Weight", new[] { 1f, 0f, 1f, 1f, 0f, 1f, 0f, 1f });
+                Submit(matrices, b);
+            });
             Case(api + ".uniformarray", () => Submit(matrices, Arrays(2)));
             Case(api + ".matrixarray", () => Submit(matrices, Arrays(3)));
             Case(api + ".scalar", () =>
