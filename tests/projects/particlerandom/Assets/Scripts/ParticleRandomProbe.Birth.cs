@@ -8,6 +8,7 @@ public partial class ParticleRandomProbe
     static void BirthControls()
     {
         float previousMax = Time.maximumParticleDeltaTime;
+        float previousFixed = Time.fixedDeltaTime;
         foreach (string source in new[] { "burst", "rate", "emit" })
         foreach (int count in new[] { 1, 5 })
         foreach (float step in new[] { 0.02f, 0.05f, 0.1f })
@@ -26,15 +27,21 @@ public partial class ParticleRandomProbe
                 parentWorld: parentWorld, childWorld: childWorld, rotateChild: rotateChild);
         BirthControl("child_rate", "burst", 1, 0.05f, childRate: true);
         BirthControl("child_bursts", "burst", 1, 0.05f, childBursts: true);
+        BirthControl("fixed_001", "burst", 1, 0.05f, speed: 2f, gravity: 1f, fixedDelta: 0.01f);
+        BirthControl("fixed_003", "burst", 1, 0.1f, speed: 2f, gravity: 1f, fixedDelta: 0.03f);
+        BirthControl("fixed_parent", "burst", 1, 0.05f, speed: 2f, fixedTimeStep: true);
         Time.maximumParticleDeltaTime = previousMax;
+        Time.fixedDeltaTime = previousFixed;
     }
 
     static void BirthControl(string name, string source, int count, float step, int calls = 1,
         float maximum = 0.03f, float speed = 0f, float gravity = 0f, bool withChildren = true,
         bool restartAgain = false, bool transformed = false, bool parentWorld = false,
-        bool childWorld = false, bool rotateChild = false, bool childRate = false, bool childBursts = false)
+        bool childWorld = false, bool rotateChild = false, bool childRate = false, bool childBursts = false,
+        float fixedDelta = 0.02f, bool fixedTimeStep = false)
     {
         Time.maximumParticleDeltaTime = maximum;
+        Time.fixedDeltaTime = fixedDelta;
         string key = "birth/" + name;
         var parent = Make(key, 12345, ps =>
         {
@@ -77,7 +84,7 @@ public partial class ParticleRandomProbe
         int index = 0;
         Action<float, bool> advance = (dt, restart) =>
         {
-            parent.Simulate(dt, withChildren, restart, false);
+            parent.Simulate(dt, withChildren, restart, fixedTimeStep);
             RecordParticles(key + "/parent/" + index, parent);
             RecordParticles(key + "/child/" + index, child);
             index++;
