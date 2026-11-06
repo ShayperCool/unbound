@@ -110,7 +110,10 @@ Unbound's choices (unmeasured):
   - Measured with AudioReverbFilter (tests/projects/audioreverb): when a source without an
     OnAudioFilterRead path ends its last voice, the chain runs on to the end of the next DSP
     buffer, then the tail is cut and the chain reset (clip end at frame 12288: last sample 13311;
-    at 12800: 14335). The engine applies this to every component kind.
+    at 12800: 14335). The engine applies this to every component kind; for LowPass, HighPass and
+    Echo it is unmeasured. The end is taken at the 256-frame mix block in which the voice ends,
+    so a device period that is not a multiple of 256 frames can lengthen the tail by up to one DSP
+    buffer.
   - `AudioSettings.Reset` (a new output rate) restarts every component empty at the new rate.
 - **No group fade.** The mixer group's startup input fade is not applied to components.
 - **Parameter timing.** Parameters reach the mixer with the source's next packet, at the latest
@@ -298,9 +301,11 @@ profile and the strict report).
 
 - Parameter values outside the documented ranges reach the kernel clamped to the mixer ranges.
   Native's response to them is unmeasured, as is HF Reference below 1000 Hz.
-- Unmeasured: an unrouted source with `bypassListenerEffects` (it bypasses the listener
-  components, as documented), a listener reverb filter next to OnAudioFilterRead scripts (fails
-  loudly), parameter changes while a tail runs, and other component kinds on the listener.
+- Unmeasured: an unrouted source with `bypassListenerEffects` or `bypassEffects` (it bypasses
+  the listener components, as documented). Also unmeasured, and failing loudly on the listener: a
+  listener reverb filter next to OnAudioFilterRead scripts, one on a GameObject that also has an
+  AudioSource (it runs on the source only), and other component kinds there. Parameter changes
+  while a tail runs are unmeasured too.
 - Residuals: one-step device PCM flips only (10 at 48 kHz, 11 at 44.1 kHz in the strict report;
   the gate admits one step on device PCM, never on floats).
 

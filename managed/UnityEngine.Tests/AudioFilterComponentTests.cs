@@ -371,6 +371,14 @@ namespace UnityEngine.Tests
             scripted.AddComponent<AudioReverbFilter>();
             Assert.Equal(0, AudioFilterChain.CollectListener(other, true, ref table));
             Assert.Contains("listener filter components are not applied", Assert.Single(Errors("OnAudioFilterRead scripts on the AudioListener 'scripted ears'")));
+
+            var shared = new GameObject("source ears");
+            m_Objects.Add(shared);
+            var third = shared.AddComponent<AudioListener>();
+            shared.AddComponent<AudioSource>();
+            shared.AddComponent<AudioReverbFilter>();
+            Assert.Equal(0, AudioFilterChain.CollectListener(third, false, ref table));
+            Assert.Contains("runs on the source only", Assert.Single(Errors("AudioListener 'source ears'")));
         }
 
         // Measured in tests/projects/audioreverb (6000.0.71f1).
@@ -400,6 +408,7 @@ namespace UnityEngine.Tests
             Assert.Equal(new[] { -300f, -500f, 0f, 2.91f, 1.3f, -602f, 0.007f, -302f, 0.022f, 100f, 100f, 5000f, 0f, 250f }, values);
             Assert.Contains(AudioFilterKind.Reverb, Array.ConvertAll(Collected(reverb.GetComponent<AudioSource>()), f => f.Kind));
 
+            // Unbound's choice: values are read as stored (the Editor writes a preset's values).
             reverb.ReadSerialized(YNode.MakeMap(("m_Room", YNode.MakeScalar("-700")), ("m_ReverbPreset", YNode.MakeScalar("9")),
                 ("m_LFReference", YNode.MakeScalar("150"))), null);
             Assert.Equal((AudioReverbPreset.Cave, -700f, 150f, 0f, 1f), (reverb.reverbPreset, reverb.room, reverb.lfReference, reverb.dryLevel, reverb.decayTime));

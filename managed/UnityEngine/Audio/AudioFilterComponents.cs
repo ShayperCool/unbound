@@ -449,8 +449,10 @@ namespace Unbound.Runtime
         /// Fills <paramref name="table"/> with the enabled AudioReverbFilter components of the
         /// hearing AudioListener's GameObject in component order and returns how many; they run
         /// on the final mix (tests/projects/audioreverb). Other filter kinds there, and reverb
-        /// filters next to OnAudioFilterRead scripts (an unmeasured order), are reported once per
-        /// listener and not applied; the reverb filters still run in the first case.
+        /// filters next to OnAudioFilterRead scripts (an unmeasured order) or on a GameObject
+        /// that also has an AudioSource (whose chain already runs them; unmeasured), are reported
+        /// once per listener and not applied on the listener; the reverb filters still run in the
+        /// first case.
         /// </summary>
         internal static int CollectListener(AudioListener listener, bool scripts, ref AudioFilterDescriptor[] table)
         {
@@ -469,6 +471,12 @@ namespace Unbound.Runtime
                 if (scripts)
                 {
                     error ??= "AudioReverbFilter next to OnAudioFilterRead scripts on the AudioListener '" + go.m_Name + "' is not supported; listener filter components are not applied";
+                    count = 0;
+                    break;
+                }
+                if (go.GetComponent<AudioSource>() != null)
+                {
+                    error ??= "AudioReverbFilter on the AudioListener '" + go.m_Name + "', which also has an AudioSource, is not supported on the listener; it runs on the source only";
                     count = 0;
                     break;
                 }

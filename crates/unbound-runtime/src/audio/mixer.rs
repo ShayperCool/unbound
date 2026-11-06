@@ -744,6 +744,7 @@ impl Mixer {
             source.completed_main = None;
             source.pending_position = 0.0;
             source.generator = GeneratorState::default();
+            source.chain_tail = None;
             source.filtered.clear();
             source.filtered_offset = 0;
             source.filter_started = false;
@@ -1557,9 +1558,10 @@ impl Mixer {
             if need_mix || filter {
                 // `bypassListenerEffects`: "It also does'nt apply, if the AudioSource is playing
                 // into a mixer group" (6000.0 Scripting API); measured so for AudioReverbFilter.
-                // Unrouted bypassing sources are unmeasured and follow the documentation.
+                // `bypassEffects` covers "global listener filters" too. Unrouted bypassing
+                // sources are unmeasured and follow the documentation.
                 let bypass_listener = listener_components
-                    && flags & source_flags::BYPASS_LISTENER_EFFECTS != 0;
+                    && flags & (source_flags::BYPASS_LISTENER_EFFECTS | source_flags::BYPASS_EFFECTS) != 0;
                 let unrouted = if bypass_listener { &mut listener_bypass[..n * 2] } else { &mut mix[..n * 2] };
                 let target = group_nodes
                     .get_mut(&source.params.group)
@@ -3271,12 +3273,12 @@ mod tests {
 
     #[test]
     fn listener_reverb_runs_on_the_mix_except_bypassing_unrouted_sources() {
-        let listen = |bypass: bool| {
+        let listen = |bypass: u32| {
             let mut m = Mixer::new(MixerConfig::default());
             m.add_clip(1, impulse_clip(300));
             m.update_listener_filters(Ok(vec![component(5, filter_kind::REVERB, 0)]));
             source_with(&mut m, 7, 1, |p| {
-                p.flags = if bypass { source_flags::BYPASS_LISTENER_EFFECTS } else { 0 };
+                p.flags = bypass;
             });
             play(&mut m, 7, command::PLAY, 0.0);
             m.update_suspension();
@@ -3286,8 +3288,10 @@ mod tests {
             out
         };
         // The listener's tail outlives the source.
-        assert!(listen(false)[2 * 2048..].iter().any(|v| v.abs() > 1e-6));
-        assert!(listen(true)[2 * 201..].iter().all(|v| *v == 0.0));
+        assert!(listen(0)[2 * 2048..].iter().any(|v| v.abs() > 1e-6));
+        for flag in [source_flags::BYPASS_LISTENER_EFFECTS, source_flags::BYPASS_EFFECTS] {
+            assert!(listen(flag)[2 * 201..].iter().all(|v| *v == 0.0));
+        }
         let mut m = Mixer::new(MixerConfig::default());
         m.update_listener_filters(Err(anyhow::anyhow!("refused")));
         assert!(m.listener_chain.filters.is_empty());
