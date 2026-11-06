@@ -137,6 +137,41 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ImportedParticlesInitializeForceWithoutPlayOrEmit()
+        {
+            Action<ParticleSystem> configure = s =>
+            {
+                var f = s.forceOverLifetime; f.enabled = true; f.randomized = true;
+                f.x = Two; f.y = Two; f.z = Two;
+                var emission = s.emission; emission.enabled = false;
+            };
+            var dormant = Make(configure);
+            var played = Make(configure);
+            float delta = Time.s_DeltaTime;
+            float unscaled = Time.s_UnscaledDeltaTime;
+            try
+            {
+                Time.s_DeltaTime = .02f; Time.s_UnscaledDeltaTime = .02f;
+                var imported = new[] { new ParticleSystem.Particle
+                    { randomSeed = 7u, startLifetime = 10f, remainingLifetime = 10f, startSize = 1f } };
+                dormant.SetParticles(imported); played.SetParticles(imported);
+                played.Play(false);
+                Assert.False(dormant.isPlaying);
+                Assert.True(dormant.FrameUpdate()); Assert.True(played.FrameUpdate());
+                var actual = new ParticleSystem.Particle[1];
+                var expected = new ParticleSystem.Particle[1];
+                Assert.Equal(1, dormant.GetParticles(actual)); Assert.Equal(1, played.GetParticles(expected));
+                Assert.NotEqual(0f, expected[0].velocity.x);
+                Assert.Equal(expected[0].velocity, actual[0].velocity);
+            }
+            finally
+            {
+                Time.s_DeltaTime = delta; Time.s_UnscaledDeltaTime = unscaled;
+                Object.DestroyImmediate(dormant.gameObject); Object.DestroyImmediate(played.gameObject);
+            }
+        }
+
+        [Fact]
         public void PlaybackStateRestoresRandomizedForceLanes()
         {
             var ps = Make(s =>

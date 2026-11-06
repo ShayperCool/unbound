@@ -62,8 +62,11 @@ namespace UnityEngine
             if (m_ModuleLane != 0) return;
             m_ModuleGroupSeed = seed;
             if (m_Force.enabled && m_Force.randomized && m_Force.x.IsRandom)
+            {
+                EnsureModuleRandom();
                 for (int lane = 0; lane < 4; lane++)
                     m_ForceSamples[lane] = ModuleVector(ref m_ForceRandom[lane]);
+            }
         }
     }
 }
