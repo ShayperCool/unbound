@@ -269,30 +269,110 @@ namespace UnityEngine.Tests
             Assert.True(OnNavMesh(0f, 0f));
         }
 
+        NavMeshAgent Walker(Vector3 start, Vector3 goal, float stoppingDistance = 0f)
+        {
+            var go = new GameObject("agent");
+            m_Objects.Add(go);
+            go.transform.position = start;
+            var agent = go.AddComponent<NavMeshAgent>();
+            agent.stoppingDistance = stoppingDistance;
+            Assert.True(agent.SetDestination(goal));
+            return agent;
+        }
+
         [Fact]
         public void AHoleCutElsewhereLetsAnArrivingAgentFinish()
         {
             // The rebuild after a cut must not stop an agent in its last centimetre (hasPath
-            // already false, still moving to the end).
-            var go = new GameObject("agent");
-            m_Objects.Add(go);
-            go.transform.position = new Vector3(4f, 0f, 0f);
-            var agent = go.AddComponent<NavMeshAgent>();
+            // already false, still moving to the end). The hole is decided first, then cut in
+            // exactly such a frame.
             var goal = new Vector3(8f, 0f, 0f);
-            Assert.True(agent.SetDestination(goal));
+            var agent = Walker(new Vector3(4f, 0f, 0f), goal);
+            Box(new Vector3(-8f, 0.5f, 3f), Vector3.one);
+            ObstacleSystem.UpdateCarving();
             bool finishing = false;
             for (int i = 0; i < 400 && !finishing; i++)
             {
-                Frame();
+                Time.s_Time += Dt;
+                AgentSystem.Step();
                 var p = agent.nextPosition;
                 finishing = !agent.hasPath && new Vector2(p.x - goal.x, p.z - goal.z).magnitude > 1e-4f;
             }
             Assert.True(finishing, "no frame within the last centimetre");
-            Box(new Vector3(-8f, 0.5f, 3f), Vector3.one);
+            int version = NavWorld.Version;
+            Frame();
+            Assert.NotEqual(version, NavWorld.Version);
+            Assert.False(OnNavMesh(-8f, 3f));
             for (int i = 0; i < 20; i++) Frame();
             var end = agent.nextPosition;
             Assert.True(new Vector2(end.x - goal.x, end.z - goal.z).magnitude <= 1e-4f, $"stopped at {end}");
             Assert.False(agent.hasPath);
+        }
+
+        [Fact]
+        public void AnAgentStoppedWithinItsStoppingDistanceStaysStopped()
+        {
+            var agent = Walker(new Vector3(-8f, 0f, 0f), new Vector3(4f, 0f, 0f), 3f);
+            for (int i = 0; i < 400; i++) Frame();
+            var stopped = agent.nextPosition;
+            Assert.True(stopped.x > 0.5f && stopped.x < 1.5f, $"at {stopped}");
+            Assert.Equal(Vector3.zero, agent.velocity);
+            // A hole cut between it and its destination: it does not set off again.
+            Box(new Vector3(2.5f, 0.5f, 0f), Vector3.one);
+            for (int i = 0; i < 30; i++) Frame();
+            Assert.False(OnNavMesh(2.5f, 0f));
+            Assert.True((agent.nextPosition - stopped).magnitude < 1e-4f, $"moved to {agent.nextPosition}");
+            Assert.False(agent.hasPath);
+        }
+
+        [Fact]
+        public void APendingPathIsFoundWhileAHoleMovesEveryFrame()
+        {
+            int iterations = NavMesh.pathfindingIterationsPerFrame;
+            try
+            {
+                // Many small holes make the search need many iterations; one per frame.
+                NavMesh.pathfindingIterationsPerFrame = 1;
+                for (int k = -3; k <= 3; k++)
+                {
+                    Box(new Vector3(k * 2.5f, 0.5f, 0f), new Vector3(0.3f, 1f, 0.3f));
+                    Box(new Vector3(k * 2.5f + 1.25f, 0.5f, -2.5f), new Vector3(0.3f, 1f, 0.3f));
+                }
+                var carver = Box(new Vector3(-8f, 0.5f, 3.5f), Vector3.one, onlyStationary: false);
+                Frame();
+                Frame();
+                var agent = Walker(new Vector3(-8f, 0f, -3f), new Vector3(8f, 0f, -3f));
+                int version = NavWorld.Version;
+                int frames = 0;
+                float x = -8f;
+                while (agent.pathPending && frames < 300)
+                {
+                    x += 0.15f;
+                    carver.transform.position = new Vector3(x, 0.5f, 3.5f);
+                    Frame();
+                    frames++;
+                }
+                Assert.False(agent.pathPending, $"still pending after {frames} frames");
+                Assert.True(NavWorld.Version - version >= frames - 1, "the NavMesh did not change every frame");
+                Assert.Equal(NavMeshPathStatus.PathComplete, agent.pathStatus);
+            }
+            finally
+            {
+                NavMesh.pathfindingIterationsPerFrame = iterations;
+            }
+        }
+
+        [Fact]
+        public void ABoxWithNoThicknessCarvesAStrip()
+        {
+            Box(new Vector3(0f, 0.5f, 0f), new Vector3(4f, 1f, 0f));
+            Frame();
+            Frame();
+            // A 4 m segment grown by 0.5: 5 x 1.
+            Assert.Equal(m_Area - 5f, Area(), 3);
+            Assert.False(OnNavMesh(0f, 0.3f));
+            Assert.False(OnNavMesh(2.3f, 0f));
+            Assert.True(OnNavMesh(0f, 0.55f));
         }
 
         [Fact]

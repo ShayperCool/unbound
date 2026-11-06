@@ -34,6 +34,8 @@ namespace Unbound.Runtime
         }
 
         const float Eps = 1e-5f;
+        /// <summary>A hole could not be cut into a polygon (reported once per run).</summary>
+        static bool s_WarnedUncut;
         const int MaxVerts = DtDetour.DT_VERTS_PER_POLYGON;
         internal const int CapsuleSides = 16;
 
@@ -66,6 +68,14 @@ namespace Unbound.Runtime
             int n = outline.Length;
             if (n == 0 || r <= 0f) return outline;
             if (n == 1) return new[] { outline[0] + new Vector2(-r, -r), outline[0] + new Vector2(r, -r), outline[0] + new Vector2(r, r), outline[0] + new Vector2(-r, r) };
+            if (n == 2)
+            {
+                // No thickness seen from above (a box with a zero side): the rectangle around the
+                // segment, counterclockwise.
+                var d = (outline[1] - outline[0]).normalized * r;
+                var side = new Vector2(-d.y, d.x);
+                return new[] { outline[0] - d - side, outline[1] + d - side, outline[1] + d + side, outline[0] - d + side };
+            }
             var normals = new Vector2[n];
             for (int i = 0; i < n; i++)
             {
@@ -422,6 +432,8 @@ namespace Unbound.Runtime
                 var triangles = Triangulate(ring);
                 if (triangles == null)
                 {
+                    if (s_WarnedUncut) return null;
+                    s_WarnedUncut = true;
                     Debug.LogWarning("Unbound: a NavMeshObstacle's carved hole could not be cut into a NavMesh polygon; the polygon is left whole.");
                     return null;
                 }

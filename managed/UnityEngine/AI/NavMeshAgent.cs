@@ -656,6 +656,7 @@ namespace Unbound.Runtime
         {
             s_Agents.Remove(agent);
             s_PathRequests.Remove(agent);
+            s_Restarted.Remove(agent);
             Detach(agent);
         }
 
@@ -785,9 +786,11 @@ namespace Unbound.Runtime
                 var old = agent.isOnOffMeshLink ? agent.m_Crowd : null;
                 bool onLink = old != null || agent.m_LinkCompleting;
                 bool following = !onLink && destination.HasValue && agent.hasPath;
-                // Within its last centimetre (hasPath already false) and still moving to the end.
+                // Within its last centimetre (hasPath already false) and still moving to the end; an
+                // agent stopped within its stoppingDistance stays stopped.
                 bool finishing = !onLink && destination.HasValue && !following && !agent.pathPending
-                    && agent.m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID;
+                    && agent.m_Crowd.targetState == DtMoveRequestState.DT_CROWDAGENT_TARGET_VALID
+                    && agent.remainingDistance < 0.01f;
                 var moving = agent.m_Crowd;
                 agent.m_Crowd = null;
                 agent.m_Surface = null;
@@ -809,7 +812,14 @@ namespace Unbound.Runtime
                     agent.SetPathPending(false);
                     continue;
                 }
-                if (agent.pathPending) RequestPath(agent);
+                if (agent.pathPending)
+                {
+                    // A search under way starts again on the new NavMesh and is then finished at
+                    // once, so a NavMesh changing every frame (a moving carving obstacle) cannot
+                    // keep a request pending forever (Unbound's choice, unmeasured).
+                    if (s_Searches.ContainsKey(agent)) s_Restarted.Add(agent);
+                    RequestPath(agent);
+                }
                 else if (following) PlanAgain(agent, moving);
                 else if (finishing)
                 {
@@ -923,6 +933,8 @@ namespace Unbound.Runtime
         }
 
         static readonly Dictionary<NavMeshAgent, NavMesh.PathSearch> s_Searches = new Dictionary<NavMeshAgent, NavMesh.PathSearch>();
+        /// <summary>Agents whose search under way a NavMesh rebuild restarted: finished in one go.</summary>
+        static readonly HashSet<NavMeshAgent> s_Restarted = new HashSet<NavMeshAgent>();
 
         /// <summary>Paths for the requests, after the scripts' Update, in request order within the
         /// frame's A* iteration budget; a request the budget does not finish goes on next frame.</summary>
@@ -936,7 +948,11 @@ namespace Unbound.Runtime
                 if (agent == null || agent.m_Crowd == null || !agent.pathPending)
                 {
                     s_PathRequests.RemoveAt(0);
-                    if (agent != null) s_Searches.Remove(agent);
+                    if (agent != null)
+                    {
+                        s_Searches.Remove(agent);
+                        s_Restarted.Remove(agent);
+                    }
                     continue;
                 }
                 if (!s_Searches.TryGetValue(agent, out var search))
@@ -951,7 +967,11 @@ namespace Unbound.Runtime
                     }
                     s_Searches[agent] = search;
                 }
-                if (!search.Step(ref budget)) break;
+                bool restarted = s_Restarted.Remove(agent);
+                int allowed = restarted ? int.MaxValue : budget;
+                bool finished = search.Step(ref allowed);
+                if (!restarted) budget = allowed;
+                if (!finished) break;
                 s_PathRequests.RemoveAt(0);
                 s_Searches.Remove(agent);
                 if (search.Result == null)
