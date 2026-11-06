@@ -23,8 +23,9 @@ public static class TexFormatsProbe
     static readonly Color B = new Color(1.25f, -0.25f, 0.000004f, 0.33333334f);
     static readonly Color Over = new Color(0.9f, 0.2f, 0.3f, 0.25f);
     static readonly Color Sentinel = new Color(9f, 9f, 9f, 9f);
-    // Draws never bind a texture, so no target is sampled while it is drawn into.
-    static Material s_Mat, s_Sample, s_Load;
+    // Draws never bind a texture, so no target is sampled while it is drawn into (except in
+    // Feedback, whose material samples its target on purpose).
+    static Material s_Mat, s_Sample, s_Load, s_Feed;
     static ComputeShader s_Kernels;
     static RenderTexture s_Out2, s_Out1;
     /// <summary><c>TEXTURE_FORMATS_PROBE_ONLY</c>: run only the cases whose key starts with one of
@@ -287,6 +288,28 @@ public static class TexFormatsProbe
         Try(key + ".kernel.load", () => Loaded(rw, c.Signed));
     }
 
+    // ------------------------------------------------------------------ feedback
+
+    /// A draw whose material samples the target it draws into: through Blit's <c>_MainTex</c>
+    /// (source and destination the same texture) and through another property. Each pass writes
+    /// the sampled texel swizzled (yzwx), over a target holding A and B.
+    static void Feedback(string key, RenderTextureFormat format)
+    {
+        var rt = Own(new RenderTexture(2, 1, 0, format, RenderTextureReadWrite.Linear));
+        rt.filterMode = FilterMode.Point;
+        Value(key + ".create", B2(rt.Create()));
+        s_Mat.SetVector("_Color", A);
+        s_Mat.SetVector("_Color2", B);
+        Graphics.Blit(null, rt, s_Mat, 2);
+        Graphics.Blit(rt, rt, s_Feed, 12);
+        Read(key + ".blit", rt);
+        Graphics.Blit(null, rt, s_Mat, 2);
+        s_Feed.SetTexture("_FeedTex", rt);
+        Graphics.Blit(null, rt, s_Feed, 13);
+        s_Feed.SetTexture("_FeedTex", null);
+        Read(key + ".property", rt);
+    }
+
     // ------------------------------------------------------------------ textures
 
     static byte[] Pattern(int length)
@@ -366,6 +389,7 @@ public static class TexFormatsProbe
         s_Mat = Own(new Material(Shader.Find("Probe/TexFormats")));
         s_Sample = Own(new Material(s_Mat.shader));
         s_Load = Own(new Material(s_Mat.shader));
+        s_Feed = Own(new Material(s_Mat.shader));
         s_Kernels = Resources.Load<ComputeShader>("TexFormats");
         s_Out2 = Target(Descriptor(GraphicsFormat.R32G32B32A32_SFloat));
         s_Out1 = Own(new RenderTexture(1, 1, 0, RenderTextureFormat.ARGBFloat, RenderTextureReadWrite.Linear));
@@ -375,6 +399,8 @@ public static class TexFormatsProbe
                          RenderTextureFormat.ARGB64, RenderTextureFormat.ARGB2101010 })
                 if (Runs("rt." + format)) NormTarget("rt." + format, format);
             foreach (var c in IntTargets) if (Runs("rt." + c.Key)) IntTarget(c);
+            foreach (var format in new[] { RenderTextureFormat.ARGB32, RenderTextureFormat.ARGBFloat })
+                if (Runs("feedback." + format)) Feedback("feedback." + format, format);
             foreach (var format in new[] { TextureFormat.R16, TextureFormat.RG32, TextureFormat.RGBA64 })
                 if (Runs("tex." + format)) NormTexture("tex." + format, () => new Texture2D(2, 1, format, false, true), true);
             if (Runs("tex.A2B10G10R10_UNormPack32"))

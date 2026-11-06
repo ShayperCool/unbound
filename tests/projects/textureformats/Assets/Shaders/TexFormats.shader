@@ -7,7 +7,7 @@ Shader "Probe/TexFormats"
         HLSLINCLUDE
         #include "UnityCG.cginc"
         float4 _Color, _Color2;
-        sampler2D _MainTex;
+        sampler2D _MainTex, _FeedTex;
         Texture2D<int4> _IntTex;
         Texture2D<uint4> _UIntTex;
         struct v2f { float4 pos : SV_POSITION; float2 uv : TEXCOORD0; };
@@ -19,6 +19,8 @@ Shader "Probe/TexFormats"
         float4 sample(v2f i) : SV_Target { return tex2Dlod(_MainTex, float4(i.uv, 0, 0)); }
         float4 loadInt(v2f i) : SV_Target { return asfloat(_IntTex.Load(int3((int)i.pos.x, 0, 0))); }
         float4 loadUInt(v2f i) : SV_Target { return asfloat(_UIntTex.Load(int3((int)i.pos.x, 0, 0))); }
+        float4 feedMain(v2f i) : SV_Target { return tex2Dlod(_MainTex, float4(i.uv, 0, 0)).yzwx; }
+        float4 feedOther(v2f i) : SV_Target { return tex2Dlod(_FeedTex, float4(i.uv, 0, 0)).yzwx; }
         int4 int8(v2f i) : SV_Target { return PICK(i.pos, int4(-128, 127, -1, 5), int4(1, -2, 3, -4)); }
         uint4 uint8(v2f i) : SV_Target { return PICK(i.pos, uint4(255, 0, 128, 7), uint4(1, 2, 3, 4)); }
         int4 int16(v2f i) : SV_Target { return PICK(i.pos, int4(-32768, 32767, -2, 300), int4(1, -2, 3, -4)); }
@@ -92,6 +94,17 @@ Shader "Probe/TexFormats"
             #pragma target 4.5
             #pragma vertex vert
             #pragma fragment uint32
+            ENDHLSL }
+        // 12, 13: _MainTex / _FeedTex at the pixel's uv, swizzled (yzwx)
+        Pass { HLSLPROGRAM
+            #pragma target 4.5
+            #pragma vertex vert
+            #pragma fragment feedMain
+            ENDHLSL }
+        Pass { HLSLPROGRAM
+            #pragma target 4.5
+            #pragma vertex vert
+            #pragma fragment feedOther
             ENDHLSL }
     }
 }
