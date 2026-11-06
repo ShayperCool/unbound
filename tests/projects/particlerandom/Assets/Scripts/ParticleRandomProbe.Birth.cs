@@ -39,6 +39,7 @@ public partial class ParticleRandomProbe
         var parent = Make(key, 12345, ps =>
         {
             var m = ps.main; m.startLifetime = 0.4f; m.startSpeed = 5f;
+            var rotation = ps.rotationOverLifetime; rotation.enabled = true; rotation.z = 0f;
             m.simulationSpace = parentWorld ? ParticleSystemSimulationSpace.World : ParticleSystemSimulationSpace.Local;
             if (transformed)
             {
@@ -59,6 +60,7 @@ public partial class ParticleRandomProbe
         cm.startSpeed = speed; cm.gravityModifier = gravity; cm.maxParticles = 256;
         cm.simulationSpace = childWorld ? ParticleSystemSimulationSpace.World : ParticleSystemSimulationSpace.Local;
         var cs = child.shape; cs.enabled = false;
+        var cr = child.rotationOverLifetime; cr.enabled = true; cr.z = 0f;
         var ce = child.emission; ce.rateOverTime = childRate ? 40f : 0f;
         ce.SetBursts(childRate ? new ParticleSystem.Burst[0] : childBursts
             ? new[] { new ParticleSystem.Burst(0f, (short)1), new ParticleSystem.Burst(0.04f, (short)1) }
