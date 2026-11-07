@@ -285,6 +285,10 @@ namespace UnityEngine
                 throw new ArgumentOutOfRangeException(nameof(start), $"Bad start/count arguments (start:{start} count:{count} length:{length})");
         }
 
+        // Raw buffer writes can retain array identities and use bone-bounds notification flags.
+        // Automatic skin bounds for that mutation path need their own Unity measurements.
+        internal bool m_UnmeasuredSkinBoundsMutation;
+
         /// <summary>Decodes stream data written at byte <paramref name="offset"/> of the stream into
         /// the vertices it covers (whole vertices of the stream's stride).</summary>
         internal void WriteVertices(ReadOnlySpan<byte> bytes, int offset, int stream)
@@ -309,6 +313,8 @@ namespace UnityEngine
                     at += size * d.dimension;
                     // Only attributes the data covers wholly.
                     if (start < 0 || start + size * d.dimension > bytes.Length) continue;
+                    if (d.attribute is VertexAttribute.Position or VertexAttribute.BlendWeight or VertexAttribute.BlendIndices)
+                        m_UnmeasuredSkinBoundsMutation = true;
                     for (int c = 0; c < 4; c++)
                     {
                         f[c] = c == 3 ? 1f : 0f;

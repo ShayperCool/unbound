@@ -62,7 +62,11 @@ is only for explicit Unity-compatible fixture authoring; it is never part of a g
 * Automatic defaults for multi-bone runtime/imported meshes without serialized
   animation bounds, and offscreen bounds updates for multi-bone meshes, blend
   shapes and cloth remain unsupported and reported. They keep the previous
-  renderer-space fallback and draw policy. Authored local bounds with offscreen
+  renderer-space fallback and draw policy. Raw position/weight buffer edits also
+  disable automatic-bounds trust and report until their bone-bounds notification
+  flags are measured. Mesh reassignment revalidates automatic support while
+  retaining the stored local box; authored/serialized boxes retain their separate
+  provenance. Authored local bounds with offscreen
   updates disabled support separate roots regardless of the skinning algorithm.
   Import-time animation envelope generation, other releases, SRP-specific timing,
   and deformation bounds outside the measured rigid case are follow-ups.
@@ -72,3 +76,10 @@ while reporting false visibility at the renderer's x=20 position, freezing its
 CullCompletely Animator. It also discarded the prefab's serialized `m_AABB`.
 The capture extension adds Animator-driven bone movement through the camera edge
 and a camera return, preserving all initial 1043 records exactly.
+
+Raw buffer edits are bounded by [Mesh.SetVertexBufferData](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Mesh.SetVertexBufferData.html)
+and [MeshUpdateFlags](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rendering.MeshUpdateFlags.html).
+They write the vertex buffer directly; notification and bone-bound-reset flags
+can affect renderer updates. Those flag-dependent automatic bounds are unmeasured
+here and reported, including when a mutated mesh is cloned. Explicit local bounds
+with offscreen updates disabled retain the measured root-space path.

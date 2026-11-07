@@ -31,7 +31,7 @@ namespace UnityEngine
         internal readonly List<float> m_BlendShapeWeights = new List<float>();
 
         Bounds m_LocalBounds;
-        bool m_HasLocalBounds, m_ExactLocalBounds;
+        bool m_HasLocalBounds, m_ExactLocalBounds, m_AuthoredLocalBounds;
         Bounds? m_CullingBounds;
         Mesh m_RigidSource;
         Vector3[] m_RigidVertices;
@@ -232,7 +232,7 @@ namespace UnityEngine
         {
             local = default;
             var mesh = m_Mesh;
-            if (mesh == null) return false;
+            if (mesh == null || mesh.m_UnmeasuredSkinBoundsMutation) return false;
             if (m_RigidSource != mesh || m_RigidVertices != mesh.m_Vertices ||
                 m_RigidWeights != mesh.m_BoneWeights || m_RigidBindposes != mesh.m_Bindposes)
             {
@@ -278,7 +278,8 @@ namespace UnityEngine
             {
                 if (!Compat.SkinnedBoundsMeasured) return false;
                 EnsureLocalBounds();
-                return m_UpdateWhenOffscreen ? RigidBounds(out _) : m_ExactLocalBounds;
+                return m_UpdateWhenOffscreen ? RigidBounds(out _) :
+                    m_AuthoredLocalBounds || m_ExactLocalBounds && RigidBounds(out _);
             }
         }
 
@@ -288,7 +289,8 @@ namespace UnityEngine
             Stubs.Ignored("SkinnedMeshRenderer bounds outside measured support",
                 "root-space culling bounds are measured for Unity 6000.0.71f1 with authored local bounds, " +
                 "or a rigid single-bone mesh. Offscreen bounds updates for multi-bone, blend-shape and cloth meshes " +
-                "and automatic bounds for other runtime meshes remain unsupported; provide localBounds and disable updateWhenOffscreen");
+                "and automatic bounds after raw vertex/weight buffer edits or for other runtime meshes remain unsupported; " +
+                "provide localBounds and disable updateWhenOffscreen");
         }
 
         internal override Bounds GetLocalBounds()
@@ -304,7 +306,7 @@ namespace UnityEngine
         {
             if (!Compat.SkinnedBoundsMeasured) { base.SetLocalBounds(value); return; }
             m_LocalBounds = value;
-            m_HasLocalBounds = m_ExactLocalBounds = true;
+            m_HasLocalBounds = m_ExactLocalBounds = m_AuthoredLocalBounds = true;
             // Unlike transform/root changes, a local-bounds write invalidates cached world bounds.
             m_CullingBounds = null;
         }
@@ -452,7 +454,7 @@ namespace UnityEngine
             if (aabb != null && Compat.SkinnedBoundsMeasured)
             {
                 m_LocalBounds = new Bounds(aabb.Vector3("m_Center"), aabb.Vector3("m_Extent") * 2f);
-                m_HasLocalBounds = m_ExactLocalBounds = true;
+                m_HasLocalBounds = m_ExactLocalBounds = m_AuthoredLocalBounds = true;
             }
             m_BlendShapeWeights.Clear();
             foreach (var item in body.Get("m_BlendShapeWeights")?.Seq() ?? Array.Empty<YNode>()) m_BlendShapeWeights.Add(item.AsFloat());
@@ -466,6 +468,7 @@ namespace UnityEngine
             m_LocalBounds = s.m_LocalBounds;
             m_HasLocalBounds = s.m_HasLocalBounds;
             m_ExactLocalBounds = s.m_ExactLocalBounds;
+            m_AuthoredLocalBounds = s.m_AuthoredLocalBounds;
             m_CullingBounds = null;
             m_Bones = new Transform[s.m_Bones.Length];
             for (int i = 0; i < m_Bones.Length; i++) m_Bones[i] = remap(s.m_Bones[i]) as Transform;

@@ -882,6 +882,7 @@ namespace Unbound.Runtime
                 if ((mask & (1u << renderer.gameObject.layer)) == 0) continue;
                 if (camera != null && !LODGroup.Drawn(renderer, camera, camera.transform.position)) continue;
                 data.Renderers.Add(renderer);
+                renderer.PrepareCullingBounds();
                 if (InsidePlanes(ref parameters, renderer.bounds))
                 {
                     data.Visible.Add(renderer);

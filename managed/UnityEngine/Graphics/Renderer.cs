@@ -367,6 +367,7 @@ namespace UnityEngine
                 if (!renderer || renderer.forceRenderingOff || !renderer.m_Enabled) continue;
                 var go = renderer.m_GameObject;
                 if ((cullingMask & (1 << go.m_Layer)) == 0 || !go.activeInHierarchy) continue;
+                renderer.PrepareCullingBounds();
                 if (!FrameBuilder.InFrustum(viewProjection, renderer.bounds)) continue;
                 var components = go.m_Components;
                 for (int i = 0; i < components.Count; i++)

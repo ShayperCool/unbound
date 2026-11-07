@@ -101,6 +101,7 @@ namespace UnityEngine
             m_SubMeshes.Clear();
             foreach (var s in source.m_SubMeshes)
                 m_SubMeshes.Add(new SubMesh { Indices = (int[])s.Indices.Clone(), Topology = s.Topology, BaseVertex = s.BaseVertex, IndexStart = s.IndexStart, Bounds = s.Bounds, FirstVertex = s.FirstVertex, VertexCount = s.VertexCount });
+            m_UnmeasuredSkinBoundsMutation = source.m_UnmeasuredSkinBoundsMutation;
             m_Layout = (VertexAttributeDescriptor[])source.m_Layout?.Clone();
             m_IndexBuffer = (int[])source.m_IndexBuffer?.Clone();
             m_BoneWeights = (BoneWeight[])source.m_BoneWeights?.Clone();
