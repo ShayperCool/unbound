@@ -861,7 +861,7 @@ public partial class LineProbe : MonoBehaviour
         }
         if (code == 0)
         {
-            try { Blend(); CapCounts(); MiterReversals(); }
+            try { Blend(); CapCounts(); MiterReversals(); MiterChains(); }
             catch (Exception e) { Value("fatal", Q(e.ToString())); code = 1; }
         }
         Value("complete", B(code == 0));
