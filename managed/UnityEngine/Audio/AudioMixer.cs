@@ -34,6 +34,7 @@ namespace UnityEngine.Audio
         readonly HashSet<string> m_PendingClears = new HashSet<string>(StringComparer.Ordinal);
         readonly Dictionary<string, float> m_SubmittedOverrides = new Dictionary<string, float>(StringComparer.Ordinal);
         Dictionary<string, float> m_InstantTarget;
+        HashSet<string> m_TimedSidechainParameters = new HashSet<string>();
 
         // A snapshot transition in progress.
         Dictionary<string, float> m_From;
@@ -134,6 +135,16 @@ namespace UnityEngine.Audio
                 m_To = null;
                 return;
             }
+            // Send levels and Duck Volume parameters have no measured timed interpolation yet.
+            // Unrelated snapshot changes remain usable, including changes on the same mixer.
+            var changingSidechains = new HashSet<string>();
+            foreach (var group in m_Groups)
+                foreach (var effect in group.m_Effects)
+                    effect.CollectTimedSidechainChanges(this, target, snapshots, weights, changingSidechains);
+            foreach (var guid in changingSidechains)
+                if (!HasOverride(guid))
+                    throw new NotSupportedException("AudioMixer timed snapshot changes to Send levels or Duck Volume parameters are unmeasured");
+            m_TimedSidechainParameters = changingSidechains;
             m_InstantTarget = null;
             m_From = new Dictionary<string, float>(m_Values);
             m_To = target;
@@ -160,6 +171,9 @@ namespace UnityEngine.Audio
         {
             Build();
             if (name == null || !m_Exposed.TryGetValue(name, out var guid)) return false;
+            if (m_To != null && m_TimedSidechainParameters.Contains(guid)
+                && m_To.TryGetValue(guid, out var target) && target != SnapshotValue(guid))
+                throw new NotSupportedException("AudioMixer ClearFloat would enable an unmeasured timed snapshot change to a Send level or Duck Volume parameter");
             m_PendingClears.Add(guid);
             return true;
         }
@@ -189,6 +203,23 @@ namespace UnityEngine.Audio
 
         internal float GetAbsoluteAudibilityFromGroup(AudioMixerGroup group) => group == null ? 0f : group.EffectiveGain(0);
 
+        internal bool SnapshotTransitionChanges(string guid, Dictionary<string, float> target, AudioMixerSnapshot[] snapshots, float[] weights)
+        {
+            if (guid == null || !target.TryGetValue(guid, out var value)) return false;
+            float current = SnapshotValue(guid);
+            if (value == current) return false;
+            if (!float.IsFinite(value)) return true;
+            // Equal snapshot values can acquire a rounding difference during weighted summation.
+            // That alone does not make an unrelated transition a sidechain parameter change.
+            for (int i = 0; i < snapshots.Length; i++)
+                if (snapshots[i] != null && weights[i] > 0f && snapshots[i].ValueOf(guid, m_Defaults) != current)
+                    return true;
+            return false;
+        }
+
+        internal bool HasOverride(string guid) => m_Overrides.ContainsKey(guid) && !m_PendingClears.Contains(guid);
+        internal float SnapshotValue(string guid) => m_Values.TryGetValue(guid, out var value) ? value : m_Defaults.TryGetValue(guid, out value) ? value : 0f;
+
         /// <summary>A parameter's current value.</summary>
         internal float Value(string guid)
         {
@@ -196,6 +227,12 @@ namespace UnityEngine.Audio
             if (m_Overrides.TryGetValue(guid, out var v)) return v;
             if (m_Values.TryGetValue(guid, out v)) return v;
             return m_Defaults.TryGetValue(guid, out v) ? v : 0f;
+        }
+
+        internal AudioMixerGroup FindEffectGroup(AudioMixerEffectController effect)
+        {
+            foreach (var group in m_Groups) if (group.m_Effects.Contains(effect)) return group;
+            return null;
         }
 
         internal bool AnySolo
@@ -410,14 +447,29 @@ namespace UnityEngine.Audio
             return pitch;
         }
 
-        internal object DspConfiguration()
+        internal void ValidateSidechains()
         {
             m_Mixer?.Build();
+            foreach (var effect in m_Effects)
+            {
+                if (!effect.IsSidechain) continue;
+                if (!Compat.MixerSidechainMeasured)
+                    throw new NotSupportedException("AudioMixer Send, Receive and Duck Volume are measured only for Unity 6000.0.71f1");
+                if (effect.m_EnableWetMix)
+                    throw new NotSupportedException("AudioMixer wet mixing is unsupported for effect '" + effect.m_EffectName + "' in group '" + Path + "'");
+                if (effect.m_SendTarget != null && m_Mixer.FindEffectGroup(effect.m_SendTarget) == null)
+                    throw new NotSupportedException("AudioMixer sends to a target outside their mixer are unmeasured in group '" + Path + "'");
+            }
+        }
+
+        internal object DspConfiguration()
+        {
+            ValidateSidechains();
             var effects = new List<object>();
             foreach (var effect in m_Effects)
             {
                 // Native ignores bypass on Send, Receive and Duck Volume (the Editor disallows it).
-                bool routed = effect.m_EffectName == "Send" || effect.m_EffectName == "Receive" || effect.m_EffectName == AudioMixerEffectController.DuckVolume;
+                bool routed = effect.IsSidechain;
                 bool bypass = !routed && (m_BypassEffects || effect.m_Bypass);
                 bool reverb = effect.m_EffectName == AudioMixerEffectController.SfxReverb;
                 bool measured = Array.IndexOf(AudioMixerEffectController.MeasuredEffects, effect.m_EffectName) >= 0;
@@ -429,7 +481,7 @@ namespace UnityEngine.Audio
                     throw new NotSupportedException("AudioMixer " + effect.m_EffectName + " Cutoff freq " + simpleCutoff + " is outside the Editor's range 10 to 22000");
                 // A send's target registers its group, which may have no source of its own.
                 var target = effect.m_EffectName == "Send" ? effect.m_SendTarget : null;
-                var targetGroup = target == null ? null : m_Mixer?.m_Groups.Find(g => g.m_Effects.Contains(target));
+                var targetGroup = target == null ? null : m_Mixer?.FindEffectGroup(target);
                 if (targetGroup != null) _ = targetGroup.Handle;
                 // Wet mixing is measured only on SFX Reverb (tests/projects/mixerreverb).
                 if (!bypass && !reverb && effect.m_EnableWetMix)
@@ -471,6 +523,7 @@ namespace UnityEngine.Audio
             var parent = m_Parent ?? m_Mixer?.m_OutputGroup;
             return new { handle = m_Handle, parent = parent?.Handle ?? 0UL,
                 mixer = m_Mixer?.m_MasterGroup?.Handle ?? 0UL,
+                inputFadeFromMixer = Compat.MixerGraphStartupMeasured,
                 enableSuspend = m_Parent == null && m_Mixer != null && m_Mixer.m_EnableSuspend,
                 suspendThreshold = SuspensionGain(m_Mixer?.m_SuspendThreshold ?? -80f),
                 muted = m_Mute || (m_Mixer != null && m_Mixer.AnySolo && !InSoloPath()),
@@ -742,6 +795,17 @@ namespace Unbound.Runtime
             var v = Values(mixer);
             return new { center = v[0], octaves = v[1], gain = v[2] };
         }
+        internal bool IsSidechain => m_EffectName == "Send" || m_EffectName == "Receive" || m_EffectName == DuckVolume;
+
+        internal void CollectTimedSidechainChanges(UnityEngine.Audio.AudioMixer mixer, Dictionary<string, float> target,
+            UnityEngine.Audio.AudioMixerSnapshot[] snapshots, float[] weights, HashSet<string> changing)
+        {
+            void Collect(string guid) { if (mixer.SnapshotTransitionChanges(guid, target, snapshots, weights)) changing.Add(guid); }
+            if (m_EffectName == "Send") Collect(m_MixLevelGuid);
+            else if (m_EffectName == DuckVolume)
+                foreach (var name in DuckParameters) Collect(Parameter(name));
+        }
+
         internal AudioMixerEffectController m_SendTarget;
         internal object DuckConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {

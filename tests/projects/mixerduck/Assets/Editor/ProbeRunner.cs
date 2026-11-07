@@ -112,6 +112,21 @@ public static class ProbeRunner
             if (found == null) throw new Exception("No send target in " + target + ": " + key);
             Set(send, "sendTarget", found);
         }
+        string change = DuckProbe.Option(key, "change=", "");
+        if (change != "") {
+            var unit = units[change == "Send Level" ? "Voice.Send" : "Music.Duck"];
+            ((UnityEngine.Object)snapshot).name = "Base";
+            Call(mixer, "CloneNewSnapshotFromTarget", true);
+            var other = Get(mixer, "TargetSnapshot"); ((UnityEngine.Object)other).name = "Other";
+            float to = float.Parse(DuckProbe.Option(key, "to=", "0"), CultureInfo.InvariantCulture);
+            if (change == "Send Level") Call(unit, "SetValueForMixLevel", mixer, other, to);
+            else Call(unit, "SetValueForParameter", mixer, other, change, to);
+            Set(mixer, "TargetSnapshot", snapshot);
+            var type = T("ExposedAudioParameter"); var item = Activator.CreateInstance(type);
+            type.GetField("name", F).SetValue(item, "Change");
+            type.GetField("guid", F).SetValue(item, change == "Send Level" ? Call(unit, "GetGUIDForMixLevel") : Call(unit, "GetGUIDForParameter", change));
+            var exposed = Array.CreateInstance(type, 1); exposed.SetValue(item, 0); Set(mixer, "exposedParameters", exposed);
+        }
         EditorUtility.SetDirty((UnityEngine.Object)mixer);
     }
 }

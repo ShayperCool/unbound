@@ -50,8 +50,11 @@ namespace Unbound.Runtime
         internal abstract AudioSourceState State(ulong handle);
         internal abstract void ReleaseSource(ulong handle);
         internal abstract void UpdateGroup(ulong handle, float gain, float pitch);
-        internal virtual void UpdateGroup(UnityEngine.Audio.AudioMixerGroup group) =>
+        internal virtual void UpdateGroup(UnityEngine.Audio.AudioMixerGroup group)
+        {
+            group.ValidateSidechains();
             UpdateGroup(group.m_Handle, group.EffectiveGain(0), group.EffectivePitch(0));
+        }
         internal abstract AudioStatus Frame(in AudioFramePacket frame);
         internal abstract double DspTime { get; }
         /// <summary>window &lt; 0: samples; else the spectrum with that FFTWindow.</summary>

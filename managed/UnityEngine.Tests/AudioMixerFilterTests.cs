@@ -259,6 +259,97 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void CrossMixerSendTargetsFailOnBothBackendsWithoutDroppingTheTarget()
+        {
+            var (sender, group, send) = Fixture();
+            var (receiver, _, target) = Fixture();
+            send.m_EffectName = "Send"; send.m_SendTarget = target;
+            receiver.outputAudioMixerGroup = group;
+            foreach (Action submit in new Action[] { () => group.DspConfiguration(), () => AudioBackend.Current.UpdateGroup(group) })
+                Assert.Contains("outside their mixer", Assert.Throws<NotSupportedException>(submit).Message);
+            Assert.Same(target, send.m_SendTarget);
+            send.m_SendTarget = null;
+            group.DspConfiguration(); AudioBackend.Current.UpdateGroup(group);
+        }
+
+        [Theory]
+        [InlineData("Send")]
+        [InlineData("Receive")]
+        [InlineData("Duck Volume")]
+        public void SidechainAcceptanceIsSharedAndReleaseSpecific(string kind)
+        {
+            var (_, group, effect) = Fixture(); effect.m_EffectName = kind;
+            foreach (Action submit in new Action[] { () => group.DspConfiguration(), () => AudioBackend.Current.UpdateGroup(group) })
+            {
+                ProjectInfo.UnityVersion = "6000.0.72f1";
+                Assert.Contains("6000.0.71f1", Assert.Throws<NotSupportedException>(submit).Message);
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                effect.m_EnableWetMix = true;
+                Assert.Contains("wet mixing", Assert.Throws<NotSupportedException>(submit).Message);
+                effect.m_EnableWetMix = false;
+                submit();
+            }
+        }
+
+        [Theory]
+        [InlineData("Send", "level")]
+        [InlineData("Duck Volume", "Threshold")]
+        [InlineData("Duck Volume", "Ratio")]
+        [InlineData("Duck Volume", "Attack Time")]
+        [InlineData("Duck Volume", "Release Time")]
+        [InlineData("Duck Volume", "Make-up Gain")]
+        [InlineData("Duck Volume", "Knee")]
+        [InlineData("Duck Volume", "Sidechain Mix")]
+        public void TimedSnapshotsRejectOnlyChangingUnmeasuredSidechainParameters(string kind, string parameter)
+        {
+            var (mixer, group, effect) = Fixture();
+            UseEffect(mixer, effect, kind, kind == "Send" ? Array.Empty<string>() : AudioMixerEffectController.DuckParameters);
+            if (kind == "Send") { effect.m_MixLevelGuid = parameter; mixer.m_Exposed[parameter] = parameter; }
+            mixer.Build();
+            float original = mixer.Value(parameter);
+            float change = parameter == "Sidechain Mix" ? -0.25f : 1f;
+            var target = new AudioMixerSnapshot { m_Mixer = mixer };
+            target.m_Values[parameter] = original + change;
+            Assert.Contains("timed snapshot", Assert.Throws<NotSupportedException>(() => target.TransitionTo(0.1f)).Message);
+            Assert.Throws<NotSupportedException>(() => mixer.TransitionToSnapshots(new[] { target }, new[] { 1f }, 0.2f));
+            Assert.Equal(original, mixer.Value(parameter));
+            // Immediate changes retain detector history; the mixerduck captures measure them.
+            target.TransitionTo(0f); mixer.Tick(0f, 0f);
+            Assert.Equal(original + change, mixer.Value(parameter));
+            // Changing only a group fader on this mixer remains supported.
+            target.m_Values["volume"] = -12f;
+            target.TransitionTo(0.2f); mixer.Tick(0.2f, 0.2f);
+            Assert.Equal(-12f, mixer.Value("volume"));
+            target.m_Values[parameter] = original;
+            Assert.True(mixer.SetFloat(parameter, original + 2f * change));
+            target.TransitionTo(0.2f);
+            Assert.Throws<NotSupportedException>(() => mixer.ClearFloat(parameter));
+            Assert.Equal(original + 2f * change, mixer.Value(parameter));
+            mixer.Tick(0.2f, 0.2f);
+            Assert.Equal(original + 2f * change, mixer.Value(parameter));
+            Assert.True(mixer.ClearFloat(parameter));
+            target.m_Values[parameter] = original + change;
+            Assert.Throws<NotSupportedException>(() => target.TransitionTo(0.2f));
+        }
+
+        [Fact]
+        public void WeightedSnapshotsWithIdenticalSidechainValuesCanChangeOnlyTheirFaders()
+        {
+            var (mixer, _, effect) = Fixture();
+            UseEffect(mixer, effect, "Duck Volume", AudioMixerEffectController.DuckParameters);
+            mixer.Build();
+            var snapshots = new AudioMixerSnapshot[3];
+            for (int i = 0; i < snapshots.Length; i++)
+            {
+                snapshots[i] = new AudioMixerSnapshot { m_Mixer = mixer };
+                snapshots[i].m_Values["volume"] = -3f * i;
+            }
+            mixer.TransitionToSnapshots(snapshots, new[] { 0.11f, 0.29f, 0.63f }, 0.5f);
+            mixer.Tick(0.1f, 0.1f);
+            Assert.True(mixer.Value("volume") < 0f);
+        }
+
+        [Fact]
         public void SendsTargetADuckWithMeasuredDefaultsAndIgnoreBypass()
         {
             var (mixer, master, duck) = Fixture();

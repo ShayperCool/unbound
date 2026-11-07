@@ -367,6 +367,18 @@ the Audio Mixer* (https://docs.unity.com/en-us/engine/6000.0/manual/audio/mixer/
 - The Manual states nothing about group processing order for sends, latency, bypass of these
   units or their startup.
 
+The 6000.0 [SetFloat API](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Audio.AudioMixer.SetFloat.html)
+locks the exposed parameter against snapshots once set. Its limitations prohibit calls in Awake,
+OnEnable and AfterSceneLoad; these captures change parameters after Start, between rendered blocks.
+[TransitionTo](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Audio.AudioMixerSnapshot.TransitionTo.html)
+reaches a snapshot over the requested interval;
+[TransitionToSnapshots](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Audio.AudioMixer.TransitionToSnapshots.html)
+reaches a weighted mixture. Neither documents DSP interpolation steps or detector-state handling.
+The [mixer routing manual](https://docs.unity3d.com/6000.0/Documentation/Manual/AudioMixerSpecifics.html)
+guarantees mixer-output routing into another mixer's group; it does not establish cross-mixer Send
+semantics. The former AudioMixerEffects manual URL returns 404; the effect descriptions are in
+AudioMixerInspectors, linked above.
+
 Editor definitions of 6000.0.71f1 (`MixerEffectDefinitions`): Threshold -80 to 0 dB (default -10),
 Ratio 0.2 to 10 (displayed in %, default 2), Attack Time and Release Time 0 to 10 s (default 0.1),
 Make-up Gain -80 to 40 dB (0), Knee 0 to 50 dB (10), Sidechain Mix 0 to 1 (1). A Send's level is
@@ -393,7 +405,11 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
   `default`). The other unset parameters act as their Editor defaults.
 - **Sends.** A Send adds `DspGain(level) * signal` at its chain position to its target, where
   `DspGain` is the mixer's gain approximation; -80 dB sends nothing. Several sends sum. A Receive
-  adds the sum at its position.
+  adds the sum at its position. A live level change ramps linear gain across the next DSP block:
+  `previous + (target - previous) * sample / blockSamples`, beginning at the previous gain. Samples are interleaved stereo, so the right channel advances
+  half a frame ahead of the left during the ramp. Exposed
+  SetFloat/ClearFloat and immediate snapshots use the same ramp; creating a late source does not
+  restart it.
 - **Order.** Sends reach their target in the same block in every measured layout: siblings in
   both creation orders, a duck or receive in the parent. The engine processes children before
   parents and senders before the groups they send to. A send cycle (including into its own
@@ -401,9 +417,18 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
 - **Bypass.** Native ignores effect bypass and group bypass on all three units (the Editor
   disallows bypassing them).
 - **Startup.** During the mixer's first DSP block nothing reaches a Receive or Duck Volume. The
-  engine times this from the mixer's start, also for a sending group registered later (unmeasured). A
-  group with Duck Volume has the 1024-frame group input fade (as Echo and SFX Reverb); groups with
-  only Send or Receive do not. Signals there otherwise show only the voices' 64-frame start fade.
+  engine times this from the mixer's start. Late source playback, source creation at blocks 3/8,
+  and the resulting late group registration reach their target immediately, with no new sidechain
+  drop. Post-fader late senders also retain the mixer's age for the input fade
+  (`Compat.MixerGraphStartupMeasured`); other releases retain the unmeasured group-age path. A group with Duck Volume has the 1024-frame group input fade, as Echo and SFX Reverb do.
+  Send or Receive after Attenuation also request that fade; before Attenuation they do not. The
+  placement controls cover both units and chains containing both, with the dry input and send
+  output recorded. Voices separately keep their 64-frame start fade.
+- **Live detector parameters.** Threshold, Ratio, Attack Time, Release Time, Make-up Gain, Knee
+  and Sidechain Mix changes retain the detector envelope and eight-frame interpolation history.
+  Threshold, Ratio, Attack, Release and Make-up are covered through exposed SetFloat/ClearFloat
+  and zero-time snapshots; Knee and Sidechain Mix are covered through zero-time snapshots.
+  These are block-boundary changes; timed interpolation is a separate unmeasured mechanism.
 
 ## Limits
 
@@ -412,9 +437,17 @@ reproduces every float of the reference within ATOL `2e-5`/RTOL `2e-4`.
   differ by under 1.4e-5.
 - A Send level above 0 dB and Duck Volume values outside the Editor's ranges (through exposed
   parameters) fail loudly as unmeasured.
-- Unmeasured: other releases, surround output, parameter changes and snapshot transitions while
-  the detector runs, sending groups that start after their mixer, sends between mixers, a send into its own group,
-  wet mixing on these units (fails loudly), and sample rates other than 48000 and 44100 Hz.
+- Send, Receive and Duck Volume require `Compat.MixerSidechainMeasured`, exactly 6000.0.71f1.
+  Sends to another mixer fail explicitly, including when one mixer outputs into another mixer.
+  Timed snapshots that change Send levels or Duck Volume parameters fail before scheduling, on
+  both TransitionTo and TransitionToSnapshots. Unrelated snapshot changes and parameters held
+  by exposed overrides remain usable. Cross-mixer sends and timed sidechain interpolation are
+  follow-ups; no substitute routing or interpolation is certified.
+- The 6000.0 Editor exposes no Allow Wet Mixing or Wet Level control on Send or Duck Volume.
+  The published [6000.0 Inspector implementation](https://github.com/Unity-Technologies/UnityCsReference/blob/6000.0/Editor/Mono/Audio/Mixer/GUI/AudioMixerEffectView.cs)
+  excludes both units. Assets enabling wet mixing on either still fail explicitly.
+- Surround output, sample rates other than 48000/44100 Hz, other DSP buffer sizes and live effect
+  insertion/retargeting remain unmeasured.
 - Compressor, ParamEQ, the simple filters and Distortion are below; the other mixer effects
   still fail loudly.
 

@@ -86,10 +86,15 @@ impl EffectKind {
     }
     /// Kinds whose group input keeps the measured startup fade also while bypassed
     /// (tests/projects/mixerduck, tests/projects/mixercompressor). Lowpass and Highpass fade
-    /// only while active; Attenuation, Send and Receive never.
+    /// only while active; Send and Receive use the placement rule below.
     pub(crate) fn fades_in_when_bypassed(self) -> bool {
         use EffectKind::*;
         matches!(self, Echo | SfxReverb | DuckVolume) || self.bypass_keeps_state()
+    }
+    /// Routing units following Attenuation retain the group input fade. Before it, they
+    /// do not request a fade (tests/projects/mixerduck, startup placement controls).
+    pub(crate) fn fades_in_after_attenuation(self) -> bool {
+        matches!(self, Self::Send | Self::Receive)
     }
     /// The fade of Lowpass and Highpass, which apply it only while active.
     pub(crate) fn fades_in_when_active(self) -> bool {
@@ -369,6 +374,9 @@ pub struct GroupSpec {
     pub observe: bool,
     #[serde(default)]
     pub mixer: u64,
+    /// The measured mixer graph startup profile; false keeps the unmeasured legacy group age.
+    #[serde(default)]
+    pub input_fade_from_mixer: bool,
     #[serde(default)]
     pub enable_suspend: bool,
     /// Linear RMS boundary, converted from the asset's dB setting by the managed mixer.
@@ -615,6 +623,9 @@ pub struct Effect {
     resonance: f32,
     rate: u32,
     gain: f32,
+    send_from: f32,
+    send_frames: u32,
+    buffer: u32,
 }
 impl Effect {
     pub fn new(spec: EffectSpec, rate: u32, buffer: u32) -> anyhow::Result<Self> {
@@ -638,7 +649,14 @@ impl Effect {
             cutoff: 5000.0,
             resonance: 1.0,
             rate,
-            gain: spec.gain,
+            send_from: spec.send_level,
+            send_frames: 0,
+            buffer: buffer.max(1),
+            gain: if spec.kind == EffectKind::Send.name() {
+                spec.send_level
+            } else {
+                spec.gain
+            },
         };
         effect.update(spec, rate, buffer)?;
         Ok(effect)
@@ -674,6 +692,11 @@ impl Effect {
             };
             reverb.tune(sfx);
         }
+        if kind == Some(EffectKind::Send) && spec.send_level != self.spec.send_level {
+            self.send_from = self.gain;
+            self.send_frames = 0;
+        }
+        self.buffer = buffer.max(1);
         self.kind = kind;
         self.rate = rate;
         self.spec = spec;
@@ -705,9 +728,15 @@ impl Effect {
         self.simple = SimpleFilter::default();
         self.eq.h = Default::default();
         self.frames = 0;
+        self.send_from = self.spec.send_level;
+        self.send_frames = 0;
         self.cutoff = 5000.0;
         self.resonance = 1.0;
-        self.gain = self.spec.gain;
+        self.gain = if self.kind == Some(EffectKind::Send) {
+            self.spec.send_level
+        } else {
+            self.spec.gain
+        };
         self.tune();
     }
     fn tune(&mut self) {
@@ -751,14 +780,24 @@ impl Effect {
                     .as_ref()
                     .and_then(|t| sidechains.get_mut(t));
                 if let Some(sidechain) = target {
-                    let skip = muted.min(samples.len() / 2);
-                    for (s, x) in sidechain[skip * 2..samples.len()]
-                        .iter_mut()
-                        .zip(&samples[skip * 2..])
-                    {
-                        *s += x * self.spec.send_level;
+                    let frames = samples.len() / 2;
+                    let skip = muted.min(frames);
+                    // tests/projects/mixerduck: a live level change interpolates linear gain
+                    // across interleaved samples of one DSP block, starting at the preceding level.
+                    for frame in skip..frames {
+                        let position = self.send_frames.saturating_add(frame as u32);
+                        for channel in 0..2 {
+                            let gain = self.send_gain_at(position, channel);
+                            let i = frame * 2 + channel;
+                            sidechain[i] += samples[i] * gain;
+                        }
                     }
                 }
+                self.send_frames = self
+                    .send_frames
+                    .saturating_add((samples.len() / 2) as u32)
+                    .min(self.buffer);
+                self.gain = self.send_gain_at(self.send_frames, 0);
             }
             Some(EffectKind::Receive) => {
                 if let Some(sidechain) = sidechains.get(&self.spec.id) {
@@ -779,6 +818,15 @@ impl Effect {
         self.frames = self.frames.saturating_add((samples.len() / 2) as u32);
         true
     }
+    fn send_gain_at(&self, position: u32, channel: usize) -> f32 {
+        if position >= self.buffer {
+            self.spec.send_level
+        } else {
+            self.send_from
+                + (self.spec.send_level - self.send_from)
+                    * ((position as f32 + channel as f32 * 0.5) / self.buffer as f32)
+        }
+    }
     pub fn process(&mut self, samples: &mut [f32], bypass: bool) {
         let Some(kind) = self.kind else { return };
         if kind == EffectKind::Attenuation {
@@ -790,7 +838,11 @@ impl Effect {
                     *x *= gain;
                 }
             }
-            self.gain = self.spec.gain;
+            self.gain = if self.kind == Some(EffectKind::Send) {
+                self.spec.send_level
+            } else {
+                self.spec.gain
+            };
         } else if kind == EffectKind::Echo {
             if !bypass && !self.spec.bypass {
                 self.echo.process(samples, &self.spec);
@@ -894,6 +946,7 @@ pub struct GroupNode {
     pub effects: Vec<Effect>,
     pub buffer: Vec<f32>,
     pub rendered: usize,
+    pub input_fade: bool,
     pub suspended: bool,
     pub last_active: u64,
     pub energy: f64,
@@ -920,6 +973,16 @@ impl GroupNode {
                 }
             })
             .collect::<anyhow::Result<_>>()?;
+        let mut after_attenuation = false;
+        self.input_fade = self.effects.iter().any(|effect| {
+            let Some(kind) = effect.kind() else {
+                return false;
+            };
+            after_attenuation |= kind == EffectKind::Attenuation;
+            kind.fades_in_when_bypassed()
+                || (after_attenuation && kind.fades_in_after_attenuation())
+                || (!spec.bypass && !effect.spec.bypass && kind.fades_in_when_active())
+        });
         self.spec = spec;
         Ok(())
     }
@@ -928,6 +991,43 @@ impl GroupNode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn live_send_gain_changes_ramp_without_resetting_or_muting_the_dry_signal() {
+        for rate in [48000, 44100] {
+            let spec = |level| {
+                serde_json::from_value::<EffectSpec>(serde_json::json!({
+                    "id": "send", "kind": "Send", "sendTarget": "receive", "sendLevel": level
+                }))
+                .unwrap()
+            };
+            let mut effect = Effect::new(spec(0.25), rate, 32).unwrap();
+            let mut sidechains = HashMap::from([("receive".to_string(), vec![0.0; 32])]);
+            let mut dry = vec![1.0; 32];
+            effect.process_routed(&mut dry, &mut sidechains, 0);
+            assert_eq!(sidechains["receive"], vec![0.25; 32]);
+            for (from, to) in [(0.25, 0.75), (0.75, 0.125)] {
+                for chunk in 0..3 {
+                    // Equal descriptors are submitted repeatedly, including midway through a ramp.
+                    effect.update(spec(to), rate, 32).unwrap();
+                    sidechains.get_mut("receive").unwrap().fill(0.0);
+                    effect.process_routed(&mut dry, &mut sidechains, 0);
+                    for frame in 0..16 {
+                        for channel in 0..2 {
+                            let position = ((chunk * 16 + frame) * 2 + channel).min(64);
+                            let expected = from + (to - from) * position as f32 / 64.0;
+                            assert_eq!(sidechains["receive"][frame * 2 + channel], expected);
+                        }
+                    }
+                    assert_eq!(dry, vec![1.0; 32]);
+                }
+            }
+            effect.reset();
+            sidechains.get_mut("receive").unwrap().fill(0.0);
+            effect.process_routed(&mut dry, &mut sidechains, 0);
+            assert_eq!(sidechains["receive"], vec![0.125; 32]);
+        }
+    }
 
     #[test]
     fn the_kind_table_round_trips_and_keeps_the_former_kind_lists() {

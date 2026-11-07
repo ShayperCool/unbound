@@ -70,6 +70,39 @@ public class DuckProbe : MonoBehaviour
         new[] { "startup_receive", "music=none", "voice=imp0", "Music:Att", "Voice:Send>Fx,Att", "Fx:Receive,Att" },
         new[] { "startup_receive_source", "music=none", "voice=imp0", "fx=dc0", "Music:Att", "Voice:Send>Fx,Att", "Fx:Receive,Att" },
         new[] { "startup_send_audible", "music=none", "voice=imp0", "Music:Att", "Voice:Send>Fx,Att", "Fx:Receive,Att", "Voice.Volume=0", "Fx.Volume=-80" },
+        new[] { "late_receive", "music=dc0", "voice=imp0", "Music:Att,Receive", "Voice:Send>Music,Att", "late=8" },
+        new[] { "late_duck", "music=dc0", "voice=step0:0.5", "late=8" },
+        new[] { "late_receive_create", "music=dc0", "voice=imp0", "Music:Att,Receive", "Voice:Send>Music,Att", "late=8", "create=1" },
+        new[] { "live_send", "music=dc0", "voice=step0:0.5", "Voice.Send.Level=-80", "change=Send Level", "to=0" },
+        new[] { "live_threshold", "voice=step0:0.5", "change=Threshold", "to=-25" },
+        new[] { "live_ratio", "voice=step0:0.5", "change=Ratio", "to=5" },
+        new[] { "live_attack", "voice=step0:0.5", "change=Attack Time", "to=0.01" },
+        new[] { "live_release", "voice=step0:0.5", "change=Release Time", "to=0.01" },
+        new[] { "live_makeup", "voice=step0:0.5", "change=Make-up Gain", "to=6" },
+        new[] { "snap_threshold", "voice=step0:0.5", "change=Threshold", "to=-25", "snapshot=1" },
+        new[] { "snap_ratio", "voice=step0:0.5", "change=Ratio", "to=5", "snapshot=1" },
+        new[] { "snap_attack", "voice=step0:0.5", "change=Attack Time", "to=0.01", "snapshot=1" },
+        new[] { "snap_release", "voice=step0:0.5", "change=Release Time", "to=0.01", "snapshot=1" },
+        new[] { "snap_makeup", "voice=step0:0.5", "change=Make-up Gain", "to=6", "snapshot=1" },
+        new[] { "snap_knee", "voice=step0:0.5", "change=Knee", "to=40", "snapshot=1" },
+        new[] { "snap_mix", "voice=step0:0.5", "change=Sidechain Mix", "to=0.3", "snapshot=1" },
+        new[] { "late_duck_create", "music=dc0", "voice=step0:0.5", "late=3", "create=1" },
+        new[] { "late_send_control", "music=dc0", "voice=imp0", "late=3", "create=1", "Music:Att,Receive", "Voice:Send>Music,Att" },
+        new[] { "startup_receive_post", "music=dc0", "voice=imp0", "Music:Att,Receive", "Voice:Send>Music,Att" },
+        new[] { "startup_receive_pre", "music=dc0", "voice=imp0", "Music:Receive,Att", "Voice:Send>Music,Att" },
+        new[] { "late_receive_pre", "music=dc0", "voice=imp0", "Music:Receive,Att", "Voice:Send>Music,Att", "late=8" },
+        new[] { "startup_att", "music=dc0", "Music:Att", "Voice:Att" },
+        new[] { "startup_send_post", "music=dc0", "Music:Att,Send>Fx", "Voice:Att", "Fx:Receive,Att" },
+        new[] { "startup_send_pre", "music=dc0", "Music:Send>Fx,Att", "Voice:Att", "Fx:Receive,Att" },
+        new[] { "live_send_receive", "music=dc0", "voice=step0:0.5", "Music:Att,Receive", "Voice:Send>Music,Att", "Voice.Send.Level=-80", "change=Send Level", "to=0" },
+        new[] { "startup_send_then_receive", "music=dc0", "voice=imp0", "Music:Send>Fx,Att,Receive", "Voice:Send>Music,Att", "Fx:Receive,Att", "Fx.Volume=-80" },
+        new[] { "startup_receive_then_send", "music=dc0", "voice=imp0", "Music:Receive,Att,Send>Fx", "Voice:Send>Music,Att", "Fx:Receive,Att", "Fx.Volume=-80" },
+        new[] { "startup_post_send_receive", "music=dc0", "voice=imp0", "Music:Att,Send>Fx,Receive", "Voice:Send>Music,Att", "Fx:Receive,Att", "Fx.Volume=-80" },
+        new[] { "live_send_down", "voice=step0:0.5", "change=Send Level", "to=-6" },
+        new[] { "live_send_up", "voice=tone:0.5", "Voice.Send.Level=-12", "change=Send Level", "to=-3" },
+        new[] { "snap_send", "voice=step0:0.5", "change=Send Level", "to=-6", "snapshot=1" },
+        new[] { "late_post", "music=dc0", "voice=imp0", "Music:Receive,Att", "Voice:Att,Send>Music", "Voice.Volume=0", "late=8" },
+        new[] { "late_post_create", "music=dc0", "voice=imp0", "Music:Receive,Att", "Voice:Att,Send>Music", "Voice.Volume=0", "late=8", "create=1" },
     };
     public const int BlockCount = 32;
     public const int ClipFrames = BlockCount * 1024;
@@ -175,16 +208,23 @@ public class DuckProbe : MonoBehaviour
             var mixer = Resources.Load<AudioMixer>(key); if (!mixer) throw new Exception("Missing mixer " + key);
             var go = new GameObject(key);
             var clips = new List<AudioClip>();
+            AudioSource delayed = null; Action createDelayed = null;
             foreach (var (name, fallback) in new[] { ("Music", "dc"), ("Voice", "none"), ("Fx", "none") }) {
                 string spec = Option(key, name.ToLowerInvariant() + "=", fallback);
                 if (spec == "none") continue;
+                Action create = () => {
                 var source = go.AddComponent<AudioSource>();
                 source.outputAudioMixerGroup = Array.Find(mixer.FindMatchingGroups(""), g => g.name == name);
                 if (!source.outputAudioMixerGroup) throw new Exception("Missing group " + name);
                 source.spatialBlend = 0; source.volume = 1;
                 var clip = AudioClip.Create(key + name, ClipFrames, 2, rate, false); clips.Add(clip);
                 if (!clip.SetData(Signal(spec, rate), 0)) throw new Exception("SetData failed");
-                source.clip = clip; source.Play();
+                source.clip = clip;
+                if (name == "Voice" && Option(key, "late=", "") != "") delayed = source;
+                else source.Play();
+                };
+                if (name == "Voice" && Option(key, "create=", "0") == "1") createDelayed = create;
+                else create();
             }
             var sink = new NativeArray<float>(2048, Allocator.Persistent); sinks.Add(sink);
             var buffer = new NativeArray<float>(2048, Allocator.Persistent);
@@ -194,6 +234,13 @@ public class DuckProbe : MonoBehaviour
             using (var writer = new BinaryWriter(File.Create(Path.Combine(output, key+".f32")))) {
                 if (Engine) FlushEngine();
                 for (int block = 0; block < BlockCount; block++) {
+                    if (block == int.Parse(Option(key, "late=", "-1"))) { createDelayed?.Invoke(); delayed.Play(); if (Engine) FlushEngine(); }
+                    if ((block == 8 || block == 20) && Option(key, "change=", "") != "") {
+                        if (Option(key, "snapshot=", "0") == "1") mixer.FindSnapshot(block == 8 ? "Other" : "Base").TransitionTo(0);
+                        else if (block == 8) { if (!mixer.SetFloat("Change", float.Parse(Option(key, "to=", "0"), System.Globalization.CultureInfo.InvariantCulture))) throw new Exception("SetFloat failed"); }
+                        else if (!mixer.ClearFloat("Change")) throw new Exception("ClearFloat failed");
+                        if (Engine) FlushEngine();
+                    }
                     if (!Engine) yield return null;
                     if (!(bool)addSink.Invoke(null, new object[] { master, sink, false })) throw new Exception("AddMixerGroupSink failed");
                     if (!AudioRenderer.Render(buffer)) throw new Exception("AudioRenderer.Render failed");

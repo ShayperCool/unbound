@@ -1091,6 +1091,7 @@ impl Mixer {
         let node = self.group_nodes.entry(handle).or_insert_with(|| GroupNode {
             spec: spec.clone(),
             rendered: 0,
+            input_fade: false,
             effects: Vec::new(),
             buffer: vec![0.0; BLOCK * 2],
             suspended: false,
@@ -1867,28 +1868,23 @@ impl Mixer {
             }
             // Frames since the mixer started: its root renders last, so its count is still the
             // block's start. Sidechains stay silent through the mixer's first DSP block, also for
-            // groups registered later (unmeasured for those).
+            // groups registered later (tests/projects/mixerduck late source cases).
             let mixer_start = self
                 .group_nodes
                 .get(&root)
                 .map_or(self.group_nodes[&handle].rendered, |r| r.rendered);
             let muted = (config.buffer_size as usize).saturating_sub(mixer_start);
             let node = self.group_nodes.get_mut(&handle).unwrap();
-            // Echo, SFX Reverb, Duck Volume, Compressor, ParamEQ and the simple filters retain the
-            // measured group input fade even when bypassed. Send and Receive have none
-            // (tests/projects/mixerduck, tests/projects/mixercompressor).
-            let active = node
-                .effects
-                .iter()
-                .any(|e| e.kind().is_some_and(EffectKind::fades_in_when_bypassed))
-                || (!node.spec.bypass
-                    && node.effects.iter().any(|e| {
-                        !e.spec.bypass && e.kind().is_some_and(EffectKind::fades_in_when_active)
-                    }));
-            if active {
+            // The chain's kind/placement/bypass rule is cached when it is configured.
+            if node.input_fade {
+                let fade_start = if node.spec.input_fade_from_mixer {
+                    mixer_start
+                } else {
+                    node.rendered
+                };
                 for (frame, stereo) in node.buffer[..n * 2].chunks_exact_mut(2).enumerate() {
-                    let gain = ((node.rendered + frame) as f32 / config.buffer_size.max(1) as f32)
-                        .min(1.0);
+                    let gain =
+                        ((fade_start + frame) as f32 / config.buffer_size.max(1) as f32).min(1.0);
                     for sample in stereo {
                         *sample *= gain;
                     }
@@ -3340,6 +3336,68 @@ mod tests {
             out
         }
         assert_eq!(run(false), run(true));
+    }
+
+    #[test]
+    fn routing_units_after_attenuation_fade_the_group_input_even_when_bypassed() {
+        for kind in ["Send", "Receive"] {
+            for after in [false, true] {
+                for bypass in [false, true] {
+                    let mut m = Mixer::new(MixerConfig::default());
+                    let attenuation =
+                        serde_json::json!({"id": "att", "kind": "Attenuation", "gain": 1.0});
+                    let route = serde_json::json!({"id": "route", "kind": kind, "bypass": bypass});
+                    let effects = if after {
+                        vec![attenuation, route]
+                    } else {
+                        vec![route, attenuation]
+                    };
+                    let spec = serde_json::from_value(
+                        serde_json::json!({"handle": 1, "parent": 0, "mixer": 1, "muted": false,
+                        "bypass": bypass, "effects": effects}),
+                    )
+                    .unwrap();
+                    m.configure_group(spec).unwrap();
+                    m.add_clip(1, Clip::new(2, 48000, vec![1.0; 2048]));
+                    source_with(&mut m, 2, 1, |p| p.group = 1);
+                    play(&mut m, 2, command::PLAY, 0.0);
+                    m.update_suspension();
+                    let mut out = vec![0.0; 2048];
+                    m.render(&mut out, 2);
+                    assert_eq!(out[64 * 2], if after { 64.0 / 1024.0 } else { 1.0 });
+                    assert_eq!(out[1023 * 2], if after { 1023.0 / 1024.0 } else { 1.0 });
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn measured_startup_age_does_not_fade_a_group_first_used_after_its_mixer() {
+        let mut m = Mixer::new(MixerConfig::default());
+        let root = serde_json::from_value(serde_json::json!({"handle": 1, "parent": 0, "mixer": 1,
+            "muted": false, "bypass": false, "inputFadeFromMixer": true,
+            "effects": [{"id": "master", "kind": "Attenuation", "gain": 1.0}]}))
+        .unwrap();
+        m.configure_group(root).unwrap();
+        m.add_clip(1, Clip::new(2, 48000, vec![0.25; 8192]));
+        source_with(&mut m, 2, 1, |p| p.group = 1);
+        play(&mut m, 2, command::PLAY, 0.0);
+        m.update_suspension();
+        let mut out = vec![0.0; 2048];
+        m.render(&mut out, 2);
+        let late = serde_json::from_value(serde_json::json!({"handle": 3, "parent": 1, "mixer": 1,
+            "muted": false, "bypass": false, "inputFadeFromMixer": true,
+            "effects": [{"id": "att", "kind": "Attenuation", "gain": 1.0},
+                {"id": "send", "kind": "Send", "sendLevel": 0.0}]}))
+        .unwrap();
+        m.configure_group(late).unwrap();
+        m.add_clip(4, Clip::new(2, 48000, vec![0.5; 2048]));
+        source_with(&mut m, 5, 4, |p| p.group = 3);
+        play(&mut m, 5, command::PLAY, 0.0);
+        m.update_suspension();
+        m.render(&mut out, 2);
+        assert_eq!(out[64 * 2], 0.75);
+        assert_eq!(out[512 * 2], 0.75);
     }
 
     #[test]

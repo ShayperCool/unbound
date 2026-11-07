@@ -20,6 +20,14 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Group input startup fades follow the mixer graph's processing age, including
+        /// groups first used later (tests/projects/mixerduck, exactly 6000.0.71f1).</summary>
+        internal static bool MixerGraphStartupMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>Send/Receive routing, startup and Duck Volume detector state, measured on
+        /// exactly 6000.0.71f1 (tests/projects/mixerduck). Other releases fail until measured.</summary>
+        internal static bool MixerSidechainMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Default mixer Pitch Shifter DSP measured on exactly 6000.0.71f1.
         /// Other releases fail until their kernels and state have been measured.</summary>
         internal static bool MixerPitchShifterMeasured => Release == (6000, 0, 71, 'f', 1);
