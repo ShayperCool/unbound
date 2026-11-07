@@ -15,7 +15,7 @@ namespace Unbound.Box3D
         const string Library = "unbound_physx";
 
         /// <summary>The shim version this binding was written for.</summary>
-        internal const int Version = 14;
+        internal const int Version = 15;
 
         // The per-body accessors called every step are constant time, never block and never call
         // back into managed code: they skip the GC transition ([SuppressGCTransition]).
@@ -233,6 +233,7 @@ namespace Unbound.Box3D
         }
 
         [LibraryImport(Library)] internal static partial int ua3_version();
+        [LibraryImport(Library)] internal static partial void ua3_query_reserve(int capacity);
         [LibraryImport(Library)] internal static partial void ua3_settings(float contactOffset, float sleepThreshold, float maxDepenetration, float maxAngularVelocity, int positionIterations, int velocityIterations);
 
         // World.

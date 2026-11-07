@@ -65,3 +65,33 @@ python3 tests/projects/physicsbatch/run.py gate --release 6000.0.71f1 --cli "$UN
 `--work` selects a separate validation cache directory; `--label` selects its capture
 and private project. The comparator retains every missing, extra and differing row
 in the comparison JSON, with 1e-4 absolute and 1e-5 relative float tolerances.
+
+## Validation and remaining limits
+
+The engine resolves every measured result and invalid-input case. The strict
+comparison is 5,145/5,151. Six raw differences remain in `stress/faces/{0,2,5,7,40,42}`:
+three pairs of mesh faces exchange slots. All 80 unique collider/triangle identities,
+distances, points and normals agree at the unchanged tolerances; termination and
+counts agree. `compare` still fails on these six rows and saves both values.
+The gate's separate `verify.py` keeps those failures and checks the complete identity
+set without sorting either capture or requiring an unspecified hit order. Missing,
+extra, duplicate faces, changed geometry and a hit after termination all fail.
+Five comparator controls exercise those failure cases.
+
+Scheduling still runs synchronously after completing dependencies. The returned
+handle is already complete, and minCommandsPerJob has no effect on work partitioning.
+A future queue item should move prepared scene queries into jobs with native result
+storage and appropriate container safety. Concurrent physics job execution is not
+claimed. Local-scene managed controls pass; additional release profiles, terrain
+and every invalid-container alias/safety combination are not Editor-measured here.
+
+Validation: release build; all 3,261 managed tests; Rust unbound-host test/doc-test
+commands; stub regeneration with no drift; the engine-only gate above. Managed
+controls include local scenes, nonuniform actual collider scale, a missing collider
+between valid commands, initial overlaps, no managed allocation growth between 1
+and 1,024 commands, and 4,105 overlapping colliders beyond the former touch ceiling.
+The native query callback uses fixed stack chunks and reserved reusable ray-face
+storage. Batches reserve managed/native scratch before their command loops, allocate
+result staging once per batch and prepare each physics scene once. They share the
+single-call query collectors and add no per-command list, closure or native vector.
+No importer or serialized cache output changes.

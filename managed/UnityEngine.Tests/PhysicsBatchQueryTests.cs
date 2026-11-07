@@ -17,7 +17,7 @@ namespace UnityEngine.Tests
     /// Unbound's choices (unmeasured), asserted only where named: the batch checks throw before
     /// any result is written, with the exception types named in the test. The order of several
     /// colliders one command finds is not documented and is not asserted.
-    /// No Editor reference measures these APIs: the expectations are per documentation, unmeasured.
+    /// Measured controls: tests/projects/physicsbatch, Unity 6000.0.71f1.
     /// </summary>
     public class PhysicsBatchQueryTests : IDisposable
     {
@@ -229,11 +229,61 @@ namespace UnityEngine.Tests
             Assert.True((results[0] - Physics.ClosestPoint(outside, box, t.position, t.rotation)).magnitude < 1e-5f);
         }
 
-        // The documented requirement is that a wrong batch is not run; the exception types and the
-        // "nothing written" property are Unbound's choice (unmeasured).
-        // Red on bf016b60: compiles; the stubs throw nothing, so the first Assert.Throws fails.
         [Fact]
-        public void WrongBatchesThrowBeforeWritingResults()
+        public void ClosestPointIgnoresCommandScaleAndUsesTheCollidersGeometry()
+        {
+            var box = Box("ScaleControl",Origin+Vector3.forward*45);
+            box.transform.localScale=new Vector3(2,3,4);
+            var at=box.transform.position;
+            var point=at+Vector3.right*5;
+            var commands=Native(
+                new ClosestPointCommand(point,box,at,Quaternion.identity,Vector3.zero),
+                new ClosestPointCommand(point,box,at,Quaternion.identity,-Vector3.one),
+                new ClosestPointCommand(point,box,at,Quaternion.identity,Vector3.one*7));
+            var results=Native<Vector3>(3);
+            ClosestPointCommand.ScheduleBatch(commands,results,1).Complete();
+            var expected=Physics.ClosestPoint(point,box,at,Quaternion.identity);
+            for(int i=0;i<3;i++)Assert.Equal(expected,results[i]);
+            Assert.Equal(at+Vector3.right,expected);
+        }
+
+        [Fact]
+        public void MissingClosestPointCollidersDoNotAbortOtherCommands()
+        {
+            var box=Box("MissingControl",Origin+Vector3.forward*47);
+            var at=box.transform.position;
+            var point=at+Vector3.right*4;
+            var commands=Native(
+                new ClosestPointCommand(point,box,at,Quaternion.identity,Vector3.one),
+                new ClosestPointCommand(point,0,at,Quaternion.identity,Vector3.one),
+                new ClosestPointCommand(point,box,at,Quaternion.identity,Vector3.one));
+            var results=Native<Vector3>(3);
+            ClosestPointCommand.ScheduleBatch(commands,results,1).Complete();
+            Assert.Equal(at+Vector3.right*.5f,results[0]);
+            Assert.Equal(point,results[1]);
+            Assert.Equal(results[0],results[2]);
+        }
+
+        [Fact]
+        public void LargeOverlapResultsStreamPastTheFormerTouchCeiling()
+        {
+            const int count=4105;
+            var at=Origin+Vector3.forward*200;
+            var expected=new HashSet<Collider>();
+            for(int i=0;i<count;i++)expected.Add(Sphere("Crowd"+i,at+Vector3.up*(i%3)*.01f));
+            var commands=Native(new OverlapSphereCommand(at,1f,Mask(Physics.AllLayers)));
+            var results=Native<ColliderHit>(count+1);
+            OverlapSphereCommand.ScheduleBatch(commands,results,1,count+1).Complete();
+            var actual=new HashSet<Collider>();
+            for(int i=0;i<count;i++)Assert.True(actual.Add(results[i].collider));
+            Assert.True(expected.SetEquals(actual));
+            Assert.Equal(0,results[count].instanceID);
+            Assert.Equal(count,Physics.OverlapSphere(at,1f,Physics.AllLayers).Length);
+        }
+
+        // Measured Unity 6000.0.71f1 capacity checks warn and return without running commands.
+        [Fact]
+        public void WrongBatchesReturnBeforeWritingResults()
         {
             var target = Sphere("Checked", Origin + new Vector3(0f, 0f, 50f));
             var all = Mask(Physics.AllLayers);
@@ -242,10 +292,9 @@ namespace UnityEngine.Tests
                 new OverlapSphereCommand(target.transform.position, 1f, all));
             var tooSmall = Native<ColliderHit>(3);
 
-            Assert.Throws<ArgumentException>(() => OverlapSphereCommand.ScheduleBatch(commands, tooSmall, 1, 2));
-            Assert.ThrowsAny<ArgumentException>(() => OverlapSphereCommand.ScheduleBatch(commands, tooSmall, 1, 0));
-            var unassigned = Assert.Throws<InvalidOperationException>(() => OverlapSphereCommand.ScheduleBatch(commands, default, 1, 1));
-            Assert.Contains("has not been assigned or constructed", unassigned.Message);
+            OverlapSphereCommand.ScheduleBatch(commands, tooSmall, 1, 2).Complete();
+            OverlapSphereCommand.ScheduleBatch(commands, tooSmall, 1, 0).Complete();
+            OverlapSphereCommand.ScheduleBatch(commands, default, 1, 1).Complete();
 
             var disposed = new NativeArray<OverlapSphereCommand>(1, Allocator.TempJob);
             disposed.Dispose();
@@ -259,7 +308,7 @@ namespace UnityEngine.Tests
                 new ClosestPointCommand(t.position + Vector3.up * 5f, box, t.position, t.rotation, t.lossyScale));
             var sentinel = new Vector3(9f, 9f, 9f);
             var shortPoints = Native(sentinel);
-            Assert.Throws<ArgumentException>(() => ClosestPointCommand.ScheduleBatch(points, shortPoints, 1));
+            ClosestPointCommand.ScheduleBatch(points, shortPoints, 1).Complete();
             Assert.Equal(sentinel, shortPoints[0]);
         }
 

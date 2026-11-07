@@ -46,7 +46,7 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 14
+#define UA3_VERSION 15
 
 struct ua3_scene_def
 {
@@ -2333,40 +2333,67 @@ PxQueryFilterData query_filter( uint64_t maskBits )
 	return data;
 }
 
-// Writes touches as hits; the closest (fraction > 0: Unity's single casts miss the shapes they
-// start in) when closest is set.
+// Stream query touches through fixed stack storage. The count includes hits beyond the
+// caller's capacity, so allocating callers can grow and repeat without a fixed hit limit.
+constexpr PxU32 QueryChunkSize = 64;
+thread_local std::vector<PxRaycastHit> rayFaceScratch(QueryChunkSize);
 template <typename Hit>
-int collect( const Hit* touches, PxU32 count, float length, int closest, ua3_hit* hits, int capacity )
+struct CastCollector : PxHitCallback<Hit>
 {
-	if ( closest )
-	{
-		int best = -1;
-		for ( PxU32 i = 0; i < count; ++i )
-		{
-			if ( touches[i].distance <= 0.0f )
-			{
-				continue;
-			}
-			if ( best < 0 || touches[i].distance < touches[best].distance )
-			{
-				best = static_cast<int>( i );
-			}
-		}
-		if ( best < 0 || capacity < 1 )
-		{
-			return best < 0 ? 0 : 1;
-		}
-		const Hit& t = touches[best];
-		hits[0] = query_hit( t, length );
-		return 1;
-	}
-	for ( PxU32 i = 0; i < count && static_cast<int>( i ) < capacity; ++i )
-	{
-		const Hit& t = touches[i];
-		hits[i] = query_hit( t, length );
-	}
-	return static_cast<int>( count );
-}
+    Hit scratch[QueryChunkSize];
+    ua3_hit* output;
+    int capacity;
+    float length;
+    bool closest;
+    bool skipInitial;
+    int count = 0;
+    float bestDistance = PX_MAX_F32;
+
+    CastCollector(ua3_hit* outputIn, int capacityIn, float lengthIn, bool closestIn, bool skipInitialIn, Hit* storage = nullptr, PxU32 storageSize = QueryChunkSize)
+        : PxHitCallback<Hit>(storage != nullptr ? storage : scratch, storageSize), output(outputIn), capacity(capacityIn),
+          length(lengthIn), closest(closestIn), skipInitial(skipInitialIn) {}
+
+    PxAgain processTouches(const Hit* hits, PxU32 size) override
+    {
+        for (PxU32 i = 0; i < size; ++i)
+        {
+            const Hit& hit = hits[i];
+            if (skipInitial && hit.distance <= 0.0f) continue;
+            if (closest)
+            {
+                if (hit.distance >= bestDistance) continue;
+                bestDistance = hit.distance;
+                count = 1;
+                if (capacity > 0) output[0] = query_hit(hit, length);
+            }
+            else
+            {
+                if (count < capacity) output[count] = query_hit(hit, length);
+                ++count;
+            }
+        }
+        return true;
+    }
+};
+
+struct OverlapCollector : PxOverlapCallback
+{
+    PxOverlapHit scratch[QueryChunkSize];
+    uint64_t* output;
+    int capacity;
+    int count = 0;
+    OverlapCollector(uint64_t* outputIn, int capacityIn)
+        : PxOverlapCallback(scratch, QueryChunkSize), output(outputIn), capacity(capacityIn) {}
+    PxAgain processTouches(const PxOverlapHit* hits, PxU32 size) override
+    {
+        for (PxU32 i = 0; i < size; ++i)
+        {
+            if (count < capacity) output[count] = pack(hits[i].shape);
+            ++count;
+        }
+        return true;
+    }
+};
 
 // The query shapes: kind 0 sphere (a = center, radius), 1 capsule (a, b = centers, radius),
 // 2 box (a = center, b = half extents, rotation).
@@ -2401,12 +2428,12 @@ PxGeometryHolder query_geometry( int kind, PxVec3 a, PxVec3 b, PxQuat rotation, 
 	return holder;
 }
 
-const PxU32 MaxTouches = 4096;
-
 // The ray and shape casts' query flags (their hitTriggers argument): bit 0 hits triggers, bit 1
 // hits the back faces of mesh triangles (Physics.queriesHitBackfaces, QueryParameters.hitBackfaces).
 const int QueryHitTriggers = 1;
 const int QueryHitBackfaces = 2;
+const int QueryMultipleFaces = 4;
+const int QuerySkipInitial = 8;
 
 // The cast's hit flags: back faces through PhysX's eMESH_BOTH_SIDES (Unbound's choice, unmeasured).
 PxHitFlags cast_flags( PxHitFlags flags, int queryFlags )
@@ -2418,6 +2445,12 @@ PxHitFlags cast_flags( PxHitFlags flags, int queryFlags )
 	return flags;
 }
 } // namespace
+
+// Reserve reusable multiple-face storage once before a batch, rather than per command.
+UA3_API void ua3_query_reserve(int capacity)
+{
+    if (capacity > static_cast<int>(rayFaceScratch.size())) rayFaceScratch.resize(capacity);
+}
 
 // Ray casts: the closest hit (closest != 0, one hit written) or all hits along the ray. Returns
 // the number of hits; at most capacity are written. hitTriggers carries the query flags above.
@@ -2432,14 +2465,18 @@ UA3_API int ua3_raycast( uint32_t id, ua3_vec3 originIn, ua3_vec3 translationIn,
 	{
 		return 0;
 	}
-	std::vector<PxRaycastHit> touches( MaxTouches );
-	PxRaycastBuffer buffer( touches.data(), MaxTouches );
+	const bool multiple = (hitTriggers & QueryMultipleFaces) != 0;
+    if (multiple) ua3_query_reserve(capacity);
+    CastCollector<PxRaycastHit> buffer(hits, capacity, length, closest != 0, true,
+        multiple ? rayFaceScratch.data() : nullptr, multiple ? static_cast<PxU32>(rayFaceScratch.size()) : QueryChunkSize);
 	QueryFilter filter;
 	filter.hitTriggers = ( hitTriggers & QueryHitTriggers ) != 0;
+	PxHitFlags flags = PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX | PxHitFlag::eUV;
+	if (hitTriggers & QueryMultipleFaces) flags |= PxHitFlag::eMESH_MULTIPLE;
 	world->scene->raycast( origin, translation / length, length, buffer,
-						   cast_flags( PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX | PxHitFlag::eUV, hitTriggers ),
+						   cast_flags( flags, hitTriggers ),
 						   query_filter( maskBits ), &filter );
-	return collect( buffer.touches, buffer.nbTouches, length, closest, hits, capacity );
+	return buffer.count;
 }
 
 UA3_API int ua3_shapecast( uint32_t id, int kind, ua3_vec3 aIn, ua3_vec3 bIn, ua3_quat rotationIn, float radius, ua3_vec3 translationIn, uint64_t maskBits,
@@ -2457,14 +2494,13 @@ UA3_API int ua3_shapecast( uint32_t id, int kind, ua3_vec3 aIn, ua3_vec3 bIn, ua
 	}
 	PxTransform pose;
 	PxGeometryHolder geometry = query_geometry( kind, a, b, rotation, radius, pose );
-	std::vector<PxSweepHit> touches( MaxTouches );
-	PxSweepBuffer buffer( touches.data(), MaxTouches );
+	CastCollector<PxSweepHit> buffer(hits, capacity, length, closest != 0, closest != 0 || (hitTriggers & QuerySkipInitial) != 0);
 	QueryFilter filter;
 	filter.hitTriggers = ( hitTriggers & QueryHitTriggers ) != 0;
 	world->scene->sweep( geometry.any(), pose, translation / length, length, buffer,
 						 cast_flags( PxHitFlag::ePOSITION | PxHitFlag::eNORMAL | PxHitFlag::eFACE_INDEX, hitTriggers ), query_filter( maskBits ),
 						 &filter );
-	return collect( buffer.touches, buffer.nbTouches, length, closest, hits, capacity );
+	return buffer.count;
 }
 
 // The shapes overlapping a query shape (see query_geometry). Returns their number; at most
@@ -2482,16 +2518,11 @@ UA3_API int ua3_overlap( uint32_t id, int kind, ua3_vec3 aIn, ua3_vec3 bIn, ua3_
 	}
 	PxTransform pose;
 	PxGeometryHolder geometry = query_geometry( kind, a, b, rotation, radius, pose );
-	std::vector<PxOverlapHit> touches( MaxTouches );
-	PxOverlapBuffer buffer( touches.data(), MaxTouches );
+	OverlapCollector buffer(shapes, capacity);
 	QueryFilter filter;
 	filter.hitTriggers = hitTriggers != 0;
 	world->scene->overlap( geometry.any(), pose, buffer, query_filter( maskBits ), &filter );
-	for ( PxU32 i = 0; i < buffer.nbTouches && static_cast<int>( i ) < capacity; ++i )
-	{
-		shapes[i] = pack( buffer.touches[i].shape );
-	}
-	return static_cast<int>( buffer.nbTouches );
+	return buffer.count;
 }
 
 // The shapes whose bounds overlap an axis-aligned box.

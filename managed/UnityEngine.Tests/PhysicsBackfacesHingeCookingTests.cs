@@ -308,7 +308,7 @@ namespace UnityEngine.Tests
         // QueryParameters.hitBackfaces (6000.0: "Whether physics queries should hit back-face
         // triangles"; QueryParameters.Default: no back faces). Unbound's reading (unmeasured): a
         // command hits back faces as its own field says, not as Physics.queriesHitBackfaces does;
-        // a command asking for back faces is still refused (PhysicsCastBatchQueryTests asserts that).
+        // a command asking for back faces is covered by PhysicsCastBatchQueryTests.
         // So a RaycastCommand from inside the cube with hitBackfaces false misses while the global
         // setting is on and Physics.Raycast hits.
         // Red at 4d0029d5: only through its control (the Physics.Raycast hit). Red reverting only the

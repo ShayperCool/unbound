@@ -13,6 +13,10 @@ namespace Unbound.Runtime
         /// <summary>The longest cast: Unity's infinite distances become this many meters.</summary>
         internal const float MaxLength = 1e5f;
 
+        // Shared with the native query flags. The first two bits select triggers/backfaces.
+        const int MultipleRayFaces = 1 << 2;
+        const int SkipInitialOverlap = 1 << 3;
+
         static B3.Hit[] s_Hits = new B3.Hit[64];
         static ulong[] s_Shapes = new ulong[64];
 
@@ -91,90 +95,161 @@ namespace Unbound.Runtime
         {
             var space = s_Target ?? W.DefaultSpace;
             // Objects that just changed scene join their physics scene before it is searched.
-            W.SceneMembershipChanged();
-            if (space.Colliders.Count == 0) return 0;
+            if (s_InBatch && s_BatchWorlds.TryGetValue(space, out uint cached)) return cached;
+            if (!s_InBatch) W.SceneMembershipChanged();
             W.PrepareQuery(space);
-            return space.World;
+            uint world = space.Colliders.Count == 0 ? 0 : space.World;
+            if (s_InBatch) s_BatchWorlds[space] = world;
+            return world;
         }
 
-        delegate int HitQuery(B3.Hit* hits, int capacity);
+        static readonly Dictionary<W.Space, uint> s_BatchWorlds = new Dictionary<W.Space, uint>();
+        static bool s_InBatch;
 
-        static List<RaycastHit> Collect(HitQuery query, float length, Vector3 direction, bool closest)
+        internal readonly struct BatchScope : IDisposable
         {
-            var result = new List<RaycastHit>();
+            internal BatchScope(bool unused)
+            {
+                W.SceneMembershipChanged();
+                s_BatchWorlds.Clear();
+                s_InBatch = true;
+            }
+            public void Dispose()
+            {
+                s_InBatch = false;
+                s_BatchWorlds.Clear();
+            }
+        }
+
+        internal static BatchScope Batch() => new BatchScope(true);
+
+        internal static void Reserve(int capacity)
+        {
+            if (s_Hits.Length < capacity) Array.Resize(ref s_Hits, capacity);
+            if (s_Shapes.Length < capacity) Array.Resize(ref s_Shapes, capacity);
+            B3.ua3_query_reserve(capacity);
+        }
+
+        static RaycastHit ConvertedHit(int index, float length, Vector3 direction)
+        {
+            var raw = s_Hits[index];
+            var hit = ToHit(raw, W.ColliderOf(raw.Shape), length);
+            if (raw.Fraction <= 0f)
+            {
+                hit.m_Point = Vector3.zero;
+                hit.m_Normal = -direction;
+                hit.m_Distance = 0f;
+            }
+            return hit;
+        }
+
+        static List<RaycastHit> Collect(int count, float length, Vector3 direction)
+        {
+            var result = new List<RaycastHit>(count);
+            for (int i = 0; i < count; i++)
+            {
+                var hit = ConvertedHit(i, length, direction);
+                if (hit.m_Collider != 0) result.Add(hit);
+            }
+            return result;
+        }
+
+        // The shared native query path. Batch queries cap storage at maxHits; allocating APIs
+        // repeat after growing scratch storage so their result count has no fixed ceiling.
+        static int ReadCast(bool ray, B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius,
+            Vector3 direction, float maxDistance, int layerMask, QueryTriggerInteraction triggers,
+            bool closest, bool bounded, int extraFlags = 0)
+        {
+            uint world = ReadyWorld();
+            if (world == 0 || layerMask == 0 || direction.sqrMagnitude < 1e-12f || maxDistance < 0f) return 0;
+            if (!ray && maxDistance == 0f)
+            {
+                if (closest || (extraFlags & SkipInitialOverlap) != 0) return 0;
+                int overlaps = ReadOverlap(kind, a, b, rotation, radius, layerMask, triggers, bounded);
+                if (s_Hits.Length < overlaps) Array.Resize(ref s_Hits, overlaps);
+                for (int i = 0; i < overlaps; i++)
+                    s_Hits[i] = new B3.Hit { Shape = s_Shapes[i], TriangleIndex = -1 };
+                return overlaps;
+            }
+            var translation = direction.normalized * Length(maxDistance);
+            int flags = CastFlags(triggers) | extraFlags;
             int count;
             while (true)
             {
                 fixed (B3.Hit* hits = s_Hits)
-                    count = query(hits, s_Hits.Length);
-                if (count <= s_Hits.Length) break;
-                s_Hits = new B3.Hit[count * 2];
+                    count = ray
+                        ? B3.ua3_raycast(world, a, translation, Mask(layerMask), flags, closest ? 1 : 0, hits, s_Hits.Length)
+                        : B3.ua3_shapecast(world, (int)kind, a, b, Quaternion.Normalize(rotation), Mathf.Max(0f, radius), translation, Mask(layerMask), flags, closest ? 1 : 0, hits, s_Hits.Length);
+                if (bounded || count <= s_Hits.Length) return Math.Min(count, s_Hits.Length);
+                Array.Resize(ref s_Hits, count);
             }
-            for (int i = 0; i < count; i++)
-            {
-                var collider = W.ColliderOf(s_Hits[i].Shape);
-                if (collider == null) continue;
-                var hit = ToHit(s_Hits[i], collider, length);
-                if (s_Hits[i].Fraction <= 0f)
-                {
-                    // Unity's casts that start overlapping a collider report it at distance 0
-                    // without a point.
-                    hit.m_Point = Vector3.zero;
-                    hit.m_Normal = -direction;
-                    hit.m_Distance = 0f;
-                }
-                result.Add(hit);
-            }
-            if (closest && result.Count > 1) result.RemoveRange(1, result.Count - 1);
-            return result;
         }
 
-        internal static List<RaycastHit> Raycast(Vector3 origin, Vector3 direction, float maxDistance, int layerMask, QueryTriggerInteraction triggers, bool closest)
+        internal static List<RaycastHit> Raycast(Vector3 origin, Vector3 direction, float maxDistance, int layerMask, QueryTriggerInteraction triggers, bool closest) =>
+            Collect(ReadCast(true, default, origin, default, Quaternion.identity, 0f, direction, maxDistance, layerMask, triggers, closest, false), Length(maxDistance), direction.normalized);
+
+        internal static List<RaycastHit> Cast(B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, Vector3 direction, float maxDistance, int layerMask, QueryTriggerInteraction triggers, bool closest) =>
+            Collect(ReadCast(false, kind, a, b, rotation, radius, direction, maxDistance, layerMask, triggers, closest, false), Length(maxDistance), direction.normalized);
+
+        internal static int BatchCast(PhysicsScene scene, bool ray, B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius,
+            Vector3 direction, float distance, QueryParameters parameters, RaycastHit[] results, bool closest)
         {
-            uint world = ReadyWorld();
-            if (world == 0 || direction.sqrMagnitude < 1e-12f) return new List<RaycastHit>();
-            var dir = direction.normalized;
-            float length = Length(maxDistance);
-            var translation = dir * length;
-            int hitTriggers = CastFlags(triggers);
-            return Collect((hits, capacity) => B3.ua3_raycast(world, origin, translation, Mask(layerMask), hitTriggers, closest ? 1 : 0, hits, capacity),
-                length, dir, closest);
+            using var target = scene.Searching();
+            using var backfaces = Backfaces(parameters.hitBackfaces);
+            // Bit 2 requests multiple ray faces; bit 3 omits initial sweep overlaps at every
+            // maxHits, as measured by tests/projects/physicsbatch in Unity 6000.0.71f1.
+            int flags = ray ? (parameters.hitMultipleFaces && !closest ? MultipleRayFaces : 0) : SkipInitialOverlap;
+            int count = ReadCast(ray, kind, a, b, rotation, radius, direction, distance,
+                parameters.layerMask, parameters.hitTriggers, closest, true, flags);
+            int written = Math.Min(count, results.Length);
+            for (int i = 0; i < written; i++) results[i] = ConvertedHit(i, Length(distance), direction.normalized);
+            return written;
         }
 
-        internal static List<RaycastHit> Cast(B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, Vector3 direction, float maxDistance, int layerMask, QueryTriggerInteraction triggers, bool closest)
+        static int ReadOverlap(B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, int layerMask, QueryTriggerInteraction triggers, bool bounded)
         {
             uint world = ReadyWorld();
-            if (world == 0 || direction.sqrMagnitude < 1e-12f) return new List<RaycastHit>();
-            var dir = direction.normalized;
-            float length = Length(maxDistance);
-            var translation = dir * length;
-            int hitTriggers = CastFlags(triggers);
-            var q = Quaternion.Normalize(rotation);
-            return Collect((hits, capacity) => B3.ua3_shapecast(world, (int)kind, a, b, q, Mathf.Max(0f, radius), translation, Mask(layerMask), hitTriggers, closest ? 1 : 0, hits, capacity),
-                length, dir, closest);
-        }
-
-        internal static List<Collider> Overlap(B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, int layerMask, QueryTriggerInteraction triggers)
-        {
-            var result = new List<Collider>();
-            uint world = ReadyWorld();
-            if (world == 0) return result;
-            int hitTriggers = HitTriggers(triggers);
-            var q = Quaternion.Normalize(rotation);
+            if (world == 0 || layerMask == 0) return 0;
             int count;
             while (true)
             {
                 fixed (ulong* shapes = s_Shapes)
-                    count = B3.ua3_overlap(world, (int)kind, a, b, q, Mathf.Max(0f, radius), Mask(layerMask), hitTriggers, shapes, s_Shapes.Length);
-                if (count <= s_Shapes.Length) break;
-                s_Shapes = new ulong[count * 2];
+                    count = B3.ua3_overlap(world, (int)kind, a, b, Quaternion.Normalize(rotation), Mathf.Max(0f, radius), Mask(layerMask), HitTriggers(triggers), shapes, s_Shapes.Length);
+                if (bounded || count <= s_Shapes.Length) return Math.Min(count, s_Shapes.Length);
+                Array.Resize(ref s_Shapes, count);
             }
+        }
+
+        internal static List<Collider> Overlap(B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, int layerMask, QueryTriggerInteraction triggers)
+        {
+            int count = ReadOverlap(kind, a, b, rotation, radius, layerMask, triggers, false);
+            var result = new List<Collider>(count);
             for (int i = 0; i < count; i++)
             {
                 var collider = W.ColliderOf(s_Shapes[i]);
                 if (collider != null) result.Add(collider);
             }
             return result;
+        }
+
+        internal static int BatchOverlap(PhysicsScene scene, B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, QueryParameters parameters, Collider[] results)
+        {
+            using var target = scene.Searching();
+            int count = ReadOverlap(kind, a, b, rotation, radius, parameters.layerMask, parameters.hitTriggers, true);
+            int written = 0;
+            for (int i = 0; i < count && written < results.Length; i++)
+            {
+                var collider = W.ColliderOf(s_Shapes[i]);
+                if (collider != null) results[written++] = collider;
+            }
+            return written;
+        }
+
+        internal static Vector3 ClosestPoint(Collider collider, Vector3 point)
+        {
+            using var target = In(collider.m_Space);
+            ReadyWorld();
+            return collider.m_Shape == 0 ? point : B3.ua3_shape_closest_point(collider.m_Shape, point);
         }
 
         /// <summary>Casts a collider's own geometry, at its current pose, along a direction.</summary>

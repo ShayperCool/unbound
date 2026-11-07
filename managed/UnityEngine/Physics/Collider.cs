@@ -297,9 +297,7 @@ namespace UnityEngine
         /// <summary>The closest point of the collider to a position: the position itself when it is inside.</summary>
         public Vector3 ClosestPoint(Vector3 position)
         {
-            W.PrepareQuery();
-            if (m_Shape == 0) return position;
-            return B3.ua3_shape_closest_point(m_Shape, position);
+            return PhysicsQueries.ClosestPoint(this, position);
         }
 
         public Vector3 ClosestPointOnBounds(Vector3 position) => bounds.ClosestPoint(position);

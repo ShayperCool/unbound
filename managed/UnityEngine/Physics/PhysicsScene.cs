@@ -56,7 +56,7 @@ namespace UnityEngine
         // ------------------------------------------------------------------ queries
         // Each is the matching Physics query, searching this physics scene's colliders only.
 
-        Q.Target Searching() => Q.In(Live() ?? W.NoSpace);
+        internal Q.Target Searching() => Q.In(Live() ?? W.NoSpace);
 
         public bool Raycast(Vector3 origin, Vector3 direction, float maxDistance = float.PositiveInfinity, int layerMask = -5, QueryTriggerInteraction queryTriggerInteraction = QueryTriggerInteraction.UseGlobal)
         {

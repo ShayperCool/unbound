@@ -17,16 +17,9 @@ namespace UnityEngine.Tests
     /// null collider; results are complete once the returned handle is complete; a command searches
     /// its own physicsScene; RaycastHit.collider is the Collider that was hit, rigidbody its attached
     /// Rigidbody and transform the Transform of that rigidbody or collider.
-    /// Unbound's choices (unmeasured), asserted only where a test names them: RaycastHit holds the
-    /// collider's instance ID and reads null once that collider is destroyed; hitBackfaces on any
-    /// command and hitMultipleFaces on RaycastCommand are refused with NotSupportedException before
-    /// any result is written; the shape casts answer hitMultipleFaces as without it (the
-    /// QueryParameters Remarks limit multiple Mesh faces to RaycastCommand; inferred, unmeasured); the
-    /// other checks throw before any result is written, with the exception types named; a
-    /// one-slot command answers what the single PhysicsScene cast with an out hit answers; the
-    /// obsolete signatures put their layer mask into QueryParameters.
-    /// The order of several hits one command finds is not documented and is not asserted.
-    /// No Editor reference measures these APIs: the expectations are per documentation, unmeasured.
+    /// Geometry, face flags, capacity checks and initial-overlap differences are measured by
+    /// tests/projects/physicsbatch against Unity 6000.0.71f1. The order of several hits is not
+    /// documented and is not asserted. Execution remains synchronous after dependencies complete.
     ///
     /// Red base 29030429: the file compiles there (every API it uses is a public stub with the same
     /// signature). Each case names what fails. "Allocation" means new NativeArray&lt;RaycastHit&gt;
@@ -470,60 +463,69 @@ namespace UnityEngine.Tests
             Assert.Same(shared, boxResults[1].collider);
         }
 
-        // Unbound's choice (unmeasured), asserted: hitBackfaces and hitMultipleFaces are not
-        // supported by the managed casts, and a batch asking for hitBackfaces on any command, or
-        // hitMultipleFaces on a RaycastCommand, throws NotSupportedException before writing
-        // anything, every time. The shape casts accept hitMultipleFaces (see
-        // ShapeCastsAnswerHitMultipleFacesAsWithoutIt), but not together with hitBackfaces.
-        // Red on 29030429: allocation. On 24802055: the stubs throw nothing, so the first
-        // Assert.Throws fails. Green on 916304b3 and the head (a regression control for them).
         [Fact]
-        public void FaceOptionsAreRefusedBeforeAnyResult()
+        public void FaceOptionsSupportMultipleTrianglesAndBackfaces()
         {
             var at = Origin + new Vector3(0f, 0f, 110f);
-            Box("FaceTarget", at);
-            var from = Before(at);
-            var backfaces = new QueryParameters(Physics.AllLayers, false, QueryTriggerInteraction.UseGlobal, true);
-            var multiple = new QueryParameters(Physics.AllLayers, true, QueryTriggerInteraction.UseGlobal, false);
-            var half = new Vector3(0.2f, 0.2f, 0.2f);
-
-            void Refused(string option, Func<NativeArray<RaycastHit>, JobHandle> schedule)
+            var go = new GameObject("FaceTarget"); m_Made.Add(go); go.transform.position = at;
+            var mesh = new Mesh();
+            mesh.vertices = new[] { new Vector3(-2,-2,3), new Vector3(0,2,3), new Vector3(2,-2,3),
+                new Vector3(-2,-2,6), new Vector3(0,2,6), new Vector3(2,-2,6) };
+            mesh.triangles = new[] {0,1,2,3,4,5};
+            var collider = go.AddComponent<MeshCollider>(); collider.sharedMesh = mesh;
+            foreach (bool backfaces in new[] {false,true})
             {
+                var qp = new QueryParameters(Physics.AllLayers, true, QueryTriggerInteraction.Ignore, backfaces);
+                var commands = Native(new RaycastCommand(at + Vector3.forward*10, Vector3.back, qp, Reach));
                 var results = Native<RaycastHit>(4);
-                for (int i = 0; i < results.Length; i++) results[i] = Sentinel(i);
-                for (int attempt = 0; attempt < 2; attempt++)
+                RaycastCommand.ScheduleBatch(commands, results, 1, 4).Complete();
+                var hits = Hits(results, 0, 4);
+                Assert.Equal(backfaces ? 2 : 0, hits.Count);
+                if (backfaces)
                 {
-                    var error = Assert.Throws<NotSupportedException>(() => schedule(results));
-                    Assert.Contains(option, error.Message);
-                    Assert.Contains("command 1", error.Message);
+                    Assert.All(hits, hit => Assert.Same(collider, hit));
+                    Assert.True(new HashSet<int> {0,1}.SetEquals(new[] {results[0].triangleIndex,results[1].triangleIndex}));
                 }
-                StillSentinels(results);
             }
+            Object.DestroyImmediate(mesh);
+        }
 
-            // The flagged command comes second: the valid first command is not answered either.
-            var rays = Native(new RaycastCommand(from, Vector3.forward, All, Reach), new RaycastCommand(from, Vector3.forward, backfaces, Reach));
-            Refused("hitBackfaces", r => RaycastCommand.ScheduleBatch(rays, r, 1, 2));
-            var multiRays = Native(new RaycastCommand(from, Vector3.forward, All, Reach), new RaycastCommand(from, Vector3.forward, multiple, Reach));
-            Refused("hitMultipleFaces", r => RaycastCommand.ScheduleBatch(multiRays, r, 1, 2));
-            Refused("hitMultipleFaces", r => RaycastCommand.ScheduleBatch(multiRays, r, 1));
+        [Theory]
+        [InlineData(1)]
+        [InlineData(4)]
+        public void BatchSweepsExcludeInitialOverlapsAtEveryCapacity(int maxHits)
+        {
+            var at = Origin + new Vector3(0f,0f,170f);
+            Box("Initial", at);
+            var ahead = Box("Ahead", at + Vector3.forward*4);
+            var commands = Native(new SpherecastCommand(at,.3f,Vector3.forward,All,Reach));
+            var results = Native<RaycastHit>(maxHits);
+            SpherecastCommand.ScheduleBatch(commands,results,1,maxHits).Complete();
+            Assert.Equal(new List<Collider> {ahead},Hits(results,0,maxHits));
+            var single = new RaycastHit[4];
+            Assert.Equal(2,Physics.SphereCastNonAlloc(at,.3f,Vector3.forward,single,Reach,Physics.AllLayers));
+            Assert.Equal(1,Physics.SphereCastNonAlloc(at,.3f,Vector3.forward,single,0f,Physics.AllLayers));
+            Assert.Equal(0,Physics.SphereCastNonAlloc(at,.3f,Vector3.forward,single,-1f,Physics.AllLayers));
+        }
 
-            var spheres = Native(new SpherecastCommand(from, 0.2f, Vector3.forward, All, Reach), new SpherecastCommand(from, 0.2f, Vector3.forward, backfaces, Reach));
-            Refused("hitBackfaces", r => SpherecastCommand.ScheduleBatch(spheres, r, 1, 2));
-            var boxes = Native(new BoxcastCommand(from, half, Quaternion.identity, Vector3.forward, All, Reach), new BoxcastCommand(from, half, Quaternion.identity, Vector3.forward, backfaces, Reach));
-            Refused("hitBackfaces", r => BoxcastCommand.ScheduleBatch(boxes, r, 1, 2));
-            var up = new Vector3(0f, 0.2f, 0f);
-            var capsules = Native(new CapsulecastCommand(from + up, from - up, 0.2f, Vector3.forward, All, Reach), new CapsulecastCommand(from + up, from - up, 0.2f, Vector3.forward, backfaces, Reach));
-            Refused("hitBackfaces", r => CapsulecastCommand.ScheduleBatch(capsules, r, 1, 2));
-
-            // hitBackfaces stays refused on the shape casts when hitMultipleFaces, which they
-            // accept, is set as well.
-            var both = new QueryParameters(Physics.AllLayers, true, QueryTriggerInteraction.UseGlobal, true);
-            var bothSpheres = Native(new SpherecastCommand(from, 0.2f, Vector3.forward, All, Reach), new SpherecastCommand(from, 0.2f, Vector3.forward, both, Reach));
-            Refused("hitBackfaces", r => SpherecastCommand.ScheduleBatch(bothSpheres, r, 1, 2));
-            var bothBoxes = Native(new BoxcastCommand(from, half, Quaternion.identity, Vector3.forward, All, Reach), new BoxcastCommand(from, half, Quaternion.identity, Vector3.forward, both, Reach));
-            Refused("hitBackfaces", r => BoxcastCommand.ScheduleBatch(bothBoxes, r, 1, 2));
-            var bothCapsules = Native(new CapsulecastCommand(from + up, from - up, 0.2f, Vector3.forward, All, Reach), new CapsulecastCommand(from + up, from - up, 0.2f, Vector3.forward, both, Reach));
-            Refused("hitBackfaces", r => CapsulecastCommand.ScheduleBatch(bothCapsules, r, 1, 2));
+        [Fact]
+        public void BatchManagedAllocationsDoNotGrowWithCommandCount()
+        {
+            var at = Origin + new Vector3(0f,0f,180f);
+            Box("AllocationTarget",at);
+            var one = Native(new RaycastCommand(Before(at),Vector3.forward,All,Reach));
+            var many = Native<RaycastCommand>(1024);
+            for(int i=0;i<many.Length;i++) many[i]=one[0];
+            var results = Native<RaycastHit>(many.Length*2);
+            RaycastCommand.ScheduleBatch(many,results,1,2).Complete();
+            long Measure(NativeArray<RaycastCommand> commands)
+            {
+                long before=GC.GetAllocatedBytesForCurrentThread();
+                RaycastCommand.ScheduleBatch(commands,results,1,2).Complete();
+                return GC.GetAllocatedBytesForCurrentThread()-before;
+            }
+            long small=Measure(one), large=Measure(many);
+            Assert.True(large <= small + 1024, $"one={small}, many={large}");
         }
 
         // Documented basis (6000.0 QueryParameters Remarks): "Only RaycastCommand supports hitting
@@ -580,12 +582,9 @@ namespace UnityEngine.Tests
             AnsweredAsWithout((r, maxHits) => CapsulecastCommand.ScheduleBatch(capsules, r, 1, maxHits));
         }
 
-        // The documented requirement is that a wrong batch is not run; the exception types and the
-        // "nothing written" property are Unbound's choice (unmeasured), as for the overlap commands.
-        // Red on 29030429: allocation. On 24802055: the stubs throw nothing, so the first
-        // Assert.Throws fails.
+        // Unity 6000.0.71f1 warns and returns for invalid capacities, before scheduling.
         [Fact]
-        public void WrongCastBatchesThrowBeforeWritingResults()
+        public void WrongCastBatchesReturnBeforeWritingResults()
         {
             var at = Origin + new Vector3(0f, 0f, 120f);
             Box("WrongTarget", at);
@@ -595,17 +594,16 @@ namespace UnityEngine.Tests
             var tooSmall = Native<RaycastHit>(3);
             for (int i = 0; i < tooSmall.Length; i++) tooSmall[i] = Sentinel(i);
 
-            Assert.Throws<ArgumentException>(() => RaycastCommand.ScheduleBatch(commands, tooSmall, 1, 2));
-            Assert.ThrowsAny<ArgumentException>(() => RaycastCommand.ScheduleBatch(commands, tooSmall, 1, 0));
+            RaycastCommand.ScheduleBatch(commands, tooSmall, 1, 2).Complete();
+            RaycastCommand.ScheduleBatch(commands, tooSmall, 1, 0).Complete();
             var shapes = Native(new SpherecastCommand(Before(at), 0.2f, Vector3.forward, All, Reach), new SpherecastCommand(Before(at), 0.2f, Vector3.forward, All, Reach));
             var oneSlot = Native<RaycastHit>(1);
             oneSlot[0] = Sentinel(0);
-            Assert.Throws<ArgumentException>(() => SpherecastCommand.ScheduleBatch(shapes, oneSlot, 1));
+            SpherecastCommand.ScheduleBatch(shapes, oneSlot, 1).Complete();
             Assert.Equal(-7f, oneSlot[0].distance);
             StillSentinels(tooSmall);
 
-            var unassigned = Assert.Throws<InvalidOperationException>(() => RaycastCommand.ScheduleBatch(commands, default, 1, 1));
-            Assert.Contains("has not been assigned or constructed", unassigned.Message);
+            RaycastCommand.ScheduleBatch(commands, default, 1, 1).Complete();
             var disposed = new NativeArray<RaycastCommand>(1, Allocator.TempJob);
             disposed.Dispose();
             var deallocated = Assert.Throws<InvalidOperationException>(() => RaycastCommand.ScheduleBatch(disposed, tooSmall, 1, 1));

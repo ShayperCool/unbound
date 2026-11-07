@@ -2,32 +2,14 @@ using System;
 using Unbound.Runtime;
 using Unity.Collections;
 using Unity.Jobs;
+using B3 = Unbound.Box3D.B3;
 
-// Batch physics queries (6000.0 Scripting API: QueryParameters, ColliderHit, OverlapSphereCommand,
-// OverlapBoxCommand, OverlapCapsuleCommand, ClosestPointCommand and their ScheduleBatch). Each
-// command is answered by the engine's existing query for it (PhysicsScene.OverlapSphere,
-// PhysicsScene.OverlapBox, PhysicsScene.OverlapCapsule, Physics.ClosestPoint); there is no
-// separate batch query model.
-//
-// Documented: a command at index N with maxHits slots has its results at N * maxHits; when it hits
-// fewer colliders than maxHits, the first unused result has collider instance ID 0 (no collider) and the results of the
-// command end there. A ClosestPointCommand at index N has its result at index N.
-//
-// Unbound's choices (unmeasured):
-// - ScheduleBatch completes dependsOn, then answers every command on the calling thread before it
-//   returns, and returns an already completed handle (default). The results are therefore final
-//   when ScheduleBatch returns; Unity only promises them once the returned handle is complete.
-//   minCommandsPerJob does not change the results and is not used.
-// - Every unused result slot of a command is cleared, not only the first one.
-// - When more colliders overlap than maxHits, the ones kept and their order are those the
-//   PhysicsScene overlap query fills a maxHits-long array with; Unity documents no order.
-// - The checks throw before any result is written: an unassigned or deallocated container
-//   (InvalidOperationException, as the job scheduler reports it), maxHits below 1
-//   (ArgumentOutOfRangeException), a results array shorter than the commands need
-//   (ArgumentException), a ClosestPointCommand naming no live Collider (ArgumentException) or a
-//   scale other than its Collider's current lossy scale (NotSupportedException).
-// - The overlap commands do not read QueryParameters.hitBackfaces or hitMultipleFaces: their pages
-//   describe their QueryParameters as "layer mask or hit triggers" only.
+// Unity 6000.0 batch query contracts and measured limits are recorded in
+// tests/projects/physicsbatch. Commands share the single-call native query path, with
+// per-command face flags and initial sweep overlaps omitted at every maxHits.
+// Results start at commandIndex * maxHits; unused slots are cleared. No hit order is promised.
+// Scheduling currently completes dependencies and queries on the calling thread. Parallel
+// execution remains a limitation while scene preparation and managed lookup use main-thread state.
 namespace UnityEngine
 {
     /// <summary>The layer mask, trigger interaction and face options of a batch query.</summary>
@@ -91,7 +73,7 @@ namespace UnityEngine
 
         public static JobHandle ScheduleBatch(NativeArray<OverlapSphereCommand> commands, NativeArray<ColliderHit> results, int minCommandsPerJob, int maxHits, JobHandle dependsOn = default) =>
             PhysicsBatchQueries.Overlaps("OverlapSphereCommand.ScheduleBatch", commands, results, maxHits, dependsOn,
-                (in OverlapSphereCommand c, Collider[] found) => c.physicsScene.OverlapSphere(c.point, c.radius, found, c.queryParameters.layerMask, c.queryParameters.hitTriggers));
+                (in OverlapSphereCommand c, Collider[] found) => PhysicsQueries.BatchOverlap(c.physicsScene, B3.Proxy.Sphere, c.point, default, Quaternion.identity, c.radius, c.queryParameters, found));
     }
 
     public partial struct OverlapBoxCommand
@@ -122,7 +104,7 @@ namespace UnityEngine
 
         public static JobHandle ScheduleBatch(NativeArray<OverlapBoxCommand> commands, NativeArray<ColliderHit> results, int minCommandsPerJob, int maxHits, JobHandle dependsOn = default) =>
             PhysicsBatchQueries.Overlaps("OverlapBoxCommand.ScheduleBatch", commands, results, maxHits, dependsOn,
-                (in OverlapBoxCommand c, Collider[] found) => c.physicsScene.OverlapBox(c.center, c.halfExtents, found, c.orientation, c.queryParameters.layerMask, c.queryParameters.hitTriggers));
+                (in OverlapBoxCommand c, Collider[] found) => PhysicsQueries.BatchOverlap(c.physicsScene, B3.Proxy.Box, c.center, c.halfExtents, c.orientation, 0f, c.queryParameters, found));
     }
 
     public partial struct OverlapCapsuleCommand
@@ -153,7 +135,7 @@ namespace UnityEngine
 
         public static JobHandle ScheduleBatch(NativeArray<OverlapCapsuleCommand> commands, NativeArray<ColliderHit> results, int minCommandsPerJob, int maxHits, JobHandle dependsOn = default) =>
             PhysicsBatchQueries.Overlaps("OverlapCapsuleCommand.ScheduleBatch", commands, results, maxHits, dependsOn,
-                (in OverlapCapsuleCommand c, Collider[] found) => c.physicsScene.OverlapCapsule(c.point0, c.point1, c.radius, found, c.queryParameters.layerMask, c.queryParameters.hitTriggers));
+                (in OverlapCapsuleCommand c, Collider[] found) => PhysicsQueries.BatchOverlap(c.physicsScene, B3.Proxy.Capsule, c.point0, c.point1, Quaternion.identity, c.radius, c.queryParameters, found));
     }
 
     public partial struct ClosestPointCommand
@@ -172,10 +154,7 @@ namespace UnityEngine
         {
         }
 
-        // Unbound's choice (unmeasured): a null reference is rejected here; a destroyed Collider still
-        // has its instance ID, and ScheduleBatch reports that it is gone.
-        static int InstanceIdOf(Collider collider) =>
-            ReferenceEquals(collider, null) ? throw new ArgumentNullException(nameof(collider)) : collider.GetInstanceID();
+        static int InstanceIdOf(Collider collider) => collider.GetInstanceID();
 
         public Vector3 point { get; set; }
 
@@ -190,64 +169,39 @@ namespace UnityEngine
         public static JobHandle ScheduleBatch(NativeArray<ClosestPointCommand> commands, NativeArray<Vector3> results, int minCommandsPerJob, JobHandle dependsOn = default)
         {
             const string api = "ClosestPointCommand.ScheduleBatch";
+            if (results.Length < commands.Length)
+            {
+                Debug.LogWarning("The supplied results buffer is too small, there should be at least one result per command in the batch.");
+                return default;
+            }
+            if (commands.Length == 0) return dependsOn;
             PhysicsBatchQueries.CheckContainer(api, commands, nameof(commands));
             PhysicsBatchQueries.CheckContainer(api, results, nameof(results));
-            if (results.Length < commands.Length)
-                throw new ArgumentException($"{api}: results has {results.Length} elements, but the {commands.Length} commands need {commands.Length}.", nameof(results));
             dependsOn.Complete();
-
-            // Every command is checked before any result is written.
-            var colliders = new Collider[commands.Length];
+            using var batch = PhysicsQueries.Batch();
             for (int i = 0; i < commands.Length; i++)
             {
                 var command = commands[i];
                 var collider = Physics.GetColliderByInstanceID(command.colliderInstanceID);
                 if (collider == null)
-                    throw new ArgumentException($"{api}: command {i} names collider instance ID {command.colliderInstanceID}, which is not a live Collider.", nameof(commands));
-                // Physics.ClosestPoint, which answers the command, uses the Collider's own scale.
-                var lossy = collider.transform.lossyScale;
-                if (command.scale != lossy)
-                    throw new NotSupportedException($"{api}: command {i} gives scale {command.scale} for '{collider.name}', whose scale is {lossy}; Unbound answers closest points at the Collider's own scale only.");
-                colliders[i] = collider;
-            }
-            for (int i = 0; i < commands.Length; i++)
-            {
-                var command = commands[i];
-                results[i] = Physics.ClosestPoint(command.point, colliders[i], command.position, command.rotation);
+                {
+                    Debug.LogError($"Failed to resolve instance id: {command.colliderInstanceID}");
+                    results[i] = command.point;
+                    continue;
+                }
+                if (collider is not BoxCollider && collider is not SphereCollider && collider is not CapsuleCollider && collider is not MeshCollider { convex: true })
+                {
+                    Debug.LogError("ClosestPointCommand can only be used with a BoxCollider, SphereCollider, CapsuleCollider and a convex MeshCollider.");
+                    results[i] = command.point;
+                    continue;
+                }
+                // The scale field has no effect in the measured Editor. Use the collider's
+                // geometry at its actual scale, as Physics.ClosestPoint does.
+                results[i] = Physics.ClosestPoint(command.point, collider, command.position, command.rotation);
             }
             return default;
         }
     }
-
-    // ---------------------------------------------------------------------------- cast commands
-    // 6000.0 Scripting API: RaycastCommand, SpherecastCommand, BoxcastCommand, CapsulecastCommand,
-    // their ScheduleBatch, and QueryParameters. Each command is answered by the engine's existing
-    // cast for its physicsScene (PhysicsScene.Raycast / SphereCast / BoxCast / CapsuleCast); there
-    // is no separate batch query model.
-    //
-    // Documented: the results of the command at index N start at N * maxHits; the ScheduleBatch
-    // overload without maxHits uses maxHits 1; for RaycastCommand, the first invalid result has a
-    // null collider and ends the command's results; only RaycastCommand supports hitMultipleFaces.
-    //
-    // Managed answer, not the native batch: QueryParameters.hitBackfaces and hitMultipleFaces are
-    // not supported by Unbound's batch commands. Each answered command hits back faces as its own
-    // hitBackfaces (false) says, not as Physics.queriesHitBackfaces does (Unbound's reading,
-    // unmeasured: the field has no "use the global setting" value). A batch with hitBackfaces set
-    // on any command, or hitMultipleFaces set on a RaycastCommand, throws NotSupportedException
-    // after dependsOn completes and before any result is written, instead of being answered without
-    // them (Unbound's choice). The QueryParameters page (6000.0 Remarks: "Only RaycastCommand supports hitting
-    // multiple Mesh faces") gives hitMultipleFaces no effect on SpherecastCommand, BoxcastCommand
-    // and CapsulecastCommand, so they accept it and answer as without it. That it is ignored there
-    // is inferred from the documented API scope; Unity's own result for it is not measured.
-    //
-    // Unbound's choices (unmeasured), as for the overlap commands: ScheduleBatch answers on the
-    // calling thread and returns an already completed handle; minCommandsPerJob is not used; every
-    // unused slot is cleared to an empty hit; the container, maxHits and results-length checks
-    // throw before anything else. Hypotheses (unmeasured, Unity documents no order): with maxHits 1
-    // a command's hit is the closest one, as the single PhysicsScene cast with an out hit answers
-    // (shapes the cast starts in are not hit); with a larger maxHits the hits kept and their order
-    // are those the PhysicsScene cast writes into a maxHits-long array (unsorted, shapes the cast
-    // starts in reported at distance 0).
 
     public partial struct RaycastCommand
     {
@@ -312,9 +266,7 @@ namespace UnityEngine
 
         public static JobHandle ScheduleBatch(NativeArray<RaycastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, int maxHits, JobHandle dependsOn = default) =>
             PhysicsBatchQueries.Casts("RaycastCommand.ScheduleBatch", commands, results, maxHits, dependsOn,
-                (in RaycastCommand c) => c.queryParameters,
-                (in RaycastCommand c, out RaycastHit hit) => c.physicsScene.Raycast(c.from, c.direction, out hit, c.distance, c.queryParameters.layerMask, c.queryParameters.hitTriggers),
-                (in RaycastCommand c, RaycastHit[] found) => c.physicsScene.Raycast(c.from, c.direction, found, c.distance, c.queryParameters.layerMask, c.queryParameters.hitTriggers));
+                (in RaycastCommand c, RaycastHit[] found, bool closest) => PhysicsQueries.BatchCast(c.physicsScene, true, default, c.from, default, Quaternion.identity, 0f, c.direction, c.distance, c.queryParameters, found, closest));
 
         /// <summary>Documented: maxHits is 1 in this variant.</summary>
         public static JobHandle ScheduleBatch(NativeArray<RaycastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, JobHandle dependsOn = default) =>
@@ -371,9 +323,7 @@ namespace UnityEngine
 
         public static JobHandle ScheduleBatch(NativeArray<SpherecastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, int maxHits, JobHandle dependsOn = default) =>
             PhysicsBatchQueries.Casts("SpherecastCommand.ScheduleBatch", commands, results, maxHits, dependsOn,
-                (in SpherecastCommand c) => c.queryParameters,
-                (in SpherecastCommand c, out RaycastHit hit) => c.physicsScene.SphereCast(c.origin, c.radius, c.direction, out hit, c.distance, c.queryParameters.layerMask, c.queryParameters.hitTriggers),
-                (in SpherecastCommand c, RaycastHit[] found) => c.physicsScene.SphereCast(c.origin, c.radius, c.direction, found, c.distance, c.queryParameters.layerMask, c.queryParameters.hitTriggers));
+                (in SpherecastCommand c, RaycastHit[] found, bool closest) => PhysicsQueries.BatchCast(c.physicsScene, false, B3.Proxy.Sphere, c.origin, default, Quaternion.identity, c.radius, c.direction, c.distance, c.queryParameters, found, closest));
 
         /// <summary>Documented: maxHits is 1 in this variant.</summary>
         public static JobHandle ScheduleBatch(NativeArray<SpherecastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, JobHandle dependsOn = default) =>
@@ -433,9 +383,7 @@ namespace UnityEngine
 
         public static JobHandle ScheduleBatch(NativeArray<BoxcastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, int maxHits, JobHandle dependsOn = default) =>
             PhysicsBatchQueries.Casts("BoxcastCommand.ScheduleBatch", commands, results, maxHits, dependsOn,
-                (in BoxcastCommand c) => c.queryParameters,
-                (in BoxcastCommand c, out RaycastHit hit) => c.physicsScene.BoxCast(c.center, c.halfExtents, c.direction, out hit, c.orientation, c.distance, c.queryParameters.layerMask, c.queryParameters.hitTriggers),
-                (in BoxcastCommand c, RaycastHit[] found) => c.physicsScene.BoxCast(c.center, c.halfExtents, c.direction, found, c.orientation, c.distance, c.queryParameters.layerMask, c.queryParameters.hitTriggers));
+                (in BoxcastCommand c, RaycastHit[] found, bool closest) => PhysicsQueries.BatchCast(c.physicsScene, false, B3.Proxy.Box, c.center, c.halfExtents, c.orientation, 0f, c.direction, c.distance, c.queryParameters, found, closest));
 
         /// <summary>Documented: maxHits is 1 in this variant.</summary>
         public static JobHandle ScheduleBatch(NativeArray<BoxcastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, JobHandle dependsOn = default) =>
@@ -495,9 +443,7 @@ namespace UnityEngine
 
         public static JobHandle ScheduleBatch(NativeArray<CapsulecastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, int maxHits, JobHandle dependsOn = default) =>
             PhysicsBatchQueries.Casts("CapsulecastCommand.ScheduleBatch", commands, results, maxHits, dependsOn,
-                (in CapsulecastCommand c) => c.queryParameters,
-                (in CapsulecastCommand c, out RaycastHit hit) => c.physicsScene.CapsuleCast(c.point1, c.point2, c.radius, c.direction, out hit, c.distance, c.queryParameters.layerMask, c.queryParameters.hitTriggers),
-                (in CapsulecastCommand c, RaycastHit[] found) => c.physicsScene.CapsuleCast(c.point1, c.point2, c.radius, c.direction, found, c.distance, c.queryParameters.layerMask, c.queryParameters.hitTriggers));
+                (in CapsulecastCommand c, RaycastHit[] found, bool closest) => PhysicsQueries.BatchCast(c.physicsScene, false, B3.Proxy.Capsule, c.point1, c.point2, Quaternion.identity, c.radius, c.direction, c.distance, c.queryParameters, found, closest));
 
         /// <summary>Documented: maxHits is 1 in this variant.</summary>
         public static JobHandle ScheduleBatch(NativeArray<CapsulecastCommand> commands, NativeArray<RaycastHit> results, int minCommandsPerJob, JobHandle dependsOn = default) =>
@@ -526,6 +472,8 @@ namespace Unbound.Runtime
                 throw new InvalidOperationException($"{api}: the {type} {name} has not been assigned or constructed. All containers must be valid when scheduling a job.");
             if (!Safety.IsAlive(handle))
                 throw new InvalidOperationException($"{api}: the {type} {name} has been deallocated. All containers must be valid when scheduling a job.");
+            if (Safety.IsTemp(handle))
+                throw new InvalidOperationException($"{api}: the {type} {name} is allocated with Temp memory. Use TempJob when scheduling a job.");
             if (!array.IsCreated)
                 throw new InvalidOperationException($"{api}: the {type} {name} has not been assigned or constructed. All containers must be valid when scheduling a job.");
         }
@@ -533,15 +481,14 @@ namespace Unbound.Runtime
         internal static JobHandle Overlaps<TCommand>(string api, NativeArray<TCommand> commands, NativeArray<ColliderHit> results, int maxHits, JobHandle dependsOn, OverlapQuery<TCommand> query)
             where TCommand : struct
         {
+            if (!CheckCapacity(commands.Length, results.Length, maxHits)) return default;
+            if (commands.Length == 0) return dependsOn;
             CheckContainer(api, commands, nameof(commands));
             CheckContainer(api, results, nameof(results));
-            if (maxHits < 1)
-                throw new ArgumentOutOfRangeException(nameof(maxHits), maxHits, $"{api}: maxHits must be at least 1.");
-            long needed = (long)commands.Length * maxHits;
-            if (results.Length < needed)
-                throw new ArgumentException($"{api}: results has {results.Length} elements, but {commands.Length} commands with maxHits {maxHits} need {needed}.", nameof(results));
             dependsOn.Complete();
 
+            using var batch = PhysicsQueries.Batch();
+            PhysicsQueries.Reserve(maxHits);
             var found = new Collider[maxHits];
             for (int i = 0; i < commands.Length; i++)
             {
@@ -555,54 +502,40 @@ namespace Unbound.Runtime
             return default;
         }
 
-        internal delegate QueryParameters CastParameters<TCommand>(in TCommand command);
-        internal delegate bool ClosestCast<TCommand>(in TCommand command, out RaycastHit hit);
-        internal delegate int AllCasts<TCommand>(in TCommand command, RaycastHit[] found);
-
-        /// <summary>Answers cast commands into maxHits result slots each: with maxHits 1 the
-        /// command's closest hit (its PhysicsScene cast with an out hit), otherwise the hits its
-        /// PhysicsScene cast writes into a maxHits-long array. A command asking for back faces, or a
-        /// RaycastCommand asking for multiple faces, is refused before any result is written.</summary>
-        internal static JobHandle Casts<TCommand>(string api, NativeArray<TCommand> commands, NativeArray<RaycastHit> results, int maxHits, JobHandle dependsOn,
-            CastParameters<TCommand> parameters, ClosestCast<TCommand> closest, AllCasts<TCommand> all)
-            where TCommand : struct
+        internal static bool CheckCapacity(int commands, int results, int maxHits)
         {
+            if (maxHits < 1)
+            {
+                Debug.LogWarning("maxHits should be greater than 0.");
+                return false;
+            }
+            if (results < (long)commands * maxHits)
+            {
+                Debug.LogWarning("The supplied results buffer is too small, there should be at least maxHits space per each command in the batch.");
+                return false;
+            }
+            return true;
+        }
+
+        internal delegate int CastQuery<TCommand>(in TCommand command, RaycastHit[] found, bool closest);
+
+        internal static JobHandle Casts<TCommand>(string api, NativeArray<TCommand> commands, NativeArray<RaycastHit> results, int maxHits, JobHandle dependsOn,
+            CastQuery<TCommand> query) where TCommand : struct
+        {
+            // The public size checks precede scheduling/container validation in the Editor.
+            if (!CheckCapacity(commands.Length, results.Length, maxHits)) return default;
+            if (commands.Length == 0) return dependsOn;
             CheckContainer(api, commands, nameof(commands));
             CheckContainer(api, results, nameof(results));
-            if (maxHits < 1)
-                throw new ArgumentOutOfRangeException(nameof(maxHits), maxHits, $"{api}: maxHits must be at least 1.");
-            long needed = (long)commands.Length * maxHits;
-            if (results.Length < needed)
-                throw new ArgumentException($"{api}: results has {results.Length} elements, but {commands.Length} commands with maxHits {maxHits} need {needed}.", nameof(results));
             dependsOn.Complete();
-
-            // Every command is checked before any result is written.
-            for (int i = 0; i < commands.Length; i++)
-            {
-                var query = parameters(commands[i]);
-                if (query.hitBackfaces)
-                    throw new NotSupportedException($"{api}: command {i} sets QueryParameters.hitBackfaces, which Unbound's batch commands do not support yet, so the batch is refused instead of answered without back faces.");
-                // Only RaycastCommand supports hitting multiple Mesh faces (QueryParameters, 6000.0);
-                // the shape casts accept the flag and answer as without it.
-                if (query.hitMultipleFaces && typeof(TCommand) == typeof(RaycastCommand))
-                    throw new NotSupportedException($"{api}: command {i} sets QueryParameters.hitMultipleFaces, which Unbound does not support: its casts report one hit per collider, so the batch is refused instead of answered without multiple faces.");
-            }
-
-            var found = maxHits > 1 ? new RaycastHit[maxHits] : null;
+            using var batch = PhysicsQueries.Batch();
+            PhysicsQueries.Reserve(maxHits);
+            var found = new RaycastHit[maxHits];
             for (int i = 0; i < commands.Length; i++)
             {
                 var command = commands[i];
+                int count = query(in command, found, maxHits == 1);
                 int start = i * maxHits;
-                // A command hits back faces as its QueryParameters.hitBackfaces says, not as
-                // Physics.queriesHitBackfaces does.
-                using var backfaces = PhysicsQueries.Backfaces(parameters(command).hitBackfaces);
-                if (found == null)
-                {
-                    results[start] = closest(in command, out var hit) ? hit : default;
-                    continue;
-                }
-                Array.Clear(found, 0, found.Length);
-                int count = all(in command, found);
                 for (int k = 0; k < maxHits; k++)
                     results[start + k] = k < count ? found[k] : default;
             }

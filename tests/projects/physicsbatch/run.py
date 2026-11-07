@@ -2,7 +2,6 @@
 """Record and replay 3D batch query contracts in private Unity projects."""
 import argparse
 import json
-import math
 import os
 from pathlib import Path
 import shutil
@@ -14,6 +13,8 @@ REPO = ROOT.parents[2]
 sys.path.insert(0, str(REPO/'tests'))
 from probe_paths import cache_artifact_path, reference_file
 from editor_runner import EditorJob, run, publish
+from compare import load, compare as compare_rows
+from verify import verify
 
 p = argparse.ArgumentParser(description=__doc__)
 p.add_argument('mode', choices=['prepare', 'native', 'engine', 'publish', 'compare', 'gate'])
@@ -44,33 +45,16 @@ def engine():
     with (work/(a.label+'-engine.log')).open('w') as log:
         subprocess.run([str(Path.home()/'.cache/compat/with-heavy-job'),str(a.cli.resolve()),'run','-p',str(project),'--headless','30000','--no-watch'],env=dict(os.environ,PHYSICS_PROBE_OUT=str(out)),stdout=log,stderr=subprocess.STDOUT,check=True)
 
-def compare():
-    def load(path):
-        result = {}
-        for line in path.read_text().splitlines():
-            k,v = line.split('\t',1)
-            if k in result: raise ValueError('Duplicate key '+k)
-            result[k]=v
-        if result.get('complete') != 'yes' or 'fatal' in result: raise ValueError('Incomplete capture '+str(path))
-        return result
+def compare(classify=False):
     expected,actual=load(ref),load(out)
-    failures=[]
-    for key in sorted(expected.keys()|actual.keys()):
-        x,y=expected.get(key),actual.get(key)
-        equal=x==y
-        if not equal and x is not None and y is not None:
-            xx,yy=x.split(','),y.split(',')
-            if len(xx)==len(yy):
-                def same(v,w):
-                    if v==w:return True
-                    try:return math.isclose(float(v),float(w),abs_tol=1e-4,rel_tol=1e-5)
-                    except ValueError:return False
-                equal=all(same(v,w) for v,w in zip(xx,yy))
-        if not equal:failures.append(dict(key=key,expected=x,actual=y))
-    report=dict(total=len(expected.keys()|actual.keys()),failures=failures)
+    report=compare_rows(expected,actual)
     (work/(a.label+'-comparison.json')).write_text(json.dumps(report,indent=2)+'\n')
-    print(f"physicsbatch: {report['total']-len(failures)}/{report['total']} records match; {len(failures)} differences")
-    return bool(failures)
+    print(f"physicsbatch: {report['total']-len(report['failures'])}/{report['total']} records match; {len(report['failures'])} differences")
+    if not classify:return bool(report['failures'])
+    verdict=verify(expected,actual,report)
+    (work/(a.label+'-verification.json')).write_text(json.dumps(verdict,indent=2)+'\n')
+    print(f"physicsbatch: {len(verdict['unresolved'])} unresolved; {len(verdict['order_only'])} retained mesh slot-order differences")
+    return bool(verdict['unresolved'])
 
 if a.mode=='prepare':prepare()
 elif a.mode=='native':
@@ -101,4 +85,4 @@ elif a.mode=='engine':engine()
 elif a.mode=='compare':raise SystemExit(compare())
 elif a.mode=='gate':
     if project.exists():shutil.rmtree(project)
-    prepare();engine();raise SystemExit(compare())
+    prepare();engine();raise SystemExit(compare(classify=True))
