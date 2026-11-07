@@ -212,3 +212,33 @@ delta; with an attached controller, its reported replay velocity uses the
 controller sample interval (0.02 here), instead of the explicit interval (0.04
 here). These distinctions are measured, not a proposed controller phase rule.
 Other controller intervals and callback-relative visibility changes are unmeasured.
+
+## Direct humanoid clip root motion (Q91)
+
+`humanMotion/` connects one nonmirrored `LoopMuscles` AnimationClipPlayable directly
+at output weight one to an Animator with a valid Avatar and no controller. The
+assets are the existing humanoid probe's clip and models. HumanA covers both graph
+clocks, all three culling modes, root motion disabled, builtin application, and
+OnAnimatorMove calling ApplyBuiltinRootMotion with applyRootMotion both off and on.
+HumanB's two AlwaysAnimate controls retarget the same clip with a different avatar,
+root scale and parent scale/rotation. Foot IK is disabled; playable IK is requested.
+Records include the initial unsampled state, root and API root pose, deltas,
+velocities, body pose, bone transforms and movement/IK callback counts. Explicit
+calls in frames 6, 16 and 33 supply 0, 0.37 and 0.74 seconds, crossing whole loops.
+GameTime also advances automatically. The existing visibility schedule covers
+visible, offscreen and returning rigs. The visibility mesh is added before
+GetBoneTransform initializes the Animator's bindings.
+
+| Question | Unity 6000.0 documented guarantee or limitation | Measured 6000.0.71f1 context |
+| --- | --- | --- |
+| Direct output | [AnimationPlayableOutput](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationPlayableOutput.html) connects an animation graph to an Animator; [AnimationClipPlayable](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animations.AnimationClipPlayable.html) controls an AnimationClip. Neither specifies a separate humanoid output root algorithm. | These cases measure one direct clip, without a controller or intervening node. |
+| Root extraction | [Root Motion manual](https://docs.unity3d.com/6000.0/Documentation/Manual/RootMotion.html) projects the humanoid Body Transform to a Root Transform, computes its change each frame, and applies it to the GameObject. Bake settings can keep position/rotation in the pose; loop pose is relative to the root. Body-orientation projection can fail for strafing and needs an offset. | The existing nonmirrored looping clip has translation and yaw. The implementation reuses controller-side SampleMotion/ApplyMotion, including the feet pivot and body-relative pose. This does not establish a universal graph composition rule. |
+| Retargeting | [Retargeting manual](https://docs.unity3d.com/6000.0/Documentation/Manual/Retargeting.html) limits retargeting to humanoid models with configured Avatars. | Both authored avatars are valid; HumanB also checks the existing avatar/root transform conversion. |
+| Application and callback | [applyRootMotion](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-applyRootMotion.html) has no effect when OnAnimatorMove is implemented; changing it at runtime reinitializes the Animator. [OnAnimatorMove](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnAnimatorMove.html) runs after animation evaluation and before OnAnimatorIK. | Flags are set before graph playback and never toggled here. Both callback cases apply the sampled builtin motion. No order between different Animators is asserted. |
+| Motion fields | [deltaPosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-deltaPosition.html), [deltaRotation](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-deltaRotation.html), [velocity](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-velocity.html) and [angularVelocity](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Animator-angularVelocity.html) describe the last evaluated frame and say applyRootMotion must be enabled for calculation. | The OnAnimatorMove case with the flag off measures the callback exception separately from that stated API prerequisite. Zero and successive evaluations retain every numeric field. |
+| Culling and explicit time | [AnimatorCullingMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AnimatorCullingMode.html) disables retargeting, IK and transform writes for CullUpdateTransforms, and animation for CullCompletely. [PlayableGraph.Evaluate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Playables.PlayableGraph.Evaluate.html) advances by the supplied interval. Neither documents visibility replay or humanoid feet-pivot state under replay. | The existing Q90 timing/culling machinery is retained. Root motion and its memory are sampled once per evaluation; visibility replay retains the last movement fields without sampling the feet pivot again. |
+
+Mixer/layer/controller-playable composition, an attached controller, fractional or
+multiple outputs, loop overrides, mirrored clips, animation jobs/HumanStream and
+other releases remain outside this measurement. Unsupported requested humanoid
+root-motion contexts retain a diagnostic instead of using generic transform curves.

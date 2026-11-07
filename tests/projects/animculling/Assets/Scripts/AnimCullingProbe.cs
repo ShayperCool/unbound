@@ -43,6 +43,7 @@ public class AnimCullingProbe : MonoBehaviour
         public AnimationClipPlayable clip;
         public Playable source;
         public bool explicitEvaluation;
+        public bool humanMotion;
     }
 
     readonly List<Case> cases = new List<Case>();
@@ -130,6 +131,7 @@ public class AnimCullingProbe : MonoBehaviour
         ExplicitCases("later", entry: false);
         ExplicitHumanCases();
         ExplicitCases("replay", entry: false);
+        HumanMotionCases();
         foreach (var (name, mode) in modes)
         foreach (bool controller in new[] { false, true })
         foreach (bool mixer in new[] { false, true })
@@ -259,6 +261,73 @@ public class AnimCullingProbe : MonoBehaviour
         }
     }
 
+    void HumanMotionCases()
+    {
+        foreach (var mode in new[] { AnimatorCullingMode.AlwaysAnimate, AnimatorCullingMode.CullUpdateTransforms, AnimatorCullingMode.CullCompletely })
+        foreach (var clock in new[] { DirectorUpdateMode.GameTime, DirectorUpdateMode.Manual })
+        foreach (string movement in new[] { "off", "builtin", "callbackOff", "callbackOn" })
+            HumanMotionCase(mode, clock, movement, "HumanA", 0.01f);
+        // A different configured Avatar and root/parent scale exercise the existing retarget transform.
+        foreach (var clock in new[] { DirectorUpdateMode.GameTime, DirectorUpdateMode.Manual })
+            HumanMotionCase(AnimatorCullingMode.AlwaysAnimate, clock, "builtin", "HumanB", 0.015f);
+    }
+
+    void HumanMotionCase(AnimatorCullingMode mode, DirectorUpdateMode clock, string movement, string avatar, float scale)
+    {
+        var name = "humanMotion/" + avatar + "/" + mode + "/" + clock + "/" + movement;
+        var c = new Case { name = name, visible = ScheduleA, humanMotion = true, explicitEvaluation = true };
+        c.holder = new GameObject(name).transform;
+        if (avatar == "HumanB")
+        {
+            c.holder.localRotation = Quaternion.Euler(0f, 20f, 0f);
+            c.holder.localScale = Vector3.one * 1.2f;
+        }
+        var model = Instantiate(Resources.Load<GameObject>(avatar), c.holder, false);
+        c.rig = model.transform;
+        c.rig.localScale *= scale;
+        c.rig.localRotation = Quaternion.Euler(0f, 25f, 0f) * c.rig.localRotation;
+        // Add the visibility renderer before GetBoneTransform initializes the Animator bindings.
+        c.renderers.Add(Body("Body", c.rig, Vector3.up));
+        c.animator = model.GetComponent<Animator>();
+        c.animator.runtimeAnimatorController = null;
+        c.animator.cullingMode = mode;
+        c.animator.applyRootMotion = movement == "builtin" || movement == "callbackOn";
+        c.ik = model.AddComponent<CullIK>();
+        c.hips = c.animator.GetBoneTransform(HumanBodyBones.Hips);
+        c.arm = c.animator.GetBoneTransform(HumanBodyBones.LeftLowerArm);
+        c.marker = c.hips;
+        if (movement.StartsWith("callback", StringComparison.Ordinal)) c.move = model.AddComponent<CullMoveReceiver>();
+        c.graph = PlayableGraph.Create(name);
+        c.graph.SetTimeUpdateMode(clock);
+        c.clip = AnimationClipPlayable.Create(c.graph, Resources.Load<AnimationClip>("LoopMuscles"));
+        c.clip.SetApplyFootIK(false);
+        c.clip.SetApplyPlayableIK(true);
+        c.source = c.clip;
+        AnimationPlayableOutput.Create(c.graph, "Animation", c.animator).SetSourcePlayable(c.source);
+        c.graph.Play();
+        Put(name + "/info", "{\"human\":" + B(c.animator.isHuman) + ",\"valid\":" + B(c.animator.avatar.isValid)
+            + ",\"humanScale\":" + F(c.animator.humanScale) + ",\"scale\":" + V(c.rig.lossyScale)
+            + ",\"controller\":" + B(c.animator.runtimeAnimatorController != null) + "}");
+        cases.Add(c);
+        Record(c, "initial");
+    }
+
+    void RecordHumanMotion(Case c, string phase)
+    {
+        var a = c.animator;
+        Put(c.name + (phase == null ? "" : "/" + phase) + "/" + frame,
+            "{\"visible\":" + B(c.renderers[0].isVisible) + ",\"time\":" + c.clip.GetTime().ToString("R", CultureInfo.InvariantCulture)
+            + ",\"root\":" + V(c.rig.localPosition) + ",\"rotation\":" + Q(c.rig.localRotation)
+            + ",\"rootPosition\":" + V(a.rootPosition) + ",\"rootRotation\":" + Q(a.rootRotation)
+            + ",\"delta\":" + V(a.deltaPosition) + ",\"turn\":" + Q(a.deltaRotation)
+            + ",\"velocity\":" + V(a.velocity) + ",\"angularVelocity\":" + V(a.angularVelocity)
+            + ",\"body\":" + V(a.bodyPosition) + ",\"bodyRotation\":" + Q(a.bodyRotation)
+            + ",\"hips\":" + V(c.hips.localPosition) + ",\"hipsRotation\":" + Q(c.hips.localRotation)
+            + ",\"arm\":" + Q(c.arm.localRotation) + ",\"ik\":" + c.ik.calls
+            + ",\"move\":" + (c.move == null ? 0 : c.move.calls)
+            + ",\"callbackDelta\":" + V(c.move == null ? Vector3.zero : c.move.lastDelta) + "}");
+    }
+
     void ExplicitStep(Case c)
     {
         if (!c.explicitEvaluation) return;
@@ -266,7 +335,7 @@ public class AnimCullingProbe : MonoBehaviour
         // Capture before/after every call. 0.07 + 0 + 0.04 crosses the clip's 0.1 event.
         Record(c, "before");
         int call = 0;
-        foreach (float delta in new[] { 0.07f, 0f, 0.04f })
+        foreach (float delta in c.humanMotion ? new[] { 0f, 0.37f, 0.74f } : new[] { 0.07f, 0f, 0.04f })
         {
             c.graph.Evaluate(delta);
             Record(c, "evaluate" + call++);
@@ -432,6 +501,7 @@ public class AnimCullingProbe : MonoBehaviour
 
     void Record(Case c, string phase = null)
     {
+        if (c.humanMotion) { RecordHumanMotion(c, phase); return; }
         var json = new StringBuilder("{\"vis\":[");
         for (int i = 0; i < c.renderers.Count; i++) json.Append(i > 0 ? "," : "").Append(B(c.renderers[i].isVisible));
         json.Append("]");
