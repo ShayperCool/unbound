@@ -30,6 +30,7 @@ namespace UnityEngine.Audio
         internal readonly Dictionary<string, float> m_Overrides = new Dictionary<string, float>();
         internal readonly Dictionary<string, float> m_Defaults = new Dictionary<string, float>();
         internal readonly List<AudioMixerGroup> m_Groups = new List<AudioMixerGroup>();
+        readonly Dictionary<AudioMixerEffectController, AudioMixerGroup> m_EffectGroups = new Dictionary<AudioMixerEffectController, AudioMixerGroup>();
         bool m_Built;
         readonly HashSet<string> m_PendingClears = new HashSet<string>(StringComparer.Ordinal);
         readonly Dictionary<string, float> m_SubmittedOverrides = new Dictionary<string, float>(StringComparer.Ordinal);
@@ -229,11 +230,8 @@ namespace UnityEngine.Audio
             return m_Defaults.TryGetValue(guid, out v) ? v : 0f;
         }
 
-        internal AudioMixerGroup FindEffectGroup(AudioMixerEffectController effect)
-        {
-            foreach (var group in m_Groups) if (group.m_Effects.Contains(effect)) return group;
-            return null;
-        }
+        internal AudioMixerGroup FindEffectGroup(AudioMixerEffectController effect) =>
+            m_EffectGroups.TryGetValue(effect, out var group) ? group : null;
 
         internal bool AnySolo
         {
@@ -331,6 +329,7 @@ namespace UnityEngine.Audio
             if (m_Built) return;
             m_Built = true;
             m_Groups.Clear();
+            m_EffectGroups.Clear();
             m_Defaults.Clear();
             if (m_MasterGroup != null) Collect(m_MasterGroup, null);
             m_Values.Clear();
@@ -348,6 +347,7 @@ namespace UnityEngine.Audio
             if (group.m_PitchGuid != null) m_Defaults[group.m_PitchGuid] = 1f;
             foreach (var effect in group.m_Effects)
             {
+                m_EffectGroups[effect] = group;
                 if (effect.Parameter("Cutoff freq") is string cutoff) m_Defaults[cutoff] = AudioMixerEffectController.CutoffDefault(effect.m_EffectName);
                 if (effect.Parameter("Resonance") is string resonance) m_Defaults[resonance] = 1f;
                 if (effect.m_EffectName == "Echo")

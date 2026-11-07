@@ -259,6 +259,29 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void SidechainOwnershipLookupCoversEveryGroupWithoutUpdateAllocations()
+        {
+            var (mixer, master, target) = Fixture();
+            target.m_EffectName = "Receive";
+            var sender = new AudioMixerGroup { m_Mixer = mixer, m_Name = "Voice" };
+            var send = new AudioMixerEffectController { m_EffectName = "Send", m_SendTarget = target };
+            sender.m_Effects.Add(send); master.m_Children.Add(sender);
+            mixer.Build();
+            Assert.Same(master, mixer.FindEffectGroup(target));
+            Assert.Same(sender, mixer.FindEffectGroup(send));
+            Assert.Null(mixer.FindEffectGroup(new AudioMixerEffectController()));
+            sender.ValidateSidechains();
+            long before = GC.GetAllocatedBytesForCurrentThread();
+            for (int i = 0; i < 1000; i++) sender.ValidateSidechains();
+            long allocated = GC.GetAllocatedBytesForCurrentThread() - before;
+            Assert.Equal(0, allocated);
+            // Parameter changes and display names do not change ownership or require a rebuild.
+            master.m_Name = "Output"; sender.m_Name = "New voice name";
+            Assert.Same(master, mixer.FindEffectGroup(target));
+            Assert.Same(sender, mixer.FindEffectGroup(send));
+        }
+
+        [Fact]
         public void CrossMixerSendTargetsFailOnBothBackendsWithoutDroppingTheTarget()
         {
             var (sender, group, send) = Fixture();
