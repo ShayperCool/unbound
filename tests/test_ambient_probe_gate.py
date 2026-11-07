@@ -3,6 +3,7 @@ import contextlib
 import importlib.util
 import io
 import json
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -25,7 +26,7 @@ verifier = load('ambient_verifier_test', 'verify.py')
 
 class AmbientGateFailureTests(unittest.TestCase):
     def setUp(self):
-        cache = Path.home()/'.cache/unbound'
+        cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound'
         cache.mkdir(parents=True, exist_ok=True)
         self.temporary = tempfile.TemporaryDirectory(prefix='ambient-negative-', dir=cache)
         self.addCleanup(self.temporary.cleanup)
