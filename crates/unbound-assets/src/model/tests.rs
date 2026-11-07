@@ -611,6 +611,9 @@ fn obj_material_cache_tracks_library_content_and_missing_inputs() {
     assert_eq!(model.materials[0].description.float("TransparencyFactor"), Some(0.2));
     std::fs::remove_file(&library).unwrap();
     assert!(load().is_err(), "missing authored MTL must not reuse the cached colors");
+    std::fs::write(&library, "newmtl Paint\nmap_Kd Tint.png\n").unwrap();
+    let material = &load().unwrap().0.materials[0].description;
+    assert!(material.texture("DiffuseColor").unwrap().relative_path.ends_with("Tint.png"), "{material:?}");
     let mut obj = std::fs::read_to_string(&source).unwrap();
     obj.push_str("usemtl Other\nf 1 3 2\n");
     std::fs::write(&source, obj).unwrap();

@@ -234,8 +234,8 @@ pub fn describe_obj(
     if let Some(texture) = diffuse_texture {
         out.textures.push(TextureDescription {
             property: "DiffuseColor".into(),
-            path: texture.absolute_filename.to_string(),
-            relative_path: texture.absolute_filename.to_string(),
+            path: texture.filename.to_string(),
+            relative_path: texture.relative_filename.to_string(),
             offset: [0.0; 2],
             scale: [1.0; 2],
         });
