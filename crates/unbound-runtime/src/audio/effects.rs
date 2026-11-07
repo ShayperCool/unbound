@@ -5,11 +5,133 @@ use super::chorus::{Chorus, ChorusSpec};
 use super::compressor::{Compressor, CompressorSpec};
 use super::duck::{Duck, DuckSpec};
 use super::flange::{Flange, FlangeSpec};
+use super::mixer::MixerConfig;
+use super::modulated_delay::MAX_HISTORY_BYTES;
 use super::normalize::{Normalize, NormalizeSpec};
 use super::pitch::{PitchShifter, PitchSpec};
 use super::reverb::{SfxReverb, SfxReverbSpec};
 use serde::Deserialize;
 use std::collections::HashMap;
+
+/// The group effect kinds the mixer runs, by the AudioMixer effect name the managed side sends.
+/// Every per-kind rule of the mixer is a method here.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub(crate) enum EffectKind {
+    Attenuation,
+    Lowpass,
+    Highpass,
+    Echo,
+    SfxReverb,
+    Send,
+    Receive,
+    DuckVolume,
+    Compressor,
+    ParamEq,
+    LowpassSimple,
+    HighpassSimple,
+    Distortion,
+    Chorus,
+    Flange,
+    Normalize,
+    PitchShifter,
+}
+impl EffectKind {
+    const NAMES: [(Self, &'static str); 17] = [
+        (Self::Attenuation, "Attenuation"),
+        (Self::Lowpass, "Lowpass"),
+        (Self::Highpass, "Highpass"),
+        (Self::Echo, "Echo"),
+        (Self::SfxReverb, "SFX Reverb"),
+        (Self::Send, "Send"),
+        (Self::Receive, "Receive"),
+        (Self::DuckVolume, "Duck Volume"),
+        (Self::Compressor, "Compressor"),
+        (Self::ParamEq, "ParamEQ"),
+        (Self::LowpassSimple, "Lowpass Simple"),
+        (Self::HighpassSimple, "Highpass Simple"),
+        (Self::Distortion, "Distortion"),
+        (Self::Chorus, "Chorus"),
+        (Self::Flange, "Flange"),
+        (Self::Normalize, "Normalize"),
+        (Self::PitchShifter, "Pitch Shifter"),
+    ];
+    /// None for a kind the mixer does not run.
+    pub(crate) fn parse(name: &str) -> Option<Self> {
+        Self::NAMES
+            .iter()
+            .find(|(_, n)| *n == name)
+            .map(|(kind, _)| *kind)
+    }
+    pub(crate) fn name(self) -> &'static str {
+        Self::NAMES
+            .iter()
+            .find(|(kind, _)| *kind == self)
+            .map_or("", |(_, name)| name)
+    }
+    /// Kernels with their own state that a bypass skips, leaving the state as it is.
+    fn bypass_keeps_state(self) -> bool {
+        use EffectKind::*;
+        matches!(
+            self,
+            Compressor
+                | ParamEq
+                | Distortion
+                | Chorus
+                | Flange
+                | Normalize
+                | PitchShifter
+                | LowpassSimple
+                | HighpassSimple
+        )
+    }
+    /// Kinds whose group input keeps the measured startup fade also while bypassed
+    /// (tests/projects/mixerduck, tests/projects/mixercompressor). Lowpass and Highpass fade
+    /// only while active; Attenuation, Send and Receive never.
+    pub(crate) fn fades_in_when_bypassed(self) -> bool {
+        use EffectKind::*;
+        matches!(self, Echo | SfxReverb | DuckVolume) || self.bypass_keeps_state()
+    }
+    /// The fade of Lowpass and Highpass, which apply it only while active.
+    pub(crate) fn fades_in_when_active(self) -> bool {
+        matches!(self, Self::Lowpass | Self::Highpass)
+    }
+    /// The one-pole filters, whose cutoff is measured only from 10 to 22000 Hz.
+    fn simple_filter(self) -> bool {
+        matches!(self, Self::LowpassSimple | Self::HighpassSimple)
+    }
+    /// Kinds measured only on [`MEASURED_LAYOUT`] output, whose settings, placement and bypass
+    /// are also unmeasured to change once the group renders.
+    pub(crate) fn layout_limited(self) -> bool {
+        Self::LAYOUT_LIMITED.contains(&self)
+    }
+    pub(crate) const LAYOUT_LIMITED: [Self; 2] = [Self::PitchShifter, Self::Normalize];
+}
+
+/// The output the Normalize and Pitch Shifter captures cover (Unity 6000.0.71f1 Linux Editor,
+/// tests/projects/audionormalize and tests/projects/audiopitch): these rates, DSP buffers of
+/// this many frames and the stereo speaker mode. Other layouts fail rather than run unmeasured.
+pub(crate) const MEASURED_LAYOUT: MeasuredLayout = MeasuredLayout {
+    rates: [48000, 44100],
+    buffer: 1024,
+    speaker_mode: 2,
+};
+pub(crate) struct MeasuredLayout {
+    rates: [u32; 2],
+    buffer: u32,
+    /// `AudioSpeakerMode.Stereo`.
+    speaker_mode: i32,
+}
+impl MeasuredLayout {
+    pub(crate) fn ensure(&self, effect: &str, config: &MixerConfig) -> anyhow::Result<()> {
+        anyhow::ensure!(
+            self.rates.contains(&config.sample_rate)
+                && config.buffer_size == self.buffer
+                && config.speaker_mode == self.speaker_mode,
+            "AudioMixer {effect} is measured only at 48000/44100 Hz with 1024-frame stereo output"
+        );
+        Ok(())
+    }
+}
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -81,9 +203,16 @@ pub struct ParamEqSpec {
     pub gain: f32,
 }
 impl EffectSpec {
-    pub(crate) fn validate(&self, rate: u32) -> anyhow::Result<()> {
+    /// Parameter and resource checks that hold wherever the effect runs (group or source).
+    pub(crate) fn validate(&self, rate: u32, buffer: u32) -> anyhow::Result<()> {
         if self.kind == "Echo" {
             Echo::frames(self.delay, rate)?;
+        }
+        if self.chorus.is_some() {
+            Chorus::frames(rate, buffer)?;
+        }
+        if self.flange.is_some() {
+            Flange::frames(rate, buffer)?;
         }
         anyhow::ensure!(
             self.kind != "SFX Reverb" || self.sfx.is_some(),
@@ -170,6 +299,50 @@ impl EffectSpec {
                 level.is_finite() && (0.0..=1.0).contains(&level),
                 "invalid AudioMixer wet level {level}"
             );
+        }
+        Ok(())
+    }
+
+    /// Everything a group effect needs on this output, checked before the mixer changes any
+    /// state: the checks of [`EffectSpec::validate`], and for an active effect (neither it nor
+    /// its group bypassed) a supported kind, its parameters and its measured context.
+    pub(crate) fn validate_in_group(
+        &self,
+        config: &MixerConfig,
+        group_bypass: bool,
+    ) -> anyhow::Result<()> {
+        self.validate(config.sample_rate, config.buffer_size)?;
+        if self.bypass || group_bypass {
+            return Ok(());
+        }
+        let Some(kind) = EffectKind::parse(&self.kind) else {
+            anyhow::bail!("unsupported AudioMixer effect '{}'", self.kind);
+        };
+        let parameters = match kind {
+            EffectKind::Compressor => self.compressor.is_some(),
+            EffectKind::ParamEq => self.eq.is_some(),
+            EffectKind::Distortion => self.distortion.is_some(),
+            EffectKind::Chorus => self.chorus.is_some(),
+            EffectKind::Flange => self.flange.is_some(),
+            EffectKind::Normalize => self.normalize.is_some(),
+            EffectKind::PitchShifter => self.pitch_shifter.is_some(),
+            _ => true,
+        };
+        anyhow::ensure!(
+            parameters,
+            "AudioMixer {} '{}' has no parameters",
+            self.kind,
+            self.id
+        );
+        anyhow::ensure!(
+            !kind.simple_filter() || (10.0..=22000.0).contains(&self.cutoff),
+            "AudioMixer {} '{}' cutoff {} is outside the measured 10 to 22000 Hz",
+            self.kind,
+            self.id,
+            self.cutoff
+        );
+        if kind.layout_limited() {
+            MEASURED_LAYOUT.ensure(&self.kind, config)?;
         }
         Ok(())
     }
@@ -369,8 +542,7 @@ struct Echo {
 }
 impl Echo {
     fn frames(delay: f32, rate: u32) -> anyhow::Result<usize> {
-        // A backend resource limit, not a restriction on Unity's parameter range.
-        const MAX_HISTORY_BYTES: usize = 8 * 1024 * 1024;
+        // MAX_HISTORY_BYTES is a backend resource limit, not a restriction of Unity's range.
         anyhow::ensure!(delay.is_finite(), "AudioMixer Echo delay must be finite");
         // Truncate fractional frames, then round up to the measured eight-frame boundary.
         let frames = (delay.clamp(1.0, 5000.0) * rate as f32 / 1000.0) as usize;
@@ -422,6 +594,8 @@ fn distortion(samples: &mut [f32], level: f32) {
 
 pub struct Effect {
     pub spec: EffectSpec,
+    /// `spec.kind`, parsed once; None for a kind the mixer does not run (bypassed only).
+    kind: Option<EffectKind>,
     stages: [Biquad; 2],
     lowpass: Lowpass,
     echo: Echo,
@@ -446,6 +620,7 @@ impl Effect {
     pub fn new(spec: EffectSpec, rate: u32, buffer: u32) -> anyhow::Result<Self> {
         let mut effect = Self {
             spec: spec.clone(),
+            kind: None,
             stages: Default::default(),
             lowpass: Default::default(),
             echo: Default::default(),
@@ -486,18 +661,20 @@ impl Effect {
             self.flange = Some(Flange::new(rate, buffer)?);
         }
         if spec.pitch_shifter.is_some() && self.pitch.is_none() {
-            PitchShifter::validate_configuration(rate, buffer)?;
             self.pitch = Some(PitchShifter::new());
         }
-        if spec.kind == "Echo" {
+        let kind = EffectKind::parse(&spec.kind);
+        if kind == Some(EffectKind::Echo) {
             self.echo.tune(spec.delay, rate)?;
         }
         if let Some(sfx) = &spec.sfx {
-            if self.reverb.as_ref().is_none_or(|r| r.rate() != rate) {
-                self.reverb = Some(Box::new(SfxReverb::new(rate)?));
-            }
-            self.reverb.as_mut().unwrap().tune(sfx);
+            let reverb = match &mut self.reverb {
+                Some(reverb) if reverb.rate() == rate => reverb,
+                slot => slot.insert(Box::new(SfxReverb::new(rate)?)),
+            };
+            reverb.tune(sfx);
         }
+        self.kind = kind;
         self.rate = rate;
         self.spec = spec;
         self.tune();
@@ -534,16 +711,21 @@ impl Effect {
         self.tune();
     }
     fn tune(&mut self) {
-        match self.spec.kind.as_str() {
-            "Lowpass" => self.lowpass.tune(self.cutoff, self.resonance, self.rate),
-            "Highpass" => self.stages[0].tune(true, self.cutoff, self.resonance, self.rate),
-            "ParamEQ" => {
+        match self.kind {
+            Some(EffectKind::Lowpass) => self.lowpass.tune(self.cutoff, self.resonance, self.rate),
+            Some(EffectKind::Highpass) => {
+                self.stages[0].tune(true, self.cutoff, self.resonance, self.rate)
+            }
+            Some(EffectKind::ParamEq) => {
                 if let Some(eq) = &self.spec.eq {
                     self.eq.tune(eq, self.rate);
                 }
             }
             _ => {}
         }
+    }
+    pub(crate) fn kind(&self) -> Option<EffectKind> {
+        self.kind
     }
     // Measured sample-by-sample slew: clamp the step to one percent of the endpoint sum.
     fn slew(current: f32, target: f32) -> f32 {
@@ -561,8 +743,8 @@ impl Effect {
         sidechains: &mut HashMap<String, Vec<f32>>,
         muted: usize,
     ) -> bool {
-        match self.spec.kind.as_str() {
-            "Send" => {
+        match self.kind {
+            Some(EffectKind::Send) => {
                 let target = self
                     .spec
                     .send_target
@@ -578,21 +760,19 @@ impl Effect {
                     }
                 }
             }
-            "Receive" => {
+            Some(EffectKind::Receive) => {
                 if let Some(sidechain) = sidechains.get(&self.spec.id) {
                     for (x, s) in samples.iter_mut().zip(sidechain) {
                         *x += s;
                     }
                 }
             }
-            "Duck Volume" => {
-                let sidechain = sidechains.get(&self.spec.id).map(|s| &s[..samples.len()]);
-                self.duck.process(
-                    samples,
-                    sidechain,
-                    self.spec.duck.as_ref().unwrap(),
-                    self.rate,
-                );
+            Some(EffectKind::DuckVolume) => {
+                // validate() requires the parameters for this kind.
+                if let Some(duck) = &self.spec.duck {
+                    let sidechain = sidechains.get(&self.spec.id).map(|s| &s[..samples.len()]);
+                    self.duck.process(samples, sidechain, duck, self.rate);
+                }
             }
             _ => return false,
         }
@@ -600,7 +780,8 @@ impl Effect {
         true
     }
     pub fn process(&mut self, samples: &mut [f32], bypass: bool) {
-        if self.spec.kind == "Attenuation" {
+        let Some(kind) = self.kind else { return };
+        if kind == EffectKind::Attenuation {
             let from = self.gain;
             let frames = samples.len() / 2;
             for (frame, stereo) in samples.chunks_exact_mut(2).enumerate() {
@@ -610,59 +791,54 @@ impl Effect {
                 }
             }
             self.gain = self.spec.gain;
-        } else if self.spec.kind == "Echo" {
+        } else if kind == EffectKind::Echo {
             if !bypass && !self.spec.bypass {
                 self.echo.process(samples, &self.spec);
             }
-        } else if matches!(
-            self.spec.kind.as_str(),
-            "Compressor"
-                | "ParamEQ"
-                | "Distortion"
-                | "Chorus"
-                | "Flange"
-                | "Normalize"
-                | "Pitch Shifter"
-                | "Lowpass Simple"
-                | "Highpass Simple"
-        ) {
+        } else if kind.bypass_keeps_state() {
             // A bypassed unit keeps its state; resuming after bypass is unmeasured.
             if bypass || self.spec.bypass {
                 return;
             }
-            match self.spec.kind.as_str() {
-                "Compressor" => {
+            // An active unit has its parameters (validate_in_group), and its kernel exists.
+            let rate = self.rate;
+            match kind {
+                EffectKind::Compressor => {
                     if let Some(spec) = &self.spec.compressor {
-                        self.compressor.process(samples, spec, self.rate);
+                        self.compressor.process(samples, spec, rate);
                     }
                 }
-                "ParamEQ" => self.eq.process(samples),
-                "Distortion" => distortion(samples, self.spec.distortion.unwrap()),
-                "Pitch Shifter" => self.pitch.as_mut().unwrap().process(
+                EffectKind::ParamEq => self.eq.process(samples),
+                EffectKind::Distortion => {
+                    if let Some(level) = self.spec.distortion {
+                        distortion(samples, level);
+                    }
+                }
+                EffectKind::PitchShifter => {
+                    if let (Some(pitch), Some(spec)) = (&mut self.pitch, &self.spec.pitch_shifter) {
+                        pitch.process(samples, spec, rate);
+                    }
+                }
+                EffectKind::Normalize => {
+                    if let Some(spec) = &self.spec.normalize {
+                        self.normalize.process(samples, spec, rate);
+                    }
+                }
+                EffectKind::Flange => {
+                    if let (Some(flange), Some(spec)) = (&mut self.flange, &self.spec.flange) {
+                        flange.process(samples, spec);
+                    }
+                }
+                EffectKind::Chorus => {
+                    if let (Some(chorus), Some(spec)) = (&mut self.chorus, &self.spec.chorus) {
+                        chorus.process(samples, spec);
+                    }
+                }
+                _ => self.simple.process(
                     samples,
-                    self.spec.pitch_shifter.as_ref().unwrap(),
-                    self.rate,
-                ),
-                "Normalize" => self.normalize.process(
-                    samples,
-                    self.spec.normalize.as_ref().unwrap(),
-                    self.rate,
-                ),
-                "Flange" => self
-                    .flange
-                    .as_mut()
-                    .unwrap()
-                    .process(samples, self.spec.flange.as_ref().unwrap()),
-                "Chorus" => self
-                    .chorus
-                    .as_mut()
-                    .unwrap()
-                    .process(samples, self.spec.chorus.as_ref().unwrap()),
-                kind => self.simple.process(
-                    samples,
-                    kind == "Highpass Simple",
+                    kind == EffectKind::HighpassSimple,
                     self.spec.cutoff,
-                    self.rate,
+                    rate,
                 ),
             }
         } else if let Some(reverb) = &mut self.reverb {
@@ -692,7 +868,7 @@ impl Effect {
                 }
                 self.frames = self.frames.saturating_add((samples.len() / 2) as u32);
             }
-        } else if !bypass && !self.spec.bypass {
+        } else if kind.fades_in_when_active() && !bypass && !self.spec.bypass {
             for stereo in samples.chunks_exact_mut(2) {
                 let cutoff = Self::slew(self.cutoff, self.spec.cutoff.clamp(10.0, 22000.0));
                 let resonance = Self::slew(self.resonance, self.spec.resonance.clamp(1.0, 10.0));
@@ -702,7 +878,7 @@ impl Effect {
                     self.tune();
                 }
                 for (channel, x) in stereo.iter_mut().enumerate() {
-                    *x = if self.spec.kind == "Lowpass" {
+                    *x = if kind == EffectKind::Lowpass {
                         self.lowpass.sample(*x, channel)
                     } else {
                         self.stages[0].sample(*x, channel, true)
@@ -725,7 +901,7 @@ pub struct GroupNode {
 impl GroupNode {
     pub fn update(&mut self, spec: GroupSpec, rate: u32, buffer: u32) -> anyhow::Result<()> {
         for effect in &spec.effects {
-            effect.validate(rate)?;
+            effect.validate(rate, buffer)?;
         }
         let mut old = std::mem::take(&mut self.effects);
         self.effects = spec
@@ -752,6 +928,83 @@ impl GroupNode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn the_kind_table_round_trips_and_keeps_the_former_kind_lists() {
+        for (kind, name) in EffectKind::NAMES {
+            assert_eq!(EffectKind::parse(name), Some(kind));
+            assert_eq!(kind.name(), name);
+        }
+        assert_eq!(EffectKind::parse("Unmeasured Effect"), None);
+        let names = |rule: fn(EffectKind) -> bool| -> Vec<&str> {
+            EffectKind::NAMES
+                .iter()
+                .filter(|(kind, _)| rule(*kind))
+                .map(|(_, name)| *name)
+                .collect()
+        };
+        assert_eq!(
+            names(EffectKind::bypass_keeps_state),
+            [
+                "Compressor",
+                "ParamEQ",
+                "Lowpass Simple",
+                "Highpass Simple",
+                "Distortion",
+                "Chorus",
+                "Flange",
+                "Normalize",
+                "Pitch Shifter"
+            ]
+        );
+        assert_eq!(
+            names(EffectKind::fades_in_when_bypassed),
+            [
+                "Echo",
+                "SFX Reverb",
+                "Duck Volume",
+                "Compressor",
+                "ParamEQ",
+                "Lowpass Simple",
+                "Highpass Simple",
+                "Distortion",
+                "Chorus",
+                "Flange",
+                "Normalize",
+                "Pitch Shifter"
+            ]
+        );
+        assert_eq!(
+            names(EffectKind::fades_in_when_active),
+            ["Lowpass", "Highpass"]
+        );
+        assert_eq!(
+            names(EffectKind::layout_limited),
+            ["Normalize", "Pitch Shifter"]
+        );
+    }
+
+    #[test]
+    fn kernels_without_parameters_leave_the_samples_instead_of_panicking() {
+        // validate_in_group rejects these when active; the audio thread must not panic anyway.
+        for kind in [
+            "Distortion",
+            "Chorus",
+            "Flange",
+            "Normalize",
+            "Pitch Shifter",
+            "Compressor",
+            "Duck Volume",
+        ] {
+            let spec: EffectSpec =
+                serde_json::from_value(serde_json::json!({ "id": "e", "kind": kind })).unwrap();
+            let mut effect = Effect::new(spec, 48000, 1024).unwrap();
+            let mut samples = [0.25_f32, -0.5, 0.125, 0.0];
+            effect.process(&mut samples, false);
+            effect.process_routed(&mut samples, &mut HashMap::new(), 0);
+            assert_eq!(samples, [0.25, -0.5, 0.125, 0.0], "{kind}");
+        }
+    }
 
     #[test]
     fn distortion_matches_native_dc_and_large_bipolar_samples() {

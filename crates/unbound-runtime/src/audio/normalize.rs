@@ -1,5 +1,6 @@
 //! Normalize's linked peak envelope, measured in Unity 6000.0.71f1.
-//! See tests/projects/audionormalize for the captured context and contract limits.
+//! See tests/projects/audionormalize for the captured context and contract limits; the mixer
+//! checks the measured output layout ([`super::effects::EffectKind::layout_limited`]).
 use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -31,13 +32,6 @@ impl Default for Normalize {
     }
 }
 impl Normalize {
-    pub fn validate_configuration(rate: u32, buffer: u32) -> anyhow::Result<()> {
-        anyhow::ensure!(
-            [48000, 44100].contains(&rate) && buffer == 1024,
-            "AudioMixer Normalize is measured only at 48000/44100 Hz with 1024-frame stereo output"
-        );
-        Ok(())
-    }
     pub fn process(&mut self, samples: &mut [f32], spec: &NormalizeSpec, rate: u32) {
         let decay = if spec.fade == 0.0 {
             1.0

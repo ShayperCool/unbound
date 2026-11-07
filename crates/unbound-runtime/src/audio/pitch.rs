@@ -1,4 +1,6 @@
 //! Unity 6000.0.71f1 default Pitch Shifter profile. See tests/projects/audiopitch.
+//! The output layouts it is measured for are checked by the mixer
+//! ([`super::effects::EffectKind::layout_limited`]).
 use super::wavetable;
 use serde::Deserialize;
 use std::f32::consts::{PI, TAU};
@@ -48,13 +50,6 @@ pub struct PitchShifter {
     frequencies: Vec<f32>,
 }
 impl PitchShifter {
-    pub fn validate_configuration(rate: u32, buffer: u32) -> anyhow::Result<()> {
-        anyhow::ensure!(
-            [48000, 44100].contains(&rate) && buffer == 1024,
-            "AudioMixer Pitch Shifter is measured only at 48000/44100 Hz with 1024-frame stereo output"
-        );
-        Ok(())
-    }
     pub fn new() -> Self {
         // cos(pi / 4), the table's middle entry.
         let diagonal = wavetable::table()[wavetable::QUARTER / 2];

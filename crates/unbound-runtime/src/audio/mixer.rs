@@ -8,7 +8,7 @@
 //! changes do not click.
 use super::{
     capture,
-    effects::{Effect, EffectSpec, GroupNode, GroupSpec},
+    effects::{Effect, EffectKind, EffectSpec, GroupNode, GroupSpec},
     fft,
     protocol::{
         AudioFilterDescriptor, AudioFramePacket, AudioSourceCommand, AudioSourcePacket,
@@ -297,8 +297,8 @@ impl std::fmt::Debug for FilterChain {
 
 impl FilterChain {
     /// Checks every component at `rate` (the Echo history bound) without changing anything.
-    fn validate(filters: &[AudioFilterDescriptor], rate: u32) -> anyhow::Result<()> {
-        filters.iter().try_for_each(|d| effect_spec(d).validate(rate))
+    fn validate(filters: &[AudioFilterDescriptor], rate: u32, buffer: u32) -> anyhow::Result<()> {
+        filters.iter().try_for_each(|d| effect_spec(d).validate(rate, buffer))
     }
 
     /// Matches the components by identity and kind: an unchanged one keeps its histories, a
@@ -750,27 +750,13 @@ impl Mixer {
     /// Switches to another configuration (`AudioSettings.Reset`): every voice stops, the dsp
     /// clock keeps its time in seconds.
     pub fn validate_configuration(&self, config: &MixerConfig) -> anyhow::Result<()> {
-        if self.group_nodes.values().any(|n| n.spec.effects.iter().any(|e| e.chorus.is_some()))
-            || self.sources.values().any(|s| s.params.filters.iter().any(|f| f.kind == filter_kind::CHORUS)) {
-            super::chorus::Chorus::frames(config.sample_rate, config.buffer_size)?;
-        }
-        if self.group_nodes.values().any(|n| n.spec.effects.iter().any(|e| e.flange.is_some())) {
-            super::flange::Flange::frames(config.sample_rate, config.buffer_size)?;
-        }
         for node in self.group_nodes.values() {
             for effect in &node.spec.effects {
-                effect.validate(config.sample_rate)?;
-                if effect.kind == "Pitch Shifter" && !effect.bypass && !node.spec.bypass {
-                    super::pitch::PitchShifter::validate_configuration(config.sample_rate, config.buffer_size)?;
-                    anyhow::ensure!(config.speaker_mode == 2, "AudioMixer Pitch Shifter requires stereo output");
-                }
-                if effect.kind == "Normalize" && !effect.bypass && !node.spec.bypass {
-                    super::normalize::Normalize::validate_configuration(config.sample_rate, config.buffer_size)?;
-                }
+                effect.validate_in_group(config, node.spec.bypass)?;
             }
         }
         for source in self.sources.values() {
-            FilterChain::validate(&source.params.filters, config.sample_rate)?;
+            FilterChain::validate(&source.params.filters, config.sample_rate, config.buffer_size)?;
         }
         Ok(())
     }
@@ -872,7 +858,7 @@ impl Mixer {
             tracing::error!("AudioSource {handle}: filter components rejected: {error}");
             params.filters = source.params.filters.clone();
         } else if params.filters != source.params.filters {
-            if let Err(error) = FilterChain::validate(&params.filters, rate) {
+            if let Err(error) = FilterChain::validate(&params.filters, rate, self.config.buffer_size) {
                 tracing::error!("AudioSource {handle}: filter components rejected: {error:#}");
                 params.filters = source.params.filters.clone();
             } else if let Err(error) = source.chain.apply(&params.filters, rate, self.config.buffer_size) {
@@ -903,7 +889,7 @@ impl Mixer {
             return;
         }
         let rate = self.config.sample_rate;
-        if let Err(error) = FilterChain::validate(&filters, rate)
+        if let Err(error) = FilterChain::validate(&filters, rate, self.config.buffer_size)
             .and_then(|()| self.listener_chain.apply(&filters, rate, self.config.buffer_size))
         {
             tracing::error!("AudioListener filter components dropped: {error:#}");
@@ -967,69 +953,24 @@ impl Mixer {
     /// Updates routing and parameters without discarding the filters' delay lines.
     pub fn configure_group(&mut self, spec: GroupSpec) -> anyhow::Result<()> {
         if let Some(node) = self.group_nodes.get(&spec.handle).filter(|n| n.rendered > 0) {
-            let signature = |group: &GroupSpec| -> Vec<_> {
-                group.effects.iter().enumerate().filter(|(_, e)| e.kind == "Pitch Shifter")
-                    .map(|(i, e)| (i, e.id.clone(), e.bypass, e.pitch_shifter.clone())).collect()
-            };
-            let previous = signature(&node.spec);
-            let next = signature(&spec);
-            anyhow::ensure!((previous.is_empty() && next.is_empty())
-                || (previous == next && node.spec.bypass == spec.bypass),
-                "AudioMixer Pitch Shifter live parameter, placement and bypass changes are unmeasured");
-            let signature = |group: &GroupSpec| -> Vec<_> {
-                group.effects.iter().enumerate().filter(|(_, e)| e.kind == "Normalize")
-                    .map(|(i, e)| (i, e.id.clone(), e.bypass, e.normalize.clone())).collect()
-            };
-            let previous = signature(&node.spec);
-            let next = signature(&spec);
-            anyhow::ensure!((previous.is_empty() && next.is_empty())
-                || (previous == next && node.spec.bypass == spec.bypass),
-                "AudioMixer Normalize live parameter, placement and bypass changes are unmeasured");
+            for kind in EffectKind::LAYOUT_LIMITED {
+                // Each unit's place, identity, bypass and settings, which must stay as they
+                // were when the group started rendering.
+                let signature = |group: &GroupSpec| -> Vec<_> {
+                    group.effects.iter().enumerate().filter(|(_, e)| e.kind == kind.name())
+                        .map(|(i, e)| (i, e.id.clone(), e.bypass, e.pitch_shifter.clone(), e.normalize.clone()))
+                        .collect()
+                };
+                let (previous, next) = (signature(&node.spec), signature(&spec));
+                anyhow::ensure!((previous.is_empty() && next.is_empty())
+                    || (previous == next && node.spec.bypass == spec.bypass),
+                    "AudioMixer {} live parameter, placement and bypass changes are unmeasured", kind.name());
+            }
         }
         anyhow::ensure!(spec.suspend_threshold.is_finite() && spec.suspend_threshold >= 0.0,
             "invalid AudioMixer suspension threshold");
         for effect in &spec.effects {
-            effect.validate(self.config.sample_rate)?;
-            if effect.kind == "Pitch Shifter" && !effect.bypass && !spec.bypass {
-                super::pitch::PitchShifter::validate_configuration(self.config.sample_rate, self.config.buffer_size)?;
-                anyhow::ensure!(self.config.speaker_mode == 2, "AudioMixer Pitch Shifter requires stereo output");
-            }
-            if effect.kind == "Normalize" && !effect.bypass && !spec.bypass {
-                super::normalize::Normalize::validate_configuration(self.config.sample_rate, self.config.buffer_size)?;
-            }
-            anyhow::ensure!(
-                matches!(effect.kind.as_str(),
-                    "Attenuation" | "Lowpass" | "Highpass" | "Echo" | "SFX Reverb"
-                        | "Send" | "Receive" | "Duck Volume" | "Compressor" | "ParamEQ"
-                        | "Lowpass Simple" | "Highpass Simple" | "Distortion" | "Chorus" | "Flange" | "Normalize" | "Pitch Shifter")
-                    || effect.bypass
-                    || spec.bypass,
-                "unsupported AudioMixer effect '{}'",
-                effect.kind
-            );
-            let active = !effect.bypass && !spec.bypass;
-            anyhow::ensure!(
-                !active
-                    || (effect.kind != "Compressor" || effect.compressor.is_some())
-                        && (effect.kind != "ParamEQ" || effect.eq.is_some())
-                        && (effect.kind != "Distortion" || effect.distortion.is_some())
-                        && (effect.kind != "Chorus" || effect.chorus.is_some())
-                        && (effect.kind != "Flange" || effect.flange.is_some())
-                        && (effect.kind != "Normalize" || effect.normalize.is_some())
-                        && (effect.kind != "Pitch Shifter" || effect.pitch_shifter.is_some()),
-                "AudioMixer {} '{}' has no parameters",
-                effect.kind,
-                effect.id
-            );
-            anyhow::ensure!(
-                !active
-                    || !matches!(effect.kind.as_str(), "Lowpass Simple" | "Highpass Simple")
-                    || (10.0..=22000.0).contains(&effect.cutoff),
-                "AudioMixer {} '{}' cutoff {} is outside the measured 10 to 22000 Hz",
-                effect.kind,
-                effect.id,
-                effect.cutoff
-            );
+            effect.validate_in_group(&self.config, spec.bypass)?;
         }
         let mut parent = spec.parent;
         for _ in 0..=self.group_nodes.len() {
@@ -1729,11 +1670,10 @@ impl Mixer {
             // measured group input fade even when bypassed. Send and Receive have none
             // (tests/projects/mixerduck, tests/projects/mixercompressor).
             let active = node.effects.iter()
-                .any(|e| matches!(e.spec.kind.as_str(), "Echo" | "SFX Reverb" | "Duck Volume"
-                    | "Compressor" | "ParamEQ" | "Lowpass Simple" | "Highpass Simple" | "Distortion" | "Chorus" | "Flange" | "Normalize" | "Pitch Shifter"))
+                .any(|e| e.kind().is_some_and(EffectKind::fades_in_when_bypassed))
                 || (!node.spec.bypass
                     && node.effects.iter().any(|e| {
-                        !e.spec.bypass && matches!(e.spec.kind.as_str(), "Lowpass" | "Highpass")
+                        !e.spec.bypass && e.kind().is_some_and(EffectKind::fades_in_when_active)
                     }));
             if active {
                 for (frame, stereo) in node.buffer[..n * 2].chunks_exact_mut(2).enumerate() {
@@ -3000,6 +2940,44 @@ mod tests {
         assert!(mixer.configure_group(spec).is_err());
         assert!(!mixer.group_nodes[&3].spec.bypass);
         assert_eq!(mixer.group_nodes[&3].spec.effects[0].pitch_shifter.as_ref().unwrap().pitch, 0.75);
+    }
+    #[test]
+    fn layout_limited_effects_fail_on_mono_and_other_unmeasured_outputs() {
+        let measured = MixerConfig::default();
+        let unmeasured = [
+            MixerConfig { speaker_mode: 1, ..measured },
+            MixerConfig { speaker_mode: 3, ..measured },
+            MixerConfig { sample_rate: 22050, ..measured },
+            MixerConfig { buffer_size: 512, ..measured },
+        ];
+        for kind in ["Normalize", "Pitch Shifter"] {
+            let mut spec = filter_group(3, 0, kind);
+            spec.effects[0].normalize = Some(super::super::normalize::NormalizeSpec {
+                fade: 5000.0, lowest: 0.1, maximum: 20.0,
+            });
+            spec.effects[0].pitch_shifter = Some(super::super::pitch::PitchSpec { pitch: 0.75 });
+            for config in unmeasured {
+                let mut mixer = Mixer::new(config);
+                let error = mixer.configure_group(spec.clone()).unwrap_err().to_string();
+                assert!(error.contains(&format!("{kind} is measured only at")), "{error}");
+                assert!(mixer.group_nodes.is_empty());
+                let mut bypassed = spec.clone();
+                bypassed.effects[0].bypass = true;
+                mixer.configure_group(bypassed).unwrap();
+            }
+            let mut mixer = Mixer::new(measured);
+            mixer.configure_group(spec.clone()).unwrap();
+            mixer.reconfigure(MixerConfig { sample_rate: 44100, ..measured }).unwrap();
+            let before = mixer.config;
+            for config in unmeasured {
+                assert!(mixer.reconfigure(config).unwrap_err().to_string().contains("measured only at"));
+                assert_eq!(mixer.config, before);
+            }
+        }
+        // A control outside these kinds: Flange keeps running on a mono output.
+        let mut spec = filter_group(3, 0, "Flange");
+        spec.effects[0].flange = Some(super::super::flange::FlangeSpec { dry: 0.45, wet: 0.55, depth: 1.0, rate: 0.1 });
+        Mixer::new(unmeasured[0]).configure_group(spec).unwrap();
     }
     #[test]
     fn normalize_rejects_unmeasured_configuration_and_live_changes_without_mutating_state() {

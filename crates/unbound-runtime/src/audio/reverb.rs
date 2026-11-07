@@ -482,6 +482,6 @@ mod tests {
         close(x[2 * 100], 0.5 * 1e-5 + 0.5);
         let mut lowpass: EffectSpec = serde_json::from_value(json).unwrap();
         lowpass.kind = "Lowpass".into();
-        assert!(lowpass.validate(48000).is_err());
+        assert!(lowpass.validate(48000, 1024).is_err());
     }
 }
