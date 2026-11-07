@@ -639,3 +639,17 @@ fn obj_material_cache_tracks_library_content_and_missing_inputs() {
     drop(cache);
     std::fs::remove_dir_all(root).unwrap();
 }
+
+#[test]
+fn baked_axis_conversion_rejects_unmeasured_deformers_and_animation() {
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/modelimport/Assets/Models");
+    let settings = meta("ModelImporter:\n  meshes:\n    bakeAxisConversion: 1\n");
+    assert!(ModelSettings::read(&settings).bake_axis_conversion);
+    assert!(!ModelSettings::read(&Value::Null).bake_axis_conversion);
+    for filename in ["Animated.fbx", "Skinned.fbx"] {
+        let source = root.join(filename);
+        let bytes = std::fs::read(&source).unwrap();
+        let error = ModelImporter.import(&source, &bytes, &settings).unwrap_err().to_string();
+        assert!(error.contains("FBX Bake Axis Conversion for animation or deformers is not yet supported"), "{error}");
+    }
+}

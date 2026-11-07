@@ -1,13 +1,16 @@
 //! The model importer: FBX (and OBJ) through `ufbx`, converted the way Unity's `ModelImporter`
 //! does, into the data the runtime needs to instantiate the model prefab.
 //!
-//! **Coordinates.** The file is first brought to a right-handed, Y-up space (axis conversion is
-//! applied to the top-level nodes' transforms, as Unity does without "Bake Axis Conversion"), then
+//! **Coordinates.** Without "Bake Axis Conversion", the file is brought to right-handed, Y-up
+//! space through the top-level transforms. Static improper-axis conversions use Unity's
+//! measured positive-scale decomposition. The result is then
 //! mirrored on X into Unity's left-handed space: positions `(-x, y, z)`, rotations
 //! `(x, -y, -z, w)`, normals `(-x, y, z)`, tangents `(-x, y, z, -w)`, and every triangle's winding
 //! reversed. Positions (vertices, node translations, bind-pose translations) are multiplied by
 //! the import scale: `meshes.globalScale`, times the file's unit in metres when
 //! `meshes.useFileScale` ("Convert Units") is set. Node scales are untouched.
+//! Static "Bake Axis Conversion" instead maps geometry and every local transform to Unity's
+//! axes. Animated/deformed baked-axis imports fail explicitly pending separate measurements.
 //!
 //! **Hierarchy.** The prefab root is a GameObject named after the file (`//RootNode` in the
 //! fileID tables). When the file has a single top-level node and `preserveHierarchy` is off, that
@@ -111,6 +114,8 @@ pub struct ModelSettings {
     pub global_scale: f32,
     /// "Convert Units": apply the file's unit (centimetres in most FBX files).
     pub use_file_scale: bool,
+    /// Bake the source coordinate axes into static geometry and node-local transforms.
+    pub bake_axis_conversion: bool,
     pub import_blend_shapes: bool,
     /// `meshes.importBlendShapeDeformPercent`: renderers start at the file's shape weights.
     pub import_deform_percent: bool,
@@ -203,6 +208,7 @@ impl ModelSettings {
         Self {
             global_scale: float(imp, "meshes.globalScale").unwrap_or(1.0),
             use_file_scale: boolean(imp, "meshes.useFileScale").unwrap_or(true),
+            bake_axis_conversion: boolean(imp, "meshes.bakeAxisConversion").unwrap_or(false),
             import_blend_shapes: boolean(imp, "meshes.importBlendShapes").unwrap_or(true),
             import_deform_percent: boolean(imp, "importBlendShapeDeformPercent").unwrap_or(true),
             swap_uv_channels: boolean(imp, "meshes.swapUVChannels").unwrap_or(false),
@@ -635,7 +641,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 22;
+    const VERSION: u32 = 23;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -686,26 +692,58 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         .then(|| obj_material_library(source, bytes))
         .flatten();
     let library_name = library.as_ref().map(|p| p.to_string_lossy());
-    let opts = ufbx::LoadOpts {
-        target_axes: ufbx::CoordinateAxes::right_handed_y_up(),
-        space_conversion: ufbx::SpaceConversion::AdjustTransforms,
-        geometry_transform_handling: ufbx::GeometryTransformHandling::ModifyGeometry,
-        // Unity moves a node to its pivot and its geometry by the opposite (measured: a Maya
-        // node with its pivot away from its origin imports at local zero with its mesh centred
-        // on the pivot), so a prefab or clip setting the node's position keeps the mesh in place.
-        pivot_handling: ufbx::PivotHandling::AdjustToPivot,
-        // Missing normals are calculated as the importer does (see `normals`).
-        generate_missing_normals: false,
-        retain_dom: !is_obj
-            && settings.normals != NormalMode::None
-            && settings.normal_calculation != 0
-            && settings.normal_smoothing_source < 2,
-        filename: filename.as_ref().into(),
-        // Explicit selection keeps the loader's inputs identical to the cache dependencies.
-        obj_mtl_path: library_name.as_deref().unwrap_or("").into(),
-        ..Default::default()
+    let load = |raw_axes| {
+        ufbx::load_memory(
+            bytes,
+            ufbx::LoadOpts {
+                target_axes: if raw_axes {
+                    ufbx::CoordinateAxes::default()
+                } else {
+                    ufbx::CoordinateAxes::right_handed_y_up()
+                },
+                space_conversion: ufbx::SpaceConversion::AdjustTransforms,
+                geometry_transform_handling: ufbx::GeometryTransformHandling::ModifyGeometry,
+                // Unity moves a node to its pivot and its geometry by the opposite (measured: a Maya
+                // node with its pivot away from its origin imports at local zero with its mesh centred
+                // on the pivot), so a prefab or clip setting the node's position keeps the mesh in place.
+                pivot_handling: ufbx::PivotHandling::AdjustToPivot,
+                // Missing normals are calculated as the importer does (see `normals`).
+                generate_missing_normals: false,
+                retain_dom: !is_obj
+                    && settings.normals != NormalMode::None
+                    && settings.normal_calculation != 0
+                    && settings.normal_smoothing_source < 2,
+                filename: filename.as_ref().into(),
+                // Explicit selection keeps the loader's inputs identical to the cache dependencies.
+                obj_mtl_path: library_name.as_deref().unwrap_or("").into(),
+                ..Default::default()
+            },
+        )
+        .map_err(|e| anyhow!("{}", e.description))
     };
-    let scene = ufbx::load_memory(bytes, opts).map_err(|e| anyhow!("{}", e.description))?;
+    let baked = !is_obj && settings.bake_axis_conversion;
+    let mut scene = load(baked)?;
+    let static_geometry = scene.anim_stacks.is_empty()
+        && scene.skin_deformers.is_empty()
+        && scene.blend_deformers.is_empty()
+        && scene.cache_deformers.is_empty();
+    anyhow::ensure!(
+        !baked || static_geometry,
+        "{}: FBX Bake Axis Conversion for animation or deformers is not yet supported",
+        source.display()
+    );
+    let conversion = if !is_obj && (baked || static_geometry) {
+        let axes = axes::StaticAxes::new(scene.settings.axes, baked)?;
+        (baked || axes.reverses_handedness()).then_some(axes)
+    } else {
+        None
+    };
+    // ufbx's decomposition of an improper axis conversion introduces negative node
+    // scales. Static Unity imports retain positive source scales and use a different
+    // top-level rotation. Read the original local transforms for that measured path.
+    if conversion.is_some() && !baked {
+        scene = load(true)?;
+    }
 
     let file_unit = if is_obj || scene.settings.unit_meters <= 0.0 {
         1.0
@@ -785,6 +823,20 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
     builder.assign_unique_names(root);
     builder.add_node(root, None, &mut ids);
     builder.add_renderers(&mut ids)?;
+    if let Some(conversion) = conversion {
+        for (node, source) in builder.model.nodes.iter_mut().zip(&builder.sources) {
+            if baked {
+                conversion.baked_node(node);
+            } else if source.node_depth == 1 {
+                conversion.unbaked_node(node);
+            }
+        }
+        if baked {
+            for mesh in &mut builder.model.meshes {
+                conversion.mesh(mesh);
+            }
+        }
+    }
     builder.assign_material_ids(imp, &mut ids);
 
     // Source descriptions are consumed only after None/remap handling. A deferred MTL
@@ -2934,6 +2986,7 @@ fn bone_weight(skin: &ufbx::SkinDeformer, vertex: usize) -> BoneWeight {
     out
 }
 
+mod axes;
 mod fbx_smoothing;
 mod lightmap_uv;
 mod materials;
