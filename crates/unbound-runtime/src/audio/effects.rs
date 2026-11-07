@@ -1,12 +1,12 @@
 //! Persistent DSP on summed mixer groups. Native captures establish a fourth-order Butterworth
 //! response for Lowpass and a second-order response for Highpass. The independently measured
 //! startup kernels also constrain parameter-dependent delay-history normalization.
-use super::pitch::{PitchShifter, PitchSpec};
-use super::normalize::{Normalize, NormalizeSpec};
-use super::flange::{Flange, FlangeSpec};
 use super::chorus::{Chorus, ChorusSpec};
 use super::compressor::{Compressor, CompressorSpec};
 use super::duck::{Duck, DuckSpec};
+use super::flange::{Flange, FlangeSpec};
+use super::normalize::{Normalize, NormalizeSpec};
+use super::pitch::{PitchShifter, PitchSpec};
 use super::reverb::{SfxReverb, SfxReverbSpec};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -85,44 +85,91 @@ impl EffectSpec {
         if self.kind == "Echo" {
             Echo::frames(self.delay, rate)?;
         }
-        anyhow::ensure!(self.kind != "SFX Reverb" || self.sfx.is_some(),
-            "AudioMixer SFX Reverb '{}' has no parameters", self.id);
+        anyhow::ensure!(
+            self.kind != "SFX Reverb" || self.sfx.is_some(),
+            "AudioMixer SFX Reverb '{}' has no parameters",
+            self.id
+        );
         if let Some(sfx) = &self.sfx {
-            let values = [sfx.dry_level, sfx.room, sfx.room_hf, sfx.decay_time, sfx.decay_hf_ratio,
-                sfx.reflections, sfx.reflect_delay, sfx.reverb, sfx.reverb_delay, sfx.diffusion,
-                sfx.density, sfx.hf_reference, sfx.room_lf, sfx.lf_reference];
-            anyhow::ensure!(values.iter().all(|v| v.is_finite()),
-                "AudioMixer SFX Reverb '{}' has a non-finite parameter", self.id);
+            let values = [
+                sfx.dry_level,
+                sfx.room,
+                sfx.room_hf,
+                sfx.decay_time,
+                sfx.decay_hf_ratio,
+                sfx.reflections,
+                sfx.reflect_delay,
+                sfx.reverb,
+                sfx.reverb_delay,
+                sfx.diffusion,
+                sfx.density,
+                sfx.hf_reference,
+                sfx.room_lf,
+                sfx.lf_reference,
+            ];
+            anyhow::ensure!(
+                values.iter().all(|v| v.is_finite()),
+                "AudioMixer SFX Reverb '{}' has a non-finite parameter",
+                self.id
+            );
         }
-        anyhow::ensure!(self.kind != "Duck Volume" || self.duck.is_some(),
-            "AudioMixer Duck Volume '{}' has no parameters", self.id);
+        anyhow::ensure!(
+            self.kind != "Duck Volume" || self.duck.is_some(),
+            "AudioMixer Duck Volume '{}' has no parameters",
+            self.id
+        );
         if let Some(duck) = &self.duck {
             duck.validate(&self.id)?;
         }
         if let Some(compressor) = &self.compressor {
             compressor.validate(&self.id)?;
         }
-        if let Some(chorus) = &self.chorus { chorus.validate()?; }
-        if let Some(flange) = &self.flange { flange.validate()?; }
-        if let Some(pitch) = &self.pitch_shifter { pitch.validate()?; }
-        if let Some(normalize) = &self.normalize { normalize.validate()?; }
+        if let Some(chorus) = &self.chorus {
+            chorus.validate()?;
+        }
+        if let Some(flange) = &self.flange {
+            flange.validate()?;
+        }
+        if let Some(pitch) = &self.pitch_shifter {
+            pitch.validate()?;
+        }
+        if let Some(normalize) = &self.normalize {
+            normalize.validate()?;
+        }
         if let Some(level) = self.distortion {
-            anyhow::ensure!(level.is_finite() && (0.0..=1.0).contains(&level),
-                "AudioMixer Distortion has an invalid Level {level}");
+            anyhow::ensure!(
+                level.is_finite() && (0.0..=1.0).contains(&level),
+                "AudioMixer Distortion has an invalid Level {level}"
+            );
         }
         if let Some(eq) = &self.eq {
             // The Editor's ranges; outside them the response is unmeasured.
-            anyhow::ensure!(eq.center.is_finite() && eq.center > 0.0 && eq.octaves > 0.0
-                && eq.octaves.is_finite() && eq.gain > 0.0 && eq.gain.is_finite(),
-                "AudioMixer ParamEQ '{}' has unsupported parameters", self.id);
+            anyhow::ensure!(
+                eq.center.is_finite()
+                    && eq.center > 0.0
+                    && eq.octaves > 0.0
+                    && eq.octaves.is_finite()
+                    && eq.gain > 0.0
+                    && eq.gain.is_finite(),
+                "AudioMixer ParamEQ '{}' has unsupported parameters",
+                self.id
+            );
         }
-        anyhow::ensure!(self.send_level.is_finite() && self.send_level >= 0.0,
-            "invalid AudioMixer send level {}", self.send_level);
+        anyhow::ensure!(
+            self.send_level.is_finite() && self.send_level >= 0.0,
+            "invalid AudioMixer send level {}",
+            self.send_level
+        );
         if let Some(level) = self.mix_level {
-            anyhow::ensure!(self.kind == "SFX Reverb",
-                "AudioMixer wet mixing is unsupported for effect '{}'", self.kind);
-            anyhow::ensure!(level.is_finite() && (0.0..=1.0).contains(&level),
-                "invalid AudioMixer wet level {level}");
+            anyhow::ensure!(
+                self.kind == "SFX Reverb",
+                "AudioMixer wet mixing is unsupported for effect '{}'",
+                self.kind
+            );
+            anyhow::ensure!(
+                level.is_finite() && (0.0..=1.0).contains(&level),
+                "invalid AudioMixer wet level {level}"
+            );
         }
         Ok(())
     }
@@ -294,7 +341,11 @@ impl ParamEq {
         let alpha = w0.sin() * spec.octaves as f64 / 2.0;
         let (gain, c) = (spec.gain as f64, w0.cos());
         let a0 = 1.0 + alpha / gain;
-        self.b = [(1.0 + alpha * gain) / a0, -2.0 * c / a0, (1.0 - alpha * gain) / a0];
+        self.b = [
+            (1.0 + alpha * gain) / a0,
+            -2.0 * c / a0,
+            (1.0 - alpha * gain) / a0,
+        ];
         self.a = [-2.0 * c / a0, (1.0 - alpha / gain) / a0];
     }
     fn process(&mut self, samples: &mut [f32]) {
@@ -325,9 +376,11 @@ impl Echo {
         let frames = (delay.clamp(1.0, 5000.0) * rate as f32 / 1000.0) as usize;
         let frames = frames.checked_add(7).map(|n| (n & !7).max(8));
         let frames = frames.filter(|n| *n <= MAX_HISTORY_BYTES / std::mem::size_of::<[i16; 2]>());
-        frames.ok_or_else(|| anyhow::anyhow!(
-            "AudioMixer Echo delay buffer exceeds the supported 8 MiB limit at {rate} Hz"
-        ))
+        frames.ok_or_else(|| {
+            anyhow::anyhow!(
+                "AudioMixer Echo delay buffer exceeds the supported 8 MiB limit at {rate} Hz"
+            )
+        })
     }
     fn tune(&mut self, delay: f32, rate: u32) -> anyhow::Result<()> {
         let frames = Self::frames(delay, rate)?;
@@ -416,10 +469,20 @@ impl Effect {
         Ok(effect)
     }
     pub fn update(&mut self, spec: EffectSpec, rate: u32, buffer: u32) -> anyhow::Result<()> {
-        if spec.chorus.is_some() && self.chorus.as_ref().is_none_or(|c| c.configuration() != (rate, buffer.max(1))) {
+        if spec.chorus.is_some()
+            && self
+                .chorus
+                .as_ref()
+                .is_none_or(|c| c.configuration() != (rate, buffer.max(1)))
+        {
             self.chorus = Some(Chorus::new(rate, buffer)?);
         }
-        if spec.flange.is_some() && self.flange.as_ref().is_none_or(|c| c.configuration() != (rate, buffer.max(1))) {
+        if spec.flange.is_some()
+            && self
+                .flange
+                .as_ref()
+                .is_none_or(|c| c.configuration() != (rate, buffer.max(1)))
+        {
             self.flange = Some(Flange::new(rate, buffer)?);
         }
         if spec.pitch_shifter.is_some() && self.pitch.is_none() {
@@ -452,10 +515,16 @@ impl Effect {
         }
         self.duck = Duck::default();
         self.compressor = Compressor::default();
-        if let Some(chorus) = &mut self.chorus { chorus.clear(); }
-        if let Some(flange) = &mut self.flange { flange.clear(); }
+        if let Some(chorus) = &mut self.chorus {
+            chorus.clear();
+        }
+        if let Some(flange) = &mut self.flange {
+            flange.clear();
+        }
         self.normalize = Normalize::default();
-        if let Some(pitch) = &mut self.pitch { pitch.clear(); }
+        if let Some(pitch) = &mut self.pitch {
+            pitch.clear();
+        }
         self.simple = SimpleFilter::default();
         self.eq.h = Default::default();
         self.frames = 0;
@@ -486,13 +555,25 @@ impl Effect {
     /// ducks by it. Native ignores bypass on them (the Editor disallows it), and nothing reaches
     /// a sidechain during the mixer's first DSP block: `muted` leading frames of this chunk still
     /// belong to it. False for any other kind.
-    pub fn process_routed(&mut self, samples: &mut [f32], sidechains: &mut HashMap<String, Vec<f32>>, muted: usize) -> bool {
+    pub fn process_routed(
+        &mut self,
+        samples: &mut [f32],
+        sidechains: &mut HashMap<String, Vec<f32>>,
+        muted: usize,
+    ) -> bool {
         match self.spec.kind.as_str() {
             "Send" => {
-                let target = self.spec.send_target.as_ref().and_then(|t| sidechains.get_mut(t));
+                let target = self
+                    .spec
+                    .send_target
+                    .as_ref()
+                    .and_then(|t| sidechains.get_mut(t));
                 if let Some(sidechain) = target {
                     let skip = muted.min(samples.len() / 2);
-                    for (s, x) in sidechain[skip * 2..samples.len()].iter_mut().zip(&samples[skip * 2..]) {
+                    for (s, x) in sidechain[skip * 2..samples.len()]
+                        .iter_mut()
+                        .zip(&samples[skip * 2..])
+                    {
                         *s += x * self.spec.send_level;
                     }
                 }
@@ -506,7 +587,12 @@ impl Effect {
             }
             "Duck Volume" => {
                 let sidechain = sidechains.get(&self.spec.id).map(|s| &s[..samples.len()]);
-                self.duck.process(samples, sidechain, self.spec.duck.as_ref().unwrap(), self.rate);
+                self.duck.process(
+                    samples,
+                    sidechain,
+                    self.spec.duck.as_ref().unwrap(),
+                    self.rate,
+                );
             }
             _ => return false,
         }
@@ -528,7 +614,18 @@ impl Effect {
             if !bypass && !self.spec.bypass {
                 self.echo.process(samples, &self.spec);
             }
-        } else if matches!(self.spec.kind.as_str(), "Compressor" | "ParamEQ" | "Distortion" | "Chorus" | "Flange" | "Normalize" | "Pitch Shifter" | "Lowpass Simple" | "Highpass Simple") {
+        } else if matches!(
+            self.spec.kind.as_str(),
+            "Compressor"
+                | "ParamEQ"
+                | "Distortion"
+                | "Chorus"
+                | "Flange"
+                | "Normalize"
+                | "Pitch Shifter"
+                | "Lowpass Simple"
+                | "Highpass Simple"
+        ) {
             // A bypassed unit keeps its state; resuming after bypass is unmeasured.
             if bypass || self.spec.bypass {
                 return;
@@ -541,11 +638,32 @@ impl Effect {
                 }
                 "ParamEQ" => self.eq.process(samples),
                 "Distortion" => distortion(samples, self.spec.distortion.unwrap()),
-                "Pitch Shifter" => self.pitch.as_mut().unwrap().process(samples, self.spec.pitch_shifter.as_ref().unwrap(), self.rate),
-                "Normalize" => self.normalize.process(samples, self.spec.normalize.as_ref().unwrap(), self.rate),
-                "Flange" => self.flange.as_mut().unwrap().process(samples, self.spec.flange.as_ref().unwrap()),
-                "Chorus" => self.chorus.as_mut().unwrap().process(samples, self.spec.chorus.as_ref().unwrap()),
-                kind => self.simple.process(samples, kind == "Highpass Simple", self.spec.cutoff, self.rate),
+                "Pitch Shifter" => self.pitch.as_mut().unwrap().process(
+                    samples,
+                    self.spec.pitch_shifter.as_ref().unwrap(),
+                    self.rate,
+                ),
+                "Normalize" => self.normalize.process(
+                    samples,
+                    self.spec.normalize.as_ref().unwrap(),
+                    self.rate,
+                ),
+                "Flange" => self
+                    .flange
+                    .as_mut()
+                    .unwrap()
+                    .process(samples, self.spec.flange.as_ref().unwrap()),
+                "Chorus" => self
+                    .chorus
+                    .as_mut()
+                    .unwrap()
+                    .process(samples, self.spec.chorus.as_ref().unwrap()),
+                kind => self.simple.process(
+                    samples,
+                    kind == "Highpass Simple",
+                    self.spec.cutoff,
+                    self.rate,
+                ),
             }
         } else if let Some(reverb) = &mut self.reverb {
             if !bypass && !self.spec.bypass {
@@ -560,8 +678,10 @@ impl Effect {
                         reverb.process(processed);
                         let wet = if self.spec.mix_audible { wet } else { 0.0 };
                         let dry = 1.0 - self.spec.mix_level.unwrap_or(0.0);
-                        for (frame, (out, effect)) in samples.chunks_exact_mut(2)
-                            .zip(processed.chunks_exact(2)).enumerate()
+                        for (frame, (out, effect)) in samples
+                            .chunks_exact_mut(2)
+                            .zip(processed.chunks_exact(2))
+                            .enumerate()
                         {
                             let ramp = ((self.frames as usize + frame) as f32 / 64.0).min(1.0);
                             for (x, e) in out.iter_mut().zip(effect) {
@@ -637,7 +757,15 @@ mod tests {
     fn distortion_matches_native_dc_and_large_bipolar_samples() {
         let mut x = [0.0, 0.00001, -0.000005, 0.5, -0.25, 4.0, -2.0];
         distortion(&mut x, 0.5);
-        let native = [0.0, 0.000029999399, -0.0000149998496, 0.75, -0.5, 1.3333334, -1.2];
+        let native = [
+            0.0,
+            0.000029999399,
+            -0.0000149998496,
+            0.75,
+            -0.5,
+            1.3333334,
+            -1.2,
+        ];
         for (actual, expected) in x.into_iter().zip(native) {
             assert!((actual - expected).abs() < 1e-7);
         }
@@ -653,10 +781,16 @@ mod tests {
     #[test]
     fn simple_filter_coefficients_follow_the_measured_two_segment_curve() {
         // Native impulse responses (tests/projects/mixercompressor): first sample a^2.
-        for (cutoff, rate, expected) in [(5000.0, 48000, 0.3955872), (14000.0, 44100, 0.6660725),
-            (17000.0, 48000, 0.7520257), (21999.0, 44100, 0.9999582)]
-        {
-            assert!((SimpleFilter::coefficient(cutoff, rate) - expected).abs() < 2e-7, "{cutoff} {rate}");
+        for (cutoff, rate, expected) in [
+            (5000.0, 48000, 0.3955872),
+            (14000.0, 44100, 0.6660725),
+            (17000.0, 48000, 0.7520257),
+            (21999.0, 44100, 0.9999582),
+        ] {
+            assert!(
+                (SimpleFilter::coefficient(cutoff, rate) - expected).abs() < 2e-7,
+                "{cutoff} {rate}"
+            );
         }
         assert_eq!(SimpleFilter::coefficient(22000.0, 48000), 1.0);
         let mut high = SimpleFilter::default();
@@ -668,7 +802,14 @@ mod tests {
     #[test]
     fn param_eq_boosts_its_center_by_the_squared_gain_and_passes_dc() {
         let mut eq = ParamEq::default();
-        eq.tune(&ParamEqSpec { center: 1000.0, octaves: 1.0, gain: 3.0 }, 48000);
+        eq.tune(
+            &ParamEqSpec {
+                center: 1000.0,
+                octaves: 1.0,
+                gain: 3.0,
+            },
+            48000,
+        );
         // Native's first impulse sample for this setting (eq_boost).
         assert!((eq.b[0] - 1.1703296).abs() < 1e-6);
         let dc: f64 = eq.b.iter().sum::<f64>() / (1.0 + eq.a[0] + eq.a[1]);

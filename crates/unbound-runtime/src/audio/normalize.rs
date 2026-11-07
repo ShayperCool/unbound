@@ -10,10 +10,15 @@ pub struct NormalizeSpec {
 }
 impl NormalizeSpec {
     pub fn validate(&self) -> anyhow::Result<()> {
-        anyhow::ensure!(self.fade.is_finite() && (0.0..=20000.0).contains(&self.fade)
-            && self.lowest.is_finite() && (0.0..=1.0).contains(&self.lowest)
-            && self.maximum.is_finite() && (0.0..=100000.0).contains(&self.maximum),
-            "AudioMixer Normalize has invalid parameters");
+        anyhow::ensure!(
+            self.fade.is_finite()
+                && (0.0..=20000.0).contains(&self.fade)
+                && self.lowest.is_finite()
+                && (0.0..=1.0).contains(&self.lowest)
+                && self.maximum.is_finite()
+                && (0.0..=100000.0).contains(&self.maximum),
+            "AudioMixer Normalize has invalid parameters"
+        );
         Ok(())
     }
 }
@@ -21,22 +26,33 @@ pub struct Normalize {
     peak: f32,
 }
 impl Default for Normalize {
-    fn default() -> Self { Self { peak: 1.0 } }
+    fn default() -> Self {
+        Self { peak: 1.0 }
+    }
 }
 impl Normalize {
     pub fn validate_configuration(rate: u32, buffer: u32) -> anyhow::Result<()> {
-        anyhow::ensure!([48000, 44100].contains(&rate) && buffer == 1024,
-            "AudioMixer Normalize is measured only at 48000/44100 Hz with 1024-frame stereo output");
+        anyhow::ensure!(
+            [48000, 44100].contains(&rate) && buffer == 1024,
+            "AudioMixer Normalize is measured only at 48000/44100 Hz with 1024-frame stereo output"
+        );
         Ok(())
     }
     pub fn process(&mut self, samples: &mut [f32], spec: &NormalizeSpec, rate: u32) {
-        let decay = if spec.fade == 0.0 { 1.0 }
-            else { 1.0 / (spec.fade * rate as f32 / 1000.0) };
+        let decay = if spec.fade == 0.0 {
+            1.0
+        } else {
+            1.0 / (spec.fade * rate as f32 / 1000.0)
+        };
         for frame in samples.chunks_exact_mut(2) {
-            self.peak = (self.peak - decay).max(spec.lowest)
-                .max(frame[0].abs()).max(frame[1].abs());
+            self.peak = (self.peak - decay)
+                .max(spec.lowest)
+                .max(frame[0].abs())
+                .max(frame[1].abs());
             let gain = spec.maximum.min(1.0 / self.peak);
-            for x in frame { *x *= gain; }
+            for x in frame {
+                *x *= gain;
+            }
         }
     }
 }
@@ -47,7 +63,11 @@ mod tests {
     #[test]
     fn native_default_peak_response_and_linked_channels() {
         // Captured default_dc_quarter: silent first 1024 frames, then [0.25, -0.125].
-        let spec = NormalizeSpec { fade: 5000.0, lowest: 0.1, maximum: 20.0 };
+        let spec = NormalizeSpec {
+            fade: 5000.0,
+            lowest: 0.1,
+            maximum: 20.0,
+        };
         let mut effect = Normalize::default();
         let mut silent = vec![0.0; 2048];
         effect.process(&mut silent, &spec, 48000);
@@ -60,9 +80,16 @@ mod tests {
     }
     #[test]
     fn zero_floor_silence_and_gain_cap_stay_finite() {
-        let spec = NormalizeSpec { fade: 0.0, lowest: 0.0, maximum: 10.0 };
+        let spec = NormalizeSpec {
+            fade: 0.0,
+            lowest: 0.0,
+            maximum: 10.0,
+        };
         let mut x = [0.0, 0.0, 0.01, -0.005, 0.5, -0.25, 0.0, 0.0];
         Normalize::default().process(&mut x, &spec, 44100);
-        assert_eq!(x, [0.0, 0.0, 0.099999994, -0.049999997, 1.0, -0.5, 0.0, 0.0]);
+        assert_eq!(
+            x,
+            [0.0, 0.0, 0.099999994, -0.049999997, 1.0, -0.5, 0.0, 0.0]
+        );
     }
 }
