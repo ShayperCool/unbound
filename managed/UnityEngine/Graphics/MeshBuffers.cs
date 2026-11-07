@@ -237,6 +237,7 @@ namespace UnityEngine
             }
             m_BoneWeights = Resize(m_BoneWeights, Has(VertexAttribute.BlendWeight) || Has(VertexAttribute.BlendIndices));
             m_Layout = layout;
+            ResizePackedChannels(vertexCount, layout);
             Changed();
         }
 
@@ -298,12 +299,14 @@ namespace UnityEngine
         // Automatic skin bounds for that mutation path need their own Unity measurements.
         internal bool m_UnmeasuredSkinBoundsMutation;
 
-        /// <summary>Decodes stream data written at byte <paramref name="offset"/> of the stream into
-        /// the vertices it covers (whole vertices of the stream's stride).</summary>
+        /// <summary>Retains exact bytes written at a stream offset and updates the decoded
+        /// channels for every touched attribute, including partial component writes.</summary>
         internal void WriteVertices(ReadOnlySpan<byte> bytes, int offset, int stream)
         {
-            var layout = Layout();
-            int stride = GetVertexBufferStride(stream);
+            Span<VertexAttributeDescriptor> descriptors = stackalloc VertexAttributeDescriptor[MaxVertexAttributes];
+            var layout = descriptors.Slice(0, FillLayout(descriptors));
+            int stride = 0;
+            foreach (var d in layout) if (d.stream == stream) stride += FormatSize(d.format) * d.dimension;
             if (stride == 0) throw new ArgumentException($"The mesh has no vertex attributes in stream {stream}", nameof(stream));
             if (offset + bytes.Length > m_Vertices.Length * stride)
                 throw new ArgumentException($"Writing {bytes.Length} bytes at {offset} overflows the vertex buffer's {m_Vertices.Length * stride} bytes (stream {stream}); call SetVertexBufferParams first");
@@ -320,8 +323,12 @@ namespace UnityEngine
                     int size = FormatSize(d.format);
                     int start = v * stride + at - offset;
                     at += size * d.dimension;
-                    // Only attributes the data covers wholly.
-                    if (start < 0 || start + size * d.dimension > bytes.Length) continue;
+                    int begin = Math.Max(start, 0), end = Math.Min(start + size * d.dimension, bytes.Length);
+                    if (end <= begin) continue;
+                    var channel = WritablePackedChannel(d);
+                    int width = size * d.dimension;
+                    var attribute = channel.Bytes.AsSpan(v * width, width);
+                    bytes.Slice(begin, end - begin).CopyTo(attribute.Slice(begin - start));
                     if (d.attribute is VertexAttribute.Position or VertexAttribute.BlendWeight or VertexAttribute.BlendIndices)
                         m_UnmeasuredSkinBoundsMutation = true;
                     for (int c = 0; c < 4; c++)
@@ -331,10 +338,10 @@ namespace UnityEngine
                     }
                     for (int c = 0; c < d.dimension; c++)
                     {
-                        var s = bytes.Slice(start + c * size, size);
+                        var s = attribute.Slice(c * size, size);
                         (f[c], n[c]) = Read(s, d.format);
                     }
-                    Store(d, v, f, n, bytes.Slice(start, size * d.dimension));
+                    Store(d, v, f, n, attribute);
                 }
             }
             Changed();

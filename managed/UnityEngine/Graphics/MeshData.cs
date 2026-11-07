@@ -135,9 +135,7 @@ namespace UnityEngine
                     foreach (var d in Layout)
                     {
                         byte* at = Streams[d.stream] + v * Stride(d.stream) + Offset(d.attribute);
-                        mesh.ReadChannel(d.attribute, v, out var f, out var n);
-                        for (int c = 0; c < d.dimension; c++)
-                            Write(at + c * FormatSize(d.format), d.format, f[c], c switch { 0 => n.Item1, 1 => n.Item2, 2 => n.Item3, _ => n.Item4 });
+                        mesh.PackAttribute(d, v, new Span<byte>(at, FormatSize(d.format) * d.dimension));
                     }
                 var buffer = mesh.IndexBuffer();
                 if (Indices == null || IndexCount != buffer.Length || IndexFormat != mesh.indexFormat)

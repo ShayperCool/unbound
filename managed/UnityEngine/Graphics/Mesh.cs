@@ -108,6 +108,7 @@ namespace UnityEngine
             m_Bindposes = (Matrix4x4[])source.m_Bindposes?.Clone();
             m_Bounds = source.m_Bounds;
             m_IndexFormat = source.m_IndexFormat;
+            CopyPackedChannels(source);
             CopyBlendShapesFrom(source);
             Changed();
         }
@@ -181,6 +182,8 @@ namespace UnityEngine
                 for (int channel = 0; channel < m_UVs.Length; channel++)
                     ResizeVertexChannel(ref m_UVs[channel], count);
                 RecalculateBounds();
+                InvalidatePackedChannel(VertexAttribute.Position);
+                ResizePackedChannels(count);
                 Changed();
             }
         }
@@ -193,13 +196,13 @@ namespace UnityEngine
         public Vector3[] normals
         {
             get => m_Normals != null ? (Vector3[])m_Normals.Clone() : Array.Empty<Vector3>();
-            set { m_Normals = Checked(value, "normals"); Changed(); }
+            set { m_Normals = Checked(value, "normals"); InvalidatePackedChannel(VertexAttribute.Normal); Changed(); }
         }
 
         public Vector4[] tangents
         {
             get => m_Tangents != null ? (Vector4[])m_Tangents.Clone() : Array.Empty<Vector4>();
-            set { m_Tangents = Checked(value, "tangents"); Changed(); }
+            set { m_Tangents = Checked(value, "tangents"); InvalidatePackedChannel(VertexAttribute.Tangent); Changed(); }
         }
 
         public Color[] colors
@@ -213,10 +216,11 @@ namespace UnityEngine
             }
             set
             {
-                if (value == null || value.Length == 0) { m_Colors = null; Changed(); return; }
+                if (value == null || value.Length == 0) { m_Colors = null; InvalidatePackedChannel(VertexAttribute.Color); Changed(); return; }
                 var c = new Color32[value.Length];
                 for (int i = 0; i < c.Length; i++) c[i] = value[i];
                 m_Colors = Checked(c, "colors");
+                InvalidatePackedChannel(VertexAttribute.Color);
                 Changed();
             }
         }
@@ -224,7 +228,7 @@ namespace UnityEngine
         public Color32[] colors32
         {
             get => m_Colors != null ? (Color32[])m_Colors.Clone() : Array.Empty<Color32>();
-            set { m_Colors = Checked(value, "colors32"); Changed(); }
+            set { m_Colors = Checked(value, "colors32"); InvalidatePackedChannel(VertexAttribute.Color); Changed(); }
         }
 
         T[] Checked<T>(T[] value, string what)
@@ -258,7 +262,7 @@ namespace UnityEngine
 
         void SetUV2(int channel, Vector2[] value)
         {
-            if (value == null || value.Length == 0) { m_UVs[channel] = null; m_UVDimensions[channel] = 0; Changed(); return; }
+            if (value == null || value.Length == 0) { InvalidatePackedChannel(VertexAttribute.TexCoord0 + channel); m_UVs[channel] = null; m_UVDimensions[channel] = 0; Changed(); return; }
             if (value.Length != m_Vertices.Length)
             {
                 Debug.LogError("Mesh.uv is out of bounds. The supplied array needs to be the same size as the Mesh.vertices array.");
@@ -266,6 +270,7 @@ namespace UnityEngine
             }
             var r = new Vector4[value.Length];
             for (int i = 0; i < r.Length; i++) r[i] = value[i];
+            InvalidatePackedChannel(VertexAttribute.TexCoord0 + channel);
             m_UVs[channel] = r;
             m_UVDimensions[channel] = 2;
             Changed();
@@ -336,6 +341,7 @@ namespace UnityEngine
             }
             if (values == null || values.Length == 0)
             {
+                InvalidatePackedChannel(VertexAttribute.TexCoord0 + channel);
                 m_UVs[channel] = null;
                 m_UVDimensions[channel] = 0;
                 Changed();
@@ -346,6 +352,7 @@ namespace UnityEngine
                 Debug.LogError("Mesh.uv is out of bounds. The supplied array needs to be the same size as the Mesh.vertices array.");
                 return;
             }
+            InvalidatePackedChannel(VertexAttribute.TexCoord0 + channel);
             m_UVs[channel] = values;
             m_UVDimensions[channel] = dimension;
             Changed();
@@ -561,7 +568,7 @@ namespace UnityEngine
         public BoneWeight[] boneWeights
         {
             get => m_BoneWeights != null ? (BoneWeight[])m_BoneWeights.Clone() : Array.Empty<BoneWeight>();
-            set { m_BoneWeights = Checked(value, "boneWeights"); Changed(); }
+            set { m_BoneWeights = Checked(value, "boneWeights"); InvalidatePackedChannel(VertexAttribute.BlendWeight); InvalidatePackedChannel(VertexAttribute.BlendIndices); Changed(); }
         }
 
         public Matrix4x4[] bindposes
@@ -588,6 +595,7 @@ namespace UnityEngine
 
         public void Clear([Internal.DefaultValue("true")] bool keepVertexLayout)
         {
+            m_PackedChannels = null;
             m_Vertices = Array.Empty<Vector3>();
             m_Normals = null;
             m_Tangents = null;
@@ -650,6 +658,7 @@ namespace UnityEngine
             }
             for (int i = 0; i < normals.Length; i++) normals[i] = normals[i].normalized;
             m_Normals = normals;
+            InvalidatePackedChannel(VertexAttribute.Normal);
             Changed();
         }
 
@@ -702,6 +711,7 @@ namespace UnityEngine
                 tangents[i] = new Vector4(t.x, t.y, t.z, w);
             }
             m_Tangents = tangents;
+            InvalidatePackedChannel(VertexAttribute.Tangent);
             Changed();
         }
 
@@ -771,6 +781,7 @@ namespace UnityEngine
                 foreach (var t in tris) target.Add(t + offset);
             }
             Clear(false);
+            m_PackedChannels = null;
             m_Vertices = positions.ToArray();
             m_Normals = normals.ToArray();
             m_UVs[0] = uvs.ToArray();

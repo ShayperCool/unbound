@@ -1,4 +1,7 @@
 using System;
+using System.Runtime.InteropServices;
+using System.Collections.Generic;
+using Unity.Collections;
 using Unbound.Runtime;
 using UnityEngine.Rendering;
 using Xunit;
@@ -139,6 +142,81 @@ namespace UnityEngine.Tests
                 Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
             }
             finally { data.Free(); Object.DestroyImmediate(mesh); }
+        }
+
+        static Mesh PreciseMesh(out float[] colors, out uint[] integers)
+        {
+            var mesh = new Mesh();
+            mesh.SetVertexBufferParams(2,
+                new VertexAttributeDescriptor(VertexAttribute.Position, VertexAttributeFormat.Float32, 3, 0),
+                new VertexAttributeDescriptor(VertexAttribute.Color, VertexAttributeFormat.Float32, 4, 1),
+                new VertexAttributeDescriptor(VertexAttribute.TexCoord0, VertexAttributeFormat.UInt32, 4, 2));
+            colors = new[] {-1f, .5f, 2f, 4f, .3f, .7f, 8f, -2f};
+            integers = new uint[] {0xffffffff, 16777217, 0x80000001, 17, 31, 0x7fffffff, 0xabcdef01, 99};
+            mesh.SetVertexBufferData(colors, 0, 0, colors.Length, 1);
+            mesh.SetVertexBufferData(integers, 0, 0, integers.Length, 2);
+            return mesh;
+        }
+
+        static byte[] Stream(Mesh mesh, int stream)
+        {
+            using var data = Mesh.AcquireReadOnlyMeshData(mesh);
+            return data[0].GetVertexData<byte>(stream).ToArray();
+        }
+
+        [Fact]
+        public void PackedColorsAndUnsignedAttributesRetainTheirExactBytes()
+        {
+            var mesh = PreciseMesh(out var colors, out var integers);
+            try
+            {
+                var colorBytes = MemoryMarshal.AsBytes(colors.AsSpan()).ToArray();
+                var integerBytes = MemoryMarshal.AsBytes(integers.AsSpan()).ToArray();
+                Assert.Equal(colorBytes, Stream(mesh, 1));
+                Assert.Equal(integerBytes, Stream(mesh, 2));
+                mesh.uv = new Vector2[1]; // Rejected input must not discard unrelated packed data.
+                mesh.SetIndices(new[] {0,1}, MeshTopology.Points, 0);
+                mesh.vertices = new[] {Vector3.right, Vector3.up};
+                mesh.normals = new[] {Vector3.forward, Vector3.forward};
+                Assert.Equal(colorBytes, Stream(mesh, 1));
+                Assert.Equal(integerBytes, Stream(mesh, 2));
+                var clone = Object.Instantiate(mesh);
+                try { Assert.Equal(colorBytes, Stream(clone, 1)); }
+                finally { Object.DestroyImmediate(clone); }
+                mesh.vertices = new Vector3[1];
+                mesh.vertices = new Vector3[2];
+                Array.Clear(colorBytes, 16, 16);
+                Assert.Equal(colorBytes, Stream(mesh, 1));
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
+        [Fact]
+        public void PartialRawWritesPreserveEveryOtherByte()
+        {
+            var mesh = PreciseMesh(out var colors, out _);
+            try
+            {
+                var expected = MemoryMarshal.AsBytes(colors.AsSpan()).ToArray();
+                expected[5] = 0xab; expected[6] = 0xcd;
+                mesh.SetVertexBufferData(new byte[] {0xab,0xcd}, 0, 5, 2, 1);
+                Assert.Equal(expected, Stream(mesh, 1));
+            }
+            finally { Object.DestroyImmediate(mesh); }
+        }
+
+        [Fact]
+        public void RepeatedRawWritesReuseExactChannelStorageWithoutAllocating()
+        {
+            var mesh = PreciseMesh(out var colors, out _);
+            try
+            {
+                mesh.SetVertexBufferData(colors, 0, 0, colors.Length, 1);
+                long before = GC.GetAllocatedBytesForCurrentThread();
+                for (int frame = 0; frame < 100; frame++) mesh.SetVertexBufferData(colors, 0, 0, colors.Length, 1);
+                Assert.Equal(0, GC.GetAllocatedBytesForCurrentThread() - before);
+            }
+            finally { Object.DestroyImmediate(mesh); }
         }
 
         [Fact]
