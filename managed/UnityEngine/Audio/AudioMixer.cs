@@ -19,6 +19,7 @@ namespace UnityEngine.Audio
         internal AudioMixerGroup m_MasterGroup;
         internal readonly List<AudioMixerSnapshot> m_Snapshots = new List<AudioMixerSnapshot>();
         internal AudioMixerSnapshot m_StartSnapshot;
+        internal AudioMixerSnapshot m_TargetSnapshot;
         internal AudioMixerUpdateMode m_UpdateMode;
         internal bool m_EnableSuspend = true;
         internal float m_SuspendThreshold = -80f;
@@ -310,6 +311,7 @@ namespace UnityEngine.Audio
                 if (snapshot != null) m_Snapshots.Add(snapshot);
             }
             m_StartSnapshot = Resolve<AudioMixerSnapshot>(body.Ref("m_StartSnapshot")) ?? (m_Snapshots.Count > 0 ? m_Snapshots[0] : null);
+            m_TargetSnapshot = Resolve<AudioMixerSnapshot>(body.Ref("m_TargetSnapshot"));
             m_UpdateMode = (AudioMixerUpdateMode)body.Int("m_UpdateMode");
             m_EnableSuspend = body.Bool("m_EnableSuspend", true);
             m_SuspendThreshold = body.Float("m_SuspendThreshold", -80f);
@@ -323,7 +325,7 @@ namespace UnityEngine.Audio
             AudioSystem.Add(this);
         }
 
-        /// <summary>Links the groups (read after the mixer) and applies the start snapshot.</summary>
+        /// <summary>Links the groups (read after the mixer) and applies the initial snapshot.</summary>
         internal void Build()
         {
             if (m_Built) return;
@@ -333,8 +335,11 @@ namespace UnityEngine.Audio
             m_Defaults.Clear();
             if (m_MasterGroup != null) Collect(m_MasterGroup, null);
             m_Values.Clear();
-            if (m_StartSnapshot != null)
-                foreach (var pair in m_StartSnapshot.m_Values) m_Values[pair.Key] = pair.Value;
+            // The Editor resumes its saved snapshot selection when entering Play mode.
+            // tests/projects/mixersuspend distinguishes that selection from the start snapshot.
+            var initial = Compat.MixerSnapshotSelectionMeasured ? m_TargetSnapshot ?? m_StartSnapshot : m_StartSnapshot;
+            if (initial != null)
+                foreach (var pair in initial.m_Values) m_Values[pair.Key] = pair.Value;
         }
 
         void Collect(AudioMixerGroup group, AudioMixerGroup parent)
@@ -496,6 +501,7 @@ namespace UnityEngine.Audio
                 effects.Add(new {
                     id = effect.m_EffectId, kind = effect.m_EffectName, bypass = effect.m_Bypass,
                     gain = AudioMixer.DspGain(m_Mixer.Value(m_VolumeGuid)),
+                    gainImmediate = Compat.MixerParameterGainMeasured,
                     cutoff = effect.Parameter("Cutoff freq") is string cutoff ? m_Mixer.Value(cutoff) : AudioMixerEffectController.CutoffDefault(effect.m_EffectName),
                     resonance = effect.Parameter("Resonance") is string resonance ? m_Mixer.Value(resonance) : 1f,
                     delay = effect.Parameter("Delay") is string delay ? m_Mixer.Value(delay) : 500f,

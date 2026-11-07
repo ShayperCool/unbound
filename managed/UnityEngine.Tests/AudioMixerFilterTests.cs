@@ -47,6 +47,30 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void InitialSnapshotUsesTheMeasuredEditorSelectionWithStartFallback()
+        {
+            foreach (var release in new[] { "6000.0.71f1", "6000.0.70f1" })
+            foreach (bool selected in new[] { false, true })
+            {
+                ProjectInfo.UnityVersion = release;
+                var (mixer, _, _) = Fixture();
+                mixer.m_StartSnapshot = new AudioMixerSnapshot { m_Mixer = mixer };
+                mixer.m_StartSnapshot.m_Values["cutoff"] = 1000;
+                if (selected)
+                {
+                    mixer.m_TargetSnapshot = new AudioMixerSnapshot { m_Mixer = mixer };
+                    mixer.m_TargetSnapshot.m_Values["cutoff"] = 2000;
+                }
+                Assert.True(mixer.GetFloat("Cutoff", out var value));
+                Assert.Equal(selected && release == "6000.0.71f1" ? 2000 : 1000, value);
+                mixer.SetFloat("Cutoff", 3000);
+                mixer.Build();
+                Assert.True(mixer.GetFloat("Cutoff", out value));
+                Assert.Equal(3000, value);
+            }
+        }
+
+        [Fact]
         public void NamedFilterParametersUseMeasuredDefaultsAndSnapshotOverrides()
         {
             var (mixer, group, effect) = Fixture();

@@ -55,8 +55,10 @@ reset sequence, and same-frame replay does not produce later output. These
 observations are retained as part of the canonical data. Matching all reset
 delivery behavior is separate from establishing mixer suspension.
 
-Other releases, surround output, linked-mixer timing and timed parameter/snapshot
-transitions are unmeasured. This fixture does not establish full audio parity.
+Other releases, surround output and linked-mixer timing remain unmeasured. The
+independent state controls below measure timed group-gain snapshots; timed effect
+parameter changes and realtime PCM histories remain unclaimed. This fixture does
+not establish full audio parity.
 
 ## Reproduce
 
@@ -158,3 +160,20 @@ file under Assets/, Packages/ or ProjectSettings/ has changed: re-run its record
 fresh cache directory and record that project again. `tools/agents/suite.py` runs every profile
 this way.
 
+
+
+## Suspension state and parameter ownership
+
+[STATE_MEASUREMENT.md](STATE_MEASUREMENT.md) defines the independent 27-case state
+profile and records the Unity documentation, measured causes and remaining reset
+records. Two Native repeats agree bit-for-bit on 84935303 values per rate.
+
+```sh
+python3 tests/projects/mixersuspend/gate.py --release 6000.0.71f1
+```
+
+The gate uses `$UNBOUND` and its matching managed directory, or `--runtime`. It runs
+all original profiles and the new state controls without an Editor, preserves each
+complete strict report, and rejects anything outside the precisely documented
+reset records and the two isolated one-step Reverb PCM samples. The suite still
+reports the original 2055 raw device-reset failures per rate.

@@ -227,6 +227,7 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         .into(),
         bypass: false,
         gain: 0.0,
+        gain_immediate: false,
         cutoff: d.cutoff,
         resonance: d.resonance,
         delay: d.delay,

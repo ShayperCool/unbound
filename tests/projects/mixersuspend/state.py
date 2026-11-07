@@ -15,6 +15,7 @@ REPO = FIXTURE.parents[2]
 sys.path.insert(0, str(FIXTURE))
 from compare import compare, header, raw
 from pack import pack
+from acceptance import check
 
 
 def verify(root, release, rate):
@@ -104,7 +105,9 @@ def main():
         for rate in (48000, 44100):
             subprocess.run([sys.executable, str(__file__), 'engine', '--release', a.release, '--rate', str(rate),
                             '--runtime', str(runtime), '--project', str(work/'authored'), '--work', str(work/f'engine-{rate}')], check=True)
-            failed |= bool(compare(FIXTURE/'Reference'/('unity-'+a.release)/f'state-rate-{rate}', work/f'engine-{rate}/capture', work/f'report-{rate}.jsonl.gz', batch=True))
+            report = work/f'report-{rate}.jsonl.gz'
+            compare(FIXTURE/'Reference'/('unity-'+a.release)/f'state-rate-{rate}', work/f'engine-{rate}/capture', report, batch=True)
+            failed |= bool(check(report, 'state', rate))
         return failed
     return 0
 

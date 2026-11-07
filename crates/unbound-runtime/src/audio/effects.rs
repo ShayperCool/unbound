@@ -147,6 +147,9 @@ pub struct EffectSpec {
     pub bypass: bool,
     #[serde(default)]
     pub gain: f32,
+    /// The compatibility profile selects block-constant mixer parameter submission.
+    #[serde(default)]
+    pub gain_immediate: bool,
     #[serde(default)]
     pub cutoff: f32,
     #[serde(default = "one")]
@@ -833,16 +836,16 @@ impl Effect {
             let from = self.gain;
             let frames = samples.len() / 2;
             for (frame, stereo) in samples.chunks_exact_mut(2).enumerate() {
-                let gain = from + (self.spec.gain - from) * (frame + 1) as f32 / frames as f32;
+                let gain = if self.spec.gain_immediate {
+                    self.spec.gain
+                } else {
+                    from + (self.spec.gain - from) * (frame + 1) as f32 / frames as f32
+                };
                 for x in stereo {
                     *x *= gain;
                 }
             }
-            self.gain = if self.kind == Some(EffectKind::Send) {
-                self.spec.send_level
-            } else {
-                self.spec.gain
-            };
+            self.gain = self.spec.gain;
         } else if kind == EffectKind::Echo {
             if !bypass && !self.spec.bypass {
                 self.echo.process(samples, &self.spec);
@@ -991,6 +994,35 @@ impl GroupNode {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn attenuation_parameter_submission_applies_across_the_whole_packet() {
+        for packet in [64, 256, 480, 1024] {
+            for immediate in [false, true] {
+                let spec = |gain| {
+                    serde_json::from_value::<EffectSpec>(serde_json::json!({
+                        "id": "level", "kind": "Attenuation", "gain": gain,
+                        "gainImmediate": immediate
+                    }))
+                    .unwrap()
+                };
+                let mut effect = Effect::new(spec(1.0), 48000, 1024).unwrap();
+                let mut samples = vec![1.0; packet * 2];
+                effect.process(&mut samples, false);
+                for gain in [0.5, 0.25, 0.0] {
+                    effect.update(spec(gain), 48000, 1024).unwrap();
+                    samples.fill(1.0);
+                    effect.process(&mut samples, false);
+                    if immediate {
+                        assert!(samples.iter().all(|v| *v == gain));
+                    } else {
+                        assert!(samples[0] > gain);
+                        assert_eq!(samples[packet * 2 - 1], gain);
+                    }
+                }
+            }
+        }
+    }
 
     #[test]
     fn live_send_gain_changes_ramp_without_resetting_or_muting_the_dry_signal() {

@@ -40,3 +40,68 @@ python3 tests/projects/mixersuspend/state.py publish --release 6000.0.71f1 --rat
 
 Repeat at 44100 Hz. `state.py gate` uses only the committed authored project and
 canonical references, without launching the Editor.
+
+## Contract and measured causes
+
+Unity 6000.0 documentation:
+
+- [Audio Mixer window](https://docs.unity3d.com/6000.0/Documentation/Manual/AudioMixer.html)
+  describes routing and snapshots and notes partial Web-platform support.
+- [AudioGroup Inspector, Audio Mixer inspector](https://docs.unity3d.com/6000.0/Documentation/Manual/AudioMixerInspectors.html)
+  says source/submixer input keeps a mixer active. After the final source ends it
+  waits one second, then measures output loudness. Auto Mixer Suspend controls
+  suspension; the documented default threshold is -80 dB.
+- [AudioMixer](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Audio.AudioMixer.html)
+  and [updateMode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Audio.AudioMixer-updateMode.html)
+  define Normal as scaled game time and UnscaledTime as realtime. GetFloat follows
+  the current snapshot/transition unless SetFloat owns the parameter; ClearFloat
+  returns control to snapshots. These pages do not specify DSP-history disposal,
+  saved Editor selection on startup, or sample-level parameter submission.
+
+| Mechanism | Observation in Unity 6000.0.71f1 Linux | Implementation / limit |
+|---|---|---|
+| Suspension decision | Existing activity, mute, threshold and clock matrix retains all blocks. A silent playing voice keeps an unmuted route awake. Wait/measurement uses rendered DSP time observed at audio updates, independently of captureDeltaTime and wall time. | Existing DSP-time/RMS mechanism remains. enableSuspend=false prevents suspension. The existing stereo RMS and threshold conversion remain unchanged. |
+| DSP history | Echo delay contents/cursor, Lowpass/Highpass history, Reverb tail and Duck detector attenuation survive the silent gap. Enabled, disabled and fresh controls distinguish frozen histories from discarded histories. | Suspension skips the graph and wake resumes it. Neither transition calls the effect reset routine or restarts the graph's input fade. Ordinary DSP updates continue while suspension is disabled. |
+| Snapshot in progress | Normal transitions started before sleep or during sleep advance at scaled game time. timeScale=0 freezes the timed transition; 0.5 halves progression. Instant UnscaledTime transitions apply under pause. | Snapshot ownership/time advances on audio updates even while DSP is suspended. Wake uses the current interpolated value, not the value at suspension or the destination unconditionally. Timed UnscaledTime wall-clock output has no deterministic PCM oracle. |
+| Exposed parameters | A SetFloat override persists across sleep/wake. A submitted override still reads immediately after ClearFloat until the next audio update. At that update the current snapshot value takes over. | Existing override/clear submission rule remains; no snapshot, override or transition is cleared on suspension/wake. |
+| Attenuation submission | Active SetFloat, instant/timed snapshots and ClearFloat at wake apply the submitted gain across the DSP block. The live cases control for suspension being unrelated. | MixerParameterGainMeasured selects block-constant attenuation. Source fades and Send ramps are separate mechanisms and remain. Other releases retain an explicitly unmeasured attenuation ramp. |
+| Initial snapshot | A saved Other selection reads -12 dB on load even when Base is the serialized start snapshot. Explicit Base transition changes it on the next update. Original wake_snapshot has the same mismatch at -6 dB, before its wake request. | MixerSnapshotSelectionMeasured selects the saved target snapshot with start-snapshot fallback. Other releases retain start-snapshot initialization until measured. |
+
+Both independent Native captures agree bit-for-bit on all **84,935,303 values per
+rate** before publishing one canonical `state-rate-<rate>` reference. This includes
+all parameter observations, all complete PCM/master/listener streams and metadata.
+The engine has no raw master, listener or parameter failures in this profile. Its
+only raw failure at each rate is the Reverb PCM sample listed below.
+
+## Retained raw failures
+
+The original comparator and its ATOL `2e-5` / RTOL `2e-4` are unchanged. `gate.py`
+writes a complete raw report for every original profile and this state profile,
+then `acceptance.py` classifies only these specific records. Unknown failures,
+truncated reports and a changed reset failure shape fail the gate. The suite keeps
+the original strict comparison visible, including its remaining 2055 failures per
+rate, and also runs the state gate.
+
+The original `reset` case calls AudioSettings.Reset at block 384 while the mixer is
+asleep, restarts capture and calls Play in the same frame. This is a device reset,
+not a suspension/wake control. Its remaining **2055 raw failures per rate** are:
+
+- `reset` and `reset.master`: samples 792576 and 794625 are Native 0, engine
+  0.25 and -0.125, the replayed source impulses. `reset.listener` has the same two
+  replay differences against Native's inaudible values near `1e-20`.
+- `reset.listener` metadata: Native has 1049600 stereo frames, engine 1048576.
+- `reset.listener` samples 2097152 through 2099199: Native's additional callback
+  block, near `+/-1e-20`, has no engine counterpart. Every missing value stays in
+  the raw report.
+
+The separate reset-playback experiment already records inconsistent independent
+Native repeats. No fixed callback count or special replay rule is inferred from
+that experiment. Device-reset delivery/replay remains a functional compatibility
+follow-up; these 2055 records are not classified as insignificant precision error.
+
+The state profile has one insignificant device-PCM difference per rate, in
+`reverb_disabled`: sample 46619 at 48000 Hz is Native `-3/32768`, engine `-2/32768`;
+sample 28553 at 44100 Hz is Native `-3/32768`, engine `-4/32768`. Each differs by
+one 16-bit step, `3.0517578125e-5`; every corresponding master/listener float passes.
+Rounding near the PCM boundary is the suspected cause. These exact sample positions
+and the one-step bound are checked without changing the original comparator.

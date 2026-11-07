@@ -64,6 +64,16 @@ namespace Unbound.Runtime
         /// groups first used later (tests/projects/mixerduck, exactly 6000.0.71f1).</summary>
         internal static bool MixerGraphStartupMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>The Editor starts with its saved mixer snapshot selection, measured on
+        /// exactly 6000.0.71f1 (tests/projects/mixersuspend). Other releases retain the start
+        /// snapshot until their Editor selection behavior is measured.</summary>
+        internal static bool MixerSnapshotSelectionMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>Mixer attenuation uses the parameter submitted for the whole DSP block,
+        /// measured on exactly 6000.0.71f1 (tests/projects/mixersuspend). Other releases retain
+        /// the unmeasured gain ramp until their parameter submission is measured.</summary>
+        internal static bool MixerParameterGainMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Send/Receive routing, startup and Duck Volume detector state, measured on
         /// exactly 6000.0.71f1 (tests/projects/mixerduck). Other releases fail until measured.</summary>
         internal static bool MixerSidechainMeasured => Release == (6000, 0, 71, 'f', 1);
