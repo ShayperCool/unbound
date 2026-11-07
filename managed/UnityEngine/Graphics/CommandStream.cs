@@ -302,10 +302,6 @@ namespace Unbound.Runtime
             I32(Math.Max(slice, 0));
         }
 
-        /// <summary>How the next draw runs: instances, or counts read on the GPU from an arguments
-        /// buffer (indexed: DrawMeshInstancedIndirect's layout; not: DrawProceduralIndirect's);
-        /// then, when it has them, the indices from a buffer it reads instead of its mesh's
-        /// (DrawIndices: buffer, index size, first index, index count).</summary>
         /// <summary>The next draw is instance <paramref name="index"/> of a mesh-instancing call:
         /// its first logical instance, and the element its scalar uniforms take from the draw's
         /// property arrays (render protocol 12).</summary>
@@ -319,6 +315,10 @@ namespace Unbound.Runtime
         static int s_PendingCommand = -1;
         static readonly int s_BaseCommandId = Shader.PropertyToID("unity_BaseCommandID");
 
+        /// <summary>How the next draw runs: instances, or counts read on the GPU from an arguments
+        /// buffer (indexed: DrawMeshInstancedIndirect's layout; not: DrawProceduralIndirect's);
+        /// then, when it has them, the indices from a buffer it reads instead of its mesh's
+        /// (DrawIndices: buffer, index size, first index, index count).</summary>
         internal static void DrawSetup(in Unbound.Runtime.DrawSetup setup)
         {
             if (setup.MeshInstance is uint index) MeshInstance(index);

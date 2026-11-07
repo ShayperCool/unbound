@@ -63,7 +63,9 @@ namespace Unbound.Runtime
         /// light's colour (<c>_LightColor0</c> zero; the procedural sky's sun disk then adds
         /// nothing, while its scattering keeps the light's direction). Measured on 6000.0.71f1:
         /// procedural skies with no, simple, high-quality and zero-size disks give the same
-        /// ambient probe. Other releases project the sky as drawn.</summary>
+        /// ambient probe. That the colour, not only the disk, is left out for every sky shader
+        /// is a hypothesis: a sky tinted by <c>_LightColor0</c> is unmeasured
+        /// (docs/COMPATIBILITY_GAPS.md). Other releases project the sky as drawn.</summary>
         internal static bool SkyAmbientWithoutLightColor => RenderingMeasured;
 
         /// <summary>LineRenderer's open-strip joins of positive width as measured by the lines

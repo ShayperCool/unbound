@@ -1363,9 +1363,22 @@ mod tests {
         let mut bytes = global_array_bytes("_A", kind::SHARED_ARRAY, 0, Some(&values));
         bytes.extend(global_array_bytes("_B", kind::ARRAY_REF, 0, None));
         let commands = parse(&bytes).unwrap();
-        let [Command::Global(a, PropertyValue::Array { components: 4, data: first }),
-            Command::Global(b, PropertyValue::Array { components: 4, data: second })] =
-            commands.as_slice()
+        let [
+            Command::Global(
+                a,
+                PropertyValue::Array {
+                    components: 4,
+                    data: first,
+                },
+            ),
+            Command::Global(
+                b,
+                PropertyValue::Array {
+                    components: 4,
+                    data: second,
+                },
+            ),
+        ] = commands.as_slice()
         else {
             panic!("{commands:?}");
         };
@@ -1373,13 +1386,28 @@ mod tests {
         assert_eq!(&first[..], &values);
         assert!(std::sync::Arc::ptr_eq(first, second));
         assert!(parse(&global_array_bytes("_B", kind::ARRAY_REF, 0, None)).is_err());
-        assert!(parse(&global_array_bytes("_A", kind::SHARED_ARRAY, 1, Some(&values))).is_err());
+        assert!(
+            parse(&global_array_bytes(
+                "_A",
+                kind::SHARED_ARRAY,
+                1,
+                Some(&values)
+            ))
+            .is_err()
+        );
         // Each stream numbers its own arrays.
         let mut twice = global_array_bytes("_A", kind::SHARED_ARRAY, 0, Some(&values));
-        twice.extend(global_array_bytes("_A", kind::SHARED_ARRAY, 1, Some(&values[..4])));
+        twice.extend(global_array_bytes(
+            "_A",
+            kind::SHARED_ARRAY,
+            1,
+            Some(&values[..4]),
+        ));
         twice.extend(global_array_bytes("_B", kind::ARRAY_REF, 1, None));
         let commands = parse(&twice).unwrap();
-        assert!(matches!(&commands[2], Command::Global(_, PropertyValue::Array { data, .. }) if data.len() == 4));
+        assert!(
+            matches!(&commands[2], Command::Global(_, PropertyValue::Array { data, .. }) if data.len() == 4)
+        );
     }
 
     /// A malformed or truncated `DrawIndices` is an error, never a draw: no buffer, indices of

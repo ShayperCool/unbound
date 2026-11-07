@@ -282,7 +282,7 @@ unmeasured answer in the last column until a probe records it.
 | `MeshInstanceBatchLimits`: mesh-instancing IDs restart at 511/1023 transforms or 64 KiB of properties | cmdbuffers `graphics.meshinstances.*.batch.*` | sequential instance IDs, with a once-only warning |
 | `GraphicsFenceFrames`: a CPU fence reports passed two frames after it ran | cmdbuffers `fence.*` | passed as soon as the GPU has passed it |
 | `ZeroIndexedInstancesDrawOne`: `RenderPrimitivesIndexed` with 0 instances draws one | cmdbuffers `render.indexed.instances.zero` | draws none |
-| `SkyAmbientWithoutLightColor`: the ambient projection of the sky draws it with `_LightColor0` zero (any sky material; only the procedural sky was measured) | indirectspec, Q105 ambient controls | the sky projected as drawn, sun disk included |
+| `SkyAmbientWithoutLightColor`: the ambient projection of the sky draws it with `_LightColor0` zero (any sky material; only procedural skies with every disk mode were measured, so leaving out the colour rather than only the disk is a hypothesis until a sky tinted by `_LightColor0` is captured) | indirectspec, Q105 ambient controls | the sky projected as drawn, sun disk included |
 | `LineOpenStripJoinsMeasured`: open-strip positive-width reversal intersections, the reach limit from the segment two points back (an empirical fit: `0.75 * length[i-2] / widest half width`, clamped to [1, 3]) and the un-eased lighting tangent | lines `miterrev.*`, `miterchain.*` | the general miter rules (three quarters of the longer neighbouring segment) |
 | `ShaderKeywordsMeasured`: the built-in keyword registry and types | shaderkeywords | every name a global keyword, with a warning |
 

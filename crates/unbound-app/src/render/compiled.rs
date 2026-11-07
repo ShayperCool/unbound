@@ -1320,7 +1320,11 @@ mod tests {
             0.75,
             "declared instanced arrays select their element"
         );
-        assert_eq!(f(&out, 80), 0.5, "so do ordinary scalar uniforms of an array");
+        assert_eq!(
+            f(&out, 80),
+            0.5,
+            "so do ordinary scalar uniforms of an array"
+        );
         assert_eq!(
             [f(&out, 176), f(&out, 192)],
             [0.25, 0.75],
