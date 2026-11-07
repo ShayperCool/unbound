@@ -23,13 +23,14 @@ public partial class ParticleRandomProbe
         BirthRateControl("clear", "rate", 1, 1.013f, 10f, clear: true);
         BirthRateControl("delay", "burst", 1, 1.013f, 10f, childDelay: 0.073f);
         BirthRateControl("duration", "burst", 1, 1.013f, 10f, childDuration: 0.173f);
+        BirthRateControl("delay_long", "burst", 1, 1.013f, 10f, childDelay: 0.073f, step: 0.1f);
         Time.maximumParticleDeltaTime = maximum;
         Time.fixedDeltaTime = fixedDelta;
     }
 
     static void BirthRateControl(string name, string source, int count, float parentLife,
         float rate, bool single = false, float childLife = 0.413f, bool stop = false,
-        bool clear = false, float childDelay = 0f, float childDuration = 5f)
+        bool clear = false, float childDelay = 0f, float childDuration = 5f, float step = 0.05f)
     {
         string key = "birthrate/" + name;
         var parent = Make(key, 12345, ps =>
@@ -58,7 +59,7 @@ public partial class ParticleRandomProbe
         {
             if (i == 8 && (stop || clear))
                 parent.Stop(false, clear ? ParticleSystemStopBehavior.StopEmittingAndClear : ParticleSystemStopBehavior.StopEmitting);
-            parent.Simulate(single ? 0.9f : 0.05f, true, i == 0, false);
+            parent.Simulate(single ? 0.9f : step, true, i == 0, false);
             RecordParticles(key + "/parent/" + i, parent);
             RecordParticles(key + "/child/" + i, child);
             Record(key + "/clock/" + i, new[] { parent.time, child.time });
