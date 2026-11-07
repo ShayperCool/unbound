@@ -43,7 +43,7 @@ fn guid_of(value: Option<&Value>) -> Guid {
 }
 
 fn object_ref(file_id: i64) -> Value {
-    Value::Map(Map(vec![(
+    Value::Map(Map::from(vec![(
         "fileID".into(),
         Value::Scalar(file_id.to_string()),
     )]))
@@ -143,7 +143,7 @@ fn link_to_source(body: &mut Value, source_id: i64, source: Guid, instance: i64)
     let Some(map) = body.as_map_mut() else { return };
     map.insert(
         "m_CorrespondingSourceObject",
-        Value::Map(Map(vec![
+        Value::Map(Map::from(vec![
             ("fileID".into(), Value::Scalar(source_id.to_string())),
             ("guid".into(), Value::Scalar(source.to_string())),
             ("type".into(), Value::Scalar("3".into())),
@@ -385,7 +385,7 @@ fn insert_ref(body: &mut Value, list: &str, key: Option<&str>, id: i64, at: i64)
         return;
     }
     let entry = match key {
-        Some(k) => Value::Map(Map(vec![(k.to_string(), object_ref(id))])),
+        Some(k) => Value::Map(Map::from(vec![(k.to_string(), object_ref(id))])),
         None => object_ref(id),
     };
     if at >= 0 && (at as usize) <= items.len() {

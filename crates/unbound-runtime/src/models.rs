@@ -40,10 +40,12 @@ fn scalar(v: impl ToString) -> Value {
 }
 
 fn map(entries: Vec<(&str, Value)>) -> Value {
-    Value::Map(Map(entries
-        .into_iter()
-        .map(|(k, v)| (k.to_string(), v))
-        .collect()))
+    Value::Map(Map::from(
+        entries
+            .into_iter()
+            .map(|(k, v)| (k.to_string(), v))
+            .collect::<Vec<_>>(),
+    ))
 }
 
 fn local(file_id: i64) -> Value {
@@ -173,10 +175,11 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
             _ => None,
         };
         let mut document = clip_document(clip, mask.as_deref());
-        if let (Some(avatar), false, Value::Map(Map(entries))) =
+        if let (Some(avatar), false, Value::Map(map)) =
             (&human_avatar, clip.legacy, &mut document.body)
         {
-            entries.push(("m_UnboundHumanAvatar".to_string(), avatar.clone()));
+            map.0
+                .push(("m_UnboundHumanAvatar".to_string(), avatar.clone()));
         }
         docs.push(document);
     }
@@ -325,7 +328,10 @@ pub fn documents(guid: Guid, path: &str, model: &ImportedModel, db: &AssetDb) ->
                         ("m_Controller", local(0)),
                         // The importer applies root motion for humanoid avatars (measured:
                         // tests/projects/humanoid, the model moves with its clip).
-                        ("m_ApplyRootMotion", scalar(model.human_description.is_some() as i32)),
+                        (
+                            "m_ApplyRootMotion",
+                            scalar(model.human_description.is_some() as i32),
+                        ),
                     ]),
                 )
             });
@@ -430,7 +436,9 @@ fn material_import(
     mode: MaterialImportMode,
     description: &MaterialDescription,
 ) -> Value {
-    let named = |entries: Vec<(String, Value)>| Value::Map(Map(entries.into_iter().collect()));
+    let named = |entries: Vec<(String, Value)>| {
+        Value::Map(Map::from(entries.into_iter().collect::<Vec<_>>()))
+    };
     let xy = |v: [f32; 2]| map(vec![("x", scalar(v[0])), ("y", scalar(v[1]))]);
     let textures = description
         .textures
@@ -772,13 +780,14 @@ fn clip_document(clip: &ModelClip, mask: Option<&[(String, f32)]>) -> Document {
         }
     }
     let float_curve = |curve: Value, attribute: &str, class_id: i32| {
-        let Value::Map(Map(mut entries)) = curve else {
+        let Value::Map(map) = curve else {
             unreachable!()
         };
+        let mut entries = map.0;
         entries.push(("attribute".to_string(), scalar(attribute)));
         entries.push(("classID".to_string(), scalar(class_id)));
         entries.push(("script".to_string(), map(vec![("fileID", scalar(0))])));
-        Value::Map(Map(entries))
+        Value::Map(Map::from(entries))
     };
     let mut floats: Vec<Value> = clip
         .floats

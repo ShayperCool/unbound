@@ -1,5 +1,6 @@
 //! Unity's YAML text serialization: scenes, prefabs, assets, `.meta` files and settings.
 mod parse;
+pub mod reads;
 mod value;
 
 pub use value::{Guid, Map, ObjectRef, Value, parse_float};

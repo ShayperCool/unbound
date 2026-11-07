@@ -208,11 +208,23 @@ impl Bundle {
 
     /// A serialized file's objects as documents (see the module's documentation).
     pub fn documents(&self, path: &str) -> Result<Vec<unbound_yaml::Document>> {
+        let mut docs = self.raw_documents(path)?;
+        self.prepare_documents(&mut docs)?;
+        Ok(docs)
+    }
+
+    /// Decoded serialized input, before stream data is inlined. Diagnostics use these paths
+    /// while capturing reads from the same conversion used by `documents`.
+    pub fn raw_documents(&self, path: &str) -> Result<Vec<unbound_yaml::Document>> {
         let file = self
             .file(path)
             .with_context(|| format!("the bundle has no file {path}"))?;
-        let mut docs = crate::serialized::documents_with(&file.data, external_reference)?;
-        for doc in &mut docs {
+        crate::serialized::documents_with(&file.data, external_reference)
+    }
+
+    /// Apply the bundle's texture, mesh and shader conversions to decoded documents.
+    pub fn prepare_documents(&self, docs: &mut [unbound_yaml::Document]) -> Result<()> {
+        for doc in docs {
             if doc.class_id == 28 {
                 inline_texture(self, &mut doc.body)
                     .with_context(|| format!("texture {}", doc.file_id))?;
@@ -224,7 +236,7 @@ impl Bundle {
                 slim_shader(&mut doc.body);
             }
         }
-        Ok(docs)
+        Ok(())
     }
 }
 
@@ -498,7 +510,7 @@ mod texture_mip_tests {
 
     #[test]
     fn inlining_keeps_the_mip_count_and_original_format() {
-        let mut body = Value::Map(Map(vec![
+        let mut body = Value::Map(Map::from(vec![
             ("m_Width".into(), Value::Scalar("8".into())),
             ("m_Height".into(), Value::Scalar("4".into())),
             ("m_TextureFormat".into(), Value::Scalar("10".into())),
@@ -520,7 +532,10 @@ mod texture_mip_tests {
         assert_eq!(scalar_i64(&map, "m_SourceMipCount"), Some(4));
         assert_eq!(scalar_i64(&map, "m_SourceTextureFormat"), Some(10));
         assert_eq!(scalar_i64(&map, "m_TextureFormat"), Some(4));
-        assert_eq!(map.get("m_SourceTextureData"), Some(&Value::Scalar(hex(&chain()))));
+        assert_eq!(
+            map.get("m_SourceTextureData"),
+            Some(&Value::Scalar(hex(&chain())))
+        );
         let Some(Value::Scalar(data)) = map.get("image data") else {
             panic!("texture data")
         };

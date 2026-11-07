@@ -34,12 +34,32 @@ impl Value {
 }
 
 /// A mapping in source order. Unity mappings are small; a linear scan beats hashing.
-#[derive(Debug, Clone, PartialEq, Default, Serialize, Deserialize)]
-pub struct Map(pub Vec<(String, Value)>);
+#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[serde(transparent)]
+pub struct Map(
+    pub Vec<(String, Value)>,
+    #[serde(skip)] pub(crate) Option<crate::reads::TrackedMap>,
+);
+
+impl From<Vec<(String, Value)>> for Map {
+    fn from(entries: Vec<(String, Value)>) -> Self {
+        Self(entries, None)
+    }
+}
+
+impl PartialEq for Map {
+    fn eq(&self, other: &Self) -> bool {
+        self.0 == other.0
+    }
+}
 
 impl Map {
     pub fn get(&self, key: &str) -> Option<&Value> {
-        self.0.iter().find(|(k, _)| k == key).map(|(_, v)| v)
+        let value = self.0.iter().find(|(k, _)| k == key).map(|(_, v)| v)?;
+        if let Some(reads) = &self.1 {
+            reads.note(key);
+        }
+        Some(value)
     }
 
     pub fn get_mut(&mut self, key: &str) -> Option<&mut Value> {
@@ -55,6 +75,9 @@ impl Map {
     }
 
     pub fn remove(&mut self, key: &str) -> Option<Value> {
+        if let Some(reads) = &self.1 {
+            reads.note(key);
+        }
         let index = self.0.iter().position(|(k, _)| k == key)?;
         Some(self.0.remove(index).1)
     }
