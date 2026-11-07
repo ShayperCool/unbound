@@ -253,8 +253,20 @@ namespace UnityEngine
         internal Vector3 m_RelativeVelocity;
         internal Vector3 m_Impulse;
         internal ContactPoint[] m_Contacts = Array.Empty<ContactPoint>();
+        internal int m_ContactCount;
 
         public Collision() { }
+
+        internal void CopyFrom(Collision source)
+        {
+            m_Collider = source.m_Collider;
+            m_Rigidbody = source.m_Rigidbody;
+            m_Self = source.m_Self;
+            m_RelativeVelocity = source.m_RelativeVelocity;
+            m_Impulse = source.m_Impulse;
+            m_Contacts = source.m_Contacts;
+            m_ContactCount = source.m_ContactCount;
+        }
 
         public Vector3 impulse => m_Impulse;
 
@@ -271,22 +283,30 @@ namespace UnityEngine
 
         public GameObject gameObject => m_Rigidbody != null ? m_Rigidbody.gameObject : m_Collider != null ? m_Collider.gameObject : null;
 
-        public int contactCount => m_Contacts.Length;
+        public int contactCount => m_ContactCount;
 
         /// <summary>A new array on every call, as in Unity.</summary>
-        public ContactPoint[] contacts => (ContactPoint[])m_Contacts.Clone();
+        public ContactPoint[] contacts
+        {
+            get
+            {
+                var copy = new ContactPoint[m_ContactCount];
+                Array.Copy(m_Contacts, copy, m_ContactCount);
+                return copy;
+            }
+        }
 
         public ContactPoint GetContact(int index)
         {
-            if (index < 0 || index >= m_Contacts.Length)
-                throw new ArgumentOutOfRangeException(nameof(index), $"Cannot get contact at index {index}. There are {m_Contacts.Length} contact(s).");
+            if (index < 0 || index >= m_ContactCount)
+                throw new ArgumentOutOfRangeException(nameof(index), $"Cannot get contact at index {index}. There are {m_ContactCount} contact(s).");
             return m_Contacts[index];
         }
 
         public int GetContacts(ContactPoint[] contacts)
         {
             if (contacts == null) throw new NullReferenceException("Cannot get contacts as the provided array is NULL.");
-            int n = Math.Min(contacts.Length, m_Contacts.Length);
+            int n = Math.Min(contacts.Length, m_ContactCount);
             Array.Copy(m_Contacts, contacts, n);
             return n;
         }
@@ -295,12 +315,12 @@ namespace UnityEngine
         {
             if (contacts == null) throw new NullReferenceException("Cannot get contacts as the provided list is NULL.");
             contacts.Clear();
-            contacts.AddRange(m_Contacts);
-            return m_Contacts.Length;
+            for (int i = 0; i < m_ContactCount; i++) contacts.Add(m_Contacts[i]);
+            return m_ContactCount;
         }
 
         [Obsolete("Do not use Collision.GetEnumerator(), enumerate using non-allocating array returned by Collision.GetContacts() or enumerate using Collision.GetContact(index) instead.", false)]
-        public virtual IEnumerator GetEnumerator() => m_Contacts.GetEnumerator();
+        public virtual IEnumerator GetEnumerator() => contacts.GetEnumerator();
 
         [Obsolete("Use Collision.relativeVelocity instead. (UnityUpgradable) -> relativeVelocity", false)]
         public Vector3 impactForceSum => m_RelativeVelocity;

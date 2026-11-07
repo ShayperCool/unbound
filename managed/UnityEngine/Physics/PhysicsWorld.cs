@@ -33,6 +33,7 @@ namespace Unbound.Runtime
         static bool s_Registered;
         static bool s_Stepping;
         static readonly Dictionary<ulong, Collider> s_ByShape = new Dictionary<ulong, Collider>();
+        static readonly Dictionary<ulong, Rigidbody> s_ByActor = new Dictionary<ulong, Rigidbody>();
 
         // ------------------------------------------------------------------ physics scenes
 
@@ -46,6 +47,7 @@ namespace Unbound.Runtime
         {
             internal uint World;
             internal bool StructureDirty;
+            internal bool SelectiveContactReports;
             internal bool AttachmentDirty;
             internal readonly List<Rigidbody> Rigidbodies = new List<Rigidbody>();
             internal readonly HashSet<Rigidbody> InitiallyKinematic = new HashSet<Rigidbody>();
@@ -270,6 +272,7 @@ namespace Unbound.Runtime
             if (version != B3.Version)
                 throw new InvalidOperationException($"Unbound: the unbound_physx library is version {version}, the engine expects {B3.Version}; rebuild with cargo build");
             Physics.EnsureSettings();
+            s_Space.SelectiveContactReports = Compat.SelectiveContactReportsMeasured;
             B3.ua3_settings(Physics.s_DefaultContactOffset, Physics.s_SleepThreshold, Physics.s_DefaultMaxDepenetrationVelocity,
                 Physics.s_DefaultMaxAngularSpeed, Physics.s_DefaultSolverIterations, Physics.s_DefaultSolverVelocityIterations);
             var settings = new B3.SceneDef
@@ -369,6 +372,13 @@ namespace Unbound.Runtime
             s_InitiallyKinematic.Clear();
             s_Colliders.Clear();
             s_ByShape.Clear();
+            s_ByActor.Clear();
+            s_ContactRequestCache.Clear();
+            s_CollisionRequestTypes.Clear();
+            s_ContactDeliveries.Clear();
+            s_CollisionSnapshots.Clear();
+            s_CollisionPoints.Clear();
+            s_ReusedCollision.CopyFrom(new Collision());
             s_Pairs.Clear();
             s_PairOrder.Clear();
             s_IgnoredPairs.Clear();
@@ -726,6 +736,7 @@ namespace Unbound.Runtime
                 IsBullet = rb.NativeCollisionDetection,
             };
             rb.m_Body = B3.ua3_body_create(s_World, def);
+            if (rb.m_Body != 0) s_ByActor[rb.m_Body] = rb;
             rb.m_HasCreatedBody = true;
             rb.m_KinematicPending = rb.m_IsKinematic;
             rb.ApplyTuning();
@@ -764,6 +775,7 @@ namespace Unbound.Runtime
             // velocity belongs to that simulation step and is not retained while inactive.
             rb.m_PendingVelocity = rb.m_IsKinematic ? Vector3.zero : B3.ua3_body_get_linear_velocity(rb.m_Body);
             rb.m_PendingAngularVelocity = rb.m_IsKinematic ? Vector3.zero : B3.ua3_body_get_angular_velocity(rb.m_Body);
+            s_ByActor.Remove(rb.m_Body);
             B3.ua3_body_destroy(rb.m_Body);
             rb.m_Body = 0;
             rb.ForgetMove();
@@ -949,6 +961,7 @@ namespace Unbound.Runtime
             layerFlags = (include | exclude) != 0 ? B3.LayerOverride : 0;
             if (rb != null && !rb.m_DetectCollisions) layerFlags |= B3.LayerNoContacts;
             if (c.m_HasModifiableContacts) layerFlags |= B3.LayerModifiable;
+            if (!(c.m_Space ?? s_Space).SelectiveContactReports || c.m_ContactReportFlags != 0) layerFlags |= B3.LayerContactReports;
         }
 
         /// <summary>The filter of a collider changed (layer, include/exclude layers, layer override
@@ -1129,6 +1142,7 @@ namespace Unbound.Runtime
         {
             if (s_World == 0 || deltaTime <= 0f) return;
             SyncCurrent();
+            UpdateContactRequests();
             B3.ua3_world_set_gravity(s_World, Physics.s_Gravity);
 
             ReadBodyStates();
@@ -1193,7 +1207,7 @@ namespace Unbound.Runtime
                     var key=p.Shape0<p.Shape1 ? (p.Shape0,p.Shape1) : (p.Shape1,p.Shape0);
                     bool removed=(p.Flags & 3)!=0;
                     bool wanted=removed ? s_PublicContactPairs.Contains(key) :
-                        WantsPublicContacts(ColliderOf(p.Shape0)) || WantsPublicContacts(ColliderOf(p.Shape1));
+                        WantsPublicContacts(ColliderOf(p.Shape0), p.Events) || WantsPublicContacts(ColliderOf(p.Shape1), p.Events);
                     if (wanted) { selected.Add(index); s_PublicContactPairs.Add(key); }
                     if ((p.Events & (ushort)CollisionPairEventFlags.NotifyTouchLost)!=0) s_PublicContactPairs.Remove(key);
                 }
@@ -1230,35 +1244,70 @@ namespace Unbound.Runtime
                     Physics.SendContactEvent(SceneOf(s_Space), view);
                     foreach (var delivery in deliveries)
                         if (Physics.s_InvokeCollisionCallbacks)
-                            Physics2DWorld.Deliver(delivery.Receiver, delivery.Name, typeof(Collision), delivery.Collision);
+                            DeliverCollision(delivery.Receiver, delivery.Name, delivery.Collision, delivery.Reusable);
                 }
-                finally { s_Stepping = false; Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.Release(safety); }
+                finally
+                {
+                    deliveries.Clear();
+                    for (int i = 0; i < s_CollisionSnapshotsUsed; i++)
+                    {
+                        var collision = s_CollisionSnapshots[i];
+                        collision.m_Collider = null; collision.m_Rigidbody = null; collision.m_Self = null;
+                    }
+                    s_Stepping = false;
+                    Unity.Collections.LowLevel.Unsafe.AtomicSafetyHandle.Release(safety);
+                }
             }
         }
-        static readonly Dictionary<Type,bool> s_HasCollisionMessages = new Dictionary<Type,bool>();
-        static bool WantsPublicContacts(Collider collider)
+        // The request cache is rebuilt once per step, so compound children share their body's
+        // component scan and receiver changes take effect without scanning other colliders.
+        const int ContactEnterExit = 1, ContactStay = 2;
+        static readonly Dictionary<Type, int> s_CollisionRequestTypes = new Dictionary<Type, int>();
+        static readonly Dictionary<GameObject, int> s_ContactRequestCache = new Dictionary<GameObject, int>();
+        static readonly Type[] s_CollisionArguments = { typeof(Collision) };
+
+        static void UpdateContactRequests()
         {
-            if (collider==null) return false;
-            if (collider.m_ProvidesContacts) return true;
-            return HasReceiver(collider.m_GameObject) || HasReceiver(collider.m_AttachedBody?.m_GameObject);
+            s_ContactRequestCache.Clear();
+            foreach (var collider in s_Colliders)
+            {
+                int request = collider.m_ProvidesContacts ? ContactEnterExit | ContactStay :
+                    ReceiverRequest(collider.m_GameObject) | ReceiverRequest(collider.m_AttachedBody?.m_GameObject);
+                if (request == collider.m_ContactReportFlags) continue;
+                collider.m_ContactReportFlags = request;
+                Refilter(collider);
+            }
         }
-        static bool HasReceiver(GameObject go)
+
+        static int ReceiverRequest(GameObject go)
         {
-            if (go==null) return false;
+            if (go == null) return 0;
+            if (s_ContactRequestCache.TryGetValue(go, out int request)) return request;
             foreach (var component in go.m_Components)
             {
                 if (!(component is MonoBehaviour) || component.m_Destroyed) continue;
-                var type=component.GetType();
-                if (!s_HasCollisionMessages.TryGetValue(type,out bool has))
+                var type = component.GetType();
+                if (!s_CollisionRequestTypes.TryGetValue(type, out int flags))
                 {
-                    foreach (string name in s_CollisionMessages)
-                        if (ScriptMessages.Find(type,name,new[]{typeof(Collision)})!=null || ScriptMessages.Find(type,name,Type.EmptyTypes)!=null)
-                        { has=true; break; }
-                    s_HasCollisionMessages[type]=has;
+                    for (int i = 0; i < s_CollisionMessages.Length; i++)
+                        if (ScriptMessages.Find(type, s_CollisionMessages[i], s_CollisionArguments) != null ||
+                            ScriptMessages.Find(type, s_CollisionMessages[i], Type.EmptyTypes) != null)
+                            flags |= i == 1 ? ContactStay : ContactEnterExit;
+                    s_CollisionRequestTypes[type] = flags;
                 }
-                if (has) return true;
+                request |= flags;
             }
-            return false;
+            s_ContactRequestCache[go] = request;
+            return request;
+        }
+
+        static bool WantsPublicContacts(Collider collider, ushort events)
+        {
+            if (collider == null) return false;
+            int request = collider.m_ContactReportFlags;
+            if (!s_Space.SelectiveContactReports) return request != 0;
+            return (request & ContactStay) != 0 || ((request & ContactEnterExit) != 0 &&
+                (events & (ushort)(CollisionPairEventFlags.NotifyTouchFound | CollisionPairEventFlags.NotifyTouchLost)) != 0);
         }
 
         readonly struct ContactDelivery
@@ -1266,12 +1315,39 @@ namespace Unbound.Runtime
             internal readonly GameObject Receiver;
             internal readonly string Name;
             internal readonly Collision Collision;
+            internal readonly bool Reusable;
             internal ContactDelivery(GameObject receiver, string name, Collision collision)
-            { Receiver=receiver; Name=name; Collision=collision; }
+            { Receiver=receiver; Name=name; Collision=collision; Reusable=Physics.s_ReuseCollisionCallbacks; }
         }
+        static readonly List<ContactDelivery> s_ContactDeliveries = new List<ContactDelivery>();
+        static readonly List<Collision> s_CollisionSnapshots = new List<Collision>();
+        static readonly Collision s_ReusedCollision = new Collision();
+        static readonly List<ContactPoint> s_CollisionPoints = new List<ContactPoint>(16);
+        static int s_CollisionSnapshotsUsed;
+
+        static void DeliverCollision(GameObject receiver, string name, Collision collision, bool bufferedReusable = false)
+        {
+            if (Physics.s_ReuseCollisionCallbacks && !ReferenceEquals(collision, s_ReusedCollision))
+            {
+                s_ReusedCollision.CopyFrom(collision);
+                collision = s_ReusedCollision;
+            }
+            else if (!Physics.s_ReuseCollisionCallbacks && bufferedReusable)
+            {
+                // A ContactEvent listener can change reuse before these buffered messages run.
+                var retained = new Collision();
+                retained.CopyFrom(collision);
+                retained.m_Contacts = collision.contacts;
+                collision = retained;
+            }
+            Physics2DWorld.Deliver(receiver, name, typeof(Collision), collision);
+        }
+
         static List<ContactDelivery> PrepareCollisionMessages()
         {
-            var deliveries = new List<ContactDelivery>();
+            var deliveries = s_ContactDeliveries;
+            deliveries.Clear();
+            s_CollisionSnapshotsUsed = 0;
             foreach (var pair in s_PairOrder.ToArray())
             {
                 if (pair.IsTrigger) continue;
@@ -1296,12 +1372,14 @@ namespace Unbound.Runtime
                 {
                     var go=self.m_GameObject;
                     if (go==null || go.m_Destroyed || !go.activeInHierarchy) return;
-                    var collision=MakeCollision(pair,self,other,phase,flip);
+                    var rbGo = self.m_AttachedBody?.m_GameObject;
+                    bool ownReceiver = ReceiverRequest(go) != 0;
+                    bool bodyReceiver = rbGo != null && rbGo != go && rbGo.activeInHierarchy && ReceiverRequest(rbGo) != 0;
+                    if (!ownReceiver && !bodyReceiver) return;
+                    var collision=MakeCollision(pair,self,other,phase,flip, snapshot: true);
                     var name=s_CollisionMessages[(int)phase];
-                    deliveries.Add(new ContactDelivery(go,name,collision));
-                    var rbGo=self.m_AttachedBody?.m_GameObject;
-                    if (rbGo!=null && rbGo!=go && rbGo.activeInHierarchy)
-                        deliveries.Add(new ContactDelivery(rbGo,name,collision));
+                    if (ownReceiver) deliveries.Add(new ContactDelivery(go,name,collision));
+                    if (bodyReceiver) deliveries.Add(new ContactDelivery(rbGo,name,collision));
                 }
             }
         }
@@ -1310,10 +1388,7 @@ namespace Unbound.Runtime
             !removed && s_ByShape.TryGetValue(shape, out var c) && c != null ? c.GetInstanceID() : 0;
         internal static int BodyInstanceId(ulong actor, bool removed)
         {
-            if (removed) return 0;
-            foreach (var rb in s_Rigidbodies)
-                if (rb.m_Body == actor && rb != null) return rb.GetInstanceID();
-            return 0;
+            return !removed && s_ByActor.TryGetValue(actor, out var rb) && rb != null ? rb.GetInstanceID() : 0;
         }
 
         static ulong[] s_StateBodies = new ulong[64];
@@ -1645,35 +1720,42 @@ namespace Unbound.Runtime
             else
             {
                 var name = s_CollisionMessages[(int)phase];
+                bool ownReceiver = ReceiverRequest(go) != 0;
+                bool bodyReceiver = rbGo != null && rbGo != go && rbGo.activeInHierarchy && ReceiverRequest(rbGo) != 0;
+                if (!ownReceiver && !bodyReceiver) return;
                 var collision = MakeCollision(pair, self, other, phase, flip);
-                Physics2DWorld.Deliver(go, name, typeof(Collision), collision);
-                if (rbGo != null && rbGo != go && rbGo.activeInHierarchy) Physics2DWorld.Deliver(rbGo, name, typeof(Collision), collision);
+                if (ownReceiver) DeliverCollision(go, name, collision);
+                if (bodyReceiver) DeliverCollision(rbGo, name, collision);
             }
         }
 
-        static Collision MakeCollision(Pair pair, Collider self, Collider other, Phase phase, bool flip)
+        static Collision MakeCollision(Pair pair, Collider self, Collider other, Phase phase, bool flip, bool snapshot = false)
         {
-            var collision = new Collision
+            Collision collision;
+            if (!Physics.s_ReuseCollisionCallbacks) collision = new Collision();
+            else if (!snapshot) collision = s_ReusedCollision;
+            else
             {
-                m_Collider = other,
-                m_Rigidbody = other.m_AttachedBody,
-                m_Self = self,
-            };
-            // Unity 6000.0.71f1, physicsccdhinge: stays also report the incoming velocity.
-            if (phase == Phase.Enter) collision.m_RelativeVelocity = flip ? -pair.EnterRelativeVelocity : pair.EnterRelativeVelocity;
-            else if (phase == Phase.Exit) collision.m_RelativeVelocity = PreStepVelocity(other) - PreStepVelocity(self);
-            else collision.m_RelativeVelocity = PreStepVelocity(other) - PreStepVelocity(self);
-            if (phase == Phase.Exit)
-            {
-                collision.m_Contacts = Array.Empty<ContactPoint>();
-                return collision;
+                if (s_CollisionSnapshotsUsed == s_CollisionSnapshots.Count) s_CollisionSnapshots.Add(new Collision());
+                collision = s_CollisionSnapshots[s_CollisionSnapshotsUsed++];
             }
-            var points = new List<ContactPoint>(4);
+            collision.m_Collider = other;
+            collision.m_Rigidbody = other.m_AttachedBody;
+            collision.m_Self = self;
+            collision.m_RelativeVelocity = phase == Phase.Enter
+                ? (flip ? -pair.EnterRelativeVelocity : pair.EnterRelativeVelocity)
+                : PreStepVelocity(other) - PreStepVelocity(self);
+            collision.m_Impulse = Vector3.zero;
+            collision.m_ContactCount = 0;
+            if (phase == Phase.Exit) return collision;
+            var points = s_CollisionPoints;
+            points.Clear();
             CollectContacts(self, other, points);
-            collision.m_Contacts = points.ToArray();
-            var impulse = Vector3.zero;
-            foreach (var p in points) impulse += p.m_Impulse;
-            collision.m_Impulse = impulse;
+            if (collision.m_Contacts.Length < points.Count)
+                collision.m_Contacts = new ContactPoint[Math.Max(4, points.Count * 2)];
+            points.CopyTo(collision.m_Contacts);
+            collision.m_ContactCount = points.Count;
+            foreach (var point in points) collision.m_Impulse += point.m_Impulse;
             return collision;
         }
 

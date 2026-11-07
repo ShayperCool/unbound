@@ -15,7 +15,7 @@ namespace Unbound.Box3D
         const string Library = "unbound_physx";
 
         /// <summary>The shim version this binding was written for.</summary>
-        internal const int Version = 16;
+        internal const int Version = 17;
 
         // The per-body accessors called every step are constant time, never block and never call
         // back into managed code: they skip the GC transition ([SuppressGCTransition]).
@@ -138,6 +138,7 @@ namespace Unbound.Box3D
         /// <summary>Layer flags: the collider's contact pairs go to contact modification
         /// (Collider.hasModifiableContacts).</summary>
         internal const int LayerModifiable = 4;
+        internal const int LayerContactReports = 8;
 
         [StructLayout(LayoutKind.Sequential)]
         internal struct Pair

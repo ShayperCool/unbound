@@ -223,7 +223,7 @@ namespace UnityEngine
                 Material = shape.Material,
                 StaticFriction = shape.StaticFriction,
                 DetectCollisions = m_DetectCollisions ? 1 : 0,
-                LayerFlags = shape.LayerFlags & B3.LayerOverride,
+                LayerFlags = shape.LayerFlags & (B3.LayerOverride | B3.LayerModifiable | B3.LayerContactReports),
                 LayerPriority = shape.LayerPriority,
             };
             m_Controller = B3.ua3_cct_create(W.World, def);
@@ -240,7 +240,7 @@ namespace UnityEngine
         internal void SetFilter(ulong category, ulong mask, int layerFlags)
         {
             if (m_Controller != 0)
-                B3.ua3_cct_set_filter(m_Controller, category, mask, m_DetectCollisions ? 1 : 0, layerFlags & B3.LayerOverride, m_LayerOverridePriority);
+                B3.ua3_cct_set_filter(m_Controller, category, mask, m_DetectCollisions ? 1 : 0, layerFlags & (B3.LayerOverride | B3.LayerModifiable | B3.LayerContactReports), m_LayerOverridePriority);
         }
 
         /// <summary>The transform moved or scaled: the capsule follows it.</summary>

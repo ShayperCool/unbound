@@ -183,6 +183,171 @@ namespace UnityEngine.Tests
             Assert.True(go.transform.position.x > lane.x + 8f, $"stopped at {go.transform.position.x - lane.x}");
         }
 
+        public sealed class Receiver : MonoBehaviour
+        {
+            void OnCollisionStay(Collision collision) { }
+        }
+
+        [Theory]
+        [InlineData(false, false, false)]
+        [InlineData(true, false, false)]
+        [InlineData(false, true, false)]
+        [InlineData(true, true, false)]
+        [InlineData(false, false, true)]
+        [InlineData(true, false, true)]
+        public void LiveFlagChangesFollowThePairsContactPointRequest(bool initial, bool receiver, bool provides)
+        {
+            string release = ProjectInfo.UnityVersion;
+            var active = SceneManager.GetActiveScene();
+            Scene scene;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            try
+            {
+                scene = SceneManager.CreateScene("LiveContacts" + s_Lane, new CreateSceneParameters(LocalPhysicsMode.Physics3D));
+                m_Scenes.Add(scene);
+                SceneManager.SetActiveScene(scene);
+                // Create the scene's native world while its measured profile is selected.
+                var anchor = new GameObject("Anchor"); m_Made.Add(anchor);
+                anchor.AddComponent<BoxCollider>();
+            }
+            finally { ProjectInfo.UnityVersion = release; }
+            var physics = scene.GetPhysicsScene();
+            void Steps(int count) { for (int i = 0; i < count; i++) physics.Simulate(Dt); }
+            var lane = Lane();
+            Box(lane, new Vector3(10, 1, 10), false);
+            var box = Box(lane + Vector3.up, Vector3.one, true);
+            var col = box.GetComponent<BoxCollider>();
+            col.hasModifiableContacts = initial;
+            col.providesContacts = provides;
+            if (receiver) box.AddComponent<Receiver>().enabled = false;
+            box.GetComponent<Rigidbody>().sleepThreshold = 0;
+            SceneManager.SetActiveScene(active);
+            Steps(2);
+            Assert.Equal(initial, m_Pairs.Count != 0);
+            col.hasModifiableContacts = !initial;
+            m_Pairs.Clear();
+            Steps(2);
+            Assert.Equal(receiver || provides ? initial : !initial, m_Pairs.Count != 0);
+            // A new overlap uses the current flag even when reports keep points requested.
+            var rb = box.GetComponent<Rigidbody>();
+            rb.position = lane + Vector3.up * 5;
+            Steps(1);
+            rb.position = lane + Vector3.up;
+            rb.linearVelocity = Vector3.zero;
+            m_Pairs.Clear();
+            Steps(2);
+            Assert.Equal(!initial, m_Pairs.Count != 0);
+        }
+
+        public sealed class ReuseReceiver : MonoBehaviour
+        {
+            internal static readonly List<Collision> Seen = new List<Collision>();
+            internal static readonly List<int> Counts = new List<int>();
+            void OnCollisionEnter(Collision collision) { Seen.Add(collision); Counts.Add(collision.contactCount); }
+            void OnCollisionStay(Collision collision) { Seen.Add(collision); Counts.Add(collision.contactCount); }
+        }
+
+        [Theory]
+        [InlineData(false, false)]
+        [InlineData(true, false)]
+        [InlineData(false, true)]
+        [InlineData(true, true)]
+        public void CollisionObjectReuseAppliesToBothDeliveryPaths(bool reuse, bool reports)
+        {
+            bool previous = Physics.reuseCollisionCallbacks;
+            Physics.ContactEventDelegate handler = (_, __) => { };
+            var lane = Lane();
+            var floor = Box(lane, new Vector3(10, 1, 10), false);
+            var box = Box(lane + Vector3.up, Vector3.one, true);
+            floor.AddComponent<ReuseReceiver>();
+            box.AddComponent<ReuseReceiver>();
+            box.GetComponent<Rigidbody>().sleepThreshold = 0;
+            ReuseReceiver.Seen.Clear(); ReuseReceiver.Counts.Clear();
+            Physics.reuseCollisionCallbacks = reuse;
+            if (reports) Physics.ContactEvent += handler;
+            try
+            {
+                Steps(3);
+                Assert.Equal(6, ReuseReceiver.Seen.Count);
+                for (int i = 0; i < ReuseReceiver.Seen.Count; i++)
+                {
+                    Assert.Equal(i == 0 || reuse, ReferenceEquals(ReuseReceiver.Seen[0], ReuseReceiver.Seen[i]));
+                    Assert.Equal(4, ReuseReceiver.Counts[i]);
+                }
+            }
+            finally
+            {
+                if (reports) Physics.ContactEvent -= handler;
+                Physics.reuseCollisionCallbacks = previous;
+                ReuseReceiver.Seen.Clear(); ReuseReceiver.Counts.Clear();
+            }
+        }
+
+        [Fact]
+        public void CompoundActorIdentitiesSurviveReplacementAndAreSharedByAllChildren()
+        {
+            var lane = Lane();
+            var floor = Box(lane, new Vector3(10, 1, 10), false).GetComponent<Collider>();
+            for (int generation = 0; generation < 3; generation++)
+            {
+                var root = new GameObject("Compound"); m_Made.Add(root);
+                root.transform.position = lane + Vector3.up;
+                var rb = root.AddComponent<Rigidbody>();
+                rb.sleepThreshold = 0;
+                var children = new HashSet<int>();
+                for (int i = 0; i < 2; i++)
+                {
+                    var child = new GameObject("Child");
+                    child.transform.SetParent(root.transform, false);
+                    child.transform.localPosition = new Vector3(i * 2 - 1, 0, 0);
+                    var col = Add<SphereCollider>(child);
+                    col.hasModifiableContacts = true;
+                    children.Add(col.GetInstanceID());
+                }
+                int count = 0;
+                Action<PhysicsScene, NativeArray<ModifiableContactPair>> handler = (scene, pairs) =>
+                {
+                    foreach (var pair in pairs)
+                    {
+                        bool first = children.Contains(pair.colliderInstanceID);
+                        if (!first && !children.Contains(pair.otherColliderInstanceID)) continue;
+                        Assert.Equal(rb.GetInstanceID(), first ? pair.bodyInstanceID : pair.otherBodyInstanceID);
+                        Assert.Equal(0, first ? pair.otherBodyInstanceID : pair.bodyInstanceID);
+                        Assert.Equal(floor.GetInstanceID(), first ? pair.otherColliderInstanceID : pair.colliderInstanceID);
+                        count++;
+                    }
+                };
+                Physics.ContactModifyEvent += handler;
+                try { Steps(1); }
+                finally { Physics.ContactModifyEvent -= handler; }
+                Assert.Equal(2, count);
+                Object.DestroyImmediate(root);
+                Steps(1);
+            }
+        }
+
+        [Fact]
+        public void FlaggedControllerReportsSimulationContactsButNotItsMoves()
+        {
+            var lane = Lane();
+            Box(lane, new Vector3(10, 1, 10), false);
+            var go = new GameObject("Controller"); m_Made.Add(go);
+            go.transform.position = lane + Vector3.up * 1.5f;
+            var controller = Add<CharacterController>(go);
+            Assert.False(controller.hasModifiableContacts);
+            controller.hasModifiableContacts = true;
+            Assert.True(controller.hasModifiableContacts);
+            controller.Move(Vector3.down * .5f);
+            Steps(1);
+            Assert.Empty(m_Pairs);
+            var box = Box(lane + Vector3.up * 2.5f, Vector3.one, true);
+            box.GetComponent<Rigidbody>().sleepThreshold = 0;
+            Steps(3);
+            Assert.NotEmpty(m_Pairs);
+            foreach (var pair in m_Pairs)
+                Assert.Contains(controller.GetInstanceID(), new[] { pair.Collider, pair.Other });
+        }
+
         [Fact]
         public void LocalPhysicsSceneReportsItsOwnScene()
         {

@@ -23,6 +23,7 @@ namespace UnityEngine
         internal int m_ExcludeLayers;
         internal int m_LayerOverridePriority;
         internal bool m_ProvidesContacts;
+        internal int m_ContactReportFlags;
         internal bool m_HasModifiableContacts;
 
         // Runtime tuning is not serialized or copied into clones. Keep the creation-time

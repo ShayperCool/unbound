@@ -46,7 +46,7 @@ using namespace physx;
 #endif
 
 // The version of this API; the managed side checks it.
-#define UA3_VERSION 16
+#define UA3_VERSION 17
 
 struct ua3_scene_def
 {
@@ -183,6 +183,7 @@ enum : int
 	LayerOverride = 1,
 	LayerNoContacts = 2,
 	LayerModifiable = 4,
+	LayerContactReports = 8,
 };
 
 // Simulation filter data: word0 the category (the layer's bit), word1 the mask (the layers this
@@ -201,6 +202,7 @@ enum : PxU32
 	FlagLayerOverride = 64,
 	FlagNoContacts = 128,
 	FlagModifiable = 256,
+	FlagContactReports = 512,
 };
 
 // Whether two colliders' layers let them meet (Collider.layerOverridePriority, 6000.0 Scripting
@@ -680,7 +682,11 @@ PxFilterFlags shader( PxFilterObjectAttributes attributes0, PxFilterData data0, 
 	bool moving0 = PxGetFilterObjectType( attributes0 ) == PxFilterObjectType::eRIGID_DYNAMIC && !PxFilterObjectIsKinematic( attributes0 );
 	bool moving1 = PxGetFilterObjectType( attributes1 ) == PxFilterObjectType::eRIGID_DYNAMIC && !PxFilterObjectIsKinematic( attributes1 );
 	pairFlags = PxPairFlag::eDETECT_DISCRETE_CONTACT | PxPairFlag::eNOTIFY_TOUCH_FOUND | PxPairFlag::eNOTIFY_TOUCH_LOST |
-				PxPairFlag::eNOTIFY_TOUCH_PERSISTS | PxPairFlag::eNOTIFY_CONTACT_POINTS;
+				PxPairFlag::eNOTIFY_TOUCH_PERSISTS;
+	if ( ( data0.word2 | data1.word2 ) & FlagContactReports )
+	{
+		pairFlags |= PxPairFlag::eNOTIFY_CONTACT_POINTS;
+	}
 	if ( ( data0.word2 | data1.word2 ) & FlagModifiable )
 	{
 		pairFlags |= PxPairFlag::eMODIFY_CONTACTS;
@@ -743,7 +749,8 @@ PxU32 filter_flags( const PxShape* shape, const PxRigidActor* actor )
 	ShapeInfo* i = info( shape );
 	return ( i->contactEvents ? FlagContactEvents : 0u ) | ( i->sensorEvents ? FlagSensorEvents : 0u ) | ( i->ignores > 0 ? FlagIgnores : 0u ) |
 		   ( i->layers & LayerOverride ? FlagLayerOverride : 0u ) | ( i->layers & LayerNoContacts ? FlagNoContacts : 0u ) |
-		   ( i->layers & LayerModifiable ? FlagModifiable : 0u ) | ccd_bits( actor != nullptr ? actor : shape->getActor() );
+		   ( i->layers & LayerModifiable ? FlagModifiable : 0u ) |
+		   ( i->layers & LayerContactReports ? FlagContactReports : 0u ) | ccd_bits( actor != nullptr ? actor : shape->getActor() );
 }
 
 void set_filter_flags( PxShape* shape, const PxRigidActor* actor = nullptr )
@@ -3138,7 +3145,7 @@ UA3_API uint64_t ua3_cct_create( uint32_t id, const ua3_cct_def* def )
 	c->controller = static_cast<PxCapsuleController*>( controller );
 	PxRigidDynamic* actor = controller->getActor();
 	actor->getShapes( &c->shape, 1 );
-	ShapeInfo* i = new ShapeInfo{ 1.0f, true, true, 0, ( def->layerFlags & LayerOverride ) | ( def->detectCollisions ? 0 : LayerNoContacts ) };
+	ShapeInfo* i = new ShapeInfo{ 1.0f, true, true, 0, ( def->layerFlags & ( LayerOverride | LayerModifiable | LayerContactReports ) ) | ( def->detectCollisions ? 0 : LayerNoContacts ) };
 	c->shape->userData = i;
 	c->shape->setSimulationFilterData( PxFilterData( static_cast<PxU32>( def->categoryBits ), c->mask, 0, static_cast<PxU32>( def->layerPriority ) ) );
 	set_filter_flags( c->shape );
@@ -3172,7 +3179,7 @@ UA3_API void ua3_cct_set_filter( uint64_t id, uint64_t categoryBits, uint64_t ma
 		return;
 	}
 	c->mask = static_cast<PxU32>( maskBits );
-	info( c->shape )->layers = ( layerFlags & LayerOverride ) | ( detectCollisions ? 0 : LayerNoContacts );
+	info( c->shape )->layers = ( layerFlags & ( LayerOverride | LayerModifiable | LayerContactReports ) ) | ( detectCollisions ? 0 : LayerNoContacts );
 	PxFilterData data = c->shape->getSimulationFilterData();
 	data.word0 = static_cast<PxU32>( categoryBits );
 	data.word1 = c->mask;
