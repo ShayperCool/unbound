@@ -1607,15 +1607,23 @@ namespace UnityEngine
         }
 
         /// <summary>Ages and moves the particles by a step; a particle whose remaining lifetime drops
-        /// below zero dies and the last particle takes its place (Unity keeps one at exactly zero
-        /// until the next step).</summary>
+        /// below zero dies (Unity keeps one at exactly zero until the next step).
+        /// <para>Every particle in the buffer at the start of the step is updated in its own slot
+        /// before any death is compacted, so the four-lane module samples (randomized force lanes,
+        /// the speed modifier's group seed) never depend on which particles die. A carrier of a
+        /// fading trail still occupies its lane. The dead then leave by
+        /// <see cref="RemoveDeadSlots"/> (6000.0.71f1, particlerandom model/death/).</para></summary>
         void UpdateParticles(float dt)
         {
             if (m_Count == 0) return;
             bool deathSubs = m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Death);
-            for (int i = 0; i < m_Count;)
+            int count = m_Count;
+            var marks = SlotMarks(count);
+            bool anyDead = false;
+            for (int i = 0; i < count; i++)
             {
-                if ((m_Particles[i].m_Flags & Particle.FlagOrphanTrail) != 0) { i++; continue; }
+                BeginModuleSample(i, m_Particles[i].m_RandomSeed);
+                if ((m_Particles[i].m_Flags & Particle.FlagOrphanTrail) != 0) continue;
                 // A particle a trigger killed in the previous update dies now, without ageing again,
                 // like one whose life ran out exactly at the end of that update.
                 bool killed = (m_Particles[i].m_Flags & Particle.FlagTriggerKilled) != 0;
@@ -1627,12 +1635,9 @@ namespace UnityEngine
                     ageBefore = m_Particles[i].Age01;
                 }
                 bool agedOut = false;
-                BeginModuleSample(i, m_Particles[i].m_RandomSeed);
-                if (!killed && Integrate(ref m_Particles[i], dt, ref m_Context, true, out agedOut))
-                {
-                    i++;
-                    continue;
-                }
+                if (!killed && Integrate(ref m_Particles[i], dt, ref m_Context, true, out agedOut)) continue;
+                marks[i] = SlotMark.Dead;
+                anyDead = true;
                 if (deathSubs)
                 {
                     // Its Death sub-emitters fire where the whole step's movement takes it, not where
@@ -1641,19 +1646,15 @@ namespace UnityEngine
                     // .51; killed at .51, it emits at .56 in the next step; the broad parent dying in
                     // the first of two steps emits at 1.05). Only the event's position moves: the
                     // particle itself, its trail and what children inherit from it stay as they were.
-                    var dying = m_Particles[i];
-                    if (killed || agedOut)
-                    {
-                        var end = dying;
-                        Move(ref end, dt, ref m_Context, ageBefore, out _);
-                        dying.m_Position = end.m_Position;
-                    }
-                    TriggerSubEmitters(ParticleSystemSubEmitterType.Death, ref dying);
+                    // The movement uses this slot's module samples, so it is taken now.
+                    var end = m_Particles[i];
+                    if (killed || agedOut) Move(ref end, dt, ref m_Context, ageBefore, out _);
+                    m_SlotPoints[i] = end.m_Position;
                 }
-                if (KeepOrphanTrail(ref m_Particles[i])) { i++; continue; }
-                EndTrail(ref m_Particles[i]);
-                RemoveAt(i);
             }
+            // A sub-emitter can only add particles to other systems, so the flags still
+            // describe this buffer while the dead leave.
+            if (anyDead) RemoveDeadSlots(0, deathSubs ? DeadSlotRemoval.DeathWithSubEmitters : DeadSlotRemoval.Death);
         }
 
         /// <summary>Advances one particle by <paramref name="dt"/>; false when it dies. The lifetime

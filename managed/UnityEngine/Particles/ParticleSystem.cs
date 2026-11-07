@@ -566,19 +566,86 @@ namespace UnityEngine
             }
             // Native consumes the input lifetime before encoding normalized age. Nonpositive
             // inputs die immediately; tiny positive inputs can export as zero and still survive.
-            // Native's observed compaction order is four-slot groups aligned to the buffer:
-            // collect dead slots, remove high to low, then revisit the group after swap-back.
             // The retained prefix is untouched, even when its exported lifetime is zero.
-            for (int block = offset & ~3; block < m_Count;)
-            {
-                int dead = 0;
-                for (int i = Math.Max(block, offset); i < Math.Min(block + 4, m_Count); i++)
-                    if (DiesWhenWritten(i)) dead |= 1 << (i - block);
-                if (dead == 0) { block += 4; continue; }
-                for (int lane = 3; lane >= 0; lane--)
-                    if ((dead & (1 << lane)) != 0) RemoveAt(block + lane);
-            }
+            var marks = SlotMarks(m_Count);
+            for (int i = offset; i < m_Count; i++)
+                if (DiesWhenWritten(i)) marks[i] = SlotMark.Dead;
+            RemoveDeadSlots(offset & ~3, DeadSlotRemoval.Drop);
             for (int i = offset; i < m_Count; i++) SettleWrittenParticle(i);
+        }
+
+        /// <summary>What leaving the buffer means for a dead slot: SetParticles just drops it; a death in a step ends its trail (or leaves it to fade), and can fire
+        /// Death sub-emitters.</summary>
+        enum DeadSlotRemoval : byte { Drop, Death, DeathWithSubEmitters }
+
+        [Flags]
+        enum SlotMark : byte { Dead = 1, Admitted = 2 }
+
+        // Per-slot removal state and a point each slot carries through the compaction (a dying
+        // particle's event position, a newborn's origin), reused by every step (grown, never shrunk).
+        SlotMark[] m_SlotMarks = Array.Empty<SlotMark>();
+        Vector3[] m_SlotPoints = Array.Empty<Vector3>();
+
+        /// <summary>The cleared marks for slots [0, <paramref name="count"/>).</summary>
+        SlotMark[] SlotMarks(int count)
+        {
+            if (m_SlotMarks.Length < count)
+            {
+                m_SlotMarks = new SlotMark[Math.Max(count, m_SlotMarks.Length * 2)];
+                m_SlotPoints = new Vector3[m_SlotMarks.Length];
+            }
+            else Array.Clear(m_SlotMarks, 0, count);
+            return m_SlotMarks;
+        }
+
+        /// <summary>Removes the slots marked dead from <paramref name="from"/> (a multiple of four)
+        /// on. Unity 6000.0.71f1 compacts in four-slot groups aligned to the buffer: it collects
+        /// a group's dead slots, removes them high to low, each taking the last particle in, then
+        /// revisits the group, whose swapped-in particles can be dead too (particlerandom
+        /// setparticles and model/death/: the same order for SetParticles and for deaths in a
+        /// step; a rate batch's newborns follow another order, see FlushRateBatch). A dying
+        /// particle fires its Death sub-emitters as it leaves; one whose trail stays to fade
+        /// keeps its slot.</summary>
+        void RemoveDeadSlots(int from, DeadSlotRemoval removal)
+        {
+            var marks = m_SlotMarks;
+            for (int block = from; block < m_Count;)
+            {
+                int mask = 0;
+                for (int i = block; i < Math.Min(block + 4, m_Count); i++)
+                    if ((marks[i] & SlotMark.Dead) != 0) mask |= 1 << (i - block);
+                if (mask == 0) { block += 4; continue; }
+                for (int lane = 3; lane >= 0; lane--)
+                {
+                    if ((mask & (1 << lane)) == 0) continue;
+                    int index = block + lane;
+                    marks[index] = 0;
+                    if (removal != DeadSlotRemoval.Drop)
+                    {
+                        if (removal == DeadSlotRemoval.DeathWithSubEmitters)
+                        {
+                            var dying = m_Particles[index];
+                            dying.m_Position = m_SlotPoints[index];
+                            TriggerSubEmitters(ParticleSystemSubEmitterType.Death, ref dying);
+                        }
+                        if (KeepOrphanTrail(ref m_Particles[index])) continue;
+                        EndTrail(ref m_Particles[index]);
+                    }
+                    RemoveSlot(index);
+                }
+            }
+        }
+
+        /// <summary>Removes a slot as <see cref="RemoveAt"/> does; the last slot's mark and
+        /// point move with its particle.</summary>
+        void RemoveSlot(int index)
+        {
+            int last = m_Count - 1;
+            RemoveAt(index);
+            if (index >= last) return;
+            m_SlotMarks[index] = m_SlotMarks[last];
+            m_SlotPoints[index] = m_SlotPoints[last];
+            m_SlotMarks[last] = 0;
         }
 
         /// <summary>SetParticles' write of one slot: the public particle replaces it.</summary>
