@@ -6,7 +6,7 @@ pub mod executor;
 pub mod pipelines;
 pub mod resources;
 
-use crate::{backend::GpuBackend, materials::Resolver, shaderlab::ShaderIndex};
+use crate::backend::GpuBackend;
 use bevy::{
     ecs::schedule::{ScheduleBuildSettings, ScheduleLabel},
     prelude::*,
@@ -79,10 +79,7 @@ impl Plugin for UnityRenderPlugin {
         let adapter = render_app.world().resource::<RenderAdapterInfo>();
         let center_anisotropic_lod =
             adapter.backend == wgpu::Backend::Vulkan && adapter.vendor == 0x10de;
-        let index = ShaderIndex::scan(&self.shader_roots);
-        if !self.shader_roots.is_empty() {
-            tracing::info!("indexed {} shaders", index.len());
-        }
+        let resolver = self.backend.take_resolver(&self.shader_roots);
         let latest = Arc::new(Mutex::new(None));
         unbound_runtime::state::set_gpu_bc7(
             device
@@ -100,7 +97,7 @@ impl Plugin for UnityRenderPlugin {
         self.backend.install(UnityRenderer::new(
             device.wgpu_device().clone(),
             wgpu_queue,
-            Resolver::new(index),
+            resolver,
             compiled::CompiledPrograms::new(self.shader_compiler.clone()),
             latest.clone(),
             center_anisotropic_lod,

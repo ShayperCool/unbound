@@ -1305,7 +1305,12 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     };
     // The window: the renderer is installed before the game starts so the first scene's
     // uploads reach it.
-    let backend = std::sync::Arc::new(unbound_app::backend::GpuBackend::new());
+    let (shader_compiler, mut shader_roots, builtin_roots) = shader_setup(&project, &args.target);
+    shader_roots.extend(builtin_roots);
+    // Shader queries of the first frame's scripts are answered before the GPU is up.
+    let backend = std::sync::Arc::new(unbound_app::backend::GpuBackend::with_shader_roots(
+        shader_roots.clone(),
+    ));
     let mut game =
         unbound_runtime::Game::start_with_backend(&project, &options, Some(backend.clone()))?;
     if run.watch {
@@ -1322,8 +1327,6 @@ fn run_session(args: &ProjectArgs, run: RunArgs) -> Result<()> {
     } else {
         project.settings.product_name.clone()
     };
-    let (shader_compiler, mut shader_roots, builtin_roots) = shader_setup(&project, &args.target);
-    shader_roots.extend(builtin_roots);
     let frames = match (run.frames, &run.screenshot) {
         (None, Some(_)) => Some(5),
         (frames, _) => frames,
