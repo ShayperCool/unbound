@@ -23,10 +23,16 @@ namespace UnityEngine.Tests
                     for (int col = 0; col < 3; col++) Assert.Equal(model[row,col], snapped[row,col]);
                 PixelPerfectRendering.pixelSnapSpacing = -.25f;
                 Assert.Equal(snapped, PixelPerfectRendering.Snap(model));
-                foreach (float value in new[] {0f, float.NaN, float.PositiveInfinity})
+                foreach (float value in new[] {0f})
                 {
                     PixelPerfectRendering.pixelSnapSpacing = value;
                     Assert.Equal(model, PixelPerfectRendering.Snap(model));
+                }
+                foreach (float value in new[] {float.NaN, float.PositiveInfinity})
+                {
+                    PixelPerfectRendering.pixelSnapSpacing = value;
+                    Assert.Equal(value, PixelPerfectRendering.pixelSnapSpacing);
+                    Assert.Throws<NotSupportedException>(() => PixelPerfectRendering.Snap(model));
                 }
             }
             finally { PixelPerfectRendering.pixelSnapSpacing = saved; }

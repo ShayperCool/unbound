@@ -13,6 +13,7 @@ use unbound_project::Project;
 
 const RENDERING_LIMITATIONS: &[&str] = &[
     "Mesh GraphicsBuffers support GetData and read-only shader/compute inputs. GPU mesh editing and SetData/CopyBuffer into mesh buffers are not supported; update the mesh CPU data instead.",
+    "Rendering sprites with non-finite PixelPerfectRendering.pixelSnapSpacing is not supported; finite spacing and property get/set are supported.",
     "Game-view gizmo drawing and OnDrawGizmos/OnDrawGizmosSelected repaint callbacks are not supported. Gizmos state and calls outside those callbacks match the measured Play-mode API.",
 ];
 

@@ -9,7 +9,9 @@ namespace UnityEngine.U2D
         internal static Matrix4x4 Snap(Matrix4x4 model)
         {
             float spacing = pixelSnapSpacing;
-            if (spacing == 0 || !float.IsFinite(spacing)) return model;
+            if (spacing == 0) return model;
+            if (!float.IsFinite(spacing))
+                throw new System.NotSupportedException("Unbound: rendering sprites with non-finite PixelPerfectRendering.pixelSnapSpacing is not supported.");
             model.m03 = Mathf.Round(model.m03 / spacing) * spacing;
             model.m13 = Mathf.Round(model.m13 / spacing) * spacing;
             model.m23 = Mathf.Round(model.m23 / spacing) * spacing;

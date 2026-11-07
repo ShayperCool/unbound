@@ -38,6 +38,9 @@ binds completion and toggle callbacks at EnteredPlayMode, after domain reload.
 
 ## Explicit renderer gaps
 
+- Non-finite pixelSnapSpacing values are retained by get/set, but attempting to render a sprite
+  with such spacing throws NotSupportedException. That rendering case is unmeasured.
+
 - GPU edits to mesh buffers are unsupported. CPU SetData and buffer/counter copies into mesh
   buffers throw NotSupportedException. Writable compute or fragment bindings warn and skip the
   dispatch/draw. Use the mesh CPU setters instead. Read-only shader and compute inputs and
@@ -47,5 +50,5 @@ binds completion and toggle callbacks at EnteredPlayMode, after domain reload.
   callbacks is unsupported. The strict comparison retains `gizmos.game.True.callback` and
   `gizmos.game.True.pixels`. No engine image or oracle is changed to hide them.
 
-`unbound doctor` lists both limitations. Enabling gizmo drawing and writable mesh geometry
+`unbound doctor` lists these limitations. Enabling gizmo drawing and writable mesh geometry
 are follow-ups, not implementations implied by this probe's passing gate.
