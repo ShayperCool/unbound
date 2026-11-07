@@ -24,6 +24,22 @@ class AcceptanceTests(unittest.TestCase):
         self.assertFalse(reset_residual(dict(row, sample=2*(RESET_FRAMES+1024))))
         self.assertFalse(reset_residual(dict(row, reference=float('nan'))))
 
+    def test_complete_recorded_reset_failures_are_classified_at_both_rates(self):
+        # Literal positions from the capture, independently of the admission constants.
+        for rate in (48000, 44100):
+            rows = [dict(key='reset.listener',
+                         reference=dict(file='reset.listener.f32', frames=1049600, channels=2),
+                         candidate=dict(file='reset.listener.f32', frames=1048576, channels=2))]
+            for key in ('reset', 'reset.master', 'reset.listener'):
+                for sample, pulse in [(792576, 0.25), (794625, -0.125)]:
+                    rows.append(dict(key=key, sample=sample, reference=0.0, candidate=pulse))
+            for sample in range(2097152, 2099200):
+                rows.append(dict(key='reset.listener', sample=sample, reference=1e-20, candidate='<missing>'))
+            self.assertEqual(2055, len(rows))
+            self.assertFalse(check(self.report(rows), 'suspension', rate))
+            rows[1] = dict(rows[1], sample=790528)
+            self.assertTrue(check(self.report(rows), 'suspension', rate))
+
     def report(self, rows, failed=None):
         cache = Path(os.environ.get('XDG_CACHE_HOME') or Path.home()/'.cache')/'unbound/q43/tests'
         cache.mkdir(parents=True, exist_ok=True)

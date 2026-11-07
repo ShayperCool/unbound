@@ -7,8 +7,9 @@ from collections import Counter
 # Original reset capture: one extra listener block and same-frame replay that does not
 # restart in the Editor. These are unresolved device-reset behavior, not suspension.
 RESET_FRAMES = 1024 * 1024
-RESET_PULSES = {2 * (384 * 1024 + 2048): 0.25,
-                2 * (384 * 1024 + 3072) + 1: -0.125}
+# Replay begins on the update after the block-384 request. These are the measured
+# output sample positions, including that complete pending-submission block.
+RESET_PULSES = {792576: 0.25, 794625: -0.125}
 STATE_PCM_SAMPLE = {48000: 46619, 44100: 28553}
 
 
