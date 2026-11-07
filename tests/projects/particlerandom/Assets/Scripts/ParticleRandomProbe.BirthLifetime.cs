@@ -24,8 +24,53 @@ public partial class ParticleRandomProbe
             BirthLifetimeControl("later", inherit, 0.413f, 0.813f, laterOnly: true);
             BirthLifetimeControl("batch", inherit, 0.613f, 0.813f, rate: 120f);
         }
+        BirthLifetimeClockControls();
         Time.maximumParticleDeltaTime = maximum;
         Time.fixedDeltaTime = fixedDelta;
+    }
+
+    static void BirthLifetimeClockControls()
+    {
+        var accumulator = typeof(ParticleSystem.Particle).GetField("m_EmitAccumulator0",
+            System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+        if (accumulator == null) throw new InvalidOperationException("Missing particle emission accumulator field");
+        foreach (float life in new[] { 0.413f, 0.613f, 1.013f, 1.613f })
+        foreach (float rate in new[] { 10f, 120f })
+        foreach (bool burst in new[] { false, true })
+        {
+            string key = "birthclock/" + F(life) + "/" + F(rate) + "/" + (burst ? "burst" : "rate");
+            var parent = Make(key, 12345, ps =>
+            {
+                var m = ps.main; m.startLifetime = life;
+                var r = ps.rotationOverLifetime; r.enabled = true; r.z = 0f;
+            }, 1);
+            parent.gameObject.SetActive(false);
+            var childObject = new GameObject("child");
+            childObject.transform.SetParent(parent.transform, false);
+            var child = childObject.AddComponent<ParticleSystem>();
+            child.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            child.randomSeed = 12346;
+            var cm = child.main; cm.playOnAwake = false; cm.startLifetime = 10f;
+            cm.startSpeed = 0f; cm.maxParticles = 256;
+            var shape = child.shape; shape.enabled = false;
+            var cr = child.rotationOverLifetime; cr.enabled = true; cr.z = 0f;
+            var ce = child.emission; ce.rateOverTime = rate;
+            ce.SetBursts(burst ? new[] { new ParticleSystem.Burst(0f, (short)1) } : new ParticleSystem.Burst[0]);
+            var sub = parent.subEmitters; sub.enabled = true;
+            sub.AddSubEmitter(child, ParticleSystemSubEmitterType.Birth, ParticleSystemSubEmitterProperties.InheritNothing);
+            parent.gameObject.SetActive(true);
+            var buffer = new ParticleSystem.Particle[1];
+            for (int i = 0; i < 12; i++)
+            {
+                parent.Simulate(0.025f, true, i == 0, false);
+                int count = parent.GetParticles(buffer);
+                var p = buffer[0];
+                Record(key + "/parent/" + i, new[] { (float)count, (float)(p.randomSeed & 65535u),
+                    (float)(p.randomSeed >> 16), p.startLifetime, p.remainingLifetime,
+                    (float)accumulator.GetValue(p), (float)child.particleCount });
+            }
+            DestroyImmediate(parent.gameObject);
+        }
     }
 
     static void BirthLifetimeControl(string name, bool inherit, float parentLife, float childLife,
