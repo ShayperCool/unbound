@@ -110,6 +110,9 @@ pub struct GpuMesh {
     pub submeshes: Vec<SubMesh>,
 }
 
+/// `MeshTopology.Quads`: drawn as two triangles per quad.
+const MESH_TOPOLOGY_QUADS: i32 = 2;
+
 /// Interleaves a mesh and rewrites its submeshes' indices into one list (quads become triangles).
 pub fn build_mesh(mesh: &owned::Mesh) -> (Vec<Vertex>, Vec<u32>, Vec<SubMesh>) {
     let n = mesh.positions.len();
@@ -167,13 +170,14 @@ pub fn build_mesh(mesh: &owned::Mesh) -> (Vec<Vertex>, Vec<u32>, Vec<SubMesh>) {
         let end = (start + sm.index_count.max(0) as usize).min(mesh.indices.len());
         let source = &mesh.indices[start.min(end)..end];
         let first = indices.len() as u32;
+        // Unity's MeshTopology: 0 triangles, 2 quads, 3 lines, 4 line strip, 5 points.
         let topology = match sm.topology {
-            2 => Topology::Lines,
-            3 => Topology::LineStrip,
+            3 => Topology::Lines,
+            4 => Topology::LineStrip,
             5 => Topology::Points,
             _ => Topology::Triangles,
         };
-        if sm.topology == 4 {
+        if sm.topology == MESH_TOPOLOGY_QUADS {
             for quad in source.as_chunks::<4>().0 {
                 indices.extend_from_slice(&[quad[0], quad[1], quad[2], quad[0], quad[2], quad[3]]);
             }
@@ -1330,7 +1334,7 @@ mod tests {
             submeshes: vec![SubMeshPacket {
                 index_start: 0,
                 index_count: 4,
-                topology: 4,
+                topology: 2,
                 base_vertex: 0,
             }],
             ..Default::default()
@@ -1340,7 +1344,38 @@ mod tests {
         assert_eq!(vertices[0].color, [255; 4]);
         assert_eq!(indices, vec![0, 1, 2, 0, 2, 3]);
         assert_eq!(submeshes[0].count, 6);
+        assert_eq!(submeshes[0].topology, Topology::Triangles);
         assert_eq!(size_of::<Vertex>(), 108);
+    }
+
+    #[test]
+    fn submesh_topologies_are_unitys_mesh_topology() {
+        // MeshTopology: Triangles 0, Quads 2, Lines 3, LineStrip 4, Points 5.
+        let sub = |topology| SubMeshPacket {
+            index_start: 0,
+            index_count: 4,
+            topology,
+            base_vertex: 0,
+        };
+        let mesh = owned::Mesh {
+            positions: vec![Vector3::default(); 4],
+            indices: vec![0, 1, 2, 3],
+            submeshes: [0, 3, 4, 5].map(sub).to_vec(),
+            ..Default::default()
+        };
+        let (_, indices, submeshes) = build_mesh(&mesh);
+        let topologies: Vec<_> = submeshes.iter().map(|s| s.topology).collect();
+        assert_eq!(
+            topologies,
+            [
+                Topology::Triangles,
+                Topology::Lines,
+                Topology::LineStrip,
+                Topology::Points
+            ]
+        );
+        // Only quads rewrite their indices.
+        assert_eq!(indices.len(), 16);
     }
 
     /// Every usage and flag: a device that does everything with the format.
