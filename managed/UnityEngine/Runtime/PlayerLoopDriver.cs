@@ -428,28 +428,27 @@ namespace Unbound.Runtime
         {
             int target = Application.targetFrameRate;
             double now = s_FrameClock.Elapsed.TotalSeconds;
-            double period;
-            if (QualitySettings.vSyncCount != 0)
-            {
-                // Presenting waits for the display's refresh; a window the compositor does not
-                // show (covered, on another workspace) presents at once, so the frames are also
-                // held to the refresh rate here, a little early so a waiting present is never late.
-                double refresh = Screen.currentResolution.refreshRateRatio.value;
-                if (!(refresh >= 1)) refresh = 60;
-                period = QualitySettings.vSyncCount / refresh * 0.95;
-            }
-            else if (target <= 0)
+            double period = FramePeriod(target, QualitySettings.vSyncCount);
+            if (period == 0)
             {
                 s_NextFrameAt = now;
                 return;
             }
-            else period = 1.0 / target;
             // A late frame starts the schedule again rather than racing to catch up.
             s_NextFrameAt = Math.Max(s_NextFrameAt + period, now);
             double wait = s_NextFrameAt - now;
             // Sleep most of the wait, then yield the last millisecond away for precision.
             if (wait > 0.002) System.Threading.Thread.Sleep(TimeSpan.FromSeconds(wait - 0.0015));
             while (s_FrameClock.Elapsed.TotalSeconds < s_NextFrameAt) System.Threading.Thread.Yield();
+        }
+
+        /// <summary>Uses the physical host refresh for pacing. Screen's public resolution
+        /// answer independently follows the Editor. Present is scheduled 5% early so it does
+        /// not miss the compositor's refresh deadline.</summary>
+        internal static double FramePeriod(int target, int vSyncCount)
+        {
+            if (vSyncCount != 0) return vSyncCount / Screen.HostRefreshRate * 0.95;
+            return target > 0 ? 1.0 / target : 0;
         }
 
         /// <summary>The fixed steps the game clock has reached: the first at fixed time 0 in the

@@ -18,13 +18,18 @@ def read(path):
     return {row['k']: row['v'] for row in rows}
 
 
-def compare(reference, candidate):
+def compare_fields(reference, candidate, excluded=frozenset()):
     failures = []
     for key in sorted(reference.keys() | candidate.keys()):
         if key not in reference or key not in candidate:
             failures.append(f'{key}: missing from {"reference" if key not in reference else "candidate"}')
-        elif key not in MACHINE | WARP and reference[key] != candidate[key]:
+        elif key not in excluded and reference[key] != candidate[key]:
             failures.append(f'{key}: expected {reference[key]!r}, got {candidate[key]!r}')
+    return failures
+
+
+def compare(reference, candidate):
+    failures = compare_fields(reference, candidate, MACHINE | WARP)
     if any(key not in candidate for key in MACHINE | WARP):
         return failures
     # These runs deliberately use a private 1280x720 Xvfb with no physical dimensions, mode

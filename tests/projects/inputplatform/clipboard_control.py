@@ -3,7 +3,11 @@
 import subprocess
 import sys
 mode = sys.argv[1]
-if mode == 'focus':
+if mode == 'workarea':
+    subprocess.run(['xprop', '-root', '-f', '_NET_WORKAREA', '32c', '-set', '_NET_WORKAREA', '0, 40, 1280, 640'], check=True, stdout=subprocess.DEVNULL)
+elif mode == 'workarea-clear':
+    subprocess.run(['xprop', '-root', '-remove', '_NET_WORKAREA'], check=True, stdout=subprocess.DEVNULL)
+elif mode == 'focus':
     pid = int(sys.stdin.read())
     windows = subprocess.check_output(['xdotool', 'search', '--pid', str(pid)], text=True).split()
     subprocess.run(['xdotool', 'windowfocus', '--sync', windows[-1]], check=True)

@@ -656,9 +656,10 @@ fn save_png(image: &Image, path: &std::path::Path) -> Result<()> {
 /// Makes host display answers available to Awake/OnEnable before the window is created.
 /// If no display can be queried, keep the explicit unavailable answer until window discovery.
 pub fn initialize_display() {
-    match host_display::primary() {
+    match host_display::snapshot(None) {
         Ok(display) => {
-            unbound_runtime::display::publish(unbound_runtime::display::Display::Known(display))
+            unbound_runtime::display::publish(unbound_runtime::display::Display::Known(display));
+            host_display::watch();
         }
         Err(error) => unbound_runtime::display::publish(
             unbound_runtime::display::Display::Unavailable(format!("{error:#}")),
@@ -688,7 +689,8 @@ fn publish_display(
     let changed = found
         .as_ref()
         .is_some_and(|(_, monitor, _)| monitor.is_changed());
-    if *published == Some(key) && !changed {
+    let host_changed = host_display::changed();
+    if *published == Some(key) && !changed && !host_changed {
         return;
     }
     *published = Some(key);
@@ -698,15 +700,15 @@ fn publish_display(
         ));
         return;
     };
-    let details = host_display::query(
-        monitor.name.as_deref(),
-        [monitor.physical_position.x, monitor.physical_position.y],
-        [monitor.physical_width, monitor.physical_height],
-    );
-    if let Err(error) = &details {
-        tracing::warn!("Screen display details unavailable: {error:#}");
+    match host_display::snapshot(monitor.name.as_deref()) {
+        Ok(snapshot) => {
+            host_display::watch();
+            display::publish(Display::Known(snapshot));
+            return;
+        }
+        Err(error) => tracing::warn!("Screen display details unavailable: {error:#}"),
     }
-    let details = details.unwrap_or_else(|_| host_display::Details {
+    let details = host_display::Details {
         refresh_numerator: monitor.refresh_rate_millihertz.unwrap_or(0),
         refresh_denominator: if monitor.refresh_rate_millihertz.is_some() {
             1000
@@ -714,7 +716,7 @@ fn publish_display(
             1
         },
         ..Default::default()
-    });
+    };
     display::publish(Display::Known(DisplaySnapshot {
         dpi: details.dpi,
         info_refresh_numerator: details.refresh_numerator,
@@ -725,7 +727,7 @@ fn publish_display(
             monitor.physical_width as i32,
             monitor.physical_height as i32,
         ]),
-        id: details.id.unwrap_or_else(|| entity.to_bits()),
+        id: entity.to_bits(),
         name: monitor.name.clone(),
         width: monitor.physical_width,
         height: monitor.physical_height,

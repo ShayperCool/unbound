@@ -107,6 +107,20 @@ namespace UnityEngine.Tests
             Assert.Equal(600, Screen.resolutions[7].height);
         }
 
+        [Fact]
+        public void EditorResolutionAnswerDoesNotLimitHighRefreshPacing()
+        {
+            if (!OperatingSystem.IsLinux()) return;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            m_Answer = _ => Known(1, width: 1920, height: 1080, rate: Rate(144, 1));
+            Assert.Equal(60u, Screen.currentResolution.refreshRateRatio.numerator);
+            Assert.Equal(144d, Screen.HostRefreshRate);
+            Assert.Equal(0.95 / 144, Unbound.Runtime.PlayerLoopDriver.FramePeriod(-1, 1), 12);
+            Assert.Equal(1.90 / 144, Unbound.Runtime.PlayerLoopDriver.FramePeriod(-1, 2), 12);
+            Assert.Equal(1.0 / 120, Unbound.Runtime.PlayerLoopDriver.FramePeriod(120, 0), 12);
+            Assert.Equal(0, Unbound.Runtime.PlayerLoopDriver.FramePeriod(-1, 0));
+        }
+
         [Theory]
         [InlineData("xvfb")]
         [InlineData("host")]
@@ -143,12 +157,15 @@ namespace UnityEngine.Tests
             Screen.UpdateDisplayVersion(1);
             m_Answer = _ => Known(1);
             _ = Screen.currentResolution;
+            ulong handle = Screen.mainWindowDisplayInfo.handle;
             Screen.UpdateDisplayVersion(1);
             _ = Screen.dpi;
             Assert.Single(m_Requests);
             Screen.UpdateDisplayVersion(2);
-            m_Answer = _ => Known(2, width: 1920);
+            m_Answer = _ => Known(2, width: 1920, rate: Rate(144, 1));
             Assert.Equal(1920, Screen.currentResolution.width);
+            Assert.Equal(144u, Screen.currentResolution.refreshRateRatio.numerator);
+            Assert.Equal(handle, Screen.mainWindowDisplayInfo.handle);
             Assert.Equal(2, m_Requests.Count);
         }
 

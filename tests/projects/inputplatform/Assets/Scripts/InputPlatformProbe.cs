@@ -104,6 +104,15 @@ public class InputPlatformProbe : MonoBehaviour
         modes.Clear(); foreach (var d in Display.displays) modes.Add("[" + d.systemWidth + "," + d.systemHeight + "," + d.renderingWidth + "," + d.renderingHeight + "," + (d.active ? "true" : "false") + "]");
         Add("displays", "[" + string.Join(",", modes) + "]");
         Add("screen", "[" + Screen.width + "," + Screen.height + "]");
+        if (Environment.GetEnvironmentVariable("INPUTPLATFORM_WORK_AREA") == "1")
+        {
+            Clipboard("workarea");
+            for (int i = 0; i < 10; i++) yield return null;
+            Add("workArea.changed", D(Screen.mainWindowDisplayInfo));
+            Clipboard("workarea-clear");
+            for (int i = 0; i < 10; i++) yield return null;
+            Add("workArea.restored", D(Screen.mainWindowDisplayInfo));
+        }
         if (Environment.GetEnvironmentVariable("INPUTPLATFORM_DISPLAY_ONLY") == "1")
         {
             Add("complete", "true");

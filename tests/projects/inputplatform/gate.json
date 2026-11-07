@@ -1,4 +1,7 @@
 {
- "commands": ["python3 tests/projects/inputplatform/run.py check --release \"$UNBOUND_PROBE_UNITY_VERSION\""],
+ "commands": [
+  "python3 tests/projects/inputplatform/run.py check --release \"$UNBOUND_PROBE_UNITY_VERSION\"",
+  "python3 tests/projects/inputplatform/run.py check --release \"$UNBOUND_PROBE_UNITY_VERSION\" --work-area-control"
+ ],
  "summary": "\\d+/\\d+ records match.*"
 }

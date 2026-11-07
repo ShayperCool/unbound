@@ -10,7 +10,7 @@ import time
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from editor_runner import EditorJob, run, run_parallel, summary, publish as publish_repeats, jsonl_complete
 from probe_paths import run_root, reference_root
-from compare import read, compare
+from compare import read, compare, compare_fields
 P = Path(__file__).resolve().parent
 REPO = P.parents[2]
 LAUNCHER = Path.home()/'.cache/compat/with-heavy-job'
@@ -27,7 +27,7 @@ def environment(out):
             'INPUTPLATFORM_CONTROL': str(P/'clipboard_control.py')}
 
 
-def editor(work, host, screen, display_only=False):
+def editor(work, host, screen, display_only=False, work_area=False):
     jobs = []
     for name in ['native1', 'native2']:
         out = work/name
@@ -36,6 +36,8 @@ def editor(work, host, screen, display_only=False):
         env = environment(out)
         if display_only:
             env['INPUTPLATFORM_DISPLAY_ONLY'] = '1'
+        if work_area:
+            env['INPUTPLATFORM_WORK_AREA'] = '1'
         jobs.append(EditorJob(project, out/'editor.log', out, env=env,
             private_display=not host, screen=screen, timeout=900,
             progress_files=[out/'values.jsonl'], progress_timeout=480, label='inputplatform-'+name))
@@ -53,7 +55,7 @@ def publish(work, host, context=None):
         lambda d: ['values.jsonl'], write, complete=[jsonl_complete('values.jsonl', {'k':'complete','v':True})], gpu=True)
 
 
-def engine(work, cli):
+def engine(work, cli, work_area=False):
     project = project_copy(work/'project')
     out = work/'unbound'
     out.mkdir(parents=True)
@@ -66,15 +68,18 @@ def engine(work, cli):
     env['XDG_SESSION_TYPE'] = 'x11'
     env['WINIT_UNIX_BACKEND'] = 'x11'
     env['INPUTPLATFORM_ENGINE'] = '1'
+    if work_area:
+        env['INPUTPLATFORM_WORK_AREA'] = '1'
+        env['INPUTPLATFORM_DISPLAY_ONLY'] = '1'
     with (out/'unbound.log').open('w') as log:
         result = subprocess.run(command, env=env, stdout=log, stderr=subprocess.STDOUT, cwd=REPO)
     if result.returncode:
         print(f'engine exit {result.returncode}, see {out / "unbound.log"}')
         return 1
     try:
-        ref = read(reference_root(P)/'xvfb/values.jsonl')
+        ref = read(reference_root(P)/('workarea' if work_area else 'xvfb')/'values.jsonl')
         actual = read(out/'values.jsonl')
-        failures = compare(ref, actual)
+        failures = compare_fields(ref, actual) if work_area else compare(ref, actual)
     except (OSError, ValueError, KeyError) as error:
         print(f'invalid capture: {error}')
         return 1
@@ -91,8 +96,9 @@ def main():
     parser.add_argument('--label')
     parser.add_argument('--cli', default=os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI'))
     parser.add_argument('--host-display', action='store_true')
+    parser.add_argument('--work-area-control', action='store_true')
     parser.add_argument('--display-only', action='store_true')
-    parser.add_argument('--context', choices=['host', 'xvfb', 'large', 'control'])
+    parser.add_argument('--context', choices=['host', 'xvfb', 'large', 'control', 'workarea'])
     parser.add_argument('--screen', default='1280x720x24')
     a = parser.parse_args()
     os.environ['UNBOUND_PROBE_UNITY_VERSION'] = a.release
@@ -100,10 +106,10 @@ def main():
         parser.error('check needs --cli or UNBOUND')
     work = run_root('inputplatform', a.label or ('check-'+str(time.time_ns())))
     if a.command == 'editor':
-        return editor(work, a.host_display, a.screen, a.display_only)
+        return editor(work, a.host_display, a.screen, a.display_only, a.work_area_control)
     if a.command == 'publish':
         return publish(work, a.host_display, a.context)
-    return engine(work, a.cli)
+    return engine(work, a.cli, a.work_area_control)
 
 
 if __name__ == '__main__':

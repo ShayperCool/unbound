@@ -53,5 +53,9 @@ Other releases keep the prior host-mode interpretation. Multiple monitors,
 physical-size DPI, native Wayland and macOS display metadata need their own captures.
 Clipboard transport uses arboard's X11/Wayland and NSPasteboard backends; Wayland/macOS
 clipboard behavior has not been measured here. The clipboard's host-error fallback stays
-explicitly diagnosed. Display work areas refresh when the monitor description changes;
-a panel-only work-area change is not yet observed independently.
+explicitly diagnosed. A blocking X11 event connection invalidates the cache on RandR changes and desktop
+work-area properties. The work-area control changes the same output without recreating its
+monitor, observes [0,40,1280,640], and then restores the full area. Its two Editor captures
+match. Mode-change event tests retain the same screen identity while changing geometry;
+Xvfb on this machine does not support adding another output mode. Frame pacing uses the
+actual host refresh, separately from the public Editor resolution answer.

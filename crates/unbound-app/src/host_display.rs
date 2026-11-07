@@ -2,7 +2,6 @@
 //! monitor description changes, never by a managed Screen getter.
 #[derive(Debug, Default)]
 pub(crate) struct Details {
-    pub id: Option<u64>,
     pub refresh_numerator: u32,
     pub refresh_denominator: u32,
     pub dpi: f32,
@@ -35,7 +34,6 @@ pub(crate) fn query(
             continue;
         }
         found = true;
-        details.id = Some(u64::from(*output));
         let crtc = connection
             .randr_get_crtc_info(info.crtc, resources.config_timestamp)?
             .reply()?;
@@ -134,20 +132,11 @@ mod tests {
     }
 }
 
-#[cfg(not(target_os = "linux"))]
-pub(crate) fn query(
-    _name: Option<&str>,
-    _position: [i32; 2],
-    _size: [u32; 2],
-) -> anyhow::Result<Details> {
-    anyhow::bail!(
-        "physical density, exact refresh ratio and desktop work area are not supplied by this host backend"
-    )
-}
-
-/// Before the application window exists, use the host's primary monitor as the Editor does.
+/// Read the selected output, or the primary output before the application window exists.
 #[cfg(target_os = "linux")]
-pub(crate) fn primary() -> anyhow::Result<unbound_runtime::display::DisplaySnapshot> {
+pub(crate) fn snapshot(
+    name: Option<&str>,
+) -> anyhow::Result<unbound_runtime::display::DisplaySnapshot> {
     use x11rb::connection::Connection;
     use x11rb::protocol::randr::ConnectionExt as _;
     let (connection, screen) = x11rb::connect(None)?;
@@ -170,7 +159,7 @@ pub(crate) fn primary() -> anyhow::Result<unbound_runtime::display::DisplaySnaps
         let info = connection
             .randr_get_output_info(*output, resources.config_timestamp)?
             .reply()?;
-        if info.crtc == 0 {
+        if info.crtc == 0 || name.is_some_and(|name| info.name != name.as_bytes()) {
             continue;
         }
         let crtc = connection
@@ -195,15 +184,165 @@ pub(crate) fn primary() -> anyhow::Result<unbound_runtime::display::DisplaySnaps
             work_area: details
                 .work_area
                 .unwrap_or([0, 0, width as i32, height as i32]),
-            refresh_rate_millihertz: None,
+            refresh_rate_millihertz: rate_millihertz(
+                details.refresh_numerator,
+                details.refresh_denominator,
+            ),
             scale_factor: 1.0,
-            modes: Vec::new(),
+            modes: info
+                .modes
+                .iter()
+                .filter_map(|id| resources.modes.iter().find(|mode| mode.id == *id))
+                .map(|mode| unbound_runtime::display::DisplayMode {
+                    width: u32::from(mode.width),
+                    height: u32::from(mode.height),
+                    refresh_rate_millihertz: rate_millihertz(
+                        mode.dot_clock,
+                        u32::from(mode.htotal) * u32::from(mode.vtotal),
+                    )
+                    .unwrap_or(0),
+                })
+                .collect(),
         });
     }
     anyhow::bail!("the X server reports no active monitor")
 }
 
 #[cfg(not(target_os = "linux"))]
-pub(crate) fn primary() -> anyhow::Result<unbound_runtime::display::DisplaySnapshot> {
-    anyhow::bail!("the primary display is unavailable before this host's window opens")
+pub(crate) fn snapshot(
+    _name: Option<&str>,
+) -> anyhow::Result<unbound_runtime::display::DisplaySnapshot> {
+    anyhow::bail!(
+        "physical density, exact refresh ratio and desktop work area are not supplied by this host backend"
+    )
+}
+
+#[cfg(target_os = "linux")]
+fn rate_millihertz(numerator: u32, denominator: u32) -> Option<u32> {
+    (numerator != 0 && denominator != 0)
+        .then(|| ((u64::from(numerator) * 1000) / u64::from(denominator)) as u32)
+}
+
+static DIRTY: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(false);
+
+/// Checks only memory in the frame loop. The blocking event connection wakes on changes.
+pub(crate) fn changed() -> bool {
+    DIRTY.swap(false, std::sync::atomic::Ordering::AcqRel)
+}
+
+pub(crate) fn watch() {
+    #[cfg(target_os = "linux")]
+    {
+        static START: std::sync::Once = std::sync::Once::new();
+        START.call_once(|| {
+            if let Err(error) = std::thread::Builder::new()
+                .name("unbound-displays".into())
+                .spawn(|| {
+                    if let Err(error) = watch_events() {
+                        tracing::warn!(
+                            "Screen display change notifications unavailable: {error:#}"
+                        );
+                    }
+                })
+            {
+                tracing::warn!("Screen display change notifications unavailable: {error}");
+            }
+        });
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn watch_events() -> anyhow::Result<()> {
+    use std::sync::atomic::Ordering;
+    use x11rb::{
+        connection::Connection,
+        protocol::{
+            randr::{ConnectionExt as _, NotifyMask},
+            xproto::{ChangeWindowAttributesAux, ConnectionExt as _, EventMask},
+        },
+    };
+    let (connection, screen) = x11rb::connect(None)?;
+    let root = connection.setup().roots[screen].root;
+    // Create the atoms even without a window manager: a desktop may begin publishing them later.
+    let work_area = connection
+        .intern_atom(false, b"_NET_WORKAREA")?
+        .reply()?
+        .atom;
+    let desktop = connection
+        .intern_atom(false, b"_NET_CURRENT_DESKTOP")?
+        .reply()?
+        .atom;
+    connection
+        .change_window_attributes(
+            root,
+            &ChangeWindowAttributesAux::new().event_mask(EventMask::PROPERTY_CHANGE),
+        )?
+        .check()?;
+    connection
+        .randr_select_input(
+            root,
+            NotifyMask::SCREEN_CHANGE
+                | NotifyMask::CRTC_CHANGE
+                | NotifyMask::OUTPUT_CHANGE
+                | NotifyMask::OUTPUT_PROPERTY,
+        )?
+        .check()?;
+    connection.flush()?;
+    DIRTY.store(true, Ordering::Release);
+    loop {
+        let event = connection.wait_for_event()?;
+        let changed = is_display_event(&event, root, work_area, desktop);
+        if changed {
+            DIRTY.store(true, Ordering::Release);
+        }
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn is_display_event(
+    event: &x11rb::protocol::Event,
+    root: u32,
+    work_area: u32,
+    desktop: u32,
+) -> bool {
+    use x11rb::protocol::Event;
+    match event {
+        Event::RandrScreenChangeNotify(_) | Event::RandrNotify(_) => true,
+        Event::PropertyNotify(event) => {
+            event.window == root && (event.atom == work_area || event.atom == desktop)
+        }
+        _ => false,
+    }
+}
+
+#[cfg(all(test, target_os = "linux"))]
+mod change_tests {
+    use super::is_display_event;
+    use x11rb::protocol::{Event, randr::ScreenChangeNotifyEvent, xproto::PropertyNotifyEvent};
+    #[test]
+    fn screen_changes_refresh_even_when_the_output_identity_is_unchanged() {
+        let mut event = ScreenChangeNotifyEvent::default();
+        event.width = 1920;
+        event.height = 1080;
+        assert!(is_display_event(
+            &Event::RandrScreenChangeNotify(event),
+            1,
+            2,
+            3
+        ));
+        event.width = 2560;
+        event.height = 1440;
+        assert!(is_display_event(
+            &Event::RandrScreenChangeNotify(event),
+            1,
+            2,
+            3
+        ));
+        let mut property = PropertyNotifyEvent::default();
+        property.window = 1;
+        property.atom = 2;
+        assert!(is_display_event(&Event::PropertyNotify(property), 1, 2, 3));
+        property.atom = 4;
+        assert!(!is_display_event(&Event::PropertyNotify(property), 1, 2, 3));
+    }
 }

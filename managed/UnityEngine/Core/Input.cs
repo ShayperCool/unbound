@@ -72,6 +72,9 @@ namespace UnityEngine
         public static int msaaSamples => 1;
         [Unbound.EditorFaithful("a player-window API: the Editor answers zero")]
         public static Vector2Int mainWindowPosition => Vector2Int.zero;
+        /// <summary>The actual host refresh used for frame pacing.</summary>
+        internal static double HostRefreshRate => HostDisplay()?.HostRefreshRate ?? 60;
+
         /// <summary>The host monitor's size, name, exact refresh ratio and desktop work area.
         /// DisplayInfo preserves the OS ratio; Screen.currentResolution separately describes the
         /// Editor's 60 Hz resolution choices on the measured Linux release.</summary>
@@ -85,6 +88,7 @@ namespace UnityEngine
             internal Resolution[] Modes;
             internal float Dpi;
             internal DisplayInfo Info;
+            internal double HostRefreshRate;
         }
 
         static readonly object s_DisplayLock = new object();
@@ -231,6 +235,7 @@ namespace UnityEngine
                 Current = new Resolution { width = width, height = height, refreshRateRatio = rate },
                 Modes = modes.ToArray(),
                 Dpi = density,
+                HostRefreshRate = infoRate.value >= 1 ? infoRate.value : rate.value >= 1 ? rate.value : 60,
                 Info = new DisplayInfo
                 {
                     handle = root.GetProperty("id").GetUInt64(),
