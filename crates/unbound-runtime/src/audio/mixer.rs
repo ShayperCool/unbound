@@ -228,6 +228,7 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         compressor: None,
         eq: None,
         distortion: (d.kind == filter_kind::DISTORTION).then(|| d.cutoff.clamp(0.0, 1.0)),
+        flange: None,
         chorus: (d.kind == filter_kind::CHORUS).then(|| super::chorus::ChorusSpec {
             dry: r[0].clamp(0.0, 1.0), wet1: r[1].clamp(0.0, 1.0), wet2: r[2].clamp(0.0, 1.0),
             wet3: r[3].clamp(0.0, 1.0), delay: (r[4] <= 100.0).then_some(r[4].max(0.0)),
@@ -750,6 +751,9 @@ impl Mixer {
             || self.sources.values().any(|s| s.params.filters.iter().any(|f| f.kind == filter_kind::CHORUS)) {
             super::chorus::Chorus::frames(config.sample_rate, config.buffer_size)?;
         }
+        if self.group_nodes.values().any(|n| n.spec.effects.iter().any(|e| e.flange.is_some())) {
+            super::flange::Flange::frames(config.sample_rate, config.buffer_size)?;
+        }
         for node in self.group_nodes.values() {
             for effect in &node.spec.effects {
                 effect.validate(config.sample_rate)?;
@@ -960,7 +964,7 @@ impl Mixer {
                 matches!(effect.kind.as_str(),
                     "Attenuation" | "Lowpass" | "Highpass" | "Echo" | "SFX Reverb"
                         | "Send" | "Receive" | "Duck Volume" | "Compressor" | "ParamEQ"
-                        | "Lowpass Simple" | "Highpass Simple" | "Distortion" | "Chorus")
+                        | "Lowpass Simple" | "Highpass Simple" | "Distortion" | "Chorus" | "Flange")
                     || effect.bypass
                     || spec.bypass,
                 "unsupported AudioMixer effect '{}'",
@@ -972,7 +976,8 @@ impl Mixer {
                     || (effect.kind != "Compressor" || effect.compressor.is_some())
                         && (effect.kind != "ParamEQ" || effect.eq.is_some())
                         && (effect.kind != "Distortion" || effect.distortion.is_some())
-                        && (effect.kind != "Chorus" || effect.chorus.is_some()),
+                        && (effect.kind != "Chorus" || effect.chorus.is_some())
+                        && (effect.kind != "Flange" || effect.flange.is_some()),
                 "AudioMixer {} '{}' has no parameters",
                 effect.kind,
                 effect.id
@@ -1686,7 +1691,7 @@ impl Mixer {
             // (tests/projects/mixerduck, tests/projects/mixercompressor).
             let active = node.effects.iter()
                 .any(|e| matches!(e.spec.kind.as_str(), "Echo" | "SFX Reverb" | "Duck Volume"
-                    | "Compressor" | "ParamEQ" | "Lowpass Simple" | "Highpass Simple" | "Distortion" | "Chorus"))
+                    | "Compressor" | "ParamEQ" | "Lowpass Simple" | "Highpass Simple" | "Distortion" | "Chorus" | "Flange"))
                 || (!node.spec.bypass
                     && node.effects.iter().any(|e| {
                         !e.spec.bypass && matches!(e.spec.kind.as_str(), "Lowpass" | "Highpass")
@@ -2889,7 +2894,7 @@ mod tests {
         let mut m = Mixer::new(MixerConfig::default());
         m.configure_group(filter_group(3, 4, "Lowpass")).unwrap();
         assert!(m.configure_group(filter_group(4, 3, "Highpass")).is_err());
-        assert!(m.configure_group(filter_group(3, 0, "Flange")).is_err());
+        assert!(m.configure_group(filter_group(3, 0, "Normalize")).is_err());
         assert_eq!(m.group_nodes[&3].spec.parent, 4);
         assert_eq!(m.group_nodes[&3].spec.effects[0].kind, "Lowpass");
     }

@@ -1,6 +1,7 @@
 //! Persistent DSP on summed mixer groups. Native captures establish a fourth-order Butterworth
 //! response for Lowpass and a second-order response for Highpass. The independently measured
 //! startup kernels also constrain parameter-dependent delay-history normalization.
+use super::flange::{Flange, FlangeSpec};
 use super::chorus::{Chorus, ChorusSpec};
 use super::compressor::{Compressor, CompressorSpec};
 use super::duck::{Duck, DuckSpec};
@@ -61,6 +62,8 @@ pub struct EffectSpec {
     pub distortion: Option<f32>,
     #[serde(default)]
     pub chorus: Option<ChorusSpec>,
+    #[serde(default)]
+    pub flange: Option<FlangeSpec>,
 }
 
 /// ParamEQ parameters as the mixer stores them: Hz, octaves and a linear gain.
@@ -94,6 +97,7 @@ impl EffectSpec {
             compressor.validate(&self.id)?;
         }
         if let Some(chorus) = &self.chorus { chorus.validate()?; }
+        if let Some(flange) = &self.flange { flange.validate()?; }
         if let Some(level) = self.distortion {
             anyhow::ensure!(level.is_finite() && (0.0..=1.0).contains(&level),
                 "AudioMixer Distortion has an invalid Level {level}");
@@ -364,6 +368,7 @@ pub struct Effect {
     duck: Duck,
     compressor: Compressor,
     chorus: Option<Chorus>,
+    flange: Option<Flange>,
     simple: SimpleFilter,
     eq: ParamEq,
     /// Frames since the effect started, for the slot's startup ramp.
@@ -385,6 +390,7 @@ impl Effect {
             duck: Duck::default(),
             compressor: Compressor::default(),
             chorus: None,
+            flange: None,
             simple: SimpleFilter::default(),
             eq: ParamEq::default(),
             frames: 0,
@@ -400,6 +406,9 @@ impl Effect {
     pub fn update(&mut self, spec: EffectSpec, rate: u32, buffer: u32) -> anyhow::Result<()> {
         if spec.chorus.is_some() && self.chorus.as_ref().is_none_or(|c| c.configuration() != (rate, buffer.max(1))) {
             self.chorus = Some(Chorus::new(rate, buffer)?);
+        }
+        if spec.flange.is_some() && self.flange.as_ref().is_none_or(|c| c.configuration() != (rate, buffer.max(1))) {
+            self.flange = Some(Flange::new(rate, buffer)?);
         }
         if spec.kind == "Echo" {
             self.echo.tune(spec.delay, rate)?;
@@ -428,6 +437,7 @@ impl Effect {
         self.duck = Duck::default();
         self.compressor = Compressor::default();
         if let Some(chorus) = &mut self.chorus { chorus.clear(); }
+        if let Some(flange) = &mut self.flange { flange.clear(); }
         self.simple = SimpleFilter::default();
         self.eq.h = Default::default();
         self.frames = 0;
@@ -500,7 +510,7 @@ impl Effect {
             if !bypass && !self.spec.bypass {
                 self.echo.process(samples, &self.spec);
             }
-        } else if matches!(self.spec.kind.as_str(), "Compressor" | "ParamEQ" | "Distortion" | "Chorus" | "Lowpass Simple" | "Highpass Simple") {
+        } else if matches!(self.spec.kind.as_str(), "Compressor" | "ParamEQ" | "Distortion" | "Chorus" | "Flange" | "Lowpass Simple" | "Highpass Simple") {
             // A bypassed unit keeps its state; resuming after bypass is unmeasured.
             if bypass || self.spec.bypass {
                 return;
@@ -513,6 +523,7 @@ impl Effect {
                 }
                 "ParamEQ" => self.eq.process(samples),
                 "Distortion" => distortion(samples, self.spec.distortion.unwrap()),
+                "Flange" => self.flange.as_mut().unwrap().process(samples, self.spec.flange.as_ref().unwrap()),
                 "Chorus" => self.chorus.as_mut().unwrap().process(samples, self.spec.chorus.as_ref().unwrap()),
                 kind => self.simple.process(samples, kind == "Highpass Simple", self.spec.cutoff, self.rate),
             }

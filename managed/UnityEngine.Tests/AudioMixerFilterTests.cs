@@ -321,10 +321,42 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void FlangeDefaultsRawSettersDspClampsAndUnsupportedWetMixing()
+        {
+            var (mixer, group, effect) = Fixture();
+            effect.m_EffectName = "Flange"; effect.m_ParameterGuids.Clear();
+            foreach (string name in AudioMixerEffectController.FlangeParameters)
+            {
+                effect.m_ParameterGuids[name] = name; mixer.m_Exposed[name] = name;
+            }
+            foreach (var pair in new[] { ("Drymix", 0.45f), ("Wetmix", 0.55f), ("Depth", 1f), ("Rate", 0.1f) })
+            {
+                Assert.True(mixer.GetFloat(pair.Item1, out float value)); Assert.Equal(pair.Item2, value);
+            }
+            Assert.False(mixer.SetFloat("Feedback", 1f)); Assert.False(mixer.SetFloat("Delay", 20f));
+            Assert.True(mixer.SetFloat("Depth", -1f)); Assert.True(mixer.SetFloat("Rate", 40f));
+            Assert.True(mixer.SetFloat("Drymix", 2f)); Assert.True(mixer.SetFloat("Wetmix", -1f));
+            Assert.True(mixer.GetFloat("Depth", out float raw)); Assert.Equal(-1f, raw);
+            using var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration()));
+            var flange = payload.RootElement.GetProperty("effects")[0].GetProperty("flange");
+            Assert.Equal(0.01f, flange.GetProperty("depth").GetSingle());
+            Assert.Equal(20f, flange.GetProperty("rate").GetSingle());
+            Assert.Equal(1f, flange.GetProperty("dry").GetSingle());
+            Assert.Equal(0f, flange.GetProperty("wet").GetSingle());
+            effect.m_EnableWetMix = true;
+            Assert.Contains("wet mixing", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+            effect.m_Bypass = true; group.DspConfiguration();
+            effect.m_Bypass = false; effect.m_EnableWetMix = false;
+            mixer.SetFloat("Depth", float.NaN);
+            Assert.Contains("finite", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+            group.m_BypassEffects = true; group.DspConfiguration();
+        }
+
+        [Fact]
         public void ActiveUnsupportedEffectsAndWetMixFailLoudly()
         {
             var (_, group, effect) = Fixture();
-            effect.m_EffectName = "Flange";
+            effect.m_EffectName = "Normalize";
             Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
             effect.m_Bypass = true;
             group.DspConfiguration();

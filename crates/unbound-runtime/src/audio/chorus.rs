@@ -112,7 +112,7 @@ impl Chorus {
         self.phase = 0.0;
         self.span = 0.0;
     }
-    fn cosine(phase: f32) -> f32 {
+    pub(crate) fn cosine(phase: f32) -> f32 {
         static TABLE: OnceLock<Box<[f32]>> = OnceLock::new();
         let table = TABLE.get_or_init(|| (0..8192).map(|i|
             ((i as f32 / 8192.0) * std::f32::consts::FRAC_PI_2).cos()).collect());

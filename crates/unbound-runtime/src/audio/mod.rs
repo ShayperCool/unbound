@@ -1,3 +1,4 @@
+mod flange;
 //! Audio: the mixer the managed engine's AudioSources, AudioListener and AudioMixers drive, and
 //! the output it renders to (see docs/AUDIO.md).
 //!
