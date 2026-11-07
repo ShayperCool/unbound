@@ -37,7 +37,14 @@ def compare(reference, candidate):
                 raise ValueError('duplicate key '+row['k'])
             result[row['k']] = row['v']
         return result
-    a, b = load(reference/'mtl.jsonl'), load(candidate/'mtl.jsonl')
+    def capture(directory):
+        result = load(directory/'mtl.jsonl')
+        for key, value in load(directory/'light-default.jsonl').items():
+            if key in result:
+                raise ValueError('duplicate key '+key)
+            result[key] = value
+        return result
+    a, b = capture(reference), capture(candidate)
     differences = {k: {'expected': a.get(k), 'actual': b.get(k),
                        'missing': k not in b, 'extra': k not in a}
                    for k in sorted(a.keys() | b.keys()) if k not in a or k not in b or not driver_compare.equal(a[k], b[k])}
@@ -76,24 +83,6 @@ def compare(reference, candidate):
     return int(bool(differences or image_failures or any(not isinstance(v, list) for v in images.values())))
 
 
-def conversion_gate(candidate):
-    """Gate API values, unlit colors and direct-light materials; retain sky comparisons as reports."""
-    report = json.loads((candidate/'mtl-comparison.json').read_text())
-    failures = list(report['values'])
-    environment = []
-    for name, differences in report['images'].items():
-        if not isinstance(differences, list):
-            failures.append(name)  # Missing/extra/invalid images fail in every lighting mode.
-        elif name.endswith('-assigned.png'):
-            environment.append(name)
-        elif any(max(abs(a-b) for a,b in zip(pixel['expected'], pixel['actual'])) > 8
-                 for pixel in differences):
-            failures.append(name)
-    print(f'OBJ conversion gate: {len(failures)} failures; '
-          f'{len(environment)} environment-lit image residuals retained in mtl-comparison.json')
-    return int(bool(failures))
-
-
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('mode', choices=('editor', 'publish', 'unbound', 'gate', 'check'))
@@ -123,7 +112,7 @@ def main():
     if args.mode == 'publish':
         def files(directory):
             return [str(p.relative_to(directory)) for p in sorted(directory.rglob('*'))
-                    if p.name == 'mtl.jsonl' or p.suffix == '.png']
+                    if p.name in ('mtl.jsonl', 'light-default.jsonl') or p.suffix == '.png']
         def write(target, first):
             for name in files(first):
                 (target/name).parent.mkdir(parents=True, exist_ok=True)
@@ -133,6 +122,7 @@ def main():
             result |= publish([work/'native1'/space, work/'native2'/space], work/'publication'/space,
                               files, write,
                               complete=[lambda d: None if len(driver_compare.load(d/'mtl.jsonl')) == 1350
+                                        and len(driver_compare.load(d/'light-default.jsonl')) == 1
                                         and len(list(d.glob('*.png'))) == 30 else 'incomplete capture'])
         if result:
             return result
@@ -165,7 +155,7 @@ def main():
                 print('engine capture failed', code, out/'unbound.log')
                 return code or 1
         comparison = compare(reference/space, out)
-        result |= conversion_gate(out) if args.mode == 'gate' else comparison
+        result |= comparison
     return result
 
 

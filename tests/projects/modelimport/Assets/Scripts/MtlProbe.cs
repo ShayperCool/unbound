@@ -60,6 +60,9 @@ public class MtlProbe : MonoBehaviour
             renderer.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
             var lightObject = new GameObject("MtlLight");
             var light = lightObject.AddComponent<Light>();
+            if (name == "Description")
+                File.WriteAllText(Path.Combine(directory, "light-default.jsonl"),
+                    "{\"k\":\"RuntimeLight/color\",\"v\":" + C(light.color) + "}\n");
             light.type = LightType.Directional;
             light.intensity = 1;
             light.transform.rotation = Quaternion.Euler(0, 180, 0);

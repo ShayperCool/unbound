@@ -11,11 +11,8 @@ python3 tests/projects/modelimport/mtl_properties.py publish --release 6000.0.71
 UNBOUND=/path/to/unbound python3 tests/projects/modelimport/mtl_properties.py gate --release 6000.0.71f1 --label candidate
 ```
 
-`unbound` remains the strict full comparison, including the original environment-lit images.
-`gate` runs the same comparison and retains every raw failure, then gates all API values, unlit
-colors and direct-light images. Missing or extra images fail in every mode. Environment-lit
-images are reported separately because the default sky's lighting differs independently of
-material properties; no comparator bound or existing assertion is changed.
+`unbound` and `gate` both run the strict full comparison. All material API values and every
+image, including the original environment-lit images, must pass. Missing and extra images fail.
 
 The API comparator uses the existing model probe's absolute/relative 1e-5 tolerance. The new
 render gate uses a maximum channel error of 8/255. Every differing value and pixel remains in
@@ -36,12 +33,14 @@ The following official Unity 6000.0 pages were checked, including their limitati
 | [Model formats](https://docs.unity3d.com/6000.0/Documentation/Manual/3D-formats.html) | OBJ is supported, with FBX recommended. This does not promise universal Wavefront keyword support, transforms or material property equivalence. |
 | [Standard albedo](https://docs.unity3d.com/6000.0/Documentation/Manual/StandardShaderMaterialParameterAlbedoColor.html) | Albedo controls color and transparency; color tints a texture. Rendering mode also controls whether transparency is used. |
 | [Ambient light](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderSettings-ambientLight.html) and [ambient mode](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/RenderSettings-ambientMode.html) | Flat ambient uses a single color, exposed as ambientLight. The second render pass sets it to black to isolate direct lighting. |
+| [Light.color](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Light-color.html) and [AddComponent](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/GameObject.AddComponent.html) | color controls emitted light; AddComponent creates the requested component. These pages do not guarantee a constructor color. The runtime default below is a release-specific observation. |
 | [AddRemap](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/AssetImporter.AddRemap.html) | A same-type external asset replaces an imported subasset after metadata is written and the model reimported. |
 
 These are observations in this release and built-in render pipeline, not universal contracts:
 
 | Authored control | Native observation |
 | --- | --- |
+| Runtime `AddComponent<Light>().color` | White, RGBA 1. Unbound previously used the warm color of an Editor-authored directional light. Correcting that runtime default removes the material-render tint; serialized authored colors continue to load from their fields. |
 | Omitted `Kd`, black, white, intermediate RGB | Diffuse default 0.8; endpoints and intermediate values preserved in Gamma description import. |
 | Linear project, description mode | Untextured diffuse values become gamma values in Material.color; `useSRGBMaterialColor` has no effect. |
 | Legacy with sRGB Albedo enabled/disabled | Enabled preserves diffuse values; disabled converts untextured diffuse values to gamma in both project color spaces. Textured diffuse values remain unchanged. |

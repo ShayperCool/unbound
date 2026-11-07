@@ -16,7 +16,7 @@ namespace UnityEngine
         internal static readonly List<Light> s_Enabled = new List<Light>();
 
         LightType m_Type = LightType.Point;
-        Color m_Color = new Color(1f, 0.95686275f, 0.8392157f, 1f);
+        Color m_Color = Color.white;
         float m_Intensity = 1f;
         float m_BounceIntensity = 1f;
         float m_Range = 10f;
