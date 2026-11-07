@@ -154,6 +154,42 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ChangingTheBurstsOnTheTimeOfARepeatDoesNotFireItAgain()
+        {
+            // 15 steps of 0.02 s end at 0.29999998, where the repeat every 0.06 s (5 x 0.06 in
+            // float, the same value) has just fired.
+            var ps = Make("burst-change-on-repeat", true, Burst(0f, 1, 0, .06f));
+            try
+            {
+                for (int i = 0; i < 15; i++) ps.Simulate(.02f, true, i == 0, false);
+                int fired = ps.particleCount;
+                var e = ps.emission;
+                e.SetBurst(0, Burst(0f, 1, 0, .06f));
+                ps.Simulate(.02f, true, false, false);
+                Assert.Equal(fired, ps.particleCount);
+                // The next repeat, at 0.36 s, comes once.
+                ps.Simulate(.06f, true, false, false);
+                Assert.Equal(fired + 1, ps.particleCount);
+            }
+            finally { Destroy(ps); }
+        }
+
+        [Fact]
+        public void ABurstThatEmitsNothingDoesNotSetTheStepsAge()
+        {
+            // Unbound's choice (only emitting bursts are measured): the empty burst at 0.305 s
+            // leaves the burst at 0.295 s its own age, 0.015 s.
+            var ps = Make("burst-empty", true, Burst(.295f, 2), Burst(.305f, 0));
+            try
+            {
+                var p = Run(ps, .29f, .02f);
+                Assert.Equal(2, p.Length);
+                foreach (var n in p) Near(3.985f, n.remainingLifetime);
+            }
+            finally { Destroy(ps); }
+        }
+
+        [Fact]
         public void TheLoopEndRuleDoesNotDependOnTheDurationOrTheStep()
         {
             // A control outside the probe: a 2.5 s loop, a 0.1 s call from 2.44 s split into four

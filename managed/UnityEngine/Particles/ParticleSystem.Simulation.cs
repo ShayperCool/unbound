@@ -758,16 +758,23 @@ namespace UnityEngine
             for (int i = 0; i < bursts.Count; i++)
             {
                 var burst = bursts[i];
-                int c = 0;
-                if (burst.m_Time < m_Time)
-                {
-                    // The first cycle and every repeat at or before the current time.
-                    float interval = Mathf.Max(burst.m_RepeatInterval, 0.0001f);
-                    double due = Math.Floor((m_Time - burst.m_Time) / (double)interval) + 1.0;
-                    c = (int)Math.Min(due, burst.cycleCount > 0 ? burst.cycleCount : 100000);
-                }
+                float interval = Mathf.Max(burst.m_RepeatInterval, 0.0001f);
+                int limit = burst.cycleCount > 0 ? burst.cycleCount : 100000;
+                // A closed-form guess, settled by the same float test CollectBursts applies.
+                double guess = burst.m_Time < m_Time ? Math.Floor((m_Time - burst.m_Time) / (double)interval) + 1.0 : 0.0;
+                int c = (int)Math.Clamp(guess, 0.0, limit);
+                while (c > 0 && !CycleDueBy(burst, c - 1, interval, m_Time)) c--;
+                while (c < limit && CycleDueBy(burst, c, interval, m_Time)) c++;
                 m_BurstCycles[i] = c;
             }
+        }
+
+        /// <summary>Whether cycle <paramref name="c"/> of a burst is due by playback time
+        /// <paramref name="time"/>: a first cycle before it, a repeat at it too.</summary>
+        static bool CycleDueBy(in Burst burst, int c, float interval, float time)
+        {
+            float at = burst.m_Time + c * interval;
+            return c == 0 ? at < time : at <= time;
         }
 
         /// <summary>Emits the step's bursts, in the order they were collected, all aged as the
