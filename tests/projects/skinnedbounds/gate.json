@@ -1,0 +1,6 @@
+{
+  "commands": [
+    "python3 tests/projects/skinnedbounds/run.py check --release \"$UNBOUND_PROBE_UNITY_VERSION\""
+  ],
+  "summary": "\\d+/\\d+ records match.*"
+}
