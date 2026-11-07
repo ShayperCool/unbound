@@ -654,7 +654,7 @@ pub struct ModelImporter;
 impl Importer for ModelImporter {
     type Output = ImportedModel;
     const KIND: &'static str = "models";
-    const VERSION: u32 = 24;
+    const VERSION: u32 = 25;
 
     fn dependencies(&self, source: &Path) -> Result<Vec<std::path::PathBuf>> {
         if !source
@@ -705,6 +705,11 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         .then(|| obj_material_library(source, bytes))
         .flatten();
     let library_name = library.as_ref().map(|p| p.to_string_lossy());
+    // Calculated normals that honour smoothing groups need the FBX's own smoothing masks.
+    let reads_fbx_smoothing = !is_obj
+        && settings.normals != NormalMode::None
+        && settings.normal_calculation != 0
+        && settings.normal_smoothing_source < 2;
     let load = |raw_axes| {
         ufbx::load_memory(
             bytes,
@@ -722,10 +727,8 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
                 pivot_handling: ufbx::PivotHandling::AdjustToPivot,
                 // Missing normals are calculated as the importer does (see `normals`).
                 generate_missing_normals: false,
-                retain_dom: !is_obj
-                    && settings.normals != NormalMode::None
-                    && settings.normal_calculation != 0
-                    && settings.normal_smoothing_source < 2,
+                // The DOM identifies each geometry's smoothing layer (see `fbx_smoothing`).
+                retain_dom: reads_fbx_smoothing,
                 filename: filename.as_ref().into(),
                 // Explicit selection keeps the loader's inputs identical to the cache dependencies.
                 obj_mtl_path: library_name.as_deref().unwrap_or("").into(),
@@ -770,6 +773,20 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
             1.0
         };
 
+    let mut warnings = Vec::new();
+    let fbx_smoothing = if reads_fbx_smoothing
+        && (settings.normals == NormalMode::Calculate
+            || scene.meshes.iter().any(|m| !m.vertex_normal.exists))
+    {
+        fbx_smoothing::per_mesh(
+            bytes,
+            &scene,
+            settings.normals == NormalMode::Import,
+            &mut warnings,
+        )?
+    } else {
+        Vec::new()
+    };
     let table = FileIdTable::read(imp);
     let mut ids = FileIdAllocator::new(&table);
     let mut builder = Builder {
@@ -790,7 +807,7 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
             lod_group: None,
             scale,
             settings: settings.clone(),
-            warnings: Vec::new(),
+            warnings,
         },
         unique_names: HashMap::new(),
         node_index: HashMap::new(),
@@ -813,17 +830,7 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
         } else {
             Vec::new()
         },
-        fbx_smoothing: if !is_obj
-            && settings.normals != NormalMode::None
-            && settings.normal_calculation != 0
-            && settings.normal_smoothing_source < 2
-            && (settings.normals == NormalMode::Calculate
-                || scene.meshes.iter().any(|m| !m.vertex_normal.exists))
-        {
-            fbx_smoothing::per_mesh(bytes, &scene, settings.normals == NormalMode::Import)?
-        } else {
-            Vec::new()
-        },
+        fbx_smoothing,
     };
 
     // The root: the single top-level node, or the scene root.

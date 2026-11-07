@@ -665,6 +665,51 @@ fn fbx_group_normals_match_the_editor_reference() {
 }
 
 #[test]
+fn edge_smoothing_with_unenclosed_sharp_edges_matches_the_editor_reference() {
+    // Blender "mark sharp" edges that end inside the surface (Slit) and a sharp seam beside
+    // enclosing cap rims (Seam), in every calculated-normal variant.
+    let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../tests/projects/lightmapuvs");
+    let reference =
+        std::fs::read_to_string(root.join("Reference/unity-6000.0.71f1.jsonl")).unwrap();
+    let rows: Vec<serde_json::Value> = reference
+        .lines()
+        .map(|l| serde_json::from_str(l).unwrap())
+        .collect();
+    for name in ["Edges", "Slit", "Seam"] {
+        for variant in [
+            "NormCalc",
+            "NormGroups",
+            "NormAngle",
+            "NormArea",
+            "NormUnweighted",
+        ] {
+            let source = root.join(format!("Assets/Resources/{variant}/{name}.fbx"));
+            let meta = meta(&std::fs::read_to_string(source.with_extension("fbx.meta")).unwrap());
+            let model = ModelImporter
+                .import(&source, &std::fs::read(&source).unwrap(), &meta)
+                .unwrap();
+            let row = rows
+                .iter()
+                .find(|r| r["variant"] == variant && r["mesh"] == format!("{name}/0"))
+                .unwrap();
+            let normals: Vec<[f32; 3]> = serde_json::from_value(row["normals"].clone()).unwrap();
+            let indices: Vec<Vec<u32>> = serde_json::from_value(row["subMeshes"].clone()).unwrap();
+            let mesh = &model.meshes[0];
+            assert_eq!(mesh.submeshes, indices, "{variant}/{name}");
+            assert_eq!(mesh.normals.len(), normals.len(), "{variant}/{name}");
+            for (actual, expected) in mesh.normals.iter().zip(&normals) {
+                for i in 0..3 {
+                    assert!(
+                        (actual[i] - expected[i]).abs() <= 1.8e-7,
+                        "{variant}/{name}: {actual:?} != {expected:?}"
+                    );
+                }
+            }
+        }
+    }
+}
+
+#[test]
 fn unsupported_lightmap_settings_keep_the_supported_group_normals() {
     let source = Path::new(env!("CARGO_MANIFEST_DIR"))
         .join("../../tests/projects/lightmapuvs/Sources/Normals/Groups.fbx");

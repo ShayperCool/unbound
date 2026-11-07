@@ -196,66 +196,123 @@ pub fn read(bytes: &[u8], limit: usize) -> Result<HashMap<i64, Groups>> {
     Ok(out)
 }
 
-fn edge_groups(mesh: &ufbx::Mesh, values: &[u32]) -> Result<Vec<u32>> {
+/// The lowest group bit no mask in `used` has; `None` when all 32 are taken.
+fn lowest_free(used: u32) -> Option<u32> {
+    (!used != 0).then(|| 1 << (!used).trailing_zeros())
+}
+
+/// Smoothing group masks per face from edge smoothing (`smooth` per mesh edge), as the Unity
+/// 6000.0.71f1 Editor converts them (tests/projects/lightmapuvs `Edges`, `Slit`, `Seam`):
+/// - faces joined by smooth edges form regions; in face order, each region takes the lowest
+///   bit no hard-adjacent region has taken yet;
+/// - then, in face order, a hard edge whose faces still share a bit (a hard edge that does not
+///   enclose its region, such as a Blender "mark sharp" edge) is resolved: the later face drops
+///   the shared bits (or, left with none, takes the lowest bit none of its hard neighbours has),
+///   and its smooth neighbours add its bits so they stay smooth with it.
+/// A face that finds no free bit among the 32 keeps an empty mask (hard on every edge).
+///
+/// The measured fixtures have sharp edges that do not interact (chains apart from each other,
+/// or beside enclosing rims). Where a later resolution gives bits back to faces an earlier hard
+/// edge separated, that edge ends up smooth; the Editor is not measured there, so such edges are
+/// counted for a warning.
+fn edge_groups(mesh: &ufbx::Mesh, smooth: &[bool]) -> Result<EdgeGroups> {
     ensure!(
-        values.len() == mesh.edges.len(),
+        smooth.len() == mesh.edges.len(),
         "unsupported FBX edge smoothing array size"
     );
     let mut topology = vec![ufbx::TopoEdge::default(); mesh.num_indices];
     ufbx::compute_topology(mesh, &mut topology);
-    let mut parents: Vec<usize> = (0..mesh.faces.len()).collect();
-    fn root(parents: &[usize], mut face: usize) -> usize {
-        while parents[face] != face {
-            face = parents[face];
+    let faces = mesh.faces.len();
+    // Each face's neighbours across its edges in corner order, and whether that edge is smooth.
+    let mut neighbours: Vec<Vec<(usize, bool)>> = vec![Vec::new(); faces];
+    for e in &topology {
+        let Some(other) = topology.get(e.twin as usize) else {
+            continue;
+        };
+        let smooth = smooth.get(e.edge as usize).copied().unwrap_or(true);
+        neighbours[e.face as usize].push((other.face as usize, smooth));
+    }
+    // Regions: union-find with path halving; the smallest face is the root.
+    let mut parent: Vec<usize> = (0..faces).collect();
+    fn root(parent: &mut [usize], mut face: usize) -> usize {
+        while parent[face] != face {
+            parent[face] = parent[parent[face]];
+            face = parent[face];
         }
         face
     }
-    let pairs: Vec<_> = topology
-        .iter()
-        .filter(|e| e.twin != u32::MAX)
-        .filter_map(|e| {
-            let other = topology.get(e.twin as usize)?;
-            (e.face < other.face).then_some((
-                e.face as usize,
-                other.face as usize,
-                values.get(e.edge as usize).is_some_and(|&v| v != 0),
-            ))
-        })
-        .collect();
-    for &(a, b, smooth) in &pairs {
-        if smooth {
-            let (a, b) = (root(&parents, a), root(&parents, b));
-            parents[a.max(b)] = a.min(b);
+    for face in 0..faces {
+        for &(other, smooth) in &neighbours[face] {
+            if smooth {
+                let (a, b) = (root(&mut parent, face), root(&mut parent, other));
+                parent[a.max(b)] = a.min(b);
+            }
         }
     }
-    let mut hard = vec![std::collections::HashSet::new(); mesh.faces.len()];
-    for &(a, b, smooth) in &pairs {
-        if !smooth {
-            let (a, b) = (root(&parents, a), root(&parents, b));
-            ensure!(
-                a != b,
-                "overlapping FBX edge smoothing regions are not supported"
-            );
-            hard[a].insert(b);
-            hard[b].insert(a);
+    let roots: Vec<usize> = (0..faces).map(|f| root(&mut parent, f)).collect();
+    let mut hard_regions: Vec<Vec<usize>> = vec![Vec::new(); faces];
+    for face in 0..faces {
+        for &(other, smooth) in &neighbours[face] {
+            if !smooth && roots[face] != roots[other] {
+                hard_regions[roots[face]].push(roots[other]);
+            }
         }
     }
-    let mut colors = vec![0u32; mesh.faces.len()];
-    for face in 0..mesh.faces.len() {
-        if root(&parents, face) != face {
-            continue;
+    let mut full = 0;
+    let mut colors = vec![0u32; faces];
+    for region in 0..faces {
+        if roots[region] == region {
+            let used = hard_regions[region].iter().fold(0, |m, &r| m | colors[r]);
+            colors[region] = lowest_free(used).unwrap_or_else(|| {
+                full += 1;
+                0
+            });
         }
-        let used = hard[face]
-            .iter()
-            .fold(0, |mask, &other| mask | colors[other]);
-        colors[face] = (0..32)
-            .map(|bit| 1u32 << bit)
-            .find(|&mask| mask & used == 0)
-            .ok_or_else(|| anyhow::anyhow!("FBX edge smoothing needs more than 32 groups"))?;
     }
-    Ok((0..mesh.faces.len())
-        .map(|face| colors[root(&parents, face)])
-        .collect())
+    let mut groups: Vec<u32> = roots.iter().map(|&r| colors[r]).collect();
+    for a in 0..faces {
+        for k in 0..neighbours[a].len() {
+            let (b, smooth) = neighbours[a][k];
+            if smooth || b < a || groups[a] & groups[b] == 0 {
+                continue;
+            }
+            groups[b] &= !groups[a];
+            if groups[b] == 0 {
+                let used = neighbours[b]
+                    .iter()
+                    .filter(|n| !n.1)
+                    .fold(0, |m, n| m | groups[n.0]);
+                groups[b] = lowest_free(used).unwrap_or_else(|| {
+                    full += 1;
+                    0
+                });
+            }
+            let bits = groups[b];
+            for &(other, smooth) in &neighbours[b] {
+                if smooth {
+                    groups[other] |= bits;
+                }
+            }
+        }
+    }
+    let smoothed = (0..faces)
+        .flat_map(|a| neighbours[a].iter().map(move |&(b, smooth)| (a, b, smooth)))
+        .filter(|&(a, b, smooth)| !smooth && a < b && groups[a] & groups[b] != 0)
+        .count();
+    Ok(EdgeGroups {
+        groups,
+        full,
+        smoothed,
+    })
+}
+
+/// Polygon groups converted from edge smoothing ([`edge_groups`]).
+struct EdgeGroups {
+    groups: Vec<u32>,
+    /// Faces without a free group bit.
+    full: usize,
+    /// Hard edges whose faces still share a group (unmeasured interacting sharp edges).
+    smoothed: usize,
 }
 
 fn has_smoothing_layer(node: &ufbx::DomNode) -> bool {
@@ -273,6 +330,7 @@ pub fn per_mesh(
     bytes: &[u8],
     scene: &ufbx::Scene,
     import_normals: bool,
+    warnings: &mut Vec<String>,
 ) -> Result<Vec<Option<Vec<u32>>>> {
     if scene
         .meshes
@@ -289,6 +347,24 @@ pub fn per_mesh(
         .unwrap_or(1)
         .max(1);
     let raw = read(bytes, limit)?;
+    let mut from_edges = |mesh: &ufbx::Mesh, smooth: &[bool]| -> Result<Vec<u32>> {
+        let converted = edge_groups(mesh, smooth)?;
+        if converted.full > 0 {
+            warnings.push(format!(
+                "{} face(s) of mesh '{}' need more than 32 smoothing groups for their FBX \
+                 edge smoothing; they are shaded flat (not supported)",
+                converted.full, mesh.element.name
+            ));
+        }
+        if converted.smoothed > 0 {
+            warnings.push(format!(
+                "{} sharp edge(s) of mesh '{}' are shaded smooth: they interact with other sharp \
+                 edges in a way the Unity Editor's FBX edge smoothing was not measured for",
+                converted.smoothed, mesh.element.name
+            ));
+        }
+        Ok(converted.groups)
+    };
     scene
         .meshes
         .iter()
@@ -303,6 +379,11 @@ pub fn per_mesh(
                 .and_then(|n| n.values.first())
                 .map(|v| v.value_int);
             let Some(group) = id.and_then(|id| raw.get(&id)) else {
+                // Edge smoothing needs no masks, so ufbx's flags serve where the raw layer is
+                // not read (ASCII files).
+                if mesh.face_smoothing.is_empty() && !mesh.edge_smoothing.is_empty() {
+                    return from_edges(mesh, &mesh.edge_smoothing).map(Some);
+                }
                 ensure!(
                     mesh.face_smoothing.is_empty()
                         && mesh.edge_smoothing.is_empty()
@@ -319,7 +400,7 @@ pub fn per_mesh(
                 group.reference == "Direct",
                 "indexed FBX smoothing layers are not supported"
             );
-            let values = match group.mapping.as_str() {
+            Ok(Some(match group.mapping.as_str() {
                 "ByPolygon" => {
                     ensure!(
                         group.values.len() == mesh.faces.len(),
@@ -328,10 +409,12 @@ pub fn per_mesh(
                     group.values.clone()
                 }
                 "AllSame" if group.values.len() == 1 => vec![group.values[0]; mesh.faces.len()],
-                "ByEdge" => edge_groups(mesh, &group.values)?,
+                "ByEdge" => {
+                    let smooth: Vec<bool> = group.values.iter().map(|&v| v != 0).collect();
+                    from_edges(mesh, &smooth)?
+                }
                 _ => bail!("unsupported FBX smoothing mapping '{}'", group.mapping),
-            };
-            Ok(Some(values))
+            }))
         })
         .collect()
 }
@@ -349,23 +432,100 @@ mod tests {
         .unwrap()
     }
 
+    fn load(name: &str) -> Vec<u32> {
+        let bytes = bytes(name);
+        let scene = ufbx::load_memory(
+            &bytes,
+            ufbx::LoadOpts {
+                retain_dom: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        per_mesh(&bytes, &scene, false, &mut Vec::new())
+            .unwrap()
+            .remove(0)
+            .unwrap()
+    }
+
     #[test]
     fn binary_masks_preserve_group_bits_and_edge_regions() {
-        let load = |name: &str| {
-            let bytes = bytes(name);
-            let scene = ufbx::load_memory(
-                &bytes,
-                ufbx::LoadOpts {
-                    retain_dom: true,
-                    ..Default::default()
-                },
-            )
-            .unwrap();
-            per_mesh(&bytes, &scene, false).unwrap().remove(0).unwrap()
-        };
         let authored = load("Groups");
         assert!(authored.contains(&1) && authored.contains(&2));
+        // Hard rims that enclose the caps give the same groups as the authored masks.
         assert_eq!(authored, load("Edges"));
+    }
+
+    #[test]
+    fn measured_sharp_edges_convert_without_warnings() {
+        for name in ["Edges", "Slit", "Seam"] {
+            let bytes = bytes(name);
+            let opts = ufbx::LoadOpts {
+                retain_dom: true,
+                ..Default::default()
+            };
+            let scene = ufbx::load_memory(&bytes, opts).unwrap();
+            let mut warnings = Vec::new();
+            assert!(per_mesh(&bytes, &scene, false, &mut warnings).unwrap()[0].is_some());
+            assert!(warnings.is_empty(), "{name}: {warnings:?}");
+        }
+    }
+
+    #[test]
+    fn interacting_sharp_edges_outside_the_measurements_are_counted() {
+        // Slit's 6x6 grid (control point y * 7 + x) with two sharp edges a row apart:
+        // (3,2)-(3,3) and (2,3)-(2,4). The second resolution gives bits back across the first.
+        let bytes = bytes("Slit");
+        let scene = ufbx::load_memory(&bytes, ufbx::LoadOpts::default()).unwrap();
+        let mesh = &scene.meshes[0];
+        let point = |c: u32| mesh.vertex_indices[c as usize];
+        let sharp = [(17, 24), (23, 30)];
+        let smooth: Vec<bool> = mesh
+            .edges
+            .iter()
+            .map(|e| {
+                let (a, b) = (point(e.a), point(e.b));
+                !sharp.contains(&(a.min(b), a.max(b)))
+            })
+            .collect();
+        assert_eq!(smooth.iter().filter(|s| !**s).count(), 2);
+        let converted = edge_groups(mesh, &smooth).unwrap();
+        assert_eq!((converted.full, converted.smoothed), (0, 1));
+    }
+
+    #[test]
+    fn the_retained_dom_keeps_smoothing_only_as_flags() {
+        // The loader reads smoothing arrays as booleans, so its DOM cannot give the masks the
+        // normals need (Groups uses bit 2); the raw layer is read from the file instead.
+        let bytes = bytes("Groups");
+        let opts = ufbx::LoadOpts {
+            retain_dom: true,
+            ..Default::default()
+        };
+        let scene = ufbx::load_memory(&bytes, opts).unwrap();
+        let mesh = &scene.meshes[0];
+        let mut pending = vec![mesh.element.dom_node.as_ref().unwrap().as_ref()];
+        let mut arrays = Vec::new();
+        while let Some(node) = pending.pop() {
+            if node.name == "Smoothing" {
+                arrays.extend(node.values.first());
+            }
+            pending.extend(node.children.iter().map(|child| child.as_ref()));
+        }
+        let [array] = arrays[..] else {
+            panic!("Groups has one smoothing layer, found {}", arrays.len())
+        };
+        assert_eq!(array.type_, ufbx::DomValueType::Blob);
+        assert_eq!(array.value_blob.len(), mesh.faces.len());
+        assert!(array.value_blob.iter().all(|&flag| flag <= 1));
+        assert!(load("Groups").contains(&2));
+    }
+
+    #[test]
+    fn lowest_free_bits() {
+        assert_eq!(lowest_free(0), Some(1));
+        assert_eq!(lowest_free(0b1011), Some(0b100));
+        assert_eq!(lowest_free(u32::MAX), None);
     }
 
     #[test]
@@ -376,20 +536,63 @@ mod tests {
         }
     }
     #[test]
-    fn overlapping_edge_regions_are_refused_explicitly() {
+    fn a_hard_edge_without_an_enclosed_region_stays_hard() {
         let bytes = bytes("Edges");
         let scene = ufbx::load_memory(&bytes, ufbx::LoadOpts::default()).unwrap();
         let mesh = &scene.meshes[0];
-        // One hard edge with a smooth route around it needs overlapping group masks.
-        let mut values = vec![1; mesh.edges.len()];
-        values[0] = 0;
-        let error = edge_groups(mesh, &values).unwrap_err();
-        assert!(
-            error
-                .to_string()
-                .contains("overlapping FBX edge smoothing regions are not supported"),
-            "{error}"
-        );
+        // One hard edge with a smooth route around it: its faces get disjoint groups while
+        // every smooth edge keeps a shared group.
+        let mut smooth = vec![true; mesh.edges.len()];
+        smooth[0] = false;
+        let EdgeGroups {
+            groups,
+            full,
+            smoothed,
+        } = edge_groups(mesh, &smooth).unwrap();
+        assert_eq!((full, smoothed), (0, 0));
+        let mut topology = vec![ufbx::TopoEdge::default(); mesh.num_indices];
+        ufbx::compute_topology(mesh, &mut topology);
+        for e in topology.iter().filter(|e| e.twin != u32::MAX) {
+            let (a, b) = (e.face as usize, topology[e.twin as usize].face as usize);
+            assert_eq!(groups[a] & groups[b] != 0, e.edge != 0, "faces {a} and {b}");
+        }
+        assert!(edge_groups(mesh, &smooth[1..]).is_err());
+    }
+    #[test]
+    fn ascii_edge_smoothing_uses_the_loaders_flags() {
+        // Two triangles sharing the hard edge 1-2 (edge 1).
+        let bytes = br#"; FBX 7.4.0 project file
+FBXHeaderExtension: { FBXVersion: 7400 }
+Objects: {
+ Geometry: 1, "Geometry::Mesh", "Mesh" {
+  Vertices: *12 { a: 0,0,0,1,0,0,0,1,0,1,1,1 }
+  PolygonVertexIndex: *6 { a: 0,1,-3,2,1,-4 }
+  Edges: *5 { a: 0,1,2,4,5 }
+  LayerElementSmoothing: 0 {
+   Version: 102
+   MappingInformationType: "ByEdge"
+   ReferenceInformationType: "Direct"
+   Smoothing: *5 { a: 1,0,1,1,1 }
+  }
+ }
+ Model: 2, "Model::Mesh", "Mesh" { }
+}
+Connections: { C: "OO",1,2 }
+"#;
+        let scene = ufbx::load_memory(
+            bytes,
+            ufbx::LoadOpts {
+                retain_dom: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        let groups = per_mesh(bytes, &scene, false, &mut Vec::new())
+            .unwrap()
+            .remove(0)
+            .expect("ByEdge smoothing is read");
+        // The shared edge is hard: the triangles share no group.
+        assert_eq!(groups[0] & groups[1], 0, "{groups:?}");
     }
     #[test]
     fn unsupported_ascii_smoothing_cannot_disappear_from_the_normalized_arrays() {
@@ -418,7 +621,7 @@ Connections: { C: "OO",1,2 }
             },
         )
         .unwrap();
-        let error = per_mesh(bytes, &scene, false).unwrap_err();
+        let error = per_mesh(bytes, &scene, false, &mut Vec::new()).unwrap_err();
         assert!(
             error
                 .to_string()
