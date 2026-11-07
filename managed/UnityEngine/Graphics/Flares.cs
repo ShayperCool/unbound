@@ -51,6 +51,7 @@ namespace UnityEngine
 
     /// <summary>Lets a camera show lens flares (halos draw without it).</summary>
     [ClassId(124)]
+    [EnabledOnlySerializedState]
     public partial class FlareLayer : Behaviour
     {
         internal FlareLayer() { }

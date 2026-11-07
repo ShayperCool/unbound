@@ -445,7 +445,7 @@ namespace Unbound.Runtime
             }
             catch (Exception e)
             {
-                Debug.LogError($"Unbound: could not load scene {scene.Path}: {e.Message}");
+                Debug.LogError($"Unbound: could not load scene {scene.Path}: {e.Message}" + ClassCoverage.DoctorHint);
                 return;
             }
             var file = ObjectGraphBuilder.Build(documents, scene.Path, null, ObjectGraphBuilder.Kind.Scene, scene);

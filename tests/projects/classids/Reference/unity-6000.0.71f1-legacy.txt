@@ -1,0 +1,8 @@
+edit.combined=UnityEngine.Transform,UnityEngine.AudioListener:false,UnityEngine.FlareLayer:false,UnityEngine.Camera:true
+edit.flare=UnityEngine.Transform,UnityEngine.FlareLayer:false,UnityEngine.Camera:true
+edit.legacy=UnityEngine.Transform
+edit.listener=UnityEngine.Transform,UnityEngine.AudioListener:false
+play.combined=UnityEngine.Transform,UnityEngine.AudioListener:false,UnityEngine.FlareLayer:false,UnityEngine.Camera:true
+play.flare=UnityEngine.Transform,UnityEngine.FlareLayer:false,UnityEngine.Camera:true
+play.legacy=UnityEngine.Transform
+play.listener=UnityEngine.Transform,UnityEngine.AudioListener:false

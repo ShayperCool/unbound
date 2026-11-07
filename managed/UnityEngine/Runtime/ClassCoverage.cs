@@ -28,6 +28,11 @@ namespace Unbound.Runtime
         Unsupported,
     }
 
+    /// <summary>A Behaviour whose complete serialized runtime state is the enabled flag read
+    /// by ObjectGraphBuilder.ReadComponent. Classes with other data must supply a reader.</summary>
+    [AttributeUsage(AttributeTargets.Class, Inherited = false)]
+    internal sealed class EnabledOnlySerializedStateAttribute : Attribute { }
+
     /// <summary>
     /// Which Unity classes the loader reads (Unity's class ids, Manual "YAML Class ID Reference"),
     /// so that a class without a reader is loud: <see cref="Note"/> warns once per class at load,
@@ -78,12 +83,18 @@ namespace Unbound.Runtime
             [29] = ("m_OcclusionCullingData", "the scene's baked occlusion data"),
         };
 
+        internal const string DoctorHint = " `unbound doctor --all --json` reports unsupported serialized content in the source project, including the source of AssetBundle scenes.";
+
         static readonly HashSet<int> s_Warned = new HashSet<int>();
 
         /// <summary>The loader's handling of a document of a class, given its top-level keys
         /// (null: the class alone decides).</summary>
-        internal static (ClassReading Reading, string Detail) Classify(int classId, Func<string, bool> hasData)
+        internal static (ClassReading Reading, string Detail) Classify(int classId, Func<string, bool> hasData, string release = null)
         {
+            if (classId == 92 && Compat.RemovesLegacyGuiLayer(release ?? ProjectInfo.UnityVersion))
+                return (ClassReading.Ignored, "GUILayer: obsolete serialized component removed on load (tests/projects/classids)");
+            if (classId == 181963792)
+                return (ClassReading.Unsupported, "Preset: UnityEditor.Presets.Preset serialized properties and ApplyTo are not supported; references to this asset are null");
             if (s_Loader.TryGetValue(classId, out var loader)) return (ClassReading.Loader, loader);
             if (s_Ignored.TryGetValue(classId, out var reason)) return (ClassReading.Ignored, reason);
             if (s_IgnoredWithoutData.TryGetValue(classId, out var data))
@@ -94,6 +105,10 @@ namespace Unbound.Runtime
             if (type == null) return (ClassReading.Unknown, "no engine class: its objects are skipped");
             if (type == typeof(AudioMixerEffectController))
                 return (ClassReading.Read, type.FullName + " (Chorus, Flange, Distortion, Normalize and Pitch Shifter support only Unity 6000.0.71f1; Normalize and Pitch Shifter only 1024-frame stereo at 48000/44100 Hz and no live changes, Pitch Shifter only FFT size 1024, Overlap 4, Max channels 0; wet mixing is unsupported except on SFX Reverb; Send/Receive/Duck Volume require Unity 6000.0.71f1, sends to another mixer and timed snapshots changing Send levels or Duck Volume parameters are unmeasured and fail)");
+            // These registered Behaviour classes declare no serialized data beyond the
+            // enabled flag that ReadComponent consumes for every Behaviour.
+            if (type.IsDefined(typeof(EnabledOnlySerializedStateAttribute), inherit: false))
+                return (ClassReading.Read, type.FullName + " (Behaviour enabled flag)");
             if (Reads(type)) return (ClassReading.Read, type.FullName);
             // Nothing beyond the common keys: the defaults are what the document says.
             if (hasData != null && !hasData(null)) return (ClassReading.Read, type.FullName + " (no data to read)");
@@ -130,15 +145,13 @@ namespace Unbound.Runtime
         {
             if (doc.Stripped) return;
             var (reading, detail) = Classify(doc.ClassId, DataOf(doc.Body));
-            if (reading != ClassReading.Unread && reading != ClassReading.Unknown) return;
+            if (reading != ClassReading.Unread && reading != ClassReading.Unknown && reading != ClassReading.Unsupported) return;
             lock (s_Warned)
             {
                 if (!s_Warned.Add(doc.ClassId)) return;
             }
-            // The doctor scans the project's own files (scenes, prefabs, assets), not bundles or settings.
-            bool projectFile = path != null && (path.StartsWith("Assets/", StringComparison.Ordinal) || path.StartsWith("Packages/", StringComparison.Ordinal));
             Debug.LogWarning($"Unbound: {doc.TypeName} (class {doc.ClassId}) in {path} is not read: {detail}." +
-                (projectFile ? " `unbound doctor` lists the project's files with such objects." : ""));
+                DoctorHint);
         }
 
         /// <summary>One class found in the project's files (<c>unbound doctor</c>).</summary>
@@ -197,7 +210,7 @@ namespace Unbound.Runtime
                     foreach (var k in keys) if (!s_CommonKeys.Contains(k)) return true;
                     return false;
                 }
-                var (reading, detail) = Classify(f.ClassId, HasData);
+                var (reading, detail) = Classify(f.ClassId, HasData, release);
                 Func<YNode, string> check = f.ClassId == 213 ? SpriteProblem : f.ClassId == LightingSettingsId ? LightingProblems : null;
                 if (check != null && f.Documents != null)
                 {
@@ -242,7 +255,7 @@ namespace Unbound.Runtime
                 {
                     var c = pair.Value;
                     if (c.Abstract || c.EditorOnly || !CanBeContent(table, c)) continue;
-                    var (reading, detail) = Classify(pair.Key, null);
+                    var (reading, detail) = Classify(pair.Key, null, release);
                     if (reading == ClassReading.Unread || reading == ClassReading.Unknown)
                         report.UnreadInRelease.Add(new Entry { ClassId = pair.Key, TypeName = c.Name, UnityName = c.Name, Reading = reading.ToString(), Detail = detail });
                 }

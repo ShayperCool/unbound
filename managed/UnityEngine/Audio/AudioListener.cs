@@ -10,6 +10,7 @@ namespace UnityEngine
     /// (AudioManager.asset); <c>pause</c> pauses every source that does not ignore it.
     /// </summary>
     [ClassId(81)]
+    [EnabledOnlySerializedState]
     [RequireComponent(typeof(Transform))]
     public sealed partial class AudioListener : AudioBehaviour
     {

@@ -32,6 +32,10 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Old GUILayer documents are discarded on scene load in the measured release
+        /// (tests/projects/classids). Other releases retain the unsupported-class diagnostic.</summary>
+        internal static bool RemovesLegacyGuiLayer(string release) => Parse(release ?? "") == (6000, 0, 71, 'f', 1);
+
         /// <summary>Asset resource ownership and clone diagnostics measured by assetinstantiate
         /// in 6000.0.71f1. Other releases require their own measurement.</summary>
         internal static bool AssetCloneResourcesMeasured => Release == (6000, 0, 71, 'f', 1);

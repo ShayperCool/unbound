@@ -20,15 +20,16 @@ namespace Unbound.Tests
         sealed class Capture : ILogHandler
         {
             readonly ILogHandler m_Inner;
+            readonly int m_ClassId;
             internal readonly List<string> Warnings = new List<string>();
 
-            internal Capture(ILogHandler inner) { m_Inner = inner; }
+            internal Capture(ILogHandler inner, int classId = Unread) { m_Inner = inner; m_ClassId = classId; }
 
             public void LogFormat(LogType type, Object context, string format, params object[] args)
             {
                 string message = args == null || args.Length == 0 ? format
                     : string.Format(System.Globalization.CultureInfo.InvariantCulture, format, args);
-                if (type == LogType.Warning && message.Contains($"class {Unread}")) lock (Warnings) Warnings.Add(message);
+                if (type == LogType.Warning && message.Contains($"class {m_ClassId}")) lock (Warnings) Warnings.Add(message);
                 m_Inner.LogFormat(type, context, format, args);
             }
 
@@ -55,6 +56,21 @@ namespace Unbound.Tests
             Assert.Contains("UnreadThing", warning);
             Assert.Contains("Assets/first.asset", warning);
             Assert.Contains("unbound doctor", warning);
+        }
+
+        [Fact]
+        public void BundleSceneDiagnosticsAlwaysPointToDoctor()
+        {
+            var logger = Debug.unityLogger;
+            var previous = logger.logHandler;
+            var capture = new Capture(previous, Unread + 1);
+            logger.logHandler = capture;
+            try
+            {
+                ClassCoverage.Note(new YDocument { ClassId = Unread + 1, TypeName = "BundleThing", Body = YNode.MakeMap() }, "bundle:7/BuildPlayer-Scene");
+            }
+            finally { logger.logHandler = previous; }
+            Assert.Contains("unbound doctor --all --json", Assert.Single(capture.Warnings));
         }
 
         static ClassCoverage.Entry Listed(int classId, string name, string[] keys, string[] referenced = null) =>
@@ -86,7 +102,26 @@ namespace Unbound.Tests
             Assert.Equal("NavMeshSettings", navMesh.UnityName);
             Assert.Equal("Ignored", Listed(1002, "EditorExtensionImpl", new[] { "m_Object" }).Reading);
             // Editor scripts can apply a preset: it stays loud.
-            Assert.Equal("Unknown", Listed(181963792, "Preset", new[] { "m_Properties" }).Reading);
+            Assert.Equal("Unsupported", Listed(181963792, "Preset", new[] { "m_Properties" }).Reading);
+        }
+
+        [Fact]
+        public void EnabledOnlyComponentsAreReadWithoutAProjectDocument()
+        {
+            var unread = ClassCoverage.Report("6000.0.71f1", new ClassCoverage.Found[0]).UnreadInRelease;
+            Assert.DoesNotContain(unread, e => e.ClassId == 81 || e.ClassId == 124);
+            foreach (int id in new[] { 81, 124 })
+                Assert.Equal(ClassReading.Read, ClassCoverage.Classify(id, null).Reading);
+        }
+
+        [Fact]
+        public void LegacyGuiLayerIsRemovedOnlyInTheMeasuredRelease()
+        {
+            Assert.Equal(ClassReading.Ignored, ClassCoverage.Classify(92, _ => true, "6000.0.71f1").Reading);
+            Assert.Equal(ClassReading.Unknown, ClassCoverage.Classify(92, _ => true, "2022.3.1f1").Reading);
+            var file = ObjectGraphBuilder.Build(UnityYaml.Parse("--- !u!1 &1\nGameObject:\n  m_Name: legacy\n--- !u!4 &4\nTransform:\n  m_GameObject: {fileID: 1}\n--- !u!92 &92\nGUILayer:\n  m_GameObject: {fileID: 1}\n  m_Enabled: 1\n"),
+                "Assets/legacy.unity", null, ObjectGraphBuilder.Kind.Asset, null);
+            Assert.False(file.Objects.ContainsKey(92));
         }
 
         [Fact]
