@@ -840,3 +840,36 @@ fn flipbook_arrays_and_volumes_match_the_editor() {
         assert!(checked > 200, "{checked} levels");
     }
 }
+
+#[test]
+fn a_cookie_keeps_its_alpha_in_every_channel() {
+    // An opaque image imported as a Cookie with the alpha taken from the input: white.
+    let bytes = png(2, 1, |x, _| {
+        if x == 0 {
+            [200, 40, 10, 255]
+        } else {
+            [0, 0, 0, 255]
+        }
+    });
+    let tex = import_with(
+        "TextureImporter:\n  textureType: 4\n  alphaUsage: 1\n",
+        &bytes,
+        false,
+    );
+    assert_eq!(tex.mips[0].data, [255; 8]);
+    assert!(!tex.srgb);
+    // From the gray scale: the mean, in every channel.
+    let tex = import_with(
+        "TextureImporter:\n  textureType: 4\n  alphaUsage: 2\n",
+        &bytes,
+        false,
+    );
+    assert_eq!(tex.mips[0].data, [83, 83, 83, 83, 0, 0, 0, 0]);
+    // Control: a Default texture keeps its colour.
+    let tex = import_with(
+        "TextureImporter:\n  textureType: 0\n  alphaUsage: 2\n",
+        &bytes,
+        false,
+    );
+    assert_eq!(tex.mips[0].data, [200, 40, 10, 83, 0, 0, 0, 0]);
+}

@@ -230,7 +230,9 @@ impl TextureSettings {
         let srgb = match boolean(imp, "mipmaps.sRGBTexture") {
             Some(srgb) => srgb,
             None => !boolean(imp, "mipmaps.linearTexture").unwrap_or(false),
-        } && texture_type != TextureType::NormalMap;
+        } && texture_type != TextureType::NormalMap
+            // A cookie is one (alpha) channel, which no sRGB decode applies to.
+            && texture_type != TextureType::Cookie;
         let alpha_source = match int(imp, "alphaUsage") {
             Some(0) => AlphaSource::None,
             Some(2) => AlphaSource::FromGrayScale,
@@ -545,7 +547,8 @@ impl Importer for TextureImporter {
     const KIND: &'static str = "textures";
     // 12: Texture2DArray and Texture3D shapes import their flipbook cells (were a 2D texture).
     // 13: single-cell arrays and volumes are no longer BC7-compressed.
-    const VERSION: u32 = 13;
+    // 14: Cookie textures keep their alpha in every channel and are not sRGB.
+    const VERSION: u32 = 14;
 
     fn import(&self, source: &Path, bytes: &[u8], meta: &Value) -> Result<ImportedTexture> {
         let mut settings = TextureSettings::read(meta, &self.build_target);
@@ -656,6 +659,9 @@ pub fn import_texture(
         AlphaSource::None if settings.format_alpha != Some(true) => image.set_opaque(),
         AlphaSource::FromGrayScale => image.alpha_from_gray(),
         AlphaSource::None | AlphaSource::FromInput => {}
+    }
+    if settings.texture_type == TextureType::Cookie {
+        image.alpha_to_all_channels();
     }
     // The Editor dilates whenever the texture's format stores alpha (an automatic one does
     // whenever the image has transparent texels to fill).
@@ -1404,6 +1410,25 @@ impl Image {
                 let c = |i: usize| read_f32(&p[i * 4..i * 4 + 4]);
                 let mean = (c(0) + c(1) + c(2)) / 3.0;
                 p[12..].copy_from_slice(&mean.to_le_bytes());
+            }),
+        }
+    }
+
+    /// A Cookie texture: the Editor keeps only its alpha (an Alpha8 texture: what the alpha
+    /// source gives, so an opaque image's cookie is white; measured with the URP probe's
+    /// cookie_directional scenario, tests/projects/urp). Every channel holds it here, so a
+    /// shader reading the colour (as URP does from an RGBA texture) or the alpha sees the same
+    /// value.
+    fn alpha_to_all_channels(&mut self) {
+        match self.format {
+            TextureFormat::Rgba8 => self.data.as_chunks_mut::<4>().0.iter_mut().for_each(|p| {
+                *p = [p[3]; 4];
+            }),
+            TextureFormat::Rgba32F => self.data.as_chunks_mut::<16>().0.iter_mut().for_each(|p| {
+                let alpha: [u8; 4] = p[12..].try_into().unwrap();
+                for c in 0..3 {
+                    p[c * 4..c * 4 + 4].copy_from_slice(&alpha);
+                }
             }),
         }
     }
