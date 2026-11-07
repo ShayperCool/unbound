@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Unbound.Runtime;
 using UnityEngine.SceneManagement;
 using Xunit;
 
@@ -18,16 +19,31 @@ namespace UnityEngine.Tests
         const float Dt = 0.02f;
         static int s_Created;
         readonly List<Scene> m_Scenes = new List<Scene>();
+        readonly SceneData m_PreviousActive = SceneRegistry.Active;
+        readonly SceneData m_OwnedFallback;
 
         public PhysicsSceneInvalidInputPolicyTests()
         {
             Physics.simulationMode = SimulationMode.Script;
+            // UnloadSceneAsync refuses the last loaded scene. Keep an active scene alive,
+            // including when this fixture starts with no scenes at all.
+            if (m_PreviousActive == null)
+                m_OwnedFallback = SceneManager.GetActiveScene().Data;
         }
 
         public void Dispose()
         {
-            foreach (var scene in m_Scenes)
-                if (scene.isLoaded) SceneManager.UnloadSceneAsync(scene);
+            try
+            {
+                foreach (var scene in m_Scenes)
+                    if (scene.isLoaded) SceneManager.UnloadSceneAsync(scene);
+            }
+            finally
+            {
+                // The empty fallback belongs to this fixture; forget it even if it is last.
+                if (m_OwnedFallback != null) SceneRegistry.Forget(m_OwnedFallback);
+                SceneRegistry.Active = m_PreviousActive;
+            }
         }
 
         [Fact]
