@@ -830,6 +830,7 @@ pub fn import_model(source: &Path, bytes: &[u8], meta: &Value) -> Result<Importe
             } else if source.node_depth == 1 {
                 conversion.unbaked_node(node);
             }
+            axes::normalize_rotation(node);
         }
         if baked {
             for mesh in &mut builder.model.meshes {

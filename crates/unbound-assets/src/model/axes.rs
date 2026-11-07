@@ -67,8 +67,24 @@ impl StaticAxes {
         let b = self.vector(mesh.bounds_max);
         mesh.bounds_min = std::array::from_fn(|i| a[i].min(b[i]));
         mesh.bounds_max = std::array::from_fn(|i| a[i].max(b[i]));
-        // Unity retains the importer's triangle index order in both measured bake modes.
-        // Vertex order, material slots and UV channels are also unchanged.
+        if self.determinant < 0.0 {
+            for indices in &mut mesh.submeshes {
+                for triangle in indices.chunks_exact_mut(3) {
+                    triangle.swap(1, 2);
+                }
+            }
+        }
+        // Vertex order, material slots and UV channels are unchanged.
+    }
+}
+
+/// The f64 source quaternion can round to a non-unit f32 quaternion. Unity's
+/// stored imported rotation is normalized in the measured static conversion paths.
+pub(super) fn normalize_rotation(node: &mut ModelNode) {
+    let [x, y, z, w] = node.rotation;
+    let norm = ((x * x + y * y) + (z * z + w * w)).sqrt();
+    if norm > 0.0 {
+        node.rotation = node.rotation.map(|v| v / norm);
     }
 }
 
