@@ -17,8 +17,8 @@ namespace Unbound.Runtime
         const int MultipleRayFaces = 1 << 2;
         const int SkipInitialOverlap = 1 << 3;
 
-        static B3.Hit[] s_Hits = new B3.Hit[64];
-        static ulong[] s_Shapes = new ulong[64];
+        [ThreadStatic] static B3.Hit[] s_Hits;
+        [ThreadStatic] static ulong[] s_Shapes;
 
         internal static float Length(float maxDistance) =>
             float.IsNaN(maxDistance) || maxDistance > MaxLength ? MaxLength : Mathf.Max(0f, maxDistance);
@@ -40,7 +40,7 @@ namespace Unbound.Runtime
         /// command's QueryParameters.hitBackfaces while it is answered.</summary>
         static bool HitsBackfaces => s_Backfaces ?? Physics.s_QueriesHitBackfaces;
 
-        static bool? s_Backfaces;
+        [ThreadStatic] static bool? s_Backfaces;
 
         internal readonly struct BackfacesScope : IDisposable
         {
@@ -69,12 +69,12 @@ namespace Unbound.Runtime
             m_Distance = hit.Fraction * length,
             m_FaceID = unchecked((uint)hit.TriangleIndex),
             m_UV = hit.UV,
-            m_Collider = collider != null ? collider.GetInstanceID() : 0,
+            m_Collider = collider != null ? collider.m_InstanceID : 0,
         };
 
         /// <summary>The physics scene the queries search: the default one (Physics), or the one a
         /// PhysicsScene query or a body's sweep names.</summary>
-        static W.Space s_Target;
+        [ThreadStatic] static W.Space s_Target;
 
         internal readonly struct Target : IDisposable
         {
@@ -94,39 +94,38 @@ namespace Unbound.Runtime
         static uint ReadyWorld()
         {
             var space = s_Target ?? W.DefaultSpace;
+            if (s_PreparedWorlds != null) return s_PreparedWorlds.TryGetValue(space, out uint prepared) ? prepared : 0;
             // Objects that just changed scene join their physics scene before it is searched.
-            if (s_InBatch && s_BatchWorlds.TryGetValue(space, out uint cached)) return cached;
-            if (!s_InBatch) W.SceneMembershipChanged();
+            W.SceneMembershipChanged();
             W.PrepareQuery(space);
-            uint world = space.Colliders.Count == 0 ? 0 : space.World;
-            if (s_InBatch) s_BatchWorlds[space] = world;
-            return world;
+            return space.Colliders.Count == 0 ? 0 : space.World;
         }
 
-        static readonly Dictionary<W.Space, uint> s_BatchWorlds = new Dictionary<W.Space, uint>();
-        static bool s_InBatch;
+        [ThreadStatic] static Dictionary<W.Space, uint> s_PreparedWorlds;
 
-        internal readonly struct BatchScope : IDisposable
+        internal readonly struct PreparedScope : IDisposable
         {
-            internal BatchScope(bool unused)
+            readonly Dictionary<W.Space, uint> m_Previous;
+            internal PreparedScope(Dictionary<W.Space, uint> worlds)
             {
-                W.SceneMembershipChanged();
-                s_BatchWorlds.Clear();
-                s_InBatch = true;
+                m_Previous = s_PreparedWorlds;
+                s_PreparedWorlds = worlds;
             }
-            public void Dispose()
-            {
-                s_InBatch = false;
-                s_BatchWorlds.Clear();
-            }
+            public void Dispose() => s_PreparedWorlds = m_Previous;
         }
+        internal static PreparedScope Prepared(Dictionary<W.Space, uint> worlds) => new PreparedScope(worlds);
 
-        internal static BatchScope Batch() => new BatchScope(true);
+        static void EnsureScratch(int capacity)
+        {
+            s_Hits ??= new B3.Hit[Math.Max(64, capacity)];
+            s_Shapes ??= new ulong[Math.Max(64, capacity)];
+            if (s_Hits.Length < capacity) Array.Resize(ref s_Hits, capacity);
+            if (s_Shapes.Length < capacity) Array.Resize(ref s_Shapes, capacity);
+        }
 
         internal static void Reserve(int capacity)
         {
-            if (s_Hits.Length < capacity) Array.Resize(ref s_Hits, capacity);
-            if (s_Shapes.Length < capacity) Array.Resize(ref s_Shapes, capacity);
+            EnsureScratch(capacity);
             B3.ua3_query_reserve(capacity);
         }
 
@@ -160,6 +159,7 @@ namespace Unbound.Runtime
             Vector3 direction, float maxDistance, int layerMask, QueryTriggerInteraction triggers,
             bool closest, bool bounded, int extraFlags = 0, int boundedCapacity = 0)
         {
+            EnsureScratch(64);
             uint world = ReadyWorld();
             if (world == 0 || layerMask == 0 || direction.sqrMagnitude < 1e-12f || maxDistance < 0f) return 0;
             if (!ray && maxDistance == 0f)
@@ -209,6 +209,7 @@ namespace Unbound.Runtime
 
         static int ReadOverlap(B3.Proxy kind, Vector3 a, Vector3 b, Quaternion rotation, float radius, int layerMask, QueryTriggerInteraction triggers, bool bounded)
         {
+            EnsureScratch(64);
             uint world = ReadyWorld();
             if (world == 0 || layerMask == 0) return 0;
             int count;

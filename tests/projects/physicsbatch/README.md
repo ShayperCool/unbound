@@ -1,11 +1,12 @@
 # 3D batch query commands
 
 Unity 6000.0.71f1, Linux GPU Editor. Two independent project copies produced
-byte-identical 5,248-record captures before the canonical reference was published.
+byte-identical 5,867-record captures before the canonical reference was published.
 The repeat captures and Editor supervision receipts remain in the validation cache.
 The extensions preserve every earlier reference value. They add global backface
 controls, 80 faces on one mesh, container/closest-point limitations and 63 colliders
-containing a multiple-face ray origin.
+containing a multiple-face ray origin. The scheduling/terrain/controller extension is
+described in [FOLLOWUPS.md](FOLLOWUPS.md).
 
 ## Initial audit
 
@@ -70,7 +71,7 @@ in the comparison JSON, with 1e-4 absolute and 1e-5 relative float tolerances.
 ## Validation and remaining limits
 
 The engine resolves every measured result and invalid-input case. The strict
-comparison is 5,236/5,248. Twelve raw differences remain in `stress/{faces,mixed}/{0,2,5,7,40,42}`:
+comparison is 5,855/5,867. Twelve raw differences remain in `stress/{faces,mixed}/{0,2,5,7,40,42}`:
 three pairs of mesh faces exchange slots in each stress scene. All 80 unique collider/triangle identities per scene,
 distances, points and normals agree at the unchanged tolerances; termination and
 counts agree. `compare` still fails on these twelve rows and saves both values.
@@ -79,14 +80,17 @@ set without sorting either capture or requiring an unspecified hit order. Missin
 extra, duplicate faces, changed geometry and a hit after termination all fail.
 Six comparator controls exercise those failure cases.
 
-Scheduling still runs synchronously after completing dependencies. The returned
-handle is already complete, and minCommandsPerJob has no effect on work partitioning.
-A future queue item should move prepared scene queries into jobs with native result
-storage and appropriate container safety. Concurrent physics job execution is not
-claimed. Local-scene managed controls pass; additional release profiles, terrain
-and every invalid-container alias/safety combination are not Editor-measured here.
+Batch queries retain the last synchronized transforms even when autoSyncTransforms
+is enabled, as measured with ordinary edits and pending transform jobs.
+Scheduling uses parallel jobs with `minCommandsPerJob` chunking and dependency
+tracking. The returned handle owns read access to commands and write access to
+results until completion. Scene preparation runs on the calling thread; worker
+queries use thread-local scratch. Scene mutations wait for query execution while
+array safety remains owned by the job until completion. Terrain heightmap/tree
+queries and tree material lifetimes are Editor-measured by the added controls.
+Additional releases and every unsafe-container alias combination remain unmeasured.
 
-Validation: release build; all 3,262 managed tests; Rust unbound-host test/doc-test
+Validation: release build; all 3,377 managed tests; Rust unbound-host test/doc-test
 commands; stub regeneration with no drift; the engine-only gate above. Managed
 controls include local scenes, nonuniform actual collider scale, a missing collider
 between valid commands, initial overlaps, no managed allocation growth between 1

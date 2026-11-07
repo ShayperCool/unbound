@@ -30,6 +30,35 @@ namespace Unbound.Runtime
     /// </summary>
     internal static unsafe class PhysicsWorld
     {
+        static readonly List<Unity.Jobs.JobHandle> s_QueryJobs = new List<Unity.Jobs.JobHandle>();
+        internal static void TrackQueryJob(Unity.Jobs.JobHandle handle) => s_QueryJobs.Add(handle);
+
+        internal static void CompleteQueryJobs()
+        {
+            while (s_QueryJobs.Count != 0)
+            {
+                int last = s_QueryJobs.Count - 1;
+                var handle = s_QueryJobs[last];
+                s_QueryJobs.RemoveAt(last);
+                Jobs.JobSystem.WaitForExecution(handle);
+            }
+        }
+
+        internal static Dictionary<Space, uint> PrepareBatchWorlds()
+        {
+            CompleteQueryJobs();
+            SceneMembershipChanged();
+            if (Compat.PhysicsBatchRetainsSyncedTransforms) Flush();
+            else PrepareQuery();
+            var worlds = new Dictionary<Space, uint>(s_Locals.Count + 1);
+            worlds.Add(s_Default, s_Default.Colliders.Count != 0 ? s_Default.World : 0);
+            foreach (var space in s_Locals)
+            {
+                worlds.Add(space, space.Colliders.Count != 0 ? space.World : 0);
+            }
+            return worlds;
+        }
+
         static bool s_Registered;
         static bool s_Stepping;
         static readonly Dictionary<ulong, Collider> s_ByShape = new Dictionary<ulong, Collider>();
@@ -146,6 +175,7 @@ namespace Unbound.Runtime
         /// native world is created with the first component that joins it.</summary>
         internal static void CreateLocal(int sceneHandle)
         {
+            CompleteQueryJobs();
             if (s_ByScene.ContainsKey(sceneHandle)) return;
             var space = new Space(sceneHandle, s_NextLocalIndex++, 1);
             s_Locals.Add(space);
@@ -158,6 +188,7 @@ namespace Unbound.Runtime
         /// what is left leaves the simulation.</summary>
         internal static void ReleaseLocal(int sceneHandle)
         {
+            CompleteQueryJobs();
             if (!s_ByScene.TryGetValue(sceneHandle, out var space)) return;
             if (!s_Stepping) Migrate();
             using (Enter(space))
@@ -190,6 +221,7 @@ namespace Unbound.Runtime
         /// physics scene. Without local physics scenes every component is in the default one.</summary>
         internal static void SceneMembershipChanged()
         {
+            CompleteQueryJobs();
             if (s_Locals.Count > 0 && !s_Stepping) Migrate();
         }
 
@@ -321,6 +353,7 @@ namespace Unbound.Runtime
 
         internal static void SetImprovedPatchFriction(bool value)
         {
+            CompleteQueryJobs();
             // A native setting of every world; applied once a world exists, as before.
             bool any = s_Default.World != 0;
             foreach (var space in s_Locals) any |= space.World != 0;
@@ -331,6 +364,7 @@ namespace Unbound.Runtime
         /// world is created for it, as before.</summary>
         internal static void SetBounceThreshold(float value)
         {
+            CompleteQueryJobs();
             using (Enter(s_Default)) B3.ua3_world_set_restitution_threshold(World, value);
             foreach (var space in s_Locals)
                 if (space.World != 0) B3.ua3_world_set_restitution_threshold(space.World, value);
@@ -354,6 +388,7 @@ namespace Unbound.Runtime
         /// <summary>Forgets every body (the game domain is torn down).</summary>
         internal static void Reset()
         {
+            CompleteQueryJobs();
             foreach (var space in s_Locals)
             {
                 if (space.World != 0) B3.ua3_world_destroy(space.World);
@@ -415,6 +450,7 @@ namespace Unbound.Runtime
 
         internal static void Add(Rigidbody rb)
         {
+            CompleteQueryJobs();
             using (Enter(rb.m_Registered ? rb.m_Space : SpaceOf(rb.m_GameObject))) AddCurrent(rb);
         }
 
@@ -448,6 +484,7 @@ namespace Unbound.Runtime
 
         internal static void Remove(Rigidbody rb)
         {
+            CompleteQueryJobs();
             if (!rb.m_Registered) return;
             using (Enter(rb.m_Space)) RemoveCurrent(rb);
         }
@@ -472,6 +509,7 @@ namespace Unbound.Runtime
 
         internal static void Add(Collider c)
         {
+            CompleteQueryJobs();
             using (Enter(c.m_Registered ? c.m_Space : SpaceOf(c.m_GameObject))) AddCurrent(c);
         }
 
@@ -500,6 +538,7 @@ namespace Unbound.Runtime
 
         internal static void Remove(Collider c)
         {
+            CompleteQueryJobs();
             if (!c.m_Registered) return;
             using (Enter(c.m_Space)) RemoveCurrent(c);
         }
@@ -524,6 +563,7 @@ namespace Unbound.Runtime
 
         internal static void MarkShapeDirty(Collider c, bool geometryChanged)
         {
+            CompleteQueryJobs();
             if (!c.m_Registered) return;
             using (Enter(c.m_Space)) MarkShapeDirtyCurrent(c, geometryChanged);
         }
@@ -571,6 +611,7 @@ namespace Unbound.Runtime
         /// <see cref="SyncTransforms"/> does that).</summary>
         internal static void Flush()
         {
+            CompleteQueryJobs();
             if (s_Stepping) return;
             if (s_Locals.Count > 0) Migrate();
             FlushSpace(s_Default);
@@ -968,6 +1009,7 @@ namespace Unbound.Runtime
         /// priority, detectCollisions, hasModifiableContacts).</summary>
         internal static void Refilter(Collider c)
         {
+            CompleteQueryJobs();
             if (c.m_Shape == 0) return;
             FilterOf(c, c.m_AttachedBody, out var category, out var mask, out int layerFlags);
             if (c is CharacterController controller)
@@ -987,7 +1029,11 @@ namespace Unbound.Runtime
                 foreach (var c in space.Colliders) Refilter(c);
         }
 
-        internal static void MaterialChanged(Collider c) => UpdateMaterial(c);
+        internal static void MaterialChanged(Collider c)
+        {
+            CompleteQueryJobs();
+            UpdateMaterial(c);
+        }
 
         static void UpdateMaterial(Collider c)
         {
@@ -1007,6 +1053,7 @@ namespace Unbound.Runtime
         /// (unmeasured).</summary>
         internal static void SyncTransforms()
         {
+            CompleteQueryJobs();
             using (Enter(s_Default)) SyncCurrent();
             for (int i = 0; i < s_Locals.Count; i++)
                 using (Enter(s_Locals[i])) SyncCurrent();
@@ -1106,6 +1153,7 @@ namespace Unbound.Runtime
         /// (Unbound's choice, unmeasured).</summary>
         internal static void PrepareQuery(Space space)
         {
+            CompleteQueryJobs();
             using (Enter(space))
             {
                 if (s_World == 0) return;
@@ -1126,6 +1174,7 @@ namespace Unbound.Runtime
         /// (6000.0 Scripting API, PhysicsScene.Simulate).</summary>
         internal static void Simulate(Space space, float deltaTime)
         {
+            CompleteQueryJobs();
             if (s_Stepping)
             {
                 Debug.LogError("Physics.Simulate cannot be called during a simulation step or its callbacks.");
@@ -1512,6 +1561,7 @@ namespace Unbound.Runtime
 
         internal static void SetIgnored(Collider a, Collider b, bool ignore)
         {
+            CompleteQueryJobs();
             var key = new PairKey(a, b);
             if (ignore ? !s_IgnoredPairs.Add(key) : !s_IgnoredPairs.Remove(key)) return;
             Flush();

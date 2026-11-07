@@ -19,7 +19,7 @@ namespace UnityEngine.Tests
     /// Rigidbody and transform the Transform of that rigidbody or collider.
     /// Geometry, face flags, capacity checks and initial-overlap differences are measured by
     /// tests/projects/physicsbatch against Unity 6000.0.71f1. The order of several hits is not
-    /// documented and is not asserted. Execution remains synchronous after dependencies complete.
+    /// documented and is not asserted. Scheduling owns command/result buffers until completion and executes dependencies first.
     ///
     /// Red base 29030429: the file compiles there (every API it uses is a public stub with the same
     /// signature). Each case names what fails. "Allocation" means new NativeArray&lt;RaycastHit&gt;
@@ -27,7 +27,7 @@ namespace UnityEngine.Tests
     /// (RaycastHit made unmanaged, commands still stubs) the cast cases fail on their first
     /// assertion instead, since the stub ScheduleBatch writes nothing.
     /// </summary>
-    public class PhysicsCastBatchQueryTests : IDisposable
+    public partial class PhysicsCastBatchQueryTests : IDisposable
     {
         // Far from the origin, away from anything other tests leave in the default physics scene.
         static readonly Vector3 Origin = new Vector3(900f, 0f, 0f);

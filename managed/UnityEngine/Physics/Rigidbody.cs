@@ -122,6 +122,7 @@ namespace UnityEngine
         {
             get
             {
+                W.CompleteQueryJobs();
                 if (m_Registered && m_Body == 0) W.Flush();
                 return m_Body;
             }
@@ -153,6 +154,7 @@ namespace UnityEngine
         /// their shapes give that mass (Unity's automatic center and tensor), or the set ones.</summary>
         internal void ApplyMass()
         {
+            W.CompleteQueryJobs();
             m_MassDirty = false;
             var body = m_Body;
             if (body == 0 || m_IsKinematic) return;
@@ -602,6 +604,7 @@ namespace UnityEngine
         /// <summary>The solver settings PhysX keeps per body.</summary>
         internal void ApplyTuning()
         {
+            W.CompleteQueryJobs();
             var body = m_Body;
             if (body == 0) return;
             B3.ua3_body_set_sleep_threshold(body, m_SleepThreshold);

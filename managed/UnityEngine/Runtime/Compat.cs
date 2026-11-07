@@ -93,6 +93,11 @@ namespace Unbound.Runtime
         /// Other releases retain their existing sampling until measured.</summary>
         internal static bool ParticleShapeModifiersMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>Batch physics queries use the last synchronized transforms even with
+        /// autoSyncTransforms enabled (physicsbatch, 6000.0.71f1). Other releases retain automatic
+        /// preparation until measured.</summary>
+        internal static bool PhysicsBatchRetainsSyncedTransforms => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Terrain tree material bindings retain their creation material, measured in
         /// tests/projects/physicsbatch on 6000.0.71f1. Other releases keep assignment propagation
         /// until their binding lifetime is measured.</summary>

@@ -46,6 +46,7 @@ namespace Unbound.Runtime.Jobs
         public int[] Claimed = new int[1];
         public int Remaining;
         public bool Flushed;
+        public volatile bool Held;
         public bool Parallel;
         public bool Transform;
         public volatile bool Done;
@@ -105,6 +106,7 @@ namespace Unbound.Runtime.Jobs
         [ThreadStatic] static JobRecord t_Executing;
         [ThreadStatic] static int t_ThreadIndex;
         [ThreadStatic] static Safety.TempScope t_JobScope;
+        [ThreadStatic] static Stack<Safety.TempScope> t_FreeJobScopes;
 
         internal static bool IsExecutingJob => t_Executing != null;
         internal static int ThreadIndex => t_Executing != null ? t_ThreadIndex : 0;
@@ -411,7 +413,7 @@ namespace Unbound.Runtime.Jobs
                 s_Batch.Add(record);
                 if (record.Transform) s_PendingTransformJobs++;
             }
-            Trace.Jobs($"scheduled {record.Name} #{record.Id} ({record.Participants} participants, {record.PendingDependencies} pending dependencies)");
+            if (Trace.JobsOn) Trace.Jobs($"scheduled {record.Name} #{record.Id} ({record.Participants} participants, {record.PendingDependencies} pending dependencies)");
             return record.Handle;
         }
 
@@ -552,9 +554,12 @@ namespace Unbound.Runtime.Jobs
                 if (s_Batch.Count == 0) return;
                 batch = new List<JobRecord>(s_Batch);
                 s_Batch.Clear();
-                Trace.Jobs($"flush {batch.Count} jobs");
+                if (Trace.JobsOn) Trace.Jobs($"flush {batch.Count} jobs");
                 foreach (var record in batch)
                 {
+                    // Engine jobs can validate ownership before preparing their native inputs.
+                    // A flush during that preparation must leave them queued.
+                    if (record.Held) { s_Batch.Add(record); continue; }
                     record.Flushed = true;
                     if (record.PendingDependencies == 0) EnqueueLocked(record);
                 }
@@ -598,12 +603,13 @@ namespace Unbound.Runtime.Jobs
         static void Execute(JobRecord record, int jobIndex)
         {
             if (Interlocked.Exchange(ref record.Claimed[jobIndex], 1) != 0) return;
-            Trace.Jobs($"run {record.Name} #{record.Id} participant {jobIndex} on thread {Environment.CurrentManagedThreadId}");
+            if (Trace.JobsOn) Trace.Jobs($"run {record.Name} #{record.Id} participant {jobIndex} on thread {Environment.CurrentManagedThreadId}");
             var previous = t_Executing;
             var previousScope = t_JobScope;
             int previousIndex = t_ThreadIndex;
             t_Executing = record;
-            t_JobScope = new Safety.TempScope();
+            t_FreeJobScopes ??= new Stack<Safety.TempScope>();
+            t_JobScope = t_FreeJobScopes.TryPop(out var availableScope) ? availableScope : new Safety.TempScope();
             if (!PlayerLoopDriver.IsMainThread && t_ThreadIndex == 0) t_ThreadIndex = 1;
             byte* data = record.Data;
             byte* copy = null;
@@ -627,6 +633,7 @@ namespace Unbound.Runtime.Jobs
             finally
             {
                 t_JobScope.End();
+                t_FreeJobScopes.Push(t_JobScope);
                 if (copy != null) NativeMemory.AlignedFree(copy);
                 t_Executing = previous;
                 t_JobScope = previousScope;
@@ -637,7 +644,7 @@ namespace Unbound.Runtime.Jobs
 
         static void Finish(JobRecord record)
         {
-            Trace.Jobs($"finished {record.Name} #{record.Id}");
+            if (Trace.JobsOn) Trace.Jobs($"finished {record.Name} #{record.Id}");
             foreach (var (buffer, allocator, safety) in record.Deallocations)
             {
                 UnsafeUtility.FreeTracked((void*)buffer, allocator);
@@ -669,6 +676,7 @@ namespace Unbound.Runtime.Jobs
         /// <summary>Runs a job and its unstarted dependencies on this thread; waits for what others run.</summary>
         static void RunNow(JobRecord record)
         {
+            lock (s_Lock) s_Batch.Remove(record);
             foreach (var dependency in record.Dependencies) RunNow(dependency);
             if (record.Reflection != null)
             {
@@ -690,6 +698,14 @@ namespace Unbound.Runtime.Jobs
         }
 
         // ------------------------------------------------------------------ completion
+
+        // Physics mutations wait for outstanding query reads without releasing the user's
+        // NativeArray ownership. Only JobHandle.Complete synchronizes those safety records.
+        internal static void WaitForExecution(JobHandle handle)
+        {
+            var record = Find(handle);
+            if (record != null && !record.Done) RunNow(record);
+        }
 
         internal static void Complete(JobHandle handle)
         {
@@ -717,7 +733,7 @@ namespace Unbound.Runtime.Jobs
             if (!record.Done) Complete(record.Handle);
             if (record.Synced) return;
             record.Synced = true;
-            Trace.Jobs($"synced {record.Name} #{record.Id}");
+            if (Trace.JobsOn) Trace.Jobs($"synced {record.Name} #{record.Id}");
             foreach (var dependency in record.Dependencies) Sync(dependency);
             Safety.JobSynced(record);
             if (record.Transform)

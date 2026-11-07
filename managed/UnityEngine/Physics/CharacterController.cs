@@ -246,6 +246,7 @@ namespace UnityEngine
         /// <summary>The transform moved or scaled: the capsule follows it.</summary>
         internal void SyncFromTransform()
         {
+            W.CompleteQueryJobs();
             if (m_Controller == 0) return;
             Geometry(transform.localToWorldMatrix, out var centre, out float r, out float cylinder);
             B3.ua3_cct_configure(m_Controller, r, cylinder, Mathf.Max(1e-4f, m_SkinWidth), StepOffsetFor(r, cylinder), SlopeCosine);
