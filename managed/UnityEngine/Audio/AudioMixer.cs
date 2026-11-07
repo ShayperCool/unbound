@@ -715,7 +715,8 @@ namespace Unbound.Runtime
             // Feedback is obsolete and has no measured effect, including the mixer's signed range.
             float rawDelay = Parameter("Delay") is string delayGuid ? mixer.Value(delayGuid) : ChorusDefaults[4];
             float? delay = rawDelay <= 100f ? Mathf.Max(0f, rawDelay) : null;
-            return new { dry = v[0], wet1 = v[1], wet2 = v[2], wet3 = v[3], delay, rate = v[5], depth = v[6] };
+            // Wet mix tap 3 (v[3]) reaches only a third output channel, which the stereo mix lacks.
+            return new { dry = v[0], wet1 = v[1], wet2 = v[2], delay, rate = v[5], depth = v[6] };
         }
         internal object ParamEqConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {

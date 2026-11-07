@@ -17,6 +17,7 @@ pub mod duck;
 pub mod effects;
 pub mod fft;
 pub mod mixer;
+pub(crate) mod modulated_delay;
 pub mod protocol;
 pub mod reverb;
 pub mod spatial;

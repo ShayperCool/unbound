@@ -378,7 +378,9 @@ namespace UnityEngine.Tests
             var chorus = payload.RootElement.GetProperty("effects")[0].GetProperty("chorus");
             Assert.Equal(0f, chorus.GetProperty("delay").GetSingle());
             Assert.Equal(20f, chorus.GetProperty("rate").GetSingle());
-            Assert.Equal(1f, chorus.GetProperty("wet3").GetSingle());
+            // Wet mix tap 3 only reaches a third output channel: the stereo mix does not get it.
+            Assert.True(mixer.GetFloat("Wet mix tap 3", out float tap3)); Assert.Equal(200f, tap3);
+            Assert.False(chorus.TryGetProperty("wet3", out _));
             effect.m_EnableWetMix = true;
             Assert.Contains("wet mixing", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
             effect.m_Bypass = true; group.DspConfiguration();

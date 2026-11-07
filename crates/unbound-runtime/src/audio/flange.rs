@@ -1,8 +1,8 @@
-//! Mixer Flange measured on Unity 6000.0.71f1 (tests/projects/audioflange).
-//! Q14 input history and cosine interpolation match Chorus, but both channels use one
-//! phase, the history covers 40 ms, and the delay span is 20 ms times depth squared.
-//! These are release-specific measurements, not a documented Unity DSP contract.
-use super::wavetable;
+//! Mixer Flange matching the Unity 6000.0.71f1 Editor (tests/projects/audioflange): the
+//! shared [`ModulatedDelay`] of Chorus with one tap for both channels, a 40 ms history and a
+//! delay span of 20 ms times depth squared. These are release-specific measurements, not a
+//! documented Unity DSP contract.
+use super::modulated_delay::{ModulatedDelay, Taps};
 use serde::Deserialize;
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
@@ -27,117 +27,43 @@ impl FlangeSpec {
         Ok(())
     }
 }
+/// The Delay span at Depth 1, in milliseconds (no exposed Delay parameter).
+const SPAN_MS: f32 = 40.0;
+
 pub struct Flange {
-    history: Vec<[i16; 2]>,
-    position: usize,
-    offset: usize,
-    buffer: usize,
-    rate: u32,
-    phase: f32,
-    span: f32,
+    line: ModulatedDelay,
 }
 impl Flange {
+    /// 40 ms of history; the milliseconds are truncated to frames before rounding up to DSP
+    /// buffers.
+    fn reach(rate: u32) -> usize {
+        (rate as f32 * SPAN_MS) as usize / 1000
+    }
     pub(crate) fn frames(rate: u32, buffer: u32) -> anyhow::Result<usize> {
-        anyhow::ensure!(rate > 0, "AudioMixer Flange output rate must be positive");
-        let buffer = buffer.max(1) as usize;
-        // Native truncates milliseconds to samples before rounding up to DSP buffers.
-        let delay = (rate as f32 * 40.0) as usize / 1000;
-        (delay / buffer + 1)
-            .max(2)
-            .checked_mul(buffer)
-            .filter(|n| *n <= 8 * 1024 * 1024 / 4)
-            .ok_or_else(|| {
-                anyhow::anyhow!("AudioMixer Flange history exceeds the supported 8 MiB limit")
-            })
+        ModulatedDelay::frames("Flange", rate, buffer, Self::reach)
     }
     pub fn new(rate: u32, buffer: u32) -> anyhow::Result<Self> {
-        let frames = Self::frames(rate, buffer)?;
-        let mut history = Vec::new();
-        history.try_reserve_exact(frames)?;
-        history.resize(frames, [0; 2]);
         Ok(Self {
-            history,
-            position: 0,
-            offset: 0,
-            buffer: buffer.max(1) as usize,
-            rate,
-            phase: 0.0,
-            span: 0.0,
+            line: ModulatedDelay::new("Flange", rate, buffer, Self::reach)?,
         })
     }
     pub fn configuration(&self) -> (u32, u32) {
-        (self.rate, self.buffer as u32)
+        self.line.configuration()
     }
     pub fn clear(&mut self) {
-        self.history.fill([0; 2]);
-        self.position = 0;
-        self.offset = 0;
-        self.phase = 0.0;
-        self.span = 0.0;
-    }
-    fn wrap(&self, value: f32) -> f32 {
-        let frames = self.history.len() as f32;
-        if value < 0.0 {
-            value + frames
-        } else if value >= frames {
-            value - frames
-        } else {
-            value
-        }
-    }
-    fn sample(&self, index: usize, channel: usize) -> f32 {
-        if index == self.history.len() {
-            0.0
-        } else {
-            self.history[index][channel] as f32 * (1.0 / 16384.0)
-        }
+        self.line.clear();
     }
     pub fn process(&mut self, samples: &mut [f32], spec: &FlangeSpec) {
-        let target =
-            (((40.0 * spec.depth) * self.rate as f32 / 1000.0) * (spec.depth * 0.5)).max(4.0);
-        let increment = spec.rate / self.rate as f32;
-        let mut done = 0;
-        while done < samples.len() / 2 {
-            let count = (samples.len() / 2 - done)
-                .min(self.buffer - self.offset)
-                .min(self.history.len() - self.position);
-            for (history, frame) in self.history[self.position..self.position + count]
-                .iter_mut()
-                .zip(samples[done * 2..(done + count) * 2].chunks_exact(2))
-            {
-                for c in 0..2 {
-                    history[c] = (frame[c] * 16384.0) as i32 as i16;
-                }
-            }
-            let base = (self.position - self.offset) as f32;
-            for f in 0..count {
-                self.span = if target - 0.015625 > self.span {
-                    self.span + 0.015625
-                } else if self.span > target + 0.015625 {
-                    self.span - 0.015625
-                } else {
-                    target
-                };
-                let wave = (wavetable::cosine(self.phase) + 1.0) * 0.5;
-                let shift = wave * self.span - self.span;
-                let read = self.wrap((base + shift) + (self.offset + f) as f32);
-                let next = self.wrap(read + 1.0);
-                let fraction = read - read as usize as f32;
-                for c in 0..2 {
-                    let a = self.sample(read as usize, c);
-                    let b = self.sample(next as usize, c);
-                    let x = &mut samples[(done + f) * 2 + c];
-                    *x = *x * spec.dry + (a * (1.0 - fraction) + b * fraction) * spec.wet;
-                }
-                self.phase += increment;
-                if self.phase > 1.0 {
-                    self.phase -= 1.0;
-                }
-            }
-            self.position = (self.position + count) % self.history.len();
-            self.offset = (self.offset + count) % self.buffer;
-            done += count;
-        }
+        let rate = self.line.rate() as f32;
+        let target = ((SPAN_MS * spec.depth) * rate / 1000.0) * (spec.depth * 0.5);
+        self.line.process(
+            samples,
+            target,
+            spec.rate,
+            Taps::Shared,
+            spec.dry,
+            [spec.wet; 2],
+        );
     }
 }
 
