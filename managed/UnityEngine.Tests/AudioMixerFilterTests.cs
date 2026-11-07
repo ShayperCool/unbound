@@ -86,6 +86,25 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ClearFloatRetainsSubmittedOverrideUntilTheNextAudioUpdate()
+        {
+            var (mixer, _, _) = Fixture();
+            var snapshot = new AudioMixerSnapshot { m_Mixer = mixer };
+            snapshot.m_Values["cutoff"] = 1000;
+            snapshot.TransitionTo(0);
+            mixer.Tick(0, 0);
+            mixer.SetFloat("Cutoff", 4000);
+            mixer.Tick(0, 0);
+            Assert.True(mixer.ClearFloat("Cutoff"));
+            Assert.True(mixer.GetFloat("Cutoff", out var value));
+            // mixerfilters rate-48000/rate-44100: set_lp.cutoff.8, before submission.
+            Assert.Equal(4000, value);
+            mixer.Tick(0, 0);
+            Assert.True(mixer.GetFloat("Cutoff", out value));
+            Assert.Equal(1000, value);
+        }
+
+        [Fact]
         public unsafe void GroupObservationDoesNotModifyTheProductionBuffer()
         {
             var (_, group, _) = Fixture();

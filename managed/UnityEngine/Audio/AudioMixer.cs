@@ -32,6 +32,7 @@ namespace UnityEngine.Audio
         internal readonly List<AudioMixerGroup> m_Groups = new List<AudioMixerGroup>();
         bool m_Built;
         readonly HashSet<string> m_PendingClears = new HashSet<string>(StringComparer.Ordinal);
+        readonly Dictionary<string, float> m_SubmittedOverrides = new Dictionary<string, float>(StringComparer.Ordinal);
         Dictionary<string, float> m_InstantTarget;
 
         // A snapshot transition in progress.
@@ -171,8 +172,10 @@ namespace UnityEngine.Audio
                 value = 0f;
                 return false;
             }
-            // 6000.0 GetFloat promises the snapshot value after ClearFloat. Native's
-            // audiodistortion mix_clear capture reports it before the next render too.
+            // The 6000.0.71f1 captures distinguish an override already submitted to audio
+            // (mixerfilters set_lp) from a set/clear before submission (audiodistortion mix_clear).
+            if (m_PendingClears.Contains(guid) && m_SubmittedOverrides.TryGetValue(guid, out value))
+                return true;
             value = m_PendingClears.Contains(guid)
                 ? (m_Values.TryGetValue(guid, out var snapshot) ? snapshot : m_Defaults.TryGetValue(guid, out var fallback) ? fallback : 0f)
                 : Value(guid);
@@ -220,6 +223,8 @@ namespace UnityEngine.Audio
         {
             foreach (var guid in m_PendingClears) m_Overrides.Remove(guid);
             m_PendingClears.Clear();
+            m_SubmittedOverrides.Clear();
+            foreach (var pair in m_Overrides) m_SubmittedOverrides[pair.Key] = pair.Value;
             if (m_InstantTarget != null)
             {
                 foreach (var pair in m_InstantTarget) m_Values[pair.Key] = pair.Value;

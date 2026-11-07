@@ -82,8 +82,9 @@ and tails after a source ends. Defaults are 5000 Hz and resonance 1; parameter b
 input fade and parameter slew remain in the full recordings. The gain profile constrains the
 mixer's quadratic exponent approximation independently of its exposed dB values.
 
-Exposed overrides apply immediately to GetFloat. Clearing an override and immediate snapshot
-changes become visible at the next audio update. The coroutine renders before that submission;
+Exposed overrides apply immediately to GetFloat. A submitted override remains visible after
+ClearFloat until the next audio update. Immediate snapshot changes also wait for that update.
+The coroutine renders before that submission;
 the engine capture preserves the same order. The narrow Time dependency retains the requested
 float duration independently of the FPS view and uses the existing rational-time conversion for
 its public view and capture stepping. Other Time and unscaled-clock behavior is outside this change.
@@ -94,6 +95,14 @@ NativeApi12/render5/shim9 and existing callback kinds 0–3 remain unchanged. Ac
 effects and wet mixing fail clearly. Other mixer effects and spatializer processing remain separate
 work. Only Unity 6000.0.71f1 Linux, mono/stereo input and stereo output at the two matrix rates are
 measured. Other releases, surround output and timed snapshot transitions are unmeasured.
+
+### ClearFloat regression cause
+
+| Evidence | Scope and conclusion |
+| --- | --- |
+| Documented, Unity 6000.0 | [GetFloat](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/audio/audiomixer/getfloat) returns the snapshot or transition value after [ClearFloat](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/audio/audiomixer/clearfloat). Neither API specifies an audio-update boundary. The [Audio Mixer manual](https://docs.unity.com/en-us/engine/6000.0/manual/audio/mixer/mixer) describes snapshot-controlled parameters, without a getter submission-order guarantee. |
+| Measured, Unity 6000.0.71f1 Linux | Both canonical rate profiles record `set_lp.cutoff.8` as `True:4000` immediately after clearing an override submitted in earlier audio updates; the next update restores 1000. The distortion `mix_clear` reference clears before its override is submitted and immediately reports its snapshot value. These are distinct capture contexts. |
+| Cause and implementation | The distortion delivery generalized its before-submission observation to all pending clears, introducing one lowpass API mismatch per rate. Keeping the last submitted overrides lets both existing captures match. This state model explains the measurements; it is not a claim about Unity's internal mechanism or every unmeasured timing context. Oracles, assertions and tolerances remain unchanged. |
 
 `regress.py` runs private source-matched audio-import, physics and graphics gates, preserving their
 existing tolerances and every failing field, including lossy-asset samples. `--reuse-before` reads
