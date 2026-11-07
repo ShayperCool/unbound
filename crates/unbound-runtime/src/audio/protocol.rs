@@ -91,6 +91,13 @@ pub mod filter_kind {
     pub const DISTORTION: i32 = 5;
     /// Chorus: first seven `reverb` entries are dry, wet1..3, delay, rate and depth (NativeApi 24).
     pub const CHORUS: i32 = 6;
+    /// The highest kind: both backends accept exactly `LOWPASS..=LAST`. The managed
+    /// `AudioFilterKind.Last` and `Supported` mirror this (`managed_filter_kinds_match`).
+    pub const LAST: i32 = CHORUS;
+
+    pub fn supported(kind: i32) -> bool {
+        (LOWPASS..=LAST).contains(&kind)
+    }
 }
 
 /// `AudioFilterDescriptor.stage`: where a component sits relative to the scripts with
@@ -321,5 +328,57 @@ mod tests {
             [0, 1]
         );
         assert_eq!(MAX_SOURCE_FILTERS, 64);
+    }
+
+    /// The virtual backend (managed tests, no native mixer) must accept the same descriptor
+    /// kinds as `decode_descriptors`: both use one range, `AudioFilterKind.Supported` there and
+    /// [`filter_kind::supported`] here. Fails when a kind is added on one side only.
+    #[test]
+    fn managed_filter_kinds_match() {
+        let protocol = include_str!("../../../../managed/UnityEngine/Audio/AudioProtocol.cs");
+        let backend = include_str!("../../../../managed/UnityEngine/Audio/AudioBackend.cs");
+        let class = &protocol[protocol.find("static class AudioFilterKind").unwrap()..];
+        let class = &class[..class.find("\n    }").unwrap()];
+        let constants: Vec<(&str, &str)> = class
+            .lines()
+            .filter_map(|line| line.trim().strip_prefix("internal const int "))
+            .map(|rest| {
+                let (name, value) = rest.trim_end_matches(';').split_once(" = ").unwrap();
+                (name, value)
+            })
+            .collect();
+        let numbers: Vec<(&str, i32)> = constants
+            .iter()
+            .filter_map(|(name, value)| value.parse().ok().map(|v| (*name, v)))
+            .collect();
+        assert_eq!(
+            numbers,
+            [
+                ("LowPass", filter_kind::LOWPASS),
+                ("HighPass", filter_kind::HIGHPASS),
+                ("Echo", filter_kind::ECHO),
+                ("Reverb", filter_kind::REVERB),
+                ("Distortion", filter_kind::DISTORTION),
+                ("Chorus", filter_kind::CHORUS),
+            ]
+        );
+        let last = constants
+            .iter()
+            .find(|(name, _)| *name == "Last")
+            .unwrap()
+            .1;
+        assert_eq!(
+            numbers.iter().find(|(name, _)| *name == last).unwrap().1,
+            filter_kind::LAST
+        );
+        assert!(class.contains("Supported(int kind) => kind >= LowPass && kind <= Last;"));
+        let copy = &backend[backend.find("string CopyFilters(").unwrap()..];
+        assert!(
+            copy[..copy.find("\n        }").unwrap()]
+                .contains("!AudioFilterKind.Supported(f.Kind)")
+        );
+        assert!(
+            (0..=filter_kind::LAST + 1).all(|k| filter_kind::supported(k) == (1..=6).contains(&k))
+        );
     }
 }

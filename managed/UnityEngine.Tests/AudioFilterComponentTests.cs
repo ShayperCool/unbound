@@ -354,6 +354,29 @@ namespace UnityEngine.Tests
             Assert.Null(source.m_FilterTable);
         }
 
+        static AudioFilterDescriptor NonFiniteReverb(AudioFilterDescriptor d)
+        {
+            d.Reverb[AudioFilterDescriptor.ReverbCount - 1] = float.NaN;
+            return d;
+        }
+
+        /// <summary>The virtual backend accepts every kind the native mixer accepts (both use
+        /// AudioFilterKind.Supported; managed_filter_kinds_match in protocol.rs pins it to Rust).</summary>
+        [Fact]
+        public void VirtualBackendAcceptsEveryNativeFilterKind()
+        {
+            AudioFilterDescriptor* descriptors = stackalloc AudioFilterDescriptor[AudioFilterKind.Last];
+            for (int kind = AudioFilterKind.LowPass; kind <= AudioFilterKind.Last; kind++)
+                descriptors[kind - 1] = new AudioFilterDescriptor { Id = (ulong)kind, Kind = kind, Resonance = 1f, DryMix = 1f, WetMix = 1f };
+            var packet = new AudioSourcePacket { Clip = 1, Volume = 1f, Pitch = 1f, FilterCount = AudioFilterKind.Last, Filters = descriptors };
+            m_Backend.UpdateSource(4, ref packet);
+            Assert.Empty(m_Backend.FilterRejections);
+            Assert.Equal(new[] { 1, 2, 3, 4, 5, 6 }, Array.ConvertAll(m_Backend.FiltersOf(4), f => f.Kind));
+            Assert.True(AudioFilterKind.Supported(AudioFilterKind.Chorus));
+            Assert.False(AudioFilterKind.Supported(AudioFilterKind.Last + 1));
+            Assert.False(AudioFilterKind.Supported(0));
+        }
+
         [Fact]
         public void MalformedDescriptorsAreRefusedAndKeepThePreviousChain()
         {
@@ -376,8 +399,9 @@ namespace UnityEngine.Tests
             };
             var bad = new[]
             {
-                ("kind", valid with { Kind = 0 }), ("kind", valid with { Kind = 4 }), ("stage", valid with { Stage = 2 }),
+                ("kind", valid with { Kind = 0 }), ("kind", valid with { Kind = AudioFilterKind.Last + 1 }), ("stage", valid with { Stage = 2 }),
                 ("finite", valid with { Delay = float.NaN }), ("finite", valid with { Cutoff = float.PositiveInfinity }),
+                ("finite", NonFiniteReverb(valid with { Kind = AudioFilterKind.Reverb })),
             };
             AudioFilterDescriptor* singles = stackalloc AudioFilterDescriptor[bad.Length];
             for (int i = 0; i < bad.Length; i++)

@@ -78,6 +78,10 @@ namespace Unbound.Runtime
         internal const int Distortion = 5;
         /// <summary>AudioChorusFilter (NativeApi 24): first seven Reverb entries, dry, wet1..3, delay, rate, depth.</summary>
         internal const int Chorus = 6;
+        /// <summary>The highest kind: the native mixer and <see cref="VirtualAudioBackend"/> accept
+        /// exactly LowPass..Last (filter_kind::LAST; a Rust test reads this class).</summary>
+        internal const int Last = Chorus;
+        internal static bool Supported(int kind) => kind >= LowPass && kind <= Last;
     }
 
     /// <summary>Where a component sits relative to the scripts with OnAudioFilterRead on its
@@ -105,7 +109,8 @@ namespace Unbound.Runtime
         /// Room, Room HF, Decay Time, Decay HF Ratio, Reflections, Reflect Delay, Reverb, Reverb
         /// Delay, Diffusion, Density, HF Reference, Room LF, LF Reference). Chorus uses the first
         /// seven entries for dry, wet1..3, delay, rate and depth.</summary>
-        internal fixed float Reverb[14];
+        internal fixed float Reverb[ReverbCount];
+        internal const int ReverbCount = 14;
 
         /// <summary>The most descriptors one source sends (a resource bound, not a Unity limit).</summary>
         internal const int MaxPerSource = 64;

@@ -166,7 +166,7 @@ unsafe fn decode_descriptors(
     let filters = unsafe { std::slice::from_raw_parts(pointer, count as usize) }.to_vec();
     for (i, f) in filters.iter().enumerate() {
         anyhow::ensure!(
-            matches!(f.kind, filter_kind::LOWPASS | filter_kind::HIGHPASS | filter_kind::ECHO | filter_kind::REVERB | filter_kind::DISTORTION | filter_kind::CHORUS),
+            filter_kind::supported(f.kind),
             "unsupported AudioSource filter kind {}",
             f.kind
         );

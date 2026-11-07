@@ -317,7 +317,8 @@ namespace Unbound.Runtime
         internal AudioFilterDescriptor[] FiltersOf(ulong handle) =>
             m_Sources.TryGetValue(handle, out var source) ? source.Filters : Array.Empty<AudioFilterDescriptor>();
 
-        /// <summary>The native mixer's checks on a packet's descriptors; null when they are valid.</summary>
+        /// <summary>The native mixer's checks on a packet's descriptors (decode_descriptors in
+        /// crates/unbound-runtime/src/audio/mixer.rs); null when they are valid.</summary>
         internal static unsafe string CopyFilters(in AudioSourcePacket p, out AudioFilterDescriptor[] filters)
         {
             filters = Array.Empty<AudioFilterDescriptor>();
@@ -330,11 +331,13 @@ namespace Unbound.Runtime
             for (int i = 0; i < copy.Length; i++)
             {
                 var f = copy[i];
-                if ((f.Kind < AudioFilterKind.LowPass || f.Kind > AudioFilterKind.Echo) && f.Kind != AudioFilterKind.Distortion) return "unsupported filter kind " + f.Kind;
+                if (!AudioFilterKind.Supported(f.Kind)) return "unsupported filter kind " + f.Kind;
                 if (f.Stage != AudioFilterStage.BeforeScripts && f.Stage != AudioFilterStage.AfterScripts) return "invalid filter stage " + f.Stage;
                 if (generator && f.Stage == AudioFilterStage.BeforeScripts) return "a filter component above a clipless OnAudioFilterRead generator is unsupported";
                 if (!float.IsFinite(f.Cutoff) || !float.IsFinite(f.Resonance) || !float.IsFinite(f.Delay)
                     || !float.IsFinite(f.Decay) || !float.IsFinite(f.DryMix) || !float.IsFinite(f.WetMix)) return "filter parameters must be finite";
+                for (int j = 0; j < AudioFilterDescriptor.ReverbCount; j++)
+                    if (!float.IsFinite(f.Reverb[j])) return "filter parameters must be finite";
                 for (int j = 0; j < i; j++)
                     if (copy[j].Id == f.Id) return "duplicate filter component " + f.Id;
             }
