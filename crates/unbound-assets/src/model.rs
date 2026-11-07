@@ -3080,3 +3080,5 @@ mod triangulation;
 
 #[cfg(test)]
 mod tests;
+#[cfg(test)]
+mod version_guard;
