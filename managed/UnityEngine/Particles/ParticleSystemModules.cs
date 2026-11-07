@@ -36,7 +36,23 @@ namespace UnityEngine
             public bool prewarm { get => D.prewarm; set => D.prewarm = value; }
             public MinMaxCurve startDelay { get => D.startDelay.Clone(); set => D.startDelay = value.Clone(); }
             public float startDelayMultiplier { get => D.startDelay.curveMultiplier; set => D.startDelay.curveMultiplier = value; }
-            public MinMaxCurve startLifetime { get => D.startLifetime.Clone(); set => D.startLifetime = value.Clone(); }
+            public MinMaxCurve startLifetime { get => D.startLifetime.Clone(); set => D.startLifetime = KeptStartLifetime(value).Clone(); }
+
+            /// <summary>The shortest start lifetime the setter keeps, in seconds.</summary>
+            internal const float MinimumStartLifetime = 0.0001f;
+
+            /// <summary>The startLifetime setter raises every value below
+            /// <see cref="MinimumStartLifetime"/> to it: the constant, each constant of a range on
+            /// its own (without reordering them) and a curve's multiplier (6000.0.71f1,
+            /// particlerandom model/lifetimesetter/). Lifetimes read from a scene are kept as
+            /// written (unmeasured).</summary>
+            internal static MinMaxCurve KeptStartLifetime(MinMaxCurve value)
+            {
+                value.constantMax = Mathf.Max(value.constantMax, MinimumStartLifetime);
+                if (value.mode == ParticleSystemCurveMode.TwoConstants)
+                    value.constantMin = Mathf.Max(value.constantMin, MinimumStartLifetime);
+                return value;
+            }
             public float startLifetimeMultiplier { get => D.startLifetime.curveMultiplier; set => D.startLifetime.curveMultiplier = value; }
             public MinMaxCurve startSpeed { get => D.startSpeed.Clone(); set => D.startSpeed = value.Clone(); }
             public float startSpeedMultiplier { get => D.startSpeed.curveMultiplier; set => D.startSpeed.curveMultiplier = value; }

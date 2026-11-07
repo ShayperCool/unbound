@@ -195,7 +195,7 @@ namespace UnityEngine
         }
 
         [Obsolete("startLifetime property is deprecated. Use main.startLifetime or main.startLifetimeMultiplier instead.", false)]
-        public float startLifetime { get => m_Main.startLifetime.constant; set => m_Main.startLifetime = value; }
+        public float startLifetime { get => m_Main.startLifetime.constant; set => m_Main.startLifetime = MainModule.KeptStartLifetime(value); }
 
         [Obsolete("gravityModifier property is deprecated. Use main.gravityModifier or main.gravityModifierMultiplier instead.", false)]
         public float gravityModifier { get => m_Main.gravityModifier.constant; set => m_Main.gravityModifier = value; }
