@@ -125,6 +125,38 @@ namespace UnityEngine.Tests
             Assert.Equal(at+Vector3.right*.5f,results[0]);
         }
 
+        [Theory]
+        [InlineData("convex")]
+        [InlineData("disable")]
+        [InlineData("destroy")]
+        public void ClosestPointBatchesMatchMeasuredColliderMutationOrder(string mutation)
+        {
+            var previous=ProjectInfo.UnityVersion;ProjectInfo.UnityVersion="6000.0.71f1";
+            var go=new GameObject("ClosestMutation");m_Made.Add(go);
+            var mesh=new Mesh();
+            try
+            {
+                var at=Origin+new Vector3(0,0,290);go.transform.position=at;
+                mesh.vertices=new[]{new Vector3(1,0,0),new Vector3(0,1,0),new Vector3(0,0,1),new Vector3(-1,-1,-1)};
+                mesh.triangles=new[]{0,2,1,0,1,3,1,2,3,2,0,3};
+                var collider=go.AddComponent<MeshCollider>();collider.sharedMesh=mesh;collider.convex=true;
+                Physics.SyncTransforms();
+                var commands=Native(new ClosestPointCommand(at+Vector3.right*3,collider,at,Quaternion.identity,Vector3.one));
+                var results=Native<Vector3>(1);
+                var handle=ClosestPointCommand.ScheduleBatch(commands,results,1);
+                if(mutation=="convex")collider.convex=false;
+                if(mutation=="disable")collider.enabled=false;
+                if(mutation=="destroy")Object.DestroyImmediate(go);
+                handle.Complete();
+                Assert.Equal(at+Vector3.right*(mutation=="convex"?3:1),results[0]);
+            }
+            finally
+            {
+                if(go!=null)Object.DestroyImmediate(go);
+                Object.DestroyImmediate(mesh);ProjectInfo.UnityVersion=previous;
+            }
+        }
+
         struct QueryTransformWriter : IJobParallelForTransform
         {
             public Vector3 Position;

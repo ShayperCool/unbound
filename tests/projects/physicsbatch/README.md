@@ -1,7 +1,7 @@
 # 3D batch query commands
 
 Unity 6000.0.71f1, Linux GPU Editor. Two independent project copies produced
-byte-identical 5,867-record captures before the canonical reference was published.
+byte-identical 5,870-record captures before the canonical reference was published.
 The repeat captures and Editor supervision receipts remain in the validation cache.
 The extensions preserve every earlier reference value. They add global backface
 controls, 80 faces on one mesh, container/closest-point limitations and 63 colliders
@@ -71,7 +71,7 @@ in the comparison JSON, with 1e-4 absolute and 1e-5 relative float tolerances.
 ## Validation and remaining limits
 
 The engine resolves every measured result and invalid-input case. The strict
-comparison is 5,855/5,867. Twelve raw differences remain in `stress/{faces,mixed}/{0,2,5,7,40,42}`:
+comparison is 5,858/5,870. Twelve raw differences remain in `stress/{faces,mixed}/{0,2,5,7,40,42}`:
 three pairs of mesh faces exchange slots in each stress scene. All 80 unique collider/triangle identities per scene,
 distances, points and normals agree at the unchanged tolerances; termination and
 counts agree. `compare` still fails on these twelve rows and saves both values.
@@ -90,7 +90,7 @@ array safety remains owned by the job until completion. Terrain heightmap/tree
 queries and tree material lifetimes are Editor-measured by the added controls.
 Additional releases and every unsafe-container alias combination remain unmeasured.
 
-Validation: release build; all 3,387 managed tests; Rust unbound-host test/doc-test
+Validation: release build; all 3,390 managed tests; Rust unbound-host test/doc-test
 commands; stub regeneration with no drift; the engine-only gate above. Managed
 controls include local scenes, nonuniform actual collider scale, a missing collider
 between valid commands, initial overlaps, no managed allocation growth between 1

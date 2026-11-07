@@ -16,6 +16,7 @@ public static partial class ProbeEntry
     {
         Scheduling(box);
         TransformPreparation();
+        ClosestMutation();
         TerrainQueriesAndMaterials();
         ControllerFilters();
     }
@@ -107,6 +108,28 @@ public static partial class ProbeEntry
             Physics.SyncTransforms();RaycastCommand.ScheduleBatch(commands,results,1).Complete();Hit("jobs/transform/synced",results[0]);
         }
         Physics.autoSyncTransforms=previous;UnityEngine.Object.DestroyImmediate(target.gameObject);
+    }
+    static void ClosestMutation()
+    {
+        foreach(string mutation in new[]{"convex","disable","destroy"})
+        {
+            var go=new GameObject("closestMutation");var at=new Vector3(700,0,0);go.transform.position=at;
+            var mesh=new Mesh();mesh.vertices=new[]{new Vector3(1,0,0),new Vector3(0,1,0),new Vector3(0,0,1),new Vector3(-1,-1,-1)};
+            mesh.triangles=new[]{0,2,1,0,1,3,1,2,3,2,0,3};
+            var collider=go.AddComponent<MeshCollider>();collider.sharedMesh=mesh;collider.convex=true;
+            Physics.SyncTransforms();
+            using(var commands=new NativeArray<ClosestPointCommand>(1,Allocator.TempJob))
+            using(var results=new NativeArray<Vector3>(1,Allocator.TempJob))
+            {
+                Set(commands,0,new ClosestPointCommand(at+Vector3.right*3,collider,at,Quaternion.identity,Vector3.one));
+                var handle=ClosestPointCommand.ScheduleBatch(commands,results,1);
+                if(mutation=="convex")collider.convex=false;
+                if(mutation=="disable")collider.enabled=false;
+                if(mutation=="destroy")UnityEngine.Object.DestroyImmediate(go);
+                handle.Complete();Row("jobs/closestMutation/"+mutation,V(results[0]));
+            }
+            if(go!=null)UnityEngine.Object.DestroyImmediate(go);UnityEngine.Object.DestroyImmediate(mesh);
+        }
     }
     static TerrainCollider NewTerrain(string name,Vector3 origin,PhysicsMaterial initial)
     {
