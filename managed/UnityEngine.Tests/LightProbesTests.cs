@@ -47,6 +47,29 @@ namespace Unbound.Tests
         });
 
         [Fact]
+        public void BakesWithUnusedNaNValuesLoad()
+        {
+            // The Editor's bakes hold NaN where a value is unused (the hull ray of a probe off the
+            // hull, an outer cell's first matrix rows); the lighting data reply writes it as null.
+            const string json = @"{
+                ""positions"": [0,0,0, 1,0,0, 0,1,0, 0,0,1],
+                ""coefficients"": [" + "0.5,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0," + @"
+                    0.5,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0," + @"
+                    0.5,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0," + @"
+                    0.5,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,0],
+                ""hullRays"": [null,null,null, 1,0,0, 0,1,0, 0,0,1],
+                ""tetrahedra"": [{ ""indices"": [1,2,3,-1], ""neighbors"": [-1,-1,-1,-1],
+                    ""matrix"": [null,null,null,null, null,null,null,null, 1,2,3,4] }]
+            }";
+            var probes = LightProbes.FromJson(JsonDocument.Parse(json).RootElement);
+            Assert.Equal(4, probes.count);
+            Assert.True(float.IsNaN(probes.m_Self.HullRays[0].x));
+            Assert.Equal(new Vector3(1, 0, 0), probes.m_Self.HullRays[1]);
+            Assert.True(float.IsNaN(probes.m_Self.Cells[0].R0.x));
+            Assert.Equal(new Vector3(1, 2, 3), probes.m_Self.Cells[0].R2);
+        }
+
+        [Fact]
         public void ProbeOcclusionIsByShadowMaskChannel()
         {
             Assert.Equal(new Vector4(0.25f, 0.5f, 1f, 1f),

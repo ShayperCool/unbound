@@ -325,11 +325,14 @@ namespace UnityEngine
             return v;
         }
 
+        /// <summary>A float array of the reply. JSON has no NaN: the native side writes a
+        /// non-finite value as null. The Editor's bakes hold NaN where a value is unused: the hull
+        /// ray of a probe off the hull and the first two matrix rows of an outer cell.</summary>
         static float[] Floats(JsonElement array)
         {
             var values = new float[array.GetArrayLength()];
             int i = 0;
-            foreach (var v in array.EnumerateArray()) values[i++] = v.GetSingle();
+            foreach (var v in array.EnumerateArray()) values[i++] = v.ValueKind == JsonValueKind.Null ? float.NaN : v.GetSingle();
             return values;
         }
 
