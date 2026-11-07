@@ -417,6 +417,8 @@ namespace UnityEngine
                 if (!Unbound.Runtime.Compat.SkinnedBoundsMeasured && renderer is SkinnedMeshRenderer skinned && skinned.rootBone != null && skinned.rootBone != skinned.transform)
                     Unbound.Runtime.Stubs.Ignored("Animation culling by a skinned renderer with a root bone",
                         "judges its visibility by the mesh bounds around the renderer, not Unity's bounds around the root bone: a character whose bones move far from the renderer can be culled on screen");
+                if (Unbound.Runtime.Compat.SkinnedBoundsMeasured && renderer is SkinnedMeshRenderer measuredSkin)
+                    measuredSkin.ReportBoundsLimitation();
                 if (renderer.isVisible) return true;
                 if (!HasExactCullingBounds(renderer) && renderer.enabled && root.activeInHierarchy)
                 {

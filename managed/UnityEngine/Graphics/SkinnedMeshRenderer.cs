@@ -259,7 +259,7 @@ namespace UnityEngine
                     m_RigidBoneBounds.SetMinMax(lo, hi);
                 }
             }
-            if (!m_Rigid || m_Bones.Length != 1 || m_Bones[0] == null || GetComponent<Cloth>() != null) return false;
+            if (!m_Rigid || mesh.blendShapeCount != 0 || m_Bones.Length != 1 || m_Bones[0] == null || GetComponent<Cloth>() != null) return false;
             local = TransformBounds(m_RigidBoneBounds, RootMatrix.inverse * m_Bones[0].localToWorldMatrix);
             return true;
         }
@@ -282,7 +282,7 @@ namespace UnityEngine
             }
         }
 
-        void ReportBoundsLimitation()
+        internal void ReportBoundsLimitation()
         {
             if (HasMeasuredCullingBounds || m_Mesh == null) return;
             Stubs.Ignored("SkinnedMeshRenderer bounds outside measured support",
