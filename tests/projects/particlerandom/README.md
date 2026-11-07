@@ -197,8 +197,8 @@ Regression results retain emission's 18 failing records/54 values, gravity's 568
 sub-emitters' 975/1321 with all 58 random counts exact, and seed/axis's 48 failing values.
 Particles improves from 1520/1560 to 1522/1560, with four of 94 scenarios still differing.
 All 17 images are byte-identical to the before capture and worst mean remains 0.92.
-The broader particle probe retains eight Birth time-rate records, including boundary counts
-and subsequent histories. Those raw failures remain open separately from these origin/age
+At P6 the broader particle probe retained eight Birth time-rate records, including boundary
+counts and subsequent histories. P7 resolves these separately below, preserving the origin/age
 controls. Lifetime curves, inherited lifetime, nested Birth systems and other releases are not
 certified by this extension.
 
@@ -283,3 +283,9 @@ unique particle seed, including positions, lifetimes and exact seed halves.
 The comparator reports each original differing index and both full records,
 and accepts these keys only when that complete identity check passes. No engine
 sorting, global phase rule, or buffer-order contract is introduced.
+
+P7 validation: 3133/3308 records match, 175 retained differences and zero unexpected
+differences. All 342 P6 origin/age controls remain exact and all 2491 prior canonical
+keys are unchanged. The 817 new controls have 791 exact records and 26 complete
+per-seed matches with the reported expiry permutations. The original broad Birth
+gate improves from 22/30 to 30/30 without an allowance or reference edit.
