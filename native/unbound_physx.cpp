@@ -1326,14 +1326,18 @@ UA3_API const ua3_contact_point* ua3_world_contact_points( uint32_t id )
 
 // Public contact face indices refer to the authored triangle order. Non-mesh
 // colliders (including height fields) have no public mesh triangle index.
-UA3_API uint32_t ua3_shape_contact_face_index( uint64_t id, uint32_t index )
+uint32_t mesh_triangle_index( const PxShape* shape, uint32_t index )
 {
-    PxShape* shape = shape_of( id );
     PxTriangleMeshGeometry geometry;
     if ( !shape || !shape->getTriangleMeshGeometry( geometry ) || index >= geometry.triangleMesh->getNbTriangles() )
         return UINT32_MAX;
     const PxU32* remap = geometry.triangleMesh->getTrianglesRemap();
     return remap ? remap[index] : index;
+}
+
+UA3_API uint32_t ua3_shape_contact_face_index( uint64_t id, uint32_t index )
+{
+    return mesh_triangle_index( shape_of( id ), index );
 }
 
 // Physics.IgnoreCollision between two shapes.
@@ -2254,14 +2258,7 @@ struct ua3_hit
 // including when cooking reordered or removed faces. Convex hull faces are not mesh triangles.
 int original_triangle( const PxShape* shape, PxU32 face )
 {
-	if ( shape == nullptr || face == 0xffffffffu ) return -1;
-	PxGeometryHolder geometry = shape->getGeometry();
-	if ( geometry.getType() == PxGeometryType::eTRIANGLEMESH )
-	{
-		const PxU32* remap = geometry.triangleMesh().triangleMesh->getTrianglesRemap();
-		return static_cast<int>( remap != nullptr ? remap[face] : face );
-	}
-	return geometry.getType() == PxGeometryType::eHEIGHTFIELD ? static_cast<int>( face ) : -1;
+    return static_cast<int>( mesh_triangle_index( shape, face ) );
 }
 
 ua3_hit query_hit( const PxRaycastHit& hit, float length )
