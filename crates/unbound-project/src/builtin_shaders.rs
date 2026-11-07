@@ -164,6 +164,10 @@ fn unpack(archive: &[u8], root: &Path) -> Result<()> {
 }
 
 #[cfg(test)]
+#[path = "builtin_shaders_tests.rs"]
+mod publication_tests;
+
+#[cfg(test)]
 mod tests {
     use super::*;
 
