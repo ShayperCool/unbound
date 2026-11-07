@@ -23,7 +23,7 @@ if len(sys.argv)>1 and sys.argv[1]=='worker':
         relative=Path('/proc/self/cgroup').read_text().split('::',1)[1].strip()
         group=Path('/sys/fs/cgroup')/relative.lstrip('/')
         pool=group.parent
-        if kind in ('build','tool'):
+        if kind in ('build','test','tool'):
             assert pool.name=='unbound-builds.slice',pool
             assert int((group/'memory.max').read_text())==9*2**30
             assert int((group/'memory.high').read_text())==7*2**30
@@ -67,7 +67,8 @@ for command,expected in [
     (['env','A=1','timeout','600','cargo','run','--','run'],'heavy'),
     (['cargo','custom-alias'],'heavy'),
     (['timeout','1200','cargo','test','-p','unbound-app'],'build'),
-    (['env','A=1','dotnet','test','Tests.csproj'],'build'),
+    (['env','A=1','dotnet','test','Tests.csproj'],'test'),
+    (['timeout','590','dotnet','test','Tests.csproj','-c','Release'],'test'),
     (['dotnet','build','project.csproj'],'build'),
     (['dotnet','exec','tool.dll'],'heavy'),
     (['./build.sh'],'heavy'),
@@ -130,6 +131,14 @@ join([spawn('editor-gpu','gpu-editor-'+str(i),.6) for i in range(GPUS)]+
 jobs=[spawn('tool','tool-'+str(i),.8) for i in range(config['tool_slots'])]
 jobs.append(spawn('editor-cpu','tool-editor',.8))
 join(jobs)
+# Test runs do not take build slots: with every build slot busy, tests start at once.
+jobs=[spawn('build','test-build-'+str(i),1.2) for i in range(config['build_slots'])]
+time.sleep(.3)
+jobs += [spawn('test','test-'+str(i),.6) for i in range(config['test_slots'])]
+join(jobs)
+marks={(row['name'],row['phase']):row['time'] for row in map(json.loads,events.read_text().splitlines())}
+first_build_end=min(marks[('test-build-'+str(i),'end')] for i in range(config['build_slots']))
+assert all(marks[('test-'+str(i),'start')]<first_build_end for i in range(config['test_slots'])),'tests waited for builds'
 # A long-waiting build (behind another build) never delays an Editor.
 jobs=[spawn('build','wait-build-a',3.0)]
 time.sleep(.4)
@@ -172,6 +181,8 @@ for row in sorted(rows,key=lambda r:r['time']):
         engine_count=sum(k.startswith('engine-') for k in active_kinds.values())
         editor_count=sum(k.startswith('editor-') for k in active_kinds.values())
         build_count=sum(k=='build' for k in active_kinds.values())
+        test_count=sum(k=='test' for k in active_kinds.values())
+        assert test_count<=config['test_slots'],('test cap',active_kinds)
         tool_count=sum(k=='tool' for k in active_kinds.values())
         assert tool_count<=config['tool_slots'],('tool cap',active_kinds)
         tool_peak=max(globals().get('tool_peak',0),tool_count)

@@ -3,7 +3,7 @@
 
 Every pooled job reserves all it needs at once, without blocking while it holds
 anything: Editor count slots, memory tokens (one GiB each, weighted by kind from
-measured peaks), engine slots, a build slot and a GPU slot. A job that cannot get
+measured peaks), engine slots, a build slot, a test slot and a GPU slot. A job that cannot get
 everything releases what it took and retries, so a waiting job never pins tokens
 and never blocks other jobs whose resources are free. Only an exclusive 'heavy' job
 keeps the entry lock while it waits, so newer pooled jobs queue behind it.
@@ -35,6 +35,9 @@ BUILD_TOOLS = {'cargo': {'build', 'test', 'check', 'bench', 'clippy', 'doc',
 
 # GPU slot 0 keeps the name of the former single GPU mutex, so a job admitted by
 # the previous runner still occupies one GPU slot while the new runner is rolled out.
+KINDS = ['editor-cpu', 'editor-gpu', 'engine-cpu', 'engine-gpu', 'build', 'test', 'tool']
+# CPU job kinds that run in the build slice with the per-build memory limits.
+CPU_KINDS = ('build', 'test', 'tool')
 GPU_SLOT_NAMES = ['parity-editor-gpu.lock']+['parity-gpu-slot-'+str(i)+'.lock' for i in range(1, 8)]
 
 
@@ -51,6 +54,9 @@ def policy():
     value.setdefault('engine_slots', 2)
     value.setdefault('gpu_slots', 1)
     value.setdefault('tool_slots', 2)
+    # Test runs (`dotnet test`) have their own slots: a long test run must not hold
+    # a build slot that compilers in other worktrees are waiting for.
+    value.setdefault('test_slots', 2)
     # Optional memory tokens (one GiB each, weighted by kind). Without them only
     # the count caps and the systemd slices bound the pools.
     value.setdefault('memory_tokens', 0)
@@ -59,10 +65,11 @@ def policy():
     assert 1 <= value['build_slots'] <= 2
     assert 1 <= value['gpu_slots'] <= len(GPU_SLOT_NAMES)
     assert 1 <= value['tool_slots'] <= 8
+    assert 1 <= value['test_slots'] <= 4
     assert 0 <= value['memory_tokens'] <= 64
     assert value['memory_tokens']*2**30 <= value['memory_max_bytes']
     if value['memory_tokens']:
-        for kind in ['editor-cpu', 'editor-gpu', 'engine-cpu', 'engine-gpu', 'build', 'tool']:
+        for kind in KINDS:
             assert 1 <= value['weights'][kind] <= value['memory_tokens'], kind
     return value
 
@@ -129,6 +136,8 @@ def needs(kind, config):
         result.append((['parity-engine-slot-'+str(i)+'.lock' for i in range(config['engine_slots'])], 1))
     if kind == 'build':
         result.append((['parity-build-slot-'+str(i)+'.lock' for i in range(config['build_slots'])], 1))
+    if kind == 'test':
+        result.append((['parity-test-slot-'+str(i)+'.lock' for i in range(config['test_slots'])], 1))
     if kind == 'tool':
         result.append((['parity-tool-slot-'+str(i)+'.lock' for i in range(config['tool_slots'])], 1))
     if kind.endswith('-gpu'):
@@ -239,7 +248,7 @@ def clean_idle_compilers(config):
 def execute(command, kind, config):
     editor = kind.startswith('editor-')
     engine = kind.startswith('engine-')
-    build = kind in ('build', 'tool')
+    build = kind in CPU_KINDS
     pooled = editor or engine or build
     queued = time.time()
     with contextlib.ExitStack() as held:
@@ -316,6 +325,8 @@ def classify(command):
         return 'tool'
     if len(args)>1 and Path(args[0]).name=='dotnet' and args[1].endswith('.dll'):
         return 'tool'
+    if len(args)>1 and Path(args[0]).name=='dotnet' and args[1]=='test':
+        return 'test'
     if args and Path(args[0]).name in BUILD_TOOLS:
         verbs = BUILD_TOOLS[Path(args[0]).name]
         if verbs is None or (len(args)>1 and args[1] in verbs):
@@ -352,13 +363,14 @@ def main(args):
     if args and args[0]=='--':
         args = args[1:]
     if not args:
-        raise SystemExit('usage: with-heavy-job [--kind editor-cpu|editor-gpu|engine-cpu|engine-gpu|build|tool|heavy] COMMAND...')
-    if kind is None:
+        raise SystemExit('usage: with-heavy-job [--kind '+'|'.join(KINDS)+'|heavy] COMMAND...')
+    if kind is None or (kind=='build' and not worker and classify(args)=='test'):
+        # Callers that still pass `--kind build` for `dotnet test` get the test pool.
         kind = classify(args)
-    assert kind in ['editor-cpu','editor-gpu','engine-cpu','engine-gpu','build','tool','heavy'], 'invalid job kind'
+    assert kind in [*KINDS,'heavy'], 'invalid job kind'
     if kind!='heavy' and not worker:
         editor = kind.startswith('editor-')
-        build = kind in ('build', 'tool')
+        build = kind in CPU_KINDS
         unit = ('unbound-editor-' if editor else 'unbound-build-' if build else
                 'unbound-engine-')+scope_id+'.scope'
         if editor:

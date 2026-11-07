@@ -7,7 +7,7 @@
   "memory_high_bytes": 15032385536,
   "slice": "unbound-editors.slice",
   "engine_slice": "unbound-engines.slice",
-  "basis": "Unity 6000.0.71f1: eight fresh 3.36M-observation Editor processes peaked at 14.108 GiB with identical captures. Admission is by count only (8 Editors, 4 engines, 2 builds, 4 tools (unbound subcommands other than run, dotnet Tool.dll, --kind tool), GPU slots shared by Editors and engines); the slices bound RAM and may swap.",
+  "basis": "Unity 6000.0.71f1: eight fresh 3.36M-observation Editor processes peaked at 14.108 GiB with identical captures. Admission is by count only (8 Editors, 4 engines, 2 builds, 2 test runs (dotnet test), 4 tools (unbound subcommands other than run, dotnet Tool.dll, --kind tool), GPU slots shared by Editors and engines); the slices bound RAM and may swap.",
   "build_slots": 2,
   "build_slice": "unbound-builds.slice",
   "build_memory_high_bytes": 7516192768,
@@ -15,5 +15,6 @@
   "gpu_slots": 6,
   "memory_tokens": 0,
   "tool_slots": 4,
-  "measured": "2026-11-01 09:46-10:01 with 4 GPU and 1 build slot: 4 GPU Editors at once used at most 1.55 GiB of 8 GiB VRAM (39% mean GPU use), RAM available stayed >= 6 GiB, and up to 7 builds queued behind one."
+  "measured": "2026-11-01 09:46-10:01 with 4 GPU and 1 build slot: 4 GPU Editors at once used at most 1.55 GiB of 8 GiB VRAM (39% mean GPU use), RAM available stayed >= 6 GiB, and up to 7 builds queued behind one.",
+  "test_slots": 2
 }

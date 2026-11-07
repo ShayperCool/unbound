@@ -16,8 +16,10 @@ the previous serial launcher is backed up before replacement.
 Admission is by count: at most eight Unity Editors (`-nographics` or graphics),
 four direct `unbound run` engine jobs (`--headless` selects CPU mode), two builds
 (`cargo build/test/check` and other known build verbs, `rustc`,
-`dotnet build/test/publish/restore/msbuild/pack/format`, also
-behind time, timeout and env; pass `--kind build` for a script that only builds)
+`dotnet build/publish/restore/msbuild/pack/format`, also
+behind time, timeout and env; pass `--kind build` for a script that only builds),
+`test_slots` test runs (`dotnet test`, also when passed as `--kind build`, so a
+long managed test run never holds a build slot that compilers are waiting for),
 `tool_slots` CPU tools (other `unbound` subcommands such as `compile`, `.NET` tools
 run as `dotnet Tool.dll` such as ApiCheck, or anything passed with `--kind tool`)
 and `gpu_slots` GPU jobs, shared by graphics Editors and non-headless engine runs.
@@ -42,7 +44,7 @@ Memory is not divided into tokens (`memory_tokens` stays 0; the runner still
 accepts weighted one-GiB tokens if a policy sets them). The systemd slices bound
 RAM: `unbound.slice` MemoryHigh 14 GiB / MemoryMax 16 GiB for all pools, the
 engine slice 8 GiB with 4 GiB per engine job, the build slice 12/14 GiB with
-7/9 GiB per build job. Swap is
+7/9 GiB per build, test or tool job (measured `dotnet test` peak 2.8 GiB). Swap is
 allowed in all of them, so a peak above the RAM bound swaps instead of being
 killed. All Editor children, import workers and compiler servers count toward the
 Editor slice. Lock descriptors are closed for child commands. At pool idle, only
