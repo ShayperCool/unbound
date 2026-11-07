@@ -273,7 +273,7 @@ emit until expiry; StopEmittingAndClear clears linked particles and subsequent
 non-restarting Simulate calls continue the stopped parent clock. Random start
 delays, rate curves, child loop boundaries, inherited lifetime and nested Birth
 chains remain outside this extension's measurements. Infinite parent lifetimes and
-ring age rewinds retain their existing integration-delta rate path; the finite
+ring age rewinds retain their existing integration-delta rate path; the
 finite-interval measurement does not cover them. A managed regression
 control checks that an infinite parent still emits children with finite histories.
 

@@ -231,11 +231,13 @@ namespace UnityEngine.Tests
         {
             WithSystems((parent, child) =>
             {
-                var main = parent.main; main.startLifetime = 0.413f; main.loop = false;
+                var main = parent.main; main.startLifetime = 0.413f; main.loop = false; main.duration = 0.05f;
                 var emission = parent.emission;
                 emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
                 parent.Simulate(1f, true, true, false);
                 Assert.Equal(0, parent.particleCount);
+                Assert.False(parent.isPlaying);
+                Assert.True(parent.isPaused);
                 parent.Stop(false, ParticleSystemStopBehavior.StopEmitting);
                 foreach (float dt in new[] { 0.05f, 0.2f, 0.5f, 1f, 2f })
                 {
