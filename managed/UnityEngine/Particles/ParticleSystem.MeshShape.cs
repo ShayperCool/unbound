@@ -83,7 +83,9 @@ namespace UnityEngine
 
             internal Vector3[] Vertices = Array.Empty<Vector3>(), Normals;
             internal Color32[] Colors;
-            Vector3[] m_LocalScratch = Array.Empty<Vector3>(), m_NormalScratch = Array.Empty<Vector3>();
+            // Arrays the table owns: positions and normals are written only into these, never into
+            // a mesh's own arrays (which Vertices and Normals may point at).
+            Vector3[] m_LocalScratch = Array.Empty<Vector3>(), m_ScaledScratch = Array.Empty<Vector3>(), m_NormalScratch = Array.Empty<Vector3>();
             /// <summary>Triangle corners of the triangle submeshes (the selected one with Single
             /// Material), degenerate triangles included.</summary>
             internal int[] Triangles = Array.Empty<int>();
@@ -108,17 +110,17 @@ namespace UnityEngine
                     && Fresh(mesh, BuiltDirty, BuiltFrame, frame);
                 if (!vertices) BuildVertices(mesh, toLocal, scale, frame);
                 // The areas weigh the unscaled mesh: the rest mesh's vertices for a deformed pose,
-                // the mesh's own when it is drawn as it is, else the pose brought back unscaled.
+                // the mesh's own when it is drawn as it is, else the pose brought back unscaled
+                // (then the topology follows each rebuild of the positions).
                 var areaVertices = !ReferenceEquals(topologyMesh, mesh) ? topologyMesh.m_Vertices : toLocal.isIdentity ? mesh.m_Vertices : null;
-                if (HasTopology && TopologyMatches(topologyMesh, areaVertices, subMesh, frame)) return;
+                if (HasTopology && (areaVertices == null ? vertices : TopologyMatches(topologyMesh, areaVertices, subMesh, frame))) return;
                 BuildTopology(topologyMesh, areaVertices ?? m_LocalScratch, subMesh, frame);
                 AreaVertices = areaVertices;
             }
 
             bool TopologyMatches(Mesh mesh, Vector3[] areaVertices, int subMesh, int frame)
             {
-                // Without its own area vertices the topology follows every pose.
-                if (areaVertices == null || !ReferenceEquals(AreaVertices, areaVertices)) return false;
+                if (!ReferenceEquals(AreaVertices, areaVertices)) return false;
                 if (!ReferenceEquals(TopologyMesh, mesh) || TopologySyncVersion != mesh.m_SyncVersion || SubMesh != subMesh
                     || SourceSubMeshes.Length != mesh.m_SubMeshes.Count || !Fresh(mesh, TopologyBuiltDirty, TopologyBuiltFrame, frame))
                     return false;
@@ -149,8 +151,9 @@ namespace UnityEngine
                 if (scale == Vector3.one) Vertices = local;
                 else
                 {
-                    if (ReferenceEquals(Vertices, source) || ReferenceEquals(Vertices, m_LocalScratch) || Vertices.Length != n) Vertices = new Vector3[n];
-                    for (int i = 0; i < n; i++) Vertices[i] = Vector3.Scale(local[i], scale);
+                    if (m_ScaledScratch.Length != n) m_ScaledScratch = new Vector3[n];
+                    for (int i = 0; i < n; i++) m_ScaledScratch[i] = Vector3.Scale(local[i], scale);
+                    Vertices = m_ScaledScratch;
                 }
                 var toFrame = Matrix4x4.Scale(scale) * toLocal;
                 var normals = mesh.m_Normals;

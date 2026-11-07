@@ -386,6 +386,40 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
 
+        /// <summary>Sampling a scaled renderer never writes into a mesh's own vertices, also after
+        /// the system sampled another mesh with as many vertices unscaled.</summary>
+        [Fact]
+        public void ScaledSamplingLeavesEveryMeshsVerticesAlone()
+        {
+            var meshA = TwoTriangles();
+            var meshB = TwoTriangles();
+            var target = new GameObject("scaled");
+            target.transform.localScale = new Vector3(2f, 2f, 2f);
+            target.AddComponent<MeshFilter>().sharedMesh = meshB;
+            var renderer = target.AddComponent<MeshRenderer>();
+            var ps = Make(meshA, ParticleSystemMeshShapeType.Vertex);
+            try
+            {
+                ps.Emit(10);
+                var shape = ps.shape;
+                shape.shapeType = ParticleSystemShapeType.MeshRenderer;
+                shape.meshRenderer = renderer;
+                ps.Emit(10);
+                Assert.Equal(s_Vertices, meshA.vertices);
+                Assert.Equal(s_Vertices, meshB.vertices);
+                // The renderer's particles start at its scaled vertices.
+                var scaled = Array.ConvertAll(s_Vertices, v => v * 2f);
+                int fromRenderer = 0;
+                foreach (var p in Read(ps)) if (Array.IndexOf(scaled, p.position) >= 0 && p.position != Vector3.zero) fromRenderer++;
+                Assert.True(fromRenderer > 0);
+            }
+            finally
+            {
+                Object.DestroyImmediate(ps.gameObject);
+                Object.DestroyImmediate(target);
+            }
+        }
+
         [Fact]
         public void SkinnedMeshRendererEmitsFromTheCurrentPose()
         {
