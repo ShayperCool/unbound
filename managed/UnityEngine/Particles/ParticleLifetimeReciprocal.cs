@@ -7,9 +7,12 @@ namespace UnityEngine
         /// <summary>The inverse start lifetime a new particle's age clock advances by. In
         /// 6000.0.71f1 every start lifetime takes the estimate below, whatever its mode,
         /// sub-emitters or playback path (particlerandom birthclock/ and model/clock/:
-        /// 0.613 exports as 0.613000035 and 2.9 as 2.89999986). Other releases keep the
-        /// correctly rounded division until measured.</summary>
-        static float StartLifetimeReciprocal(float lifetime) =>
+        /// 0.613 exports as 0.613000035 and 2.9 as 2.89999986), and so does a lifetime that
+        /// InheritLifetime scales (exported child start lifetimes match the reference bit for
+        /// bit in 944 of 953 birthlife/ and 506 of 516 model/inherit/ values, against 705 and
+        /// 434 with a division). Other releases keep the correctly rounded division until
+        /// measured.</summary>
+        internal static float StartLifetimeReciprocal(float lifetime) =>
             Unbound.Runtime.Compat.ParticleLifetimeReciprocalEstimate ? LifetimeReciprocalEstimate(lifetime) : 1f / lifetime;
 
         // The measured 6000.0.71f1 initialization uses a 12-bit reciprocal estimate,

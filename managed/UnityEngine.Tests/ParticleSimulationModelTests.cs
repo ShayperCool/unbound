@@ -253,9 +253,12 @@ namespace UnityEngine.Tests
             Assert.True(kept > 0, "no seed in range starts only the unused lane without lifetime");
         }
 
-        [Fact]
-        public void InheritLifetimeUsesRemainingSecondsForANonConstantParentLifetime()
+        [Theory]
+        [InlineData(true)]
+        [InlineData(false)]
+        public void InheritLifetimeUsesRemainingSecondsForANonConstantParentLifetime(bool measured)
         {
+            if (!measured) ProjectInfo.UnityVersion = "2022.3.0f1";
             var parent = Quiet(12345, ps =>
             {
                 var m = ps.main; m.startLifetime = new ParticleSystem.MinMaxCurve(0.413f, 0.913f); m.startSpeed = 2f;
@@ -278,7 +281,10 @@ namespace UnityEngine.Tests
                 parent.Simulate(0.02f, true, true, false);
                 var p = Assert.Single(ParticlesOf(parent));
                 var c = Assert.Single(ParticlesOf(child));
-                Assert.InRange(c.startLifetime, 0.813f * p.remainingLifetime - 1e-5f, 0.813f * p.remainingLifetime + 1e-5f);
+                float inherited = 0.813f * p.m_Lifetime;
+                // The scaled lifetime takes the same inverse as any start lifetime: the measured
+                // estimate on 6000.0.71f1, the division elsewhere.
+                Assert.Equal(measured ? ParticleSystem.StartLifetimeReciprocal(inherited) : 1f / inherited, c.m_InvStartLifetime);
                 float fraction = 0.813f * p.remainingLifetime / p.startLifetime;
                 Assert.True(Math.Abs(c.startLifetime - fraction) > 1e-3f);
             }
