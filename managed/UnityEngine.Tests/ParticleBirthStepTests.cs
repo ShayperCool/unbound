@@ -143,6 +143,33 @@ namespace UnityEngine.Tests
             });
         }
 
+        // Independent constant-lifetime captures in particlerandom birthlife/zero and long.
+        [Theory]
+        [InlineData(0.413f, 0.813f, 0.315444f)]
+        [InlineData(1.613f, 0.413f, 0.655844f)]
+        public void BirthLifetimeUsesTheParentsRemainingSecondsAtItsIntegrationStep(
+            float parentLife, float childLife, float inheritedLife)
+        {
+            WithSystems((parent, child) =>
+            {
+                var m = parent.main; m.startLifetime = parentLife;
+                m = child.main; m.startLifetime = childLife;
+                var emission = parent.emission;
+                emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+                var sub = parent.subEmitters;
+                sub.SetSubEmitterProperties(0, ParticleSystemSubEmitterProperties.InheritLifetime);
+                parent.Simulate(0.05f, true, true, false);
+                var particle = Read(child);
+                Near(inheritedLife, particle.startLifetime);
+                Near(inheritedLife - 0.065f, particle.remainingLifetime);
+                Assert.Equal(2449477499u, particle.randomSeed);
+                // Assignment stays fixed while the parent continues ageing.
+                parent.Simulate(0.05f, true, false, false);
+                Near(inheritedLife, Read(child).startLifetime);
+                Near(inheritedLife - 0.115f, Read(child).remainingLifetime);
+            });
+        }
+
         static void Near(float expected, float actual) => Assert.InRange(Math.Abs(expected - actual), 0f, 0.000002f);
 
         static void WithSystems(Action<ParticleSystem, ParticleSystem> run)
