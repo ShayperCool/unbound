@@ -1,8 +1,10 @@
 # 3D batch query commands
 
 Unity 6000.0.71f1, Linux GPU Editor. Two independent project copies produced
-byte-identical 4,791-record captures before the canonical reference was published.
+byte-identical 5,151-record captures before the canonical reference was published.
 The repeat captures and Editor supervision receipts remain in the validation cache.
+The extension preserves every original 4,791-record value and adds global backface
+controls, 80 faces on one mesh, and container/closest-point limitations.
 
 ## Initial audit
 
@@ -37,6 +39,8 @@ Official 6000.0 API pages consulted for this work:
 | Closest point | Results are available after completion | Supplied scale does not affect the measured box result, including zero, negative and nonuniform values |
 | Scheduling | dependsOn precedes queries; results require completion; minCommandsPerJob selects job granularity | Dependent command writer is visible; min values -1, 0, 1 and 64 complete |
 | Invalid capacity | Public 6000.0 C# scheduling checks warn and return for invalid maxHits or short results | maxHits 0/-1, short results and an unassigned short result buffer return without an exception |
+| Closest-point limits | Box, sphere, capsule and convex mesh colliders only | A nonconvex mesh or unresolved ID returns the input point with a diagnostic; a disabled collider also returns the input point; a null constructor argument throws NullReferenceException |
+| Container limits | Scheduled job containers require valid allocations | Disposed and Temp containers throw InvalidOperationException; zero commands, including an unassigned command array, return without work |
 | Multiple-hit order | No order is promised | Raw slot order is retained, including mesh face order; no global sort is introduced |
 
 The scale and invalid-argument observations are release/context measurements, not
@@ -50,11 +54,11 @@ requires `--release`; the gate never starts the Editor. Native runs use the supe
 GPU Editor launcher and publish checks its receipts, completion and identical bytes.
 
 ```sh
-python3 tests/projects/physicsbatch/run.py prepare --release 6000.0.71f1 --label nativeA
-python3 tests/projects/physicsbatch/run.py native --release 6000.0.71f1 --label nativeA
-python3 tests/projects/physicsbatch/run.py prepare --release 6000.0.71f1 --label nativeB
-python3 tests/projects/physicsbatch/run.py native --release 6000.0.71f1 --label nativeB
-python3 tests/projects/physicsbatch/run.py publish --release 6000.0.71f1 --label nativeA --repeat-label nativeB
+python3 tests/projects/physicsbatch/run.py prepare --release 6000.0.71f1 --label nativeE
+python3 tests/projects/physicsbatch/run.py native --release 6000.0.71f1 --label nativeE
+python3 tests/projects/physicsbatch/run.py prepare --release 6000.0.71f1 --label nativeF
+python3 tests/projects/physicsbatch/run.py native --release 6000.0.71f1 --label nativeF
+python3 tests/projects/physicsbatch/run.py publish --release 6000.0.71f1 --label nativeE --repeat-label nativeF
 python3 tests/projects/physicsbatch/run.py gate --release 6000.0.71f1 --cli "$UNBOUND"
 ```
 

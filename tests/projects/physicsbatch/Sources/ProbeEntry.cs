@@ -70,6 +70,12 @@ public static class ProbeEntry
             foreach (bool multiple in new[] {false,true})
             foreach (bool reverse in new[] {false,true})
                 Casts("mesh/"+max+"/"+back+"/"+multiple+"/"+reverse, new Vector3(40,0,reverse ? 10 : 0),reverse ? Vector3.back : Vector3.forward,20,new QueryParameters(-1,multiple,QueryTriggerInteraction.Ignore,back),max);
+            foreach(bool global in new[] {false,true})
+            foreach(bool back in new[] {false,true})
+            {
+                Physics.queriesHitBackfaces=global;
+                Casts("globalBackfaces/"+global+"/"+back,new Vector3(40,0,10),Vector3.back,20,new QueryParameters(-1,false,QueryTriggerInteraction.Ignore,back),4);
+            }
             Casts("zeroDirection", Vector3.zero,Vector3.zero,20,QueryParameters.Default,4);
             Overlaps("empty",new Vector3(20,20,0),QueryParameters.Default,4);
             var tr = near.transform;
@@ -94,6 +100,8 @@ public static class ProbeEntry
                 Attempt("invalid/short",()=>RaycastCommand.ScheduleBatch(commands,results,1,3).Complete());
                 Attempt("invalid/default",()=>RaycastCommand.ScheduleBatch(commands,default(NativeArray<RaycastHit>),1,1).Complete());
             }
+            Limits(near,meshGo.GetComponent<MeshCollider>());
+            Stress();
             Row("complete","yes");
         }
         catch(Exception e) { Row("fatal",e.ToString().Replace('\n',' ').Replace('\r',' ')); }
@@ -105,11 +113,65 @@ public static class ProbeEntry
         Application.Quit();
 #endif
     }
+    static void Limits(Collider box,Collider mesh)
+    {
+        Action<string,ClosestPointCommand> point=(key,command)=>
+        {
+            using(var commands=new NativeArray<ClosestPointCommand>(1,Allocator.TempJob))
+            using(var results=new NativeArray<Vector3>(1,Allocator.TempJob))
+            {
+                Set(commands,0,command);Set(results,0,new Vector3(99,99,99));
+                Attempt("limits/"+key,()=>ClosestPointCommand.ScheduleBatch(commands,results,1).Complete());
+                Row("limits/"+key+"/point",V(results[0]));
+            }
+        };
+        point("posed",new ClosestPointCommand(new Vector3(5,6,7),box,new Vector3(1,2,3),Quaternion.Euler(0,0,40),Vector3.one));
+        point("mesh",new ClosestPointCommand(new Vector3(41,2,3),mesh,mesh.transform.position,Quaternion.identity,Vector3.one));
+        point("missing",new ClosestPointCommand(Vector3.one,0,Vector3.zero,Quaternion.identity,Vector3.one));
+        point("unknown",new ClosestPointCommand(Vector3.one,int.MaxValue,Vector3.zero,Quaternion.identity,Vector3.one));
+        box.enabled=false;
+        point("disabled",new ClosestPointCommand(new Vector3(5,6,7),box,box.transform.position,box.transform.rotation,Vector3.one));
+        box.enabled=true;
+        Attempt("limits/null",()=>new ClosestPointCommand(Vector3.one,(Collider)null,Vector3.zero,Quaternion.identity,Vector3.one));
+        using(var commands=new NativeArray<RaycastCommand>(1,Allocator.TempJob))
+        using(var results=new NativeArray<RaycastHit>(1,Allocator.TempJob))
+        {
+            Attempt("limits/unassigned",()=>RaycastCommand.ScheduleBatch(default(NativeArray<RaycastCommand>),results,1,1).Complete());
+            var disposed=new NativeArray<RaycastCommand>(1,Allocator.TempJob);disposed.Dispose();
+            Attempt("limits/disposed",()=>RaycastCommand.ScheduleBatch(disposed,results,1,1).Complete());
+            using(var temp=new NativeArray<RaycastCommand>(1,Allocator.Temp))
+                Attempt("limits/temp",()=>RaycastCommand.ScheduleBatch(temp,results,1,1).Complete());
+            using(var empty=new NativeArray<RaycastCommand>(0,Allocator.TempJob))
+                Attempt("limits/empty",()=>RaycastCommand.ScheduleBatch(empty,results,1,1).Complete());
+        }
+    }
+    static void Stress()
+    {
+        var go=new GameObject("manyFaces");go.transform.position=new Vector3(60,0,0);
+        var vertices=new Vector3[80*3];var triangles=new int[vertices.Length];
+        for(int i=0;i<80;i++)
+        {
+            float z=1+i*.1f;
+            vertices[i*3]=new Vector3(-2,-2,z);vertices[i*3+1]=new Vector3(0,2,z);vertices[i*3+2]=new Vector3(2,-2,z);
+            triangles[i*3]=i*3;triangles[i*3+1]=i*3+1;triangles[i*3+2]=i*3+2;
+        }
+        var mesh=new Mesh();mesh.vertices=vertices;mesh.triangles=triangles;go.AddComponent<MeshCollider>().sharedMesh=mesh;
+        Physics.SyncTransforms();
+        using(var commands=new NativeArray<RaycastCommand>(1,Allocator.TempJob))
+        using(var results=new NativeArray<RaycastHit>(96,Allocator.TempJob))
+        {
+            Set(commands,0,new RaycastCommand(go.transform.position,Vector3.forward,new QueryParameters(-1,true,QueryTriggerInteraction.Ignore),20));
+            RaycastCommand.ScheduleBatch(commands,results,1,96).Complete();
+            int count=0;for(int i=0;i<results.Length;i++) {Hit("stress/faces/"+i,results[i]);if(results[i].collider!=null)count++;}
+            Row("stress/faces/count",count.ToString());
+        }
+    }
     static void Casts(string key,Vector3 origin,Vector3 direction,float distance,QueryParameters qp,int max)
     {
-        Physics.queriesHitBackfaces=qp.hitBackfaces;
+        bool originalBackfaces=Physics.queriesHitBackfaces;
         for(int kind=0;kind<4;kind++)
         {
+            Physics.queriesHitBackfaces=originalBackfaces;
             string prefix=key+"/cast"+kind;
             using(var results=new NativeArray<RaycastHit>(3*max+1,Allocator.TempJob))
             {
@@ -124,6 +186,7 @@ public static class ProbeEntry
                     if(kind==3) { using(var commands=new NativeArray<CapsulecastCommand>(3,Allocator.TempJob)) { for(int i=0;i<3;i++) { var at=origin+(i==1?Vector3.up*30:Vector3.zero); Set(commands,i,new CapsulecastCommand(at-Vector3.up*.2f,at+Vector3.up*.2f,.3f,direction,qp,distance)); } CapsulecastCommand.ScheduleBatch(commands,results,2,max).Complete(); } }
                 });
                 for(int i=0;i<results.Length;i++)Hit(prefix+"/slot"+i,results[i]);
+                Physics.queriesHitBackfaces=qp.hitBackfaces;
                 var found=new RaycastHit[max]; int count=0;
                 if(max==1)
                 {

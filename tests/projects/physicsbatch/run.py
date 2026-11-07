@@ -22,6 +22,7 @@ p.add_argument('--work', type=Path, default=Path.home()/'.cache/unbound/validati
 p.add_argument('--label', default='engine')
 p.add_argument('--repeat-label')
 p.add_argument('--cli', type=Path)
+p.add_argument('--extend-reference', action='store_true')
 a = p.parse_args()
 os.environ['UNBOUND_PROBE_UNITY_VERSION'] = a.release
 work = cache_artifact_path(a.work.resolve())
@@ -88,7 +89,14 @@ elif a.mode=='publish':
     def write(target,first):
         target.parent.mkdir(parents=True,exist_ok=True)
         shutil.copy2(first/'capture.tsv',target)
-    publish(directories,ref,lambda directory:['capture.tsv'],write,complete=[complete],gpu=True)
+    target = work/(a.label+'-validated-reference.tsv') if a.extend_reference else ref
+    publish(directories,target,lambda directory:['capture.tsv'],write,complete=[complete],gpu=True)
+    if a.extend_reference:
+        previous=dict(line.split('\t',1) for line in ref.read_text().splitlines())
+        extended=dict(line.split('\t',1) for line in target.read_text().splitlines())
+        if any(extended.get(key)!=value for key,value in previous.items()):
+            raise SystemExit('Extension would change an existing reference value')
+        shutil.copy2(target,ref)
 elif a.mode=='engine':engine()
 elif a.mode=='compare':raise SystemExit(compare())
 elif a.mode=='gate':
