@@ -17,6 +17,10 @@ public partial class LineProbe
             ("prefixLong", new[] { P(-1, 0), P(0, 0), P(1.46f, 0.05f), P(0.96f, -0.05f), P(0.46f, 0.05f) }, 0.3f, false),
             ("prefixLongReversed", new[] { P(0.46f, 0.05f), P(0.96f, -0.05f), P(1.46f, 0.05f), P(0, 0), P(-1, 0) }, 0.3f, false),
             ("twoReversals", new[] { P(-0.01f, 0), P(0, 0), P(-1, 0.05f), P(0, 0.1f), P(-1, 0.15f) }, 0.3f, false),
+            ("lagVsMinimum", new[] { P(-0.01f, 0), P(0, 0), P(-1, 0.05f), P(-0.5f, 0.075f), P(-1.5f, 0.1f) }, 0.3f, false),
+            ("shortPrefix90", new[] { P(-0.01f, 0), P(0, 0), P(1, 0), P(1, 1) }, 0.3f, false),
+            ("shortPrefix140", new[] { P(-0.01f, 0), P(0, 0), P(1, 0), P(0.23395556f, 0.6427876f) }, 0.3f, false),
+            ("shortPrefix10", new[] { P(-0.01f, 0), P(0, 0), P(1, 0), P(1.9848077f, 0.17364818f) }, 0.3f, false),
         };
         foreach (var (name, points, width, taper) in cases)
             foreach (int corners in new[] { 0, 2 })
