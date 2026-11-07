@@ -390,6 +390,234 @@ public class ParticleTrailProbe : MonoBehaviour
         Done(restart);
     }
 
+    /// <summary>The count, then each particle's remaining lifetime and the low half of its seed.</summary>
+    static void RecordLight(string key, ParticleSystem ps)
+    {
+        if (s_Buffer.Length < ps.particleCount) s_Buffer = new ParticleSystem.Particle[ps.particleCount * 2];
+        int n = ps.GetParticles(s_Buffer);
+        var v = new List<float> { n, ps.time };
+        for (int i = 0; i < n; i++) { v.Add(s_Buffer[i].remainingLifetime); v.Add(s_Buffer[i].randomSeed & 0xffff); }
+        Record(key, v);
+    }
+
+    static float Capacity(ref ParticleSystem.Trails t)
+    {
+        try { return t.capacity; }
+        catch (Exception) { return -1f; }
+    }
+
+    /// <summary>GetTrails: its return, the Trails' capacity (fresh, presized and refilled), and
+    /// SetTrails restoring a capture with SetParticles and SetPlaybackState: the state and trail
+    /// mesh right after, and the steps after that against the steps after the capture.</summary>
+    static void TrailApi()
+    {
+        foreach (var (name, ribbon, die, maxParticles) in new[] { ("pp", false, false, 64), ("pp1", false, true, 64), ("ribbon", true, false, 64), ("ppmax16", false, false, 16) })
+        {
+            var ps = Make("api/" + name, s =>
+            {
+                var t = s.trails; t.dieWithParticles = die;
+                if (ribbon) { t.mode = ParticleSystemTrailMode.Ribbon; var e = s.emission; e.rateOverTime = 10f; }
+                var m = s.main; m.maxParticles = maxParticles;
+            });
+            var presized = new ParticleSystem.Trails();
+            var v = new List<float> { Capacity(ref presized) };
+            try { presized.capacity = 300; v.Add(Capacity(ref presized)); }
+            catch (Exception) { v.Add(-2f); }
+            Record("api/" + name + "/presized", v);
+            for (int i = 0; i < 24; i++)
+            {
+                ps.Simulate(Step, true, i == 0, false);
+                if (i % 3 != 0) continue;
+                var t = ps.GetTrails();
+                var r = new ParticleSystem.Trails();
+                int n = ps.GetTrails(ref r);
+                int m = ps.GetTrails(ref presized);
+                Record("api/" + name + "/" + i, new List<float> { ps.particleCount, Capacity(ref t), n, Capacity(ref r), m, Capacity(ref presized) });
+            }
+            Done(ps);
+        }
+
+        // The storage GetTrails reports: n particles at rest (one trail point each), and one
+        // particle leaving a point every step.
+        foreach (int n in new[] { 1, 2, 3, 5, 9, 17, 33 })
+        {
+            var ps = Make("api/grow/" + n, s =>
+            {
+                var e = s.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)n) });
+                var m = s.main; m.startSpeed = 0f; m.startLifetime = 5f;
+            });
+            ps.Simulate(Step, true, true, false);
+            var t = new ParticleSystem.Trails();
+            int size = ps.GetTrails(ref t);
+            Record("api/grow/" + n, new List<float> { ps.particleCount, size, Capacity(ref t) });
+            Done(ps);
+        }
+        var mover = Make("api/points", s =>
+        {
+            var e = s.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+            var m = s.main; m.startLifetime = 5f;
+            var t = s.trails; t.minVertexDistance = 0.01f; t.lifetime = 0.4f;
+        });
+        var moverTrails = new ParticleSystem.Trails();
+        for (int i = 0; i < 40; i++)
+        {
+            mover.Simulate(Step, true, i == 0, false);
+            int size = mover.GetTrails(ref moverTrails);
+            s_Mesh.Clear();
+            mover.GetComponent<ParticleSystemRenderer>().BakeTrailsMesh(s_Mesh, s_BakeCamera, ParticleSystemBakeMeshOptions.Default);
+            Record("api/points/" + i, new List<float> { size, Capacity(ref moverTrails), s_Mesh.vertexCount });
+        }
+        // The storage after Clear, and after a restart.
+        mover.Clear();
+        Record("api/points/cleared", new List<float> { mover.GetTrails(ref moverTrails), Capacity(ref moverTrails) });
+        mover.Simulate(Step, true, true, false);
+        Record("api/points/restarted", new List<float> { mover.GetTrails(ref moverTrails), Capacity(ref moverTrails) });
+        Done(mover);
+
+        foreach (var (name, saveAt, ribbon, world) in new[] { ("pp", 8, false, false), ("carrier", 14, false, false), ("ribbon", 8, true, false), ("world", 8, false, true), ("ratio", 8, false, false) })
+        {
+            string key = "api/rt/" + name;
+            var ps = Make(key, s =>
+            {
+                var t = s.trails;
+                if (name == "ratio") { t.ratio = 0.5f; var e = s.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)8), new ParticleSystem.Burst(0.3f, (short)4) }); }
+                if (ribbon) { t.mode = ParticleSystemTrailMode.Ribbon; var e = s.emission; e.rateOverTime = 10f; }
+                if (world) { t.worldSpace = true; var m = s.main; m.simulationSpace = ParticleSystemSimulationSpace.World; }
+            });
+            for (int i = 0; i < saveAt; i++)
+            {
+                if (world) ps.transform.position = new Vector3(0.1f * i, 0f, 0f);
+                ps.Simulate(Step, true, i == 0, false);
+            }
+            RecordState(key + "/saved", ps);
+            int count = ps.GetParticles(s_Buffer);
+            var saved = new ParticleSystem.Particle[count];
+            Array.Copy(s_Buffer, saved, count);
+            var state = ps.GetPlaybackState();
+            var trails = ps.GetTrails();
+            for (int k = 0; k < 6; k++) { ps.Simulate(Step, true, false, false); RecordState(key + "/first/" + k, ps); }
+            ps.SetParticles(saved, count);
+            ps.SetPlaybackState(state);
+            ps.SetTrails(trails);
+            RecordState(key + "/restored", ps);
+            for (int k = 0; k < 6; k++) { ps.Simulate(Step, true, false, false); RecordState(key + "/second/k" + k, ps); }
+            // The capture applied again after more steps, with its first particle left out.
+            if (count > 1)
+            {
+                var fewer = new ParticleSystem.Particle[count - 1];
+                Array.Copy(saved, 1, fewer, 0, count - 1);
+                ps.SetParticles(fewer, count - 1);
+                ps.SetPlaybackState(state);
+                ps.SetTrails(trails);
+                RecordState(key + "/dropfirst", ps);
+                for (int k = 0; k < 3; k++) { ps.Simulate(Step, true, false, false); RecordState(key + "/dropfirst/" + k, ps); }
+            }
+            // The trails alone, without the particles, and then before the particles.
+            ps.SetTrails(trails);
+            RecordState(key + "/trailsonly", ps);
+            ps.SetTrails(trails);
+            ps.SetParticles(saved, count);
+            ps.SetPlaybackState(state);
+            RecordState(key + "/trailsfirst", ps);
+            for (int k = 0; k < 3; k++) { ps.Simulate(Step, true, false, false); RecordState(key + "/trailsfirst/" + k, ps); }
+            // Another system of the same setup takes the capture.
+            var other = Make(key + "/other", s =>
+            {
+                var t = s.trails;
+                if (ribbon) { t.mode = ParticleSystemTrailMode.Ribbon; var e = s.emission; e.rateOverTime = 10f; }
+                if (world) { t.worldSpace = true; var m = s.main; m.simulationSpace = ParticleSystemSimulationSpace.World; }
+            });
+            other.transform.position = ps.transform.position;
+            other.Simulate(Step, true, true, false);
+            other.SetParticles(saved, count);
+            other.SetPlaybackState(state);
+            other.SetTrails(trails);
+            RecordState(key + "/other", other);
+            Done(other);
+            Done(ps);
+        }
+    }
+
+    /// <summary>Births blocked by maxParticles: a rate, a faster rate, cycling bursts, and both, with
+    /// trails that fade (carriers), trails that die with their particles, and no trails, stepped
+    /// by Simulate calls of 0.02, 0.05 and 0.1 s.</summary>
+    static void CapControls()
+    {
+        foreach (var (name, configure) in CapSystems)
+            foreach (var (trail, trailsOn, die) in new[] { ("die0", true, false), ("die1", true, true), ("none", false, false), ("die0nt", true, false) })
+                foreach (float dt in new[] { 0.02f, 0.05f, 0.1f })
+                {
+                    string key = "cap/" + name + "/" + trail + "/" + dt.ToString("R", CultureInfo.InvariantCulture);
+                    var ps = Make(key, s =>
+                    {
+                        configure(s);
+                        var t = s.trails; t.enabled = trailsOn; t.dieWithParticles = die;
+                        // Off the step grid: a trail point never expires exactly at a step's end.
+                        if (trail == "die0nt") t.lifetime = 0.47f;
+                    });
+                    int calls = Mathf.RoundToInt(1.2f / dt);
+                    for (int i = 0; i < calls; i++)
+                    {
+                        ps.Simulate(dt, true, i == 0, false);
+                        RecordLight(key + "/" + i, ps);
+                    }
+                    Done(ps);
+                }
+    }
+
+    static readonly (string, Action<ParticleSystem>)[] CapSystems =
+    {
+        ("rate", s =>
+        {
+            var m = s.main; m.maxParticles = 4; m.loop = true; m.startLifetime = 0.3f;
+            var e = s.emission; e.rateOverTime = 20f; e.SetBursts(new ParticleSystem.Burst[0]);
+        }),
+        ("rate30", s =>
+        {
+            var m = s.main; m.maxParticles = 3; m.loop = true; m.startLifetime = 0.2f;
+            var e = s.emission; e.rateOverTime = 30f; e.SetBursts(new ParticleSystem.Burst[0]);
+        }),
+        ("burst", s =>
+        {
+            var m = s.main; m.maxParticles = 4; m.loop = true; m.startLifetime = 0.3f;
+            var e = s.emission; e.rateOverTime = 0f; e.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)2, (short)2, 0, 0.1f) });
+        }),
+        ("burstrate", s =>
+        {
+            var m = s.main; m.maxParticles = 4; m.loop = true; m.startLifetime = 0.3f;
+            var e = s.emission; e.rateOverTime = 10f; e.SetBursts(new[] { new ParticleSystem.Burst(0.05f, (short)1, (short)1, 0, 0.15f) });
+        }),
+    };
+
+    /// <summary>The cap controls played over frames at a fixed capture delta.</summary>
+    IEnumerator CapPlayed(float delta)
+    {
+        Time.captureDeltaTime = delta;
+        var played = new List<(string, ParticleSystem)>();
+        foreach (var (name, configure) in CapSystems)
+            foreach (var (trail, trailsOn) in new[] { ("die0", true), ("none", false) })
+            {
+                string key = "cap/played/" + delta.ToString("R", CultureInfo.InvariantCulture) + "/" + name + "/" + trail;
+                var ps = Make(key, s =>
+                {
+                    configure(s);
+                    var t = s.trails; t.enabled = trailsOn;
+                    var m = s.main; m.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+                });
+                played.Add((key, ps));
+            }
+        yield return null;
+        foreach (var (_, ps) in played) ps.Play();
+        int frames = Mathf.RoundToInt(1.2f / delta);
+        for (int frame = 0; frame < frames; frame++)
+        {
+            yield return null;
+            foreach (var (key, ps) in played) RecordLight(key + "/" + frame, ps);
+        }
+        foreach (var (_, ps) in played) Done(ps);
+        Time.captureDeltaTime = 0f;
+    }
+
     /// <summary>Played over frames at a fixed capture delta: state, count and the stop callback.</summary>
     IEnumerator Played()
     {
@@ -491,8 +719,12 @@ public class ParticleTrailProbe : MonoBehaviour
         s_BakeCamera.enabled = false;
         s_Mesh = new Mesh();
         Simulations();
+        TrailApi();
+        CapControls();
         Images();
         yield return Played();
+        yield return CapPlayed(0.05f);
+        yield return CapPlayed(0.02f);
         Record("complete", new List<float> { 1f });
         File.WriteAllText(s_Path, s_Out.ToString());
         Debug.Log("particle trails complete: " + s_Path);
