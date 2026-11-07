@@ -276,6 +276,25 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(go);Object.DestroyImmediate(source);Object.DestroyImmediate(baked);
         }
 
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void ClothUsesRetainedGeometryForReadableAndUnreadableMeshClones(bool unreadable)
+        {
+            var source = new Mesh { vertices = new[] { Vector3.zero, Vector3.right, Vector3.up }, triangles = new[] { 0, 1, 2 } };
+            source.UploadMeshData(unreadable);
+            var copy = Object.Instantiate(source);
+            var go = new GameObject("cloth");
+            go.transform.localScale = new Vector3(2, 3, 1);
+            var renderer = go.AddComponent<SkinnedMeshRenderer>();
+            renderer.sharedMesh = copy;
+            var cloth = go.AddComponent<Cloth>();
+            Assert.Equal(new[] { Vector3.zero, new Vector3(2, 0, 0), new Vector3(0, 3, 0) }, cloth.vertices);
+            Assert.Equal(3, cloth.coefficients.Length);
+            Assert.Equal(new[] { Vector3.zero, Vector3.right, Vector3.up }, copy.m_Vertices);
+            Object.DestroyImmediate(go);Object.DestroyImmediate(copy);Object.DestroyImmediate(source);
+        }
+
         static Color FaceColor(int face, int mip) => new Color32((byte)(40 * face), (byte)(60 * mip + 15), 200, 255);
 
         static Cubemap FilledCubemap()

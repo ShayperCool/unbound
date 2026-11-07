@@ -374,7 +374,7 @@ namespace UnityEngine
                 m_Coefficients ??= Array.Empty<ClothSkinningCoefficient>();
                 return;
             }
-            var vertices = mesh.vertices;
+            var vertices = mesh.m_Vertices;
             var map = new Dictionary<Vector3, int>();
             m_ParticleOf = new int[vertices.Length];
             var first = new List<int>();
@@ -435,7 +435,7 @@ namespace UnityEngine
             else
             {
                 var scale = Matrix4x4.Scale(t.lossyScale);
-                positions = mesh.vertices;
+                positions = (Vector3[])mesh.m_Vertices.Clone();
                 normals = mesh.normals;
                 for (int i = 0; i < positions.Length; i++) positions[i] = scale.MultiplyPoint3x4(positions[i]);
                 if (normals != null && normals.Length != positions.Length) normals = null;

@@ -321,7 +321,7 @@ namespace UnityEngine
         {
             var mesh = PrototypeMesh(prototype.prototype, out _);
             if (mesh == null) return;
-            var vertices = mesh.vertices;
+            var vertices = mesh.m_Vertices;
             var normals = mesh.normals;
             var triangles = mesh.triangles;
             foreach (var i in instances)

@@ -224,7 +224,7 @@ namespace Unbound.Runtime
                     {
                         var mesh = source.sourceObject as Mesh;
                         if (mesh == null) break;
-                        var v = mesh.vertices;
+                        var v = mesh.m_Vertices;
                         for (int s = 0; s < mesh.subMeshCount; s++)
                         {
                             if (mesh.GetTopology(s) != MeshTopology.Triangles) continue;
