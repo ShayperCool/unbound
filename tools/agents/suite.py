@@ -403,6 +403,8 @@ def recipes(release):
                               'Authored,Bare,Cube,Cylinder,Edges,Faces,Grid,Groups,Ico,Kite,Multi,Organic,Pieces,Polys,Prism,Sphere,Star,StarObj,Tent,Torus,Triangle,TwoUV')]
     for name in ('appfacts', 'customrt', 'flares', 'gpubuffers', 'lines', 'rtdepth'):
         R[name] = guarded(folder)
+    # Keep the full strict verdict, including the disjoint cap/reversal controls.
+    R['lines'] = guarded(lambda runs: [*folder(runs), '--mode', 'miter'])
     R['assetclones'] = guarded(lambda runs: ['{probe}/Reference/unity-{release}/Main.jsonl', f'{runs}/values.jsonl',
                                              '--report', '{work}/report.json'])
     R['lightprobes'] = guarded(lambda runs: ['{probe}/Reference/unity-{release}/probe.jsonl', f'{runs}/probe.jsonl'])

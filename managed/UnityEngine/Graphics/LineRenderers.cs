@@ -216,11 +216,13 @@ namespace UnityEngine
             // The per-segment texture modes also place the width curve and the gradient by point index
             // (measured, tests/projects/lines line.tex.*PerSegment.zigzag.curve and trail.*.tex.*PerSegment).
             bool perSegment = p.TextureMode == LineTextureMode.DistributePerSegment || p.TextureMode == LineTextureMode.RepeatPerSegment;
+            float widestHalf = 0f;
             for (int i = 0; i < n; i++)
             {
                 float t = perSegment ? (float)i / (n - 1) : total > 0f ? m_Dist[i] / total : 0f;
                 bool hide = hidden != null && hidden[i % count];
                 m_Half[i] = hide ? 0f : 0.5f * p.WidthMultiplier * p.WidthCurve.Evaluate(t);
+                widestHalf = Mathf.Max(widestHalf, Mathf.Abs(m_Half[i]));
                 m_Color[i] = VertexColor(p.ColorGradient.Evaluate(t), linear);
             }
 
@@ -264,6 +266,7 @@ namespace UnityEngine
             else EffectiveDirections(segments);
 
             int corners = Math.Max(0, p.NumCornerVertices);
+            float miterFloor = Compat.LineMiterDenominatorFloor;
             var faceNormal = facing.TransformZ ? -facing.TransformForward : -facing.CameraForward;
             float va = 0.5f + 0.5f * p.TextureScale.y, vb = 0.5f - 0.5f * p.TextureScale.y;
             for (int i = 0; i < n; i++)
@@ -290,7 +293,19 @@ namespace UnityEngine
                 var sum = s1 + s2;
                 Vector3 m;
                 float length;
-                if (sum.sqrMagnitude < 1e-12f)
+                float sideCos = Vector3.Dot(s1, s2);
+                if (!loop && h >= 0f && miterFloor > 0f && 1f + sideCos < miterFloor)
+                {
+                    // Near reversal, the measured intersection retains the incoming side's
+                    // half width and guards the tangent's denominator before limiting reach.
+                    // This changes direction as well as length (lines miterrev.*, including
+                    // emitting trails). Negative-width and loop corner rules remain unmeasured.
+                    var intersection = s1 + (s2 - s1 * sideCos) / miterFloor;
+                    float scale = intersection.magnitude;
+                    m = intersection / scale;
+                    length = h * Mathf.Min(scale, MiterLimit);
+                }
+                else if (sum.sqrMagnitude < 1e-12f)
                 {
                     m = s1;
                     length = h;
@@ -301,6 +316,16 @@ namespace UnityEngine
                     length = h / Mathf.Max(Vector3.Dot(m, s1), 1f / MiterLimit);
                 }
                 if (m_NoMiter[i]) length = h;
+                else if (!loop && h >= 0f && miterFloor > 0f && widestHalf > 0f)
+                {
+                    // The measured reach scale uses the segment two points back (the first
+                    // segment at the first joint), normalized by the widest sampled half width.
+                    // It is carried to the local width after limiting to [1,3]. Asymmetric,
+                    // tapered and multiple-reversal miterchain controls distinguish this from
+                    // the adjacent-segment bound and from a minimum of the preceding lengths.
+                    float reachScale = 0.75f * m_Length[Math.Max(0, i - 2)] / widestHalf;
+                    length = Mathf.Min(length, h * Mathf.Clamp(reachScale, 1f, MiterLimit));
+                }
                 else if (i > 0 && i < segments && Mathf.Abs(length) > Mathf.Abs(h))
                 {
                     // A miter reaches at most three quarters of the longer neighbouring segment,
@@ -310,7 +335,10 @@ namespace UnityEngine
                 }
                 if (corners == 0)
                 {
-                    m_Pairs.Add(new Pair { A = point - m * length, B = point + m * length, Tangent = Vector3.Cross(faceNormal, s2), U = u, Color = color });
+                    // As with rounded joints, easing changes only the miter. The lighting
+                    // tangent follows the un-eased side (miterchain prefix controls).
+                    var tangentSide = !loop && h >= 0f && miterFloor > 0f ? Side(arcOut, normal, facing) : s2;
+                    m_Pairs.Add(new Pair { A = point - m * length, B = point + m * length, Tangent = Vector3.Cross(faceNormal, tangentSide), U = u, Color = color });
                     continue;
                 }
                 // The arc runs from the incoming side to the un-eased outgoing side, so that it meets

@@ -164,7 +164,11 @@ and adds alpha at pixel 2055. The 80 mask pixels remain separately owned.
 Full task receipt and immutable independent pair bindings:
 `/mnt/data/unbound-cache-20261031/unbound-validation/runs/line-cap-tangent-20261101-t3-ce24a7cc/REPORT.md`.
 
-### Corner sides, arc ends and per-segment widths (offline, unbuilt)
+### Earlier corner-side, arc-end and per-segment-width projections
+
+The current engine includes these rules. The offline counts below describe the
+earlier projection, not the current runtime. R8's full before/after comparison is
+recorded in [Reversal joints](MITER_REVERSALS.md).
 
 Three general strip rules, each predicted from saved engine meshes and authored
 inputs, never fitted to a Native value. `strip_projection.py` replays the shared
