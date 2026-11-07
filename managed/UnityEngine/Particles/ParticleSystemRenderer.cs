@@ -694,7 +694,8 @@ namespace UnityEngine
                     foreach (var s in sheet.sprites)
                         if (s != null) { Texture = s.texture; break; }
 
-                Order(r, ps, view, toWorld);
+                count = Order(r, ps, view, toWorld);
+                if (count == 0) return false;
 
                 Mesh[] meshes = null;
                 if (r.m_RenderMode == ParticleSystemRenderMode.Mesh)
@@ -757,20 +758,25 @@ namespace UnityEngine
                 return VertexCount > 0;
             }
 
-            /// <summary>Draw order by the sort mode (later particles draw over earlier ones).</summary>
-            void Order(ParticleSystemRenderer r, ParticleSystem ps, View view, Matrix4x4 toWorld)
+            /// <summary>Draw order by the sort mode (later particles draw over earlier ones); returns how
+            /// many particles draw. A dead particle kept only for its fading trail does not draw (its
+            /// trail does), 6000.0.71f1 tests/projects/particletrails images.</summary>
+            int Order(ParticleSystemRenderer r, ParticleSystem ps, View view, Matrix4x4 toWorld)
             {
-                int count = ps.m_Count;
-                if (m_Order.Length < count)
+                int total = ps.m_Count;
+                if (m_Order.Length < total)
                 {
-                    m_Order = new int[Math.Max(count, m_Order.Length * 2)];
+                    m_Order = new int[Math.Max(total, m_Order.Length * 2)];
                     m_Keys = new float[m_Order.Length];
                 }
-                for (int i = 0; i < count; i++) m_Order[i] = i;
+                int count = 0;
+                for (int i = 0; i < total; i++)
+                    if (!ps.m_Particles[i].IsTrailCarrier) m_Order[count++] = i;
                 var mode = r.m_SortMode;
-                if (mode == ParticleSystemSortMode.None) return;
-                for (int i = 0; i < count; i++)
+                if (mode == ParticleSystemSortMode.None) return count;
+                for (int o = 0; o < count; o++)
                 {
+                    int i = m_Order[o];
                     ref var p = ref ps.m_Particles[i];
                     float key;
                     switch (mode)
@@ -803,9 +809,10 @@ namespace UnityEngine
                             key = i;
                             break;
                     }
-                    m_Keys[i] = key;
+                    m_Keys[o] = key;
                 }
                 Array.Sort(m_Keys, m_Order, 0, count);
+                return count;
             }
 
             static Vector3 ClampToScreen(ParticleSystemRenderer r, View view, Vector3 position, Vector3 size)

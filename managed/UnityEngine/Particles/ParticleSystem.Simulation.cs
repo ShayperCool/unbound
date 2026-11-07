@@ -1708,10 +1708,15 @@ namespace UnityEngine
             for (int i = 0; i < count; i++)
             {
                 BeginModuleSample(i, m_Particles[i].m_RandomSeed);
-                if ((m_Particles[i].m_Flags & Particle.FlagOrphanTrail) != 0) continue;
+                if (m_Particles[i].IsTrailCarrier)
+                {
+                    // It stays at rest until its trail is spent, then leaves with this step's dead.
+                    if (CarriedTrailSpent(m_Particles[i].m_TrailId)) { marks[i] = SlotMark.Dead; anyDead = true; }
+                    continue;
+                }
                 // A particle a trigger killed in the previous update dies now, without ageing again,
                 // like one whose life ran out exactly at the end of that update.
-                bool killed = (m_Particles[i].m_Flags & Particle.FlagTriggerKilled) != 0;
+                bool killed = (m_Particles[i].m_Flags & Particle.FlagKilled) != 0;
                 float ageBefore = 0f;
                 if (deathSubs)
                 {
@@ -1785,19 +1790,21 @@ namespace UnityEngine
             }
             var before = p.m_Position;
             float speedModifier = Move(ref p, dt, ref c, age, out var moving);
-            if (!c.TemporaryLane && m_Collision.enabled && !Collide(ref p, before, age, dt, speedModifier)) return false;
-            if (!c.TemporaryLane && m_Trigger.enabled && !Trigger(ref p))
+            if (!c.TemporaryLane && (m_Collision.enabled && !Collide(ref p, before, age, dt, speedModifier)
+                || m_Trigger.enabled && !Trigger(ref p)))
             {
                 // A newborn killed while it is emitted is never added (measured: none is
                 // reported, even in a call's last step). An existing particle's life ends
                 // here: it keeps its moved state with zero remaining lifetime, and the next
-                // update removes it (measured: killed in a call's last internal step it is
-                // reported at lifetime 0, killed in an earlier one it is gone). The rest of
-                // this update still skips it, as before.
+                // update removes it (measured for triggers: killed in a call's last internal
+                // step it is reported at lifetime 0, killed in an earlier one it is gone; for
+                // collisions, tests/projects/particletrails pp/collision: reported at lifetime 0
+                // with its bounced velocity, then left at rest carrying its fading trail). The
+                // rest of this update still skips it, as before.
                 if (!existing) return false;
                 p.m_AgePercent = 100f;
                 p.m_Lifetime = 0f;
-                p.m_Flags |= Particle.FlagTriggerKilled;
+                p.m_Flags |= Particle.FlagKilled;
                 return true;
             }
 

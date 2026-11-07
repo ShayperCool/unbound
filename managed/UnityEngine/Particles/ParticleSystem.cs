@@ -539,33 +539,6 @@ namespace UnityEngine
             for (int s = 0; s < 2; s++)
                 if (m_Custom[s] != null && m_Custom[s].Length < count) Array.Resize(ref m_Custom[s], m_Particles.Length);
             m_Count = count;
-            // A written particle with a nonpositive lifetime is removed below; its trail ends as
-            // at its death (TrailModule.dieWithParticles): freed when trails die with their
-            // particles, else left to fade. Unbound's choices (unmeasured): the trail ends at this
-            // call rather than at the next step; a fading trail is left with no carrier particle (a
-            // natural death keeps one); a trail still held by a particle that survives this call (in
-            // the retained prefix, or written and kept) is not ended; a removed carrier of a fading
-            // trail, or a link to a free or fading slot, ends nothing; trails freed by one call
-            // return their slots in written order. Ending a live slot moves no particle
-            // (FreeTrail's carrier scan runs only for a fading slot), so the compaction below
-            // removes the same particles in the same order.
-            // Survivors' links are collected once, at the first candidate, so the pass is expected linear.
-            HashSet<int> survivors = null;
-            for (int r = offset; r < m_Count; r++)
-            {
-                int link = m_Particles[r].m_TrailId;
-                if (!(m_Particles[r].m_Lifetime <= 0f) || link <= 0 || (m_Particles[r].m_Flags & Particle.FlagOrphanTrail) != 0) continue;
-                if (link > m_TrailList.Count || !(m_TrailList[link - 1] is { Orphan: false })) continue;
-                if (survivors == null)
-                {
-                    survivors = new HashSet<int>();
-                    for (int i = 0; i < m_Count; i++)
-                        if (i < offset || !(m_Particles[i].m_Lifetime <= 0f)) survivors.Add(m_Particles[i].m_TrailId);
-                }
-                if (survivors.Contains(link)) continue;
-                var owner = new Particle { m_TrailId = link };
-                EndTrail(ref owner);
-            }
             // Native consumes the input lifetime before encoding normalized age. Nonpositive
             // inputs die immediately; tiny positive inputs can export as zero and still survive.
             // The retained prefix is untouched, even when its exported lifetime is zero.
@@ -574,6 +547,10 @@ namespace UnityEngine
                 if (DiesWhenWritten(i)) marks[i] = SlotMark.Dead;
             RemoveDeadSlots(offset & ~3, DeadSlotRemoval.Drop);
             for (int i = offset; i < m_Count; i++) SettleWrittenParticle(i);
+            // A particle written at a nonpositive lifetime, or cut off by the size, leaves with its
+            // trail, also a fading one: it does not fade (6000.0.71f1, tests/projects/particletrails
+            // pp/setparticles and pp/killlife, whatever dieWithParticles).
+            FreeUnheldTrails();
         }
 
         /// <summary>What leaving the buffer means for a dead slot: SetParticles just drops it; a death in a step ends its trail (or leaves it to fade), and can fire
@@ -613,7 +590,8 @@ namespace UnityEngine
         /// setparticles and model/death/: the same order for SetParticles and for deaths in a
         /// step; a rate batch's newborns follow another order, see FlushRateBatch). A dying
         /// particle fires its Death sub-emitters as it leaves; one whose trail stays to fade
-        /// keeps its slot.</summary>
+        /// keeps its slot as the trail's carrier, and leaves the same way once the trail is spent
+        /// (tests/projects/particletrails).</summary>
         void RemoveDeadSlots(int from, DeadSlotRemoval removal)
         {
             var marks = m_SlotMarks;
@@ -628,7 +606,13 @@ namespace UnityEngine
                     if ((mask & (1 << lane)) == 0) continue;
                     int index = block + lane;
                     marks[index] = 0;
-                    if (removal != DeadSlotRemoval.Drop)
+                    if (m_Particles[index].IsTrailCarrier)
+                    {
+                        // A carrier of a fading trail already died: no second death; its trail
+                        // goes with it (spent, or dropped by SetParticles: measured, it does not fade).
+                        EndTrail(ref m_Particles[index]);
+                    }
+                    else if (removal != DeadSlotRemoval.Drop)
                     {
                         if (removal == DeadSlotRemoval.DeathWithSubEmitters)
                         {
@@ -712,6 +696,8 @@ namespace UnityEngine
             }
             dead.Sort();
             for (int k = dead.Count - 1; k >= 0; k--) RemoveAt(dead[k]);
+            // Their trails go with them, as with SetParticles.
+            if (dead.Count > 0) FreeUnheldTrails();
         }
 
         public void SetParticles(Particle[] particles, int size) => SetParticles(particles, size, 0);

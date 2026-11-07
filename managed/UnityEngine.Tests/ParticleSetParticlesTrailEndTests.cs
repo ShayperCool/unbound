@@ -6,12 +6,9 @@ namespace UnityEngine.Tests
 {
     /// <summary>ParticleSystem.SetParticles removing a particle (Scripting API 6000.0: "Setting the
     /// lifetime of a particle to a negative value will result in that particle being removed")
-    /// ends its trail as TrailModule.dieWithParticles describes a death: "Specifies whether trails
-    /// disappear immediately when their owning particle dies. When false, each trail persists until
-    /// all its points have naturally expired, based on its lifetime." That a SetParticles removal
-    /// counts as that death, and that the trail ends at the call, is Unbound's choice (unmeasured).
-    /// These tests read only members that exist without the change, so each one that fails without
-    /// it fails on its own assertion.</summary>
+    /// removes its trail with it at the call, whatever TrailModule.dieWithParticles says: the trail
+    /// does not fade (6000.0.71f1, tests/projects/particletrails pp/killlife and pp/setparticles).
+    /// A trail still held by a particle in the buffer stays.</summary>
     public class ParticleSetParticlesTrailEndTests
     {
         static ParticleSystem Make(string name, bool dieWithParticles, float startLifetime = 2.013f,
@@ -136,7 +133,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void RemovingAParticleLeavesItsTrailToFadeWhenTrailsOutliveParticles()
+        public void RemovingAParticleFreesItsTrailAlsoWhenTrailsOutliveParticles()
         {
             var ps = Make("setparticles-trail-fade", dieWithParticles: false);
             try
@@ -150,16 +147,32 @@ namespace UnityEngine.Tests
                 ps.SetParticles(particles);
 
                 Assert.Equal(particles.Length - 1, ps.particleCount);
-                var trail = ps.m_TrailList[link - 1];
-                Assert.NotNull(trail);
-                Assert.True(trail.Orphan);
-                Assert.Equal(pointsBefore[link - 1], trail.Points.ToArray());
-
-                // Its points expire within the trail lifetime (.5 x 2.013 s); with no emission,
-                // nothing takes the freed slot again.
-                var e = ps.emission; e.enabled = false;
-                Step(ps, 45);
                 Assert.Null(ps.m_TrailList[link - 1]);
+                Assert.DoesNotContain(Particles(ps), p => p.m_TrailId == link);
+                pointsBefore[link - 1] = null;
+                Assert.Equal(pointsBefore, TrailPoints(ps));
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void WritingBackACarrierOfAFadingTrailAtZeroLifetimeDropsItWithItsTrail()
+        {
+            var ps = Make("setparticles-trail-carrier", dieWithParticles: false, startLifetime: .513f);
+            try
+            {
+                for (int i = 0; i < 60 && !Particles(ps).Any(p => p.IsTrailCarrier); i++) Step(ps, 1);
+                var particles = Particles(ps);
+                var carriers = particles.Where(p => p.IsTrailCarrier).Select(p => p.m_TrailId).ToList();
+                Assert.NotEmpty(carriers);
+                Assert.All(particles.Where(p => p.IsTrailCarrier), p => Assert.Equal(0f, p.remainingLifetime));
+
+                // GetParticles then SetParticles: the carriers come back at zero lifetime.
+                ps.SetParticles(particles);
+
+                Assert.Equal(particles.Length - carriers.Count, ps.particleCount);
+                Assert.All(carriers, link => Assert.Null(ps.m_TrailList[link - 1]));
+                Assert.DoesNotContain(Particles(ps), p => p.IsTrailCarrier);
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
@@ -188,8 +201,7 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(ps.gameObject); }
         }
 
-        // A trail still held by a particle that survives the call is not ended: Unbound's choice
-        // (unmeasured).
+        // A trail still held by a particle that survives the call is not ended.
 
         [Fact]
         public void RemovingACopyOfARetainedParticleKeepsItsTrailLive()
@@ -277,7 +289,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void RemovingManyTrailedParticlesInOneCallEndsEachUnheldTrailOnceInWrittenOrder()
+        public void RemovingManyTrailedParticlesInOneCallEndsEachUnheldTrailOnce()
         {
             var ps = Make("setparticles-trail-many", dieWithParticles: true);
             try
@@ -319,12 +331,12 @@ namespace UnityEngine.Tests
                 foreach (int link in ended) expected[link - 1] = null;
                 Assert.Equal(expected, TrailPoints(ps));
                 Assert.All(ps.m_TrailList.Where(t => t != null), t => Assert.False(t.Orphan));
-                // Each ended slot is freed once, in written order: new trails take them last first,
-                // then a new slot.
+                // Each ended slot is freed once: new trails take each of them, then a new slot.
                 ps.Emit(removed + 1);
                 Assert.Equal(particles.Length + 1, ps.particleCount);
-                Assert.Equal(Enumerable.Reverse(ended).Append(slots + 1),
-                    Particles(ps).Skip(particles.Length - removed).Select(p => p.m_TrailId));
+                var taken = Particles(ps).Skip(particles.Length - removed).Select(p => p.m_TrailId).ToList();
+                Assert.Equal(ended.OrderBy(link => link), taken.Take(removed).OrderBy(link => link));
+                Assert.Equal(slots + 1, taken[removed]);
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
         }

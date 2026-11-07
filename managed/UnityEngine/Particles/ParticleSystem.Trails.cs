@@ -20,7 +20,13 @@ namespace UnityEngine
             internal Color32 Color;
             internal float Width;
             internal float Age01;
+            /// <summary>The particle died and the trail only fades (dieWithParticles off).</summary>
             internal bool Orphan;
+            /// <summary>A fading trail whose points all expired: the dead particle carrying it leaves,
+            /// and frees it, in the next update.</summary>
+            internal bool Spent;
+            /// <summary>The <see cref="RenderTrails"/> pass that last returned this trail.</summary>
+            internal int RenderPass;
             internal float HeadTime;
             internal bool Ribbon;
             internal List<float> Widths;
@@ -34,7 +40,7 @@ namespace UnityEngine
                 var copy = new Trail
                 {
                     Lifetime = Lifetime, Head = Head, Color = Color, Width = Width, Age01 = Age01,
-                    Orphan = Orphan, HeadTime = HeadTime, Ribbon = Ribbon,
+                    Orphan = Orphan, Spent = Spent, HeadTime = HeadTime, Ribbon = Ribbon,
                     Widths = Widths != null ? new List<float>(Widths) : null,
                     Colors = Colors != null ? new List<Color32>(Colors) : null,
                     WidthRandom = WidthRandom, ColorRandom = ColorRandom, BirthPosition = BirthPosition,
@@ -89,13 +95,21 @@ namespace UnityEngine
 
         bool TrailsEnabled => m_Trails.enabled;
 
+        /// <summary>The salt of the per-particle draw the trail ratio compares with: a particle gets a
+        /// trail when the draw is below the ratio (6000.0.71f1, tests/projects/particletrails
+        /// pp/ratiobig, 600 seeds at ratios 0.5 and 0.25; 0x8abff360 fits them equally).</summary>
+        const uint TrailRatioSalt = 0x0abff360u;
+
+        /// <summary>Whether a particle with this seed gets a trail under the module's ratio.</summary>
+        internal static bool GetsTrail(uint seed, float ratio) => ratio >= 1f || TrailRandom(seed, TrailRatioSalt) < ratio;
+
         /// <summary>A newborn particle gets its trail (or not, by the ratio).</summary>
         void StartTrail(ref Particle p, Vector3? birthPosition = null)
         {
             p.m_TrailId = 0;
             if (!m_Trails.enabled) return;
             if (m_Trails.mode != ParticleSystemTrailMode.PerParticle) return;
-            if (m_Trails.ratio < 1f && R.Value(p.m_RandomSeed, R.Trail) >= m_Trails.ratio) return;
+            if (!GetsTrail(p.m_RandomSeed, m_Trails.ratio)) return;
             var trail = new Trail();
             int id = m_FreeTrails.Count > 0 ? m_FreeTrails.Pop() : m_TrailList.Count;
             if (id == m_TrailList.Count) m_TrailList.Add(trail);
@@ -178,9 +192,16 @@ namespace UnityEngine
             {
                 var trail = m_TrailList[id];
                 if (trail == null) continue;
+                if (trail.Spent) continue;
                 int expired = 0;
                 while (expired < trail.Times.Count && m_TrailTime - trail.Times[expired] > trail.Lifetime) expired++;
-                if (expired == trail.Times.Count && trail.Orphan) { FreeTrail(id); continue; }
+                if (expired == trail.Times.Count && trail.Orphan)
+                {
+                    trail.Points.Clear();
+                    trail.Times.Clear();
+                    trail.Spent = true;
+                    continue;
+                }
                 // Keep one expired anchor so the renderer can cut the tail at its exact age.
                 expired = Mathf.Max(0, expired - 1);
                 if (expired > 0)
@@ -188,11 +209,22 @@ namespace UnityEngine
                     trail.Points.RemoveRange(0, expired);
                     trail.Times.RemoveRange(0, expired);
                 }
-                if (trail.Orphan && trail.Points.Count == 0) FreeTrail(id);
             }
         }
 
-        /// <summary>A particle died: its trail goes with it, or stays to fade.</summary>
+        /// <summary>Whether the trail a carrier holds is spent (or gone): Unity 6000.0.71f1 removes
+        /// the carrier in the first update that starts so, with that update's dead and in their
+        /// order (tests/projects/particletrails).</summary>
+        bool CarriedTrailSpent(int link)
+        {
+            var trail = link > 0 && link <= m_TrailList.Count ? m_TrailList[link - 1] : null;
+            return trail == null || trail.Spent;
+        }
+
+        /// <summary>A particle died: its trail goes with it, or stays to fade. A fading trail keeps
+        /// its dead particle in the buffer as its carrier, at zero remaining lifetime and at rest:
+        /// GetParticles and particleCount report it, the renderer does not draw it, and it holds its
+        /// slot against maxParticles (6000.0.71f1, tests/projects/particletrails).</summary>
         bool KeepOrphanTrail(ref Particle p)
         {
             if (m_Trails.dieWithParticles || p.m_TrailId == 0) return false;
@@ -205,22 +237,36 @@ namespace UnityEngine
             return true;
         }
 
+        /// <summary>A particle leaves the buffer (a death that keeps no fading trail, or a carrier
+        /// whose trail is spent): its trail goes with it.</summary>
         void EndTrail(ref Particle p)
         {
-            if (p.m_TrailId == 0) return;
             int id = p.m_TrailId - 1;
             p.m_TrailId = 0;
-            var trail = id < m_TrailList.Count ? m_TrailList[id] : null;
-            if (trail == null) return;
-            if (m_Trails.dieWithParticles) FreeTrail(id);
-            else trail.Orphan = true;
+            if (id >= 0 && id < m_TrailList.Count && m_TrailList[id] != null) FreeTrail(id);
+        }
+
+        bool[] m_HeldTrails = global::System.Array.Empty<bool>();
+
+        /// <summary>Frees, in slot order, every trail no particle in the buffer holds: a trail lives
+        /// as long as its particle (live, or dead and carrying it while it fades).</summary>
+        void FreeUnheldTrails()
+        {
+            int slots = m_TrailList.Count;
+            if (slots == 0) return;
+            if (m_HeldTrails.Length < slots) m_HeldTrails = new bool[global::System.Math.Max(slots, m_HeldTrails.Length * 2)];
+            else global::System.Array.Clear(m_HeldTrails, 0, slots);
+            for (int i = 0; i < m_Count; i++)
+            {
+                int link = m_Particles[i].m_TrailId;
+                if (link > 0 && link <= slots) m_HeldTrails[link - 1] = true;
+            }
+            for (int id = 0; id < slots; id++)
+                if (!m_HeldTrails[id] && m_TrailList[id] != null) FreeTrail(id);
         }
 
         void FreeTrail(int id)
         {
-            if (m_TrailList[id]?.Orphan == true)
-                for (int i = m_Count - 1; i >= 0; i--)
-                    if (m_Particles[i].m_TrailId == id + 1) RemoveAt(i);
             m_TrailList[id] = null;
             m_FreeTrails.Push(id);
         }
@@ -311,9 +357,9 @@ namespace UnityEngine
         }
 
         /// <summary>Puts a capture back: the trail slots, their free order and the trail clock, as
-        /// copies, so the capture can be applied again later. A captured particle at zero lifetime
-        /// that SetParticles has dropped ends its trail as its death would have: freed when trails
-        /// die with their particles, else left to fade (Unbound's choice, unmeasured).</summary>
+        /// copies, so the capture can be applied again later. The trail of a captured particle that
+        /// SetParticles has dropped (at zero lifetime, or carrying a fading trail) goes with it, as
+        /// SetParticles measures.</summary>
         internal void RestoreTrails(in Trails trailData)
         {
             var capture = CaptureOf(trailData);
@@ -322,24 +368,28 @@ namespace UnityEngine
             m_FreeTrails.Clear();
             for (int i = capture.FreeOrder.Length - 1; i >= 0; i--) m_FreeTrails.Push(capture.FreeOrder[i]);
             m_TrailTime = capture.TrailTime;
-            if (capture.EndingTrailIds.Length == 0) return;
-            var linked = new HashSet<int>();
-            for (int i = 0; i < m_Count; i++) linked.Add(m_Particles[i].m_TrailId);
-            foreach (int link in capture.EndingTrailIds)
-            {
-                if (linked.Contains(link)) continue;
-                var trail = m_TrailList[link - 1];
-                if (trail == null) continue;
-                if (m_Trails.dieWithParticles) { m_TrailList[link - 1] = null; m_FreeTrails.Push(link - 1); }
-                else trail.Orphan = true;
-            }
+            FreeUnheldTrails();
         }
 
+        int m_RenderPass;
+
+        /// <summary>The trails to draw. Per-particle trails come in the order of the particles holding
+        /// them (live, or dead and carrying a fading trail), as Unity bakes and draws them
+        /// (6000.0.71f1, tests/projects/particletrails: a particle moved by a death takes its trail
+        /// along).</summary>
         internal IEnumerable<Trail> RenderTrails()
         {
             if (m_Trails.mode == ParticleSystemTrailMode.PerParticle)
             {
-                foreach (var trail in m_TrailList) if (trail != null) yield return trail;
+                int pass = ++m_RenderPass;
+                for (int i = 0; i < m_Count; i++)
+                {
+                    int link = m_Particles[i].m_TrailId;
+                    var trail = link > 0 && link <= m_TrailList.Count ? m_TrailList[link - 1] : null;
+                    if (trail == null || trail.RenderPass == pass) continue;
+                    trail.RenderPass = pass;
+                    yield return trail;
+                }
                 yield break;
             }
             int ribbons = Mathf.Max(1, m_Trails.ribbonCount);

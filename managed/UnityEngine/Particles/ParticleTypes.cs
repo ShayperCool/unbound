@@ -34,9 +34,13 @@ namespace UnityEngine
             internal int m_TrailId;
 
             internal const uint FlagMeshIndexSet = 1, FlagFlipRotation = 2, FlagBirthBurstsDone = 4, FlagInsideTrigger = 8, FlagAgeInitialized = 16, FlagOrphanTrail = 32;
-            /// <summary>A trigger action killed this existing particle in the last update: it
-            /// shows zero remaining lifetime until the next update removes it.</summary>
-            internal const uint FlagTriggerKilled = 64;
+            /// <summary>A dead particle kept in the buffer, at zero remaining lifetime and not drawn,
+            /// while its trail fades (TrailModule.dieWithParticles off).</summary>
+            internal bool IsTrailCarrier => (m_Flags & FlagOrphanTrail) != 0;
+            /// <summary>A trigger action or a collision killed this existing particle in the last
+            /// update: it shows zero remaining lifetime, and its last velocity, until the next update
+            /// removes it without moving it.</summary>
+            internal const uint FlagKilled = 64;
 
             [Obsolete("Please use Particle.remainingLifetime instead. (UnityUpgradable) -> UnityEngine.ParticleSystem/Particle.remainingLifetime", false)]
             public float lifetime { get => remainingLifetime; set => remainingLifetime = value; }
@@ -58,7 +62,7 @@ namespace UnityEngine
             public Vector3 velocity { get => m_Velocity; set => m_Velocity = value; }
             public Vector3 animatedVelocity => m_AnimatedVelocity;
             public Vector3 totalVelocity => m_Velocity + m_AnimatedVelocity;
-            public float remainingLifetime { get => m_Lifetime; set { m_Lifetime = value; m_Flags &= ~(FlagAgeInitialized | FlagTriggerKilled); } }
+            public float remainingLifetime { get => m_Lifetime; set { m_Lifetime = value; m_Flags &= ~(FlagAgeInitialized | FlagKilled); } }
             public float startLifetime { get => m_StartLifetime; set { m_StartLifetime = value; m_Flags &= ~FlagAgeInitialized; } }
             public Color32 startColor { get => m_StartColor; set => m_StartColor = value; }
             public uint randomSeed { get => m_RandomSeed; set => m_RandomSeed = value; }

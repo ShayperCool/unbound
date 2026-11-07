@@ -379,7 +379,7 @@ namespace UnityEngine
             for (int i = 0; i < m_Count; i++)
             {
                 // An orphaned trail is no longer a particle.
-                if ((m_Particles[i].m_Flags & Particle.FlagOrphanTrail) != 0) continue;
+                if (m_Particles[i].IsTrailCarrier) continue;
                 uint serial = TriggerSerialOf(m_Particles[i]);
                 if (IsCurrentTriggerSerial(serial)) slotOf.TryAdd(serial, i);
             }
@@ -395,7 +395,7 @@ namespace UnityEngine
                 // newborn, replaced, removed by a script) writes nothing, and a write-back does
                 // not undo a trigger Kill of the same update (the particle still dies).
                 if (!slotOf.TryGetValue(serial, out int slot)) continue;
-                if ((m_Particles[slot].m_Flags & Particle.FlagTriggerKilled) != 0) continue;
+                if ((m_Particles[slot].m_Flags & Particle.FlagKilled) != 0) continue;
                 // A particle listed twice (by two internal steps) gets both entries' changes,
                 // the later entry's winning a field both changed (Unbound's choice, unmeasured).
                 var value = particles[offset + k];
@@ -462,7 +462,7 @@ namespace UnityEngine
             if (!Same(value.m_Lifetime, entry.m_Lifetime))
             {
                 target.m_Lifetime = value.m_Lifetime;
-                target.m_Flags &= ~(Particle.FlagAgeInitialized | Particle.FlagTriggerKilled);
+                target.m_Flags &= ~(Particle.FlagAgeInitialized | Particle.FlagKilled);
                 changed = true;
             }
             return changed;

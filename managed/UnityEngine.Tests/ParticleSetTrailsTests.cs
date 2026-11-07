@@ -191,17 +191,18 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void ARestoreWhileATrailFadesPutsTheFadingTrailBack()
+        public void ARestoreWhileATrailFadesKeepsTheOtherTrailsButNotTheDroppedCarriers()
         {
             using var scene = new Scene();
             var ps = scene.NewSystem("set-trails-fading", dieWithParticles: false);
             StepUntilATrailFades(ps);
-            var bakedThen = Bake(ps, scene.Camera);
             var pointsThen = TrailPoints(ps);
             var particles = Particles(ps);
             // The dead particle that carries the fading trail is exported at zero lifetime, and
-            // SetParticles drops it and reorders the others.
-            Assert.Contains(particles, p => p.remainingLifetime <= 0f);
+            // SetParticles drops it, with its trail (measured), and reorders the others.
+            var dropped = particles.Where(p => p.remainingLifetime <= 0f && p.m_TrailId != 0).Select(p => p.m_TrailId).ToList();
+            Assert.Contains(particles, p => p.IsTrailCarrier);
+            Assert.NotEmpty(dropped);
             var trails = ps.GetTrails();
 
             Step(ps, 10);
@@ -214,8 +215,9 @@ namespace UnityEngine.Tests
             });
 
             Assert.Empty(errors);
-            Assert.Equal(pointsThen, TrailPoints(ps));
-            SameBake(bakedThen, Bake(ps, scene.Camera));
+            var expected = new List<Vector3[]>(pointsThen);
+            foreach (int link in dropped) expected[link - 1] = null;
+            Assert.Equal(expected, TrailPoints(ps));
         }
 
         [Fact]
