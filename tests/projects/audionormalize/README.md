@@ -29,3 +29,8 @@ It never starts the Editor. Reports keep every missing, extra and failing value.
 The unchanged audio tolerances are 2e-5 absolute plus 2e-4 relative. A separate
 gate admits one 1/32768 device PCM step, with no additional float-sink slack.
 RESIDUALS is empty. All run artifacts stay outside Git in the cache.
+
+Certification: both independent Native repeats agree exactly across 36,831,499
+values at each rate. The engine strict and separate gate comparisons each pass
+36,831,499/36,831,499 at both rates, including all metadata and startup samples.
+There are zero raw float/PCM failures and no added residuals.

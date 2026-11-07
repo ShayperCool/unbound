@@ -584,7 +584,9 @@ matter across the long decay. These captures support this
 inference; it is not a documented guarantee for every Unity release or context.
 
 Two independent Native projects agree bit for bit across 36,831,499 values per
-rate before publishing one canonical `Reference/unity-6000.0.71f1` profile. Cases
+rate before publishing one canonical `Reference/unity-6000.0.71f1` profile. The
+engine passes all 36,831,499 strict values at each rate, with zero raw float/PCM
+failures and no added residuals. Cases
 include silence, impulses, small/large/bipolar DC, noise, tones, ramps and amplitude
 steps in either channel, defaults and controls, serialized values, setter clamps,
 mono clips, bypass and Master routing. Every startup frame remains compared.
