@@ -71,7 +71,7 @@ namespace Unbound.Runtime.Playables
             double t = e.ReferencePose ? 0.0 : node.Time;
             m_Pose.Reset(e.Bindings.FloatCount, e.Bindings.ObjectCount);
             ClipSampling.Sample(bound, (float)ClipTime(t), 1f, m_Pose,
-                loopPose: e.MotionMode is RootMotionMode.DirectHuman or RootMotionMode.MixedHuman);
+                loopPose: e.MotionMode == RootMotionMode.Human);
             int n = Math.Min(into.FloatCount, e.Bindings.FloatCount);
             for (int c = 0; c < n; c++)
             {
@@ -222,15 +222,13 @@ namespace Unbound.Runtime.Playables
             FireInterval(animator, m_From, m_To, m_Weight, m_IncludeStart);
         }
 
-        internal Action CaptureEvents(Animator animator, PlayableNode node)
+        /// <summary>The event interval this evaluation fires, for a later replay.</summary>
+        internal ClipEventInterval EventInterval(PlayableNode node) => new ClipEventInterval
         {
-            double from = m_From, to = m_To;
-            float weight = m_Weight;
-            bool includeStart = m_IncludeStart;
-            return () => { if (!node.Destroyed) FireInterval(animator, from, to, weight, includeStart); };
-        }
+            Clip = this, Node = node, From = m_From, To = m_To, Weight = m_Weight, IncludeStart = m_IncludeStart,
+        };
 
-        void FireInterval(Animator animator, double from, double to, float weight, bool includeStart)
+        internal void FireInterval(Animator animator, double from, double to, float weight, bool includeStart)
         {
             if (animator == null || !animator.m_FireEvents || Clip == null) return;
             float length = Clip.length;
@@ -248,91 +246,150 @@ namespace Unbound.Runtime.Playables
         }
     }
 
+    /// <summary>A clip playable's evaluated event interval, retained for visibility replay.</summary>
+    internal struct ClipEventInterval
+    {
+        internal ClipKind Clip;
+        internal PlayableNode Node;
+        internal double From, To;
+        internal float Weight;
+        internal bool IncludeStart;
+
+        internal void Fire(Animator animator)
+        {
+            if (!Node.Destroyed) Clip.FireInterval(animator, From, To, Weight, IncludeStart);
+        }
+    }
+
     /// <summary>An AnimationMixerPlayable: its inputs summed by weight, the remainder of weight one
     /// taken by the default values (channel by channel, over the inputs animating the channel).</summary>
     internal sealed class MixerKind : AnimationKind
     {
-        InputPort[] m_HumanMotionInputs;
-        bool m_HumanMotionInputsChanged;
+        /// <summary>Mixer trees deeper than this are not walked for humanoid motion (a guard
+        /// against cyclic or runaway graphs; real graphs nest a few levels).</summary>
+        const int MaxHumanTreeDepth = 64;
 
-        // The Native controls certify constant weights only. Retain the first inputs so a live
-        // change remains diagnostic, even if the weights later return to their original values.
-        internal bool FixedHumanMotionInputs(PlayableNode node)
+        /// <summary>How far a mixer's input weights may sum from one and still count as a unit
+        /// sum: float rounding of weights authored to add up to one (0.1 + 0.1 + 0.8).</summary>
+        internal const float UnitWeightSumTolerance = 1e-5f;
+
+        /// <summary>Whether a mixer and its inputs compose humanoid root motion through the
+        /// humanoid sampler: every connected input is a humanoid motion clip or such a mixer,
+        /// is reached through port 0 and feeds only this mixer, at a finite nonnegative weight,
+        /// and each mixer's weights sum to one. Clips under a mixer need all four RootQ curves,
+        /// because the blended body is written back to those bindings (sparse body rotations
+        /// are a separate gap). Other weight sums blend unnormalized body positions in Unity
+        /// 6000.0.71f1 (animculling capture), which the normalized humanoid blend does not
+        /// reproduce, so they stay unsupported.</summary>
+        internal static bool HumanMotionTree(PlayableNode node, int depth = 0)
         {
-            if (m_HumanMotionInputs == null) m_HumanMotionInputs = node.Inputs.ToArray();
-            if (m_HumanMotionInputs.Length != node.Inputs.Count) m_HumanMotionInputsChanged = true;
-            else
-                for (int i = 0; i < node.Inputs.Count; i++)
-                    if (node.Inputs[i].Node != m_HumanMotionInputs[i].Node
-                        || node.Inputs[i].Weight != m_HumanMotionInputs[i].Weight
-                        || node.Inputs[i].SourcePort != m_HumanMotionInputs[i].SourcePort)
-                        m_HumanMotionInputsChanged = true;
-            if (m_HumanMotionInputsChanged || node.Inputs.Count != 2) return false;
-            float total = 0f;
-            var first = node.Inputs[0].Node;
-            if (first == node.Inputs[1].Node) return false;
+            if (node == null || node.Destroyed || depth > MaxHumanTreeDepth || node.Kind is not MixerKind
+                || node.Traversal != PlayableTraversalMode.Mix) return false;
+            int connected = 0;
+            float sum = 0f;
             foreach (var input in node.Inputs)
             {
-                if (!(input.Weight >= 0f) || !AnimationEvaluation.HumanMotionClip(input.Node)
-                    || ((ClipKind)input.Node.Kind).ApplyFootIK || input.SourcePort != 0) return false;
-                // The stream rewrite below requires each quaternion component to have a
-                // binding. Sparse body quaternions remain outside this measured graph slice.
+                if (input.Node == null) continue;
+                connected++;
+                sum += input.Weight;
+                if (!(input.Weight >= 0f) || float.IsInfinity(input.Weight) || input.SourcePort != 0
+                    || ConsumerCount(input.Node) != 1) return false;
+                if (input.Node.Kind is MixerKind)
+                {
+                    if (!HumanMotionTree(input.Node, depth + 1)) return false;
+                    continue;
+                }
+                if (!AnimationEvaluation.HumanMotionClip(input.Node)) return false;
                 var present = ((ClipKind)input.Node.Kind).Clip.HumanPresent;
                 for (int q = 0; q < 4; q++)
                     if (!present[Unbound.Runtime.Humanoid.HumanClipImport.RootFirst + 3 + q]) return false;
-                int consumers = 0;
-                foreach (var output in input.Node.Outputs)
-                    if (output.Node != null) consumers++;
-                if (consumers != 1) return false;
-                total += input.Weight;
             }
-            return total == 1f;
+            return connected > 0 && Math.Abs(sum - 1f) <= UnitWeightSumTolerance;
+        }
+
+        /// <summary>A hash of a mixer tree's input weights, to tell whether they changed
+        /// between two evaluations.</summary>
+        internal static int TreeWeights(PlayableNode node, int depth = 0)
+        {
+            int hash = 17;
+            if (node == null || node.Destroyed || depth > MaxHumanTreeDepth) return hash;
+            foreach (var input in node.Inputs)
+            {
+                if (input.Node == null) continue;
+                hash = hash * 31 + BitConverter.SingleToInt32Bits(input.Weight);
+                if (input.Node.Kind is MixerKind) hash = hash * 31 + TreeWeights(input.Node, depth + 1);
+            }
+            return hash;
+        }
+
+        static int ConsumerCount(PlayableNode node)
+        {
+            int consumers = 0;
+            foreach (var output in node.Outputs)
+                if (output.Node != null) consumers++;
+            return consumers;
         }
 
         internal override void Evaluate(AnimationEvaluation e, PlayableNode node, int viaPort, float weight, AnimStream into) =>
             Mix(e, node, weight, into, 0);
 
+        static readonly Stack<List<(AnimStream Stream, float Weight)>> s_InputLists = new Stack<List<(AnimStream, float)>>();
+
         internal static void Mix(AnimationEvaluation e, PlayableNode node, float weight, AnimStream into, int depth)
         {
-            var inputs = new List<(AnimStream, float)>(node.Inputs.Count);
-            foreach (var i in node.Inputs)
+            // Nested mixers and reentrant evaluations each rent their own input list.
+            var inputs = s_InputLists.Count > 0 ? s_InputLists.Pop() : new List<(AnimStream, float)>();
+            e.Combining++;
+            try
             {
-                if (i.Node == null) continue;
-                var s = AnimStream.Rent(e.Bindings);
-                s.DeltaTime = e.DeltaTime;
-                e.EvaluateInto(i.Node, i.SourcePort, weight * i.Weight, s, depth + 1);
-                inputs.Add((s, i.Weight));
-            }
-            AnimationEvaluation.MixInto(into, inputs);
-            if (e.MotionMode == RootMotionMode.MixedHuman && into.BodyMotion.HasMotion)
-            {
-                // Human clip rotations are normalized before blending. The scalar curve
-                // bindings otherwise blend their unnormalized quaternion components, which
-                // ApplyToPose would mistake for an additional layer rotation.
-                var root = into.BodyMotion.Root;
-                foreach (var group in e.Bindings.Groups)
+                foreach (var i in node.Inputs)
                 {
-                    int human = group.HumanCurve - Unbound.Runtime.Humanoid.HumanClipImport.RootFirst;
-                    if (human < 0 || human >= 7) continue;
-                    var value = human < 3 ? root.t : root.q;
-                    int component = human < 3 ? human : human - 3;
-                    into.Values[group.First] = component == 0 ? value.x : component == 1 ? value.y : component == 2 ? value.z : value.w;
+                    if (i.Node == null) continue;
+                    var s = AnimStream.Rent(e.Bindings);
+                    s.DeltaTime = e.DeltaTime;
+                    inputs.Add((s, i.Weight));
+                    e.EvaluateInto(i.Node, i.SourcePort, weight * i.Weight, s, depth + 1);
+                }
+                AnimationEvaluation.MixInto(into, inputs);
+                if (e.MotionMode == RootMotionMode.Human && into.BodyMotion.HasMotion) WriteHumanRoot(e, into);
+                if (e.MotionMode != RootMotionMode.Unsupported)
+                {
+                    var motion = RootMotionStep.Mix(inputs);
+                    // The mixer animates the root when an input does, whatever its weight, as its pose
+                    // marks a channel any input animates (Unbound's choice, unmeasured).
+                    if (motion.Known)
+                    {
+                        motion.RootUnanimated = true;
+                        foreach (var (s, _) in inputs)
+                            if (!s.Motion.RootUnanimated) { motion.RootUnanimated = false; break; }
+                    }
+                    into.Motion = motion;
                 }
             }
-            if (e.MotionMode != RootMotionMode.Unsupported)
+            finally
             {
-                var motion = RootMotionStep.Mix(inputs);
-                // The mixer animates the root when an input does, whatever its weight, as its pose
-                // marks a channel any input animates (Unbound's choice, unmeasured).
-                if (motion.Known)
-                {
-                    motion.RootUnanimated = true;
-                    foreach (var (s, _) in inputs)
-                        if (!s.Motion.RootUnanimated) { motion.RootUnanimated = false; break; }
-                }
-                into.Motion = motion;
+                e.Combining--;
+                foreach (var (s, _) in inputs) AnimStream.Return(s);
+                inputs.Clear();
+                s_InputLists.Push(inputs);
             }
-            foreach (var (s, _) in inputs) AnimStream.Return(s);
+        }
+
+        /// <summary>Human clip rotations are normalized before blending. The scalar body curve
+        /// bindings otherwise blend their unnormalized quaternion components, which
+        /// ApplyToPose would mistake for an additional rotation, so the blended body
+        /// (RootT/RootQ) replaces them.</summary>
+        static void WriteHumanRoot(AnimationEvaluation e, AnimStream into)
+        {
+            var root = into.BodyMotion.Root;
+            foreach (var group in e.Bindings.Groups)
+            {
+                int human = group.HumanCurve - Unbound.Runtime.Humanoid.HumanClipImport.RootFirst;
+                if (human < 0 || human >= 7) continue;
+                var value = human < 3 ? root.t : root.q;
+                int component = human < 3 ? human : human - 3;
+                into.Values[group.First] = component == 0 ? value.x : component == 1 ? value.y : component == 2 ? value.z : value.w;
+            }
         }
     }
 
@@ -466,7 +523,9 @@ namespace Unbound.Runtime.Playables
                 if (input.Node == null) continue;
                 var s = AnimStream.Rent(e.Bindings);
                 s.DeltaTime = e.DeltaTime;
-                e.EvaluateInto(input.Node, input.SourcePort, weight * input.Weight, s);
+                e.Combining++;
+                try { e.EvaluateInto(input.Node, input.SourcePort, weight * input.Weight, s); }
+                finally { e.Combining--; }
                 any = true;
                 bool additive = l < Additive.Count && Additive[l];
                 // A layer that does not animate the root is skipped like a masked-out one.

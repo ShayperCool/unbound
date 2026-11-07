@@ -94,9 +94,18 @@ namespace Unbound.Runtime
         /// releases keep the general miter rules.</summary>
         internal static bool LineOpenStripJoinsMeasured => RenderingMeasured;
 
-        /// <summary>One two-input humanoid mixer with constant unit-sum weights, measured by
-        /// animculling on exactly 6000.0.71f1. Other releases keep the unsupported diagnostic.</summary>
+        /// <summary>Humanoid root motion composed by mixer trees (any input count and nesting,
+        /// input weights summing to one in each mixer, weights changed between evaluations),
+        /// measured by animculling humanMixerMotion/humanMixerShape on exactly 6000.0.71f1.
+        /// Other releases keep the unsupported diagnostic.</summary>
         internal static bool HumanPlayableMixerMotionMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>After skipped updates, a visibility return replays the last event intervals of
+        /// clips that a mixer or layer mixer combined (at any depth), but not of a clip that is the
+        /// output's source or is reached only through passthrough playables (6000.0.71f1,
+        /// animculling explicit/later and explicit/eventShape). Other releases fire no events on
+        /// visibility return, as the culling documentation describes.</summary>
+        internal static bool PlayableEventsReplayOnVisibility => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>Animator automatic Play-entry timing and startup controls measured by
         /// tests/projects/animstartup in exactly 6000.0.71f1's Linux Editor. Other releases

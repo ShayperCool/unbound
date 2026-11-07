@@ -1261,6 +1261,8 @@ namespace Unbound.Runtime
             }
         }
 
+        bool[] m_OutputBound = Array.Empty<bool>(), m_OutputObjectBound = Array.Empty<bool>();
+
         void SampleState(LayerRun layer, int layerIndex, StateRun run, float weight, AnimationPose pose, bool[] mask, bool[] objectMask)
         {
             if (weight <= 0f) return;
@@ -1292,19 +1294,21 @@ namespace Unbound.Runtime
             var (animated, animatedObjects) = MotionMask(motion, mirror);
             var (inLayer, objectsInLayer) = LayerChannels(layerIndex);
             var leftAs = holds ? pose.Fill : !run.Def.WriteDefaults ? pose.Keep : motion != null ? pose.Fill : pose.Rest;
+            // The base layer's write defaults also cover channels bound by the Animator's outputs.
+            bool outputBound = Attached && layerIndex == 0 && run.Def.WriteDefaults
+                && Unbound.Runtime.Playables.AnimationOutputs.BoundChannels(m_Animator, ref m_OutputBound, ref m_OutputObjectBound,
+                    Bindings.FloatCount, Bindings.ObjectCount);
             for (int c = 0; c < Bindings.FloatCount; c++)
             {
                 if ((c < animated.Length && animated[c]) || (mask != null && !mask[c])) continue;
-                if (run.Def.WriteDefaults && (c >= inLayer.Length || !inLayer[c])
-                    && !(Attached && layerIndex == 0 && Unbound.Runtime.Playables.AnimationOutputs.BindsChannel(m_Animator, c))) continue;
+                if (run.Def.WriteDefaults && (c >= inLayer.Length || !inLayer[c]) && !(outputBound && m_OutputBound[c])) continue;
                 if (holds && c < layer.Held.Length && layer.Held[c]) continue;
                 leftAs[c] += weight;
             }
             if (!run.Def.WriteDefaults || layerIndex > 0) return;
             for (int c = 0; c < Bindings.ObjectCount && c < objectsInLayer.Length; c++)
             {
-                if (animatedObjects[c] || (!objectsInLayer[c]
-                    && !(Attached && Unbound.Runtime.Playables.AnimationOutputs.BindsChannel(m_Animator, c, objectChannel: true)))
+                if (animatedObjects[c] || (!objectsInLayer[c] && !(outputBound && m_OutputObjectBound[c]))
                     || (objectMask != null && !objectMask[c])) continue;
                 if (weight > pose.ObjectWeight[c])
                 {
