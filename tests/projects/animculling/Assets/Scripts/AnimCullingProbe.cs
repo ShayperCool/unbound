@@ -48,6 +48,13 @@ public class AnimCullingProbe : MonoBehaviour
         public AnimationMixerPlayable humanMixer;
         public List<AnimationClipPlayable> humanInputs;
         public List<(AnimationMixerPlayable Mixer, int Port)> humanWeights;
+        // clock/ cases: the named playables whose clocks are recorded, and their behaviours.
+        public List<(string Name, Playable Node)> clockNodes;
+        public List<(string Name, CullClock Behaviour)> clockScripts;
+        public bool clockManual;
+        // Two Animators sampling one clip node evaluate it concurrently in the Editor (their poses
+        // differed between captures at a loop wrap): only the clocks are recorded.
+        public bool clockOnly;
     }
 
     readonly List<Case> cases = new List<Case>();
@@ -139,6 +146,7 @@ public class AnimCullingProbe : MonoBehaviour
         HumanMixerMotionCases();
         HumanMixerShapeCases();
         EventShapeCases();
+        ClockCases();
         foreach (var (name, mode) in modes)
         foreach (bool controller in new[] { false, true })
         foreach (bool mixer in new[] { false, true })
@@ -433,6 +441,184 @@ public class AnimCullingProbe : MonoBehaviour
         }
     }
 
+
+    // Which playables' clocks a culled output stops. Each shape puts plain Playables (P),
+    // ScriptPlayables (S), clips (C, C2), mixers (M), a layer mixer (L), an
+    // AnimationScriptPlayable (J) and an AnimatorControllerPlayable (A) under an
+    // AnimationPlayableOutput; twoTrees and sharedClip add an output to a second Animator that
+    // stays visible, with its own tree or sharing the clip through a second output port (that
+    // Animator's output created after or, for sharedClipFirst, before the culled one). The
+    // records keep every node's time, previous time, done flag and duration, and each
+    // behaviour's callback counts and last deltas. Outputs sharing one source port are a
+    // separate output-binding question and are not part of this probe.
+    static readonly string[] ClockShapes = { "clip", "plain", "script", "plainLeaf", "scriptLeaf", "mixer", "mixerPlain",
+        "mixerScript", "plainMixer", "plainPlain", "nestedScript", "layer", "job", "speed", "duration",
+        "twoTrees", "sharedClip", "sharedClipFirst", "controller" };
+
+    void ClockCases()
+    {
+        foreach (var clock in new[] { DirectorUpdateMode.GameTime, DirectorUpdateMode.Manual })
+        foreach (string shape in ClockShapes)
+            ClockCase(shape, AnimatorCullingMode.CullCompletely, clock);
+        foreach (var mode in new[] { AnimatorCullingMode.AlwaysAnimate, AnimatorCullingMode.CullUpdateTransforms })
+        foreach (string shape in new[] { "plain", "script", "mixerPlain", "mixerScript", "duration", "sharedClip", "controller" })
+            ClockCase(shape, mode, DirectorUpdateMode.GameTime);
+        ClockCase("scriptOutput", AnimatorCullingMode.CullCompletely, DirectorUpdateMode.GameTime);
+    }
+
+    void ClockCase(string shape, AnimatorCullingMode mode, DirectorUpdateMode clock)
+    {
+        var c = Animated("clock/" + shape + "/" + mode + "/" + clock, null, mode, ScheduleA);
+        c.clockNodes = new List<(string, Playable)>();
+        c.clockScripts = new List<(string, CullClock)>();
+        c.clockManual = clock == DirectorUpdateMode.Manual;
+        var g = c.graph = PlayableGraph.Create(c.name);
+        g.SetTimeUpdateMode(clock);
+        var pose = Resources.Load<AnimationClip>("PlayablePose");
+        var second = Resources.Load<AnimationClip>("PlayableSecond");
+        Playable Node(string name, Playable p) { c.clockNodes.Add((name, p)); return p; }
+        Playable Clip(string name, AnimationClip clip) => Node(name, AnimationClipPlayable.Create(g, clip));
+        Playable Plain(string name, Playable input)
+        {
+            var p = Node(name, Playable.Create(g, input.IsValid() ? 1 : 0));
+            if (input.IsValid()) p.ConnectInput(0, input, 0, 1f);
+            return p;
+        }
+        Playable Script(string name, Playable input)
+        {
+            var p = ScriptPlayable<CullClock>.Create(g, input.IsValid() ? 1 : 0);
+            c.clockScripts.Add((name, p.GetBehaviour()));
+            Node(name, p);
+            if (input.IsValid()) p.ConnectInput(0, input, 0, 1f);
+            return p;
+        }
+        Playable Mixer(string name, Playable a, Playable b)
+        {
+            var m = Node(name, AnimationMixerPlayable.Create(g, 2));
+            m.ConnectInput(0, a, 0, 0.25f);
+            m.ConnectInput(1, b, 0, 0.75f);
+            return m;
+        }
+        Playable source;
+        // The "First" variants create (and later connect) the culled Animator's output before the other output.
+        bool first = shape.EndsWith("First", StringComparison.Ordinal);
+        if (first) shape = shape.Substring(0, shape.Length - 5);
+        var output = first ? AnimationPlayableOutput.Create(g, "Animation", c.animator) : AnimationPlayableOutput.Null;
+        AnimationPlayableOutput OtherOutput()
+        {
+            // A second Animator that is always on screen and never culled.
+            var other = Animated(c.name + "/other", null, AnimatorCullingMode.AlwaysAnimate, Always);
+            other.clockNodes = new List<(string, Playable)>();
+            other.clockScripts = new List<(string, CullClock)>();
+            other.clockOnly = c.clockOnly;
+            return AnimationPlayableOutput.Create(g, "Other", other.animator);
+        }
+        switch (shape)
+        {
+            case "clip": source = Clip("C", pose); break;
+            case "plain": source = Plain("P", Clip("C", pose)); break;
+            case "script": source = Script("S", Clip("C", pose)); break;
+            case "plainLeaf": source = Plain("P", Playable.Null); break;
+            case "scriptLeaf": source = Script("S", Playable.Null); break;
+            case "mixer": source = Mixer("M", Clip("C", pose), Clip("C2", second)); break;
+            case "mixerPlain": source = Mixer("M", Plain("P", Clip("C", pose)), Clip("C2", second)); break;
+            case "mixerScript": source = Mixer("M", Script("S", Clip("C", pose)), Clip("C2", second)); break;
+            case "plainMixer": source = Plain("P", Mixer("M", Clip("C", pose), Clip("C2", second))); break;
+            case "plainPlain": source = Plain("P", Plain("P2", Clip("C", pose))); break;
+            case "nestedScript": source = Plain("P", Script("S", Clip("C", pose))); break;
+            case "layer":
+            {
+                var layer = Node("L", AnimationLayerMixerPlayable.Create(g, 1));
+                layer.ConnectInput(0, Clip("C", pose), 0, 1f);
+                source = layer;
+                break;
+            }
+            case "job":
+            {
+                var job = Node("J", AnimationScriptPlayable.Create(g, new CullClockJob(), 1));
+                job.ConnectInput(0, Clip("C", pose), 0, 1f);
+                source = job;
+                break;
+            }
+            case "speed":
+                source = Plain("P", Clip("C", pose));
+                source.SetSpeed(2.0);
+                break;
+            case "duration":
+            {
+                var clip = Clip("C", pose);
+                clip.SetDuration(0.3);
+                var script = Script("S", clip);
+                script.SetDuration(0.3);
+                source = Plain("P", script);
+                source.SetDuration(0.3);
+                break;
+            }
+            case "twoTrees":
+                source = Plain("P", Clip("C", pose));
+                OtherOutput().SetSourcePlayable(Plain("P2", Clip("C2", second)));
+                break;
+            case "sharedClip":
+            {
+                c.clockOnly = true;
+                var clip = Clip("C", pose);
+                clip.SetOutputCount(2);
+                source = Node("P", Playable.Create(g, 1));
+                source.ConnectInput(0, clip, 0, 1f);
+                var other = Node("P2", Playable.Create(g, 1));
+                other.ConnectInput(0, clip, 1, 1f);
+                if (first) output.SetSourcePlayable(source);
+                OtherOutput().SetSourcePlayable(other);
+                break;
+            }
+            case "controller":
+                // An AnimatorControllerPlayable below a plain Playable; nt records its state time.
+                source = Plain("P", Node("A", AnimatorControllerPlayable.Create(g, Resources.Load<RuntimeAnimatorController>("Culling"))));
+                break;
+            case "scriptOutput":
+                // No Animator output: a script output alone, a control for the clip clock.
+                source = Plain("P", Clip("C", pose));
+                ScriptPlayableOutput.Create(g, "Script").SetSourcePlayable(source);
+                g.Play();
+                return;
+            default: throw new ArgumentException(shape);
+        }
+        if (!first) output = AnimationPlayableOutput.Create(g, "Animation", c.animator);
+        output.SetSourcePlayable(source);
+        g.Play();
+    }
+
+    // Manual graphs: one 0.02 s evaluation per frame; frame 16 calls 0.07, 0 and 0.04 instead.
+    void ClockStep(Case c)
+    {
+        if (!c.clockManual) return;
+        if (frame == 16)
+            foreach (float delta in new[] { 0.07f, 0f, 0.04f }) c.graph.Evaluate(delta);
+        else c.graph.Evaluate(0.02f);
+    }
+
+    static string D(double d) => d.ToString("R", CultureInfo.InvariantCulture);
+
+    void RecordClock(Case c)
+    {
+        var json = new StringBuilder("{\"vis\":").Append(B(c.renderers[0].isVisible));
+        if (!c.clockOnly)
+            json.Append(",\"m\":[").Append(F(c.marker.localPosition.x)).Append(",").Append(F(c.marker.localPosition.y)).Append("]")
+                .Append(",\"root\":").Append(V(c.rig.localPosition)).Append(",\"ev\":").Append(c.receiver.events)
+                .Append(",\"value\":").Append(F(c.receiver.value));
+        foreach (var (name, node) in c.clockNodes)
+            json.Append(",\"").Append(name).Append("\":[").Append(D(node.GetTime())).Append(",").Append(D(node.GetPreviousTime()))
+                .Append(",").Append(B(node.IsDone())).Append(",").Append(D(node.GetDuration())).Append("]");
+        foreach (var (name, node) in c.clockNodes)
+            if (node.IsPlayableOfType<AnimatorControllerPlayable>())
+                json.Append(",\"nt\":").Append(F(((AnimatorControllerPlayable)node).GetCurrentAnimatorStateInfo(0).normalizedTime));
+        foreach (var (name, b) in c.clockScripts)
+            json.Append(",\"").Append(name).Append("cb\":[").Append(b.prepares).Append(",").Append(D(b.prepareDelta))
+                .Append(",").Append(b.processes).Append(",").Append(D(b.processDelta)).Append(",").Append(b.plays)
+                .Append(",").Append(b.pauses).Append(",").Append(B(b.prepareEvaluate)).Append("]");
+        Put(c.name + "/" + frame, json.Append("}").ToString());
+    }
+
     void HumanMotionCase(AnimatorCullingMode mode, DirectorUpdateMode clock, string movement, string avatar, float scale, float? mixerWeight = null, string shape = null)
     {
         var name = (shape != null ? "humanMixerShape/" + shape : mixerWeight.HasValue ? "humanMixerMotion/" + F(mixerWeight.Value) : "humanMotion")
@@ -665,6 +851,7 @@ public class AnimCullingProbe : MonoBehaviour
                 c.holder.position = c.visible(frame) ? On : Off;
                 c.step?.Invoke(frame);
                 ExplicitStep(c);
+                ClockStep(c);
             }
         }
         catch (Exception e) { Put("fatal", S(e.ToString())); failed = true; }
@@ -688,6 +875,7 @@ public class AnimCullingProbe : MonoBehaviour
     void Record(Case c, string phase = null)
     {
         if (c.humanMotion) { RecordHumanMotion(c, phase); return; }
+        if (c.clockNodes != null) { RecordClock(c); return; }
         var json = new StringBuilder("{\"vis\":[");
         for (int i = 0; i < c.renderers.Count; i++) json.Append(i > 0 ? "," : "").Append(B(c.renderers[i].isVisible));
         json.Append("]");
@@ -762,4 +950,37 @@ public class AnimCullingProbe : MonoBehaviour
 #endif
         }
     }
+}
+
+/// <summary>Counts a ScriptPlayable's callbacks and keeps their last deltas (clock/ cases).</summary>
+public class CullClock : PlayableBehaviour
+{
+    public int prepares, processes, plays, pauses;
+    public double prepareDelta, processDelta;
+    public bool prepareEvaluate;
+
+    public override void PrepareFrame(Playable playable, FrameData info)
+    {
+        prepares++;
+        prepareDelta = info.deltaTime;
+        prepareEvaluate = info.evaluationType == FrameData.EvaluationType.Evaluate;
+    }
+
+    public override void ProcessFrame(Playable playable, FrameData info, object playerData)
+    {
+        processes++;
+        processDelta = info.deltaTime;
+    }
+
+    public override void OnBehaviourPlay(Playable playable, FrameData info) => plays++;
+
+    public override void OnBehaviourPause(Playable playable, FrameData info) => pauses++;
+}
+
+/// <summary>An animation job that passes its input through (clock/job).</summary>
+public struct CullClockJob : IAnimationJob
+{
+    public void ProcessRootMotion(AnimationStream stream) { }
+
+    public void ProcessAnimation(AnimationStream stream) { }
 }
