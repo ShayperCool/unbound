@@ -112,11 +112,23 @@ def main():
                 shutil.copyfile(first/name, target/name)
         result = 0
         for space in ('Gamma', 'Linear'):
-            result |= publish([work/'native1'/space, work/'native2'/space], reference/space,
+            result |= publish([work/'native1'/space, work/'native2'/space], work/'publication'/space,
                               files, write,
                               complete=[lambda d: None if len(driver_compare.load(d/'mtl.jsonl')) == 1350
-                                        and len(list(d.glob('*.png'))) == 20 else 'incomplete capture'])
-        return result
+                                        and len(list(d.glob('*.png'))) == 30 else 'incomplete capture'])
+        if result:
+            return result
+        # Add only new reference files; existing oracle bytes must remain identical.
+        for space in ('Gamma', 'Linear'):
+            staged = work/'publication'/space
+            for name in files(reference/space):
+                if (reference/space/name).read_bytes() != (staged/name).read_bytes():
+                    raise ValueError('existing oracle changed: '+space+'/'+name)
+            for name in files(staged):
+                target = reference/space/name
+                if not target.exists():
+                    shutil.copyfile(staged/name, target)
+        return 0
     result = 0
     for space in ('Gamma', 'Linear'):
         out = work/'unbound'/space

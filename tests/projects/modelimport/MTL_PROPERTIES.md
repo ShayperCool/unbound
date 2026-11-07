@@ -14,7 +14,9 @@ UNBOUND=/path/to/unbound python3 tests/projects/modelimport/mtl_properties.py un
 The API comparator uses the existing model probe's absolute/relative 1e-5 tolerance. The new
 render gate uses a maximum channel error of 8/255. Every differing value and pixel remains in
 `mtl-comparison.json`, including differences below the bound. Assigned Standard materials and
-unlit copies of their imported colors are both rendered. Mesh-local transforms isolate this
+unlit copies of their imported colors are both rendered. A separate second pass adds direct-light
+images with flat black ambient and zero reflections. Publication requires every earlier reference
+file to remain byte-identical and adds only these new images. Mesh-local transforms isolate this
 measurement from the open OBJ axis/pivot question. Explicit remaps retain an authored green
 material instead of the imported `Mid` material.
 

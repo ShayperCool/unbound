@@ -71,6 +71,30 @@ public class MtlProbe : MonoBehaviour
             DestroyImmediate(instance);
             foreach (var m in owned) DestroyImmediate(m);
         }
+        // A separate second pass leaves the original environment-lit captures untouched.
+        // Flat black ambient isolates material conversion from the default sky's lighting data.
+        RenderSettings.ambientMode = UnityEngine.Rendering.AmbientMode.Flat;
+        RenderSettings.ambientLight = Color.black;
+        RenderSettings.reflectionIntensity = 0;
+        foreach (var name in new[] { "Description", "Legacy", "DescriptionLinearColor", "LegacyLinearColor", "Remap",
+                                    "DescriptionSolid", "LegacySolid", "DescriptionLinearColorSolid", "LegacyLinearColorSolid", "RemapSolid" })
+        {
+            var instance = Instantiate(Resources.Load<GameObject>("Mtl/" + name));
+            var renderer = instance.GetComponentInChildren<Renderer>();
+            renderer.transform.position = Vector3.zero;
+            renderer.transform.rotation = Quaternion.identity;
+            renderer.transform.localScale = Vector3.one;
+            renderer.reflectionProbeUsage = UnityEngine.Rendering.ReflectionProbeUsage.Off;
+            renderer.lightProbeUsage = UnityEngine.Rendering.LightProbeUsage.Off;
+            var lightObject = new GameObject("MtlDirectLight");
+            var light = lightObject.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.intensity = 1;
+            light.transform.rotation = Quaternion.Euler(0, 180, 0);
+            Image(name + "-direct", new[] { renderer });
+            DestroyImmediate(lightObject);
+            DestroyImmediate(instance);
+        }
         File.WriteAllText(Path.Combine(directory, "mtl.jsonl"), output.ToString());
 #if UNITY_EDITOR
         UnityEditor.EditorApplication.Exit(0);
