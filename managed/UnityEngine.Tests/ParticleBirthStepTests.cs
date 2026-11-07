@@ -119,6 +119,30 @@ namespace UnityEngine.Tests
             return particles[0];
         }
 
+        [Fact]
+        public void InfiniteParentLifetimeKeepsItsExistingRateClock()
+        {
+            WithSystems((parent, child) =>
+            {
+                // startLifetime explicitly supports PositiveInfinity. Subtracting
+                // its exported lifetime from itself must not poison the rate carry.
+                var main = parent.main; main.startLifetime = float.PositiveInfinity;
+                var emission = parent.emission;
+                emission.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+                emission = child.emission; emission.SetBursts(Array.Empty<ParticleSystem.Burst>());
+                emission.rateOverTime = 10f;
+                parent.Simulate(0.15f, true, true, false);
+                Assert.True(child.particleCount > 0);
+                var particles = new ParticleSystem.Particle[16];
+                int count = child.GetParticles(particles);
+                for (int i = 0; i < count; i++)
+                {
+                    Assert.True(float.IsFinite(particles[i].remainingLifetime));
+                    Assert.True(float.IsFinite(particles[i].position.z));
+                }
+            });
+        }
+
         static void Near(float expected, float actual) => Assert.InRange(Math.Abs(expected - actual), 0f, 0.000002f);
 
         static void WithSystems(Action<ParticleSystem, ParticleSystem> run)

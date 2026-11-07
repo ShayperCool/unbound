@@ -2000,7 +2000,11 @@ namespace UnityEngine
                     // Measured Birth rate intervals follow the parent's exported age.
                     // The first interval cannot precede the newborn's integration span;
                     // later intervals preserve the rounded parent clock boundaries.
-                    float delay = m_SimulatingBirths ? Mathf.Max(0f,
+                    // Infinite lifetimes and a ring's age rewind have no such interval;
+                    // retain their existing integration-delta path until measured.
+                    bool useInterval = m_SimulatingBirths && float.IsFinite(ageBefore)
+                        && float.IsFinite(ageAfter) && ageAfter >= ageBefore;
+                    float delay = useInterval ? Mathf.Max(0f,
                         child.m_Main.startDelay.Evaluate(0f, ModuleValue(child.m_Main.randomSeed, 0u))) : 0f;
                     float from = Mathf.Max(0f, ageBefore - delay);
                     float to = Mathf.Max(0f, ageAfter - delay);
@@ -2009,8 +2013,8 @@ namespace UnityEngine
                         from = Mathf.Min(from, child.m_Main.duration);
                         to = Mathf.Min(to, child.m_Main.duration);
                     }
-                    float emissionDt = m_SimulatingBirths ? to - from : dt;
-                    if (m_SimulatingBirths && firstBirth) emissionDt = Mathf.Min(emissionDt, dt);
+                    float emissionDt = useInterval ? to - from : dt;
+                    if (useInterval && firstBirth) emissionDt = Mathf.Min(emissionDt, dt);
                     if (slot == 0)
                     {
                         parent.m_EmitAccumulator0 += rate * emissionDt;
@@ -2026,7 +2030,7 @@ namespace UnityEngine
                     if (n > 0 && rate > 0f)
                     {
                         float remainder = slot == 0 ? parent.m_EmitAccumulator0 : parent.m_EmitAccumulator1;
-                        birthAge = remainder / rate + (m_SimulatingBirths ? Mathf.Max(0f, ageAfter - delay - to) : 0f);
+                        birthAge = remainder / rate + (useInterval ? Mathf.Max(0f, ageAfter - delay - to) : 0f);
                         spacing = -1f / rate;
                         firstEmission = new BirthEmission { count = n, age = birthAge, spacing = spacing, velocity = travel,
                             position = Vector3.LerpUnclamped(positionBefore, parent.m_Position, dt > 0f ? 1f - birthAge / dt : 0f) };
