@@ -116,7 +116,7 @@ def main():
         if out.exists():
             shutil.rmtree(out)
         out.mkdir(parents=True)
-        cli = os.environ.get('UNBOUND_CLI', str(driver.REPO/'target/release/unbound'))
+        cli = os.environ.get('UNBOUND_CLI') or os.environ.get('UNBOUND') or str(driver.REPO/'target/release/unbound')
         with (out/'unbound.log').open('w') as log:
             code = subprocess.run([str(driver.LAUNCHER), 'timeout', '600', cli, 'run', '-p', str(project),
                                    '--no-watch', '--frames', '10', '--size', '160x64'],
