@@ -243,6 +243,58 @@ namespace UnityEngine.Tests
             Assert.False(clip.IsDone());
         }
 
+        /// <summary>25 evaluations of 0.02f put a 0.5 s loop at 0.4999999888 s, which the clip
+        /// samples as its start. Root motion crosses that wrap with the pose: a steady step, no
+        /// jump back and forth.</summary>
+        [Fact]
+        public void RootMotionCrossesASinglePrecisionLoopWrapSteadily()
+        {
+            var animator = Rig(AnimatorCullingMode.AlwaysAnimate);
+            animator.applyRootMotion = true;
+            var clip = new AnimationClip();
+            clip.SetCurve("", typeof(Transform), "m_LocalPosition.x", AnimationCurve.Linear(0f, 0f, 0.5f, 1f));
+            clip.SetCurve("", typeof(Transform), "m_LocalPosition.y", AnimationCurve.Constant(0f, 0.5f, 0f));
+            clip.SetCurve("", typeof(Transform), "m_LocalPosition.z", AnimationCurve.Constant(0f, 0.5f, 0f));
+            clip.m_LoopTime = true;
+            m_Objects.Add(clip);
+            var graph = Graph(DirectorUpdateMode.Manual);
+            var playable = AnimationClipPlayable.Create(graph, clip);
+            AnimationPlayableOutput.Create(graph, "animation", animator).SetSourcePlayable(playable);
+            graph.Play();
+            graph.Evaluate(0f);
+            for (int frame = 1; frame <= 30; frame++)
+            {
+                graph.Evaluate(0.02f);
+                Assert.True(System.Math.Abs(animator.deltaPosition.x - 0.04f) < 1e-4f,
+                    $"frame {frame} (t={playable.GetTime():R}): delta {animator.deltaPosition.x:R}");
+            }
+            Assert.True(System.Math.Abs(animator.transform.position.x - 1.2f) < 1e-3f, $"root at {animator.transform.position.x:R}");
+        }
+
+        /// <summary>The automatic Play-entry interval is zero for an animation output's whole
+        /// tree, the playables above its clip included (unmeasured there; the existing rule).</summary>
+        [Fact]
+        public void ThePlayEntryIntervalHoldsTheWholeAnimationOutputTree()
+        {
+            var animator = Rig(AnimatorCullingMode.AlwaysAnimate);
+            var graph = Graph();
+            var clip = AnimationClipPlayable.Create(graph, Clip());
+            var plain = Above(graph, clip);
+            AnimationPlayableOutput.Create(graph, "animation", animator).SetSourcePlayable(plain);
+            graph.Play();
+            AnimationSystem.BeginPlayMode();
+            try
+            {
+                Frames(graph, 1);
+                Assert.Equal(0, plain.GetTime());
+                Assert.Equal(0, clip.GetTime());
+            }
+            finally { AnimationSystem.EndPlayModeEntry(); }
+            Frames(graph, 1);
+            Assert.Equal(Step, plain.GetTime(), 9);
+            Assert.Equal(Step, clip.GetTime(), 9);
+        }
+
         [Fact]
         public void OtherReleasesHoldTheWholeSourceTree()
         {

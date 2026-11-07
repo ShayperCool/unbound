@@ -427,17 +427,20 @@ Observed (two byte-identical captures, 3,660 records):
 
 Implementation: `PlayableKind.AnimatorClock` marks the animation playables;
 `PlayableGraphData.PreparePass` holds the trees below them for culled outputs (the hold
-wins over other outputs), otherwise advances them on the Animator's clock (the zero
-Play-entry interval) and the rest on the graph's. `Compat.PlayableCullingHoldsAnimationPlayablesOnly`
-selects this for 6000.0.71f1; other releases hold each culled output's whole source
-tree as before. Done flags of the player loop's passes are set in
-PostLateUpdate.DirectorLateUpdate.
+wins over other outputs). `Compat.PlayableCullingHoldsAnimationPlayablesOnly` selects
+this for 6000.0.71f1; other releases hold each culled output's whole source tree. Done
+flags of the player loop's passes, and of clips in explicit evaluations, are set in
+PostLateUpdate.DirectorLateUpdate. Pose, root motion and events of a clip all use its
+single-precision time, so a loop wrap is the same for all three (managed tests cover
+root motion across that boundary). The zero Play-entry interval of an animation output
+still applies to its whole tree.
 
 Not part of this probe: two outputs with one source playable and port. Exploratory
 captures (outside Git) showed the output created later neither animating its Animator
 nor getting ProcessFrame; Unbound evaluates both (a gap row). Other releases, Fixed and
-UnscaledTime Animators, the Play-entry interval for playables above the clip, and
-pausing a held playable explicitly are unmeasured.
+UnscaledTime Animators, the Play-entry interval for playables above the clip, a held
+playable that a script output also reaches (Unbound skips its ProcessFrame like a paused
+one), and pausing a held playable explicitly are unmeasured.
 
 Before the implementation, every new CullCompletely case and the 124
 `explicit/eventShape/*/plain` source-time records differed. Now the full reference has

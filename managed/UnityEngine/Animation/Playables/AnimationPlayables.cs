@@ -33,15 +33,18 @@ namespace Unbound.Runtime.Playables
         internal override bool CanChangeInputs => false;
         internal override bool CanSetWeights => false;
 
-        /// <summary>The clip's local time at playable time <paramref name="t"/>. The clip samples
-        /// the single-precision playable time, so a time just below a loop's end in double
-        /// precision already wraps to its start (6000.0.71f1, animculling clock/*/Manual).</summary>
+        /// <summary>The playable time as the clip uses it: in single precision, so a double time
+        /// just below a loop's end already samples the loop's start (6000.0.71f1, animculling
+        /// clock/*/Manual). Pose, root motion and events all read the clip through it, so they
+        /// agree on which loop a time is in.</summary>
+        static double Single(double t) => (float)t;
+
+        /// <summary>The clip's local time at (single-precision) playable time <paramref name="t"/>.</summary>
         double ClipTime(double t)
         {
             float length = Clip.length;
             if (length <= 0f) return Clip.StartTime;
-            double time = (float)t;
-            double local = Loops ? time - Math.Floor(time / length) * length : Math.Clamp(time, 0.0, length);
+            double local = Loops ? t - Math.Floor(t / length) * length : Math.Clamp(t, 0.0, length);
             return Clip.StartTime + local;
         }
 
@@ -71,7 +74,7 @@ namespace Unbound.Runtime.Playables
                     Time = (float)(node.Time / Clip.length),
                     PreviousTime = (float)((node.LastPlaying ? node.PreviousTime : node.Time) / Clip.length), Speed = 1f,
                 }, out into.BodyMotion);
-            double t = e.ReferencePose ? 0.0 : node.Time;
+            double t = e.ReferencePose ? 0.0 : Single(node.Time);
             m_Pose.Reset(e.Bindings.FloatCount, e.Bindings.ObjectCount);
             ClipSampling.Sample(bound, (float)ClipTime(t), 1f, m_Pose,
                 loopPose: e.MotionMode == RootMotionMode.Human);
@@ -106,8 +109,8 @@ namespace Unbound.Runtime.Playables
             m_IncludeStart = Compat.AnimatorStartupMeasured && e.AutomaticFrame && node.LastPlaying
                 && node.PreviousTime == 0 && !m_EventTargets.TryGetValue(e.Animator, out _);
             if (node.PreviousTime == node.Time && !m_IncludeStart) return;
-            m_From = node.PreviousTime;
-            m_To = node.Time;
+            m_From = Single(node.PreviousTime);
+            m_To = Single(node.Time);
             m_Weight = weight;
             e.Note(this, node);
         }
@@ -134,7 +137,7 @@ namespace Unbound.Runtime.Playables
         RootMotionStep Motion(AnimationEvaluation e, BoundClip bound, PlayableNode node)
         {
             if (!node.LastPlaying || (node.FrameFlags & FrameData.Flags.SeekOccured) != 0) return RootMotionStep.Zero;
-            double from = node.PreviousTime, to = node.Time;
+            double from = Single(node.PreviousTime), to = Single(node.Time);
             if ((node.FrameFlags & FrameData.Flags.Loop) != 0 && to < from && node.Duration > 0 && node.Duration < double.MaxValue)
                 to += node.Duration;
             if (from == to) return RootMotionStep.Zero;

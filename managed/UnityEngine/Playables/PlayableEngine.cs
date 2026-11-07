@@ -635,9 +635,9 @@ namespace Unbound.Runtime.Playables
 
         /// <summary>Playables that reached their duration (wrap mode None). They report done once
         /// the explicit evaluation that moved them is over (tests/projects/playables), or at the end
-        /// of the frame when the player loop moved them, or when they are animation playables below
-        /// an animation output: that frame's LateUpdate still sees them not done (6000.0.71f1,
-        /// animculling clock/duration, both update modes).</summary>
+        /// of the frame when the player loop moved them, or when they are animation playables
+        /// themselves below an animation output: that frame's LateUpdate still sees them not done
+        /// (6000.0.71f1, animculling clock/duration, both update modes).</summary>
         readonly List<PlayableNode> m_Finished = new List<PlayableNode>();
         readonly List<PlayableNode> m_FinishedAtFrameEnd = new List<PlayableNode>();
         static readonly List<PlayableGraphData> s_FinishAtFrameEnd = new List<PlayableGraphData>();
@@ -713,17 +713,18 @@ namespace Unbound.Runtime.Playables
         }
 
         /// <summary>
-        /// The prepare pass over every output. Below an animation output, the animation playables
-        /// (<see cref="PlayableKind.AnimatorClock"/>) and everything under them run on the target
-        /// Animator's clock: the automatic Play-entry interval is zero
-        /// (<see cref="AnimationSystem.AutomaticFrameDelta"/>), and while the Animator is
-        /// CullCompletely and invisible they are held, like paused playables: their times stay, they
-        /// get no PrepareFrame, and entering the hold pauses them once (OnBehaviourPause). A hold
-        /// wins over other outputs reaching the same playable; otherwise a playable that any output
-        /// advances moves by the frame's delta. Plain and script playables above the animation
-        /// playables keep the graph's clock. Measured in 6000.0.71f1 (animculling clock/, both
-        /// update modes, shared clips, several outputs and Animators); other releases hold the
-        /// whole source tree (<see cref="Compat.PlayableCullingHoldsAnimationPlayablesOnly"/>).
+        /// The prepare pass over every output. While an animation output's Animator is
+        /// CullCompletely and invisible, the animation playables of its tree
+        /// (<see cref="PlayableKind.AnimatorClock"/>) and everything under them are held, like
+        /// paused playables: their times stay, they get no PrepareFrame, and entering the hold
+        /// pauses them once (OnBehaviourPause). Plain and script playables above them keep
+        /// advancing. A hold wins over other outputs reaching the same playable; otherwise a
+        /// playable that any output advances moves by the frame's delta. Measured in 6000.0.71f1
+        /// (animculling clock/, both update modes, shared clips, several outputs and Animators);
+        /// other releases hold the whole source tree
+        /// (<see cref="Compat.PlayableCullingHoldsAnimationPlayablesOnly"/>). An animation output's
+        /// automatic Play-entry interval (<see cref="AnimationSystem.AutomaticFrameDelta"/>) applies
+        /// to its whole tree.
         /// </summary>
         internal void PreparePass(double dt, bool evaluate)
         {
@@ -736,11 +737,11 @@ namespace Unbound.Runtime.Playables
                 foreach (var o in Outputs)
                 {
                     if (o.Destroyed || o.Source == null) continue;
-                    var mark = new Mark { Held = held, Advancing = advancing, Step = dt, ClockStep = dt };
+                    var mark = new Mark { Held = held, Advancing = advancing, Step = dt };
                     if (o.Engine is AnimationOutputState animation)
                     {
                         animation.Automatic = !evaluate;
-                        if (!evaluate && UpdateMode == DirectorUpdateMode.GameTime) mark.ClockStep = AnimationSystem.AutomaticFrameDelta(dt);
+                        if (!evaluate && UpdateMode == DirectorUpdateMode.GameTime) mark.Step = AnimationSystem.AutomaticFrameDelta(dt);
                         bool culled = CulledCompletely(animation);
                         // The first culled evaluation still samples the held pose.
                         animation.SkipEvaluation = culled && animation.Ticked;
@@ -788,14 +789,13 @@ namespace Unbound.Runtime.Playables
         struct Mark : INodeVisitor
         {
             internal HashSet<PlayableNode> Held, Advancing;
-            internal double Step, ClockStep;
+            internal double Step;
             internal bool Animation, Hold;
 
             public void Visit(PlayableNode n, in NodeVisit v)
             {
-                bool clock = Animation && v.AnimatorClock;
-                if (clock && Hold) Held.Add(n);
-                else if (Advancing != null && (clock ? ClockStep : Step) != 0) Advancing.Add(n);
+                if (Animation && Hold && v.AnimatorClock) Held.Add(n);
+                else if (Advancing != null && Step != 0) Advancing.Add(n);
             }
         }
 
@@ -859,7 +859,7 @@ namespace Unbound.Runtime.Playables
                     flags |= FrameData.Flags.SeekOccured;
                     n.TimeSet = false;
                 }
-                else Advance(n, step * v.Speed, ref flags, !evaluate || (v.AnimatorClock && o.Engine is AnimationOutputState));
+                else Advance(n, step * v.Speed, ref flags, !evaluate || (o.Engine is AnimationOutputState && (n.Kind?.AnimatorClock ?? false)));
             }
             n.FrameFlags = flags;
             var info = MakeInfo(n, step, v, flags, playing, o, evaluate);
@@ -897,7 +897,9 @@ namespace Unbound.Runtime.Playables
         void Process(PlayableOutputData o, PlayableNode n, int viaPort, float w, float ew, double parentSpeed, bool parentPlaying, double dt, int depth)
         {
             if (n == null || n.Destroyed || depth > MaxDepth) return;
-            bool playing = parentPlaying && n.State == PlayState.Playing;
+            // Held playables are skipped like paused ones (Unbound's choice for a held playable
+            // that a script output also reaches; unmeasured).
+            bool playing = parentPlaying && n.State == PlayState.Playing && !n.Held;
             if (!playing) return;
             double speed = parentSpeed * n.Speed;
             if (n.Traversal == PlayableTraversalMode.Passthrough)

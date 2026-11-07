@@ -682,8 +682,9 @@ namespace UnityEngine.Tests
         }
 
         /// <summary>A culled Animator's hold wins over another output reaching the clip: the clip
-        /// keeps its time (6000.0.71f1, animculling clock/sharedClip and an exploratory capture
-        /// with a script output on the same port).</summary>
+        /// keeps its time. Measured with a second Animator's output on another port
+        /// (6000.0.71f1, animculling clock/sharedClip); with a script output created later on the
+        /// same port only in an exploratory capture outside the published reference.</summary>
         [Fact]
         public void ACulledOutputHoldsAClipAnotherOutputShares()
         {
