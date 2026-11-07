@@ -150,7 +150,7 @@ namespace UnityEngine
         public int safeCollisionEventSize => this.GetSafeCollisionEventSize();
 
         [Obsolete("startDelay property is deprecated. Use main.startDelay or main.startDelayMultiplier instead.", false)]
-        public float startDelay { get => m_Main.startDelay.constant; set => m_Main.startDelay = value; }
+        public float startDelay { get => m_Main.startDelay.Multiplier; set => m_Main.startDelay.Set(value); }
 
         [Obsolete("loop property is deprecated. Use main.loop instead.", false)]
         public bool loop { get => m_Main.loop; set => m_Main.loop = value; }
@@ -168,37 +168,37 @@ namespace UnityEngine
         public bool enableEmission { get => m_Emission.enabled; set => m_Emission.enabled = value; }
 
         [Obsolete("emissionRate property is deprecated. Use emission.rateOverTime, emission.rateOverDistance, emission.rateOverTimeMultiplier or emission.rateOverDistanceMultiplier instead.", false)]
-        public float emissionRate { get => m_Emission.rateOverTime.constantMax; set => m_Emission.rateOverTime = value; }
+        public float emissionRate { get => m_Emission.rateOverTime.Multiplier; set => m_Emission.rateOverTime.Set(value); }
 
         [Obsolete("startSpeed property is deprecated. Use main.startSpeed or main.startSpeedMultiplier instead.", false)]
-        public float startSpeed { get => m_Main.startSpeed.constant; set => m_Main.startSpeed = value; }
+        public float startSpeed { get => m_Main.startSpeed.Multiplier; set => m_Main.startSpeed.Set(value); }
 
         [Obsolete("startSize property is deprecated. Use main.startSize or main.startSizeMultiplier instead.", false)]
-        public float startSize { get => m_Main.startSizeX.constant; set => m_Main.startSizeX = value; }
+        public float startSize { get => m_Main.startSizeX.Multiplier; set => m_Main.startSizeX.Set(value); }
 
         [Obsolete("startColor property is deprecated. Use main.startColor instead.", false)]
         public Color startColor { get => m_Main.startColor.color; set => m_Main.startColor = value; }
 
         [Obsolete("startRotation property is deprecated. Use main.startRotation or main.startRotationMultiplier instead.", false)]
-        public float startRotation { get => m_Main.startRotationZ.constant; set => m_Main.startRotationZ = value; }
+        public float startRotation { get => m_Main.startRotationZ.Multiplier; set => m_Main.startRotationZ.Set(value); }
 
         [Obsolete("startRotation3D property is deprecated. Use main.startRotationX, main.startRotationY and main.startRotationZ instead. (Or main.startRotationXMultiplier, main.startRotationYMultiplier and main.startRotationZMultiplier).", false)]
         public Vector3 startRotation3D
         {
-            get => new Vector3(m_Main.startRotationX.constant, m_Main.startRotationY.constant, m_Main.startRotationZ.constant);
+            get => new Vector3(m_Main.startRotationX.Multiplier, m_Main.startRotationY.Multiplier, m_Main.startRotationZ.Multiplier);
             set
             {
-                m_Main.startRotationX = value.x;
-                m_Main.startRotationY = value.y;
-                m_Main.startRotationZ = value.z;
+                m_Main.startRotationX.Set(value.x);
+                m_Main.startRotationY.Set(value.y);
+                m_Main.startRotationZ.Set(value.z);
             }
         }
 
         [Obsolete("startLifetime property is deprecated. Use main.startLifetime or main.startLifetimeMultiplier instead.", false)]
-        public float startLifetime { get => m_Main.startLifetime.constant; set => m_Main.startLifetime = MainModule.KeptStartLifetime(value); }
+        public float startLifetime { get => m_Main.startLifetime.Multiplier; set => m_Main.startLifetime.Set(value); }
 
         [Obsolete("gravityModifier property is deprecated. Use main.gravityModifier or main.gravityModifierMultiplier instead.", false)]
-        public float gravityModifier { get => m_Main.gravityModifier.constant; set => m_Main.gravityModifier = value; }
+        public float gravityModifier { get => m_Main.gravityModifier.Multiplier; set => m_Main.gravityModifier.Set(value); }
 
         [Obsolete("maxParticles property is deprecated. Use main.maxParticles instead.", false)]
         public int maxParticles { get => m_Main.maxParticles; set => m_Main.maxParticles = Math.Max(0, value); }
@@ -1015,14 +1015,14 @@ namespace UnityEngine
             Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
         }
 
-        static float MaxValue(MinMaxCurve curve)
+        static float MaxValue(in ModuleCurve curve)
         {
             switch (curve.mode)
             {
-                case ParticleSystemCurveMode.TwoConstants: return Mathf.Max(curve.constantMin, curve.constantMax);
-                case ParticleSystemCurveMode.Curve: return curve.curveMultiplier * MaxKey(curve.curveMax);
-                case ParticleSystemCurveMode.TwoCurves: return curve.curveMultiplier * Mathf.Max(MaxKey(curve.curveMin), MaxKey(curve.curveMax));
-                default: return curve.constant;
+                case ParticleSystemCurveMode.TwoConstants: return Mathf.Max(curve.minScalar, curve.scalar);
+                case ParticleSystemCurveMode.Curve: return curve.scalar * MaxKey(curve.maxCurve);
+                case ParticleSystemCurveMode.TwoCurves: return curve.scalar * Mathf.Max(MaxKey(curve.minCurve), MaxKey(curve.maxCurve));
+                default: return curve.scalar;
             }
         }
 

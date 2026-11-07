@@ -603,7 +603,7 @@ namespace UnityEngine
                         side = (side - view.Forward * Vector3.Dot(side, view.Forward)).normalized;
                         segmentSides.Add(side.sqrMagnitude > 0f ? side : view.Right);
                     }
-                    float smoothingWidth = (trail.Ribbon ? maximumSize * T.widthOverTrail.curveMultiplier : trail.Width) * uniformScale;
+                    float smoothingWidth = (trail.Ribbon ? maximumSize * T.widthOverTrail.scalar : trail.Width) * uniformScale;
                     for (int i = 1; i < segmentSides.Count; i++)
                     {
                         float length = distances[i + 1] - distances[i];

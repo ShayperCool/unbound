@@ -1391,15 +1391,39 @@ namespace UnityEngine.Tests
             Object.DestroyImmediate(go);
         }
 
+        /// <summary>A MinMaxCurve script field serializes the struct's six fields, as the 6000.0.71f1
+        /// Editor writes them (tests/projects/particlecurves Authored.prefab), and keeps all of them:
+        /// the constants and the multiplier stay apart, and a curve mode keeps its constants.</summary>
         [Fact]
         public void ScriptFieldsOfCurveTypesReadAndCopyLikeUnitysData()
         {
             const string yaml = @"MonoBehaviour:
   curve:
-    serializedVersion: 2
-    minMaxState: 3
-    scalar: 4
-    minScalar: 2
+    m_Mode: 3
+    m_CurveMultiplier: 9
+    m_CurveMin:
+      serializedVersion: 2
+      m_Curve: []
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_CurveMax:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 5
+        inSlope: 0
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    m_ConstantMin: 2
+    m_ConstantMax: 4
   color:
     serializedVersion: 2
     minMaxState: 2
@@ -1412,10 +1436,15 @@ namespace UnityEngine.Tests
             Assert.Equal(ParticleSystemCurveMode.TwoConstants, holder.curve.mode);
             Assert.Equal(2f, holder.curve.constantMin);
             Assert.Equal(4f, holder.curve.constantMax);
+            Assert.Equal(9f, holder.curve.curveMultiplier);
+            Assert.Equal(5f, holder.curve.curveMax.Evaluate(0.5f));
+            Assert.Equal(0, holder.curve.curveMin.length);
             Assert.Equal(ParticleSystemGradientMode.TwoColors, holder.color.mode);
             Assert.Equal(Color.red, holder.color.colorMin);
             var clone = Object.Instantiate(go).GetComponent<CurveHolder>();
             Assert.Equal(3f, clone.curve.Evaluate(0f, 0.5f));
+            Assert.Equal(9f, clone.curve.curveMultiplier);
+            Assert.NotSame(holder.curve.curveMax, clone.curve.curveMax);
             Assert.Equal(Color.blue, clone.color.colorMax);
             Object.DestroyImmediate(go);
             Object.DestroyImmediate(clone.gameObject);

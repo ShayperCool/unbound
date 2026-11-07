@@ -28,15 +28,6 @@ namespace UnityEngine
         [global::Unbound.Stub] internal static bool CheckVertexStreamsMatchShader(bool hasTangent, bool hasColor, int texCoordChannelCount, global::UnityEngine.Material material, ref bool tangentError, ref bool colorError, ref bool uvError) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystem.CheckVertexStreamsMatchShader"); return default; }
         [global::Unbound.Stub] internal static int GetMaxTexCoordStreams() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystem.GetMaxTexCoordStreams"); return default; }
         internal global::UnityEngine.Matrix4x4 localToWorldMatrix { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystem.localToWorldMatrix"); return default; } }
-        unsafe partial struct MinMaxCurve
-        {
-            [global::Unbound.Stub] internal global::UnityEngine.ParticleSystemCurveMode m_Mode;
-            [global::Unbound.Stub] internal float m_CurveMultiplier;
-            [global::Unbound.Stub] internal global::UnityEngine.AnimationCurve m_CurveMin;
-            [global::Unbound.Stub] internal global::UnityEngine.AnimationCurve m_CurveMax;
-            [global::Unbound.Stub] internal float m_ConstantMin;
-            [global::Unbound.Stub] internal float m_ConstantMax;
-        }
         unsafe partial struct ShapeModule
         {
             public global::UnityEngine.SkinnedMeshRenderer skinnedMeshRenderer { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystem.ShapeModule.skinnedMeshRenderer"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ParticleSystem.ShapeModule.skinnedMeshRenderer"); } }

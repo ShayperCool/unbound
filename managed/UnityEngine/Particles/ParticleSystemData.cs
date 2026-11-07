@@ -13,28 +13,31 @@ namespace UnityEngine
             internal object MemberwiseCopy() => MemberwiseClone();
         }
 
-        static MinMaxCurve Linear01(float multiplier) => new MinMaxCurve(multiplier, AnimationCurve.Linear(0f, 0f, 1f, 1f));
+        static ModuleCurve C(float value, CurveRange range = CurveRange.Any) => ModuleCurve.Constant(value, range);
+
+        static ModuleCurve Linear(float multiplier, float from, float to, CurveRange range = CurveRange.Any) =>
+            ModuleCurve.Curve(multiplier, AnimationCurve.Linear(0f, from, 1f, to), range);
 
         internal sealed class MainData : ModuleData
         {
             internal float duration = 5f;
             internal bool loop = true;
             internal bool prewarm;
-            internal MinMaxCurve startDelay = 0f;
-            internal MinMaxCurve startLifetime = 5f;
-            internal MinMaxCurve startSpeed = 5f;
+            internal ModuleCurve startDelay = C(0f, CurveRange.NonNegative);
+            internal ModuleCurve startLifetime = C(5f, CurveRange.StartLifetime);
+            internal ModuleCurve startSpeed = C(5f);
             internal bool startSize3D;
-            internal MinMaxCurve startSizeX = 1f;
-            internal MinMaxCurve startSizeY = 1f;
-            internal MinMaxCurve startSizeZ = 1f;
+            internal ModuleCurve startSizeX = C(1f, CurveRange.NonNegative);
+            internal ModuleCurve startSizeY = C(1f, CurveRange.NonNegative);
+            internal ModuleCurve startSizeZ = C(1f, CurveRange.NonNegative);
             internal bool startRotation3D;
-            internal MinMaxCurve startRotationX = 0f;
-            internal MinMaxCurve startRotationY = 0f;
-            internal MinMaxCurve startRotationZ = 0f;
+            internal ModuleCurve startRotationX = C(0f);
+            internal ModuleCurve startRotationY = C(0f);
+            internal ModuleCurve startRotationZ = C(0f);
             internal float flipRotation;
             internal MinMaxGradient startColor = Color.white;
             internal ParticleSystemGravitySource gravitySource;
-            internal MinMaxCurve gravityModifier = 0f;
+            internal ModuleCurve gravityModifier = C(0f);
             internal ParticleSystemSimulationSpace simulationSpace;
             internal Transform customSimulationSpace;
             internal float simulationSpeed = 1f;
@@ -55,8 +58,8 @@ namespace UnityEngine
         internal sealed class EmissionData : ModuleData
         {
             internal bool enabled = true;
-            internal MinMaxCurve rateOverTime = 10f;
-            internal MinMaxCurve rateOverDistance = 0f;
+            internal ModuleCurve rateOverTime = C(10f, CurveRange.NonNegative);
+            internal ModuleCurve rateOverDistance = C(0f, CurveRange.NonNegative);
             internal List<Burst> bursts = new List<Burst>();
         }
 
@@ -71,7 +74,7 @@ namespace UnityEngine
             internal float radius = 1f;
             internal ParticleSystemShapeMultiModeValue radiusMode;
             internal float radiusSpread;
-            internal MinMaxCurve radiusSpeed = 1f;
+            internal ModuleCurve radiusSpeed = C(1f);
             internal float radiusThickness = 1f;
             internal float angle = 25f;
             internal float length = 5f;
@@ -88,11 +91,11 @@ namespace UnityEngine
             internal float normalOffset;
             internal ParticleSystemShapeMultiModeValue meshSpawnMode;
             internal float meshSpawnSpread;
-            internal MinMaxCurve meshSpawnSpeed = 1f;
+            internal ModuleCurve meshSpawnSpeed = C(1f);
             internal float arc = 360f;
             internal ParticleSystemShapeMultiModeValue arcMode;
             internal float arcSpread;
-            internal MinMaxCurve arcSpeed = 1f;
+            internal ModuleCurve arcSpeed = C(1f);
             internal float donutRadius = 0.2f;
             internal Vector3 position;
             internal Vector3 rotation;
@@ -109,23 +112,23 @@ namespace UnityEngine
         internal sealed class VelocityData : ModuleData
         {
             internal bool enabled;
-            internal MinMaxCurve x = 0f, y = 0f, z = 0f;
-            internal MinMaxCurve orbitalX = 0f, orbitalY = 0f, orbitalZ = 0f;
-            internal MinMaxCurve orbitalOffsetX = 0f, orbitalOffsetY = 0f, orbitalOffsetZ = 0f;
-            internal MinMaxCurve radial = 0f;
-            internal MinMaxCurve speedModifier = 1f;
+            internal ModuleCurve x = C(0f), y = C(0f), z = C(0f);
+            internal ModuleCurve orbitalX = C(0f), orbitalY = C(0f), orbitalZ = C(0f);
+            internal ModuleCurve orbitalOffsetX = C(0f), orbitalOffsetY = C(0f), orbitalOffsetZ = C(0f);
+            internal ModuleCurve radial = C(0f);
+            internal ModuleCurve speedModifier = C(1f);
             internal ParticleSystemSimulationSpace space;
         }
 
         internal sealed class LimitVelocityData : ModuleData
         {
             internal bool enabled;
-            internal MinMaxCurve limitX = 1f, limitY = 1f, limitZ = 1f;
-            internal MinMaxCurve limit = 1f;
+            internal ModuleCurve limitX = C(1f, CurveRange.NonNegative), limitY = C(1f, CurveRange.NonNegative), limitZ = C(1f, CurveRange.NonNegative);
+            internal ModuleCurve limit = C(1f, CurveRange.NonNegative);
             internal float dampen = 1f;
             internal bool separateAxes;
             internal ParticleSystemSimulationSpace space;
-            internal MinMaxCurve drag = 0f;
+            internal ModuleCurve drag = C(0f, CurveRange.NonNegative);
             internal bool multiplyDragByParticleSize = true;
             internal bool multiplyDragByParticleVelocity = true;
         }
@@ -134,20 +137,20 @@ namespace UnityEngine
         {
             internal bool enabled;
             internal ParticleSystemInheritVelocityMode mode;
-            internal MinMaxCurve curve = 0f;
+            internal ModuleCurve curve = C(0f);
         }
 
         internal sealed class LifetimeByEmitterSpeedData : ModuleData
         {
             internal bool enabled;
-            internal MinMaxCurve curve = 1f;
+            internal ModuleCurve curve = Linear(1f, 1f, 0.2f);
             internal Vector2 range = new Vector2(0f, 1f);
         }
 
         internal sealed class ForceData : ModuleData
         {
             internal bool enabled;
-            internal MinMaxCurve x = 0f, y = 0f, z = 0f;
+            internal ModuleCurve x = C(0f), y = C(0f), z = C(0f);
             internal ParticleSystemSimulationSpace space;
             internal bool randomized;
         }
@@ -169,14 +172,14 @@ namespace UnityEngine
         {
             internal bool enabled;
             internal bool separateAxes;
-            internal MinMaxCurve x = Linear01(1f), y = Linear01(1f), z = Linear01(1f);
+            internal ModuleCurve x = Linear(1f, 0f, 1f), y = Linear(1f, 0f, 1f), z = Linear(1f, 0f, 1f);
         }
 
         internal sealed class SizeBySpeedData : ModuleData
         {
             internal bool enabled;
             internal bool separateAxes;
-            internal MinMaxCurve x = Linear01(1f), y = Linear01(1f), z = Linear01(1f);
+            internal ModuleCurve x = Linear(1f, 0f, 1f), y = Linear(1f, 0f, 1f), z = Linear(1f, 0f, 1f);
             internal Vector2 range = new Vector2(0f, 1f);
         }
 
@@ -184,22 +187,22 @@ namespace UnityEngine
         {
             internal bool enabled;
             internal bool separateAxes;
-            internal MinMaxCurve x = 0f, y = 0f, z = 45f * Mathf.Deg2Rad;
+            internal ModuleCurve x = C(0f), y = C(0f), z = C(45f * Mathf.Deg2Rad);
         }
 
         internal sealed class RotationBySpeedData : ModuleData
         {
             internal bool enabled;
             internal bool separateAxes;
-            internal MinMaxCurve x = 0f, y = 0f, z = 45f * Mathf.Deg2Rad;
+            internal ModuleCurve x = C(0f), y = C(0f), z = C(45f * Mathf.Deg2Rad);
             internal Vector2 range = new Vector2(0f, 1f);
         }
 
         internal sealed class ExternalForcesData : ModuleData
         {
             internal bool enabled;
-            internal float multiplier = 1f;
-            internal MinMaxCurve multiplierCurve = 1f;
+            // `multiplier` is this curve's stored scalar (6000.0.71f1, particlecurves).
+            internal ModuleCurve multiplierCurve = C(1f, CurveRange.NonNegative);
             internal ParticleSystemGameObjectFilter influenceFilter;
             internal LayerMask influenceMask = -1;
             internal List<ParticleSystemForceField> influences = new List<ParticleSystemForceField>();
@@ -209,21 +212,21 @@ namespace UnityEngine
         {
             internal bool enabled;
             internal bool separateAxes;
-            internal MinMaxCurve strengthX = 1f, strengthY = 1f, strengthZ = 1f;
+            internal ModuleCurve strengthX = C(1f), strengthY = C(1f), strengthZ = C(1f);
             internal float frequency = 0.5f;
             internal bool damping = true;
             internal int octaveCount = 1;
             internal float octaveMultiplier = 0.5f;
             internal float octaveScale = 2f;
             internal ParticleSystemNoiseQuality quality = ParticleSystemNoiseQuality.High;
-            internal MinMaxCurve scrollSpeed = 0f;
+            internal ModuleCurve scrollSpeed = C(0f);
             internal bool remapEnabled;
-            internal MinMaxCurve remapX = new MinMaxCurve(1f, AnimationCurve.Linear(0f, -1f, 1f, 1f));
-            internal MinMaxCurve remapY = new MinMaxCurve(1f, AnimationCurve.Linear(0f, -1f, 1f, 1f));
-            internal MinMaxCurve remapZ = new MinMaxCurve(1f, AnimationCurve.Linear(0f, -1f, 1f, 1f));
-            internal MinMaxCurve positionAmount = 1f;
-            internal MinMaxCurve rotationAmount = 0f;
-            internal MinMaxCurve sizeAmount = 0f;
+            internal ModuleCurve remapX = Linear(1f, -1f, 1f);
+            internal ModuleCurve remapY = Linear(1f, -1f, 1f);
+            internal ModuleCurve remapZ = Linear(1f, -1f, 1f);
+            internal ModuleCurve positionAmount = C(1f);
+            internal ModuleCurve rotationAmount = C(0f);
+            internal ModuleCurve sizeAmount = C(0f);
         }
 
         internal sealed class CollisionData : ModuleData
@@ -231,9 +234,9 @@ namespace UnityEngine
             internal bool enabled;
             internal ParticleSystemCollisionType type;
             internal ParticleSystemCollisionMode mode;
-            internal MinMaxCurve dampen = 0f;
-            internal MinMaxCurve bounce = 1f;
-            internal MinMaxCurve lifetimeLoss = 0f;
+            internal ModuleCurve dampen = C(0f, CurveRange.Unit);
+            internal ModuleCurve bounce = C(1f, CurveRange.Bounce);
+            internal ModuleCurve lifetimeLoss = C(0f, CurveRange.Unit);
             internal float minKillSpeed;
             internal float maxKillSpeed = 10000f;
             internal LayerMask collidesWith = -1;
@@ -287,8 +290,8 @@ namespace UnityEngine
             internal int numTilesY = 1;
             internal ParticleSystemAnimationType animation;
             internal ParticleSystemAnimationRowMode rowMode;
-            internal MinMaxCurve frameOverTime = Linear01(0.9999f);
-            internal MinMaxCurve startFrame = 0f;
+            internal ModuleCurve frameOverTime = Linear(0.9999f, 0f, 1f, CurveRange.Frame);
+            internal ModuleCurve startFrame = C(0f, CurveRange.Frame);
             internal int cycleCount = 1;
             internal int rowIndex;
             internal Rendering.UVChannelFlags uvChannelMask = (Rendering.UVChannelFlags)(-1);
@@ -307,8 +310,8 @@ namespace UnityEngine
             internal bool useParticleColor = true;
             internal bool sizeAffectsRange = true;
             internal bool alphaAffectsIntensity = true;
-            internal MinMaxCurve range = 1f;
-            internal MinMaxCurve intensity = 1f;
+            internal ModuleCurve range = C(1f, CurveRange.NonNegative);
+            internal ModuleCurve intensity = C(1f, CurveRange.NonNegative);
             internal int maxLights = 20;
         }
 
@@ -317,7 +320,7 @@ namespace UnityEngine
             internal bool enabled;
             internal ParticleSystemTrailMode mode;
             internal float ratio = 1f;
-            internal MinMaxCurve lifetime = 1f;
+            internal ModuleCurve lifetime = C(1f, CurveRange.Unit);
             internal float minVertexDistance = 0.2f;
             internal ParticleSystemTrailTextureMode textureMode;
             internal Vector2 textureScale = Vector2.one;
@@ -327,7 +330,7 @@ namespace UnityEngine
             internal bool sizeAffectsLifetime;
             internal bool inheritParticleColor = true;
             internal MinMaxGradient colorOverLifetime = Color.white;
-            internal MinMaxCurve widthOverTrail = 1f;
+            internal ModuleCurve widthOverTrail = C(1f, CurveRange.NonNegative);
             internal MinMaxGradient colorOverTrail = Color.white;
             internal bool generateLightingData;
             internal int ribbonCount = 1;
@@ -341,7 +344,7 @@ namespace UnityEngine
             internal bool enabled;
             internal ParticleSystemCustomDataMode[] modes = new ParticleSystemCustomDataMode[2];
             internal int[] componentCounts = { 4, 4 };
-            internal MinMaxCurve[,] vectors = new MinMaxCurve[2, 4];
+            internal ModuleCurve[,] vectors = new ModuleCurve[2, 4];
             internal MinMaxGradient[] colors = { Color.white, Color.white };
         }
 

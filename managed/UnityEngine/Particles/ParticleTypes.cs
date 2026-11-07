@@ -308,6 +308,18 @@ namespace UnityEngine
             public float time { get => m_Time; set => m_Time = value; }
             public MinMaxCurve count { get => m_Count; set => m_Count = value; }
 
+            /// <summary>This burst as an emission module keeps and returns it: the struct holds any
+            /// count, but the module stores it like a module property (non-negative, see
+            /// <see cref="ModuleCurve"/>) and hands out copies of its curves.</summary>
+            internal Burst Stored()
+            {
+                var stored = ModuleCurve.Constant(0f, CurveRange.NonNegative);
+                stored.Set(m_Count);
+                var b = this;
+                b.m_Count = stored.Get();
+                return b;
+            }
+
             public short minCount
             {
                 get => (short)m_Count.constantMin;

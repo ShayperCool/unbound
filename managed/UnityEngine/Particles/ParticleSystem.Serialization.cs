@@ -17,13 +17,13 @@ namespace UnityEngine
             return r.IsNull ? null : resolver.Resolve(r, typeof(T)) as T;
         }
 
-        static MinMaxCurve Curve(YNode module, string key, float fallback) => MinMaxCurve.Read(module?.Get(key), fallback);
+        /// <summary>A serialized MinMaxCurve into the module property <paramref name="current"/> (keeping its
+        /// range); missing data gives the constant <paramref name="fallback"/>.</summary>
+        static ModuleCurve Curve(YNode module, string key, in ModuleCurve current, float fallback) =>
+            ModuleCurve.Constant(fallback, current.range).Read(module?.Get(key));
 
-        static MinMaxCurve Curve(YNode module, string key, MinMaxCurve fallback)
-        {
-            var node = module?.Get(key);
-            return node != null && node.Kind == YKind.Map ? MinMaxCurve.Read(node, fallback.constant) : fallback;
-        }
+        /// <summary>A serialized MinMaxCurve over the property's own value, which missing data keeps.</summary>
+        static ModuleCurve Curve(YNode module, string key, in ModuleCurve current) => current.Read(module?.Get(key));
 
         static int Mask(YNode node, int fallback) =>
             node == null ? fallback : node.Kind == YKind.Map ? unchecked((int)node.Long("m_Bits", fallback)) : node.AsInt(fallback);
@@ -46,28 +46,28 @@ namespace UnityEngine
             M.useUnscaledTime = body.Bool("useUnscaledTime");
             M.autoRandomSeed = body.Bool("autoRandomSeed", true);
             M.randomSeed = unchecked((uint)body.Long("randomSeed"));
-            M.startDelay = Curve(body, "startDelay", 0f);
+            M.startDelay = Curve(body, "startDelay", M.startDelay, 0f);
             M.simulationSpace = (ParticleSystemSimulationSpace)body.Int("moveWithTransform");
             M.customSimulationSpace = Resolve<Transform>(resolver, body.Get("moveWithCustomTransform"));
             M.scalingMode = (ParticleSystemScalingMode)body.Int("scalingMode", 1);
 
             if (body.Get("InitialModule") is YNode I)
             {
-                M.startLifetime = Curve(I, "startLifetime", 5f);
-                M.startSpeed = Curve(I, "startSpeed", 5f);
+                M.startLifetime = Curve(I, "startLifetime", M.startLifetime, 5f);
+                M.startSpeed = Curve(I, "startSpeed", M.startSpeed, 5f);
                 M.startColor = MinMaxGradient.Read(I.Get("startColor"));
-                M.startSizeX = Curve(I, "startSize", 1f);
-                M.startSizeY = Curve(I, "startSizeY", 1f);
-                M.startSizeZ = Curve(I, "startSizeZ", 1f);
-                M.startRotationX = Curve(I, "startRotationX", 0f);
-                M.startRotationY = Curve(I, "startRotationY", 0f);
-                M.startRotationZ = Curve(I, "startRotation", 0f);
+                M.startSizeX = Curve(I, "startSize", M.startSizeX, 1f);
+                M.startSizeY = Curve(I, "startSizeY", M.startSizeY, 1f);
+                M.startSizeZ = Curve(I, "startSizeZ", M.startSizeZ, 1f);
+                M.startRotationX = Curve(I, "startRotationX", M.startRotationX, 0f);
+                M.startRotationY = Curve(I, "startRotationY", M.startRotationY, 0f);
+                M.startRotationZ = Curve(I, "startRotation", M.startRotationZ, 0f);
                 M.flipRotation = I.Float("randomizeRotationDirection");
                 M.maxParticles = Math.Max(0, I.Int("maxNumParticles", 1000));
                 M.customEmitterVelocity = I.Vector3("customEmitterVelocity");
                 M.startSize3D = I.Bool("size3D");
                 M.startRotation3D = I.Bool("rotation3D");
-                M.gravityModifier = Curve(I, "gravityModifier", 0f);
+                M.gravityModifier = Curve(I, "gravityModifier", M.gravityModifier, 0f);
                 M.gravitySource = (ParticleSystemGravitySource)I.Int("gravitySource");
             }
 
@@ -77,17 +77,21 @@ namespace UnityEngine
             {
                 var D = m_Emission;
                 D.enabled = E.Bool("enabled", true);
-                D.rateOverTime = E.Get("rateOverTime") != null ? Curve(E, "rateOverTime", 10f) : Curve(E, "rate", 10f);
-                D.rateOverDistance = Curve(E, "rateOverDistance", 0f);
+                D.rateOverTime = Curve(E, E.Get("rateOverTime") != null ? "rateOverTime" : "rate", D.rateOverTime, 10f);
+                D.rateOverDistance = Curve(E, "rateOverDistance", D.rateOverDistance, 0f);
                 D.bursts.Clear();
                 foreach (var b in E.Get("m_Bursts")?.Seq() ?? Array.Empty<YNode>())
                 {
                     var burst = new Burst { m_Time = b.Float("time") };
-                    burst.m_Count = b.Get("countCurve") is YNode count && count.Kind == YKind.Map
-                        ? MinMaxCurve.Read(count, 30f)
-                        : b.Get("minCount") != null && b.Int("minCount") != b.Int("maxCount")
-                            ? new MinMaxCurve(b.Int("minCount"), b.Int("maxCount"))
-                            : new MinMaxCurve(b.Float("maxCount", b.Float("minCount", 30f)));
+                    // The count is kept like a module property (see Burst.Stored).
+                    var count = ModuleCurve.Constant(30f, CurveRange.NonNegative);
+                    if (b.Get("countCurve") is YNode countCurve && countCurve.Kind == YKind.Map)
+                        count = count.Read(countCurve);
+                    else if (b.Get("minCount") != null && b.Int("minCount") != b.Int("maxCount"))
+                        count.Set(new MinMaxCurve(b.Int("minCount"), b.Int("maxCount")));
+                    else
+                        count.Set(b.Float("maxCount", b.Float("minCount", 30f)));
+                    burst.m_Count = count.Get();
                     burst.m_RepeatCount = b.Int("cycleCount", 1) - 1;
                     burst.m_RepeatInterval = b.Float("repeatInterval", 0.01f);
                     burst.m_InvProbability = 1f - Mathf.Clamp01(b.Float("probability", 1f));
@@ -98,7 +102,7 @@ namespace UnityEngine
                 {
                     int n = Mathf.Clamp(E.Int("m_BurstCount"), 0, 4);
                     for (int i = 0; i < n; i++)
-                        D.bursts.Add(new Burst(E.Float($"time{i}"), (short)E.Int($"cnt{i}")));
+                        D.bursts.Add(new Burst(E.Float($"time{i}"), (short)E.Int($"cnt{i}")).Stored());
                 }
                 m_BurstCycles = new int[D.bursts.Count];
             }
@@ -106,18 +110,18 @@ namespace UnityEngine
             if (body.Get("SizeModule") is YNode Z)
             {
                 m_Size.enabled = Z.Bool("enabled");
-                m_Size.x = Curve(Z, "curve", 1f);
-                m_Size.y = Curve(Z, "y", 1f);
-                m_Size.z = Curve(Z, "z", 1f);
+                m_Size.x = Curve(Z, "curve", m_Size.x, 1f);
+                m_Size.y = Curve(Z, "y", m_Size.y, 1f);
+                m_Size.z = Curve(Z, "z", m_Size.z, 1f);
                 m_Size.separateAxes = Z.Bool("separateAxes");
             }
 
             if (body.Get("RotationModule") is YNode RO)
             {
                 m_Rotation.enabled = RO.Bool("enabled");
-                m_Rotation.x = Curve(RO, "x", 0f);
-                m_Rotation.y = Curve(RO, "y", 0f);
-                m_Rotation.z = Curve(RO, "curve", 0f);
+                m_Rotation.x = Curve(RO, "x", m_Rotation.x, 0f);
+                m_Rotation.y = Curve(RO, "y", m_Rotation.y, 0f);
+                m_Rotation.z = Curve(RO, "curve", m_Rotation.z, 0f);
                 m_Rotation.separateAxes = RO.Bool("separateAxes");
             }
 
@@ -133,17 +137,17 @@ namespace UnityEngine
             {
                 var D = m_Velocity;
                 D.enabled = V.Bool("enabled");
-                D.x = Curve(V, "x", 0f);
-                D.y = Curve(V, "y", 0f);
-                D.z = Curve(V, "z", 0f);
-                D.orbitalX = Curve(V, "orbitalX", 0f);
-                D.orbitalY = Curve(V, "orbitalY", 0f);
-                D.orbitalZ = Curve(V, "orbitalZ", 0f);
-                D.orbitalOffsetX = Curve(V, "orbitalOffsetX", 0f);
-                D.orbitalOffsetY = Curve(V, "orbitalOffsetY", 0f);
-                D.orbitalOffsetZ = Curve(V, "orbitalOffsetZ", 0f);
-                D.radial = Curve(V, "radial", 0f);
-                D.speedModifier = Curve(V, "speedModifier", 1f);
+                D.x = Curve(V, "x", D.x, 0f);
+                D.y = Curve(V, "y", D.y, 0f);
+                D.z = Curve(V, "z", D.z, 0f);
+                D.orbitalX = Curve(V, "orbitalX", D.orbitalX, 0f);
+                D.orbitalY = Curve(V, "orbitalY", D.orbitalY, 0f);
+                D.orbitalZ = Curve(V, "orbitalZ", D.orbitalZ, 0f);
+                D.orbitalOffsetX = Curve(V, "orbitalOffsetX", D.orbitalOffsetX, 0f);
+                D.orbitalOffsetY = Curve(V, "orbitalOffsetY", D.orbitalOffsetY, 0f);
+                D.orbitalOffsetZ = Curve(V, "orbitalOffsetZ", D.orbitalOffsetZ, 0f);
+                D.radial = Curve(V, "radial", D.radial, 0f);
+                D.speedModifier = Curve(V, "speedModifier", D.speedModifier, 1f);
                 D.space = V.Bool("inWorldSpace") ? ParticleSystemSimulationSpace.World : ParticleSystemSimulationSpace.Local;
             }
 
@@ -151,22 +155,22 @@ namespace UnityEngine
             {
                 m_InheritVelocity.enabled = IV.Bool("enabled");
                 m_InheritVelocity.mode = (ParticleSystemInheritVelocityMode)IV.Int("m_Mode");
-                m_InheritVelocity.curve = Curve(IV, "m_Curve", 0f);
+                m_InheritVelocity.curve = Curve(IV, "m_Curve", m_InheritVelocity.curve, 0f);
             }
 
             if (body.Get("LifetimeByEmitterSpeedModule") is YNode LE)
             {
                 m_LifetimeByEmitterSpeed.enabled = LE.Bool("enabled");
-                m_LifetimeByEmitterSpeed.curve = Curve(LE, "m_Curve", 1f);
+                m_LifetimeByEmitterSpeed.curve = Curve(LE, "m_Curve", m_LifetimeByEmitterSpeed.curve, 1f);
                 if (LE.Get("m_Range") != null) m_LifetimeByEmitterSpeed.range = LE.Vector2("m_Range");
             }
 
             if (body.Get("ForceModule") is YNode F)
             {
                 m_Force.enabled = F.Bool("enabled");
-                m_Force.x = Curve(F, "x", 0f);
-                m_Force.y = Curve(F, "y", 0f);
-                m_Force.z = Curve(F, "z", 0f);
+                m_Force.x = Curve(F, "x", m_Force.x, 0f);
+                m_Force.y = Curve(F, "y", m_Force.y, 0f);
+                m_Force.z = Curve(F, "z", m_Force.z, 0f);
                 m_Force.space = F.Bool("inWorldSpace") ? ParticleSystemSimulationSpace.World : ParticleSystemSimulationSpace.Local;
                 m_Force.randomized = F.Bool("randomizePerFrame");
             }
@@ -175,8 +179,8 @@ namespace UnityEngine
             {
                 var D = m_ExternalForces;
                 D.enabled = X.Bool("enabled");
-                D.multiplier = X.Float("multiplier", 1f);
-                D.multiplierCurve = X.Get("multiplierCurve") != null ? Curve(X, "multiplierCurve", 1f) : new MinMaxCurve(D.multiplier);
+                // Data from before multiplierCurve existed has only the constant `multiplier`.
+                D.multiplierCurve = Curve(X, "multiplierCurve", D.multiplierCurve, X.Float("multiplier", 1f));
                 D.influenceFilter = (ParticleSystemGameObjectFilter)X.Int("influenceFilter");
                 D.influenceMask = Mask(X.Get("influenceMask"), -1);
                 D.influences.Clear();
@@ -191,25 +195,25 @@ namespace UnityEngine
             {
                 var D = m_LimitVelocity;
                 D.enabled = L.Bool("enabled");
-                D.limitX = Curve(L, "x", 1f);
-                D.limitY = Curve(L, "y", 1f);
-                D.limitZ = Curve(L, "z", 1f);
-                D.limit = Curve(L, "magnitude", 1f);
+                D.limitX = Curve(L, "x", D.limitX, 1f);
+                D.limitY = Curve(L, "y", D.limitY, 1f);
+                D.limitZ = Curve(L, "z", D.limitZ, 1f);
+                D.limit = Curve(L, "magnitude", D.limit, 1f);
                 D.separateAxes = L.Bool("separateAxis");
                 D.space = L.Bool("inWorldSpace") ? ParticleSystemSimulationSpace.World : ParticleSystemSimulationSpace.Local;
                 D.multiplyDragByParticleSize = L.Bool("multiplyDragByParticleSize", true);
                 D.multiplyDragByParticleVelocity = L.Bool("multiplyDragByParticleVelocity", true);
                 D.dampen = L.Float("dampen", 1f);
-                D.drag = Curve(L, "drag", 0f);
+                D.drag = Curve(L, "drag", D.drag, 0f);
             }
 
             if (body.Get("NoiseModule") is YNode N)
             {
                 var D = m_Noise;
                 D.enabled = N.Bool("enabled");
-                D.strengthX = Curve(N, "strength", 1f);
-                D.strengthY = Curve(N, "strengthY", 1f);
-                D.strengthZ = Curve(N, "strengthZ", 1f);
+                D.strengthX = Curve(N, "strength", D.strengthX, 1f);
+                D.strengthY = Curve(N, "strengthY", D.strengthY, 1f);
+                D.strengthZ = Curve(N, "strengthZ", D.strengthZ, 1f);
                 D.separateAxes = N.Bool("separateAxes");
                 D.frequency = N.Float("frequency", 0.5f);
                 D.damping = N.Bool("damping", true);
@@ -217,22 +221,22 @@ namespace UnityEngine
                 D.octaveMultiplier = N.Float("octaveMultiplier", 0.5f);
                 D.octaveScale = N.Float("octaveScale", 2f);
                 D.quality = (ParticleSystemNoiseQuality)N.Int("quality", 2);
-                D.scrollSpeed = Curve(N, "scrollSpeed", 0f);
+                D.scrollSpeed = Curve(N, "scrollSpeed", D.scrollSpeed, 0f);
                 D.remapX = Curve(N, "remap", D.remapX);
                 D.remapY = Curve(N, "remapY", D.remapY);
                 D.remapZ = Curve(N, "remapZ", D.remapZ);
                 D.remapEnabled = N.Bool("remapEnabled");
-                D.positionAmount = Curve(N, "positionAmount", 1f);
-                D.rotationAmount = Curve(N, "rotationAmount", 0f);
-                D.sizeAmount = Curve(N, "sizeAmount", 0f);
+                D.positionAmount = Curve(N, "positionAmount", D.positionAmount, 1f);
+                D.rotationAmount = Curve(N, "rotationAmount", D.rotationAmount, 0f);
+                D.sizeAmount = Curve(N, "sizeAmount", D.sizeAmount, 0f);
             }
 
             if (body.Get("SizeBySpeedModule") is YNode SS)
             {
                 m_SizeBySpeed.enabled = SS.Bool("enabled");
-                m_SizeBySpeed.x = Curve(SS, "curve", 1f);
-                m_SizeBySpeed.y = Curve(SS, "y", 1f);
-                m_SizeBySpeed.z = Curve(SS, "z", 1f);
+                m_SizeBySpeed.x = Curve(SS, "curve", m_SizeBySpeed.x, 1f);
+                m_SizeBySpeed.y = Curve(SS, "y", m_SizeBySpeed.y, 1f);
+                m_SizeBySpeed.z = Curve(SS, "z", m_SizeBySpeed.z, 1f);
                 if (SS.Get("range") != null) m_SizeBySpeed.range = SS.Vector2("range");
                 m_SizeBySpeed.separateAxes = SS.Bool("separateAxes");
             }
@@ -240,9 +244,9 @@ namespace UnityEngine
             if (body.Get("RotationBySpeedModule") is YNode RS)
             {
                 m_RotationBySpeed.enabled = RS.Bool("enabled");
-                m_RotationBySpeed.x = Curve(RS, "x", 0f);
-                m_RotationBySpeed.y = Curve(RS, "y", 0f);
-                m_RotationBySpeed.z = Curve(RS, "curve", 0f);
+                m_RotationBySpeed.x = Curve(RS, "x", m_RotationBySpeed.x, 0f);
+                m_RotationBySpeed.y = Curve(RS, "y", m_RotationBySpeed.y, 0f);
+                m_RotationBySpeed.z = Curve(RS, "curve", m_RotationBySpeed.z, 0f);
                 m_RotationBySpeed.separateAxes = RS.Bool("separateAxes");
                 if (RS.Get("range") != null) m_RotationBySpeed.range = RS.Vector2("range");
             }
@@ -329,8 +333,8 @@ namespace UnityEngine
                 D.useParticleColor = LI.Bool("color", true);
                 D.sizeAffectsRange = LI.Bool("range", true);
                 D.alphaAffectsIntensity = LI.Bool("intensity", true);
-                D.range = Curve(LI, "rangeCurve", 1f);
-                D.intensity = Curve(LI, "intensityCurve", 1f);
+                D.range = Curve(LI, "rangeCurve", D.range, 1f);
+                D.intensity = Curve(LI, "intensityCurve", D.intensity, 1f);
                 D.maxLights = LI.Int("maxLights", 20);
             }
 
@@ -340,7 +344,7 @@ namespace UnityEngine
                 D.enabled = TR.Bool("enabled");
                 D.mode = (ParticleSystemTrailMode)TR.Int("mode");
                 D.ratio = TR.Float("ratio", 1f);
-                D.lifetime = Curve(TR, "lifetime", 1f);
+                D.lifetime = Curve(TR, "lifetime", D.lifetime, 1f);
                 D.minVertexDistance = TR.Float("minVertexDistance", 0.2f);
                 D.textureMode = (ParticleSystemTrailTextureMode)TR.Int("textureMode");
                 if (TR.Get("textureScale") != null) D.textureScale = TR.Vector2("textureScale");
@@ -355,7 +359,7 @@ namespace UnityEngine
                 D.splitSubEmitterRibbons = TR.Bool("splitSubEmitterRibbons");
                 D.attachRibbonsToTransform = TR.Bool("attachRibbonsToTransform");
                 D.colorOverLifetime = MinMaxGradient.Read(TR.Get("colorOverLifetime"));
-                D.widthOverTrail = Curve(TR, "widthOverTrail", 1f);
+                D.widthOverTrail = Curve(TR, "widthOverTrail", D.widthOverTrail, 1f);
                 D.colorOverTrail = MinMaxGradient.Read(TR.Get("colorOverTrail"));
             }
 
@@ -368,7 +372,7 @@ namespace UnityEngine
                     D.modes[s] = (ParticleSystemCustomDataMode)CD.Int($"mode{s}");
                     D.componentCounts[s] = CD.Int($"vectorComponentCount{s}", 4);
                     D.colors[s] = MinMaxGradient.Read(CD.Get($"color{s}"));
-                    for (int c = 0; c < 4; c++) D.vectors[s, c] = Curve(CD, $"vector{s}_{c}", 0f);
+                    for (int c = 0; c < 4; c++) D.vectors[s, c] = Curve(CD, $"vector{s}_{c}", D.vectors[s, c], 0f);
                 }
             }
         }
@@ -394,7 +398,7 @@ namespace UnityEngine
             {
                 D.meshSpawnMode = (ParticleSystemShapeMultiModeValue)spawn.Int("mode");
                 D.meshSpawnSpread = spawn.Float("spread");
-                D.meshSpawnSpeed = Curve(spawn, "speed", 1f);
+                D.meshSpawnSpeed = Curve(spawn, "speed", D.meshSpawnSpeed, 1f);
             }
             D.mesh = Resolve<Mesh>(resolver, S.Get("m_Mesh"));
             D.meshRenderer = Resolve<MeshRenderer>(resolver, S.Get("m_MeshRenderer"));
@@ -421,7 +425,7 @@ namespace UnityEngine
                     D.radius = radius.Float("value", 1f);
                     D.radiusMode = (ParticleSystemShapeMultiModeValue)radius.Int("mode");
                     D.radiusSpread = radius.Float("spread");
-                    D.radiusSpeed = Curve(radius, "speed", 1f);
+                    D.radiusSpeed = Curve(radius, "speed", D.radiusSpeed, 1f);
                 }
                 else D.radius = radius.AsFloat(1f);
             }
@@ -432,7 +436,7 @@ namespace UnityEngine
                     D.arc = arc.Float("value", 360f);
                     D.arcMode = (ParticleSystemShapeMultiModeValue)arc.Int("mode");
                     D.arcSpread = arc.Float("spread");
-                    D.arcSpeed = Curve(arc, "speed", 1f);
+                    D.arcSpeed = Curve(arc, "speed", D.arcSpeed, 1f);
                 }
                 else D.arc = arc.AsFloat(360f);
             }
@@ -446,7 +450,7 @@ namespace UnityEngine
             D.timeMode = (ParticleSystemAnimationTimeMode)U.Int("timeMode");
             D.fps = U.Float("fps", 30f);
             D.frameOverTime = Curve(U, "frameOverTime", D.frameOverTime);
-            D.startFrame = Curve(U, "startFrame", 0f);
+            D.startFrame = Curve(U, "startFrame", D.startFrame, 0f);
             if (U.Get("speedRange") != null) D.speedRange = U.Vector2("speedRange");
             D.numTilesX = Math.Max(1, U.Int("tilesX", 1));
             D.numTilesY = Math.Max(1, U.Int("tilesY", 1));
@@ -490,9 +494,9 @@ namespace UnityEngine
                     if (plane != null) D.planes.Add(plane);
                 }
             }
-            D.dampen = Curve(C, "m_Dampen", 0f);
-            D.bounce = Curve(C, "m_Bounce", 1f);
-            D.lifetimeLoss = Curve(C, "m_EnergyLossOnCollision", 0f);
+            D.dampen = Curve(C, "m_Dampen", D.dampen, 0f);
+            D.bounce = Curve(C, "m_Bounce", D.bounce, 1f);
+            D.lifetimeLoss = Curve(C, "m_EnergyLossOnCollision", D.lifetimeLoss, 0f);
             D.minKillSpeed = C.Float("minKillSpeed");
             D.maxKillSpeed = C.Float("maxKillSpeed", 10000f);
             D.radiusScale = C.Float("radiusScale", 1f);

@@ -34,51 +34,35 @@ namespace UnityEngine
 
             public bool loop { get => D.loop; set => D.loop = value; }
             public bool prewarm { get => D.prewarm; set => D.prewarm = value; }
-            public MinMaxCurve startDelay { get => D.startDelay.Clone(); set => D.startDelay = value.Clone(); }
-            public float startDelayMultiplier { get => D.startDelay.curveMultiplier; set => D.startDelay.curveMultiplier = value; }
-            public MinMaxCurve startLifetime { get => D.startLifetime.Clone(); set => D.startLifetime = KeptStartLifetime(value).Clone(); }
-
-            /// <summary>The shortest start lifetime the setter keeps, in seconds.</summary>
-            internal const float MinimumStartLifetime = 0.0001f;
-
-            /// <summary>The startLifetime setter raises every value below
-            /// <see cref="MinimumStartLifetime"/> to it: the constant, each constant of a range on
-            /// its own (without reordering them) and a curve's multiplier (6000.0.71f1,
-            /// particlerandom model/lifetimesetter/). Lifetimes read from a scene are kept as
-            /// written (unmeasured).</summary>
-            internal static MinMaxCurve KeptStartLifetime(MinMaxCurve value)
-            {
-                value.constantMax = Mathf.Max(value.constantMax, MinimumStartLifetime);
-                if (value.mode == ParticleSystemCurveMode.TwoConstants)
-                    value.constantMin = Mathf.Max(value.constantMin, MinimumStartLifetime);
-                return value;
-            }
-            public float startLifetimeMultiplier { get => D.startLifetime.curveMultiplier; set => D.startLifetime.curveMultiplier = value; }
-            public MinMaxCurve startSpeed { get => D.startSpeed.Clone(); set => D.startSpeed = value.Clone(); }
-            public float startSpeedMultiplier { get => D.startSpeed.curveMultiplier; set => D.startSpeed.curveMultiplier = value; }
+            public MinMaxCurve startDelay { get => D.startDelay.Get(); set => D.startDelay.Set(value); }
+            public float startDelayMultiplier { get => D.startDelay.Multiplier; set => D.startDelay.Multiplier = value; }
+            public MinMaxCurve startLifetime { get => D.startLifetime.Get(); set => D.startLifetime.Set(value); }
+            public float startLifetimeMultiplier { get => D.startLifetime.Multiplier; set => D.startLifetime.Multiplier = value; }
+            public MinMaxCurve startSpeed { get => D.startSpeed.Get(); set => D.startSpeed.Set(value); }
+            public float startSpeedMultiplier { get => D.startSpeed.Multiplier; set => D.startSpeed.Multiplier = value; }
             public bool startSize3D { get => D.startSize3D; set => D.startSize3D = value; }
-            public MinMaxCurve startSize { get => D.startSizeX.Clone(); set => D.startSizeX = value.Clone(); }
-            public float startSizeMultiplier { get => D.startSizeX.curveMultiplier; set => D.startSizeX.curveMultiplier = value; }
-            public MinMaxCurve startSizeX { get => D.startSizeX.Clone(); set => D.startSizeX = value.Clone(); }
-            public float startSizeXMultiplier { get => D.startSizeX.curveMultiplier; set => D.startSizeX.curveMultiplier = value; }
-            public MinMaxCurve startSizeY { get => D.startSizeY.Clone(); set => D.startSizeY = value.Clone(); }
-            public float startSizeYMultiplier { get => D.startSizeY.curveMultiplier; set => D.startSizeY.curveMultiplier = value; }
-            public MinMaxCurve startSizeZ { get => D.startSizeZ.Clone(); set => D.startSizeZ = value.Clone(); }
-            public float startSizeZMultiplier { get => D.startSizeZ.curveMultiplier; set => D.startSizeZ.curveMultiplier = value; }
+            public MinMaxCurve startSize { get => D.startSizeX.Get(); set => D.startSizeX.Set(value); }
+            public float startSizeMultiplier { get => D.startSizeX.Multiplier; set => D.startSizeX.Multiplier = value; }
+            public MinMaxCurve startSizeX { get => D.startSizeX.Get(); set => D.startSizeX.Set(value); }
+            public float startSizeXMultiplier { get => D.startSizeX.Multiplier; set => D.startSizeX.Multiplier = value; }
+            public MinMaxCurve startSizeY { get => D.startSizeY.Get(); set => D.startSizeY.Set(value); }
+            public float startSizeYMultiplier { get => D.startSizeY.Multiplier; set => D.startSizeY.Multiplier = value; }
+            public MinMaxCurve startSizeZ { get => D.startSizeZ.Get(); set => D.startSizeZ.Set(value); }
+            public float startSizeZMultiplier { get => D.startSizeZ.Multiplier; set => D.startSizeZ.Multiplier = value; }
             public bool startRotation3D { get => D.startRotation3D; set => D.startRotation3D = value; }
-            public MinMaxCurve startRotation { get => D.startRotationZ.Clone(); set => D.startRotationZ = value.Clone(); }
-            public float startRotationMultiplier { get => D.startRotationZ.curveMultiplier; set => D.startRotationZ.curveMultiplier = value; }
-            public MinMaxCurve startRotationX { get => D.startRotationX.Clone(); set => D.startRotationX = value.Clone(); }
-            public float startRotationXMultiplier { get => D.startRotationX.curveMultiplier; set => D.startRotationX.curveMultiplier = value; }
-            public MinMaxCurve startRotationY { get => D.startRotationY.Clone(); set => D.startRotationY = value.Clone(); }
-            public float startRotationYMultiplier { get => D.startRotationY.curveMultiplier; set => D.startRotationY.curveMultiplier = value; }
-            public MinMaxCurve startRotationZ { get => D.startRotationZ.Clone(); set => D.startRotationZ = value.Clone(); }
-            public float startRotationZMultiplier { get => D.startRotationZ.curveMultiplier; set => D.startRotationZ.curveMultiplier = value; }
+            public MinMaxCurve startRotation { get => D.startRotationZ.Get(); set => D.startRotationZ.Set(value); }
+            public float startRotationMultiplier { get => D.startRotationZ.Multiplier; set => D.startRotationZ.Multiplier = value; }
+            public MinMaxCurve startRotationX { get => D.startRotationX.Get(); set => D.startRotationX.Set(value); }
+            public float startRotationXMultiplier { get => D.startRotationX.Multiplier; set => D.startRotationX.Multiplier = value; }
+            public MinMaxCurve startRotationY { get => D.startRotationY.Get(); set => D.startRotationY.Set(value); }
+            public float startRotationYMultiplier { get => D.startRotationY.Multiplier; set => D.startRotationY.Multiplier = value; }
+            public MinMaxCurve startRotationZ { get => D.startRotationZ.Get(); set => D.startRotationZ.Set(value); }
+            public float startRotationZMultiplier { get => D.startRotationZ.Multiplier; set => D.startRotationZ.Multiplier = value; }
             public float flipRotation { get => D.flipRotation; set => D.flipRotation = value; }
             public MinMaxGradient startColor { get => D.startColor.Clone(); set => D.startColor = value.Clone(); }
             public ParticleSystemGravitySource gravitySource { get => D.gravitySource; set => D.gravitySource = value; }
-            public MinMaxCurve gravityModifier { get => D.gravityModifier.Clone(); set => D.gravityModifier = value.Clone(); }
-            public float gravityModifierMultiplier { get => D.gravityModifier.curveMultiplier; set => D.gravityModifier.curveMultiplier = value; }
+            public MinMaxCurve gravityModifier { get => D.gravityModifier.Get(); set => D.gravityModifier.Set(value); }
+            public float gravityModifierMultiplier { get => D.gravityModifier.Multiplier; set => D.gravityModifier.Multiplier = value; }
             public ParticleSystemSimulationSpace simulationSpace { get => D.simulationSpace; set => m_ParticleSystem.SetSimulationSpace(value); }
             public Transform customSimulationSpace { get => D.customSimulationSpace; set => D.customSimulationSpace = value; }
             public float simulationSpeed { get => D.simulationSpeed; set => D.simulationSpeed = value; }
@@ -110,10 +94,10 @@ namespace UnityEngine
             public float rateMultiplier { get => rateOverTimeMultiplier; set => rateOverTimeMultiplier = value; }
 
             public bool enabled { get => D.enabled; set => D.enabled = value; }
-            public MinMaxCurve rateOverTime { get => D.rateOverTime.Clone(); set => D.rateOverTime = value.Clone(); }
-            public float rateOverTimeMultiplier { get => D.rateOverTime.curveMultiplier; set => D.rateOverTime.curveMultiplier = value; }
-            public MinMaxCurve rateOverDistance { get => D.rateOverDistance.Clone(); set => D.rateOverDistance = value.Clone(); }
-            public float rateOverDistanceMultiplier { get => D.rateOverDistance.curveMultiplier; set => D.rateOverDistance.curveMultiplier = value; }
+            public MinMaxCurve rateOverTime { get => D.rateOverTime.Get(); set => D.rateOverTime.Set(value); }
+            public float rateOverTimeMultiplier { get => D.rateOverTime.Multiplier; set => D.rateOverTime.Multiplier = value; }
+            public MinMaxCurve rateOverDistance { get => D.rateOverDistance.Get(); set => D.rateOverDistance.Set(value); }
+            public float rateOverDistanceMultiplier { get => D.rateOverDistance.Multiplier; set => D.rateOverDistance.Multiplier = value; }
 
             public int burstCount
             {
@@ -132,34 +116,29 @@ namespace UnityEngine
             {
                 D.bursts.Clear();
                 if (bursts == null) return;
-                for (int i = 0; i < size && i < bursts.Length; i++) D.bursts.Add(Copy(bursts[i]));
+                for (int i = 0; i < size && i < bursts.Length; i++) D.bursts.Add(bursts[i].Stored());
             }
 
             public int GetBursts(Burst[] bursts)
             {
                 if (bursts == null) throw new ArgumentNullException(nameof(bursts));
                 int n = Math.Min(bursts.Length, D.bursts.Count);
-                for (int i = 0; i < n; i++) bursts[i] = Copy(D.bursts[i]);
+                for (int i = 0; i < n; i++) bursts[i] = D.bursts[i].Stored();
                 return n;
             }
 
             public void SetBurst(int index, Burst burst)
             {
                 if (index < 0 || index >= D.bursts.Count) throw new IndexOutOfRangeException("Burst index out of range.");
-                D.bursts[index] = Copy(burst);
+                D.bursts[index] = burst.Stored();
             }
 
             public Burst GetBurst(int index)
             {
                 if (index < 0 || index >= D.bursts.Count) throw new IndexOutOfRangeException("Burst index out of range.");
-                return Copy(D.bursts[index]);
+                return D.bursts[index].Stored();
             }
 
-            static Burst Copy(Burst b)
-            {
-                b.m_Count = b.m_Count.Clone();
-                return b;
-            }
         }
 
         public partial struct ShapeModule
@@ -186,8 +165,8 @@ namespace UnityEngine
             public float radius { get => D.radius; set => D.radius = value; }
             public ParticleSystemShapeMultiModeValue radiusMode { get => D.radiusMode; set => D.radiusMode = value; }
             public float radiusSpread { get => D.radiusSpread; set => D.radiusSpread = value; }
-            public MinMaxCurve radiusSpeed { get => D.radiusSpeed.Clone(); set => D.radiusSpeed = value.Clone(); }
-            public float radiusSpeedMultiplier { get => D.radiusSpeed.curveMultiplier; set => D.radiusSpeed.curveMultiplier = value; }
+            public MinMaxCurve radiusSpeed { get => D.radiusSpeed.Get(); set => D.radiusSpeed.Set(value); }
+            public float radiusSpeedMultiplier { get => D.radiusSpeed.Multiplier; set => D.radiusSpeed.Multiplier = value; }
             public float radiusThickness { get => D.radiusThickness; set => D.radiusThickness = value; }
             public float angle { get => D.angle; set => D.angle = value; }
             public float length { get => D.length; set => D.length = value; }
@@ -203,13 +182,13 @@ namespace UnityEngine
             public float normalOffset { get => D.normalOffset; set => D.normalOffset = value; }
             public ParticleSystemShapeMultiModeValue meshSpawnMode { get => D.meshSpawnMode; set => D.meshSpawnMode = value; }
             public float meshSpawnSpread { get => D.meshSpawnSpread; set => D.meshSpawnSpread = value; }
-            public MinMaxCurve meshSpawnSpeed { get => D.meshSpawnSpeed.Clone(); set => D.meshSpawnSpeed = value.Clone(); }
-            public float meshSpawnSpeedMultiplier { get => D.meshSpawnSpeed.curveMultiplier; set => D.meshSpawnSpeed.curveMultiplier = value; }
+            public MinMaxCurve meshSpawnSpeed { get => D.meshSpawnSpeed.Get(); set => D.meshSpawnSpeed.Set(value); }
+            public float meshSpawnSpeedMultiplier { get => D.meshSpawnSpeed.Multiplier; set => D.meshSpawnSpeed.Multiplier = value; }
             public float arc { get => D.arc; set => D.arc = value; }
             public ParticleSystemShapeMultiModeValue arcMode { get => D.arcMode; set => D.arcMode = value; }
             public float arcSpread { get => D.arcSpread; set => D.arcSpread = value; }
-            public MinMaxCurve arcSpeed { get => D.arcSpeed.Clone(); set => D.arcSpeed = value.Clone(); }
-            public float arcSpeedMultiplier { get => D.arcSpeed.curveMultiplier; set => D.arcSpeed.curveMultiplier = value; }
+            public MinMaxCurve arcSpeed { get => D.arcSpeed.Get(); set => D.arcSpeed.Set(value); }
+            public float arcSpeedMultiplier { get => D.arcSpeed.Multiplier; set => D.arcSpeed.Multiplier = value; }
             public float donutRadius { get => D.donutRadius; set => D.donutRadius = value; }
             public Vector3 position { get => D.position; set => D.position = value; }
             public Vector3 rotation { get => D.rotation; set => D.rotation = value; }
@@ -230,28 +209,28 @@ namespace UnityEngine
             VelocityData D => m_ParticleSystem.m_Velocity;
 
             public bool enabled { get => D.enabled; set => D.enabled = value; }
-            public MinMaxCurve x { get => D.x.Clone(); set => D.x = value.Clone(); }
-            public MinMaxCurve y { get => D.y.Clone(); set => D.y = value.Clone(); }
-            public MinMaxCurve z { get => D.z.Clone(); set => D.z = value.Clone(); }
-            public float xMultiplier { get => D.x.curveMultiplier; set => D.x.curveMultiplier = value; }
-            public float yMultiplier { get => D.y.curveMultiplier; set => D.y.curveMultiplier = value; }
-            public float zMultiplier { get => D.z.curveMultiplier; set => D.z.curveMultiplier = value; }
-            public MinMaxCurve orbitalX { get => D.orbitalX.Clone(); set => D.orbitalX = value.Clone(); }
-            public MinMaxCurve orbitalY { get => D.orbitalY.Clone(); set => D.orbitalY = value.Clone(); }
-            public MinMaxCurve orbitalZ { get => D.orbitalZ.Clone(); set => D.orbitalZ = value.Clone(); }
-            public float orbitalXMultiplier { get => D.orbitalX.curveMultiplier; set => D.orbitalX.curveMultiplier = value; }
-            public float orbitalYMultiplier { get => D.orbitalY.curveMultiplier; set => D.orbitalY.curveMultiplier = value; }
-            public float orbitalZMultiplier { get => D.orbitalZ.curveMultiplier; set => D.orbitalZ.curveMultiplier = value; }
-            public MinMaxCurve orbitalOffsetX { get => D.orbitalOffsetX.Clone(); set => D.orbitalOffsetX = value.Clone(); }
-            public MinMaxCurve orbitalOffsetY { get => D.orbitalOffsetY.Clone(); set => D.orbitalOffsetY = value.Clone(); }
-            public MinMaxCurve orbitalOffsetZ { get => D.orbitalOffsetZ.Clone(); set => D.orbitalOffsetZ = value.Clone(); }
-            public float orbitalOffsetXMultiplier { get => D.orbitalOffsetX.curveMultiplier; set => D.orbitalOffsetX.curveMultiplier = value; }
-            public float orbitalOffsetYMultiplier { get => D.orbitalOffsetY.curveMultiplier; set => D.orbitalOffsetY.curveMultiplier = value; }
-            public float orbitalOffsetZMultiplier { get => D.orbitalOffsetZ.curveMultiplier; set => D.orbitalOffsetZ.curveMultiplier = value; }
-            public MinMaxCurve radial { get => D.radial.Clone(); set => D.radial = value.Clone(); }
-            public float radialMultiplier { get => D.radial.curveMultiplier; set => D.radial.curveMultiplier = value; }
-            public MinMaxCurve speedModifier { get => D.speedModifier.Clone(); set => D.speedModifier = value.Clone(); }
-            public float speedModifierMultiplier { get => D.speedModifier.curveMultiplier; set => D.speedModifier.curveMultiplier = value; }
+            public MinMaxCurve x { get => D.x.Get(); set => D.x.Set(value); }
+            public MinMaxCurve y { get => D.y.Get(); set => D.y.Set(value); }
+            public MinMaxCurve z { get => D.z.Get(); set => D.z.Set(value); }
+            public float xMultiplier { get => D.x.Multiplier; set => D.x.Multiplier = value; }
+            public float yMultiplier { get => D.y.Multiplier; set => D.y.Multiplier = value; }
+            public float zMultiplier { get => D.z.Multiplier; set => D.z.Multiplier = value; }
+            public MinMaxCurve orbitalX { get => D.orbitalX.Get(); set => D.orbitalX.Set(value); }
+            public MinMaxCurve orbitalY { get => D.orbitalY.Get(); set => D.orbitalY.Set(value); }
+            public MinMaxCurve orbitalZ { get => D.orbitalZ.Get(); set => D.orbitalZ.Set(value); }
+            public float orbitalXMultiplier { get => D.orbitalX.Multiplier; set => D.orbitalX.Multiplier = value; }
+            public float orbitalYMultiplier { get => D.orbitalY.Multiplier; set => D.orbitalY.Multiplier = value; }
+            public float orbitalZMultiplier { get => D.orbitalZ.Multiplier; set => D.orbitalZ.Multiplier = value; }
+            public MinMaxCurve orbitalOffsetX { get => D.orbitalOffsetX.Get(); set => D.orbitalOffsetX.Set(value); }
+            public MinMaxCurve orbitalOffsetY { get => D.orbitalOffsetY.Get(); set => D.orbitalOffsetY.Set(value); }
+            public MinMaxCurve orbitalOffsetZ { get => D.orbitalOffsetZ.Get(); set => D.orbitalOffsetZ.Set(value); }
+            public float orbitalOffsetXMultiplier { get => D.orbitalOffsetX.Multiplier; set => D.orbitalOffsetX.Multiplier = value; }
+            public float orbitalOffsetYMultiplier { get => D.orbitalOffsetY.Multiplier; set => D.orbitalOffsetY.Multiplier = value; }
+            public float orbitalOffsetZMultiplier { get => D.orbitalOffsetZ.Multiplier; set => D.orbitalOffsetZ.Multiplier = value; }
+            public MinMaxCurve radial { get => D.radial.Get(); set => D.radial.Set(value); }
+            public float radialMultiplier { get => D.radial.Multiplier; set => D.radial.Multiplier = value; }
+            public MinMaxCurve speedModifier { get => D.speedModifier.Get(); set => D.speedModifier.Set(value); }
+            public float speedModifierMultiplier { get => D.speedModifier.Multiplier; set => D.speedModifier.Multiplier = value; }
             public ParticleSystemSimulationSpace space { get => D.space; set => D.space = value; }
         }
 
@@ -262,19 +241,19 @@ namespace UnityEngine
             LimitVelocityData D => m_ParticleSystem.m_LimitVelocity;
 
             public bool enabled { get => D.enabled; set => D.enabled = value; }
-            public MinMaxCurve limitX { get => D.limitX.Clone(); set => D.limitX = value.Clone(); }
-            public float limitXMultiplier { get => D.limitX.curveMultiplier; set => D.limitX.curveMultiplier = value; }
-            public MinMaxCurve limitY { get => D.limitY.Clone(); set => D.limitY = value.Clone(); }
-            public float limitYMultiplier { get => D.limitY.curveMultiplier; set => D.limitY.curveMultiplier = value; }
-            public MinMaxCurve limitZ { get => D.limitZ.Clone(); set => D.limitZ = value.Clone(); }
-            public float limitZMultiplier { get => D.limitZ.curveMultiplier; set => D.limitZ.curveMultiplier = value; }
-            public MinMaxCurve limit { get => D.limit.Clone(); set => D.limit = value.Clone(); }
-            public float limitMultiplier { get => D.limit.curveMultiplier; set => D.limit.curveMultiplier = value; }
+            public MinMaxCurve limitX { get => D.limitX.Get(); set => D.limitX.Set(value); }
+            public float limitXMultiplier { get => D.limitX.Multiplier; set => D.limitX.Multiplier = value; }
+            public MinMaxCurve limitY { get => D.limitY.Get(); set => D.limitY.Set(value); }
+            public float limitYMultiplier { get => D.limitY.Multiplier; set => D.limitY.Multiplier = value; }
+            public MinMaxCurve limitZ { get => D.limitZ.Get(); set => D.limitZ.Set(value); }
+            public float limitZMultiplier { get => D.limitZ.Multiplier; set => D.limitZ.Multiplier = value; }
+            public MinMaxCurve limit { get => D.limit.Get(); set => D.limit.Set(value); }
+            public float limitMultiplier { get => D.limit.Multiplier; set => D.limit.Multiplier = value; }
             public float dampen { get => D.dampen; set => D.dampen = value; }
             public bool separateAxes { get => D.separateAxes; set => D.separateAxes = value; }
             public ParticleSystemSimulationSpace space { get => D.space; set => D.space = value; }
-            public MinMaxCurve drag { get => D.drag.Clone(); set => D.drag = value.Clone(); }
-            public float dragMultiplier { get => D.drag.curveMultiplier; set => D.drag.curveMultiplier = value; }
+            public MinMaxCurve drag { get => D.drag.Get(); set => D.drag.Set(value); }
+            public float dragMultiplier { get => D.drag.Multiplier; set => D.drag.Multiplier = value; }
             public bool multiplyDragByParticleSize { get => D.multiplyDragByParticleSize; set => D.multiplyDragByParticleSize = value; }
             public bool multiplyDragByParticleVelocity { get => D.multiplyDragByParticleVelocity; set => D.multiplyDragByParticleVelocity = value; }
         }
@@ -287,8 +266,8 @@ namespace UnityEngine
 
             public bool enabled { get => D.enabled; set => D.enabled = value; }
             public ParticleSystemInheritVelocityMode mode { get => D.mode; set => D.mode = value; }
-            public MinMaxCurve curve { get => D.curve.Clone(); set => D.curve = value.Clone(); }
-            public float curveMultiplier { get => D.curve.curveMultiplier; set => D.curve.curveMultiplier = value; }
+            public MinMaxCurve curve { get => D.curve.Get(); set => D.curve.Set(value); }
+            public float curveMultiplier { get => D.curve.Multiplier; set => D.curve.Multiplier = value; }
         }
 
         public partial struct LifetimeByEmitterSpeedModule
@@ -298,8 +277,8 @@ namespace UnityEngine
             LifetimeByEmitterSpeedData D => m_ParticleSystem.m_LifetimeByEmitterSpeed;
 
             public bool enabled { get => D.enabled; set => D.enabled = value; }
-            public MinMaxCurve curve { get => D.curve.Clone(); set => D.curve = value.Clone(); }
-            public float curveMultiplier { get => D.curve.curveMultiplier; set => D.curve.curveMultiplier = value; }
+            public MinMaxCurve curve { get => D.curve.Get(); set => D.curve.Set(value); }
+            public float curveMultiplier { get => D.curve.Multiplier; set => D.curve.Multiplier = value; }
             public Vector2 range { get => D.range; set => D.range = value; }
         }
 
@@ -310,12 +289,12 @@ namespace UnityEngine
             ForceData D => m_ParticleSystem.m_Force;
 
             public bool enabled { get => D.enabled; set => D.enabled = value; }
-            public MinMaxCurve x { get => D.x.Clone(); set => D.x = value.Clone(); }
-            public MinMaxCurve y { get => D.y.Clone(); set => D.y = value.Clone(); }
-            public MinMaxCurve z { get => D.z.Clone(); set => D.z = value.Clone(); }
-            public float xMultiplier { get => D.x.curveMultiplier; set => D.x.curveMultiplier = value; }
-            public float yMultiplier { get => D.y.curveMultiplier; set => D.y.curveMultiplier = value; }
-            public float zMultiplier { get => D.z.curveMultiplier; set => D.z.curveMultiplier = value; }
+            public MinMaxCurve x { get => D.x.Get(); set => D.x.Set(value); }
+            public MinMaxCurve y { get => D.y.Get(); set => D.y.Set(value); }
+            public MinMaxCurve z { get => D.z.Get(); set => D.z.Set(value); }
+            public float xMultiplier { get => D.x.Multiplier; set => D.x.Multiplier = value; }
+            public float yMultiplier { get => D.y.Multiplier; set => D.y.Multiplier = value; }
+            public float zMultiplier { get => D.z.Multiplier; set => D.z.Multiplier = value; }
             public ParticleSystemSimulationSpace space { get => D.space; set => D.space = value; }
             public bool randomized { get => D.randomized; set => D.randomized = value; }
         }
@@ -348,14 +327,14 @@ namespace UnityEngine
             SizeData D => m_ParticleSystem.m_Size;
 
             public bool enabled { get => D.enabled; set => D.enabled = value; }
-            public MinMaxCurve size { get => D.x.Clone(); set => D.x = value.Clone(); }
-            public float sizeMultiplier { get => D.x.curveMultiplier; set => D.x.curveMultiplier = value; }
-            public MinMaxCurve x { get => D.x.Clone(); set => D.x = value.Clone(); }
-            public float xMultiplier { get => D.x.curveMultiplier; set => D.x.curveMultiplier = value; }
-            public MinMaxCurve y { get => D.y.Clone(); set => D.y = value.Clone(); }
-            public float yMultiplier { get => D.y.curveMultiplier; set => D.y.curveMultiplier = value; }
-            public MinMaxCurve z { get => D.z.Clone(); set => D.z = value.Clone(); }
-            public float zMultiplier { get => D.z.curveMultiplier; set => D.z.curveMultiplier = value; }
+            public MinMaxCurve size { get => D.x.Get(); set => D.x.Set(value); }
+            public float sizeMultiplier { get => D.x.Multiplier; set => D.x.Multiplier = value; }
+            public MinMaxCurve x { get => D.x.Get(); set => D.x.Set(value); }
+            public float xMultiplier { get => D.x.Multiplier; set => D.x.Multiplier = value; }
+            public MinMaxCurve y { get => D.y.Get(); set => D.y.Set(value); }
+            public float yMultiplier { get => D.y.Multiplier; set => D.y.Multiplier = value; }
+            public MinMaxCurve z { get => D.z.Get(); set => D.z.Set(value); }
+            public float zMultiplier { get => D.z.Multiplier; set => D.z.Multiplier = value; }
             public bool separateAxes { get => D.separateAxes; set => D.separateAxes = value; }
         }
 
@@ -366,14 +345,14 @@ namespace UnityEngine
             SizeBySpeedData D => m_ParticleSystem.m_SizeBySpeed;
 
             public bool enabled { get => D.enabled; set => D.enabled = value; }
-            public MinMaxCurve size { get => D.x.Clone(); set => D.x = value.Clone(); }
-            public float sizeMultiplier { get => D.x.curveMultiplier; set => D.x.curveMultiplier = value; }
-            public MinMaxCurve x { get => D.x.Clone(); set => D.x = value.Clone(); }
-            public float xMultiplier { get => D.x.curveMultiplier; set => D.x.curveMultiplier = value; }
-            public MinMaxCurve y { get => D.y.Clone(); set => D.y = value.Clone(); }
-            public float yMultiplier { get => D.y.curveMultiplier; set => D.y.curveMultiplier = value; }
-            public MinMaxCurve z { get => D.z.Clone(); set => D.z = value.Clone(); }
-            public float zMultiplier { get => D.z.curveMultiplier; set => D.z.curveMultiplier = value; }
+            public MinMaxCurve size { get => D.x.Get(); set => D.x.Set(value); }
+            public float sizeMultiplier { get => D.x.Multiplier; set => D.x.Multiplier = value; }
+            public MinMaxCurve x { get => D.x.Get(); set => D.x.Set(value); }
+            public float xMultiplier { get => D.x.Multiplier; set => D.x.Multiplier = value; }
+            public MinMaxCurve y { get => D.y.Get(); set => D.y.Set(value); }
+            public float yMultiplier { get => D.y.Multiplier; set => D.y.Multiplier = value; }
+            public MinMaxCurve z { get => D.z.Get(); set => D.z.Set(value); }
+            public float zMultiplier { get => D.z.Multiplier; set => D.z.Multiplier = value; }
             public bool separateAxes { get => D.separateAxes; set => D.separateAxes = value; }
             public Vector2 range { get => D.range; set => D.range = value; }
         }
@@ -385,12 +364,12 @@ namespace UnityEngine
             RotationData D => m_ParticleSystem.m_Rotation;
 
             public bool enabled { get => D.enabled; set => D.enabled = value; }
-            public MinMaxCurve x { get => D.x.Clone(); set => D.x = value.Clone(); }
-            public float xMultiplier { get => D.x.curveMultiplier; set => D.x.curveMultiplier = value; }
-            public MinMaxCurve y { get => D.y.Clone(); set => D.y = value.Clone(); }
-            public float yMultiplier { get => D.y.curveMultiplier; set => D.y.curveMultiplier = value; }
-            public MinMaxCurve z { get => D.z.Clone(); set => D.z = value.Clone(); }
-            public float zMultiplier { get => D.z.curveMultiplier; set => D.z.curveMultiplier = value; }
+            public MinMaxCurve x { get => D.x.Get(); set => D.x.Set(value); }
+            public float xMultiplier { get => D.x.Multiplier; set => D.x.Multiplier = value; }
+            public MinMaxCurve y { get => D.y.Get(); set => D.y.Set(value); }
+            public float yMultiplier { get => D.y.Multiplier; set => D.y.Multiplier = value; }
+            public MinMaxCurve z { get => D.z.Get(); set => D.z.Set(value); }
+            public float zMultiplier { get => D.z.Multiplier; set => D.z.Multiplier = value; }
             public bool separateAxes { get => D.separateAxes; set => D.separateAxes = value; }
         }
 
@@ -401,12 +380,12 @@ namespace UnityEngine
             RotationBySpeedData D => m_ParticleSystem.m_RotationBySpeed;
 
             public bool enabled { get => D.enabled; set => D.enabled = value; }
-            public MinMaxCurve x { get => D.x.Clone(); set => D.x = value.Clone(); }
-            public float xMultiplier { get => D.x.curveMultiplier; set => D.x.curveMultiplier = value; }
-            public MinMaxCurve y { get => D.y.Clone(); set => D.y = value.Clone(); }
-            public float yMultiplier { get => D.y.curveMultiplier; set => D.y.curveMultiplier = value; }
-            public MinMaxCurve z { get => D.z.Clone(); set => D.z = value.Clone(); }
-            public float zMultiplier { get => D.z.curveMultiplier; set => D.z.curveMultiplier = value; }
+            public MinMaxCurve x { get => D.x.Get(); set => D.x.Set(value); }
+            public float xMultiplier { get => D.x.Multiplier; set => D.x.Multiplier = value; }
+            public MinMaxCurve y { get => D.y.Get(); set => D.y.Set(value); }
+            public float yMultiplier { get => D.y.Multiplier; set => D.y.Multiplier = value; }
+            public MinMaxCurve z { get => D.z.Get(); set => D.z.Set(value); }
+            public float zMultiplier { get => D.z.Multiplier; set => D.z.Multiplier = value; }
             public bool separateAxes { get => D.separateAxes; set => D.separateAxes = value; }
             public Vector2 range { get => D.range; set => D.range = value; }
         }
@@ -418,8 +397,8 @@ namespace UnityEngine
             ExternalForcesData D => m_ParticleSystem.m_ExternalForces;
 
             public bool enabled { get => D.enabled; set => D.enabled = value; }
-            public float multiplier { get => D.multiplier; set => D.multiplier = value; }
-            public MinMaxCurve multiplierCurve { get => D.multiplierCurve.Clone(); set => D.multiplierCurve = value.Clone(); }
+            public float multiplier { get => D.multiplierCurve.Multiplier; set => D.multiplierCurve.Multiplier = value; }
+            public MinMaxCurve multiplierCurve { get => D.multiplierCurve.Get(); set => D.multiplierCurve.Set(value); }
             public ParticleSystemGameObjectFilter influenceFilter { get => D.influenceFilter; set => D.influenceFilter = value; }
             public LayerMask influenceMask { get => D.influenceMask; set => D.influenceMask = value; }
             public int influenceCount => D.influences.Count;
@@ -453,34 +432,34 @@ namespace UnityEngine
 
             public bool enabled { get => D.enabled; set => D.enabled = value; }
             public bool separateAxes { get => D.separateAxes; set => D.separateAxes = value; }
-            public MinMaxCurve strength { get => D.strengthX.Clone(); set => D.strengthX = value.Clone(); }
-            public float strengthMultiplier { get => D.strengthX.curveMultiplier; set => D.strengthX.curveMultiplier = value; }
-            public MinMaxCurve strengthX { get => D.strengthX.Clone(); set => D.strengthX = value.Clone(); }
-            public float strengthXMultiplier { get => D.strengthX.curveMultiplier; set => D.strengthX.curveMultiplier = value; }
-            public MinMaxCurve strengthY { get => D.strengthY.Clone(); set => D.strengthY = value.Clone(); }
-            public float strengthYMultiplier { get => D.strengthY.curveMultiplier; set => D.strengthY.curveMultiplier = value; }
-            public MinMaxCurve strengthZ { get => D.strengthZ.Clone(); set => D.strengthZ = value.Clone(); }
-            public float strengthZMultiplier { get => D.strengthZ.curveMultiplier; set => D.strengthZ.curveMultiplier = value; }
+            public MinMaxCurve strength { get => D.strengthX.Get(); set => D.strengthX.Set(value); }
+            public float strengthMultiplier { get => D.strengthX.Multiplier; set => D.strengthX.Multiplier = value; }
+            public MinMaxCurve strengthX { get => D.strengthX.Get(); set => D.strengthX.Set(value); }
+            public float strengthXMultiplier { get => D.strengthX.Multiplier; set => D.strengthX.Multiplier = value; }
+            public MinMaxCurve strengthY { get => D.strengthY.Get(); set => D.strengthY.Set(value); }
+            public float strengthYMultiplier { get => D.strengthY.Multiplier; set => D.strengthY.Multiplier = value; }
+            public MinMaxCurve strengthZ { get => D.strengthZ.Get(); set => D.strengthZ.Set(value); }
+            public float strengthZMultiplier { get => D.strengthZ.Multiplier; set => D.strengthZ.Multiplier = value; }
             public float frequency { get => D.frequency; set => D.frequency = value; }
             public bool damping { get => D.damping; set => D.damping = value; }
             public int octaveCount { get => D.octaveCount; set => D.octaveCount = Mathf.Clamp(value, 1, 4); }
             public float octaveMultiplier { get => D.octaveMultiplier; set => D.octaveMultiplier = value; }
             public float octaveScale { get => D.octaveScale; set => D.octaveScale = value; }
             public ParticleSystemNoiseQuality quality { get => D.quality; set => D.quality = value; }
-            public MinMaxCurve scrollSpeed { get => D.scrollSpeed.Clone(); set => D.scrollSpeed = value.Clone(); }
-            public float scrollSpeedMultiplier { get => D.scrollSpeed.curveMultiplier; set => D.scrollSpeed.curveMultiplier = value; }
+            public MinMaxCurve scrollSpeed { get => D.scrollSpeed.Get(); set => D.scrollSpeed.Set(value); }
+            public float scrollSpeedMultiplier { get => D.scrollSpeed.Multiplier; set => D.scrollSpeed.Multiplier = value; }
             public bool remapEnabled { get => D.remapEnabled; set => D.remapEnabled = value; }
-            public MinMaxCurve remap { get => D.remapX.Clone(); set => D.remapX = value.Clone(); }
-            public float remapMultiplier { get => D.remapX.curveMultiplier; set => D.remapX.curveMultiplier = value; }
-            public MinMaxCurve remapX { get => D.remapX.Clone(); set => D.remapX = value.Clone(); }
-            public float remapXMultiplier { get => D.remapX.curveMultiplier; set => D.remapX.curveMultiplier = value; }
-            public MinMaxCurve remapY { get => D.remapY.Clone(); set => D.remapY = value.Clone(); }
-            public float remapYMultiplier { get => D.remapY.curveMultiplier; set => D.remapY.curveMultiplier = value; }
-            public MinMaxCurve remapZ { get => D.remapZ.Clone(); set => D.remapZ = value.Clone(); }
-            public float remapZMultiplier { get => D.remapZ.curveMultiplier; set => D.remapZ.curveMultiplier = value; }
-            public MinMaxCurve positionAmount { get => D.positionAmount.Clone(); set => D.positionAmount = value.Clone(); }
-            public MinMaxCurve rotationAmount { get => D.rotationAmount.Clone(); set => D.rotationAmount = value.Clone(); }
-            public MinMaxCurve sizeAmount { get => D.sizeAmount.Clone(); set => D.sizeAmount = value.Clone(); }
+            public MinMaxCurve remap { get => D.remapX.Get(); set => D.remapX.Set(value); }
+            public float remapMultiplier { get => D.remapX.Multiplier; set => D.remapX.Multiplier = value; }
+            public MinMaxCurve remapX { get => D.remapX.Get(); set => D.remapX.Set(value); }
+            public float remapXMultiplier { get => D.remapX.Multiplier; set => D.remapX.Multiplier = value; }
+            public MinMaxCurve remapY { get => D.remapY.Get(); set => D.remapY.Set(value); }
+            public float remapYMultiplier { get => D.remapY.Multiplier; set => D.remapY.Multiplier = value; }
+            public MinMaxCurve remapZ { get => D.remapZ.Get(); set => D.remapZ.Set(value); }
+            public float remapZMultiplier { get => D.remapZ.Multiplier; set => D.remapZ.Multiplier = value; }
+            public MinMaxCurve positionAmount { get => D.positionAmount.Get(); set => D.positionAmount.Set(value); }
+            public MinMaxCurve rotationAmount { get => D.rotationAmount.Get(); set => D.rotationAmount.Set(value); }
+            public MinMaxCurve sizeAmount { get => D.sizeAmount.Get(); set => D.sizeAmount.Set(value); }
         }
 
         /// <summary>Collision settings. Particle collisions are not simulated by Unbound (the data is kept).</summary>
@@ -496,12 +475,12 @@ namespace UnityEngine
             public bool enabled { get => D.enabled; set => D.enabled = value; }
             public ParticleSystemCollisionType type { get => D.type; set => D.type = value; }
             public ParticleSystemCollisionMode mode { get => D.mode; set => D.mode = value; }
-            public MinMaxCurve dampen { get => D.dampen.Clone(); set => D.dampen = value.Clone(); }
-            public float dampenMultiplier { get => D.dampen.curveMultiplier; set => D.dampen.curveMultiplier = value; }
-            public MinMaxCurve bounce { get => D.bounce.Clone(); set => D.bounce = value.Clone(); }
-            public float bounceMultiplier { get => D.bounce.curveMultiplier; set => D.bounce.curveMultiplier = value; }
-            public MinMaxCurve lifetimeLoss { get => D.lifetimeLoss.Clone(); set => D.lifetimeLoss = value.Clone(); }
-            public float lifetimeLossMultiplier { get => D.lifetimeLoss.curveMultiplier; set => D.lifetimeLoss.curveMultiplier = value; }
+            public MinMaxCurve dampen { get => D.dampen.Get(); set => D.dampen.Set(value); }
+            public float dampenMultiplier { get => D.dampen.Multiplier; set => D.dampen.Multiplier = value; }
+            public MinMaxCurve bounce { get => D.bounce.Get(); set => D.bounce.Set(value); }
+            public float bounceMultiplier { get => D.bounce.Multiplier; set => D.bounce.Multiplier = value; }
+            public MinMaxCurve lifetimeLoss { get => D.lifetimeLoss.Get(); set => D.lifetimeLoss.Set(value); }
+            public float lifetimeLossMultiplier { get => D.lifetimeLoss.Multiplier; set => D.lifetimeLoss.Multiplier = value; }
             public float minKillSpeed { get => D.minKillSpeed; set => D.minKillSpeed = value; }
             public float maxKillSpeed { get => D.maxKillSpeed; set => D.maxKillSpeed = value; }
             public LayerMask collidesWith { get => D.collidesWith; set => D.collidesWith = value; }
@@ -676,10 +655,10 @@ namespace UnityEngine
             public int numTilesY { get => D.numTilesY; set => D.numTilesY = Math.Max(1, value); }
             public ParticleSystemAnimationType animation { get => D.animation; set => D.animation = value; }
             public ParticleSystemAnimationRowMode rowMode { get => D.rowMode; set => D.rowMode = value; }
-            public MinMaxCurve frameOverTime { get => D.frameOverTime.Clone(); set => D.frameOverTime = value.Clone(); }
-            public float frameOverTimeMultiplier { get => D.frameOverTime.curveMultiplier; set => D.frameOverTime.curveMultiplier = value; }
-            public MinMaxCurve startFrame { get => D.startFrame.Clone(); set => D.startFrame = value.Clone(); }
-            public float startFrameMultiplier { get => D.startFrame.curveMultiplier; set => D.startFrame.curveMultiplier = value; }
+            public MinMaxCurve frameOverTime { get => D.frameOverTime.Get(); set => D.frameOverTime.Set(value); }
+            public float frameOverTimeMultiplier { get => D.frameOverTime.Multiplier; set => D.frameOverTime.Multiplier = value; }
+            public MinMaxCurve startFrame { get => D.startFrame.Get(); set => D.startFrame.Set(value); }
+            public float startFrameMultiplier { get => D.startFrame.Multiplier; set => D.startFrame.Multiplier = value; }
             public int cycleCount { get => D.cycleCount; set => D.cycleCount = value; }
             public int rowIndex { get => D.rowIndex; set => D.rowIndex = value; }
             public Rendering.UVChannelFlags uvChannelMask { get => D.uvChannelMask; set => D.uvChannelMask = value; }
@@ -705,10 +684,10 @@ namespace UnityEngine
             public bool useParticleColor { get => D.useParticleColor; set => D.useParticleColor = value; }
             public bool sizeAffectsRange { get => D.sizeAffectsRange; set => D.sizeAffectsRange = value; }
             public bool alphaAffectsIntensity { get => D.alphaAffectsIntensity; set => D.alphaAffectsIntensity = value; }
-            public MinMaxCurve range { get => D.range.Clone(); set => D.range = value.Clone(); }
-            public float rangeMultiplier { get => D.range.curveMultiplier; set => D.range.curveMultiplier = value; }
-            public MinMaxCurve intensity { get => D.intensity.Clone(); set => D.intensity = value.Clone(); }
-            public float intensityMultiplier { get => D.intensity.curveMultiplier; set => D.intensity.curveMultiplier = value; }
+            public MinMaxCurve range { get => D.range.Get(); set => D.range.Set(value); }
+            public float rangeMultiplier { get => D.range.Multiplier; set => D.range.Multiplier = value; }
+            public MinMaxCurve intensity { get => D.intensity.Get(); set => D.intensity.Set(value); }
+            public float intensityMultiplier { get => D.intensity.Multiplier; set => D.intensity.Multiplier = value; }
             public int maxLights { get => D.maxLights; set => D.maxLights = value; }
             public Light light { get => D.light as Light; set => D.light = value; }
         }
@@ -723,17 +702,8 @@ namespace UnityEngine
             public bool enabled { get => D.enabled; set => D.enabled = value; }
             public ParticleSystemTrailMode mode { get => D.mode; set => D.mode = value; }
             public float ratio { get => D.ratio; set => D.ratio = value; }
-            public MinMaxCurve lifetime
-            {
-                get => D.lifetime.Clone();
-                set
-                {
-                    value.constantMin = Mathf.Clamp01(value.constantMin);
-                    value.constantMax = Mathf.Clamp01(value.constantMax);
-                    D.lifetime = value.Clone();
-                }
-            }
-            public float lifetimeMultiplier { get => D.lifetime.curveMultiplier; set => D.lifetime.curveMultiplier = Mathf.Clamp01(value); }
+            public MinMaxCurve lifetime { get => D.lifetime.Get(); set => D.lifetime.Set(value); }
+            public float lifetimeMultiplier { get => D.lifetime.Multiplier; set => D.lifetime.Multiplier = value; }
             public float minVertexDistance { get => D.minVertexDistance; set => D.minVertexDistance = value; }
             public ParticleSystemTrailTextureMode textureMode { get => D.textureMode; set => D.textureMode = value; }
             public Vector2 textureScale { get => D.textureScale; set => D.textureScale = value; }
@@ -743,8 +713,8 @@ namespace UnityEngine
             public bool sizeAffectsLifetime { get => D.sizeAffectsLifetime; set => D.sizeAffectsLifetime = value; }
             public bool inheritParticleColor { get => D.inheritParticleColor; set => D.inheritParticleColor = value; }
             public MinMaxGradient colorOverLifetime { get => D.colorOverLifetime.Clone(); set => D.colorOverLifetime = value.Clone(); }
-            public MinMaxCurve widthOverTrail { get => D.widthOverTrail.Clone(); set => D.widthOverTrail = value.Clone(); }
-            public float widthOverTrailMultiplier { get => D.widthOverTrail.curveMultiplier; set => D.widthOverTrail.curveMultiplier = value; }
+            public MinMaxCurve widthOverTrail { get => D.widthOverTrail.Get(); set => D.widthOverTrail.Set(value); }
+            public float widthOverTrailMultiplier { get => D.widthOverTrail.Multiplier; set => D.widthOverTrail.Multiplier = value; }
             public MinMaxGradient colorOverTrail { get => D.colorOverTrail.Clone(); set => D.colorOverTrail = value.Clone(); }
             public bool generateLightingData { get => D.generateLightingData; set => D.generateLightingData = value; }
             public int ribbonCount { get => D.ribbonCount; set => D.ribbonCount = value; }
@@ -764,8 +734,8 @@ namespace UnityEngine
             public ParticleSystemCustomDataMode GetMode(ParticleSystemCustomData stream) => D.modes[(int)stream];
             public void SetVectorComponentCount(ParticleSystemCustomData stream, int count) => D.componentCounts[(int)stream] = Mathf.Clamp(count, 0, 4);
             public int GetVectorComponentCount(ParticleSystemCustomData stream) => D.componentCounts[(int)stream];
-            public void SetVector(ParticleSystemCustomData stream, int component, MinMaxCurve curve) => D.vectors[(int)stream, component] = curve.Clone();
-            public MinMaxCurve GetVector(ParticleSystemCustomData stream, int component) => D.vectors[(int)stream, component].Clone();
+            public void SetVector(ParticleSystemCustomData stream, int component, MinMaxCurve curve) => D.vectors[(int)stream, component].Set(curve);
+            public MinMaxCurve GetVector(ParticleSystemCustomData stream, int component) => D.vectors[(int)stream, component].Get();
             public void SetColor(ParticleSystemCustomData stream, MinMaxGradient gradient) => D.colors[(int)stream] = gradient.Clone();
             public MinMaxGradient GetColor(ParticleSystemCustomData stream) => D.colors[(int)stream].Clone();
         }

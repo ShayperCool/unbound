@@ -367,9 +367,9 @@ namespace UnityEngine
                 AddRateSegment(curve, rateRandom, t0, duration, false, duration, phase, ref counted, ref whole, ref gain);
                 if (!m_Main.loop) break;
                 float rest = t1 - duration;
-                if (curve.mode == ParticleSystemCurveMode.Constant && curve.constant > 0f)
+                if (curve.mode == ParticleSystemCurveMode.Constant && curve.scalar > 0f)
                 {
-                    float due = curve.constant * duration + phase;
+                    float due = curve.scalar * duration + phase;
                     phase = due - ((float)Math.Ceiling(due) - 1f);
                 }
                 else phase = 0f;
@@ -384,7 +384,7 @@ namespace UnityEngine
             return true;
         }
 
-        void AddRateSegment(MinMaxCurve curve, float random, float a, float b, bool included, float duration,
+        void AddRateSegment(in ModuleCurve curve, float random, float a, float b, bool included, float duration,
             float phase, ref float counted, ref float whole, ref float gain)
         {
             if (!(b > a)) return;
@@ -451,12 +451,12 @@ namespace UnityEngine
         {
             var rate = m_Emission.rateOverTime;
             m_LoopStart = true;
-            if (rate.mode != ParticleSystemCurveMode.Constant || !(rate.constant > 0f))
+            if (rate.mode != ParticleSystemCurveMode.Constant || !(rate.scalar > 0f))
             {
                 m_EmitPhase = 0f;
                 return;
             }
-            float due = rate.constant * duration + m_EmitPhase;
+            float due = rate.scalar * duration + m_EmitPhase;
             m_EmitPhase = due - ((float)Math.Ceiling(due) - 1f);
         }
 
@@ -465,8 +465,8 @@ namespace UnityEngine
         internal void KeepEmissionPhase()
         {
             var rate = m_Emission.rateOverTime;
-            if (rate.mode != ParticleSystemCurveMode.Constant || !(rate.constant > 0f) || m_LoopStart && m_Time == 0f) return;
-            float due = rate.constant * m_Time + m_EmitPhase;
+            if (rate.mode != ParticleSystemCurveMode.Constant || !(rate.scalar > 0f) || m_LoopStart && m_Time == 0f) return;
+            float due = rate.scalar * m_Time + m_EmitPhase;
             m_EmitPhase = due - (float)Math.Floor(due);
             m_LoopStart = false;
         }
@@ -475,8 +475,8 @@ namespace UnityEngine
         {
             var curve = m_Emission.rateOverTime;
             m_StepRateBirths = 0;
-            if (curve.mode != ParticleSystemCurveMode.Constant || !(curve.constant > 0f)) return false;
-            float rate = curve.constant;
+            if (curve.mode != ParticleSystemCurveMode.Constant || !(curve.scalar > 0f)) return false;
+            float rate = curve.scalar;
             float counted = m_RateAccumulator, whole = m_RateAccumulator, gain = 0f, phase = m_EmitPhase;
             int births = 0;
             float t1 = t0 + dt;
@@ -529,7 +529,7 @@ namespace UnityEngine
             m_LoopStart = false;
             if (rateCurve.mode == ParticleSystemCurveMode.Constant)
             {
-                float rate = rateCurve.constant;
+                float rate = rateCurve.scalar;
                 if (!(rate > 0f)) return;
                 float phase = m_EmitPhase;
                 int count = ConstantRateBirths(rate, a, b, endIncluded, phase, ref m_RateAccumulator, out int last, out _);
@@ -1590,7 +1590,7 @@ namespace UnityEngine
             if (m_Main.loop) endTime %= duration;
             c.Nt = Mathf.Clamp01(endTime / duration);
             c.WorldToSim = WorldToSimulationRotation();
-            c.HasGravity = m_Main.gravityModifier.mode != ParticleSystemCurveMode.Constant || m_Main.gravityModifier.constant != 0f;
+            c.HasGravity = m_Main.gravityModifier.mode != ParticleSystemCurveMode.Constant || m_Main.gravityModifier.scalar != 0f;
             bool simWorld = m_Main.simulationSpace == ParticleSystemSimulationSpace.World;
             if (c.HasGravity)
             {
@@ -1764,7 +1764,7 @@ namespace UnityEngine
             if (F.enabled)
             {
                 // The axes are evaluated in the first axis' mode: a constant reads a curve's
-                // multiplier (Unity shares one scalar between them).
+                // multiplier (a module stores one scalar for both).
                 var random = F.randomized ? m_ForceSamples[m_ModuleLane] : ModuleVector(seed, 306581307u);
                 var mode = F.x.mode;
                 var f = new Vector3(InMode(F.x, mode).Evaluate(age, random.x), InMode(F.y, mode).Evaluate(age, random.y), InMode(F.z, mode).Evaluate(age, random.z));
@@ -1816,7 +1816,7 @@ namespace UnityEngine
             return speedModifier;
         }
 
-        static MinMaxCurve InMode(MinMaxCurve curve, ParticleSystemCurveMode mode)
+        static ModuleCurve InMode(ModuleCurve curve, ParticleSystemCurveMode mode)
         {
             curve.mode = mode;
             return curve;

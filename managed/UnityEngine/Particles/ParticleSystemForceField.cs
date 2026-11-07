@@ -19,15 +19,21 @@ namespace UnityEngine
         public Vector2 rotationRandomness { get; set; }
         public bool multiplyDragByParticleSize { get; set; } = true;
         public bool multiplyDragByParticleVelocity { get; set; } = true;
-        public ParticleSystem.MinMaxCurve directionX { get; set; }
-        public ParticleSystem.MinMaxCurve directionY { get; set; }
-        public ParticleSystem.MinMaxCurve directionZ { get; set; }
-        public ParticleSystem.MinMaxCurve gravity { get; set; }
-        public ParticleSystem.MinMaxCurve rotationSpeed { get; set; }
-        public ParticleSystem.MinMaxCurve rotationAttraction { get; set; }
-        public ParticleSystem.MinMaxCurve drag { get; set; }
-        public ParticleSystem.MinMaxCurve vectorFieldSpeed { get; set; }
-        public ParticleSystem.MinMaxCurve vectorFieldAttraction { get; set; }
+        // Stored like particle module properties (one scalar per curve, see ParticleSystem.ModuleCurve);
+        // a new field's gravity and vector-field speed are 1, the rest 0 (6000.0.71f1, particlecurves).
+        internal ParticleSystem.ModuleCurve m_DirectionX, m_DirectionY, m_DirectionZ, m_RotationSpeed,
+            m_RotationAttraction, m_Drag, m_VectorFieldAttraction;
+        internal ParticleSystem.ModuleCurve m_Gravity = ParticleSystem.ModuleCurve.Constant(1f);
+        internal ParticleSystem.ModuleCurve m_VectorFieldSpeed = ParticleSystem.ModuleCurve.Constant(1f);
+        public ParticleSystem.MinMaxCurve directionX { get => m_DirectionX.Get(); set => m_DirectionX.Set(value); }
+        public ParticleSystem.MinMaxCurve directionY { get => m_DirectionY.Get(); set => m_DirectionY.Set(value); }
+        public ParticleSystem.MinMaxCurve directionZ { get => m_DirectionZ.Get(); set => m_DirectionZ.Set(value); }
+        public ParticleSystem.MinMaxCurve gravity { get => m_Gravity.Get(); set => m_Gravity.Set(value); }
+        public ParticleSystem.MinMaxCurve rotationSpeed { get => m_RotationSpeed.Get(); set => m_RotationSpeed.Set(value); }
+        public ParticleSystem.MinMaxCurve rotationAttraction { get => m_RotationAttraction.Get(); set => m_RotationAttraction.Set(value); }
+        public ParticleSystem.MinMaxCurve drag { get => m_Drag.Get(); set => m_Drag.Set(value); }
+        public ParticleSystem.MinMaxCurve vectorFieldSpeed { get => m_VectorFieldSpeed.Get(); set => m_VectorFieldSpeed.Set(value); }
+        public ParticleSystem.MinMaxCurve vectorFieldAttraction { get => m_VectorFieldAttraction.Get(); set => m_VectorFieldAttraction.Set(value); }
         public Texture3D vectorField { get; set; }
 
         /// <summary>Whether a point in the field's local space is inside its shape.</summary>

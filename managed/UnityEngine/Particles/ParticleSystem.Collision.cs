@@ -509,7 +509,7 @@ namespace UnityEngine
             var toWorld = SimulationToWorld();
             var world = toWorld.MultiplyPoint3x4(p.m_Position);
             var total = Vector3.zero;
-            float multiplier = X.multiplier * X.multiplierCurve.Evaluate(age, R.Value(p.m_RandomSeed, R.Force + 8));
+            float multiplier = X.multiplierCurve.Evaluate(age, R.Value(p.m_RandomSeed, R.Force + 8));
             bool rotated = false;
             foreach (var field in ParticleSystemForceField.FindAll())
             {
@@ -518,17 +518,17 @@ namespace UnityEngine
                 var local = t.InverseTransformPoint(world);
                 if (!field.Contains(local)) continue;
                 float r = R.Value(p.m_RandomSeed, R.Force + 7);
-                var direction = new Vector3(field.directionX.Evaluate(age, r), field.directionY.Evaluate(age, r), field.directionZ.Evaluate(age, r));
+                var direction = new Vector3(field.m_DirectionX.Evaluate(age, r), field.m_DirectionY.Evaluate(age, r), field.m_DirectionZ.Evaluate(age, r));
                 var accel = t.rotation * direction;
-                float gravity = field.gravity.Evaluate(age, r);
+                float gravity = field.m_Gravity.Evaluate(age, r);
                 if (gravity != 0f)
                 {
                     var toCenter = t.position - world;
                     if (toCenter.sqrMagnitude > 1e-12f) accel += toCenter.normalized * (gravity * 30f);
                 }
                 float distance = field.RotationCurveTime(local);
-                var speedCurve = field.rotationSpeed;
-                var attractionCurve = field.rotationAttraction;
+                ref readonly var speedCurve = ref field.m_RotationSpeed;
+                ref readonly var attractionCurve = ref field.m_RotationAttraction;
                 float rotationSpeed = speedCurve.Evaluate(distance, r);
                 float attraction = attractionCurve.Evaluate(distance, r);
                 if (rotationSpeed != 0f && attraction != 0f)
@@ -551,7 +551,7 @@ namespace UnityEngine
                         rotated = true;
                     }
                 }
-                float drag = field.drag.Evaluate(age, r);
+                float drag = field.m_Drag.Evaluate(age, r);
                 if (drag != 0f)
                 {
                     // A deceleration of drag along the velocity (measured), times the particle's

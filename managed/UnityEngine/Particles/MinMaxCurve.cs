@@ -1,4 +1,5 @@
 using System;
+using Unbound.Runtime;
 
 namespace UnityEngine
 {
@@ -6,102 +7,188 @@ namespace UnityEngine
     {
         /// <summary>
         /// A value that is a constant, a curve, or random between two constants or two curves.
-        /// It is stored the way Unity serializes it (and the way a value reads back from a particle
-        /// system): one scalar is the constant, the upper constant and the curve multiplier at once.
-        /// Storing it that way lets script fields of this type read from scenes and prefabs as-is.
+        /// Like Unity's, the struct keeps all six values apart: the mode, the curve multiplier, both
+        /// curves and both constants; script fields serialize them as <c>m_Mode</c> ...
+        /// <c>m_ConstantMax</c>. A module property keeps one stored scalar instead
+        /// (<see cref="ModuleCurve"/>), so what a module returns is not always what was assigned.
         /// </summary>
         [Serializable]
         public partial struct MinMaxCurve
         {
-            [SerializeField] ParticleSystemCurveMode minMaxState;
-            [SerializeField] float scalar;
-            [SerializeField] float minScalar;
-            [SerializeField] AnimationCurve maxCurve;
-            [SerializeField] AnimationCurve minCurve;
+            [SerializeField] ParticleSystemCurveMode m_Mode;
+            [SerializeField] float m_CurveMultiplier;
+            [SerializeField] AnimationCurve m_CurveMin;
+            [SerializeField] AnimationCurve m_CurveMax;
+            [SerializeField] float m_ConstantMin;
+            [SerializeField] float m_ConstantMax;
 
             public MinMaxCurve(float constant)
             {
-                minMaxState = ParticleSystemCurveMode.Constant;
-                scalar = constant;
-                minScalar = 0f;
-                maxCurve = null;
-                minCurve = null;
+                m_Mode = ParticleSystemCurveMode.Constant;
+                m_CurveMultiplier = 0f;
+                m_CurveMin = null;
+                m_CurveMax = null;
+                m_ConstantMin = 0f;
+                m_ConstantMax = constant;
             }
 
             public MinMaxCurve(float multiplier, AnimationCurve curve)
             {
-                minMaxState = ParticleSystemCurveMode.Curve;
-                scalar = multiplier;
-                minScalar = 0f;
-                maxCurve = curve;
-                minCurve = null;
+                m_Mode = ParticleSystemCurveMode.Curve;
+                m_CurveMultiplier = multiplier;
+                m_CurveMin = null;
+                m_CurveMax = curve;
+                m_ConstantMin = 0f;
+                m_ConstantMax = 0f;
             }
 
             public MinMaxCurve(float multiplier, AnimationCurve min, AnimationCurve max)
             {
-                minMaxState = ParticleSystemCurveMode.TwoCurves;
-                scalar = multiplier;
-                minScalar = 0f;
-                maxCurve = max;
-                minCurve = min;
+                m_Mode = ParticleSystemCurveMode.TwoCurves;
+                m_CurveMultiplier = multiplier;
+                m_CurveMin = min;
+                m_CurveMax = max;
+                m_ConstantMin = 0f;
+                m_ConstantMax = 0f;
             }
 
             public MinMaxCurve(float min, float max)
             {
-                minMaxState = ParticleSystemCurveMode.TwoConstants;
-                scalar = max;
-                minScalar = min;
-                maxCurve = null;
-                minCurve = null;
+                m_Mode = ParticleSystemCurveMode.TwoConstants;
+                m_CurveMultiplier = 0f;
+                m_CurveMin = null;
+                m_CurveMax = null;
+                m_ConstantMin = min;
+                m_ConstantMax = max;
             }
 
-            public ParticleSystemCurveMode mode { get => minMaxState; set => minMaxState = value; }
+            public ParticleSystemCurveMode mode { get => m_Mode; set => m_Mode = value; }
 
             [Obsolete("Please use MinMaxCurve.curveMultiplier instead. (UnityUpgradable) -> UnityEngine.ParticleSystem/MinMaxCurve.curveMultiplier", false)]
-            public float curveScalar { get => scalar; set => scalar = value; }
+            public float curveScalar { get => m_CurveMultiplier; set => m_CurveMultiplier = value; }
 
-            public float curveMultiplier { get => scalar; set => scalar = value; }
-            public AnimationCurve curveMax { get => maxCurve; set => maxCurve = value; }
-            public AnimationCurve curveMin { get => minCurve; set => minCurve = value; }
-            public float constantMax { get => scalar; set => scalar = value; }
-            public float constantMin { get => minScalar; set => minScalar = value; }
-            public float constant { get => scalar; set => scalar = value; }
-            public AnimationCurve curve { get => maxCurve; set => maxCurve = value; }
+            public float curveMultiplier { get => m_CurveMultiplier; set => m_CurveMultiplier = value; }
+            public AnimationCurve curveMax { get => m_CurveMax; set => m_CurveMax = value; }
+            public AnimationCurve curveMin { get => m_CurveMin; set => m_CurveMin = value; }
+            public float constantMax { get => m_ConstantMax; set => m_ConstantMax = value; }
+            public float constantMin { get => m_ConstantMin; set => m_ConstantMin = value; }
+            public float constant { get => m_ConstantMax; set => m_ConstantMax = value; }
+            public AnimationCurve curve { get => m_CurveMax; set => m_CurveMax = value; }
 
             public float Evaluate(float time) => Evaluate(time, 1f);
 
+            /// <summary>The value in the current mode; a curve mode with a missing curve throws, as
+            /// in Unity. The lerp factor is clamped to [0, 1].</summary>
             public float Evaluate(float time, float lerpFactor)
             {
-                switch (minMaxState)
+                switch (m_Mode)
+                {
+                    case ParticleSystemCurveMode.Constant:
+                        return m_ConstantMax;
+                    case ParticleSystemCurveMode.TwoConstants:
+                        return Mathf.Lerp(m_ConstantMin, m_ConstantMax, lerpFactor);
+                    case ParticleSystemCurveMode.TwoCurves:
+                        return Mathf.Lerp(m_CurveMin.Evaluate(time), m_CurveMax.Evaluate(time), lerpFactor) * m_CurveMultiplier;
+                    default:
+                        return m_CurveMax.Evaluate(time) * m_CurveMultiplier;
+                }
+            }
+
+            public static implicit operator MinMaxCurve(float constant) => new MinMaxCurve(constant);
+        }
+
+        /// <summary>The bounds a module property keeps its stored scalars in (6000.0.71f1,
+        /// tests/projects/particlecurves: every property in the probe is in one of these).</summary>
+        internal enum CurveRange : byte
+        {
+            /// <summary>No bound.</summary>
+            Any,
+            /// <summary>[0, +inf): sizes, rates, delays, limits, drag, light range and intensity,
+            /// trail width, the external-forces multiplier and burst counts.</summary>
+            NonNegative,
+            /// <summary>[<see cref="ModuleCurve.MinimumStartLifetime"/>, +inf): the start lifetime.</summary>
+            StartLifetime,
+            /// <summary>[0, 1]: collision dampen and lifetime loss, the trail lifetime.</summary>
+            Unit,
+            /// <summary>[0, 2]: collision bounce.</summary>
+            Bounce,
+            /// <summary>[0, <see cref="ModuleCurve.LastFrame"/>]: the normalized texture-sheet frames.</summary>
+            Frame,
+        }
+
+        /// <summary>
+        /// A MinMaxCurve as a module property stores it (6000.0.71f1, tests/projects/particlecurves):
+        /// one <see cref="scalar"/> that is the constant, the upper constant or the curve multiplier
+        /// depending on the mode, a lower constant <see cref="minScalar"/> and the curves. Every way
+        /// in (the property setter, its <c>*Multiplier</c> shortcut and scene data) keeps both scalars
+        /// within the property's <see cref="range"/>; the range does not reorder them. Reading the
+        /// property gives back only what the mode uses: constants with a curve multiplier of 1 and no
+        /// curves, or curves with constants of 0. A curve mode stores a missing curve as the constant
+        /// curve 1.
+        /// </summary>
+        internal struct ModuleCurve
+        {
+            /// <summary>The shortest start lifetime a module keeps, in seconds.</summary>
+            internal const float MinimumStartLifetime = 0.0001f;
+
+            /// <summary>The largest normalized texture-sheet frame, just below the last frame's end.</summary>
+            internal const float LastFrame = 0.9999f;
+
+            internal ParticleSystemCurveMode mode;
+            internal float scalar;
+            internal float minScalar;
+            internal AnimationCurve maxCurve;
+            internal AnimationCurve minCurve;
+            internal CurveRange range;
+
+            internal static ModuleCurve Constant(float value, CurveRange range = CurveRange.Any)
+            {
+                var c = new ModuleCurve { range = range };
+                c.scalar = c.Bounded(value);
+                c.minScalar = c.Bounded(0f);
+                return c;
+            }
+
+            internal static ModuleCurve Curve(float multiplier, AnimationCurve curve, CurveRange range = CurveRange.Any)
+            {
+                var c = Constant(multiplier, range);
+                c.mode = ParticleSystemCurveMode.Curve;
+                c.maxCurve = curve;
+                return c;
+            }
+
+            internal bool IsCurve => mode == ParticleSystemCurveMode.Curve || mode == ParticleSystemCurveMode.TwoCurves;
+
+            /// <summary>True when the value can differ between particles (random modes).</summary>
+            internal bool IsRandom => mode == ParticleSystemCurveMode.TwoConstants || mode == ParticleSystemCurveMode.TwoCurves;
+
+            internal float Evaluate(float time) => Evaluate(time, 1f);
+
+            internal float Evaluate(float time, float lerpFactor)
+            {
+                switch (mode)
                 {
                     case ParticleSystemCurveMode.Constant:
                         return scalar;
                     case ParticleSystemCurveMode.TwoConstants:
                         return Mathf.Lerp(minScalar, scalar, lerpFactor);
-                    case ParticleSystemCurveMode.Curve:
-                        return (maxCurve != null ? maxCurve.Evaluate(time) : 0f) * scalar;
                     case ParticleSystemCurveMode.TwoCurves:
-                    {
-                        float min = minCurve != null ? minCurve.Evaluate(time) : 0f;
-                        float max = maxCurve != null ? maxCurve.Evaluate(time) : 0f;
-                        return Mathf.Lerp(min, max, lerpFactor) * scalar;
-                    }
+                        return Mathf.Lerp(Sample(minCurve, time), Sample(maxCurve, time), lerpFactor) * scalar;
                     default:
-                        return scalar;
+                        return Sample(maxCurve, time) * scalar;
                 }
             }
 
-            public static implicit operator MinMaxCurve(float constant) => new MinMaxCurve(constant);
-
-            /// <summary>True when the value can differ between particles (random modes).</summary>
-            internal bool IsRandom => minMaxState == ParticleSystemCurveMode.TwoConstants || minMaxState == ParticleSystemCurveMode.TwoCurves;
+            // A constant-mode value evaluated in a curve mode (the force module reads every axis in
+            // the first axis' mode) has no curve: 0.
+            static float Sample(AnimationCurve curve, float time) => curve != null ? curve.Evaluate(time) : 0f;
 
             /// <summary>The largest value the curve can take (constant or sampled), for bounds and limits.</summary>
             internal float MaxValue
             {
                 get
                 {
-                    switch (minMaxState)
+                    switch (mode)
                     {
                         case ParticleSystemCurveMode.Constant: return scalar;
                         case ParticleSystemCurveMode.TwoConstants: return Mathf.Max(scalar, minScalar);
@@ -119,35 +206,81 @@ namespace UnityEngine
                 }
             }
 
-            /// <summary>A copy that owns its curves (Unity hands out fresh curves on every read).</summary>
-            internal MinMaxCurve Clone()
+            float Bounded(float value)
             {
-                var c = this;
-                c.maxCurve = Unbound.Runtime.ParticleCopies.Curve(maxCurve);
-                c.minCurve = Unbound.Runtime.ParticleCopies.Curve(minCurve);
-                return c;
+                switch (range)
+                {
+                    case CurveRange.NonNegative: return Mathf.Max(value, 0f);
+                    case CurveRange.StartLifetime: return Mathf.Max(value, MinimumStartLifetime);
+                    case CurveRange.Unit: return Mathf.Clamp(value, 0f, 1f);
+                    case CurveRange.Bounce: return Mathf.Clamp(value, 0f, 2f);
+                    case CurveRange.Frame: return Mathf.Clamp(value, 0f, LastFrame);
+                    default: return value;
+                }
             }
 
-            /// <summary>The serialized form: `{minMaxState, scalar, minScalar, maxCurve, minCurve}`.
-            /// Data written before `minScalar` existed kept the lower constant as the min curve's
-            /// first key times the scalar.</summary>
-            internal static MinMaxCurve Read(Unbound.Runtime.YNode node, float fallback)
+            /// <summary>The property getter: what the mode uses, with copies of the curves.</summary>
+            internal MinMaxCurve Get()
             {
-                if (node == null || node.Kind != Unbound.Runtime.YKind.Map)
-                    return new MinMaxCurve(fallback);
-                var c = new MinMaxCurve
+                switch (mode)
                 {
-                    minMaxState = (ParticleSystemCurveMode)node.Int("minMaxState"),
-                    scalar = node.Float("scalar", fallback),
-                };
-                if (node.Get("maxCurve") is Unbound.Runtime.YNode max && max.Kind == Unbound.Runtime.YKind.Map)
-                    c.maxCurve = Unbound.Runtime.BuiltinReaders.AnimationCurve(max);
-                if (node.Get("minCurve") is Unbound.Runtime.YNode min && min.Kind == Unbound.Runtime.YKind.Map)
-                    c.minCurve = Unbound.Runtime.BuiltinReaders.AnimationCurve(min);
-                if (node.Get("minScalar") != null)
-                    c.minScalar = node.Float("minScalar");
-                else if (c.minCurve != null && c.minCurve.length > 0)
-                    c.minScalar = c.minCurve[0].value * c.scalar;
+                    case ParticleSystemCurveMode.Constant:
+                        return new MinMaxCurve(scalar) { curveMultiplier = 1f };
+                    case ParticleSystemCurveMode.TwoConstants:
+                        return new MinMaxCurve(minScalar, scalar) { curveMultiplier = 1f };
+                    case ParticleSystemCurveMode.TwoCurves:
+                        return new MinMaxCurve(scalar, ParticleCopies.Curve(minCurve), ParticleCopies.Curve(maxCurve));
+                    default:
+                        return new MinMaxCurve(scalar, ParticleCopies.Curve(maxCurve)) { mode = mode };
+                }
+            }
+
+            /// <summary>The property setter: the mode's scalars within the range, curves copied
+            /// (a missing one becomes the constant curve 1). The range stays the property's.</summary>
+            internal void Set(in MinMaxCurve value)
+            {
+                mode = value.mode;
+                bool curves = IsCurve;
+                scalar = Bounded(curves ? value.curveMultiplier : value.constantMax);
+                minScalar = mode == ParticleSystemCurveMode.TwoConstants ? Bounded(value.constantMin) : Bounded(0f);
+                maxCurve = curves ? CurveOrOne(value.curveMax) : null;
+                minCurve = mode == ParticleSystemCurveMode.TwoCurves ? CurveOrOne(value.curveMin) : null;
+            }
+
+            /// <summary>The <c>*Multiplier</c> shortcut: the stored scalar in every mode.</summary>
+            internal float Multiplier
+            {
+                get => scalar;
+                set => scalar = Bounded(value);
+            }
+
+            static AnimationCurve CurveOrOne(AnimationCurve curve) => curve != null ? ParticleCopies.Curve(curve) : One();
+
+            /// <summary>The curve a curve mode stores when it is given none: the constant 1.</summary>
+            static AnimationCurve One() => new AnimationCurve(new Keyframe(0f, 1f));
+
+            /// <summary>The serialized form `{minMaxState, scalar, minScalar, maxCurve, minCurve}`
+            /// over this value (the property's default and range); the scalars are kept within the
+            /// range as when set. Data written before `minScalar` existed kept the lower constant as
+            /// the min curve's first key times the scalar.</summary>
+            internal ModuleCurve Read(YNode node)
+            {
+                if (node == null || node.Kind != YKind.Map) return this;
+                var c = this;
+                c.mode = (ParticleSystemCurveMode)node.Int("minMaxState");
+                c.scalar = c.Bounded(node.Float("scalar", scalar));
+                c.maxCurve = node.Get("maxCurve") is YNode max && max.Kind == YKind.Map ? BuiltinReaders.AnimationCurve(max) : null;
+                c.minCurve = node.Get("minCurve") is YNode min && min.Kind == YKind.Map ? BuiltinReaders.AnimationCurve(min) : null;
+                float lower = node.Get("minScalar") != null ? node.Float("minScalar")
+                    : c.minCurve != null && c.minCurve.length > 0 ? c.minCurve[0].value * node.Float("scalar", scalar) : 0f;
+                c.minScalar = c.Bounded(lower);
+                if (!c.IsCurve)
+                    c.maxCurve = c.minCurve = null;
+                else
+                {
+                    c.maxCurve ??= One();
+                    c.minCurve = c.mode == ParticleSystemCurveMode.TwoCurves ? c.minCurve ?? One() : null;
+                }
                 return c;
             }
         }
