@@ -664,7 +664,7 @@ namespace Unbound.Runtime
                 v[i] = Mathf.Clamp(value, NormalizeMinimums[i], NormalizeMaximums[i]);
             }
             var config = AudioSettings.GetConfiguration();
-            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || config.dspBufferSize != 1024)
+            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || config.dspBufferSize != 1024 || config.speakerMode != AudioSpeakerMode.Stereo)
                 throw new NotSupportedException("AudioMixer Normalize is measured only at 48000/44100 Hz with 1024-frame stereo output");
             return new { fade = v[0], lowest = v[1], maximum = v[2] };
         }
