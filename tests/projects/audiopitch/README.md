@@ -30,4 +30,9 @@ step of 1/32768 and no added Master-float slack. RESIDUALS is empty. Reports
 preserve every missing, extra and failing value; no sample limits apply.
 All captures, diagnostic candidates and reports remain under the cache.
 
-Certification results are recorded after the engine gate completes.
+Certification: both independent Native repeats agree exactly across 3,932,347
+values per rate. The engine strict and separate gate comparisons each pass all
+3,932,347 at 48000 and 44100 Hz, with zero raw float/PCM failures. An additional
+exact comparison also passes every value at both rates. There are no added
+residuals. `regressions.py --release 6000.0.71f1` runs the unchanged prior DSP
+and ClearFloat comparators with one runtime snapshot to limit disk duplication.
