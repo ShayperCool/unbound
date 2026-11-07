@@ -20,6 +20,10 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Default mixer Pitch Shifter DSP measured on exactly 6000.0.71f1.
+        /// Other releases fail until their kernels and state have been measured.</summary>
+        internal static bool MixerPitchShifterMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Where Input's errors point to its settings: 6000.0's Editor says (measured)
         /// "Edit -> Project Settings... -> Input Manager"; earlier releases "Edit -> Settings -> Input".</summary>
         internal static string InputSettingsMenu => Major >= 6000 ? "Edit -> Project Settings... -> Input Manager" : "Edit -> Settings -> Input";

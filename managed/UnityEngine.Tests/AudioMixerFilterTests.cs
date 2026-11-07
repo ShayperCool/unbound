@@ -450,10 +450,50 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void PitchShifterKeepsRawValuesAndRejectsUnmeasuredContexts()
+        {
+            string release = ProjectInfo.UnityVersion;
+            try
+            {
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                var (mixer, group, effect) = Fixture();
+                effect.m_EffectName = "Pitch Shifter"; effect.m_ParameterGuids.Clear();
+                foreach (string name in AudioMixerEffectController.PitchShifterParameters)
+                { effect.m_ParameterGuids[name] = name; mixer.m_Exposed[name] = name; }
+                foreach (var pair in new[] { ("Pitch", 1f), ("FFT size", 1024f), ("Overlap", 4f), ("Max channels", 0f) })
+                {
+                    Assert.True(mixer.GetFloat(pair.Item1, out float value)); Assert.Equal(pair.Item2, value);
+                }
+                foreach (float raw in new[] { -1f, 0.5f, 0.75f, 1f, 1.5f, 2f, 3f })
+                {
+                    Assert.True(mixer.SetFloat("Pitch", raw));
+                    Assert.True(mixer.GetFloat("Pitch", out float value)); Assert.Equal(raw, value);
+                    using var payload = JsonDocument.Parse(JsonSerializer.Serialize(group.DspConfiguration()));
+                    Assert.Equal(Mathf.Clamp(raw, 0.5f, 2f), payload.RootElement.GetProperty("effects")[0].GetProperty("pitchShifter").GetProperty("pitch").GetSingle());
+                }
+                foreach (var pair in new[] { ("FFT size", 2048f, 1024f), ("Overlap", 8f, 4f), ("Max channels", 1f, 0f) })
+                {
+                    mixer.SetFloat(pair.Item1, pair.Item2);
+                    Assert.Contains("requires measured defaults", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+                    mixer.SetFloat(pair.Item1, pair.Item3);
+                }
+                mixer.SetFloat("Pitch", float.NaN);
+                Assert.Contains("finite", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+                mixer.SetFloat("Pitch", 1f); effect.m_EnableWetMix = true;
+                Assert.Contains("wet mixing", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+                effect.m_EnableWetMix = false;
+                ProjectInfo.UnityVersion = "6000.0.72f1";
+                Assert.Contains("6000.0.71f1", Assert.Throws<NotSupportedException>(() => group.DspConfiguration()).Message);
+                effect.m_Bypass = true; group.DspConfiguration();
+            }
+            finally { ProjectInfo.UnityVersion = release; }
+        }
+
+        [Fact]
         public void ActiveUnsupportedEffectsAndWetMixFailLoudly()
         {
             var (_, group, effect) = Fixture();
-            effect.m_EffectName = "Pitch Shifter";
+            effect.m_EffectName = "Unmeasured Effect";
             Assert.Throws<NotSupportedException>(() => group.DspConfiguration());
             effect.m_Bypass = true;
             group.DspConfiguration();

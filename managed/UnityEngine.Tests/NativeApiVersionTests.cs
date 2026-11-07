@@ -5,9 +5,9 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
-    /// <summary>NativeApi 26 (filter component descriptors at the end of AudioSourcePacket, with
+    /// <summary>NativeApi 27 (filter component descriptors at the end of AudioSourcePacket, with
     /// AudioReverbFilter's since 20, the reverb zone of AudioFramePacket since 21, Distortion
-    /// kind 5 since 23, Chorus kind 6 since 24, mixer Flange since 25, Normalize since 26; render protocol 8: external 16-bit indices, protocol 9: depth copies,
+    /// kind 5 since 23, Chorus kind 6 since 24, mixer Flange since 25, Normalize since 26, Pitch Shifter since 27; render protocol 8: external 16-bit indices, protocol 9: depth copies,
     /// protocol 10: 32-bit indices, and protocol 11: logical instance IDs. The managed side
     /// refuses a native side of any other version at startup, older or newer, before anything is
     /// installed.</summary>
@@ -19,7 +19,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheVersionIsAudioFilterDescriptorsAndRenderProtocolEleven()
         {
-            Assert.Equal(26u, NativeApi.CurrentVersion);
+            Assert.Equal(27u, NativeApi.CurrentVersion);
             Assert.Equal(1UL << 62, TextureElements.DepthElement);
         }
 
@@ -36,7 +36,8 @@ namespace UnityEngine.Tests
         [InlineData(23u)]
         [InlineData(24u)]
         [InlineData(25u)]
-        [InlineData(27u)]
+        [InlineData(26u)]
+        [InlineData(28u)]
         public void AnotherNativeVersionIsRejectedBeforeInstalling(uint version)
         {
             var before = (NativeApi)Api.GetValue(null);
@@ -46,7 +47,7 @@ namespace UnityEngine.Tests
             try { Native.Initialize(&api); }
             catch (InvalidOperationException e) { error = e; }
             Assert.NotNull(error);
-            Assert.Equal($"native API version {version}, managed expects 26", error.Message);
+            Assert.Equal($"native API version {version}, managed expects 27", error.Message);
             Assert.Equal(before.Version, ((NativeApi)Api.GetValue(null)).Version);
             Assert.Equal(ready, (bool)Ready.GetValue(null));
         }

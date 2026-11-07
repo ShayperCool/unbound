@@ -12,6 +12,7 @@ pub mod compressor;
 pub mod chorus;
 pub mod flange;
 pub mod normalize;
+pub mod pitch;
 pub mod duck;
 pub mod effects;
 pub mod fft;

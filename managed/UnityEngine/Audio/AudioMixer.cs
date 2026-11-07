@@ -453,6 +453,7 @@ namespace UnityEngine.Audio
                     mixAudible = wetDb > -69f,
                     duck = effect.m_EffectName == AudioMixerEffectController.DuckVolume ? effect.DuckConfiguration(m_Mixer) : null,
                     compressor = effect.m_EffectName == AudioMixerEffectController.Compressor && !bypass ? effect.CompressorConfiguration(m_Mixer) : null,
+                    pitchShifter = effect.m_EffectName == AudioMixerEffectController.PitchShifter && !bypass ? effect.PitchShifterConfiguration(m_Mixer) : null,
                     normalize = effect.m_EffectName == AudioMixerEffectController.Normalize && !bypass ? effect.NormalizeConfiguration(m_Mixer) : null,
                     flange = effect.m_EffectName == AudioMixerEffectController.Flange && !bypass ? effect.FlangeConfiguration(m_Mixer) : null,
                     chorus = effect.m_EffectName == AudioMixerEffectController.Chorus && !bypass ? effect.ChorusConfiguration(m_Mixer) : null,
@@ -587,6 +588,11 @@ namespace Unbound.Runtime
         static readonly float[] DuckMaximums = { 0f, 10f, 10f, 10f, 40f, 50f, 1f };
         internal const string Compressor = "Compressor";
         internal const string ParamEq = "ParamEQ";
+        internal const string PitchShifter = "Pitch Shifter";
+        internal static readonly string[] PitchShifterParameters = { "Pitch", "FFT size", "Overlap", "Max channels" };
+        static readonly float[] PitchShifterDefaults = { 1f, 1024f, 4f, 0f };
+        static readonly float[] PitchShifterMinimums = { 0.5f, 256f, 1f, 0f };
+        static readonly float[] PitchShifterMaximums = { 2f, 4096f, 32f, 16f };
         internal const string Normalize = "Normalize";
         internal static readonly string[] NormalizeParameters = { "Fade in time", "Lowest volume", "Maximum amp" };
         static readonly float[] NormalizeDefaults = { 5000f, 0.1f, 20f };
@@ -617,11 +623,12 @@ namespace Unbound.Runtime
         static readonly float[] ParamEqMaximums = { 22000f, 5f, 3f };
         /// <summary>Kinds the DSP runs besides SFX Reverb and the routed units.</summary>
         internal static readonly string[] MeasuredEffects = {
-            "Attenuation", "Lowpass", "Highpass", "Echo", Compressor, ParamEq, Distortion, Chorus, Flange, Normalize, "Lowpass Simple", "Highpass Simple" };
+            "Attenuation", "Lowpass", "Highpass", "Echo", Compressor, ParamEq, Distortion, Chorus, Flange, Normalize, PitchShifter, "Lowpass Simple", "Highpass Simple" };
         internal static float CutoffDefault(string effect) => effect == "Highpass Simple" ? 1000f : 5000f;
         internal static (string[], float[], float[], float[]) Ranges(string effect) =>
             effect == Compressor ? (CompressorParameters, CompressorDefaults, CompressorMinimums, CompressorMaximums)
             : effect == ParamEq ? (ParamEqParameters, ParamEqDefaults, ParamEqMinimums, ParamEqMaximums)
+            : effect == PitchShifter ? (PitchShifterParameters, PitchShifterDefaults, PitchShifterMinimums, PitchShifterMaximums)
             : effect == Normalize ? (NormalizeParameters, NormalizeDefaults, NormalizeMinimums, NormalizeMaximums)
             : effect == Flange ? (FlangeParameters, FlangeDefaults, FlangeMinimums, FlangeMaximums)
             : effect == Chorus ? (ChorusParameters, ChorusDefaults, ChorusMinimums, ChorusMaximums)
@@ -654,6 +661,23 @@ namespace Unbound.Runtime
             return Mathf.Clamp01(value);
         }
         // Unity 6000.0.71f1 captures retain exposed values and clamp only the DSP inputs.
+        internal object PitchShifterConfiguration(UnityEngine.Audio.AudioMixer mixer)
+        {
+            if (!Compat.MixerPitchShifterMeasured)
+                throw new NotSupportedException("AudioMixer Pitch Shifter is measured only for Unity 6000.0.71f1");
+            var v = new float[4];
+            for (int i = 0; i < v.Length; i++)
+            {
+                v[i] = Parameter(PitchShifterParameters[i]) is string guid ? mixer.Value(guid) : PitchShifterDefaults[i];
+                if (!float.IsFinite(v[i])) throw new NotSupportedException("AudioMixer Pitch Shifter " + PitchShifterParameters[i] + " must be finite");
+            }
+            if (v[1] != 1024f || v[2] != 4f || v[3] != 0f)
+                throw new NotSupportedException("AudioMixer Pitch Shifter requires measured defaults FFT size=1024, Overlap=4, Max channels=0");
+            var config = AudioSettings.GetConfiguration();
+            if ((config.sampleRate != 48000 && config.sampleRate != 44100) || config.dspBufferSize != 1024 || config.speakerMode != AudioSpeakerMode.Stereo)
+                throw new NotSupportedException("AudioMixer Pitch Shifter is measured only at 48000/44100 Hz with 1024-frame stereo output");
+            return new { pitch = Mathf.Clamp(v[0], 0.5f, 2f) };
+        }
         internal object NormalizeConfiguration(UnityEngine.Audio.AudioMixer mixer)
         {
             var v = new float[3];

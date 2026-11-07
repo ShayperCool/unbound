@@ -14,7 +14,7 @@ Those kernels were measured on mixer groups by `tests/projects/mixerfilters` and
 `tests/projects/mixerecho` (Unity 6000.0.71f1, Linux, 48000 and 44100 Hz). Those captures do not
 establish parity for component chains.
 
-## Wire (NativeApi 24)
+## Wire (NativeApi 27)
 
 `AudioSourcePacket` passes through `NativeApi.AudioUpdateSource`. Version 16 appended the filter
 descriptors to it; version 18 carries them together with render protocol 8 (`DrawIndices`,
@@ -25,7 +25,8 @@ filters to `AudioFramePacket` (`filter_count` at 64, `filters` at 72). Version 2
 reverb zone descriptor (`zone` at 80, 176 bytes) and sends the source's zone send gain in
 `reverb_zone_mix`. Version 23 adds Distortion kind 5 in the existing cutoff field; version 24
 adds Chorus kind 6, using the first seven reverb entries for dry, wet1..3, delay, rate and depth.
-These two additions keep the descriptor and packet layouts unchanged.
+These two additions keep the descriptor and packet layouts unchanged. Versions 25, 26 and 27 add
+measured mixer Flange, Normalize and Pitch Shifter JSON parameters without changing these layouts.
 
 | `AudioSourcePacket` field | Offset | Size |
 | --- | --- | --- |
@@ -597,3 +598,32 @@ Other rates, buffers and layouts fail explicitly. Enabled slot wet mixing and li
 Normalize parameter, bypass or placement changes fail clearly. Other effect wet
 mixing, timed transitions and Pitch Shifter remain follow-ups. Existing audio
 residuals are retained unchanged.
+
+# Mixer Pitch Shifter
+
+`Pitch Shifter` uses the Unity 6000.0.71f1 default FFT profile in
+`crates/unbound-runtime/src/audio/pitch.rs`, selected by `Compat.MixerPitchShifterMeasured`.
+NativeApi 27 adds its Pitch to the existing group JSON. It adds no source filter component.
+
+The documented contract, Editor parameter queries, measured state and kernel inferences are
+separated in [the probe cause table](../tests/projects/audiopitch/README.md). That table links
+the official Unity 6000.0 Pitch Shifter, AudioMixer, AudioGroup Inspector and exposed-parameter
+API pages. FFT size 1024, Overlap 4 and Max channels 0 are the actual Editor defaults.
+
+Both independent Native repeats agree at 48000 and 44100 Hz. The engine passes 3,932,347 strict
+values per rate with no float/PCM failures, and also matches all values bit for bit. The capture
+includes constant downward/upward shifts, default/unity and bypass controls, stereo impulses,
+noise, DC and tone bursts, all startup/tail samples, source endings and reuse after
+AudioSettings.Reset. Pitch 1 is a delayed nonidentity effect. Bypass removes that processing.
+
+The 1024-point phase vocoder keeps separate channel input, output, overlap and phase histories.
+`Effect::reset` clears them, and chunked rendering retains them across internal packets. Its
+single-precision radix-4/2 transform follows Ooura fft4g's arithmetic order and uses the measured
+quarter-wave lookup for twiddles and synthesis. This describes the measured implementation;
+the Manual does not guarantee it for other releases.
+
+Enabled slot wet mixing and live changes remain unsupported. Active unmeasured releases,
+FFT/overlap/channel-limit settings, output rates/layouts/buffers fail clearly. `unbound doctor`
+lists these Pitch Shifter limits in the effect-class detail. No prior DSP kernel or ClearFloat
+ownership behavior changes. The optional `audiopitch/regressions.py` runs the unchanged
+Distortion, Chorus, Flange, Normalize and ClearFloat probes with one private runtime snapshot.

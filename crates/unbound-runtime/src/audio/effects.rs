@@ -1,6 +1,7 @@
 //! Persistent DSP on summed mixer groups. Native captures establish a fourth-order Butterworth
 //! response for Lowpass and a second-order response for Highpass. The independently measured
 //! startup kernels also constrain parameter-dependent delay-history normalization.
+use super::pitch::{PitchShifter, PitchSpec};
 use super::normalize::{Normalize, NormalizeSpec};
 use super::flange::{Flange, FlangeSpec};
 use super::chorus::{Chorus, ChorusSpec};
@@ -67,6 +68,8 @@ pub struct EffectSpec {
     pub flange: Option<FlangeSpec>,
     #[serde(default)]
     pub normalize: Option<NormalizeSpec>,
+    #[serde(default)]
+    pub pitch_shifter: Option<PitchSpec>,
 }
 
 /// ParamEQ parameters as the mixer stores them: Hz, octaves and a linear gain.
@@ -101,6 +104,7 @@ impl EffectSpec {
         }
         if let Some(chorus) = &self.chorus { chorus.validate()?; }
         if let Some(flange) = &self.flange { flange.validate()?; }
+        if let Some(pitch) = &self.pitch_shifter { pitch.validate()?; }
         if let Some(normalize) = &self.normalize { normalize.validate()?; }
         if let Some(level) = self.distortion {
             anyhow::ensure!(level.is_finite() && (0.0..=1.0).contains(&level),
@@ -374,6 +378,7 @@ pub struct Effect {
     chorus: Option<Chorus>,
     flange: Option<Flange>,
     normalize: Normalize,
+    pitch: Option<PitchShifter>,
     simple: SimpleFilter,
     eq: ParamEq,
     /// Frames since the effect started, for the slot's startup ramp.
@@ -397,6 +402,7 @@ impl Effect {
             chorus: None,
             flange: None,
             normalize: Normalize::default(),
+            pitch: None,
             simple: SimpleFilter::default(),
             eq: ParamEq::default(),
             frames: 0,
@@ -415,6 +421,10 @@ impl Effect {
         }
         if spec.flange.is_some() && self.flange.as_ref().is_none_or(|c| c.configuration() != (rate, buffer.max(1))) {
             self.flange = Some(Flange::new(rate, buffer)?);
+        }
+        if spec.pitch_shifter.is_some() && self.pitch.is_none() {
+            PitchShifter::validate_configuration(rate, buffer)?;
+            self.pitch = Some(PitchShifter::new());
         }
         if spec.kind == "Echo" {
             self.echo.tune(spec.delay, rate)?;
@@ -445,6 +455,7 @@ impl Effect {
         if let Some(chorus) = &mut self.chorus { chorus.clear(); }
         if let Some(flange) = &mut self.flange { flange.clear(); }
         self.normalize = Normalize::default();
+        if let Some(pitch) = &mut self.pitch { pitch.clear(); }
         self.simple = SimpleFilter::default();
         self.eq.h = Default::default();
         self.frames = 0;
@@ -517,7 +528,7 @@ impl Effect {
             if !bypass && !self.spec.bypass {
                 self.echo.process(samples, &self.spec);
             }
-        } else if matches!(self.spec.kind.as_str(), "Compressor" | "ParamEQ" | "Distortion" | "Chorus" | "Flange" | "Normalize" | "Lowpass Simple" | "Highpass Simple") {
+        } else if matches!(self.spec.kind.as_str(), "Compressor" | "ParamEQ" | "Distortion" | "Chorus" | "Flange" | "Normalize" | "Pitch Shifter" | "Lowpass Simple" | "Highpass Simple") {
             // A bypassed unit keeps its state; resuming after bypass is unmeasured.
             if bypass || self.spec.bypass {
                 return;
@@ -530,6 +541,7 @@ impl Effect {
                 }
                 "ParamEQ" => self.eq.process(samples),
                 "Distortion" => distortion(samples, self.spec.distortion.unwrap()),
+                "Pitch Shifter" => self.pitch.as_mut().unwrap().process(samples, self.spec.pitch_shifter.as_ref().unwrap(), self.rate),
                 "Normalize" => self.normalize.process(samples, self.spec.normalize.as_ref().unwrap(), self.rate),
                 "Flange" => self.flange.as_mut().unwrap().process(samples, self.spec.flange.as_ref().unwrap()),
                 "Chorus" => self.chorus.as_mut().unwrap().process(samples, self.spec.chorus.as_ref().unwrap()),

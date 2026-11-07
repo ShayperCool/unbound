@@ -27,7 +27,8 @@ use crate::{
 /// 22: render protocols 10 and 11 (32-bit indices and logical instance IDs).
 /// 23: AudioDistortionFilter kind 5, Level in the existing cutoff field.
 /// 26: measured mixer Normalize parameters in the group configuration JSON.
-pub const NATIVE_API_VERSION: u32 = 26;
+/// 27: measured mixer Pitch Shifter parameters in the group configuration JSON.
+pub const NATIVE_API_VERSION: u32 = 27;
 
 /// A rasterized glyph (`font_glyph`), in pixels: FreeType's `bitmap_left`/`bitmap_top` and size.
 #[repr(C)]
