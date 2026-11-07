@@ -102,6 +102,73 @@ namespace UnityEngine.Tests
             finally { Object.DestroyImmediate(mesh); }
         }
 
+        // Unity 6000.0.71f1 (skinnedbounds static/swap/*): a runtime renderer computes its
+        // default local bounds on their first query and keeps them through later sharedMesh
+        // assignments, a null mesh and ResetLocalBounds; never queried, they come from the
+        // mesh assigned at the first query. Rigid one-bone and two-bone meshes behave alike, and
+        // the public world box is that local bound in root space in every case.
+        [Theory]
+        [InlineData(false, true)]
+        [InlineData(false, false)]
+        [InlineData(true, true)]
+        [InlineData(true, false)]
+        public void DefaultBoundsAreTakenAtFirstQueryAndSurviveMeshSwaps(bool twoBones, bool queried)
+        {
+            Mesh Quad(float scale, Vector3 offset)
+            {
+                var v = new[] { new Vector3(-.5f, -.5f, 0), new Vector3(.5f, -.5f, 0), new Vector3(-.5f, .5f, 0), new Vector3(.5f, .5f, .25f) };
+                for (int i = 0; i < v.Length; i++) v[i] = v[i] * scale + offset;
+                var weights = new BoneWeight[4];
+                for (int i = 0; i < 4; i++) weights[i] = twoBones && i >= 2 ? new BoneWeight { boneIndex0 = 1, weight0 = 1 } : new BoneWeight { weight0 = 1 };
+                var mesh = new Mesh { vertices = v, triangles = new[] { 0, 2, 1, 1, 2, 3 }, boneWeights = weights };
+                mesh.bindposes = twoBones ? new[] { Matrix4x4.identity, Matrix4x4.Translate(new Vector3(0, -1, 0)) } : new[] { Matrix4x4.identity };
+                mesh.RecalculateBounds();
+                return mesh;
+            }
+            var second = new GameObject("second");
+            second.transform.SetParent(rig.transform, false);
+            second.transform.localPosition = new Vector3(0, 1, 0);
+            rig.transform.position = new Vector3(5, 6, 7);
+            var skin = body.AddComponent<SkinnedMeshRenderer>();
+            skin.enabled = false;
+            skin.bones = twoBones ? new[] { rig.transform, second.transform } : new[] { rig.transform };
+            skin.rootBone = rig.transform;
+            var first = Quad(1f, Vector3.zero);
+            var other = Quad(3f, new Vector3(2, -1, 0.5f));
+            try
+            {
+                skin.sharedMesh = first;
+                if (queried)
+                {
+                    var stored = skin.localBounds;
+                    Near.Equal(new Vector3(0, 0, 0.125f), stored.center, 1e-5f);
+                    Near.Equal(new Vector3(1, 1, 0.25f), stored.size, 1e-5f);
+                    skin.sharedMesh = null;
+                    Assert.Equal(stored, skin.localBounds);
+                    skin.sharedMesh = other;
+                    Assert.Equal(stored, skin.localBounds);
+                    skin.ResetLocalBounds();
+                    Assert.Equal(stored, skin.localBounds);
+                    skin.sharedMesh = null;
+                    Near.Equal(rig.transform.TransformPoint(stored.center), skin.bounds.center, 1e-4f);
+                    skin.sharedMesh = other;
+                }
+                else
+                {
+                    skin.sharedMesh = other;
+                    Near.Equal(new Vector3(2, -1, 0.875f), skin.localBounds.center, 1e-5f);
+                    Near.Equal(new Vector3(3, 3, 0.75f), skin.localBounds.size, 1e-5f);
+                }
+                Near.Equal(rig.transform.TransformPoint(skin.localBounds.center), skin.bounds.center, 1e-4f);
+            }
+            finally
+            {
+                Object.DestroyImmediate(second);
+                Object.DestroyImmediate(other);
+                Object.DestroyImmediate(first);
+            }
+        }
+
         [Fact]
         public void AutomaticBoundsDoNotRetainTrustAfterChangingMeshOrBones()
         {

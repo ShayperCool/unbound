@@ -320,7 +320,13 @@ namespace UnityEngine
         internal override Bounds GetWorldBounds()
         {
             if (!Compat.SkinnedBoundsMeasured) return base.GetWorldBounds();
-            if (!HasMeasuredCullingBounds) return base.GetWorldBounds();
+            if (!HasMeasuredCullingBounds)
+            {
+                // The public box is the retained local bound in root space even when that bound
+                // is only the mesh's (multi-bone defaults) or outlived its mesh (skinnedbounds
+                // static/swap); culling keeps its own fallback (PrepareCullingBounds).
+                return m_HasLocalBounds ? TransformBounds(localBounds, RootMatrix) : base.GetWorldBounds();
+            }
             if (!m_UpdateWhenOffscreen && m_Enabled && gameObject.activeInHierarchy)
             {
                 // The first query (including after a local-bounds write) captures this box until

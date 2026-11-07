@@ -59,6 +59,59 @@ public class SkinnedBoundsProbe : MonoBehaviour
         return skin;
     }
 
+    /// <summary>A quad of other geometry: scaled and offset, weighted to one bone or split over two.</summary>
+    static Mesh Geometry(string name, float scale, Vector3 offset, bool twoBones)
+    {
+        var mesh = new Mesh { name = name };
+        var v = new[] { new Vector3(-.5f,-.5f,0), new Vector3(.5f,-.5f,0), new Vector3(-.5f,.5f,0), new Vector3(.5f,.5f,.25f) };
+        for (int i = 0; i < v.Length; i++) v[i] = v[i] * scale + offset;
+        mesh.vertices = v;
+        mesh.triangles = new[] {0,2,1,1,2,3};
+        var weights = new BoneWeight[4];
+        for (int i = 0; i < 4; i++)
+            weights[i] = twoBones && i >= 2 ? new BoneWeight { boneIndex0 = 1, weight0 = 1 } : new BoneWeight { weight0 = 1 };
+        mesh.boneWeights = weights;
+        mesh.bindposes = twoBones ? new[] { Matrix4x4.identity, Matrix4x4.Translate(new Vector3(0,-1,0)) } : new[] { Matrix4x4.identity };
+        mesh.RecalculateBounds();
+        return mesh;
+    }
+
+    /// <summary>sharedMesh assignment to other geometry on runtime-created renderers, with
+    /// the default bound queried before the swap, unqueried, explicit, and through null.</summary>
+    void SwapCases(Transform root)
+    {
+        var second = new GameObject("SwapSecondBone").transform;
+        second.SetParent(root, false);
+        second.localPosition = new Vector3(0,1,0);
+        foreach (bool twoBones in new[] { false, true })
+        foreach (string order in new[] { "queried", "unqueried", "explicit", "null" })
+        {
+            string key = "static/swap/" + (twoBones ? "two" : "one") + "/" + order;
+            var skin = new GameObject("Swap").AddComponent<SkinnedMeshRenderer>();
+            skin.enabled = false;
+            skin.bones = twoBones ? new[] { root, second } : new[] { root };
+            skin.rootBone = root;
+            skin.sharedMesh = Geometry("SwapA", 1f, Vector3.zero, twoBones);
+            if (order == "queried" || order == "null") Bounds(key + "/before", skin);
+            if (order == "explicit")
+            {
+                skin.localBounds = new Bounds(new Vector3(1,2,3), new Vector3(2,4,6));
+                Bounds(key + "/before", skin);
+            }
+            if (order == "null")
+            {
+                skin.sharedMesh = null;
+                Bounds(key + "/none", skin);
+            }
+            skin.sharedMesh = Geometry("SwapB", 3f, new Vector3(2,-1,0.5f), twoBones);
+            Bounds(key + "/after", skin);
+            skin.ResetLocalBounds();
+            Bounds(key + "/reset", skin);
+            Destroy(skin.gameObject);
+        }
+        Destroy(second.gameObject);
+    }
+
     void StaticCases()
     {
         var root = new GameObject("StaticRoot").transform;
@@ -116,6 +169,7 @@ public class SkinnedBoundsProbe : MonoBehaviour
         presetSkin.sharedMesh=preset;
         Bounds("static/preset-mesh-bounds",presetSkin);
         Destroy(presetSkin.gameObject);
+        SwapCases(root);
         Destroy(fresh.gameObject);
         Destroy(skin.gameObject);
         Destroy(root.gameObject);
