@@ -40,7 +40,6 @@ namespace UnityEngine
         internal bool m_Stream;
         /// <summary><c>AudioCompressionFormat</c> of an asset's data.</summary>
         internal int m_CompressionFormat;
-
         event PCMReaderCallback m_PCMReaderCallback = null;
         event PCMSetPositionCallback m_PCMSetPositionCallback = null;
 
@@ -49,7 +48,9 @@ namespace UnityEngine
 
         AudioClip() { }
 
-        public float length => m_Frequency > 0 ? (float)((double)m_Samples / m_Frequency) : 0f;
+        public float length => m_Frequency <= 0 ? 0f : !m_IsAsset && Compat.ScriptAudioClipDurationMeasured
+            ? (long)m_Samples * 1000 / m_Frequency / 1000f
+            : (float)((double)m_Samples / m_Frequency);
 
         public int samples => m_Samples;
 
@@ -110,31 +111,19 @@ namespace UnityEngine
 
         public bool GetData(Span<float> data, int offsetSamples)
         {
-            if (channels <= 0)
-            {
-                Debug.Log("AudioClip.GetData failed; AudioClip " + m_Name + " contains no data");
-                return false;
-            }
+            if (!CheckChannels("GetData")) return false;
             return ReadData(data, offsetSamples);
         }
 
         public bool GetData(float[] data, int offsetSamples)
         {
-            if (channels <= 0)
-            {
-                Debug.Log("AudioClip.GetData failed; AudioClip " + m_Name + " contains no data");
-                return false;
-            }
+            if (!CheckChannels("GetData")) return false;
             return ReadData(data.AsSpan(), offsetSamples);
         }
 
         public bool SetData(float[] data, int offsetSamples)
         {
-            if (channels <= 0)
-            {
-                Debug.Log("AudioClip.SetData failed; AudioClip " + m_Name + " contains no data");
-                return false;
-            }
+            if (!CheckChannels("SetData")) return false;
             if (offsetSamples < 0 || offsetSamples >= samples)
                 throw new ArgumentException("AudioClip.SetData failed; invalid offsetSamples");
             if (data == null || data.Length == 0)
@@ -144,16 +133,20 @@ namespace UnityEngine
 
         public bool SetData(ReadOnlySpan<float> data, int offsetSamples)
         {
-            if (channels <= 0)
-            {
-                Debug.Log("AudioClip.SetData failed; AudioClip " + m_Name + " contains no data");
-                return false;
-            }
+            if (!CheckChannels("SetData")) return false;
             if (offsetSamples < 0 || offsetSamples >= samples)
                 throw new ArgumentException("AudioClip.SetData failed; invalid offsetSamples");
             if (data.Length == 0)
                 throw new ArgumentException("AudioClip.SetData failed; invalid data");
             return WriteData(data, offsetSamples);
+        }
+
+        bool CheckChannels(string api)
+        {
+            ThrowIfDestroyed();
+            if (m_Channels > 0) return true;
+            Debug.Log("AudioClip." + api + " failed; AudioClip " + m_Name + " contains no data");
+            return false;
         }
 
         bool ReadData(Span<float> data, int offsetSamples)
@@ -192,7 +185,10 @@ namespace UnityEngine
                 return false;
             }
             var copy = data.ToArray();
-            return AudioBackend.Current.ClipData(m_Handle, offsetSamples, copy, write: true);
+            bool written = AudioBackend.Current.ClipData(m_Handle, offsetSamples, copy, write: true);
+            if (written && m_IsAsset && Compat.AudioClipDataOwnershipMeasured)
+                m_LoadState = AudioDataLoadState.Loaded;
+            return written;
         }
 
         [Obsolete("The _3D argument of AudioClip is deprecated. Use the spatialBlend property of AudioSource instead to morph between 2D and 3D playback.")]
@@ -236,6 +232,7 @@ namespace UnityEngine
             m_LoadType = AudioClipLoadType.DecompressOnLoad;
             m_LoadState = AudioDataLoadState.Loaded;
             m_Handle = AudioBackend.NextHandle();
+            m_SharedData = new SharedClipData(AudioBackend.Current, m_Handle);
             AudioBackend.Current.CreateClip(m_Handle, lengthSamples, channels, frequency, m_Stream);
             if (m_Stream)
             {
@@ -264,6 +261,7 @@ namespace UnityEngine
             using (ObjectRegistry.AsAssets())
                 clip = new AudioClip { m_Name = name, IsPersistentAsset = true, m_IsAsset = true, m_ImportedFrom = guid };
             clip.m_Handle = AudioBackend.NextHandle();
+            clip.m_SharedData = new SharedClipData(AudioBackend.Current, clip.m_Handle, guid);
             if (!AudioBackend.Current.ImportClip(clip.m_Handle, guid, out var info))
             {
                 clip.m_Handle = 0;
@@ -302,11 +300,38 @@ namespace UnityEngine
         /// </summary>
         internal bool ReloadImported()
         {
-            if (m_ImportedFrom == null || m_Handle == 0) return false;
-            if (!AudioBackend.Current.ImportClip(m_Handle, m_ImportedFrom, out var info)) return false;
+            return ReloadData(m_ImportedFrom, restoreProperties: true);
+        }
+
+        bool ReloadData(string key, bool restoreProperties)
+        {
+            if (key == null || m_Handle == 0) return false;
+            if (!AudioBackend.Current.ImportClip(m_Handle, key, out var info)) return false;
+            m_SharedData.NeedsReload = false;
             m_LoadState = AudioDataLoadState.Unloaded;
-            ApplyImport(info);
+            if (restoreProperties) ApplyImport(info);
             return true;
+        }
+
+        internal void OnAudioReset(ulong epoch)
+        {
+            if (m_Handle == 0 || (m_SharedData == null || m_SharedData.Backend != AudioBackend.Current)) return;
+            if (m_SharedData.Import != null)
+            {
+                if (m_SharedData.ResetEpoch != epoch && !ReloadData(m_SharedData.Import, restoreProperties: false))
+                {
+                    Debug.LogError($"Unbound: AudioSettings.Reset could not reload AudioClip '{m_Name}'.", this);
+                    return;
+                }
+                m_SharedData.ResetEpoch = epoch;
+                m_LoadState = AudioDataLoadState.Unloaded;
+                return;
+            }
+            // The object and frequency remain, but the generated sound has no frames or
+            // channels. GetData/SetData leave the caller's data untouched and return false.
+            OnEngineDestroy();
+            m_Samples = 0;
+            m_Channels = 0;
         }
 
         /// <summary>A player clip (an AssetBundle's): its properties, and its FSB5 bank, in the
@@ -333,6 +358,7 @@ namespace UnityEngine
             var key = $"bundle:{bundle}/{stream.Substring(stream.LastIndexOf('/') + 1)}:{resource.Long("m_Offset")}:{resource.Long("m_Size")}:{body.Int("m_SubsoundIndex")}";
             m_ImportedFrom = key;
             m_Handle = AudioBackend.NextHandle();
+            m_SharedData = new SharedClipData(AudioBackend.Current, m_Handle, key);
             if (!AudioBackend.Current.ImportClip(m_Handle, key, out var info))
             {
                 m_Handle = 0;
@@ -350,11 +376,11 @@ namespace UnityEngine
             if (m_SharedData != null)
             {
                 if (IsPersistentAsset) m_SharedData.NeedsReload = true;
-                if (--m_SharedData.References != 0) { m_Handle = 0; return; }
+                if (System.Threading.Interlocked.Decrement(ref m_SharedData.References) == 0)
+                    m_SharedData.Backend.ReleaseClip(m_SharedData.Handle);
             }
-            s_WithCallbacks.TryRemove(m_Handle, out _);
-            AudioBackend.Current.ReleaseClip(m_Handle);
             m_Handle = 0;
+            m_SharedData = null;
         }
     }
 }

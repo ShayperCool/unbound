@@ -30,18 +30,19 @@ def main():
         (runtime/'unbound').symlink_to(cli); (runtime/'managed').symlink_to(managed)
     def run(script, *flags):
         subprocess.run([sys.executable, str(script), '--release', args.release, *map(str, flags)], check=True)
-    for item in ('default', 'submission', 'lifecycle', 'generators', 'state'):
+    for item in ('default', 'submission', 'lifecycle', 'generators', 'state', 'reset-data'):
         subprocess.run([sys.executable, str(REPO/'tests/authored_project.py'), 'assemble', 'mixersuspend', item,
                         '--release', args.release, '--out', str(work/('native-'+item))], check=True)
     profiles = [('suspension', 'default', [], rate) for rate in (48000, 44100)]
     profiles += [(name, name, ['--'+name], rate) for name in ('submission', 'lifecycle') for rate in (48000, 44100)]
     profiles += [('generators', 'generators', ['--generators'], 48000), ('state', 'state', [], 48000), ('state', 'state', [], 44100)]
+    profiles += [('reset-data', 'reset-data', [], rate) for rate in (48000, 44100)]
     unexpected = 0
     for name, item, flags, rate in profiles:
         capture = work/f'engine-{name}-{rate}'
-        if name == 'state':
-            subprocess.run([sys.executable, str(FIXTURE/'state.py'), 'engine', '--release', args.release, '--rate', str(rate),
-                            '--project', str(work/'native-state'), '--runtime', str(runtime), '--work', str(capture)], check=True)
+        if name in ('state', 'reset-data'):
+            subprocess.run([sys.executable, str(FIXTURE/('reset_data.py' if name == 'reset-data' else 'state.py')), 'engine', '--release', args.release, '--rate', str(rate),
+                            '--project', str(work/('native-'+name)), '--runtime', str(runtime), '--work', str(capture)], check=True)
         else:
             run(FIXTURE/'engine.py', '--rate', rate, *flags, '--native-project', work/('native-'+item), '--runtime', runtime, '--work', capture)
         prefix = '' if name == 'suspension' else name+'-'

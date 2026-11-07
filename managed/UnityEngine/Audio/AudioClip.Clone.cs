@@ -13,6 +13,11 @@ namespace UnityEngine
             internal string Name;
             internal string Import;
             internal bool NeedsReload;
+            internal readonly AudioBackend Backend;
+            internal readonly ulong Handle;
+            internal ulong ResetEpoch;
+            internal SharedClipData(AudioBackend backend, ulong handle, string import = null)
+            { Backend = backend; Handle = handle; Import = import; }
         }
 
         SharedClipData m_SharedData;
@@ -32,8 +37,8 @@ namespace UnityEngine
             };
             if (m_IsAsset && m_Handle != 0)
             {
-                m_SharedData ??= new SharedClipData { Name = m_Name, Import = m_ImportedFrom };
-                m_SharedData.References++;
+                m_SharedData.Name ??= m_Name;
+                System.Threading.Interlocked.Increment(ref m_SharedData.References);
                 copy.m_SharedData = m_SharedData;
                 copy.m_Handle = m_Handle;
                 copy.m_Samples = m_Samples;

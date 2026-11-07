@@ -11,6 +11,7 @@ namespace UnityEngine.Tests
     /// against the Unity 6000.0.71f1 Editor, plus retained-storage implementation controls.</summary>
     public class AssetInstantiateCloneTests : IDisposable
     {
+        readonly string m_Release = ProjectInfo.UnityVersion;
         readonly AudioBackend m_PreviousAudio;
         readonly string m_PreviousRelease = ProjectInfo.UnityVersion;
         readonly ILogHandler m_PreviousLog = Debug.unityLogger.logHandler;

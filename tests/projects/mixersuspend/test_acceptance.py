@@ -6,18 +6,14 @@ import os
 from pathlib import Path
 import tempfile
 import unittest
-from acceptance import RESET_FRAMES, RESET_PULSES, STATE_PCM_SAMPLE, check, reset_residual
+from acceptance import RESET_FRAMES, STATE_PCM_SAMPLE, check, reset_residual
 
 
 class AcceptanceTests(unittest.TestCase):
-    def test_reset_is_limited_to_the_recorded_replay_and_listener_delivery(self):
-        for sample, pulse in RESET_PULSES.items():
-            row = dict(key='reset.master', sample=sample, reference=0.0, candidate=pulse)
-            self.assertTrue(reset_residual(row))
-            self.assertFalse(reset_residual(dict(row, sample=sample+1)))
-            self.assertFalse(reset_residual(dict(row, candidate=pulse/2)))
-            self.assertFalse(reset_residual(dict(row, reference=0.1)))
-            self.assertFalse(reset_residual(dict(row, key='wake_snapshot.master')))
+    def test_reset_is_limited_to_listener_delivery(self):
+        for key in ('reset', 'reset.master', 'reset.listener'):
+            for sample, pulse in [(792576, 0.25), (794625, -0.125)]:
+                self.assertFalse(reset_residual(dict(key=key, sample=sample, reference=0.0, candidate=pulse)))
         row = dict(key='reset.listener', sample=2*RESET_FRAMES, reference=1e-20, candidate='<missing>')
         self.assertTrue(reset_residual(row))
         self.assertFalse(reset_residual(dict(row, key='reset.master')))
@@ -30,14 +26,11 @@ class AcceptanceTests(unittest.TestCase):
             rows = [dict(key='reset.listener',
                          reference=dict(file='reset.listener.f32', frames=1049600, channels=2),
                          candidate=dict(file='reset.listener.f32', frames=1048576, channels=2))]
-            for key in ('reset', 'reset.master', 'reset.listener'):
-                for sample, pulse in [(792576, 0.25), (794625, -0.125)]:
-                    rows.append(dict(key=key, sample=sample, reference=0.0, candidate=pulse))
             for sample in range(2097152, 2099200):
                 rows.append(dict(key='reset.listener', sample=sample, reference=1e-20, candidate='<missing>'))
-            self.assertEqual(2055, len(rows))
+            self.assertEqual(2049, len(rows))
             self.assertFalse(check(self.report(rows), 'suspension', rate))
-            rows[1] = dict(rows[1], sample=790528)
+            rows[1] = dict(rows[1], sample=792576)
             self.assertTrue(check(self.report(rows), 'suspension', rate))
 
     def report(self, rows, failed=None):
@@ -61,7 +54,7 @@ class AcceptanceTests(unittest.TestCase):
                 self.assertTrue(check(self.report([changed]), 'state', rate))
 
     def test_truncated_report_and_incomplete_reset_shape_fail(self):
-        row = dict(key='reset', sample=next(iter(RESET_PULSES)), reference=0.0, candidate=0.25)
+        row = dict(key='reset', sample=792576, reference=0.0, candidate=0.25)
         self.assertTrue(check(self.report([row]), 'suspension', 48000))
         with self.assertRaises(ValueError): check(self.report([row], failed=2), 'suspension', 48000)
 

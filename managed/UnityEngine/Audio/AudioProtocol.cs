@@ -32,6 +32,7 @@ namespace Unbound.Runtime
         internal const uint Filter = 1 << 7;
         internal const uint Spatialize = 1 << 8;
         internal const uint KeepOutput = 1 << 9;
+        internal const uint HoldClipEndpoint = 1 << 10;
     }
 
     [StructLayout(LayoutKind.Sequential)]

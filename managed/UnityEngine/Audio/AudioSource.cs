@@ -379,6 +379,7 @@ namespace UnityEngine
                 Debug.LogWarning("Can not play a disabled audio source", this);
                 return;
             }
+            if (m_Clip != null && (m_Clip.channels == 0 || m_Clip.samples == 0)) return;
             m_Paused = false;
             m_Clip?.EnsureLoaded();
             // Play can start a clipless OnAudioFilterRead generator before the first
@@ -616,6 +617,7 @@ namespace UnityEngine
             if (m_BypassReverbZones) flags |= AudioSourceFlags.BypassReverbZones;
             if (m_Spatialize) flags |= AudioSourceFlags.Spatialize;
             if (m_KeepOutput) flags |= AudioSourceFlags.KeepOutput;
+            if (Compat.AudioClipEndpointMeasured) flags |= AudioSourceFlags.HoldClipEndpoint;
             if (m_HasFilter && isActiveAndEnabled) flags |= AudioSourceFlags.Filter;
             var packet = new AudioSourcePacket
             {

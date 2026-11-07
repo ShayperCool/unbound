@@ -5,11 +5,11 @@ using Xunit;
 
 namespace UnityEngine.Tests
 {
-    /// <summary>NativeApi 29 (cached display/IME frame versions and filter component descriptors at the end of AudioSourcePacket, with
+    /// <summary>NativeApi 30 (cached display/IME frame versions and filter component descriptors at the end of AudioSourcePacket, with
     /// AudioReverbFilter's since 20, the reverb zone of AudioFramePacket since 21, Distortion
     /// kind 5 since 23, Chorus kind 6 since 24, mixer Flange since 25, Normalize since 26, Pitch Shifter since 27; render protocol 8: external 16-bit indices, protocol 9: depth copies,
     /// protocol 10: 32-bit indices, protocol 11: logical instance IDs, and protocol 12: shared
-    /// property arrays and mesh-instance elements. The managed side
+    /// property arrays and mesh-instance elements; 29 adds the decoded audio endpoint flag. The managed side
     /// refuses a native side of any other version at startup, older or newer, before anything is
     /// installed.</summary>
     public unsafe class NativeApiVersionTests
@@ -20,7 +20,7 @@ namespace UnityEngine.Tests
         [Fact]
         public void TheVersionIncludesCachedDisplayAndImeFrameVersions()
         {
-            Assert.Equal(29u, NativeApi.CurrentVersion);
+            Assert.Equal(30u, NativeApi.CurrentVersion);
             Assert.Equal(112, System.Runtime.InteropServices.Marshal.SizeOf<FrameInput>());
             Assert.Equal(96, (int)System.Runtime.InteropServices.Marshal.OffsetOf<FrameInput>("DisplayVersion"));
             Assert.Equal(104, (int)System.Runtime.InteropServices.Marshal.OffsetOf<FrameInput>("ImeVersion"));
@@ -43,7 +43,8 @@ namespace UnityEngine.Tests
         [InlineData(26u)]
         [InlineData(27u)]
         [InlineData(28u)]
-        [InlineData(30u)]
+        [InlineData(29u)]
+        [InlineData(31u)]
         public void AnotherNativeVersionIsRejectedBeforeInstalling(uint version)
         {
             var before = (NativeApi)Api.GetValue(null);
@@ -53,7 +54,7 @@ namespace UnityEngine.Tests
             try { Native.Initialize(&api); }
             catch (InvalidOperationException e) { error = e; }
             Assert.NotNull(error);
-            Assert.Equal($"native API version {version}, managed expects 29", error.Message);
+            Assert.Equal($"native API version {version}, managed expects 30", error.Message);
             Assert.Equal(before.Version, ((NativeApi)Api.GetValue(null)).Version);
             Assert.Equal(ready, (bool)Ready.GetValue(null));
         }

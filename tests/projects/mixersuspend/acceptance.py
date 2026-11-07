@@ -4,12 +4,9 @@ import json
 import math
 from collections import Counter
 
-# Original reset capture: one extra listener block and same-frame replay that does not
-# restart in the Editor. These are unresolved device-reset behavior, not suspension.
+# Original reset capture delivers one extra listener callback block in the Editor.
+# Clip replay now agrees; only this independently documented delivery gap is admitted.
 RESET_FRAMES = 1024 * 1024
-# Replay begins on the update after the block-384 request. These are the measured
-# output sample positions, including that complete pending-submission block.
-RESET_PULSES = {792576: 0.25, 794625: -0.125}
 STATE_PCM_SAMPLE = {48000: 46619, 44100: 28553}
 
 
@@ -35,8 +32,6 @@ def reset_residual(row):
     sample, reference, candidate = row['sample'], row['reference'], row['candidate']
     if not isinstance(reference, (int, float)) or not math.isfinite(reference) or abs(reference) > 2e-5:
         return False
-    if sample in RESET_PULSES:
-        return candidate == RESET_PULSES[sample]
     return (key == 'reset.listener' and 2 * RESET_FRAMES <= sample < 2 * (RESET_FRAMES + 1024)
             and candidate == '<missing>')
 
@@ -59,7 +54,7 @@ def check(report, profile, rate):
             unexpected += 1
     if summary is None or sum(counts.values()) != summary['failed']:
         raise ValueError('incomplete comparison report: '+str(report))
-    if profile == 'suspension' and summary['failed'] and counts != Counter({'reset': 2, 'reset.master': 2, 'reset.listener': 2051}):
+    if profile == 'suspension' and summary['failed'] and counts != Counter({'reset.listener': 2049}):
         unexpected += 1
         print('Documented reset failure shape changed:', dict(counts), flush=True)
     if profile == 'state' and sum(counts.values()) > 1:

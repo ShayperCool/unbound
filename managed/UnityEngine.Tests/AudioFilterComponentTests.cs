@@ -101,12 +101,12 @@ namespace UnityEngine.Tests
         static ulong Id(Component c) => unchecked((ulong)(long)c.GetInstanceID());
 
         [Fact]
-        public void PacketAndDescriptorLayoutsUnchangedInNativeApi28()
+        public void PacketAndDescriptorLayoutsUnchangedInNativeApi29()
         {
             // Added at 16; 20 adds reverb parameters, 21 the frame zone; 22 adds render commands,
             // 23 adds Distortion, 24 adds Chorus, 25-27 mixer effects and 28 render protocol 12
             // without changing the audio descriptor layout.
-            Assert.Equal(29u, NativeApi.CurrentVersion);
+            Assert.Equal(30u, NativeApi.CurrentVersion);
             var frame = default(AudioFramePacket);
             byte* f = (byte*)&frame;
             Assert.Equal((64, 72, 80, 176), ((int)((byte*)&frame.FilterCount - f), (int)((byte*)&frame.Filters - f),

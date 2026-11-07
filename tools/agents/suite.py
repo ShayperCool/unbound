@@ -583,6 +583,8 @@ def recipes(release):
     # Keep the original raw reset residuals visible and gate the independent state controls too.
     R['mixersuspend'].append(driver('state.py', 'gate', '--release', '{release}', '--runtime', '{runtime}',
                                      '--work', '{work}/state'))
+    R['mixersuspend'].append(driver('reset_data.py', 'gate', '--release', '{release}', '--runtime', '{runtime}',
+                                     '--work', '{work}/reset-data'))
     for name in ('audiogeneratorboundaries', 'audiogeneratorlifecycle'):
         R[name] = native_project(name, ['default']) + [
             driver('run.py', 'engine', '--release', '{release}', '--work', '{work}/engine', '--runtime', '{runtime}',

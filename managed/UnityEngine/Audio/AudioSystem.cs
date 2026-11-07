@@ -113,9 +113,16 @@ namespace Unbound.Runtime
             AudioBackend.Current.UpdateGroup(group);
         }
 
+        static ulong s_ClipResetEpoch;
+
         /// <summary>AudioSettings.Reset stopped every voice.</summary>
         internal static void OnReset()
         {
+            if (Compat.AudioClipDataOwnershipMeasured)
+            {
+                ulong epoch = ++s_ClipResetEpoch;
+                foreach (AudioClip clip in ObjectRegistry.All(typeof(AudioClip))) clip.OnAudioReset(epoch);
+            }
             foreach (var source in s_Sources)
             {
                 source.m_Paused = false;

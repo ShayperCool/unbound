@@ -139,7 +139,7 @@ chunking is unchanged. All callback guards and borrowed-array checks remain in p
 
 The original `wake_snapshot` initial sample mismatches and the reset sequence are
 kept in the full original matrix. The lifecycle profile explicitly initializes its
-snapshot through public calls. No engine behavior infers an Editor selection state.
+snapshot through public calls. The state controls establish that the saved Editor target snapshot supplies the initial values.
 Engine resource-limit rejection preserves managed paused state, pending sink
 registrations and notifications; its safety tests do not certify reset delivery parity.
 
@@ -149,7 +149,7 @@ registrations and notifications; its safety tests do not certify reset delivery 
 mixer assets, scenes, `.meta` GUIDs, the Editor's ProjectSettings and `packages-lock.json`.
 `authored.json` records the authoring command and the hash of every fixture file it started
 from. Each set was recorded with `tests/authored_project.py record` from a Native run whose
-capture matched the canonical reference exactly. Sets: `default` (both rates), `submission`, `lifecycle`, `generators`; the reset diagnostics have none.
+capture matched the canonical reference exactly. Sets: `default` (both rates), `submission`, `lifecycle`, `generators`, `state`, `reset-data`; the unstable reset diagnostics have none.
 
 ```bash
 python3 tests/authored_project.py assemble mixersuspend default --release 6000.0.71f1 --out "$work/native"
@@ -176,4 +176,11 @@ The gate uses `$UNBOUND` and its matching managed directory, or `--runtime`. It 
 all original profiles and the new state controls without an Editor, preserves each
 complete strict report, and rejects anything outside the precisely documented
 reset records and the two isolated one-step Reverb PCM samples. The suite still
-reports the original 2055 raw device-reset failures per rate.
+reports the original 2049 raw device-reset failures per rate.
+
+
+[RESET_DATA_MEASUREMENT.md](RESET_DATA_MEASUREMENT.md) defines the clip-data reset
+controls, cloned storage, duration boundaries and resampling endpoints. Both Native
+repeats match all 180543 values per rate; the engine compares them strictly.
+Generated-data loss resolves the six original replay impulse failures. The 2049
+remaining original records concern only the extra listener callback around reset.

@@ -74,6 +74,16 @@ namespace Unbound.Runtime
         /// the unmeasured gain ramp until their parameter submission is measured.</summary>
         internal static bool MixerParameterGainMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>AudioSettings.Reset invalidates generated clip data and reloads
+        /// imported data; imported clones share PCM and writes load it. Measured on exactly 6000.0.71f1 (tests/projects/mixersuspend).
+        /// Other releases retain their existing clip data until measured.</summary>
+        internal static bool AudioClipDataOwnershipMeasured => Release == (6000, 0, 71, 'f', 1);
+
+        /// <summary>Script-created clip duration uses whole milliseconds, measured on exactly
+        /// 6000.0.71f1 (tests/projects/mixersuspend). Imported duration remains sample-based.
+        /// Other releases retain sample-based duration until measured.</summary>
+        internal static bool ScriptAudioClipDurationMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Send/Receive routing, startup and Duck Volume detector state, measured on
         /// exactly 6000.0.71f1 (tests/projects/mixerduck). Other releases fail until measured.</summary>
         internal static bool MixerSidechainMeasured => Release == (6000, 0, 71, 'f', 1);

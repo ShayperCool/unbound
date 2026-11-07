@@ -2080,6 +2080,7 @@ fn render_source_voices(
     audible: bool,
     callback: Option<Callback>,
 ) {
+    let hold_endpoint = source.params.has(source_flags::HOLD_CLIP_ENDPOINT);
     if let Some(main) = &mut source.main
         && main.clip != 0
     {
@@ -2093,6 +2094,7 @@ fn render_source_voices(
             target,
             mono_pan,
             looping,
+            hold_endpoint,
             audible.then_some(&mut *out),
             callback,
         ) {
@@ -2118,6 +2120,7 @@ fn render_source_voices(
             target,
             mono_pan,
             false,
+            hold_endpoint,
             audible.then_some(&mut *out),
             callback,
         );
@@ -2141,6 +2144,7 @@ fn render_voice(
     mut target: [f32; 4],
     mono_pan: Option<f32>,
     looping: bool,
+    hold_endpoint: bool,
     mut out: Option<&mut [f32]>,
     callback: Option<Callback>,
 ) -> bool {
@@ -2213,6 +2217,8 @@ fn render_voice(
                     clip.frame(i as usize)
                 } else if looping {
                     clip.frame(i.rem_euclid(clip.frames as i64) as usize)
+                } else if hold_endpoint {
+                    clip.frame(i.clamp(0, clip.frames as i64 - 1) as usize)
                 } else {
                     (0.0, 0.0)
                 }
@@ -2341,6 +2347,43 @@ mod tests {
         assert_eq!(m.source_state(7).position, 0.0);
         // The rest after the end is silent.
         assert_eq!(out[50 * 2], 0.0);
+    }
+
+    #[test]
+    fn decoded_endpoint_holds_until_end_while_loops_interpolate_across_wrap() {
+        for channels in [1, 2] {
+            for looping in [false, true] {
+                for measured in [false, true] {
+                    let mut m = mixer();
+                    let pcm = (0..100)
+                        .flat_map(|i| std::iter::repeat_n(i as f32 / 100.0, channels))
+                        .collect();
+                    m.add_clip(1, Clip::new(channels, 1000, pcm));
+                    source_with(&mut m, 7, 1, |p| {
+                        p.pitch = 0.5;
+                        if looping {
+                            p.flags |= source_flags::LOOP;
+                        }
+                        if measured {
+                            p.flags |= source_flags::HOLD_CLIP_ENDPOINT;
+                        }
+                    });
+                    play(&mut m, 7, command::PLAY, 0.0);
+                    let mut out = vec![0.0; 202 * 2];
+                    m.render(&mut out, 2);
+                    let gain = if channels == 1 { mono_gain(199) } else { 1.0 };
+                    let last = if measured && !looping { 0.99 } else { 0.495 };
+                    assert_eq!(out[199 * 2], last * gain);
+                    assert_eq!(out[198 * 2], 0.99 * gain);
+                    assert_eq!(out[200 * 2], 0.0);
+                    if !looping {
+                        assert_eq!(out[201 * 2], 0.0);
+                    } else {
+                        assert_eq!(out[201 * 2], 0.005 * gain);
+                    }
+                }
+            }
+        }
     }
 
     #[test]

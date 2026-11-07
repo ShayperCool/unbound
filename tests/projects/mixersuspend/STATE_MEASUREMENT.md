@@ -76,19 +76,16 @@ only raw failure at each rate is the Reverb PCM sample listed below.
 ## Retained raw failures
 
 The original comparator and its ATOL `2e-5` / RTOL `2e-4` are unchanged. `gate.py`
-writes a complete raw report for every original profile and this state profile,
+writes a complete raw report for every original profile and both new control profiles,
 then `acceptance.py` classifies only these specific records. Unknown failures,
 truncated reports and a changed reset failure shape fail the gate. The suite keeps
-the original strict comparison visible, including its remaining 2055 failures per
+the original strict comparison visible, including its remaining 2049 failures per
 rate, and also runs the state gate.
 
 The original `reset` case calls AudioSettings.Reset at block 384 while the mixer is
 asleep, restarts capture and calls Play in the same frame. This is a device reset,
-not a suspension/wake control. Its remaining **2055 raw failures per rate** are:
+not a suspension/wake control. Its remaining **2049 raw failures per rate** are:
 
-- `reset` and `reset.master`: samples 792576 and 794625 are Native 0, engine
-  0.25 and -0.125, the replayed source impulses. `reset.listener` has the same two
-  replay differences against Native's inaudible values near `1e-20`.
 - `reset.listener` metadata: Native has 1049600 stereo frames, engine 1048576.
 - `reset.listener` samples 2097152 through 2099199: Native's additional callback
   block, near `+/-1e-20`, has no engine counterpart. Every missing value stays in
@@ -96,8 +93,8 @@ not a suspension/wake control. Its remaining **2055 raw failures per rate** are:
 
 The separate reset-playback experiment already records inconsistent independent
 Native repeats. No fixed callback count or special replay rule is inferred from
-that experiment. Device-reset delivery/replay remains a functional compatibility
-follow-up; these 2055 records are not classified as insignificant precision error.
+that experiment. Generated-data loss now resolves replay, as [RESET_DATA_MEASUREMENT.md](RESET_DATA_MEASUREMENT.md) records. Device-reset listener delivery remains a functional compatibility
+follow-up; these 2049 records are not classified as insignificant precision error.
 
 The state profile has one insignificant device-PCM difference per rate, in
 `reverb_disabled`: sample 46619 at 48000 Hz is Native `-3/32768`, engine `-2/32768`;
