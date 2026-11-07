@@ -46,3 +46,22 @@ The baseline engine matches 376/720 original keys. It ignores Bake Axis Conversi
 unbaked improper-axis decomposition creates negative scales and wrong world geometry. The
 file-unit scaling matches in these controls. Raw before captures and full comparisons remain
 in the validation cache under `as3-before` and `as3-signed-before`.
+
+## Implementation scope
+
+Static baked imports map the source axis permutation into geometry and every node's local
+translation, rotation and scale. Unbaked improper-axis imports apply the measured root
+translation and proper rotation without synthesizing negative scales. Right-handed unbaked
+imports keep their existing path. The model cache format is v23.
+
+Animated, skinned, blend-shape and vertex-cache baked imports now fail with an asset-named
+unsupported-content error; their conversion needs separate reference probes. Unbaked animated
+imports keep the existing implementation and are not certified here. The signed-permutation
+implementation for unmeasured coordinate systems is an implementation choice, not an added
+Unity guarantee.
+
+`Tools/regress.py --release 6000.0.71f1 --label <fresh-label>` reruns the existing material-slot,
+OBJ material, UV2 and normals comparators with their original references, tolerances and
+expected source lists. The AS3 regression capture retains 306/306 exact slot values and 20/20
+exact images; MTL 2702/2702 values and 60/60 images within 8/255, 40 exact; UV2 362/384;
+normals 208/264 exact plus the same 56 listed residuals and no gated failures.
