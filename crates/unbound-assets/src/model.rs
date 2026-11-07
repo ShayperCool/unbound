@@ -1635,6 +1635,7 @@ impl<'a> Builder<'a> {
             description: if self.obj {
                 let mut description = materials::describe_obj(material, self.obj_diffuse);
                 if self.settings.material_import == MaterialImportMode::Legacy
+                    && self.obj_diffuse.is_none()
                     && !self.settings.use_srgb_material_color
                 {
                     if let Some((_, color)) = description

@@ -35,7 +35,7 @@ These are observations in this release and built-in render pipeline, not univers
 | --- | --- |
 | Omitted `Kd`, black, white, intermediate RGB | Diffuse default 0.8; endpoints and intermediate values preserved in Gamma description import. |
 | Linear project, description mode | Untextured diffuse values become gamma values in Material.color; `useSRGBMaterialColor` has no effect. |
-| Legacy with sRGB Albedo enabled/disabled | Enabled preserves diffuse values; disabled converts them to gamma values in both project color spaces. |
+| Legacy with sRGB Albedo enabled/disabled | Enabled preserves diffuse values; disabled converts untextured diffuse values to gamma in both project color spaces. Textured diffuse values remain unchanged. |
 | `d 0`, `d 0.25`, `d 1` | Alpha 1, 0.25, 1 respectively. Zero dissolve is opaque through the measured FBX transparency-factor conversion. |
 | `Tr 0.25`; `d 0.3` before/after `Tr 0.8` | Alpha 0.75; alpha 0.3 in both orders. `d` wins. |
 | One `map_Kd` in the library | Unity attaches that diffuse texture across the library's used materials. Description mode uses white RGB with imported alpha; legacy retains `Kd`. The untextured counterpart distinguishes this from an RGB conversion error. |
