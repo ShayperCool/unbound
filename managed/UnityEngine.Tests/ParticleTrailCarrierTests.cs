@@ -195,13 +195,17 @@ namespace UnityEngine.Tests
         {
             var plane = new GameObject("trail-collision-plane");
             plane.transform.position = new Vector3(0f, -.5f, 0f);
-            foreach (bool die in new[] { false, true })
+            // Measured with a fading trail, trails dying with their particles, no trails, and a kill
+            // by speed (tests/projects/particletrails pp/collision/*).
+            foreach (var (die, trails, speedKill) in new[] { (false, true, false), (true, true, false), (true, false, false), (true, false, true) })
             {
                 var ps = Make("trail-collision", die, s =>
                 {
                     var m = s.main; m.startLifetime = 2f;
                     var c = s.collision; c.enabled = true; c.type = ParticleSystemCollisionType.Planes; c.SetPlane(0, plane.transform);
-                    c.lifetimeLoss = 1f; c.bounce = 1f; c.dampen = 0f;
+                    c.bounce = 1f; c.dampen = 0f;
+                    if (speedKill) c.minKillSpeed = 3f; else c.lifetimeLoss = 1f;
+                    var t = s.trails; t.enabled = trails;
                 });
                 try
                 {

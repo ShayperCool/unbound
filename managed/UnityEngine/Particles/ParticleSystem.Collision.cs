@@ -103,8 +103,6 @@ namespace UnityEngine
                     m_Velocity = simToWorldRotation * (p.m_Velocity + p.m_AnimatedVelocity),
                     m_ColliderInstanceID = colliderId,
                 }));
-            if (speed < C.minKillSpeed || speed > C.maxKillSpeed) return false;
-
             float bounce = C.bounce.Evaluate(age, R.Value(seed, R.Collision));
             float dampen = C.dampen.Evaluate(age, R.Value(seed, R.Collision + 1));
             var normalPart = normal * Vector3.Dot(velocity, normal);
@@ -114,6 +112,9 @@ namespace UnityEngine
             p.m_Position = toWorld.inverse.MultiplyPoint3x4(after);
             p.m_AgePercent += C.lifetimeLoss.Evaluate(age, R.Value(seed, R.Collision + 2)) * 100f;
             p.ExportLifetime();
+            // A kill by speed also comes after the bounce: the killed particle reports its bounced
+            // velocity (6000.0.71f1, tests/projects/particletrails pp/collision/speedkill).
+            if (speed < C.minKillSpeed || speed > C.maxKillSpeed) return false;
             return p.m_AgePercent <= 100f;
         }
 

@@ -7,9 +7,10 @@ the probe records the state (`particleCount`, `IsAlive`, `isPlaying`, `isEmittin
 lifetime, current size and alpha, seed) and the trail mesh `BakeTrailsMesh` builds (positions and
 alpha). Scenarios: `dieWithParticles` false and true, PerParticle and Ribbon trails, local and
 world trail space, world simulation space and a moving emitter, a trail lifetime range with a
-ratio and a larger vertex distance, trail lifetime by size, a Death sub-emitter, collision kills,
-`Stop`, `Clear`, `SetParticles` (written back as read, and a living particle written at zero
-lifetime), a four-particle cap, a looping system, a restart, the trail ratio over 600 particles,
+ratio and a larger vertex distance, trail lifetime by size, a Death sub-emitter, collision kills
+(lifetime loss with and without trails, and by speed with a Death sub-emitter), `Stop`, `Clear`,
+`SetParticles` (written back as read, and a living particle written at zero lifetime), a
+four-particle cap (with `dieWithParticles` off and on), a looping system, a restart, the trail ratio over 600 particles,
 two systems played over frames with a stop callback, and images of fading trails.
 
     python3 tests/projects/particletrails/run.py native --label native1   # Editor capture (GPU, job pool)
@@ -39,10 +40,10 @@ Everything below is measured in this release, not documented.
 | `pp/local/die0`, `pp/localmove`, `pp/worldsim`, `pp/stop`, `pp/clear`, `pp/restart` | A particle whose trail outlives it stays in the buffer: `particleCount` and `GetParticles` include it at zero remaining lifetime, at rest (zero velocity), at its death position. It leaves in the first update that starts with its trail spent (all points expired), with that update's dead, in the four-slot death order. `Stop`/`Clear`/restart remove it like any particle. |
 | `img/die0_*` | It is not drawn; its trail is, fading as before. |
 | `pp/local/die1`, `pp/*/die0` meshes | Trails are baked and drawn in the order of their particles: a death that moves the last particle into a freed slot moves its trail along. |
-| `pp/maxp` | It holds its slot against `maxParticles`. |
+| `pp/maxp/*` | It holds its slot against `maxParticles`. |
 | `pp/ratio`, `pp/ratiobig/*` | The ratio selects a particle when a seeded draw is below it (one draw per particle seed; the 0.25 selection is a subset of the 0.5 one); particles without a trail leave at death. |
 | `pp/setparticles`, `pp/killlife` | `SetParticles` removes a particle written at zero or negative lifetime, a carrier included, with its trail at once, whatever `dieWithParticles` says: the trail does not fade. |
-| `pp/collision` | A particle killed by a collision (lifetime loss) shows zero lifetime and its bounced velocity for one update; the next update makes it a carrier at rest where it was. |
+| `pp/collision/*` | A particle killed by a collision, by lifetime loss or by speed, with or without trails, shows zero lifetime and its bounced velocity for one update; the next update removes it (or makes it a carrier at rest where it was), and its Death sub-emitters fire then. |
 | `pp/deathsub` | Death sub-emitters fire when the particle dies, not when its trail ends (same with `dieWithParticles` true). |
 | `ribbon/*` | Ribbons keep no dead particles; `dieWithParticles` changes nothing. |
 | `played/*` | Played over frames the same holds; the stop callback comes when the last carrier leaves. |
@@ -50,22 +51,23 @@ Everything below is measured in this release, not documented.
 ## Known differences (`known.json`)
 
 Listed by exact key and class with its reason; the comparator prints each as KNOWN and fails on
-any other difference. None is caused by the death handling above; each is also seen with
-`dieWithParticles` on or while every particle lives, except `world-trail-death-head`:
+any other difference. Two concern dead particles, `world-trail-death-head` and the carrier part of
+`rate-at-capacity`; the others also show with `dieWithParticles` on or while every particle lives:
 
 - `newborn-trail-quad`: a newborn trail whose points still coincide gets its first quad across
   another direction in Unity (images `die1_9`, `world_9`).
-- `death-child-age`: the separate Death sub-emitter child age residual.
+- `death-child-age`: the separate Death sub-emitter child age residual (also after a speed kill).
 - `ribbon-order`: particles of one burst (equal ages) are joined in an order Unbound does not
   reproduce.
-- `rate-at-capacity`: short trails of rate births sample other points, and a rate birth after a
-  carrier leaves a full buffer comes one step later in Unbound.
+- `rate-at-capacity`: short trails of rate births sample other points (`die0` and `die1`); with
+  `dieWithParticles` off a rate birth into the slot a leaving carrier frees comes one step later in
+  Unbound (the `die1` control matches every particle).
 - `collision-bounce-trail`: trail points around a bounce.
 - `world-trail-death-head`: with world-space trails behind a moving emitter in local simulation
   space, a dead particle's trail ends at its newest point in Unity, at its last head in Unbound
   (image `world_13`); with world simulation space both end at the last head
   (tests/projects/particlestreams `trail.22`).
 
-Unmeasured: other releases, trigger kills of trailed particles, `SetTrails` after carriers were
+Unmeasured: other releases, trigger kills of trailed particles, a speed kill that also loses lifetime, `SetTrails` after carriers were
 dropped, trail texture modes on fading trails, `BakeMesh` of carriers (Unbound bakes what it
 draws).
