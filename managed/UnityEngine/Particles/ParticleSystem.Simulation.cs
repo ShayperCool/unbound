@@ -313,6 +313,9 @@ namespace UnityEngine
             bool planned = emit && (m_UseRateBatch ? PlanRate(t0, dt, duration, rateRandom) : PlanConstantRate(t0, dt, duration));
             m_CollectRateBatch = m_UseRateBatch && m_StepRateBirths > 0;
             int guard = 0;
+            var segment = BurstSegment.Within;
+            m_StepBursts.Clear();
+            m_StepBurstAge = float.PositiveInfinity;
             while (t1 >= duration && guard++ < 10000)
             {
                 if (!m_Main.loop)
@@ -320,7 +323,9 @@ namespace UnityEngine
                     if (emit)
                     {
                         EmitRate(t0, duration, false, 0f, duration, rateRandom);
-                        EmitOver(t0, duration, 0f, step, distance * ((duration - t0) / step));
+                        CollectBursts(t0, duration, step, segment, duration);
+                        EmitStepBursts(duration);
+                        EmitOverDistance(t0, duration, 0f, step, distance * ((duration - t0) / step));
                     }
                     if (planned) m_RateAccumulator = m_StepRateRemainder;
                     m_Time = duration;
@@ -331,18 +336,22 @@ namespace UnityEngine
                 if (emit)
                 {
                     EmitRate(t0, duration, false, rest, duration, rateRandom);
-                    EmitOver(t0, duration, rest, step, distance * ((duration - t0) / step));
+                    CollectBursts(t0, duration, step, BurstSegment.BeforeWrap, duration);
+                    EmitOverDistance(t0, duration, rest, step, distance * ((duration - t0) / step));
                 }
                 m_Loop++;
                 CarryEmissionPhase(duration);
                 Array.Clear(m_BurstCycles, 0, m_BurstCycles.Length);
                 t0 = 0f;
                 t1 = rest;
+                segment = BurstSegment.AfterWrap;
             }
             if (emit)
             {
                 EmitRate(t0, t1, true, 0f, duration, rateRandom);
-                EmitOver(t0, t1, 0f, step, distance * ((t1 - t0) / step));
+                CollectBursts(t0, t1, step, segment, duration);
+                EmitStepBursts(t1);
+                EmitOverDistance(t0, t1, 0f, step, distance * ((t1 - t0) / step));
             }
             if (planned) m_RateAccumulator = m_StepRateRemainder;
             m_Time = t1;
@@ -674,39 +683,113 @@ namespace UnityEngine
             m_SpeedNt = -1f;
         }
 
-        /// <summary>Distance and burst emission for the playback time (a, b), plus
-        /// <paramref name="extraAge"/> (the step's time after b). A burst fires in the step its time
-        /// falls in, its first cycle aged from that time, its repeats aged the whole step (measured).</summary>
-        void EmitOver(float a, float b, float extraAge, float step, float distance)
+        /// <summary>Where a step's playback time span lies relative to the loop end: inside one loop,
+        /// before a wrap the step crosses (the span ends at the duration), or after one.</summary>
+        enum BurstSegment : byte { Within, BeforeWrap, AfterWrap }
+
+        /// <summary>A burst due in the current step: its count and start-speed time; its own age
+        /// within the step decides the age every burst of the step shares.</summary>
+        struct StepBurst { internal int count; internal float speedNt; }
+        readonly System.Collections.Generic.List<StepBurst> m_StepBursts = new();
+        float m_StepBurstAge;
+
+        /// <summary>The time past the loop end that a crossing step's first part is measured to,
+        /// in seconds: a step that starts that long before the end ages the bursts of its first
+        /// part by half the step (6000.0.71f1, tests/projects/particleburstloop edge/*).</summary>
+        const float BurstWrapMargin = 0.0001f;
+
+        /// <summary>Collects the bursts due in the playback time span (a, b) of a step of
+        /// <paramref name="step"/> seconds (Unity 6000.0.71f1, tests/projects/particleburstloop):
+        /// a burst fires in the step its time falls in, a repeat also at the span's end, none past
+        /// the duration, except that a burst whose own time is the duration fires in a step crossing
+        /// the loop end (a non-looping system never emits it). Its age within the step: the time
+        /// since it was due inside one loop; across the loop end each part of the step stands for
+        /// the whole step, the part before the end measured to <see cref="BurstWrapMargin"/>
+        /// past it; repeats are aged the whole step. Probability and count are drawn here, in
+        /// list order.</summary>
+        void CollectBursts(float a, float b, float step, BurstSegment segment, float duration)
+        {
+            var bursts = m_Emission.bursts;
+            if (bursts.Count == 0) return;
+            if (m_BurstCycles.Length != bursts.Count) Array.Resize(ref m_BurstCycles, bursts.Count);
+            bool endIncluded = segment == BurstSegment.BeforeWrap;
+            for (int i = 0; i < bursts.Count; i++)
+            {
+                var burst = bursts[i];
+                int cycles = burst.cycleCount; // 0: forever
+                float interval = Mathf.Max(burst.m_RepeatInterval, 0.0001f);
+                int c = m_BurstCycles[i];
+                while (cycles == 0 || c < cycles)
+                {
+                    float at = burst.m_Time + c * interval;
+                    if (c == 0 ? (endIncluded ? at > b : at >= b) : at > b || at >= duration) break;
+                    if (burst.probability >= 1f || burst.probability > 0f && NextEmissionValue() < burst.probability)
+                    {
+                        int count = BurstCount(burst.m_Count, at / duration);
+                        float age = c > 0 ? step
+                            : segment == BurstSegment.BeforeWrap ? step * ((b + BurstWrapMargin - at) / (b + BurstWrapMargin - a))
+                            : segment == BurstSegment.AfterWrap ? step * ((b - at) / b)
+                            : b - at;
+                        m_StepBurstAge = Mathf.Min(m_StepBurstAge, age);
+                        if (count > 0) m_StepBursts.Add(new StepBurst { count = count, speedNt = Mathf.Clamp01(at / duration) });
+                    }
+                    c++;
+                    if (cycles == 0 && c > 100000) break;
+                }
+                m_BurstCycles[i] = c;
+            }
+        }
+
+        /// <summary>The burst list changed through the emission module: each burst counts the
+        /// cycles due before the current playback time as fired (a first cycle is due before its
+        /// time is reached, a repeat once it is), so a burst still ahead in this loop fires when
+        /// the time reaches it (6000.0.71f1, tests/projects/particlecurves sim/*/c: a burst set
+        /// at the duration after 0.74 s fires at the loop end). That a burst already passed in
+        /// this loop waits for the next one is Unbound's choice (unmeasured).</summary>
+        internal void BurstsChanged()
+        {
+            var bursts = m_Emission.bursts;
+            if (m_BurstCycles.Length != bursts.Count) m_BurstCycles = new int[bursts.Count];
+            for (int i = 0; i < bursts.Count; i++)
+            {
+                var burst = bursts[i];
+                int cycles = burst.cycleCount; // 0: forever
+                float interval = Mathf.Max(burst.m_RepeatInterval, 0.0001f);
+                int c = 0;
+                while ((cycles == 0 || c < cycles) && c < 100000)
+                {
+                    float at = burst.m_Time + c * interval;
+                    if (c == 0 ? at >= m_Time : at > m_Time) break;
+                    c++;
+                }
+                m_BurstCycles[i] = c;
+            }
+        }
+
+        /// <summary>Emits the step's bursts, in the order they were collected, all aged as the
+        /// youngest of them (measured: two bursts due in one step share their age) and born at the
+        /// step's end, <paramref name="birthTime"/>, in its loop. They are initialized as one batch
+        /// with the step's rate births (see <see cref="FlushRateBatch"/>), also without any:
+        /// particleburstloop measures the batch's slot order for bursts alone.</summary>
+        void EmitStepBursts(float birthTime)
+        {
+            bool collect = m_CollectRateBatch;
+            m_CollectRateBatch = m_UseRateBatch;
+            foreach (var burst in m_StepBursts)
+            {
+                m_SpeedNt = burst.speedNt;
+                EmitParticles(burst.count, m_StepBurstAge, birthTime, default, false);
+            }
+            m_CollectRateBatch = collect;
+            m_StepBursts.Clear();
+            m_SpeedNt = -1f;
+        }
+
+        /// <summary>Rate-over-distance emission for the playback time (a, b), plus
+        /// <paramref name="extraAge"/> (the step's time after b).</summary>
+        void EmitOverDistance(float a, float b, float extraAge, float step, float distance)
         {
             float duration = Mathf.Max(m_Main.duration, 0.0001f);
-            var bursts = m_Emission.bursts;
-            if (bursts.Count > 0)
-            {
-                if (m_BurstCycles.Length != bursts.Count) Array.Resize(ref m_BurstCycles, bursts.Count);
-                for (int i = 0; i < bursts.Count; i++)
-                {
-                    var burst = bursts[i];
-                    int cycles = burst.cycleCount; // 0: forever
-                    float interval = Mathf.Max(burst.m_RepeatInterval, 0.0001f);
-                    int c = m_BurstCycles[i];
-                    while (cycles == 0 || c < cycles)
-                    {
-                        float at = burst.m_Time + c * interval;
-                        if (at > b || c == 0 && at >= b || at >= duration) break;
-                        if (burst.probability >= 1f || burst.probability > 0f && NextEmissionValue() < burst.probability)
-                        {
-                            int count = BurstCount(burst.m_Count, at / duration);
-                            float age = (c == 0 && !(m_CollectRateBatch && m_Loop > m_RateBatchStartLoop) ? b - at : step) + extraAge;
-                            m_SpeedNt = Mathf.Clamp01(at / duration);
-                            if (count > 0) EmitParticles(count, age, b, default, false);
-                        }
-                        c++;
-                        if (cycles == 0 && c > 100000) break;
-                    }
-                    m_BurstCycles[i] = c;
-                }
-            }
             float perDistance = distance > 0f ? m_Emission.rateOverDistance.Evaluate(Mathf.Clamp01(a / duration), NextEmissionValue()) : 0f;
             if (perDistance > 0f && distance > 0f)
             {

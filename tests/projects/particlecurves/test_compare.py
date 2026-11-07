@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""The burst-at-duration classifier accepts only its measured shape."""
+"""The comparator is strict: every key and value within the particle probes' bound."""
 import sys
 import unittest
 from pathlib import Path
@@ -16,38 +16,30 @@ def record(*particles):
     return [len(particles)] + [v for p in particles for v in p]
 
 
-class BurstAtDuration(unittest.TestCase):
+class Strict(unittest.TestCase):
     def check(self, key, reference, candidate):
         return compare({key: reference, 'complete': [1]}, {key: candidate, 'complete': [1]})
 
-    def test_accepts_the_last_two_missing(self):
-        passing, known, failures = self.check('sim/0/c', record(P, Q, BURST, BURST), record(P, Q))
-        self.assertEqual((passing, len(known), failures), (1, 1, []))
+    def test_equal_records_pass(self):
+        passing, failures = self.check('sim/0/c', record(P, Q, BURST, BURST), record(P, Q, BURST, BURST))
+        self.assertEqual((passing, failures), (2, []))
 
-    def test_rejects_a_changed_particle(self):
+    def test_missing_burst_particles_fail(self):
+        # The burst at the loop end is no longer a known difference.
+        _, failures = self.check('sim/0/c', record(P, Q, BURST, BURST), record(P, Q))
+        self.assertEqual(len(failures), 1)
+
+    def test_a_value_outside_the_bound_fails(self):
         changed = list(Q)
-        changed[1] = 0.6
-        _, known, failures = self.check('sim/0/c', record(P, Q, BURST, BURST), record(P, changed))
-        self.assertEqual((len(known), len(failures)), (0, 1))
-
-    def test_rejects_another_count(self):
-        _, known, failures = self.check('sim/0/c', record(P, Q, BURST, BURST), record(P))
-        self.assertEqual((len(known), len(failures)), (0, 1))
-        _, known, failures = self.check('sim/0/c', record(P, Q, BURST, BURST), record(P, Q, BURST))
-        self.assertEqual((len(known), len(failures)), (0, 1))
-
-    def test_rejects_dropped_particles_older_than_kept_ones(self):
-        _, known, failures = self.check('sim/0/c', record(P, Q, Q, Q), record(P, Q))
-        self.assertEqual((len(known), len(failures)), (0, 1))
-
-    def test_rejects_other_keys(self):
-        _, known, failures = self.check('sim/0/b', record(P, Q, BURST, BURST), record(P, Q))
-        self.assertEqual((len(known), len(failures)), (0, 1))
-        _, known, failures = self.check('module/main.startSize/const/none', record(P, Q, BURST, BURST), record(P, Q))
-        self.assertEqual((len(known), len(failures)), (0, 1))
+        changed[3] += 0.002
+        _, failures = self.check('sim/0/b', record(P, Q), record(P, changed))
+        self.assertEqual(len(failures), 1)
+        changed[3] = Q[3] + 0.0005
+        _, failures = self.check('sim/0/b', record(P, Q), record(P, changed))
+        self.assertEqual(failures, [])
 
     def test_missing_and_extra_keys_fail(self):
-        passing, known, failures = compare({'a': [1], 'complete': [1]}, {'b': [1], 'complete': [1]})
+        _, failures = compare({'a': [1], 'complete': [1]}, {'b': [1], 'complete': [1]})
         self.assertEqual(sorted(f[1] for f in failures), ['extra', 'missing'])
 
 

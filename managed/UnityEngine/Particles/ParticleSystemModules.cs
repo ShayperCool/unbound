@@ -107,6 +107,7 @@ namespace UnityEngine
                     value = Math.Max(0, value);
                     while (D.bursts.Count > value) D.bursts.RemoveAt(D.bursts.Count - 1);
                     while (D.bursts.Count < value) D.bursts.Add(new Burst(0f, (short)30));
+                    m_ParticleSystem.BurstsChanged();
                 }
             }
 
@@ -115,8 +116,9 @@ namespace UnityEngine
             public void SetBursts(Burst[] bursts, int size)
             {
                 D.bursts.Clear();
-                if (bursts == null) return;
-                for (int i = 0; i < size && i < bursts.Length; i++) D.bursts.Add(bursts[i].Stored());
+                if (bursts != null)
+                    for (int i = 0; i < size && i < bursts.Length; i++) D.bursts.Add(bursts[i].Stored());
+                m_ParticleSystem.BurstsChanged();
             }
 
             public int GetBursts(Burst[] bursts)
@@ -131,6 +133,7 @@ namespace UnityEngine
             {
                 if (index < 0 || index >= D.bursts.Count) throw new IndexOutOfRangeException("Burst index out of range.");
                 D.bursts[index] = burst.Stored();
+                m_ParticleSystem.BurstsChanged();
             }
 
             public Burst GetBurst(int index)
