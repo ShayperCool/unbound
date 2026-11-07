@@ -19,7 +19,11 @@ public class AmbientProbe : MonoBehaviour
     readonly StringBuilder m_Out = new StringBuilder();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
-    static void Run() => new GameObject("AmbientProbe").AddComponent<AmbientProbe>();
+    static void Run()
+    {
+        if (System.Environment.GetEnvironmentVariable("AMBIENT_SUN_CONTROLS") == null)
+            new GameObject("AmbientProbe").AddComponent<AmbientProbe>();
+    }
 
     static string F(float v) => v.ToString("R", CultureInfo.InvariantCulture);
     void Record(string kind, string body) => m_Out.Append("{\"case\":\"").Append(kind).Append("\",").Append(body).Append("}\n");

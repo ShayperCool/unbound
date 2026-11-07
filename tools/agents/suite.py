@@ -312,8 +312,7 @@ def recipes(release):
     R['blendshapes'] = classic('BLEND_PROBE_OUT', 'out', ['--frames', '600', '--size', '320x180', '--no-watch'],
                                images=True)
     R['grass'] = classic('GRASS_PROBE_OUT', 'out', ['--frames', '600', '--size', '320x180', '--no-watch'], images=True)
-    R['ambient'] = classic('AMBIENT_PROBE_OUT', 'out', ['--frames', '600', '--size', '320x180', '--no-watch'],
-                           images=True)
+    R['ambient'] = declared('ambient', release)
     R['xr'] = classic('XR_PROBE_OUT', 'out', ['--frames', '300', '--size', '320x180', '--no-watch'])
     R['wind'] = classic('WIND_PROBE_OUT', 'out', ['--frames', '100000', '--size', '320x180', '--no-watch'])
     for name, variable in [('vehicles', 'VEHICLES_PROBE_OUT'), ('joints', 'JOINTS_PROBE_OUT'),

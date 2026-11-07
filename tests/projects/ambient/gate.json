@@ -1,0 +1,6 @@
+{
+  "commands": [
+    "python3 tests/projects/ambient/run.py gate --release \"$UNBOUND_PROBE_UNITY_VERSION\" --label gate-$(date +%s%N)"
+  ],
+  "summary": "ambient strict gate: [0-9]+ failing values"
+}
