@@ -2189,7 +2189,7 @@ namespace UnityEngine
                 {
                     p.m_StartLifetime *= parentLife;
                     p.m_Lifetime = p.m_StartLifetime;
-                    p.m_InvStartLifetime = 1f / p.m_StartLifetime;
+                    p.m_InvStartLifetime = StartLifetimeReciprocal(p.m_StartLifetime);
                     p.m_AgePercent = 0f;
                     if (p.m_Lifetime <= 0f)
                     {
