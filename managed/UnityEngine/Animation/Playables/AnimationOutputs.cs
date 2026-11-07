@@ -543,7 +543,8 @@ namespace Unbound.Runtime.Playables
             foreach (var (o, _, _) in outputs)
                 if (o.Source != null) e.Bind(o.Source);
             var result = AnimStream.Rent(bindings);
-            var withController = animator.m_Player != null && animator.isActiveAndEnabled;
+            var evaluatedPlayer = animator.m_Player;
+            var withController = evaluatedPlayer != null && animator.isActiveAndEnabled;
             e.MotionMode = MotionModeOf(animator);
             var motion = RootMotionStep.Zero;
             float motionDeltaTime = (float)outputs[0].Dt;
@@ -607,7 +608,7 @@ namespace Unbound.Runtime.Playables
             if (animator.isActiveAndEnabled)
                 AnimationOutputs.RememberCulled(animator, result, motion, motionDeltaTime, e.MotionMode, e.PlayableIK, e.VisibilityEvents(outputs), outputs.Exists(o => o.Output.Graph.UpdateMode == DirectorUpdateMode.Manual));
             else AnimStream.Return(result);
-            if (withController) animator.m_Player.Ticked = true;
+            if (withController) evaluatedPlayer.Ticked = true;
             e.AfterWrite();
         }
 

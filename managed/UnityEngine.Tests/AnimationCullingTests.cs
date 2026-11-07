@@ -637,6 +637,50 @@ namespace UnityEngine.Tests
             finally { graph.Destroy(); }
         }
 
+        public class ChangeControllerDuringMove : MonoBehaviour
+        {
+            public RuntimeAnimatorController Replacement;
+            public int Moves, Events;
+            void OnAnimatorMove()
+            {
+                Moves++;
+                GetComponent<Animator>().runtimeAnimatorController = Replacement;
+            }
+            void OnClipEvent() => Events++;
+        }
+
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void MovementCallbacksCanRemoveOrReplaceTheControllerWithoutLosingEvents(bool replace)
+        {
+            var (animator, _, _) = Rig(AnimatorCullingMode.AlwaysAnimate);
+            var receiver = animator.gameObject.AddComponent<ChangeControllerDuringMove>();
+            if (replace) receiver.Replacement = (RuntimeAnimatorController)Load(AnimationFixtures.PopupButton).Objects[9100000];
+            var graph = PlayableRig(animator, out var playable);
+            var clip = playable.GetAnimationClip();
+            clip.AddEvent(new AnimationEvent { time = 0.05f, functionName = "OnClipEvent" });
+            var logs = new List<string>();
+            var logger = Debug.unityLogger;
+            var previous = logger.logHandler;
+            logger.logHandler = new ExceptionCapture(logs);
+            try
+            {
+                graph.Evaluate(0.1f);
+                Assert.Empty(logs);
+                Assert.Equal(1, receiver.Moves);
+                Assert.Equal(1, receiver.Events);
+                Assert.Same(receiver.Replacement, animator.runtimeAnimatorController);
+                if (replace) Assert.False(animator.m_Player.Ticked);
+                else Assert.Null(animator.m_Player);
+            }
+            finally
+            {
+                logger.logHandler = previous;
+                graph.Destroy();
+            }
+        }
+
         [Fact]
         public void ASharedPlayableStillAdvancesForAnUnculledOutput()
         {
