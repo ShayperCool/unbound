@@ -120,9 +120,10 @@ namespace Unbound.Runtime
         /// tests/projects/particlerandom. Other releases retain their previous path.</summary>
         internal static bool ParticleBirthStepsMeasured => Release == (6000, 0, 71, 'f', 1);
 
-        /// <summary>Constant-lifetime Birth inheritance during Simulate, measured by
-        /// tests/projects/particlerandom. Other releases retain the fraction path.</summary>
-        internal static bool ParticleBirthLifetimeMeasured => Release == (6000, 0, 71, 'f', 1);
+        /// <summary>Start lifetimes take a reciprocal estimate with two Newton corrections
+        /// instead of a correctly rounded division, measured by tests/projects/particlerandom
+        /// (birthclock/, model/clock/). Other releases keep the division until measured.</summary>
+        internal static bool ParticleLifetimeReciprocalEstimate => Release == (6000, 0, 71, 'f', 1);
 
         /// <summary>6000.0's BakeTrailsMesh joins ribbon strips in its index count and rejects
         /// the resulting out-of-bounds indices. Regular ribbon rendering is unaffected.</summary>

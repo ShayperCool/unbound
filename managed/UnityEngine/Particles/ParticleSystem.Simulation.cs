@@ -908,10 +908,7 @@ namespace UnityEngine
             p.m_StartColor = color;
             p.m_StartLifetime = lifetime;
             p.m_Lifetime = lifetime;
-            p.m_InvStartLifetime = Unbound.Runtime.Compat.ParticleBirthLifetimeMeasured
-                && M.startLifetime.mode == ParticleSystemCurveMode.Constant
-                && m_SubEmitters.enabled && HasSubEmitters(ParticleSystemSubEmitterType.Birth)
-                    ? BirthLifetimeReciprocal(lifetime) : 1f / lifetime;
+            p.m_InvStartLifetime = StartLifetimeReciprocal(lifetime);
             p.m_AgePercent = 0f;
             p.m_Flags |= Particle.FlagAgeInitialized;
             return lifetime > 0f;
@@ -2107,16 +2104,15 @@ namespace UnityEngine
         /// are not emitted).</para></summary>
         void EmitFromParent(ParticleSystem parentSystem, ref Particle parent, ParticleSystemSubEmitterProperties properties, int count, float preAge, bool eventEmission = false, float birthCatchup = -1f, float birthSpacing = 0f, Vector3 birthVelocity = default, System.Collections.Generic.List<BirthEmission> birthRequests = null)
         {
-            // The measured constant-lifetime Birth controls skip an emission whose
-            // remaining call time reaches its lifetime bound, without consuming start samples.
+            // A Simulate Birth emission whose remaining call time reaches the child's own
+            // start-lifetime bound is skipped before it consumes start samples (measured
+            // for constant child lifetimes, with and without inheritance: the bound is the
+            // start lifetime before InheritLifetime scales it; a two-constant child loses
+            // one more child in Unity in a long call, open). Curve
+            // lifetimes and lifetime by emitter speed have no such bound here: their
+            // children are initialized and expire during the catch-up instead (unmeasured).
             var lifetime = m_Main.startLifetime;
-            bool constantBirthLifetime = birthCatchup >= 0f && Unbound.Runtime.Compat.ParticleBirthLifetimeMeasured
-                && lifetime.mode == ParticleSystemCurveMode.Constant
-                && parentSystem.m_Main.startLifetime.mode == ParticleSystemCurveMode.Constant
-                && !m_LifetimeByEmitterSpeed.enabled && !parentSystem.m_LifetimeByEmitterSpeed.enabled
-                && float.IsFinite(parent.m_StartLifetime);
             if (birthCatchup >= 0f && !m_LifetimeByEmitterSpeed.enabled
-                && ((properties & ParticleSystemSubEmitterProperties.InheritLifetime) == 0 || constantBirthLifetime)
                 && (lifetime.mode == ParticleSystemCurveMode.Constant || lifetime.mode == ParticleSystemCurveMode.TwoConstants)
                 && birthCatchup >= lifetime.MaxValue) return;
             var origin = parentSystem.SimulationToWorld().MultiplyPoint3x4(parent.m_Position);
@@ -2149,13 +2145,12 @@ namespace UnityEngine
             Color parentColor = parentSystem.CurrentColor(ref parent);
             var parentSize = parentSystem.CurrentSize3D(ref parent);
             var parentRotation = parent.m_Rotation;
-            float parentLife = eventEmission ? Mathf.Max(parent.m_Lifetime, 0f)
-                : parent.m_StartLifetime > 0f ? parent.m_Lifetime / parent.m_StartLifetime : 0f;
-            // Constant Birth lifetimes in 6000.0.71f1 use the parent's remaining
-            // seconds after this integration step. Every child in the batch shares
-            // that multiplier, including rate births with different initial ages.
-            if (constantBirthLifetime)
-                parentLife = Mathf.Max(parent.m_Lifetime, 0f);
+            // InheritLifetime multiplies by the parent's remaining seconds after its
+            // integration step, for every event type, in Simulate and in Play, whatever
+            // the parent's and child's lifetime modes (6000.0.71f1, particlerandom
+            // birthlife/ and model/inherit/). Every child of one emission shares it,
+            // including rate births with different initial ages.
+            float parentLife = Mathf.Max(parent.m_Lifetime, 0f);
             EmitParams none = default;
             var context = MakeContext();
             int requestIndex = 0, requestStart = 0;
@@ -2207,6 +2202,10 @@ namespace UnityEngine
                     bool alive = true;
                     if (birthCatchup >= 0f)
                     {
+                        // Approximation (unmeasured, open): every catch-up step reuses the
+                        // context made once for this emission, so system-time curves (gravity
+                        // modifier, system-time module curves) and the emitter's transform stay
+                        // those of the emission instead of following each catch-up step.
                         float remaining = birthCatchup;
                         float step = Mathf.Max(Time.fixedDeltaTime, 0.0001f);
                         for (int guard = 0; remaining >= step && guard < 100000; guard++)

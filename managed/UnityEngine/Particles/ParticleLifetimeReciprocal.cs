@@ -4,14 +4,23 @@ namespace UnityEngine
 {
     public sealed partial class ParticleSystem
     {
+        /// <summary>The inverse start lifetime a new particle's age clock advances by. In
+        /// 6000.0.71f1 every start lifetime takes the estimate below, whatever its mode,
+        /// sub-emitters or playback path (particlerandom birthclock/ and model/clock/:
+        /// 0.613 exports as 0.613000035 and 2.9 as 2.89999986). Other releases keep the
+        /// correctly rounded division until measured.</summary>
+        static float StartLifetimeReciprocal(float lifetime) =>
+            Unbound.Runtime.Compat.ParticleLifetimeReciprocalEstimate ? LifetimeReciprocalEstimate(lifetime) : 1f / lifetime;
+
         // The measured 6000.0.71f1 initialization uses a 12-bit reciprocal estimate,
         // then two separately rounded Newton corrections. The first uses 2 + 2 ulps.
         // Its inverse lifetime can differ from correctly rounded division by one ulp,
-        // which changes Birth rate boundaries. Keep the Linux estimate on every CPU.
-        // Each entry is the upper twelve mantissa bits for an input in [1, 2),
-        // indexed by its upper twelve mantissa bits. Exponents scale independently.
-        // The seed table records RCPPS on the reference host, not particle fixtures.
-        static float BirthLifetimeReciprocal(float lifetime)
+        // which changes emission boundaries and expiry steps. Keep the Linux estimate
+        // on every CPU. Each entry is the upper twelve mantissa bits for an input in
+        // [1, 2), indexed by its upper twelve mantissa bits. Exponents scale
+        // independently. The seed table records RCPPS on the reference host, not
+        // particle fixtures.
+        static float LifetimeReciprocalEstimate(float lifetime)
         {
             int bits = BitConverter.SingleToInt32Bits(lifetime);
             int exponent = (bits >> 23) & 255;
@@ -20,9 +29,12 @@ namespace UnityEngine
             int index = ((bits & 0x7fffff) >> 11) * 2;
             int mantissa = s_ReciprocalSeeds[index] | s_ReciprocalSeeds[index + 1] << 8;
             float estimate = BitConverter.Int32BitsToSingle(((253 - exponent) << 23) | mantissa << 11);
-            estimate *= 2.000000476837158f - lifetime * estimate;
+            estimate *= FirstNewtonTwo - lifetime * estimate;
             return estimate * (2f - lifetime * estimate);
         }
+
+        /// <summary>2 + 2 ulps (0x40000002): the first Newton correction's constant.</summary>
+        const float FirstNewtonTwo = 2.000000476837158f;
 
         static readonly byte[] s_ReciprocalSeeds = Convert.FromBase64String(
             "/g/8D/sP+Q/3D/UP8w/xD+8P7Q/sD+oP6A/mD+QP4g/eD9wP2w/ZD9cP1Q/TD9EPzw/ND8wPyg/ID8YPxA/CD78PvQ+8D7oPuA+2D7QPsg+wD64PrQ+rD6kP" +
