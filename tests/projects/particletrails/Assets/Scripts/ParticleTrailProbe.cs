@@ -291,14 +291,20 @@ public class ParticleTrailProbe : MonoBehaviour
         });
         Done(clear);
 
-        // A cap of four particles under a steady rate: do fading trails hold slots?
-        var cap = Make("pp/maxp/die0", s =>
+        // A cap of four particles under a steady rate: do fading trails hold slots? And the same
+        // with trails that die with their particles.
+        foreach (bool die in new[] { false, true })
         {
-            var m = s.main; m.maxParticles = 4; m.loop = true; m.startLifetime = 0.3f;
-            var e = s.emission; e.rateOverTime = 20f; e.SetBursts(new ParticleSystem.Burst[0]);
-        });
-        Run("pp/maxp/die0", cap);
-        Done(cap);
+            string key = "pp/maxp/" + (die ? "die1" : "die0");
+            var cap = Make(key, s =>
+            {
+                var m = s.main; m.maxParticles = 4; m.loop = true; m.startLifetime = 0.3f;
+                var e = s.emission; e.rateOverTime = 20f; e.SetBursts(new ParticleSystem.Burst[0]);
+                var t = s.trails; t.dieWithParticles = die;
+            });
+            Run(key, cap);
+            Done(cap);
+        }
 
         // A looping system: newborns taking the slots fading trails free.
         var loop = Make("pp/loop/die0", s =>
@@ -342,6 +348,38 @@ public class ParticleTrailProbe : MonoBehaviour
         });
         Run("pp/collision/die0", collide);
         Done(collide);
+
+        // Controls: trails that die with their particles, no trails, and a kill by speed (speed 2
+        // below minKillSpeed 3) with a Death sub-emitter.
+        foreach (var (name, trails, die, speedKill) in new[] { ("die1", true, true, false), ("notrail", false, false, false), ("speedkill", false, false, true) })
+        {
+            string key = "pp/collision/" + name;
+            var root = new GameObject(key + "/root");
+            var ps = Make(key, s =>
+            {
+                var m = s.main; m.startLifetime = 2f;
+                var c = s.collision; c.enabled = true; c.type = ParticleSystemCollisionType.Planes; c.SetPlane(0, plane);
+                c.bounce = 1f; c.dampen = 0f;
+                if (speedKill) c.minKillSpeed = 3f; else c.lifetimeLoss = 1f;
+                var t = s.trails; t.enabled = trails; t.dieWithParticles = die;
+            }, root.transform);
+            ParticleSystem child = null;
+            if (speedKill)
+            {
+                child = Make(key + "/child", s =>
+                {
+                    var m = s.main; m.startLifetime = 5f; m.startSpeed = 0f;
+                    var sh = s.shape; sh.enabled = false;
+                    var e = s.emission; e.SetBursts(new[] { new ParticleSystem.Burst(0f, (short)1) });
+                    var t = s.trails; t.enabled = false;
+                }, ps.transform);
+                var sub = ps.subEmitters;
+                sub.enabled = true;
+                sub.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            }
+            Run(key, ps, extra: i => { if (child != null) RecordState(key + "/" + i + "/child", child); });
+            DestroyImmediate(root);
+        }
         DestroyImmediate(plane.gameObject);
 
         // A restart while trails fade.
