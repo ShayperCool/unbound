@@ -30,8 +30,8 @@ What still differs, and why:
 
 - `noise`: Unity's noise field is its own function; Unbound's moves particles differently.
 - `external_forces_rotation`: force field rotation is not simulated (Unbound warns).
-- `sub_emitters_child`, `sub_emitters_birth_child`: in `Simulate`, sub-emitter particles start a
-  little older in Unity than in Unbound (by about a frame's delta), not yet understood.
+- `sub_emitters_child`: Death children retain their separate `Simulate` age residual.
+  Birth origin/age controls are described in `../particlerandom/README.md`.
 - `simulate_long_call`, `set_particles`: a single long `Simulate` from a restart splits its time
   so that Unity's clock ends one float step lower, and the particle due exactly at the end is one
   step later.
@@ -86,3 +86,15 @@ and all 17 images are byte-identical, apart from the existing ignored wall-clock
 fields. The broad comparator still retains 305 failures. First child age stays
 functional and open. The earlier precision ledger and all its raw records remain
 unchanged; no tolerance or ignore rule was added.
+
+## Original Birth time-rate gate
+
+Run the engine-only gate with an explicit Editor release:
+
+    python3 tests/projects/particles/check_birth.py --unity-version "$UNBOUND_PROBE_UNITY_VERSION"
+
+It uses the unchanged broad comparator and canonical reference for both original
+Birth scenarios, keeping every missing/extra/failing record and raw value. Other
+broad module residuals remain visible in the full comparator and image comparison.
+The independent boundary and active-interval controls are in particlerandom's
+Birth time-rate extension. No original reference value or tolerance is changed.

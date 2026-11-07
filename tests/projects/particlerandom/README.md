@@ -233,7 +233,7 @@ certified by these measurements. Other Unity releases remain unmeasured.
 
 ## Birth time-rate intervals, P7
 
-The extension records 755 controls twice independently in Unity 6000.0.71f1 and
+The extension records 817 controls twice independently in Unity 6000.0.71f1 and
 retains all 2491 prior keys unchanged. New systems use deterministic seeds, no
 shape, and an enabled zero rotation module to isolate angular context. Controls
 measure counts, exact seed halves, positions, remaining lifetimes and clocks.
@@ -255,3 +255,28 @@ are retained. New `birthrate/original` reproduces these values with angular
 state isolated. `below` and `above` select 9.999/s and 10.001/s, with separate
 1.013 s and 0.4 s parent lifetime controls, one/three parents, a fractional 7/s
 rate, split/single calls, expiry, stop/clear, and child delay/duration controls.
+
+The measured implementation uses per-parent active intervals after the child's
+start delay and before a nonlooping child's duration. Exported parent ages select
+rate boundaries, with the initial interval limited to the newborn's integration
+span. Fractional count carry stays on each parent and the P6 initialization batch,
+origin, age and random-draw paths remain separate. This arithmetic is a measured
+6000.0.71f1 scheduling rule, not a guarantee in the Unity documentation.
+
+In both delay controls the child's shared `time` stays zero while its particles
+age and its per-parent emission interval passes the delay. This is measured for
+0.05 and 0.1 s calls with constant delay 0.073 s, not a general promise about
+all delayed sub-emitter configurations. StopEmitting leaves parent particles to
+emit until expiry; StopEmittingAndClear clears linked particles and subsequent
+non-restarting Simulate calls continue the stopped parent clock. Random start
+delays, rate curves, child loop boundaries, inherited lifetime and nested Birth
+chains remain outside this extension's measurements.
+
+The extended expiry captures also retain 26 raw buffer permutations. For
+`birthrate/{original,below,above,lifetime04,stop}/child`, these are `17`,
+`end/0.05/18` and `end/0.2/19`. For `birthrate/three/child`, they are steps
+9 through 17, `end/0.05/18` and `end/0.2/19`. Every value agrees for every
+unique particle seed, including positions, lifetimes and exact seed halves.
+The comparator reports each original differing index and both full records,
+and accepts these keys only when that complete identity check passes. No engine
+sorting, global phase rule, or buffer-order contract is introduced.

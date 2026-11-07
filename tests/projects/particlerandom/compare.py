@@ -80,6 +80,27 @@ def retained_emit_prefix(key, reference, candidate):
                for particle, source in enumerate(slots) for field in range(PARTICLE_FIELDS))
 
 
+
+def retained_birth_expiry(key, reference, candidate):
+    # Only these measured histories retain older particles in different buffer slots.
+    # Every value must agree by unique seed, with the same counts and tolerances.
+    # The report below still prints every raw differing index and both full records.
+    keys = {f'birthrate/{name}/child/{step}'
+            for name in ('original', 'below', 'above', 'lifetime04', 'stop')
+            for step in ('17', 'end/0.05/18', 'end/0.2/19')}
+    keys.update(f'birthrate/three/child/{step}'
+                for step in [*map(str, range(9, 18)), 'end/0.05/18', 'end/0.2/19'])
+    if key not in keys or reference[0] != candidate[0]:
+        return False
+    def particles(values):
+        return {tuple(values[i:i + 2]): values[i:i + PARTICLE_FIELDS]
+                for i in range(1, len(values), PARTICLE_FIELDS)}
+    expected, actual = particles(reference), particles(candidate)
+    return (len(expected) == len(actual) == reference[0] and expected.keys() == actual.keys()
+            and all(near(key, 1 + field, x, y)
+                    for seed in expected for field, (x, y) in enumerate(zip(expected[seed], actual[seed]))))
+
+
 def main():
     a, b = map(read, sys.argv[1:3])
     keys = sorted(a.keys() | b.keys())
@@ -95,8 +116,9 @@ def main():
             continue
         retained_pair = retained_existing_pair(key, ra, rb)
         emit_prefix = retained_emit_prefix(key, ra, rb)
+        birth_expiry = retained_birth_expiry(key, ra, rb)
         reasons = {i: ('existing-particle death compaction order; values agree by seed'
-                       if retained_pair and 1 <= i <= 66 else
+                       if (retained_pair and 1 <= i <= 66) or (birth_expiry and i >= 1) else
                        'scripted Emit newborn prefix permutation; all fields agree by seed'
                        if emit_prefix and i >= 1 + 9 * PARTICLE_FIELDS else residual(key, i, ra[i], rb[i]))
                    for i in failures}
