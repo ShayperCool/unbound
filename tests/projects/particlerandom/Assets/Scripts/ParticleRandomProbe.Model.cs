@@ -364,9 +364,10 @@ public partial class ParticleRandomProbe
         DestroyImmediate(ps.gameObject);
     }
 
-    // A rate batch's unused final lanes take start values too. The range below zero is
-    // raised by the setter (see LifetimeSetterControls), so every lane starts with some
-    // lifetime and the shortest die within the batch.
+    // Rate batches with very short lifetimes. The range below zero is raised by the setter
+    // (see LifetimeSetterControls), so every lane starts with some lifetime; admitted births
+    // shorter than their age die within the batch. Unused lanes are integrated for almost no
+    // time and survive here; a managed test covers one that starts without lifetime.
     static void UnusedLaneControls()
     {
         foreach (uint seed in Seeds)

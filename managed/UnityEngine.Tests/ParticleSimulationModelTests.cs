@@ -181,9 +181,11 @@ namespace UnityEngine.Tests
         }
 
         [Theory]
-        [InlineData(false)]
-        [InlineData(true)]
-        public void StartLifetimesTakeTheReciprocalEstimateWithOrWithoutSubEmitters(bool measured)
+        [InlineData(true, false)]
+        [InlineData(true, true)]
+        [InlineData(false, false)]
+        [InlineData(false, true)]
+        public void StartLifetimesTakeTheReciprocalEstimateOnTheMeasuredRelease(bool measured, bool deathSubEmitter)
         {
             if (!measured) ProjectInfo.UnityVersion = "2022.3.0f1";
             var ps = Quiet(4242, s =>
@@ -191,6 +193,14 @@ namespace UnityEngine.Tests
                 var m = s.main; m.startLifetime = 0.613f;
                 var e = s.emission; e.rateOverTime = 40f;
             });
+            if (deathSubEmitter)
+            {
+                // An unrelated sub-emitter must not change the clock (particlerandom model/clock/*/death).
+                var child = Quiet(77);
+                child.transform.SetParent(ps.transform, false);
+                var subs = ps.subEmitters; subs.enabled = true;
+                subs.AddSubEmitter(child, ParticleSystemSubEmitterType.Death, ParticleSystemSubEmitterProperties.InheritNothing);
+            }
             try
             {
                 ps.Simulate(0.025f, true, true, false);
@@ -202,6 +212,45 @@ namespace UnityEngine.Tests
                 foreach (var p in particles) Assert.Equal(expected, p.startLifetime);
             }
             finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        /// <summary>One step's rate births: 3 or 4 of a four-lane group. Start lifetimes range
+        /// between two flat curves from -1 s to 10 s, so a lane's own random draw decides
+        /// whether it starts without lifetime (the setter keeps a curve multiplier, not the
+        /// curves). Returns the live particles' seeds.</summary>
+        static uint[] RateBatchSeeds(uint seed, int births)
+        {
+            var ps = Quiet(seed, s =>
+            {
+                var m = s.main;
+                m.startLifetime = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Constant(0f, 1f, -1f),
+                    AnimationCurve.Constant(0f, 1f, 10f));
+                var e = s.emission; e.rateOverTime = births == 3 ? 160f : 210f;
+            });
+            try
+            {
+                ps.Simulate(0.02f, true, true, false);
+                return ParticlesOf(ps).Select(p => p.randomSeed).OrderBy(x => x).ToArray();
+            }
+            finally { Object.DestroyImmediate(ps.gameObject); }
+        }
+
+        [Fact]
+        public void AnUnusedLaneThatStartsWithoutLifetimeKeepsEveryLiveBirth()
+        {
+            // Three births fill three lanes of a four-lane group; the fourth lane draws start
+            // values too. With four births that lane is a birth of its own. When the four-birth
+            // step keeps exactly the three-birth step's particles, the fourth lane started
+            // without lifetime and all three births stayed; dropping a birth for the unused
+            // lane's death would keep only two.
+            int kept = 0;
+            for (uint seed = 1; seed <= 200; seed++)
+            {
+                var four = RateBatchSeeds(seed, 4);
+                var three = RateBatchSeeds(seed, 3);
+                if (four.Length == 3 && three.SequenceEqual(four)) kept++;
+            }
+            Assert.True(kept > 0, "no seed in range starts only the unused lane without lifetime");
         }
 
         [Fact]

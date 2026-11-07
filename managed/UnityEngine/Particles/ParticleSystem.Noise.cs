@@ -68,8 +68,9 @@ namespace UnityEngine
         {
             var n = m_Noise;
             float frequency = Mathf.Max(n.frequency, .000001f);
-            // The playback's seed, like every other system draw (equal to the serialized seed
-            // unless the system seeds itself automatically).
+            // The playback's seed, as the measured sub-emitter draws use (equal to the serialized
+            // seed unless the system seeds itself automatically; the noise offset itself is
+            // unmeasured with automatic seeding).
             var rng = Random.State.FromSeed(unchecked((int)PlaybackSeed));
             var offset = new Vector3(rng.NextValue() * 100f, rng.NextValue() * 100f, rng.NextValue() * 100f);
             var q = p.m_Position + offset;
