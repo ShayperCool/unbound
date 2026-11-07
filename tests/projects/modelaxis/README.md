@@ -68,21 +68,31 @@ expected source lists. The AS3 regression capture retains 306/306 exact slot val
 exact images; MTL 2702/2702 values and 60/60 images within 8/255, 40 exact; UV2 362/384;
 normals 208/264 exact plus the same 56 listed residuals and no gated failures.
 
-## Recovery status
+## Validation and recovery
 
-The last completed release build, at `d952d1f64`, passed all 720 original keys and 178/180
-signed controls. The two remaining signed keys are `U1S1B0H0/Branch/Tip/worldVertices` and
-`U1S1B0H1/Root/Branch/Tip/worldVertices`, each at vertex 3, component X: Native -81.65851,
+The recovery release build passes all 720 original keys and all 180 signed keys at the
+unchanged absolute 1e-5 bound. Consistent static quaternion normalization resolves the two
+previous signed world-vertex failures. All 114 asset-crate tests and all 3110 managed tests
+passed on the recovery base; `gen-stubs` built the handwritten API without stubs and reproduced
+the committed generated files without drift. The landing gate repeats validation after rebase.
+
+The engine-only commands are:
+
+```sh
+python3 tests/projects/modelaxis/run.py unbound --release "$UNBOUND_PROBE_UNITY_VERSION"
+python3 tests/projects/modelaxis/run.py unbound --release "$UNBOUND_PROBE_UNITY_VERSION" --set Signed
+python3 tests/projects/modelaxis/Tools/regress.py --release "$UNBOUND_PROBE_UNITY_VERSION" --label <fresh-label>
+```
+
+Set `UNBOUND_CLI` to the release CLI for all three commands. Recovery captures use labels
+`as3-recovery-axis-20261107`, `as3-recovery-signed-20261107` and
+`as3-recovery-regress-20261107`. They preserve the regression counts above. Build, stub,
+managed and Rust logs are under `~/.cache/unbound/agents/logs/as3-recovery-*-20261107.log`.
+
+The earlier build at `d952d1f64` matched 720/720 original keys and 178/180 signed keys.
+The failing keys were `U1S1B0H0/Branch/Tip/worldVertices` and
+`U1S1B0H1/Root/Branch/Tip/worldVertices`, vertex 3, component X: Native -81.65851,
 engine -81.6585. Their complete raw comparisons remain under `as3-signed-normalized`.
-No comparator or reference was changed. All 114 asset-crate tests passed. The existing model
-regression results above are from `as3-regress`.
-
-Commit `da7d6e8bf` applies quaternion normalization consistently to static FBX nodes, including
-those two unchanged-axis controls. Its release build did not complete, and the managed-test run
-ended without a TRX or terminal summary. These runs are not passes. Final build, all three
-engine-only probe commands, managed/Rust validation, the independent Sol-high review and
-`tools/agents/land.py` remain required. The latest build/test logs are
-`~/.cache/unbound/agents/logs/as3-static-rotation-build.log` and `as3-managed-tests.log`.
-Work stopped with approximately 150 MiB free on the data filesystem and 440 MiB on root;
-all captures and original failures are preserved. Free regenerable build/cache space before
-resuming validation. No engine or probe outputs may be removed as part of that cleanup.
+The first attempt to build consistent static normalization stopped on storage exhaustion;
+that interrupted build and managed run were not counted as passes. All prior captures,
+failures and independent Native repeats remain preserved. No reference or comparator changed.
