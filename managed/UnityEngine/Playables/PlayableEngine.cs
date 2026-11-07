@@ -637,7 +637,8 @@ namespace Unbound.Runtime.Playables
         /// the explicit evaluation that moved them is over (tests/projects/playables), or at the end
         /// of the frame when the player loop moved them, or when they are animation playables
         /// themselves below an animation output: that frame's LateUpdate still sees them not done
-        /// (6000.0.71f1, animculling clock/duration, both update modes).</summary>
+        /// (6000.0.71f1, animculling clock/duration, both update modes; measured for clips, other
+        /// animation playables with a duration follow them unmeasured).</summary>
         readonly List<PlayableNode> m_Finished = new List<PlayableNode>();
         readonly List<PlayableNode> m_FinishedAtFrameEnd = new List<PlayableNode>();
         static readonly List<PlayableGraphData> s_FinishAtFrameEnd = new List<PlayableGraphData>();
