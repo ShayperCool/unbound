@@ -270,7 +270,10 @@ all delayed sub-emitter configurations. StopEmitting leaves parent particles to
 emit until expiry; StopEmittingAndClear clears linked particles and subsequent
 non-restarting Simulate calls continue the stopped parent clock. Random start
 delays, rate curves, child loop boundaries, inherited lifetime and nested Birth
-chains remain outside this extension's measurements.
+chains remain outside this extension's measurements. Infinite parent lifetimes and
+ring age rewinds retain their existing integration-delta rate path; the finite
+exported-age interval measurement does not cover them. A managed regression
+control checks that an infinite parent still emits children with finite histories.
 
 The extended expiry captures also retain 26 raw buffer permutations. For
 `birthrate/{original,below,above,lifetime04,stop}/child`, these are `17`,
