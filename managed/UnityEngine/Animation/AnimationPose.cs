@@ -295,10 +295,12 @@ namespace Unbound.Runtime
         /// <paramref name="humanBodyInRootMotion"/>, additive layers leave a humanoid body's curves to
         /// the root motion pass (see <see cref="CombineLayers"/>). With
         /// <paramref name="skipTransforms"/>, Transforms and humanoid curves are left as they are
-        /// (an Animator culled by CullUpdateTransforms). With <paramref name="stream"/>, captures
+        /// (an Animator culled by CullUpdateTransforms), except <paramref name="rootDuringCull"/>
+        /// when an attached controller restores its output-bound root pose. With <paramref name="stream"/>, captures
         /// the same composed result and bookkeeping without writing the scene.</summary>
         internal static void WriteLayers(AnimationBindings b, LayerPose[] layers, int count, float[] written = null, bool[] held = null,
-            bool humanBodyInRootMotion = false, bool skipTransforms = false, Unbound.Runtime.Playables.AnimStream stream = null)
+            bool humanBodyInRootMotion = false, bool skipTransforms = false, Unbound.Runtime.Playables.AnimStream stream = null,
+            Transform rootDuringCull = null)
         {
             var s = Rent(b);
             try
@@ -349,7 +351,7 @@ namespace Unbound.Runtime
                         }
                     }
                 }
-                if (stream == null) Write(b, s, skipTransforms);
+                if (stream == null) Write(b, s, skipTransforms, rootDuringCull);
                 else
                 {
                     Array.Copy(s.Result, stream.Values, n);
@@ -577,7 +579,7 @@ namespace Unbound.Runtime
         /// <summary>Writes the channels an animation stream animates (playable outputs): their
         /// values as they are, the other channels of their properties as they were.</summary>
         internal static void WriteStream(AnimationBindings b, float[] values, bool[] animated, Object[] objects, bool[] objectAnimated,
-            Transform onlyRoot = null)
+            Transform onlyRoot = null, Transform skipRoot = null)
         {
             var s = Rent(b);
             try
@@ -594,10 +596,11 @@ namespace Unbound.Runtime
                     s.ObjectTouched[c] = objectAnimated[c];
                     s.Objects[c] = objects[c];
                 }
-                if (onlyRoot != null)
+                if (onlyRoot != null || skipRoot != null)
                     foreach (var group in b.Groups)
                     {
-                        if (ReferenceEquals(group.Target, onlyRoot)) continue;
+                        if ((onlyRoot == null || ReferenceEquals(group.Target, onlyRoot))
+                            && (skipRoot == null || !ReferenceEquals(group.Target, skipRoot))) continue;
                         if (group.IsObject) s.ObjectTouched[group.First] = false;
                         else for (int c = group.First; c < group.First + group.Width; c++) s.Touched[c] = false;
                     }
@@ -628,13 +631,13 @@ namespace Unbound.Runtime
             return false;
         }
 
-        static void Write(AnimationBindings b, Scratch s, bool skipTransforms = false)
+        static void Write(AnimationBindings b, Scratch s, bool skipTransforms = false, Transform rootDuringCull = null)
         {
             // The group list may grow while game code runs: iterate what exists now.
             var groups = b.Groups.ToArray();
             foreach (var g in groups)
             {
-                if (!g.Alive || skipTransforms && (g.Target is Transform || g.HumanCurve >= 0)) continue;
+                if (!g.Alive || skipTransforms && ((g.Target is Transform && !ReferenceEquals(g.Target, rootDuringCull)) || g.HumanCurve >= 0)) continue;
                 try
                 {
                     bool changed;

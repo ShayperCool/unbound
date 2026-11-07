@@ -10,6 +10,7 @@ namespace Unbound.Runtime
     {
         AnimationPose m_RootScratch;
         float m_RootDeltaTime;
+        internal float RootMotionDeltaTime => m_RootDeltaTime;
         bool m_CallbacksStarted;
         bool m_HasMonoMove, m_HasStateMove;
         Quaternion[] m_RootTurns = Array.Empty<Quaternion>();

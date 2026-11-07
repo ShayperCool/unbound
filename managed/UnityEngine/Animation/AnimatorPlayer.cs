@@ -1029,7 +1029,8 @@ namespace Unbound.Runtime
                 Array.Resize(ref m_WrittenHeld, Bindings.FloatCount);
             }
             PoseWriter.WriteLayers(Bindings, m_LayerPoses, count, m_Written, m_WrittenHeld, humanBodyInRootMotion: Attached,
-                skipTransforms: skipTransforms, stream: stream);
+                skipTransforms: skipTransforms, stream: stream,
+                rootDuringCull: Attached && Unbound.Runtime.Playables.AnimationOutputs.Of(m_Animator)?.Count > 0 ? m_Animator.transform : null);
             if (skipTransforms || stream != null) return;
             if (Attached) WriteMassCenterPose(count);
             if (Attached) m_Animator.ApplyHumanPose();
@@ -1294,14 +1295,17 @@ namespace Unbound.Runtime
             for (int c = 0; c < Bindings.FloatCount; c++)
             {
                 if ((c < animated.Length && animated[c]) || (mask != null && !mask[c])) continue;
-                if (run.Def.WriteDefaults && (c >= inLayer.Length || !inLayer[c])) continue;
+                if (run.Def.WriteDefaults && (c >= inLayer.Length || !inLayer[c])
+                    && !(Attached && layerIndex == 0 && Unbound.Runtime.Playables.AnimationOutputs.BindsChannel(m_Animator, c))) continue;
                 if (holds && c < layer.Held.Length && layer.Held[c]) continue;
                 leftAs[c] += weight;
             }
             if (!run.Def.WriteDefaults || layerIndex > 0) return;
             for (int c = 0; c < Bindings.ObjectCount && c < objectsInLayer.Length; c++)
             {
-                if (animatedObjects[c] || !objectsInLayer[c] || (objectMask != null && !objectMask[c])) continue;
+                if (animatedObjects[c] || (!objectsInLayer[c]
+                    && !(Attached && Unbound.Runtime.Playables.AnimationOutputs.BindsChannel(m_Animator, c, objectChannel: true)))
+                    || (objectMask != null && !objectMask[c])) continue;
                 if (weight > pose.ObjectWeight[c])
                 {
                     pose.Objects[c] = Bindings.ObjectDefaults[c];

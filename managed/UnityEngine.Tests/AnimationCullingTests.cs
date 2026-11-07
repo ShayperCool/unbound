@@ -534,6 +534,109 @@ namespace UnityEngine.Tests
             finally { graph.Destroy(); }
         }
 
+        // Explicit calls measured by animculling explicit/* are subject to the same culling
+        // modes, but keep their supplied delta instead of using the automatic entry interval.
+        [Theory]
+        [InlineData(AnimatorCullingMode.AlwaysAnimate)]
+        [InlineData(AnimatorCullingMode.CullUpdateTransforms)]
+        [InlineData(AnimatorCullingMode.CullCompletely)]
+        public void ExplicitEvaluationCullsClocksAndPoseWrites(AnimatorCullingMode mode)
+        {
+            var (animator, text, _) = Rig(mode);
+            animator.runtimeAnimatorController = null;
+            var graph = PlayableRig(animator, out var playable);
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            try
+            {
+                graph.Evaluate(0.2f);
+                graph.Evaluate(0f);
+                graph.Evaluate(0.1f);
+                float time = mode == AnimatorCullingMode.CullCompletely ? 0f : 0.3f;
+                Near.Equal(time, (float)playable.GetTime());
+                Near.Equal(mode == AnimatorCullingMode.AlwaysAnimate ? 0.6f : 0f, text.localPosition.x);
+                Near.Equal(time, animator.transform.localPosition.y);
+            }
+            finally { graph.Destroy(); }
+        }
+
+        [Fact]
+        public void ManualOutputsRetainTheirSampleAcrossRepeatedVisibilityReturns()
+        {
+            var camera = MakeCamera();
+            var (animator, text, renderer) = Rig(AnimatorCullingMode.CullCompletely);
+            animator.runtimeAnimatorController = null;
+            var graph = PlayableRig(animator, out var playable);
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            try
+            {
+                MakeVisible(camera, renderer);
+                graph.Evaluate(0.2f);
+                for (int i = 0; i < 2; i++)
+                {
+                    renderer.SetVisible(false);
+                    animator.Tick(0.1f);
+                    graph.Evaluate(0.1f);
+                    text.localPosition = Vector3.zero;
+                    MakeVisible(camera, renderer);
+                    Near.Equal(0.2f, (float)playable.GetTime());
+                    Near.Equal(0.4f, text.localPosition.x);
+                }
+            }
+            finally { graph.Destroy(); }
+        }
+
+        [Fact]
+        public void AControllerRestoresItsRootWhileManualVisibilityReplayRestoresTheChild()
+        {
+            var camera = MakeCamera();
+            var (animator, text, renderer) = Rig(AnimatorCullingMode.CullUpdateTransforms);
+            var graph = PlayableRig(animator, out var playable);
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            try
+            {
+                MakeVisible(camera, renderer);
+                graph.Evaluate(0.2f);
+                Near.Equal(0.2f, animator.transform.localPosition.y);
+                renderer.SetVisible(false);
+                animator.Tick(0.1f);
+                Near.Equal(0f, animator.transform.localPosition.y);
+                text.localPosition = Vector3.zero;
+                MakeVisible(camera, renderer);
+                Near.Equal(0.4f, text.localPosition.x);
+                Near.Equal(0f, animator.transform.localPosition.y);
+                Near.Equal(0.2f, (float)playable.GetTime());
+            }
+            finally { graph.Destroy(); }
+        }
+
+        [Fact]
+        public void ExplicitOutputMovesWithAnAttachedControllerWithoutAdvancingItsState()
+        {
+            var root = new GameObject("ExplicitActor");
+            m_Objects.Add(root);
+            new GameObject("ContinueText", typeof(RectTransform)).transform.SetParent(root.transform, false);
+            var animator = root.AddComponent<Animator>();
+            animator.runtimeAnimatorController = (RuntimeAnimatorController)Load(AnimationFixtures.PopupButton).Objects[9100000];
+            animator.applyRootMotion = true;
+            var graph = PlayableRig(animator, out var playable);
+            graph.SetTimeUpdateMode(DirectorUpdateMode.Manual);
+            try
+            {
+                graph.Evaluate(0.1f);
+                Near.Equal(0.1f, (float)playable.GetTime());
+                Near.Equal(0f, animator.GetCurrentAnimatorStateInfo(0).normalizedTime);
+                Near.Equal(0.1f, animator.deltaPosition.y);
+                Near.Equal(0.1f, root.transform.localPosition.y);
+                graph.Evaluate(0f);
+                Near.Equal(Vector3.zero, animator.deltaPosition);
+                Near.Equal(0.1f, root.transform.localPosition.y);
+                graph.Evaluate(0.1f);
+                Near.Equal(0.2f, root.transform.localPosition.y);
+                Near.Equal(0f, animator.GetCurrentAnimatorStateInfo(0).normalizedTime);
+            }
+            finally { graph.Destroy(); }
+        }
+
         [Fact]
         public void ASharedPlayableStillAdvancesForAnUnculledOutput()
         {

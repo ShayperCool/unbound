@@ -215,14 +215,28 @@ namespace Unbound.Runtime.Playables
         internal override void AfterWrite(AnimationEvaluation e, PlayableNode node)
         {
             var animator = e.Animator;
+            if (animator == null || !animator.m_FireEvents || Clip == null || Clip.length <= 0f) return;
+            if (e.AutomaticFrame) m_EventTargets.GetValue(animator, _ => new object());
+            FireInterval(animator, m_From, m_To, m_Weight, m_IncludeStart);
+        }
+
+        internal Action CaptureEvents(Animator animator, PlayableNode node)
+        {
+            double from = m_From, to = m_To;
+            float weight = m_Weight;
+            bool includeStart = m_IncludeStart;
+            return () => { if (!node.Destroyed) FireInterval(animator, from, to, weight, includeStart); };
+        }
+
+        void FireInterval(Animator animator, double from, double to, float weight, bool includeStart)
+        {
             if (animator == null || !animator.m_FireEvents || Clip == null) return;
             float length = Clip.length;
             if (length <= 0f) return;
             var go = animator.m_GameObject;
             var clip = Clip;
-            var clipInfo = new AnimatorClipInfo { m_Clip = clip, m_Weight = m_Weight };
-            if (e.AutomaticFrame) m_EventTargets.GetValue(animator, _ => new object());
-            AnimationEvents.FireCrossed(clip, m_From / length, m_To / length, Loops, m_IncludeStart, ev =>
+            var clipInfo = new AnimatorClipInfo { m_Clip = clip, m_Weight = weight };
+            AnimationEvents.FireCrossed(clip, from / length, to / length, Loops, includeStart, ev =>
             {
                 var fired = ev.Copy();
                 fired.m_Source = AnimationEventSource.Animator;

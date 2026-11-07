@@ -617,7 +617,7 @@ namespace Unbound.Runtime.Playables
                 {
                     animation.Automatic = !evaluate;
                     if (!evaluate && UpdateMode == DirectorUpdateMode.GameTime) step = AnimationSystem.AutomaticFrameDelta(step);
-                    bool culled = !evaluate && animation.Target != null && animation.Target.isActiveAndEnabled
+                    bool culled = animation.Target != null && animation.Target.isActiveAndEnabled
                         && animation.Target.cullingMode == AnimatorCullingMode.CullCompletely
                         && !Animator.AnyRendererVisible(animation.Target.gameObject);
                     animation.SkipEvaluation = culled && animation.Ticked;

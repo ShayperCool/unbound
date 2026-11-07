@@ -88,7 +88,7 @@ namespace Unbound.Runtime.Playables
     /// <summary>How the streams of one evaluation carry root motion.</summary>
     internal enum RootMotionMode
     {
-        /// <summary>Not computed (humanoid avatars, Animators whose own controller plays): streams
+        /// <summary>Not computed (humanoid avatars): streams
         /// carry no motion and the graph's root curves pose the root as before.</summary>
         Unsupported,
         /// <summary>The Animator requests no root motion (applyRootMotion off, no OnAnimatorMove):
@@ -334,6 +334,21 @@ namespace Unbound.Runtime.Playables
             m_Evaluated.Clear();
         }
 
+        // Unity 6000.0.71f1 (animculling): after skipped updates, visibility replay repeats
+        // the last clip-event intervals of mixer inputs, but not of a direct clip output.
+        // Their public previous times remain unchanged. The native internal cause is unknown.
+        internal List<Action> VisibilityEvents(List<(PlayableOutputData Output, double Dt, bool Seek)> outputs)
+        {
+            List<Action> events = null;
+            foreach (var (kind, node) in m_Evaluated)
+            {
+                if (kind is not ClipKind clip || outputs.Exists(o => o.Output.Source == node)) continue;
+                events ??= new List<Action>();
+                events.Add(clip.CaptureEvents(Animator, node));
+            }
+            return events;
+        }
+
         // ------------------------------------------------------------------ channel math
 
         static bool IsQuaternionStart(AnimationBindings b, int c, out int width)
@@ -512,7 +527,7 @@ namespace Unbound.Runtime.Playables
         /// in Unity 6000.0.71f1 (animculling): CullUpdateTransforms keeps time, events and movement
         /// but holds script fields and the pose, except for curves on the Animator's root itself.
         /// On visibility return the combined pose is written without another time/event step.</summary>
-        internal static void Run(Animator animator, List<(PlayableOutputData Output, double Dt, bool Seek)> outputs)
+        internal static void Run(Animator animator, List<(PlayableOutputData Output, double Dt, bool Seek)> outputs, bool suppressMovement = false)
         {
             if (animator == null || outputs.Count == 0) return;
             var bindings = animator.StreamBindings;
@@ -529,7 +544,7 @@ namespace Unbound.Runtime.Playables
                 if (o.Source != null) e.Bind(o.Source);
             var result = AnimStream.Rent(bindings);
             var withController = animator.m_Player != null && animator.isActiveAndEnabled;
-            e.MotionMode = MotionModeOf(animator, withController);
+            e.MotionMode = MotionModeOf(animator);
             var motion = RootMotionStep.Zero;
             float motionDeltaTime = (float)outputs[0].Dt;
             if (withController)
@@ -543,7 +558,7 @@ namespace Unbound.Runtime.Playables
                 }
                 if (animator.m_Player.DeferOutput)
                     animator.m_Player.CopyDeferredInto(result.Values, result.Animated, result.Objects, result.ObjectAnimated);
-                if (e.MotionMode == RootMotionMode.Compute)
+                if (e.MotionMode == RootMotionMode.Compute && animator.m_Player.DeferOutput)
                     motion = RootMotionStep.FromVelocities(animator, motionDeltaTime, animator.velocity, animator.angularVelocity);
             }
             foreach (var (o, dt, seek) in outputs)
@@ -584,23 +599,23 @@ namespace Unbound.Runtime.Playables
                 result.BodyMotion = HumanRootMotion.Override(result.BodyMotion, s.BodyMotion, o.Weight);
                 AnimStream.Return(s);
             }
-            if (e.MotionMode == RootMotionMode.Compute) ApplyRootMotion(animator, result, motion, motionDeltaTime);
-            else if (withController && animator.m_Player.DeferOutput) animator.m_Player.ProcessRootMotion();
-            bool culled = outputs.Exists(o => (o.Output.Engine as AnimationOutputState)?.Automatic == true)
-                && animator.cullingMode != AnimatorCullingMode.AlwaysAnimate && !Animator.AnyRendererVisible(animator.gameObject);
+            if (e.MotionMode == RootMotionMode.Compute) ApplyRootMotion(animator, result, motion, motionDeltaTime, dispatch: !suppressMovement);
+            else if (!suppressMovement && withController && animator.m_Player.DeferOutput) animator.m_Player.ProcessRootMotion();
+            bool culled = animator.cullingMode != AnimatorCullingMode.AlwaysAnimate && !Animator.AnyRendererVisible(animator.gameObject);
             WriteOutput(animator, result, culled, e.PlayableIK);
             AnimationOutputs.ForgetCulled(animator);
-            if (animator.isActiveAndEnabled && outputs.Exists(o => (o.Output.Engine as AnimationOutputState)?.Automatic == true))
-                AnimationOutputs.RememberCulled(animator, result, motion, motionDeltaTime, e.MotionMode, e.PlayableIK);
+            if (animator.isActiveAndEnabled)
+                AnimationOutputs.RememberCulled(animator, result, motion, motionDeltaTime, e.MotionMode, e.PlayableIK, e.VisibilityEvents(outputs), outputs.Exists(o => o.Output.Graph.UpdateMode == DirectorUpdateMode.Manual));
             else AnimStream.Return(result);
+            if (withController) animator.m_Player.Ticked = true;
             e.AfterWrite();
         }
 
-        internal static void WriteOutput(Animator animator, AnimStream result, bool culled, bool playableIK)
+        internal static void WriteOutput(Animator animator, AnimStream result, bool culled, bool playableIK, bool preserveRoot = false)
         {
             if (result.BodyMotion.HasMotion) animator.Human?.SetPoseMotion(result.BodyMotion);
             PoseWriter.WriteStream(result.Bindings, result.Values, result.Animated, result.Objects, result.ObjectAnimated,
-                onlyRoot: culled ? animator.transform : null);
+                onlyRoot: culled ? animator.transform : null, skipRoot: preserveRoot ? animator.transform : null);
             if (!culled) animator.ApplyPlayableHumanPose(playableIK);
         }
 
@@ -627,14 +642,12 @@ namespace Unbound.Runtime.Playables
         /// OnAnimatorMove script, as for its own root motion). A humanoid Animator's is not (its
         /// root movement is not implemented for streams): requesting it warns once and the graph's
         /// root curves keep posing the root. During automatic evaluation the attached controller defers movement to this
-        /// combined output. Explicit graph evaluation keeps its independent behavior.
+        /// combined output. Explicit graph evaluation computes only the evaluated outputs
+        /// and leaves the attached controller clock unchanged (6000.0.71f1, animculling).
         /// Unbound's choice (unmeasured): the OnAnimatorMove gate, as for the Animator's own root
         /// motion; the docs name applyRootMotion only.</summary>
-        static RootMotionMode MotionModeOf(Animator animator, bool withController)
+        static RootMotionMode MotionModeOf(Animator animator)
         {
-            // The attached controller defers movement to the combined output during automatic
-            // evaluation. Explicit graph evaluation retains its previous independent behavior.
-            if (withController && !animator.m_Player.DeferOutput) return RootMotionMode.Unsupported;
             bool requested = animator.m_ApplyRootMotion || HasMoveCallback(animator);
             if (animator.isHuman)
             {
@@ -658,7 +671,7 @@ namespace Unbound.Runtime.Playables
         /// curves, and the Animator reports no motion. Unbound's choice (unmeasured): the motion is
         /// applied inside each Animator's output evaluation, before its pose is written.
         /// </summary>
-        internal static void ApplyRootMotion(Animator animator, AnimStream result, RootMotionStep motion, float deltaTime)
+        internal static void ApplyRootMotion(Animator animator, AnimStream result, RootMotionStep motion, float deltaTime, bool dispatch = true)
         {
             animator.CaptureRootMotionPose();
             animator.m_RootMotionApplied = false;
@@ -670,7 +683,7 @@ namespace Unbound.Runtime.Playables
             {
                 Stubs.Ignored("Animator root motion of this playable graph output",
                     "is not computed (only animation clips, mixers, layer mixers, controller playables and animation jobs carry it; offset, motion-to-delta, remove-scale and pose playables, mixers and layer mixers without inputs, and controller playables playing humanoid clips do not): the root keeps the graph's root curves and the Animator reports no motion");
-                if (animator.m_Player != null) animator.m_Player.ProcessRootMotion();
+                if (dispatch && animator.m_Player != null) animator.m_Player.ProcessRootMotion();
                 return;
             }
             var t = animator.transform;
@@ -683,6 +696,7 @@ namespace Unbound.Runtime.Playables
             animator.m_DeltaRotation = motion.Turn;
             RootMotionStep.Velocities(animator.m_DeltaPosition, animator.m_DeltaRotation, animator.m_MotionRootRotation, deltaTime,
                 out animator.m_RootVelocity, out animator.m_RootAngularVelocity);
+            if (!dispatch) return;
             if (animator.m_Player != null)
             {
                 animator.m_Player.ProcessRootMotion();
@@ -762,7 +776,9 @@ namespace Unbound.Runtime.Playables
             internal RootMotionStep Motion;
             internal float DeltaTime;
             internal RootMotionMode Mode;
-            internal bool IK;
+            internal bool IK, Manual;
+            internal List<Action> Events;
+            internal bool Writing, Retired;
         }
         static readonly Dictionary<Animator, CulledPose> s_Culled = new Dictionary<Animator, CulledPose>();
         static bool s_Registered;
@@ -795,27 +811,76 @@ namespace Unbound.Runtime.Playables
 
         internal static bool HasPending(Animator animator) => s_Pending.TryGetValue(animator, out var list) && list.Count > 0;
 
+        // The attached controller's write-defaults base also owns channels bound by its outputs
+        // (6000.0.71f1, animculling explicit/*/Manual/controller). A later controller sample
+        // restores them even when that graph has no automatic evaluation pending.
+        internal static bool BindsChannel(Animator animator, int channel, bool objectChannel = false)
+        {
+            if (Of(animator) is not { } outputs) return false;
+            foreach (var output in outputs)
+            {
+                if (output.Destroyed || output.Engine is not AnimationOutputState state) continue;
+                var bound = objectChannel ? state.ObjectBound : state.Bound;
+                if (bound != null && channel < bound.Length && bound[channel]) return true;
+            }
+            return false;
+        }
+
         internal static void ForgetCulled(Animator animator)
         {
             if (!s_Culled.Remove(animator, out var frame)) return;
-            AnimStream.Return(frame.Pose);
+            frame.Retired = true;
+            if (!frame.Writing) AnimStream.Return(frame.Pose);
         }
 
-        internal static void RememberCulled(Animator animator, AnimStream pose, RootMotionStep motion, float dt, RootMotionMode mode, bool ik) =>
-            s_Culled[animator] = new CulledPose { Pose = pose, Motion = motion, DeltaTime = dt, Mode = mode, IK = ik };
+        internal static void RememberCulled(Animator animator, AnimStream pose, RootMotionStep motion, float dt, RootMotionMode mode, bool ik, List<Action> events, bool manual) =>
+            s_Culled[animator] = new CulledPose { Pose = pose, Motion = motion, DeltaTime = dt, Mode = mode, IK = ik, Events = events, Manual = manual };
 
         internal static bool EvaluateOnVisible(Animator animator, bool move)
         {
-            if (!s_Culled.Remove(animator, out var frame)) return false;
+            if (!s_Culled.TryGetValue(animator, out var frame))
+            {
+                // A Manual graph need not have evaluated yet. First visibility still writes
+                // its zero-time pose and invokes IK; an attached controller that already
+                // delivered movement for CullUpdateTransforms does not deliver it again
+                // (Unity 6000.0.71f1, animculling explicit/human and explicit/later).
+                if (Of(animator) is not { } outputs) return false;
+                var initial = new List<(PlayableOutputData, double, bool)>();
+                foreach (var output in outputs)
+                {
+                    if (output.Destroyed || output.Source == null || output.Graph.Destroyed
+                        || !output.Graph.Playing || output.Graph.UpdateMode != DirectorUpdateMode.Manual) continue;
+                    if (output.Engine is not AnimationOutputState state || state.Ticked) continue;
+                    state.Ticked = true;
+                    state.Automatic = false;
+                    initial.Add((output, 0, true));
+                }
+                if (initial.Count == 0) return false;
+                AnimationEvaluation.Run(animator, initial, suppressMovement: animator.m_Player != null && !move);
+                return true;
+            }
+            // Manual outputs can return to visibility more than once without evaluation. Keep
+            // their last sample until replaced or invalidated. A movement callback may replace
+            // it reentrantly, so defer returning that stream until this write finishes.
+            if (frame.Writing) return false;
+            frame.Writing = true;
             try
             {
                 if (move) animator.m_RootMotionApplied = false;
                 if (move && frame.Mode == RootMotionMode.Compute)
-                    AnimationEvaluation.ApplyRootMotion(animator, frame.Pose, frame.Motion, frame.DeltaTime);
+                    AnimationEvaluation.ApplyRootMotion(animator, frame.Pose, frame.Motion,
+                        animator.m_Player?.RootMotionDeltaTime ?? frame.DeltaTime);
                 else if (move) animator.m_Player?.ProcessRootMotion();
-                AnimationEvaluation.WriteOutput(animator, frame.Pose, false, frame.IK);
+                AnimationEvaluation.WriteOutput(animator, frame.Pose, false, frame.IK,
+                    preserveRoot: !move && frame.Manual && frame.Mode == RootMotionMode.Zero && animator.m_Player != null);
+                if (move && frame.Events != null)
+                    foreach (var fire in frame.Events) fire();
             }
-            finally { AnimStream.Return(frame.Pose); }
+            finally
+            {
+                frame.Writing = false;
+                if (frame.Retired) AnimStream.Return(frame.Pose);
+            }
             return true;
         }
 
