@@ -12,9 +12,8 @@ use super::{
     fft,
     protocol::{
         AudioFilterDescriptor, AudioFramePacket, AudioSourceCommand, AudioSourcePacket,
-        AudioSourceState, Callback,
-        MAX_SOURCE_FILTERS, callback, command, filter_kind, filter_stage, source_flags,
-        voice_state,
+        AudioSourceState, Callback, MAX_SOURCE_FILTERS, callback, command, filter_kind,
+        filter_stage, source_flags, voice_state,
     },
     reverb::{SfxReverb, SfxReverbSpec},
     spatial::{self, Listener, SourceSpatial},
@@ -160,8 +159,14 @@ unsafe fn decode_descriptors(
     if count == 0 {
         return Ok(Vec::new());
     }
-    anyhow::ensure!(!pointer.is_null(), "AudioSource filter descriptors are null");
-    anyhow::ensure!(pointer.is_aligned(), "AudioSource filter descriptors are misaligned");
+    anyhow::ensure!(
+        !pointer.is_null(),
+        "AudioSource filter descriptors are null"
+    );
+    anyhow::ensure!(
+        pointer.is_aligned(),
+        "AudioSource filter descriptors are misaligned"
+    );
     // Copied before returning: the managed array is pinned for this call only.
     let filters = unsafe { std::slice::from_raw_parts(pointer, count as usize) }.to_vec();
     for (i, f) in filters.iter().enumerate() {
@@ -171,7 +176,10 @@ unsafe fn decode_descriptors(
             f.kind
         );
         anyhow::ensure!(
-            matches!(f.stage, filter_stage::BEFORE_SCRIPTS | filter_stage::AFTER_SCRIPTS),
+            matches!(
+                f.stage,
+                filter_stage::BEFORE_SCRIPTS | filter_stage::AFTER_SCRIPTS
+            ),
             "invalid AudioSource filter stage {}",
             f.stage
         );
@@ -180,10 +188,17 @@ unsafe fn decode_descriptors(
             "an AudioSource filter component above a clipless OnAudioFilterRead generator is unsupported"
         );
         anyhow::ensure!(
-            [f.cutoff, f.resonance, f.delay, f.decay, f.dry_mix, f.wet_mix]
-                .iter()
-                .chain(&f.reverb)
-                .all(|v| v.is_finite()),
+            [
+                f.cutoff,
+                f.resonance,
+                f.delay,
+                f.decay,
+                f.dry_mix,
+                f.wet_mix
+            ]
+            .iter()
+            .chain(&f.reverb)
+            .all(|v| v.is_finite()),
             "AudioSource filter parameters must be finite"
         );
         anyhow::ensure!(
@@ -233,9 +248,12 @@ fn effect_spec(d: &AudioFilterDescriptor) -> EffectSpec {
         pitch_shifter: None,
         chorus: (d.kind == filter_kind::CHORUS).then(|| super::chorus::ChorusSpec {
             // r[3], Wet mix tap 3, reaches only a third output channel.
-            dry: r[0].clamp(0.0, 1.0), wet1: r[1].clamp(0.0, 1.0), wet2: r[2].clamp(0.0, 1.0),
+            dry: r[0].clamp(0.0, 1.0),
+            wet1: r[1].clamp(0.0, 1.0),
+            wet2: r[2].clamp(0.0, 1.0),
             delay: (r[4] <= 100.0).then_some(r[4].max(0.0)),
-            rate: r[5].clamp(0.0, 20.0), depth: r[6].clamp(0.0, 1.0),
+            rate: r[5].clamp(0.0, 20.0),
+            depth: r[6].clamp(0.0, 1.0),
         }),
     }
 }
@@ -298,13 +316,20 @@ impl std::fmt::Debug for FilterChain {
 impl FilterChain {
     /// Checks every component at `rate` (the Echo history bound) without changing anything.
     fn validate(filters: &[AudioFilterDescriptor], rate: u32, buffer: u32) -> anyhow::Result<()> {
-        filters.iter().try_for_each(|d| effect_spec(d).validate(rate, buffer))
+        filters
+            .iter()
+            .try_for_each(|d| effect_spec(d).validate(rate, buffer))
     }
 
     /// Matches the components by identity and kind: an unchanged one keeps its histories, a
     /// changed one keeps them and ramps to its new parameters, a new one starts empty. Call
     /// after [`FilterChain::validate`]; a failed allocation then leaves the chain empty.
-    fn apply(&mut self, filters: &[AudioFilterDescriptor], rate: u32, buffer: u32) -> anyhow::Result<()> {
+    fn apply(
+        &mut self,
+        filters: &[AudioFilterDescriptor],
+        rate: u32,
+        buffer: u32,
+    ) -> anyhow::Result<()> {
         let mut old = std::mem::take(&mut self.filters);
         let mut chain = Vec::with_capacity(filters.len());
         for d in filters {
@@ -317,7 +342,12 @@ impl FilterChain {
                 }
                 None => Effect::new(spec, rate, buffer)?,
             };
-            chain.push(SourceFilter { id: d.id, kind: d.kind, stage: d.stage, effect });
+            chain.push(SourceFilter {
+                id: d.id,
+                kind: d.kind,
+                stage: d.stage,
+                effect,
+            });
         }
         self.filters = chain;
         Ok(())
@@ -550,7 +580,14 @@ impl GeneratorState {
             buffer.resize(length, 0.0);
             buffer.fill(0.0);
             if let Some(cb) = callback {
-                cb(callback::SOURCE_FILTER, handle, buffer.as_mut_ptr(), frames as i32, 2, 0);
+                cb(
+                    callback::SOURCE_FILTER,
+                    handle,
+                    buffer.as_mut_ptr(),
+                    frames as i32,
+                    2,
+                    0,
+                );
             }
         };
         if self.current.len() != length {
@@ -561,9 +598,12 @@ impl GeneratorState {
         }
         let mut written = 0;
         while written < out.len() {
-            if self.offset == 0 { fill(&mut self.next); }
+            if self.offset == 0 {
+                fill(&mut self.next);
+            }
             let count = (out.len() - written).min(length - self.offset);
-            out[written..written + count].copy_from_slice(&self.current[self.offset..self.offset + count]);
+            out[written..written + count]
+                .copy_from_slice(&self.current[self.offset..self.offset + count]);
             written += count;
             self.offset += count;
             if self.offset == length {
@@ -668,7 +708,8 @@ fn processing_order(specs: &HashMap<u64, &GroupSpec>) -> anyhow::Result<Vec<u64>
     };
     let mut order: Vec<u64> = specs.keys().copied().collect();
     order.sort_by_key(|h| (std::cmp::Reverse(depth(*h)), *h));
-    let owner: HashMap<&str, u64> = specs.iter()
+    let owner: HashMap<&str, u64> = specs
+        .iter()
         .flat_map(|(h, spec)| spec.effects.iter().map(move |e| (e.id.as_str(), *h)))
         .collect();
     let mut before: HashMap<u64, Vec<u64>> = HashMap::new();
@@ -687,8 +728,12 @@ fn processing_order(specs: &HashMap<u64, &GroupSpec>) -> anyhow::Result<Vec<u64>
     let mut done = HashSet::new();
     let mut result = Vec::with_capacity(order.len());
     while result.len() < order.len() {
-        let next = order.iter().copied().find(|h| !done.contains(h)
-            && before.get(h).is_none_or(|b| b.iter().all(|d| done.contains(d))));
+        let next = order.iter().copied().find(|h| {
+            !done.contains(h)
+                && before
+                    .get(h)
+                    .is_none_or(|b| b.iter().all(|d| done.contains(d)))
+        });
         let Some(next) = next else {
             anyhow::bail!("cyclic AudioMixer send routing");
         };
@@ -756,7 +801,11 @@ impl Mixer {
             }
         }
         for source in self.sources.values() {
-            FilterChain::validate(&source.params.filters, config.sample_rate, config.buffer_size)?;
+            FilterChain::validate(
+                &source.params.filters,
+                config.sample_rate,
+                config.buffer_size,
+            )?;
         }
         Ok(())
     }
@@ -774,7 +823,8 @@ impl Mixer {
             node.effects.clear();
             node.update(node.spec.clone(), config.sample_rate, config.buffer_size)?;
         }
-        self.listener_chain.reconfigure(config.sample_rate, config.buffer_size)?;
+        self.listener_chain
+            .reconfigure(config.sample_rate, config.buffer_size)?;
         // The next frame packet sets the zone up again at the new rate.
         self.zone = None;
         for source in self.sources.values_mut() {
@@ -789,7 +839,9 @@ impl Mixer {
             source.filtered_offset = 0;
             source.filter_started = false;
             source.filter_paused = false;
-            source.chain.reconfigure(config.sample_rate, config.buffer_size)?;
+            source
+                .chain
+                .reconfigure(config.sample_rate, config.buffer_size)?;
         }
         Ok(())
     }
@@ -858,10 +910,16 @@ impl Mixer {
             tracing::error!("AudioSource {handle}: filter components rejected: {error}");
             params.filters = source.params.filters.clone();
         } else if params.filters != source.params.filters {
-            if let Err(error) = FilterChain::validate(&params.filters, rate, self.config.buffer_size) {
+            if let Err(error) =
+                FilterChain::validate(&params.filters, rate, self.config.buffer_size)
+            {
                 tracing::error!("AudioSource {handle}: filter components rejected: {error:#}");
                 params.filters = source.params.filters.clone();
-            } else if let Err(error) = source.chain.apply(&params.filters, rate, self.config.buffer_size) {
+            } else if let Err(error) =
+                source
+                    .chain
+                    .apply(&params.filters, rate, self.config.buffer_size)
+            {
                 tracing::error!("AudioSource {handle}: filter components dropped: {error:#}");
                 params.filters = Vec::new();
             }
@@ -889,8 +947,11 @@ impl Mixer {
             return;
         }
         let rate = self.config.sample_rate;
-        if let Err(error) = FilterChain::validate(&filters, rate, self.config.buffer_size)
-            .and_then(|()| self.listener_chain.apply(&filters, rate, self.config.buffer_size))
+        if let Err(error) =
+            FilterChain::validate(&filters, rate, self.config.buffer_size).and_then(|()| {
+                self.listener_chain
+                    .apply(&filters, rate, self.config.buffer_size)
+            })
         {
             tracing::error!("AudioListener filter components dropped: {error:#}");
             self.listener_chain = FilterChain::default();
@@ -907,7 +968,9 @@ impl Mixer {
         }
         if !d.reverb.iter().all(|v| v.is_finite()) {
             if self.zone_rejected != Some(d.id) {
-                tracing::error!("AudioReverbZone parameters must be finite; the reverb zones are silent");
+                tracing::error!(
+                    "AudioReverbZone parameters must be finite; the reverb zones are silent"
+                );
             }
             self.zone_rejected = Some(d.id);
             self.zone = None;
@@ -929,7 +992,11 @@ impl Mixer {
         self.zone = match SfxReverb::new(rate) {
             Ok(mut reverb) => {
                 reverb.tune(&spec);
-                Some(ZoneReverb { id: d.id, spec, reverb })
+                Some(ZoneReverb {
+                    id: d.id,
+                    spec,
+                    reverb,
+                })
             }
             Err(error) => {
                 tracing::error!("AudioReverbZone reverb unavailable: {error:#}");
@@ -952,23 +1019,44 @@ impl Mixer {
 
     /// Updates routing and parameters without discarding the filters' delay lines.
     pub fn configure_group(&mut self, spec: GroupSpec) -> anyhow::Result<()> {
-        if let Some(node) = self.group_nodes.get(&spec.handle).filter(|n| n.rendered > 0) {
+        if let Some(node) = self
+            .group_nodes
+            .get(&spec.handle)
+            .filter(|n| n.rendered > 0)
+        {
             for kind in EffectKind::LAYOUT_LIMITED {
                 // Each unit's place, identity, bypass and settings, which must stay as they
                 // were when the group started rendering.
                 let signature = |group: &GroupSpec| -> Vec<_> {
-                    group.effects.iter().enumerate().filter(|(_, e)| e.kind == kind.name())
-                        .map(|(i, e)| (i, e.id.clone(), e.bypass, e.pitch_shifter.clone(), e.normalize.clone()))
+                    group
+                        .effects
+                        .iter()
+                        .enumerate()
+                        .filter(|(_, e)| e.kind == kind.name())
+                        .map(|(i, e)| {
+                            (
+                                i,
+                                e.id.clone(),
+                                e.bypass,
+                                e.pitch_shifter.clone(),
+                                e.normalize.clone(),
+                            )
+                        })
                         .collect()
                 };
                 let (previous, next) = (signature(&node.spec), signature(&spec));
-                anyhow::ensure!((previous.is_empty() && next.is_empty())
-                    || (previous == next && node.spec.bypass == spec.bypass),
-                    "AudioMixer {} live parameter, placement and bypass changes are unmeasured", kind.name());
+                anyhow::ensure!(
+                    (previous.is_empty() && next.is_empty())
+                        || (previous == next && node.spec.bypass == spec.bypass),
+                    "AudioMixer {} live parameter, placement and bypass changes are unmeasured",
+                    kind.name()
+                );
             }
         }
-        anyhow::ensure!(spec.suspend_threshold.is_finite() && spec.suspend_threshold >= 0.0,
-            "invalid AudioMixer suspension threshold");
+        anyhow::ensure!(
+            spec.suspend_threshold.is_finite() && spec.suspend_threshold >= 0.0,
+            "invalid AudioMixer suspension threshold"
+        );
         for effect in &spec.effects {
             effect.validate_in_group(&self.config, spec.bypass)?;
         }
@@ -988,11 +1076,18 @@ impl Mixer {
         {
             return Ok(());
         }
-        let mut specs: HashMap<u64, &GroupSpec> =
-            self.group_nodes.iter().map(|(h, n)| (*h, &n.spec)).collect();
+        let mut specs: HashMap<u64, &GroupSpec> = self
+            .group_nodes
+            .iter()
+            .map(|(h, n)| (*h, &n.spec))
+            .collect();
         specs.insert(handle, &spec);
         let order = processing_order(&specs)?;
-        let targets: Vec<String> = spec.effects.iter().filter_map(|e| e.send_target.clone()).collect();
+        let targets: Vec<String> = spec
+            .effects
+            .iter()
+            .filter_map(|e| e.send_target.clone())
+            .collect();
         let node = self.group_nodes.entry(handle).or_insert_with(|| GroupNode {
             spec: spec.clone(),
             rendered: 0,
@@ -1004,7 +1099,9 @@ impl Mixer {
         });
         node.update(spec, self.config.sample_rate, self.config.buffer_size)?;
         for target in targets {
-            self.sidechains.entry(target).or_insert_with(|| vec![0.0; BLOCK * 2]);
+            self.sidechains
+                .entry(target)
+                .or_insert_with(|| vec![0.0; BLOCK * 2]);
         }
         self.group_order = order;
         Ok(())
@@ -1021,19 +1118,30 @@ impl Mixer {
             // of the real voice and completed one-shots follows the DSP frontier.
             source.completed_shots.retain(|end| self.frames <= *end);
             if let Some(end) = source.completed_main {
-                if self.frames >= end { source.pending_position = 0.0; }
-                if self.frames > end { source.completed_main = None; }
+                if self.frames >= end {
+                    source.pending_position = 0.0;
+                }
+                if self.frames > end {
+                    source.completed_main = None;
+                }
             }
-            if let Some(voice) = &mut source.main { voice.submitted = true; }
-            for voice in &mut source.one_shots { voice.submitted = true; }
+            if let Some(voice) = &mut source.main {
+                voice.submitted = true;
+            }
+            for voice in &mut source.one_shots {
+                voice.submitted = true;
+            }
         }
         let active = self.active_mixer_roots();
         for (handle, node) in &mut self.group_nodes {
-            if node.spec.mixer != *handle { continue; }
+            if node.spec.mixer != *handle {
+                continue;
+            }
             if active.contains(handle) || !node.spec.enable_suspend {
                 node.suspended = false;
                 node.last_active = self.frames;
-            } else if self.frames.saturating_sub(node.last_active) > self.config.sample_rate as u64 {
+            } else if self.frames.saturating_sub(node.last_active) > self.config.sample_rate as u64
+            {
                 node.suspended = true;
             }
         }
@@ -1045,12 +1153,18 @@ impl Mixer {
         for source in self.sources.values().filter(|s| s.active()) {
             let mut handle = source.params.group;
             for _ in 0..self.group_nodes.len() {
-                let Some(group) = self.group_nodes.get(&handle) else { break; };
+                let Some(group) = self.group_nodes.get(&handle) else {
+                    break;
+                };
                 // A muted route contributes no activity to its mixer, even while its source
                 // remains playing and real. A silent clip on an unmuted route does. The
                 // independent lifecycle probe makes this distinction audible with a sibling Echo.
-                if group.spec.muted { break; }
-                if handle == group.spec.mixer && !active.insert(handle) { break; }
+                if group.spec.muted {
+                    break;
+                }
+                if handle == group.spec.mixer && !active.insert(handle) {
+                    break;
+                }
                 handle = group.spec.parent;
             }
         }
@@ -1061,10 +1175,18 @@ impl Mixer {
         let now = self.frames;
         let rate = self.config.sample_rate;
         let callback = self.callback;
-        let Self { sources, clips, group_nodes, defer_voice_submission, .. } = self;
+        let Self {
+            sources,
+            clips,
+            group_nodes,
+            defer_voice_submission,
+            ..
+        } = self;
         let source = sources.entry(handle).or_default();
         let deferred = *defer_voice_submission
-            || group_nodes.get(&source.params.group).is_some_and(|n| n.spec.mixer != 0);
+            || group_nodes
+                .get(&source.params.group)
+                .is_some_and(|n| n.spec.mixer != 0);
         source.component_playback = deferred;
         let start_frame = |time: f64| -> u64 {
             if time < 0.0 {
@@ -1215,7 +1337,9 @@ impl Mixer {
                 }
             }
             command::SET_SCHEDULED_END => {
-                if let Some(main) = &mut source.main && main.clip != 0 {
+                if let Some(main) = &mut source.main
+                    && main.clip != 0
+                {
                     main.end_at = (cmd.time.max(0.0) * rate as f64) as u64;
                 }
             }
@@ -1230,9 +1354,12 @@ impl Mixer {
         let mut state = AudioSourceState {
             main: voice_state::NONE,
             one_shots: (source.one_shots.len() + source.completed_shots.len()) as i32,
-            is_virtual: (source.is_virtual || (source.main.is_none() && source.one_shots.is_empty()
-                && source.completed_shots.is_empty() && source.completed_main.is_none()
-                && (source.params.clip != 0 || source.played))) as i32,
+            is_virtual: (source.is_virtual
+                || (source.main.is_none()
+                    && source.one_shots.is_empty()
+                    && source.completed_shots.is_empty()
+                    && source.completed_main.is_none()
+                    && (source.params.clip != 0 || source.played))) as i32,
             _pad: 0,
             position: source.pending_position,
         };
@@ -1331,9 +1458,18 @@ impl Mixer {
         self.capture_listener_batch = true;
         for block in samples.chunks_mut(block_samples) {
             self.render(block, 2);
-            if self.listener_filter && self.has_listener && let Some(cb) = self.callback {
-                cb(callback::LISTENER_FILTER, 0, block.as_mut_ptr(),
-                    (block.len() / 2) as i32, 2, 0);
+            if self.listener_filter
+                && self.has_listener
+                && let Some(cb) = self.callback
+            {
+                cb(
+                    callback::LISTENER_FILTER,
+                    0,
+                    block.as_mut_ptr(),
+                    (block.len() / 2) as i32,
+                    2,
+                    0,
+                );
             }
             self.listener_output.push(block);
         }
@@ -1411,15 +1547,21 @@ impl Mixer {
         for source in self.sources.values().filter(|s| s.active()) {
             let mut handle = source.params.group;
             for _ in 0..self.group_nodes.len() {
-                let Some(node) = self.group_nodes.get(&handle) else { break; };
-                if handle == node.spec.mixer { self.activated_mixers.insert(handle); }
+                let Some(node) = self.group_nodes.get(&handle) else {
+                    break;
+                };
+                if handle == node.spec.mixer {
+                    self.activated_mixers.insert(handle);
+                }
                 handle = node.spec.parent;
             }
         }
         // New voices wake immediately, even when no main-thread update intervenes. Waking
         // preserves effect history and the input fade; parameter submissions alone do not wake.
         for root in self.active_mixer_roots() {
-            if let Some(node) = self.group_nodes.get_mut(&root) && node.suspended {
+            if let Some(node) = self.group_nodes.get_mut(&root)
+                && node.suspended
+            {
                 node.suspended = false;
                 node.last_active = self.frames;
             }
@@ -1544,32 +1686,56 @@ impl Mixer {
             let target = s.matrix.map(|g| g * volume);
             let looping = flags & source_flags::LOOP != 0;
             let mono_pan = (source.params.spatial_blend <= 0.0
-                && source.params.spatial_blend_curve.iter().all(|value| *value <= 0.0))
-                .then_some(source.params.pan_stereo);
+                && source
+                    .params
+                    .spatial_blend_curve
+                    .iter()
+                    .all(|value| *value <= 0.0))
+            .then_some(source.params.pan_stereo);
             let dsp_frames = config.buffer_size.max(1) as u64;
             source.completion_frontier = (t0 + n as u64).div_ceil(dsp_frames) * dsp_frames;
             let generator = filter_only;
             // `AudioSource.bypassEffects`: "Applied from filter components or global listener
             // filters". A paused or not yet submitted source does not advance its components.
             let bypass = flags & source_flags::BYPASS_EFFECTS != 0;
-            let voices_running = source.main.as_ref().is_some_and(|v| v.submitted && !v.paused)
+            let voices_running = source
+                .main
+                .as_ref()
+                .is_some_and(|v| v.submitted && !v.paused)
                 || source.one_shots.iter().any(|v| v.submitted && !v.paused);
             if generator {
                 // The main generator receives zeros. One-shots retain their own gain
                 // and are accumulated downstream of its callback/read-ahead queue.
-                if source.main.as_ref().is_some_and(|v| v.submitted && !v.paused) {
-                    source.generator.render(handle, buffer, config.buffer_size.max(1) as usize, callback);
+                if source
+                    .main
+                    .as_ref()
+                    .is_some_and(|v| v.submitted && !v.paused)
+                {
+                    source.generator.render(
+                        handle,
+                        buffer,
+                        config.buffer_size.max(1) as usize,
+                        callback,
+                    );
                 }
-                render_source_voices(source, clips, buffer, n, t0, pitch, out_rate,
-                    target, mono_pan, looping, audible, callback);
+                render_source_voices(
+                    source, clips, buffer, n, t0, pitch, out_rate, target, mono_pan, looping,
+                    audible, callback,
+                );
                 // Components below the generating script (none may sit above it). Unbound's
                 // choice (unmeasured): they also process the source's one-shots.
                 if voices_running {
-                    source.chain.process(buffer, Some(filter_stage::AFTER_SCRIPTS), bypass);
+                    source
+                        .chain
+                        .process(buffer, Some(filter_stage::AFTER_SCRIPTS), bypass);
                 }
             } else if filter {
-                if source.main.as_ref().is_some_and(|v| v.submitted && !v.paused)
-                    || source.one_shots.iter().any(|v| v.submitted && !v.paused) {
+                if source
+                    .main
+                    .as_ref()
+                    .is_some_and(|v| v.submitted && !v.paused)
+                    || source.one_shots.iter().any(|v| v.submitted && !v.paused)
+                {
                     source.filter_started = true;
                 }
                 if source.filter_started && !source.filter_paused {
@@ -1583,32 +1749,63 @@ impl Mixer {
                             source.completion_frontier = t0 + (written + length) as u64 / 2;
                             // Keep voice ramps and interpolation in their existing DSP chunks.
                             for (block, chunk) in input.chunks_mut(BLOCK * 2).enumerate() {
-                                render_source_voices(source, clips, chunk, chunk.len() / 2,
-                                    t0 + (written / 2 + block * BLOCK) as u64, pitch, out_rate,
-                                    target, mono_pan, looping, audible, callback);
+                                render_source_voices(
+                                    source,
+                                    clips,
+                                    chunk,
+                                    chunk.len() / 2,
+                                    t0 + (written / 2 + block * BLOCK) as u64,
+                                    pitch,
+                                    out_rate,
+                                    target,
+                                    mono_pan,
+                                    looping,
+                                    audible,
+                                    callback,
+                                );
                             }
                             // The Inspector order is the processing order: components above
                             // the scripts, the scripts, then the components below them.
-                            source.chain.process(&mut input, Some(filter_stage::BEFORE_SCRIPTS), bypass);
+                            source.chain.process(
+                                &mut input,
+                                Some(filter_stage::BEFORE_SCRIPTS),
+                                bypass,
+                            );
                             if let Some(cb) = callback {
-                                cb(callback::SOURCE_FILTER, handle, input.as_mut_ptr(),
-                                    (length / 2) as i32, 2, 0);
+                                cb(
+                                    callback::SOURCE_FILTER,
+                                    handle,
+                                    input.as_mut_ptr(),
+                                    (length / 2) as i32,
+                                    2,
+                                    0,
+                                );
                             }
-                            source.chain.process(&mut input, Some(filter_stage::AFTER_SCRIPTS), bypass);
+                            source.chain.process(
+                                &mut input,
+                                Some(filter_stage::AFTER_SCRIPTS),
+                                bypass,
+                            );
                             source.filtered = input;
                             source.filtered_offset = 0;
                         }
                         let count = (buffer.len() - written).min(length - source.filtered_offset);
                         buffer[written..written + count].copy_from_slice(
-                            &source.filtered[source.filtered_offset..source.filtered_offset + count]);
+                            &source.filtered
+                                [source.filtered_offset..source.filtered_offset + count],
+                        );
                         source.filtered_offset += count;
                         written += count;
                     }
                 }
             } else {
-                render_source_voices(source, clips, buffer, n, t0, pitch, out_rate,
-                    target, mono_pan, looping, audible, callback);
-                if voices_running && source.main.is_none() && source.one_shots.is_empty()
+                render_source_voices(
+                    source, clips, buffer, n, t0, pitch, out_rate, target, mono_pan, looping,
+                    audible, callback,
+                );
+                if voices_running
+                    && source.main.is_none()
+                    && source.one_shots.is_empty()
                     && !source.chain.filters.is_empty()
                 {
                     source.chain_tail = Some(source.completion_frontier + dsp_frames);
@@ -1640,8 +1837,14 @@ impl Mixer {
                 // `bypassEffects` covers "global listener filters" too. Unrouted bypassing
                 // sources are unmeasured and follow the documentation.
                 let bypass_listener = listener_components
-                    && flags & (source_flags::BYPASS_LISTENER_EFFECTS | source_flags::BYPASS_EFFECTS) != 0;
-                let unrouted = if bypass_listener { &mut listener_bypass[..n * 2] } else { &mut mix[..n * 2] };
+                    && flags
+                        & (source_flags::BYPASS_LISTENER_EFFECTS | source_flags::BYPASS_EFFECTS)
+                        != 0;
+                let unrouted = if bypass_listener {
+                    &mut listener_bypass[..n * 2]
+                } else {
+                    &mut mix[..n * 2]
+                };
                 let target = group_nodes
                     .get_mut(&source.params.group)
                     .map_or(unrouted, |node| &mut node.buffer[..n * 2]);
@@ -1652,8 +1855,12 @@ impl Mixer {
         }
         for &handle in &self.group_order {
             let root = self.group_nodes[&handle].spec.mixer;
-            if self.group_nodes.get(&root).is_some_and(|node| node.suspended)
-                || (root != 0 && !self.activated_mixers.contains(&root)) {
+            if self
+                .group_nodes
+                .get(&root)
+                .is_some_and(|node| node.suspended)
+                || (root != 0 && !self.activated_mixers.contains(&root))
+            {
                 // A suspended graph does not write registered group sinks. The caller retains
                 // its previous block, while the device stream and listener receive silence.
                 continue;
@@ -1661,13 +1868,18 @@ impl Mixer {
             // Frames since the mixer started: its root renders last, so its count is still the
             // block's start. Sidechains stay silent through the mixer's first DSP block, also for
             // groups registered later (unmeasured for those).
-            let mixer_start = self.group_nodes.get(&root).map_or(self.group_nodes[&handle].rendered, |r| r.rendered);
+            let mixer_start = self
+                .group_nodes
+                .get(&root)
+                .map_or(self.group_nodes[&handle].rendered, |r| r.rendered);
             let muted = (config.buffer_size as usize).saturating_sub(mixer_start);
             let node = self.group_nodes.get_mut(&handle).unwrap();
             // Echo, SFX Reverb, Duck Volume, Compressor, ParamEQ and the simple filters retain the
             // measured group input fade even when bypassed. Send and Receive have none
             // (tests/projects/mixerduck, tests/projects/mixercompressor).
-            let active = node.effects.iter()
+            let active = node
+                .effects
+                .iter()
                 .any(|e| e.kind().is_some_and(EffectKind::fades_in_when_bypassed))
                 || (!node.spec.bypass
                     && node.effects.iter().any(|e| {
@@ -1704,7 +1916,8 @@ impl Mixer {
                     let end = frame + count as u64;
                     if end % window == 0 {
                         if node.energy / (window * 2) as f64
-                            >= (node.spec.suspend_threshold as f64).powi(2) {
+                            >= (node.spec.suspend_threshold as f64).powi(2)
+                        {
                             node.last_active = end - window;
                         }
                         node.energy = 0.0;
@@ -1752,9 +1965,13 @@ impl Mixer {
         }
         if listener_components {
             if has_listener {
-                self.listener_chain.process(&mut self.mix[..n * 2], None, false);
+                self.listener_chain
+                    .process(&mut self.mix[..n * 2], None, false);
             }
-            for (m, b) in self.mix[..n * 2].iter_mut().zip(&self.listener_bypass[..n * 2]) {
+            for (m, b) in self.mix[..n * 2]
+                .iter_mut()
+                .zip(&self.listener_bypass[..n * 2])
+            {
                 *m += *b;
             }
         }
@@ -1853,22 +2070,63 @@ impl StreamState {
 /// Advance decoded voices and accumulate their PCM without invoking the source filter.
 #[allow(clippy::too_many_arguments)]
 fn render_source_voices(
-    source: &mut Source, clips: &HashMap<u64, Clip>, out: &mut [f32], n: usize,
-    t0: u64, pitch: f64, rate: u32, target: [f32; 4], mono_pan: Option<f32>,
-    looping: bool, audible: bool, callback: Option<Callback>,
+    source: &mut Source,
+    clips: &HashMap<u64, Clip>,
+    out: &mut [f32],
+    n: usize,
+    t0: u64,
+    pitch: f64,
+    rate: u32,
+    target: [f32; 4],
+    mono_pan: Option<f32>,
+    looping: bool,
+    audible: bool,
+    callback: Option<Callback>,
 ) {
-    if let Some(main) = &mut source.main && main.clip != 0 {
-        if render_voice(main, clips.get(&main.clip), n, t0, pitch, rate, target,
-            mono_pan, looping, audible.then_some(&mut *out), callback) {
-            source.pending_position = if source.component_playback { main.position } else { 0.0 };
-            if source.component_playback { source.completed_main = Some(source.completion_frontier); }
+    if let Some(main) = &mut source.main
+        && main.clip != 0
+    {
+        if render_voice(
+            main,
+            clips.get(&main.clip),
+            n,
+            t0,
+            pitch,
+            rate,
+            target,
+            mono_pan,
+            looping,
+            audible.then_some(&mut *out),
+            callback,
+        ) {
+            source.pending_position = if source.component_playback {
+                main.position
+            } else {
+                0.0
+            };
+            if source.component_playback {
+                source.completed_main = Some(source.completion_frontier);
+            }
             source.main = None;
         }
     }
     source.one_shots.retain_mut(|voice| {
-        let finished = render_voice(voice, clips.get(&voice.clip), n, t0, pitch, rate, target,
-            mono_pan, false, audible.then_some(&mut *out), callback);
-        if finished && source.component_playback { source.completed_shots.push(source.completion_frontier); }
+        let finished = render_voice(
+            voice,
+            clips.get(&voice.clip),
+            n,
+            t0,
+            pitch,
+            rate,
+            target,
+            mono_pan,
+            false,
+            audible.then_some(&mut *out),
+            callback,
+        );
+        if finished && source.component_playback {
+            source.completed_shots.push(source.completion_frontier);
+        }
         !finished
     });
 }
@@ -1931,7 +2189,9 @@ fn render_voice(
             // The scheduled route has already started processing silence. Its
             // startup matrix ramp elapses before the decoded clip becomes audible.
             if voice.fade_frames < 64 {
-                for i in 0..4 { voice.fade_matrix[i] += voice.fade_initial[i] / 64.0; }
+                for i in 0..4 {
+                    voice.fade_matrix[i] += voice.fade_initial[i] / 64.0;
+                }
                 voice.fade_frames += 1;
             }
             continue;
@@ -2361,7 +2621,9 @@ mod tests {
         source_with(&mut m, 7, 1, |p| p.group = 3);
         play(&mut m, 7, command::PLAY, 0.0);
         let mut output = vec![0.0; 2048];
-        for _ in 0..10 { m.render(&mut output, 2); }
+        for _ in 0..10 {
+            m.render(&mut output, 2);
+        }
         assert!(output.iter().all(|x| *x == 0.0));
         assert_eq!(m.source_state(7).main, voice_state::PLAYING);
         assert_eq!(m.source_state(7).position, 0.0);
@@ -2375,11 +2637,23 @@ mod tests {
     fn captured_listener_delivery_uses_dsp_buffers_and_preserves_pcm_and_partial_suffixes() {
         use std::cell::RefCell;
         thread_local! { static SIZES: RefCell<Vec<i32>> = const { RefCell::new(Vec::new()) }; }
-        extern "C" fn listener(kind: i32, _: u64, data: *mut f32, frames: i32, channels: i32, _: i64) {
-            if kind != callback::LISTENER_FILTER { return; }
+        extern "C" fn listener(
+            kind: i32,
+            _: u64,
+            data: *mut f32,
+            frames: i32,
+            channels: i32,
+            _: i64,
+        ) {
+            if kind != callback::LISTENER_FILTER {
+                return;
+            }
             SIZES.with(|sizes| sizes.borrow_mut().push(frames));
-            let values = unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
-            for value in values { *value *= 0.5; }
+            let values =
+                unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+            for value in values {
+                *value *= 0.5;
+            }
         }
         fn prepared() -> Mixer {
             let mut m = Mixer::new(MixerConfig::default());
@@ -2391,7 +2665,9 @@ mod tests {
         let mut control = prepared();
         let mut expected = vec![0.0; 4096];
         control.render(&mut expected, 2);
-        for sample in &mut expected { *sample = capture::pcm16(*sample * 0.5); }
+        for sample in &mut expected {
+            *sample = capture::pcm16(*sample * 0.5);
+        }
         let mut m = prepared();
         m.set_callback(Some(listener));
         m.listener_filter = true;
@@ -2428,10 +2704,16 @@ mod tests {
         m.add_clip(1, Clip::new(2, 48000, input));
         m.add_clip(2, Clip::new(2, 48000, vec![0.01; 2048]));
         source_with(&mut m, 7, 1, |p| p.group = 3);
-        source_with(&mut m, 8, 2, |p| { p.group = 5; p.flags = source_flags::LOOP; });
+        source_with(&mut m, 8, 2, |p| {
+            p.group = 5;
+            p.flags = source_flags::LOOP;
+        });
         play(&mut m, 7, command::PLAY, 0.0);
         play(&mut m, 8, command::PLAY, 0.0);
-        for _ in 0..70 { m.update_suspension(); m.advance(1024); }
+        for _ in 0..70 {
+            m.update_suspension();
+            m.advance(1024);
+        }
         assert!(m.group_nodes[&4].suspended);
         assert_eq!(m.group_nodes[&3].rendered, 50 * 1024);
         assert_eq!(m.source_state(8).main, voice_state::PLAYING);
@@ -2469,16 +2751,29 @@ mod tests {
             }
             assert!(mixer.group_nodes[&3].suspended, "packet={packet}");
         }
-        assert_eq!(dsp.group_nodes[&3].last_active, remote.group_nodes[&3].last_active);
+        assert_eq!(
+            dsp.group_nodes[&3].last_active,
+            remote.group_nodes[&3].last_active
+        );
     }
 
     #[test]
     fn clipless_generator_keeps_or_wakes_its_mixer_after_silence() {
         use std::cell::Cell;
         thread_local! { static TONE: Cell<bool> = const { Cell::new(false) }; }
-        extern "C" fn generator(kind: i32, _: u64, data: *mut f32, frames: i32, channels: i32, _: i64) {
-            if kind != callback::SOURCE_FILTER { return; }
-            let output = unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+        extern "C" fn generator(
+            kind: i32,
+            _: u64,
+            data: *mut f32,
+            frames: i32,
+            channels: i32,
+            _: i64,
+        ) {
+            if kind != callback::SOURCE_FILTER {
+                return;
+            }
+            let output =
+                unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
             output.fill(TONE.with(|tone| if tone.get() { 0.125 } else { 0.0 }));
         }
         for attach in [0, 80] {
@@ -2494,15 +2789,28 @@ mod tests {
             let mut output = vec![0.0; 2048];
             for block in 0..84 {
                 if block == attach {
-                    if attach > 0 { assert!(mixer.group_nodes[&3].suspended); }
-                    source_with(&mut mixer, 7, 0, |p| { p.group = 3; p.flags = source_flags::FILTER; });
+                    if attach > 0 {
+                        assert!(mixer.group_nodes[&3].suspended);
+                    }
+                    source_with(&mut mixer, 7, 0, |p| {
+                        p.group = 3;
+                        p.flags = source_flags::FILTER;
+                    });
                     play(&mut mixer, 7, command::PLAY, 0.0);
                 }
-                if block == 82 { TONE.with(|tone| tone.set(true)); }
+                if block == 82 {
+                    TONE.with(|tone| tone.set(true));
+                }
                 mixer.update_suspension();
                 mixer.render(&mut output, 2);
-                if block >= attach { assert!(!mixer.group_nodes[&3].suspended); }
-                assert!(output.iter().all(|sample| *sample == if block < 83 { 0.0 } else { 0.125 }));
+                if block >= attach {
+                    assert!(!mixer.group_nodes[&3].suspended);
+                }
+                assert!(
+                    output
+                        .iter()
+                        .all(|sample| *sample == if block < 83 { 0.0 } else { 0.125 })
+                );
             }
         }
     }
@@ -2511,63 +2819,142 @@ mod tests {
     fn clipless_lifecycle_matches_every_native_callback_state_and_sink_sample() {
         use std::cell::RefCell;
         #[derive(Default)]
-        struct Trace { amplitude: f32, calls: u32, listener: u32, length: usize, generated: f32, first: f32, last: f32 }
+        struct Trace {
+            amplitude: f32,
+            calls: u32,
+            listener: u32,
+            length: usize,
+            generated: f32,
+            first: f32,
+            last: f32,
+        }
         thread_local! { static TRACE: RefCell<Trace> = RefCell::new(Trace::default()); }
-        extern "C" fn callback(kind: i32, _: u64, data: *mut f32, frames: i32, channels: i32, _: i64) {
-            let values = unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+        extern "C" fn callback(
+            kind: i32,
+            _: u64,
+            data: *mut f32,
+            frames: i32,
+            channels: i32,
+            _: i64,
+        ) {
+            let values =
+                unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
             TRACE.with(|trace| {
                 let mut t = trace.borrow_mut();
                 if kind == callback::SOURCE_FILTER {
-                    t.calls += 1; t.length = values.len(); t.generated = t.amplitude;
+                    t.calls += 1;
+                    t.length = values.len();
+                    t.generated = t.amplitude;
                     values.fill(t.amplitude);
                 } else if kind == callback::LISTENER_FILTER {
-                    t.listener += 1; t.first = values[0]; t.last = values[values.len()-1];
+                    t.listener += 1;
+                    t.first = values[0];
+                    t.last = values[values.len() - 1];
                 }
             });
         }
         let reference = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/projects/audiogeneratorlifecycle/Reference/unity-6000.0.71f1");
         // Keep the regression self-contained without adding a decompression dependency.
-        let unpack = |key: &str| -> Vec<f32> {
-            let result = std::process::Command::new("python3").args(["-c",
+        let unpack =
+            |key: &str| -> Vec<f32> {
+                let result = std::process::Command::new("python3").args(["-c",
                 "import gzip,sys;sys.stdout.buffer.write(gzip.open(sys.argv[1],'rb').read())"])
                 .arg(reference.join(format!("{key}.f32.gz"))).output().unwrap();
-            assert!(result.status.success());
-            result.stdout.chunks_exact(4).map(|b| f32::from_le_bytes(b.try_into().unwrap())).collect()
-        };
+                assert!(result.status.success());
+                result
+                    .stdout
+                    .chunks_exact(4)
+                    .map(|b| f32::from_le_bytes(b.try_into().unwrap()))
+                    .collect()
+            };
         let expected_output = unpack("output");
         let expected_sink = unpack("master");
         let expected_trace = unpack("trace");
         let mut m = Mixer::new(MixerConfig::default());
         m.defer_voice_submission = true;
         let mut group = filter_group(3, 0, "Attenuation");
-        group.mixer = 3; group.effects[0].gain = 1.0;
+        group.mixer = 3;
+        group.effects[0].gain = 1.0;
         m.configure_group(group).unwrap();
         m.listener_filter = true;
         m.set_callback(Some(callback));
-        source_with(&mut m, 7, 0, |p| { p.group = 3; p.flags = source_flags::FILTER; });
-        TRACE.with(|trace| *trace.borrow_mut() = Trace { amplitude: 0.0625, ..Default::default() });
+        source_with(&mut m, 7, 0, |p| {
+            p.group = 3;
+            p.flags = source_flags::FILTER;
+        });
+        TRACE.with(|trace| {
+            *trace.borrow_mut() = Trace {
+                amplitude: 0.0625,
+                ..Default::default()
+            }
+        });
         for step in 0..23 {
-            if matches!(step, 0 | 1 | 2 | 5 | 12 | 15 | 18 | 21) { m.update_suspension(); }
-            let command = match step { 3 | 20 => Some(command::PLAY), 11 => Some(command::PAUSE),
-                14 => Some(command::UNPAUSE), 17 => Some(command::STOP), _ => None };
-            if let Some(command) = command { play(&mut m, 7, command, 0.0); }
-            if step == 8 { TRACE.with(|trace| trace.borrow_mut().amplitude = 0.125); }
-            if step == 20 { TRACE.with(|trace| trace.borrow_mut().amplitude = 0.25); }
-            let before = TRACE.with(|trace| { let t = trace.borrow(); (t.calls, t.listener) });
-            let output = m.capture(2048, vec![capture::SinkRequest { handle: 3, length: 2048, exclude_from_mix: false }]).unwrap();
+            if matches!(step, 0 | 1 | 2 | 5 | 12 | 15 | 18 | 21) {
+                m.update_suspension();
+            }
+            let command = match step {
+                3 | 20 => Some(command::PLAY),
+                11 => Some(command::PAUSE),
+                14 => Some(command::UNPAUSE),
+                17 => Some(command::STOP),
+                _ => None,
+            };
+            if let Some(command) = command {
+                play(&mut m, 7, command, 0.0);
+            }
+            if step == 8 {
+                TRACE.with(|trace| trace.borrow_mut().amplitude = 0.125);
+            }
+            if step == 20 {
+                TRACE.with(|trace| trace.borrow_mut().amplitude = 0.25);
+            }
+            let before = TRACE.with(|trace| {
+                let t = trace.borrow();
+                (t.calls, t.listener)
+            });
+            let output = m
+                .capture(
+                    2048,
+                    vec![capture::SinkRequest {
+                        handle: 3,
+                        length: 2048,
+                        exclude_from_mix: false,
+                    }],
+                )
+                .unwrap();
             let state = m.source_state(7);
             let observed = TRACE.with(|trace| {
                 let t = trace.borrow();
-                [(t.calls-before.0) as f32, (t.listener-before.1) as f32,
-                    (state.main == voice_state::PLAYING) as u8 as f32, state.is_virtual as f32,
-                    state.position as f32, t.length as f32, t.generated, t.first, t.last]
+                [
+                    (t.calls - before.0) as f32,
+                    (t.listener - before.1) as f32,
+                    (state.main == voice_state::PLAYING) as u8 as f32,
+                    state.is_virtual as f32,
+                    state.position as f32,
+                    t.length as f32,
+                    t.generated,
+                    t.first,
+                    t.last,
+                ]
             });
-            assert_eq!(&observed, &expected_trace[step*9..(step+1)*9], "trace step={step}");
-            assert_eq!(output.samples, expected_output[step*2048..(step+1)*2048], "output step={step}");
+            assert_eq!(
+                &observed,
+                &expected_trace[step * 9..(step + 1) * 9],
+                "trace step={step}"
+            );
+            assert_eq!(
+                output.samples,
+                expected_output[step * 2048..(step + 1) * 2048],
+                "output step={step}"
+            );
             let mut sink = vec![-3.0; 2048];
             sink[..output.sinks[0].samples.len()].copy_from_slice(&output.sinks[0].samples);
-            assert_eq!(sink, expected_sink[step*2048..(step+1)*2048], "sink step={step}");
+            assert_eq!(
+                sink,
+                expected_sink[step * 2048..(step + 1) * 2048],
+                "sink step={step}"
+            );
         }
     }
 
@@ -2575,81 +2962,168 @@ mod tests {
     fn source_filter_routes_match_complete_native_one_shots_and_scheduled_windows() {
         use std::cell::RefCell;
         #[derive(Default)]
-        struct Trace { input: Vec<f32>, emitted: Vec<f32>, lengths: Vec<usize> }
+        struct Trace {
+            input: Vec<f32>,
+            emitted: Vec<f32>,
+            lengths: Vec<usize>,
+        }
         thread_local! { static TRACE: RefCell<Trace> = RefCell::new(Trace::default()); }
-        extern "C" fn filter(kind: i32, _: u64, data: *mut f32, frames: i32, channels: i32, _: i64) {
-            if kind != callback::SOURCE_FILTER { return; }
-            let values = unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+        extern "C" fn filter(
+            kind: i32,
+            _: u64,
+            data: *mut f32,
+            frames: i32,
+            channels: i32,
+            _: i64,
+        ) {
+            if kind != callback::SOURCE_FILTER {
+                return;
+            }
+            let values =
+                unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
             TRACE.with(|trace| {
                 let mut trace = trace.borrow_mut();
                 trace.input.extend_from_slice(values);
                 trace.lengths.push(values.len());
-                for value in values.iter_mut() { *value = *value * 0.5 + 0.0625; }
+                for value in values.iter_mut() {
+                    *value = *value * 0.5 + 0.0625;
+                }
                 trace.emitted.extend_from_slice(values);
             });
         }
         let reference = std::path::Path::new(env!("CARGO_MANIFEST_DIR"))
             .join("../../tests/projects/audiogeneratorboundaries/Reference/unity-6000.0.71f1");
-        let unpack = |key: &str| -> Vec<f32> {
-            let result = std::process::Command::new("python3").args(["-c",
+        let unpack =
+            |key: &str| -> Vec<f32> {
+                let result = std::process::Command::new("python3").args(["-c",
                 "import gzip,sys;sys.stdout.buffer.write(gzip.open(sys.argv[1],'rb').read())"])
                 .arg(reference.join(format!("{key}.f32.gz"))).output().unwrap();
-            assert!(result.status.success());
-            result.stdout.chunks_exact(4).map(|b| f32::from_le_bytes(b.try_into().unwrap())).collect()
-        };
-        let metadata: serde_json::Value = serde_json::from_slice(
-            &std::fs::read(reference.join("capture.json")).unwrap()).unwrap();
-        for key in ["idle", "shotPlain", "shotFilter", "generator", "generatorShot",
-            "startInside", "endInside", "windowInside", "startClipInside", "endClipInside", "windowClipInside"] {
+                assert!(result.status.success());
+                result
+                    .stdout
+                    .chunks_exact(4)
+                    .map(|b| f32::from_le_bytes(b.try_into().unwrap()))
+                    .collect()
+            };
+        let metadata: serde_json::Value =
+            serde_json::from_slice(&std::fs::read(reference.join("capture.json")).unwrap())
+                .unwrap();
+        for key in [
+            "idle",
+            "shotPlain",
+            "shotFilter",
+            "generator",
+            "generatorShot",
+            "startInside",
+            "endInside",
+            "windowInside",
+            "startClipInside",
+            "endClipInside",
+            "windowClipInside",
+        ] {
             TRACE.with(|trace| *trace.borrow_mut() = Trace::default());
             let mut m = Mixer::new(MixerConfig::default());
             let mut master = filter_group(3, 0, "Attenuation");
-            master.mixer = 3; master.effects[0].gain = 1.0;
+            master.mixer = 3;
+            master.effects[0].gain = 1.0;
             let mut child = filter_group(4, 3, "Attenuation");
-            child.mixer = 3; child.effects[0].gain = 1.0;
-            m.configure_group(master).unwrap(); m.configure_group(child).unwrap();
+            child.mixer = 3;
+            child.effects[0].gain = 1.0;
+            m.configure_group(master).unwrap();
+            m.configure_group(child).unwrap();
             m.set_callback(Some(filter));
             let pcm: Vec<f32> = (0..4096).flat_map(|_| [0.125, -0.25]).collect();
             m.add_clip(1, Clip::new(2, 48000, pcm));
             let backed = key.contains("Clip");
             source_with(&mut m, 7, if backed { 1 } else { 0 }, |p| {
-                p.group = 4; if key != "shotPlain" { p.flags = source_flags::FILTER; }
+                p.group = 4;
+                if key != "shotPlain" {
+                    p.flags = source_flags::FILTER;
+                }
             });
-            assert_eq!(m.source_state(7).is_virtual != 0,
-                metadata[format!("{key}.events")][0]["virtual"].as_bool().unwrap(),
-                "initial virtual state {key}");
+            assert_eq!(
+                m.source_state(7).is_virtual != 0,
+                metadata[format!("{key}.events")][0]["virtual"]
+                    .as_bool()
+                    .unwrap(),
+                "initial virtual state {key}"
+            );
             if key.ends_with("Inside") {
-                let (start, end) = if key.starts_with("start") { (8265.25, 12288.75) }
-                    else if key.starts_with("end") { (8192.25, 10425.75) } else { (8265.25, 8377.75) };
+                let (start, end) = if key.starts_with("start") {
+                    (8265.25, 12288.75)
+                } else if key.starts_with("end") {
+                    (8192.25, 10425.75)
+                } else {
+                    (8265.25, 8377.75)
+                };
                 play(&mut m, 7, command::PLAY, start / 48000.0);
                 play(&mut m, 7, command::SET_SCHEDULED_END, end / 48000.0);
             } else {
-                if key.starts_with("generator") { play(&mut m, 7, command::PLAY, 0.0); }
+                if key.starts_with("generator") {
+                    play(&mut m, 7, command::PLAY, 0.0);
+                }
                 if matches!(key, "shotPlain" | "shotFilter" | "generatorShot") {
-                    m.command(7, &AudioSourceCommand { kind: command::PLAY_ONE_SHOT,
-                        clip: 1, volume_scale: 1.0, ..Default::default() });
+                    m.command(
+                        7,
+                        &AudioSourceCommand {
+                            kind: command::PLAY_ONE_SHOT,
+                            clip: 1,
+                            volume_scale: 1.0,
+                            ..Default::default()
+                        },
+                    );
                 }
             }
             let check_state = |m: &Mixer, phase: &str, block: i64| {
-                let event = metadata[format!("{key}.events")].as_array().unwrap().iter()
-                    .find(|e| e["phase"] == phase && e["block"] == block).unwrap();
+                let event = metadata[format!("{key}.events")]
+                    .as_array()
+                    .unwrap()
+                    .iter()
+                    .find(|e| e["phase"] == phase && e["block"] == block)
+                    .unwrap();
                 let state = m.source_state(7);
-                assert_eq!(state.main == voice_state::PLAYING || state.main == voice_state::SCHEDULED
-                    || state.one_shots > 0, event["playing"].as_bool().unwrap(), "playing {key} {phase} {block}");
-                assert_eq!(state.is_virtual != 0, event["virtual"].as_bool().unwrap(), "virtual {key} {phase} {block}");
-                assert_eq!(state.position as i64, event["timeSamples"].as_i64().unwrap(), "position {key} {phase} {block}");
+                assert_eq!(
+                    state.main == voice_state::PLAYING
+                        || state.main == voice_state::SCHEDULED
+                        || state.one_shots > 0,
+                    event["playing"].as_bool().unwrap(),
+                    "playing {key} {phase} {block}"
+                );
+                assert_eq!(
+                    state.is_virtual != 0,
+                    event["virtual"].as_bool().unwrap(),
+                    "virtual {key} {phase} {block}"
+                );
+                assert_eq!(
+                    state.position as i64,
+                    event["timeSamples"].as_i64().unwrap(),
+                    "position {key} {phase} {block}"
+                );
             };
-            let mut pcm = Vec::new(); let mut sinks = [Vec::new(), Vec::new()];
+            let mut pcm = Vec::new();
+            let mut sinks = [Vec::new(), Vec::new()];
             for block in 0..if key.ends_with("Inside") { 88 } else { 12 } {
                 m.update_suspension();
                 check_state(&m, "beforeRender", block);
-                let result = m.capture(2048, [3, 4].into_iter().map(|handle|
-                    capture::SinkRequest { handle, length: 2048, exclude_from_mix: false }).collect()).unwrap();
+                let result = m
+                    .capture(
+                        2048,
+                        [3, 4]
+                            .into_iter()
+                            .map(|handle| capture::SinkRequest {
+                                handle,
+                                length: 2048,
+                                exclude_from_mix: false,
+                            })
+                            .collect(),
+                    )
+                    .unwrap();
                 check_state(&m, "afterRender", block);
                 pcm.extend(result.samples);
                 for (dest, sink) in sinks.iter_mut().zip(result.sinks) {
                     let mut block = vec![-3.0; 2048];
-                    block[..sink.samples.len()].copy_from_slice(&sink.samples); dest.extend(block);
+                    block[..sink.samples.len()].copy_from_slice(&sink.samples);
+                    dest.extend(block);
                 }
             }
             let check = |actual: &[f32], suffix: &str| {
@@ -2665,12 +3139,19 @@ mod tests {
             }
             TRACE.with(|trace| {
                 let trace = trace.borrow();
-                assert!(trace.lengths.iter().all(|n| *n == 2048), "callback dimensions {key}");
+                assert!(
+                    trace.lengths.iter().all(|n| *n == 2048),
+                    "callback dimensions {key}"
+                );
                 check(&trace.input, "input");
                 check(&trace.emitted, "emitted");
             });
             if key.ends_with("Inside") {
-                assert_eq!(m.source_state(7).main == voice_state::PLAYING, !backed, "completion {key}");
+                assert_eq!(
+                    m.source_state(7).main == voice_state::PLAYING,
+                    !backed,
+                    "completion {key}"
+                );
             }
         }
     }
@@ -2679,31 +3160,69 @@ mod tests {
     fn generator_accumulates_independent_one_shots_without_changing_their_gain() {
         use std::cell::Cell;
         thread_local! { static INPUT_ZERO: Cell<bool> = const { Cell::new(true) }; }
-        extern "C" fn generate(kind: i32, _: u64, data: *mut f32, frames: i32, channels: i32, _: i64) {
-            if kind != callback::SOURCE_FILTER { return; }
+        extern "C" fn generate(
+            kind: i32,
+            _: u64,
+            data: *mut f32,
+            frames: i32,
+            channels: i32,
+            _: i64,
+        ) {
+            if kind != callback::SOURCE_FILTER {
+                return;
+            }
             let pcm = unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
             INPUT_ZERO.with(|zero| zero.set(zero.get() && pcm.iter().all(|x| *x == 0.0)));
-            for (i, value) in pcm.iter_mut().enumerate() { *value = (i % 17) as f32 / 128.0; }
+            for (i, value) in pcm.iter_mut().enumerate() {
+                *value = (i % 17) as f32 / 128.0;
+            }
         }
         let render = |generator: bool, shots: bool| {
-            let mut m = Mixer::new(MixerConfig { buffer_size: 512, ..Default::default() });
+            let mut m = Mixer::new(MixerConfig {
+                buffer_size: 512,
+                ..Default::default()
+            });
             m.set_callback(Some(generate));
-            source_with(&mut m, 7, 0, |p| { if generator { p.flags = source_flags::FILTER; } });
-            m.add_clip(1, Clip::new(2, 48000, (0..3500).map(|i| (i % 31) as f32 / 64.0).collect()));
-            if generator { play(&mut m, 7, command::PLAY, 0.0); }
+            source_with(&mut m, 7, 0, |p| {
+                if generator {
+                    p.flags = source_flags::FILTER;
+                }
+            });
+            m.add_clip(
+                1,
+                Clip::new(
+                    2,
+                    48000,
+                    (0..3500).map(|i| (i % 31) as f32 / 64.0).collect(),
+                ),
+            );
+            if generator {
+                play(&mut m, 7, command::PLAY, 0.0);
+            }
             if shots {
                 for scale in [0.375, 0.8125] {
-                    m.command(7, &AudioSourceCommand { kind: command::PLAY_ONE_SHOT,
-                        clip: 1, volume_scale: scale, ..Default::default() });
+                    m.command(
+                        7,
+                        &AudioSourceCommand {
+                            kind: command::PLAY_ONE_SHOT,
+                            clip: 1,
+                            volume_scale: scale,
+                            ..Default::default()
+                        },
+                    );
                 }
             }
             let mut out = vec![0.0; 4096];
             // Cross callback boundaries using device-sized packets.
-            for chunk in out.chunks_mut(480 * 2) { m.render(chunk, 2); }
+            for chunk in out.chunks_mut(480 * 2) {
+                m.render(chunk, 2);
+            }
             out
         };
         INPUT_ZERO.with(|zero| zero.set(true));
-        let generated = render(true, false); let shots = render(false, true); let combined = render(true, true);
+        let generated = render(true, false);
+        let shots = render(false, true);
+        let combined = render(true, true);
         for ((g, s), actual) in generated.iter().zip(shots).zip(combined) {
             assert!((actual - (g + s)).abs() < 1e-6);
         }
@@ -2744,10 +3263,14 @@ mod tests {
         group.mixer = 4;
         group.effects[0].delay = 5000.0;
         m.configure_group(group).unwrap();
-        m.configure_group(serde_json::from_value(serde_json::json!({
-            "handle": 4, "parent": 0, "mixer": 4, "enableSuspend": true,
-            "suspendThreshold": 0.0001, "muted": false, "bypass": false, "effects": []
-        })).unwrap()).unwrap();
+        m.configure_group(
+            serde_json::from_value(serde_json::json!({
+                "handle": 4, "parent": 0, "mixer": 4, "enableSuspend": true,
+                "suspendThreshold": 0.0001, "muted": false, "bypass": false, "effects": []
+            }))
+            .unwrap(),
+        )
+        .unwrap();
         let mut input = vec![0.0; 4096 * 2];
         input[2048 * 2] = 0.25;
         input[3072 * 2 + 1] = -0.125;
@@ -2762,19 +3285,31 @@ mod tests {
         assert!(m.group_nodes[&4].suspended);
         // The complete Native wake_hold capture freezes after 50 DSP buffers at 48 kHz.
         assert_eq!(m.group_nodes[&3].rendered, 50 * 1024);
-        let captured = m.capture(2048, vec![capture::SinkRequest {
-            handle: 4, length: 2048, exclude_from_mix: false,
-        }]).unwrap();
+        let captured = m
+            .capture(
+                2048,
+                vec![capture::SinkRequest {
+                    handle: 4,
+                    length: 2048,
+                    exclude_from_mix: false,
+                }],
+            )
+            .unwrap();
         assert!(captured.sinks[0].samples.is_empty());
         assert!(captured.samples.iter().all(|x| *x == 0.0));
         m.add_clip(2, Clip::new(2, 48000, vec![0.01; 1024 * 2]));
-        source_with(&mut m, 8, 2, |p| { p.group = 4; p.flags = source_flags::LOOP; });
+        source_with(&mut m, 8, 2, |p| {
+            p.group = 4;
+            p.flags = source_flags::LOOP;
+        });
         play(&mut m, 8, command::PLAY, 0.0);
         m.render(&mut block, 2);
         assert!(!m.group_nodes[&4].suspended);
         assert_eq!(m.group_nodes[&3].rendered, 51 * 1024);
         // Neither time without rendering nor repeated graph submissions advance the history.
-        for _ in 0..160 { m.update_suspension(); }
+        for _ in 0..160 {
+            m.update_suspension();
+        }
         assert_eq!(m.group_nodes[&3].rendered, 51 * 1024);
         let configuration = m.config;
         m.reconfigure(configuration).unwrap();
@@ -2811,16 +3346,32 @@ mod tests {
     fn sends_reach_a_later_sibling_receive_in_the_same_block_after_the_first_dsp_block() {
         fn group(handle: u64, parent: u64, effects: serde_json::Value) -> GroupSpec {
             serde_json::from_value(serde_json::json!({ "handle": handle, "parent": parent,
-                "mixer": 1, "muted": false, "bypass": false, "effects": effects })).unwrap()
+                "mixer": 1, "muted": false, "bypass": false, "effects": effects }))
+            .unwrap()
         }
         let mut m = Mixer::new(MixerConfig::default());
-        m.configure_group(group(1, 0, serde_json::json!([{ "id": "a1", "kind": "Attenuation", "gain": 1.0 }]))).unwrap();
-        m.configure_group(group(3, 1, serde_json::json!([{ "id": "recv", "kind": "Receive" },
-            { "id": "a3", "kind": "Attenuation", "gain": 1.0 }]))).unwrap();
+        m.configure_group(group(
+            1,
+            0,
+            serde_json::json!([{ "id": "a1", "kind": "Attenuation", "gain": 1.0 }]),
+        ))
+        .unwrap();
+        m.configure_group(group(
+            3,
+            1,
+            serde_json::json!([{ "id": "recv", "kind": "Receive" },
+            { "id": "a3", "kind": "Attenuation", "gain": 1.0 }]),
+        ))
+        .unwrap();
         // The sender has the larger handle, so only the send edge puts it first.
-        m.configure_group(group(5, 1, serde_json::json!([
+        m.configure_group(group(
+            5,
+            1,
+            serde_json::json!([
             { "id": "send", "kind": "Send", "sendTarget": "recv", "sendLevel": 0.5 },
-            { "id": "a5", "kind": "Attenuation", "gain": 0.0 }]))).unwrap();
+            { "id": "a5", "kind": "Attenuation", "gain": 0.0 }]),
+        ))
+        .unwrap();
         assert_eq!(m.group_order, vec![5, 3, 1]);
         let mut input = vec![0.0; 4096 * 2];
         input[100 * 2] = 1.0;
@@ -2836,9 +3387,14 @@ mod tests {
         assert_eq!(out[2000 * 2], 0.5);
         assert_eq!(out.iter().filter(|x| **x != 0.0).count(), 1);
         // A sending group registered while the mixer runs reaches its target at once.
-        m.configure_group(group(6, 1, serde_json::json!([
+        m.configure_group(group(
+            6,
+            1,
+            serde_json::json!([
             { "id": "late", "kind": "Send", "sendTarget": "recv", "sendLevel": 0.25 },
-            { "id": "a6", "kind": "Attenuation", "gain": 0.0 }]))).unwrap();
+            { "id": "a6", "kind": "Attenuation", "gain": 0.0 }]),
+        ))
+        .unwrap();
         let mut input = vec![0.0; 1024 * 2];
         input[10 * 2] = 1.0;
         m.add_clip(2, Clip::new(2, 48000, input));
@@ -2851,19 +3407,54 @@ mod tests {
         // 0.25 times the voice's 64-frame start fade at frame 10.
         assert!(late.chunks_exact(2).any(|f| (0.03..0.05).contains(&f[0])));
         // A send into its own group, or one closing a loop, is refused and keeps the graph.
-        assert!(m.configure_group(group(3, 1, serde_json::json!([{ "id": "recv", "kind": "Receive" },
-            { "id": "loop", "kind": "Send", "sendTarget": "recv", "sendLevel": 1.0 }]))).is_err());
-        assert!(m.configure_group(group(1, 0, serde_json::json!([{ "id": "back", "kind": "Duck Volume",
+        assert!(
+            m.configure_group(group(
+                3,
+                1,
+                serde_json::json!([{ "id": "recv", "kind": "Receive" },
+            { "id": "loop", "kind": "Send", "sendTarget": "recv", "sendLevel": 1.0 }])
+            ))
+            .is_err()
+        );
+        assert!(
+            m.configure_group(group(
+                1,
+                0,
+                serde_json::json!([{ "id": "back", "kind": "Duck Volume",
             "duck": { "threshold": -10.0, "ratio": 2.0, "attackTime": 0.1, "releaseTime": 0.3,
-                "makeupGain": 0.0, "knee": 10.0, "sidechainMix": 1.0 } }]))).is_ok());
-        assert!(m.configure_group(group(5, 1, serde_json::json!([
-            { "id": "send", "kind": "Send", "sendTarget": "recv", "sendLevel": 0.5 }]))).is_ok());
-        assert!(m.configure_group(group(3, 1, serde_json::json!([{ "id": "recv", "kind": "Receive" },
-            { "id": "up", "kind": "Send", "sendTarget": "back", "sendLevel": 1.0 }]))).is_ok());
-        assert!(m.configure_group(group(1, 0, serde_json::json!([{ "id": "back", "kind": "Duck Volume",
+                "makeupGain": 0.0, "knee": 10.0, "sidechainMix": 1.0 } }])
+            ))
+            .is_ok()
+        );
+        assert!(
+            m.configure_group(group(
+                5,
+                1,
+                serde_json::json!([
+            { "id": "send", "kind": "Send", "sendTarget": "recv", "sendLevel": 0.5 }])
+            ))
+            .is_ok()
+        );
+        assert!(
+            m.configure_group(group(
+                3,
+                1,
+                serde_json::json!([{ "id": "recv", "kind": "Receive" },
+            { "id": "up", "kind": "Send", "sendTarget": "back", "sendLevel": 1.0 }])
+            ))
+            .is_ok()
+        );
+        assert!(
+            m.configure_group(group(
+                1,
+                0,
+                serde_json::json!([{ "id": "back", "kind": "Duck Volume",
             "duck": { "threshold": -10.0, "ratio": 2.0, "attackTime": 0.1, "releaseTime": 0.3,
                 "makeupGain": 0.0, "knee": 10.0, "sidechainMix": 1.0 } },
-            { "id": "down", "kind": "Send", "sendTarget": "recv", "sendLevel": 1.0 }]))).is_err());
+            { "id": "down", "kind": "Send", "sendTarget": "recv", "sendLevel": 1.0 }])
+            ))
+            .is_err()
+        );
         assert_eq!(m.group_nodes[&1].spec.effects.len(), 1);
     }
     #[test]
@@ -2881,7 +3472,8 @@ mod tests {
             let mut effect = effect;
             effect["bypass"] = bypass.into();
             serde_json::from_value(serde_json::json!({ "handle": 1, "parent": 0, "mixer": 1,
-                "muted": false, "bypass": group_bypass, "effects": [effect] })).unwrap()
+                "muted": false, "bypass": group_bypass, "effects": [effect] }))
+            .unwrap()
         };
         let high = serde_json::json!({ "id": "h", "kind": "Highpass Simple", "cutoff": 23000.0 });
         let mut m = Mixer::new(MixerConfig::default());
@@ -2890,7 +3482,10 @@ mod tests {
         m.configure_group(spec(false, true, high)).unwrap();
         let compressor = serde_json::json!({ "id": "c", "kind": "Compressor" });
         let mut m = Mixer::new(MixerConfig::default());
-        assert!(m.configure_group(spec(false, false, compressor.clone())).is_err());
+        assert!(
+            m.configure_group(spec(false, false, compressor.clone()))
+                .is_err()
+        );
         m.configure_group(spec(true, false, compressor)).unwrap();
     }
     #[test]
@@ -2902,16 +3497,32 @@ mod tests {
         mixer.configure_group(spec.clone()).unwrap();
         spec.effects[0].bypass = false;
         spec.effects[0].flange = Some(super::super::flange::FlangeSpec {
-            dry: 0.45, wet: 0.55, depth: 1.0, rate: 0.1,
+            dry: 0.45,
+            wet: 0.55,
+            depth: 1.0,
+            rate: 0.1,
         });
         mixer.configure_group(spec.clone()).unwrap();
         spec.effects[0].mix_level = Some(0.5);
-        assert!(mixer.configure_group(spec.clone()).unwrap_err().to_string().contains("wet mixing"));
+        assert!(
+            mixer
+                .configure_group(spec.clone())
+                .unwrap_err()
+                .to_string()
+                .contains("wet mixing")
+        );
         spec.effects[0].mix_level = None;
         spec.effects[0].flange.as_mut().unwrap().rate = 40.0;
         assert!(mixer.configure_group(spec).is_err());
         let before = mixer.config;
-        assert!(mixer.reconfigure(MixerConfig { sample_rate: u32::MAX, ..before }).is_err());
+        assert!(
+            mixer
+                .reconfigure(MixerConfig {
+                    sample_rate: u32::MAX,
+                    ..before
+                })
+                .is_err()
+        );
         assert_eq!(mixer.config, before);
         assert_eq!(mixer.group_nodes[&3].effects.len(), 1);
     }
@@ -2923,41 +3534,91 @@ mod tests {
         spec.effects[0].pitch_shifter = Some(super::super::pitch::PitchSpec { pitch: 0.75 });
         mixer.configure_group(spec.clone()).unwrap();
         let before = mixer.config;
-        for config in [MixerConfig { buffer_size: 512, ..before }, MixerConfig { sample_rate: 22050, ..before }, MixerConfig { speaker_mode: 1, ..before }] {
-            assert!(mixer.reconfigure(config).is_err()); assert_eq!(mixer.config, before);
+        for config in [
+            MixerConfig {
+                buffer_size: 512,
+                ..before
+            },
+            MixerConfig {
+                sample_rate: 22050,
+                ..before
+            },
+            MixerConfig {
+                speaker_mode: 1,
+                ..before
+            },
+        ] {
+            assert!(mixer.reconfigure(config).is_err());
+            assert_eq!(mixer.config, before);
         }
         spec.effects[0].mix_level = Some(0.5);
-        assert!(mixer.configure_group(spec.clone()).unwrap_err().to_string().contains("wet mixing"));
+        assert!(
+            mixer
+                .configure_group(spec.clone())
+                .unwrap_err()
+                .to_string()
+                .contains("wet mixing")
+        );
         spec.effects[0].mix_level = None;
         mixer.group_nodes.get_mut(&3).unwrap().rendered = 1024;
         mixer.configure_group(spec.clone()).unwrap();
         spec.effects[0].pitch_shifter.as_mut().unwrap().pitch = 1.5;
-        assert!(mixer.configure_group(spec.clone()).unwrap_err().to_string().contains("live parameter"));
+        assert!(
+            mixer
+                .configure_group(spec.clone())
+                .unwrap_err()
+                .to_string()
+                .contains("live parameter")
+        );
         spec.effects[0].pitch_shifter.as_mut().unwrap().pitch = 0.75;
         spec.bypass = true;
         assert!(mixer.configure_group(spec).is_err());
         assert!(!mixer.group_nodes[&3].spec.bypass);
-        assert_eq!(mixer.group_nodes[&3].spec.effects[0].pitch_shifter.as_ref().unwrap().pitch, 0.75);
+        assert_eq!(
+            mixer.group_nodes[&3].spec.effects[0]
+                .pitch_shifter
+                .as_ref()
+                .unwrap()
+                .pitch,
+            0.75
+        );
     }
     #[test]
     fn layout_limited_effects_fail_on_mono_and_other_unmeasured_outputs() {
         let measured = MixerConfig::default();
         let unmeasured = [
-            MixerConfig { speaker_mode: 1, ..measured },
-            MixerConfig { speaker_mode: 3, ..measured },
-            MixerConfig { sample_rate: 22050, ..measured },
-            MixerConfig { buffer_size: 512, ..measured },
+            MixerConfig {
+                speaker_mode: 1,
+                ..measured
+            },
+            MixerConfig {
+                speaker_mode: 3,
+                ..measured
+            },
+            MixerConfig {
+                sample_rate: 22050,
+                ..measured
+            },
+            MixerConfig {
+                buffer_size: 512,
+                ..measured
+            },
         ];
         for kind in ["Normalize", "Pitch Shifter"] {
             let mut spec = filter_group(3, 0, kind);
             spec.effects[0].normalize = Some(super::super::normalize::NormalizeSpec {
-                fade: 5000.0, lowest: 0.1, maximum: 20.0,
+                fade: 5000.0,
+                lowest: 0.1,
+                maximum: 20.0,
             });
             spec.effects[0].pitch_shifter = Some(super::super::pitch::PitchSpec { pitch: 0.75 });
             for config in unmeasured {
                 let mut mixer = Mixer::new(config);
                 let error = mixer.configure_group(spec.clone()).unwrap_err().to_string();
-                assert!(error.contains(&format!("{kind} is measured only at")), "{error}");
+                assert!(
+                    error.contains(&format!("{kind} is measured only at")),
+                    "{error}"
+                );
                 assert!(mixer.group_nodes.is_empty());
                 let mut bypassed = spec.clone();
                 bypassed.effects[0].bypass = true;
@@ -2965,16 +3626,32 @@ mod tests {
             }
             let mut mixer = Mixer::new(measured);
             mixer.configure_group(spec.clone()).unwrap();
-            mixer.reconfigure(MixerConfig { sample_rate: 44100, ..measured }).unwrap();
+            mixer
+                .reconfigure(MixerConfig {
+                    sample_rate: 44100,
+                    ..measured
+                })
+                .unwrap();
             let before = mixer.config;
             for config in unmeasured {
-                assert!(mixer.reconfigure(config).unwrap_err().to_string().contains("measured only at"));
+                assert!(
+                    mixer
+                        .reconfigure(config)
+                        .unwrap_err()
+                        .to_string()
+                        .contains("measured only at")
+                );
                 assert_eq!(mixer.config, before);
             }
         }
         // A control outside these kinds: Flange keeps running on a mono output.
         let mut spec = filter_group(3, 0, "Flange");
-        spec.effects[0].flange = Some(super::super::flange::FlangeSpec { dry: 0.45, wet: 0.55, depth: 1.0, rate: 0.1 });
+        spec.effects[0].flange = Some(super::super::flange::FlangeSpec {
+            dry: 0.45,
+            wet: 0.55,
+            depth: 1.0,
+            rate: 0.1,
+        });
         Mixer::new(unmeasured[0]).configure_group(spec).unwrap();
     }
     #[test]
@@ -2983,27 +3660,63 @@ mod tests {
         let mut spec = filter_group(3, 0, "Normalize");
         assert!(mixer.configure_group(spec.clone()).is_err());
         spec.effects[0].normalize = Some(super::super::normalize::NormalizeSpec {
-            fade: 5000.0, lowest: 0.1, maximum: 20.0,
+            fade: 5000.0,
+            lowest: 0.1,
+            maximum: 20.0,
         });
         mixer.configure_group(spec.clone()).unwrap();
         let before = mixer.config;
-        for config in [MixerConfig { buffer_size: 512, ..before }, MixerConfig { sample_rate: 22050, ..before }] {
-            assert!(mixer.reconfigure(config).unwrap_err().to_string().contains("measured only"));
+        for config in [
+            MixerConfig {
+                buffer_size: 512,
+                ..before
+            },
+            MixerConfig {
+                sample_rate: 22050,
+                ..before
+            },
+        ] {
+            assert!(
+                mixer
+                    .reconfigure(config)
+                    .unwrap_err()
+                    .to_string()
+                    .contains("measured only")
+            );
             assert_eq!(mixer.config, before);
         }
         spec.effects[0].mix_level = Some(0.5);
-        assert!(mixer.configure_group(spec.clone()).unwrap_err().to_string().contains("wet mixing"));
+        assert!(
+            mixer
+                .configure_group(spec.clone())
+                .unwrap_err()
+                .to_string()
+                .contains("wet mixing")
+        );
         spec.effects[0].mix_level = None;
         // A repeated managed submission retains the envelope; changing its settings must fail.
         mixer.group_nodes.get_mut(&3).unwrap().rendered = 1024;
         mixer.configure_group(spec.clone()).unwrap();
         spec.effects[0].normalize.as_mut().unwrap().fade = 100.0;
-        assert!(mixer.configure_group(spec.clone()).unwrap_err().to_string().contains("live parameter"));
+        assert!(
+            mixer
+                .configure_group(spec.clone())
+                .unwrap_err()
+                .to_string()
+                .contains("live parameter")
+        );
         spec.effects[0].normalize.as_mut().unwrap().fade = 5000.0;
         spec.bypass = true;
         assert!(mixer.configure_group(spec).is_err());
         assert!(!mixer.group_nodes[&3].spec.bypass);
-        assert_eq!(mixer.group_nodes[&3].spec.effects[0].normalize.as_ref().unwrap().fade, 5000.0);
+        assert_eq!(
+            mixer.group_nodes[&3].spec.effects[0]
+                .normalize
+                .as_ref()
+                .unwrap()
+                .fade,
+            5000.0
+        );
     }
     #[test]
     fn malformed_echo_rates_fail_before_allocating_or_replacing_groups() {
@@ -3022,17 +3735,22 @@ mod tests {
             mixer.configure_group(filter_group(3, 0, "Echo")).unwrap();
             let before = mixer.config;
             let spec = mixer.group_nodes[&3].spec.clone();
-            let error = mixer.reconfigure(MixerConfig {
-                sample_rate: i32::MAX as u32,
-                ..before
-            }).unwrap_err();
+            let error = mixer
+                .reconfigure(MixerConfig {
+                    sample_rate: i32::MAX as u32,
+                    ..before
+                })
+                .unwrap_err();
             assert!(error.to_string().contains("8 MiB"));
             assert_eq!(mixer.config, before);
             assert_eq!(mixer.group_nodes[&3].spec, spec);
             assert_eq!(mixer.group_nodes[&3].effects.len(), 1);
         }
         // The resource limit still admits a five-second stereo delay at 384 kHz.
-        let mut mixer = Mixer::new(MixerConfig { sample_rate: 384000, ..Default::default() });
+        let mut mixer = Mixer::new(MixerConfig {
+            sample_rate: 384000,
+            ..Default::default()
+        });
         let mut spec = filter_group(3, 0, "Echo");
         spec.effects[0].delay = 5000.0;
         mixer.configure_group(spec).unwrap();
@@ -3050,7 +3768,10 @@ mod tests {
                 ("tone_stereo", 25.0, 0.5, false),
                 ("effect_bypass", 25.0, 0.5, true),
             ] {
-                let mut m = Mixer::new(MixerConfig { sample_rate: rate, ..Default::default() });
+                let mut m = Mixer::new(MixerConfig {
+                    sample_rate: rate,
+                    ..Default::default()
+                });
                 let mut group = filter_group(3, 0, "Echo");
                 group.effects[0].delay = delay;
                 group.effects[0].decay = decay;
@@ -3061,15 +3782,23 @@ mod tests {
                     for channel in 0..2 {
                         input[frame * 2 + channel] = if key == "tone_stereo" {
                             if frame < 4096 {
-                                (0.125 * (2.0 * std::f64::consts::PI
-                                    * if channel == 0 { 400.0 } else { 1700.0 }
-                                    * frame as f64 / rate as f64).sin()) as f32
-                            } else { 0.0 }
+                                (0.125
+                                    * (2.0
+                                        * std::f64::consts::PI
+                                        * if channel == 0 { 400.0 } else { 1700.0 }
+                                        * frame as f64
+                                        / rate as f64)
+                                        .sin()) as f32
+                            } else {
+                                0.0
+                            }
                         } else if channel == 0 && (frame == 0 || frame == 2048) {
                             0.25
                         } else if channel == 1 && (frame == 31 || frame == 3072) {
                             -0.125
-                        } else { 0.0 };
+                        } else {
+                            0.0
+                        };
                     }
                 }
                 m.add_clip(1, Clip::new(2, rate, input));
@@ -3086,8 +3815,10 @@ mod tests {
                 }
                 for (i, (bytes, actual)) in reference.chunks_exact(4).zip(output).enumerate() {
                     let native = f32::from_le_bytes(bytes.try_into().unwrap());
-                    assert!((native - actual).abs() <= 2e-5 + 2e-4 * native.abs(),
-                        "{rate}/{key} sample {i}: native={native}, engine={actual}");
+                    assert!(
+                        (native - actual).abs() <= 2e-5 + 2e-4 * native.abs(),
+                        "{rate}/{key} sample {i}: native={native}, engine={actual}"
+                    );
                 }
             }
         }
@@ -3251,7 +3982,9 @@ mod tests {
     fn through(input: &[f32], filters: &[AudioFilterDescriptor], rate: u32) -> Vec<f32> {
         let mut out = input.to_vec();
         for d in filters {
-            Effect::new(effect_spec(d), rate, 1024).unwrap().process(&mut out, false);
+            Effect::new(effect_spec(d), rate, 1024)
+                .unwrap()
+                .process(&mut out, false);
         }
         out
     }
@@ -3306,7 +4039,11 @@ mod tests {
             spread_curve: std::ptr::null(),
             filter_count: filters.len() as i32,
             _pad2: 0,
-            filters: if filters.is_empty() { std::ptr::null() } else { filters.as_ptr() },
+            filters: if filters.is_empty() {
+                std::ptr::null()
+            } else {
+                filters.as_ptr()
+            },
         }
     }
 
@@ -3328,7 +4065,12 @@ mod tests {
     fn a_source_without_components_or_with_bypassed_effects_is_unchanged() {
         let dry = render_source(&[], 0, stereo_tone(8192), 4096);
         // bypassEffects skips the components; the samples are the dry voice's.
-        let bypassed = render_source(&components(), source_flags::BYPASS_EFFECTS, stereo_tone(8192), 4096);
+        let bypassed = render_source(
+            &components(),
+            source_flags::BYPASS_EFFECTS,
+            stereo_tone(8192),
+            4096,
+        );
         assert_eq!(bypassed, dry);
         // A NativeApi 15 style packet (no descriptors) decodes to no components.
         let params = unsafe { SourceParams::from_packet(&packet(1, 0, &[])) };
@@ -3404,7 +4146,10 @@ mod tests {
         }
         let steady = run(|_, _| {});
         // The engine sends the packet every frame: equal descriptors change nothing.
-        assert_eq!(run(|m, _| source_with(m, 7, 1, |p| p.filters = components())), steady);
+        assert_eq!(
+            run(|m, _| source_with(m, 7, 1, |p| p.filters = components())),
+            steady
+        );
         // A replaced component (new instance ID) restarts its history.
         let replaced = run(|m, block| {
             let mut filters = components();
@@ -3487,7 +4232,10 @@ mod tests {
         };
         // The listener's tail outlives the source.
         assert!(listen(0)[2 * 2048..].iter().any(|v| v.abs() > 1e-6));
-        for flag in [source_flags::BYPASS_LISTENER_EFFECTS, source_flags::BYPASS_EFFECTS] {
+        for flag in [
+            source_flags::BYPASS_LISTENER_EFFECTS,
+            source_flags::BYPASS_EFFECTS,
+        ] {
             assert!(listen(flag)[2 * 201..].iter().all(|v| *v == 0.0));
         }
         let mut m = Mixer::new(MixerConfig::default());
@@ -3536,15 +4284,30 @@ mod tests {
     fn components_sit_above_or_below_the_on_audio_filter_read_scripts() {
         use std::cell::RefCell;
         #[derive(Default)]
-        struct Trace { input: Vec<f32>, emitted: Vec<f32> }
+        struct Trace {
+            input: Vec<f32>,
+            emitted: Vec<f32>,
+        }
         thread_local! { static TRACE: RefCell<Trace> = RefCell::new(Trace::default()); }
-        extern "C" fn script(kind: i32, _: u64, data: *mut f32, frames: i32, channels: i32, _: i64) {
-            if kind != callback::SOURCE_FILTER { return; }
-            let values = unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
+        extern "C" fn script(
+            kind: i32,
+            _: u64,
+            data: *mut f32,
+            frames: i32,
+            channels: i32,
+            _: i64,
+        ) {
+            if kind != callback::SOURCE_FILTER {
+                return;
+            }
+            let values =
+                unsafe { std::slice::from_raw_parts_mut(data, (frames * channels) as usize) };
             TRACE.with(|trace| {
                 let mut trace = trace.borrow_mut();
                 trace.input.extend_from_slice(values);
-                for value in values.iter_mut() { *value *= 0.5; }
+                for value in values.iter_mut() {
+                    *value *= 0.5;
+                }
                 trace.emitted.extend_from_slice(values);
             });
         }
@@ -3554,7 +4317,10 @@ mod tests {
             m.set_callback(Some(script));
             m.add_clip(1, stereo_tone(8192));
             let filters: Vec<_> = stage.map_or(Vec::new(), |stage| {
-                vec![AudioFilterDescriptor { cutoff: 300.0, ..component(12, filter_kind::HIGHPASS, stage) }]
+                vec![AudioFilterDescriptor {
+                    cutoff: 300.0,
+                    ..component(12, filter_kind::HIGHPASS, stage)
+                }]
             });
             source_with(&mut m, 7, 1, |p| {
                 p.flags = source_flags::FILTER;
@@ -3563,7 +4329,10 @@ mod tests {
             play(&mut m, 7, command::PLAY, 0.0);
             let mut out = vec![0.0; 2048 * 2];
             m.render(&mut out, 2);
-            (out, TRACE.with(|trace| std::mem::take(&mut *trace.borrow_mut())))
+            (
+                out,
+                TRACE.with(|trace| std::mem::take(&mut *trace.borrow_mut())),
+            )
         };
         let highpass = [AudioFilterDescriptor {
             cutoff: 300.0,
@@ -3592,47 +4361,81 @@ mod tests {
         let mut negative = packet(1, 0, &valid);
         negative.filter_count = -1;
         assert!(refused(&negative).contains("outside"));
-        let many: Vec<_> = (0..65).map(|id| component(id, filter_kind::LOWPASS, 0)).collect();
+        let many: Vec<_> = (0..65)
+            .map(|id| component(id, filter_kind::LOWPASS, 0))
+            .collect();
         assert!(refused(&packet(1, 0, &many)).contains("outside"));
         let mut null = packet(1, 0, &valid);
         null.filters = std::ptr::null();
         assert!(refused(&null).contains("null"));
         let storage = vec![0u64; 16];
         let mut misaligned = packet(1, 0, &valid[..1]);
-        misaligned.filters = unsafe { (storage.as_ptr() as *const u8).add(4) } as *const AudioFilterDescriptor;
+        misaligned.filters =
+            unsafe { (storage.as_ptr() as *const u8).add(4) } as *const AudioFilterDescriptor;
         assert!(refused(&misaligned).contains("misaligned"));
         for kind in [0, filter_kind::CHORUS + 1, -1] {
             assert!(refused(&packet(1, 0, &[component(1, kind, 0)])).contains("kind"));
         }
         let distortion = [component(1, filter_kind::DISTORTION, 0)];
-        assert_eq!(unsafe { SourceParams::from_packet(&packet(1, 0, &distortion)) }.filters.len(), 1);
+        assert_eq!(
+            unsafe { SourceParams::from_packet(&packet(1, 0, &distortion)) }
+                .filters
+                .len(),
+            1
+        );
         assert!(refused(&packet(1, 0, &[component(1, filter_kind::ECHO, 2)])).contains("stage"));
         let mut reverb = component(1, filter_kind::REVERB, 0);
         reverb.reverb[3] = f32::NAN;
         assert!(refused(&packet(1, 0, &[reverb])).contains("finite"));
         for bad in [f32::NAN, f32::INFINITY] {
-            let lowpass = AudioFilterDescriptor { cutoff: bad, ..component(1, filter_kind::LOWPASS, 0) };
+            let lowpass = AudioFilterDescriptor {
+                cutoff: bad,
+                ..component(1, filter_kind::LOWPASS, 0)
+            };
             assert!(refused(&packet(1, 0, &[lowpass])).contains("finite"));
-            let echo = AudioFilterDescriptor { delay: bad, ..component(1, filter_kind::ECHO, 0) };
+            let echo = AudioFilterDescriptor {
+                delay: bad,
+                ..component(1, filter_kind::ECHO, 0)
+            };
             assert!(refused(&packet(1, 0, &[echo])).contains("finite"));
         }
-        let twice = [component(5, filter_kind::LOWPASS, 0), component(5, filter_kind::ECHO, 0)];
+        let twice = [
+            component(5, filter_kind::LOWPASS, 0),
+            component(5, filter_kind::ECHO, 0),
+        ];
         assert!(refused(&packet(1, 0, &twice)).contains("duplicate"));
         // A clipless generator plays its first script; nothing may sit above it.
         // Packet pointers borrow these arrays through both decoding calls.
         let generator_filters = [component(1, filter_kind::LOWPASS, 0)];
         let generator = packet(0, source_flags::FILTER, &generator_filters);
         assert!(refused(&generator).contains("generator"));
-        let below_filters = [component(1, filter_kind::LOWPASS, filter_stage::AFTER_SCRIPTS)];
+        let below_filters = [component(
+            1,
+            filter_kind::LOWPASS,
+            filter_stage::AFTER_SCRIPTS,
+        )];
         let below = packet(0, source_flags::FILTER, &below_filters);
-        assert!(unsafe { SourceParams::from_packet(&below) }.filters_rejected.is_none());
+        assert!(
+            unsafe { SourceParams::from_packet(&below) }
+                .filters_rejected
+                .is_none()
+        );
         // The resource bound itself is accepted.
-        let most: Vec<_> = (0..64).map(|id| component(id, filter_kind::LOWPASS, 0)).collect();
-        assert_eq!(unsafe { SourceParams::from_packet(&packet(1, 0, &most)) }.filters.len(), 64);
+        let most: Vec<_> = (0..64)
+            .map(|id| component(id, filter_kind::LOWPASS, 0))
+            .collect();
+        assert_eq!(
+            unsafe { SourceParams::from_packet(&packet(1, 0, &most)) }
+                .filters
+                .len(),
+            64
+        );
 
         // A refused packet still updates the source, and its chain stays as it was.
         let mut m = Mixer::new(MixerConfig::default());
-        m.update_source(7, unsafe { SourceParams::from_packet(&packet(1, 0, &valid)) });
+        m.update_source(7, unsafe {
+            SourceParams::from_packet(&packet(1, 0, &valid))
+        });
         let mut bad = packet(1, 0, &valid);
         bad.filter_count = -1;
         bad.volume = 0.25;
@@ -3646,8 +4449,14 @@ mod tests {
 
     #[test]
     fn echo_components_beyond_the_history_bound_fail_without_replacing_the_chain() {
-        let mut m = Mixer::new(MixerConfig { sample_rate: i32::MAX as u32, ..Default::default() });
-        let echo = [AudioFilterDescriptor { delay: 5000.0, ..component(1, filter_kind::ECHO, 0) }];
+        let mut m = Mixer::new(MixerConfig {
+            sample_rate: i32::MAX as u32,
+            ..Default::default()
+        });
+        let echo = [AudioFilterDescriptor {
+            delay: 5000.0,
+            ..component(1, filter_kind::ECHO, 0)
+        }];
         source_with(&mut m, 7, 1, |p| p.filters = echo.to_vec());
         assert!(m.source(7).unwrap().params.filters.is_empty());
         assert!(m.source(7).unwrap().chain.filters.is_empty());
@@ -3655,7 +4464,12 @@ mod tests {
         let mut m = Mixer::new(MixerConfig::default());
         source_with(&mut m, 7, 1, |p| p.filters = echo.to_vec());
         let before = m.config;
-        let error = m.reconfigure(MixerConfig { sample_rate: i32::MAX as u32, ..before }).unwrap_err();
+        let error = m
+            .reconfigure(MixerConfig {
+                sample_rate: i32::MAX as u32,
+                ..before
+            })
+            .unwrap_err();
         assert!(error.to_string().contains("8 MiB"));
         assert_eq!(m.config, before);
         assert_eq!(m.source(7).unwrap().params.filters, echo);
@@ -3665,7 +4479,10 @@ mod tests {
     fn a_new_output_rate_restarts_the_components_at_that_rate() {
         let clip = || Clip::new(2, 44100, stereo_tone(8192).samples);
         let fresh = {
-            let mut m = Mixer::new(MixerConfig { sample_rate: 44100, ..Default::default() });
+            let mut m = Mixer::new(MixerConfig {
+                sample_rate: 44100,
+                ..Default::default()
+            });
             m.add_clip(1, clip());
             source_with(&mut m, 7, 1, |p| p.filters = components());
             play(&mut m, 7, command::PLAY, 0.0);
@@ -3679,7 +4496,11 @@ mod tests {
         play(&mut m, 7, command::PLAY, 0.0);
         let mut out = vec![0.0; 2048 * 2];
         m.render(&mut out, 2);
-        m.reconfigure(MixerConfig { sample_rate: 44100, ..m.config }).unwrap();
+        m.reconfigure(MixerConfig {
+            sample_rate: 44100,
+            ..m.config
+        })
+        .unwrap();
         play(&mut m, 7, command::PLAY, 0.0);
         m.render(&mut out, 2);
         assert_eq!(out, fresh);
