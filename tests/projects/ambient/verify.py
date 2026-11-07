@@ -61,6 +61,11 @@ def main():
         bad, worst = compare(records(reference), records(actual))
         failures += [dict(group=group, **entry) for entry in bad]
         deltas[group] = worst
+    expected_images = {p.name for p in (PROBE/'Reference').glob('*.png')}
+    actual_images = {p.name for p in (args.actual/'ambient').glob('*.png')}
+    for name in sorted(expected_images ^ actual_images):
+        failures.append({'group': 'images', 'key': name,
+                         'expected': name in expected_images, 'actual': name in actual_images})
     report = {'release': args.release, 'coefficient_tolerance': TOLERANCE,
               'deltas': deltas, 'failures': failures}
     args.report.write_text(json.dumps(report, indent=2)+'\n')

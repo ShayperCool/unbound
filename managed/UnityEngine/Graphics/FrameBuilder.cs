@@ -558,12 +558,26 @@ namespace Unbound.Runtime
             var mesh = s_SkyboxMesh ??= SkyboxMesh();
             float radius = camera.farClipPlane * 0.9f;
             var model = Matrix4x4.TRS(camera.transform.position, Quaternion.identity, new Vector3(radius, radius, radius));
-            // With no light the built-in sky sees the light from behind, (0, 0, -1) (objects see
-            // zero; measured: tests/projects/video).
+            GfxStream.Draw(mesh.Sync(), 0, material.Sync(), 0, model, Color.white,
+                properties: SkyboxLightProperties(camera, material));
+        }
+
+        internal static Dictionary<int, object> SkyboxLightProperties(Camera camera, Material material)
+        {
             Dictionary<int, object> properties = null;
             if (GraphicsSettings.currentRenderPipeline == null && LightingGlobals.MainLightOf() == null)
                 properties = new Dictionary<int, object> { [Shader.PropertyToID("_WorldSpaceLightPos0")] = new Vector4(0f, 0f, -1f, 0f) };
-            GfxStream.Draw(mesh.Sync(), 0, material.Sync(), 0, model, Color.white, properties: properties);
+            // 6000.0.71f1 controls: None/HQ/zero-size skies give identical ambient SH although
+            // ordinary sky renders differ. Omit the disk's radiance during ambient projection.
+            // In the official procedural shader _LightColor0 only scales sunColor; scattering
+            // still uses the unchanged light direction. This does not claim Unity's mechanism.
+            if (camera.m_EnvironmentCapture && GraphicsSettings.currentRenderPipeline == null
+                && material.shader?.name == "Skybox/Procedural")
+            {
+                properties ??= new Dictionary<int, object>();
+                properties[Shader.PropertyToID("_LightColor0")] = Vector4.zero;
+            }
+            return properties;
         }
 
         /// <summary>The sky mesh: an octahedron whose triangles are split in four five times,

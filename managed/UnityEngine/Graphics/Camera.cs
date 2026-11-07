@@ -177,6 +177,8 @@ namespace UnityEngine
 
         /// <summary>Set by FrameBuilder while this camera renders.</summary>
         internal bool m_Rendering;
+        // Only the temporary DynamicGI camera omits the procedural sun disk.
+        internal bool m_EnvironmentCapture;
         internal RenderTexture m_RenderingInto;
         public int targetDisplay { get => m_TargetDisplay; set => m_TargetDisplay = value; }
         public bool allowHDR { get => m_AllowHDR; set => m_AllowHDR = value; }

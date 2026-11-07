@@ -61,7 +61,7 @@ def main():
         def write(target, first):
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(first/'sun.jsonl', target)
-        return publish([work/'editor1', work/'editor2'], reference, ['sun.jsonl'], write,
+        return publish([work/'editor1', work/'editor2'], reference, lambda directory: ['sun.jsonl'], write,
                        complete=[complete], gpu=True)
     cli = os.environ.get('UNBOUND') or os.environ.get('UNBOUND_CLI')
     if not cli:

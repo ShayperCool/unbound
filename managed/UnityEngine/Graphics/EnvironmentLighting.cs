@@ -31,6 +31,7 @@ namespace UnityEngine
             var cameraObject = new GameObject("Unbound Environment Camera") { hideFlags = HideFlags.HideAndDontSave };
             var camera = cameraObject.AddComponent<Camera>();
             camera.enabled = false;
+            camera.m_EnvironmentCapture = true;
             camera.cullingMask = 0;
             camera.clearFlags = CameraClearFlags.Skybox;
             camera.fieldOfView = 90f;
