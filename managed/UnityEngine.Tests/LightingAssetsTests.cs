@@ -346,6 +346,21 @@ LightingSettings:
             Assert.False(Lightmapping.TryGetLightingSettings(out _));
         }
 
+        [Fact]
+        public void SettingsEmbeddedInTheSceneFileAreItsSettings()
+        {
+            using var scenes = new LightProbesTests.Scenes();
+            var scene = scenes.Loaded("Embedded");
+            var documents = UnityYaml.Parse("--- !u!157 &3\nLightmapSettings:\n  m_LightingDataAsset: {fileID: 0}\n" +
+                "  m_LightingSettings: {fileID: 7}\n" + k_Custom.Substring(k_Custom.IndexOf("---", StringComparison.Ordinal)).Replace("&4890085278179872738", "&7"));
+            var file = ObjectGraphBuilder.Build(documents, "Assets/Embedded.unity", null, ObjectGraphBuilder.Kind.Scene, scene);
+            foreach (var doc in documents) SceneSettings.Apply(doc, file, scene);
+            var settings = Lightmapping.lightingSettings;
+            Assert.Same(file.Objects[7], settings);
+            Assert.Equal("Custom", settings.name);
+            Assert.Equal(256, settings.lightmapMaxSize);
+        }
+
         sealed class WarningCapture : ILogHandler, IDisposable
         {
             readonly ILogHandler m_Inner = Debug.unityLogger.logHandler;
