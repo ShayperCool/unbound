@@ -230,3 +230,28 @@ registry names only the following fields; it does not change numeric tolerances.
 Random modes in inherited velocity, lifetime by emitter speed, texture-sheet animation, collision
 and lights remain outside this probe. Their existing implementation is unchanged and is not
 certified by these measurements. Other Unity releases remain unmeasured.
+
+## Birth time-rate intervals, P7
+
+The extension records 755 controls twice independently in Unity 6000.0.71f1 and
+retains all 2491 prior keys unchanged. New systems use deterministic seeds, no
+shape, and an enabled zero rotation module to isolate angular context. Controls
+measure counts, exact seed halves, positions, remaining lifetimes and clocks.
+
+| Official Unity 6000.0 source | Documented contract and limits |
+| --- | --- |
+| [Sub Emitters module](https://docs.unity3d.com/6000.0/Documentation/Manual/PartSysSubEmitModule.html), [Birth](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystemSubEmitterType.Birth.html) | Birth emits throughout the parent lifetime and supports all Emission settings and multiple bursts. Only the other event types restrict emission to one burst. Intra-step boundary arithmetic is unspecified. |
+| [Emission module](https://docs.unity3d.com/6000.0/Documentation/Manual/PartSysEmissionModule.html) | Time rate is particles per unit time; burst times are seconds after playback begins. No floating-point count accumulator is specified. |
+| [Simulate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.Simulate.html) | Advances the requested interval and pauses. Restart resets playback; withChildren includes child systems; fixedTimeStep uses the configured fixed interval. Split and single calls need not share an undocumented newborn schedule. |
+| [Main module](https://docs.unity3d.com/6000.0/Documentation/Manual/PartSysMainModule.html) | Duration is system run time, start delay postpones emission and start lifetime sets each new particle's lifetime. Nonlooping systems stop emitting after their duration, while existing particles finish. |
+
+Before any engine change the broader canonical probe fails exactly
+`sub_emitters_birth_child` steps 7 through 14. Counts at steps 7, 9, 11 and 13
+are respectively Native/engine 1/2, 3/4, 4/6 and 6/7. At step 8 particle 1
+is at z 0.4325001 with lifetime 0.34800002 in Native, versus z 0.435 and
+lifetime 0.343 in the engine. These are observable count and history differences,
+not a request to impose a buffer order. The original raw captures and tolerances
+are retained. New `birthrate/original` reproduces these values with angular
+state isolated. `below` and `above` select 9.999/s and 10.001/s, with separate
+1.013 s and 0.4 s parent lifetime controls, one/three parents, a fractional 7/s
+rate, split/single calls, expiry, stop/clear, and child delay/duration controls.
