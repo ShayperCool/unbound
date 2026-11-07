@@ -32,3 +32,7 @@ The strict report preserves all failing, missing and extra values. Tolerances
 are unchanged from the existing audio probes: 2e-5 absolute plus 2e-4 relative.
 The separate gate admits one 1/32768 device PCM step and no extra float-sink
 slack. RESIDUALS is empty. Artifacts and reports remain in the cache.
+
+Certification: both independent Native repeats agree exactly at each rate across
+85721421 values. The engine strict comparison passes 85721421/85721421 at each
+rate, with zero raw float/PCM failures and no added residuals.
