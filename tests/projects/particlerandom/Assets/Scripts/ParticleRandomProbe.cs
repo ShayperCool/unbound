@@ -628,6 +628,7 @@ public partial class ParticleRandomProbe : MonoBehaviour
         Time.captureDeltaTime = 0f;
         BirthControls();
         BirthRateControls();
+        BirthLifetimeControls();
         var done = new List<float> { 1f };
         Record("complete", done);
         File.WriteAllText(s_Path, s_Out.ToString());

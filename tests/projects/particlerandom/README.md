@@ -297,3 +297,23 @@ OnParticleSystemStopped callback survive. The managed regression test preserves
 that behavior. [Unity 6000.0 OnParticleSystemStopped](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/MonoBehaviour.OnParticleSystemStopped.html)
 describes the callback as notification that the system has stopped. This does
 not establish an order among callbacks of different systems.
+
+## Birth lifetime inheritance, P8
+
+The new `birthlife/` controls compare InheritNothing and InheritLifetime with
+constant parent and child lifetimes in Unity 6000.0.71f1. They isolate a parent
+shorter or longer than the child, age-zero bursts, later bursts and time rate,
+three parent cohorts, split versus single Simulate calls, restart, both stop
+modes, and child expiry. Counts, exact seed halves, positions, start and remaining
+lifetimes use the existing full-particle recorder and unchanged comparator.
+
+| Official Unity 6000.0 source | Documented contract and limits |
+| --- | --- |
+| [Sub Emitters module](https://docs.unity3d.com/6000.0/Documentation/Manual/PartSysSubEmitModule.html), [Birth](https://docs.unity.com/en-us/engine/6000.0/script-reference/unityengine/particlesystemsubemittertype/birth) | Birth emits during the parent lifetime and supports all emission settings and multiple bursts. The other event types support one burst. No intra-step schedule is specified. |
+| [InheritLifetime](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystemSubEmitterProperties.InheritLifetime.html) | Children born closer to parent death have shorter lifespans. No numeric formula is documented. |
+| [Main module](https://docs.unity3d.com/6000.0/Documentation/Manual/PartSysMainModule.html), [startLifetime](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.MainModule-startLifetime.html) | Start lifetime is assigned when a particle is created. Infinite lifetime prevents lifetime expiry. |
+| [Simulate](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/ParticleSystem.Simulate.html) | Advances and pauses, optionally restarting and including children; fixedTimeStep uses configured fixed intervals. No equivalence of split and single newborn scheduling is promised. |
+
+The documented inheritance description does not establish that Birth uses the
+measured Death/Manual formula. Lifetime curves, other inheritance channels,
+nested chains and other releases remain outside this constant-lifetime slice.
