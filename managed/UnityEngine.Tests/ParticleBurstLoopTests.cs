@@ -128,6 +128,32 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
+        public void ChangingTheBurstsKeepsTheCyclesAlreadyDueAsFired()
+        {
+            var ps = Make("burst-change", true, Burst(.2f, 1));
+            try
+            {
+                Assert.Single(Run(ps, .5f));
+                // Set at 0.5 s: the burst at 0.3 s has passed and waits for the next loop (Unbound's
+                // choice), the one at 0.7 s is ahead and fires (particlecurves sim/*/c measures it at
+                // the duration).
+                var e = ps.emission;
+                e.SetBursts(new[] { Burst(.3f, 2), Burst(.7f, 1) });
+                ps.Simulate(.3f, true, false, false);
+                Assert.Equal(2, ps.particleCount);
+
+                // An endless burst every 0.13 s, set at 0.8 s and set again, fires none of its
+                // repeats up to 0.78 s; the one at 0.91 s comes.
+                e.SetBursts(new[] { Burst(0f, 1, 0, .13f) });
+                e.SetBurst(0, Burst(0f, 1, 0, .13f));
+                int before = ps.particleCount;
+                ps.Simulate(.15f, true, false, false);
+                Assert.Equal(before + 1, ps.particleCount);
+            }
+            finally { Destroy(ps); }
+        }
+
+        [Fact]
         public void TheLoopEndRuleDoesNotDependOnTheDurationOrTheStep()
         {
             // A control outside the probe: a 2.5 s loop, a 0.1 s call from 2.44 s split into four

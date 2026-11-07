@@ -726,12 +726,17 @@ namespace UnityEngine
                     if (burst.probability >= 1f || burst.probability > 0f && NextEmissionValue() < burst.probability)
                     {
                         int count = BurstCount(burst.m_Count, at / duration);
-                        float age = c > 0 ? step
-                            : segment == BurstSegment.BeforeWrap ? step * ((b + BurstWrapMargin - at) / (b + BurstWrapMargin - a))
-                            : segment == BurstSegment.AfterWrap ? step * ((b - at) / b)
-                            : b - at;
-                        m_StepBurstAge = Mathf.Min(m_StepBurstAge, age);
-                        if (count > 0) m_StepBursts.Add(new StepBurst { count = count, speedNt = Mathf.Clamp01(at / duration) });
+                        if (count > 0)
+                        {
+                            // A burst that emits nothing does not set the step's age (Unbound's choice:
+                            // only emitting bursts are measured).
+                            float age = c > 0 ? step
+                                : segment == BurstSegment.BeforeWrap ? step * ((b + BurstWrapMargin - at) / (b + BurstWrapMargin - a))
+                                : segment == BurstSegment.AfterWrap ? step * Mathf.Clamp01((b - at) / b)
+                                : b - at;
+                            m_StepBurstAge = Mathf.Min(m_StepBurstAge, age);
+                            m_StepBursts.Add(new StepBurst { count = count, speedNt = Mathf.Clamp01(at / duration) });
+                        }
                     }
                     c++;
                     if (cycles == 0 && c > 100000) break;
@@ -753,14 +758,13 @@ namespace UnityEngine
             for (int i = 0; i < bursts.Count; i++)
             {
                 var burst = bursts[i];
-                int cycles = burst.cycleCount; // 0: forever
-                float interval = Mathf.Max(burst.m_RepeatInterval, 0.0001f);
                 int c = 0;
-                while ((cycles == 0 || c < cycles) && c < 100000)
+                if (burst.m_Time < m_Time)
                 {
-                    float at = burst.m_Time + c * interval;
-                    if (c == 0 ? at >= m_Time : at > m_Time) break;
-                    c++;
+                    // The first cycle and every repeat at or before the current time.
+                    float interval = Mathf.Max(burst.m_RepeatInterval, 0.0001f);
+                    double due = Math.Floor((m_Time - burst.m_Time) / (double)interval) + 1.0;
+                    c = (int)Math.Min(due, burst.cycleCount > 0 ? burst.cycleCount : 100000);
                 }
                 m_BurstCycles[i] = c;
             }
