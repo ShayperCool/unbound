@@ -37,11 +37,40 @@ namespace Unbound.Runtime
         /// Other releases retain their existing sampling until measured.</summary>
         internal static bool ParticleShapeModifiersMeasured => Release == (6000, 0, 71, 'f', 1);
 
+        /// <summary>The release Unbound's rendering parity was measured on (tests/projects/*
+        /// Reference/unity-6000.0.71f1). The rendering answers below give its measured behaviour
+        /// to exactly that release; the other releases' answers are listed in
+        /// docs/COMPATIBILITY_GAPS.md ("Rendering rules measured on one release").</summary>
+        internal static bool RenderingMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Standalone mesh-instancing batch limits measured on 6000.0.71f1 GLCore.
         /// x/y: transform capacities without/with uniform scaling; z: property-buffer bytes.
         /// Other releases keep sequential IDs until measured.</summary>
-        internal static UnityEngine.Vector4 MeshInstanceBatchLimits => Release == (6000, 0, 71, 'f', 1)
+        internal static UnityEngine.Vector4 MeshInstanceBatchLimits => RenderingMeasured
             ? new UnityEngine.Vector4(511, 1023, 65536, 0) : UnityEngine.Vector4.zero;
+
+        /// <summary>Frames after a CPU synchronisation GraphicsFence ran until it reports passed
+        /// (measured on the 6000.0.71f1 OpenGLCore Editor: tests/projects/cmdbuffers fence.*).
+        /// Other releases report it once the GPU has passed it.</summary>
+        internal static int GraphicsFenceFrames => RenderingMeasured ? 2 : 0;
+
+        /// <summary>Graphics.RenderPrimitivesIndexed with an instance count of zero draws one
+        /// instance (measured on 6000.0.71f1 OpenGLCore: cmdbuffers render.indexed.instances.zero);
+        /// other releases draw none, as the count says.</summary>
+        internal static bool ZeroIndexedInstancesDrawOne => RenderingMeasured;
+
+        /// <summary>The built-in pipeline's ambient projection of the sky leaves out the main
+        /// light's colour (<c>_LightColor0</c> zero; the procedural sky's sun disk then adds
+        /// nothing, while its scattering keeps the light's direction). Measured on 6000.0.71f1:
+        /// procedural skies with no, simple, high-quality and zero-size disks give the same
+        /// ambient probe. Other releases project the sky as drawn.</summary>
+        internal static bool SkyAmbientWithoutLightColor => RenderingMeasured;
+
+        /// <summary>LineRenderer's open-strip joins of positive width as measured by the lines
+        /// probe on 6000.0.71f1 (miterrev.*, miterchain.*): near-reversal intersections, the
+        /// reach limit from the segment two points back and the un-eased lighting tangent. Other
+        /// releases keep the general miter rules.</summary>
+        internal static bool LineOpenStripJoinsMeasured => RenderingMeasured;
 
         /// <summary>One two-input humanoid mixer with constant unit-sum weights, measured by
         /// animculling on exactly 6000.0.71f1. Other releases keep the unsupported diagnostic.</summary>
@@ -68,10 +97,6 @@ namespace Unbound.Runtime
         /// the resulting out-of-bounds indices. Regular ribbon rendering is unaffected.</summary>
         internal static bool ParticleRibbonBakeRejectsMultipleStrips => Major >= 6000;
 
-        /// <summary>Open-strip positive-width reversal intersections and their reach scale
-        /// measured by the lines probe on 6000.0.71f1. Zero retains the existing join rules.</summary>
-        internal static float LineMiterDenominatorFloor => Release == (6000, 0, 71, 'f', 1) ? 0.01f : 0f;
-
         /// <summary>6000.0.71f1 has no serialized PCM switch and ignores an injected m_EnablePCM
         /// (measured by physicsscenesettings). Older settings documents expose this legacy switch;
         /// their selectable SAT path is documented, but not yet measured by this fixture.</summary>
@@ -83,19 +108,39 @@ namespace Unbound.Runtime
         {
             get
             {
+                // Parsed once per version string: hot paths (per draw, per particle) ask. The
+                // cache is replaced whole, so another thread sees a consistent pair.
                 var v = UnityEngine.ProjectInfo.UnityVersion ?? "";
-                var parts = v.Split('.');
-                if (parts.Length != 3) return null;
-                int stageAt = 0;
-                while (stageAt < parts[2].Length && char.IsDigit(parts[2][stageAt])) stageAt++;
-                if (stageAt == 0 || stageAt >= parts[2].Length - 1) return null;
-                if (!int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out var major)
-                    || !int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var minor)
-                    || !int.TryParse(parts[2].Substring(0, stageAt), NumberStyles.None, CultureInfo.InvariantCulture, out var patch)
-                    || !int.TryParse(parts[2].Substring(stageAt + 1), NumberStyles.None, CultureInfo.InvariantCulture, out var build))
-                    return null;
-                return (major, minor, patch, parts[2][stageAt], build);
+                var cached = s_Release;
+                if (cached != null && string.Equals(cached.Version, v, StringComparison.Ordinal)) return cached.Parsed;
+                var parsed = Parse(v);
+                s_Release = new ParsedRelease(v, parsed);
+                return parsed;
             }
+        }
+
+        sealed class ParsedRelease
+        {
+            internal readonly string Version;
+            internal readonly (int Major, int Minor, int Patch, char Stage, int Build)? Parsed;
+            internal ParsedRelease(string version, (int, int, int, char, int)? parsed) { Version = version; Parsed = parsed; }
+        }
+
+        static ParsedRelease s_Release;
+
+        static (int Major, int Minor, int Patch, char Stage, int Build)? Parse(string v)
+        {
+            var parts = v.Split('.');
+            if (parts.Length != 3) return null;
+            int stageAt = 0;
+            while (stageAt < parts[2].Length && char.IsDigit(parts[2][stageAt])) stageAt++;
+            if (stageAt == 0 || stageAt >= parts[2].Length - 1) return null;
+            if (!int.TryParse(parts[0], NumberStyles.None, CultureInfo.InvariantCulture, out var major)
+                || !int.TryParse(parts[1], NumberStyles.None, CultureInfo.InvariantCulture, out var minor)
+                || !int.TryParse(parts[2].Substring(0, stageAt), NumberStyles.None, CultureInfo.InvariantCulture, out var patch)
+                || !int.TryParse(parts[2].Substring(stageAt + 1), NumberStyles.None, CultureInfo.InvariantCulture, out var build))
+                return null;
+            return (major, minor, patch, parts[2][stageAt], build);
         }
 
         /// <summary>Whether the shader keyword registry and keyword types below are measured for the
@@ -104,7 +149,7 @@ namespace Unbound.Runtime
         /// release only (unbound_compat::ShaderKeywordRules). Other patches of the family are not
         /// measured: they keep the name-based behaviour (every name is a global keyword) with a
         /// warning, not an extrapolated table.</summary>
-        internal static bool ShaderKeywordsMeasured => Release == (6000, 0, 71, 'f', 1);
+        internal static bool ShaderKeywordsMeasured => RenderingMeasured;
 
         /// <summary>The engine's built-in global shader keywords: the ones that exist before any is
         /// made (canonical global.builtin.types and global.all.contains, 6000.0.71f1 Linux Editor).

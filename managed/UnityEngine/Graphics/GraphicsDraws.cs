@@ -397,8 +397,11 @@ namespace UnityEngine
             if (rparams.material == null) return;
             WarnUnhonoured(rparams, nameof(RenderPrimitivesIndexed));
             if (indexCount <= 0 || instanceCount < 0) return;
-            // 6000.0.71f1 OpenGLCore renders one instance for a zero direct instance count.
-            instanceCount = Math.Max(1, instanceCount);
+            if (instanceCount == 0)
+            {
+                if (!Compat.ZeroIndexedInstancesDrawOne) return;
+                instanceCount = 1;
+            }
             if (!IndexedDraws.Supported(indexBuffer, topology, k_Indexed)) return;
             Render(rparams, IndexedDraws.StandIn(topology), 0, Matrix4x4.identity, IndexedDraws.Direct(indexBuffer, startIndex, indexCount, instanceCount));
         }

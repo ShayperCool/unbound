@@ -147,6 +147,13 @@ namespace UnityEngine
     {
         const float ZeroLengthSqr = 1e-5f;
         const float MiterLimit = 3f;
+        /// <summary>Measured open-strip joins (Compat.LineOpenStripJoinsMeasured): below this
+        /// 1 + cos between the sides a join is a near reversal, and the intersection's tangent
+        /// denominator is held at it (lines miterrev.*).</summary>
+        const float ReversalDenominatorFloor = 0.01f;
+        /// <summary>Measured open-strip joins: the share of the segment two points back a miter
+        /// reaches, relative to the widest half width (an empirical fit to lines miterchain.*).</summary>
+        const float ReachFitSegmentShare = 0.75f;
 
         readonly List<Vector3> m_Vertices = new List<Vector3>();
         readonly List<Vector3> m_Normals = new List<Vector3>();
@@ -266,7 +273,7 @@ namespace UnityEngine
             else EffectiveDirections(segments);
 
             int corners = Math.Max(0, p.NumCornerVertices);
-            float miterFloor = Compat.LineMiterDenominatorFloor;
+            bool measuredJoins = Compat.LineOpenStripJoinsMeasured;
             var faceNormal = facing.TransformZ ? -facing.TransformForward : -facing.CameraForward;
             float va = 0.5f + 0.5f * p.TextureScale.y, vb = 0.5f - 0.5f * p.TextureScale.y;
             for (int i = 0; i < n; i++)
@@ -294,13 +301,14 @@ namespace UnityEngine
                 Vector3 m;
                 float length;
                 float sideCos = Vector3.Dot(s1, s2);
-                if (!loop && h >= 0f && miterFloor > 0f && 1f + sideCos < miterFloor)
+                bool openJoin = measuredJoins && !loop && h >= 0f;
+                if (openJoin && 1f + sideCos < ReversalDenominatorFloor)
                 {
                     // Near reversal, the measured intersection retains the incoming side's
                     // half width and guards the tangent's denominator before limiting reach.
                     // This changes direction as well as length (lines miterrev.*, including
                     // emitting trails). Negative-width and loop corner rules remain unmeasured.
-                    var intersection = s1 + (s2 - s1 * sideCos) / miterFloor;
+                    var intersection = s1 + (s2 - s1 * sideCos) / ReversalDenominatorFloor;
                     float scale = intersection.magnitude;
                     m = intersection / scale;
                     length = h * Mathf.Min(scale, MiterLimit);
@@ -316,14 +324,15 @@ namespace UnityEngine
                     length = h / Mathf.Max(Vector3.Dot(m, s1), 1f / MiterLimit);
                 }
                 if (m_NoMiter[i]) length = h;
-                else if (!loop && h >= 0f && miterFloor > 0f && widestHalf > 0f)
+                else if (openJoin && widestHalf > 0f)
                 {
-                    // The measured reach scale uses the segment two points back (the first
-                    // segment at the first joint), normalized by the widest sampled half width.
-                    // It is carried to the local width after limiting to [1,3]. Asymmetric,
-                    // tapered and multiple-reversal miterchain controls distinguish this from
-                    // the adjacent-segment bound and from a minimum of the preceding lengths.
-                    float reachScale = 0.75f * m_Length[Math.Max(0, i - 2)] / widestHalf;
+                    // An empirical fit, not a derived rule (docs/COMPATIBILITY_GAPS.md): the
+                    // reach scale uses the segment two points back (the first segment at the
+                    // first joint), normalized by the widest sampled half width, and is carried
+                    // to the local width after limiting to [1, MiterLimit]. Asymmetric, tapered
+                    // and multiple-reversal miterchain controls distinguish it from the
+                    // adjacent-segment bound and from a minimum of the preceding lengths.
+                    float reachScale = ReachFitSegmentShare * m_Length[Math.Max(0, i - 2)] / widestHalf;
                     length = Mathf.Min(length, h * Mathf.Clamp(reachScale, 1f, MiterLimit));
                 }
                 else if (i > 0 && i < segments && Mathf.Abs(length) > Mathf.Abs(h))
@@ -337,7 +346,7 @@ namespace UnityEngine
                 {
                     // As with rounded joints, easing changes only the miter. The lighting
                     // tangent follows the un-eased side (miterchain prefix controls).
-                    var tangentSide = !loop && h >= 0f && miterFloor > 0f ? Side(arcOut, normal, facing) : s2;
+                    var tangentSide = openJoin ? Side(arcOut, normal, facing) : s2;
                     m_Pairs.Add(new Pair { A = point - m * length, B = point + m * length, Tangent = Vector3.Cross(faceNormal, tangentSide), U = u, Color = color });
                     continue;
                 }

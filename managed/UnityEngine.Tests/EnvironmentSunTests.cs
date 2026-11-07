@@ -7,9 +7,14 @@ namespace Unbound.Tests
     [Collection("RenderSettings state")]
     public class EnvironmentSunTests
     {
+        /// <summary>On the measured release the sky's ambient projection draws any sky material
+        /// with <c>_LightColor0</c> zero (Compat.SkyAmbientWithoutLightColor); other releases
+        /// project the sky as drawn.</summary>
         [Fact]
-        public void AmbientCaptureOmitsOnlyTheProceduralDiskRadiance()
+        public void AmbientCaptureOmitsTheMainLightColourOnTheMeasuredRelease()
         {
+            string version = ProjectInfo.UnityVersion;
+            ProjectInfo.UnityVersion = "6000.0.71f1";
             var owner = new GameObject("environment test camera");
             var sunOwner = new GameObject("environment test sun");
             var oldSun = RenderSettings.sun;
@@ -28,7 +33,13 @@ namespace Unbound.Tests
                 var properties = FrameBuilder.SkyboxLightProperties(camera, sky);
                 Assert.Single(properties);
                 Assert.Equal(Vector4.zero, properties[Shader.PropertyToID("_LightColor0")]);
-                Assert.Null(FrameBuilder.SkyboxLightProperties(camera, other));
+                // Keyed on the projection, not on the shader: a cubemap sky gets it too.
+                properties = FrameBuilder.SkyboxLightProperties(camera, other);
+                Assert.Equal(Vector4.zero, Assert.Single(properties).Value);
+                // Unmeasured release: the sky is projected as drawn.
+                ProjectInfo.UnityVersion = "6000.0.70f1";
+                Assert.Null(FrameBuilder.SkyboxLightProperties(camera, sky));
+                ProjectInfo.UnityVersion = "6000.0.71f1";
                 Assert.True(sky.IsKeywordEnabled("_SUNDISK_HIGH_QUALITY"));
                 Assert.Equal(0.04f, sky.GetFloat("_SunSize"));
                 Assert.Same(sun, RenderSettings.sun);
@@ -40,6 +51,7 @@ namespace Unbound.Tests
             }
             finally
             {
+                ProjectInfo.UnityVersion = version;
                 RenderSettings.sun = oldSun;
                 Object.DestroyImmediate(owner);
                 Object.DestroyImmediate(sunOwner);

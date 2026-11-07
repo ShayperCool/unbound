@@ -11,6 +11,7 @@ namespace Unbound.Tests
     /// <summary>Indexed RenderParams draws retain external GPU indices and indirect arguments.
     /// Camera-frame parity is checked by cmdbuffers against Unity 6000.0.71f1. Unsupported
     /// topologies and strides remain counted and warned at the logger's handler.</summary>
+    [Collection("Project release")]
     public class GraphicsRenderPrimitivesIndexedTests : IDisposable
     {
         const string Indexed = "UnityEngine.Graphics.RenderPrimitivesIndexed";
@@ -190,9 +191,23 @@ namespace Unbound.Tests
         [Fact]
         public void ZeroDirectInstanceCountUsesOneInstanceOnMeasuredGlCore()
         {
-            var index = NewBuffer(GraphicsBuffer.Target.Index, 6, 2);
-            Graphics.RenderPrimitivesIndexed(new RenderParams(NewMaterial()), MeshTopology.Triangles, index, 6, 0, 0);
-            Assert.Equal(1u, Assert.Single(TakeQueued()).Setup.Value.Instances);
+            string version = ProjectInfo.UnityVersion;
+            try
+            {
+                var index = NewBuffer(GraphicsBuffer.Target.Index, 6, 2);
+                var rp = new RenderParams(NewMaterial());
+                ProjectInfo.UnityVersion = "6000.0.71f1";
+                Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, index, 6, 0, 0);
+                Assert.Equal(1u, Assert.Single(TakeQueued()).Setup.Value.Instances);
+                // Unmeasured release: zero instances draw nothing (Compat.ZeroIndexedInstancesDrawOne).
+                ProjectInfo.UnityVersion = "6000.0.70f1";
+                Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, index, 6, 0, 0);
+                Assert.Empty(TakeQueued());
+                // A count of one is drawn on every release.
+                Graphics.RenderPrimitivesIndexed(rp, MeshTopology.Triangles, index, 6, 0, 1);
+                Assert.Equal(1u, Assert.Single(TakeQueued()).Setup.Value.Instances);
+            }
+            finally { ProjectInfo.UnityVersion = version; }
         }
 
         // ---------------------------------------------------------------- argument checks

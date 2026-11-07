@@ -271,6 +271,25 @@ AsyncGPUReadback, SRP culling/renderer lists, URP and URP 2D matching the Editor
 | BatchRendererGroup / GPU Resident Drawer | stubs | W | L (off by default) |
 | Indirect draws' `startInstance` and instancing cost | `Graphics/GraphicsDraws.cs`, `IndirectDraws.cs`, `CommandStream.cs`, `crates/unbound-app/src/render/executor.rs` | W | done: every indirect path (DrawMeshInstancedIndirect, DrawProceduralIndirect with and without indices, their CommandBuffer forms, RenderMeshIndirect, RenderPrimitivesIndirect, RenderPrimitivesIndexedIndirect) draws `SV_InstanceID` from 0 whatever the start instance, as the OpenGLCore Editor does (tests/projects/cmdbuffers `render.indexed.startinstance.*`); the arguments go through one pooled buffer without ending the render pass. Instanced calls copy their property block once and stream each array once per hand-over (render protocol 12) |
 
+#### Rendering rules measured on one release
+
+These answers of `Runtime/Compat.cs` give the measured behaviour to exactly 6000.0.71f1
+(`Compat.RenderingMeasured`). Every other release, including other 6000.0 patches, takes the
+unmeasured answer in the last column until a probe records it.
+
+| Rule (`Compat.`) | Measured by (6000.0.71f1) | Other releases (unmeasured) |
+|---|---|---|
+| `MeshInstanceBatchLimits`: mesh-instancing IDs restart at 511/1023 transforms or 64 KiB of properties | cmdbuffers `graphics.meshinstances.*.batch.*` | sequential instance IDs, with a once-only warning |
+| `GraphicsFenceFrames`: a CPU fence reports passed two frames after it ran | cmdbuffers `fence.*` | passed as soon as the GPU has passed it |
+| `ZeroIndexedInstancesDrawOne`: `RenderPrimitivesIndexed` with 0 instances draws one | cmdbuffers `render.indexed.instances.zero` | draws none |
+| `SkyAmbientWithoutLightColor`: the ambient projection of the sky draws it with `_LightColor0` zero (any sky material; only the procedural sky was measured) | indirectspec, Q105 ambient controls | the sky projected as drawn, sun disk included |
+| `LineOpenStripJoinsMeasured`: open-strip positive-width reversal intersections, the reach limit from the segment two points back (an empirical fit: `0.75 * length[i-2] / widest half width`, clamped to [1, 3]) and the un-eased lighting tangent | lines `miterrev.*`, `miterchain.*` | the general miter rules (three quarters of the longer neighbouring segment) |
+| `ShaderKeywordsMeasured`: the built-in keyword registry and types | shaderkeywords | every name a global keyword, with a warning |
+
+A Don't Clear camera's intermediate that does not take the screen's depth starts with cleared
+depth (measured for partial screen cameras and explicit full-rect HDR-to-byte targets,
+cameraexplicitdepth). Explicit targets with image effects follow the same rule unmeasured.
+
 ### Physics, particles, navigation, terrain
 
 Done: PhysX 4.1 bodies, shapes, forces, queries (NonAlloc, Check, ComputePenetration), layer matrix,

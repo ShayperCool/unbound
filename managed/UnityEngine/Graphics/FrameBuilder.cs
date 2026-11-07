@@ -567,12 +567,10 @@ namespace Unbound.Runtime
             Dictionary<int, object> properties = null;
             if (GraphicsSettings.currentRenderPipeline == null && LightingGlobals.MainLightOf() == null)
                 properties = new Dictionary<int, object> { [Shader.PropertyToID("_WorldSpaceLightPos0")] = new Vector4(0f, 0f, -1f, 0f) };
-            // 6000.0.71f1 controls: None/HQ/zero-size skies give identical ambient SH although
-            // ordinary sky renders differ. Omit the disk's radiance during ambient projection.
-            // In the official procedural shader _LightColor0 only scales sunColor; scattering
-            // still uses the unchanged light direction. This does not claim Unity's mechanism.
+            // The ambient projection leaves out the main light's colour, whatever the sky's
+            // shader (Compat.SkyAmbientWithoutLightColor).
             if (camera.m_EnvironmentCapture && GraphicsSettings.currentRenderPipeline == null
-                && material.shader?.name == "Skybox/Procedural")
+                && Compat.SkyAmbientWithoutLightColor)
             {
                 properties ??= new Dictionary<int, object>();
                 properties[Shader.PropertyToID("_LightColor0")] = Vector4.zero;
@@ -1158,16 +1156,15 @@ namespace Unbound.Runtime
                     else temporaries.Own(msaaTarget);
                     sceneTarget = msaaTarget;
                     viewport = new Rect(0, 0, w, h);
-                    // Don't Clear: a full-screen intermediate starts with the depth of the screen
-                    // or of the stack before it; a partial one's starts cleared (measured).
-                    // Explicit full-rect HDR-to-byte renders without effects also start with
-                    // fresh intermediate depth, independent of pooled history (6000.0.71f1,
-                    // cameraexplicitdepth). Their resolve preserves the owned target's depth.
+                    // Don't Clear: a full-screen screen intermediate starts with the depth of the
+                    // screen or of the stack before it; every other one starts with cleared depth,
+                    // never a pooled temporary's (measured: a partial screen camera, and explicit
+                    // full-rect HDR-to-byte targets, tests/projects/cameraexplicitdepth, whose
+                    // resolve keeps the owned target's depth). Explicit targets with image effects
+                    // follow the same rule unmeasured (docs/COMPATIBILITY_GAPS.md).
                     if (camera.clearFlags == CameraClearFlags.Nothing && onScreen && fullScreen)
                         GfxStream.CopyDepth(depthSource, TextureHandles.Of(msaaTarget));
-                    else if (camera.clearFlags == CameraClearFlags.Nothing
-                        && (onScreen || (camera.targetTexture != null && fullScreen && hdrIntermediate
-                            && effects.Count == 0 && opaqueEffects.Count == 0)))
+                    else if (camera.clearFlags == CameraClearFlags.Nothing)
                     {
                         GfxStream.SetTarget(TextureHandles.Of(msaaTarget));
                         GfxStream.Viewport(viewport);
