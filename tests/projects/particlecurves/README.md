@@ -14,7 +14,14 @@ that use them. Each record is one JSON line `{"key", "value": [numbers]}`; the r
 `outofrange` system's scalars were then set out of range in the YAML by hand (the Editor bounds
 them when it writes), to record what loading does with such data. Run output stays under
 `$XDG_CACHE_HOME/unbound/validation/runs/particlecurves/`. The comparator checks every key and value
-at the particle probes' bound (0.0002 absolute plus 0.0002 relative); there are no known differences.
+at the particle probes' bound (0.0002 absolute plus 0.0002 relative).
+
+One known difference, outside this probe's subject, stays visible: in `sim/{0..3}/c` the step
+from 0.75 s to 1.25 s of a 1 s loop crosses a burst set at 1.0 s (the duration). Unity emits its
+two particles (remaining lifetime 3.76015, an age of 0.23985 s rather than the 0.25 s since the
+loop end); Unbound does not emit a burst whose time equals the duration. The comparator reports
+these four records as known only when exactly those last two particles are missing and every
+other value matches (`test_compare.py`). The burst timing at the loop end is a follow-up.
 
 ## Documented contract
 
