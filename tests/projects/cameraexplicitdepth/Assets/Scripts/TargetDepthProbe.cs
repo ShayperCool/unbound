@@ -96,7 +96,9 @@ public class TargetDepthProbe : MonoBehaviour
             poison.targetTexture = unrelated;
             draw.allowHDR = mode == "float" || mode.StartsWith("hdr");
             draw.clearFlags = clear;
-            string key = "owned." + mode + "." + clear + (near ? ".near" : ".far");
+            // Enum aliases can stringify differently on Mono and CoreCLR.
+            string clearName = clear == CameraClearFlags.SolidColor ? "SolidColor" : clear.ToString();
+            string key = "owned." + mode + "." + clearName + (near ? ".near" : ".far");
             seed.Render();
             Capture(key + ".seed", target);
             for (int frame = 1; frame <= 2; frame++)
