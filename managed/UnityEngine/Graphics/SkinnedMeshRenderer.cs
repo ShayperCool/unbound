@@ -407,7 +407,7 @@ namespace UnityEngine
             bool skinned = IsSkinned;
             var source = skinned || HasShapes ? Deform(now: true) : m_Mesh;
             mesh.Clear();
-            var vertices = source.vertices;
+            var vertices = (Vector3[])source.m_Vertices.Clone();
             var fromSource = skinned ? toLocal : (useScale ? Matrix4x4.identity : Matrix4x4.Scale(t.lossyScale));
             for (int i = 0; i < vertices.Length; i++) vertices[i] = fromSource.MultiplyPoint3x4(vertices[i]);
             mesh.vertices = vertices;

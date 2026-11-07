@@ -26,6 +26,9 @@ namespace UnityEngine
         /// <summary>How many times changes were sent: what a mesh made from this one checks.</summary>
         internal int m_SyncVersion;
         bool m_IsReadable = true;
+        // Model import's Editor-only CPU access remains unchanged until measured. An explicit
+        // UploadMeshData(true) removes script access; renderers still own the retained geometry.
+        bool m_CpuAccess = true;
         IndexFormat m_IndexFormat = IndexFormat.UInt16;
 
         internal sealed class SubMesh
@@ -83,6 +86,8 @@ namespace UnityEngine
         {
             var m = new Mesh();
             m.CopyGeometryFrom(this);
+            m.m_IsReadable = m_IsReadable;
+            m.m_CpuAccess = m_CpuAccess;
             return m;
         }
 
@@ -122,6 +127,7 @@ namespace UnityEngine
         {
             CopyGeometryFrom(saved);
             m_IsReadable = saved.m_IsReadable;
+            m_CpuAccess = saved.m_CpuAccess;
         }
 
         void Changed() { m_Dirty = true; m_GraphicsBuffersDirty = true; }
@@ -168,7 +174,15 @@ namespace UnityEngine
 
         public Vector3[] vertices
         {
-            get => (Vector3[])m_Vertices.Clone();
+            get
+            {
+                if (!m_CpuAccess)
+                {
+                    Debug.LogError($"Not allowed to access vertices on mesh '{name}' (isReadable is false; Read/Write must be enabled in import settings)");
+                    return Array.Empty<Vector3>();
+                }
+                return (Vector3[])m_Vertices.Clone();
+            }
             set
             {
                 m_Vertices = value != null ? (Vector3[])value.Clone() : Array.Empty<Vector3>();
@@ -741,7 +755,7 @@ namespace UnityEngine
         public void UploadMeshData(bool markNoLongerReadable)
         {
             Sync();
-            if (markNoLongerReadable) m_IsReadable = false;
+            if (markNoLongerReadable) { m_IsReadable = false; m_CpuAccess = false; }
         }
 
         public void CombineMeshes(CombineInstance[] combine) => CombineMeshes(combine, true, true, false);

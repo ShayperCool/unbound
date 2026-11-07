@@ -58,7 +58,7 @@ namespace UnityEngine
         public int frequency => m_Frequency;
 
         [Obsolete("Use AudioClip.loadState instead to get more detailed information about the loading process.")]
-        public bool isReadyToPlay => m_LoadState == AudioDataLoadState.Loaded;
+        public bool isReadyToPlay => loadState == AudioDataLoadState.Loaded;
 
         public AudioClipLoadType loadType => m_LoadType;
 
@@ -68,14 +68,15 @@ namespace UnityEngine
 
         public bool loadInBackground => m_LoadInBackground;
 
-        public AudioDataLoadState loadState => m_LoadState;
+        public AudioDataLoadState loadState => m_SharedData?.NeedsReload == true ? AudioDataLoadState.Unloaded : m_LoadState;
 
         public bool LoadAudioData()
         {
             ThrowIfDestroyed();
-            if (m_Handle == 0) return false;
+            if (m_Handle == 0) return m_IsAsset && m_Samples == 0;
+            EnsureSharedData();
             if (m_LoadState == AudioDataLoadState.Loaded || m_LoadState == AudioDataLoadState.Loading) return true;
-            // A streamed asset reads its data as it plays: as in Unity, it stays unloaded.
+            // A streamed asset stays unloaded until a data access or playback requests it.
             if (m_IsAsset && m_LoadType == AudioClipLoadType.Streaming) return true;
             if (m_LoadInBackground)
             {
@@ -94,14 +95,15 @@ namespace UnityEngine
         {
             ThrowIfDestroyed();
             if (!m_IsAsset) return false;
-            m_LoadState = AudioDataLoadState.Unloaded;
+            if (m_SharedData == null || m_SharedData.References == 1 || m_LoadType == AudioClipLoadType.Streaming)
+                m_LoadState = AudioDataLoadState.Unloaded;
             return true;
         }
 
         /// <summary>Playing a clip loads its data, as Unity does.</summary>
         internal void EnsureLoaded()
         {
-            if (m_IsAsset && m_LoadType == AudioClipLoadType.Streaming) return;
+            EnsureSharedData();
             if (m_LoadState == AudioDataLoadState.Unloaded || m_LoadState == AudioDataLoadState.Loading)
                 m_LoadState = AudioDataLoadState.Loaded;
         }
@@ -157,6 +159,8 @@ namespace UnityEngine
         bool ReadData(Span<float> data, int offsetSamples)
         {
             ThrowIfDestroyed();
+            if (m_Handle == 0) return false;
+            if (Compat.AssetCloneResourcesMeasured) EnsureLoaded();
             if (m_Stream || m_LoadType == AudioClipLoadType.Streaming)
             {
                 Debug.LogError($"Can't get data from streamed samples for audio clip \"{m_Name}\". If you created the audio clip with AudioClip.Create, set the 'stream' argument to false, so you can access the data with 'AudioClip.GetData'. For a disk-based audio clip, change the load type to 'DecompressOnLoad', so you can access the data with 'AudioClip.GetData'.", this);
@@ -165,7 +169,7 @@ namespace UnityEngine
             // Compressed data stays compressed in memory: only PCM reads back.
             if (m_IsAsset && m_LoadType == AudioClipLoadType.CompressedInMemory && m_CompressionFormat != (int)AudioCompressionFormat.PCM)
             {
-                Debug.LogError($"Cannot get data on compressed samples for audio clip \"{m_Name}\". Changing the load type to DecompressOnLoad on the audio clip will fix this.", this);
+                Debug.LogError($"Cannot get data on compressed samples for audio clip \"{DataName}\". Changing the load type to DecompressOnLoad on the audio clip will fix this.", this);
                 return false;
             }
             if (offsetSamples < 0) offsetSamples = 0;
@@ -175,9 +179,16 @@ namespace UnityEngine
         bool WriteData(ReadOnlySpan<float> data, int offsetSamples)
         {
             ThrowIfDestroyed();
+            if (m_Handle == 0) return false;
+            if (Compat.AssetCloneResourcesMeasured) EnsureLoaded();
             if (m_Stream || m_LoadType == AudioClipLoadType.Streaming)
             {
-                Debug.LogError($"AudioClip.SetData failed; AudioClip {m_Name} is streamed", this);
+                Debug.LogError($"Cannot set data on streamed samples for audio clip \"{m_Name}\". If the AudioClip was created via AudioClip.Create and no PCM read callback was provided, the 'stream' argument must be false. For a disk-based AudioClip changing the load type to DecompressOnLoad on the AudioClip will allow modification of the data.", this);
+                return false;
+            }
+            if (m_IsAsset && m_LoadType == AudioClipLoadType.CompressedInMemory && m_CompressionFormat != (int)AudioCompressionFormat.PCM)
+            {
+                Debug.LogError($"Cannot set data on compressed samples for audio clip \"{DataName}\". Changing the load type to DecompressOnLoad on the audio clip will fix this.", this);
                 return false;
             }
             var copy = data.ToArray();
@@ -222,7 +233,7 @@ namespace UnityEngine
             m_Channels = channels;
             m_Frequency = frequency;
             m_Stream = stream && m_PCMReaderCallback != null;
-            m_LoadType = m_Stream ? AudioClipLoadType.Streaming : AudioClipLoadType.DecompressOnLoad;
+            m_LoadType = AudioClipLoadType.DecompressOnLoad;
             m_LoadState = AudioDataLoadState.Loaded;
             m_Handle = AudioBackend.NextHandle();
             AudioBackend.Current.CreateClip(m_Handle, lengthSamples, channels, frequency, m_Stream);
@@ -320,6 +331,7 @@ namespace UnityEngine
                 return;
             }
             var key = $"bundle:{bundle}/{stream.Substring(stream.LastIndexOf('/') + 1)}:{resource.Long("m_Offset")}:{resource.Long("m_Size")}:{body.Int("m_SubsoundIndex")}";
+            m_ImportedFrom = key;
             m_Handle = AudioBackend.NextHandle();
             if (!AudioBackend.Current.ImportClip(m_Handle, key, out var info))
             {
@@ -335,6 +347,11 @@ namespace UnityEngine
         internal override void OnEngineDestroy()
         {
             if (m_Handle == 0) return;
+            if (m_SharedData != null)
+            {
+                if (IsPersistentAsset) m_SharedData.NeedsReload = true;
+                if (--m_SharedData.References != 0) { m_Handle = 0; return; }
+            }
             s_WithCallbacks.TryRemove(m_Handle, out _);
             AudioBackend.Current.ReleaseClip(m_Handle);
             m_Handle = 0;

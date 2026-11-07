@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Unbound.Runtime;
 using UnityEngine;
 using Xunit;
@@ -6,23 +7,37 @@ using Object = UnityEngine.Object;
 
 namespace UnityEngine.Tests
 {
-    /// <summary>Object.Instantiate of AudioClip, Font and Cubemap assets: a new "(Clone)" object
-    /// with its own identity and a copy of the data, independent of the source afterwards.
-    /// Clone load-state, dynamic-font material/texture ownership and private CPU-retention
-    /// assertions below are Unbound implementation checks. These choices are unmeasured in
-    /// Unity and may be revised by a Native capture.</summary>
+    /// <summary>Asset resource ownership and diagnostics measured by tests/projects/assetinstantiate
+    /// against the Unity 6000.0.71f1 Editor, plus retained-storage implementation controls.</summary>
     public class AssetInstantiateCloneTests : IDisposable
     {
         readonly AudioBackend m_PreviousAudio;
+        readonly string m_PreviousRelease = ProjectInfo.UnityVersion;
+        readonly ILogHandler m_PreviousLog = Debug.unityLogger.logHandler;
+        readonly Messages m_Messages = new Messages();
+
+        sealed class Messages : ILogHandler
+        {
+            internal readonly List<string> Values = new List<string>();
+            public void LogFormat(LogType type, Object context, string format, params object[] args) => Values.Add(string.Format(format, args));
+            public void LogException(Exception exception, Object context) => Values.Add(exception.Message);
+        }
         readonly VirtualAudioBackend m_Audio = new VirtualAudioBackend();
 
         public AssetInstantiateCloneTests()
         {
+            ProjectInfo.UnityVersion = "6000.0.71f1";
+            Debug.unityLogger.logHandler = m_Messages;
             m_PreviousAudio = AudioBackend.Current;
             AudioBackend.Use(m_Audio);
         }
 
-        public void Dispose() => AudioBackend.Use(m_PreviousAudio);
+        public void Dispose()
+        {
+            AudioBackend.Use(m_PreviousAudio);
+            ProjectInfo.UnityVersion = m_PreviousRelease;
+            Debug.unityLogger.logHandler = m_PreviousLog;
+        }
 
         static float[] Ramp(int count, float scale)
         {
@@ -31,45 +46,41 @@ namespace UnityEngine.Tests
             return data;
         }
 
-        [Fact]
-        public void ScriptAudioClipCloneCopiesSamplesAndIsIndependent()
+        [Theory]
+        [InlineData(false)]
+        [InlineData(true)]
+        public void RuntimeAudioCloneCopiesMetadataWithoutSamplesOrCallbacks(bool stream)
         {
-            var source = AudioClip.Create("tone", 8, 2, 22050, false);
-            var samples = Ramp(16, 0.5f);
-            Assert.True(source.SetData(samples, 0));
-
+            int calls = 0;
+            var source = AudioClip.Create("tone", 8, 2, 22050, stream, data => { calls++; Array.Fill(data, 0.5f); });
+            int beforeClone = calls;
             var copy = Object.Instantiate(source);
             Assert.NotSame(source, copy);
             Assert.NotEqual(source.GetInstanceID(), copy.GetInstanceID());
             Assert.Equal("tone(Clone)", copy.name);
             Assert.False(copy.IsPersistentAsset);
-            Assert.Equal(source.samples, copy.samples);
+            Assert.Equal(0, copy.samples);
             Assert.Equal(source.channels, copy.channels);
             Assert.Equal(source.frequency, copy.frequency);
-            Assert.Equal(source.length, copy.length);
-            Assert.Equal(source.loadType, copy.loadType);
-            Assert.Equal(AudioDataLoadState.Loaded, copy.loadState);
-            Assert.NotEqual(source.m_Handle, copy.m_Handle);
-            var read = new float[16];
-            Assert.True(copy.GetData(read, 0));
-            Assert.Equal(samples, read);
-
-            Assert.True(copy.SetData(Ramp(16, -1f), 0));
-            var original = new float[16];
-            Assert.True(source.GetData(original, 0));
-            Assert.Equal(samples, original);
-
-            Object.DestroyImmediate(source);
-            Assert.True(copy.GetData(read, 0));
-            Assert.Equal(Ramp(16, -1f), read);
+            Assert.Equal(0f, copy.length);
+            Assert.Equal(AudioClipLoadType.DecompressOnLoad, copy.loadType);
+            Assert.Equal(AudioDataLoadState.Unloaded, copy.loadState);
+            Assert.Equal(0ul, copy.m_Handle);
+            Assert.False(copy.GetData(new float[16], 0));
+            Assert.Throws<ArgumentException>(() => copy.SetData(new float[16], 0));
+            Assert.True(copy.LoadAudioData());
+            Assert.True(copy.UnloadAudioData());
+            Assert.Equal(beforeClone, calls);
             Object.DestroyImmediate(copy);
+            Assert.True(source);
+            Object.DestroyImmediate(source);
         }
 
         [Theory]
         [InlineData(AudioClipLoadType.DecompressOnLoad, AudioCompressionFormat.PCM)]
         [InlineData(AudioClipLoadType.CompressedInMemory, AudioCompressionFormat.Vorbis)]
         [InlineData(AudioClipLoadType.Streaming, AudioCompressionFormat.Vorbis)]
-        public void ImportedAudioClipCloneKeepsLoadSettingsAndEveryDecodedSample(AudioClipLoadType loadType, AudioCompressionFormat compression)
+        public void ImportedAudioClipCloneSharesDecodedResourceAndKeepsSettings(AudioClipLoadType loadType, AudioCompressionFormat compression)
         {
             var guid = $"clone-audio-{loadType}";
             var samples = Ramp(3 * 10, 0.75f);
@@ -95,7 +106,7 @@ namespace UnityEngine.Tests
             Assert.Equal(source.channels, copy.channels);
             Assert.Equal(source.frequency, copy.frequency);
             Assert.Equal(source.loadState, copy.loadState);
-            Assert.NotEqual(source.m_Handle, copy.m_Handle);
+            Assert.Equal(source.m_Handle, copy.m_Handle);
 
             // The mixer holds every clip's decoded samples, whatever its load type.
             var stored = new float[samples.Length];
@@ -103,17 +114,45 @@ namespace UnityEngine.Tests
             Assert.Equal(samples, stored);
             Assert.True(AudioBackend.Current.ClipData(copy.m_Handle, 0, Ramp(samples.Length, -1f), write: true));
             Assert.True(AudioBackend.Current.ClipData(source.m_Handle, 0, stored, write: false));
-            Assert.Equal(samples, stored);
+            Assert.Equal(Ramp(samples.Length, -1f), stored);
             Object.DestroyImmediate(copy);
+            Assert.True(source.GetInstanceID() != 0);
+            Assert.True(AudioBackend.Current.ClipData(source.m_Handle, 0, stored, write: false));
+            Assert.Equal(Ramp(samples.Length, -1f), stored);
+            Object.DestroyImmediate(source, true);
         }
 
         [Fact]
-        public void StreamedScriptAudioClipCloneFailsLoudly()
+        public void ImportedCloneSurvivesAssetDestructionAndReloadsItsSharedResource()
         {
-            var source = AudioClip.Create("reader", 8, 1, 8000, true, data => { });
-            var error = Assert.Throws<ArgumentException>(() => Object.Instantiate(source));
-            Assert.Contains("PCM reader", error.Message);
-            Object.DestroyImmediate(source);
+            var samples = Ramp(30, 0.75f);
+            m_Audio.Assets["lifetime"] = (new AudioClipInfo { Frames = 10, Channels = 3, Frequency = 11025, Preload = 1 }, samples);
+            var source = AudioClip.FromImport("lifetime", "imported");
+            var first = Object.Instantiate(source);
+            var last = Object.Instantiate(first);
+            first.SetData(Ramp(30, -1f), 0);
+            Object.DestroyImmediate(first);
+            var read = new float[30];
+            Assert.True(last.GetData(read, 0));
+            Assert.Equal(Ramp(30, -1f), read);
+            Object.DestroyImmediate(source, true);
+            Assert.Equal(AudioDataLoadState.Unloaded, last.loadState);
+            Assert.True(last.LoadAudioData());
+            Assert.Equal(AudioDataLoadState.Loaded, last.loadState);
+            Assert.True(last.GetData(read, 0));
+            Assert.Equal(samples, read);
+            Object.DestroyImmediate(last);
+        }
+
+        [Fact]
+        public void AssetResourceCloneRequiresMeasuredRelease()
+        {
+            var source = AudioClip.Create("tone", 8, 1, 8000, false);
+            var font = new Font();
+            ProjectInfo.UnityVersion = "6000.0.72f1";
+            Assert.Throws<NotSupportedException>(() => Object.Instantiate(source));
+            Assert.Throws<NotSupportedException>(() => Object.Instantiate(font));
+            Object.DestroyImmediate(source);Object.DestroyImmediate(font);
         }
 
         [Fact]
@@ -149,7 +188,7 @@ namespace UnityEngine.Tests
         }
 
         [Fact]
-        public void DynamicFontCloneSharesFaceAndOwnsGlyphTexture()
+        public void DynamicFontCloneReportsUnsupportedAndSharesMaterial()
         {
             var source = new Font(new Unbound.Tests.BoxGlyphSource(), 10, "Box");
             var copy = Object.Instantiate(source);
@@ -163,9 +202,10 @@ namespace UnityEngine.Tests
             Assert.Equal(source.lineHeight, copy.lineHeight);
             Assert.Equal(source.fontNames, copy.fontNames);
             Assert.NotNull(copy.material);
-            Assert.NotSame(source.material, copy.material);
+            Assert.Same(source.material, copy.material);
             Assert.NotSame(source.Atlas.Texture, copy.Atlas.Texture);
-            Assert.Same(copy.Atlas.Texture, copy.material.mainTexture);
+            Assert.Same(source.Atlas.Texture, copy.material.mainTexture);
+            Assert.Contains("Font Error: Cloning a dynamic font is not supported and may result in incorrect font rendering.", m_Messages.Values);
 
             copy.RequestCharactersInTexture("AB");
             Assert.True(copy.GetCharacterInfo('A', out var copied));
@@ -175,6 +215,65 @@ namespace UnityEngine.Tests
             Assert.Equal(original, copied);
             Object.DestroyImmediate(copy);
             Object.DestroyImmediate(source);
+        }
+
+        [Fact]
+        public void ShaderClonePreservesNameAndOwnsMutableSettings()
+        {
+            var source = Shader.Create("Control", 3000);
+            source.maximumLOD = 200;
+            source.hideFlags = HideFlags.HideAndDontSave;
+            var copy = Object.Instantiate(source);
+            Assert.Equal("Control", copy.name);
+            Assert.NotEqual(source.GetInstanceID(), copy.GetInstanceID());
+            Assert.Equal(HideFlags.None, copy.hideFlags);
+            Assert.Equal(200, copy.maximumLOD);
+            copy.maximumLOD = 100;
+            Assert.Equal(200, source.maximumLOD);
+            Object.DestroyImmediate(source);Object.DestroyImmediate(copy);
+        }
+
+        [Fact]
+        public void ComputeCloneStartsWithoutRuntimeBindings()
+        {
+            var source = ComputeShader.FromFile("control.compute", "compute", "#pragma kernel Main");
+            source.SetInt("Value", 7);
+            source.EnableKeyword("RUNTIME");
+            var copy = Object.Instantiate(source);
+            Assert.Equal("compute(Clone)", copy.name);
+            Assert.True(copy.HasKernel("Main"));
+            Assert.Empty(copy.shaderKeywords);
+            Assert.False(copy.IsKeywordEnabled("RUNTIME"));
+            Assert.NotEqual(source.GetInstanceID(), copy.GetInstanceID());
+            Object.DestroyImmediate(source);Object.DestroyImmediate(copy);
+        }
+
+        [Fact]
+        public void UnreadableMeshCloneKeepsGeometryForRenderingWithoutExposingVertices()
+        {
+            var source = new Mesh { name = "mesh", vertices = new[] { Vector3.zero, Vector3.right, Vector3.up }, triangles = new[] { 0, 1, 2 } };
+            source.UploadMeshData(true);
+            var copy = Object.Instantiate(source);
+            Assert.False(copy.isReadable);
+            Assert.Equal(3, copy.vertexCount);
+            Assert.Empty(copy.vertices);
+            Assert.Contains("Not allowed to access vertices on mesh 'mesh(Clone)' (isReadable is false; Read/Write must be enabled in import settings)", m_Messages.Values);
+            Object.DestroyImmediate(source);Object.DestroyImmediate(copy);
+        }
+
+        [Fact]
+        public void BakingAnUnreadableMeshUsesTheRenderersRetainedGeometry()
+        {
+            var source = new Mesh { vertices = new[] { Vector3.zero, Vector3.right, Vector3.up }, triangles = new[] { 0, 1, 2 } };
+            source.UploadMeshData(true);
+            var go = new GameObject("bake");
+            var renderer = go.AddComponent<SkinnedMeshRenderer>();
+            renderer.sharedMesh = source;
+            var baked = new Mesh();
+            renderer.BakeMesh(baked);
+            Assert.Equal(new[] { Vector3.zero, Vector3.right, Vector3.up }, baked.vertices);
+            Assert.Equal(new[] { 0, 1, 2 }, baked.triangles);
+            Object.DestroyImmediate(go);Object.DestroyImmediate(source);Object.DestroyImmediate(baked);
         }
 
         static Color FaceColor(int face, int mip) => new Color32((byte)(40 * face), (byte)(60 * mip + 15), 200, 255);
@@ -241,7 +340,8 @@ namespace UnityEngine.Tests
             Assert.NotEqual(source.GetInstanceID(), copy.GetInstanceID());
             Assert.False(copy.isReadable);
             Assert.Equal(source.mipmapCount, copy.mipmapCount);
-            Assert.Throws<UnityException>(() => copy.GetPixels(CubemapFace.PositiveX));
+            Assert.Throws<ArgumentException>(() => copy.GetPixels(CubemapFace.PositiveX));
+            Assert.Contains("Instantiating a non-readable 'cube' texture is not allowed! Please mark the texture readable in the inspector or don't instantiate it.", m_Messages.Values);
             Assert.NotSame(source.m_UnreadablePixels, copy.m_UnreadablePixels);
             for (int face = 0; face < 6; face++)
                 for (int mip = 0; mip < copy.mipmapCount; mip++)

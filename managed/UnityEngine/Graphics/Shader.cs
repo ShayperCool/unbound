@@ -640,6 +640,7 @@ namespace Unbound.Runtime
                 return null;
             shader = UnityEngine.Shader.Create(name, DefaultQueue(name));
             shader.m_QueueFromSource = true;
+            shader.hideFlags = UnityEngine.HideFlags.NotEditable;
             ApplySource(shader, Source(name));
             s_Shaders[name] = shader;
             return shader;

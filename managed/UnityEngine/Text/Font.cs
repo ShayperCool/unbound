@@ -21,7 +21,7 @@ namespace UnityEngine
         event FontTextureRebuildCallback m_FontTextureRebuildCallback;
 
         // Serialized state, as Unity's Font keeps it: metrics at m_FontSize.
-        internal float m_FontSize = 16f;
+        internal float m_FontSize;
         internal float m_Ascent;
         internal float m_Descent;
         internal float m_LineSpacing;

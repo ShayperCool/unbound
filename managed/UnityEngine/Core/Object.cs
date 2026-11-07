@@ -151,6 +151,8 @@ namespace UnityEngine
         {
             CheckNullArgument(original, "The Object you want to instantiate is null.");
             MainThreadCheck.Check("Internal_InstantiateSingle");
+            if (original is ScriptableObject)
+                throw new ArgumentException("Cannot instantiate a ScriptableObject with a position and rotation");
             return Instantiation.Clone(original, null, false, position, rotation);
         }
 

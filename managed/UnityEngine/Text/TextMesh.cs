@@ -80,7 +80,22 @@ namespace UnityEngine
         public TextMesh() { }
 
         public string text { get => m_Text; set { m_Text = value; m_Dirty = true; } }
-        public Font font { get => m_Font; set { m_Font = value; m_Dirty = true; } }
+        public Font font
+        {
+            get => m_Font;
+            set
+            {
+                m_Font = value;
+                m_Dirty = true;
+                WarnCustomFontOverrides();
+            }
+        }
+
+        void WarnCustomFontOverrides()
+        {
+            if (Compat.AssetCloneResourcesMeasured && m_Font != null && !m_Font.dynamic && (m_FontSize != 0 || m_FontStyle != FontStyle.Normal))
+                Debug.LogWarning("Font size and style overrides are only supported for dynamic fonts.");
+        }
         public int fontSize { get => m_FontSize; set { m_FontSize = value; m_Dirty = true; } }
         public FontStyle fontStyle { get => m_FontStyle; set { m_FontStyle = value; m_Dirty = true; } }
         public float offsetZ { get => m_OffsetZ; set { m_OffsetZ = value; m_Dirty = true; } }

@@ -20,6 +20,10 @@ namespace Unbound.Runtime
             }
         }
 
+        /// <summary>Asset resource ownership and clone diagnostics measured by assetinstantiate
+        /// in 6000.0.71f1. Other releases require their own measurement.</summary>
+        internal static bool AssetCloneResourcesMeasured => Release == (6000, 0, 71, 'f', 1);
+
         /// <summary>Linux Editor display answers measured by inputplatform on 6000.0.71f1.
         /// Screen's resolution choices describe the Editor, while DisplayInfo comes from the OS.</summary>
         internal static bool EditorDisplayMeasured => OperatingSystem.IsLinux() && Release == (6000, 0, 71, 'f', 1);

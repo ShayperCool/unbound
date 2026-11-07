@@ -41,7 +41,7 @@ namespace Unbound.Runtime
             {
                 throw new ArgumentException($"Instantiating an object of type {original.GetType().Name} is not supported.");
             }
-            clone.m_Name = original.m_Name + "(Clone)";
+            clone.m_Name = original is Shader ? original.m_Name : original.m_Name + "(Clone)";
             return clone;
         }
 

@@ -19,6 +19,8 @@ namespace UnityEngine
         /// </summary>
         Object Instantiation.ICloneable.CloneObject()
         {
+            if (!m_Readable && Compat.AssetCloneResourcesMeasured)
+                Debug.LogError($"Instantiating a non-readable '{name}' texture is not allowed! Please mark the texture readable in the inspector or don't instantiate it.");
             var faces = RetainedFaces();
             if (faces == null)
                 throw new ArgumentException($"Instantiating cubemap '{name}' is not supported because its retained pixel data is unavailable.");

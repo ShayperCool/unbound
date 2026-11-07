@@ -263,6 +263,12 @@ namespace UnityEngine
 
         public void OverrideGeometry(Vector2[] vertices, ushort[] triangles)
         {
+            foreach (var vertex in vertices)
+                if (vertex.x < 0f || vertex.y < 0f || vertex.x > m_Rect.width || vertex.y > m_Rect.height)
+                {
+                    Debug.LogError(FormattableString.Invariant($"Invalid vertex array. Some vertices are outside of the Sprite rectangle: ({m_Rect.width:F6}, {m_Rect.height:F6})."));
+                    return;
+                }
             float w = m_Texture != null ? m_Texture.width : 1f;
             float h = m_Texture != null ? m_Texture.height : 1f;
             m_Vertices = new Vector2[vertices.Length];

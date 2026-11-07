@@ -30,7 +30,7 @@ namespace UnityEngine
         {
             ComputeShader shader;
             using (ObjectRegistry.AsAssets())
-                shader = new ComputeShader { m_Name = name, m_File = file, IsPersistentAsset = true };
+                shader = new ComputeShader { m_Name = name, m_File = file, IsPersistentAsset = true, hideFlags = HideFlags.NotEditable };
             var kernels = new List<string>();
             foreach (Match m in s_Kernel.Matches(source))
                 if (!kernels.Contains(m.Groups[1].Value)) kernels.Add(m.Groups[1].Value);

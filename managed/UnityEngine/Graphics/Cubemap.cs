@@ -179,7 +179,12 @@ namespace UnityEngine
         }
 
         public Color[] GetPixels(CubemapFace face) => GetPixels(face, 0);
-        public Color[] GetPixels(CubemapFace face, int miplevel) => (Color[])Level(face, miplevel).Clone();
+        public Color[] GetPixels(CubemapFace face, int miplevel)
+        {
+            if (!m_Readable && Compat.AssetCloneResourcesMeasured)
+                throw new ArgumentException($"Cubemap.GetPixels: texture data is either not readable, corrupted or does not exist. (Texture '{name}')");
+            return (Color[])Level(face, miplevel).Clone();
+        }
 
         public void SetPixels(Color[] colors, CubemapFace face) => SetPixels(colors, face, 0);
 
