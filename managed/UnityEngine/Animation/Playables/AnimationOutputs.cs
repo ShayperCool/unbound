@@ -31,7 +31,7 @@ namespace Unbound.Runtime.Playables
         /// controller playables or jobs set it).</summary>
         internal RootMotionStep Motion = RootMotionStep.Unknown;
         /// <summary>The humanoid body relative to its clip's motion, including bake/loop settings.
-        /// This places the pose; humanoid output root movement remains unsupported.</summary>
+        /// Direct humanoid clip outputs also use this sample for root movement.</summary>
         internal HumanRootMotionSample BodyMotion;
 
         static readonly Stack<AnimStream> s_Free = new Stack<AnimStream>();
@@ -91,6 +91,9 @@ namespace Unbound.Runtime.Playables
         /// <summary>Not computed (humanoid avatars): streams
         /// carry no motion and the graph's root curves pose the root as before.</summary>
         Unsupported,
+        /// <summary>A direct humanoid clip output uses the Animator humanoid sampler, including
+        /// its feet-pivot memory. Graph composition remains unsupported.</summary>
+        DirectHuman,
         /// <summary>The Animator requests no root motion (applyRootMotion off, no OnAnimatorMove):
         /// streams carry zero motion, as the Animator's own root motion is then zero.</summary>
         Zero,
@@ -545,7 +548,7 @@ namespace Unbound.Runtime.Playables
             var result = AnimStream.Rent(bindings);
             var evaluatedPlayer = animator.m_Player;
             var withController = evaluatedPlayer != null && animator.isActiveAndEnabled;
-            e.MotionMode = MotionModeOf(animator);
+            e.MotionMode = MotionModeOf(animator, outputs);
             var motion = RootMotionStep.Zero;
             float motionDeltaTime = (float)outputs[0].Dt;
             if (withController)
@@ -600,13 +603,22 @@ namespace Unbound.Runtime.Playables
                 result.BodyMotion = HumanRootMotion.Override(result.BodyMotion, s.BodyMotion, o.Weight);
                 AnimStream.Return(s);
             }
-            if (e.MotionMode == RootMotionMode.Compute) ApplyRootMotion(animator, result, motion, motionDeltaTime, dispatch: !suppressMovement);
+            AnimatorRootMotion? humanMotion = null;
+            if (e.MotionMode == RootMotionMode.DirectHuman)
+            {
+                // The same sample and feet-pivot memory as controller-driven humanoid motion.
+                // Advance it once even when motion is not requested, as the controller does.
+                animator.Human.ApplyMotion(result.BodyMotion.HasMotion ? result.BodyMotion : HumanRootMotion.NoMotion, motionDeltaTime, out var step);
+                humanMotion = step;
+                ApplyHumanRootMotion(animator, step, dispatch: !suppressMovement);
+            }
+            else if (e.MotionMode == RootMotionMode.Compute) ApplyRootMotion(animator, result, motion, motionDeltaTime, dispatch: !suppressMovement);
             else if (!suppressMovement && withController && animator.m_Player.DeferOutput) animator.m_Player.ProcessRootMotion();
             bool culled = animator.cullingMode != AnimatorCullingMode.AlwaysAnimate && !Animator.AnyRendererVisible(animator.gameObject);
             WriteOutput(animator, result, culled, e.PlayableIK);
             AnimationOutputs.ForgetCulled(animator);
             if (animator.isActiveAndEnabled)
-                AnimationOutputs.RememberCulled(animator, result, motion, motionDeltaTime, e.MotionMode, e.PlayableIK, e.VisibilityEvents(outputs), outputs.Exists(o => o.Output.Graph.UpdateMode == DirectorUpdateMode.Manual));
+                AnimationOutputs.RememberCulled(animator, result, motion, motionDeltaTime, e.MotionMode, e.PlayableIK, e.VisibilityEvents(outputs), outputs.Exists(o => o.Output.Graph.UpdateMode == DirectorUpdateMode.Manual), humanMotion);
             else AnimStream.Return(result);
             if (withController) evaluatedPlayer.Ticked = true;
             e.AfterWrite();
@@ -638,26 +650,43 @@ namespace Unbound.Runtime.Playables
             return false;
         }
 
-        /// <summary>Root motion of a graph's outputs is computed for a generic Animator when it
-        /// requests root motion (applyRootMotion, or an
-        /// OnAnimatorMove script, as for its own root motion). A humanoid Animator's is not (its
-        /// root movement is not implemented for streams): requesting it warns once and the graph's
-        /// root curves keep posing the root. During automatic evaluation the attached controller defers movement to this
-        /// combined output. Explicit graph evaluation computes only the evaluated outputs
-        /// and leaves the attached controller clock unchanged (6000.0.71f1, animculling).
-        /// Unbound's choice (unmeasured): the OnAnimatorMove gate, as for the Animator's own root
-        /// motion; the docs name applyRootMotion only.</summary>
-        static RootMotionMode MotionModeOf(Animator animator)
+        /// <summary>Direct, full-weight humanoid clip outputs without an attached controller use
+        /// the measured humanoid sampler. Other humanoid graph shapes retain their warning.
+        /// Generic output motion and the attached-controller combination are unchanged.</summary>
+        static RootMotionMode MotionModeOf(Animator animator, List<(PlayableOutputData Output, double Dt, bool Seek)> outputs)
         {
             bool requested = animator.m_ApplyRootMotion || HasMoveCallback(animator);
             if (animator.isHuman)
             {
+                if (animator.m_Player == null && outputs.Count == 1)
+                {
+                    var o = outputs[0].Output;
+                    if (!o.Destroyed && o.Weight == 1f && o.Source?.Kind is ClipKind clip
+                        && clip.Clip != null && clip.Clip.HasHumanCurves && clip.Clip.length > 0f
+                        && !clip.Clip.HumanClipMotion.Settings.Mirror && !clip.OverrideLoopTime
+                        && (o.Engine as AnimationOutputState)?.StreamSource == AnimationStreamSource.DefaultValues)
+                        return RootMotionMode.DirectHuman;
+                }
                 if (requested)
-                    Stubs.Ignored("Animator root motion of playable graph outputs on humanoid avatars",
-                        "is not applied: the root keeps the graph's root curves and deltaPosition, velocity and OnAnimatorMove see no motion");
+                    Stubs.Ignored("Animator root motion of composed playable graph outputs on humanoid avatars",
+                        "is not applied: only one direct, full-weight nonmirrored humanoid clip output without a playing controller or loop override is measured; mixer, layer, controller-playable and animation-job motion remain unsupported");
                 return RootMotionMode.Unsupported;
             }
             return requested ? RootMotionMode.Compute : RootMotionMode.Zero;
+        }
+
+        /// <summary>Apply the already sampled humanoid motion. Visibility replay keeps the last
+        /// world deltas, as the controller does, without stepping the feet-pivot memory again.</summary>
+        internal static void ApplyHumanRootMotion(Animator animator, in AnimatorRootMotion motion, bool dispatch = true)
+        {
+            animator.CaptureRootMotionPose();
+            animator.m_RootMotionApplied = false;
+            bool requested = animator.m_ApplyRootMotion || HasMoveCallback(animator);
+            animator.m_DeltaPosition = requested ? new Vector3(motion.DeltaPosition.x, motion.DeltaPosition.y, motion.DeltaPosition.z) : Vector3.zero;
+            animator.m_DeltaRotation = requested ? new Quaternion(motion.DeltaRotation.x, motion.DeltaRotation.y, motion.DeltaRotation.z, motion.DeltaRotation.w) : Quaternion.identity;
+            animator.m_RootVelocity = requested ? new Vector3(motion.Velocity.x, motion.Velocity.y, motion.Velocity.z) : Vector3.zero;
+            animator.m_RootAngularVelocity = requested ? new Vector3(motion.AngularVelocity.x, motion.AngularVelocity.y, motion.AngularVelocity.z) : Vector3.zero;
+            if (dispatch) DispatchRootMotion(animator);
         }
 
         /// <summary>
@@ -698,6 +727,11 @@ namespace Unbound.Runtime.Playables
             RootMotionStep.Velocities(animator.m_DeltaPosition, animator.m_DeltaRotation, animator.m_MotionRootRotation, deltaTime,
                 out animator.m_RootVelocity, out animator.m_RootAngularVelocity);
             if (!dispatch) return;
+            DispatchRootMotion(animator);
+        }
+
+        static void DispatchRootMotion(Animator animator)
+        {
             if (animator.m_Player != null)
             {
                 animator.m_Player.ProcessRootMotion();
@@ -775,6 +809,7 @@ namespace Unbound.Runtime.Playables
         {
             internal AnimStream Pose;
             internal RootMotionStep Motion;
+            internal AnimatorRootMotion? HumanMotion;
             internal float DeltaTime;
             internal RootMotionMode Mode;
             internal bool IK, Manual;
@@ -834,8 +869,8 @@ namespace Unbound.Runtime.Playables
             if (!frame.Writing) AnimStream.Return(frame.Pose);
         }
 
-        internal static void RememberCulled(Animator animator, AnimStream pose, RootMotionStep motion, float dt, RootMotionMode mode, bool ik, List<Action> events, bool manual) =>
-            s_Culled[animator] = new CulledPose { Pose = pose, Motion = motion, DeltaTime = dt, Mode = mode, IK = ik, Events = events, Manual = manual };
+        internal static void RememberCulled(Animator animator, AnimStream pose, RootMotionStep motion, float dt, RootMotionMode mode, bool ik, List<Action> events, bool manual, AnimatorRootMotion? humanMotion = null) =>
+            s_Culled[animator] = new CulledPose { Pose = pose, Motion = motion, HumanMotion = humanMotion, DeltaTime = dt, Mode = mode, IK = ik, Events = events, Manual = manual };
 
         internal static bool EvaluateOnVisible(Animator animator, bool move)
         {
@@ -868,7 +903,9 @@ namespace Unbound.Runtime.Playables
             try
             {
                 if (move) animator.m_RootMotionApplied = false;
-                if (move && frame.Mode == RootMotionMode.Compute)
+                if (move && frame.HumanMotion is { } humanMotion)
+                    AnimationEvaluation.ApplyHumanRootMotion(animator, humanMotion);
+                else if (move && frame.Mode == RootMotionMode.Compute)
                     AnimationEvaluation.ApplyRootMotion(animator, frame.Pose, frame.Motion,
                         animator.m_Player?.RootMotionDeltaTime ?? frame.DeltaTime);
                 else if (move) animator.m_Player?.ProcessRootMotion();
