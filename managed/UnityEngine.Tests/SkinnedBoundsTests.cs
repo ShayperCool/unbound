@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Unbound.Runtime;
 using Unbound.Tests;
 using Xunit;
@@ -82,12 +83,15 @@ namespace UnityEngine.Tests
             skin.bones = new[] {rig.transform,body.transform};
             var logs = new Logs();
             var saved = Debug.unityLogger.logHandler;
+            const string diagnostic = "SkinnedMeshRenderer bounds outside measured support";
+            int priorHits = Stubs.HitReport().FirstOrDefault(x => x.Key == diagnostic).Value;
             try
             {
                 Debug.unityLogger.logHandler = logs;
                 skin.PrepareCullingBounds();
                 Assert.False(skin.HasMeasuredCullingBounds);
-                Assert.Contains(logs.messages, x => x.Contains("SkinnedMeshRenderer bounds outside measured support"));
+                Assert.True(Stubs.HitReport().First(x => x.Key == diagnostic).Value > priorHits);
+                if (priorHits == 0) Assert.Contains(logs.messages, x => x.Contains(diagnostic));
                 skin.localBounds = new Bounds(Vector3.zero,Vector3.one);
                 Assert.True(skin.HasMeasuredCullingBounds);
                 skin.updateWhenOffscreen = true;
