@@ -54,8 +54,10 @@ fn models(dir: &Path, out: &mut Vec<std::path::PathBuf>) {
     }
 }
 
-/// A serde serializer that feeds a value's structure into a hash, with floats on the grid.
-struct Fingerprint<'a>(&'a mut blake3::Hasher);
+/// A serde serializer that feeds a value's structure into a hash, with floats on the grid. A
+/// string under the second field's directory (`tests/projects`: an imported texture's resolved
+/// file name) is hashed relative to it, so the fingerprint is the same in every checkout.
+struct Fingerprint<'a>(&'a mut blake3::Hasher, &'a str);
 
 #[derive(Debug)]
 struct Unhashable(String);
@@ -136,7 +138,13 @@ impl<'a, 'b> ser::Serializer for &'a mut Fingerprint<'b> {
         Ok(())
     }
     fn serialize_str(self, v: &str) -> Result<(), Unhashable> {
-        self.serialize_bytes(v.as_bytes())
+        match v.strip_prefix(self.1).filter(|_| !self.1.is_empty()) {
+            Some(relative) => {
+                self.tag(b'r', &[]);
+                self.serialize_bytes(relative.as_bytes())
+            }
+            None => self.serialize_bytes(v.as_bytes()),
+        }
     }
     fn serialize_bytes(self, v: &[u8]) -> Result<(), Unhashable> {
         self.len(b's', v.len());
@@ -287,13 +295,14 @@ fn fingerprints(root: &Path) -> BTreeMap<String, String> {
                 .unwrap_or(Value::Null);
             let bytes = std::fs::read(source).unwrap();
             let mut hasher = blake3::Hasher::new();
+            let root = root.to_string_lossy();
             match ModelImporter.import(source, &bytes, &meta) {
                 // A failure is output too: the cache keeps no entry for it.
                 Err(_) => {
                     hasher.update(b"error");
                 }
                 Ok(model) => model
-                    .serialize(&mut Fingerprint(&mut hasher))
+                    .serialize(&mut Fingerprint(&mut hasher, &root))
                     .unwrap_or_else(|e| panic!("{name}: {e}")),
             }
             (name, hasher.finalize().to_hex().to_string())
@@ -375,7 +384,8 @@ fn import_output_changes_bump_the_model_cache_version() {
 fn floats_hash_on_the_grid_and_guids_hash_whole() {
     fn hash<T: Serialize>(v: &T) -> blake3::Hash {
         let mut hasher = blake3::Hasher::new();
-        v.serialize(&mut Fingerprint(&mut hasher)).unwrap();
+        v.serialize(&mut Fingerprint(&mut hasher, "/checkout/tests/projects"))
+            .unwrap();
         hasher.finalize()
     }
     assert_eq!(hash(&1.0f32), hash(&f32::from_bits(1.0f32.to_bits() + 1)));
@@ -384,4 +394,11 @@ fn floats_hash_on_the_grid_and_guids_hash_whole() {
     let guid = unbound_yaml::Guid;
     assert_ne!(hash(&guid(1 << 100)), hash(&guid(2 << 100)));
     assert_ne!(hash(&Some(0u8)), hash(&None::<u8>));
+    // A file under the probes' root hashes the same from any checkout.
+    let mut other = blake3::Hasher::new();
+    "/elsewhere/tests/projects/a/b.png"
+        .serialize(&mut Fingerprint(&mut other, "/elsewhere/tests/projects"))
+        .unwrap();
+    assert_eq!(hash(&"/checkout/tests/projects/a/b.png"), other.finalize());
+    assert_ne!(hash(&"/checkout/tests/projects/a/b.png"), hash(&"/a/b.png"));
 }
