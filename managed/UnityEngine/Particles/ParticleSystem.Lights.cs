@@ -26,6 +26,9 @@ namespace UnityEngine
                 for (int i = 0; i < m_Count && used < limit; i++)
                 {
                     ref var p = ref m_Particles[i];
+                    // A dead particle kept for its fading trail is not drawn; it lights nothing
+                    // either (Unbound's choice, unmeasured).
+                    if (p.IsTrailCarrier) continue;
                     bool lit = L.useRandomDistribution ? R.Value(p.m_RandomSeed, R.Light) < ratio : ratio > 0f && i % every == 0;
                     if (!lit) continue;
                     var light = ModuleLight(used++, template);
