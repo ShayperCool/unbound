@@ -738,15 +738,9 @@ impl UnityRenderer {
         }
     }
 
-    /// A texture's anisotropic level under the global setting (Unity's: forced on, every
-    /// texture filters at least at the forced minimum; never above the maximum).
+    /// A texture's anisotropic level under the global setting.
     fn effective_aniso(&self, level: i32) -> i32 {
-        let [mode, forced_min, global_max] = self.anisotropy;
-        match mode {
-            0 => 1,
-            2 => level.max(forced_min).min(global_max),
-            _ => level.min(global_max),
-        }
+        effective_aniso(self.anisotropy, level)
     }
 
     /// Bias uses the sampler's native LOD operation, preserving implicit and explicit gradients.
@@ -4056,6 +4050,20 @@ fn apply_override(
     o.stencil_ref as u32
 }
 
+/// A texture's anisotropic level under QualitySettings.anisotropicFiltering (`[mode, forced
+/// minimum, maximum]`, mode 0 off, 1 per texture, 2 forced on): forced on, every texture filters
+/// at least at the forced minimum, except one whose anisoLevel is 0, which opts out (the 6000.0
+/// Texture.anisoLevel contract; the Cookie importer writes 0: tests/projects/urp
+/// cookie_directional); never above the maximum.
+fn effective_aniso([mode, forced_min, global_max]: [i32; 3], level: i32) -> i32 {
+    match mode {
+        0 => 1,
+        2 if level == 0 => 1,
+        2 => level.max(forced_min).min(global_max),
+        _ => level.min(global_max),
+    }
+}
+
 /// The determinant of a column-major 4x4 matrix's upper 3x3 (the sign of its handedness).
 fn determinant3(m: &[f32; 16]) -> f32 {
     m[0] * (m[5] * m[10] - m[9] * m[6]) - m[4] * (m[1] * m[10] - m[9] * m[2])
@@ -4126,6 +4134,20 @@ fn external_index_refusal(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn forced_anisotropy_spares_level_zero() {
+        // Forced on with the default limits (9..16): 1..9 become 9, above 9 stay, 0 opts out.
+        let forced = [2, 9, 16];
+        assert_eq!(effective_aniso(forced, 0), 1);
+        assert_eq!(effective_aniso(forced, 1), 9);
+        assert_eq!(effective_aniso(forced, 12), 12);
+        assert_eq!(effective_aniso([2, 9, 10], 16), 10);
+        // Per texture: as set, up to the maximum; off: none.
+        assert_eq!(effective_aniso([1, 9, 16], 4), 4);
+        assert_eq!(effective_aniso([1, 9, 2], 4), 2);
+        assert_eq!(effective_aniso([0, 9, 16], 16), 1);
+    }
 
     fn stand_in(extra: bool) -> DrawInputs {
         DrawInputs {
