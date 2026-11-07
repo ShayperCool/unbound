@@ -15,6 +15,10 @@ use unbound_project::Project;
 /// (`ClassCoverage.s_IgnoredWithoutData` on the managed side).
 const DATA_KEYS: &[&str] = &["m_OcclusionCullingData", "m_NavMeshData"];
 
+/// Classes whose documents the managed side checks value by value (`ClassCoverage.Report`):
+/// Sprite (213) layouts, LightingSettings (850595691) features Unbound does not draw.
+const CHECKED_CLASSES: &[i32] = &[213, 850595691];
+
 /// The objects of one class in the project's files.
 #[derive(Default)]
 struct Found {
@@ -23,7 +27,8 @@ struct Found {
     files: BTreeSet<String>,
     keys: BTreeSet<String>,
     referenced: BTreeSet<String>,
-    sprite_documents: BTreeMap<String, String>,
+    /// The documents of a [`CHECKED_CLASSES`] class, by file.
+    documents: BTreeMap<String, String>,
 }
 
 #[derive(Serialize)]
@@ -33,7 +38,7 @@ struct FoundRequest<'a> {
     type_name: &'a str,
     keys: &'a BTreeSet<String>,
     referenced: &'a BTreeSet<String>,
-    sprite_documents: &'a BTreeMap<String, String>,
+    documents: &'a BTreeMap<String, String>,
 }
 
 #[derive(Deserialize, Serialize)]
@@ -71,9 +76,9 @@ fn scan(text: &str, path: &str, found: &mut BTreeMap<i32, Found>) {
                 let entry = found.entry(id).or_default();
                 entry.objects += 1;
                 entry.files.insert(path.to_string());
-                if id == 213 {
+                if CHECKED_CLASSES.contains(&id) {
                     entry
-                        .sprite_documents
+                        .documents
                         .entry(path.to_string())
                         .or_default()
                         .push_str(&format!("--- !u!{header}\n"));
@@ -82,13 +87,8 @@ fn scan(text: &str, path: &str, found: &mut BTreeMap<i32, Found>) {
             continue;
         }
         let Some(id) = current else { continue };
-        if id == 213 {
-            let document = found
-                .get_mut(&id)
-                .unwrap()
-                .sprite_documents
-                .get_mut(path)
-                .unwrap();
+        if CHECKED_CLASSES.contains(&id) {
+            let document = found.get_mut(&id).unwrap().documents.get_mut(path).unwrap();
             document.push_str(line);
             document.push('\n');
         }
@@ -174,7 +174,7 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
             type_name: &f.type_name,
             keys: &f.keys,
             referenced: &f.referenced,
-            sprite_documents: &f.sprite_documents,
+            documents: &f.documents,
         })
         .collect();
     let release = project.version.to_string();
@@ -223,7 +223,10 @@ pub fn doctor(args: &ProjectArgs, all: bool, as_json: bool) -> Result<()> {
         }
     };
     for (reading, title) in [
-        ("Unsupported", "with rejected serialized representations"),
+        (
+            "Unsupported",
+            "with content Unbound rejects or does not draw",
+        ),
         ("Unread", "not read: they load with default settings"),
         ("Unknown", "no engine class: their objects are skipped"),
         ("Ignored", "ignored on purpose"),
@@ -295,7 +298,7 @@ mod tests {
     }
 
     #[test]
-    fn keeps_only_non_stripped_sprite_documents_for_layout_validation() {
+    fn keeps_only_non_stripped_checked_documents() {
         let first = "--- !u!213 &12\nSprite:\n  m_RD:\n    settingsRaw: 64\n";
         let second = "--- !u!213 &14\nSprite:\n  m_RD:\n    settingsRaw: 1\n";
         let text = format!(
@@ -305,8 +308,17 @@ mod tests {
         scan(&text, "Assets/sprites.asset", &mut found);
         assert_eq!(found[&213].objects, 2);
         assert_eq!(
-            found[&213].sprite_documents["Assets/sprites.asset"],
+            found[&213].documents["Assets/sprites.asset"],
             format!("{first}{second}")
         );
+        let lighting = "--- !u!850595691 &4890085278179872738\nLightingSettings:\n  m_EnableRealtimeLightmaps: 1\n";
+        let mut found = BTreeMap::new();
+        scan(
+            &format!("%YAML 1.1\n{lighting}--- !u!28 &13\nTexture2D:\n  m_Width: 64\n"),
+            "Assets/a.lighting",
+            &mut found,
+        );
+        assert_eq!(found[&850595691].documents["Assets/a.lighting"], lighting);
+        assert!(found[&28].documents.is_empty());
     }
 }

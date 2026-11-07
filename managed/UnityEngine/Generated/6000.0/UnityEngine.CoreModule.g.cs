@@ -1623,105 +1623,12 @@ namespace UnityEngine
         Pyramid = 1,
         Box = 2,
     }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class LightingSettings : global::UnityEngine.Object
+    unsafe partial class LightingSettings
     {
         [global::Unbound.Stub] internal void LightingSettingsDontStripMe() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.LightingSettingsDontStripMe"); }
-        [global::Unbound.Stub] public LightingSettings() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.ctor"); }
-        public bool bakedGI { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.bakedGI"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.bakedGI"); } }
-        public bool realtimeGI { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.realtimeGI"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.realtimeGI"); } }
-        public bool realtimeEnvironmentLighting { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.realtimeEnvironmentLighting"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.realtimeEnvironmentLighting"); } }
-        [global::System.Obsolete("LightingSettings.autoGenerate is obsolete.")] public bool autoGenerate { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.autoGenerate"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.autoGenerate"); } }
-        public global::UnityEngine.MixedLightingMode mixedBakeMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.mixedBakeMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.mixedBakeMode"); } }
-        public float albedoBoost { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.albedoBoost"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.albedoBoost"); } }
-        public float indirectScale { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.indirectScale"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.indirectScale"); } }
-        public global::UnityEngine.LightingSettings.Lightmapper lightmapper { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.lightmapper"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.lightmapper"); } }
-        public int lightmapMaxSize { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.lightmapMaxSize"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.lightmapMaxSize"); } }
-        public float lightmapResolution { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.lightmapResolution"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.lightmapResolution"); } }
-        public int lightmapPadding { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.lightmapPadding"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.lightmapPadding"); } }
-        public global::UnityEngine.LightmapCompression lightmapCompression { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.lightmapCompression"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.lightmapCompression"); } }
-        [global::System.Obsolete("Use LightingSettings.lightmapCompression instead.")] public bool compressLightmaps { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.compressLightmaps"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.compressLightmaps"); } }
-        public bool ao { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.ao"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.ao"); } }
-        public float aoMaxDistance { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.aoMaxDistance"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.aoMaxDistance"); } }
-        public float aoExponentIndirect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.aoExponentIndirect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.aoExponentIndirect"); } }
-        public float aoExponentDirect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.aoExponentDirect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.aoExponentDirect"); } }
-        public bool extractAO { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.extractAO"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.extractAO"); } }
-        public global::UnityEngine.LightmapsMode directionalityMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.directionalityMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.directionalityMode"); } }
-        internal global::UnityEngine.FilterMode lightmapFilterMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.lightmapFilterMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.lightmapFilterMode"); } }
-        [global::System.Obsolete("Training data export for baked lighting is deprecated.")] public bool exportTrainingData { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.exportTrainingData"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.exportTrainingData"); } }
-        [global::System.Obsolete("Training data export for baked lighting is deprecated.")] public string trainingDataDestination { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.trainingDataDestination"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.trainingDataDestination"); } }
-        public float indirectResolution { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.indirectResolution"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.indirectResolution"); } }
-        internal bool realtimeForceWhiteAlbedo { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.realtimeForceWhiteAlbedo"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.realtimeForceWhiteAlbedo"); } }
-        internal bool realtimeForceUpdates { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.realtimeForceUpdates"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.realtimeForceUpdates"); } }
         [global::System.Obsolete("Bake with the Progressive Lightmapper. The backend that uses Enlighten to bake is obsolete.")] public bool finalGather { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.finalGather"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.finalGather"); } }
         [global::System.Obsolete("Bake with the Progressive Lightmapper. The backend that uses Enlighten to bake is obsolete.")] public float finalGatherRayCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.finalGatherRayCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.finalGatherRayCount"); } }
         [global::System.Obsolete("Bake with the Progressive Lightmapper. The backend that uses Enlighten to bake is obsolete.")] public bool finalGatherFiltering { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.finalGatherFiltering"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.finalGatherFiltering"); } }
-        public global::UnityEngine.LightingSettings.Sampling sampling { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.sampling"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.sampling"); } }
-        public int directSampleCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.directSampleCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.directSampleCount"); } }
-        public int indirectSampleCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.indirectSampleCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.indirectSampleCount"); } }
-        [global::System.Obsolete("Use LightingSettings.maxBounces instead. (UnityUpgradable) -> UnityEngine.LightingSettings.maxBounces")] public int bounces { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.bounces"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.bounces"); } }
-        public int maxBounces { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.maxBounces"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.maxBounces"); } }
-        [global::System.Obsolete("Use LightingSettings.minBounces instead. (UnityUpgradable) -> UnityEngine.LightingSettings.minBounces")] public int russianRouletteStartBounce { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.russianRouletteStartBounce"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.russianRouletteStartBounce"); } }
-        public int minBounces { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.minBounces"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.minBounces"); } }
-        public bool prioritizeView { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.prioritizeView"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.prioritizeView"); } }
-        public global::UnityEngine.LightingSettings.FilterMode filteringMode { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringMode"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringMode"); } }
-        public global::UnityEngine.LightingSettings.DenoiserType denoiserTypeDirect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.denoiserTypeDirect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.denoiserTypeDirect"); } }
-        public global::UnityEngine.LightingSettings.DenoiserType denoiserTypeIndirect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.denoiserTypeIndirect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.denoiserTypeIndirect"); } }
-        public global::UnityEngine.LightingSettings.DenoiserType denoiserTypeAO { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.denoiserTypeAO"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.denoiserTypeAO"); } }
-        public global::UnityEngine.LightingSettings.FilterType filterTypeDirect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filterTypeDirect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filterTypeDirect"); } }
-        public global::UnityEngine.LightingSettings.FilterType filterTypeIndirect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filterTypeIndirect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filterTypeIndirect"); } }
-        public global::UnityEngine.LightingSettings.FilterType filterTypeAO { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filterTypeAO"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filterTypeAO"); } }
-        public float filteringGaussianRadiusDirect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringGaussianRadiusDirect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringGaussianRadiusDirect"); } }
-        public float filteringGaussianRadiusIndirect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringGaussianRadiusIndirect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringGaussianRadiusIndirect"); } }
-        public float filteringGaussianRadiusAO { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringGaussianRadiusAO"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringGaussianRadiusAO"); } }
-        public float filteringAtrousPositionSigmaDirect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringAtrousPositionSigmaDirect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringAtrousPositionSigmaDirect"); } }
-        public float filteringAtrousPositionSigmaIndirect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringAtrousPositionSigmaIndirect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringAtrousPositionSigmaIndirect"); } }
-        public float filteringAtrousPositionSigmaAO { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringAtrousPositionSigmaAO"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringAtrousPositionSigmaAO"); } }
-        public bool environmentImportanceSampling { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.environmentImportanceSampling"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.environmentImportanceSampling"); } }
-        public int environmentSampleCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.environmentSampleCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.environmentSampleCount"); } }
-        internal int environmentReferencePointCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.environmentReferencePointCount"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.environmentReferencePointCount"); } }
-        public float lightProbeSampleCountMultiplier { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.lightProbeSampleCountMultiplier"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.lightProbeSampleCountMultiplier"); } }
-        public bool respectSceneVisibilityWhenBakingGI { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.respectSceneVisibilityWhenBakingGI"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.respectSceneVisibilityWhenBakingGI"); } }
-        [global::System.Obsolete("LightingSettings.filteringGaussRadiusDirect is deprecated. Use filteringGaussianRadiusDirect instead.")] public int filteringGaussRadiusDirect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringGaussRadiusDirect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringGaussRadiusDirect"); } }
-        [global::System.Obsolete("LightingSettings.filteringGaussRadiusIndirect is deprecated. Use filteringGaussianRadiusIndirect instead.")] public int filteringGaussRadiusIndirect { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringGaussRadiusIndirect"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringGaussRadiusIndirect"); } }
-        [global::System.Obsolete("LightingSettings.filteringGaussRadiusAO is deprecated. Use filteringGaussianRadiusAO instead.")] public int filteringGaussRadiusAO { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringGaussRadiusAO"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.LightingSettings.filteringGaussRadiusAO"); } }
-        public enum Lightmapper
-        {
-            [global::System.Obsolete("Use Lightmapper.ProgressiveCPU instead. (UnityUpgradable) -> UnityEngine.LightingSettings/Lightmapper.ProgressiveCPU")] Enlighten = 0,
-            ProgressiveCPU = 1,
-            ProgressiveGPU = 2,
-        }
-        public enum Sampling
-        {
-            Auto = 0,
-            Fixed = 1,
-        }
-        public enum FilterMode
-        {
-            None = 0,
-            Auto = 1,
-            Advanced = 2,
-        }
-        public enum DenoiserType
-        {
-            None = 0,
-            Optix = 1,
-            OpenImage = 2,
-            [global::System.Obsolete("DenoiserType.RadeonPro is obsolete, use DenoiserType.OpenImage instead.")] RadeonPro = 3,
-        }
-        public enum FilterType
-        {
-            Gaussian = 0,
-            ATrous = 1,
-            None = 2,
-        }
-    }
-    public enum LightmapCompression
-    {
-        None = 0,
-        LowQuality = 1,
-        NormalQuality = 2,
-        HighQuality = 3,
     }
     unsafe partial class LightmapSettings
     {
@@ -2449,29 +2356,6 @@ namespace UnityEngine
         public static int maximumChunksOverride { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Shader.maximumChunksOverride"); return default; } [global::Unbound.Stub] set { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Shader.maximumChunksOverride"); } }
         internal global::UnityEngine.DisableBatchingType disableBatching { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Shader.disableBatching"); return default; } }
         internal string customEditor { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Shader.customEditor"); return default; } }
-    }
-    [global::Unbound.Stub]
-    public unsafe sealed partial class ShaderVariantCollection : global::UnityEngine.Object
-    {
-        [global::Unbound.Stub] public void Clear() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ShaderVariantCollection.Clear"); }
-        [global::Unbound.Stub] public void WarmUp() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ShaderVariantCollection.WarmUp"); }
-        [global::Unbound.Stub] public bool WarmUpProgressively(int variantCount) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ShaderVariantCollection.WarmUpProgressively"); return default; }
-        [global::Unbound.Stub] public ShaderVariantCollection() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ShaderVariantCollection.ctor"); }
-        [global::Unbound.Stub] public bool Add(global::UnityEngine.ShaderVariantCollection.ShaderVariant variant) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ShaderVariantCollection.Add"); return default; }
-        [global::Unbound.Stub] public bool Remove(global::UnityEngine.ShaderVariantCollection.ShaderVariant variant) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ShaderVariantCollection.Remove"); return default; }
-        [global::Unbound.Stub] public bool Contains(global::UnityEngine.ShaderVariantCollection.ShaderVariant variant) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ShaderVariantCollection.Contains"); return default; }
-        public int shaderCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ShaderVariantCollection.shaderCount"); return default; } }
-        public int variantCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ShaderVariantCollection.variantCount"); return default; } }
-        public int warmedUpVariantCount { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ShaderVariantCollection.warmedUpVariantCount"); return default; } }
-        public bool isWarmedUp { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ShaderVariantCollection.isWarmedUp"); return default; } }
-        [global::Unbound.Stub]
-        public unsafe partial struct ShaderVariant
-        {
-            [global::Unbound.Stub] public global::UnityEngine.Shader shader;
-            [global::Unbound.Stub] public global::UnityEngine.Rendering.PassType passType;
-            [global::Unbound.Stub] public string[] keywords;
-            [global::Unbound.Stub] public ShaderVariant(global::UnityEngine.Shader shader, global::UnityEngine.Rendering.PassType passType, params string[] keywords) { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.ShaderVariantCollection.ShaderVariant.ctor"); }
-        }
     }
     [global::Unbound.Stub]
     internal unsafe partial class ShimManager
@@ -5758,24 +5642,6 @@ namespace UnityEngine.Rendering
         [global::Unbound.Stub] public override int GetHashCode() { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.PassIdentifier.GetHashCode"); return default; }
         public uint SubshaderIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.PassIdentifier.SubshaderIndex"); return default; } }
         public uint PassIndex { [global::Unbound.Stub] get { global::Unbound.Runtime.Stubs.NotImplemented("UnityEngine.Rendering.PassIdentifier.PassIndex"); return default; } }
-    }
-    public enum PassType
-    {
-        Normal = 0,
-        Vertex = 1,
-        VertexLM = 2,
-        [global::System.Obsolete("VertexLMRGBM PassType is obsolete. Please use VertexLM PassType together with DecodeLightmap shader function.")] VertexLMRGBM = 3,
-        ForwardBase = 4,
-        ForwardAdd = 5,
-        [global::System.Obsolete("Deferred Lighting was removed, so LightPrePassBase pass type is never used anymore.")] LightPrePassBase = 6,
-        [global::System.Obsolete("Deferred Lighting was removed, so LightPrePassFinal pass type is never used anymore.")] LightPrePassFinal = 7,
-        ShadowCaster = 8,
-        Deferred = 10,
-        Meta = 11,
-        MotionVectors = 12,
-        ScriptableRenderPipeline = 13,
-        ScriptableRenderPipelineDefaultUnlit = 14,
-        GrabPass = 15,
     }
     [global::Unbound.Stub]
     public unsafe partial struct PlatformKeywordSet

@@ -32,6 +32,9 @@ namespace Unbound.Runtime
         /// <summary>The file ids of the objects the scene file made (GlobalObjectId names scene
         /// objects by them).</summary>
         internal readonly Dictionary<Object, long> FileIds = new Dictionary<Object, long>();
+        /// <summary>The scene's Lighting Settings (its LightmapSettings' m_LightingSettings, or
+        /// what UnityEditor.Lightmapping assigned since); null: none.</summary>
+        internal LightingSettings LightingSettings;
     }
 
     /// <summary>The loaded scenes and their root GameObjects, in hierarchy order.</summary>

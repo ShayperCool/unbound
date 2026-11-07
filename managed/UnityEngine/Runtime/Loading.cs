@@ -502,6 +502,11 @@ namespace Unbound.Runtime
                 // additive one adds to it.
                 bool first = scene == null || SceneRegistry.Loaded.TrueForAll(s => s == scene || SceneRegistry.IsDontDestroyOnLoad(s) || !s.IsLoaded);
                 RenderSettings.ReadLightingData(doc.Body.Ref("m_LightingDataAsset"), resolver as LoadedFile, first, scene?.Handle.Value ?? 0);
+                if (scene != null)
+                {
+                    var settings = doc.Body.Ref("m_LightingSettings");
+                    scene.LightingSettings = settings.IsNull || resolver == null ? null : resolver.Resolve(settings, typeof(LightingSettings)) as LightingSettings;
+                }
             }
             Loaded?.Invoke(doc);
         }

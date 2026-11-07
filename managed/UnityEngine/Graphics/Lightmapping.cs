@@ -137,8 +137,10 @@ namespace UnityEngine
             }
             if (file != null && root.TryGetProperty("renderers", out var renderers))
             {
+                int realtime = 0;
                 foreach (var r in renderers.EnumerateArray())
                 {
+                    if (IsLightmapIndex(r.GetProperty("indexDynamic").GetInt32())) realtime++;
                     var target = Find(file, r);
                     if (target is Terrain terrain)
                     {
@@ -157,6 +159,7 @@ namespace UnityEngine
                     renderer.realtimeLightmapIndex = dynamic >= 0xFFFE ? -1 : dynamic;
                     renderer.realtimeLightmapScaleOffset = Vector(r.GetProperty("stDynamic"));
                 }
+                if (realtime > 0) RealtimeGINotDrawn(file.Path, realtime);
             }
             if (file != null && root.TryGetProperty("lights", out var lights))
             {
@@ -187,6 +190,26 @@ namespace UnityEngine
             }
             if (root.TryGetProperty("probes", out var probes) && probes.ValueKind == JsonValueKind.Object)
                 LightProbes.SceneLoaded(scene, lightingData, probes);
+        }
+
+        /// <summary>A lightmap index that names a lightmap (0xFFFE and 0xFFFF name none).</summary>
+        static bool IsLightmapIndex(int index) => index >= 0 && index < 0xFFFE;
+
+        static readonly HashSet<string> s_RealtimeWarned = new HashSet<string>(StringComparer.Ordinal);
+
+        /// <summary>Enlighten Realtime Global Illumination precomputed into a scene's lighting
+        /// data lights it in Play mode (its realtime lightmaps take the realtime lights' bounced
+        /// light and the environment's; measured: tests/projects/lightingassets, the same scene
+        /// with and without it). Unbound does not draw it: said once per scene file.</summary>
+        static void RealtimeGINotDrawn(string scene, int renderers)
+        {
+            lock (s_RealtimeWarned)
+            {
+                if (!s_RealtimeWarned.Add(scene ?? "")) return;
+            }
+            Debug.LogWarning($"Unbound: {scene} has Enlighten Realtime Global Illumination precomputed for {renderers} renderers " +
+                "(LightingSettings.realtimeGI): its realtime lightmaps are not drawn, so realtime lights add no bounced light and the " +
+                "environment no realtime indirect light. `unbound doctor` lists the Lighting Settings that enable it.");
         }
 
         /// <summary>The scene object an entry is of: by its file id, or (in a prefab instance) by

@@ -23,7 +23,8 @@ namespace Unbound.Runtime
         Unread,
         /// <summary>No engine class: its objects are skipped (references to them are null).</summary>
         Unknown,
-        /// <summary>A reader exists, but the project's documents contain a rejected representation.</summary>
+        /// <summary>A reader exists, but the project's documents contain a representation it
+        /// rejects or a feature Unbound does not draw.</summary>
         Unsupported,
     }
 
@@ -150,9 +151,11 @@ namespace Unbound.Runtime
             /// <summary>The keys of <see cref="s_IgnoredWithoutData"/> that reference an object in
             /// any of its documents.</summary>
             public List<string> Referenced { get; set; }
-            /// <summary>ClassId213 documents by file, for the same layout checks used at load.
-            /// The doctor does not resolve textures or evaluate their imported dimensions.</summary>
-            public Dictionary<string, string> SpriteDocuments { get; set; }
+            /// <summary>The documents of the classes checked value by value, by file: Sprite
+            /// (213) for the same layout checks used at load (the doctor does not resolve
+            /// textures or evaluate their imported dimensions), LightingSettings (850595691) for
+            /// <see cref="LightingProblems"/>.</summary>
+            public Dictionary<string, string> Documents { get; set; }
         }
 
         internal sealed class Entry
@@ -195,22 +198,37 @@ namespace Unbound.Runtime
                     return false;
                 }
                 var (reading, detail) = Classify(f.ClassId, HasData);
-                if (f.ClassId == 213 && f.SpriteDocuments != null)
+                Func<YNode, string> check = f.ClassId == 213 ? SpriteProblem : f.ClassId == LightingSettingsId ? LightingProblems : null;
+                if (check != null && f.Documents != null)
                 {
-                    var problems = new List<string>();
-                    foreach (var pair in f.SpriteDocuments)
+                    // Each problem once, with the objects that have it.
+                    var problems = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+                    var order = new List<string>();
+                    void Add(string problem, string where)
+                    {
+                        if (!problems.TryGetValue(problem, out var list))
+                        {
+                            problems[problem] = list = new List<string>();
+                            order.Add(problem);
+                        }
+                        list.Add(where);
+                    }
+                    foreach (var pair in f.Documents)
                     {
                         try
                         {
                             foreach (var doc in UnityYamlText.Parse(pair.Value))
                             {
-                                try { Sprite.ValidateSerialized(doc.Body.ToNode()); }
-                                catch (Exception e) { problems.Add($"{pair.Key} fileID {doc.FileId}: {e.Message}"); }
+                                string problem;
+                                try { problem = check(doc.Body.ToNode()); }
+                                catch (Exception e) { problem = e.Message; }
+                                if (problem != null) Add(problem, $"{pair.Key} fileID {doc.FileId}");
                             }
                         }
-                        catch (Exception e) { problems.Add($"{pair.Key}: {e.Message}"); }
+                        catch (Exception e) { Add(e.Message, pair.Key); }
                     }
-                    if (problems.Count != 0) (reading, detail) = (ClassReading.Unsupported, string.Join("; ", problems));
+                    if (order.Count != 0)
+                        (reading, detail) = (ClassReading.Unsupported, string.Join("; ", order.ConvertAll(p => $"{string.Join(", ", problems[p])}: {p}")));
                 }
                 report.Classes.Add(new Entry
                 {
@@ -231,6 +249,23 @@ namespace Unbound.Runtime
             }
             return report;
         }
+
+        const int LightingSettingsId = 850595691;
+
+        static string SpriteProblem(YNode body)
+        {
+            Sprite.ValidateSerialized(body);
+            return null;
+        }
+
+        /// <summary>What Unbound does not draw of a Lighting Settings asset: Enlighten Realtime
+        /// Global Illumination, once a scene that uses the settings is precomputed (each such
+        /// scene also warns when it loads, see BakedLighting). The other settings are bake inputs
+        /// that change nothing drawn in Play mode.</summary>
+        internal static string LightingProblems(YNode body) =>
+            body.Bool("m_EnableRealtimeLightmaps")
+                ? "Enlighten Realtime Global Illumination (realtimeGI) is enabled: Unbound does not draw realtime lightmaps (the bounced light of realtime lights, realtime environment lighting) of scenes precomputed with it"
+                : null;
 
         /// <summary>Whether objects of a class can be in scenes, prefabs or assets: not a
         /// serialization placeholder (no base: `int`, `Vector3f`), not a project settings manager

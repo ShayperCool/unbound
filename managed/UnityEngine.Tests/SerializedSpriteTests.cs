@@ -90,12 +90,12 @@ namespace UnityEngine.Tests
         {
             string text = File.ReadAllText(Path.Combine(AppContext.BaseDirectory, "SpriteFixtures", "Rectangle.asset"));
             var found = new ClassCoverage.Found { ClassId = 213, TypeName = "Sprite",
-                SpriteDocuments = new Dictionary<string, string> { ["Assets/packed.asset"] = text.Replace("settingsRaw: 0", "settingsRaw: 1") } };
+                Documents = new Dictionary<string, string> { ["Assets/packed.asset"] = text.Replace("settingsRaw: 0", "settingsRaw: 1") } };
             var rejected = Assert.Single(ClassCoverage.Report("6000.0.71f1", new[] { found }).Classes);
             Assert.Equal("Unsupported", rejected.Reading);
             Assert.Contains("Assets/packed.asset fileID 21300000", rejected.Detail);
             Assert.Contains("settingsRaw 1", rejected.Detail);
-            found.SpriteDocuments["Assets/packed.asset"] = text;
+            found.Documents["Assets/packed.asset"] = text;
             Assert.Equal("Read", Assert.Single(ClassCoverage.Report("6000.0.71f1", new[] { found }).Classes).Reading);
         }
 
